@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.132 2003/08/13 20:20:41 moonfallen Exp $
+$Id: setup.py,v 1.133 2003/08/14 15:17:39 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -86,33 +86,46 @@ class build_ext_twisted(build_ext):
         build_ext.build_extensions(self)
 
 
+    def _compile_helper(self, content):
+        conftest = open("conftest.c", "w")
+        try:
+            conftest.write(content)
+            conftest.close()
+
+            try:
+                self.compiler.compile(["conftest.c"], output_dir='')
+            except CompileError:
+                return False
+            return True
+        finally:
+            try:
+                os.unlink("conftest.c")
+                os.unlink("conftest.o")
+            except:
+                pass
+
+    def _check_define(self, include_files, define_name):
+        """
+        Check if the given name has been #define'd by trying to compile a
+        file that #includes the given files and uses #ifndef to test for the
+        name.
+        """
+        self.compiler.announce("checking for %s..." % define_name, 0)
+        return self._compile_helper("""\
+%s
+#ifndef %s
+#error %s is not defined
+#endif
+""" % ('\n'.join(['#include <%s>' % n for n in include_files]),
+       define_name, define_name))
+
     def _check_header(self, header_name):
         """
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
         self.compiler.announce("checking for %s ..." % header_name, 0)
-
-        conftest = open("conftest.c", "w")
-        conftest.write("#include <%s>\n" % header_name)
-        conftest.close()
-
-        # Attempt to compile the file, I wish I could use compiler.preprocess
-        # instead but it defaults to None in unixccompiler.py.
-        ok = 1
-        try:
-            self.compiler.compile(["conftest.c"], output_dir='')
-        except CompileError:
-            ok = 0
-
-        # Cleanup
-        try:
-            os.unlink("conftest.c")
-            os.unlink("conftest.o")
-        except:
-            pass
-
-        return ok
+        return self._compile_helper("#include <%s>\n" % header_name)
     
     def _detect_modules(self):
         """
@@ -177,7 +190,8 @@ class build_ext_twisted(build_ext):
         # dirent.h exists on windows, but is totally different.
         # _check_header doesn't catch this, so disable building
         # _c_dir on windows
-        if os.name!="nt" and self._check_header("dirent.h"):
+        if (os.name != "nt" and self._check_header("dirent.h")
+            and self._check_define(["dirent.h"], "_DIRENT_HAVE_D_TYPE")):
             exts.append( Extension("twisted.python._c_dir",
                                     ["twisted/python/_c_dir.c"],
                                     define_macros=define_macros) )
