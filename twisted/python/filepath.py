@@ -73,7 +73,7 @@ class FilePath:
         norm = normpath(path)
         if slash in norm:
             raise InsecurePath()
-        newpath = normpath(joinpath(self.path, norm))
+        newpath = abspath(joinpath(self.path, norm))
         if not newpath.startswith(self.path):
             raise InsecurePath()
         return self.clonePath(newpath)
