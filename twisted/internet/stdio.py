@@ -38,7 +38,6 @@ class StandardIOWriter(abstract.FileDescriptor):
     def writeSomeData(self, data):
         try:
             return os.write(self.fileno(), data)
-            return rv
         except IOError, io:
             if io.args[0] == errno.EAGAIN:
                 return 0
