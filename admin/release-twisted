@@ -719,8 +719,7 @@ class UpdateWebDocs(Transaction):
 
         os.chdir('man')
         sh('lore -p --config ext=.xhtml -l../howto -iman -olore *.1')
-        sh('lore -p --config template=$templ '
-           '--config ext=-man -l ../howto *.xhtml')
+        sh('%s --config ext=-man -l ../howto *.xhtml' % lorecmd)
 
         os.chdir('../..') # should be in docdir now
 
