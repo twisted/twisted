@@ -1,15 +1,14 @@
-#run twistd -y on me
-from twisted.application import app, compat, servers, timer, clients, service
+from twisted.application import service, compat, internet
 from twisted.protocols import wire
 from twisted.internet import protocol
 from twisted.python import util
 
-appl = app.Application('test')
+appl = service.Application('test')
 factory = protocol.ServerFactory()
 factory.protocol = wire.Echo
 compat.IOldApplication(appl).listenTCP(8080, factory)
-servers.TCPServer(8081, factory).setServiceParent(appl)
-timer.TimerService(5, util.println, "--MARK--").setServiceParent(appl)
+internet.TCPServer(8081, factory).setServiceParent(appl)
+internet.TimerService(5, util.println, "--MARK--").setServiceParent(appl)
 class Foo(protocol.Protocol):
     def connectionMade(self):
         self.transport.write('lalala\n')
@@ -17,7 +16,7 @@ class Foo(protocol.Protocol):
         print `data`
 factory = protocol.ClientFactory()
 factory.protocol = Foo
-clients.TCPClient('localhost', 8081, factory).setServiceParent(appl)
+internet.TCPClient('localhost', 8081, factory).setServiceParent(appl)
 class FooService(service.Service):
     def startService(self):
         service.Service.startService(self)

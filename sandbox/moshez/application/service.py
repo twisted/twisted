@@ -144,12 +144,12 @@ class MultiService(Service):
             service.stopService()
 
 
-class Application(service.MultiService, components.Componentized):
+class Application(MultiService, components.Componentized):
 
     processName = None
 
     def __init__(self, name, uid=None, gid=None):
-        service.MultiService.__init__(self)
+        MultiService.__init__(self)
         components.Componentized.__init__(self)
         self.setName(name)
         self.setComponent(sob.IPersistable, sob.Persistant(self, self.name))

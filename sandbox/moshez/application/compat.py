@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.python import components, log
-from twisted.application import internet
+from twisted.application import internet, service
 from twisted.persisted import sob
 
 class IOldApplication(components.Interface):
