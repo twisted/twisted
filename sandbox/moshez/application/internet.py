@@ -82,7 +82,7 @@ import new
 for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         base = globals()['_Abstract'+side]
-        method = (tran=='Generic' and 'With') or tran
+        method = {'Generic': 'With'}.get(tran, tran)
         klass = new.classobj(tran+side, (base,), {'method': method})
         globals()[tran+side] = klass
 
