@@ -690,7 +690,7 @@ def registerViewForModel(view, model):
     """
     components.registerAdapter(view, model, interfaces.IView)
 #     adapter = components.getAdapter(model, resource.IResource, None)
-#     if adapter is None and components.implements(view, resource.IResource):
+#     if adapter is None and resource.IResource.providedBy(view):
 #         components.registerAdapter(view, model, resource.IResource)
 
 

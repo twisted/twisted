@@ -21,6 +21,8 @@ import types
 import weakref
 import warnings
 
+from zope.interface import implements
+
 from twisted.python import components, reflect
 from twisted.internet import defer
 
@@ -42,7 +44,7 @@ class Model:
     A Model which keeps track of views which are looking at it in order
     to notify them when the model changes.
     """
-    __implements__ = interfaces.IModel
+    implements(interfaces.IModel)
 
     def __init__(self, *args, **kwargs):
         if len(args):
@@ -243,6 +245,7 @@ class Model:
             if hasattr(self, 'parent') and self.parent:
                 self.parent.setSubmodel(request, self.name, data)
             self.orig = self.original = data
+components.backwardsCompatImplements(Model)
 
 
 class MethodModel(Model):

@@ -22,7 +22,7 @@
 # System Imports
 from twisted.internet import defer
 from twisted.python import roots, components, reflect
-from zope.interface import Attribute
+from zope.interface import Attribute, implements
 
 class IResource(components.Interface):
     """A web resource."""
@@ -71,7 +71,7 @@ class Resource:
     abstract directory structure for URL retrieval.
     """
 
-    __implements__ = IResource,
+    implements(IResource)
     
     entityType = IResource
 
@@ -207,6 +207,7 @@ class Resource:
         the framework will handle this correctly.
         """
         return self.render_GET(request)
+components.backwardsCompatImplements(Resource)
         
 
 
