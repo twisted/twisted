@@ -73,10 +73,10 @@ class FormFillerWidget(widgets.Widget):
                              value=value)
 
     def input_text(self, request, content, arg):
-        r = content.textarea(cols="60",
-                             rows="10",
+        r = content.textarea(cols=arg.getHint('columns', '60'),
+                             rows=arg.getHint('rows', '10'),
                              name=arg.name,
-                             wrap="virtual")
+                             wrap=arg.getHint('wrap', "virtual"))
         r.text(str(getValue(request, arg)))
         return r
 
