@@ -91,17 +91,12 @@ class MicroDOMTest(TestCase):
             self.assertRaises(microdom.MismatchedTags, microdom.parseString, s)
 
     def testComment(self):
-        s = "<bar> <!--<foo />--> </bar>"
+        s = "<bar><!--<foo />--></bar>"
         d = microdom.parseString(s)
         e = d.documentElement
         self.assertEquals(e.nodeName, "bar")
-        # do it like this after we fix it so we don't have empty text nodes:
-        #c = e.childNodes[0]
-        #self.assert_(isinstance(c, microdom.Comment))
-        c = None
-        for n in e.childNodes:
-            if isinstance(n, microdom.Comment):
-                c = n
+        c = e.childNodes[0]
+        self.assert_(isinstance(c, microdom.Comment))
         self.assertEquals(c.value, "<foo />")
 
     def testText(self):
@@ -110,3 +105,24 @@ class MicroDOMTest(TestCase):
         self.assert_(isinstance(text, microdom.Text))
         self.assertEquals(text.value, "xxxx")
         
+    def testEntities(self):
+        nodes = microdom.parseString("<b>&amp;&#12AB;</b>").documentElement.childNodes
+        self.assertEquals(len(nodes), 2)
+        self.assertEquals(nodes[0].data, "&amp;")
+        self.assertEquals(nodes[1].data, "&#12AB;")
+        for n in nodes:
+            self.assert_(isinstance(n, microdom.EntityReference))
+
+    def testCData(self):
+        s = '<x><![CDATA[</x>\r\n & foo]]></x>'
+        cdata = microdom.parseString(s).documentElement.childNodes[0]
+        self.assert_(isinstance(cdata, microdom.CDATASection))
+        self.assertEquals(cdata.data, "</x>\r\n & foo")
+
+    def testSingletons(self):
+        s = "<foo><b/><b /><b\n/></foo>"
+        nodes = microdom.parseString(s).documentElement.childNodes
+        self.assertEquals(len(nodes), 3)
+        for n in nodes:
+            self.assert_(isinstance(n, microdom.Element))
+            self.assertEquals(n.nodeName, "b")
