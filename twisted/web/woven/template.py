@@ -109,8 +109,8 @@ class NodeNodeMutator(NodeMutator):
     """ 
     def generate(self, request, node):
         if self.data is not node:
-            if hasattr(self.d, 'importNode'):
-                self.data = self.d.importNode(self.data, 1)
+            if hasattr(request.d, 'importNode'):
+                self.data = request.d.importNode(self.data, 1)
             parent = node.parentNode
             if parent:
                 parent.replaceChild(self.data, node)
@@ -122,7 +122,7 @@ class NodeNodeMutator(NodeMutator):
 class NoneNodeMutator(NodeMutator):
     def generate(self, request, node):
         return node # do nothing
-        child = self.d.createTextNode("None")
+        child = request.d.createTextNode("None")
         node.parentNode.replaceChild(child, node)
 
 
@@ -136,11 +136,10 @@ class StringNodeMutator(NodeMutator):
                 child = microdom.parseString(self.data)
             except Exception, e:
                 log.msg("Error parsing return value, probably invalid xml:", e)
-                child = self.d.createTextNode(self.data)
+                child = request.d.createTextNode(self.data)
         else:
-            child = self.d.createTextNode(self.data)
+            child = request.d.createTextNode(self.data)
         nodeMutator = NodeNodeMutator(child)
-        nodeMutator.d = self.d
         return nodeMutator.generate(request, node)
 
 
@@ -290,7 +289,6 @@ class DOMTemplate(Resource):
                     "INodeMutator adapter registerred for %s." %
                     (result, getattr(result, "__class__",
                                      None) or type(result)))
-            adapter.d = self.d
             result = adapter.generate(request, node)
         if isinstance(result, defer.Deferred):
             self.outstandingCallbacks += 1

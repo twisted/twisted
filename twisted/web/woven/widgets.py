@@ -242,7 +242,7 @@ class Widget(view.View):
                   in L{setUp}, probably).
         """
         if self.become:
-            print "becoming"
+            #print "becoming"
             become = self.become
             self.become = None
             parent = node.parentNode
@@ -292,6 +292,9 @@ class Widget(view.View):
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
+        # This works for simple cases, unfortunately this widget doesn't have
+        # appropriate mvc stack -- it only has itself
+        self.recurseChildren(request, newNode)
         return newNode
 
     def __setitem__(self, item, value):
@@ -315,7 +318,7 @@ class Widget(view.View):
         and set to self.become. When generate is subsequently called, self.become
         will be responsible for mutating the DOM instead of this widget.
         """
-        print "setError called", self
+        #print "setError called", self
         self.become = self.errorFactory(self.model, message)
 #        self.modelChanged({'request': request})
 
@@ -363,7 +366,6 @@ class WidgetNodeMutator(template.NodeMutator):
         if isinstance(newNode, defer.Deferred):
             return newNode
         nodeMutator = template.NodeNodeMutator(newNode)
-        nodeMutator.d = self.d
         return nodeMutator.generate(request, node)
 
 components.registerAdapter(WidgetNodeMutator, Widget, template.INodeMutator)

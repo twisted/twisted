@@ -109,6 +109,7 @@ class InputHandler(controller.Controller):
 
         if data != self.view.getData():
             self.model.setData(data)
+            self.model.notify({'request': request, self.submodel: data})
 
 
 wcfactory_InputHandler = controllerFactory(InputHandler)

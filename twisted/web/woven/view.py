@@ -410,18 +410,9 @@ class View(template.DOMTemplate):
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
-            print 'controller.model', controller.model, controller.model.views
+            #print 'controller.model', controller.model, controller.model.views
             returnNodes = controller.model.notify({'request': request, 
                                         controller.submodel: data})
-            self.controllerStack.insert(0, controller)
-            for wid, newNode in returnNodes:
-                if newNode is not None:
-                    self.viewStack.insert(0, wid)
-                    self.modelStack.insert(0, controller.model)
-                    self.recurseChildren(request, newNode)
-                    self.modelStack.pop(0)
-                    self.viewStack.pop(0)
-            self.controllerStack.pop(0)
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
                 result.addCallback(self.handleCommitCallback, request)

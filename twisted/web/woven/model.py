@@ -227,8 +227,12 @@ class ListModel(Wrapper):
     models and submodels.
     """
     def getSubmodel(self, name):
+        if self.submodels.has_key(name):
+            return self.submodels[name]
         orig = self.orig
-        return adaptToIModel(orig[int(name)], self, name)
+        sm = adaptToIModel(orig[int(name)], self, name)
+        self.submodels[name] = sm
+        return sm
     
     def setSubmodel(self, name, value):
         self.orig[int(name)] = value
@@ -268,8 +272,12 @@ class DictionaryModel(Wrapper):
     models and submodels.
     """
     def getSubmodel(self, name):
+        if self.submodels.has_key(name):
+            return self.submodels[name]
         orig = self.orig
-        return adaptToIModel(orig[name], self, name)
+        sm = adaptToIModel(orig[name], self, name)
+        self.submodels[name] = sm
+        return sm
 
     def setSubmodel(self, name, value):
         self.orig[name] = value
@@ -296,7 +304,11 @@ class ObjectWrapper(Wrapper):
     and submodels.  By default, I am not registered for use with anything.
     """
     def getSubmodel(self, name):
-        return adaptToIModel(getattr(self.orig, name), self, name)
+        if self.submodels.has_key(name):
+            return self.submodels[name]
+        sm = adaptToIModel(getattr(self.orig, name), self, name)
+        self.submodels[name] = sm
+        return sm
 
     def setSubmodel(self, name, value):
         setattr(self.orig, name, value)
@@ -309,10 +321,14 @@ class UnsafeObjectWrapper(ObjectWrapper):
     dangerously unsafe.  Be wary or I will kill your security model!
     """
     def getSubmodel(self, name):
+        if self.submodels.has_key(name):
+            return self.submodels[name]
         value = getattr(self.orig, name)
         if callable(value):
             return value()
-        return adaptToIModel(value, self, name)
+        sm = adaptToIModel(value, self, name)
+        self.submodels = sm
+        return sm
 
 from twisted.internet import defer
 
