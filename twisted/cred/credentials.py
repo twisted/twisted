@@ -81,14 +81,11 @@ class IUsernamePassword(ICredentials):
         password matches.
         """
 
+
 class IAnonymous(ICredentials):
     """I am an explicitly anonymous request for access.
     """
 
-
-class SimpleMD5ChallengeResponse(ICredentials):
-    """XXX specify PB c/r protocol
-    """
 
 class CramMD5Credentials:
     __implements__ = (IUsernameHashedPassword,)
