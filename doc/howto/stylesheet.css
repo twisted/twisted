@@ -84,6 +84,12 @@ pre
   
   color: #115511
 }
+
+.py-src-endmarker
+{
+  display: block; /* IE hack; prevents following line from being sucked into the py-listing box. */
+}
+
 .py-listing 
 {
   margin: 1ex;
