@@ -22,7 +22,7 @@ This module requires Stackless Python 3.0. See http://stackless.com/
 """
 
 
-# THIS is how stacklessy twisted works
+# THIS is how the threadless reactor works.
 
 # Any time the reactor makes a call to "user" code, it calls a special
 # method to do it, callInTasklet.
@@ -40,10 +40,11 @@ This module requires Stackless Python 3.0. See http://stackless.com/
 import new, types
 import stackless
 
-from twisted.internet import reactor
+
 from twisted.python import failure, log
 
 def makeContinuation(channel):
+    from twisted.internet import reactor
     def continuation(result):
         reactor.callLater(0, channel.send, result)
     return continuation
@@ -165,5 +166,35 @@ class Scheduler:
 
 theScheduler = Scheduler()
 
+
+
+import time
+
+from twisted.internet import default, main
+from twisted.internet.defer import Deferred, DeferredList
+
+
+class SelectReactor(default.SelectReactor):
+    def mainLoop(self):
+        while self.running:
+            try:
+                while self.running:
+                    # Advance simulation time in delayed event
+                    # processors.
+                    theScheduler.callInTasklet(self.runUntilCurrent)
+                    t2 = self.timeout()
+                    t = self.running and t2
+                    theScheduler.callInTasklet(self.doIteration, t)
+            except:
+                log.msg("Unexpected error in main loop.")
+                log.deferr()
+            else:
+                log.msg('Main loop terminated.')
+
+
+def install():
+    from twisted.internet import main
+    reactor = SelectReactor()
+    main.installReactor(reactor)
 
 
