@@ -346,7 +346,11 @@ class Request:
         """Called when have finished responding and are no longer queued."""
         self.channel.requestDone(self)
         del self.channel
-        self.content.close()
+        try:
+            self.content.close()
+        except OSError:
+            # win32 suckiness, no idea why it does this
+            pass
         del self.content
 
     # methods for channel - end users should not use these
