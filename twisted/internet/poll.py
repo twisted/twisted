@@ -89,12 +89,13 @@ def removeWriter(writer, writes=writes):
 
 def removeAll():
     """Remove all selectables, and return a list of them."""
-    global reads, writes, selectables, poller
     result = selectables.values()
-    reads = {}
-    writes = {}
-    selectables = {}
-    poller = select.poll()
+    fds = selectables.keys()
+    reads.clear()
+    writes.clear()
+    selectables.clear()
+    for fd in fds:
+        poller.unregister(fd)
     return result
 
 def doPoll(timeout,
