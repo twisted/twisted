@@ -567,7 +567,9 @@ try:
     from os import setgroups, getgroups
     def initgroups(uid, primaryGid):
         username = pwd.getpwuid(uid)[0]
-        l=[primaryGid]
+        l = []
+        if primaryGid is not None:
+            l.append(primaryGid)
         for groupname, password, gid, userlist in grp.getgrall():
             if username in userlist:
                 l.append(gid)
@@ -593,9 +595,11 @@ def switchUID(uid, gid, euid=False):
     else:
         setuid = os.setuid
         setgid = os.setgid
-    setgid(gid)
-    initgroups(uid, gid)
-    setuid(uid)
+    if gid is not None:
+        setgid(gid)
+    if uid is not None:
+        initgroups(uid, gid)
+        setuid(uid)
 
 
 class SubclassableCStringIO(object):

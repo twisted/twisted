@@ -263,19 +263,14 @@ class Process:
     def __init__(self, uid=None, gid=None):
         """Set uid and gid.
 
-        By default, uid or gid will be the current user's if run on POSIX,
-        or 0 if run on Windows.
+        @param uid: The user ID as whom to execute the process.  If
+        this is None, no attempt will be made to change the UID.
+
+        @param gid: The group ID as whom to execute the process.  If
+        this is None, no attempt will be made to change the GID.
         """
-        if platformType == "posix":
-            if uid is None:
-                uid = os.getuid()
-            if gid is None:
-                gid = os.getgid()
-            self.uid = uid
-            self.gid = gid
-        else:
-            self.uid = uid or 0
-            self.gid = gid or 0
+        self.uid = uid
+        self.gid = gid
 
 
 def Application(name, uid=None, gid=None):

@@ -11,17 +11,23 @@ try:
     import pwd, grp
 except ImportError:
     def getid(uid, gid):
-        return map(int, (uid or 0, gid or 0))
+        if uid is not None:
+            uid = int(uid)
+        if gid is not None:
+            gid = int(gid)
+        return uid, gid
 else:
     def getid(uid, gid):
-        try:
-            uid = int(uid or 0)
-        except ValueError:
-            uid = pwd.getpwnam(uid)[2]
-        try:
-            gid = int(gid or 0)
-        except ValueError:
-            gid = grp.getgrnam(gid)[2]
+        if uid is not None:
+            try:
+                uid = int(uid)
+            except ValueError:
+                uid = pwd.getpwnam(uid)[2]
+        if gid is not None:
+            try:
+                gid = int(gid)
+            except ValueError:
+                gid = grp.getgrnam(gid)[2]
         return uid, gid
 
 
@@ -65,7 +71,7 @@ class FirstPassOptions(usage.Options):
 
     recursing = 0
     params = ()
-    
+
     optParameters = [
         ['uid', 'u', None, "The uid to run as."],
         ['gid', 'g', None, "The gid to run as."],
@@ -77,8 +83,6 @@ class FirstPassOptions(usage.Options):
          "or 'source'."],
         ['appname', 'n', None, "The process name to use for this application."]
     ]
-    if hasattr(os, 'getgid'):
-        optParameters[0][2], optParameters[1][2] = os.getuid(), os.getgid()
 
     optFlags = [
         ['encrypted', 'e', "Encrypt file before writing "
@@ -101,7 +105,7 @@ class FirstPassOptions(usage.Options):
 
     def _reportDebug(self, info):
         print 'Debug: ', info
-    
+
     def _reportProgress(self, info):
         s = self.pb(info)
         if s:
@@ -132,7 +136,7 @@ class FirstPassOptions(usage.Options):
         if not self.tapLookup.has_key(self.subCommand):
             raise usage.UsageError("Please select one of: "+
                                    ' '.join(self.tapLookup))
-       
+
 
 def run():
     options = FirstPassOptions()

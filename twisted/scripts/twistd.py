@@ -6,7 +6,9 @@
 from twisted.python import log, syslog
 from twisted.python.util import switchUID
 from twisted.application import app, service
+from twisted.scripts import mktap
 from twisted import copyright
+
 import os, errno, sys
 
 class ServerOptions(app.ServerOptions):
@@ -32,6 +34,8 @@ class ServerOptions(app.ServerOptions):
                       "Name of the pidfile"],
                      ['chroot', None, None,
                       'Chroot to a supplied directory before running'],
+                     ['uid', 'u', None, "The uid to run as."],
+                     ['gid', 'g', None, "The gid to run as."],
                     ]
 
     def opt_version(self):
@@ -124,9 +128,10 @@ def daemonize():
     os.close(null)
 
 def shedPrivileges(euid, uid, gid):
-    switchUID(uid, gid, euid)
-    extra = euid and 'e' or ''
-    log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
+    if uid is not None or gid is not None:
+        switchUID(uid, gid, euid)
+        extra = euid and 'e' or ''
+        log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
 
 def launchWithName(name):
     if name and name != sys.argv[0]:
@@ -150,7 +155,14 @@ def startApplication(config, application):
         launchWithName(process.processName)
     setupEnvironment(config)
     service.IService(application).privilegedStartService()
-    shedPrivileges(config['euid'], process.uid, process.gid)
+
+    uid, gid = mktap.getid(config['uid'], config['gid'])
+    if uid is None:
+        uid = process.uid
+    if gid is None:
+        gid = process.gid
+
+    shedPrivileges(config['euid'], uid, gid)
     app.startApplication(application, not config['no_save'])
 
 
