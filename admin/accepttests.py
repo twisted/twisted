@@ -24,8 +24,11 @@ def message(*m):
     print '|####'
     print '\------'
 
-def twistdf(f):
-    cmd("twistd -f %s.tap" %f)
+def twistdf(f, p=None):
+    if p:
+        cmd("twistd --file %s.tap --rundir %s" % (f, p))
+    else:
+        cmd("twistd -f %s.tap" % (f,))
     time.sleep(0.5)
 
 def twistdg(g):
@@ -36,8 +39,11 @@ def twistdy(y):
     cmd("twistd -y %s" % (y,))
     time.sleep(0.5)
 
-def killit():
-    scmd("kill `cat twistd.pid`")
+def killit(path=None):
+    if path:
+        scmd("kill `cat %s/twistd.pid`" % (path,))
+    else:
+        scmd("kill `cat twistd.pid`")
     # Give it a sec to come down.
     time.sleep(0.5)
 
@@ -56,103 +62,132 @@ def GUITest():
 def basicToolTest():
     message("You will now be connected to an echo server")
     twistdy(twistedBinDir+"/../admin/echo.py")
-    time.sleep(0.5)
-    scmd("telnet localhost 18899")
-    killit()
+    try:
+        time.sleep(0.5)
+        scmd("telnet localhost 18899")
+    finally:
+        killit()
 
 def basicWebTest():
     message("Running Basic Web Test")
     cmd("mktap web --port 18080")
-    twistdf("web")
-    message("You should see a rather complex bunch of widgetry now.")
-    browse("http://localhost:18080/")
-    killit()
+    try:
+        twistdf("web")
+        try:
+            message("You should see a rather complex bunch of widgetry now.")
+            browse("http://localhost:18080/")
+        finally:
+            killit()
+    finally:
+        scmd("rm web.tap")
 
 def staticWebTest():
     cmd("mktap web --port 18080 --path %s/../static" % twistedBinDir)
-    twistdf("web")
-    message("You should see an 'it worked' page now.",
-            "(depending on your browser, you may need to reload)")
-    browse("http://localhost:18080/")
-    message("This is Python CGI test output.")
-    browse("http://localhost:18080/test.cgi")
-    message("This is RPY test output.")
-    browse("http://localhost:18080/test.rpy")
-    killit()
+    try:
+        twistdf("web")
+        try:
+            message("You should see an 'it worked' page now.",
+                    "(depending on your browser, you may need to reload)")
+            browse("http://localhost:18080/")
+            message("This is Python CGI test output.")
+            browse("http://localhost:18080/test.cgi")
+            message("This is RPY test output.")
+            browse("http://localhost:18080/test.rpy")
+        finally:
+            killit()
+    finally:
+        scmd("rm web.tap")
 
 def sslWebTest():
+    cmdfmt = ("mktap web --port 18080 --https=18443 -k "
+             "%s/../doc/examples/server.pem "
+              "-c %s/../doc/examples/server.pem --path %s/../static")
     message("Running SSL Web Test")
-    cmd(("mktap web --port 18080 --https=18443 -k %s/../doc/examples/server.pem "
-         "-c %s/../doc/examples/server.pem --path %s/../static") % (
-        twistedBinDir, twistedBinDir, twistedBinDir))
-    twistdf("web")
-    browse("https://localhost:18443/")
-    killit()
+    cmd(cmdfmt % (twistedBinDir, twistedBinDir, twistedBinDir))
+    try:
+        twistdf("web")
+        try:
+            browse("https://localhost:18443/")
+        finally:
+            killit()
+    finally:
+        scmd("rm web.tap")
 
 def distWebTest():
     message("Running Distributed Web Test")
+
     # make directories to stage the test
-    scmd("mkdir Personal")
-    scmd("mkdir User")
-    # make & start personal server
-    os.chdir("Personal")
-    cmd("mktap web --personal --port 18080")
-    twistdf("web")
-    os.chdir("..")
-    # make & start the user server
-    os.chdir("User")
-    cmd("mktap web --user --port 18080")
-    twistdf("web")
-    os.chdir("..")
-    # browse a dead web page
-    message("This should say 'Unable to connect to distributed server'",
-            "If it doesn't finish loading, it's broken.  Reload a few times..")
-    browse("http://localhost:18080/nobody.twistd")
-    # browse a live web page
-    message("This should be a bunch-of-widgets test page.")
-    browse("http://localhost:18080/%s.twistd" % username)
-    # clean up
-    os.chdir("User")
-    killit()
-    os.chdir("../Personal")
-    killit()
-    os.chdir("..")
-    shutil.rmtree("User")
-    shutil.rmtree("Personal")
+    scmd("mkdir Personal");    scmd("mkdir User")
+
+    # make & start servers
+    cmd("mktap --append Personal/web.tap web --personal --port 18080")
+    twistdf("Personal/web", "Personal")
+
+    cmd("mktap --append User/web.tap web --user --port 18080")
+    twistdf("User/web", "User")
+
+    try:
+        # browse a dead web page
+        message("This should say 'Unable to connect to distributed server'",
+                "If it doesn't finish loading, it's broken.  Reload a few times..")
+        browse("http://localhost:18080/nobody.twistd")
+
+        # browse a live web page
+        message("This should be a bunch-of-widgets test page.")
+        browse("http://localhost:18080/%s.twistd" % username)
+    finally:
+        killit("User")
+        killit("Personal")
+        
+        shutil.rmtree("User")
+        shutil.rmtree("Personal")
 
 def runTelnetTest():
     message("Running Telnet Test")
     cmd("mktap telnet -p 18023 -u username -w password")
-    twistdf("telnet")
-    message("Log in with the username 'username', password 'password'.",
-            "You should be able to execute python code.",
-            "Log out with '^]close'")
-    scmd("telnet localhost 18023")
-    killit()
+    try:
+        twistdf("telnet")
+        try:
+            message("Log in with the username 'username', password 'password'.",
+                    "You should be able to execute python code.",
+                    "Log out with '^]close'")
+            scmd("telnet localhost 18023")
+        finally:
+            killit()
+    finally:
+        scmd("rm telnet.tap")
 
 def runManholeTest():
     message("Running Manhole Test")
     cmd("mktap manhole --port 12943 -u username -w password")
-    twistdf("manhole")
-    message("Log in with the username 'username', password 'password'.",
-            "and bask in the l33tness of direct manipulation.")
-    cmd("manhole --port 12943")
-    killit()
+    try:
+        twistdf("manhole")
+        try:
+            message("Log in with the username 'username', password 'password'.",
+                    "and bask in the l33tness of direct manipulation.")
+            cmd("manhole --port 12943")
+        finally:
+            killit()
+    finally:
+        scmd("rm manhole.tap")
 
 def runWordsTest():
     message("Running Words Test")
     cmd("mktap words --irc 16767 --port 18787 --web 18080")
-    twistdf("words")
-    message("Create yourself an account, username 'test' password 'testing'.")
-    browse("http://localhost:18080/create")
-    message("You will have to '/msg *login* testing' to log in.")
-    scmd(ircclient+" test localhost:16767")
-    if block:
-        print "Hit enter to continue:"
-        raw_input()
-    message("Now let's test the 'im' interface.")
-    cmd("im")
-    killit()
+    try:
+        twistdf("words")
+        try:
+            message("Create yourself an account, username 'test' password 'testing'.")
+            browse("http://localhost:18080/create")
+            message("You will have to '/msg *login* testing' to log in.")
+            scmd(ircclient+" test localhost:16767")
+            block and pause()
+            message("Now let's test the 'im' interface.")
+            cmd("im")
+        finally:
+            killit()
+    finally:
+        scmd("rm words.tap")
 
 def runRealityTest():
     message("Running Reality Test")
@@ -179,17 +214,20 @@ def runExampleTest():
                                           examplesDir)
     scmd("python %s/pbecho.py" % examplesDir)
     twistdf("pbecho-start")
-    message("You should see a 'hello world'")
-    scmd("python %s/pbechoclient.py" % examplesDir)
-    pause()
-    killit()
+    try:
+        message("You should see a 'hello world'")
+        scmd("python %s/pbechoclient.py" % examplesDir)
+        pause()
+    finally:
+        killit()
 
 def runMailTest():
     message("Starting mail test. ",
             "Output should be one email (postmaster@foo.bar) ",
             "and one bounce (postmaster@no.such.domain).",)
-    for p in 'dump', 'dump2':
-        os.path.exists(p) and scmd('rm -rf %s' % p)
+    for p in ('dump', 'dump2'):
+        if os.path.exists(p):
+            scmd('rm -rf %s' % p)
         os.mkdir(p)
     cmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster "
         " --pop3 18110")
@@ -224,13 +262,13 @@ All your dependents are belong to us
         s.quit()
         time.sleep(10)
         p = poplib.POP3('127.0.0.1', 18110)
-        p._debugging = 2
         p.apop('postmaster@foo.bar', 'postmaster')
         print string.join(p.retr(1)[1], '\n')
         p.dele(1)
         p.quit()
     finally:
         killit()
+        scmd('rm -rf dump dump2')
 
 
 def runAllTests():
