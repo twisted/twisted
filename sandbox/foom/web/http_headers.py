@@ -492,7 +492,11 @@ def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, co
 
 
 # Header object
-_RecalcNeeded = object()
+class __RecalcNeeded(object):
+    def __repr__(self):
+        return "<RecalcNeeded>"
+
+_RecalcNeeded = __RecalcNeeded()
 
 DefaultHTTPParsers = dict()
 DefaultHTTPGenerators = dict()
@@ -514,11 +518,13 @@ class Headers:
     def _addHeader(self, name, strvalue):
         """Add a header & value to the collection of headers. Appends not replaces
         a previous header of the same name."""
+        name=name.lower()
         old = self._raw_headers.get(name, None)
         if old is None:
             old = []
             self._raw_headers[name]=old
         old.append(strvalue)
+        self._headers[name] = _RecalcNeeded
     
     def _parser(self, name):
         parser = self.parsers.get(name, None)
@@ -535,17 +541,16 @@ class Headers:
         return generator
 
     def hasHeader(self, name):
+        name=name.lower()
         return self._raw_headers.has_key(name)
     
-    def getRawHeader(self, name, default=Exception):
+    def getRawHeader(self, name, default=None):
         """Returns a list of headers matching the given name as the raw string given."""
-        
+
+        name=name.lower()
         raw_header = self._raw_headers.get(name, default)
         if raw_header is not _RecalcNeeded:
-            if raw_header is Exception:
-                raise KeyError(name)
-            else:
-                return raw_header
+            return raw_header
         
         generator = self._generator(name)
         
@@ -564,10 +569,11 @@ class Headers:
         
         If the header doesn't exist, return default (or None if not specified)
         """
-    
+        
+        name=name.lower()
         parsed = self._headers.get(name, default)
         if parsed is not _RecalcNeeded:
-			return parsed
+            return parsed
         parser = self._parser(name)
         
         h = self._raw_headers[name]
@@ -586,6 +592,7 @@ class Headers:
         given name.
         """
         
+        name=name.lower()
         self._raw_headers[name] = value
         self._headers[name] = _RecalcNeeded
 
@@ -594,15 +601,19 @@ class Headers:
         Value should be a list of objects whose exact form depends
         on the header in question.
         """
+        name=name.lower()
         self._raw_headers[name] = _RecalcNeeded
         self._headers[name] = value
 
     def removeHeader(self, name):
         """Removes the header named."""
         
+        name=name.lower()
         del self._raw_headers[name]
         del self._headers[name]
 
+    def __repr__(self):
+        return '<Headers: Raw: %s Parsed: %s>'% (self._raw_headers, self._headers)
 
 """The following dicts are all mappings of header to list of operations
    to perform. The first operation should generally be 'tokenize' if the
@@ -751,3 +762,10 @@ DefaultHTTPGenerators.update(generator_general_headers)
 DefaultHTTPGenerators.update(generator_request_headers)
 DefaultHTTPGenerators.update(generator_entity_headers)
 
+def lowerify(d):
+    newd = dict([(key.lower(),value) for key,value in d.items()])
+    d.clear()
+    d.update(newd)
+    
+lowerify(DefaultHTTPParsers)
+lowerify(DefaultHTTPGenerators)

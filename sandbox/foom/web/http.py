@@ -113,9 +113,9 @@ class Request:
     __implements__ = interfaces.IConsumer,
 
     code = responsecode.OK
-    code_message = responsecode.RESPONSES[responsecode.OK]
+    code_message = None
     startedWriting = 0
-    sentLength = 0 # content-length of response, or total bytes sent via chunking
+    sentLength = 0 # content bytes sent to client
 
     _foreceSSL = False
     
@@ -131,7 +131,14 @@ class Request:
 
         self.out_headers = http_headers.Headers()
         self.in_headers = in_headers
-        
+        self.process()
+
+    def process(self):
+        """Called by __init__ to let you process the request.
+
+        Can be overridden by a subclass to do something useful."""
+        pass
+    
     def handleContentChunk(self, data):
         """Called by channel when a piece of data has been received.
 
@@ -143,7 +150,11 @@ class Request:
 
         Should be overridden by a subclass to do something appropriate."""
         
-        
+    def connectionLost(self, reason):
+        """connection was lost"""
+        pass
+
+
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
 
@@ -171,7 +182,7 @@ class Request:
     def write(self, data):
         """
         Write some data as a result of an HTTP request.  The first
-        time this is called, it writes out response data.
+        time this is called, it writes out response headers.
         """
         if not self.startedWriting:
             self.startedWriting = 1
@@ -205,18 +216,13 @@ v        """
         self.code = code
         self.code_message = message
 
-    def setHeader(self, k, v):
-        """Set an outgoing HTTP header.
-        """
-        self.headers[k.lower()] = v
-
     def redirect(self, url):
         """Utility function that does a redirect.
 
         The request should have finish() called after this.
         """
         self.setResponseCode(FOUND)
-        self.setHeader("location", url)
+        self.out_headers.setHeader("location", url)
     
     def setLastModified(self, when):
         """Set the X{Last-Modified} time for the response to this request.
@@ -234,7 +240,7 @@ v        """
         when = long(math.ceil(when))
         lastModified = self.out_headers.getHeader('Last-Modified')
         if not lastModified or (lastModified < when):
-            self.setRespHeader('Last-Modified', when)
+            self.out_headers.setHeader('Last-Modified', when)
         
     def checkBody(self):
         """Check to see if this request should have a body. As a side-effect
@@ -323,7 +329,7 @@ v        """
     def _authorize(self):
         # Authorization, (mostly) per the RFC
         try:
-            authh = self.in_headers.geteaderRaw("Authorization")
+            authh = self.in_headers.getHeaderRaw("Authorization")
             if not authh:
                 self.user = self.password = ''
                 return
@@ -354,10 +360,6 @@ v        """
             pass
         self._authorize()
         return self.password
-
-    def connectionLost(self, reason):
-        """connection was lost"""
-        pass
 
 class ChannelRequest:
     headerlen = 0
@@ -479,6 +481,7 @@ class ChannelRequest:
         # Split off connection-related headers
         connHeaders = self.splitConnectionHeaders()
 
+        print "ConnHeaders: ",connHeaders
         # Set connection parameters from headers
         self.setConnectionParams(connHeaders)
 
@@ -562,11 +565,16 @@ class ChannelRequest:
 
         # Okay, now implement section 4.4 Message Length to determine
         # how to find the end of the incoming HTTP message.
-        transferEncoding = connHeaders.getHeader('Tranfer-Encoding')
+        print connHeaders
+        transferEncoding = connHeaders.getHeader('Transfer-Encoding')
         
-        
+        print "TransferEncoding:", transferEncoding
         if transferEncoding:
-            i = transferEncoding.find('chunked')
+            try: # Why doesn't list have a .find? stupid python.
+                i = transferEncoding.index('chunked')
+            except:
+                i = -1
+            
             if i != -1:
                 # Chunked
                 self.chunkedIn = 1
@@ -577,7 +585,7 @@ class ChannelRequest:
                 # Would close on end of connection, except this can't happen for
                 # client->server data.
                 raise BadRequest("Transfer-Encoding sent without chunked encoding.")
-
+            
             # Cut off the chunked encoding (cause it's special)
             transferEncoding = transferEncoding[:-1]
             # TODO: support gzip/etc encodings.
@@ -590,7 +598,7 @@ class ChannelRequest:
             # If no Content-Length either, assume no content.
             self.length = connHeaders.getHeader('Content-Length', 0)
             self.chunkedIn = 0
-
+        print "ChunkedIn: ", self.chunkedIn
     
 ############## ChannelRequest *RESPONSE* methods #############
     producer = None
@@ -611,7 +619,6 @@ class ChannelRequest:
         # if we don't have a content length, we send data in
         # chunked mode, so that we can support pipelining in
         # persistent connections.
-        print "Version = ", self.version
         if ((self.version == "HTTP/1.1") and
             (headers.getHeader('Content-Length') is None) and
             not (code in NO_BODY_CODES)):
@@ -619,7 +626,7 @@ class ChannelRequest:
             self.chunkedOut = 1
         l.append("\r\n")
         self.transport.writeSequence(l)
-
+        
     
     def writeData(self, data):
         if self.chunkedOut:
