@@ -43,15 +43,13 @@ from twisted.python import components
 
 class IModel(components.Interface):
     """A MVC Model."""
-    def addView(self, view):
+    def addView(view):
         """Add a view for the model to keep track of."""
-        raise NotImplementedError
 
-    def removeView(self, view):
+    def removeView(view):
         """Remove a view that the model no longer should keep track of."""
-        raise NotImplementedError
 
-    def notify(self, changed=None):
+    def notify(changed=None):
         """
         Notify all views that something was changed on me.
         Passing a dictionary of {'attribute': 'new value'} in changed
@@ -60,28 +58,23 @@ class IModel(components.Interface):
         MVC paradigm of querying the model for things you're interested
         in.
         """
-        raise NotImplementedError
 
 class IView(components.Interface):
     """A MVC View"""
-    def __init__(self, model, controller=None):
+    def __init__(model, controller=None):
         """
         A view must be told what it's model is, and may be told what it's
         controller is, but can also look up it's controller if none specified.
         """
-        raise NotImplementedError
 
-    def draw(self):
-        """Hook subclasses can override to implement drawing the whole view"""
-
-    def modelChanged(self, changed):
+    def modelChanged(changed):
         """
         Dispatch changed messages to any update_* methods which
         may have been defined, then pass the update notification on
         to the controller.
         """
 
-    def controllerFactory(self):
+    def controllerFactory():
         """
         Hook for subclasses to customize the controller that is associated
         with the model associated with this view.
@@ -90,15 +83,16 @@ class IView(components.Interface):
         for the self.model instance.
         """
         
-    def setController(self, controller):
+    def setController(controller):
         """Set the controller that this view is related to."""
 
 class IController(components.Interface):
     """A MVC Controller"""
-    def setView(self, view):
+    def setView(view):
         """
         Set the view that this controller is related to.
         """
+
 
 # Should all these docstrings be duplicated in the implementation
 # of the interfaces?
@@ -171,25 +165,14 @@ class View:
     """
     __implements__ = IView
     
-    def __init__(self, model, controller=None, *args, **kwargs):
+    def __init__(self, model):
         """
         A view must be told what it's model is, and may be told what it's
         controller is, but can also look up it's controller if none specified.
         """
         model.addView(self)
         self.model = model
-        if controller:
-            self.controller = controller
-        else:
-            self.controller = self.controllerFactory(model)
-        self.initialize(*args, **kwargs)
-    
-    def initialize(self):
-        """
-        Hook subclasses can override to set up the initial view
-        after the class is done initializing, without overriding __init__
-        """
-        pass
+        self.controller = self.controllerFactory(model)
 
     def modelChanged(self, changed):
         """
