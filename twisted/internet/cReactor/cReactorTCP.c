@@ -364,6 +364,7 @@ cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw)
     cReactor_AddTransport(reactor, transport);
 
     /* Create the ListeningPort object. */
+    cReactorListeningPortType.ob_type = &PyType_Type;
     port_obj = PyObject_New(cReactorListeningPort,
                             &cReactorListeningPortType);
     Py_INCREF(transport);
@@ -440,7 +441,7 @@ cReactorListeningPort_repr(PyObject *self)
 /* The ListeningPort type. */
 static PyTypeObject cReactorListeningPortType = 
 {
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,
     "cReactorListeningPort", /* tp_name */
     sizeof(cReactorListeningPort),  /* tp_basicsize */

@@ -1101,6 +1101,7 @@ cReactor_New(void)
     cReactor *reactor;
 
     /* Create a new object. */
+    cReactorType.ob_type = &PyType_Type;
     reactor = PyObject_New(cReactor, &cReactorType);
 
     /* No control pipe descriptors. */
@@ -1235,7 +1236,7 @@ cReactor_repr(PyObject *self)
 /* The cReactor type. */
 static PyTypeObject cReactorType = 
 {
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,
     "cReactor",         /* tp_name */
     sizeof(cReactor),   /* tp_basicsize */

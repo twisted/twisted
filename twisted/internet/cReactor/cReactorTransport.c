@@ -277,6 +277,7 @@ cReactorTransport_New(cReactor *reactor,
         }
     }
 
+    cReactorTransportType.ob_type = &PyType_Type;
     transport = PyObject_New(cReactorTransport, &cReactorTransportType);
     transport->next                 = NULL;
     transport->state                = CREACTOR_TRANSPORT_STATE_ACTIVE;
@@ -372,7 +373,7 @@ cReactorTransport_repr(PyObject *self)
 /* The Transport type. */
 static PyTypeObject cReactorTransportType = 
 {
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,
     "cReactorTransport", /* tp_name */
     sizeof(cReactorTransport),  /* tp_basicsize */
