@@ -38,7 +38,7 @@ class ProcessingFunctionFactory:
         except sux.ParseError, e:
             raise process.NoProcessorError(str(e))
         df = lambda file, linkrel: self.doFile[0](file, linkrel, d['ext'],
-                                           d['baseurl'], templ)
+                                           d['baseurl'], templ, d)
         return df
 
     latexSpitters = {None: latex.LatexSpitter,

@@ -59,11 +59,12 @@ def formulaeToImages(document, dir):
         node.parentNode.replaceChild(newNode, node)
 
 
-def doFile(fn, docsdir, ext, url, templ, linkrel=''):
+def doFile(fn, docsdir, ext, url, templ, linkrel='', d=None):
+    d = d or {}
     doc = tree.parseFileAndReport(fn)
     formulaeToImages(doc, os.path.dirname(fn))
     cn = templ.cloneNode(1)
-    tree.munge(doc, cn, linkrel, docsdir, fn, ext, url)
+    tree.munge(doc, cn, linkrel, docsdir, fn, ext, url, d)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
 
 

@@ -278,10 +278,11 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     return slides
 
 
-def doFile(fn, linkrel, ext, url, templ):
+def doFile(fn, linkrel, ext, url, templ, d=None):
     from tree import parseFileAndReport
+    d = d or {}
     doc = parseFileAndReport(fn)
-    slides = munge(doc, templ, linkrel, os.path.dirname(fn), fn, ext, url)
+    slides = munge(doc, templ, linkrel, os.path.dirname(fn), fn, ext, url, d)
     for slide, index in zip(slides, range(len(slides))):
         slide.dom.writexml(open(os.path.splitext(fn)[0]+'-'+str(index)+ext, 'wb'))
 

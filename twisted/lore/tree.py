@@ -223,7 +223,7 @@ def setAuthors(template, authors):
                for name, href in authors]
     head.childNodes.extend(authors)
 
-def munge(document, template, linkrel, d, fullpath, ext, url):
+def munge(document, template, linkrel, d, fullpath, ext, url, config):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
@@ -267,8 +267,9 @@ def parseFileAndReport(fn):
     except IOError, e:
         raise process.ProcessingFailure(e.strerror)
 
-def doFile(fn, linkrel, ext, url, templ):
+def doFile(fn, linkrel, ext, url, templ, d=None):
+    d = d or {}
     doc = parseFileAndReport(fn)
     cn = templ.cloneNode(1)
-    munge(doc, cn, linkrel, os.path.dirname(fn), fn, ext, url)
+    munge(doc, cn, linkrel, os.path.dirname(fn), fn, ext, url, d)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
