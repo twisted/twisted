@@ -76,6 +76,24 @@ def deferredResult(d, timeout=None):
     else:
         return result
 
+def wait(d, timeout=10):
+    """This function is unstable.
+
+    Waits (spins the reactor) for a Deferred to arrive, then returns
+    or throws an exception, based on the result. The difference
+    between this and deferredResult is that it actually throws the
+    original exception, not the Failure, so synchronous exception
+    handling is much more sane.
+    """
+    result = _getDeferredResult(d, timeout)
+    if isinstance(result, failure.Failure):
+        if result.tb:
+            raise result.value.__class__, result.value, result.tb
+        raise result.value
+    else:
+        return result
+    
+
 def deferredError(d, timeout=None):
     """Waits for deferred to fail, and it returns the Failure.
 

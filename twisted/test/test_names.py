@@ -24,6 +24,7 @@ from __future__ import nested_scopes
 import sys, socket, operator, copy
 from twisted.trial import unittest
 from twisted.trial.util import deferredResult as dR
+from twisted.trial.util import wait
 
 from twisted.internet import reactor, protocol, defer, error
 from twisted.names import client, server, common, authority, hosts
@@ -467,16 +468,16 @@ class HostsTestCase(unittest.TestCase):
         
         for name, ip in data:
             self.assertEquals(
-                dR(self.resolver.getHostByName(name)),
+                wait(self.resolver.getHostByName(name)),
                 ip)
 
     def testLookupAddress(self):
-        stuff = dR(self.resolver.lookupAddress('HOOJY'))
+        stuff = wait(self.resolver.lookupAddress('HOOJY'))
         self.assertEquals(stuff[0][0].payload.dottedQuad(), '1.1.1.2')
 
     def testIPv6(self):
         self.assertEquals(
-            dR(self.resolver.lookupIPV6Address('ip6thingy')),
+            wait(self.resolver.lookupIPV6Address('ip6thingy')),
             '::1') #???
 
     testIPv6.skip = 'IPv6 support is not in our hosts resolver yet'
@@ -484,9 +485,14 @@ class HostsTestCase(unittest.TestCase):
     def testNotImplemented(self):
         self.assertRaises(
             NotImplementedError,
-            lambda: dR(self.resolver.lookupMailExchange('EXAMPLE')))
+            lambda: wait(self.resolver.lookupMailExchange('EXAMPLE')))
 
     def testQuery(self):
         self.assertEquals(
-            dR(self.resolver.query(dns.Query('EXAMPLE')))[0][0].payload.dottedQuad(),
+            wait(self.resolver.query(dns.Query('EXAMPLE')))[0][0].payload.dottedQuad(),
             '1.1.1.1')
+
+    def testNotFound(self):
+        self.assertRaises(
+            dns.DomainError,
+            wait, self.resolver.lookupAddress('foueoa'))
