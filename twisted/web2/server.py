@@ -134,6 +134,24 @@ class StopTraversal(object):
 
 
 class Request(http.Request):
+    """
+    vars:
+    site 
+    scheme
+    host
+    path
+    params
+    args
+    
+    prepath
+    postpath
+
+    @ivar path: The path only (arguments not included).
+    @ivar args: All of the arguments, including URL and POST arguments.
+    @type args: A mapping of strings (the argument names) to lists of values.
+                i.e., ?foo=bar&foo=baz&quux=spam results in
+                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+    """
     implements(iweb.IRequest)
     
     site = None
@@ -141,7 +159,6 @@ class Request(http.Request):
     responseFilters = [rangefilter.rangefilter, defaultErrorHandler, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):
-        self.notifications = []
         if kw.has_key('site'):
             self.site = kw['site']
             del kw['site']
@@ -151,7 +168,7 @@ class Request(http.Request):
         
         http.Request.__init__(self, *args, **kw)
         
-    def parseURL(self):
+    def _parseURL(self):
         (self.scheme, self.host, self.path,
          self.params, argstring, fragment) = urlparse.urlparse(self.uri)
         
@@ -173,26 +190,21 @@ class Request(http.Request):
         else:
             self.prepath = []
             self.postpath = path
-        self.sitepath = self.prepath[:]
         
 
-    def getHost(self):
+    def _calculateHost(self):
         if self.host:
-            return self.host
+            return
         host = self.headers.getHeader('host')
         if not host:
             if self.clientproto >= (1,1):
                 raise http.HTTPError(BAD_REQUEST)
             host = self.chanRequest.channel.transport.getHost().host
-        return host
+        self.host = host
 
     def process(self):
         "Process a request."
-        # get site from channel
-        if not self.site:
-            self.site = self.chanRequest.channel.site
-
-        requestContext = context.RequestContext(tag=self)
+        requestContext = context.RequestContext(tag=self, parent=self.site.context)
         
         try:
             self.checkExpect()
@@ -200,16 +212,15 @@ class Request(http.Request):
             if resp is not None:
                 self._cbFinishRender(resp, requestContext).addErrback(self._processingFailed, requestContext)
                 return
-            self.parseURL()
-            self.host = self.getHost()
+            self._parseURL()
+            self._calculateHost()
         except:
             failedDeferred = self._processingFailed(failure.Failure(), requestContext)
             failedDeferred.addCallback(self._renderAndFinish)
             return
-
-
+        
         deferredContext = self._getChild(requestContext,
-                                         self.site.getRootResource(),
+                                         self.site.resource,
                                          self.postpath)
         deferredContext.addErrback(self._processingFailed, requestContext)
         deferredContext.addCallback(self._renderAndFinish)
@@ -347,42 +358,18 @@ class Request(http.Request):
             return d
 
         raise TypeError("html is not a resource or a response")
-    
-    def notifyFinish(self):
-        """Notify when finishing the request
-
-        @return: A deferred. The deferred will be triggered when the
-        request is finished -- with a C{None} value if the request
-        finishes successfully or with an error if the request is stopped
-        by the client.
-        """
-        self.notifications.append(defer.Deferred())
-        return self.notifications[-1]
-
-    def _error(self, reason):
-        http.Request._error(self, reason)
-        for d in self.notifications:
-            d.errback(reason)
-        self.notifications = []
-
-    def _finished(self, x):
-        http.Request._finished(self, x)
-        for d in self.notifications:
-            d.callback(None)
-        self.notifications = []
 
 class Site(http.HTTPFactory):
-
-    counter = 0
-    version = "TwistedWeb/%s" % copyright.version
-    
     def __init__(self, resource, **kwargs):
         """Initialize.
         """
         if not 'requestFactory' in kwargs:
             kwargs['requestFactory'] = Request
+        requestFactory = kwargs['requestFactory']
+        
+        kwargs['requestFactory'] = lambda *args, **kwargs: requestFactory(site=self, *args, **kwargs)
+        
         http.HTTPFactory.__init__(self, **kwargs)
-        self.sessions = {}
         self.context = context.SiteContext()
         self.resource = iweb.IResource(resource)
 
@@ -394,32 +381,3 @@ class Site(http.HTTPFactory):
         remembered here will be available throughout the site.
         """
         self.context.remember(obj, inter)
-        
-    def mkuid(self):
-        """Generate an opaque, unique ID for a user's session."""
-        import md5, random
-        self.counter = self.counter + 1
-        digest = md5.new("%s_%s" % (random.random() , self.counter))
-        return digest.hexdigest()
-
-    def setSession(self, session):
-        """Generate a new Session instance, and store it for future reference.
-        """
-        self.sessions[uid] = session
-
-    def getSession(self, uid):
-        """Get a previously generated session, by its unique ID.
-        This raises a KeyError if the session is not found.
-        """
-        return self.sessions[uid]
-
-    def buildProtocol(self, addr):
-        """Generate a channel attached to this site.
-        """
-        channel = http.HTTPFactory.buildProtocol(self, addr)
-        channel.site = self
-        return channel
-
-    def getRootResource(self):
-        return self.resource
-    

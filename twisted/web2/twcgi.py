@@ -35,6 +35,8 @@ import static
 import stream
 
 
+headerNameTranslation = ''.join([c.isalnum() and c.upper() or '_' for c in map(chr, range(256))])
+
 def createCGIEnvironment(ctx, request=None):
     if request is None:
         request = iweb.IRequest(ctx)
@@ -92,8 +94,12 @@ def createCGIEnvironment(ctx, request=None):
 
     # Propagate HTTP headers
     for title, header in request.headers.getAllRawHeaders():
-        envname = title.replace('-', '_').upper()
-        if title not in ('content-type', 'content-length'):
+        envname = title.translate(headerNameTranslation)
+        # Don't send headers we already sent otherwise, and don't
+        # send authorization headers, because that's a security
+        # issue.
+        if title not in ('content-type', 'content-length',
+                         'authorization', 'proxy-authorization'):
             envname = "HTTP_" + envname
         env[envname] = ','.join(header)
             
@@ -184,8 +190,6 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
     headertext = ''
     errortext = ''
 
-    # Remotely relay producer interface.
-
     def resumeProducing(self):
         self.transport.resumeProducing()
 
@@ -264,14 +268,14 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
             name = header.lower()[:breakpoint]
             text = header[breakpoint+2:]
             if name == 'location':
-                self.response.code = responsecode.FOUND
+                if self.response.code == responsecode.OK:
+                    self.response.code = responsecode.FOUND
             if name == 'status':
                 try:
-                    statusNum = int(text[:3]) # "123 <description>" sometimes happens.
+                     # "123 <description>" sometimes happens.
+                    self.response.code = int(text.split(' ', 1)[0])
                 except:
                     log.msg("malformed status header: %s" % header)
-                else:
-                    self.response.code = statusNum
             else:
                 self.response.headers.addRawHeader(name, text)
 

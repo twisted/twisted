@@ -98,8 +98,13 @@ class Resource(object):
     def http_GET(self, ctx):
         """Ensures there is no incoming body data, and calls render."""
         request = iweb.IRequest(ctx)
+        if self.addSlash and iweb.ICurrentSegments(ctx)[-1] != '':
+            # FIXME! return redirect
+            #return request.redirect(request.URLPath().child(''))
+            return 555
+            
         if request.stream.length != 0:
-            return http.Response(REQUEST_ENTITY_TOO_LARGE)
+            return REQUEST_ENTITY_TOO_LARGE
         return self.render(ctx)
 
     def http_OPTIONS(self, ctx):
@@ -115,7 +120,7 @@ class Resource(object):
         """Your class should implement this method to do default page rendering.
         """
         raise NotImplementedError("Subclass must implement render method.")
-
+components.backwardsCompatImplements(Resource)
 
 class PostableResource(Resource):
     def http_POST(self, ctx):

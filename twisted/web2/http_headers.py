@@ -348,7 +348,6 @@ def parseAcceptQvalue(field):
             qvalue = float(arg[1])
     return type,qvalue
 
-
 def addDefaultCharset(charsets):
     if charsets.get('*') is None and charsets.get('iso-8859-1') is None:
         charsets['iso-8859-1'] = 1.0
@@ -416,7 +415,16 @@ def parseExpires(header):
         return parseDateTime(header)
     except ValueError:
         return 0
+
+def parseIfModifiedSince(header):
+    # Ancient versions of netscape and *current* versions of MSIE send
+    #   If-Modified-Since: Thu, 05 Aug 2004 12:57:27 GMT; length=123
+    # which is blantantly RFC-violating and not documented anywhere
+    # except bug-trackers for web frameworks.
     
+    # So, we'll just strip off everything after a ';'.
+    return parseDateTime(header.split(';', 1)[0])
+
 def parseIfRange(headers):
     try:
         return ETag.parse(tokenize(headers))
@@ -996,17 +1004,6 @@ class Headers:
         self._raw_headers = headers
         self._headers = {}
         
-    def _addHeader(self, name, strvalue):
-        """Add a header & value to the collection of headers. Appends not replaces
-        a previous header of the same name."""
-        name = name.lower()
-        old = self._raw_headers.get(name, None)
-        if old is None:
-            old = []
-            self._raw_headers[name]=old
-        old.append(strvalue)
-        self._headers[name] = _RecalcNeeded
-    
     def _toParsed(self, name):
         parser = self.parsers.get(name, None)
         if parser is None:
@@ -1085,14 +1082,24 @@ class Headers:
         name=name.lower()
         self._raw_headers[name] = _RecalcNeeded
         self._headers[name] = value
-
+    
     def addRawHeader(self, name, value):
         """
         Add a raw value to a header that may or may not already exist.
         If it exists, add it as a separate header to output; do not
         replace anything.
         """
-        self.setRawHeaders(name, self.getRawHeaders(name, []) + [value])
+        name=name.lower()
+        raw_header = self._raw_headers.get(name)
+        if raw_header is None:
+            # No header yet
+            raw_header = []
+            self._raw_headers[name] = raw_header
+        elif raw_header is _RecalcNeeded:
+            raw_header = self._toRaw(name)
+        
+        raw_header.append(value)
+        self._headers[name] = _RecalcNeeded
 
     def removeHeader(self, name):
         """Removes the header named."""
@@ -1174,7 +1181,7 @@ parser_request_headers = {
     'From':(last,),
     'Host':(last,),
     'If-Match':(tokenize, listParser(parseStarOrETag), list),
-    'If-Modified-Since':(last,parseDateTime),
+    'If-Modified-Since':(last, parseIfModifiedSince),
     'If-None-Match':(tokenize, listParser(parseStarOrETag), list),
     'If-Range':(parseIfRange,),
     'If-Unmodified-Since':(last,parseDateTime),

@@ -71,7 +71,7 @@ class HTTPError(Exception):
     def __init__(self, codeOrResponse):
         Exception.__init__(self)
         self.response = iweb.IResponse(codeOrResponse)
-        
+
 class Response(object):
     implements(iweb.IResponse)
     
@@ -83,11 +83,13 @@ class Response(object):
         if code is not None:
             self.code=code
         if headers is not None:
+            if isinstance(headers, dict):
+                headers = http_headers.Headers(headers)
             self.headers=headers
         else:
             self.headers = http_headers.Headers()
         self.stream = stream
-        
+
 def NotModifiedResponse(oldResponse=None):
     if oldResponse is not None:
         headers=http_headers.Headers()
@@ -233,16 +235,13 @@ class Request(object):
     
     @ivar method: The HTTP method that was used.
     @ivar uri: The full URI that was requested (includes arguments).
-    @ivar path: The path only (arguments not included).
-    @ivar args: All of the arguments, including URL and POST arguments.
-    @type args: A mapping of strings (the argument names) to lists of values.
-                i.e., ?foo=bar&foo=baz&quux=spam results in
-                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
-    @ivar received_headers: All received headers
+    @ivar headers: All received headers
+    @ivar clientproto: client HTTP version
+    @ivar stream: incoming data stream.
     """
-
+    
     implements(iweb.IRequest, interfaces.IConsumer)
-
+    
     known_expects = ('100-continue',)
     
     def __init__(self, chanRequest, command, path, version, headers):
@@ -511,7 +510,7 @@ class HTTPChannelRequest:
         
         name, val = nameval
         val = val.lstrip(' \t')
-        self.reqHeaders._addHeader(name, val)
+        self.reqHeaders.addRawHeader(name, val)
         
         self.headerlen = self.headerlen+ len(line)
         

@@ -5,6 +5,7 @@
 - Low level protocol:
  - Proper POST support (need psudeo-MIME parser)
  - Authentication (basic and digest)
+ - Close connection if resource doesn't read entire input stream
 
  - sendfile (initial sketch in stream.py, but needs work in twisted, too)
  - Gzip Transfer-Encoding.

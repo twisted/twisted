@@ -313,7 +313,13 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
             )            
     def testIfModifiedSince(self):
         # Don't need major tests since the datetime parser has its own test
-        self.runRoundtripTest("If-Modified-Since", (("Sun, 09 Sep 2001 01:46:40 GMT", 1000000000),))
+        # Just test stupid ; length= brokenness.
+        table = (
+            ("Sun, 09 Sep 2001 01:46:40 GMT", 1000000000),
+            ("Sun, 09 Sep 2001 01:46:40 GMT; length=500", 1000000000, "Sun, 09 Sep 2001 01:46:40 GMT"),
+            )
+        
+        self.runRoundtripTest("If-Modified-Since", table)
         
     def testIfNoneMatch(self):
         table = (

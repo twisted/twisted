@@ -62,7 +62,7 @@ class TestChanRequest:
 class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
-    addSlash = True
+    addSlash = False
 
     def __init__(self, children=[]):
         """
@@ -132,6 +132,7 @@ class BaseCase(unittest.TestCase):
 
 class SampleWebTest(BaseCase):
     class SampleTestResource(BaseTestResource):
+        addSlash = True
         def child_validChild(self, ctx):
             f = BaseTestResource()
             f.responseCode = 200
@@ -165,6 +166,7 @@ class SampleWebTest(BaseCase):
 
 class TestDeferredRendering(BaseCase):
     class ResourceWithDeferreds(BaseTestResource):
+        addSlash=True
         responseText = 'I should be wrapped in a Deferred.'
         def render(self, ctx):
             from twisted.internet import reactor

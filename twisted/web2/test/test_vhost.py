@@ -6,6 +6,7 @@ from twisted.web2 import iweb
 from twisted.web2 import stream
 
 class HostResource(BaseTestResource):
+    addSlash=True
     def child_bar(self, ctx):
         return self
 
@@ -46,7 +47,7 @@ class TestVhost(BaseCase):
         """
         
         self.assertResponse(
-            (self.root, 'http://foo/bar'),
+            (self.root, 'http://foo/bar/'),
             (200, {}, 'foo'))
 
     def testNameVirtualHostWithNesting(self):

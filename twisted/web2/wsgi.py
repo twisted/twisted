@@ -4,13 +4,14 @@ A non-blocking container resource for WSGI web applications.
 
 import os, threading
 import Queue
+from zope.interface import implements
 
 from twisted.internet import defer
 from twisted.python import log, failure
 from twisted.web2 import http
 from twisted.web2 import iweb
-from twisted.web2 import resource
 from twisted.web2 import responsecode
+from twisted.web2 import server
 from twisted.web2 import stream
 from twisted.web2.twcgi import createCGIEnvironment
 
@@ -19,12 +20,16 @@ class AlreadyStartedResponse(Exception):
     pass
 
 
-class WSGIResource(resource.LeafResource):
+# This isn't a subclass of resource.Resource, because it shouldn't do
+# any method-specific actions at all. All that stuff is totally up to
+# the contained wsgi application
+class WSGIResource(object):
+    implements(iweb.IResource)
+    
     def __init__(self, application):
-        resource.Resource.__init__(self)
         self.application = application
 
-    def render(self, ctx):
+    def renderHTTP(self, ctx):
         from twisted.internet import reactor
         # Do stuff with WSGIHandler.
         handler = WSGIHandler(self.application, ctx)
@@ -33,10 +38,10 @@ class WSGIResource(resource.LeafResource):
         # Run it in a thread
         reactor.callInThread(handler.run)
         return d
-
-    def http_POST(self, ctx):
-        return self.render(ctx)
     
+    def locateChild(self, request, segments):
+        return self, server.StopTraversal
+            
 def callInReactor(__f, *__a, **__kw):
     from twisted.internet import reactor
     queue = Queue.Queue()
@@ -51,42 +56,15 @@ def __callFromThread(queue, f, a, kw):
     result.addBoth(queue.put)
 
 class InputStream(object):
-    def __init__(self, stream):
-        self.stream = stream
-        self.data = ''
+    def __init__(self, newstream):
+        self.stream = stream.BufferedStream(newstream)
         
     def read(self, size=None):
-        data = self.data
-        while True:
-            if size is not None and len(data) >= size:
-                pre,post = data[:size], data[size:]
-                self.data=post
-                return pre
-            
-            newdata = callInReactor(self.stream.read)
-            if not newdata:
-                # End Of File
-                self.data = ''
-                return data
-            data += newdata
+        return callInReactor(self.stream.readExactly, size)
 
     def readline(self):
-        data = self.data
-        while True:
-            offset = data.find('\n')
-            if offset != -1:
-                self.data = data[offset+1:]
-                return data[:offset+1]
-            
-            newdata = callInReactor(self.stream.read)
-            if not newdata:
-                # End Of File
-                self.data = ''
-                return data
-            data += newdata
-            
-        pass
-
+        return callInReactor(self.stream.readline, '\n')+'\n'
+    
     def readlines(self, hint):
         data = self.read()
         return [s+'\n' for s in data.split('\n')]
@@ -95,14 +73,14 @@ class ErrorStream(object):
     def flush(self):
         return
 
-    def write(s):
+    def write(self, s):
         from twisted.internet import reactor
-        log.err(s)
+        log.msg("WSGI app error: "+s, isError=True)
 
-    def writelines(seq):
+    def writelines(self, seq):
         from twisted.internet import reactor
         s = ''.join(seq)
-        log.err(s)
+        log.msg("WSGI app error: "+s, isError=True)
 
 class WSGIHandler(object):
     headersSent = False
@@ -155,7 +133,6 @@ class WSGIHandler(object):
             self.handleResult(result)
         except:
             log.err()
-            pass
 
 
     def __callback(self):

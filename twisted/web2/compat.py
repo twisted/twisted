@@ -286,6 +286,7 @@ class OldRequestAdapter(components.Componentized, object):
     def getSession(self, sessionInterface = None):
         # Session management
         if not self.session:
+            # FIXME: make sitepath be something
             cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
