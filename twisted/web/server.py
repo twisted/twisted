@@ -139,15 +139,6 @@ class Request(pb.Copyable, http.HTTP):
             else:
                 return name
 
-    def _parse_argstring(self, argstring, split=string.split):
-        for kvp in split(argstring, '&'):
-            keyval = map(urllib.unquote, split(kvp, '='))
-            if len(keyval) != 2:
-                continue
-            key, value = keyval
-            arg = self.args[key] = self.args.get(key, [])
-            arg.append(value)
-
     def requestReceived(self, command, path, version, content):
         from string import split
         self.args = {}
@@ -167,7 +158,14 @@ class Request(pb.Copyable, http.HTTP):
                 log.msg("May ignore parts of this invalid URI:",
                         repr(self.uri))
             self.path, argstring = urllib.unquote(x[0]), x[1]
-            self._parse_argstring(argstring)
+            # parse the argument string
+            for kvp in string.split(argstring, '&'):
+                keyval = map(urllib.unquote, string.split(kvp, '='))
+                if len(keyval) != 2:
+                    continue
+                key, value = keyval
+                arg = self.args[key] = self.args.get(key, [])
+                arg.append(value)
 
         self.process()
 
