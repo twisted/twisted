@@ -646,9 +646,10 @@ def reallyRun(config):
         else:
             def _doRun(config):
                 suite = _getSuite(config)
-                _getDebugger().run("suite.run(config['random'])", globals(), locals())
+                suite.debugger = suite.reporter.debugger = True
+                suite.run(config['random'])
                 return suite
-            return call_until_failure(_doRun, config)
+            return _getDebugger(config).runcall(call_until_failure, _doRun, config)
 
     suite = _getSuite(config)
     if config['debug']:
