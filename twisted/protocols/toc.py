@@ -599,7 +599,7 @@ class TOCClient(protocol.Protocol):
         self.username=normalize(username) # our username
         self._password=password # our password
         self._mode="SendNick" # current mode
-        self._ourseqnum=0L # current sequence number (for sendFlap)
+        self._ourseqnum=19071 # current sequence number (for sendFlap)
         self._authhost=authhost # authorization host
         self._authport=authport # authorization port
         self._online=0 # are we online?
@@ -619,7 +619,7 @@ class TOCClient(protocol.Protocol):
         s=s+struct.pack("!BHH",type,self._ourseqnum,length)
         s=s+data
         self._ourseqnum=self._ourseqnum+1
-        if self._ourseqnum>(256L**4):
+        if self._ourseqnum>(256*256+256):
             self._ourseqnum=0
         self._debug(data)
         self.transport.write(s)
@@ -649,10 +649,6 @@ class TOCClient(protocol.Protocol):
     def connectionMade(self):
         self._debug("connection made! %s" % self.transport)
         self.transport.write("FLAPON\r\n\r\n")
-        s="\000\000\000\001\000\001"
-        s=s+struct.pack("!H",len(self.username))
-        s=s+self.username
-        self.sendFlap(1,s)        
     def connectionLost(self):
         self._debug("connection lost!")
         self._online=0
@@ -664,7 +660,9 @@ class TOCClient(protocol.Protocol):
             func(flap)
     def modeSendNick(self,flap):
         if flap!=[1,"\000\000\000\001"]: raise TOCParseError
-        s="toc_signon %s %s %s %s english \"penguin\""%(self._authhost,\
+        s="\000\000\000\001\000\001"+struct.pack("!H",len(self.username))+self.username
+        self.sendFlap(1,s)
+        s="toc_signon %s %s  %s %s english \"penguin\""%(self._authhost,\
             self._authport,self.username,roast(self._password))
         self.sendFlap(2,s)
         self._mode="Data"
@@ -832,7 +830,7 @@ class TOCClient(protocol.Protocol):
         autoreply := true if the message is an autoreply from an away message
         """
         pass
-    def updateBuddy(self,username,online,evilness,signontime,idletime,away):
+    def updateBuddy(self,username,online,evilness,signontime,idletime,userclass,away):
         """
         called when a buddy changes state
         username := the user whos state changed
@@ -841,6 +839,7 @@ class TOCClient(protocol.Protocol):
         signontime := the time the user signed on (UNIX epoch)
         idletime := the time the user has been idle (minutes)
         away := true if the user is away
+        userclass := the class of the user (generally " O")
         """
         pass
     def chatJoined(self,roomid,roomname):
