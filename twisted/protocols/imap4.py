@@ -1248,63 +1248,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def do_FETCH(self, tag, messages, query, uid=0):
-        if len(inspect.getargs(self.mbox.fetch.im_func.func_code)[0]) == 4:
-            import warnings
-            warnings.warn(
-                "Accepting the query argument in IMailbox.fetch() is deprecated.",
-                DeprecationWarning, stacklevel=2
-            )
-            maybeDeferred(self.mbox.fetch, messages, query, uid=uid).addCallbacks(
-                self.__cbFetch, self.__ebFetch,
-                (tag, query, uid), None, (tag,), None
-            )
-        else:
-            maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
-                self.__cbFetch, self.__ebFetch,
-                (tag, query, uid), None, (tag,), None
-            )
+        maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
+            self.__cbFetch, self.__ebFetch,
+            (tag, query, uid), None, (tag,), None
+        )
 
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
 
     def __cbFetch(self, results, tag, query, uid):
-        if isinstance(results, dict):
-            import warnings
-            warnings.warn(
-                "Returning a dict from imap4.IMailbox.fetch is deprecated.  "
-                "Return an iterable of IMessage implementors instead.",
-                DeprecationWarning, stacklevel=2
-            )
-            results = results.iteritems()
-            self._consumeFetchResponse(results, tag, query, uid)
-        else:
-            self._consumeMessageIterable(results, tag, query, uid)
-
-    def _consumeFetchResponse(self, results, tag, query, uid):
-        try:
-            msgId, parts = results.next()
-        except StopIteration:
-            self.sendPositiveResponse(tag, 'FETCH completed')
-        else:
-            # Case normalization
-            parts = dict([(k.lower(), v) for (k, v) in parts.iteritems()])
-            finalParts = []
-            sawUID = False
-            for p in query:
-                key = str(p).lower()
-                ukey = key.upper()
-                if ukey == 'UID':
-                    sawUID = True
-                try:
-                    finalParts.extend((ukey, parts[key]))
-                except KeyError:
-                    log.err("imap4.IMailbox.fetch() did not return %s response" % (key,))
-            if uid and not sawUID:
-                finalParts[:0] = ['UID', str(msgId)]
-            self.sendUntaggedResponse(
-                '%d FETCH %s' % (msgId, collapseNestedLists([finalParts]))
-            )
-            from twisted.internet import reactor
-            reactor.callLater(0, self._consumeFetchResponse, results, tag, query, uid)
+        self._consumeMessageIterable(results, tag, query, uid)
 
     def _consumeMessageIterable(self, results, tag, query, uid):
         try:
@@ -1339,10 +1291,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 response.extend(('RFC822', _formatHeaders(msg.getHeaders(True)) + msg.getBodyFile().read()))
             elif part.type == 'uid':
                 seenUID = True
-                if uid:
-                    response.extend(('UID', str(msgId)))
-                else:
-                    response.extend(('UID', str(msg.getUID())))
+                response.extend(('UID', str(msg.getUID())))
             elif part.type == 'bodystructure':
                 response.extend(('BODYSTRUCTURE', getBodyStructure(msg, True)))
             elif part.type == 'body':
@@ -1366,7 +1315,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     response.extend(('BODY', getBodyStructure(msg, False)))
 
         if uid and not seenUID:
-            response[:0] = ['UID', str(msgId)]
+            response[:0] = ['UID', str(msg.getUID())]
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
 
     def __ebFetch(self, failure, tag):
@@ -4102,8 +4051,8 @@ class IMailbox(components.Interface):
         @param uid: If true, the IDs specified in the query are UIDs;
         otherwise they are message sequence IDs.
 
-        @rtype: Any iterable of two-tuples of message IDs and implementors
-        of C{IMessage}.
+        @rtype: Any iterable of two-tuples of message sequence numbers and
+        implementors of C{IMessage}.
         """
 
     def store(self, messages, flags, mode, uid):
@@ -4135,8 +4084,13 @@ class IMailbox(components.Interface):
         read-write.
         """
 
-def _formatHeaders(headers):
-    hdrs = [': '.join((k, '\r\n'.join(v.splitlines()))) for (k, v) in headers.iteritems()]
+def _formatHeaders(headers, order=None):
+    if order is not None:
+        headers = dict([(h.lower(), v) for (h, v) in headers.iteritems()])
+        items = [(h, headers[h.lower()]) for h in order if h.lower() in headers]
+    else:
+        items = headers.iteritems()
+    hdrs = [': '.join((k, '\r\n'.join(v.splitlines()))) for (k, v) in items]
     hdrs = '\r\n'.join(hdrs) + '\r\n'
     return hdrs
 
