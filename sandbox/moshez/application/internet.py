@@ -143,3 +143,9 @@ class TimerService(_VolatileDataService):
     def stopService(self):
         service.Service.stopService(self)
         self._call.cancel()
+
+__all__ = (['TimerService']+
+           [tran+side
+         for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
+         for side in 'Server Client'.split()])
+

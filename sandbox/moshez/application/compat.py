@@ -328,3 +328,5 @@ def convert(oldApp):
         s.disownServiceParent()
         s.setServiceParent(c)
     return ret
+
+__all__ = ['IOldApplication', 'convert']
