@@ -159,7 +159,7 @@ class TkMkAppFrame(Tkinter.Frame):
     def copyOptions(self):
         # Snarf the data out of the widgets and place them into the Options
         # instance.
-        for (opt, var) in self.optFlags + self.optParameters:
+        for (opt, var) in self.optFrame.optFlags + self.optFrame.optParameters:
             self.options[opt] = var.get()
 
         self.options['filename'] = self.tapfile.get()
@@ -176,6 +176,10 @@ class TkMkAppFrame(Tkinter.Frame):
 
 
     def createApplication(self):
+        if not self.options:
+            tkMessageBox.showerror(message="Select an Application first")
+            return
+
         self.copyOptions()
 
         if self.options['append'] and os.path.exists(self.options['filename']):
@@ -190,7 +194,18 @@ class TkMkAppFrame(Tkinter.Frame):
             traceback.print_stack(file=f)
             tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
         else:
-            a.save()
+            try:
+                a.save(filename=self.options['filename'])
+            except:
+                f = StringIO.StringIO()
+                traceback.print_stack(file=f)
+                tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
+            else:
+                filename = self.options['filename']
+                print repr(filename)
+                if not filename:
+                    filename = self.coil.name
+                tkMessageBox.showinfo(message="Wrote " + filename)
 
 
     def destroy(self):
@@ -341,19 +356,7 @@ def run():
     keyList = taps.keys()
     keyList.sort()
 
-    coil = None
-    # Find a tap that doesn't give us an error
-    for t in taps.values():
-        try:
-            t.load().Options()
-        except:
-            pass
-        else:
-            break
-    else:
-        coil = t
-        
-    config = TkMkAppFrame(r, coil)
+    config = TkMkAppFrame(r, None)
     menu = TkAppMenu(
         r,
         config.createApplication,
