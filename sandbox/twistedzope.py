@@ -94,12 +94,18 @@ class HTTPFactory(protocol.ServerFactory):
 
 
 if __name__ == '__main__':
+    
     class tested_object:
-        " "
+        """An example object to be published."""
         tries = 0
     
-        def __call__(self, URL):
-            return 'URL invoked: %s\n' % URL
+        def __call__(self, URL, REQUEST):
+            self.tries += 1
+            result = 'URL invoked: %s\n' % URL
+            result += "Number of times: %d\n" % self.tries
+            for key in REQUEST.form.keys():
+                result += "%r = %r\n" % (key, REQUEST.get(key))
+            return result
         
         def redirect_method(self, RESPONSE):
             "Generates a redirect using the redirect() method."
