@@ -232,6 +232,9 @@ class Text(CharacterData):
             val = html.escape(v)
         stream.write(val)
 
+    def __repr__(self):
+        return "Text(%s" % repr(self.nodeValue) + ')'
+
 
 class CDATASection(CharacterData):
     def cloneNode(self, deep=0, parent=None):
