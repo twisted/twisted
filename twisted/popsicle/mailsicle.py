@@ -40,6 +40,12 @@ useful prelude to developing an efficient relational schema for a set of
 objects, while providing a fallback mechanism in the case where a database is
 not installed.
 
+Future Work:
+
+    - optionally allow for backending to BSDDB or other single-file approach
+      instead of sprawling across filesystem, first for indexes, then for
+      content
+
 """
 
 # system imports
@@ -54,7 +60,8 @@ from twisted.python.reflect import qual, namedClass
 from twisted.internet import defer
 
 # sibling imports
-import popsicle
+from twisted.popsicle import repos, freezer
+
 
 class IHeaderSaver(Interface):
     """I am an interface which allows objects to be saved to mail-style headers.
@@ -144,7 +151,7 @@ class QueryResults:
         return map(self.repo.loadNow, entries)
 
 
-class Mailsicle(popsicle.DirectoryRepository):
+class Mailsicle(repos.DirectoryRepository):
 
     def loadOIDNow(self, oid):
         f = open(os.path.join(self.dirname, str(oid)))
@@ -183,7 +190,7 @@ class Mailsicle(popsicle.DirectoryRepository):
             return self._revCache[obj][0]
         else:
             # TODO: if OID generation really needs to be async...
-            return popsicle.ref(obj).acquireOID(self)
+            return freezer.ref(obj).acquireOID(self)
 
     def saveOID(self, oid, obj):
         adapt = getSaver(obj,self)
@@ -260,7 +267,7 @@ class Mailsicle(popsicle.DirectoryRepository):
 
     def addressOID(self, obj, desc=None):
         if obj is not None:
-            oid = popsicle.ref(obj, self).acquireOID()
+            oid = freezer.ref(obj, self).acquireOID()
             if desc is not None:
                 return '%s <%s>' % (quotify(desc), oid)
             else:
