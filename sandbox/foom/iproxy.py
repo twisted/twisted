@@ -1,21 +1,42 @@
+from zope.interface import providedBy, interfaces as zinterfaces
+from twisted.python.reflect import getClass
+
 class InterfaceProxy:
     """A wrapper to put around an object that only allows access to the
     specified interfaces.
     """
     def __init__(self, original, interfaces=None):
-        import zope
+        self.__original=original
+        attrs=[]
+        
         if interfaces is None:
-            interfaces = zope.interface.providedBy(original)
+            interfaces = providedBy(original)
+        
         for interface in interfaces:
             for name in interface.names():
                 attr = interface[name]
-                if zope.interface.interfaces.IMethod.providedBy(attr):
+                if zinterfaces.IMethod.providedBy(attr):
                     setattr(self, name,  _functionWrapper(original, name,
                                                          attr.getSignatureInfo()))
+                elif zinterfaces.IAttribute.providedBy(attr):
+                    attrs.append(name)
                 else:
-                    raise TypeError("Cannot handle non-function attributes yet")
-
-
+                    raise TypeError("Unknown kind of attribute.")
+        self.__attrs=attrs
+        self.__setattr__=self.__setattr
+        
+    def __getattr__(self, name):
+        if name not in self.__attrs:
+            raise AttributeError("%s object has no attribute '%s'" %(
+                getClass(self.__original).__name__, name))
+        return getattr(self.__original, name)
+    
+    def __setattr(self, name, val):
+        if name not in self.__attrs:
+            raise AttributeError("%s object has no attribute '%s'" %(
+                getClass(self.__original).__name__, name))
+        return setattr(self.__original, name, val)
+        
 def _functionWrapper(original, name, signatureInfo):
     positional=signatureInfo['positional']
     kwargs=signatureInfo['kwargs']
@@ -42,11 +63,11 @@ def _functionWrapper(original, name, signatureInfo):
                     argcount))
             for k in kw:
                 if kwargs is None:
-                    if k not in kwargs:
+                    if k not in optional:
                         raise TypeError("%.200s() got an unexpected "
                                         "keyword argument '%.400s'" %(
                             name, k))
-                for n in positional[:arglen]:
+                for n in positional[:argcount]:
                     if n == k:
                         raise TypeError("%.200s() got multiple values for "
                                         "keyword argument '%.400s'" %(
