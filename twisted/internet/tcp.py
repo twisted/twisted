@@ -30,13 +30,13 @@ import sys
 import traceback
 
 if os.name == 'nt':
-        EWOULDBLOCK = 10035
-        EINPROGRESS = 10036
-        EALREADY    = 10037
-        ECONNRESET  = 10054
-        ENOTCONN    = 10057
+    EWOULDBLOCK = 10035
+    EINPROGRESS = 10036
+    EALREADY    = 10037
+    ECONNRESET  = 10054
+    ENOTCONN    = 10057
 else:
-        from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, ENOTCONN
+    from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, ENOTCONN
 
 # Twisted Imports
 from twisted.protocols import protocol
@@ -159,10 +159,10 @@ class Client(Connection):
             self.socket.connect(self.addr)
         except socket.error, se:
             if se.args[0] in (EWOULDBLOCK, EALREADY, EINPROGRESS):
-                pass
+                self.startWriting()
             else:
                 self.protocol.connectionFailed()
-                return CONNECTION_LOST
+                self.stopWriting()
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
         del self.doWrite
@@ -332,7 +332,7 @@ class Port(abstract.FileDescriptor):
         # Since ports can't, by definition, write any data, we can just close
         # instantly (no need for the more complex stuff for selectables which
         # write)
-        removeReader(self)
+        self.stopReading()
         self.connectionLost()
 
     def connectionLost(self):
