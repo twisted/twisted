@@ -171,8 +171,8 @@ class LatexSpitter:
     mapStart_body = '\\begin{document}\n\\maketitle\n'
     mapEnd_body = '\\end{document}'
 
-    mapStart_dl = mapStart_ul = '\\begin{itemize}\n'
-    mapEnd_dl = mapEnd_ul = '\\end{itemize}\n'
+    mapStart_dl = mapStart_ul = '\\begin{description}\n'
+    mapEnd_dl = mapEnd_ul = '\\end{description}\n'
 
     mapStart_ol = '\\begin{enumerate}\n'
     mapEnd_ol = '\\end{enumerate}\n'
@@ -180,8 +180,8 @@ class LatexSpitter:
     mapStart_li = '\\item '
     mapEnd_li = '\n'
 
-    mapStart_dt = '\\item{'
-    mapEnd_dt = '}'
+    mapStart_dt = '\\item['
+    mapEnd_dt = ']'
     mapEnd_dd = '\n'
 
     mapStart_p = '\n\n'
