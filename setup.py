@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.103 2003/03/19 00:07:42 itamarst Exp $
+$Id: setup.py,v 1.104 2003/03/19 18:00:27 etrepum Exp $
 """
 
 import distutils, os, sys, string
@@ -36,7 +36,6 @@ from distutils.errors import CompileError
 from distutils.command.build_ext import build_ext
 
 from twisted import copyright
-
 
 #############################################################################
 ### Helpers and distutil tweaks
@@ -239,6 +238,28 @@ desktop environments, and your toaster.
         'build_ext' : build_ext_twisted,
     },
 }
+
+# Apple distributes a nasty version of Python 2.2 w/ all release builds of
+# OS X 10.2 and OS X Server 10.2
+BROKEN_CONFIG = '2.2 (#1, 07/14/02, 23:25:09) \n[GCC Apple cpp-precomp 6.14]'
+if sys.platform == 'darwin' and sys.version == BROKEN_CONFIG:
+    # change this to 1 if you have some need to compile
+    # with -flat_namespace as opposed to -bundle_loader
+    FLAT_NAMESPACE = 0
+    BROKEN_ARCH = '-arch i386'
+    BROKEN_NAMESPACE = '-flat_namespace -undefined_suppress'
+    import distutils.sysconfig
+    distutils.sysconfig.get_config_vars()
+    x = distutils.sysconfig._config_vars['LDSHARED']
+    y = x.replace(BROKEN_ARCH, '')
+    if not FLAT_NAMESPACE:
+        e = sys.executable
+        while os.path.islink(e):
+            e = os.readlink(e)
+        y = y.replace(BROKEN_NAMESPACE, '-bundle_loader ' + e)
+    if y != x:
+        print "Fixing some of Apple's compiler flag mistakes..."
+        distutils.sysconfig._config_vars['LDSHARED'] = y
 
 if os.name=='nt':
     # FIXME - see
