@@ -1987,7 +1987,7 @@ class IMAP4Client(basic.LineReceiver):
         message numbers to sizes, or whose errback is invoked if there is
         an error.
         """
-        d = self._fetch(message, useUID=uid, rfc822size=1)
+        d = self._fetch(messages, useUID=uid, rfc822size=1)
         d.addCallback(self.__cbFetch)
         return d
 

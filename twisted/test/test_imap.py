@@ -418,6 +418,7 @@ class IMAP4HelperMixin:
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
         failure.printTraceback(open('failure.log', 'w'))
+        failure.printTraceback()
         raise failure.value
     
     def loopback(self):
@@ -1077,9 +1078,13 @@ class FakeyServer(imap4.IMAP4Server):
         pass
 
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
-    search_result = [1, 4, 5, 7]
     def setUp(self):
         self.expected = self.result = None
+        self.server_received_query = None
+        self.server_received_uid = None
+        self.server_received_parts = None
+        self.server_received_messages = None
+        
         self.server = imap4.IMAP4Server()
         self.server.state = 'select'
         self.server.mbox = self
@@ -1087,9 +1092,9 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.client = SimpleClient(self.connected)
     
     def search(self, query, uid):
-        self.assertEquals(imap4.parseNestedParens(self.query), query)
-        self.assertEquals(self.uid, uid)
-        return self.search_result
+        self.server_received_query = query
+        self.server_received_uid = uid
+        return self.expected
     
     def _searchWork(self, uid):
         def search():
@@ -1105,18 +1110,23 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         loopback.loopback(self.server, self.client)
         
         # Ensure no short-circuiting wierdness is going on
-        self.failIf(self.result is self.search_result)
+        self.failIf(self.result is self.expected)
         
-        self.assertEquals(self.result, self.search_result)
-    
+        self.assertEquals(self.result, self.expected)
+        self.assertEquals(self.uid, self.server_received_uid)
+        self.assertEquals(
+            imap4.parseNestedParens(self.query),
+            self.server_received_query
+        )
+
     def testSearch(self):
         self.query = imap4.Or(
             imap4.Query(header=('subject', 'substring')),
             imap4.Query(larger=1024, smaller=4096),
         )
+        self.expected = [1, 4, 5, 7]
         self.uid = 0
         self._searchWork(0)
-
 
     def testUIDSearch(self):
         self.query = imap4.Or(
@@ -1124,12 +1134,13 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             imap4.Query(larger=1024, smaller=4096),
         )
         self.uid = 1
+        self.expected = [1, 2, 3]
         self._searchWork(1)
 
     def fetch(self, messages, parts, uid):
-        self.assertEquals(str(messages), self.messages)
-        self.assertEquals(parts, self.parts)
-        self.assertEquals(uid, self.uid)
+        self.server_received_uid = uid
+        self.server_received_parts = parts
+        self.server_received_messages = str(messages)
         return self.expected
     
     def _fetchWork(self, fetch):
@@ -1145,7 +1156,14 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         
         # Ensure no short-circuiting wierdness is going on
         self.failIf(self.result is self.expected)
+        
+        self.parts and self.parts.sort()
+        self.server_received_parts and self.server_received_parts.sort()
+        
         self.assertEquals(self.result, self.expected)
+        self.assertEquals(self.uid, self.server_received_uid)
+        self.assertEquals(self.parts, self.server_received_parts)
+        self.assertEquals(self.messages, self.server_received_messages)
 
     def testFetchUID(self):
         def fetch():
@@ -1226,10 +1244,112 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     
     def testFetchBodyStructureUID(self):
         self.testFetchBodyStructure(1)
-
-    def testFetchAll(self):
+    
+    def testFetchSimplifiedBody(self, uid=0):
         def fetch():
-            return self.client.fetchAll(self.messages, 0)
+            return self.client.fetchSimplifiedBody(self.messages, uid=uid)
+        
+        self.expected = {
+            2: {'BODY': 'XXX fill this in bucko'},
+        }
+        self.messages = '2,5,10'
+        self.parts = ['BODY']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchSimplifiedBodyUID(self):
+        self.testFetchSimplifiedBody(1)
+
+    def testFetchMessage(self, uid=0):
+        def fetch():
+            return self.client.fetchMessage(self.messages, uid=uid)
+        
+        self.expected = {
+            29281: {'BODY': 'XXX fill this in bucko'},
+        }
+        self.messages = '19884,1,23872,666:777'
+        self.parts = ['RFC822']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchMessageUID(self):
+        self.testFetchMessage(1)
+
+    def testFetchHeaders(self, uid=0):
+        def fetch():
+            return self.client.fetchHeaders(self.messages, uid=uid)
+        
+        self.expected = {
+            19: {'RFC822HEADER': 'XXX put some headers here'},
+        }
+        self.messages = '2:3,4:5,6:*'
+        self.parts = ['RFC822HEADER']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchHeadersUID(self):
+        self.testFetchHeaders(1)
+
+    def testFetchBody(self, uid=0):
+        def fetch():
+            return self.client.fetchBody(self.messages, uid=uid)
+        
+        self.expected = {
+            1: {'RFC822TEXT': 'XXX put some body here'},
+        }
+        self.messages = '1,2,3,4,5,6,7'
+        self.parts = ['RFC822TEXT']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchBodyUID(self):
+        self.testFetchBody(1)
+
+    def testFetchSize(self, uid=0):
+        def fetch():
+            return self.client.fetchSize(self.messages, uid=uid)
+        
+        self.expected = {
+            1: {'SIZE': '12345'},
+        }
+        self.parts = ['RFC822SIZE']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchSizeUID(self):
+        self.testFetchSize(1)
+    
+    def testFetchFull(self, uid=0):
+        def fetch():
+            return self.client.fetchFull(self.messages, uid=uid)
+        
+        self.expected = {
+            1: {
+                'FLAGS': 'XXX put some flags here',
+                'INTERNALDATE': 'XXX date',
+                'RFC822SIZE': '12345',
+                'ENVELOPE': 'XXX envelope',
+                'BODY': 'XXX body',
+            },
+            3: {
+                'FLAGS': 'XXX put some flags here',
+                'INTERNALDATE': 'XXX date',
+                'RFC822SIZE': '12345',
+                'ENVELOPE': 'XXX envelope',
+                'BODY': 'XXX body',
+            }
+        }
+        self.messages = '1,3'
+        self.parts = ['FLAGS', 'INTERNALDATE', 'RFC822SIZE', 'ENVELOPE', 'BODY']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchFullUID(self):
+        self.testFetchFull(1)
+
+    def testFetchAll(self, uid=0):
+        def fetch():
+            return self.client.fetchAll(self.messages, uid=uid)
         
         self.expected = {
             1: {
@@ -1246,5 +1366,28 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         }
         self.messages = '1,2:3'
         self.parts = ['ENVELOPE', 'RFC822SIZE', 'INTERNALDATE', 'FLAGS']
-        self.uid = 0
+        self.uid = uid
         self._fetchWork(fetch)
+
+    def testFetchAllUID(self):
+        self.testFetchFull(1)
+    
+    def testFetchFast(self, uid=0):
+        def fetch():
+            return self.client.fetchFast(self.messages, uid=uid)
+        
+        self.expected = {
+            1: {
+                'FLAGS': [],
+                'INTERNALDATE': 'XXX date',
+                'RFC822SIZE': '12345',
+            },
+        }
+        self.messages = '1'
+        self.parts = ['FLAGS', 'INTERNALDATE', 'RFC822SIZE']
+        self.uid = uid
+        self._fetchWork(fetch)
+    
+    def testFetchFastUID(self):
+        self.testFetchFast(1)
+        
