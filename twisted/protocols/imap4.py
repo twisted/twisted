@@ -1250,7 +1250,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_STATUS(self, tag, mailbox, names):
         mailbox = self._parseMbox(mailbox)
-        mbox = self.account.select(mailbox, 0)
+        maybeDeferred(self.account.select, mailbox, 0
+            ).addCallback(self._cbStatusGotMailbox, tag, names
+            ).addErrback(self._ebStatusGotMailbox, tag
+            )
+
+    def _cbStatusGotMailbox(self, mbox, tag, names):
         if mbox:
             maybeDeferred(mbox.requestStatus, names).addCallbacks(
                 self.__cbStatus, self.__ebStatus,
@@ -1258,6 +1263,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             )
         else:
             self.sendNegativeResponse(tag, "Could not open mailbox")
+
+    def _ebStatusGotMailbox(self, failure, tag):
+        self.sendBadResponse(tag, "Server error encountered while opening mailbox.")
+        log.err(failure)
 
     auth_STATUS = (do_STATUS, arg_astring, arg_plist)
     select_STATUS = auth_STATUS
@@ -1272,7 +1281,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_APPEND(self, tag, mailbox, flags, date, message):
         mailbox = self._parseMbox(mailbox)
-        mbox = self.account.select(mailbox)
+        maybeDeferred(self.account.select, mailbox
+            ).addCallback(self._cbAppendGotMailbox, tag, flags, date, message
+            ).addErrback(self._ebAppendGotMailbox, tag
+            )
+
+    def _cbAppendGotMailbox(self, mbox, tag, flags, date, message):
         if not mbox:
             self.sendNegativeResponse(tag, '[TRYCREATE] No such mailbox')
             return
@@ -1280,6 +1294,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         d = mbox.addMessage(message, flags, date)
         d.addCallback(self.__cbAppend, tag, mbox)
         d.addErrback(self.__ebAppend, tag)
+
+    def _ebAppendGotMailbox(self, failure, tag):
+        self.sendBadResponse(tag, "Server error encountered while opening mailbox.")
+        log.err(failure)
 
     auth_APPEND = (do_APPEND, arg_astring, opt_plist, opt_datetime,
                    arg_literal)
