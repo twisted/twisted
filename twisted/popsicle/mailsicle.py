@@ -58,6 +58,7 @@ from cStringIO import StringIO
 # twisted imports
 from twisted.python.components import getAdapter, Interface, Adapter, registerAdapter, getAdapterClassWithInheritance
 from twisted.python.reflect import qual, namedClass
+from twisted.python.util import dict
 from twisted.internet import defer
 
 # sibling imports

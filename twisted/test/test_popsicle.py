@@ -17,6 +17,7 @@
 
 from pyunit import unittest
 from twisted.popsicle import mailsicle, freezer
+import gc
 
 class Dummy:
     name = 'UNNAMED!!!'
@@ -97,26 +98,28 @@ class Friend:
 
 
 class PicklesicleTest(unittest.TestCase):
-    def testPickle(self):
-        import gc
-        ps = picklesicle.Picklesicle("POPSICLE", [Friend])
-        bob = Friend("bob")
-        alice = Friend("alice")
-        bob.addFriend(alice)
-        alice.addFriend(bob)
-        bob.printFriendList()
-        # ps.save(bob) # doesn't work as you'd expect, sadly :-\
-        freezer.ref(bob).acquireOID(ps)
-        freezer.dirty(bob)
-        freezer.clean()
-        l = []
-        alice._tracker = gcall(l.append, 1)
-        del alice
-        assert l, "Alice not garbage collected."
-        assert len(filter(lambda x: isinstance(x, Friend),
-                          gc.get_referrers(Friend))) == 1, (
-            "More than one friend alive.")
-        bob.printFriendList()
+    # Python 2.1 doesn't have gc.get_referrers (and Jython probably doesn't
+    # either)
+    if hasattr(gc, 'get_referrers'):
+        def testPickle(self):
+            ps = picklesicle.Picklesicle("POPSICLE", [Friend])
+            bob = Friend("bob")
+            alice = Friend("alice")
+            bob.addFriend(alice)
+            alice.addFriend(bob)
+            bob.printFriendList()
+            # ps.save(bob) # doesn't work as you'd expect, sadly :-\
+            freezer.ref(bob).acquireOID(ps)
+            freezer.dirty(bob)
+            freezer.clean()
+            l = []
+            alice._tracker = gcall(l.append, 1)
+            del alice
+            assert l, "Alice not garbage collected."
+            assert len(filter(lambda x: isinstance(x, Friend),
+                              gc.get_referrers(Friend))) == 1, (
+                "More than one friend alive.")
+            bob.printFriendList()
 
 
 
