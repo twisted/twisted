@@ -5,7 +5,6 @@ Andrew Bennetts
 Benjamin Bruheim
 Bob Ippolito
 Christopher Armstrong
-Cory Dodt
 Donovan Preston
 Itamar Shtull-Trauring
 James Knight
@@ -46,5 +45,3 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Copyright Exceptions:
 
- * twisted/python/process.py, twisted/python/which.py: (C) ActiveState 2004
-   Author: Trent Mick.

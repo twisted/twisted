@@ -201,6 +201,10 @@ class Win32Reactor(default.PosixReactorBase):
 
     doIteration = doWaitForMultipleEvents
 
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, usePTY=0):
+        """Spawn a process."""
+        Process(self, processProtocol, executable, args, env, path)
+
 components.backwardsCompatImplements(Win32Reactor)
 
 

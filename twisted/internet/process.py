@@ -31,8 +31,6 @@ from twisted.internet import protocol
 
 # Sibling Imports
 import abstract, main, fdesc, error
-from error import ProcessExitedAlready
-
 from main import CONNECTION_LOST, CONNECTION_DONE
 
 reapProcessHandlers = {}
@@ -170,6 +168,12 @@ class ProcessReader(abstract.FileDescriptor):
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fd)
         self.proc.childConnectionLost(self.name)
+
+
+class ProcessExitedAlready(Exception):
+    """The process has already excited, and the operation requested can no longer be performed."""
+    pass
+
 
 class Process(styles.Ephemeral):
     """An operating-system Process.
