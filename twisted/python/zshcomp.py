@@ -107,47 +107,73 @@ For some extra verbosity, and general niceness add these lines too:
 
 Have fun!
 """
-
-# commands to generate completion function files for
-generateFor = [
-               ('trial', 'twisted.scripts.trial', 'Options'),
-               ('conch', 'twisted.conch.scripts.conch', 'ClientOptions'),
-               ('mktap', 'twisted.scripts.mktap', 'FirstPassOptions'),
-               ('cftp', 'twisted.conch.scripts.cftp', 'ClientOptions'),
-               ('tapconvert', 'twisted.scripts.tapconvert', 'ConvertOptions'),
-               ('twistd', 'twisted.scripts.twistd', 'ServerOptions'),
-               ('ckeygen', 'twisted.conch.scripts.ckeygen', 'GeneralOptions'),
-               ('lore', 'twisted.lore.scripts.lore', 'Options'),
-               ('pyhtmlizer', 'twisted.scripts.htmlizer', 'Options'),
-               ('websetroot', 'twisted.web.scripts.websetroot', 'Options'),
-               ('tap2deb', 'twisted.scripts.tap2deb', 'MyOptions'),
-               ('tkmktap', 'twisted.scripts.tap2deb', 'MyOptions'),
-               ('tkconch', 'twisted.conch.scripts.tkconch', 'GeneralOptions'),
-               ('manhole', 'twisted.scripts.manhole', 'MyOptions'),
-               ('tap2rpm', 'twisted.scripts.tap2rpm', 'MyOptions'),
-               ]
-
 import sys, commands
-from twisted.python import reflect, util
-
-try:
-    enumerate
-except:
-    def enumerate(seq):
-        return zip(range(len(seq)), seq)
-
-try:
-    from itertools import chain
-except:
-    def chain(*args):
-        lst = []
-        for seq in args:
-            for item in seq:
-                lst.append(item)
-        return lst
+import os.path
+from twisted.python import reflect, util, usage
 
 
-class zshCodeGenerator:
+class MyOptions(usage.Options):
+    longdesc = ""
+    synopsis = "Usage: python zshcomp.py [--install | -i] | <output directory>"
+    optFlags = [["install", "i", "Output files to the \"installation\" directory " \
+               "(twisted/python/zsh in the currently active Twisted package)"]]
+    optParameters = [["directory", "d", None, "Output files to this directory"]]
+    def postOptions(self):
+        if self['install'] and self['directory']:
+            raise usage.UsageError, "Can't have --install and --directory at the same time"
+        if not self['install'] and not self['directory']:
+            raise usage.UsageError, "Not enough arguments"
+        if self['directory'] and not os.path.isdir(self['directory']):
+            raise usage.UsageError, "%s is not a directory" % self['directory']
+
+class Builder:
+    def __init__(self, cmd_name, optionsClass, file):
+        self.cmd_name = cmd_name
+        self.optionsClass = optionsClass
+        self.file = file
+
+    def write(self):
+        #by default, we just write out a single call to _arguments
+        self.file.write('#compdef %s\n' % self.cmd_name)
+        gen = ArgumentsGenerator(self.cmd_name, self.optionsClass, self.file)
+        gen.write()
+
+class MktapBuilder(Builder):
+    def write(self):
+        self.file.write('#compdef mktap\n')
+        self.file.write('_mktap_subcmds=(\n')
+        from twisted import plugin as newplugin
+        from twisted.scripts.mktap import IServiceMaker
+        plugins = newplugin.getPlugIns(IServiceMaker)
+
+        for p in plugins:
+            self.file.write('"%s:%s"\n' % (p.tapname, p.description))
+        self.file.write(")\n\n")
+
+        self.optionsClass.zsh_extras = ['*::subcmd:->subcmd']
+        gen = ArgumentsGenerator(self.cmd_name, self.optionsClass, self.file)
+        gen.write()
+
+        self.file.write("""if (( CURRENT == 1 )); then
+  _describe "tap to build" _mktap_subcmds && ret=0
+fi
+(( ret )) || return 0
+
+service="$words[1]"
+
+case $service in\n""")
+
+        plugins = newplugin.getPlugIns(IServiceMaker)
+        for p in plugins:
+            self.file.write(p.tapname + ")\n")
+            gen = ArgumentsGenerator(p.tapname, p.options, self.file)
+            gen.write()
+            self.file.write(";;\n")
+        self.file.write("""*) _message "don't know how to complete $service";;\nesac""")
+
+class ArgumentsGenerator:
+    """generate a call to the zsh _arguments completion function
+    based on data in a usage.Options subclass"""
     def __init__(self, cmd_name, optionsClass, file):
         """write the zsh completion code to the given file"""
         self.cmd_name = cmd_name
@@ -219,16 +245,35 @@ class zshCodeGenerator:
         
         self.excludes = self.makeExcludesDict()
 
+    def write(self):
+        self.writeHeader()
+        self.writeExtras()
+        self.writeOptions()
+        self.writeFooter()
+
+    def writeHeader(self):
+        self.file.write('_arguments -s -A "-*" \\\n')
+
+    def writeOptions(self):
+        for long in self.optAll_d:
+            self.writeOption(long)
+
+    def writeExtras(self):
+        for s in self.extras:
+            self.file.write(escape(s))
+            self.file.write(' \\\n')
+
+    def writeFooter(self):
+        self.file.write('&& return 0\n')
+
     def verifyZshNames(self):
         def err(name):
             raise ValueError, "Unknown option name \"%s\" found while\n" \
                 "examining zsh_ attributes for the %s command" % (
                     name, self.cmd_name)
 
-#        for name in itertools.chain(self.altArgDescr, self.actionDescr,
-#                                    self.actions, self.multiUse):
-        for name in chain(self.altArgDescr, self.actionDescr,
-                                    self.actions, self.multiUse):
+        for name in chain(self.altArgDescr, self.actionDescr, self.actions,
+                                                             self.multiUse):
             if name not in self.optAll_d:
                 err(name)
 
@@ -250,7 +295,7 @@ class zshCodeGenerator:
         # building for the long option, and vice versa.
         if long not in self.multiUse:
             if buildShort is False:
-                short = self.optAll_d[long][0] 
+                short = self.getShortOption(long)
                 if short is not None:
                     exclusions.append(short)
             else:
@@ -267,21 +312,6 @@ class zshCodeGenerator:
             else:
                 strings.append("--" + optName)
         return "(%s)" % " ".join(strings)
-
-    def writeStandardFunction(self):
-        self.writeHeader()
-
-        for s in self.extras:
-            self.writeExtra(s)
-
-        for long in self.optAll_d:
-            self.writeOption(long)
-
-        self.writeFooter()
-
-    def writeExtra(self, s):
-        self.file.write(escape(s))
-        self.file.write(' \\\n')
 
     def makeExcludesDict(self):
         """return a dict that maps each option name appearing in
@@ -312,13 +342,6 @@ class zshCodeGenerator:
                 else:
                     excludes[long] = tmp
         return excludes
-
-    def writeHeader(self):
-        self.file.write('#compdef %s\n' % self.cmd_name)
-        self.file.write('_arguments -s -A "-*" \\\n')
-
-    def writeFooter(self):
-        self.file.write('&& return 0\n')
 
     def writeOption(self, long):
         if long in self.optFlags_d: # It's a flag option. Not one that takes a parameter.
@@ -397,18 +420,17 @@ class zshCodeGenerator:
         longMangled = long.replace('-', '_') # this is what t.p.usage does
         obj = getattr(self.optionsClass, 'opt_%s' % longMangled, None)
         if obj:
-            descr = self.descrFromDoc(obj)
+            descr = descrFromDoc(obj)
             if descr is not None:
                 return descr
 
         return long # we really ought to have a good description to use
 
-
     def getShortOption(self, long):
         """Return the short option letter or None"""
         optList = self.optAll_d[long]
         try:
-            return optList[0]
+            return optList[0] or None
         except IndexError:
             pass
 
@@ -450,21 +472,21 @@ class zshCodeGenerator:
             else:
                 raise SystemExit, 'opt_ method has wrong number of arguments'
 
-    def descrFromDoc(self, obj):
-        if obj.__doc__ is None:
-            return None
+def descrFromDoc(obj):
+    if obj.__doc__ is None:
+        return None
 
-        lines = obj.__doc__.split("\n")
-        descr = None
-        try:
-            if lines[0] != "" and not lines[0].isspace():
-                descr = lines[0].lstrip()
-            # skip first line if it's blank
-            elif lines[1] != "" and not lines[1].isspace():
-                descr = lines[1].lstrip()
-        except IndexError:
-            pass
-        return descr
+    lines = obj.__doc__.split("\n")
+    descr = None
+    try:
+        if lines[0] != "" and not lines[0].isspace():
+            descr = lines[0].lstrip()
+        # skip first line if it's blank
+        elif lines[1] != "" and not lines[1].isspace():
+            descr = lines[1].lstrip()
+    except IndexError:
+        pass
+    return descr
 
 def firstLine(s):
     try:
@@ -478,7 +500,6 @@ def escape(str):
 
 def siteFunctionsPath():
     try:
-        import commands, os.path
         output = commands.getoutput("zsh -f -c 'echo ${(M)fpath:#/*/site-functions}'")
         if os.path.isdir(output):
             return output
@@ -490,28 +511,65 @@ def makeCompFunctionFiles(out_path):
         m = __import__('%s' % module_name, None, None, (class_name))
         o = getattr(m, class_name)
         f = file('%s/_%s' % (out_path, cmd_name), 'w')
-        z = zshCodeGenerator(cmd_name, o, f)
-        z.writeStandardFunction()
+
+        if cmd_name in specialBuilders:
+            b = specialBuilders[cmd_name](cmd_name, o, f)
+            b.write()
+        else:
+            b = Builder(cmd_name, o, f)
+            b.write()
 
 def run():
-    if len(sys.argv) != 2:
-        print "Usage: python zshcomp.py <output directory>\n" \
-        "       python zshcomp.py -d\n" \
-        "where <output directory> is the path to write\n" \
-        "the completion function files to. Or specify -d to use\n" \
-        "the defualt output dir. (.../twisted/python/zsh of the\n" \
-        "current Twisted installation"
-        sys.exit(1)
+    options = MyOptions()
+    try:
+        options.parseOptions(sys.argv[1:])
+    except usage.UsageError, e:
+        print e
+        print options.getUsage()
+        sys.exit(2)
 
-    if sys.argv[1] == '-d':
-        import twisted, os.path
+    if options['install']:
+        import twisted
         dir = os.path.dirname(twisted.__file__) + os.path.sep + os.path.join("python", "zsh")
         makeCompFunctionFiles(dir)
     else:
-        makeCompFunctionFiles(sys.argv[1])
+        makeCompFunctionFiles(options['directory'])
 
+# in case of python2.2 ...
+try:
+    enumerate
+except:
+    def enumerate(seq):
+        return zip(range(len(seq)), seq)
+try:
+    from itertools import chain
+except:
+    def chain(*args):
+        lst = []
+        for seq in args:
+            for item in seq:
+                lst.append(item)
+        return lst
+
+generateFor = [
+               ('conch', 'twisted.conch.scripts.conch', 'ClientOptions'),
+               ('mktap', 'twisted.scripts.mktap', 'FirstPassOptions'),
+               ('trial', 'twisted.scripts.trial', 'Options'),
+               ('cftp', 'twisted.conch.scripts.cftp', 'ClientOptions'),
+               ('tapconvert', 'twisted.scripts.tapconvert', 'ConvertOptions'),
+               ('twistd', 'twisted.scripts.twistd', 'ServerOptions'),
+               ('ckeygen', 'twisted.conch.scripts.ckeygen', 'GeneralOptions'),
+               ('lore', 'twisted.lore.scripts.lore', 'Options'),
+               ('pyhtmlizer', 'twisted.scripts.htmlizer', 'Options'),
+               ('websetroot', 'twisted.web.scripts.websetroot', 'Options'),
+               ('tap2deb', 'twisted.scripts.tap2deb', 'MyOptions'),
+               ('tkmktap', 'twisted.scripts.tap2deb', 'MyOptions'),
+               ('tkconch', 'twisted.conch.scripts.tkconch', 'GeneralOptions'),
+               ('manhole', 'twisted.scripts.manhole', 'MyOptions'),
+               ('tap2rpm', 'twisted.scripts.tap2rpm', 'MyOptions'),
+               ]
+
+specialBuilders = {'mktap' : MktapBuilder}
 
 if __name__ == '__main__':
     run()
-
-
