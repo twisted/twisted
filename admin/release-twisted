@@ -34,7 +34,7 @@ sys.path.insert(0, os.curdir)
 from twisted.python import usage, util, failure
 from twisted import copyright
 
-import shutil, tempfile
+import shutil, tempfile, re
 
 # magic for CVS guessing
 try:
@@ -234,7 +234,7 @@ def sh(command, sensitive=0):
 def replaceInFile(filename, oldstr, newstr):
     """I replace the text `oldstr' with `newstr' in `filename' using sed and mv."""
     sh('cp %s %s.bak' % (filename, filename))
-    sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr, newstr, filename, filename))
+    sh("sed -e 's/%s/%s/' < %s > %s.new" % (re.escape(oldstr), newstr, filename, filename))
     sh('cp %s.new %s' % (filename,  filename))
 
 
