@@ -179,6 +179,12 @@ class GroupConversation(InputOutputWindow):
         self.win.destroy()
         self.group.leave()
 
+    def on_AddContactButton_clicked(self, b):
+        lw = self.xml.get_widget("ParticipantList")
+
+        if lw.selection:
+            self.group.account.perspective.addContact(self.members[lw.selection[0]])
+
     def _cbTextSent(self, result, text, metadata=None):
         print text
         text = string.replace(text, '\n', '\n\t')

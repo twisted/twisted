@@ -912,8 +912,13 @@
 
 	<widget>
 	  <class>GtkButton</class>
-	  <name>button14</name>
+	  <name>AddContactButton</name>
 	  <can_focus>True</can_focus>
+	  <signal>
+	    <name>clicked</name>
+	    <handler>on_AddContactButton_clicked</handler>
+	    <last_modification_time>Wed, 13 Feb 2002 07:52:38 GMT</last_modification_time>
+	  </signal>
 	  <label>Add Contact</label>
 	  <relief>GTK_RELIEF_NORMAL</relief>
 	  <child>
