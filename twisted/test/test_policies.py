@@ -17,15 +17,18 @@
 
 """Test code for policies."""
 from __future__ import nested_scopes
+from StringIO import StringIO
 
 from twisted.trial import unittest
 
 import time
 
-
 from twisted.internet import protocol, reactor
 from twisted.protocols import policies
 
+
+class StringIOWithoutClosing(StringIO):
+    def close(self): pass
 
 class SimpleProtocol(protocol.Protocol):
 
@@ -300,3 +303,56 @@ class TimeoutTestCase(unittest.TestCase):
         reactor.run()
 
         self.failUnlessEqual(self.failed, 0)
+
+class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
+    timeOut  = 3
+    timedOut = 0
+
+    def connectionMade(self):
+        policies.TimeoutMixin.connectionMade(self)
+
+    def dataReceived(self, data):
+        policies.TimeoutMixin.dataReceived(self, data)
+        protocol.Protocol.dataReceived(self, data)
+
+    def timeoutConnection(self):
+        self.timedOut = 1
+
+
+class TestTimeout(unittest.TestCase):
+
+    def testTimeout(self):
+        p = TimeoutTester()
+        s = StringIOWithoutClosing()
+        p.makeConnection(protocol.FileWrapper(s))
+
+        for i in range(10):
+            reactor.iterate()
+            self.assert_(not p.timedOut)
+
+        time.sleep(3.5)
+        for i in range(10):
+            reactor.iterate()
+            self.assert_(p.timedOut)
+
+    def testNoTimeout(self):
+        p = TimeoutTester()
+        s = StringIOWithoutClosing()
+        p.makeConnection(protocol.FileWrapper(s))
+
+        for i in range(10):
+            reactor.iterate()
+            self.assert_(not p.timedOut)
+
+        time.sleep(2)
+        p.dataReceived('hello there')
+        time.sleep(1.5)
+
+        for i in range(10):
+            reactor.iterate()
+            self.assert_(not p.timedOut)
+
+        time.sleep(2)
+        for i in range(10):
+            reactor.iterate()
+            self.assert_(p.timedOut)
