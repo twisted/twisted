@@ -86,12 +86,12 @@ class DirDBM:
         """Encode a key so it can be used as a filename.
         """
         # NOTE: '_' is NOT in the base64 alphabet!
-        return string.replace(base64.encodestring(k), '\n', '_')
+        return base64.encodestring(k).replace('\n', '_').replace("/", "-")
     
     def _decode(self, k):
         """Decode a filename to get the key.
         """
-        return base64.decodestring(string.replace(k, '_', '\n'))
+        return base64.decodestring(k.replace('_', '\n').replace("-", "/"))
     
     def _readFile(self, path):
         """Read in the contents of a file.

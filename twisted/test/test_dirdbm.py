@@ -32,7 +32,13 @@ class DirDbmTestCase(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.path)
-    
+
+    def testAll(self):
+        k = "//==".decode("base64")
+        self.dbm[k] = "a"
+        self.dbm[k] = "a"
+        self.assertEquals(self.dbm[k], "a")
+        
     def testRebuildInteraction(self):
         from twisted.persisted import dirdbm
         from twisted.python import rebuild
