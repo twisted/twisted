@@ -410,7 +410,7 @@ class DOMTemplate(Resource, View):
         print "There were successes: ", successes
         process = {}
         for controller, data, node in successes:
-            process[node.getAttribute('name')] = data
+            process[str(node.getAttribute('name'))] = data
         return process
 
     def process(self, process):
