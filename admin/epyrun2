@@ -170,10 +170,11 @@ objdoc.DocMap._add = _add
 
 modnames = []
 def addMod(arg, path, files):
+#    print 'DIRNAME',path,'FNAMES',files
     for fn in files:
         file = os.path.join(path, fn).replace('%s__init__'%os.sep, '')
         if file[-3:] == '.py' and not file.count('%stest%s' % (os.sep,os.sep)):
-            modName = file[2:-3].replace(os.sep,'.')
+            modName = file[:-3].replace(os.sep,'.')
             try:
                 #print 'pre-loading', modName
                 reflect.namedModule(modName)
@@ -183,19 +184,53 @@ def addMod(arg, path, files):
                 print 'other error:', modName
             else:
                 modnames.append(modName)
+
+epydoc_flags = ["--html", "--latex", "--dvi", "--ps", "--pdf", "--private", "--no-private", "--show-imports", "--builtins", "--ignore-param-mismatch", "--separate-classes", "-q", "-v", "--check", "-h", "-V"]
+
+names = ['twisted'] #default, may be overriden below
+#get list of modules/pkgs on cmd-line
+for i in range(1, len(sys.argv)):
+    value = sys.argv[i]
+    if not value.startswith("-"):
+        if sys.argv[i-1].startswith("-") and sys.argv[i-1] not in epydoc_flags:
+            pass
+        else:
+            names = sys.argv[i:]
+            #sanity check on names
+            for name in names:
+                if 'twisted' not in name:
+                    raise SystemExit, "You can only specify twisted modules or packages"
+            sys.argv[i:] = []
+            break
+
 osrv = sys.argv
 sys.argv=["IGNORE"]
 im = __import__
 __builtins__.__import__ = myimport
-os.path.walk('./twisted', addMod, None)
+
+for name in names:
+    if name.endswith(".py"):
+        name = name[:-3].replace(os.sep, ".")
+        try:
+            reflect.namedModule(name)
+        except ImportError:
+            print 'import error:', name
+        except:
+            print 'other error:', name
+        else:
+            modnames.append(name)
+    else: #assume it's a dir
+        os.path.walk(name, addMod, None)
+
 __builtins__.__import__ = im
 sys.argv = osrv
 
+sys.argv.extend(modnames)
+
 from twisted import copyright
 
-sys.argv.extend(['-n', 'Twisted %s' % copyright.version, '-u', 'http://twistedmatrix.com/', '--no-private'])
+sys.argv[1:1] = ['-n', 'Twisted %s' % copyright.version, '-u', 'http://twistedmatrix.com/', '--no-private']
 
-sys.argv.extend(modnames)              # list of modules
 # Make it easy to profile epyrun
 if 0:
     import profile
