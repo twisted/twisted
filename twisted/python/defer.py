@@ -18,6 +18,7 @@
 
 # System Imports
 import traceback
+from cStringIO import StringIO
 
 # Twisted Imports
 from twisted.python import log
@@ -73,7 +74,11 @@ class Deferred:
                     # print callback, result, args, kw
                     result = apply(callback, (result,)+args, kw)
                 except:
-                    traceback.print_exc()
+                    io = StringIO()
+                    traceback.print_exc(file=io)
+                    gv = io.getvalue()
+                    print gv
+                    result = gv
                     isError = 1
         else:
             self.cbResult = result
