@@ -27,8 +27,8 @@ class producer:
     """ iterator version of the following generator... 
 
     def producer():
-        lst = flow.Wrap([1,2,3])
-        nam = flow.Wrap(['one','two','three'])
+        lst = flow.wrap([1,2,3])
+        nam = flow.wrap(['one','two','three'])
         while 1: 
             yield lst; yield nam
             if lst.stop or nam.stop:
@@ -36,8 +36,8 @@ class producer:
             yield (lst.result, nam.result)
     """
     def __iter__(self):
-        self.lst   = flow.Wrap([1,2,3])
-        self.nam   = flow.Wrap(['one','two','three'])
+        self.lst   = flow.wrap([1,2,3])
+        self.nam   = flow.wrap(['one','two','three'])
         self.state = self.yield_lst
         return self
     def yield_lst(self):
@@ -58,19 +58,19 @@ class consumer:
     """ iterator version of the following generator...
 
     def consumer():
-        title = flow.Wrap(['Title'])
-        lst = flow.Wrap(producer())
+        title = flow.wrap(['Title'])
+        lst = flow.wrap(producer())
         yield title
-        yield title.getResult()
+        yield title.next()
         try:
             while 1:
                 yield lst
-                yield lst.getResult()
+                yield lst.next()
         except flow.StopIteration: pass
     """    
     def __iter__(self):
-        self.title = flow.Wrap(['Title'])
-        self.lst   = flow.Wrap(producer())
+        self.title = flow.wrap(['Title'])
+        self.lst   = flow.wrap(producer())
         self.state = self.yield_title
         return self
     def yield_title(self):
@@ -78,13 +78,13 @@ class consumer:
         return self.title
     def yield_title_result(self):
         self.state = self.yield_lst
-        return self.title.getResult()
+        return self.title.next()
     def yield_lst(self):
         self.state = self.yield_result
         return self.lst
     def yield_result(self):
         self.state = self.yield_lst
-        return self.lst.getResult()
+        return self.lst.next()
     def next(self):
         return self.state()
 
@@ -120,23 +120,23 @@ def toList(it):
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
-        rhs = toList(flow.Iterator([1,2,3]))
+        rhs = toList(flow.Block([1,2,3]))
         self.assertEqual(lhs,rhs)
 
     def testProducer(self):
         lhs = [(1,'one'),(2,'two'),(3,'three')]
-        rhs = toList(flow.Iterator(producer()))
+        rhs = toList(flow.Block(producer()))
         self.assertEqual(lhs,rhs)
 
     def testConsumer(self):
         lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
-        rhs = toList(flow.Iterator(consumer()))
+        rhs = toList(flow.Block(consumer()))
         self.assertEqual(lhs,rhs)
 
     def testMerge(self):
         lhs = [1,'a',2,'b','c',3]
         mrg = flow.Merge([1,2,flow.Cooperate(),3],['a','b','c'])
-        rhs = toList(flow.Iterator(mrg))
+        rhs = toList(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
     def testDeferred(self):
