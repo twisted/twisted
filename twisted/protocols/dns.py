@@ -32,6 +32,8 @@ import StringIO, random, struct
 # Twisted imports
 from twisted.internet import protocol, defer
 
+PORT = 53
+
 QUERY_TYPES = {
     1:  'A',     2:  'NS',    3:  'MD',   4:   'MF',
     5:  'CNAME', 6:  'SOA',   7:  'MB',   8:   'MG',
@@ -403,23 +405,12 @@ class Message:
         self.decode(strio)
 
 
-class DNSClientProtocol(protocol.ConnectedDatagramProtocol):
+class DNSClientBase:
     id = 1000
 
-    def __init__(self):
-        self.liveMessages = {}
-
-
-    def datagramReceived(self, data):
-        m = Message()
-        m.fromStr(data)
-        if not m.answer:
-            return # XXX - Log this?
-        if not self.liveMessages.has_key(m.id):
-            return # XXX - Log this?
-        
-        self.liveMessages[m.id].callback(m)
-        del self.liveMessages[m.id]
+    def pickID(self):
+        DNSClientBase.id = DNSClientBase.id + 1
+        return DNSClientBase.id
 
 
     def writeMessage(self, message):
@@ -441,9 +432,64 @@ class DNSClientProtocol(protocol.ConnectedDatagramProtocol):
         
         @rtype: C{Deferred}
         """
-        d = self.liveMessages[self.id] = defer.Deferred()
-        m = Message(self.id, recDes=1)
+        id = self.pickID()
+        d = self.liveMessages[id] = defer.Deferred()
+        m = Message(id, recDes=1)
         m.addQuery(name, type, cls)
         self.writeMessage(m)
-        self.id = self.id + 1
         return d
+
+
+class DNSClientProtocol(DNSClientBase, protocol.DatagramProtocol):
+    def __init__(self):
+        self.liveMessages = {}
+
+
+    def datagramReceived(self, data):
+        m = Message()
+        m.fromStr(data)
+        if not m.answer:
+            return # XXX - Log this?
+        if not self.liveMessages.has_key(m.id):
+            return # XXX - Log this?
+        self.liveMessages[m.id].callback(m)
+        del self.liveMessages[m.id]
+        self.transport.loseConnection()
+
+
+class TCPDNSClientProtocol(DNSClientBase, protocol.Protocol):
+    length = None
+    buffer = ''
+    d = None
+
+
+    def __init__(self, prefab, deferred):
+        self.prefab = prefab
+        self.d = deferred
+    
+    
+    def writeMessage(self, message):
+        self.transport.write(struct.pack('!H', len(message.toStr())))
+        DNSClientBase.writeMessage(self, message)
+
+
+    def connectionMade(self):
+        m = Message(self.pickID(), recDes=1)
+        m.queries = self.prefab
+        self.writeMessage(m)
+
+
+    def dataReceived(self, data):
+        self.buffer = self.buffer + data
+        if self.length is None and len(self.buffer) >= 2:
+            self.length = struct.unpack('!H', self.buffer[:2])[0]
+            self.buffer = self.buffer[2:]
+
+        if len(self.buffer) == self.length:
+            m = Message()
+            m.fromStr(self.buffer)
+
+            if not m.answer:
+                return # XXX - Log this?
+            self.d.callback(m)
+            self.transport.loseConnection()

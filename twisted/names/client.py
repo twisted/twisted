@@ -31,7 +31,8 @@ Future plans: Proper nameserver acquisition on Windows/MacOS,
 import struct
 
 # Twisted imports
-from twisted.internet import defer
+from twisted.python.runtime import platform
+from twisted.internet import defer, protocol
 from twisted.python import log
 from twisted.protocols import dns
 
@@ -70,6 +71,17 @@ class Resolver:
                 #log.msg("Resolver added %s to server list" % (self.servers[-1],))
 
 
+    def pickServer(self):
+        """
+        Return the address of a namserver.
+        
+        TODO: Weight servers for response time so faster ones can be
+        preferred.
+        """
+        self.index = (self.index + 1) % len(self.servers)
+        return self.servers[self.index]
+
+
     def lookup(self, name, type = dns.ALL_RECORDS, cls = dns.ANY):
         """
         @type name: C{str}
@@ -91,14 +103,24 @@ class Resolver:
         p = dns.DNSClientProtocol()
 
         from twisted.internet import reactor
-        reactor.connectUDP(self.servers[self.index], 53, p)
+        reactor.connectUDP(self.pickServer(), dns.PORT, p)
         self.index = (self.index + 1) % len(self.servers)
         return p.query(name, type, cls)
 
 
     def filterAnswers(self, type):
         def getOfType(message, type=type):
-            return [n.data for n in message.answers if n.type == type]
+            if message.trunc:
+                # Woops, re-issue the request over TCP
+                d = defer.Deferred()
+                f = protocol.ClientFactory()
+                f.protocol = lambda q=message.queries, d=d: dns.TCPDNSClientProtocol(q, d)
+                from twisted.internet import reactor
+                reactor.connectTCP(self.pickServer(), dns.PORT, f)
+                print 'going tcp'
+                return d.addCallback(self.filterAnswers(type))
+            else:
+                return [n.data for n in message.answers if n.type == type]
         return getOfType
 
 
@@ -110,9 +132,25 @@ class Resolver:
         return self.lookup(name, dns.MX, dns.IN).addCallback(self.filterAnswers(dns.MX))
 
 
+    def lookupNameservers(self, name):
+        return self.lookup(name, dns.NS, dns.IN).addCallback(self.filterAnswers(dns.NS))
+
+
+class ThreadedResolver(Resolver):
+    def lookup(self, name, type = dns.ALL_RECORDS, cls = dns.ANY):
+        assert type == dns.A and cls == dns.IN, \
+            "No support for query types other than A IN"
+        return defer.deferToThread(socket.gethostbyname, name)
+
+
 try:
     theResolver
 except NameError:
-    theResolver = Resolver('/etc/resolv.conf')
+    if platform.getType() == 'posix':
+        theResolver = Resolver('/etc/resolv.conf')
+    else:
+        theResolver = ThreadedResolver()
+
     lookupAddress = theResolver.lookupAddress
     lookupMailExchange = theResolver.lookupMailExchange
+    lookupNameservers = theResolver.lookupNameservers
