@@ -260,7 +260,8 @@ class MetaInterface(interface.InterfaceClass):
                 del attrs["__adapt__"]
             for k, v in attrs.items():
                 if not isinstance(v, types.FunctionType) and not isinstance(v, interface.Attribute):
-                    warnings.warn("Please only use functions and zope.interface.Attributes as Interface class attributes", ComponentsDeprecationWarning, stacklevel=2)
+                    why = "Please only use functions and zope.interface.Attributes as Interface class attributes (.%s)" % (k,)
+                    warnings.warn(why, ComponentsDeprecationWarning, stacklevel=2)
                     self.__attrs[k] = v
                     attrs[k] = interface.Attribute(repr(v))
         # BEHOLD A GREAT EVIL SHALL COME UPON THEE
