@@ -184,13 +184,19 @@ class AppConfiguratorPage(widgets.Presentation):
         return l
 
     def makeConfigurable(self, cfgInfo, container, name):
-        """Add a new configurable to a container, based on input from web form."""
+        """Create a new configurable to a container, based on input from web form."""
         cmd, args = string.split(cfgInfo, ' ', 1)
         if cmd == "new": # create
             obj = coil.createConfigurable(reflect.namedClass(args), container, name)
         elif cmd == "dis": # dispense
             methodHash = int(args)
-            for t in self.dispensers.getDispensers(container.entityType):
+            if components.implements(container, coil.IConfigurator) and container.getType(name):
+                interface = container.getType(name)
+            elif components.implements(container, coil.IConfigCollection):
+                interface = container.entityType
+            else:
+                interface = None
+            for t in self.dispensers.getDispensers(interface):
                 obj, methodName, desc = t
                 if hash(t) == methodHash:
                     cfg = coil.getConfigurator(obj)
