@@ -55,7 +55,7 @@ class AddressTestCase(unittest.TestCase):
             self.failIf(a.check(self.resource, self.request))
 
     def testInequal(self):
-        a = (Address != '127.0.0.1/255.255.255.255')
+        a = (Address != '127.0.0.1')
 
         self.request.client = ('TCP', '127.0.0.1', 9478)
         self.failIf(a.check(self.resource, self.request))
@@ -71,16 +71,10 @@ class AddressTestCase(unittest.TestCase):
             i = i + step
 
     def testInequalSubnetMask(self):
-        a = (Address == '127.0.0.1/255.255.0.0')
+        a = (Address == '192.168.1.0/255.255.255.0')
         
         for i in range(255):
-            for j in range(255):
-                self.request.client = ('TCP', '127.0.%d.%d' % (i, j), 12345)
-                self.failIf(a.check(self.resource, self.request))
-        
-        mustFail = [
-            '127.1.0.1', '128.0.0.1', '126.0.0.0'
-        ]
-        for ip in mustFail:
-            self.request.client = ('TCP', ip, 12345)
+            self.request.client = ('TCP', '192.168.1.%d' % (i,), 12345)
             self.failUnless(a.check(self.resource, self.request))
+            self.request.client = ('TCP', '192.%d.2.%d' % (i, i), 12345)
+            self.failIf(a.check(self.resource, self.request))
