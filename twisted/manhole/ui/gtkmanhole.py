@@ -15,32 +15,48 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import gtk, string, sys, traceback, types
+# TODO:
+#  * send script
+#  * save readline history
+#  * save-history-as-python
+#  * save transcript
 
-from twisted.python import explorer, util
+import code, string, sys, traceback, types
+import gtk
+# import time
+
+from twisted.python import explorer, rebuild, util
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
-ingtkernet.install()
 
 True = gtk.TRUE
 False = gtk.FALSE
 
+try:
+    import gnomehole
+except ImportError:
+    _GNOME_POWER = False
+else:
+    _GNOME_POWER = True
+
+ingtkernet.install()
+
 rcfile = util.sibpath(__file__, 'gtkrc')
 gtk.rc_parse(rcfile)
 
-def findBeginningOfLineWithPoint(entry):
-    pos = entry.get_point()
-    while pos:
-        pos = pos - 1
-        #print 'looking at',pos
-        c = entry.get_chars(pos, pos+1)
-        #print 'found',repr(c)
-        if c == '\n':
-            #print 'got it!'
-            return pos+1
-    #print 'oops.'
-    return 0
+## def findBeginningOfLineWithPoint(entry):
+##     pos = entry.get_point()
+##     while pos:
+##         pos = pos - 1
+##         #print 'looking at',pos
+##         c = entry.get_chars(pos, pos+1)
+##         #print 'found',repr(c)
+##         if c == '\n':
+##             #print 'got it!'
+##             return pos+1
+##     #print 'oops.'
+##     return 0
 
 def isCursorOnFirstLine(entry):
     firstnewline = string.find(entry.get_chars(0,-1), '\n')
@@ -73,7 +89,13 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
         self.input.grab_focus()
         self.signal_connect('destroy', gtk.mainquit, None)
 
-        self.display = BrowserDisplay(self)
+        if _GNOME_POWER:
+            self.display = BrowserDisplay()
+            dWindow = gtk.GtkWindow(title="Spelunking")
+            dWindow.add(self.display)
+            dWindow.show_all()
+        else:
+            self.display = BrowserDisplay(self)
         # The referencable attached to the Perspective
         self.client = self
         self.remote_receiveBrowserObject=self.display.receiveBrowserObject
@@ -140,10 +162,11 @@ class LineOrientedBrowserDisplay:
 
         self.toplevel.output.console([('stdout',s)])
 
-#if _GNOME_POWER:
-#    BrowserDisplay = CanvasBrowserDisplay
-#else:
-BrowserDisplay = LineOrientedBrowserDisplay
+
+if _GNOME_POWER:
+    BrowserDisplay = gnomehole.SpelunkDisplay
+else:
+    BrowserDisplay = LineOrientedBrowserDisplay
 
 class OutputConsole(gtk.GtkText):
     maxBufSz = 10000
@@ -160,6 +183,9 @@ class OutputConsole(gtk.GtkText):
     def console(self, message):
         self.set_point(self.get_length())
         self.freeze()
+        previous_kind = None
+        style = self.get_style()
+        style_cache = {}
         try:
             for element in message:
                 if element[0] == 'exception':
@@ -168,16 +194,22 @@ class OutputConsole(gtk.GtkText):
                     s = string.join(s, '')
                 else:
                     s = element[1]
-                gtk.rc_parse_string(
-                    'widget \"Manhole.*.Console\" style \"Console_%s\"\n'
-                    % (element[0]))
-                self.set_rc_style()
-                style = self.get_style()
+
+                if element[0] != previous_kind:
+                    style = style_cache.get(element[0], None)
+                    if style is None:
+                        gtk.rc_parse_string(
+                            'widget \"Manhole.*.Console\" '
+                            'style \"Console_%s\"\n'
+                            % (element[0]))
+                        self.set_rc_style()
+                        style_cache[element[0]] = style = self.get_style()
                 # XXX: You'd think we'd use style.bg instead of 'None'
                 # here, but that doesn't seem to match the color of
                 # the backdrop.
                 self.insert(style.font, style.fg[gtk.STATE_NORMAL],
                             None, s)
+                previous_kind = element[0]
             l = self.get_length()
             diff = self.maxBufSz - l
             if diff < 0:
@@ -210,7 +242,7 @@ class InputText(gtk.GtkText):
             self.histpos = self.histpos - 1
             self.delete_text(0, -1)
             self.insert_defaults(self.history[self.histpos])
-            self.set_point(1)
+            self.set_position(0)
 
     def historyDown(self):
         if self.histpos < len(self.history) - 1:
@@ -222,36 +254,71 @@ class InputText(gtk.GtkText):
             self.delete_text(0, -1)
 
     def processKey(self, entry, event):
+        # TODO: make key bindings easier to customize.
+
         stopSignal = False
+        # ASSUMPTION: Assume Meta == mod4
+        isMeta = event.state & gtk.GDK.MOD4_MASK
         if event.keyval == gtk.GDK.Return:
-            l = self.get_length()
-            # if l is 0, this coredumps gtk ;-)
-            if not l:
-                self.emit_stop_by_name("key_press_event")
-                return True
-            lpos = findBeginningOfLineWithPoint(self)
-            pt = entry.get_point()
             isShift = event.state & gtk.GDK.SHIFT_MASK
-            if (self.get_chars(l-1,-1) == ":"):
-                self.linemode = 1
-            elif isShift:
-                self.linemode = 1
+            if isShift:
+                self.linemode = True
                 self.insert_defaults('\n')
-            elif (not self.linemode) or (pt == lpos):
-                self.sendMessage(entry)
-                self.delete_text(0, -1)
+            else:
                 stopSignal = True
-                self.linemode = 0
-        elif event.keyval == gtk.GDK.Up and isCursorOnFirstLine(self):
+                text = self.get_chars(0,-1)
+                try:
+                    if text[0] == '/':
+                        # It's a local-command, don't evaluate it as
+                        # Python.
+                        c = True
+                    else:
+                        # This will tell us it's a complete expression.
+                        c = code.compile_command(text)
+                except SyntaxError, e:
+                    # Ding!
+                    self.set_positionLineOffset(e.lineno, e.offset)
+                    print "offset", e.offset
+                    errmsg = {'traceback': [],
+                              'exception': [str(e) + '\n']}
+                    self.toplevel.output.console([('exception', errmsg)])
+                except OverflowError, e:
+                    e = traceback.format_exception_only(OverflowError, e)
+                    errmsg = {'traceback': [],
+                              'exception': e}
+                    self.toplevel.output.console([('exception', errmsg)])
+                else:
+                    if c is None:
+                        self.linemode = True
+                        stopSignal = False
+                    else:
+                        self.sendMessage(entry)
+                        self.clear()
+
+        elif ((event.keyval == gtk.GDK.Up and isCursorOnFirstLine(self))
+              or (isMeta and event.string == 'p')):
             self.historyUp()
             stopSignal = True
-        elif event.keyval == gtk.GDK.Down and isCursorOnLastLine(self):
+        elif ((event.keyval == gtk.GDK.Down and isCursorOnLastLine(self))
+              or (isMeta and event.string == 'n')):
             self.historyDown()
             stopSignal = True
 
         if stopSignal:
             self.emit_stop_by_name("key_press_event")
             return True
+
+    def clear(self):
+        self.delete_text(0, -1)
+        self.linemode = False
+
+    def set_positionLineOffset(self, line, offset):
+        text = self.get_chars(0, -1)
+        pos = 0
+        for l in xrange(line - 1):
+            pos = string.index(text, '\n', pos) + 1
+        pos = pos + offset - 1
+        self.set_position(pos)
 
     def sendMessage(self, unused_data=None):
         text = self.get_chars(0,-1)
@@ -267,16 +334,23 @@ class InputText(gtk.GtkText):
 
         method = self.toplevel.perspective.do
 
-        split = string.split(text,' ',1)
-        if len(split) == 2:
-            (statement, remainder) = split
+        if text[0] == '/':
+            split = string.split(text[1:],' ',1)
+            statement = split[0]
+            if len(split) == 2:
+                remainder = split[1]
             if statement == 'browse':
                 method = self.toplevel.perspective.browse
                 text = remainder
             elif statement == 'watch':
                 method = self.toplevel.perspective.watch
                 text = remainder
-
+            elif statement == 'self_rebuild':
+                rebuild.rebuild(explorer)
+                if _GNOME_POWER:
+                    rebuild.rebuild(gnomehole)
+                rebuild.rebuild(sys.modules[__name__])
+                return
         try:
             method(text)
         except pb.ProtocolError:
@@ -292,11 +366,9 @@ class InputText(gtk.GtkText):
 
 class ObjectLink(pb.RemoteCopy, explorer.ObjectLink):
     """RemoteCopy of explorer.ObjectLink"""
-
     def __init__(self):
         pass
 
     __str__ = explorer.ObjectLink.__str__
 
-pb.setCopierForClass('twisted.python.explorer.ObjectLink',
-                     ObjectLink)
+pb.setCopierForClass('twisted.python.explorer.ObjectLink', ObjectLink)
