@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
+"""Start a L{twisted.manhole} client.
 
 @var toolkitPreference: A list of all toolkits we have front-ends for, with
    the ones we most prefer to use listed first.
@@ -26,7 +26,14 @@ import sys
 from twisted.python import usage
 
 # Prefer gtk2 because it is the way of the future!
-toolkitPreference = ('gtk2','gtk1')
+toolkitPreference = ('gtk2', 'gtk1')
+
+class NoToolkitError(usage.UsageError):
+    wantToolkits = toolkitPreference
+    def __str__(self):
+        return (
+            "I couldn't find any of these toolkits installed, and I need "
+            "one of them to run: %s" % (', '.join(self.wantToolkits),))
 
 def bestToolkit():
     """The most-preferred available toolkit.
@@ -37,6 +44,8 @@ def bestToolkit():
     for v in toolkitPreference:
         if v in avail:
             return v
+    else:
+        raise NoToolkitError
 
 _availableToolkits = None
 def getAvailableToolkits():
@@ -104,7 +113,7 @@ def run():
         sys.exit(1)
 
     run(config)
-    
+
     from twisted.internet import reactor
     reactor.run()
 
@@ -141,7 +150,7 @@ def run_gtk2(config):
     from twisted.internet import gtk2reactor
     gtk2reactor.install()
     from twisted.spread.ui import gtk2util
-    
+
     # Put this off until after we parse options, or else gnome eats them.
     sys.argv[:] = ['manhole']
     from twisted.manhole.ui import gtk2manhole
