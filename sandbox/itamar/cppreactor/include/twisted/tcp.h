@@ -72,11 +72,11 @@ namespace TwistedImpl
 		
 	// Adding locally owned storage:
 	inline void add(const char* buf, size_t len, bool newChunk) {
-	    //if (!newChunk && m_used && m_vecs[m_offset + m_used - 1].iov_base == (void*)buf) {
-	    //m_vecs[m_offset + m_used - 1].iov_len += len;
-	    //} else {
+	    if (!newChunk && m_used && m_vecs[m_offset + m_used - 1].iov_base == (void*)buf) {
+	    m_vecs[m_offset + m_used - 1].iov_len += len;
+	    } else {
 		reallyAdd(buf, len, OwnerPtr(), false);
-		//}
+	    }
 	}
 
 	// Add externally owned storage:
