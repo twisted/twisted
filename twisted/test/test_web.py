@@ -251,3 +251,24 @@ class GoogleTestCase(unittest.TestCase):
         d = google.checkGoogle('site:www.twistedmatrix.com twisted')
         r = unittest.deferredResult(d)
         self.assertEquals(r, 'http://twistedmatrix.com/')
+
+from twisted.web import static
+class StaticFileTest(unittest.TestCase):
+
+    def testStaticPaths(self):
+        import os
+        dp = os.path.join(self.caseMethodName,"hello")
+        ddp = os.path.join(dp, "goodbye")
+        tp = os.path.join(dp,"world.txt")
+        os.makedirs(dp)
+        f = open(tp,"wb")
+        f.write("hello world")
+        f = static.File(dp)
+        f.indexNames = f.indexNames + ['world.txt']
+        self.assertEquals(f.getChild('', DummyRequest([''])).path,
+                          tp)
+        f = static.File(dp)
+        self.assertEquals(f.getChild('world.txt', DummyRequest(['world.txt']))
+                          .path, tp)
+        self.assertEquals(f.getChild('', DummyRequest([''])).__class__,
+                          static.DirectoryListing)
