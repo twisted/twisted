@@ -159,8 +159,12 @@ def suppressWarnings(f, *warningz):
             for warning in warningz:
                 warnings.filterwarnings('default', *warning)
                 return ret
-    return new.function(_.func_code, _.func_globals, f.func_name,
-                        inspect.getargspec(_), _.func_closure)
+    try:
+        return new.function(_.func_code, _.func_globals, f.func_name,
+                            inspect.getargspec(_), _.func_closure)
+    except TypeError:
+        return new.function(_.func_code, _.func_globals, f.func_name,
+                            inspect.getargspec(_))
     
 # sibling imports, ugh.
 import unittest
