@@ -27,6 +27,7 @@ import sys
 from twisted.protocols import http
 from twisted.internet import process
 from twisted.spread import pb
+from twisted.python import log
 
 # Sibling Imports
 import server
@@ -200,7 +201,7 @@ class CGIProcess(process.Process, pb.Viewable):
                             self.request.setResponseCode(http.FOUND)
                         if headerName == 'status':
                             try:
-                                statusNum = int(headerText)
+                                statusNum = int(headerText[:3]) #"XXX <description>" sometimes happens.
                             except:
                                 log.msg( "malformed status header" )
                             else:
