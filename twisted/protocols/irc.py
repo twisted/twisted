@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.89 $'[11:-2]
+__version__ = '$Revision: 1.90 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -63,6 +63,7 @@ import sys
 import time
 import types
 import traceback
+import socket
 
 from os import path
 
@@ -124,10 +125,13 @@ class IRC(protocol.Protocol):
     """
 
     buffer = ""
+    hostname = None
 
     def connectionMade(self):
         log.msg("irc connection made")
         self.channels = []
+        if self.hostname is None:
+            self.hostname = socket.getfqdn()
 
     def sendLine(self, line):
         log.msg('send: %s' % line)
@@ -255,6 +259,21 @@ class IRC(protocol.Protocol):
         @param message: The action being sent.
         """
         self.sendLine(":%s ACTION %s :%s" % (sender, recip, message))
+
+    def topic(self, user, channel, topic):
+        """Send the topic to a user.
+        
+        @type user: C{str}
+        @param user: The user receiving the topic.  Only their nick name, not
+        the full hostmask.
+        
+        @type channel: C{str}
+        @param channel: The channel for which this is the topic.
+        
+        @type topic: C{str}
+        @param topic: The topic string.
+        """
+        self.sendLine(":%s %d %s %s :%s" % (self.hostname, RPL_TOPIC, user, channel, topic))
 
     def join(self, who, where):
         """Send a join message.
