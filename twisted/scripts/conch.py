@@ -14,11 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.33 2003/02/12 18:05:58 z3p Exp $
+# $Id: conch.py,v 1.34 2003/02/12 19:46:17 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
 
+from twisted.conch import error
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
