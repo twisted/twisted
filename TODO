@@ -147,11 +147,16 @@ this file directly.
 029 DCC and CTCP parsing for IRCGateway, to allow interactions with clients on
     other protocols. (This depends on 008)
 
-030 [[Moshe Zadka]]
-    Completely rewrite and generate acceptance tests for DNS code. This should
-    be done via: a) moving everything to deferred b) making sure we can deal
-    with bad DNS servers on the resolver list c) having the acceptance test
-    use host(1)
+030 [[Moshe Zadka]] DNS
+    A. Make sure we can server DNS correctly
+       A.1 Get all necessary constants into twisted.protocols.dns
+    B. Make sure we can deal with asking several servers and dealing
+       with the answers appropriately
+    C. Generate unit tests for encoding/decoding
+    D. Figure a user interface for DNS serving
+    E. Figure a caching strategy
+    F. Figure an algorithm to decide which "additional answers" to give
+    G. Write acceptance tests (probably via dig(1))
 
 031 Abstract notion of "a group of people", at a higher level than a chat
     group.
