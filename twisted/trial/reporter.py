@@ -80,7 +80,8 @@ class Reporter:
         if resultType in (FAILURE, ERROR, EXPECTED_FAILURE):
             if self.debugger:
                 if isinstance(results, failure.Failure):
-                    raise TypeError, "Failure, not Exception -- you lose."
+                    print "Failure, not Exception -- can't postmortem."
+                    pdb.set_trace()
                 else:
                     pdb.post_mortem(results[2])
         if resultType == SKIP:
