@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.13 2002/02/23 21:39:52 itamarst Exp $
+$Id: setup.py,v 1.14 2002/02/24 00:17:56 itamarst Exp $
 """
 
 import distutils, os, sys
@@ -92,9 +92,23 @@ if os.name == 'posix':
     import glob
     setup_args['scripts'] = ['bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd', 'bin/im', 'bin/t-im', 'bin/faucet']
 
+
+# make sure data files are installed in twisted package
+# this is evil.
+from distutils.command.install_data import install_data
+
+class my_install_data(install_data):
+    def finalize_options (self):
+        self.set_undefined_options('install',
+            ('install_lib', 'install_dir'),
+            ('root', 'root'),
+            ('force', 'force'),
+        )
+
 imPath = os.path.join('twisted', 'im')
 setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')])]
-print setup_args['data_files']
+setup_args['cmdclass']=  {'install_data': my_install_data}
+
 #'"
 # for building C banana...
 
