@@ -24,8 +24,8 @@ an example::
     from twisted.python import usage
     import sys
     class MyOptions(usage.Options):
-        optFlags = [["hello", "h"], ["goodbye", "g"]]
-        optStrings = [["message", "m", "friend!"]]
+        flags = [["hello", "h"], ["goodbye", "g"]]
+        parameters = [["message", "m", "friend!"]]
         def __init__(self):
             self.debug = 0
         def opt_debug(self, opt):
@@ -34,13 +34,13 @@ an example::
             elif opt == "no" or opt == "n" or opt == "0":
                 self.debug = 0
             else:
-                print "Unkown value for debug, setting to 0"
+                print "Unknown value for debug, setting to 0"
                 self.debug = 0
         opt_d = opt_debug # a single-char alias for --debug
     try:
         config = MyOptions()
         config.parseOptions()
-    except usage.error, ue:
+    except usage.UsageError, ue:
         print "%s: %s" % (sys.argv[0], ue)
     if config.hello:
         if config.debug: print "printing hello"
@@ -61,123 +61,93 @@ the paramater on the command line. A few example command lines
 that will work:
 
 # XXX - Where'd the examples go?
-"""
+""" # "
 
 # System Imports
 import string
 import os
 import sys
+import new
 import getopt
 
 # Sibling Imports
 import reflect
 import text
 
-error = getopt.error
+
+class UsageError(Exception):
+    pass
+
+error = UsageError
 
 class Options:
     """
     A class which can be subclassed to provide command-line options
     to your program. See twisted.usage.__doc__ for for details.
     """
+
+    def __init__(self):
+        # These are strings/lists we will pass to getopt
+        self.longOpt = []
+        self.shortOpt = ''
+        self.docs = {}
+        self.synonyms = {}
+        self.__dispatch = {}
+
+        collectors = [
+            self._gather_flags,
+            self._gather_parameters,
+            self._gather_handlers,
+            ]
+
+        for (longOpt, shortOpt, docs, settings, synonyms, dispatch)\
+            in map( lambda c: c(), collectors):
+
+            self.longOpt.extend(longOpt)
+            self.shortOpt = self.shortOpt + shortOpt
+            self.docs.update(docs)
+            self.__dict__.update(settings)
+            self.synonyms.update(synonyms)
+            self.__dispatch.update(dispatch)
+
+    def opt_help(self, v=None):
+        pass
+        # XXX
+
+    opt_h = opt_help
+
     def parseOptions(self, options=None):
+        """The guts of the command-line parser.
         """
-        The guts of the command-line parser.
-        """
-        # it's fine if this is slow
+
         if options is None:
             options = sys.argv[1:]
-        dct = {}
-        reflect.addMethodNamesToDict(self.__class__, dct, "opt_")
-        # optDoc = {}
-        # These are strings/lists we will pass to getopt
-        shortOpt = ''
-        longOpt = []
 
-        for name in dct.keys():
-            method = getattr(self, 'opt_'+name)
-            reqArgs = method.im_func.func_code.co_argcount
-            if reqArgs > 2:
-                raise error, 'invalid Option function for %s' % name
-            if reqArgs == 2:
-                takesArg = 1
-            else:
-                takesArg = 0
-
-            if len(name) == 1:
-                shortOpt = shortOpt + name
-                if takesArg:
-                    shortOpt = shortOpt + ':'
-            else:
-                if takesArg:
-                    name = name + '='
-                longOpt.append(name)
-
-        flags = []
-        reflect.accumulateClassList(self.__class__, 'optFlags', flags)
-        strings = []
-        reflect.accumulateClassList(self.__class__, 'optStrings', strings)
-        flagDict = {}
-        stringDict = {}
-
-        for flag in flags:
-            long, short = flag[:2]
-            # The doc parameter is optional to preserve compatibility.
-            if len(flag) == 2:
-                pass # optDoc[long] = None
-            elif len(flag) == 3:
-                pass # optDoc[long] = flag[3]
-            else:
-                raise ValueError,\
-                      "Too many parameters for flag %s" % (long,)
-            setattr(self, long, 0)
-            if short:
-                shortOpt = shortOpt + short
-            longOpt.append(long)
-            flagDict[short] = long
-            flagDict[long] = long
-
-        for string_ in strings:
-            long, short, default = string_[:3]
-            # The doc parameter is optional to preserve compatibility.
-            if len(string_) == 3:
-                pass # optDoc[long] = None
-            elif len(string_) == 4:
-                pass # optDoc[long] = string_[4]
-            else:
-                raise ValueError,\
-                      "Too many parameters for option string %s" % (long,)
-            setattr(self, long, default)
-            if short:
-                shortOpt = shortOpt + short + ':'
-            longOpt.append(long + '=')
-            stringDict[short] = long
-            stringDict[long] = long
-
-        opts, args = getopt.getopt(options,shortOpt,longOpt)
+        try:
+            opts, args = getopt.getopt(options,
+                                       self.shortOpt, self.longOpt)
+        except getopt.error, e:
+            raise UsageError, e
 
         try:
             apply(self.parseArgs,args)
         except TypeError:
             raise error, "wrong number of arguments."
+
         for opt, arg in opts:
             if opt[1] == '-':
                 opt = opt[2:]
             else:
                 opt = opt[1:]
-            if flagDict.has_key(opt):
-                assert arg == '', 'This option is a flag.'
-                setattr(self, flagDict[opt], 1)
-            elif stringDict.has_key(opt):
-                setattr(self, stringDict[opt], arg)
-            else:
-                method = getattr(self, 'opt_'+opt)
-                if method.im_func.func_code.co_argcount == 2:
-                    method(arg)
-                else:
-                    assert arg == '', "This option takes no arguments."
-                    method()
+
+            if not self.synonyms.has_key(opt):
+                raise UsageError, "No such option '%s'" % (opt,)
+
+            opt = self.synonyms[opt]
+            self.__dispatch[opt](opt, arg)
+
         self.postOptions()
+
 
     def postOptions(self):
         """I am called after the options are parsed.
@@ -188,6 +158,7 @@ class Options:
         XXX: Like what?
         """
         pass
+
 
     def parseArgs(self):
         """I am called with any leftover arguments which were not options.
@@ -204,54 +175,167 @@ class Options:
         """
         pass
 
+    def _generic_flag(self, flagName, value=None):
+        if value not in ('', None):
+            raise UsageError, ("Flag '%s' takes no argument."
+                               " Not even \"%s\"." % (flagName, value))
+        setattr(self, flagName, 1)
+
+    def _generic_parameter(self, parameterName, value):
+        if value in ('', None):
+            raise UsageError, ("Parameter '%s' requires an argument."
+                               % (flagName,))
+        setattr(self, parameterName, value)
+
+    def _gather_flags(self):
+        """Gather up boolean (flag) options.
+        """
+
+        longOpt, shortOpt = [], ''
+        docs, settings, synonyms, dispatch = {}, {}, {}, {}
+
+        flags = []
+        # Lose the 'opt' prefix...
+        reflect.accumulateClassList(self.__class__, 'flags', flags)
+        # (transitional) read optFlags for compatibility
+        reflect.accumulateClassList(self.__class__, 'optFlags', flags)
+
+        for flag in flags:
+            long, short, doc = padTo(3, flag)
+            if not long:
+                raise ValueError, "A flag cannot be without a name."
+
+            docs[long] = doc
+            settings[long] = 0
+            if short:
+                shortOpt = shortOpt + short
+                synonyms[short] = long
+            longOpt.append(long)
+            synonyms[long] = long
+            dispatch[long] = self._generic_flag
+
+        return longOpt, shortOpt, docs, settings, synonyms, dispatch
+
+
+    def _gather_parameters(self):
+        """Gather options which take a value.
+        """
+        longOpt, shortOpt = [], ''
+        docs, settings, synonyms, dispatch = {}, {}, {}, {}
+
+        # Transition to referring to them as parameters, not "option
+        # strings".  (Yes, they will be passed from getopt as string
+        # types, but that's not relevant.)
+        parameters = []
+        reflect.accumulateClassList(self.__class__, 'parameters',
+                                    parameters)
+
+        # read optStrings for backward compatibility.
+        reflect.accumulateClassList(self.__class__, 'optStrings',
+                                    parameters)
+        synonyms = {}
+
+        for parameter in parameters:
+            long, short, default, doc = padTo(4, parameter)
+            if not long:
+                raise ValueError, "A parameter cannot be without a name."
+
+            docs[long] = doc
+            settings[long] = default
+            if short:
+                shortOpt = shortOpt + short + ':'
+                synonyms[short] = long
+            longOpt.append(long + '=')
+            synonyms[long] = long
+            dispatch[long] = self._generic_parameter
+
+        return longOpt, shortOpt, docs, settings, synonyms, dispatch
+
+
+    def _gather_handlers(self):
+        """Gather up options with their own handler methods.
+        """
+
+        longOpt, shortOpt = [], ''
+        docs, settings, synonyms, dispatch = {}, {}, {}, {}
+
+        dct = {}
+        reflect.addMethodNamesToDict(self.__class__, dct, "opt_")
+
+        for name in dct.keys():
+            method = getattr(self, 'opt_'+name)
+            reqArgs = method.im_func.func_code.co_argcount
+            if reqArgs > 2:
+                raise error, 'invalid Option function for %s' % name
+            if reqArgs == 2:
+                # argName = method.im_func.func_code.co_varnames[1]
+                takesArg = 1
+            else:
+                takesArg = 0
+
+            doc = getattr(method, '__doc__', None)
+            if doc:
+                # Only use the first line.
+                docs[name] = string.split(doc, '\n')[0]
+            else:
+                docs[name] = None
+
+            synonyms[name] = name
+
+            # A little slight-of-hand here makes dispatching much easier
+            # in parseOptions, as it makes all option-methods have the
+            # same signature.
+            if takesArg:
+                fn = lambda self, name, value, m=method: m(value)
+            else:
+                # XXX: This won't raise a TypeError if it's called
+                # with a value when it shouldn't be.
+                fn = lambda self, name, value=None, m=method: m()
+
+            dispatch[name] = new.instancemethod(fn, self, self.__class__)
+
+            if len(name) == 1:
+                shortOpt = shortOpt + name
+                if takesArg:
+                    shortOpt = shortOpt + ':'
+            else:
+                if takesArg:
+                    name = name + '='
+                longOpt.append(name)
+
+
+        return longOpt, shortOpt, docs, settings, synonyms, dispatch
+
 
     def __str__(self, width=None):
         if not width:
             width = int(os.getenv('COLUMNS', '80'))
 
-        flags = []
-        reflect.accumulateClassList(self.__class__, 'optFlags', flags)
-        strings = []
-        reflect.accumulateClassList(self.__class__, 'optStrings', strings)
+        longToShort = {}
+        for key, value in self.synonyms.items():
+            longname = value
+            if (key != longname) and (len(key) == 1):
+                longToShort[longname] = key
+            else:
+                if not longToShort.has_key(longname):
+                    longToShort[longname] = None
+                else:
+                    pass
 
-        # We should have collected these into some sane container
-        # earlier...
         optDicts = []
-        for flag in flags:
-            long, short = flag[:2]
-            # The doc parameter is optional to preserve compatibility.
-            if len(flag) == 2:
-                doc = None
-            elif len(flag) == 3:
-                doc = flag[2]
+        for opt in self.longOpt:
+            if opt[-1] == '=':
+                optType = 'parameter'
+                opt = opt[:-1]
             else:
-                raise ValueError,\
-                      "Too many parameters for flag %s" % (long,)
-            d = {'long': long,
-                 'short': short,
-                 'doc': doc,
-                 'optType': 'flag'}
-            optDicts.append(d)
+                optType = 'flag'
 
-        for string_ in strings:
-            long, short, default = string_[:3]
-            # The doc parameter is optional to preserve compatibility.
-            if len(string_) == 3:
-                doc = None
-            elif len(string_) == 4:
-                doc = string_[3]
-            else:
-                raise ValueError,\
-                      "Too many parameters for option string %s" % (long,)
-
-            d = {'long': long,
-                 'short': short,
-                 'default': default,
-                 'doc': doc,
-                 'optType': 'string'}
-            optDicts.append(d)
-
-        # XXX: Decide how user-defined opt_Foo methods fit in to this.
+            optDicts.append(
+                {'long': opt,
+                 'short': longToShort[opt],
+                 'doc': self.docs[opt],
+                 'optType': optType,
+                 })
 
         if optDicts:
             chunks = docMakeChunks(optDicts, width)
@@ -283,7 +367,7 @@ def docMakeChunks(optList, width=80):
     for opt in optList:
         optLen = len(opt.get('long', ''))
         if optLen:
-            if opt.get('optType', None) == "string":
+            if opt.get('optType', None) != "flag":
                 # these take up an extra character
                 optLen = optLen + 1
             maxOptLen = max(len(opt.get('long', '')), maxOptLen)
@@ -300,21 +384,23 @@ def docMakeChunks(optList, width=80):
     for opt in optList:
         optLines = []
         comma = " "
-        short = "%c" % (opt.get('short', None) or " ",)
+        if opt.get('short', None):
+            short = "-%c" % (opt['short'],)
+        else:
+            short = ''
 
         if opt.get('long', None):
-            if opt.get("optType", None) == "string":
-                takesString = "="
-            else:
-                takesString = ''
+            long = opt['long']
+            if opt.get("optType", None) != "flag":
+                long = long + '='
 
-            long = "%-*s%s" % (maxOptLen, opt['long'], takesString)
-            if short != " ":
+            long = "%-*s" % (maxOptLen, long)
+            if short:
                 comma = ","
         else:
             long = " " * (maxOptLen + len('--'))
 
-        column1 = "  -%c%c --%s  " % (short, comma, long)
+        column1 = "  %2s%c --%s  " % (short, comma, long)
 
         if opt.get('doc', None):
             if opt.get('default', None):
@@ -333,3 +419,25 @@ def docMakeChunks(optList, width=80):
         optChunks.append(string.join(optLines, ''))
 
     return optChunks
+
+
+def padTo(n, seq, default=None):
+    """Pads a sequence out to n elements,
+
+    filling in with a default value if it is not long enough.
+
+    If the input sequence is longer than n, raises ValueError.
+
+    Details, details:
+    This returns a new list; it does not extend the original sequence.
+    The new list contains the values of the original sequence, not copies.
+    """
+
+    if len(seq) > n:
+        raise ValueError, "%d elements is more than %d." % (len(seq), n)
+
+    blank = [default] * n
+
+    blank[:len(seq)] = seq
+
+    return blank
