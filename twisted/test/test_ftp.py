@@ -89,7 +89,7 @@ class FTPClientTests(FTPTest):
 
         # Check that the listing contains this file (test_ftp.py)
         filenames = map(lambda file: file['filename'], fileList.files)
-        self.failUnless('test_ftp.py' not in filenames, 
+        self.failUnless('test_ftp.py' in filenames, 
                         'test_ftp.py not in file listing')
 
     def testRetr(self):
