@@ -290,9 +290,7 @@ class FlowTest(unittest.TestCase):
 
     def testDeferredFailure(self):
         d = flow.Deferred(badgen())
-        r = unittest.deferredError(d) 
-        self.failUnless(isinstance(r, failure.Failure))
-        self.failUnless(isinstance(r.value, ZeroDivisionError))
+        unittest.deferredError(d).trap(ZeroDivisionError)
 
     def testDeferredTrap(self):
         d = flow.Deferred(badgen(), ZeroDivisionError)
@@ -303,9 +301,7 @@ class FlowTest(unittest.TestCase):
         lhs = [(1,'a'),(2,'b'),(3,'c')]
         mrg = flow.Zip([1,2,flow.Cooperate(),3],badgen())
         d = flow.Deferred(mrg)
-        r = unittest.deferredError(d) 
-        self.failUnless(isinstance(r, failure.Failure))
-        self.failUnless(isinstance(r.value, ZeroDivisionError))
+        unittest.deferredError(d).trap(ZeroDivisionError)
 
     def testDeferredWrapper(self):
         from twisted.internet import defer
@@ -322,9 +318,7 @@ class FlowTest(unittest.TestCase):
         d = defer.Deferred()
         f = lambda: d.errback(flow.Failure(IOError()))
         reactor.callLater(0, f)
-        r = unittest.deferredError(d)
-        self.failUnless(isinstance(r, failure.Failure))
-        self.failUnless(isinstance(r.value, IOError))
+        unittest.deferredError(d).trap(IOError)
 
     def testCallback(self):
         cb = flow.Callback()
@@ -341,9 +335,7 @@ class FlowTest(unittest.TestCase):
         for x in range(3):
             cb.result(x)
         cb.errback(flow.Failure(IOError()))
-        r = unittest.deferredError(d)
-        self.failUnless(isinstance(r, failure.Failure))
-        self.failUnless(isinstance(r.value, IOError))
+        unittest.deferredError(d).trap(IOError)
 
     def testConcurrentCallback(self):
         ca = flow.Callback()
