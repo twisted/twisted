@@ -17,6 +17,7 @@
 
 from twisted.internet import reactor
 from twisted.spread import pb
+from twisted.cred.credentials import UsernamePassword
 
 from pbecho import DefinedError
 
@@ -37,7 +38,7 @@ def connected(perspective):
 
 factory = pb.PBClientFactory()
 reactor.connectTCP("localhost", pb.portno, factory)
-factory.getPerspective(
-    "guest", "guest", "pbecho", "guest").addCallbacks(connected, failure)
+factory.login(
+    UsernamePassword("guest", "guest")).addCallbacks(connected, failure)
 
 reactor.run()

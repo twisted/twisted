@@ -16,28 +16,39 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.internet import app
-from twisted.cred.authorizer import DefaultAuthorizer
+from twisted.cred.portal import IRealm
 
 class DefinedError(pb.Error):
     pass
 
+
 class SimplePerspective(pb.Perspective):
+
     def perspective_echo(self, text):
         print 'echoing',text
         return text
+
     def perspective_error(self):
         raise DefinedError("exception!")
-class SimpleService(pb.Service):
-    def getPerspectiveNamed(self, name):
-        p = SimplePerspective(name)
-        p.setService(self)
-        return p
+
+
+class SimpleRealm:
+    __implements__ = IRealm
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if pb.IPerspective in interfaces:
+            return pb.IPerspective, SimplePerspective("pbecho"), lambda : None
+        else:
+            raise NotImplementedError("no interface")
+
 if __name__ == '__main__':
     import pbecho
-    appl = app.Application("pbecho")
-    auth = DefaultAuthorizer(appl)
-    service = pbecho.SimpleService("pbecho", appl, auth)
-    service.getPerspectiveNamed("guest").makeIdentity("guest")
-    appl.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(auth)))
-    appl.save("start")
+    from twisted.internet import reactor
+    from twisted.cred.portal import Portal
+    from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    portal = Portal(pbecho.SimpleRealm())
+    checker = InMemoryUsernamePasswordDatabaseDontUse()
+    checker.addUser("guest", "guest")
+    portal.registerChecker(checker)
+    reactor.listenTCP(pb.portno, pb.PBServerFactory(portal))
+    reactor.run()
