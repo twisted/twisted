@@ -16,10 +16,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""This script attempts to send some email.
-
-The name is preliminary and subject to change.
-"""
+"""This script attempts to send some email."""
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
@@ -31,6 +28,6 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 
-from twisted.scripts import newtexaco
-newtexaco.run()
+from twisted.scripts import mailmail
+mailmail.run()
 
