@@ -12,6 +12,11 @@
 
 <dl>
 
+<dt>Adapter</dt>
+<dd>An object which makes another object conform to a particular Interface by
+translating or adapting calls to it.  See 
+<code class="API">twisted.python.components</code>.</dd>
+
 <dt>Application</dt>
 <dd>A <code class="API">twisted.internet.app.Application</code>.  There are
 HOWTOs on <a href="basics.html">manipulating</a> existing ones, as well as
@@ -33,6 +38,11 @@ broker for Twisted Spread.</dd>
 <dd><q>COnfiguration ILlumination</q>.  It is an end-user interface for
 configuring Twisted applications.  See 
 <code class="API">twisted.coil</code>.</dd>
+
+<dt>Component</dt>
+<dd>An object that works with the 
+<code class="API">twisted.python.components</code> infrastructure, which 
+provides for Interfaces for classes and Adapters for those Interfaces.</dd>
 
 <dt>Conch</dt>
 <dd>Twisted's SSH implementation.</dd>
@@ -97,6 +107,12 @@ represents a single user with a username and a password of some sort.</dd>
 <dd>Instance Messenger is a multi-protocol chat program that comes with
 Twisted.  It can communicate via TOC with the AOL servers, via IRC, as well as
 via PB with Twisted Words.  See <code class="API">twisted.im</code>.</dd>
+
+<dt>Interface</dt>
+<dd>A <code class="API">twisted.python.components.Interface</code>.  An
+Interface defines and documents methods that a class conforming to that
+interface will have.  A collection of core Twisted Interfaces can be found in
+<code class="API">twisted.internet.interfaces</code>.</dd>
 
 <dt>Issues</dt>
 <dd>Twisted's Issue Tracker, found in 
