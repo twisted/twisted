@@ -24,7 +24,7 @@ Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 Future Plans: more configurability.
 """
 
-import pwd, grp
+import pwd, grp, socket
 from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
 from twisted.internet.protocol import ServerFactory
@@ -35,6 +35,10 @@ try:
     rpcOk = 1
 except ImportError:
     rpcOk = 0
+
+
+# Protocol map
+protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
 
 class Options(usage.Options):

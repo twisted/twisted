@@ -25,7 +25,7 @@ Future Plans: Bugfixes.  Specifically for UDP and Sun-RPC, which don't work
 correctly yet.
 """
 
-import os, socket
+import os
 
 from twisted.internet import process, reactor
 from twisted.internet.protocol import Protocol, ServerFactory
@@ -41,9 +41,6 @@ internalProtocols = {
     'time': wire.Time,
 }
             
-# Protocol map
-protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
-
 
 class InetdProtocol(Protocol):
     """Forks a child process on connectionMade, passing the socket as fd 0."""
