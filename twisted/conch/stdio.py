@@ -57,15 +57,17 @@ class ConsoleManhole(ColoredManhole):
         reactor.stop()
 
 def runWithProtocol(klass):
-    oldSettings = termios.tcgetattr(sys.stdin.fileno())
-    tty.setraw(sys.stdin.fileno())
+    fd = sys.__stdin__.fileno()
+    oldSettings = termios.tcgetattr(fd)
+    tty.setraw(fd)
     try:
         p = ServerProtocol(klass)
         stdio.StandardIO(p)
         reactor.run()
     finally:
-        termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, oldSettings)
-        print
+        termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
+        import os
+        os.write(0, "\r\x1bc\r")
 
 def main(argv=None):
     log.startLogging(file('child.log', 'w'))
