@@ -18,7 +18,7 @@ from __future__ import nested_scopes
 
 import os, tempfile
 from twisted.web import domhelpers, microdom
-import latex, tree, default
+import latex, tree, lint, default
 
 class MathLatexSpitter(latex.LatexSpitter):
 
