@@ -289,10 +289,11 @@ def doFile(fn, linkrel, ext, url, templ, d=None):
 
 class ProsperSlides(LatexSpitter):
     firstSlide = 1
-    start_html = '\\documentclass[pdf]{prosper}\n'
+    start_html = '\\documentclass[ps]{prosper}\n'
     start_body = '\\begin{document}\n'
     start_div_author = '\\author{'
     end_div_author = '}'
+
     def visitNode_h2(self, node):
         if self.firstSlide:
             self.firstSlide = 0
@@ -303,6 +304,11 @@ class ProsperSlides(LatexSpitter):
         spitter = HeadingLatexSpitter(self.writer, self.currDir, self.filename)
         spitter.visitNodeDefault(node)
         self.writer('}')
+
+    def _write_img(self, target):
+        self.writer('\\begin{center}\\includegraphics[%%\nwidth=1.0\n\\textwidth,'
+                    'height=1.0\\textheight,\nkeepaspectratio]{%s}\\end{center}\n' % target)
+
 
 class PagebreakLatex(LatexSpitter):
 
