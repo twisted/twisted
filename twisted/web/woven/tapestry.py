@@ -7,10 +7,9 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.8 $"[11:-2]
+__version__ = "$Revision: 1.9 $"[11:-2]
 
 # System Imports
-import time
 import sys
 
 # Twisted Imports
@@ -66,7 +65,7 @@ class ModelLoader(Resource):
         templateFile = (self.templateFile or self.__class__.__name__+'.html')
         d.addCallback(
             lambda result: self.parent.makeView(self.modelClass(result),
-                                                self.templateFile))
+                                                templateFile))
         return _ChildJuggler(d)
 
     def loadModelNow(self, path, request):
@@ -107,13 +106,19 @@ class Tapestry(Resource):
     def getSubview(self, request, node, model, viewName):
         mod = sys.modules[self.__class__.__module__]
         # print "I'm getting a subview", mod, viewName
+
         # try just the name
         vm = getattr(mod, viewName, None)
         if vm:
             return vm(model)
+
         # try the name + a V
         vn2 = "V"+viewName.capitalize()
         vm = getattr(mod, vn2, None)
+        if vm:
+            return vm(model)
+
+        vm = getattr(self, 'wvfactory_'+viewName, None)
         if vm:
             return vm(model)
 
