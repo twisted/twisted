@@ -106,7 +106,8 @@ class Deferred:
                                  errbackKeywords=kw)
 
     def addBoth(self, callback, *args, **kw):
-        """Convenience method for adding both a callback and an errback.
+        """Convenience method for adding a single callable as both a callback
+        and an errback.
 
         See addCallbacks.
         """
