@@ -24,6 +24,7 @@ from twisted.spread import pb
 from twisted.python import log, components, failure
 from twisted.cred import portal
 from twisted.application import service
+from zope.interface import implements
 
 # sibling imports
 import explorer
@@ -362,7 +363,7 @@ class Perspective(pb.Avatar):
 
 class Realm:
 
-    __implements__ = portal.IRealm
+    zope.interface(portal.IRealm)
 
     def __init__(self, service):
         self.service = service
@@ -379,6 +380,9 @@ class Realm:
         def detached():
             p.detached(mind, avatarId)
         return (pb.IPerspective, p, detached)
+
+components.backwardsCompatImplements(Realm)
+
 
 class Service(service.Service):
 

@@ -30,6 +30,7 @@ from twisted.spread import pb
 from twisted.spread.ui import gtk2util
 
 from twisted.manhole.service import IManholeClient
+from zope.interface import implements
 
 # The pygtk.require for version 2.0 has already been done by the reactor.
 import gtk
@@ -383,7 +384,7 @@ class _Notafile:
         pass
 
 class ManholeClient(components.Adapter, pb.Referenceable):
-    __implements__ = (IManholeClient,)
+    implements(IManholeClient)
 
     capabilities = {
 #        "Explorer": 'Set',
@@ -419,4 +420,5 @@ class ManholeClient(components.Adapter, pb.Referenceable):
             raise OfflineError
         return self.perspective.callRemote("do", text)
 
+components.backwardsCompatImplements(ManholeClient)
 components.registerAdapter(ManholeClient, ManholeWindow, IManholeClient)
