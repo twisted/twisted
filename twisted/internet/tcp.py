@@ -5,6 +5,7 @@
 
 # System Imports
 import os
+import stat
 import types
 import copy
 import socket
@@ -101,10 +102,15 @@ class Client(Connection):
         """Initialize the client, setting up its socket, and request to connect.
         """
         if host == 'unix':
+            # "port" in this case is really a filename
+            mode = os.stat(port)[0]
+            assert (mode & stat.S_IFSOCK), "that's not a socket"
+            assert (mode & stat.S_IROTH), "that's not readable"
+            assert (mode & stat.S_IWOTH), "that's not writable"
+            # success.
+            self.addr = port
             # we are using unix sockets
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            # "port" in this case is really a filename
-            self.addr = port
         else:
            skt = self.createInternetSocket()
            self.addr = (host, port)
@@ -253,9 +259,12 @@ class Port(abstract.FileDescriptor):
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             skt.bind(self.port)
+            # Make the socket readable and writable to the world.
+            mode = os.stat(self.port)[0]
+            os.chmod(self.port, mode | stat.S_IROTH | stat.S_IWOTH)
             self.unixsocket = 1
         else:
-            skt = self.createInternetSocket()            
+            skt = self.createInternetSocket()
             skt.bind( ('',self.port) )
         skt.listen(5)
         self.connected = 1
