@@ -185,3 +185,7 @@ def runApp(config):
 
 def run():
     app.run(runApp, ServerOptions)
+
+
+if __name__ == "__main__":
+     run()
