@@ -51,7 +51,8 @@ class GroupSession(Toplevel):
         self.columnconfigure(1,weight=0)
         self.columnconfigure(3,weight=0)
         self.rowconfigure(2,weight=0)
-        self.im.remote.getGroupMembers(self.name,pbcallback=self.gotGroupMembers)
+        self._nolist=0
+        self.im.remote.getGroupMembers(self.name,pbcallback=self.gotGroupMembers,pberrback=self.noGroupMembers)
     def close(self):
         self.im.remote.leaveGroup(self.name)
         self.destroy()
@@ -63,17 +64,20 @@ class GroupSession(Toplevel):
         self.output.config(state=DISABLED)
     def gotGroupMembers(self,list):
         for m in list:
-            self.list.insert(END,m)    
+            self.list.insert(END,m)
+    def noGroupMembers(self,tb):
+        self._nolist=1
     def displayMessage(self,user,message):
         self._out("<%s> %s\n"%(user,message))
     def memberJoined(self,user):
         self._out("%s joined!\n"%user)
-        self.list.insert(END,user)
+        if not self._nolist:self.list.insert(END,user)
     def memberLeft(self,user):
         self._out("%s left!\n"%user)
-        users=list(self.list.get(0,END))
-        i=users.index(user)
-        self.list.delete(i)
+        if not self._nolist:
+            users=list(self.list.get(0,END))
+            i=users.index(user)
+            self.list.delete(i)
     def say(self,*args):
         text=self.input.get("1.0",END)[:-1]
         if not text: return
