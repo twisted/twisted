@@ -168,7 +168,7 @@ in test_schema.py for this code: those tests assert specific values for
 maxSize. Those values are probably wrong, so they must be updated to match
 however maxSize actually works.
 
-* complete tests of LONGINT/LONGNEG
+* finish testing of LONGINT/LONGNEG
 
 test_banana.InboundByteStream.testConstrainedInt needs implementation
 
@@ -341,3 +341,10 @@ name must be looked up in the unjellyableRegistry (and the class located, and
 the __implements__ list consulted) before any of the object's tokens are
 accepted.
 
+* decide on a version negotiation scheme
+
+* write oldbanana compatibility code?
+
+An oldbanana peer can be detected because the server side sends its dialect
+list from connectionMade, and oldbanana lists are sent with OLDLIST tokens
+(the explicit-length kind).
