@@ -12,7 +12,7 @@
 
 	* twisted/internet/protocol.py (ProcessProtocol): add new
 	childDataReceived and childConnectionLost methods, which default
-	to invokking the old methods for backwards compatibility
+	to invoking the old methods for backwards compatibility
 
 	* twisted/test/test_process.py (FDTest): add test for childFDs
 	mapping. Also add timeouts to most tests, and make all
