@@ -29,8 +29,9 @@ def fixLinks(document, ext):
         href = node.getAttribute("href")
         if '/' not in href:
             if href.endswith('.html') or href[:href.rfind('#')].endswith('.html'):
-                fname = os.path.splitext(href)
-                node.setAttribute("href", fname[0] + ext)
+                fname, fext = os.path.splitext(href)
+                fext = fext.replace('.html', ext) 
+                node.setAttribute("href", fname + fext)
 
 
 def addMtime(document, fullpath):
