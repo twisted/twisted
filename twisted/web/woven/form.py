@@ -81,7 +81,6 @@ class FormFillerWidget(widgets.Widget):
         return r
 
     def input_string(self, request, content, arg):
-        print "INPUT_STRING"
         node = self.input_single(request, content, arg)
         node['size'] = arg.getHint('size', '60')
         return node
