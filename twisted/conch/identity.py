@@ -118,15 +118,26 @@ class OpenSSHConchIdentity(ConchIdentity):
         home = os.path.expanduser('~%s/.ssh/' % self.name)
         if home[0] == '~': # couldn't expand
             return defer.fail(Unauthorized('not valid user'))
+        uid, gid = os.geteuid(), os.getegid()
+        ouid, ogid = pwd.getpwnam(self.name)[2:4]
+        os.setegid(ogid)
+        os.seteuid(ouid)
         for file in ['authorized_keys', 'authorized_keys2']:
             if os.path.exists(home+file):
                 lines = open(home+file).readlines()
                 for l in lines:
                     try:
-                        if base64.decodestring(l.split()[1])==pubKeyString:
+                        l2 = l.split()
+                        if len(l2) < 2:
+                            continue
+                        if base64.decodestring(l2[1])==pubKeyString:
+                            os.setegid(gid)
+                            os.seteuid(uid)
                             return defer.succeed('')
                     except binascii.Error:
                         pass # we caught an ssh1 key
+        os.setegid(gid)
+        os.seteuid(uid)
         return defer.fail(error.ConchError('not valid key'))
 
     def verifyPlainPassword(self, password):
