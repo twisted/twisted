@@ -57,11 +57,12 @@ class ObjectLink(pb.Copyable):
     type = None
     identifier = None
 
-    def __init__(self, value, identifier=None, type=None):
+    def __init__(self, value, identifier=None, type=None, id_=None):
         """See ObjectLink class documentation for details on attributes.
         """
         self.value = value
         self.identifier = identifier
+        self.id = id_
 
         # Shucks, TypeType isn't jelliable yet.
         if type:
@@ -211,7 +212,6 @@ class ObjectBrowser:
 
         for name in members:
             m = getattr(object, name)
-            print name, type(m)
             # Only hook bound methods.
             if ((type(m) is types.MethodType)
                 and (m.im_self is not None)):
@@ -231,13 +231,15 @@ class ObjectBrowser:
         if seenThings is None:
             seenThings = {}
 
-        seenThings[id(thing)] = 'Set'
+        thingId = id(thing)
+        seenThings[thingId] = 'Set'
 
         thingType = type(thing)
         if thingType in (types.StringType, types.NoneType,
                          types.IntType, types.LongType,
                          types.FloatType, types.ComplexType,
-                         types.XRangeType, types.CodeType):
+                         types.CodeType):
+            # XXX: types.XRangeType needs to be made jelly-safe!
             thing = thing
 
         elif thingType in (types.ListType, types.TupleType):
@@ -247,7 +249,7 @@ class ObjectBrowser:
 
                 if seenThings.has_key(id(thing[i])):
                     lst[i] = ObjectLink(str(thing[i]), iIdentifier,
-                                        type(thing[i]))
+                                        type(thing[i]), id(thing[i]))
                 else:
                     seenThings[id(thing[i])] = 'Set'
                     lst[i] = self.browse_other(thing[i], iIdentifier,
@@ -269,14 +271,15 @@ class ObjectBrowser:
                 valueIdentifier = "%s[%s]" % (identifier, key)
 
                 if seenThings.has_key(id(key)):
-                    key = ObjectLink(str(key), keyIdentifier, type(key))
+                    key = ObjectLink(str(key), keyIdentifier, type(key),
+                                     id(key))
                 else:
                     seenThings[id(key)] = 'Set'
                     key = self.browse_other(key, keyIdentifier,
                                             seenThings)
                 if seenThings.has_key(id(value)):
                     value = ObjectLink(str(value), valueIdentifier,
-                                       type(value))
+                                       type(value), id(value))
                 else:
                     seenThings[id(value)] = 'Set'
                     value = self.browse_other(value, valueIdentifier,
@@ -288,7 +291,7 @@ class ObjectBrowser:
         else:
             thing = str(thing)
 
-        return ObjectLink(thing, identifier, thingType)
+        return ObjectLink(thing, identifier, thingType, thingId)
 
     def browse_builtin(self, function, identifier):
         """
@@ -302,7 +305,8 @@ class ObjectBrowser:
                 'name': function.__name__,
                 'self': function.__self__}
 
-        return ObjectLink(rval, identifier, types.BuiltinFunctionType)
+        return ObjectLink(rval, identifier, types.BuiltinFunctionType,
+                          id(function))
 
     def browse_instance(self, instance, identifier):
         """
@@ -332,12 +336,14 @@ class ObjectBrowser:
 
         rval = {"class": ObjectLink(str(instance.__class__),
                                     str(instance.__class__),
-                                    type(instance.__class__)),
+                                    type(instance.__class__),
+                                    id(instance.__class__)),
                 "members": members,
                 "methods": methods,
                 }
 
-        return ObjectLink(rval, identifier, types.InstanceType)
+        return ObjectLink(rval, identifier, types.InstanceType,
+                          id(instance))
 
     def browse_class(self, theClass, identifier):
         """
@@ -392,6 +398,7 @@ class ObjectBrowser:
         if type(function) is types.InstanceType:
             function = function.__call__.im_func
         link = self.browse_function(function, identifier)
+        link.id = id(method)
         link.value['class'] = self.browse_other(method.im_class,
                                              identifier + '.im_class')
         link.value['self'] = self.browse_other(method.im_self,
@@ -454,7 +461,8 @@ class ObjectBrowser:
                 'line': code.co_firstlineno,
                 }
 
-        return ObjectLink(rval, identifier, types.FunctionType)
+        return ObjectLink(rval, identifier, types.FunctionType,
+                          id(function))
 
     def browse_module(self, module, identifier):
         """
@@ -496,7 +504,7 @@ class ObjectBrowser:
                 'data': data,
                 }
 
-        return ObjectLink(rval, identifier, types.ModuleType)
+        return ObjectLink(rval, identifier, types.ModuleType, id(module))
 
     typeTable = {types.InstanceType: browse_instance,
                  types.ClassType: browse_class,
@@ -527,9 +535,9 @@ class _WatchMonkey:
 
         # XXX: this conditional probably isn't effective.
         if oldMethod is not self:
-            setattr(self.instance, methodIdentifier,
-                    new.instancemethod(self, self.instance,
-                                       self.instance.__class__))
+            self.instance.__dict__[methodIdentifier] = (
+                new.instancemethod(self, self.instance,
+                                   self.instance.__class__))
             self.oldMethod = (methodIdentifier, oldMethod)
 
     def uninstall(self):

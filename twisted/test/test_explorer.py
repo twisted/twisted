@@ -23,52 +23,243 @@ from pyunit import unittest
 
 from twisted.python import explorer
 
-EXCLUDE_FROM_BIGSUITE="Ugh."
+import types, string
 
-class ObjectBrowserTestCase(unittest.TestCase):
+"""
+# Tests:
+
+ Get an ObjectLink.  Browse ObjectLink.identifier.  Is it the same?
+
+ Watch Object.  Make sure an ObjectLink is received when:
+   Call a method.
+   Set an attribute.
+
+ Have an Object with a setattr class.  Watch it.
+   Do both the navite setattr and the watcher get called?
+
+ Sequences with circular references.  Does it blow up?
+"""
+
+class SomeDohickey:
+    def __init__(self, *a):
+        self.__dict__['args'] = a
+
+    def bip(self):
+        return self.args
+
+
+class TestBrowser(unittest.TestCase):
     def setUp(self):
-        class Foo:
-            x=2
-            def bar(self, a, b, c=3):
-                return a+b-c
-        self.Foo = Foo
-        self.ob = explorer.ObjectBrowser(Foo)
+        self.globalNS = globals().copy()
+        self.localNS = self.__dict__
+        self.browser = explorer.ObjectBrowser(self.globalNS, self.localNS)
+        self.testThing = ["How many stairs must a man climb down?",
+                          SomeDohickey(42)]
 
-    def testCode(self):
-        assert self.ob.code('x') == 2, "something's wrong."
+    def test_chain(self):
+        "Following an ObjectLink chain."
+        olink = self.browser.browseIdentifier('testThing')
+        self.failUnlessEqual(olink.id, id(self.testThing))
+        self.failUnlessEqual(olink.identifier, 'testThing')
 
-        self.ob.code('x=1')
-        self.ob.code('def baz(self): return "I am foo"')
-        assert self.Foo.x == 1,                "code('x=1') failed."
-        assert self.Foo().baz() == "I am foo", "code('def baz(self): return \"I am foo\"' failed."
+        dIdentifier = olink.value[1].identifier
 
-    def testMove(self):
-        class Bar: pass
-        self.ob.move(Bar)
-        assert self.ob.ns == Bar, "move() failed."
+        dlink = self.browser.browseIdentifier(dIdentifier)
 
-    def testGetAttrs(self):
-        assert self.ob.getAttrs() == ['__doc__', '__module__', 'bar', 'x'], "getAttrs() failed."
+        self.failUnlessEqual(dlink.id, id(self.testThing[1]))
 
-    def testCallMethod(self):
-        self.ob.move(self.Foo())
-        assert self.ob.callMeth('bar', 1, 2) == 0, "calling method 'bar' failed."
+class Watcher:
+    zero = 0
+    def __init__(self):
+        self.links = []
+
+    def receiveBrowserObject(self, olink):
+        self.links.append(olink)
+
+    def setZero(self):
+        self.zero = len(self.links)
+
+    def len(self):
+        return len(self.links) - self.zero
 
 
-class SecureObjectBrowserTestCase(unittest.TestCase):
+class SetattrDohickey:
+    def __setattr__(self, k, v):
+        v = list(str(v))
+        v.reverse()
+        self.__dict__[k] = string.join(v, '')
+
+class MiddleMan(SomeDohickey, SetattrDohickey):
+    pass
+
+class TestWatch(unittest.TestCase):
     def setUp(self):
-        class Foo:
-            pass
+        self.globalNS = globals().copy()
+        self.localNS = {}
+        self.browser = explorer.ObjectBrowser(self.globalNS, self.localNS)
+        self.watcher = Watcher()
 
-        self.Foo = Foo
-        self.ob = explorer.SecureObjectBrowser(Foo)
+    def test_setAttrPlain(self):
+        "Triggering a watcher response by setting an attribute."
 
-    def testCode(self):
-        try:
-            self.ob.code('print 1')
-        except AssertionError:
-            pass
-        else:
-            assert 0, "Hey, code should've failed."
+        testThing = SomeDohickey('pencil')
+        self.browser.watchObject(testThing, 'testThing',
+                                 self.watcher.receiveBrowserObject)
+        self.watcher.setZero()
 
-testCases = [ObjectBrowserTestCase, SecureObjectBrowserTestCase]
+        testThing.someAttr = 'someValue'
+
+        self.failUnlessEqual(testThing.someAttr, 'someValue')
+        self.failUnless(self.watcher.len())
+        olink = self.watcher.links[-1]
+        self.failUnlessEqual(olink.id, id(testThing))
+
+    def test_setAttrChain(self):
+        "Setting an attribute on a watched object that has __setattr__"
+        testThing = MiddleMan('pencil')
+
+        self.browser.watchObject(testThing, 'testThing',
+                                 self.watcher.receiveBrowserObject)
+        self.watcher.setZero()
+
+        testThing.someAttr = 'ZORT'
+
+        self.failUnlessEqual(testThing.someAttr, 'TROZ')
+        self.failUnless(self.watcher.len())
+        olink = self.watcher.links[-1]
+        self.failUnlessEqual(olink.id, id(testThing))
+
+
+    def test_method(self):
+        "Triggering a watcher response by invoking a method."
+
+        for testThing in (SomeDohickey('pencil'), MiddleMan('pencil')):
+            self.browser.watchObject(testThing, 'testThing',
+                                     self.watcher.receiveBrowserObject)
+            self.watcher.setZero()
+
+            rval = testThing.bip()
+            self.failUnlessEqual(rval, ('pencil',))
+
+            self.failUnless(self.watcher.len())
+            olink = self.watcher.links[-1]
+            self.failUnlessEqual(olink.id, id(testThing))
+
+
+def function_noArgs():
+    "A function which accepts no arguments at all."
+    return
+
+def function_simple(a, b, c):
+    "A function which accepts several arguments."
+    return a, b, c
+
+def function_variable(*a, **kw):
+    "A function which accepts a variable number of args and keywords."
+    return a, kw
+
+def function_crazy((alpha, beta), c, d=range(4), **kw):
+    "A function with a mad crazy signature."
+    return alpha, beta, c, d, kw
+
+class TestBrowseFunction(unittest.TestCase):
+
+    def setUp(self):
+        self.globalNS = globals().copy()
+        self.localNS = {}
+        self.browser = explorer.ObjectBrowser(self.globalNS, self.localNS)
+
+    def test_sanity(self):
+        """Basic checks for browse_function.
+
+        Was the proper type returned?  Does it have the right name and ID?
+        """
+        for f in ('function_noArgs', 'function_simple',
+                  'function_variable', 'function_crazy'):
+
+            olink = self.browser.browseIdentifier(f)
+
+            self.failUnlessEqual(olink.id, id(eval(f)))
+
+            self.failUnlessEqual(explorer.typeString(types.FunctionType),
+                                 olink.type)
+
+            self.failUnlessEqual(type(olink.value), types.DictType)
+
+            value = olink.value
+            self.failUnlessEqual(value['name'], f)
+
+    def test_signature_noArgs(self):
+        """Testing zero-argument function signature.
+        """
+
+        olink = self.browser.browseObject(function_noArgs,
+                                          'function_noArgs')
+
+        signature = olink.value['signature']
+
+        self.failUnlessEqual(len(signature), 0)
+
+    def test_signature_simple(self):
+        """Testing simple function signature.
+        """
+
+        olink = self.browser.browseObject(function_simple,
+                                          'function_simple')
+
+        expected_signature = [{'name': 'a'},
+                              {'name': 'b'},
+                              {'name': 'c'}]
+
+        signature = olink.value['signature']
+
+        self.failUnlessEqual(signature, expected_signature)
+
+    def test_signature_variable(self):
+        """Testing variable-argument function signature.
+        """
+
+        olink = self.browser.browseObject(function_variable,
+                                          'function_variable')
+
+        signature = olink.value['signature']
+
+        expected_signature = [{'name': 'a',
+                               'list': 1},
+                              {'name': 'kw',
+                               'keywords': 1}]
+
+        self.failUnlessEqual(signature, expected_signature)
+
+    def test_signature_crazy(self):
+        """Testing function with crazy signature.
+        """
+        olink = self.browser.browseObject(function_crazy,
+                                          'function_crazy')
+
+        signature = olink.value['signature']
+
+        expected_signature = [{'name': 'c'},
+                              {'name': 'd',
+                               'default': range(4)},
+                              {'name': 'kw',
+                               'keywords': 1}]
+
+        # The name of the first argument seems to be indecipherable,
+        # but make sure it has one (and no default).
+        self.failUnlessEqual(len(signature[0]), 1)
+        self.failUnless(signature[0].has_key('name'))
+
+        self.failUnlessEqual(signature[1], {'name': 'c'})
+
+        # Get a list of values from a list of ObjectLinks.
+        arg_2 = signature[2]
+        arg_2_default = map(lambda l: l.value, arg_2['default'].value)
+        arg_2['default'] = arg_2_default
+
+        self.failUnlessEqual(arg_2, {'name': 'd', 'default': range(4)})
+
+        self.failUnlessEqual(signature[3], {'name': 'kw', 'keywords': 1})
+
+if __name__ == '__main__':
+    unittest.main()
