@@ -76,33 +76,6 @@
 
 <p> Twisted.Web serves flat HTML files just as it does any other flat file.  </p>
 
-<a name="EmbeddedPythonScripts" />
-<h3>Embedded Python Scripts</h3>
-
-<p> An Embedded Python script is a Python file ending with the extension <code>.epy</code>, which is executed by the Twisted Web server.  </p>
-
-<p> Embedded Python scripts have 2 special variables defined within their namespace:  </p>
-
-<ul>
-  <li> <code class="python"><span class="py-src-identifier">__file__</span></code>: The name of the .epy file, including the full path.  </li>
-  <li> <code class="python"><span class="py-src-identifier">request</span></code>: An instance of <code class="API">twisted.web.server.Request</code>.  </li>
-</ul>
-
-<p> A very simple Embedded Python Script might look like:  </p>
-
-<pre class="python">
-request.write("""
-
-&lt;html&gt;
-    &lt;head&gt;&lt;title&gt; Welcome To Twisted Python &lt;/title&gt;&lt;/head&gt;
-
-    &lt;body&gt;
-    This is a demonstration of embedded python in a webserver.
-    &lt;/body&gt;
-&lt;/html&gt;
-""")
-</pre>
-
 <a name="ResourceScripts" />
 <h3>Resource Scripts</h3>
 
