@@ -39,8 +39,12 @@ import warnings
 import weakref
 
 # zope3
-from zope.interface import interface, declarations
-from zope.interface.adapter import AdapterRegistry as ZopeAdapterRegistry
+try:
+    from zope.interface import interface, declarations
+    from zope.interface.adapter import AdapterRegistry as ZopeAdapterRegistry
+except ImportError:
+    raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
+
 
 ALLOW_DUPLICATES = 0
 
