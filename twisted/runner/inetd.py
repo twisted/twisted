@@ -31,12 +31,6 @@ from twisted.internet import process, reactor
 from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.protocols import wire
 
-try:
-    import portmap
-    rpcOk = 1
-except ImportError:
-    rpcOk = 0
-
 # A dict of known 'internal' services (i.e. those that don't involve spawning
 # another process.
 internalProtocols = {

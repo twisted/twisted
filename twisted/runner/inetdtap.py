@@ -30,6 +30,12 @@ from twisted.python import log, usage
 from twisted.internet.protocol import ServerFactory
 from twisted.application import internet, service as appservice
 
+try:
+    import portmap
+    rpcOk = 1
+except ImportError:
+    rpcOk = 0
+
 
 class Options(usage.Options):
 
@@ -157,5 +163,6 @@ def makeService(config):
         if protocol == 'tcp':
             internet.TCPServer(service.port, factory).setServiceParent(s)
         elif protocol == 'udp':
+            continue
             raise RuntimeError("not supporting UDP")
-        return s
+    return s
