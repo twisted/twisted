@@ -24,14 +24,6 @@
 	the classes in the generated HTML, so custom stylesheets may need
 	updating.
 
-2003-10-19  Brian Warner  <warner@lothar.com>
-
-	* twisted/trial/reporter.py (TextReporter._formatError): use the
-	right exception formatter. Closes issue339.
-	* twisted/trial/util.py (emacs_format_exception): split emacs
-	formatting from regular formatting, so the "hide trial innards"
-	code actually gets a chance to run. Thanks to Moshe for the patch!
-
 2003-10-16  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.0alpha3.
