@@ -2,15 +2,88 @@
 
 non-independent things left to do on newpb
 
-* implement CopyableFailure, allow remote methods to return errors
+* connection setup
 
-This includes building all the class-marshalling registration framework, and
-creating some kind of configurable PBErrorResponseConstraint, and making the
-response constraint accept both good results and size-limited failures.
+PBServerFactory, PBClientFactory, pb.getRemoteURL, pb.callRemoteURL
 
-** implement/test CopiedFailure
+* thoroughly test failure-handling at all points of unserialization
 
-constrain ('failure',..) sequences to use it
+* implement/test CopiedFailureConstraint
+
+* test failure-handing during callRemote argument serialization
+
+* implement named Referenceables
+
+the Factory should hold named refs, the Broker should hold numbered
+(implicit) refs. ReferenceUnslicer and CallUnslicer should look in both
+tables (one for numerical ids, the other for string ids). The Factory should
+have an API to let you register pb.Referenceables (by name, the 'pathname'
+part of the URL).
+
+DONE
+
+* implement pb.callRemoteURL
+
+a URL defines an endpoint: a pb.Referenceable, with methods
+
+URL = f("pb:", host, port, pathname)
+d = pb.callRemoteURL(URL, ifacename, methodname, args)
+
+probably give an actual RemoteInterface instead of just its name
+
+This involves synthesizing RemoteReferences with string ids.
+
+DONE, with simple URL types (callRemoteURL_TCP)
+
+** more URLs
+
+relative URLs (those without a host part) refer to objects on the same
+Broker. Absolute URLs (those with a host part) refer to objects on other
+Brokers.
+
+* build/port the .rootObject framework, then pb.login
+
+Leave cred work for Glyph.
+
+URL = pb.parseURL("pb://lothar.com:8789/users/warner/services/petmail",
+                  IAuthorization)
+URL = doFullLogin(URL, "warner", "x8yzzy")
+URL.callRemote(methodname, args)
+
+DONE: PBServerFactory, PBClientFactory.
+
+* move from VocabSlicer sequence to ADDVOCAB/DELVOCAB tokens
+
+Requires a .wantVocabString flag in the parser, which is kind of icky but
+fixes the annoying asymmetry between set (vocab sequence) and get (VOCAB
+token). Might want a CLEARVOCAB token too.
+
+** VOCABize interface/method names
+
+One possibility is to make a list of all strings used by all known
+RemoteInterfaces and all their methods, then send it at broker connection
+time as the initial vocab map. A better one (maybe) is to somehow track what
+we send and add a word to the vocab once we've sent it more than three
+times.
+
+Maybe vocabize the pairs, as "ri/name1","ri/name2", etc, or maybe do them
+separately. Should do some handwaving math to figure out which is better.
+
+* version negotiation
+
+Should be able to telnet into a PB server and find out that it is a PB
+server. Pointing a PB client at an HTTP server (or an HTTP client at a PB
+server) should result in an error, not a timeout.
+
+desiderata:
+
+ negotiation should take place with regular banana sequences: don't invent a
+ new protocol that is only used at the start of the connection
+
+ banana should be useable one-way, for storage or high-latency RPC
+
+ negotiation should be flexible enough to be extended but still allow old code
+ to talk with new code
 
 * create UnslicerRegistry, registerUnslicer
 
@@ -33,97 +106,14 @@ also some APIs to get a list of everything in the registry
 
 * RemoteInterface instances should have an "RI-" prefix instead of "I-"
 
-* test failure-handing during callRemote argument serialization
-
-* make ISliceable and some adapters to match
-
-This can be used in lieu of subclassing from pb.Referenceable or pb.Copyable.
-
-Also, it should be possible to pass a reference with variable forms:
-
- rr.callRemote("foo", 1, Reference(obj))
- rr.callRemote("bar", 2, Copy(obj))
-
-This should probably adapt the object to IReferenceable or ICopyable, which
-are like ISliceable except they can pass the object by reference or by
-value. The slicing process should be:
-
- look up the type() in a table: this handles all basic types
- else adapt the object to ISliceable, use the result
- else raise an Unsliceable exception
-  (and point the user to the docs on how to fix it)
-
-The adapter returned by IReferenceable or ICopyable should implement
-ISliceable, so no further adaptation will be done.
-
-* make slicer/unslicers for pb.RemoteInterfaces
-
-exarkun's use case requires these Interfaces to be passable by reference
-(i.e. by name). It would also be interesting to let them be passed (and
-requested!) by value, so you can ask a remote peer exactly what their
-objects will respond to (the method names, the argument values, the return
-value). This also requires that constraints be serializable.
-
-do this, should be referenceable (round-trip should return the same object),
-should use the same registration lookup that RemoteReference(interfacelist)
-uses
-
-* implement named Referenceables
-
-the Factory should hold named refs, the Broker should hold numbered
-(implicit) refs. ReferenceUnslicer and CallUnslicer should look in both
-tables (one for numerical ids, the other for string ids). The Factory should
-have an API to let you register pb.Referenceables (by name, the 'pathname'
-part of the URL).
-
-* implement pb.callRemoteURL
-
-a URL defines an endpoint: a pb.Referenceable, with methods
-
-URL = f("pb:", host, port, pathname)
-d = pb.callRemoteURL(URL, ifacename, methodname, args)
-
-probably give an actual RemoteInterface instead of just its name
-
-This involves synthesizing RemoteReferences with string ids.
-
-** more URLs
-
-relative URLs (those without a host part) refer to objects on the same
-Broker. Absolute URLs (those with a host part) refer to objects on other
-Brokers.
-
-* build/port the .rootObject framework, then pb.login
-
-Leave this for Glyph.
-
-URL = pb.parseURL("pb://lothar.com:8789/users/warner/services/petmail",
-                  IAuthorization)
-URL = doFullLogin(URL, "warner", "x8yzzy")
-URL.callRemote(methodname, args)
-
 * change the method-call syntax to include an interfacename
 
-Scope the method name to the interface.
+Scope the method name to the interface. This implies (I think) one of two
+things:
 
-* move from VocabSlicer sequence to ADDVOCAB/DELVOCAB tokens
+ callRemote() must take a RemoteInterface argument
 
-Requires a .wantVocabString flag in the parser, which is kind of icky but
-fixes the annoying asymmetry between set (vocab sequence) and get (VOCAB
-token). Might want a CLEARVOCAB token too.
-
-** VOCABize interface/method names
-
-One possibility is to make a list of all strings used by all known
-RemoteInterfaces and all their methods, then send it at broker connection
-time as the initial vocab map. A better one (maybe) is to somehow track what
-we send and add a word to the vocab once we've sent it more than three
-times.
-
-Maybe vocabize the pairs, as "ri/name1","ri/name2", etc, or maybe do them
-separately. Should do some handwaving math to figure out which is better.
-
-* sketch out how to implement glyph's crazy non-compressed sexpr encoding
+ each RemoteReference handles just a single Interface
 
 * consider a smaller scope for OPEN-counter reference numbers
 
@@ -161,6 +151,8 @@ ScopedSlicer's open-parenthesis could be represented with a curly brace or
 something, then the refNN number would refer to the NN'th left-paren from
 the last left-brace. It would also make it clear that the recipient will not
 care about objects outside that scope.
+
+* sketch out how to implement glyph's crazy non-compressed sexpr encoding
 
 * merge my RemoteInterface syntax with zope.interface's
 
@@ -219,3 +211,37 @@ classes.
 
 For now, go implicit. Put off the decision until we have some more
 experience with using newpb.
+
+
+* make ISliceable and some adapters to match
+
+This can be used in lieu of subclassing from pb.Referenceable or pb.Copyable.
+
+Also, it should be possible to pass a reference with variable forms:
+
+ rr.callRemote("foo", 1, Reference(obj))
+ rr.callRemote("bar", 2, Copy(obj))
+
+This should probably adapt the object to IReferenceable or ICopyable, which
+are like ISliceable except they can pass the object by reference or by
+value. The slicing process should be:
+
+ look up the type() in a table: this handles all basic types
+ else adapt the object to ISliceable, use the result
+ else raise an Unsliceable exception
+  (and point the user to the docs on how to fix it)
+
+The adapter returned by IReferenceable or ICopyable should implement
+ISliceable, so no further adaptation will be done.
+
+* make slicer/unslicers for pb.RemoteInterfaces
+
+exarkun's use case requires these Interfaces to be passable by reference
+(i.e. by name). It would also be interesting to let them be passed (and
+requested!) by value, so you can ask a remote peer exactly what their
+objects will respond to (the method names, the argument values, the return
+value). This also requires that constraints be serializable.
+
+do this, should be referenceable (round-trip should return the same object),
+should use the same registration lookup that RemoteReference(interfacelist)
+uses

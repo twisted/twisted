@@ -178,11 +178,6 @@ test_banana.InboundByteStream.testConstrainedInt needs implementation
 This is much easier than the inbound side. Each constraint just gets a single
 checkObject() call with the candidate object before it is sent.
 
-* implement CopyableSlicer/CopyableUnslicer
-
-This is pretty straightforward, the main issue is how to determine the
-constraint and in what way to allow the use of Adapters.
-
 * nail down some useful schema syntaxes
 
 This has two parts: parsing something like a __schema__ class attribute (see
