@@ -31,7 +31,7 @@ but may have a small impact on users who subclass and override methods.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.29 $"[11:-2]
+__version__ = "$Revision: 1.30 $"[11:-2]
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
@@ -115,7 +115,7 @@ class Referenceable(Serializable):
         kw = broker.unserialize(kw)
         method = getattr(self, "remote_%s" % message)
         try:
-            state = apply(method, args, kw)
+            state = method(*args, **kw)
         except TypeError:
             log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
