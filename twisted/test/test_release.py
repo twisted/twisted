@@ -46,7 +46,7 @@ class UtilityTest(unittest.TestCase):
         A.assertEquals(cwd, os.getcwd())
 
     def testReplaceInFile(self):
-        in_ = 'foo\nhey hey $VER\nbar'
+        in_ = 'foo\nhey hey $VER\nbar\n'
         outf = open('release.replace', 'w')
         outf.write(in_)
         outf.close()
