@@ -1,3 +1,8 @@
+2004-05-04  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted.news, twisted.protocols.nntp: Moved back into trunk
+	pending an alternate split-up strategy.
+
 2004-05-04  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted.internet.reactor.listenUDP: transport.write() on UDP

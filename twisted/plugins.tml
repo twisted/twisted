@@ -59,6 +59,12 @@ register("Twisted Words",
          description="A chat service.",
          type="tap")
 
+register("Twisted News",
+         "twisted.tap.news",
+         description="News Server",
+         type='tap',
+         tapname="news")
+
 # Bot Plugins
 
 register("Bot-Creating Bot",
