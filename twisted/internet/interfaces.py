@@ -452,13 +452,6 @@ class IProducer(Interface):
         """
 
 
-class IConnector(Interface):
-    """Connect this to that and make it stick."""
-
-    def getProtocol(self):
-        """Get the current protocol instance."""
-
-
 class IProtocolFactory(Interface):
     """Interface for protocol factories.
     """
