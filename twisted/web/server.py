@@ -33,6 +33,7 @@ import urllib
 import cgi
 import copy
 import time
+import os
 
 
 #some useful constants
@@ -129,14 +130,9 @@ class Request(pb.Copyable, http.Request):
                 return self.prepath[-1] + '/' + name
             else:
                 return name
-
-    def __repr__(self):
-        return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
     
     def process(self):
         "Process a request."
-        # Log the request to a file.
-        log.msg( self )        
 
         # get site from channel
         self.site = self.channel.site
@@ -352,16 +348,21 @@ class Session:
 version = "TwistedWeb/%s" % copyright.version
 
 
-class Site(protocol.Factory):
+class Site(http.HTTPFactory):
     
     counter = 0
 
-    def __init__(self, resource):
+    def __init__(self, resource, logPath=None):
         """Initialize.
         """
+        http.HTTPFactory.__init__(self, logPath=logPath)
         self.sessions = {}
         self.resource = resource
 
+    def _openLogFile(self, path):
+        from twisted.lumberjack import logfile
+        return logfile.LogFile(os.path.basename(path), os.path.dirname(path))
+    
     def __getstate__(self):
         d = copy.copy(self.__dict__)
         d['sessions'] = {}
@@ -394,6 +395,7 @@ class Site(protocol.Factory):
         channel = http.HTTPChannel()
         channel.requestFactory = Request
         channel.site = self
+        channel.factory = self
         return channel
 
     isLeaf = 0

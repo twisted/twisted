@@ -30,9 +30,10 @@ import urllib
 import socket
 import time
 import calendar
+import sys
 
 # sibling imports
-import basic
+import basic, protocol
 
 # twisted imports
 from twisted.internet import interfaces
@@ -162,6 +163,16 @@ def datetimeToString(msSinceEpoch=None):
         hh, mm, ss)
     return s
 
+def datetimeToLogString(msSinceEpoch=None):
+    """Convert seconds since epoch to log datetime string."""
+    if msSinceEpoch == None:
+        msSinceEpoch = time.time()
+    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
+    s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        day, monthname[month], year,
+        hh, mm, ss)
+    return s
+
 def timegm(year, month, day, hour, minute, second):
     """Convert time tuple in GMT to seconds since epoch, GMT"""
     EPOCH = 1970
@@ -271,6 +282,7 @@ class Request:
     uri = "(no uri yet)"
     startedWriting = 0
     chunked = 0
+    sentLength = 0 # content-length of response, or total bytes sent via chunking
     
     def __init__(self, channel, queued):
         """
@@ -391,6 +403,9 @@ class Request:
         
         self.process()
 
+    def __repr__(self):
+        return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
+
     def process(self):
         """Override in subclasses."""
         pass
@@ -456,6 +471,9 @@ class Request:
         if self.chunked:
             # write last chunk and closing CRLF
             self.transport.write("0\r\n\r\n")
+
+        # log request
+        self.channel.factory.log(self)
         
         self.finished = 1
         if not self.queued:
@@ -486,7 +504,8 @@ class Request:
             if self.method == "HEAD":
                 self.write = lambda data: None
                 return
-        
+
+        self.sentLength = self.sentLength + len(data)
         if self.chunked:
             self.transport.write(toChunk(data))
         else:
@@ -737,4 +756,44 @@ class HTTPChannel(basic.LineReceiver):
                 self.requests[0].noLongerQueued()
         else:
             self.transport.loseConnection()
+
+
+class HTTPFactory(protocol.ServerFactory):
+    """Factory for HTTP server."""
+
+    logPath = None
+    
+    def __init__(self, logPath=None):
+        protocol.ServerFactory.__init__(self)
+        self.logPath = logPath
+
+    def startFactory(self):
+        if self.logPath:
+            self.logFile = self._openLogFile(self.logPath)
+        else:
+            self.logFile = sys.stdout
+
+    def stopFactory(self):
+        if hasattr(self, "logFile"):
+            self.logFile.close()
+            del self.logFile
+
+    def _openLogFile(self, path):
+        """Override in subclasses, e.g. to use lumberjack."""
+        f = open(path, "a")
+        f.seek(2, 0)
+        return f
+    
+    def log(self, request):
+        """Log a request's result to the logfile, by default in combined log format."""
+        line = '%s - %s %s "%s" %d %s "%s" "%s"\n' % (
+            request.getClientIP(),
+            request.getUser() or "-",
+            datetimeToLogString(),
+            repr(request),
+            request.code,
+            request.sentLength or "-",
+            request.getHeader("referer") or "-",
+            request.getHeader("user-agent") or "-")
+        self.logFile.write(line)
 
