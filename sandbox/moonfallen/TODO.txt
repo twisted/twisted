@@ -1,0 +1,6 @@
+1. "run as" parameter
+2. use description parameter
+
+3. py2exe to collect dependencies
+4. Inno iss gneration
+5. Execute inno compiler to produce package
