@@ -36,7 +36,7 @@ class Counter:
         self.add()
 
     def add(self):
-        """A none thread-safe method."""
+        """A non thread-safe method."""
         next = self.index + 1
         # another thread could jump in here and increment self.index on us
         if next != self.index + 1:
@@ -125,28 +125,65 @@ class ThreadsTestCase(unittest.TestCase):
         reactor.suggestThreadPoolSize(34)
         reactor.suggestThreadPoolSize(4)
 
-    gotResult = 0
-    
-    def testDeferredResult(self):
-        d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
-        d.addCallback(self._resultCallback)
-        while not self.gotResult:
-            reactor.iterate()
+class DeferredResultTestCase(unittest.TestCase):
+    """Test threads.deferToThread"""
+
+    def setUp(self):
+        self.done = 0
         self.gotResult = 0
+
+    def _timeout(self):
+        self.done = 1
 
     def _resultCallback(self, result):
         self.assertEquals(result, 7)
         self.gotResult = 1
 
+    def _resultErrback(self, error):
+        self.done = 1
+        self.assert_( isinstance(error, failure.Failure) )
+        self.assertEquals(error.type, TypeError)
+        self.gotResult = 1
+
+    def testDeferredResult(self):
+        d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
+        d.addCallback(self._resultCallback)
+        t = reactor.callLater(1, self._timeout)
+        while not self.done:
+            reactor.iterate()
+        self.failUnless(self.gotResult, "timeout")
+        if t.active(): t.cancel()
+
     def testDeferredFailure(self):
         def raiseError(): raise TypeError
         d = threads.deferToThread(raiseError)
         d.addErrback(self._resultErrback)
-        while not self.gotResult:
+        t = reactor.callLater(1, self._timeout)
+        while not self.done:
             reactor.iterate()
-        self.gotResult = 0
+        self.failUnless(self.gotResult, "timeout")
+        if t.active(): t.cancel()
 
-    def _resultErrback(self, error):
-        self.assert_( isinstance(error, failure.Failure) )
-        self.assertEquals(error.type, TypeError)
-        self.gotResult = 1
+    def OFFtestDeferredFailure2(self):
+        # set up a condition that causes cReactor to hang. These conditions
+        # can also be set by other tests when the full test suite is run in
+        # alphabetical order (test_flow.FlowTest.testThreaded followed by
+        # test_internet.ReactorCoreTestCase.testStop, to be precise). By
+        # setting them up explicitly here, we can reproduce the hang in a
+        # single precise test case instead of depending upon side effects of
+        # other tests.
+        #
+        # alas, this test appears to flunk the default reactor too
+        
+        def nothing(): pass
+        reactor.callLater(1, reactor.stop)
+        reactor.callInThread(nothing)
+        reactor.run()
+        def raiseError(): raise TypeError
+        d = threads.deferToThread(raiseError)
+        d.addErrback(self._resultErrback)
+        t = reactor.callLater(1, self._timeout)
+        while not self.done:
+            reactor.iterate()
+        self.failUnless(self.gotResult, "timeout")
+        if t.active(): t.cancel()
