@@ -64,8 +64,8 @@ class Data(resource.Resource):
 
     def render(self, request):
         request.setHeader("content-type", self.type)
+        request.setHeader("content-length", str(len(self.data)))
         if request.method == "HEAD":
-            request.setHeader("content-length", len(self.data))
             return ''
         return self.data
 
