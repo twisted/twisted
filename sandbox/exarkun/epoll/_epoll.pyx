@@ -2,9 +2,11 @@
 cdef extern from "stdio.h":
 	cdef extern void *malloc(int)
 	cdef extern void free(void *)
+	cdef extern int close(int)
 
 cdef extern from "errno.h":
 	cdef extern int errno
+	cdef extern char *strerror(int)
 
 cdef extern from "string.h":
 	cdef extern void *memset(void* s, int c, int n)
@@ -47,7 +49,10 @@ cdef extern from "sys/epoll.h":
 	int epoll_ctl(int epfd, int op, int fd, epoll_event *event)
 	int epoll_wait(int epfd, epoll_event *events, int maxevents, int timeout)
 
-import os
+cdef extern from "Python.h":
+	ctypedef struct PyThreadState
+	cdef extern PyThreadState *PyEval_SaveThread()
+	cdef extern void PyEval_RestoreThread(PyThreadState*)
 
 cdef class epoll:
 	cdef int fd
@@ -56,17 +61,18 @@ cdef class epoll:
 	def __init__(self, int size):
 		self.fd = epoll_create(size)
 		if self.fd == -1:
-			raise IOError(errno, os.strerror(errno))
+			raise IOError(errno, strerror(errno))
 		self.initialized = 1
 
 	def __dealloc__(self):
 		if self.initialized:
-			os.close(self.fd)
+			close(self.fd)
 			self.initialized = 0
 
 	def close(self):
 		if self.initialized:
-			os.close(self.fd)
+			if close(self.fd) == -1:
+				raise IOError(errno, strerror(errno))
 			self.initialized = 0
 
 	def fileno(self):
@@ -85,12 +91,19 @@ cdef class epoll:
 		cdef epoll_event *events
 		cdef int result
 		cdef int nbytes
+		cdef int fd
+		cdef PyThreadState *_save
 
 		nbytes = sizeof(epoll_event) * maxevents
 		events = <epoll_event*>malloc(nbytes)
 		memset(events, 0, nbytes)
 		try:
-			result = epoll_wait(self.fd, events, maxevents, timeout)
+			fd = self.fd
+
+			_save = PyEval_SaveThread()
+			result = epoll_wait(fd, events, maxevents, timeout)
+			PyEval_RestoreThread(_save)
+
 			if result == -1:
 				raise IOError(result, os.strerror(result))
 			results = []

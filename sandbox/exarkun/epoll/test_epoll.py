@@ -48,7 +48,7 @@ class EPoll(unittest.TestCase):
         then = time.time()
         self.failIf(then - now > 0.01)
         self.assertEquals(
-            dict(events), 
+            dict(events),
             {client.fileno(): _epoll.OUT,
              server.fileno(): _epoll.OUT})
 
@@ -67,6 +67,6 @@ class EPoll(unittest.TestCase):
         self.failIf(then - now > 0.01)
         events.sort()
         self.assertEquals(
-            dict(events), 
+            dict(events),
             {client.fileno(): _epoll.IN | _epoll.OUT,
              server.fileno(): _epoll.IN | _epoll.OUT})
