@@ -30,7 +30,7 @@ def makeService(config):
     # protocol instances when events arrive on the specified port.
     pbport = config['pb']               # TCP PB port to listen on
     if pbport:
-        pbfact = pb.BrokerFactory(pbquote.QuoteReader(quoter))
+        pbfact = pb.PBServerFactory(pbquote.QuoteReader(quoter))
         svc.addService(internet.TCPServer(int(pbport), pbfact))
     svc.addService(internet.TCPServer(port, factory))
     return svc
