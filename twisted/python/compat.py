@@ -12,7 +12,7 @@ This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
 """
 
-import sys, types, socket, struct, __builtin__, exceptions
+import sys, types, socket, struct, __builtin__, exceptions, UserDict
 
 #elif sys.version_info[:2] == (2, 2):
 #    def dict(*arg, **kwargs):
@@ -23,6 +23,11 @@ import sys, types, socket, struct, __builtin__, exceptions
 #    __builtin__.dict = dict
 
 
+del UserDict.DictMixin
+if not hasattr(UserDict, 'DictMixin'):
+    from twisted.python.pymodules import UserDictExtras
+    UserDict.DictMixin = UserDictExtras.DictMixin
+    
 if sys.version_info[:3] == (2, 2, 0):
     __builtin__.True = (1 == 1)
     __builtin__.False = (1 == 0)
@@ -87,8 +92,6 @@ if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
     object.__setattr__(str, 'lstrip', lstrip)
     object.__setattr__(str, 'rstrip', rstrip)
     object.__setattr__(str, 'strip', strip)
-
-import types, socket, struct
 
 # dict(key=value) compatibility hack
 if sys.version_info[:2] == (2,2):
