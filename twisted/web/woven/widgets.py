@@ -882,11 +882,11 @@ from types import StringType
 class Link(Widget):
     """A utility class for generating <a href='foo'>bar</a> tags.
     """
-
+    tagName = 'a'
     def setUp(self, request, node, data):
         # TODO: we ought to support Deferreds here for both text and href!
         if isinstance(data, StringType):
-            node.tagName = 'a'
+            node.tagName = self.tagName
             node.setAttribute("href", data)
         else:
             data = self.model
@@ -895,7 +895,7 @@ class Link(Widget):
                 txt = document.createTextNode(txt)
             lnk = data.getSubmodel("href").getData(request)
             self['href'] = lnk
-            node.tagName = 'a'
+            node.tagName = self.tagName
             domhelpers.clearNode(node)
             node.appendChild(txt)
 
