@@ -300,5 +300,168 @@ Content-Type: text/html
 Hello world
 </pre>
 
+<h2>Twisted Web Development</h2>
+
+<p>Twisted Web serves python objects that implement the interface 
+IResource.</p>
+
+<img src="../img/twisted_1.gif" alt="Twisted Web process" />
+
+<h3>Main Concepts</h3>
+
+<ul>
+
+<li><a href="#sites">Site Objects</a> are responsible for creating
+<code>HTTPChannel</code> instances to parse the HTTP request, and begin the object lookup process. They contain the root Resource, the resource which represents the URL <code>/</code> on the site.</li>
+
+<li><a href="#resources">Resource</a> objects represent a single URL segment. The <code class="API" base="twisted.web.resource">IResource</code> interface describes the methods a Resource object must implement in order to participate in the object publishing process.</li>
+
+<li><a href="#trees">Resource trees</a> are arrangements of Resource objects into a Resource tree. Starting at the root Resource object, the tree of Resource objects defines the URLs which will be valid.</li>
+
+<li><a href="#rpys">.rpy scripts</a> are python scripts which the twisted.web static file server will execute, much like a CGI. However, unlike CGI they must create a Resource object which will be rendered when the URL is visited.</li>
+
+<li><a href="#rendering">Resource rendering</a> occurs when Twisted Web locates a leaf Resource object. A Resource can either return an html string or write to the request object.</li>
+
+<li><a href="#sessions">Session</a> objects allow you to store information across multiple requests. Each individual browser using the system has a unique Session instance.</li>
+
+</ul>
+
+<h3>Site Objects</h3>
+<a name="sites" />
+
+<p>Site objects serve as the glue between a port to listen for HTTP requests on, and a root Resource object.</p>
+
+<p>When using <code>mktap web --path /foo/bar/baz</code>, a Site object is created with a root Resource that serves files out of the given path.</p>
+
+<p>You can also create a <code>Site</code> instance by hand, passing it a
+<code>Resource</code> object which will serve as the root of the site:</p>
+
+<pre class="python">
+from twisted.web import server, resource
+from twisted.internet import reactor
+
+class Simple(resource.Resource):
+    isLeaf = True
+    def render(self, request):
+        return "&lt;html&gt;Hello, world!&lt;/html&gt;"
+
+site = server.Site(Simple())
+reactor.listenTCP(8080, site)
+reactor.run()
+</pre>
+
+<h3>Resource objects</h3>
+<a name="resources" />
+
+<p><code>Resource</code> objects represent a single URL segment of a site. During URL parsing, <code>getChild</code> is called on the current <code>Resource</code> to produce the next <code>Resource</code> object.</p>
+
+<p>When the leaf Resource is reached, either because there were no more URL segments or a Resource had isLeaf set to True, the leaf Resource is rendered by calling <code>render(request)</code>.</p>
+
+<p>During the Resource location process, the URL segments which have already been processed and those which have not yet been processed are available in <code>request.prepath</code> and <code>request.postpath</code>.</p>
+
+<p>A Resource can know where it is in the URL tree by looking at <code>request.prepath</code>, a list of URL segment strings.</p>
+
+<p>A Resource can know which path segments will be processed after it by looking at <code>request.postpath</code>.</p>
+
+<p>If the URL ends in a slash, for example <code>http://example.com/foo/bar/</code>, the final URL segment will be an empty string. Resources can thus know if they were requested with or without a final slash.</p>
+
+<p>Here is a simple Resource object:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+
+class Hello(Resource):
+    def getChild(self, name, request):
+        if name == '':
+            return self
+        return Resource.getChild(
+            self, name, request)
+
+        def render(self, request):
+            return """&lt;html&gt;
+      Hello, world! I am located at %r.
+    &lt;/html&gt;""" % (request.prepath) 
+
+resource = Hello()
+</pre>
+
+<h3>Resource Trees</h3>
+<a name="trees" />
+
+<p>Resources can be arranged in trees using <code>putChild</code>. <code>putChild</code> puts a Resource instance into another Resource instance, making it available at the given path segment name:</p>
+
+<pre class="python">
+root = Hello()
+root.putChild('fred', Hello())
+root.putChild('bob', Hello())
+</pre>
+
+<p>If this root resource is served as the root of a Site instance, the following URLs will all be valid:</p>
+
+<ul>
+<li><code>http://example.com/</code></li>
+<li><code>http://example.com/fred</code></li>
+<li><code>http://example.com/bob</code></li>
+<li><code>http://example.com/fred/</code></li>
+<li><code>http://example.com/bob/</code></li>
+
+</ul>
+
+<h3>.rpy scripts</h3>
+<a name="rpys" />
+
+<p>Files with the extension <code>.rpy</code> are python scripts which, when placed in a directory served by Twisted Web, will be executed when visited through the web.</p>
+
+<p>An <code>.rpy</code> script must define a variable, <code>resource</code>, which is the Resource object that will render the request.</p>
+
+<p><code>.rpy</code> files are very convenient for rapid development and prototyping. Since they are executed on every web request, defining a Resource subclass in an <code>.rpy</code> will make viewing the results of changes to your class visible simply by refreshing the page:</p>
+
+<pre class="python">
+class MyResource(resource.Resource):
+    def render(self, request):
+        return "&lt;html&gt;Hello, world!&lt;/html&gt;"
+
+resource = MyResource()
+</pre>
+
+<p>However, it is often a better idea to define Resource subclasses in Python modules. In order for changes in modules to be visible, you must either restart the Python process, or reload the module:</p>
+
+<pre class="python">
+import myresource
+
+## Comment out this line when finished debugging
+reload(myresource)
+
+resource = myresource.MyResource()
+</pre>
+
+<p>Creating a Twisted Web server which serves a directory is easy:</p>
+
+<pre class="shell">
+% mktap web --path /Users/dsp/Sites
+% twistd -nf web.tap
+</pre>
+
+<h3>Resource rendering</h3>
+<a name="rendering" />
+
+<p>Resource rendering occurs when Twisted Web locates a leaf Resource object to handle a web request. A Resource object may do various things to produce output which will be sent back to the browser:</p>
+
+<ul>
+<li>Return a string</li>
+<li>Call <code>request.write("stuff")</code> as many times as desired, then call <code>request.finish()</code> and return <code>server.NOT_DONE_YET</code> (This is deceptive, since you are in fact done with the request, but is the correct way to do this)</li>
+
+<li>Request a <code>Deferred</code>, return <code>server.NOT_DONE_YET</code>, and call <code>request.write("stuff")</code> and <code>request.finish()</code> later, in a callback on the <code>Deferred</code>.</li>
+</ul>
+
+<h3>Session</h3>
+<a name="sessions" />
+
+<p>HTTP is a stateless protocol; every request-response is treated as an individual unit, distinguishable from any other request only by the URL requested. With the advent of Cookies in the mid nineties, dynamic web servers gained the ability to distinguish between requests coming from different <em>browser sessions</em> by sending a Cookie to a browser. The browser then sends this cookie whenever it makes a request to a web server, allowing the server to track which requests come from which browser session.</p>
+
+<p>Twisted Web provides an abstraction of this browser-tracking behavior called the <em>Session object</em>. Calling <code>request.getSession()</code> checks to see if a session cookie has been set; if not, it creates a unique session id, creates a Session object, stores it in the Site, and returns it. If a session object already exists, the same session object is returned. In this way, you can store data specific to the session in the session object.</p>
+
+<img src="../img/twisted_2.gif" />
+
 </body>
 </html>
