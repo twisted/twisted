@@ -17,7 +17,7 @@
 
 """Base classes for Instance Messenger clients."""
 
-from twisted.im.locals import OFFLINE, ONLINE, AWAY
+from twisted.words.im.locals import OFFLINE, ONLINE, AWAY
 
 class ContactsList:
     """A GUI object that displays a contacts list"""

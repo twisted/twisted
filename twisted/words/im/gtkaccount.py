@@ -21,10 +21,10 @@ except ImportError:
 
 import gtk
 
-from twisted.im.gtkcommon import GLADE_FILE, SETTINGS_FILE, autoConnectMethods,\
+from twisted.words.im.gtkcommon import GLADE_FILE, SETTINGS_FILE, autoConnectMethods,\
      openGlade
 
-import gtkchat
+from twisted.words.im import gtkchat
 
 ### This generic stuff uses the word "account" in a very different way -- chat
 ### accounts are potential sources of messages, InstanceMessenger accounts are
@@ -145,9 +145,9 @@ class NewAccount:
     def on_NewAccountWindow_destroy(self, w):
         self.manager.lockNewAccount(0)
 
-from twisted.im.pbsupport import PBAccount
-from twisted.im.tocsupport import TOCAccount
-from twisted.im.ircsupport import IRCAccount
+from twisted.words.im.pbsupport import PBAccount
+from twisted.words.im.tocsupport import TOCAccount
+from twisted.words.im.ircsupport import IRCAccount
 
 
 class PBAccountForm:

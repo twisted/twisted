@@ -24,9 +24,9 @@ from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.spread import pb
 
-from twisted.im.locals import ONLINE, OFFLINE, AWAY
+from twisted.words.im.locals import ONLINE, OFFLINE, AWAY
 
-import basesupport, interfaces
+from twisted.words.im import basesupport, interfaces
 
 class TwistedWordsPerson(basesupport.AbstractPerson):
     """I a facade for a person you can talk to through a twisted.words service.

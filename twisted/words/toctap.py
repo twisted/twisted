@@ -1,5 +1,6 @@
+
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+# Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
@@ -13,24 +14,19 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
 
-from twisted.protocols.irc import IRC
-from twisted.python import log
-from twisted.internet.protocol import Factory
+"""
+Support module for making TOC servers with mktap.
+"""
 
-class IRCUserInterface(IRC):
-    def connectionLost(self):
-        del self.factory.ircui
+from twisted.words.protocols import toc
+from twisted.python import usage
+from twisted.application import strports
 
-class IRCUIFactory(Factory):
-    ircui = None
-    def buildProtocol(self):
-        if self.ircui:
-            log.msg("already logged in")
-            return None
-        i = IRCUserInterface()
-        i.factory = self
-        self.ircui = i
-        return i
+class Options(usage.Options):
+    synopsis = "Usage: mktap toc [-p <port>]"
+    optParameters = [["port", "p", "5190"]]
+    longdesc = "Makes a TOC server."
 
+def makeService(config):
+    return strports.service(config['port'], toc.TOCFactory())

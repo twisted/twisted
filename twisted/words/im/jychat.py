@@ -14,9 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from twisted.im.basechat import ContactsList, Conversation, GroupConversation,\
+from twisted.words.im.basechat import ContactsList, Conversation, GroupConversation,\
      ChatUI
-from twisted.im.locals import OFFLINE, ONLINE, AWAY
+from twisted.words.im.locals import OFFLINE, ONLINE, AWAY
 
 from java.awt import GridLayout, FlowLayout, BorderLayout, Container
 import sys

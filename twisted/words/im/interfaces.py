@@ -5,7 +5,7 @@ Stability: incendiary, work in progress.
 """
 from twisted.python.components import Interface
 
-import locals
+from twisted.words.im import locals
 
 # (Random musings, may not reflect on current state of code:)
 #

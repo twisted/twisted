@@ -15,13 +15,22 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from proxyui import IRCUIFactory
-from twisted.python import usage
+from twisted.words.protocols.irc import IRC
+from twisted.python import log
+from twisted.internet.protocol import Factory
 
-class Options(usage.Options):
-    optParameters = [["ircport", "p", "6667",
-                      "Port to start the IRC server on."]]
+class IRCUserInterface(IRC):
+    def connectionLost(self):
+        del self.factory.ircui
 
-def updateApplication(app, config):
-    factory = IRCUIFactory()
-    app.listenTCP(int(config.opts['ircport']), IRCUIFactory())
+class IRCUIFactory(Factory):
+    ircui = None
+    def buildProtocol(self):
+        if self.ircui:
+            log.msg("already logged in")
+            return None
+        i = IRCUserInterface()
+        i.factory = self
+        self.ircui = i
+        return i
+

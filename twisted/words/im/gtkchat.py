@@ -19,7 +19,7 @@ import time
 
 import gtk
 
-from twisted.im.gtkcommon import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
+from twisted.words.im.gtkcommon import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
 
 class ContactsList:
     def __init__(self, chatui, xml):

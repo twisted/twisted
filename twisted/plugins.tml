@@ -50,12 +50,14 @@ register("Twisted Telnet Shell Server",
          type="tap")
 
 register("Twisted TOC Server",
-         "twisted.tap.toc",
+         "twisted.words.toctap",
+         tapname="toc",
          description="An AIM TOC service.",
          type="tap")
 
 register("Twisted Words",
-         "twisted.tap.words",
+         "twisted.words.tap",
+         tapname="words",
          description="A chat service.",
          type="tap")
 

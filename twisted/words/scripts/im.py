@@ -19,12 +19,12 @@ def run():
     if os.name == 'java':
         from twisted.internet import javareactor
         javareactor.install()
-        from twisted.im.jyaccount import AccountManagementGUI
+        from twisted.words.im.jyaccount import AccountManagementGUI
         AccountManagementGUI()
     else:
         from twisted.internet import gtkreactor
         gtkreactor.install()
-        from twisted.im.gtkaccount import AccountManager
+        from twisted.words.im.gtkaccount import AccountManager
         AccountManager()
 
     from twisted.internet import reactor

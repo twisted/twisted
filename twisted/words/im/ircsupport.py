@@ -18,12 +18,12 @@
 
 import string
 
-from twisted.protocols import irc
-from twisted.im.locals import ONLINE
+from twisted.words.protocols import irc
+from twisted.words.im.locals import ONLINE
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 
-import basesupport, interfaces, locals
+from twisted.words.im import basesupport, interfaces, locals
 
 class IRCPerson(basesupport.AbstractPerson):
 

@@ -14,11 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from twisted.im.baseaccount import AccountManager
-from twisted.im.pbsupport import PBAccount
-from twisted.im.tocsupport import TOCAccount
-from twisted.im.ircsupport import IRCAccount
-import twisted.im.jychat
+from twisted.words.im.baseaccount import AccountManager
+from twisted.words.im.pbsupport import PBAccount
+from twisted.words.im.tocsupport import TOCAccount
+from twisted.words.im.ircsupport import IRCAccount
+import twisted.words.im.jychat
 
 from java.awt import GridLayout, FlowLayout, BorderLayout, Container
 import sys
@@ -219,7 +219,7 @@ class AccountManagementGUI:
         else:
             acctname = self.data.getValueAt(row, 0)
             if not self.chatui:
-                self.chatui = twisted.im.jychat.JyChatUI()
+                self.chatui = twisted.words.im.jychat.JyChatUI()
             self.acctmanager.connect(acctname, self.chatui)
             self.update()
 

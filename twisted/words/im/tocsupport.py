@@ -20,13 +20,13 @@
 import string, re
 
 # Twisted Imports
-from twisted.protocols import toc
-from twisted.im.locals import ONLINE, OFFLINE, AWAY
+from twisted.words.protocols import toc
+from twisted.words.im.locals import ONLINE, OFFLINE, AWAY
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 
 # Sibling Imports
-import basesupport, interfaces, locals
+from twisted.words.im import basesupport, interfaces, locals
 
 def dehtml(text):
     text=string.replace(text,"<br>","\n")

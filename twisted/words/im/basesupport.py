@@ -22,8 +22,8 @@ You will find these useful if you're adding a new protocol to IM.
 
 # Abstract representation of chat "model" classes
 
-from locals import ONLINE, OFFLINE, OfflineError
-import interfaces
+from twisted.words.im.locals import ONLINE, OFFLINE, OfflineError
+from twisted.words.im import interfaces
 
 from twisted.internet.protocol import Protocol
 
