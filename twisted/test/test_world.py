@@ -213,7 +213,35 @@ class RefTest(Storable):
         'b': storable.ref('RefTest'),
     }
 
-           
+
+class Upgrader(Storable):
+    __schema__ = {
+        'a': int,
+        'b': int
+        }
+
+    schemaVersion = 1
+
+upgraderv1 = Upgrader
+
+class Upgrader(Storable):
+    __schema__ = {
+        'aplusb': int,
+        'strab': str
+        }
+
+    schemaVersion = 2
+
+    def upgradeToSchema2(self, input):
+        # should I have to declare the previous schema?
+        a, b = input['a'], input['b']
+        output = {}
+        output['aplusb'] = a+b
+        output['strab'] = str(a)+','+str(b)
+        return output
+
+upgraderv2 = Upgrader
+
 class TestStorableSchema(unittest.TestCase):
     class MROTestA(Storable):
         __schema__ = {
@@ -357,6 +385,23 @@ class TestFixedClasses(unittest.TestCase):
 
     def tearDown(self):
         self.db.dumpHTML(open(self.db.dirname+"-dump.html",'wb'))
+
+    def testSchemaVersioning(self):
+        global Upgrader
+        Upgrader = upgraderv1
+        u = Upgrader()
+        u.a = 1
+        u.b = 2
+        self.db.insert(u)
+        del u
+        self.db.close()
+        Upgrader = upgraderv2
+        self.setUp()
+        q = self.db.queryClassSelect(Upgrader)
+        self.failUnlessEqual(q[0].strab, "1,2")
+        self.failUnlessEqual(q[0].aplusb, 3)
+
+    testSchemaVersioning.todo = "Upgrading isn't checked in yet."
 
     def testRecursiveStuff(self):
         n = Node("top")
