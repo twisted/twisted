@@ -502,6 +502,10 @@ def parse(readable, *args, **kwargs):
             mdp.dataReceived(r)
             r = readable.read(1024)
     mdp.connectionLost(None)
+
+    if not mdp.documents:
+        raise ParseError(mdp.filename, 0, 0, "No top-level Nodes in document")
+    
     if mdp.beExtremelyLenient:
         if len(mdp.documents) == 1:
             d = mdp.documents[0]

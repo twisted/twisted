@@ -52,6 +52,9 @@ class SUXTest(TestCase):
 
 class MicroDOMTest(TestCase):
 
+    def testEmptyError(self):
+        self.assertRaises(sux.ParseError, microdom.parseString, "")
+
     def testEatingWhitespace(self):
         s = """<hello>   
         </hello>"""
