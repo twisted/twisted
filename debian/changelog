@@ -1,6 +1,9 @@
-twisted (0.15.6-1) unstable; urgency=low
+twisted (0.16.1-1) unstable; urgency=low
 
   * New upstream release
+  * Now building two packages -- one for the code, one for the docs
+    + If you want the docs, install twisted-docs too
+    + Feedback is encouraged about whether a 2.2-supporting version is needed
 
  -- Moshe Zadka <moshez@debian.org>  Thu, 14 Mar 2002 07:24:07 +0200
 

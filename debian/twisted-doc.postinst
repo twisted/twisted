@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ "$1" = "configure" ]; then
+	if [ -d /usr/doc -a ! -e /usr/doc/twisted-doc -a -d /usr/share/doc/twisted-doc ]; then
+		ln -sf ../share/doc/twisted-doc /usr/doc/twisted-doc
+	fi
+fi

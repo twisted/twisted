@@ -8,7 +8,7 @@
 #export DH_VERBOSE=1
 
 # This is the debhelper compatability version to use.
-export DH_COMPAT=1
+export DH_COMPAT=3
 
 build: build-stamp
 build-stamp:
@@ -30,20 +30,25 @@ install-stamp: build-stamp
 	dh_testdir
 	dh_testroot
 	dh_clean -k
-	dh_installdirs
 
-	# Add here commands to install the package into debian/tmp.
-	cp -rf build/lib*/twisted debian/tmp/usr/lib/python2.1/site-packages/
-	cp twisted/im/instancemessenger.glade debian/tmp/usr/lib/python2.1/site-packages/twisted/im
-	cp twisted/plugins.tml debian/tmp/usr/lib/python2.1/site-packages/twisted/
-	cp TODO README CREDITS doc/*.html debian/tmp/usr/share/doc/twisted
-	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
-	gzip -9 debian/tmp/usr/share/doc/twisted/examples/*.py
-	cp debian/copyright debian/tmp/usr/share/doc/twisted/
-	cp bin/eco bin/manhole bin/tap2deb bin/mktap bin/gnusto bin/twistd bin/im bin/t-im bin/faucet bin/coil debian/tmp/usr/bin
-	for file in debian/tmp/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
-	cp doc/man/*.1 debian/tmp/usr/share/man/man1/
-	gzip -9 debian/tmp/usr/share/man/man1/*
+	# Add here commands to install the package into debian/twisted.
+	# Add here commands to install the package into debian/twisted-doc.
+	dh_installdirs -A
+	cp -rf build/lib*/twisted debian/twisted/usr/lib/python2.1/site-packages/
+	cp twisted/im/instancemessenger.glade debian/twisted/usr/lib/python2.1/site-packages/twisted/im
+	cp twisted/plugins.tml debian/twisted/usr/lib/python2.1/site-packages/twisted/
+	cp TODO README CREDITS debian/twisted/usr/share/doc/twisted/
+	cp ChangeLog debian/twisted/usr/share/doc/twisted/changelog
+	cp debian/copyright debian/twisted/usr/share/doc/twisted/
+	cp bin/eco bin/manhole bin/tap2deb bin/mktap bin/gnusto bin/twistd bin/im bin/t-im bin/faucet bin/coil debian/twisted/usr/bin/
+	for file in debian/twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
+	cp doc/man/*.1 debian/twisted/usr/share/man/man1/
+	gzip -9 debian/twisted/usr/share/man/man1/*
+	cp debian/copyright debian/twisted-doc/usr/share/doc/twisted-doc/
+	cp doc/howto/*.html debian/twisted-doc/usr/share/doc/twisted-doc/howto/
+	cp doc/img/*.{png,bmp} debian/twisted-doc/usr/share/doc/twisted-doc/img/
+	cp doc/examples/*.py debian/twisted-doc/usr/share/doc/twisted-doc/examples/
+	gzip -9 debian/twisted-doc/usr/share/doc/twisted-doc/examples/*.py
 	touch install-stamp
 
 binary-indep: build install
@@ -52,14 +57,14 @@ binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_strip
-	dh_compress
 	dh_installchangelogs
+	dh_compress
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
-	dh_builddeb
+	dh_builddeb -A
 
 source diff:                                                                  
 	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
