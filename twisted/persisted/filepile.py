@@ -395,9 +395,14 @@ class LenientIntCompare:
     def __call__(self, fn1, fn2):
         fn1p, fn1e = os.path.splitext(fn1)
         fn2p, fn2e = os.path.splitext(fn2)
+        
+        # note - it might be a good idea to guarantee that pools sort before
+        # items (or vice-versa) in order to make certain kinds of sorting
+        # easier
+
         fn1i = fn1e[1:] in (self.itemext, self.poolext)
         fn2i = fn2e[1:] in (self.itemext, self.poolext)
-        if fn1i:
+        if fn1i and fn2i:
             return cmp(self.filt(fn1p),
                        self.filt(fn2p))
         elif fn1i:
