@@ -27,6 +27,7 @@ efficient, but it's good for easy debugging.
 import os
 import types
 import base64
+import string
 _open = __builtins__['open']
 
 class DirDBM:
@@ -44,12 +45,13 @@ class DirDBM:
     def _encode(self, k):
         """Encode a key so it can be used as a filename.
         """
-        return base64.encodestring(k)
+        # NOTE: '_' is NOT in the base64 alphabet!
+        return string.replace(base64.encodestring(k), '\n', '_')
     
     def _decode(self, k):
         """Decode a filename to get the key.
         """
-        return base64.decodestring(k)
+        return base64.decodestring(string.replace(k, '_', '\n'))
     
     def __setitem__(self, k, v):
         """dirdbm[foo] = bar; create or modify a textfile in this directory
