@@ -36,7 +36,7 @@ import widgets
 
 # Twisted Imports
 from twisted.protocols import http
-from twisted.python import threadable, log, components
+from twisted.python import threadable, log, components, failure
 from twisted.internet import abstract, interfaces, defer
 from twisted.spread import pb
 from twisted.persisted import styles
@@ -284,10 +284,22 @@ class File(resource.Resource, styles.Versioned):
         p, ext = os.path.splitext(childPath)
         processor = self.processors.get(ext)
         if processor:
-            try: #the `registry' argument is new.
+            #the `registry' argument is new, so we have to do this nasty hack
+            try: 
                 p = processor(childPath, self.registry)
             except TypeError: # this isn't very robust :(
-                p = processor(childPath)
+                potentialErrorMessage = widgets.formatFailure(failure.Failure())
+                try:
+                    p = processor(childPath)
+                except TypeError:
+                    #So it raised TypeError _both_ times, that means it's
+                    #probably not because of processor's signature
+                    return error.ErrorPage(500, "Internal Error", potentialErrorMessage)
+                import warnings
+                #this really should be a very short phase-out period; I doubt there are even any third-party processors
+                warnings.warn("warning: Processor %s doesn't use the signature (childPath, registry), it should." % processor,
+                              category=DeprecationWarning, stacklevel=2)
+                              
 
             if components.implements(p, resource.IResource):
                 return p
