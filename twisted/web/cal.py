@@ -78,7 +78,7 @@ class PostForm(widgets.Form):
     def __init__(self,page):
         self.page=page
 
-    def process(self,write,request,day,month,year,title,data):
+    def process(self,write,request,submit,day,month,year,title,data):
         month=calendar.month_name.index(month)
         self.page.setDay(day,month,year,title,data)
         return [self.page.backToCalendar(request)]
@@ -94,7 +94,7 @@ class EditForm(widgets.Form):
             ["string","Title","title",self.event.title],
             ["text","Data","data",text]]
 
-    def process(self,write,request,title,data):
+    def process(self,write,request,submit,title,data):
         self.event.title=title
         self.event.data=string.replace(data,"\n","<br>\n")
         return [self.page.backToCalendar(request)]
@@ -104,11 +104,11 @@ class CalendarPage(widgets.Page):
 
     template = '''<HTML>
 <HEAD>
-<TITLE>%%%%title(request)%%%%</TITLE>
+<TITLE>%%%%self.title(request)%%%%</TITLE>
 </HEAD>
 <BODY>
-%%%%displayPage(request)%%%%
-%%%%displayFooter(request)%%%%
+%%%%self.displayPage(request)%%%%
+%%%%self.displayFooter(request)%%%%
 </BODY>
 </HTML>'''
 

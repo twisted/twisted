@@ -14,9 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
-## THIS CODE IS NOT FINISHED YET. ##
-
 """Twisted Python Roots: an abstract hierarchy representation for Twisted.
 """
 
@@ -191,6 +188,9 @@ class Constrained(Collection):
         """
         return 1
 
+    def reallyPutEntity(self, name, entity):
+        Collection.putEntity(self, name, entity)
+
     def putEntity(self, name, entity):
         """Store an entity if it meets both constraints.
 
@@ -198,12 +198,20 @@ class Constrained(Collection):
         """
         if self.nameConstraint(name):
             if self.entityConstraint(entity):
-                Collection.putEntity(self, name, entity)
+                self.reallyPutEntity(name, entity)
             else:
                 raise ConstraintViolation("Entity constraint violated.")
         else:
             raise ConstraintViolation("Name constraint violated.")
                 
+
+class Locked(Constrained):
+    locked = 0
+    def lock(self):
+        self.locked = 1
+
+    def entityConstraint(self, entity):
+        return not self.locked
 
 class Homogenous(Constrained):
     """A homogenous collection of entities.
@@ -211,11 +219,8 @@ class Homogenous(Constrained):
     I will only contain entities that are an instance of the class or type
     specified by my 'entityType' attribute.
     """
-    def __init__(self, entityType):
-        """Initialize me, specifying which entity type I allow.
-        """
-        Constrained.__init__(self)
-        self.entityType = entityType
+
+    entityType = types.InstanceType
 
     def entityConstraint(self, entity):
         if isinstance(entity, self.entityType):
@@ -224,17 +229,3 @@ class Homogenous(Constrained):
             raise ConstraintViolation("%s of incorrect type (%s)" %
                                       (entity, self.entityType))
 
-class Attributes(Constrained):
-    def __init__(self, **attributeMap):
-        Constrained.__init__(self)
-        self.attributeMap = attributeMap
-
-    def putEntity(self, name, entity):
-        allowedType = self.attributeMap.get(name)
-        if allowedType is None:
-            raise ConstraintViolation("Name %s does not exist." % name)
-        else:
-            if isinstance(entity, allowedType):
-                Collection.putEntity(self, name, entity)
-            else:
-                raise ConstraintViolation("Invalid type %s for name %s." % (allowedType.__name__, name))

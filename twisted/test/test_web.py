@@ -57,6 +57,16 @@ class SiteTest(unittest.TestCase):
 class SimpleWidget(widgets.Widget):
     def display(self, request):
         return ['correct']
+    
+class TextDeferred(widgets.Widget):
+    def __init__(self, text):
+        self.text = text
+
+    def display(self, request):
+        d = defer.Deferred()
+        d.callback([self.text])
+        return [d]
+
 
 class DeferredWidget(widgets.Widget):
     def display(self, request):

@@ -90,7 +90,7 @@ class AuthForm(widgets.Form):
         self.format(self.getFormFields(request), io.write)
         return io.getvalue()
 
-    def process(self, write, request, username, password, perspective):
+    def process(self, write, request, submit, username, password, perspective):
         """Process the form results.
         """
         # must be done before page is displayed so cookie can get set!

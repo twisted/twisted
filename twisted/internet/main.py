@@ -41,194 +41,6 @@ from twisted.persisted import styles
 
 # Sibling Imports
 
-import passport
-
-class Application(log.Logger, styles.Versioned):
-    running = 0
-    def __init__(self, name, uid=None, gid=None, authorizer=None):
-        self.name = name
-        # a list of (tcp, ssl, udp) Ports
-        self.ports = []
-        # a list of twisted.python.delay.Delayeds
-        self.delayeds = []
-        # a list of twisted.internet.passport.Services
-        self.services = {}
-        # a passport authorizer
-        self.authorizer = authorizer or passport.DefaultAuthorizer()
-        if platform.getType() == "posix":
-            self.uid = uid or os.getuid()
-            self.gid = gid or os.getgid()
-        self.resolver = DummyResolver()
-
-    persistenceVersion = 2
-
-    def upgradeToVersion2(self):
-        self.resolver = DummyResolver()
-
-    def upgradeToVersion1(self):
-        """Version 1 Persistence Upgrade
-        """
-        log.msg("Upgrading %s Application." % repr(self.name))
-        self.authorizer = passport.DefaultAuthorizer()
-        self.services = {}
-
-    def getServiceNamed(self, serviceName):
-        """Retrieve the named service from this application.
-
-        Raise a KeyError if there is no such service name.
-        """
-        return self.services[serviceName]
-
-    def addService(self, service):
-        """Add a service to this application.
-        """
-        self.services[service.serviceName] = service
-
-    def __repr__(self):
-        return "<%s app>" % self.name
-
-    def __getstate__(self):
-        dict = styles.Versioned.__getstate__(self)
-        if dict.has_key("running"):
-            del dict['running']
-        return dict
-
-    def listenTCP(self, port, factory, backlog=5):
-        """
-        Connects a given protocol factory to the given numeric TCP/IP port.
-        """
-        from twisted.internet import tcp
-        self.addPort(tcp.Port(port, factory, backlog))
-
-    # deprecated name for backward compat.
-    listenOn = listenTCP
-
-    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
-        """
-        Connects a given protocol factory to the given numeric TCP/IP port.
-        """
-        from twisted.internet import udp
-        self.addPort(udp.Port(port, factory, interface, maxPacketSize))
-
-    def listenSSL(self, port, factory, ctxFactory, backlog=5):
-        """
-        Connects a given protocol factory to the given numeric TCP/IP port.
-        The connection is a SSL one, using contexts created by the context
-        factory.
-        """
-        from twisted.internet import ssl
-        self.addPort(ssl.Port(port, factory, ctxFactory, backlog))
-
-    def addPort(self, port):
-        """
-        Adds a listening port (an instance of a twisted.internet.tcp.Port) to
-        this Application, to be bound when it's running.
-        """
-        self.ports.append(port)
-        if self.running:
-            port.startListening()
-
-    def addDelayed(self, delayed):
-        """
-        Adds a twisted.python.delay.Delayed object for execution in my event loop.
-
-        The timeout for select() will be calculated based on the sum of
-        all Delayed instances attached to me, using their 'ticktime'
-        attribute.  In this manner, delayed instances should have their
-        various callbacks called approximately when they're supposed to
-        be (based on when they were registered).
-
-        This is not hard realtime by any means; depending on server
-        load, the callbacks may be called in more or less time.
-        However, 'simulation time' for each Delayed instance will be
-        monotonically increased on a regular basis.
-
-        See the documentation for twisted.python.delay.Delayed for
-        details.
-        """
-        self.delayeds.append(delayed)
-        if running and self.running:
-            delayeds.append(delayed)
-
-    def removeDelayed(self, delayed):
-        """
-        Remove a Delayed previously added to the main event loop with addDelayed.
-        """ 
-        self.delayeds.remove(delayed)
-        if delayed in delayeds:
-            delayeds.remove(delayed)
-
-    def setUID(self):
-        """Retrieve persistent uid/gid pair (if possible) and set the current process's uid/gid
-        """
-        if hasattr(os, 'getgid'):
-            if not os.getgid():
-                os.setgid(self.gid)
-                os.setuid(self.uid)
-                log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
-
-    def shutDownSave(self):
-        """Persist a pickle, then stop all protocol factories.
-
-        The pickle will be named \"%(self.name)s-shutdown.tap\".  First, all
-        currently active factories will have thier stopFactory method called.
-        """
-        self.save("shutdown")
-        for port in self.ports:
-            port.factory.stopFactory()
-
-    def save(self, tag=None):
-        """Save a pickle of this application to a file in the current directory.
-        """
-        from cPickle import dump
-        if tag:
-            filename = self.name+'-'+tag+'-2.tap'
-            finalname = self.name+'-'+tag+'.tap'
-        else:
-            filename = self.name+"-2.tap"
-            finalname = self.name+".tap"
-        log.msg("Saving "+self.name+" application to "+finalname+"...")
-        f = open(filename, 'wb')
-        dump(self, f, 1)
-        f.flush()
-        f.close()
-        if platform.getType() == "win32":
-            if os.path.isfile(finalname):
-                os.remove(finalname)
-        os.rename(filename, finalname)
-        log.msg("Saved.")
-
-    def logPrefix(self):
-        """A log prefix which describes me.
-        """
-        return self.name+" application"
-
-    def run(self, save=1):
-        """Run this application, running the main loop if necessary.
-        """
-        global resolver
-        if not self.running:
-            log.logOwner.own(self)
-            delayeds.extend(self.delayeds)
-            if save:
-                shutdowns.append(self.shutDownSave)
-            for port in self.ports:
-                try:
-                    port.startListening()
-                except socket.error:
-                    print 'port %s already bound' % port.port
-                    return
-            for port in self.ports:
-                port.factory.startFactory()
-            resolver = self.resolver
-            self.running = 1
-            log.logOwner.disown(self)
-        if not running:
-            log.logOwner.own(self)
-            self.setUID()
-            run()
-            log.logOwner.disown(self)
-
 theTimeouts = delay.Delayed() # A delay for non-peristent delayed actions
 theTimeouts.ticktime = 1
 
@@ -457,6 +269,11 @@ def addDelayed(delayed):
     """
     delayeds.append(delayed)
 
+def removeDelayed(delayed):
+    """Remove a Delayed object from the event loop.
+    """
+    delayeds.remove(delayed)
+
 def addReader(reader):
     """Add a FileDescriptor for notification of data available to read.
     """
@@ -578,6 +395,10 @@ threadable.whenThreaded(initThreads)
 # Sibling Import
 import process
 
-# eep
+# Work on Jython
 if platform.getType() == 'java':
     import jnternet
+
+# backward compatibility stuff
+import app
+Application = app.Application

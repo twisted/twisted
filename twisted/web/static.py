@@ -23,6 +23,7 @@
 import os, string, stat
 import cStringIO
 import traceback
+import types
 StringIO = cStringIO
 del cStringIO
 
@@ -37,6 +38,7 @@ from twisted.protocols import http
 from twisted.python import threadable, log
 from twisted.internet import abstract
 from twisted.spread import pb
+from twisted.manhole import coil
 
 class Data(resource.Resource):
     """
@@ -44,6 +46,7 @@ class Data(resource.Resource):
     """
 
     def __init__(self, data, type):
+        resource.Resource.__init__(self)
         self.data = data
         self.type = type
 
@@ -76,7 +79,7 @@ class DirectoryListing(html.Interface):
                                       self.directoryContents)+"</CENTER>"
 
 
-class File(resource.Resource):
+class File(resource.Resource, coil.Configurable):
     """
     File is a resource that represents a plain non-interpreted file.
     It's constructor takes a file path.
@@ -112,6 +115,42 @@ class File(resource.Resource):
 
     indexName = "index.html"
 
+    ### Configuration
+
+    configTypes = {'path': types.StringType,
+                   'execCGI': 'boolean',
+                   'execEPY': 'boolean'}
+
+    def config_path(self, path):
+        self.path = path
+
+    def config_execCGI(self, allowed):
+        if allowed:
+            import twcgi
+            self.processors['.cgi'] = twcgi.CGIScript
+        else:
+            if self.processors.has_key('.cgi'):
+                del self.processors['.cgi']
+
+    def config_execEPY(self, allowed):
+        if allowed:
+            import script
+            self.processors['.epy'] = script.PythonScript
+        else:
+            if self.processors.has_key('.epy'):
+                del self.processors['.epy']
+
+
+    def getConfiguration(self):
+        return {'path': self.path,
+                'execCGI': self.processors.has_key('.cgi'),
+                'execEPY': self.processors.has_key('.epy')}
+
+    def configInit(self, container, name):
+        self.__init__("nowhere/nohow")
+
+    ### End Configuration
+
     def __init__(self, path):
         """Create a file with the given path.
         """
@@ -125,6 +164,7 @@ class File(resource.Resource):
         if self.encoding is not None:
             p, ext = os.path.splitext(p)
         self.type = self.contentTypes.get(string.lower(ext))
+        self.processors = {}
 
 
     def getChild(self, path, request):
@@ -238,6 +278,7 @@ class File(resource.Resource):
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
+coil.registerClass(File)
 
 class FileTransfer(pb.Viewable):
     """

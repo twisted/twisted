@@ -18,69 +18,55 @@
 """I am a test application for twisted.web.
 """
 
-#t.w imports
-import html
+# Sibling Imports
+import widgets
 
+# System Imports
 import cStringIO
 StringIO = cStringIO
 del cStringIO
 
-class Test(html.Interface):
+# Twisted Imports
+from twisted.manhole import coil
+
+class FunkyForm(widgets.Form):
+    formFields = [
+        ['string', 'Title', 'title', "Chicken Little"],
+        ['checkbox', 'First Checkbox', 'checkone', 1],
+        ['checkbox', 'Second Checkbox', 'checktwo', 0],
+        ['checkgroup', 'First Checkgroup', 'checkn',
+         [['zero', "Count Zero", 0],
+          ['one', "Count One", 1],
+          ['two', "Count Two", 0]]],
+        ['menu', 'My Menu', 'mnu',
+         [['IDENTIFIER', 'Some Innocuous String'],
+          ['TEST_FORM', 'Just another silly string.'],
+          ['CONEHEADS', 'Hoo ha.']]],
+        ['text', 'Description', 'desc', "Once upon a time..."]
+        ]
+    submitNames = [
+        'Get Funky', 'Get *VERY* Funky'
+        ]
+
+
+class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
     """I am a trivial example of a 'web application'.
     """
-    isLeaf = 1
+    template = '''
+    Congratulations, twisted.web appears to work!
+    <ul>
+    <li>Funky Form:
+    %%%%self.funkyForm()%%%%
+    </ul>
+    '''
     def __init__(self):
         """Initialize.
         """
-        html.Interface.__init__(self)
+        coil.Configurable.__init__(self)
+        widgets.Gadget.__init__(self)
+        widgets.Presentation.__init__(self)
 
-    def printargs(self, request):
-        """Return an HTML table of all arguments passed to a request.
-        """
-        io = StringIO.StringIO()
-        io.write("<table>")
-        for k, v in request.args.items():
-            io.write("<tr><td>")
-            io.write(k)
-            io.write("</td><td>")
-            io.write(html.PRE(v[0]))
-            io.write("</td></tr>")
-        io.write("</table>")
-        return io.getvalue()
+    funkyForm = FunkyForm
 
-    def crash(self):
-        """Demo method that raises the exception '"kaboom"'
-        """
-        raise "kaboom"
 
-    def other(self):
-        """Returns a string.
-        """
-        return "Hello world!  This is an additional box with static text..."
-
-    def content(self, request):
-        """Some dummy content.
-
-        The source code is a good example of the 'form' method of resource.
-        """
-        return self.box(request,
-                        "It worked! (kinda)",
-"""
-You now have the twisted.web webserver installed!  This doesn't do
-very much yet, but in the near future it will do all kinds of groovy things.
-""" +
-    self.runBox(request, "Form Test", self.form, request,
-                [['text', 'Test Text', 'TestText', 'I am the eggman'],
-                 ['string', 'Test String', 'TestString', 'They Are The Eggmen'],
-                 ['menu', 'Menu Test', 'TestMenu', ['I', 'AM',
-                                                    'THE', 'WALRUS']],
-                 ['password', 'Goo Goo Ga Joob', 'TestPw', None],
-                 ['file', 'Bloopy', 'TestFile', None]
-                 ]) +
-    self.runBox(request, "Arguments",
-                 self.printargs, request) +
-    self.runBox(request, "Sample Traceback",
-                 self.crash) +
-    self.runBox(request, "HI YING!",
-                 self.other)
-    )
+coil.registerClass(Test)

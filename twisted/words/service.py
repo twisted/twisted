@@ -18,11 +18,13 @@
 
 # System Imports
 import string
+import types
 
 # Twisted Imports
 from twisted.spread import pb
 from twisted.internet import passport
-from twisted.python import log
+from twisted.python import log, roots
+from twisted.manhole import coil
 from twisted.persisted import styles
 from twisted import copyright
 
@@ -310,21 +312,57 @@ class Group(pb.Cacheable):
         s = "<%s '%s' at %x>" % (self.__class__, self.name, id(self))
         return s
 
-class Service(pb.Service, styles.Versioned):
+class Service(pb.Service, styles.Versioned, coil.Configurable):
     """I am a chat service.
     """
     def __init__(self, name, app):
         pb.Service.__init__(self, name, app)
         self.participants = {}
         self.groups = {}
+        self._setConfigDispensers()
 
-    persistenceVersion = 1
+    # Configuration stuff.
+    def _setConfigDispensers(self):
+        import ircservice, webwords
+        self.configDispensers = [
+            ['makeIRCGateway', ircservice.IRCGateway, "IRC chat gateway to %s" % self.serviceName],
+            ['makeWebAccounts', webwords.WordsGadget, "Public Words Website for %s" % self.serviceName]
+            ]
+
+    def makeWebAccounts(self):
+        import webwords
+        return webwords.WordsGadget(self)
+
+    def makeIRCGateway(self):
+        import ircservice
+        return ircservice.IRCGateway(self)
+
+    def configInit(self, container, name):
+        self.__init__(name, container.app)
+
+    def getConfiguration(self):
+        return {"name": self.serviceName}
+
+    configTypes = {
+        'name': types.StringType
+        }
+
+    def config_name(self, name):
+        raise coil.InvalidConfiguration("You can't change a Service's name.")
+
+    ## Persistence versioning.
+    persistenceVersion = 2
 
     def upgradeToVersion1(self):
         from twisted.internet.main import theApplication
         styles.requireUpgrade(theApplication)
         pb.Service.__init__(self, 'twisted.words', theApplication)
 
+    def upgradeToVersion2(self):
+        self._setConfigDispensers()
+
+    ## Service functionality.
+        
     def getGroup(self, name):
         group = self.groups.get(name)
         if not group:
@@ -353,3 +391,5 @@ class Service(pb.Service, styles.Versioned):
                                         self.application.name,
                                         id(self))
         return s
+
+coil.registerClass(Service)

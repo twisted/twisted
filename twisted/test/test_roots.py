@@ -24,27 +24,10 @@ class RootsTest(unittest.TestCase):
 
 
     def testHomogenous(self):
-        h = roots.Homogenous(types.IntType)
+        h = roots.Homogenous()
+        h.entityType = types.IntType
         h.putEntity('a', 1)
         self.failUnlessEqual(h.getStaticEntity('a'),1 )
         self.failUnlessRaises(roots.ConstraintViolation,
                               h.putEntity, 'x', 'y')
-
-    def testAttributes(self):
-        a = roots.Attributes(
-            myString = types.StringType,
-            myInt = types.IntType,
-            )
-        # positive path
-        a.putEntity('myString', 'hello')
-        a.putEntity('myInt', 100)
-        self.failUnlessEqual(a.getStaticEntity('myString'), 'hello')
-        self.failUnlessEqual(a.getStaticEntity('myInt'), 100)
-        # negative path
-        self.failUnlessRaises(roots.ConstraintViolation,
-                              a.putEntity, "illegal name", "illegal value")
-        self.failUnlessRaises(roots.ConstraintViolation,
-                              a.putEntity, "myString", 100)
-        self.failUnlessRaises(roots.ConstraintViolation,
-                              a.putEntity, "myInt", 'hello')
 

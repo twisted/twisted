@@ -25,6 +25,7 @@ from twisted.protocols import irc, protocol
 from twisted.spread import pb
 from twisted.python import log
 from twisted import copyright
+from twisted.manhole import coil
 
 # sibling imports
 import service
@@ -761,7 +762,8 @@ class IRCChatter(irc.IRC):
         pass
 
 
-class IRCGateway(protocol.Factory):
+class IRCGateway(protocol.Factory, coil.Configurable):
+    configCreatable = 0
     def __init__(self, service):
         self.service = service
     def buildProtocol(self, connection):
@@ -770,3 +772,5 @@ class IRCGateway(protocol.Factory):
         i = IRCChatter()
         i.service = self.service
         return i
+
+coil.registerClass(IRCGateway)

@@ -192,6 +192,10 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
+    def joined(self, group):
+        """Called when I finish joining a channel.
+        """
+
     def noticed(self, user, channel, message):
         """Called when I have a notice from a user to me or a channel.
 
@@ -325,7 +329,7 @@ class IRCClient(basic.LineReceiver):
         self.signedOn()
 
     def irc_JOIN(self, prefix, params):
-        pass
+        self.joined(params[-1][1:])
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])

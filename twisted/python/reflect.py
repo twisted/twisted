@@ -217,7 +217,7 @@ def qual(clazz):
 
 def getcurrent(clazz):
     assert type(clazz) == types.ClassType, 'must be a class...'
-    module = named_module(clazz.__module__)
+    module = namedModule(clazz.__module__)
     currclass = getattr(module, clazz.__name__, None)
     if currclass is None:
         print "Reflection Warning: class %s deleted from module %s" % (
@@ -243,11 +243,11 @@ def isinst(inst,clazz):
     else:
         return ISNT
 
-def named_module(name):
+def namedModule(name):
     return __import__(name, {}, {}, 'x')
 
 def _reclass(clazz):
-    clazz = getattr(named_module(clazz.__module__),clazz.__name__)
+    clazz = getattr(namedModule(clazz.__module__),clazz.__name__)
     clazz.__bases__ = tuple(map(_reclass, clazz.__bases__))
     return clazz
 

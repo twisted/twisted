@@ -535,13 +535,13 @@ namespace, or a qualified python module name (prefixed with a dot).  """
 
         if ds[0]=='.':
             module=string.replace(ds[1:],' ','')
-            rebuild.rebuild(reflect.named_module(module))
+            rebuild.rebuild(reflect.namedModule(module))
         else:
             try:    object=self.code_space[ds]
             except:    object=sentence.directObject()
 
             if reflect.isinst(object,thing.Thing):
-                rebuild.rebuild(reflect.named_module(object.__class__.__module__))
+                rebuild.rebuild(reflect.namedModule(object.__class__.__module__))
             else:
                 rebuild.rebuild(object)
 

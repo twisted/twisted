@@ -38,19 +38,20 @@ import copy
 import time
 import calendar
 
+#some useful constants
+NOT_DONE_YET = 1
+
 # Twisted Imports
 from twisted.spread import pb
 from twisted.internet import tcp, passport, main
 from twisted.protocols import http, protocol
-from twisted.python import log, reflect
+from twisted.python import log, reflect, roots
 from twisted import copyright
+from twisted.manhole import coil
 
 # Sibling Imports
 import error
 import resource
-
-#some useful constants
-NOT_DONE_YET = 1
 
 weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 monthname = [None,
@@ -425,6 +426,10 @@ class Request(pb.Copyable, http.HTTP):
     def getHost(self):
         return socket.gethostbyaddr(self.transport.getHost()[1])
 
+    def prePathURL(self):
+        return 'http://%s/%s' % (self.getHeader("host"),
+                                 string.join(self.prepath, '/'))
+
     def getClientIP(self):
         if self.client[0] == 'INET':
             return self.client[1]
@@ -502,13 +507,46 @@ class Session:
 
 version = "TwistedWeb/%s" % copyright.version
 
-class Site(protocol.Factory):
+class Site(protocol.Factory, coil.Configurable, roots.Collection):
     counter = 0
+
     def __init__(self, resource):
         """Initialize.
         """
         self.sessions = {}
         self.resource = resource
+
+    # configuration
+    
+    configTypes = {'resource': resource.Resource}
+
+    def config_resource(self, res):
+        self.resource = res
+
+    def getConfiguration(self):
+        return {"resource": self.resource}
+
+    # emulate collection for listing
+
+    def listStaticEntities(self):
+        return [['resource', self.resource]]
+
+    def getStaticEntity(self, name):
+        if name == 'resource':
+            return self.resource
+
+    def configInit(self, container, name):
+        from twisted.web import static
+        d = static.Data(
+            """
+            <html><head><title>Blank Page</title></head>
+            <body>
+            <h1>This Page Left Intentionally Blank</h1>
+            </body>
+            </html>""",
+            "text/html")
+        d.isLeaf = 1
+        self.__init__(d)
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)
@@ -573,6 +611,7 @@ class Site(protocol.Factory):
         request.sitepath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 
+coil.registerClass(Site)
 
 class HTTPClient(tcp.Client):
     """A client for HTTP connections.

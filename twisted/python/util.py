@@ -17,13 +17,21 @@
 
 import os, sys
 
+def uniquify(lst):
+    """Make the elements of a list unique by inserting them into a dictionary.
+    """
+    dict = {}
+    for k in lst:
+        dict[k] = 1
+    return dict.keys()
+
 def addPluginDir():
     import twisted
 
     systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
                             os.path.abspath(twisted.__file__))), 'plugins')
     userPlugins = os.path.expanduser("~/TwistedPlugins")
-    confPlugins = os.path.expanduser('~/.twisted')
+    confPlugins = os.path.expanduser("~/.twisted")
     # Removed by Moshe's request
     # currentPlugins = os.path.abspath("TwistedPlugins")
     allPlugins = [systemPlugins, userPlugins, confPlugins] #, currentPlugins]

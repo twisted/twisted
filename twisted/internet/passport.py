@@ -52,7 +52,8 @@ class Service:
         self.setApplication(application)
 
     def setApplication(self, application):
-        assert not self.application, "Application already set!"
+        if self.application is not application:
+            assert not self.application, "Application already set!"
         if application:
             self.application = application
             application.addService(self)

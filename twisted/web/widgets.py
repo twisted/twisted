@@ -22,14 +22,28 @@ def listify(x):
     return [x]
 
 class Widget:
+    """A component of a web page.
+    """
     def display(self, request):
+        """Implement me to represent your widget.
+
+        I must return a list of strings and twisted.python.defer.Deferred
+        instances.
+        """
         raise NotImplementedError("twisted.web.widgets.Widget.display")
 
 class StreamWidget(Widget):
+    """A 'streamable' component of a webpage.
+    """
+    
     def stream(self, write, request):
+        """Call 'write' multiple times with a string argument to represent this widget.
+        """
         raise NotImplementedError("twisted.web.widgets.StringWidget.stream")
 
     def display(self, request):
+        """Produce a list containing a single string.
+        """
         io = StringIO()
         try:
             result = self.stream(io.write, request)
@@ -42,10 +56,12 @@ class StreamWidget(Widget):
             return [html.PRE(io.getvalue())]
 
 class Presentation(Widget):
+    """I am a widget which formats a template with interspersed python expressions.
+    """
     template = '''
-    hello %%%%world%%%%
+    Hello, %%%%world%%%%.
     '''
-    world = "You didn't assign to the 'template' attribute."
+    world = "you didn't assign to the 'template' attribute"
     def __init__(self, template=None, filename=None):
         if filename:
             self.template = open(filename).read()
@@ -66,13 +82,25 @@ class Presentation(Widget):
     def addVariables(self, namespace, request):
         self.addClassVars(namespace, self.__class__)
 
+    def prePresent(self, request):
+        """Perform any tasks which must be done before presenting the page.
+        """
+
     def formatTraceback(self, traceback):
         return [html.PRE(traceback)]
+
+    def streamCall(self, call, *args, **kw):
+        """Utility: Call a method like StreamWidget's 'stream'.
+        """
+        io = StringIO()
+        apply(call, (io.write,) + args, kw)
+        return io.getvalue()
 
     def display(self, request):
         tm = []
         flip = 0
         namespace = {}
+        self.prePresent(request)
         self.addVariables(namespace, request)
         # This variable may not be obscured...
         namespace['request'] = request
@@ -114,17 +142,50 @@ def htmlFor_password(write, name, value):
 def htmlFor_text(write, name, value):
     write('<TEXTAREA COLS="60" ROWS="10" NAME="%s" WRAP="virtual">%s</textarea>' % (name, value))
 def htmlFor_menu(write, name, value):
-    "Value of the format [OPTION, OPTION, OPTION]"
-    write('<SELECT NAME="%s">\n' % name)
-    for item in value:
-        write("<OPTION>\n%s\n" % item)
-    write("</select>")
+    "Value of the format [(optionName, displayName), ...]"
+    write('  <SELECT NAME="%s">\n' % name)
+    for optionName, displayName in value:
+        write('    <OPTION VALUE="%s">%s</option>\n' % (optionName, displayName))
+    write("  </select>\n")
+def htmlFor_checkbox(write, name, value):
+    "A checkbox."
+    if value:
+        value = 'checked'
+    else:
+        value = ''
+    write('<INPUT TYPE="checkbox" NAME="__checkboxes__" VALUE="%s" %s>\n' % (name, value))
 
+def htmlFor_checkgroup(write, name, value):
+    "A check-group."
+    for optionName, displayName, checked in value:
+        checked = (checked and 'checked') or ''
+        write('<INPUT TYPE="checkbox" NAME="%s" VALUE="%s" %s>%s<br>\n' % (name, optionName, checked, displayName))
 
 class FormInputError(Exception):
     pass
 
 class Form(StreamWidget):
+    """I am a web form.
+
+    In order to use me, you probably want to set self.formFields (or override
+    'getFormFields') and override 'process'.  In order to demonstrate how this
+    is done, here is a small sample Form subclass::
+    
+      |  from twisted.web import widgets
+      |  class HelloForm(widgets.Form):
+      |      formFields = [
+      |          ['string', 'Who to greet?', 'whoToGreet', 'World'],
+      |          ['menu', 'How to greet?', 'how', ['cheerfully', 'with a smile',
+      |                                            'sullenly', 'without enthusiasm',
+      |                                            'spontaneously', 'on the spur of the moment']]]
+      |      def process(self, write, request, submit, whoToGreet, how):
+      |          write('The web wakes up and %s says, \"Hello, %s!\"' % (how, whoToGreet))
+
+    If you load this widget, you will see that it displays a form with 2 inputs
+    derived from data in formFields.  Note the argument names to 'process':
+    after 'write' and 'request', they are the same as the 3rd elements ('Input
+    Name' parameters) of the formFields list.
+    """
 
     formGen = {
         'hidden': htmlFor_hidden,
@@ -133,7 +194,9 @@ class Form(StreamWidget):
         'int': htmlFor_string,
         'text': htmlFor_text,
         'menu': htmlFor_menu,
-        'password': htmlFor_password
+        'password': htmlFor_password,
+        'checkbox': htmlFor_checkbox,
+        'checkgroup': htmlFor_checkgroup
     }
 
     formParse = {
@@ -143,81 +206,225 @@ class Form(StreamWidget):
     formFields = [
     ]
 
-    def getFormFields(self, request):
-        return self.formFields
+    def getFormFields(self, request, fieldSet = None):
+        """I return a list of lists describing this form.
 
-    submitName = 'OK'
+        This information is used both to display the form and to process it.
+        The list is in the following format::
 
-    def format(self, form, write):
-        write('<FORM ENCTYPE="multipart/form-data" METHOD="post">\n'
-              '<TABLE BORDER="0">\n')
+          | [['Input Type',   'Display Name',   'Input Name',   'Input Value'],
+          |  ['Input Type 2', 'Display Name 2', 'Input Name 2', 'Input Value 2']
+          |  ...]
+
+        Valid values for 'Input Type' are:
+
+          * 'hidden': a hidden field that contains a string that the user won't change
+
+          * 'string': a short string
+
+          * 'int': an integer
+
+          * 'text': a longer text field, suitable for entering paragraphs
+
+          * 'menu': an HTML SELECT input, a list of choices
+
+          * 'checkgroup': a group of checkboxes
+
+          * 'password': a 'string' field where the contents are not visible as the user types
+        
+          * 'file': a file-upload form (EXPERIMENTAL)
+
+        'Display Name' is a descriptive string that will be used to
+        identify the field to the user.
+
+        The 'Input Name' must be a legal Python identifier that describes both
+        the value's name on the HTML form and the name of an argument to
+        'self.process()'.
+
+        The 'Input Value' is usually a string, but its value can depend on the
+        'Input Type'.  'int' it is an integer, 'menu' it is a list of pairs of
+        strings, representing (value, name) pairs for the menu options.  Input
+        value for 'checkgroup' should be a list of ('inputName', 'Display
+        Name', 'checked') triplets.
+
+        If this result is statically determined for your Form subclass, you can
+        assign it to FormSubclass.formFields; if you need to determine it
+        dynamically, you can override this method.
+
+        Note: In many cases it is desirable to use user input for defaults in
+        the form rather than those supplied by your calculations, which is what
+        this method will do to self.formFields.  If this is the case for you,
+        but you still need to dynamically calculate some fields, pass your
+        results back through this method by doing::
+
+          |  def getFormFields(self, request):
+          |      myFormFields = [self.myFieldCalculator()]
+          |      return widgets.Form.getFormFields(self, request, myFormFields)
+
+        """
+        fields = []
+        if fieldSet is None:
+            fieldSet = self.formFields
+        if not self.shouldProcess(request):
+            return fieldSet
+        for inputType, displayName, inputName, inputValue in fieldSet:
+            if inputType == 'checkbox':
+                if request.args.has_key('__checkboxes__'):
+                    if inputName in request.args['__checkboxes__']:
+                        inputValue = 1
+                    else:
+                        inputValue = 0
+                else:
+                    inputValue = 0
+            elif inputType == 'checkgroup':
+                if request.args.has_key(inputName):
+                    keys = request.args[inputName]
+                else:
+                    keys = []
+                iv = inputValue
+                inputValue = []
+                for optionName, optionDisplayName, checked in iv:
+                    checked = optionName in keys
+                    inputValue.append([optionName, optionDisplayName, checked])
+            elif request.args.has_key(inputName):
+                iv = request.args[inputName][0]
+                if inputType == 'menu':
+                    if iv in inputValue:
+                        inputValue.remove(iv)
+                        inputValue.insert(0, iv)
+                else:
+                    inputValue = iv
+            fields.append([inputType, displayName, inputName, inputValue])
+        return fields
+
+    submitNames = ['Submit']
+
+    def format(self, form, write, request):
+        """I display an HTML FORM according to the result of self.getFormFields.
+        """
+        write('<FORM ENCTYPE="multipart/form-data" METHOD="post" ACTION="%s">\n'
+              '<TABLE BORDER="0">\n' % request.uri)
         for inputType, displayName, inputName, inputValue in form:
             write('<TR>\n<TD ALIGN="right" VALIGN="top"><B>%s</b></td>\n'
                   '<TD VALIGN="%s">\n' %
                   (displayName, ((inputType == 'text') and 'top') or 'middle'))
             self.formGen[inputType](write, inputName, inputValue)
             write('</td>\n</tr>\n')
-        write('<TR><TD></TD><TD ALIGN="center">\n'
-              '<INPUT TYPE="submit" NAME="submit" VALUE="%s">\n'
-              '</td></tr>\n</table>\n'
+        write('<TR><TD></TD><TD ALIGN="left"><hr>\n')
+        for submitName in self.submitNames:
+            write('<INPUT TYPE="submit" NAME="submit" VALUE="%s">\n' % submitName)
+        write('</td></tr>\n</table>\n'
               '<INPUT TYPE="hidden" NAME="__formtype__" VALUE="%s">\n'
-              '</form>\n' % (self.submitName, str(self.__class__)))
+              % (str(self.__class__)))
+        fid = self.getFormID()
+        if fid:
+            write('<INPUT TYPE="hidden" NAME="__formid__" VALUE="%s">\n' % fid)
+        write("</form>\n")
 
+    def getFormID(self):
+        """Override me: I disambiguate between multiple forms of the same type.
 
-    def process(self, write, request, **kw):
-        write(pprint.PrettyPrinter().pformat(kw))
+        In order to determine which form an HTTP POST request is for, you must
+        have some unique identifier which distinguishes your form from other
+        forms of the same class.  An example of such a unique identifier would
+        be: on a page with multiple FrobConf forms, each FrobConf form refers
+        to a particular Frobnitz instance, which has a unique id().  The
+        FrobConf form's getFormID would probably look like this::
 
-    def doProcess(self, form, write, request):
+          |  def getFormID(self):
+          |      return str(id(self.frobnitz))
+
+        By default, this method will return None, since distinct Form instances
+        may be identical as far as the application is concerned.
+        """
+
+    def process(self, write, request, submit, **kw):
+        """Override me: I process a form.
+
+        I will only be called when the correct form input data to process this
+        form has been received.
+
+        I take a variable number of arguments, beginning with 'write',
+        'request', and 'submit'.  'write' is a callable object that will append
+        a string to the response, 'request' is a twisted.web.request.Request
+        instance, and 'submit' is the name of the submit action taken.
+
+        The remainder of my arguments must be correctly named.  They will each be named after one of the 
+        
+        """
+        write("Submit: %s <br> %s" % (submit, html.PRE(pprint.PrettyPrinter().pformat(kw))))
+
+    def _doProcess(self, form, write, request):
+        """(internal) Prepare arguments for self.process.
+        """
         args = copy.copy(request.args)
         kw = {}
         for inputType, displayName, inputName, inputValue in form:
-            if not args.has_key(inputName):
-                raise FormInputError("missing field %s." % repr(inputName))
-            formData = args[inputName]
-            del args[inputName]
-            if not len(formData) == 1:
-                raise FormInputError("multiple values for field %s." %repr(inputName))
-            formData = formData[0]
-            method = self.formParse.get(inputType)
-            if method:
-                formData = method(formData)
+            if inputType == 'checkbox':
+                if request.args.has_key('__checkboxes__'):
+                    if inputName in request.args['__checkboxes__']:
+                        formData = 1
+                    else:
+                        formData = 0
+                else:
+                    formData = 0
+            elif inputType == 'checkgroup':
+                if args.has_key(inputName):
+                    formData = args[inputName]
+                    del args[inputName]
+                else:
+                    formData = []
+            else:
+                if not args.has_key(inputName):
+                    raise FormInputError("missing field %s." % repr(inputName))
+                formData = args[inputName]
+                del args[inputName]
+                if not len(formData) == 1:
+                    raise FormInputError("multiple values for field %s." %repr(inputName))
+                formData = formData[0]
+                method = self.formParse.get(inputType)
+                if method:
+                    formData = method(formData)
             kw[inputName] = formData
-        for field in ['submit', '__formtype__']:
+        submitAction = args.get('submit')
+        if submitAction:
+            submitAction = submitAction[0]
+        for field in ['submit', '__formtype__', '__checkboxes__']:
             if args.has_key(field):
                 del args[field]
         if args:
             raise FormInputError("unknown fields: %s" % repr(args))
-        return apply(self.process, (write, request), kw)
+        return apply(self.process, (write, request, submitAction), kw)
 
     def formatError(self,error):
+        """Format an error message.
+
+        By default, this will make the message appear in red, bold italics.
+        """
         return '<FONT COLOR=RED><B><I>%s</i></b></font><br>\n' % error
 
+    def shouldProcess(self, request):
+        args = request.args
+        fid = self.getFormID()
+        return (args and # there are arguments to the request
+                args.has_key('__formtype__') and # this is a widgets.Form request
+                args['__formtype__'][0] == str(self.__class__) and # it is for a form of my type
+                ((not fid) or # I am only allowed one form per page
+                 (args.has_key('__formid__') and # if I distinguish myself from others, the request must too
+                  args['__formid__'][0] == fid))) # I am in fact the same
+
     def stream(self, write, request):
+        """Render the results of displaying or processing the form.
+        """
         args = request.args
         form = self.getFormFields(request)
-        if args and args.has_key('__formtype__') and args['__formtype__'][0] == str(self.__class__):
+        if self.shouldProcess(request):
             try:
-                return self.doProcess(form, write, request)
+                return self._doProcess(form, write, request)
             except FormInputError, fie:
                 write(self.formatError(str(fie)))
-        self.format(form, write)
+        self.format(form, write, request)
 
-
-class TextWidget(Widget):
-    def __init__(self, text):
-        self.text = text
-
-    def display(self, request):
-        return [self.text]
-
-class TextDeferred(Widget):
-    def __init__(self, text):
-        self.text = text
-
-    def display(self, request):
-        d = defer.Deferred()
-        d.callback([self.text])
-        return [d]
 
 class Time(Widget):
     def display(self, request):
@@ -387,10 +594,13 @@ class WidgetPage(Page):
     <STYLE>
     %%%%stylesheet%%%%
     </style>
-    <HEAD><TITLE>%%%%title%%%%</title></head>
+    <HEAD>
+    <TITLE>%%%%self.title%%%%</title>
+    <BASE href="%%%%request.prePathURL()%%%%">
+    </head>
     <BODY>
-    <H1>%%%%title%%%%</h1>
-    %%%%widget%%%%
+    <H1>%%%%self.title%%%%</h1>
+    %%%%self.widget%%%%
     </body>
     </html>
     '''
@@ -413,6 +623,8 @@ class WidgetPage(Page):
 class Gadget(resource.Resource):
     page = WidgetPage
 
+    isLeaf = 0
+
     def __init__(self):
         resource.Resource.__init__(self)
         self.widgets = {}
@@ -422,7 +634,7 @@ class Gadget(resource.Resource):
     def render(self, request):
         """Redirect to view this entity as a collection.
         """
-        request.setResponseCode(301)
+        request.setResponseCode(http.MOVED_PERMANENTLY)
         request.setHeader("location","http://%s%s/" % (
             request.getHeader("host"),
             (string.split(request.uri,'?')[0])))
@@ -447,14 +659,16 @@ class Gadget(resource.Resource):
             if isinstance(widget, resource.Resource):
                 return widget
             else:
-                return self.page(widget)
+                p = self.page(widget)
+                p.isLeaf = getattr(widget,'isLeaf',0)
+                return p
         elif path in self.files:
             prefix = getattr(sys.modules[self.__module__], '__file__', '')
             if prefix:
                 prefix = os.path.abspath(os.path.dirname(prefix))
             return static.File(os.path.join(prefix, path))
         elif path == '__reload__':
-            return self.page(Reloader(map(reflect.named_module, [self.__module__] + self.modules)))
+            return self.page(Reloader(map(reflect.namedModule, [self.__module__] + self.modules)))
         else:
             return error.NoResource()
 

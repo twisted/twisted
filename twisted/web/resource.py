@@ -20,8 +20,9 @@
 
 # System Imports
 import string
+from twisted.python import roots
 
-class Resource:
+class Resource(roots.Homogenous):
     """I define a web-accessible resource.
 
     I serve 2 main purposes; one is to provide a standard representation for
@@ -38,7 +39,37 @@ class Resource:
 
     isLeaf = 0
 
-    classChildren = {}
+    ### Abstract Collection Interface
+
+    def listStaticNames(self):
+        return self.children.keys()
+
+    def listStaticEntities(self):
+        return self.children.items()
+
+    listNames = listStaticNames
+    listEntities = listStaticEntities
+
+    def listDynamicNames(self):
+        raise NotImplementedError("Web Resources not true Collections")
+
+    def listDynamicEntities(self, request):
+        raise NotImplementedError("Web Resources not true Collections")
+
+    def getStaticEntity(self, name):
+        return self.children.get(name)
+
+    def getDynamicEntity(self, name, request):
+        if not self.children.has_key(name):
+            return self.getChild(name, request)
+
+    def delEntity(self, name):
+        del self.children[name]
+
+    def reallyPutEntity(self, name, entity):
+        self.children[name] = entity
+
+    # Concrete HTTP interface
 
     def getChild(self, path, request):
         """Retrieve a 'child' resource from me.
@@ -74,9 +105,8 @@ class Resource:
         This will check to see if I have a pre-registered child resource of the
         given name, and call getChild if I do not.
         """
-        for dict in (self.children, self.classChildren):
-            if dict.has_key(path):
-                return dict[path]
+        if self.children.has_key(path):
+            return self.children[path]
 
         return self.getChild(path, request)
 
@@ -112,6 +142,8 @@ class Resource:
         request.write(data), then call request.finish().
         """
         raise "%s called" % str(self.__class__.__name__)
+
+Resource.entityType = Resource
 
 #t.w imports
 #This is ugly, I know, but since error.py directly access resource.Resource

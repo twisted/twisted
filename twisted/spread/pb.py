@@ -51,6 +51,7 @@ from twisted.python import log, defer
 from twisted.protocols import protocol
 from twisted.internet import passport, tcp
 from twisted.persisted import styles
+from twisted.manhole import coil
 
 # Sibling Imports
 import jelly
@@ -1416,10 +1417,11 @@ class Broker(banana.Banana):
         """
         del self.locallyCachedObjects[objectID]
 
-class BrokerFactory(protocol.Factory, styles.Versioned):
+class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
     """I am a server for object brokerage.
     """
-    persistenceVersion = 2
+    persistenceVersion = 3
+    configTypes = {'objectToBroker': Root}
     def __init__(self, objectToBroker):
         self.objectToBroker = objectToBroker
 
@@ -1430,6 +1432,15 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 ##        del self.services
 ##        from twisted.internet.main import theApplication
 ##        self.__init__(theApplication)
+
+    def configInit(self, container, name):
+        self.__init__(AuthRoot(container.app))
+
+    def config_objectToBroker(self, newObject):
+        self.objectToBroker = newObject
+
+    def getConfiguration(self):
+        return {"objectToBroker": self.objectToBroker}
 
     def upgradeToVersion2(self):
         app = self.app
@@ -1444,6 +1455,8 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
         proto.setNameForLocal("root",
                               self.objectToBroker.rootObject(proto))
         return proto
+
+coil.registerClass(BrokerFactory)
 
 ### AUTH STUFF
 

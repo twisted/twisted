@@ -30,6 +30,7 @@ from twisted.internet import tcp
 from twisted.python import usage
 from twisted.spread import pb
 from twisted.words import service, ircservice, webwords
+from twisted.web import server
 from twisted.internet import passport
 
 import sys
@@ -48,7 +49,7 @@ def getPorts(app, config):
     svc = service.Service("twisted.words", app)
     bkr = pb.BrokerFactory(pb.AuthRoot(app))
     irc = ircservice.IRCGateway(svc)
-    adm = webwords.WebWordsAdminSite(svc)
+    adm = server.Site(webwords.WordsGadget(svc))
 
     return [(int(config.port), bkr),
             (int(config.irc), irc),

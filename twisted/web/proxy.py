@@ -84,10 +84,8 @@ class ReverseProxy(http.HTTP):
 
 
 class ReverseProxyResource(resource.Resource):
-
-    children = classChildren = {}
-
     def __init__(self, host, port, path):
+        resource.Resource.__init__(self)
         self.host = host
         self.port = port
         self.path = path

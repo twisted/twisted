@@ -21,6 +21,7 @@ import time
 from twisted.web import html, server, error, widgets
 from twisted.internet import passport
 from twisted.persisted import styles
+from twisted.manhole import coil
 
 #Sibling imports
 import service
@@ -40,7 +41,7 @@ class AccountCreationWidget(widgets.Form, styles.Versioned):
         #this object should get garbage collected..
         pass
 
-    def process(self, write, request, **args):
+    def process(self, write, request, submit, **args):
         if args.has_key("username"):
             u,p = request.args['username'][0], request.args['password'][0]
             app = self.service.application
@@ -73,18 +74,22 @@ class ParticipantInfoWidget(widgets.Widget):
                service.statuses[self.part.status])]
 
 
+class Page:
+    "Backwards Compatibility."
+
 class ParticipantListWidget(widgets.Gadget, widgets.Widget, styles.Versioned):
-    persistedVersion = 1
+    persistenceVersion = 2
     def __init__(self, service):
         widgets.Gadget.__init__(self)
         self.service = service
-        self.page = Page
         self.title = "Participant List"
 
     def upgradeToVersion1(self):
-        #This object should get garbage collected..
         pass
-        
+
+    def upgradeToVersion2(self):
+        del self.page
+
     def display(self, request):
         """Get HTML for a directory of participants.
         """
@@ -101,53 +106,37 @@ class ParticipantListWidget(widgets.Gadget, widgets.Widget, styles.Versioned):
         else:
             return error.NoResource("That participant does not exist.")
 
-class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned):
-    persistenceVersion = 1
-    title = "WebWords Administration Interface"
+class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned, coil.Configurable):
+    persistenceVersion = 2
+    title = "Welcome to WebWords"
     def __init__(self, svc):
         widgets.Gadget.__init__(self)
         self.section = ""
         self.putWidget("create", AccountCreationWidget(svc))
         self.putWidget("users", ParticipantListWidget(svc))
-        self.page = Page
 
     def upgradeToVersion1(self):
         #This object should get garbage collected...
         pass
 
+    def upgradeToVersion2(self):
+        del self.page
 
     def display(self, request):
-        return [html.linkList([[request.sibLink("create"),
+        return [html.linkList([["create",
                                 "Create an Account"],
-                               [request.sibLink("users"),
+                               ["users",
                                 "View the list of Participants"]])]
-    
-    
 
-class Page(widgets.WidgetPage):
-    box = widgets.TitleBox
-    template = ('''
-    <html><head><title>%%%%widget.title%%%%</title></head>
-    <body bgcolor="#FFFFFF" text="#000000">
-    <table><tr>'''
-    #<td>%%%%widget.sidebar(widget.mode, widget.section)%%%%</td>
-    '''
-    <td>
-    %%%%box(widget.title, widget)%%%%
-    </td>
-    </body></html>
-    ''')
+coil.registerClass(WordsGadget)
 
-
-class WebWordsAdminSite(server.Site, styles.Versioned):
-    persistenceVersion = 1
-    def __init__(self, svc):
-        res = WordsGadget(svc)
-        server.Site.__init__(self, res)
-
-    def upgradeToVersion1(self):
-        self.__init__(self.service)
-        del self.service
+class WebWordsAdminSite(styles.Versioned):
+    persistenceVersion = 2
+    def upgradeToVersion2(self):
+        self.__class__ = server.Site
+        if hasattr(self, 'service'):
+            self.__init__(WordsGadget(self.service))
+            del self.service
 
 AccountCreation = AccountCreationWidget
 ParticipantsDirectory = ParticipantListWidget

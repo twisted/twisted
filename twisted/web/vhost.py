@@ -15,16 +15,36 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""I am a virtual hosts implementation."""
+"""I am a virtual hosts implementation.
+"""
 
 # System Imports
 import string
+
+# Twisted Imports
+from twisted.manhole import coil
+from twisted.python import roots
 
 # Sibling Imports
 import resource
 import error
 
-class NameVirtualHost(resource.Resource):
+class VirtualHostCollection(roots.Homogenous):
+    """Wrapper for virtual hosts collection.
+
+    This exists for configuration purposes.
+    """
+    entityType = resource.Resource
+    def __init__(self, nvh):
+        self.nvh = nvh
+    def listStaticEntities(self):
+        return self.nvh.hosts.items()
+    def getStaticEntity(self, name):
+        return self.nvh.hosts.get(self)
+    def reallyPutEntity(self, name, entity):
+        self.nvh.addHost(name, entity)
+
+class NameVirtualHost(resource.Resource, coil.Configurable):
     """I am a resource which represents named virtual hosts.
     """
 
@@ -35,6 +55,15 @@ class NameVirtualHost(resource.Resource):
         """
         resource.Resource.__init__(self)
         self.hosts = {}
+
+    def listStaticEntities(self):
+        return resource.Resource.listStaticEntities(self) + [("Virtual Hosts", VirtualHostCollection(self))]
+
+    def getStaticEntity(self, name):
+        if name == "Virtual Hosts":
+            return VirtualHostCollection(self)
+        else:
+            return resource.Resource.getStaticEntity(self)
 
     def addHost(self, name, resrc):
         """Add a host to this virtual host.
@@ -70,3 +99,5 @@ class NameVirtualHost(resource.Resource):
         """
         resrc = self._getResourceForRequest(request)
         return resrc.getChildWithDefault(path, request)
+
+coil.registerClass(NameVirtualHost)

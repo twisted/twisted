@@ -117,8 +117,8 @@ this file directly.
     single defined API for connecting protocols to their transports.
     (listenTCP, listenSSL, connectTCP, connectSSL, etc)
 
-025 Jelly needs to handle floats and longs correctly, using the appropriate
-    types for struct.pack.
+025 Jelly needs to handle floats and longs correctly, and banana needs to use
+    the appropriate types for struct.pack.
 
 026 More ircd-style names for virtual nicks in words; LoginServ (or maybe
     NickServ) instead of *login*.  The asterisks break some clients.
@@ -135,3 +135,5 @@ this file directly.
 
 029 DCC and CTCP parsing for IRCGateway, to allow interactions with clients on
     other protocols. (This depends on 008)
+
+030 Acceptance tests for DNS code.

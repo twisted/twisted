@@ -106,7 +106,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import script
         from twisted.web import static
         from twisted.web import test
-        from twisted.web import utils
         from twisted.web import vhost
 
     def test_words(self):
