@@ -155,8 +155,7 @@ def makeService(config):
             factory = inetd.InetdFactory(service)
 
         if protocol == 'tcp':
-            klass = internet.TCPServer
+            internet.TCPServer(service.port, factory).setServiceParent(s)
         elif protocol == 'udp':
-            klass = internet.UDPServer
-        klass(service.port, factory).setServiceParent(s)
+            raise RuntimeError("not supporting UDP")
         return s
