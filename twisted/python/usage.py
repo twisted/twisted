@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.25 2002/08/09 00:29:26 exarkun Exp $
+# $Id: usage.py,v 1.26 2002/08/09 14:22:49 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -165,7 +165,8 @@ class Options(UserDict.UserDict):
                                        self.shortOpt, self.longOpt)
         except getopt.error, e:
             raise UsageError, e
-
+        
+        
         for opt, arg in opts:
             if opt[1] == '-':
                 opt = opt[2:]
@@ -179,8 +180,7 @@ class Options(UserDict.UserDict):
                     raise UsageError, "No such option '%s'" % (opt,)
 
             optMangled = self.synonyms[optMangled]
-            
-            self.__dispatch[optMangled](opt, arg)
+            self.__dispatch[optMangled](optMangled, arg)
         
         if len(args):
             sub, rest = args[0], args[1:]
