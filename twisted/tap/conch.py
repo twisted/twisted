@@ -44,9 +44,9 @@ class Options(usage.Options):
     optParameters = [["interface", "i", "", "local interface to which we listen"],
                   ["port", "p", 5822, "Port on which to listen"],
                   ["data", "d", "/etc", "directory to look for host keys in"],
-                  ["moduli", "", None, "directory to look for moduli in (if different from --data"]]
+                  ["moduli", "", None, "directory to look for moduli in (if different from --data)"]]
 
-    longdesc = "Makes a Consh SSH server.."
+    longdesc = "Makes a Conch SSH server.."
 
     def opt_auth(self, authName):
         authObj = reflect.namedClass(authName)
