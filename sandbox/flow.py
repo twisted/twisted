@@ -41,14 +41,14 @@
         title = flow.Generator(['Title'])
         yield title
         print title.getResult()
-        lst = flow.Generator(producer)
+        lst = flow.Generator(producer())
         try:
             while 1:
                 yield lst
                 print lst.getResult()
         except flow.StopIteration: pass
 
-    flow.Flow(consumer).execute()
+    flow.Flow(consumer()).execute()
 
 """
 from twisted.python import failure
