@@ -54,6 +54,7 @@ statusCodes = {100: "Trying",
                200: "OK",
                300: "Multiple Choices",
                301: "Moved Permanently",
+               404: "Not Found",
                406: "Not Acceptable",
                }
 
@@ -296,7 +297,7 @@ class Request(Message):
             self.uri = parseURL(uri)
 
     def __repr__(self):
-        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri)
+        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
 
     def _getHeaderLine(self):
         return "%s %s SIP/2.0" % (self.method, self.uri.toString())
@@ -466,6 +467,7 @@ class BaseSIP(protocol.DatagramProtocol):
         self.parser.dataReceived(data)
         self.parser.dataDone()
         for m in self.messages:
+            log.msg("Received %s from %s" % (m, addr))
             if isinstance(m, Request):
                 f = getattr(self, "handle_%s_request" % m.method, self.handle_request_default)
                 f(m, addr)
@@ -475,15 +477,8 @@ class BaseSIP(protocol.DatagramProtocol):
         self.messages[:] = []
 
     def handle_response_default(self, message, addr):
-        print "Received response %s from %s" % (message, addr)
+        pass
 
     def handle_request_default(self, message, addr):
-        print "Received request %s from %s" % (message, addr)
+        pass
 
-
-if __name__ == '__main__':
-    import sys
-    from twisted.internet import reactor
-    log.startLogging(sys.stdout)
-    reactor.listenUDP(5060, BaseSIP())
-    reactor.run()
