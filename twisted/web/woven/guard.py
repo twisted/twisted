@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.14 $"[11:-2]
+__version__ = "$Revision: 1.15 $"[11:-2]
 
 import random
 import time
@@ -58,6 +58,7 @@ class GuardSession(components.Componentized):
         if self.services.has_key(service):
             p, c, i = self.services[service]
             p.detached(c, ident)
+            del self.services[service]
         else:
             self.services[service] = perspective, client, ident
             perspective.attached(client, ident)
@@ -202,6 +203,7 @@ class SessionWrapper(Resource):
             return self.resource.getChildWithDefault(path, request)
 
 INIT_PERSPECTIVE = 'perspective-init'
+DESTROY_PERSPECTIVE = 'perspective-destroy'
 
 from twisted.python import formmethod as fm
 from twisted.web.woven import form
@@ -274,6 +276,9 @@ class PerspectiveWrapper(Resource):
             return form.FormProcessor(
                 loginSignature.method(loginMethod), 
                 callback=self.callback)
+        elif path == DESTROY_PERSPECTIVE:
+            s.setClientForService(None, None, None, self.service)
+            return Redirect(".")
         else:
             sc = s.clientForService(self.service)
             if sc:
