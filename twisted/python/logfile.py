@@ -22,12 +22,19 @@ A rotating, browsable log file.
 # System Imports
 import os, stat, glob, string
 
+# sibling imports
+
+import threadable
+
 
 class LogFile:
     """A log file that can be rotated.
     
-    A rotateLength of None disables log rotation.
+    A rotateLength of None disables automatic log rotation.
     """
+
+    synchronized = ["write", "rotate"]
+
     
     def __init__(self, name, directory, rotateLength=1000000):
         self.directory = directory
@@ -45,7 +52,7 @@ class LogFile:
             self._file.seek(0, 2)
         else:
             self.size = 0
-            self._file = open(self.path, "w")
+            self._file = open(self.path, "w+")
     
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -61,7 +68,7 @@ class LogFile:
         """Write some data to the file."""
         self.size = self.size + len(data)
         self._file.write(data)
-        if self.rotateLength is not None and self.size >= self.rotateLength:
+        if self.rotateLength and self.size >= self.rotateLength:
             self.rotate()
     
     def flush(self):
@@ -91,7 +98,13 @@ class LogFile:
         return result
     
     def rotate(self):
-        """Rotate the file and create a new one."""
+        """Rotate the file and create a new one.
+
+        If it's not possible to open new logfile, this will fail silently,
+        and continue logging to old logfile.
+        """
+        if not (os.access(self.directory, os.W_OK) and os.access(self.path, os.W_OK)):
+            return
         logs = self.listLogs()
         logs.reverse()
         for i in logs:
@@ -110,6 +123,8 @@ class LogFile:
         if not os.path.exists(filename):
             raise ValueError, "no such logfile exists"
         return LogReader(filename)
+
+threadable.synchronize(LogFile)
 
 
 class LogReader:

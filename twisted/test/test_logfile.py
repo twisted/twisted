@@ -18,7 +18,7 @@
 from pyunit import unittest
 
 # system imports
-import os, tempfile
+import os, tempfile, shutil
 
 # twisted imports
 from twisted.python import logfile
@@ -125,4 +125,28 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(reader.readLines(), ["abc\n", "def\n"])
         self.assertEquals(reader.readLines(), [])
         reader.close()
+
+    def testaNoPermission(self):
+        "logfile: check it keeps working when permission on dir changes."
+        log = logfile.LogFile(self.name, self.dir)
+        log.write("abc")
+
+        # change permissions so rotation would fail
+        os.chmod(self.dir, 444)
+
+        log.rotate() # this should not fail
+
+        log.write("def")
+        log.flush()
+
+        f = log._file
+        self.assertEquals(f.tell(), 6)
+        f.seek(0, 0)
+        self.assertEquals(f.read(), "abcdef")
+        log.close()
+
+        # reset permission so tearDown won't fail
+        os.chmod(self.dir, 777)
+
+        
         
