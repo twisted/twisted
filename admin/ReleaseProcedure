@@ -38,6 +38,7 @@ kill `cat twistd.pid`
  * OK, so everything's working, time to update release documents
  * ChangeLog: Browse through twisted-commits; if you see any updates that are
    significant but weren't mentioned in ChangeLog, retroactively add them
+ * ChangeLog: Add an entry: * .: Releasing Twisted <version>
  * README: add a new Quote of the Release
 
  * --- All the way from here to the SF hell is supposed to be automated ---
@@ -45,7 +46,6 @@ kill `cat twistd.pid`
    * README: update all mentions of last version 
      number (use your editor's search function, there are several of them)
    * doc/howto/installing-twisted.html
-   * ChangeLog: Add an entry: * .: Releasing Twisted <version>
    * twisted/copyright.py: Update the version number.
    * cvs commit README doc/howto/installing-twisted.html ChangeLog twisted/copyright.py
 
@@ -70,29 +70,31 @@ kill `cat twistd.pid`
      if desired
 
  * run 'md5sums ~/Releases/Twisted*', and 'gpg --clearsign' the output. update 
-   /products/download/md5sums.txt on the website.
+   /products/download/twisted-<ver>-md5sums.txt on the website.
 
- * Time to deploy!
-   ---- This part is sorely out of date -- document the new Debian way --
- * su root
-   * cd /twised/Releases; mv *<oldversion>* old/; cp -a ~<myuser>/Releases/*<newversion>* .
-   * cd /twisted/; tar xzvf Twisted-<version>.tar.gz; mv Twisted Twisted.old; mv Twisted-<version> Twisted
-   * cd /var/www; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f web-shutdown.tap; mv web-shutdown.tap taps/web-shutdown-`date -I`.tap
+ 
+ * run "apt-get update;apt-get upgrade"
 
- * su jh; ~jh/bin/stop; ~jh/bin/start; exit
+ * restart the main Twisted server
+cd /var/www
+kill `cat twistd.pid`
+mv web-shutdown.tap web-`date +%Y-%M-%D`.tap
+./start-twistd.sh web-`date +%Y-%M-%D`.tap
 
- * su pb; cd ~/Working; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f manhole-shutdown.tap; 
-   mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap; exit
+ * Restart snibril's server
+su jh; ~jh/bin/stop; ~jh/bin/start; exit
 
- * exit
+ * Restart the pb server:
+su pb; cd ~/Working; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f manhole-shutdown.tap; mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap; exit
 
- * Of course, testing the servers as you go.
-
- * If everything's cool, edit WebSite/twistedmatrix.com/news.htc, index, and products/download.htc
+ * If everything's cool, edit WebSite/twistedmatrix.com/news.html, index, and products/download.html
+ * go to 
+cd /var/www/WebSite
+./generate.sh
 
  * Alright, now for the hell that is sourceforge release-procedure:
    * lftp upload.sf.net
-   * cd incoming; put <all of the 9 release files>
+   * cd incoming; lcd /twisted/Releases; put *.zip *.gz *.bzip2
    * go to http://sourceforge.net, log in, go to twisted project page, admin, edit/release files.
    * for each package, click "Add Release", type in the version number for "Release Name", "Create This Release", 
      there should be a checklist of all the files in incoming, click the three
