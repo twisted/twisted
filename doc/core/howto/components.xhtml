@@ -3,10 +3,10 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>Twisted Components: Interfaces and Adapters</title></head>
+<head><title>Components: Interfaces and Adapters</title></head>
 
 <body>
-<h1>Twisted Components: Interfaces and Adapters</h1>
+<h1>Components: Interfaces and Adapters</h1>
 
 <p>Object oriented programming languages allow programmers to reuse portions of
 existing code by creating new <q>classes</q> of objects which subclass another
@@ -186,8 +186,7 @@ cannot be used in places where the original is expected. Usually this is not a
 problem, as an Adapter is created to conform an object to a particular interface
 and then discarded.</p>
 
-<h2><code class="API">twisted.python.components</code>: Twisted's implementation
-of Interfaces and Components</h2>
+<h2>Interfaces and Components in Twisted code</h2>
 
 <p>Adapters are a useful way of using multiple classes to factor code into
 discrete chunks. However, they are not very interesting without some more
@@ -196,28 +195,25 @@ to explicitly construct the adapter itself, the coupling between components
 would be too tight. We would like to achieve <q>loose coupling</q>, and this is
 where <code class="API">twisted.python.components</code> comes in.</p>
 
-<p>First, we need to discuss Interfaces in more detail. As we mentioned earlier,
-an Interface is nothing more than a class which is used as a marker. Interfaces
-should be subclasses of <code
-class="API">twisted.python.components.Interface</code>, and have a very odd look
-to python programmers not used to them:</p>
+<p>First, we need to discuss Interfaces in more detail. As we mentioned
+earlier, an Interface is nothing more than a class which is used as a marker.
+Interfaces should be subclasses of <code>zope.interface.Interface</code>, and
+have a very odd look to python programmers not used to them:</p>
 
 <pre class="python">
-from twisted.python import components
+from zope.interface import Interface
 
-class IAmericanSocket(components.Interface):
+class IAmericanSocket(Interface):
     def voltage(self):
       """Return the voltage produced by this socket object, as an integer.
       """
 </pre>
 
 <p>Notice how it looks just like a regular class definition, other than
-inheriting from <code class="API"
-base="twisted.python">components.Interface</code>. However, the method
-definitions inside the class block do not have any method body! Since
-Python does not have any native language-level support for Interfaces
-like Java does, this is what distinguishes an Interface definition
-from a Class.</p>
+inheriting from <code>Interface</code>? However, the method definitions inside
+the class block do not have any method body! Since Python does not have any
+native language-level support for Interfaces like Java does, this is what
+distinguishes an Interface definition from a Class.</p>
 
 <p>Now that we have a defined Interface, we can talk about objects using terms
 like this: <q>The <code>AmericanSocket</code> class implements the
@@ -230,25 +226,38 @@ interface for a specific class.</p>
 <p>Let's look at how we declare that a class implements an interface:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class AmericanSocket:
-    __implements__ = (IAmericanSocket, )
+
+    implements(IAmericanSocket)
+
     def voltage(self):
         return 110
 </pre>
 
-<p>So, to declare that a class implements an interface, we simply set the
-<code>__implements__</code> class variable to a tuple of interfaces. A single
-item tuple in Python is created by enclosing an item in parentheses and placing
-a single trailing comma after it.</p>
+<p>So, to declare that a class implements an interface, we simply call
+<code>zope.interface.implements</code> at the class level. A single item tuple
+in Python is created by enclosing an item in parentheses and placing a single
+trailing comma after it.</p>
 
 <p>Now, let's say we want to rewrite the <code>AdaptToAmericanSocket</code>
-class as a real adapter. We simply subclass <code class="API"
-base="twisted.python">components.Adapter</code> and provide implementations of
-the methods in the <code>IAmericanSocket</code> interface:</p>
+class as a real adapter. In this case we also specify it as implementing
+<code>IAmericanSocket</code>:</p>
 
 <pre class="python">
-class AdaptToAmericanSocket(components.Adapter):
-    __implements__ = (IAmericanSocket, )
+from zope.interface import implements
+
+class AdaptToAmericanSocket:
+
+    implements(IAmericanSocket)
+
+    def __init__(self, original):
+        """
+        Pass the original ForeignSocket object as original
+        """
+        self.original = original
+
     def voltage(self):
         return self.original.voltage() / 2
 </pre>
@@ -264,15 +273,17 @@ for the <code>ForeignSocket</code> class</em>. It is easier to see how this is
 done in code than to describe it:</p>
 
 <pre class="python">
+from zope.interface import Interface, implements
 from twisted.python import components
 
-class IAmericanSocket(components.Interface):
+class IAmericanSocket(Interface):
     def voltage(self):
       """Return the voltage produced by this socket object, as an integer.
       """
     
 class AmericanSocket:
-    __implements__ = (IAmericanSocket, )
+    implements(IAmericanSocket)
+
     def voltage(self):
         return 110
 
@@ -280,8 +291,13 @@ class ForeignSocket:
     def voltage(self):
         return 220
 
-class AdaptToAmericanSocket(components.Adapter):
-    __implements__ = (IAmericanSocket, )
+class AdaptToAmericanSocket:
+
+    implements(IAmericanSocket)
+
+    def __init__(self, original):
+        self.original = original
+
     def voltage(self):
         return self.original.voltage() / 2
     
@@ -296,21 +312,26 @@ little more about how to use components. The first thing we can do is discover
 whether an object implements an interface or not:</p>
 
 <pre class="python-interpreter">
+&gt;&gt;&gt; IAmericanSocket.implementedBy(AmericanSocket)
+True
+&gt;&gt;&gt; IAmericanSocket.implementedBy(ForeignSocket)
+False
 &gt;&gt;&gt; as = AmericanSocket() 
 &gt;&gt;&gt; fs = ForeignSocket()
-&gt;&gt;&gt; components.implements(as, IAmericanSocket)
-1
-&gt;&gt;&gt; components.implements(fs, IAmericanSocket)
-0
+&gt;&gt;&gt; IAmericanSocket.providedBy(as)
+True
+&gt;&gt;&gt; IAmericanSocket.providedBy(fs)
+False
 </pre>
 
-<p>As you can see, the <code>AmericanSocket</code> instance claims to implement
-<code>IAmericanSocket</code>, but the <code>ForeignSocket</code> does not. If we
-wanted to use the <code>HairDryer</code> with the <code>AmericanSocket</code>,
-we could know that it would be safe to do so by checking whether it implements
-<code>IAmericanSocket</code>. However, if we decide we want to use
-<code>HairDryer</code> with a <code>ForeignSocket</code> instance, we must
-<em>adapt</em> it to <code>IAmericanSocket</code> before doing so.  We use the interface object to do this:</p>
+<p>As you can see, the <code>AmericanSocket</code> instance claims to
+implement <code>IAmericanSocket</code>, but the <code>ForeignSocket</code>
+does not. If we wanted to use the <code>HairDryer</code> with the
+<code>AmericanSocket</code>, we could know that it would be safe to do so by
+checking whether it implements <code>IAmericanSocket</code>. However, if we
+decide we want to use <code>HairDryer</code> with a <code>ForeignSocket</code>
+instance, we must <em>adapt</em> it to <code>IAmericanSocket</code> before
+doing so.  We use the interface object to do this:</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; IAmericanSocket(fs)
@@ -361,42 +382,79 @@ I was plugged in properly and am operating
 
 <h3>Components and Inheritance</h3>
 
-<p>If you inherit from a class which <code>__implements__</code> some
-interface, and your new subclass defines its own <code>__implements__</code>
-tuple (because it implements an additional interface), you must explicitly
-include the base clase interface list. The Interface code does not walk the
-complete inheritance tree (because that would be a significant performance
-hit), but instead will recursively expand any tuples it finds in each
-class's <code>__implements__</code> attribute.</p>
+<p>If you inherit from a class which implements some interface, and your new
+subclass declares that it implements another interface, the implements will be
+inherited by default.</p>
 
-<p>For example, <code>pb.Root</code> (actually defined in <code class="API"
-base="twisted.spread">flavors.Root</code>) is a class which implements <code
-class="API" base="twisted.spread.flavors">IPBRoot</code>. This interface
-indicates that an object has remotely-invokable methods and can be used as
-the initial object served by a new Broker instance. It has an
-<code>__implements__</code> attribute like:</p>
+<p>For example, <code base="twisted.spread">pb.Root</code> (actually defined
+in <code class="API" base="twisted.spread">flavors.Root</code>) is a class
+which implements <code class="API"
+base="twisted.spread.flavors">IPBRoot</code>. This interface indicates that an
+object has remotely-invokable methods and can be used as the initial object
+served by a new Broker instance. It has an <code>implements</code> setting
+like:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class Root(Referenceable):
-    __implements__ = IPBRoot,
+    implements(IPBRoot)
 </pre>
 
 <p>Suppose you have your own class which implements your
 <code>IMyInterface</code> interface:</p>
 
 <pre class="python">
+from zope.interface import implements, Interface
+
+class IMyInterface(Interface):
+    pass
+
 class MyThing:
-    __implements__ = IMyInterface,
+    implements(IMyInterface)
 </pre>
 
-<p>Now if you want to make this class inherit from <code>pb.Root</code>, you
-must manually include <code>pb.Root</code>'s interface list:</p>
+<p>Now if you want to make this class inherit from <code>pb.Root</code>, 
+the interfaces code will automatically determine that it also implements
+<code>IPBRoot</code>:</p>
 
 <pre class="python">
+from twisted.spread import pb
+from zope.interface import implements, Interface
+
+class IMyInterface(Interface):
+    pass
+
 class MyThing(pb.Root):
-    __implements__ = (IMyInterface, pb.Root.__implements__)
+    implements(IMyInterface)
 </pre>
 
+<pre class="python-interpretor">
+&gt;&gt;&gt; from twisted.spread.flavors import IPBRoot
+&gt;&gt;&gt; IPBRoot.implementedBy(MyThing)
+True
+</pre>
+
+<p>If you want <code>MyThing</code> to inherit from <code>pb.Root</code> but
+<em>not</em> implement <code>IPBRoot</code> like <code>pb.Root</code> does,
+use <code>implementOnly</code>:</p>
+
+<pre class="python">
+from twisted.spread import pb
+from zope.interface import implementsOnly, Interface
+
+class IMyInterface(Interface):
+    pass
+
+class MyThing(pb.Root):
+    implementsOnly(IMyInterface)
+</pre>
+
+<pre class="python-interpretor">
+&gt;&gt;&gt; from twisted.spread.flavors import IPBRoot
+&gt;&gt;&gt; IPBRoot.implementedBy(MyThing)
+False
+</pre>
 
 </body>
 
