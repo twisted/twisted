@@ -26,6 +26,11 @@ Future plans: Better config file format maybe;
   I do this!  I have no idea.  Also, authorization probably
   needs to go in a better place, and be expanded to more than
   it is now, obviously.
+  
+  Important: No additional processing is done on any record type.
+    This violates the most basic RFC and is just plain annoying
+    for resolvers to deal with.  Fix it.
+
 
 @author: U{Jp Calderone <exarkun@twistedmatrix.com>}
 """
