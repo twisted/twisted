@@ -107,6 +107,7 @@ class Participant(pb.Perspective):
         recipient.receiveDirectMessage(self, message)
 
     def groupMessage(self, groupName, message):
+        log.msg("got",message,"from",self.name,"to",groupName)
         for group in self.groups:
             if group.name == groupName:
                 group.sendMessage(self, message)
@@ -119,6 +120,7 @@ class Participant(pb.Perspective):
     perspective_addContact = addContact
     perspective_removeContact = removeContact
     perspective_groupMessage = groupMessage
+    perspective_leaveGroup = leaveGroup
 
 class Group(pb.Cached):
 
