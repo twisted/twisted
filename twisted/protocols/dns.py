@@ -620,7 +620,7 @@ class Record_A6:
         self.prefixLen = struct.unpack('!B', readPrecisely(strio, 1))[0]
         self.bytes = int(self.prefixLen / 8.0)
         if self.prefixLen != 128:
-            self.suffix = '\x00' * self.bytes + readPrecisely(strio, 16 - self.bytes)
+            self.suffix = '\x00' * (16 - self.bytes) + readPrecisely(strio, self.bytes)
         if self.prefixLen != 0:
             self.prefix.decode(strio)
 
@@ -1017,6 +1017,12 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         self.controller = controller
         self.liveMessages = {}
         self.id = random.randrange(2 ** 10, 2 ** 15)
+
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        d['transport'] = None
+        return d
 
 
     def pickID(self):
