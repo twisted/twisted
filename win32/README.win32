@@ -12,9 +12,8 @@ which is a standard Windows command prompt with PATH and environment
 variables set up to invoke the Twisted commands the same way you would
 on Unix; e.g. "mktap".
 - There are shortcuts for some, but not all, of the GUI interfaces to
-the Twisted command line tools.  Currently only tktwistd and tkmktap
-appear in the Start Menu, as the other GUI tools do not work well if at
-all.
+the Twisted command line tools.  Currently only tkmktap appear in the Start
+Menu, as the other GUI tools do not work well if at all.
 
 There are two ways to get Twisted installed from source.  One is to do
 the bare minimum necessary so that 'import twisted' works; the other

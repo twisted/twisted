@@ -30,7 +30,7 @@ Type: filesandordirs; Name: "{app}\TwistedDocs"
 Name: "{group}\Manual"; Filename: "{app}\TwistedDocs\howto\index.xhtml"
 Name: "{group}\API Documentation"; Filename: "{app}\TwistedDocs\api\index.html"
 Name: "{group}\Twisted Command Prompt"; Filename: "{cmd}"; Parameters: "/k {app}\twisted\twistenv.bat {code:pythonRegKey}\scripts"; WorkingDir: "{sd}\"
-Name: "{group}\Application Maker"; Filename: "{code:pythonRegKey}\scripts\tktwistd.py"
+Name: "{group}\Application Maker"; Filename: "{code:pythonRegKey}\scripts\tkmktap.py"
 Name: "{group}\TkConch (ssh)"; Filename: "{code:pythonRegKey}\scripts\tkconch.py"
 Name: "{group}\Uninstall {groupname}"; Filename: "{uninstallexe}"
 

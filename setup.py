@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.145 2003/10/09 10:34:08 glyph Exp $
+$Id: setup.py,v 1.146 2003/10/12 05:07:54 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -273,7 +273,7 @@ desktop environments, and your toaster.
         'bin/im', 'bin/t-im', 'bin/tap2deb',
         'bin/tapconvert', 'bin/websetroot',
         'bin/lore',
-        'bin/tkmktap', 'bin/conch', 'bin/ckeygen', 'bin/tktwistd',
+        'bin/tkmktap', 'bin/conch', 'bin/ckeygen',
         'bin/tkconch', 'bin/trial', 'bin/mailmail'
     ],
     'cmdclass': {
