@@ -85,25 +85,26 @@ class File(resource.Resource, coil.Configurable):
     It's constructor takes a file path.
     """
     contentTypes = {
-        ".png": "image/png",
+        ".css": "text/css",
+        ".exe": "application/x-executable",
         ".gif": "image/gif",
-        ".txt": "text/plain",
-        ".jpg": "image/jpeg",
+        ".gtar": "application/x-gtar",
+        ".java": "text/plain",
         ".jpeg": "image/jpeg",
+        ".jpg": "image/jpeg",
+        ".lisp": "text/x-lisp",
         ".mp3":  "audio/mpeg",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
+        ".oz": "text/x-oz",
+        ".pdf": "application/x-pdf",
+        ".png": "image/png",
+        ".py": "text/x-python",
         ".swf": "appplication/x-shockwave-flash",
         ".tar": "application/x-tar",
         ".tgz": "application/x-gtar",
-        ".gtar": "application/x-gtar",
+        ".tif": "image/tiff",
+        ".tiff": "image/tiff",
+        ".txt": "text/plain",
         ".zip": "application/x-zip",
-        ".py": "text/x-python",
-        ".lisp": "text/x-lisp",
-        ".oz": "text/x-oz",
-        ".java": "text/plain",
-        ".pdf": "application/x-pdf",
-        ".exe": "application/x-executable",
         }
 
     contentEncodings = {
@@ -218,7 +219,7 @@ class File(resource.Resource, coil.Configurable):
             request.setHeader('content-type', self.type)
         if self.encoding:
             request.setHeader('content-encoding', self.encoding)
-        
+
         # caching headers support
         modified_since = request.getHeader('if-modified-since')
         if modified_since is not None:
@@ -227,7 +228,7 @@ class File(resource.Resource, coil.Configurable):
             if modified_since >= mtime:
                 request.setResponseCode(http.NOT_MODIFIED)
                 return ''
-        
+
         f = open(self.path,'rb')
         try:
             range = request.getHeader('range')
