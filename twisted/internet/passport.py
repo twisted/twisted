@@ -40,6 +40,7 @@ class Service:
 
     application = None
     serviceType = None
+    serviceName = None
 
     def __init__(self, serviceName, application=None):
         """Create me, attached to the given application.
@@ -81,7 +82,7 @@ class Service:
     def getServiceName(self):
         """The name of this service.
         """
-        return self.serviceName
+        return self.serviceName or self.getServiceType()
 
     def getServiceType(self):
         """Get a string describing the type of this service.

@@ -160,6 +160,14 @@ class Application(log.Logger):
                 except socket.error:
                     print 'port %s already bound' % port.port
                     return
+            # backwards compat hack...
+            if not hasattr(self, 'services'):
+                self.authorizer = passport.DefaultAuthorizer()
+                self.services = {}
+                for port in self.ports:
+                    f = port.factory
+                    if isinstance(f, passport.Service):
+                        self.services[f.getServiceName()] = f
             for service in self.services.values():
                 service.startService()
             self.running = 1
