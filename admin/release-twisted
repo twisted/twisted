@@ -36,11 +36,13 @@ from twisted.python import usage
 import string, os, shutil
 
 class Options(usage.Options):
-    optParameters = [['source', 's', 'Twisted', "The directory of the Twisted source to build a release from"],
-                     ['version', 'v', None, "The version of this release"],
-                     ['release', 'r', os.path.expanduser('~/Releases'), "The directory where your Twisted release archive is"]]
-    optFlags = [['docs', 'd', "Make a Documentation tarball (must have HappyDoc)"],
-                ['onlydocs', 'D', "*ONLY* make the docs (that is, don't generate the regular Twisted distribution)"]]
+    optParameters = [['source', 's', 'Twisted', "The directory of the Twisted source to build a release from."],
+                     ['version', 'v', None, "The version of this release."],
+                     ['release', 'r', os.path.expanduser('~/Releases'), "The directory where your Twisted release archive is."]]
+    
+    optFlags = [['docs', 'd', "Make a Documentation tarball (must have HappyDoc)."],
+                ['onlydocs', 'D', "*ONLY* make the docs (that is, don't generate the regular Twisted distribution). Twisted-$VERSION must already exist."],
+                ['dontrelease', 'R', "Useful if you want to customize a release before putting it in your Release directory."]]
 
 
 def main():
@@ -60,13 +62,15 @@ def main():
         return
 
     makeDist(opts)
+    if not opts.opts['dontrelease']:
+        release(opts)
+               
     if opts.opts['docs']:
         makeDocs(opts)
 
 
 def makeDist(opts):
     ver = opts.opts['version']
-    rel = opts.opts['release']
     destDir = "Twisted-%s" % ver
     source = opts.opts['source']
     
@@ -76,7 +80,6 @@ def makeDist(opts):
 
     print "Copying %s to %s..." % (source, destDir)
     shutil.copytree(source, destDir)
-    #os.chdir(destDir)
 
     print "Stripping *~, *.pyc, *.rpl, *.tap..."
     for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
@@ -84,7 +87,6 @@ def makeDist(opts):
 
     print "Stripping 'CVS' directories..."
     os.system('find %s -name CVS | xargs rm -rf' % destDir)
-    #os.chdir('..')
 
     print "Making dist tarball..."
     os.system('tar czf Twisted-%s.tar.gz %s' % (ver, destDir))
@@ -96,6 +98,10 @@ def makeDist(opts):
     os.system('zip -r Twisted-%s.zip %s' % (ver, destDir))
 
 
+
+def release(opts):
+    rel = opts.opts['release']
+    ver = opts.opts['version']
     print "Putting it in %s..." % rel
     if not os.path.exists(rel):
         print "Creating", rel
