@@ -188,8 +188,8 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     contentTypes = loadMimeTypes()
 
     contentEncodings = {
-        ".gz" : "application/x-gzip",
-        ".bz2": "application/x-bzip2"
+        ".gz" : "gzip",
+        ".bz2": "bzip2"
         }
 
     processors = {}
