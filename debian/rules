@@ -173,6 +173,12 @@ binary-indep: build install
 	dpkg --build debian/python$$ver-twisted ..;\
 	done
 
+	for ver in $(versions); \
+	do dpkg-gencontrol -isp -ppython$$ver-twisted-conch -Pdebian/python$$ver-twisted-conch;\
+	chown -R root.root debian/python$$ver-twisted-conch;\
+	chmod -R go=rX debian/python$$ver-twisted-conch;\
+	dpkg --build debian/python$$ver-twisted-conch ..;\
+	done
 
 binary-arch: build install
 	find debian -name "*.so" | xargs -n 1 dpkg-shlibdeps
