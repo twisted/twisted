@@ -109,7 +109,7 @@ class ICommandLog(Interface):
     def logCommand(self, command, runTime):
         """Add a command and its run time to the log.
 
-        @return Deferred of command index.
+        @return: Deferred of command index.
         """
 
     def getCurrentIndex(self):
@@ -118,6 +118,6 @@ class ICommandLog(Interface):
     def getCommandsSince(self, index):
         """Return commands who's index >= the given one.
 
-        @return list of (time, command) tuples, sorted with ascending times.
+        @return: list of (time, command) tuples, sorted with ascending times.
         """
 

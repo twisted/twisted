@@ -47,10 +47,10 @@ class NetstringReceiver(protocol.Protocol):
     argument of that string.
 
     Security features:
-    1) Messages are limited in size, useful if you don't want someone
+    1. Messages are limited in size, useful if you don't want someone
        sending you a 500MB netstring (change MAX_LENGTH to the maximum
        length you wish to accept).
-    2) The connection is lost if an illegal message is received.
+    2. The connection is lost if an illegal message is received.
     """
 
     MAX_LENGTH = 99999

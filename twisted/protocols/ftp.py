@@ -1113,11 +1113,13 @@ class FTPFileListProtocol(basic.LineReceiver):
 def parsePWDResponse(response):
     """Returns the path from a response to a PWD command.
 
-    Responses typically look like:
-        257 "/home/andrew" is current directory.
-    For this example, I will return '/home/andrew'.
+    Responses typically look like::
 
-    If I can't find the path, I return None.
+        257 "/home/andrew" is current directory.
+
+    For this example, I will return C{'/home/andrew'}.
+
+    If I can't find the path, I return C{None}.
     """
     match = re.search('".*"', response)
     if match:

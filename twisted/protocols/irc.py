@@ -20,7 +20,7 @@
 Stability: semi-stable.
 
 Future Plans
-------------
+============
 
 The way the IRCClient class works here encourages people to implement
 IRC clients by subclassing the ephemeral protocol class, and it tends
@@ -42,7 +42,7 @@ Test coverage needs to be better.
     <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.60 $'[11:-2]
+__version__ = '$Revision: 1.61 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -1310,8 +1310,9 @@ def ctcpExtract(message):
     """Extract CTCP data from a string.
 
     Returns a dictionary with two items:
-        'extended': a list of CTCP (tag, data) tuples
-        'normal': a list of strings which were not inside a CTCP delimeter
+
+       - C{'extended'}: a list of CTCP (tag, data) tuples
+       - C{'normal'}: a list of strings which were not inside a CTCP delimeter
     """
 
     extended_messages = []

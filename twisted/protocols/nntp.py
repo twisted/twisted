@@ -21,23 +21,26 @@ Stability: semi-stable
 
 Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
-  The following protocol commands are currently understood:
+The following protocol commands are currently understood::
+
     LIST        LISTGROUP                  XOVER        XHDR
     POST        GROUP        ARTICLE       STAT         HEAD
     BODY        NEXT         MODE STREAM   MODE READER  SLAVE
     LAST        QUIT         HELP          IHAVE        XPATH
     XINDEX      XROVER       TAKETHIS      CHECK
     
-  The following protocol commands require implementation:
+The following protocol commands require implementation::
+
                              NEWNEWS
                              XGTITLE                XPAT
                              XTHREAD       AUTHINFO NEWGROUPS
 
 
-  Other desired features:
-    A real backend
-    More robust client input handling
-    A control protocol
+Other desired features:
+
+   - A real backend
+   - More robust client input handling
+   - A control protocol
 """
 
 from twisted.internet import protocol, reactor

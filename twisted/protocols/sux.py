@@ -21,10 +21,10 @@
 This is a very simple implementation of XML as a network protocol.  It is not
 at all clever.  Its main features are that it does not:
 
-  * support namespaces
-  * mung mnemonic entity references
-  * validate
-  * perform *any* external actions (such as fetching URLs or writing files)
+  - support namespaces
+  - mung mnemonic entity references
+  - validate
+  - perform *any* external actions (such as fetching URLs or writing files)
     under *any* circumstances
 
 If you're looking for an XML parser that *does* do any of these things, I
@@ -32,8 +32,8 @@ strongly recommend the various parsers in PyXML.
 
 TODO:
 
-  * real tests (currently we're just hoping Marmalade tests are good enough)
-  * better error messages
+  - real tests (currently we're just hoping Marmalade tests are good enough)
+  - better error messages
 
 """
 

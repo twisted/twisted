@@ -338,9 +338,9 @@ class Request:
 
     def __init__(self, channel, queued):
         """
-        channel -- the channel we're connected to.
-        queued -- are we in the request queue, or can we start writing to
-                  the transport?
+        @param channel: the channel we're connected to.
+        @param queued: are we in the request queue, or can we start writing to
+            the transport?
         """
         self.channel = channel
         self.queued = queued
