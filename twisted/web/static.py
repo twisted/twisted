@@ -352,15 +352,15 @@ class DirectoryListing(widgets.StreamWidget):
         return "Directory Listing For %s" % request.path
 
     def stream(self, write, request):
-        write("<UL>\n")
+        write("<ul>\n")
         directory = os.listdir(self.path)
         directory.sort()
         for path in directory:
             url = urllib.quote(path, "/:")
             if os.path.isdir(os.path.join(self.path, path)):
                 url = url + '/'
-            write('<LI><A HREF="%s">%s</a>' % (url, path))
-        write("</UL>\n")
+            write('<li><a href="%s">%s</a></li>' % (url, path))
+        write("</ul>\n")
 
 class FileTransfer(pb.Viewable):
     """
