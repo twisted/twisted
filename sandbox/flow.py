@@ -941,11 +941,11 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             def echoServer(conn):
                 yield conn
                 for data in conn:
-                    yield data
+                    yield data  # or conn.write(data)
                     yield conn
             
             def echoClient(conn):
-                yield "hello, world!"
+                conn.write("hello, world!")
                 yield conn
                 print "server said: ", conn.next()
                 reactor.callLater(0,reactor.stop)
@@ -957,6 +957,53 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             client.protocol = flow.makeProtocol(echoClient)
             reactor.connectTCP("localhost", PORT, client)
             reactor.run()
+
+        Of course, the best part about flow is that you can nest
+        stages.  Therefore it is quite easy to make a lineBreaker
+        generator which takes an input connection and produces
+        and output connection.   Anyway, the code is almost 
+        identical as far as the client/server is concerned:
+
+            # this is a filter generator, it consumes from the
+            # incoming connection, and yields results to
+            # the next stage, the echoServer below
+            def lineBreaker(conn, lineEnding = "\n"):
+                lst = []
+                yield conn
+                for chunk in conn:
+                   pos = chunk.find(lineEnding)
+                   if pos > -1:
+                       lst.append(chunk[:pos])
+                       yield "".join(lst)
+                       lst = [chunk[pos+1:]]
+                   else:
+                       lst.append(chunk)
+                   yield conn
+                yield "".join(lst)
+
+            # note that this class is only slightly modified,
+            # simply comment out the line breaker line to see
+            # how the server behaves without the filter...
+            def echoServer(conn):
+                conn = flow.wrap(lineBreaker(conn))
+                yield conn
+                for data in conn:
+                    print "received", data
+                    yield data 
+                    yield conn
+            
+            # and the only thing that is changed is that we
+            # are sending data in strange chunks, and even
+            # putting the last chunk on hold for 2 seconds. 
+            def echoClient(conn):
+                conn.write("Good Morning!\nHow ")
+                yield conn
+                print "server said: ", conn.next()
+                conn.write("are you this fine ")
+                reactor.callLater(2, conn.write, "morning? \n")
+                yield conn
+                print "server said: ", conn.next()
+                reactor.callLater(0,reactor.stop)
 
     """
     if not callbacks:
