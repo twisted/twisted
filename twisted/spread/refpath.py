@@ -38,33 +38,36 @@ class PathReferenceContext:
         return o
 
 class PathReferenceAcquisitionContext(PathReferenceContext):
-    def __init__(self, path, root, parentRef):
-        PathReferenceContext.__init__(self, path, root)
-        self.metadata['parentRef'] = parentRef
-
     def _lookup(self, name, acquire=0):
         obRef = self
         ob = self.getObject()
-        found = 0
-        while not found:
+        while obRef:
             if acquire and hasattr(ob, name):
-                retVal = getattr(ob, name)
-                break
+                return getattr(ob, name)
             elif hasattr(ob, 'listNames') and name in ob.listNames():
                 if acquire:
                     retVal = ob.getChild(name)
                 else:
                     foundPath = copy(obRef.path)
                     foundPath.append(name)
-                    retVal = PathReferenceAcquisitionContext(foundPath,
-                                                             obRef.root, obRef)
-                break
+                    return PathReferenceAcquisitionContext(foundPath, obRef.root)
 
-            obRef = obRef['parentRef']
-            ob = obRef.getObject()
+            # When the loop gets to the top of the containment heirarchy,
+            # obRef will be set to None.
+            # Then the loop will exit into the else.
+            if obRef.path:
+                obRef = obRef.parentRef()
+                ob = obRef.getObject()
+            else:
+                obRef = None
         else:
             raise AttributeError, "%s not found." % name
-        return retVal
+
+    def parentRef(self):
+        """
+        Return a reference to my parent.
+        """
+        return PathReferenceAcquisitionContext(self.path[:-1], self.root)
 
     def locate(self, name):
         """

@@ -76,9 +76,9 @@ class DOMTemplate(Resource):
     
     def lookupTemplate(self, request):
         # look up an object named by our template data member
-        templateRef = request.pathRef.locate(self.templateFile)
+        templateRef = request.pathRef().locate(self.templateFile)
         # Build a reference to the template on disk
-        basePath = templateRef['parentRef'].getObject().path
+        basePath = templateRef.parentRef().getObject().path
         templatePath = os.path.join(basePath, self.templateFile)
         # Check to see if there is an already compiled copy of it
         templateName = os.path.splitext(self.templateFile)[0]

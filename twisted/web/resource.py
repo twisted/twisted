@@ -130,13 +130,9 @@ class Resource(coil.ConfigCollection):
         retrieve my appropriate child or grandchild to display.
         """
         res = self
-        parentRef = PathReferenceAcquisitionContext([], self, None)
         while request.postpath and not res.isLeaf:
             pathElement = request.postpath.pop(0)
             request.prepath.append(pathElement)
-            request.pathRef = PathReferenceAcquisitionContext(copy(request.prepath), self, parentRef)
-            request.pathRef['name'] = pathElement
-            parentRef = request.pathRef
             res = res.getChildWithDefault(pathElement, request)
         return res
 

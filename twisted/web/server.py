@@ -41,7 +41,7 @@ import calendar
 NOT_DONE_YET = 1
 
 # Twisted Imports
-from twisted.spread import pb
+from twisted.spread import pb, refpath
 from twisted.internet import main
 from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots, failure
@@ -284,6 +284,9 @@ class Request(pb.Copyable, http.Request):
                 self.addCookie(cookiename, self.session.uid)
         self.session.touch()
         return self.session
+
+    def pathRef(self):
+        return refpath.PathReferenceAcquisitionContext(self.prepath, self.site.resource)
 
 
 class _RemoteProducerWrapper:
