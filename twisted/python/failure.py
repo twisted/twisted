@@ -93,10 +93,11 @@ class Failure:
         automatically re-raised if it is not a type that you expect.
         """
         for error in errorTypes:
-            if not isinstance(error, types.StringType) and issubclass(error, Exception):
-                error = reflect.qual(error)
-            if error in self.parents:
-                return self.type
+            err = error
+            if issubclass(error, Exception):
+                err = reflect.qual(error)
+            if err in self.parents:
+                return error
         else:
             raise self
             
