@@ -1435,7 +1435,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
-        return text.strFile(body, msg.getBody(), False)
+        return text.strFile(body, msg.getBodyFile(), False)
 
     def search_CC(self, query, id, msg):
         cc = msg.getHeaders(False, 'cc').get('cc', '')
@@ -1519,7 +1519,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def search_TEXT(self, query, id, msg):
         # XXX - This must search headers too
         body = query.pop(0).lower()
-        return text.strFile(body, msg.getBody(), False)
+        return text.strFile(body, msg.getBodyFile(), False)
 
     def search_TO(self, query, id, msg):
         to = msg.getHeaders(False, 'to').get('to', '')
