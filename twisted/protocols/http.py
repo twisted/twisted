@@ -350,6 +350,8 @@ class Request:
         """Notify the object that it is no longer queued.
 
         We start writing whatever data we have to the transport, etc.
+        
+        This method is not intended for users.
         """
         if not self.queued:
             raise RuntimeError, "noLongerQueued() got called unnecessarily."
@@ -371,12 +373,19 @@ class Request:
             self._cleanup()
 
     def gotLength(self, length):
+        """Called when HTTP channel got length of content in this request.
+
+        This method is not intended for users.
+        """
         if length < 100000:
             self.content = StringIO()
         else:
             self.content = tempfile.TemporaryFile()
 
     def parseCookies(self):
+        """Parse cookie headers.
+
+        This method is not intended for users."""
         cookietxt = self.getHeader("cookie")
         if cookietxt:
             for cook in cookietxt.split(': '):
@@ -387,11 +396,17 @@ class Request:
                     pass
 
     def handleContentChunk(self, data):
-        """Write a chunk of data."""
+        """Write a chunk of data.
+        
+        This method is not intended for users.
+        """
         self.content.write(data)
 
     def requestReceived(self, command, path, version):
-        """Called by channel when all data has been received."""
+        """Called by channel when all data has been received.
+
+        This method is not intended for users.
+        """
         self.content.seek(0,0)
         self.args = {}
         self.stack = []
@@ -442,7 +457,10 @@ class Request:
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
 
     def process(self):
-        """Override in subclasses."""
+        """Override in subclasses.
+
+        This method is not intended for users.
+        """
         pass
 
 
@@ -584,6 +602,14 @@ class Request:
         """
         self.headers[k.lower()] = v
 
+    def redirect(self, url):
+        """Utility function that does a redirect.
+
+        The request should have finish() called after this.
+        """
+        self.setResponseCode(TEMPORARY_REDIRECT)
+        self.setHeader("location", url)
+
     def setLastModified(self, when):
         """Set the Last-Modified time for the response to this request.
 
@@ -598,12 +624,14 @@ class Request:
             self.lastModified = when
 
     def getAllHeaders(self):
+        """Return dictionary of all headers the request received."""
         return self.received_headers
 
     def getRequestHostname(self):
         """Get the hostname that the user passed in to the request.
 
         This will either use the Host: header (if it is available) or the
+        host we are listening on if the header is unavailable.
         """
         return (self.getHeader('host') or socket.gethostbyaddr(self.getHost()[1])).split(':')[0]
 
@@ -616,6 +644,28 @@ class Request:
         """
         return self.host
 
+    def setHost(self, host, port, ssl=0):
+        """Change the host and port the request thinks it's using.
+        
+        This method is useful for working with reverse HTTP proxies (e.g.
+        both Squid and Apache's mod_proxy can do this), when the address
+        the HTTP client is using is different than the one we're listening on.
+
+        For example, Apache may be listening on https://www.example.com, and then
+        forwarding requests to http://localhost:8080, but we don't want HTML produced
+        by Twisted to say 'http://localhost:8080', they should say 'https://www.example.com',
+        so we do::
+
+           request.setHost('www.example.com', 443, ssl=1)
+
+        This method is experimental.
+        """
+        if ssl:
+            method = 'SSL'
+        else:
+            method = 'INET'
+        self.host = (method, host, port)
+
     def getClientIP(self):
         if self.client[0] in ('INET', 'SSL'):
             return self.client[1]
@@ -623,7 +673,7 @@ class Request:
             return None
 
     def isSecure(self):
-        return (self.client[0] == 'SSL')
+        return (self.host[0] == 'SSL')
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
