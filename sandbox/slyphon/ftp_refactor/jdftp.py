@@ -220,27 +220,24 @@ class DTPFileSender(object):
         self.fsender = basic.FileSender()
 
 class DTP(protocol.Protocol):
-    debug = True
-
     def connectionMade(self):
         """Will start an transfer, if one is queued up, 
         when the client connects"""
         peer = self.transport.getPeer()
-        if self.debug:
+        if self.factory.debug:
             log.msg('got a DTP connection %s:%s' % (peer[1],peer[2]))
         # make sure someone isn't doing something sneaky
-        if self.debug:
+        if self.factory.debug:
             log.msg("DTP ip matches PI ip? %s" % str(peer[1] == self.factory.pi.peerHost[1]))
-        # TODO: test this 
-        if peer[1] != self.factory.pi.peerHost[1]:
-            # DANGER Will Robinson! Bailing!
-            self.cleanup()      
+        if self.factory.peerCheck and peer[1] != self.factory.pi.peerHost[1]:
+                # DANGER Will Robinson! Bailing!
+                self.cleanup()      
 
     def connectionLost(self, reason):
         print 'lost DTP connection %s, oh well!' % reason
         # makes sure connection is closed and factory shuts down 
         # when client disconnects
-        if self.debug:
+        if self.factory.debug:
             print "running self.transport.loseConnection()"
         self.cleanup()
 
@@ -263,11 +260,16 @@ class ActvDTPFactory(protocol.ClientFactory):
     pass
 
 class PasvDTPFactory(protocol.ServerFactory):
+    debug = True
+    peerCheck = True
     protocol = DTP
     pi = None
     dtpPort = None
     peerHost = None
     instance = None
+
+    def __init__(self):
+        pass
 
     def buildProtocol(self, addr):
         # we need to make sure that this factory only creates one
@@ -285,6 +287,12 @@ class PasvDTPFactory(protocol.ServerFactory):
 
 # -- FTP-PI (Protocol Interpreter) --
 
+def cleanPath(params):
+    # cleanup backslashes and multiple foreslashes
+    params = re.sub(r'[\\]{2,}?', '/', params)
+    params = re.sub(r'[/]{2,}?','/', params)
+    return params
+
 class FTP(basic.LineReceiver):      
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     portal      = None
@@ -294,8 +302,9 @@ class FTP(basic.LineReceiver):
     peerHost    = None      # the (type,ip,port) of the client
     debug       = True      # turn on extra logging
     dtpTxfrMode = ACTV      # PASV or ACTV, default ACTV
+    testing     = False     # set by test code to allow testing via IOPump
 
-    DEBUG_AUTO_ANON_LOGIN = False
+    DEBUG_AUTO_ANON_LOGIN = True
     
     def connectionMade(self):
         self.reply(WELCOME_MSG)
@@ -315,8 +324,6 @@ class FTP(basic.LineReceiver):
 
     def lineReceived(self, line):
         "Process the input from the client"
-        if self.debug:
-            print 'pi got line'
         line = string.strip(line)
         if self.debug:
             log.msg(repr(line))
@@ -387,7 +394,6 @@ class FTP(basic.LineReceiver):
 
     def _doDTPCommand(self, command, args=None):
         '''causes the DTP to commence with an action'''
-        #TODO: this needs to return a deferred!!!
         if not self.dtpFactory:
             self.createDTP()
         func = getattr(self.dtpFactory.instance, command)
@@ -503,7 +509,7 @@ class FTP(basic.LineReceiver):
         if params == "-a": params = ''  # bug in konqueror
         if params == "-aL": params = '' # bug in gFTP 2.0.15
 
-        sioObj = self.shell.list(params)    # returns a StringIO object
+        sioObj = self.shell.list(cleanPath(params))    # returns a StringIO object
         self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
         self._doDTPCommand('sendFile', sioObj)
  
@@ -529,13 +535,14 @@ class FTP(basic.LineReceiver):
             return
         self.dtpTxfrMode = PASV
         self.createDTP()
-        # Use the ip from the PI-connection
-        sockname = self.transport.getHost()
-        localip = string.replace(sockname[1], '.', ',')
-        lport = self.dtpFactory.dtpPort.socket.getsockname()[1]
-        # convert port into two 8-byte values
-        lp1 = lport / 256                           
-        lp2, lp1 = str(lport - lp1*256), str(lp1)
+        if not self.testing:
+            # Use the ip from the PI-connection
+            sockname = self.transport.getHost()
+            localip = string.replace(sockname[1], '.', ',')
+            lport = self.dtpFactory.dtpPort.socket.getsockname()[1]
+            # convert port into two 8-byte values
+            lp1 = lport / 256                           
+            lp2, lp1 = str(lport - lp1*256), str(lp1)
         if self.debug:
             self.reply(ENTERING_PASV_MODE, "%s,%s" % (localip, lport))
             return
@@ -543,16 +550,35 @@ class FTP(basic.LineReceiver):
 
     def ftp_CWD(self, params):
         try:
-            # cleanup backslashes and multiple foreslashes
-            params = re.sub(r'[\\]{2,}?', '/', params)
-            params = re.sub(r'[/]{2,}?','/', params)
-            self.shell.cwd(params)
+            self.shell.cwd(cleanPath(params))
         except FileNotFoundException, e:
             self.reply(FILE_NOT_FOUND, e)
         except PathBelowTLDException, e:
             self.reply(PERMISSION_DENIED, e)
         else:
             self.reply(REQ_FILE_ACTN_COMPLETED_OK)
+
+    def ftp_CDUP(self, params):
+        try:
+            self.shell.cdup()
+        except FileNotFoundException, e:
+            self.reply(FILE_NOT_FOUND, e)
+        except PathBelowTLDException, e:
+            self.reply(PERMISSION_DENIED, e)
+        else:
+            self.reply(REQ_FILE_ACTN_COMPLETED_OK)
+
+    def ftp_RETR(self, param):
+        try:
+            fp = self.shell.retr(cleanPath(param))
+            self._doDTPCommand('sendFile', fp)
+        except FileNotFoundException, e:
+            self.reply(FILE_NOT_FOUND, e)
+        except PathBelowTLDException, e:
+            self.reply(PERMISSION_DENIED, e)
+        else:
+            self.reply(REQ_FILE_ACTN_COMPLETED_OK)
+
 
 
 class FTPFactory(protocol.Factory):
@@ -669,6 +695,8 @@ class IFTPShell(components.Interface):
         file, specified in the pathname, to the server- or user-DTP
         at the other end of the data connection.  The status and
         contents of the file at the server site shall be unaffected.
+
+        returns an opened file-like object to the data requested
         """
         pass
 
@@ -703,41 +731,46 @@ class FTPAnonymousShell(object):
         return self.clientwd
 
     def myjoin(self, lpath, rpath):
-        if lpath[-1] == os.sep:
+        if lpath and lpath[-1] == os.sep:
             lpath = lpath[:-1]
-        if rpath[0] == os.sep:
+        if rpath and rpath[0] == os.sep:
             rpath = rpath[1:]
         return "%s/%s" % (lpath, rpath)
 
-
     def mapCPathToSPath(self, rpath):
-        if rpath[0] != '/':      # if this is not an absolute path
+        if not rpath or rpath[0] != '/':      # if this is not an absolute path
             # add the clients working directory to the requested path
             mappedClientPath = self.myjoin(self.clientwd, rpath) 
         # next add the client's top level directory to the requested path
         mappedServerPath = self.myjoin(self.tld, mappedClientPath)
-        return (os.path.normpath(mappedClientPath), os.path.normpath(mappedServerPath))
- 
-    def cwd(self, path):
-        cpath, spath = self.mapCPathToSPath(path)
-        common = os.path.commonprefix([self.tld, spath])
+        ncpath, nspath = os.path.normpath(mappedClientPath), os.path.normpath(mappedServerPath)
+        common = os.path.commonprefix([self.tld, nspath])
         if common != self.tld:
             raise PathBelowTLDException('Cannot access below / directory')
-        if os.path.exists(spath) and os.path.isdir(spath):
-            self.clientwd = cpath
+        class _:
+            def __init__(self, cpath, spath):
+                self.clientPath = cpath
+                self.serverPath = spath
+        return _(ncpath, nspath)
+
+ 
+    def cwd(self, path):
+        mapped = self.mapCPathToSPath(path)
+        if os.path.exists(mapped.clientPath) and os.path.isdir(mapped.serverPath):
+            self.clientwd = mapped.clientPath
         else:
-            raise FileNotFoundException(cpath)
+            raise FileNotFoundException(mapped.clientPath)
        
     def cdup(self):
         self.cwd('..')
 
-    def size(self, path):
-        # is this specified in the RFC?
-        """"""
-        npath = self.buildFullPath(path)
-        if not os.path.isfile(npath):
-            raise FileNotFoundException(path)
-        return os.path.getsize(npath)
+#    def size(self, path):
+#        # is this specified in the RFC?
+#        """"""
+#        npath = self.buildFullPath(path)
+#        if not os.path.isfile(npath):
+#            raise FileNotFoundException(path)
+#        return os.path.getsize(npath)
 
     def dele(self, path):
         raise AnonUserDeniedException()
@@ -749,18 +782,20 @@ class FTPAnonymousShell(object):
         raise AnonUserDeniedException()
  
     def retr(self, path):
-        npath = self.buildFullPath(path)
-        if not os.path.isfile(npath):
-            raise FileNotFoundException(npath)
-        if not os.access(npath, os.O_RDONLY):
-            raise PermissionDeniedException(npath)
-        return npath
+        mapped = self.mapCPathToSPath(path)
+        if not os.path.isfile(mapped.serverPath):
+            raise FileNotFoundException(mapped.clientPath)
+#        if not os.access(npath, os.O_RDONLY):
+#            raise PermissionDeniedException(npath)
+        # TODO: need to do some kind of permissions checking here
+        return file(mapped.serverPath, 'rb')
 
     def stor(self, params):
         raise AnonUserDeniedException()
 
     def list(self, path):
-        alist = os.listdir(self.buildFullPath(path))
+        spath = self.mapCPathToSPath(path).serverPath
+        alist = os.listdir(spath)
         s = ''
         for a in alist:
             ts = a

@@ -28,6 +28,7 @@ from twisted.cred import error, portal, checkers, credentials
 from twisted.python import log
 
 import jdftp as ftp
+from jdftp import PasvDTPFactory
 from twisted.protocols.ftp import FTPClient
 
 
@@ -95,11 +96,9 @@ def connectedServerAndClient():
         def connectionMade(self):
             self.f = self.factory   # to save typing in pdb :-)
         def lineReceived(self,line):
-            print 'foo got line'
             self.factory.lines.append(line)
     cf = protocol.ClientFactory()
     cf.protocol = Foo
-    cf.lastline = ""
     cf.lines = []
     c = cf.buildProtocol(('127.0.0.1',))
     cio = StringIO()
@@ -163,11 +162,71 @@ class JDFtpTests(unittest.TestCase):
 
         send('PWD'); flush()
         send('CWD ../../../'); flush()
-        print c.f.lines[-1]
 
-#    def testWelcomeMessage(self):
-#        c, s, pump =  connectedServerAndClient()
-#        pump.flush()
-#        self.assertEquals(c.f.lastline, ftp.RESPONSE[ftp.WELCOME_MSG])
+    def testCDUP(self):
+        c, s, pump =  connectedServerAndClient()
+        send = c.sendLine
+        flush = pump.flush
+
+        self.doAnonymousLogin(c,s,pump)
+        send('CWD src/freemind/doc'); flush()
+
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src/freemind/doc" is current directory.')
+    
+        send('CDUP'); flush()
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
+
+        send('CDUP'); flush()
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
+
+        send('CDUP'); flush()
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
+
+    def connectDTPClient(self, piServer):    
+        piServer.dtpFactory = PasvDTPFactory
+        piServer.dtpFactory.debug = False
+        piServer.dtpFactory.peerCheck = False
+        svr = piServer.dtpFactory()
+        dtps = svr.buildProtocol(('127.0.0.1',))
+        class _(basic.LineReceiver):
+            def connectionMade(self):
+                self.f = self.factory   # to save typing in pdb :-)
+            def lineReceived(self,line):
+                self.factory.lines.append(line)
+        dtpcf = protocol.ClientFactory()
+        dtpcf.protocol = _
+        dtpcf.lines = []
+        dtpc = dtpcf.buildProtocol(('127.0.0.1',))
+        cio = StringIO()
+        sio = StringIO()
+        dtpc.makeConnection(protocol.FileWrapper(cio))
+        dtps.makeConnection(protocol.FileWrapper(sio))
+        pump = IOPump(dtpc, dtps, cio, sio)
+        return dtpc, dtps, pump
+
+    def testPASV(self):
+        # TODO: need to figure out how to test this over TCP connection
+        pass
+
+    def testRETR(self):
+        pc, ps, ppump =  connectedServerAndClient()
+        self.doAnonymousLogin(pc,ps,ppump)
+        dc, ds, dpump = self.connectDTPClient(ps)
+        
+        pc.sendLine('PASV'); ppump.flush()
+
+        ds.sendLine('boo!'); dpump.flush()
+        print dc.f.lines[-1]
+
+
+
+    def testWelcomeMessage(self):
+        c, s, pump =  connectedServerAndClient()
+        pump.flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
 
 
