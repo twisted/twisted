@@ -63,7 +63,7 @@ methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
                         tearDown = TEAR_DOWN_WARN,
                         tearDownClass = TEAR_DOWN_CLASS_WARN)
 
-# -------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 
 def makeLoggingMethod(name, f):
@@ -77,7 +77,8 @@ class MethodCallLoggingType(type):
         for (k, v) in attrs.items():
             if isinstance(v, types.FunctionType):
                 attrs[k] = makeLoggingMethod(name, v)
-        return super(MethodCallLoggingType, cls).__new__(cls, name, bases, attrs)
+        return super(MethodCallLoggingType, cls).__new__(cls, name, bases,
+                                                         attrs)
 
 class TestStatsBase(object):
     zi.implements(itrial.ITestStats)
@@ -164,10 +165,13 @@ def formatError(tm, tbformat=None):
            '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
                               reflect.qual(tm.klass))]
 
-    ret.extend([(msg + '\n') for msg in (tm.skip, itrial.ITodo(tm.todo).msg) if msg is not None])
+    ret.extend([(msg + '\n')
+                for msg in (tm.skip, itrial.ITodo(tm.todo).msg)
+                if msg is not None])
 
     if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
-        return "%s\n\n%s" % ('\n'.join(ret), itrial.IFormattedFailure(tm.errors + tm.failures))
+        return "%s\n\n%s" % ('\n'.join(ret),
+                             itrial.IFormattedFailure(tm.errors + tm.failures))
 ##         for error in util.iterchain(tm.errors, tm.failures):
 ##             if error is None:
 ##                 continue
@@ -210,7 +214,8 @@ class Reporter(object):
     zi.classProvides(itrial.IReporterFactory)
     debugger = None
 
-    def __init__(self, stream=sys.stdout, tbformat='plain', args=None, realtime=False):
+    def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
+                 realtime=False):
         self.stream = stream
         self.tbformat = tbformat
         self.args = args
@@ -259,7 +264,8 @@ class Reporter(object):
         warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
     def cleanupErrors(self, errs):
-        warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN, itrial.IFormattedFailure(errs)),
+        warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN,
+                                  itrial.IFormattedFailure(errs)),
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
@@ -327,7 +333,8 @@ class MinimalReporter(Reporter):
 
 
 class TextReporter(Reporter):
-    def __init__(self, stream=sys.stdout, tbformat='plain', args=None, realtime=False):
+    def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
+                 realtime=False):
         super(TextReporter, self).__init__(stream, tbformat, args, realtime)
         self.seenModules, self.seenClasses = {}, {}
 
@@ -344,7 +351,8 @@ class VerboseTextReporter(TextReporter):
         super(VerboseTextReporter, self).startTest(method)
         
     def endTest(self, method):
-        self.write("%s\n" % WORDS.get(itrial.ITestMethod(method).status, "[??]"))
+        self.write("%s\n" % WORDS.get(itrial.ITestMethod(method).status,
+                                      "[??]"))
 
 class TimingTextReporter(VerboseTextReporter):
     def endTest(self, method):
@@ -366,7 +374,8 @@ class TreeReporter(VerboseTextReporter):
     CYAN = 36
     WHITE = 37
 
-    def __init__(self, stream=sys.stdout, tbformat='plain', args=None, realtime=False):
+    def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
+                 realtime=False):
         super(TreeReporter, self).__init__(stream, tbformat, args, realtime)
         self.words = {SKIP: ('[SKIPPED]', self.BLUE),
                       EXPECTED_FAILURE: ('[TODO]', self.BLUE),

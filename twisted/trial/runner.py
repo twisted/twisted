@@ -12,44 +12,47 @@
 
 #  B{What's going on here?}
 #
-#  I've been staring at this file for about 3 weeks straight, and it seems like a good place
-#  to write down how all this stuff works.
+#  I've been staring at this file for about 3 weeks straight, and it seems
+#  like a good place to write down how all this stuff works.
 #
 #  The program flow goes like this:
 #
-#  The twisted.scripts.trial module parses command line options, creates a TestSuite and passes
-#  it the Janitor and Reporter objects. It then adds the modules, classes, and methods
-#  that the user requested that the suite search for test cases. Then the script calls .runTests()
-#  on the suite.
+#  The twisted.scripts.trial module parses command line options, creates a
+#  TestSuite and passes it the Janitor and Reporter objects. It then adds
+#  the modules, classes, and methods that the user requested that the suite
+#  search for test cases. Then the script calls .runTests() on the suite.
 #
-#  The suite goes through each argument and calls ITestRunner(obj) on each object. There are adapters
-#  that are registered for ModuleType, ClassType and MethodType, so each one of these adapters knows
-#  how to run their tests, and provides a common interface to the suite.
+#  The suite goes through each argument and calls ITestRunner(obj) on each
+#  object. There are adapters that are registered for ModuleType, ClassType
+#  and MethodType, so each one of these adapters knows how to run their
+#  tests, and provides a common interface to the suite.
 #
-#  The module runner goes through the module and searches for classes that implement
-#  itrial.TestCaseFactory, does setUpModule, adapts that module's classes with ITestRunner(),
-#  and calls .run() on them in sequence.
+#  The module runner goes through the module and searches for classes that
+#  implement itrial.TestCaseFactory, does setUpModule, adapts that module's
+#  classes with ITestRunner(), and calls .run() on them in sequence.
 #
-#  The method runner wraps the method, locates the method's class and modules so that
-#  the setUp{Module, Class, } can be run for that test. 
+#  The method runner wraps the method, locates the method's class and
+#  modules so that the setUp{Module, Class, } can be run for that test.
 #
 #  ------
 #
 #  A word about reporters...
 #
-#  All output is to be handled by the reporter class. Warnings, Errors, etc. are all given
-#  to the reporter and it decides what the correct thing to do is depending on the options
-#  given on the command line. This allows the runner code to concentrate on testing logic.
-#  The reporter is also given Test-related objects wherever possible, not strings. It is not
-#  the job of the runner to know what string should be output, it is the reporter's job
+#  All output is to be handled by the reporter class. Warnings, Errors, etc.
+#  are all given to the reporter and it decides what the correct thing to do
+#  is depending on the options given on the command line. This allows the
+#  runner code to concentrate on testing logic. The reporter is also given
+#  Test-related objects wherever possible, not strings. It is not the job of
+#  the runner to know what string should be output, it is the reporter's job
 #  to know how to make sense of the data
 #
 #  -------
 #
-#  The test framework considers any user-written code *dangerous*, and it wraps it in a
-#  UserMethodWrapper before execution. This allows us to handle the errors in a sane,
-#  consistent way. The wrapper will run the user-code, catching errors, and then checking
-#  for logged errors, saving it to IUserMethod.errors. 
+#  The test framework considers any user-written code *dangerous*, and it
+#  wraps it in a UserMethodWrapper before execution. This allows us to
+#  handle the errors in a sane, consistent way. The wrapper will run the
+#  user-code, catching errors, and then checking for logged errors, saving
+#  it to IUserMethod.errors.
 #
 #  (more to follow)
 #
@@ -98,10 +101,11 @@ def _dbgPA(msg):
    log.msg(iface=itrial.ITrialDebug, parseargs=msg) 
 
 class TestSuite(Timed):
-    """This is the main organizing object. The front-end script creates a TestSuite, and
-    tells it what modules were requested on the command line. It also hands it a reporter.
-    The TestSuite then takes all of the packages, modules, classes and methods, and adapts
-    them to ITestRunner objects, which it then calls the runTests method on.
+    """This is the main organizing object. The front-end script creates a
+    TestSuite, and tells it what modules were requested on the command line.
+    It also hands it a reporter. The TestSuite then takes all of the
+    packages, modules, classes and methods, and adapts them to ITestRunner
+    objects, which it then calls the runTests method on.
     """
     zi.implements(itrial.ITestSuite)
     moduleGlob = 'test_*.py'
@@ -204,8 +208,8 @@ class TestSuite(Timed):
             self.reporter.write('Running tests shuffled with seed %d' % seed)
 
 
-        # set up SIGCHLD signal handler so that parents of spawned processes will be
-        # notified when their child processes end
+        # set up SIGCHLD signal handler so that parents of spawned processes
+        # will be notified when their child processes end
         from twisted.internet import reactor
         if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
             self.sigchldHandler = signal.signal(signal.SIGCHLD,
@@ -238,7 +242,8 @@ class TestSuite(Timed):
 \tWHOOP! WHOOP! DANGER WILL ROBINSON! DANGER! WHOOP! WHOOP!
 \tcaught exception in TestSuite! \n\n\t\tTRIAL IS BROKEN!\n\n
 \t%s""" % ('\n\t'.join(f.getTraceback().split('\n')),)
-                    raise RuntimeError, "\n%s\n%s\n\n%s\n" % (annoyingBorder, trialIsBroken, annoyingBorder)
+                    raise RuntimeError, "\n%s\n%s\n\n%s\n" % \
+                          (annoyingBorder, trialIsBroken, annoyingBorder)
 
             for name, exc in self.couldNotImport.iteritems():
                 # XXX: AFAICT this is only used by RemoteJellyReporter
@@ -256,7 +261,8 @@ class TestSuite(Timed):
             util._wait(self.reporter.tearDownReporter())
         except:
             t, v, tb = sys.exc_info()
-            raise RuntimeError, "your reporter is broken %r" % (''.join(v),), tb
+            raise RuntimeError, "your reporter is broken %r" % \
+                  (''.join(v),), tb
         _bail()
 
 
@@ -266,7 +272,8 @@ class MethodInfoBase(Timed):
         self.name = o.__name__
         self.klass = itrial.IClass(original)
         self.module = itrial.IModule(original)
-        self.fullName = "%s.%s.%s" % (self.module, self.klass.__name__, self.name)
+        self.fullName = "%s.%s.%s" % (self.module, self.klass.__name__,
+                                      self.name)
         self.docstr = (o.__doc__ or None)
         self.startTime = 0.0
         self.endTime = 0.0
@@ -318,7 +325,8 @@ class JanitorAndReporterMixin:
 class TestRunnerBase(Timed, JanitorAndReporterMixin):
     zi.implements(itrial.ITestRunner)
     _tcInstance = None
-    methodNames = setUpClass = tearDownClass = methodsWithStatus = children = parent = None
+    methodNames = setUpClass = tearDownClass = methodsWithStatus = None
+    children = parent = None
     testCaseInstance = lambda x: None
     skip = None
     
@@ -330,8 +338,9 @@ class TestRunnerBase(Timed, JanitorAndReporterMixin):
         self._signalStateMgr = util.SignalStateManager()
 
     def doCleanup(self):
-        """do cleanup after the test run. check log for errors, do reactor cleanup, and restore
-        signals to the state they were in before the test ran
+        """do cleanup after the test run. check log for errors, do reactor
+        cleanup, and restore signals to the state they were in before the
+        test ran
         """
         return self.getJanitor().postCaseCleanup()
 
@@ -344,8 +353,10 @@ class TestModuleRunner(TestRunnerBase):
     def __init__(self, original):
         super(TestModuleRunner, self).__init__(original)
         self.module = self.original
-        self.setUpModule = getattr(self.original, 'setUpModule', _bogusCallable)
-        self.tearDownModule = getattr(self.original, 'tearDownModule', _bogusCallable)
+        self.setUpModule = getattr(self.original, 'setUpModule',
+                                   _bogusCallable)
+        self.tearDownModule = getattr(self.original, 'tearDownModule',
+                                      _bogusCallable)
         self.moudleName = itrial.IModuleName(self.original)
         self.skip = getattr(self.original, 'skip', None)
         self.todo = getattr(self.original, 'todo', None)
@@ -357,7 +368,8 @@ class TestModuleRunner(TestRunnerBase):
 
     def methodNames(self):
         if self._mnames is None:
-            self._mnames = [mn for tc in self._testCases for mn in tc.methodNames]
+            self._mnames = [mn for tc in self._testCases
+                            for mn in tc.methodNames]
         return self._mnames
     methodNames = property(methodNames)
 
@@ -455,7 +467,7 @@ class TestClassAndMethodBase(TestRunnerBase):
 
             reporter.startClass(self._testCase.__name__) # fix! this sucks!
 
-            # --- setUpClass ------------------------------------------------------
+            # --- setUpClass -----------------------------------------------
 
             um = UserMethodWrapper(self.setUpClass, janitor)
             try:
@@ -466,7 +478,7 @@ class TestClassAndMethodBase(TestRunnerBase):
                         self.skip = error.value[0]
                         def _setUpSkipTests(tm):
                             tm.skip = self.skip
-                        break                              # <--- skip the else: clause
+                        break                   # <--- skip the else: clause
                     elif error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
                         um.error.raiseException()
@@ -475,11 +487,12 @@ class TestClassAndMethodBase(TestRunnerBase):
                     def _setUpClassError(tm):
                         tm.errors.extend(um.errors) 
                         reporter.startTest(tm)
-                        self.methodsWithStatus.setdefault(tm.status, []).append(tm)
+                        self.methodsWithStatus.setdefault(tm.status,
+                                                          []).append(tm)
                         reporter.endTest(tm)   
                     return _apply(_setUpClassError) # and we're done
 
-            # --- run methods -------------------------------------------------------
+            # --- run methods ----------------------------------------------
 
             methodNames = self.methodNames
             if randomize:
@@ -491,11 +504,12 @@ class TestClassAndMethodBase(TestRunnerBase):
                                               testMethod.name))
 
                 testMethod.run(tci)
-                self.methodsWithStatus.setdefault(testMethod.status, []).append(testMethod)
+                self.methodsWithStatus.setdefault(testMethod.status,
+                                                  []).append(testMethod)
 
             _apply(_runTestMethod)
 
-            # --- tearDownClass ------------------------------------------------------
+            # --- tearDownClass ---------------------------------------------
 
             um = UserMethodWrapper(self.tearDownClass, janitor)
             try:
@@ -525,8 +539,10 @@ class TestCaseRunner(TestClassAndMethodBase):
         self.original = original
         self._testCase = self.original
 
-        self.setUpClass = getattr(self.testCaseInstance, 'setUpClass', _bogusCallable)
-        self.tearDownClass = getattr(self.testCaseInstance, 'tearDownClass', _bogusCallable)
+        self.setUpClass = getattr(self.testCaseInstance, 'setUpClass',
+                                  _bogusCallable)
+        self.tearDownClass = getattr(self.testCaseInstance, 'tearDownClass',
+                                     _bogusCallable)
 
         self.methodNames = [name for name in dir(self.testCaseInstance)
                             if name.startswith(self.methodPrefix)]
@@ -599,14 +615,17 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
 
 
     def _checkTodo(self):
-        # returns EXPECTED_FAILURE for now if ITodo.types is None for backwards compatiblity
-        # but as of twisted 2.1, will return FAILURE or ERROR as appropriate
+        # returns EXPECTED_FAILURE for now if ITodo.types is None for
+        # backwards compatiblity but as of twisted 2.1, will return FAILURE
+        # or ERROR as appropriate
         #
-        # TODO: This is a bit simplistic for right now, it makes sure all errors and/or failures
-        #       are of the type(s) specified in ITodo.types, else it returns EXPECTED_FAILURE. This
-        #       should probably allow for more complex specifications. Perhaps I will define a 
-        #       Todo object that will allow for greater flexibility/complexity.
-        # 
+        # TODO: This is a bit simplistic for right now, it makes sure all
+        # errors and/or failures are of the type(s) specified in
+        # ITodo.types, else it returns EXPECTED_FAILURE. This should
+        # probably allow for more complex specifications. Perhaps I will
+        # define a Todo object that will allow for greater
+        # flexibility/complexity.
+
         for f in util.iterchain(self.failures, self.errors):
             if not itrial.ITodo(self.todo).isExpected(f):
                 return ERROR
@@ -630,13 +649,15 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
     status = property(_getStatus)
         
     def _getSkip(self):
-        return (getattr(self.original, 'skip', None) or self._skipReason or self.parent.skip)
+        return (getattr(self.original, 'skip', None) \
+                or self._skipReason or self.parent.skip)
     def _setSkip(self, value):
         self._skipReason = value
     skip = property(_getSkip, _setSkip)
 
     def todo(self):
-        return getattr(self.original, 'todo', getattr(self.parent, 'todo', None))
+        return getattr(self.original, 'todo',
+                       getattr(self.parent, 'todo', None))
     todo = property(todo)
    
     def timeout(self):
@@ -661,8 +682,10 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
             if len(f.value.args) > 1:
                 reason = f.value.args[0] 
             else:
-                warnings.warn(("Do not raise unittest.SkipTest with no arguments! "
-                               "Give a reason for skipping tests!"), stacklevel=2)
+                warnings.warn(("Do not raise unittest.SkipTest with no "
+                               "arguments! "
+                               "Give a reason for skipping tests!"),
+                              stacklevel=2)
                 reason = str(f)
             self._skipReason = reason
         else:
@@ -709,7 +732,8 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                     sys.stdout = util.StdioProxy(sys.stdout)
                     sys.stderr = util.StdioProxy(sys.stderr)
                    
-                    # --- this is basically the guts of UserMethodWrapper, because I *SUCK* -----
+                    # --- this is basically the guts of UserMethodWrapper,
+                    #     because I *SUCK* -----
                     try:
                         try:
                             r = self.original(tci)
@@ -725,7 +749,7 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                             janitor.do_logErrCheck()
                         except util.LoggedErrors:
                             self.errors.append(failure.Failure())
-                    # ----------------------------------------------------------------------------
+                    # ------------------------------------------------------
 
                 finally:
                     self.endTime = time.time()
@@ -757,7 +781,8 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
 
 
     def doCleanup(self):
-        """do cleanup after the test run. check log for errors, do reactor cleanup
+        """do cleanup after the test run. check log for errors, do reactor
+        cleanup
         """
         errs = self.getJanitor().postMethodCleanup()
         for f in errs:

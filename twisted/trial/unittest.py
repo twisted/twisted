@@ -171,15 +171,16 @@ changes in trial v2.0:
 Trial's 'special' attributes:
 =============================
 
-  1. C{.todo} attributes can either be set on the C{TestCase} or on an individual
-     test* method, and indicate that the test is expected to fail. New tests
-     (for which the underlying functionality has not yet been added) should
-     set this flag while the code is being written. Once the feature is added
-     and the test starts to pass, the flag should be removed.
+  1. C{.todo} attributes can either be set on the C{TestCase} or on an
+     individual test* method, and indicate that the test is expected to
+     fail. New tests (for which the underlying functionality has not yet
+     been added) should set this flag while the code is being written. Once
+     the feature is added and the test starts to pass, the flag should be
+     removed.
 
-  2. Tests of highly-unstable in-development code should consider using C{.skip}
-     to turn off the tests until the code has reached a point where the
-     success rate is expected to be monotonically increasing.
+  2. Tests of highly-unstable in-development code should consider using
+     C{.skip} to turn off the tests until the code has reached a point where
+     the success rate is expected to be monotonically increasing.
 
   3. Tests that return deferreds may alter the default timeout period of 4.0
      seconds by adding a method attribute C{.timeout} which is the number of
@@ -196,19 +197,21 @@ Non-obvious rules
   same respect, there are some new features that may not work quite the way you
   expect, and we'll try to document potential gotchas here.
 
-    1. Setting a classes C{.skip} attribute in C{setUpClass} will not cause all of that
-       C{TestCase}'s methods to be skipped. To get this behavior, you must instead raise
-       unittest.SkipTest with the reason for the skip. The C{.skip} attribute is only
-       considered once, when the class is first imported, before C{setUpClass} is run.
-       Also, if you raise SkipTest in C{setUpClass}, the C{tearDownClass} method B{will}
-       still be run (just be aware of this fact).
+    1. Setting a classes C{.skip} attribute in C{setUpClass} will not cause
+       all of that C{TestCase}'s methods to be skipped. To get this
+       behavior, you must instead raise unittest.SkipTest with the reason
+       for the skip. The C{.skip} attribute is only considered once, when
+       the class is first imported, before C{setUpClass} is run. Also, if
+       you raise SkipTest in C{setUpClass}, the C{tearDownClass} method
+       B{will} still be run (just be aware of this fact).
   
-    2. If a method is C{.skip}-ed, it's C{setUp} and C{tearDown} methods will never be
-       called.
+    2. If a method is C{.skip}-ed, it's C{setUp} and C{tearDown} methods
+       will never be called.
   
-    3. Setting the C{.skip} attribute on a C{TestCase} is equivalent to setting each of
-       that class' methods C{.skip} attribute to the value assigned the class' C{.skip}.
-       The same holds true for the C{.todo} or C{.timeout} attribute.
+    3. Setting the C{.skip} attribute on a C{TestCase} is equivalent to
+       setting each of that class' methods C{.skip} attribute to the value
+       assigned the class' C{.skip}. The same holds true for the C{.todo} or
+       C{.timeout} attribute.
   
        example::
   
@@ -232,23 +235,26 @@ Non-obvious rules
                    print 'I test two'
                test_two.skip = 'this is a silly test'
   
-    4. Any method may override the reason for a skip or todo by setting it's own
-       attribute value, in other words, the class attribute is a default value for the
-       method attribute.
+    4. Any method may override the reason for a skip or todo by setting it's
+       own attribute value, in other words, the class attribute is a default
+       value for the method attribute.
   
-    5. If C{setUp} runs without error, C{tearDown} is guaranteed to run, however, if C{setUp}
-       raises an exception (including C{SkipTest}), C{tearDown} will B{not} be run.
+    5. If C{setUp} runs without error, C{tearDown} is guaranteed to run,
+       however, if C{setUp} raises an exception (including C{SkipTest}),
+       C{tearDown} will B{not} be run.
  
-    6. The code that decides whether or not a given object is a C{TestCase} or not works
-       by calling ITestCaseFactory.providedBy(obj). Any class that subclasses
-       L{twisted.trial.unittest.TestCase} automatically provides this interface so in
-       99% of cases, you won't have to think about this.
+    6. The code that decides whether or not a given object is a C{TestCase}
+       or not works by calling ITestCaseFactory.providedBy(obj). Any class
+       that subclasses L{twisted.trial.unittest.TestCase} automatically
+       provides this interface so in 99% of cases, you won't have to think
+       about this.
   
        HOWEVER...
   
-       If you are trying to do something particularly spectacular, just note that if you
-       want an object that doesn't subclass unittest.TestCase in some way to be considered
-       a testable object, its B{class} definition must do::
+       If you are trying to do something particularly spectacular, just note
+       that if you want an object that doesn't subclass unittest.TestCase in
+       some way to be considered a testable object, its B{class} definition
+       must do::
   
            >>> from twisted.trial.itrial import ITestCaseFactory
            >>> import zope.interface as zi
@@ -274,16 +280,17 @@ Non-obvious rules
            # a specific reason to restrict adapters here, it should
            # probably be used.
   
-    7. A known issue is that sometimes if you press C-c during a test run, trial will
-       not exit. This usually caused by using reactor threads. The only sure-fire way to
-       stop trial in this case is to instead try C-\ which sends a SIGQUIT to the running
-       process.
+    7. A known issue is that sometimes if you press C-c during a test run,
+       trial will not exit. This usually caused by using reactor threads.
+       The only sure-fire way to stop trial in this case is to instead try
+       C-\ which sends a SIGQUIT to the running process.
 
 
 Other Notes
 ===========
 
-The documentation for most of the classes can be found in L{twisted.trial.interfaces}.
+The documentation for most of the classes can be found in
+L{twisted.trial.interfaces}.
 
 """
 
@@ -491,8 +498,8 @@ def failUnlessSubstring(substring, astring, msg=None):
         raise FailTest, (msg or "%r not found in %r" % (substring, astring))
 
 def failIfSubstring(substring, astring, msg=None):
-    """a python2.2 friendly test to assert that substring is not found in astring
-    parameters follow the semantics of failUnlessIn
+    """a python2.2 friendly test to assert that substring is not found in
+    astring parameters follow the semantics of failUnlessIn
     """
     if astring.find(substring) != -1:
         raise FailTest, (msg or "%r found in %r" % (substring, astring))

@@ -158,7 +158,8 @@ def formatFailureTraceback(fail):
 
 def formatMultipleFailureTracebacks(failList):
     if failList:
-        s = '\n'.join(["%s\n\n" % itrial.IFormattedFailure(fail) for fail in failList])
+        s = '\n'.join(["%s\n\n" % itrial.IFormattedFailure(fail)
+                       for fail in failList])
         return s
     return ''
 

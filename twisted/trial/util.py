@@ -102,7 +102,8 @@ class Janitor(object):
 
     def postCaseCleanup(self):
         if self.postCase:
-            return self._dispatch('logErrCheck', 'cleanReactor', 'cleanPending', 'cleanThreads')
+            return self._dispatch('logErrCheck', 'cleanReactor',
+                                  'cleanPending', 'cleanThreads')
 
     def _dispatch(self, *attrs):
         errors = []
@@ -233,7 +234,8 @@ def deferredError(d, timeout=None):
     """
     warnings.warn(("twisted.trial.util.deferredError is DEPRECATED! "
                    "Return a deferred from your test "
-                   "method, and trial will do the Right Thing"), DeprecationWarning, stacklevel=2)
+                   "method, and trial will do the Right Thing"),
+                  DeprecationWarning, stacklevel=2)
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
         return result
