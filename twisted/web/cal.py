@@ -22,8 +22,8 @@ Use /<password> to access the protected features of calendar, posting and deleti
 import calendar
 import time
 import string
+import cPickle
 from twisted.web import widgets,error
-from twisted.python import log
 
 class CalendarWidget(widgets.StreamWidget):
     def __init__(self,year,month,getday):
@@ -96,10 +96,12 @@ class CalendarPage(widgets.Page):
 </BODY>
 </HTML>'''
 
-    def __init__(self,password=None):
+    def __init__(self,password=None,filename=None):
         widgets.Page.__init__(self)
         self.password=password
         self.events={}
+        self.filename=filename
+        self.loadPickle()
 
     def setDate(self,request):
         curtime=time.localtime(time.time())
@@ -173,6 +175,7 @@ class CalendarPage(widgets.Page):
                 year,month,day,ind=map(int,request.postpath[1:5])
                 try:
                     del self.events[year][month][day][ind]
+                    self.savePickle()
                 except IndexError:
                     pass
                 return self.backToCalendar(request)
@@ -202,7 +205,7 @@ class CalendarPage(widgets.Page):
     def setDay(self,day,month,year,title,data):
         self.makeDay(day,month,year)
         self.events[year][month][day].append(EventWidget(day,month,year,title,data))
-        log.msg(str(self.events))
+        self.savePickle()
 
     def makeDay(self,day,month,year):
         if not self.events.has_key(year):
@@ -213,6 +216,19 @@ class CalendarPage(widgets.Page):
             self.events[year][month][day]=[]
 #        if not type(self.events[year][month][day])==type([]):
 #            self.events[year][month][day]=[]
+
+    def loadPickle(self):
+        if not self.filename:
+            return
+        try:
+            self.events=cPickle.load(open(self.filename))
+        except:
+            pass
+
+    def savePickle(self):
+        if not self.filename:
+            return
+        cPickle.dump(self.events,open(self.filename,"w"))
 
 class EventWidget(widgets.Widget):
     def __init__(self,day,month,year,title,data):
