@@ -1,19 +1,22 @@
-"""Horribly broken.  Unzipping doesn't work, but compiling does."""
+"""Post-install GUI to compile to pyc and unpack twisted doco"""
 
 from __future__ import generators
 
 import sys
 import zipfile
 import py_compile
-# wx
-import Tkinter
-from Tkinter import *
+# we're going to ignore failures to import tkinter and fall back
+# to using the console for this
+try:
+    import Tkinter
+    from Tkinter import *
+except ImportError:
+    pass
 # twisted
 from twisted.internet import tksupport, reactor, defer
 from twisted.python import failure, log, zipstream, util, usage, log
 # local
 import os.path
-
 
 class ProgressBar:
     def __init__(self, master=None, orientation="horizontal",
@@ -166,11 +169,15 @@ def compiler(path):
         py_compile.compile(f)
         yield remaining
 
-class TksetupOptions(usage.Options):
+class TkunzipOptions(usage.Options):
     optParameters=[["zipfile", "z", "", "a zipfile"],
                    ["ziptargetdir", "t", ".", "where to extract zipfile"],
                    ["compiledir", "c", "", "a directory to compile"],
                    ]
+    optFlags=[["use-console", "C", "show in the console, not graphically"],
+              ["shell-exec", "x", """\
+spawn a new console to show output (implies -C)"""],
+              ]
 
 def countPys(countl, directory, names):
     sofar=countl[0]
@@ -184,23 +191,54 @@ def countPysRecursive(path):
     return countl[0]
 
 def run(argv=sys.argv):
-    log.startLogging(file(r'c:\tkunzip.log', 'w'))
-
-    opt=TksetupOptions()
+    log.startLogging(file('tkunzip.log', 'w'))
+    opt=TkunzipOptions()
     try:
         opt.parseOptions(argv[1:])
     except usage.UsageError, e:
         print str(opt)
         print str(e)
         sys.exit(1)
-    
+
+    if opt['use-console']:
+        # this should come before shell-exec to prevent infinite loop
+        return doItConsolicious(opt)              
+    if opt['shell-exec'] or not 'Tkinter' in sys.modules:
+        from distutils import sysconfig
+        from twisted.scripts import tkunzip
+        myfile=tkunzip.__file__
+        exe=os.path.join(sysconfig.get_config_var('prefix'), 'python.exe')
+        return os.system('%s %s --use-console %s' % (exe, myfile,
+                                                     ' '.join(argv[1:])))
+    return doItTkinterly(opt)
+
+def doItConsolicious(opt):
+    # reclaim stdout/stderr from log
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
+    if opt['zipfile']:
+        print 'Unpacking documentation...'
+        for n in zipstream.unzipIter(opt['zipfile'], opt['ziptargetdir']):
+            if n % 100 == 0:
+                print n,
+            if n % 1000 == 0:
+                print
+        print 'Done unpacking.'
+        
+    if opt['compiledir']:
+        print 'Compiling to pyc...'
+        import compileall
+        compileall.compile_dir(opt["compiledir"])
+        print 'Done compiling.'
+
+def doItTkinterly(opt):
     root=Tkinter.Tk()
     root.withdraw()
     root.title('One Moment.')
     root.protocol('WM_DELETE_WINDOW', reactor.stop)
     tksupport.install(root)
     
-    prog=ProgressBar(root, value=0, labelColor="black", width=200)    
+    prog=ProgressBar(root, value=0, labelColor="black", width=200)
     prog.pack()
 
     # callback immediately
@@ -213,7 +251,7 @@ def run(argv=sys.argv):
     d.addCallback(deiconify)
     
     if opt['zipfile']:
-        uz=Progressor('Unzipping...')
+        uz=Progressor('Unpacking documentation...')
         max=zipstream.countZipFileChunks(opt['zipfile'], 4096)
         uz.setBar(prog, max)
         uz.setIterator(zipstream.unzipIterChunky(opt['zipfile'],
@@ -236,4 +274,3 @@ def run(argv=sys.argv):
 
 if __name__=='__main__':
     run()
-
