@@ -22,7 +22,7 @@ import string
 import socket
 
 # Twisted Imports
-from twisted.internet import protocol
+from twisted.internet import interfaces
 from twisted.python import log
 from twisted.persisted import styles, marmalade
 from twisted.python.runtime import platform
@@ -30,6 +30,64 @@ from twisted.cred.authorizer import DefaultAuthorizer
 
 # Sibling Imports
 import main, defer
+
+
+class Connector:
+    """Default implementation of connector.
+
+    This is used by twisted.internet.app.Application.
+    """
+
+    __implements__ = interfaces.IConnector
+
+    timeoutID = None
+    
+    def __init__(self, factory, timeout, methodName, *args):
+        self.hasConnection = 0
+        self.factory = factory
+        self.timeout = timeout
+        self.methodName = methodName
+        self.args = args
+
+    def connect(self):
+        """Start connection to remote server."""
+        assert not self.hasConnection
+        self.hasConnection = 1
+        self.factory.doStart()
+        from twisted.internet import reactor
+        c = apply(getattr(reactor, "startConnect" + self.methodName), tuple(self.args) + (self,))
+        if self.timeout is not None:
+            self.timeoutID = reactor.callLater(self.timeout, c.stopConnecting)
+        self.factory.startedConnecting(self, c)
+
+    def cancelTimeout(self):
+        if self.timeoutID:
+            from twisted.internet import reactor
+            try:
+                reactor.cancelCallLater(self.timeoutID)
+            except ValueError:
+                pass
+            del self.timeoutID
+    
+    def buildProtocol(self, addr):
+        self.cancelTimeout()
+        return self.factory.buildProtocol(addr)
+
+    def connectionFailed(self, reason):
+        self.cancelTimeout()
+        self.hasConnection = 0
+        self.factory.connectionFailed(self, reason)
+        if not self.hasConnection:
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+
+    def connectionLost(self):
+        self.hasConnection = 0
+        self.factory.connectionLost(self)
+        if not self.hasConnection:
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+
 
 class _SSLlistener:
     """persistence utility; ignore me
@@ -351,27 +409,27 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     def connectTCP(self, host, port, factory, timeout=30):
         """Connect a given client protocol factory to a specific TCP server.
 
-        This creates a new protocol.Connector and returns it.
+        This creates a new Connector and returns it.
         """
-        c = protocol.Connector(factory, timeout, "TCP", host, port) 
+        c = Connector(factory, timeout, "TCP", host, port) 
         self.addConnector(c)
         return c
 
     def connectSSL(self, host, port, factory, ctxFactory, timeout=30):
         """Connect a given client protocol factory to a specific SSL server.
 
-        This creates a new protocol.Connector and returns it.
+        This creates a new Connector and returns it.
         """
-        c = protocol.Connector(factory, timeout, host, port, ctxFactory)
+        c = Connector(factory, timeout, host, port, ctxFactory)
         self.addConnector(c)
         return c
 
     def connectUNIX(self, address, factory, timeout=30):
         """Connect a given client protocol factory to a specific UNIX socket.
 
-        This creates a new protocol.Connector and returns it.
+        This creates a new Connector and returns it.
         """
-        c = protocol.Connector(factory, timeout, "TCP", address) 
+        c = Connector(factory, timeout, "TCP", address) 
         self.addConnector(c)
         return c
 
