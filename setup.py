@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.102 2003/03/10 19:31:50 itamarst Exp $
+$Id: setup.py,v 1.103 2003/03/19 00:07:42 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -255,11 +255,13 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 imPath = os.path.join('twisted', 'im')
 pbuiPath = os.path.join('twisted','spread','ui')
 manuiPath = os.path.join('twisted','manhole','ui')
+testPath = os.path.join("twisted", 'test')
 
 setup_args['data_files']=[
     (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
     (pbuiPath, [os.path.join(pbuiPath, 'login2.glade')]),
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
+    (testPath, [os.path.join(testPath, "server.pem")]),
     ('twisted', [os.path.join('twisted', 'plugins.tml')]),
     ]
 

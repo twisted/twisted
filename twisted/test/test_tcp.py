@@ -498,6 +498,8 @@ class ConnectionLosingProtocol(protocol.Protocol):
 
 class ProperlyCloseFilesTestCase(unittest.TestCase):
 
+    numberRounds = 2048
+    
     def setUp(self):
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
@@ -513,7 +515,7 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
     
     def testProperlyCloseFiles(self):
         self.connector()
-        while self.totalConnections < 2048:
+        while self.totalConnections < self.numberRounds:
             reactor.iterate(0.01)
 
     def _connectionMade(self):

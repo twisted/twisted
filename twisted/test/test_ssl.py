@@ -17,14 +17,20 @@
 from twisted.trial import unittest
 from twisted.internet import protocol, reactor
 from twisted.internet import ssl
+import os
 import test_tcp
 
+
 class ProperlyCloseFilesTestCase(test_tcp.ProperlyCloseFilesTestCase):
+
+    numberRounds = 256
+    
     def setUp(self):
+        certPath = os.path.join(os.path.split(test_tcp.__file__)[0], "server.pem")
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
         self.listener = reactor.listenSSL(
-            0, f, ssl.DefaultOpenSSLContextFactory('', '')
+            0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath)
         )
         
         f = protocol.ClientFactory()
