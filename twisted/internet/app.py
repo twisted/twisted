@@ -476,14 +476,14 @@ class Application(log.Logger, styles.Versioned,
         if self._listenerDict.has_key((filename_)):
             self._listenerDict[filename_].stopListening()
 
-    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
+    def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
         """
-        Connects a given protocol factory to the given numeric UDP port.
+        Connects a given DatagramProtocol to the given numeric UDP port.
         """
-        self.udpPorts.append((port, factory, interface, maxPacketSize))
+        self.udpPorts.append((port, proto, interface, maxPacketSize))
         if self.running:
             from twisted.internet import reactor
-            return reactor.listenUDP(port, factory, interface, maxPacketSize)
+            return reactor.listenUDP(port, proto, interface, maxPacketSize)
 
     def unlistenUDP(self, port, interface=''):
         """
