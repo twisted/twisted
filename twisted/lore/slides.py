@@ -305,11 +305,41 @@ class ProsperSlides(LatexSpitter):
         spitter.visitNodeDefault(node)
         self.writer('}')
 
+class PagebreakLatex(LatexSpitter):
+
+    everyN = 1
+    currentN = 0
+    seenH2 = 0
+        
+    start_html = LatexSpitter.start_html+"\\date{}\n"
+    start_body = '\\begin{document}\n\n'
+
+    def visitNode_h2(self, node):
+        if not self.seenH2:
+            self.currentN = 0
+            self.seenH2 = 1
+        else:
+            self.currentN += 1
+            self.currentN %= self.everyN
+            if not self.currentN:
+                self.writer('\\clearpage\n')
+        level = (int(node.tagName[1])-2)+self.baseLevel
+        self.writer('\n\n\\'+level*'sub'+'section*{')
+        spitter = HeadingLatexSpitter(self.writer, self.currDir, self.filename)
+        spitter.visitNodeDefault(node)
+        self.writer('}\n')
+
+class TwoPagebreakLatex(PagebreakLatex):
+
+    everyN = 2
+
 
 class SlidesProcessingFunctionFactory(default.ProcessingFunctionFactory):
     doFile = [doFile]
     latexSpitters = default.ProcessingFunctionFactory.latexSpitters.copy()
     latexSpitters['prosper'] = ProsperSlides
+    latexSpitters['page'] = PagebreakLatex
+    latexSpitters['twopage'] = TwoPagebreakLatex
 
     def generate_mgp(self, d):
         template = d.get('template', 'template.mgp')
