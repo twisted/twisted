@@ -21,7 +21,7 @@ from twisted.protocols.gnutella import GnutellaTalker
 from twisted.python import usage        # twisted command-line processing
 
 from twisted.zoot.AFactory import AFactory
-from twisted.zoot.Zoot import Zoot
+from twisted.zoot.zoot import Zoot
 
 class Options(usage.Options):
     optParameters = [["port", "p", 3653, "Port number to listen on for Gnutella protocol."],]
