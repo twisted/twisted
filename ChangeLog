@@ -1,7 +1,10 @@
-2002-11-18  Itamar Shtull-Trauring  <twisted@itamarst.org>
+2002-11-21  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* twisted/protocols/policies.py: bandwidth throttling and 
-	connection limiting for protocol factories.
+	* .: Releasing 1.0.1rc2
+
+2002-11-20  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing 1.0.1rc1
 
 2002-11-16  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
