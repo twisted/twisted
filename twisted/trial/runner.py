@@ -53,7 +53,7 @@
 
 
 import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal
-import os.path as osp, itertools, fnmatch
+import os.path as osp, itertools, fnmatch, random
 from os.path import join as opj
 
 import doctest
