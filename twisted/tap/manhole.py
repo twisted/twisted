@@ -22,8 +22,8 @@ I am the support module for making a manhole server with mktap.
 from twisted.manhole import service
 from twisted.cred import authorizer
 from twisted.spread import pb
-from twisted.python import usage
-import getpass, os, sys
+from twisted.python import usage, util
+import os, sys
 
 
 class Options(usage.Options):

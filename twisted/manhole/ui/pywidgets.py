@@ -188,7 +188,7 @@ class LocalInteraction(Interaction):
         self.globalNS = {}
         self.localNS = {}
         self.filename = "<gtk console>"
-        
+
     def codeInput(self, text):
         from twisted.manhole.service import runInConsole
         val = runInConsole(text, self.output.console,

@@ -97,13 +97,13 @@ class Hidden(String):
 class Integer(Argument):
     """A single integer.
     """
-    
+
     defaultDefault = None
 
     def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
-    
+
     def coerce(self, val):
         if not val.strip() and self.allowNone:
             return None
@@ -114,7 +114,7 @@ class Integer(Argument):
 
 
 class Float(Argument):
-    
+
     defaultDefault = None
 
     def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
@@ -190,7 +190,7 @@ class Date(Argument):
     """A date."""
 
     defaultDefault = (1970, 1, 1)
-    
+
     def coerce(self, args):
         """Return tuple of ints (year, month, day)."""
         try:
@@ -252,7 +252,7 @@ class MethodSignature:
 
 class FormMethod:
     """A callable object with a signature."""
-    
+
     def __init__(self, signature, callable):
         self.signature = signature
         self.callable = callable
@@ -262,4 +262,3 @@ class FormMethod:
 
     def call(self,*args,**kw):
         return self.callable(*args,**kw)
-

@@ -99,7 +99,7 @@ def logCaller():
     """Log where the current function was called from.
 
     Example output::
-    
+
         load was called from file \"/foo/bar.py\", line 482, in loadConfig
             config.load(self.serviceParent, *self.configArgs)
 

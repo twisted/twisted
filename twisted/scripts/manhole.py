@@ -84,8 +84,7 @@ def getAvailableToolkits():
         except:
             pass
         else:
-            if 'gtk1' not in avail:
-                avail.append('gtk1')
+            avail.append('gtk1')
 
     # There may be some "middle gtk" that got left out -- that is, a
     # version of pygtk 1.99.x that happened before the pygtk module
