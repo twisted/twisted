@@ -19,7 +19,7 @@
 Tests for twisted.cred.
 """
 
-import sys
+import sys, warnings
 from twisted.trial import unittest
 from types import *
 from twisted.internet import app
@@ -52,7 +52,14 @@ class ForeignObject:
 # Service
 AppForServiceTest = app.Application
 
-class ServiceTestCase(unittest.TestCase):
+class OldCredTestCase(unittest.TestCase):
+    def setUpClass(self):
+        warnings.filterwarnings('ignore', 'cred|authorizers|identities', DeprecationWarning)
+
+    def tearDownClass(self):
+        warnings.filterwarnings('default', 'cred|authorizers|identities', DeprecationWarning)
+
+class ServiceTestCase(OldCredTestCase):
     App = AppForServiceTest
 
     def setUp(self):
@@ -156,7 +163,7 @@ AppForPerspectiveTest = app.Application
 ServiceForPerspectiveTest = service.Service
 IdentityForPerspectiveTest = identity.Identity
 
-class PerspectiveTestCase(unittest.TestCase):
+class PerspectiveTestCase(OldCredTestCase):
     App = AppForPerspectiveTest
     Service = ServiceForPerspectiveTest
     def Identity(self, n):
@@ -274,7 +281,7 @@ class PerspectiveTestCase(unittest.TestCase):
         s = self.perspective.getService()
         self.assert_(s is self.service)
 
-class FunctionsTestCase(unittest.TestCase):
+class FunctionsTestCase(OldCredTestCase):
     def test_challenge(self):
         self.assert_(identity.challenge())
 
@@ -287,7 +294,7 @@ class PerspectiveForIdentityTest(perspective.Perspective):
         perspective.Perspective.__init__(self, n)
         self.setService(service)
 
-class IdentityTestCase(unittest.TestCase):
+class IdentityTestCase(OldCredTestCase):
     App = AppForIdentityTest
     Service = ServiceForIdentityTest
     Perspective = PerspectiveForIdentityTest
@@ -388,7 +395,7 @@ class IdentityTestCase(unittest.TestCase):
 
 
 
-class AuthorizerTestCase(unittest.TestCase):
+class AuthorizerTestCase(OldCredTestCase):
     """TestCase for authorizer.DefaultAuthorizer."""
 
     def setUp(self):

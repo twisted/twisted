@@ -22,7 +22,7 @@ Test cases for defer module.
 
 from __future__ import nested_scopes
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.internet import reactor, defer
 from twisted.python import failure, log
 
@@ -141,6 +141,9 @@ class DeferredTestCase(unittest.TestCase):
         dl.addDeferred(defr2)
         defr2.callback('b')
         self.failUnlessEqual(result, [('a', 0)])
+    testEmptyDeferredList = util.suppressWarnings(testEmptyDeferredList,
+                                                  ('DeferredList.addDeferred',
+                                                   DeprecationWarning))
 
     def testDeferredListFireOnOneError(self):
         defr1 = defer.Deferred()
