@@ -223,6 +223,9 @@ class LatexSpitter:
     mapStart_div_note = '\\begin{quotation}\\textbf{Note:}'
     mapEnd_div_note = '\\end{quotation}'
 
+    mapStart_th = '\\textbf{'
+    mapEnd_th = '}'
+
 
 class SectionLatexSpitter(LatexSpitter):
 
