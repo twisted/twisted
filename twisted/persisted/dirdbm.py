@@ -204,6 +204,19 @@ class DirDBM:
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
 
+    def setdefault(self, key, value):
+        """
+        @type key: str
+        @param key: The key to lookup
+        
+        @param value: The value to associate with key if key is not already
+        associated with a value.
+        """
+        if not self.has_key(key):
+            self[key] = value
+            return value
+        return self[key]
+
     def get(self, key, default = None):
         """
         @type key: str
