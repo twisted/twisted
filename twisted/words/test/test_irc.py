@@ -149,7 +149,7 @@ class ModeTestCase(unittest.TestCase):
         del self.client
         del self.transport
 
-    def test_MODE_CHANGE(self):
+    def testModeChange(self):
         message = ":ChanServ!ChanServ@services. MODE #tanstaafl +o exarkun\r\n"
         self.client.dataReceived(message)
         self.assertEquals(
@@ -159,6 +159,33 @@ class ModeTestCase(unittest.TestCase):
                               'set': True,
                               'modes': 'o',
                               'args': ('exarkun',)})])
+
+    def _serverTestImpl(self, code, msg, func, **kw):
+        host = kw.pop('host', 'server.host')
+        nick = kw.pop('nick', 'nickname')
+
+        message = ":" + host + " " + code + " " + nick + " :" + msg + "\r\n"
+
+        self.client.dataReceived(message)
+        self.assertEquals(
+            self.client.calls,
+            [(func, kw)])
+
+    def testYourHost(self):
+        msg = "Your host is some.host[blah.blah/6667], running version server-version-3"
+        self._serverTestImpl("002", msg, "yourHost", info=msg)
+
+    def testCreated(self):
+        msg = "This server was cobbled together Fri Aug 13 18:00:25 UTC 2004"
+        self._serverTestImpl("003", msg, "created", when=msg)
+
+    def testMyInfo(self):
+        msg = "server.host server-version abcDEF bcdEHI"
+        self._serverTestImpl("004", msg, "myInfo",
+                             servername="server.host",
+                             version="server-version",
+                             umodes="abcDEF",
+                             cmodes="bcdEHI")
 
 class BasicServerFunctionalityTestCase(unittest.TestCase):
     def setUp(self):

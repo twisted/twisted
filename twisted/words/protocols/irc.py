@@ -920,7 +920,10 @@ class IRCClient(basic.LineReceiver):
         self.yourHost(params[1])
 
     def irc_RPL_MYINFO(self, prefix, params):
-        self.myInfo(*params[1:5])
+        info = params[1].split(None, 3)
+        while len(info) < 4:
+            info.append(None)
+        self.myInfo(*info)
 
     def irc_RPL_BOUNCE(self, prefix, params):
         # 005 is doubly assigned.  Piece of crap dirty trash protocol.
