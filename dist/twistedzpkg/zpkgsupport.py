@@ -68,7 +68,7 @@ class build_ext_twisted(build_ext):
         finally:
             self._remove_conftest()
 
-    def _check_define(self, include_files, define_name):
+    def check_define(self, include_files, define_name):
         """
         Check if the given name has been #define'd by trying to compile a
         file that #includes the given files and uses #ifndef to test for the
@@ -83,7 +83,7 @@ class build_ext_twisted(build_ext):
 """ % ('\n'.join(['#include <%s>' % n for n in include_files]),
        define_name, define_name))
 
-    def _check_header(self, header_name):
+    def check_header(self, header_name):
         """
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
@@ -91,7 +91,7 @@ class build_ext_twisted(build_ext):
         self.compiler.announce("checking for %s ..." % header_name, 0)
         return self._compile_helper("#include <%s>\n" % header_name)
 
-    def _check_struct_member(self, include_files, struct, member):
+    def check_struct_member(self, include_files, struct, member):
         """
         Check that given member is present in the given struct when the
         specified headers are included.
@@ -108,55 +108,31 @@ int main(int argc, char **argv)
         """
         Determine which extension modules we should build on this system.
         """
-        self.extensions = []
         # always define WIN32 under Windows
         if os.name == 'nt':
-            define_macros = [("WIN32", 1)]
+            global_define_macros = [("WIN32", 1)]
         else:
-            define_macros = []
+            global_define_macros = []
 
-        print "Checking if C extensions can be compiled, don't be alarmed if a few compile errors are printed."
+        print ("Checking if C extensions can be compiled, don't be alarmed if a few compile "
+               "errors are printed.")
         
         if not self._compile_helper("#define X 1\n"):
             print "Compiler not found, skipping C extensions."
             return
         
         # Extension modules to build.
-        exts = self.extensions
-        exts.append(
-            Extension("twisted.spread.cBanana",
-                      ["twisted/spread/cBanana.c"],
-                      define_macros=define_macros)
-            )
-
-
-        # The portmap module (for inetd)
-##        if self._check_header("rpc/rpc.h"):
-##            exts.append( Extension("twisted.runner.portmap",
-##                                    ["twisted/runner/portmap.c"],
-##                                    define_macros=define_macros) )
-##        else:
-##            self.announce("Sun-RPC portmap support is unavailable on this system (but that's OK, you probably don't need it anyway).")
-
-        # urllib.unquote accelerator
-        exts.append( Extension("twisted.protocols._c_urlarg",
-                                ["twisted/protocols/_c_urlarg.c"],
-                                define_macros=define_macros) )
-
-        if sys.platform == 'darwin':
-            exts.append( Extension("twisted.internet.cfsupport",
-                                    ["twisted/internet/cfsupport/cfsupport.c"],
-                                    extra_compile_args=['-w'],
-                                    extra_link_args=['-framework','CoreFoundation','-framework','CoreServices','-framework','Carbon'],
-                                    define_macros=define_macros))
-
-        if sys.platform == 'win32':
-            exts.append( Extension("twisted.internet.iocpreactor._iocp",
-                                    ["twisted/internet/iocpreactor/_iocp.c"],
-                                    libraries=["ws2_32", "mswsock"],
-                                    define_macros=define_macros))
-        
-        self.extensions.extend(exts)
+        # XXX hack here XXX fdrake will hate me XXX
+        from __main__ import context
+        extfn = os.path.join(context._working_dir, context._pkgname, 'EXTENSIONS.cfg')
+        # end hack (maybe)
+        ns = {'builder': self,
+              'Extension': Extension}
+        execfile(extfn, ns, ns)
+        exts = ns['extensions']
+        for ext in exts:
+            ext.define_macros.extend(global_define_macros)
+        self.extensions = exts
 
 
 class Distribution(dist.ZPkgDistribution):

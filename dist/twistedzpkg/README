@@ -1,0 +1,21 @@
+This directory contains Twisted-specific extensions to zpkgtools (and
+maybe some general purpose extensions, as well, which will hopefully
+be integrated into mainline zpkgtools eventually).
+
+
+EXTENSIONS.cfg: This is a new configuration file that you can put in
+your packages that contains python code that creates an 'extensions'
+list, full of Distutils Extension instances. Its namespace has
+'builder' and 'Extension' defined. 'builder' is the instance of
+zpkgsupport.build_ext_twisted, and 'Extension' is the distutils
+Extension classe.
+
+NOTE! When specifying the filename for the C files, make sure that the
+path includes the directory name *as included in a zpkg-generated
+tarball*, i.e., twisted's zpkg tarball contains "twisted/", so saying
+"twisted/protocols/_c_urlarg.c" is fine (as per usual), but
+twisted.runner's portmap.c needs to be specified as
+"twisted.runner/portmap.c".
+
+Yes, I know this is pretty crappy; hopefully eventually this will be
+abstracted out.

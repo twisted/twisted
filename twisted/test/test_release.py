@@ -62,21 +62,3 @@ class UtilityTest(unittest.TestCase):
         release.replaceInFile('release.replace', '2.0.0', '3.0.0')
         A.assertEquals(open('release.replace').read(), expected)
 
-    def testProcessToLog(self):
-        ptl = release.ProcessToLog()
-
-        l = []
-        def gotLog(ld):
-            l.append(ld)
-        log.addObserver(gotLog)
-
-        try:
-            ptl.outReceived('foo')
-            A.assertEquals(l, [])
-            ptl.outReceived('\n')
-            A.assertEquals(len(l), 1)
-            A.failUnless('process' in l[0])
-            A.failUnless('data' in l[0])
-            A.assertEquals(l[0]['data'], 'foo')
-        finally:
-            log.removeObserver(gotLog)
