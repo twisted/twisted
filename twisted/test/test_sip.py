@@ -463,7 +463,7 @@ class RegistrationTestCase(unittest.TestCase):
         self.assertEquals(m.headers["to"], ["sip:joe@bell.example.com"])
         self.assertEquals(m.headers["contact"], ["sip:joe@client.com:1234"])
         self.assertEquals(m.headers["expires"], ["0"])
-        self.assertEquals(self.registry.users, [])
+        self.assertEquals(self.registry.users, {})
 
     def addPortal(self):
         r = TestRealm()
@@ -607,7 +607,6 @@ class LiveTest(unittest.TestCase):
         self.assertEquals(len(self.client.received), 1)
         r = self.client.received[0]
         self.assertEquals(r.code, 200)
-        print r.headers
         
 
 registerRequest = """

@@ -163,7 +163,7 @@ def DigestCalcResponse(
     m.update(pszDigestUri)
     if pszQop == "auth-int":
         m.update(":")
-        m.update(HEntity)
+        m.update(pszHEntity)
     HA2 = m.digest().encode('hex')
     
     m = md5.md5()
@@ -727,6 +727,12 @@ class IRegistry(Interface):
         @return: Deferred of C{Registration} or failure with RegistrationError.
         """
 
+    def unregisterAddress(self, domainURL, logicalURL, physicalURL):
+        """Unregister the physical address of a logical URL.
+
+        @return: Deferred of C{Registration} or failure with RegistrationError.
+        """
+
     def getRegistrationInfo(self, logicalURL):
         """Get registration info for logical URL.
 
@@ -1054,8 +1060,8 @@ class RegisterProxy(Proxy):
         if message.headers.has_key("contact"):
             contact = message.headers["contact"][0]
 
-        if message.headers.get("expires", None) == "0":
-            self.unregister(message, contact)
+        if message.headers.get("expires", [None])[0] == "0":
+            self.unregister(message, toURL, contact)
         else:
             if contact is not None:
                 name, contactURL, params = parseAddress(contact)
@@ -1080,7 +1086,7 @@ class RegisterProxy(Proxy):
         # XXX return error message, and alter tests to deal with
         # this, currently tests assume no message sent on failure
 
-    def unregister(self, message, contact):
+    def unregister(self, message, toURL, contact):
         try:
             expires = int(message.headers["expires"][0])
         except ValueError:
@@ -1098,7 +1104,8 @@ class RegisterProxy(Proxy):
 
     def _cbUnregister(self, registration, message):
         msg = self.responseFromRequest(200, message)
-        msg.headers.setdefault('contact', []).append(registration.contactURL)
+        msg.headers.setdefault('contact', []).append(registration.contactURL.toString())
+        msg.addHeader("expires", "0")
         self.deliverResponse(msg)
 
     def _ebUnregister(self, registration, message):
@@ -1140,6 +1147,7 @@ class InMemoryRegistry:
         else:
             dc.cancel()
             del self.users[username]
+        return defer.succeed(Registration(0, url))
     
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         if domainURL.host != self.domain:
@@ -1158,7 +1166,8 @@ class InMemoryRegistry:
         return defer.succeed(Registration(int(dc.getTime() - time.time()), physicalURL))
 
     def unregisterAddress(self, domainURL, logicalURL, physicalURL):
-        self._expireRegistration(logicalURL.username)
+        return self._expireRegistration(logicalURL.username)
+
 
 if __name__ == '__main__':
     import sys
