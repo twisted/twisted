@@ -1843,7 +1843,8 @@ class IMAP4Client(basic.LineReceiver):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to date strings, or whose errback is invoked
-        if there is an error.
+        if there is an error.  Date strings take the format of 
+        \"<day-month-year time timezone\", quotes included.
         """
         d = self._fetch(messages, useUID=uid, internaldate=1)
         d.addCallback(self.__cbFetch)
@@ -1968,8 +1969,8 @@ class IMAP4Client(basic.LineReceiver):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
-        message numbers to body text, or whose errback is invoked if there
-        is an error.
+        message numbers to file-like objects containing body text, or whose
+        errback is invoked if there is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822text=1)
         d.addCallback(self.__cbFetch)
