@@ -1,9 +1,51 @@
+2002-02-11  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/web/widgets.py: Changed Gadget.page to Gadget.pageFactory
+	for clarity (this is backwards-compatible).
+
+2002-02-10  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/spread/jelly.py:
+	* twisted/spread/banana.py:
+	* twisted/spread/pb.py: fixed bugs found by pychecker, got rid
+	of __ping__ method support, and added 'local_' methods to
+	RemoteReference
+
+	* twisted/persisted/styles.py: pychecker bug fixes
+
+2002-02-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* bin/eco: Created a command-line interpreter for ECO.
+	
+	* doc/man/eco.1: man page for bin/eco
+
+2002-02-09  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/eco/eco.py: Reverted evaluator state back to functional-ness
+	:) And added functions (anonymous and global), and broke various
+	interfaces
+
+2002-02-09  Allen Short  <washort@twistedmatrix.com>
+
+	* twisted/eco/eco.py: Refactored evaluator into a class, improved
+	python-function argument signatures, and added and/or/not functions.
+
+2002-02-08  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/words/service.py, ircservice.py: Fixed annoying PING
+	bug, and added /topic support.
+
+2002-02-08  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/eco: Initial prototype of ECO, the Elegant C Overlay
+	macro engine. 
+
 2002-02-02  Paul Swartz <z3p@twistedmatrix.com>
 
-        * twisted/im/ircsupport.py:  Added support for the IRC protocol
-        to IM.
+	* twisted/im/ircsupport.py:  Added support for the IRC protocol
+	to IM.
 
-2002-02-02  Chris Armstrong <carmstro@twistedmatrix.com>
+2002-02-02  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* twisted/python/deferred.py: added Deferred.addErrback, so now
 	it's easy to attach errbacks to deferreds when you don't care
@@ -26,8 +68,8 @@
 
 2002-02-01  Paul Swartz <z3p@twistedmatrix.com>
 
-        * twisted/im/tocsupport.py: Added support for most of the TOC
-        protocol to IM.
+	* twisted/im/tocsupport.py: Added support for most of the TOC
+	protocol to IM.
 
 
 2002-02-01  Chris Armstrong  <carmstro@twistedmatrix.com>
