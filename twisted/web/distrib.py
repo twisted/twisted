@@ -70,7 +70,7 @@ class Request(pb.RemoteCopy, server.Request):
         self.remote.callRemote("unregisterProducer").addErrback(self.fail)
 
     def fail(self, failure):
-        log.msg(failure.getBriefTraceback())
+        log.msg(str(failure))
 
 
 pb.setCopierForClass(str(server.Request), Request)
