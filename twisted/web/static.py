@@ -311,6 +311,9 @@ class File(resource.Resource, styles.Versioned):
         mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
               os.stat(self.path)
 
+        #for content-length
+        fsize = size
+
         if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
             if self.path[-1] == '/':
                 index = self.getIndex(request)
@@ -342,6 +345,7 @@ class File(resource.Resource, styles.Versioned):
 
         try:
             range = request.getHeader('range')
+
             if range is not None:
                 # This is a request for partial data...
                 bytesrange = string.split(range, '=')
@@ -358,8 +362,11 @@ class File(resource.Resource, styles.Versioned):
                 request.setResponseCode(http.PARTIAL_CONTENT)
                 request.setHeader('content-range',"bytes %s-%s/%s " % (
                     str(start), str(end), str(size)))
-            else:
-                request.setHeader('content-length',size)
+                #content-length should be the actual size of the stuff we're
+                #sending, not the full size of the on-server entity.
+                fsize = end - int(start)
+
+            request.setHeader('content-length',fsize)
         except:
             traceback.print_exc(file=log.logfile)
 
