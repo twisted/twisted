@@ -97,3 +97,15 @@ class PersistTestCase(unittest.TestCase):
                           sob._encrypt(phrase, 'foo=[1,2,3]'))
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.failUnlessEqual(o, [1,2,3])
+
+    def testTypeGuesser(self):
+        self.assertRaises(KeyError, sob.guessType, "file.blah")
+        self.assertEqual('python', sob.guessType("file.py"))
+        self.assertEqual('python', sob.guessType("file.tac"))
+        self.assertEqual('python', sob.guessType("file.etac"))
+        self.assertEqual('pickle', sob.guessType("file.tap"))
+        self.assertEqual('pickle', sob.guessType("file.etap"))
+        self.assertEqual('source', sob.guessType("file.tas"))
+        self.assertEqual('source', sob.guessType("file.etas"))
+        self.assertEqual('xml', sob.guessType("file.tax"))
+        self.assertEqual('xml', sob.guessType("file.etax"))

@@ -212,4 +212,19 @@ def loadValueFromFile(filename, variable, passphrase=None):
     value = d[variable]
     return value
 
-__all__ = ['loadValueFromFile', 'load', 'Persistant', 'IPersistable']
+def guessType(filename):
+    ext = os.path.splitext(filename)[1]
+    return {
+        '.tac':  'python',
+        '.etac':  'python',
+        '.py':  'python',
+        '.tap': 'pickle',
+        '.etap': 'pickle',
+        '.tas': 'source',
+        '.etas': 'source',
+        '.tax': 'xml',
+        '.etax': 'xml'
+    }[ext]
+
+__all__ = ['loadValueFromFile', 'load', 'Persistant', 'IPersistable',
+           'guessType']
