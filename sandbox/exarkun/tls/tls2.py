@@ -26,10 +26,10 @@ class Random:
 
     def __init__(self, tstamp=None, rbytes=None):
         self.time = tstamp or int(time.time())
-        self.rbytes = rbytes or crypt.getRandomBytes(28)
+        self.bytes = rbytes or crypt.getRandomBytes(28)
 
     def encode(self):
-        return struct.pack('>I', self.time) + self.rbytes
+        return struct.pack('>I', self.time) + self.bytes
 
 def NullCipherMethod(record):
     return record
@@ -40,6 +40,10 @@ class SecurityParameters(object):
     macAlgorithm = staticmethod(crypt.HMAC_NULL)
     bulkEncryptionAlgorithm = staticmethod(NullCipherMethod)
     compressionAlgorithm = staticmethod(NullCompressionMethod)
+
+    masterSecret = None
+    clientRandom = None
+    serverRandom = None
 
     def getCipherSuites(self):
         return [0]
@@ -96,9 +100,7 @@ class Handshake(object):
     type = RL_CT_HANDSHAKE
     version = (3, 1)
 
-    def __init__(self, type):
-        self.handshakeType = type
-
+    handshakeType = None
     def encode(self):
         body = self.handshake_encode()
         assert len(body) < 2 ** 24
@@ -110,9 +112,10 @@ class Handshake(object):
 
 class ClientHello(Handshake):
     version = (3, 1)
+    handshakeType = HS_CT_CLIENT_HELLO
 
-    def __init__(self, random, session_id, ciphers, compressors):
-        Handshake.__init__(self, HS_CT_CLIENT_HELLO)
+    def __init__(self, version, random, session_id, ciphers, compressors):
+        self.version = version
         self.random = random
         self.sessionID = session_id
         self.ciphers = ciphers
@@ -129,17 +132,37 @@ class ClientHello(Handshake):
         logbytes('ClientHello', r)
         return r
 
+class ServerHello(ClientHello):
+    handshakeType = HS_CT_SERVER_HELLO
+
 import sys
 sys.path.append('../../pahan/statefulprotocol')
 from stateful import StatefulProtocol
-class TLSClient(StatefulProtocol):
-    securityParameters = None
-
-    currentReadState = None
-    currentWriteState = None
+class RecordProtocol(StatefulProtocol):
+    currentReadSecurity = None
+    currentWriteSecurity = None
     
-    pendingReadState = None
-    pendingWriteState = None
+    pendingReadSecurity = None
+    pendingWriteSecurity = None
+
+    def connectionMade(self):
+        for cp in ('pending', 'current'):
+            for rw in ('Read', 'Write'):
+                setattr(self, cp + rw + 'Security', SecurityParameters())
+
+    def _write(self, record):
+        comp = self.currentWriteSecurity.compressionAlgorithm
+        ciph = self.currentWriteSecurity.bulkEncryptionAlgorithm
+        bytes = RecordLayer(ciph(comp(record))).encode()
+        logbytes('Sending', bytes)
+        self.transport.write(bytes)
+
+    def send(self, record):
+        ctx = {'SecurityParameters': self.currentWriteSecurity}
+        rec = Plaintext(record)
+        context.call(ctx, self._write, rec)    
+
+class TLSClient(RecordProtocol):
 
     buffer = ''
 
@@ -147,18 +170,6 @@ class TLSClient(StatefulProtocol):
                         chr(21): 'Alert',
                         chr(22): 'Handshake',
                         chr(23): 'ApplicationData'}
-
-    def _write(self, record):
-        comp = self.securityParameters.compressionAlgorithm
-        ciph = self.securityParameters.bulkEncryptionAlgorithm
-        bytes = RecordLayer(ciph(comp(record))).encode()
-        logbytes('Sending', bytes)
-        self.transport.write(bytes)
-
-    def send(self, record):
-        ctx = {'SecurityParameters': self.securityParameters}
-        rec = Plaintext(record)
-        context.call(ctx, self._write, rec)
 
     def getInitialState(self):
         m = self.state_RecordType
@@ -169,10 +180,11 @@ class TLSClient(StatefulProtocol):
         StatefulProtocol.dataReceived(self, data)
 
     def connectionMade(self):
-        sp = self.securityParameters = SecurityParameters()
+        RecordProtocol.connectionMade(self)
+        sp = getattr(self, cp + rw + 'Security')
         cipherSuites = sp.getCipherSuites()
         compMethods = sp.getCompressionMethods()
-        self.send(ClientHello(Random(), '', cipherSuites, compMethods))
+        self.send(ClientHello((3, 1), Random(), '', cipherSuites, compMethods))
 
     def state_RecordType(self, data):
         method = self.CONTENT_TYPE_MAP[data]
@@ -194,7 +206,7 @@ class TLSClient(StatefulProtocol):
     def rt_ApplicationData(self, data):
         print 'ApplicationData'
 
-class TLSServer(StatefulProtocol):
+class TLSServerProtocol(RecordProtocol):
 
     CONTENT_TYPE_MAP = {chr(20): 'ChangeCipherSpec',
                         chr(21): 'Alert',
@@ -252,15 +264,44 @@ class TLSServer(StatefulProtocol):
         front, data = data[:L], data[L:]
         cv1, cv2, time, random, sessionID, nCiphs = struct.unpack(fmt, front)
         logbytes("Ciphers", data)
-        print cv1, cv2, time, repr(random), repr(sessionID), nCiphs
         ciphs, data = data[:nCiphs], data[nCiphs:]
-        self.cipherSuites = [ord(a) << 8 | ord(b) for (a, b) in twos(ciphs)]
-        assert len(self.cipherSuites) == (nCiphs / 2)
+        ciphers = [ord(a) << 8 | ord(b) for (a, b) in twos(ciphs)]
         nComps = ord(data[0])
-        self.compressionMethods = map(ord, data[1:nComps+1])
-        assert nComps == len(self.compressionMethods)
-        from pprint import pprint
-        pprint(vars(self))
+        compressors = map(ord, data[1:nComps+1])
+        ch = ClientHello((3, 1), Random(time, random), sessionID, ciphers, compressors)
+        self.handshakeMessage(ch)
+        m = self.state_RecordTypeAndVersionAndLength
+        return m, m.byteCount
+    
+
+class TLSServer(TLSServerProtocol):
+    sessions = {}
+
+    def generateSessionID(self):
+        return 'sessionID'
+
+    def handshakeMessage(self, msg):
+        f = self.HANDSHAKE_TYPE_MAP[chr(msg.handshakeType)]
+        return getattr(self, 'handshake_' + f)(msg)
+
+    def handshake_ClientHello(self, msg):
+        if msg.sessionID in self.sessions:
+            return self.resumeSession(msg)
+        # XXX Check timestamp
+        self.pendingWriteSecurity.clientRandom = msg.random.bytes
+        self.pendingReadSecurity.clientRandom = msg.random.bytes
+
+        random = crypt.getRandomBytes(28)
+        self.pendingWriteSecurity.serverRandom = random
+        self.pendingReadSecurity.serverRandom = random
+
+        sp = self.currentWriteSecurity
+
+        sessionID = self.generateSessionID()
+        cs = sp.getCipherSuites()
+        cm = sp.getCompressionMethods()
+        h = ServerHello((3, 1), Random(rbytes=random), sessionID, cs, cm)
+        self.send(h)
 
 if __name__ == '__main__':
     from twisted.internet import ssl
@@ -303,7 +344,7 @@ if __name__ == '__main__':
 
     OpenSSLConn = reactor.connectSSL('127.0.0.1', PythonTLSPort.getHost()[2], OpenSSLClientFactory, ClientContextFactory())
 
-    PythonTLSConn = reactor.connectTCP('127.0.0.1', OpenSSLPort.getHost()[2], PythonTLSClientFactory)
+    # PythonTLSConn = reactor.connectTCP('127.0.0.1', OpenSSLPort.getHost()[2], PythonTLSClientFactory)
 
     reactor.callLater(1, reactor.stop)
     reactor.run()
