@@ -8,6 +8,8 @@ The Matrix
   vocals and guitar
 - Chris "Radix" Armstrong <carmstro@twistedmatrix.com>
   percussion
+- Paul "z3p" Swartz <z3p@twistedmatrix.com>
+  oboe
 - Jürgen "snibril" Hermann <jh@twistedmatrix.com>
   synthesizer
 - Moshe "vertical" Zadka <moshez@twistedmatrix.com>
@@ -17,9 +19,8 @@ The Matrix
 - Travis B. "Nafai" Hartwell <slt5v@cc.usu.edu>
   keyboards
 
-Others
+Extras
 
 - Jerry Hebert <jerry@cynics.org>
-  Added HTTP/0.9 support to twisted.web.
 - Nick Moffit <nick@zork.org>
-  constructive criticism and feedback on twisted.reality.
+- Jeremy Fincher

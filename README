@@ -13,6 +13,8 @@ What's new in 0.9.3?
   twisted.internet.tkinternet, mainloop support for tkinter (and tkfaucet
   sample application)
 
+  twisted.protocols.toc, client and server support for AOL's TOC protocol.
+
 What is this?
 
   Twisted is an event-based framework for internet applications.  It includes a
