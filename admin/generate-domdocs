@@ -28,7 +28,9 @@ sys.path.append('.')
 ### end of preamble
 
 
-import sys, os, re
+import re
+import cStringIO
+import py2html, PyFontify
 from pprint import pprint
 from twisted import copyright
 from twisted.python import usage
@@ -94,33 +96,59 @@ class Cache:
         if not '.' in name:
             raise ValueError("Gimme more than just *%s* to work with, will ya?!?" % name)
         name = '.*' + name.replace('.', '[\._]') + "$"
-        #print "trying", name
         pat = re.compile(name)
         for k,v in self.stuff.items():
             if pat.match(k):
                 return v
-                print "%s matches %s! URL: %s" % (name, k, v)
 
-
-
+def writeNodeData(node, oldio):
+    for subnode in node.childNodes:
+        if hasattr(subnode, 'data'):
+            oldio.write(str(subnode.data))
+        else:
+            writeNodeData(subnode, oldio)
+cols = 79
 class Walker:
     def __init__(self, templ, cache, ext):
         self.templ = templ
         self.cache = cache
         self.ext = ext
+        self.walked = []
+
+    def walkdir(self, topdir):
+        os.path.walk(topdir, self.walk, None)
+        self.walkAround()
+
 
     def walk(self, ig, d, names):
         linkrel = '../' * (d.count('/')-1)
-        print d, "linkrel is", linkrel
         for name in names:
             fullpath = os.path.join(d, name)
             fname, fext = os.path.splitext(fullpath)
-            print fname
             if fext == '.html':
-                document = dom.parse(open(fullpath))
-                template = self.templ.cloneNode(1)
-                self.munge(document, template, linkrel)
-                template.writexml(open(fname+self.ext, 'wb'))
+                self.walked.append((linkrel, fname, fullpath))
+                
+    def walkAround(self):
+        i = 0
+        for linkrel, fname, fullpath in self.walked:
+            i += 1
+            self.percentdone((float(i) / len(self.walked)), fname)
+            document = dom.parse(open(fullpath))
+            template = self.templ.cloneNode(1)
+            self.munge(document, template, linkrel)
+            template.writexml(open(fname+self.ext, 'wb'))
+        self.percentdone(1., "*Done*")
+    def percentdone(self, percent, fname):
+        # override for neater progress bars
+        proglen = 40
+        hashes = int(percent * proglen)
+        spaces = proglen - hashes
+        progstat = "[%s%s] (%s)" %('#' * hashes, ' ' * spaces,fname)
+        progstat += (cols - len(progstat)) * ' '
+        progstat += '\r'
+        sys.stdout.write(progstat)
+        sys.stdout.flush()
+
 
 
     def munge(self, document, template, linkrel):
@@ -134,6 +162,7 @@ class Walker:
                 if len(fname) == 2 and fname[1] == 'html':
                     # print 'rel link', href
                     node.setAttribute("href", fname[0] + self.ext)
+        # API references
         for node in findElementsWithAttribute(document, "class", "API"):
             if len(node.childNodes) > 1:
                 print 'There are too many child nodes of this API link.'
@@ -143,7 +172,28 @@ class Walker:
                 node2.setAttribute("href", newref)
                 node2.childNodes = node.childNodes
                 node.childNodes = [node2]
-                print 'api:', newref
+        for node in findElementsWithAttribute(document, "class", "python"):
+            if node.tagName == 'pre':
+                ppr = py2html.PrettyPrint(PyFontify.fontify,
+                                          "rawhtml", "color")
+
+                newio = cStringIO.StringIO()
+                # write the python code to a buffer
+                oldio = cStringIO.StringIO()
+                writeNodeData(node, oldio)
+                oiv = oldio.getvalue()
+                oivs = oiv.strip() + '\n'
+                oldio = cStringIO.StringIO()
+                oldio.write(oivs)
+                oldio.seek(0)
+                ppr.file_filter(oldio, newio)
+                newio.seek(0)
+                open('INVESTIGATE.txt', 'wb').write(newio.getvalue())
+                newdom = dom.parse(newio)
+                newel = newdom.documentElement
+                newel.setAttribute("class", "python")
+                node.parentNode.replaceChild(newel, node)
+        # the title
         findNodesNamed(template, "title")[0].childNodes.extend(
             findNodesNamed(document, 'title')[0].childNodes)
         body = findNodesNamed(document, "body")[0]
@@ -170,7 +220,9 @@ def main():
         ext = opt['ext']
     templ = dom.parse(open(opt['template']))
     c = Cache(opt['apidir'], 'http://twistedmatrix.com/documents/TwistedDocs/Twisted-%s/' % opt['version'])
-    os.path.walk(opt['docsdir'], Walker(templ, c, ext).walk, None)
+    w = Walker(templ, c, ext)
+    w.walkdir(opt['docsdir'])
+    print
 
 if __name__=='__main__':
     main()

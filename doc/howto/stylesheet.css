@@ -11,7 +11,7 @@ BODY
 
 PRE
 {
-  padding: 5px;
+  padding: 1em;
   font-family: Neep Alt, Courier New, Courier;
   font-size: 12pt;
   border: thin black solid;
@@ -33,6 +33,32 @@ PRE
   background-color: #ddddff;
 }
 
+.py-src-comment
+{
+  color: #1111CC
+}
+
+.py-src-keyword
+{
+  color: #3333CC;
+  font-weight: bold;
+}
+
+.py-src-parameter
+{
+  color: #000066;
+  font-weight: bold;
+}
+
+.py-src-identifier
+{
+  color: #CC0000
+}
+
+.py-src-string
+{
+  color: #115511
+}
 
 HR
 {
