@@ -67,21 +67,6 @@ class SimpleTemplate(template.DOMTemplate):
     def factory_getHello(self, request, node):
         return "Hello"
 
-class DOMHelpersTest(unittest.TestCase):
-    def testMicrodom(self):
-        d = microdom.parseString("<x id='hello' />")
-        helloNode = d.getElementById("hello")
-        self.failUnlessEqual(helloNode, d.documentElement)
-
-    def testDoctype(self):
-        d = microdom.parseString('''<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<dummy/>
-''')
-        d2 = microdom.parseString(d.toxml())
-        assert d.doctype, "Doctype not set!"
-        assert d.doctype == d2.doctype, "Doctypes not equal"
-
 
 class DOMTemplateTest(WovenTC):
     resourceFactory = SimpleTemplate
