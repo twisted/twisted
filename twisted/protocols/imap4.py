@@ -1565,8 +1565,12 @@ class IMAP4Client(basic.LineReceiver):
             self._parts.append(rest.read())
             self.setLineMode(passon.lstrip('\r\n'))
 
+#    def sendLine(self, line):
+#        print 'S:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
+
     def lineReceived(self, line):
-        # print 'C: ' + line
+#        print 'C: ' + repr(line)
         if self._parts is None:
             lastPart = line.rfind(' ')
             if lastPart != -1:
@@ -1654,6 +1658,8 @@ class IMAP4Client(basic.LineReceiver):
                 # XXX - This is rude.
                 self.transport.loseConnection()
                 raise IllegalServerResponse(tag + ' ' + rest)
+            
+            self.serverGreeting(self.__cbCapabilities((rest, None)))
         else:
             self._defaultHandler(tag, rest)
 
@@ -1877,6 +1883,9 @@ class IMAP4Client(basic.LineReceiver):
             callbackArgs=(username, password),
         )
         return d
+
+    def serverGreeting(self, caps):
+        pass
 
     def _getContextFactory(self):
         if self.context is not None:
