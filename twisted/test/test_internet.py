@@ -3,7 +3,7 @@
 
 
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol, error, app, abstract
+from twisted.internet import reactor, protocol, error, app, abstract, interfaces
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
 from twisted.python import util, threadable, log
 threadable.init(1)
@@ -596,23 +596,22 @@ class TestProducer(unittest.TestCase):
         self.assertEquals(dp.stopped, 1)
 
 class PortStringification(unittest.TestCase):
-    def testTCP(self):
-        p = reactor.listenTCP(0, protocol.ServerFactory())
-        portNo = p.getHost().port
-        self.assertNotEqual(str(p).find(str(portNo)), -1,
-                            "%d not found in %s" % (portNo, p))
+    if interfaces.IReactorTCP(reactor, None) is not None:
+        def testTCP(self):
+            p = reactor.listenTCP(0, protocol.ServerFactory())
+            portNo = p.getHost().port
+            self.assertNotEqual(str(p).find(str(portNo)), -1,
+                                "%d not found in %s" % (portNo, p))
 
-    def testUDP(self):
-        p = reactor.listenUDP(0, protocol.DatagramProtocol())
-        portNo = p.getHost().port
-        self.assertNotEqual(str(p).find(str(portNo)), -1,
-                            "%d not found in %s" % (portNo, p))
+    if interfaces.IReactorUDP(reactor, None) is not None:
+        def testUDP(self):
+            p = reactor.listenUDP(0, protocol.DatagramProtocol())
+            portNo = p.getHost().port
+            self.assertNotEqual(str(p).find(str(portNo)), -1,
+                                "%d not found in %s" % (portNo, p))
 
-    try:
+    if interfaces.IReactorSSL(reactor, None) is not None:
         from twisted.internet import ssl
-    except ImportError:
-        pass
-    else:
         def testSSL(self, ssl=ssl):
             pem = util.sibpath(__file__, 'server.pem')
             p = reactor.listenSSL(0, protocol.ServerFactory(), ssl.DefaultOpenSSLContextFactory(pem, pem))
