@@ -27,7 +27,7 @@ from cPickle import load, loads
 from cStringIO import StringIO
 import traceback
 import imp
-import sys, os
+import sys, os, errno
 
 reactorTypes = {
     'gtk': 'twisted.internet.gtkreactor',
@@ -257,7 +257,6 @@ def runApp(config):
         try:
             os.kill(pid, 0)
         except OSError, why:
-            import errno
             if why[0] == errno.ESRCH:
                 # The pid doesnt exists.
                 if not config['quiet']:
@@ -352,7 +351,6 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
             try:
                 os.close(i)
             except OSError, e:
-                import errno
                 if e.errno != errno.EBADF:
                     raise
 
