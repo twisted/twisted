@@ -3337,3 +3337,11 @@ __get__ in python combined with the appropriate metaclass
 <radix> i want to make sweet love to twisted.python.components
 <ameoba> radix : it probably wouldn't be hard to whip up an adapter +)
 %
+<trawa_@ircnet> im trying to get started with web services, but i need
+       some software - i think i read all of ibm's articles on that, read
+       about 4suite - does anyone know of sth litghter, smaller in size and
+       easier to absorb?
+<dash> trawa: hmm. what do you mean by "get started with web services"? :)
+<trawa_@ircnet> well im trying to port my html application to flash mx
+       but dont fell like using cold fusion..
+%
