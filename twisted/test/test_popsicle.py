@@ -16,6 +16,7 @@
 #
 
 from twisted.trial import unittest
+from twisted.python.runtime import platformType
 from twisted.popsicle import mailsicle, freezer
 import gc, shutil
 
@@ -191,3 +192,6 @@ class MailsicleTest(unittest.TestCase):
         ms.queryIndex("person-name","joe").fetch().addCallback(zz.extend)
         self.assertEquals(yy,[])
         self.assertEquals(len(zz),1)
+
+if platformType != "posix":
+    PicklesicleTest.skip = MailsicleTest.skip = "only works on UNIX"
