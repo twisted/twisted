@@ -21,7 +21,7 @@ I am the support module for making a port forwarder with mktap.
 
 from twisted.protocols import portforward
 from twisted.python import usage
-import sys
+from twisted.application import internet
 
 
 class Options(usage.Options):
@@ -33,6 +33,7 @@ class Options(usage.Options):
 
     longdesc = 'Port Forwarder.'
 
-def updateApplication(app, config):
-    s = portforward.ProxyFactory(config['host'], int(config['dest_port']))
-    app.listenTCP(int(config['port']), s)
+def makeService(config):
+    port, host, dest_port = (int(config['port']), config['host'],
+                                                  int(config['dest_port']))
+    return internet.TCPServer(port, portforward.ProxyFactory(host, dest_port))
