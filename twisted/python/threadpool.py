@@ -50,15 +50,13 @@ class ThreadPool:
     __inited = 0
     min = 5
     max = 20
-    qlen = 0
     joined = 0
     started = 0
     workers = 0
     
-    def __init__(self, minthreads=5, maxthreads=20, qlen=100):
+    def __init__(self, minthreads=5, maxthreads=20):
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
-        self.q = Queue.Queue(qlen)
-        self.qlen = qlen
+        self.q = Queue.Queue(0)
         self.min = minthreads
         self.max = maxthreads
         self.waiters = []
@@ -76,16 +74,12 @@ class ThreadPool:
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self.q = Queue.Queue(self.qlen)
+        ThreadPool.__init__(self, self.min, self.max)
 
     def __getstate__(self):
         state = {}
         state['min'] = self.min
         state['max'] = self.max
-        state['qlen'] = self.qlen
-        state['threads'] = []
-        state['waiters'] = []
-        state['working'] = {}
         return state
     
     def _startSomeWorkers(self):
