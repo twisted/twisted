@@ -19,7 +19,6 @@ def setup(**kw):
         twistedpath = os.path.normpath(os.path.join(tsp, '..', '..'))
         
         kw['packages'] = getPackages(tsp, parent='twisted')
-        print "PACKAGES OF", tsp, kw['packages']
         kw['data_files'] = getDataFiles(tsp, parent=twistedpath)
         del kw['twisted_subproject']
         
