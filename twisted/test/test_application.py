@@ -97,6 +97,19 @@ class TestService(unittest.TestCase):
         self.assert_(not s.running)
         self.assert_(not p.running)
 
+    def testRunningChildren(self):
+        s = service.Service()
+        def checkRunning():
+            self.assert_(s.running)
+        t = service.Service()
+        t.stopService = checkRunning
+        t.startService = checkRunning
+        p = service.MultiService()
+        s.setServiceParent(p)
+        t.setServiceParent(p)
+        p.startService()
+        p.stopService()
+
     def testAddingIntoRunning(self):
         p = service.MultiService()
         p.startService()

@@ -195,7 +195,9 @@ class MultiService(Service):
     def stopService(self):
         Service.stopService(self)
         l = []
-        for service in self:
+        services = list(self)
+        services.reverse()
+        for service in services:
             l.append(defer.maybeDeferred(service.stopService))
         return defer.DeferredList(l)
 
