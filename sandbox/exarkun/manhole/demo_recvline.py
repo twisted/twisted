@@ -7,15 +7,17 @@ from twisted.application import service
 application = service.Application("Insults RecvLine Demo")
 
 class DemoRecvLineHandler(recvline.HistoricRecvLineHandler):
-    def initializeScreen(self):
-        self.proto.setMode([insults.SCROLL])
-        self.proto.setScrollRegion(self.height - 5, self.height)
-        recvline.HistoricRecvLineHandler.initializeScreen(self)
+
+    def promptLocation(self):
+        return 0, self.height - 1
 
     def lineReceived(self, line):
-        self.proto.write(line)
-        self.proto.cursorPosition(0, self.height - 1)
-        self.proto.index()
+        x, y = self.promptLocation()
+        for n, line in enumerate(self.historyLines[:-5:-1]):
+            self.proto.cursorPosition(x, y - n - 1)
+            self.proto.eraseLine()
+            self.proto.write(line)
+        self.proto.cursorPosition(x, y)
 
 from demolib import makeService
 makeService({'handler': DemoRecvLineHandler,

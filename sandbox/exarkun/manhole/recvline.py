@@ -23,8 +23,8 @@ class RecvLineHandler:
             proto.RIGHT_ARROW: self.handle_RIGHT,
             '\r': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
-            '\x04': self.handle_DELETE,
             proto.DELETE: self.handle_DELETE,
+            proto.INSERT: self.handle_INSERT,
             proto.HOME: self.handle_HOME,
             proto.END: self.handle_END}
 
@@ -34,8 +34,11 @@ class RecvLineHandler:
         # Hmm, state sucks.  Oh well.
         # For now we will just take over the whole terminal.
         self.proto.eraseDisplay()
-        self.proto.cursorPosition(0, self.height - 1)
+        self.proto.cursorPosition(*self.promptLocation())
         self.setInsertMode()
+
+    def promptLocation(self):
+        return 0, self.height - 1
 
     def setInsertMode(self):
         self.mode = 'insert'
@@ -49,7 +52,7 @@ class RecvLineHandler:
         # XXX - Clear the previous input line, redraw it at the new cursor position
         self.width = width
         self.height = height
-        self.proto.cursorPosition(0, self.height - 1)
+        self.proto.cursorPosition(*self.promptLocation())
 
     def unhandledControlSequence(self, seq):
         print "Don't know about", repr(seq)
@@ -86,11 +89,12 @@ class RecvLineHandler:
 
     def handle_HOME(self):
         self.lineBufferIndex = 0
-        self.proto.cursorPosition(0, self.height - 1)
+        self.proto.cursorPosition(*self.promptLocation())
 
     def handle_END(self):
         self.lineBufferIndex = len(self.lineBuffer)
-        self.proto.cursorPosition(self.lineBufferIndex, self.height - 1)
+        x, y = self.promptLocation()
+        self.proto.cursorPosition(x + self.lineBufferIndex, y)
 
     def handle_BACKSPACE(self):
         if self.lineBufferIndex > 0:
@@ -109,9 +113,15 @@ class RecvLineHandler:
         self.lineBuffer = []
         self.lineBufferIndex = 0
         self.proto.eraseLine()
-        self.proto.cursorPosition(0, self.height - 1)
+        self.proto.cursorPosition(*self.promptLocation())
 
         self.lineReceived(line)
+
+    def handle_INSERT(self):
+        if self.mode == 'typeover':
+            self.setInsertMode()
+        else:
+            self.setTypeoverMode()
 
     def lineReceived(self, line):
         pass
@@ -133,7 +143,7 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.historyPosition -= 1
             self.lineBuffer = list(self.historyLines[self.historyPosition])
             self.proto.eraseLine()
-            self.proto.cursorPosition(0, self.height - 1)
+            self.proto.cursorPosition(*self.promptLocation())
             self.proto.write(''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
 
@@ -142,14 +152,14 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.historyPosition += 1
             self.lineBuffer = list(self.historyLines[self.historyPosition])
             self.proto.eraseLine()
-            self.proto.cursorPosition(0, self.height - 1)
+            self.proto.cursorPosition(*self.promptLocation())
             self.proto.write(''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
         else:
             self.historyPosition = len(self.historyLines)
             self.lineBuffer = []
             self.proto.eraseLine()
-            self.proto.cursorPosition(0, self.height - 1)
+            self.proto.cursorPosition(*self.promptLocation())
             self.lineBufferIndex = 0
 
     def handle_RETURN(self):
