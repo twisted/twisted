@@ -190,7 +190,8 @@ to our servers (the protocol <code class="API"
 base="twisted.internet.protocol">Factory</code> instances and everything
 hanging off of them). We start by gaining access to the main <code
 class="API" base="twisted.internet.app">Application</code> instance through
-a global variable stored in the <code>app</code> module:</p>
+a global variable stored in the <code>app</code> module (assuming we
+ran using an Application and not the reactor directly):</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; import twisted.internet.app         
@@ -199,12 +200,11 @@ a global variable stored in the <code>app</code> module:</p>
 &lt;'demo' app&gt;
 </pre>
 
-<p>This object holds three things of interest: the list of Delayeds
-(functions scheduled to run some number of seconds in the future), the list
+<p>This object holds a number of things of interest: the list
 of Services (subclasses of ApplicationService that have been added to the
 application, most notably Perspective Broker services), and the list of
 ports on which protocol Factories are listening. The ports are kept in a
-list, and the Factory object itself is available inside that list (word
+number of lists, and the Factory object itself is available inside those lists (word
 wrapped for clarity):</p>
 
 <pre class="python-interpreter">
