@@ -367,7 +367,7 @@ class Process(abstract.FileDescriptor):
         self.reactor.removeEvent(self.hProcess)
         abstract.FileDescriptor.connectionLost(self, reason)
         if exitCode == 0:
-            err = error.ProcessDone()
+            err = error.ProcessDone(exitCode)
         else:
             err = error.ProcessTerminated(exitCode)
         self.protocol.processEnded(failure.Failure(err))
