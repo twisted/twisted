@@ -111,3 +111,76 @@ class PersistentFactory:
 #         return Perspective(self.service)
 #
 # Use: Realm(PersistentFactory(AvatarFactory(service)))
+#
+# -------------------------------------------------
+# Example: (based on twisted/wev/woven/simpleguard.py)
+# class MarkingFactory:
+#
+#    __implements__ = IAvatarFactory
+#
+#    def __init__(self, resource, nonauthenticated=None):
+#        self.resource = resource
+#        self.nonauthenticated = (nonauthenticated or
+#                                 MarkAuthenticatedResource(resource, None))
+#
+#    def requestAvatar(self, avatarId):
+#        if avatarId == checkers.ANONYMOUS:
+#            return self.nonauthenticated
+#        else:
+#            return MarkAuthenticatedResource(self.resource, avatarId)
+#
+# Use: Realm(MarkingFactory(resource, nonauthenticated))
+#
+# ----------------------------------------------
+# Example: (based on doc/examples/pbecho.py)
+#
+# class SimpleFactory:
+#    __implements__ = IAvatarFactory
+#
+#    def requestAvatar(self, avatarId):
+#        return SimplePerpsective()
+#
+# Use: Realm(SimpleFactory())
+#
+# ------------------------------------------------
+# Example: (based on doc/examples/sshsimpleserver.py)
+# 
+# class SSHFactory:
+#    __implements__ = IAvatarFactory
+#    requestAvatar = SSHAvatar
+#
+# Use: Realm(SSHFactory())
+#
+# ------------------------------------------------
+# Example: (based on doc/examples/pbbenchserver.py)
+# class _PBBenchAdapter(components.Adapter):
+#     __implements__ = IAvatar
+#     def connect(self):
+#         self.original.printCallsPerSec()
+#     def logout(self): pass
+# components.registerAdapter(_PBBenchAdapter, PBBenchPerspective, IAvatar)
+#
+# class SimpleFactory:
+#     __implements__ = IAvatarFactory
+#
+#    def requestAvatar(self, avatarId):
+#        return PBBenchPerspective()
+#
+# Use: Realm(SimpleFactory())
+#
+# ------------------------------------------------
+# Example: (based on twisted/mail/maildir.py)
+#
+# class MaildirAvatars(components.Adapter):
+#     __implements__ = IAvatarFactory
+#
+#    def requestAvatar(self, avatarId):
+#         if avatarId == cred.checkers.ANONYMOUS:
+#             return StringListMailbox([INTERNAL_ERROR])
+#         else:
+#             return MaildirMailbox(os.path.join(self.original.root, avatarId))
+# components.registerAdapter(MaildirAvatars, MaildirDirdbmDomain,
+#                                            IAvatarFactory)
+#
+# Use: Realm(IAvatarFactory(MaildirDirdbmDomain(service, root, postmaster))
+# Discussion: should Realm cast to IAvatarFactory?
