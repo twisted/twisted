@@ -39,55 +39,89 @@ class Options(usage.Options):
     optParameters = [['source', 's', 'Twisted', "The directory of the Twisted source to build a release from"],
                      ['version', 'v', None, "The version of this release"],
                      ['release', 'r', os.path.expanduser('~/Releases'), "The directory where your Twisted release archive is"]]
-
-try:
-    opts = Options()
-    opts.parseOptions()
-except usage.UsageError, ue:
-    print "%s: %s" % (sys.argv[0], ue)
-    sys.exit(2)
-
-if not opts.opts['version']:
-    print "Please specify a version."
-    sys.exit(2)
-
-destDir = "Twisted-%s" % opts.opts['version']
-
-if os.path.exists(destDir):
-    print destDir,"exists already!"
-    sys.exit(2)
-
-print "Copying %s to %s..." % (opts.opts['source'], destDir)
-shutil.copytree(opts.opts['source'], destDir)
-#os.chdir(destDir)
-
-print "Stripping *~, *.pyc, *.rpl, *.tap..."
-for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
-    os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
-
-print "Stripping 'CVS' directories..."
-os.system('find %s -name CVS | xargs rm -rf' % destDir)
-#os.chdir('..')
-
-print "Making dist tarball..."
-os.system('tar czf Twisted-%s.tar.gz %s' % (opts.opts['version'], destDir))
-
-print "Making the dist bz2ball"
-os.system('tar cjf Twisted-%s.tar.bz2 %s' % (opts.opts['version'], destDir))
-
-print "Making dist zipfile..."
-os.system('zip -r Twisted-%s.zip %s' % (opts.opts['version'], destDir))
+    optFlags = [['docs', 'd', "Make a Documentation tarball (must have HappyDoc)"],
+                ['onlydocs', 'D', "*ONLY* make the docs (that is, don't generate the regular Twisted distribution)"]]
 
 
-print "Putting it in %s..." % opts.opts['release']
-if not os.path.exists(opts.opts['release']):
-    print "Creating", opts.opts['release']
-    os.mkdir(opts.opts['release'])
+def main():
+    try:
+        opts = Options()
+        opts.parseOptions()
+    except usage.UsageError, ue:
+        print "%s: %s" % (sys.argv[0], ue)
+        sys.exit(2)
 
-if not os.path.exists("%s/old" % opts.opts['release']):
-    print "creating %s/old" % opts.opts['release']
-    os.mkdir("%s/old" % opts.opts['release'])
+    if not opts.opts['version']:
+        print "Please specify a version."
+        sys.exit(2)
+
+    if opts.opts['onlydocs']:
+        makeDocs(opts)
+        return
+
+    makeDist(opts)
+    if opts.opts['docs']:
+        makeDocs(opts)
+
+
+def makeDist(opts):
+    ver = opts.opts['version']
+    rel = opts.opts['release']
+    destDir = "Twisted-%s" % ver
+    source = opts.opts['source']
     
-os.system('mv %s/*.tar.gz %s/*.zip %s/old' % ((opts.opts['release'],)*3))
-shutil.copy('Twisted-%s.tar.gz' % opts.opts['version'], opts.opts['release'])
-shutil.copy('Twisted-%s.zip' % opts.opts['version'], opts.opts['release'])
+    if os.path.exists(destDir):
+        print destDir,"exists already!"
+        sys.exit(2)
+
+    print "Copying %s to %s..." % (source, destDir)
+    shutil.copytree(source, destDir)
+    #os.chdir(destDir)
+
+    print "Stripping *~, *.pyc, *.rpl, *.tap..."
+    for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
+        os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
+
+    print "Stripping 'CVS' directories..."
+    os.system('find %s -name CVS | xargs rm -rf' % destDir)
+    #os.chdir('..')
+
+    print "Making dist tarball..."
+    os.system('tar czf Twisted-%s.tar.gz %s' % (ver, destDir))
+
+    print "Making the dist bz2ball"
+    os.system('tar cjf Twisted-%s.tar.bz2 %s' % (ver, destDir))
+
+    print "Making dist zipfile..."
+    os.system('zip -r Twisted-%s.zip %s' % (ver, destDir))
+
+
+    print "Putting it in %s..." % rel
+    if not os.path.exists(rel):
+        print "Creating", rel
+        os.mkdir(rel)
+
+    if not os.path.exists("%s/old" % rel):
+        print "creating %s/old" % rel
+        os.mkdir("%s/old" % rel)
+
+    os.system('mv %s/*.tar.gz %s/*.zip %s/old' % ((rel,)*3))
+    shutil.copy('Twisted-%s.tar.gz' % ver, rel)
+    shutil.copy('Twisted-%s.zip' % ver, rel)
+
+def makeDocs(opts):
+    print "Making Docs!"
+    ver = opts.opts['version']
+    rel = opts.opts['release']
+    if not os.path.exists('Twisted-%s' % ver):
+        print "Twisted-%s doesn't exist!" % ver
+        sys.exit(2)
+    os.system('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" --no_comments -t "Twisted Documentation" Twisted-%s' % ver)
+    os.system('mv doc TwistedDocs-%s' % ver)
+    os.system('tar czf TwistedDocs-%s.tar.gz TwistedDocs-%s' % ((ver,)*2))
+    os.system('zip -r TwistedDocs-%s.zip TwistedDocs-%s' % ((ver,)*2))
+    shutil.copy('TwistedDocs-%s.tar.gz' % ver, rel)
+    shutil.copy('TwistedDocs-%s.zip' % ver, rel)
+
+if __name__=='__main__':
+    main()
