@@ -1,10 +1,10 @@
 /* cBanana.c */
 
 #ifdef WIN32
-#include <windows.h>
-#define EXTERN_API __declspec(dllexport)
+#	include <windows.h>
+#	define EXTERN_API __declspec(dllexport)
 #else
-#define EXTERN_API
+#	define EXTERN_API
 #endif
 
 #include <Python.h>
@@ -137,7 +137,7 @@ cBananaBuf_new(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, ":newState")){
     return NULL;
   }
-  buf = PyObject_NEW(cBananaBuf, &cBananaBufType);
+  buf = PyObject_New(cBananaBuf, &cBananaBufType);
   buf->contents = malloc(INITIAL_BUF_SZ);
   buf->size = INITIAL_BUF_SZ;
   buf->available = INITIAL_BUF_SZ;
@@ -186,12 +186,12 @@ cBananaBuf_write(PyObject *self, PyObject *args) {
   char* src;
   int len;
   me = (cBananaBuf*) self;
-  if (PyArg_ParseTuple(args, "s#:write", &src, &len)) {
-    cBananaBuf_write_internal(me, src, len);
-    Py_INCREF(Py_None);
-    return Py_None;
+  if (!PyArg_ParseTuple(args, "s#:write", &src, &len)) {
+    return NULL;
   }
-  return NULL;
+  cBananaBuf_write_internal(me, src, len);
+  Py_INCREF(Py_None);
+  return Py_None;
 }
 
 
@@ -203,12 +203,12 @@ extern EXTERN_API PyObject*
 cBananaBuf_clear(PyObject *self, PyObject *args) {
   cBananaBuf* me;
   me = (cBananaBuf*) self;
-  if (PyArg_ParseTuple(args, ":clear")) {
-    cBananaBuf_clear_internal(me);
-    Py_INCREF(Py_None);
-    return Py_None;
+  if (!PyArg_ParseTuple(args, ":clear")) {
+    return NULL;
   }
-  return NULL;
+  cBananaBuf_clear_internal(me);
+  Py_INCREF(Py_None);
+  return Py_None;
 }
 
 extern EXTERN_API PyObject*
@@ -228,7 +228,7 @@ cBananaState_new(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, ":newState")){
     return NULL;
   }
-  state = PyObject_NEW(cBananaState, &cBananaStateType);
+  state = PyObject_New(cBananaState, &cBananaStateType);
   state->currentList = NULL;
   return (PyObject*) state;
 }
@@ -344,19 +344,19 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
       cBananaBuf_write_internal(writeobj, &singleByte, 1);
     }
   } else if (PyLong_Check(encodeobj)) {
-    /*PyErr_SetString(BananaError,
-		    "Longs not yet supported.");
-		    return NULL; */
+    PyObject* result;
     PyObject* argtup;
     argtup = PyTuple_New(2);
     Py_INCREF(encodeobj);
     PyTuple_SetItem(argtup, 0, encodeobj);
-    Py_INCREF(writeobj);
+    /* Py_INCREF(writeobj); */
     PyTuple_SetItem(argtup, 1, PyObject_GetAttrString((PyObject*) writeobj, "write"));
-    if (!PyObject_CallObject(PyObject_GetAttrString(cBanana_module, "pyint2b128"), argtup)) {
+    result = PyObject_CallObject(PyObject_GetAttrString(cBanana_module, "pyint2b128"), argtup);
+    Py_DECREF(argtup);
+    if (!result) {
       return NULL;
     }
-    Py_DECREF(argtup);
+    Py_DECREF(result);
     singleByte = LONGINT;
     cBananaBuf_write_internal(writeobj, &singleByte, 1);
   } else if (PyFloat_Check(encodeobj)) {
@@ -479,27 +479,29 @@ long long b1282int(unsigned char *str, int begin, int end) {
 
 /**************
  ** invokes the python callback if required
+ ** Arguments:
+ ** "object" argument must be a new reference -- I steal a reference to it.
  **************/
+
 int gotPythonItem(PyObject *object, struct listItem *currentList, PyObject *expressionReceived)
 {
-  PyObject *result;
-  PyObject *args;
-
   if (currentList) {
     PyList_Append(currentList->thisList, object);
+    Py_DECREF(object);
     return 1;
   }
   else {
-    args = PyTuple_New(1);
-    if (PyTuple_SetItem(args, 0, object) != 0) {
-      return 0;
-    }
+    PyObject *result;
+    PyObject *args;
 
+    args = PyTuple_New(1);
+    PyTuple_SetItem(args, 0, object);
     result = PyObject_CallObject(expressionReceived, args);
-    if (!result) {
-      return 0;
+    if (result) {
+      Py_DECREF(result);
     }
-    return 1;
+    Py_DECREF(args);
+    return (int) result;
   }
 }
 
@@ -535,11 +537,8 @@ int gotItemLong(long long value, struct listItem *currentList, PyObject *express
 **************/
 int gotItemString(const char *value, int len, struct listItem *currentList, PyObject *expressionReceived)
 {
-  char* myValue;
   PyObject *object;
-  myValue = malloc(len);
-  memcpy(myValue, value, len);
-  object = PyString_FromStringAndSize(myValue, len);
+  object = PyString_FromStringAndSize(value, len);
   return gotPythonItem(object, currentList, expressionReceived);
 }
 
@@ -570,12 +569,13 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
   PyObject *stateobj;             // state object
   cBananaState *state;            // state
   unsigned char *buffer;          // buffer to work from
+  char **bufptr;                  // for python funcs that want *buffer
   int bufferSize;                 // size of the remaining portion
   int pos;
   int nBeginPos;
   int nEndPos;
   unsigned char typeByte;
-
+  bufptr = (char**) &buffer;
 
   if( !PyArg_ParseTuple( args, "OOO", &stateobj, &newChunk, &expressionReceived) )
     return NULL;
@@ -597,10 +597,10 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     Py_INCREF(Py_None);
     return Py_None;
   }
+
   state = (cBananaState*) stateobj;
 
-  buffer = PyString_AS_STRING(newChunk);
-  bufferSize = PyString_GET_SIZE(newChunk);
+  PyString_AsStringAndSize(newChunk, bufptr, &bufferSize);
 
   pos = 0;
   while (pos < bufferSize) {
@@ -611,9 +611,9 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       pos++;
       if ((pos-nBeginPos) > 64) {
         //ERROR: "Security precaution: more than 64 bytes of prefix"
-        printf("Security precaution: more than 64 bytes of prefix (this should raise an exception).\n");
-        Py_INCREF(Py_None);
-        return Py_None;
+        PyErr_SetString(PyExc_SystemError,
+			"Security precaution: more than 64 bytes of prefix (this should raise an exception).\n");
+        return NULL;
       } else if (pos == bufferSize) {
         /* boundary condition -- not enough bytes to finish the number */
         return PyInt_FromLong(nBeginPos);
@@ -659,31 +659,39 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     case LONGINT: {
       PyObject* argtup;
       PyObject* rval;
+      PyObject* pyb1282int;
       
       argtup = PyTuple_New(1);
       PyTuple_SetItem(argtup, 0,
 		      PyString_FromStringAndSize(buffer + nBeginPos,
 						 nEndPos - nBeginPos));
-      rval = PyObject_CallObject(PyObject_GetAttrString(cBanana_module, "pyb1282int"), argtup);
-
-      if (!rval) {
-	return NULL;
-      }
+      pyb1282int = PyObject_GetAttrString(cBanana_module, "pyb1282int");
+      if (!pyb1282int) { return NULL; }
+      rval = PyObject_CallObject(pyb1282int, argtup);
+      Py_DECREF(argtup);
+      Py_DECREF(pyb1282int);
+      if (!rval) { return NULL; }
       if (!gotPythonItem(rval, state->currentList, expressionReceived)) {
 	return NULL;
       }
+      
     }
       break;
     case LONGNEG: {
       PyObject* argtup;
       PyObject* rval;
       PyObject* negval;
+      PyObject* pyb1282int;
 
       argtup = PyTuple_New(1);
       PyTuple_SetItem(argtup, 0,
 		      PyString_FromStringAndSize(buffer + nBeginPos,
 						 nEndPos - nBeginPos));
-      rval = PyObject_CallObject(PyObject_GetAttrString(cBanana_module, "pyb1282int"), argtup);
+      pyb1282int = PyObject_GetAttrString(cBanana_module, "pyb1282int");
+      if (!pyb1282int) { return NULL; }
+      rval = PyObject_CallObject(pyb1282int, argtup);
+      Py_DECREF(argtup);
+      Py_DECREF(pyb1282int);
       if (!rval) {
 	return NULL;
       }
@@ -699,7 +707,6 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       break;
     case STRING: {
       int len = b1282int(buffer, nBeginPos, nEndPos);
-      /* printf("String length: %d\n", len); */
       if (len > 640 * 1024) {
         PyErr_SetString(BananaError, "Security precaution: Length identifier  > 640K.\n");
         return NULL;
