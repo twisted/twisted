@@ -350,12 +350,12 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
         self.assertEquals(util.wait(d), True)
 
-    def testSuperfluousDisableRequestRaise(self):
+    def testSuperfluousDisableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
         d = self.p.requestDisable('\xab')
         self.assertRaises(telnet.AlreadyDisabled, util.wait, d)
 
-    def testSuperfluousEnableRequestRaise(self):
+    def testSuperfluousEnableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
         s = self.p.getOptionState('\xab')
         s.state = 'yes'
