@@ -119,14 +119,14 @@ class ResolverBase:
 #                add.extend(res[1][2])
 #        return ans, auth, add
 
-    def getHostByName(self, name, timeout = 10):
+    def getHostByName(self, name, timeout = 10, effort = 10):
         # XXX - respect timeout
         return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout).addCallback(
-            self._cbRecords, name
+            self._cbRecords, name, effort
         )
 
-    def _cbRecords(self, (ans, auth, add), name):
-        result = extractRecord(self, dns.Name(name), ans + auth + add)
+    def _cbRecords(self, (ans, auth, add), name, effort):
+        result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
             raise error.DNSLookupError(name)
         return result
@@ -149,7 +149,7 @@ if hasattr(socket, 'inet_ntop'):
             if r.name == name and r.type == dns.CNAME:
                 result = extractRecord(resolver, r.payload.name, answers, level - 1)
                 if not result:
-                    return resolver.getHostByName(str(r.payload.name))
+                    return resolver.getHostByName(str(r.payload.name), effort=level-1)
                 return result
         
 else:
@@ -163,9 +163,9 @@ else:
             if r.name == name and r.type == dns.CNAME:
                 result = extractRecord(resolver, r.payload.name, answers, level - 1)
                 if not result:
-                    return resolver.getHostByName(str(r.payload.name))
+                    return resolver.getHostByName(str(r.payload.name), effort=level-1)
                 return result
-        
+
 typeToMethod = {
     dns.A:     'lookupAddress',
     dns.AAAA:  'lookupIPV6Address',
