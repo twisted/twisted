@@ -33,7 +33,7 @@ threadable.requireInit()
 
 # Sibling Imports
 
-import task, tcp, passport
+import task, tcp, passport, threadtask
 
 class Application(log.Logger):
     running = 0
@@ -174,6 +174,8 @@ reads = {}
 writes = {}
 running = None
 delayeds = [task.theScheduler]
+if threadable.threaded:
+    delayeds.append(threadtask.theScheduler)
 shutdowns = []
 
 def shutDown(a=None, b=None):
