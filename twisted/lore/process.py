@@ -74,6 +74,10 @@ class PlainReportingWalker(Walker):
         if fname:
             print fname
 
+class NullReportingWalker(Walker):
+
+    def percentdone(self, percent, fname):
+        pass
 
 def getProcessor(module, output, d):
     try:

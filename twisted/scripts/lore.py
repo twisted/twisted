@@ -19,7 +19,8 @@ from twisted.python import usage, plugin
 
 class Options(usage.Options):
 
-    optFlags = [["plain", 'p', "Report filenames without progress bar"]]
+    optFlags = [["plain", 'p', "Report filenames without progress bar"],
+                ["null", 'n', "Do not report filenames"]]
 
     optParameters = [
                      ["input", "i", 'lore'],
@@ -69,6 +70,8 @@ def run():
     klass = process.Walker
     if opt['plain']: 
         klass = process.PlainReportingWalker
+    if opt['null']: 
+        klass = process.NullReportingWalker
     w = klass(df, '.html', opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
