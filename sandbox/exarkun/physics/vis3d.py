@@ -71,8 +71,9 @@ class Body(soya.World):
         self.volume = volume
 
     def begin_round(self):
-        self.set_xyz(*[p / 10000000000000.0 for p in self.body.position])
-        print self.position()
+        x, y, z = self.body.position
+        f = 10000000000000.0
+        self.set_xyz(x / f, y / f, z / f)
         soya.World.begin_round(self)
 
 def main():
@@ -84,25 +85,14 @@ def main():
     level = Level(scene)
 
     light = soya.Light(scene)
-    light.set_xyz(0, 105, 0)
+    light.set_xyz(0, 115, 0)
 
     camera = soya.Camera(scene)
     control = Controller()
     system = System(control, level, s)
 
-    camera.fov = 180
-
-    camera.front = -100
-    camera.back = 100
-
-    camera.left = 100
-    camera.right = -100
-
-    camera.top = 100
-    camera.bottom = -100
-
     camera.set_xyz(0, 102, 0)
-    camera.look_at(soya.Point(scene, 0, 99, 0))
+    camera.look_at(soya.Point(scene, 0, 101, 0))
 
     soya.set_root_widget(soya.widget.Group())
     soya.root_widget.add(camera)
