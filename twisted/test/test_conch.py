@@ -22,7 +22,7 @@ from twisted.conch.ssh import keys, transport, factory, userauth, connection, co
 from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
 from twisted.internet import reactor, defer, protocol, error
-from twisted.python import log, failure, platform
+from twisted.python import log, failure, runtime
 from twisted.trial import unittest
 from Crypto.PublicKey import RSA, DSA
 
@@ -953,7 +953,7 @@ class SSHTransportTestCase(unittest.TestCase):
         """test the Conch server against the cmdline
         client
         """
-        if platform.getType() == 'win32':
+        if runtime.platformType == 'win32':
             raise unittest.SkipTest, "can't run cmdline client on win32"
         cmd = ('conch -p %i -l testuser '
                '--known-hosts ./kh_test '
