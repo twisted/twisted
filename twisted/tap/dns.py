@@ -27,6 +27,11 @@ from twisted.protocols import dns
 import traceback
 
 class Options(usage.Options):
+    optParameters = [
+        ["interface", "i", "*",  "The interface to which to bind"],
+        ["port",      "p", "53", "The port on which to listen"]
+    ]
+
     zonefiles = None
     
     def __init__(self):
@@ -53,11 +58,15 @@ class Options(usage.Options):
         if not len(zones):
             raise usage.UsageError("At least one zone file must contain a valid zone")
         self.zones = zones
+        
+        try:
+            self['port'] = int(self['port'])
+        except ValueError:
+            raise usage.UsageError("Invalid port: %r" % (self['port'],))
 
 
 def updateApplication(app, config):
     f = server.DNSServerFactory(config.zones)
     p = dns.DNSClientProtocol(f)
-    app.listenUDP(dns.PORT, p)
-    app.listenTCP(dns.PORT, f)
-    
+    app.listenUDP(config['port'], p)
+    app.listenTCP(config['port'], f)
