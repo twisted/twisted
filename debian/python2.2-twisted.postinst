@@ -1,11 +1,13 @@
 #!/bin/sh
 if [ "$1" = "configure" ]; then
-	if [ -d /usr/doc -a ! -e /usr/doc/twisted -a -d /usr/share/doc/twisted ]; then
-		ln -sf ../share/doc/twisted /usr/doc/twisted
+	if [ -d /usr/doc -a ! -e /usr/doc/python2.2-twisted -a -d /usr/share/doc/python2.2-twisted ]; then
+		ln -sf ../share/doc/python2.2-twisted /usr/doc/python2.2-twisted
 	fi
 fi
 
-NAME=twisted
+if test -x /usr/bin/update-menus; then update-menus; fi
+
+NAME=python2.2-twisted
 case "$1" in
         configure|abort-upgrade|abort-remove|abort-deconfigure)
 		dpkg --listfiles $NAME | grep '\.py$' | \
