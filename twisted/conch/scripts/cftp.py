@@ -17,7 +17,7 @@ from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
-import fnmatch, pwd, time
+import fnmatch, pwd, time, glob
 
 class ClientOptions(options.ConchOptions):
     
@@ -173,6 +173,18 @@ class StdioClient(basic.LineReceiver):
                 "No command called `%s'" % command)))
             self._newLine()
 
+    def _printFailure(self, f):
+        log.msg(f)
+        e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError, IOError)
+        if e == NotImplementedError:
+            self.transport.write(self.cmd_HELP(''))
+        elif e == filetransfer.SFTPError:
+            self.transport.write("remote error %i: %s\n" % 
+                    (f.value.code, f.value.message))
+        elif e in (OSError, IOError):
+            self.transport.write("local error %i: %s\n" %
+                    (f.value.errno, f.value.strerror))
+
     def _newLine(self):
         if self.client.transport.localClosed:
             return
@@ -194,47 +206,11 @@ class StdioClient(basic.LineReceiver):
         self._newLine()
 
     def _ebCommand(self, f):
-        log.msg(f)
-        e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError, IOError)
-        if e == NotImplementedError:
-            self.transport.write(self.cmd_HELP(''))
-        elif e == filetransfer.SFTPError:
-            self.transport.write("remote error %i: %s\n" % 
-                    (f.value.code, f.value.message))
-        elif e in (OSError, IOError):
-            self.transport.write("local error %i: %s\n" %
-                    (f.value.errno, f.value.strerror))
+        self._printFailure(f)
         if self.file and not self.ignoreErrors:
             self.client.transport.loseConnection()
         self._newLine()
 
-    def _getFilename(self, line):
-        line.lstrip()
-        if not line:
-            return None, ''
-        if line[0] in '\'"':
-            ret = []
-            line = list(line)
-            try:
-                for i in range(1,len(line)):
-                    c = line[i]
-                    if c == line[0]:
-                        return ''.join(ret), ''.join(line[i+1:]).lstrip()
-                    elif c == '\\': # quoted character
-                        del line[i]
-                        if line[i] not in '\'"\\':
-                            raise IndexError, "bad quote: \\%s" % line[i]
-                        ret.append(line[i])
-                    else:
-                        ret.append(line[i])
-            except IndexError:
-                raise IndexError, "unterminated quote"
-        ret = line.split(None, 1)
-        if len(ret) == 1:
-            return ret[0], ''
-        else:
-            return ret
-           
     def cmd_CD(self, path):
         path, rest = self._getFilename(path)
         if not path.endswith('/'):
@@ -288,10 +264,21 @@ class StdioClient(basic.LineReceiver):
 
     def cmd_GET(self, rest):
         remote, rest = self._getFilename(rest)
+        if '*' in remote or '?' in remote: # wildcard
+            if rest:
+                local, rest = self._getFilename(rest)
+                if not os.path.isdir(local):
+                    return "Wildcard get with non-directory target."
+            else:
+                local = ''
+            d = self._remoteGlob(remote)
+            d.addCallback(self._cbGetMultiple, local)
+            return d
         if rest:
             local, rest = self._getFilename(rest)
         else:
-            local = remote
+            local = os.path.split(remote)[1]
+            s = os.stat(local)
         log.msg((remote, local))
         lf = file(local, 'w', 0)
         path = os.path.join(self.currentDirectory, remote)
@@ -300,21 +287,42 @@ class StdioClient(basic.LineReceiver):
         d.addErrback(self._ebCloseLf, lf)
         return d
 
+    def _cbGetMultiple(self, files, local):
+        #if self._useProgressBar: # one at a time
+        # XXX this can be optimized for times w/o progress bar
+        return self._cbGetMultipleNext(None, files, local)
+
+    def _cbGetMultipleNext(self, res, files, local):
+        if isinstance(res, failure.Failure):
+            self._printFailure(res)
+        elif res:
+            self.transport.write(res)
+            if not res.endswith('\n'):
+                self.transport.write('\n')
+        if not files:
+            return
+        f = files.pop(0)[0]
+        lf = file(os.path.join(local, os.path.split(f)[1]), 'w', 0)
+        path = os.path.join(self.currentDirectory, f)
+        d = self.client.openFile(path, filetransfer.FXF_READ, {})
+        d.addCallback(self._cbGetOpenFile, lf)
+        d.addErrback(self._ebCloseLf, lf)
+        d.addBoth(self._cbGetMultipleNext, files, local)
+        return d
+
     def _ebCloseLf(self, f, lf):
         lf.close()
         return f
 
     def _cbGetOpenFile(self, rf, lf):
-        if self.useProgressBar:
-            return rf.getAttrs().addCallback(self._cbGetFileSize, rf, lf)
-        else:
-            return self._cbGetStartReading(rf, lf)
+        return rf.getAttrs().addCallback(self._cbGetFileSize, rf, lf)
 
     def _cbGetFileSize(self, attrs, rf, lf):
+        if not stat.S_ISREG(attrs['permissions']):
+            rf.close()
+            lf.close()
+            return "Can't get non-regular file: %s" % rf.name
         rf.size = attrs['size']
-        return self._cbGetStartReading(rf, lf)
-
-    def _cbGetStartReading(self, rf, lf):
         bufferSize = self.client.transport.conn.options['buffersize']
         numRequests = self.client.transport.conn.options['requests']
         rf.total = 0.0
@@ -342,53 +350,6 @@ class StdioClient(basic.LineReceiver):
         chunks.append((end, end + bufSize))
         return (end, bufSize)
    
-    def _abbrevSize(self, size):
-        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
-        _abbrevs = [
-            (1<<50L, 'PB'),
-            (1<<40L, 'TB'), 
-            (1<<30L, 'GB'), 
-            (1<<20L, 'MB'), 
-            (1<<10L, 'kb'),
-            (1, '')
-            ]
-
-        for factor, suffix in _abbrevs:
-            if size > factor:
-                break
-        return '%.1f' % (size/factor) + suffix
-
-    def _abbrevTime(self, t):
-        if t > 3600: # 1 hour
-            hours = int(t / 3600)
-            t -= (3600 * hours)
-            mins = int(t / 60)
-            t -= (60 * mins)
-            return "%i:%02i:%02i" % (hours, mins, t)
-        else:
-            mins = int(t/60)
-            t -= (60 * mins)
-            return "%02i:%02i" % (mins, t)
-
-    def _printProgessBar(self, f, startTime):
-        diff = time.time() - startTime
-        total = f.total
-        try:
-            winSize = struct.unpack('4H', 
-                fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
-        except IOError:
-            winSize = [None, 80]
-        speed = total/diff
-        if speed:
-            timeLeft = (f.size - total) / speed
-        else:
-            timeLeft = 0
-        front = f.name
-        back = '%3i%% %s %sps %s ' % ((total/f.size)*100, self._abbrevSize(total),
-                self._abbrevSize(total/diff), self._abbrevTime(timeLeft))
-        spaces = (winSize[1] - (len(front) + len(back) + 1)) * ' '
-        self.transport.write('\r%s%s%s' % (front, spaces, back)) 
-
     def _cbGetRead(self, data, rf, lf, chunks, start, size, startTime):
         if data and isinstance(data, failure.Failure):
             log.msg('get read err: %s' % data)
@@ -430,15 +391,57 @@ class StdioClient(basic.LineReceiver):
    
     def cmd_PUT(self, rest):
         local, rest = self._getFilename(rest)
+        if '*' in local or '?' in local: # wildcard
+            if rest:
+                remote, rest = self._getFilename(rest)
+                path = os.path.join(self.currentDirectory, remote)
+                d = self.client.getAttrs(path)
+                d.addCallback(self._cbPutTargetAttrs, remote, local)
+                return d
+            else:
+                remote = ''
+                files = glob.glob(local)
+                return self._cbPutMultipleNext(None, files, remote)
         if rest:
             remote, rest = self._getFilename(rest)
         else:
-            remote = local
+            remote = os.path.split(local)[1]
         lf = file(local, 'r')
         path = os.path.join(self.currentDirectory, remote)
         d = self.client.openFile(path, filetransfer.FXF_WRITE|filetransfer.FXF_CREAT, {})
         d.addCallback(self._cbPutOpenFile, lf)
         d.addErrback(self._ebCloseLf, lf)
+        return d
+
+    def _cbPutTargetAttrs(self, attrs, path, local):
+        if not stat.S_ISDIR(attrs['permissions']):
+            return "Wildcard put with non-directory target."
+        return self._cbPutMultipleNext(None, files, path)
+
+    def _cbPutMultipleNext(self, res, files, path):
+        if isinstance(res, failure.Failure):
+            self._printFailure(res)
+        elif res:
+            self.transport.write(res)
+            if not res.endswith('\n'):
+                self.transport.write('\n')
+        f = None
+        while files and not f:
+            try: 
+                f = files.pop(0)
+                lf = file(f, 'r')
+            except:
+                self._printFailure(failure.Failure())
+                f = None
+        if not f:
+            return
+        name = os.path.split(f)[1]
+        remote = os.path.join(self.currentDirectory, path, name)
+        log.msg((name, remote, path))
+        d = self.client.openFile(remote, filetransfer.FXF_WRITE|filetransfer.FXF_CREAT, {})
+        d.addCallback(self._cbPutOpenFile, lf)
+        d.addErrback(self._ebCloseLf, lf)
+        d.addBoth(self._cbPutMultipleNext, files, path)
         return d
 
     def _cbPutOpenFile(self, rf, lf):
@@ -495,62 +498,30 @@ class StdioClient(basic.LineReceiver):
         # ls name_of_file       that file
         # ls name_of_directory  that directory
         # ls some_glob_string   current directory, globbed for that string
-        rest += ' '
-        if rest.startswith('-l '):
-            verbose = 1
-            rest = rest[3:]
-        else:
-            verbose = 0 
-        rest = rest[:-1]
+        options = []
+        rest = rest.split()
+        while rest and rest[0] and rest[0][0] == '-':
+            opts = rest.pop(0)[1:]
+            for o in opts:
+                if o == 'l':
+                    options.append('verbose')
+                elif o == 'a':
+                    options.append('all')
+        rest = ' '.join(rest)
         path, rest = self._getFilename(rest)
         if not path:
             fullPath = self.currentDirectory + '/'
         else:
             fullPath = os.path.join(self.currentDirectory, path)
-        head, tail = os.path.split(fullPath)
-        if '*' in tail or '?' in tail:
-            glob = 1
-        else:
-            glob = 0
-        log.msg(str((fullPath, head, tail, verbose, tail, glob)))
-        if tail and not glob: # could be file or directory
-           # try directory first
-           d = self.client.openDirectory(fullPath)
-           d.addCallback(self._cbOpenList, tail, verbose)
-           d.addErrback(self._ebNotADirectory, head, tail, verbose)
-        else:
-            d = self.client.openDirectory(head)
-            d.addCallback(self._cbOpenList, tail, verbose)
+        d = self._remoteGlob(fullPath)
+        d.addCallback(self._cbDisplayFiles, options)
         return d
 
-    def _cbOpenList(self, directory, glob, verbose):
-        files = []
-        if not glob:
-            glob = "[!.]*"
-        d = directory.read()
-        d.addBoth(self._cbReadFile, files, directory, glob, verbose)
-        return d
-
-    def _ebNotADirectory(self, reason, path, glob, verbose):
-        d = self.client.openDirectory(path)
-        d.addCallback(self._cbOpenList, glob, verbose)
-        return d
-
-    def _cbReadFile(self, files, l, directory, glob, verbose):
-        if not isinstance(files, failure.Failure):
-            l.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
-            d = directory.read()
-            d.addBoth(self._cbReadFile, l, directory, glob, verbose)
-            return d
-        else:
-            reason = files
-            reason.trap(EOFError)
-            directory.close()
-            return self._cbDisplayFiles(l, glob, verbose)
-
-    def _cbDisplayFiles(self, files, glob, verbose):
+    def _cbDisplayFiles(self, files, options):
         files.sort()
-        if verbose:
+        if 'all' not in options:
+            files = [f for f in files if not f[0].startswith('.')]
+        if 'verbose' in options:
             lines = [f[1] for f in files]
         else:
             lines = [f[0] for f in files]
@@ -641,6 +612,125 @@ version                         Print the SFTP version.
             return utils.getProcessOutput(shell, cmds, errortoo=1)
         else:
             os.system(shell)
+
+    # accessory functions
+
+    def _remoteGlob(self, fullPath):
+        log.msg('looking up %s' % fullPath)
+        head, tail = os.path.split(fullPath)
+        if '*' in tail or '?' in tail:
+            glob = 1
+        else:
+            glob = 0
+        if tail and not glob: # could be file or directory
+           # try directory first
+           d = self.client.openDirectory(fullPath)
+           d.addCallback(self._cbOpenList, '')
+           d.addErrback(self._ebNotADirectory, head, tail)
+        else:
+            d = self.client.openDirectory(head)
+            d.addCallback(self._cbOpenList, tail)
+        return d
+
+    def _cbOpenList(self, directory, glob):
+        files = []
+        d = directory.read()
+        d.addBoth(self._cbReadFile, files, directory, glob)
+        return d
+
+    def _ebNotADirectory(self, reason, path, glob):
+        d = self.client.openDirectory(path)
+        d.addCallback(self._cbOpenList, glob)
+        return d
+
+    def _cbReadFile(self, files, l, directory, glob):
+        if not isinstance(files, failure.Failure):
+            if glob:
+                l.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
+            else:
+                l.extend(files)
+            d = directory.read()
+            d.addBoth(self._cbReadFile, l, directory, glob)
+            return d
+        else:
+            reason = files
+            reason.trap(EOFError)
+            directory.close()
+            return l
+
+    def _abbrevSize(self, size):
+        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
+        _abbrevs = [
+            (1<<50L, 'PB'),
+            (1<<40L, 'TB'), 
+            (1<<30L, 'GB'), 
+            (1<<20L, 'MB'), 
+            (1<<10L, 'kb'),
+            (1, '')
+            ]
+
+        for factor, suffix in _abbrevs:
+            if size > factor:
+                break
+        return '%.1f' % (size/factor) + suffix
+
+    def _abbrevTime(self, t):
+        if t > 3600: # 1 hour
+            hours = int(t / 3600)
+            t -= (3600 * hours)
+            mins = int(t / 60)
+            t -= (60 * mins)
+            return "%i:%02i:%02i" % (hours, mins, t)
+        else:
+            mins = int(t/60)
+            t -= (60 * mins)
+            return "%02i:%02i" % (mins, t)
+
+    def _printProgessBar(self, f, startTime):
+        diff = time.time() - startTime
+        total = f.total
+        try:
+            winSize = struct.unpack('4H', 
+                fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
+        except IOError:
+            winSize = [None, 80]
+        speed = total/diff
+        if speed:
+            timeLeft = (f.size - total) / speed
+        else:
+            timeLeft = 0
+        front = f.name
+        back = '%3i%% %s %sps %s ' % ((total/f.size)*100, self._abbrevSize(total),
+                self._abbrevSize(total/diff), self._abbrevTime(timeLeft))
+        spaces = (winSize[1] - (len(front) + len(back) + 1)) * ' '
+        self.transport.write('\r%s%s%s' % (front, spaces, back)) 
+
+    def _getFilename(self, line):
+        line.lstrip()
+        if not line:
+            return None, ''
+        if line[0] in '\'"':
+            ret = []
+            line = list(line)
+            try:
+                for i in range(1,len(line)):
+                    c = line[i]
+                    if c == line[0]:
+                        return ''.join(ret), ''.join(line[i+1:]).lstrip()
+                    elif c == '\\': # quoted character
+                        del line[i]
+                        if line[i] not in '\'"\\':
+                            raise IndexError, "bad quote: \\%s" % line[i]
+                        ret.append(line[i])
+                    else:
+                        ret.append(line[i])
+            except IndexError:
+                raise IndexError, "unterminated quote"
+        ret = line.split(None, 1)
+        if len(ret) == 1:
+            return ret[0], ''
+        else:
+            return ret
 
 StdioClient.__dict__['cmd_?'] = StdioClient.cmd_HELP
 

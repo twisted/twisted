@@ -356,7 +356,12 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         lsRes = self._getCmdResult('ls').split('\n')
         self.failUnlessEqual(lsRes, ['testDirectory', 'testRemoveFile', \
                 'testRenameFile', 'testfile1'])
+        lsRes = self._getCmdResult('ls ../sftp_test').split('\n')
+        self.failUnlessEqual(lsRes, ['testDirectory', 'testRemoveFile', \
+                'testRenameFile', 'testfile1'])
         lsRes = self._getCmdResult('ls *File').split('\n')
+        self.failUnlessEqual(lsRes, ['testRemoveFile', 'testRenameFile'])
+        lsRes = self._getCmdResult('ls -a *File').split('\n')
         self.failUnlessEqual(lsRes, ['.testHiddenFile', 'testRemoveFile', 'testRenameFile'])
         lsRes = self._getCmdResult('ls -l testDirectory')
         self.failIf(lsRes)
@@ -366,15 +371,27 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         helpRes = self._getCmdResult('?')
         self.failUnlessEqual(helpRes, cftp.StdioClient(None).cmd_HELP('').strip())
 
+    def _failUnlessFilesEqual(self, name1, name2, msg=None):
+        f1 = file(name1).read()
+        f2 = file(name2).read()
+        self.failUnlessEqual(f1, f2, msg)
+
     def testGet(self):
         getRes = self._getCmdResult('get testfile1 "sftp_test/test file2"')
-        f1 = file('sftp_test/testfile1').read()
-        f2 = file('sftp_test/test file2').read()
-        self.failUnlessEqual(f1, f2, "get failed")
-        log.msg(repr(getRes))
+        self._failUnlessFilesEqual('sftp_test/testfile1', 
+                'sftp_test/test file2', "get failed")
         self.failUnless(getRes.endswith("Transferred %s/sftp_test/testfile1 to sftp_test/test file2" % os.getcwd()))
         self.failIf(self._getCmdResult('rm "test file2"'))
         self.failIf(os.path.exists('sftp_test/test file2'))
+
+    def testWildcardGet(self):
+        getRes = self._getCmdResult('get testR*')
+        self._failUnlessFilesEqual('sftp_test/testRemoveFile',
+                'testRemoveFile', 'testRemoveFile get failed')
+        self._failUnlessFilesEqual('sftp_test/testRenameFile',
+                'testRenameFile', 'testRenameFile get failed')
+        os.remove('testRemoveFile')
+        os.remove('testRenameFile')
 
     def testPut(self):
         putRes = self._getCmdResult('put sftp_test/testfile1 "test\\"file2"')
@@ -385,6 +402,16 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.failIf(self._getCmdResult('rm "test\\"file2"'))
         self.failIf(os.path.exists('sftp_test/test"file2'))
         
+    def testWildcardPut(self):
+        self.failIf(self._getCmdResult('cd ..'))
+        getRes = self._getCmdResult('put sftp_test/testR*')
+        self._failUnlessFilesEqual('sftp_test/testRemoveFile',
+                'testRemoveFile', 'testRemoveFile get failed')
+        self._failUnlessFilesEqual('sftp_test/testRenameFile',
+                'testRenameFile', 'testRenameFile get failed')
+        os.remove('testRemoveFile')
+        os.remove('testRenameFile')
+
     def testLink(self):
         linkRes = self._getCmdResult('ln testLink testfile1')
         self.failIf(linkRes)
