@@ -70,7 +70,6 @@ class AppTestCase(unittest.TestCase):
         self.assertRaises(error.NotListeningError, a.unlistenSSL, 1010)
         self.assertRaises(error.NotListeningError, a.unlistenUDP, 1010)
 
-
 class ServiceTestCase(unittest.TestCase):
 
     def testRegisterService(self):
@@ -78,4 +77,22 @@ class ServiceTestCase(unittest.TestCase):
         svc = app.ApplicationService("service", a)
         self.assertEquals(a.getServiceNamed("service"), svc)
         self.assertEquals(a, svc.serviceParent)
-        
+
+    def testServiceOrder(self):
+        multisvc = app.MultiService('test')
+        startlst = []
+        stoplst = []
+        serviceNames = map(str, range(10))
+        for serviceName in serviceNames:
+            svc = app.ApplicationService(serviceName, serviceParent=multisvc)
+            def startService(self=svc, startlst=startlst):
+                startlst.append(self.serviceName)
+            def stopService(self=svc, stoplst=stoplst):
+                stoplst.append(self.serviceName)
+            svc.startService = startService
+            svc.stopService = stopService
+        multisvc.startService()
+        multisvc.stopService()
+        self.assertEquals(startlst, serviceNames)
+        serviceNames.reverse()
+        self.assertEquals(stoplst, serviceNames)
