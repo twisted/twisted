@@ -31,7 +31,7 @@ void Twisted::TCPTransport::initProtocol()
 
 object Twisted::TCPTransport::doRead()
 {
-    if (protocol && (! dict(self.attr("__dict__")).has_key("doRead"))) {
+    if (protocol) {
 	if (buflen == 0) {
 	    protocol->bufferFull();
 	    return None;

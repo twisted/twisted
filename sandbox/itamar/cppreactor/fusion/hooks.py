@@ -25,8 +25,12 @@ class CClient(ctcp.TCPTransportMixin, tcp.Client):
         ctcp.TCPTransportMixin.__init__(self, self)
     
     def _connectDone(self):
-        tcp.Client._connectDone(self)
+        self.protocol = self.connector.buildProtocol(self.getPeer())
         self.initProtocol()
+        self.connected = 1
+        self.protocol.makeConnection(self)
+        self.logstr = self.protocol.__class__.__name__+",client"
+        self.startReading()
 
 
 class CConnector(tcp.Connector):
