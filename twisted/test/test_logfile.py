@@ -34,7 +34,7 @@ class LogFileTestCase(unittest.TestCase):
         self.path = os.path.join(self.dir, self.name)
     
     def tearDown(self):
-        #shutil.rmtree(self.dir)
+        shutil.rmtree(self.dir)
         pass
     
     def testWriting(self):
@@ -158,7 +158,7 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
         # reset permission so tearDown won't fail
-        os.chmod(self.dir, 777)
+        os.chmod(self.dir, 0777)
 
         
 class RiggedDailyLogFile(logfile.DailyLogFile):
@@ -184,7 +184,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         self.path = os.path.join(self.dir, self.name)
     
     def tearDown(self):
-        #shutil.rmtree(self.dir)
+        shutil.rmtree(self.dir)
         pass
     
     def testWriting(self):
