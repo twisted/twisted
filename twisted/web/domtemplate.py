@@ -326,7 +326,7 @@ class DOMTemplate(Resource):
             if hasattr(self, 'controller'):
                 controllerFactory = getattr(self.controller, 'factory_' + controllerName, defaultHandlerFactory)
             if controllerFactory is defaultHandlerFactory:
-                controllerFactory = getattr(domhandlers, controllerName)
+                controllerFactory = getattr(domhandlers, controllerName, defaultHandlerFactory)
 
         # Look up either a widget factory, or a dom-mutating method
         viewMethod = None
@@ -339,7 +339,7 @@ class DOMTemplate(Resource):
                 if viewFactory is defaultWidgetFactory:
                     viewMethod = getattr(self, 'domview_' + viewName, None)
                     if viewMethod is None:
-                        viewFactory = getattr(domwidgets, viewName)
+                        viewFactory = getattr(domwidgets, viewName, defaultWidgetFactory)
 
         controller = controllerFactory(self.model)
         view = viewFactory(self.model)
