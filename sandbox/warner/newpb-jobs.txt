@@ -7,22 +7,66 @@ first.
 
 Should be able to telnet into a PB server and find out that it is a PB
 server. Pointing a PB client at an HTTP server (or an HTTP client at a PB
-server) should result in an error, not a timeout.
+server) should result in an error, not a timeout. Implement in
+banana.Banana.connectionMade().
 
 desiderata:
 
  negotiation should take place with regular banana sequences: don't invent a
  new protocol that is only used at the start of the connection
 
- Banana should be useable one-way, for storage or high-latency RPC. It
- should be easy for the layer above Banana to feed it the results of what
- its negotiation would have been (if it had actually used an interactive
- connection to its peer). Feeding the same results to both sides should have
- them proceed as if they'd agreed to those results.
+ Banana should be useable one-way, for storage or high-latency RPC (the mnet
+ folks want to create a method call, serialize it to a string, then encrypt
+ and forward it on to other nodes, sometimes storing it in relays along the
+ way if a node is offline for a few days). It should be easy for the layer
+ above Banana to feed it the results of what its negotiation would have been
+ (if it had actually used an interactive connection to its peer). Feeding the
+ same results to both sides should have them proceed as if they'd agreed to
+ those results.
 
  negotiation should be flexible enough to be extended but still allow old
  code to talk with new code. Magically predict every conceivable extension
  and provide for it from the very first release :).
+
+There are many levels to banana, all of which could be useful targets of
+negotiation:
+
+ which basic tokens are in use? Is there a BOOLEAN token? a NONE token? Can
+ it accept a LONGINT token or is the target limited to 32-bit integers?
+
+ are there any variations in the basic Banana protocol being used? Could the
+ smaller-scope OPEN-counter decision be deferred until after the first
+ release and handled later with a compatibility negotiation flag?
+
+ What "base" OPEN sequences are known? 'unicode'? 'boolean'? 'dict'? This is
+ an overlap between expressing the capabilities of the host language, the
+ Banana implementation, and the needs of the application. How about
+ 'instance', probably only used for StorageBanana?
+
+ What "top-level" OPEN sequences are known? PB stuff (like 'call', and
+ 'your-reference')? Are there any variations or versions that need to be
+ known? We may add new functionality in the future, it might be useful for
+ one end to know whether this functionality is available or not. (the PB
+ 'call' sequence could some day take numeric argument names to convey
+ positional parameters, a 'reference' sequence could take a string to
+ indicate globally-visible PB URLs, it could become possible to pass
+ target.remote_foo directly to a peer and have a callable RemoteMethod object
+ pop out the other side).
+
+ What "application-level" sequences are available? (Which RemoteInterface
+ classes are known and valid in 'call' sequences? Which RemoteCopy names are
+ valid for targets of the 'copy' sequence?). This is not necessarily within
+ the realm of Banana negotiation, but applications may need to negotiate this
+ sort of thing, and any disagreements will be manifested when Banana starts
+ raising Violations, so it may be useful to include it in the Banana-level
+ negotiation.
+
+On the other hand, negotiation is only useful if one side is prepared to
+accomodate a peer which cannot do some of the things it would prefer to use,
+or if it wants to know about the incapabilities so it can report a useful
+failure rather than have an obscure protocol-level error message pop up an
+hour later. So negotiation isn't the only goal: simple capability awareness
+is a useful lesser goal.
 
 * connection initiation
 
