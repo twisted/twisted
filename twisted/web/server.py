@@ -533,7 +533,7 @@ class Session:
                 log.msg("no session to expire: %s" % self.uid)
         else:
             log.msg("session given the will to live for 30 more minutes")
-            main.addTimeout(self.expire, 1800)
+            main.addTimeout(self.checkExpired, 1800)
 
 version = "TwistedWeb/%s" % copyright.version
 
