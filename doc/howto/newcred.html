@@ -90,7 +90,8 @@ some public-key, challenge-response, and certificate based credential
 checker mechanisms soon.</p>
 
 <p>A credential checker should raise an error if it cannot authenticate 
-the user, and return '' for anonymous access.</p>
+the user, and return <code class="API">twisted.cred.checkers.ANONYMOUS</code>
+for anonymous access.</p>
 
     <h2>The Credentials</h2>
 <p>Oddly enough, this represents some credentials that the user presents.  
@@ -121,21 +122,6 @@ the Realm should create a new user if one does not already exist
 whenever possible.  Of course, sometimes this will be impossible 
 without more information, and that is the case that the interfaces 
 argument is for.</p>
-
-<p>Some protocols can only accept a fixed set of interfaces.  However, 
-others (most notably PB) can deal with more arbitrary data being 
-returned.  An online game may call Portal.login with:</p>
-
-<pre class="python">
-    login(PBChallengeResponse(...), clientSideThingy,
-           IServerPlayerInWorld, IUserChooser, ICharacterCreationThing)
-</pre>
-
-<p>This specifies that the client would most prefer a player in the world, 
-but, failing that, a UserChooser (selection interface for a second step 
-to get a PlayerInWorld) or a CharacterCreationThing (interface to 
-create a new character in the world before returning it) would be 
-acceptable.</p>
 
 <p>Since requestAvatar should be called from a Deferred callback, it may 
 return a Deferred or a synchronous result.</p>
