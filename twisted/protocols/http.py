@@ -39,6 +39,7 @@ import socket
 import math
 import time
 import calendar
+import types
 
 # sibling imports
 import basic
@@ -314,8 +315,29 @@ class HTTPClient(basic.LineReceiver):
             self.setLineMode(rest)
 
 
+class FieldStorage(cgi.FieldStorage):
+    """Argument parsing for HTTP."""
+
+    def __getitem__(self, key):
+        result = cgi.FieldStorage.__getitem__(self, key)
+        if not isinstance(result, types.ListType):
+            result = [result]
+        fixedResult = []
+        for i in result:
+            if isinstance(i, cgi.MiniFieldStorage):
+                i = i.value
+            fixedResult.append(i)
+        return fixedResult
+
+
 class Request:
-    """A HTTP request."""
+    """A HTTP request.
+
+    @ivar args: a mapping between field names and a list of values. These
+                values can be strings (for form fields) or C{cgi.FieldStorage} instances
+                when HTTP client uploaded a file in this request.
+                
+    """
 
     __implements__ = interfaces.IConsumer
 
@@ -425,13 +447,19 @@ class Request:
         This method is not intended for users.
         """
         self.content.seek(0,0)
-        self.args = {}
         self.stack = []
 
         self.method, self.uri = command, path
         self.clientproto = version
-        x = self.uri.split('?')
 
+        # cache the client and server information, we'll need this later to be
+        # serialized and sent with the request so CGIs will work remotely
+        self.client = self.channel.transport.getPeer()
+        self.host = self.channel.transport.getHost()
+
+        env = {'REQUEST_METHOD': self.method, 'QUERY_STRING': ''}
+        argstring = ""
+        x = self.uri.split('?')
         if len(x) == 1:
             self.path = self.uri
         else:
@@ -439,28 +467,15 @@ class Request:
                 log.msg("May ignore parts of this invalid URI: %s"
                         % repr(self.uri))
             self.path, argstring = x[0], x[1]
-            self.args = cgi.parse_qs(argstring, 1)
+            env['QUERY_STRING'] = argstring
 
-        # cache the client and server information, we'll need this later to be
-        # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.transport.getPeer()
-        self.host = self.channel.transport.getHost()
 
         # Argument processing
-        args = self.args
-        ctype = self.getHeader('content-type')
-        if self.method == "POST" and ctype:
-            mfd = 'multipart/form-data'
-            key, pdict = cgi.parse_header(ctype)
-            if key == 'application/x-www-form-urlencoded':
-                args.update(
-                    cgi.parse_qs(self.content.read(), 1))
-            elif key == mfd:
-                args.update(
-                    cgi.parse_multipart(self.content, pdict))
-            else:
-                pass
-
+        if self.method in ("GET", "HEAD"):
+            self.args = cgi.parse_qs(argstring, 1)
+        else:
+            self.args = FieldStorage(self.content, self.received_headers, environ=env,
+                                     keep_blank_values=1)
         self.process()
 
     def __repr__(self):
