@@ -3948,9 +3948,8 @@ On 2003.06.25 05:36, Moshe Zadka wrote:
 <radix> Pahan: you should be used to it.
 %
 <etrepum> worst case you waste 40 bucks, best case it just works.. somewhere in the middle, you learn how to write a kernel driver
-
 %
-<_moshez> deltab: "write to stderr" is not a logging technology
+<moshez> deltab: "write to stderr" is not a logging technology
 %
 <radix> hooray! death to privatization
 %
@@ -4089,4 +4088,13 @@ experience is characterised by waves of confusion and euphoria."
 <dash> time to get my abstracti on
 %
 <radix> PHP doesn't have interfaces, it has REIFIED PAIN
+%
+<exarkun> my knowledge is exceeded only by good looks and success with the ladies
+<dash> exarkun: easy to believe
+<dash> they wouldn't have far to go
+%
+<headh> where python stores its modules?
+<exarkun> internet
+<exarkun> the modules roam free in the valley of IP
+<exarkun> just beyond the IANA peaks and the black chasm of the IETF
 %
