@@ -346,7 +346,7 @@ class SimpleRecord:
 
     def __eq__(self, other):
         if isinstance(other, SimpleRecord):
-            return self.name.lower() == other.name.lower()
+            return str(self.name).lower() == str(other.name).lower()
         return 0
 
 
