@@ -36,8 +36,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         }
 
     def __init__(self, dbpool, rowClasses):
-        """
-        Initialize me against a database.
+        """Initialize me against a database.
         """
         adbapi.Augmentation.__init__(self, dbpool)
         reflector.Reflector.__init__(self, rowClasses)        
@@ -56,8 +55,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         self.populated = 1
 
     def _populateSchemaFor(self, rc):
-        """construct all the SQL for database operations on <tableName> and
-        populate the class <rowClass> with that info.
+        """Construct all the SQL templates for database operations on
+        <tableName> and populate the class <rowClass> with that info.
         """
         attributes = ("rowColumns", "rowKeyColumns", "rowTableName" )
         for att in attributes:
@@ -203,7 +202,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 return type
 
     def buildUpdateSQL(self, tableInfo):
-        """(Internal) Build SQL to update a RowObject.
+        """(Internal) Build SQL template to update a RowObject.
 
         Returns: SQL that is used to contruct a rowObject class.
         """
@@ -229,7 +228,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         return sql
 
     def buildInsertSQL(self, tableInfo):
-        """(Internal) Build SQL to insert a new row.
+        """(Internal) Build SQL template to insert a new row.
 
         Returns: SQL that is used to insert a new row for a rowObject
         instance not created from the database.
@@ -257,7 +256,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         return sql
 
     def buildDeleteSQL(self, tableInfo):
-        """Build the SQL to delete a row from the table.
+        """Build the SQL template to delete a row from the table.
         """
         sql = "DELETE FROM %s " % tableInfo.rowTableName
         # build where clause
@@ -271,7 +270,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         return sql
 
     def updateRowSQL(self, rowObject):
-        """build SQL to update my current state.
+        """Build SQL to update the contents of rowObject.
         """
         args = []
         tableInfo = self.schema[rowObject.rowTableName]
@@ -288,31 +287,31 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         return self.getTableInfo(rowObject).updateSQL % tuple(args)
 
     def updateRow(self, rowObject):
-        """update my contents to the database.
+        """Update the contents of rowObject to the database.
         """
         sql = self.updateRowSQL(rowObject)
         rowObject.setDirty(0)
         return self.runOperation(sql)
 
     def insertRowSQL(self, rowObject):
-        """build SQL to insert my current state.
+        """Build SQL to insert the contents of rowObject.
         """
         args = []
         tableInfo = self.schema[rowObject.rowTableName]        
         # build values
         for column, type in tableInfo.rowColumns:
-            args.append(self.quote_value(rowObject.findAttribute(column), type))
+            args.append(self.quote_value(rowObject.findAttribute(column),type))
         return self.getTableInfo(rowObject).insertSQL % tuple(args)
 
     def insertRow(self, rowObject):
-        """insert a new row for this object instance.
+        """Insert a new row for rowObject.
         """
         rowObject.setDirty(0)
         sql = self.insertRowSQL(rowObject)
         return self.runOperation(sql)
 
     def deleteRowSQL(self, rowObject):
-        """build SQL to delete me from the db.
+        """Build SQL to delete rowObject from the database.
         """
         args = []
         tableInfo = self.schema[rowObject.rowTableName]        
@@ -324,7 +323,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         return self.getTableInfo(rowObject).deleteSQL % tuple(args)
 
     def deleteRow(self, rowObject):
-        """delete the row for this object from the database.
+        """Delete the row for rowObject from the database.
         """
         sql = self.deleteRowSQL(rowObject)
         self.removeFromCache(rowObject)
