@@ -90,9 +90,10 @@ class ClientContextFactory:
     """A context factory for SSL clients."""
 
     isClient = 1
-    
+    method = SSL.SSLv3_METHOD
+
     def getContext(self):
-        return SSL.Context(SSL.SSLv3_METHOD)
+        return SSL.Context(self.method)
 
 
 class Client(tcp.Client):
