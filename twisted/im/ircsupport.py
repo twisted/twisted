@@ -125,6 +125,8 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self.privmsg(username, channel, message, {"dontAutoRespond": 1})
 
     def privmsg(self, username, channel, message, metadata=None):
+        if metadata is None:
+            metadata = {}
         username=string.split(username,'!',1)[0]
         if username==self.name: return
         if channel[0]=='#':
