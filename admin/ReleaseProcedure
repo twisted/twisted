@@ -9,7 +9,7 @@ TEST, TEST.
      * start a new --personal server from the latest codebase, make sure it's working (yes, 
        we've actually had a release once where a newer --user worked with older --personals but *not*
        new --personals, and I never tested new --personals!)
-     * run the main webserver's .tap on a different port (use mungetap.py)
+     * run the main webserver's .tap on a different port (use mungetap.py) <-- DO *NOT* SKIP THIS STEP
  * Also make sure that the words .tap remained compatible; start the words server's .tap on some out-of-the-way port
        (same as above, I've gotta automate this)
 

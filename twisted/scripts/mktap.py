@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.6 2002/04/10 02:13:54 carmstro Exp $
+# $Id: mktap.py,v 1.7 2002/04/21 18:24:51 carmstro Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,8 +25,6 @@ from twisted.protocols import telnet
 from twisted.internet import app, tcp
 from twisted.python import usage
 from twisted.spread import pb
-from twisted.manhole import service
-manholeService = service
 del service
 
 import sys, traceback, os, cPickle, glob, string
@@ -66,15 +64,7 @@ Usage::
 
     optStrings = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
-                  ['append', 'a', None],
-                  ['manholeUser', None, 'manhole',
-                   "Login username for manhole service."],
-                  ['manholePass', None, None,
-                   "Password for manhole service."
-                   " (If a password is not specified,"
-                   " no manhole service will be created.)"],
-                  ['manholePort', None, pb.portno]]
-
+                  ['append', 'a', None]]
     help = 0
 
     def opt_help(self):
@@ -152,16 +142,6 @@ def run():
         if isinstance(proto, pb.BrokerFactory):
             haveBroker = 1
             break
-
-    # Would you like a manhole with that?
-    if options.opts['manholePass']:
-        if not haveBroker:
-            bkr = pb.BrokerFactory(pb.AuthRoot(a))
-            a.listenTCP(options.opts['manholePort'], bkr)
-
-        svc = manholeService.Service(application=a)
-        p = svc.createPerspective(options.opts['manholeUser'])
-        p.makeIdentity(options.opts['manholePass'])
 
     a.save()
 

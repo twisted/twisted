@@ -1,5 +1,7 @@
 2002-04-20  Chris Armstrong  <carmstro@twistedmatrix.com>
 
+	* .: Releasing Twisted 0.17.4.
+
 	* twisted/internet/tcp.py: Make unix domain sockets *really*
 	world-accessible, rather than just accessible by "other".
 
