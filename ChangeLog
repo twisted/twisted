@@ -1,5 +1,10 @@
 2003-04-23  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_trial.py (LoopbackTests.testError): .type is a
+	string
+	* twisted/trial/remote.py (JellyReporter.reportResults): stringify
+	.type and .value from Failures before jellying them.
+
 	* twisted/internet/base.py (ReactorBase.suggestThreadPoolSize):
 	don't let suggestThreadPoolSize(0) be the only reason threads are
 	initialized.

@@ -126,6 +126,11 @@ class JellyReporter(unittest.Reporter):
         if type(jresults) == types.TupleType:
             typ, val, tb = jresults
             jresults = failure.Failure(val, typ, tb)
+        # make sure Failures don't reference objects that can't be created
+        # by the recipient
+        if reflect.isinst(jresults, failure.Failure):
+            jresults.type = str(jresults.type)
+            jresults.value = str(jresults.value)
         testClassName, methodName = self.cleanResults(testClass, method)
         self.jellyMethodCall("reportResults",
                              testClassName, methodName,
