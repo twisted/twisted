@@ -54,7 +54,7 @@ class DomainDeliveryBase:
         by = "by %s with %s (%s)" % (
             self.host, self.protocolName, longversion
         )
-        for_ = "for %s; %s" % (' '.join(map(str, recipients)), smtp.rfc822date())
+        for_ = "for <%s>; %s" % (' '.join(map(str, recipients)), smtp.rfc822date())
         return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
     
     def validateTo(self, user):
