@@ -18,7 +18,13 @@ from twisted.python import components
 
 class IService(components.Interface):
 
-    def setParent(self, parent):
+    def setName(self, name):
+        pass
+
+    def setServiceParent(self, parent):
+        pass
+
+    def disownServiceParent(self):
         pass
 
     def startService(self):
