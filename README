@@ -12,6 +12,9 @@ What's new in 0.10.2?
 
   twisted.protocols.ftp now has MD5 hashed passwords using OTP.
 
+  twisted.protocols.smtp and twisted.mail changed API in a backwards
+  incompatible way. Now you can have LDAP lookups or PB-based domains
+ 
   Many fixes were made to twisted.internet to cope with obscure socket failure
   modes in various versions of Windows.
 
