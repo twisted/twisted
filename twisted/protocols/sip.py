@@ -703,19 +703,24 @@ class IContact(Interface):
     """A user of a registrar or proxy"""
 
 
+class Registration:
+    def __init__(self, secondsToExpiry, contactURL):
+        self.secondsToExpiry = secondsToExpiry
+        self.contactURL = contactURL
+
 class IRegistry(Interface):
     """Allows registration of logical->physical URL mapping."""
 
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         """Register the physical address of a logical URL.
 
-        @return: Deferred of (secondsToExpiry, contact URL) or failure with RegistrationError.
+        @return: Deferred of C{Registration} or failure with RegistrationError.
         """
 
     def getRegistrationInfo(self, logicalURL):
         """Get registration info for logical URL.
 
-        @return: Deferred of (secondsToExpiry, contact URL) or failure with LookupError.
+        @return: Deferred of C{Registration} object or failure of LookupError.
         """
 
 
@@ -908,6 +913,7 @@ class DigestedCredentials(cred.credentials.UsernameHashedPassword):
             DigestCalcHA1(algo, user, domain, password, nonce, cnonce),
             nonce, nc, cnonce, qop, method, uri, None,
         )
+        
         return expected == response
 
 class DigestAuthorizer:
@@ -961,7 +967,6 @@ class RegisterProxy(Proxy):
     registry = None # should implement IRegistry
 
     authorizers = {
-#        'basic': BasicAuthorizer(),
         'digest': DigestAuthorizer(),
     }
     
@@ -1025,6 +1030,7 @@ class RegisterProxy(Proxy):
             self.deliverResponse(self.responseFromRequest(501, message))
 
     def _cbLogin(self, (i, a, l), message, host, port):
+        print 'YAY'
         # It's stateless, matey.  What a joke.
         self.register(message, host, port)
     
@@ -1035,19 +1041,25 @@ class RegisterProxy(Proxy):
     def register(self, message, host, port):
         """Allow all users to register"""
         name, toURL, params = parseAddress(message.headers["to"][0], clean=1)
+        contact = None
         if message.headers.has_key("contact"):
             contact = message.headers["contact"][0]
-            name, contactURL, params = parseAddress(contact)
-            d = self.registry.registerAddress(message.uri, toURL, contactURL)
+
+        if message.headers.get("expires", "0") == "0":
+            self.unregister(message, contact)
         else:
-            d = self.registry.getRegistrationInfo(toURL)
-        d.addCallbacks(self._registeredResult, self._registerError, callbackArgs=(message,))
-        
-    def _registeredResult(self, (expirySeconds, contactURL), message):
+            if contact is not None:
+                name, contactURL, params = parseAddress(contact)
+                d = self.registry.registerAddress(message.uri, toURL, contactURL)
+            else:
+                d = self.registry.getRegistrationInfo(toURL)
+            d.addCallbacks(self._registeredResult, self._registerError, callbackArgs=(message,))
+
+    def _registeredResult(self, registration, message):
         response = self.responseFromRequest(200, message)
-        if contactURL != None:
-            response.addHeader("contact", contactURL.toString())
-            response.addHeader("expires", "%d" % expirySeconds)
+        if registration.contactURL != None:
+            response.addHeader("contact", registration.contactURL.toString())
+            response.addHeader("expires", "%d" % registration.secondsToExpiry)
         response.addHeader("content-length", "0")
         self.deliverResponse(response)
 
@@ -1055,6 +1067,30 @@ class RegisterProxy(Proxy):
         error.trap(RegistrationError, LookupError)
         # XXX return error message, and alter tests to deal with
         # this, currently tests assume no message sent on failure
+
+    def unregister(self, message, contact):
+        try:
+            expires = int(message.headers["expires"][0])
+        except ValueError:
+            self.deliverResponse(self.responseFromRequest(400, message))
+        else:
+            if expires == 0:
+                if contact == "*":
+                    contactURL = "*"
+                else:
+                    name, contactURL, params = parseAddress(contact)
+                d = self.registry.unregisterAddress(message.uri, toURL, contactURL)
+                d.addCallback(self._cbUnregistered, message
+                    ).addErrback(self._ebUnregistered, message
+                    )
+
+    def _cbUnregistered(self, registration, message):
+        msg = self.responseFromRequest(200, message)
+        msg.headers.setdefault('contact', []).append(registration.contactURL)
+        self.deliverResponse(msg)
+
+    def _ebUnregistered(self, registration, message):
+        pass
 
 
 class InMemoryRegistry:
@@ -1080,7 +1116,7 @@ class InMemoryRegistry:
             return defer.fail(LookupError("unknown domain"))
         if self.users.has_key(userURI.username):
             dc, url = self.users[userURI.username]
-            return defer.succeed((int(dc.getTime() - time.time()), url))
+            return defer.succeed(Registration(int(dc.getTime() - time.time()), url))
         else:
             return defer.fail(LookupError("no such user"))
         
@@ -1100,8 +1136,6 @@ class InMemoryRegistry:
         if logicalURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")
             return defer.fail(RegistrationError(404))
-        # XXX we should check for expires header and in URI, and allow
-        # unregistration
         if self.users.has_key(logicalURL.username):
             dc, old = self.users[logicalURL.username]
             dc.reset(3600)
@@ -1109,8 +1143,10 @@ class InMemoryRegistry:
             dc = reactor.callLater(3600, self._expireRegistration, logicalURL.username)
         log.msg("Registered %s at %s" % (logicalURL.toString(), physicalURL.toString()))
         self.users[logicalURL.username] = (dc, physicalURL)
-        return defer.succeed((int(dc.getTime() - time.time()), physicalURL))
+        return defer.succeed(Registration(int(dc.getTime() - time.time()), physicalURL))
 
+    def unregisterAddress(self, domainURL, logicalURL, physicalURL):
+        self._expireRegistration(logicalURL.username)
 
 if __name__ == '__main__':
     import sys
