@@ -1,3 +1,6 @@
 Twisted Flow
 
 Flow was recently split out of Twisted. This needs more work.
+
+Twisted Flow depends on Twisted. It optionally uses twisted.web if you
+want to use the twisted.flow.web module.

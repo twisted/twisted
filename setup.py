@@ -228,6 +228,7 @@ desktop environments, and your toaster.
         "twisted.cred",
         "twisted.enterprise",
         "twisted.flow",
+        "twisted.flow.test",
         "twisted.im",
         "twisted.internet",
         "twisted.internet.iocpreactor",
