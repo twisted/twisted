@@ -114,7 +114,12 @@ class NameVirtualHost(resource.Resource):
 class _HostResource(resource.Resource):
 
     def getChild(self, path, request):
-        request.setHost(path)
+        if ':' in path:
+            host, port = path.split(':', 1)
+        else:
+            host, port = path, 80
+        request.setHost(host, port)
+        request.path = '/'+'/'.join(request.postpath)
         return request.site.getResourceFor(request)
 
 
