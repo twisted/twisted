@@ -71,12 +71,15 @@ _funcs = {"tcp": _parseTCP,
 _OP, _STRING = range(2)
 def _tokenize(description):
     current = ''
+    ops = ':='
+    nextOps = {':': ':=', '=': ':'}
     description = iter(description)
     for n in description:
-        if n in ':=':
+        if n in ops:
             yield STRING, current
             yield OP, n
             current = ''
+            ops = nextOps[n]
         elif n=='\\':
             current += description.next()
         else:
@@ -89,7 +92,7 @@ def _parse(description):
         if len(sofar)==1:
             args.append(sofar[0])
         else:
-            kw[sofar[0]] = '='.join(sofar[1:])
+            kw[sofar[0]] = sofar[1]
     sofar = ()
     for (type, value) in _tokenize(description):
         if type is STRING:
@@ -142,15 +145,10 @@ def parse(description, factory, default=None):
     to allow), the interface (interface on which to listen) and the
     backlog (how many clients to keep in the backlog).
     """
-    if ':' not in description:
-        default = default or 'tcp'
-        description = default+':'+description
-    dsplit = description.split(":")
-    args = [arg for arg in dsplit[1:] if '=' not in arg]
-    kw = {}
-    for (name, val) in [arg.split('=', 1) for arg in dsplit if '=' in arg]:
-        kw[name] = val
-    return (dsplit[0].upper(),)+_funcs[dsplit[0]](factory, *args, **kw)
+    args, kw = _parse(description)
+    if len(args)==1:
+        args[0:0] = [default or 'tcp']
+    return (args[0].upper(),)+_funcs[args[0]](factory, *args[1:], **kw)
 
 def service(description, factory, default=None):
     """Return the service corresponding to a description
