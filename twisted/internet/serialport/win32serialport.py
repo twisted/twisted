@@ -1,5 +1,5 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+# Copyright (C) 2003 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
@@ -15,21 +15,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Serial Port Protocol
+Serial port support for Windows.
 
-WARNING!  I'm BROKEN!
+Requires PySerial and win32all, and needs to be used with win32event
+reactor.
+
+This code probably works but is currently untested by the maintainers.
 """
 
 # system imports
-import os, threading, Queue
-
-# dependent on pyserial ( http://pyserial.sf.net/ )
-# only tested w/ 1.18 (5 Dec 2002)
+import os
 import serial
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
 from serial import STOPBITS_ONE, STOPBITS_TWO
 from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
-from serialport import BaseSerialPort
 import win32file, win32event
 
 # twisted imports
@@ -37,79 +36,83 @@ from twisted.protocols import basic
 from twisted.internet import abstract
 from twisted.python import log
 
+# sibling imports
+from serialport import BaseSerialPort
+
+
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     """A select()able serial device, acting as a transport."""
+
     connected = 1
 
     def __init__(self, protocol, deviceNameOrPortNumber, reactor, 
         baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
-        stopbits = STOPBITS_ONE, timeout = 0, xonxoff = 0, rtscts = 0):
-        self._serial = serial.Serial(deviceNameOrPortNumber, baudrate = baudrate, bytesize = bytesize, parity = parity, stopbits = stopbits, timeout = timeout, xonxoff = xonxoff, rtscts = rtscts)
+        stopbits = STOPBITS_ONE, xonxoff = 0, rtscts = 0):
+        self._serial = serial.Serial(deviceNameOrPortNumber, baudrate=baudrate,
+                                     bytesize=bytesize, parity=parity,
+                                     stopbits=stopbits, timeout=None,
+                                     xonxoff=xonxoff, rtscts=rtscts)
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor
         self.protocol = protocol
-        self.outQueue = Queue.Queue()
+        self.outQueue = []
         self.closed = 0
         self.closedNotifies = 0
-        log.msg('serial open')
+        self.writeInProgress = 0
         
         self.protocol = protocol
         self.protocol.makeConnection(self)
-        self._overlapped = win32file.OVERLAPPED()
-        self._overlapped.hEvent = win32event.CreateEvent(None, 0, 0, None)
-        win32file.SetCommMask(self._serial.hComPort, win32file.EV_RXCHAR | win32file.EV_RXFLAG | win32file.EV_ERR | win32file.EV_TXEMPTY)
-        rc, mask = win32file.WaitCommEvent(self._serial.hComPort, self._overlapped)
-        log.msg('rc = %X mask = %X mymask = %X' % (rc, mask, win32file.EV_RXCHAR | win32file.EV_RXFLAG | win32file.EV_ERR | win32file.EV_TXEMPTY))
-        if rc == 0:
-            win32event.SetEvent(self._overlapped.hEvent)
-        self.reactor.addEvent(self._overlapped.hEvent, self, self.serialEvent)
-        log.msg('addEvent')
-
-    def serialEvent(self):
-        log.msg('serial event')
-        mask = win32file.GetCommMask(self._serial.hComPort)
-        log.msg('serial event %X' % mask)
-        if mask & win32file.EV_RXCHAR:
-            self.doRead()
-        if mask & win32file.EV_TXEMPTY:
-            self.doWrite()
-        if mask & win32file.EV_ERR:
-            log.msg('win32event.EV_ERR')
-        if mask & win32file.EV_RXFLAG:
-            log.msg('win32event.EV_RXFLAG')
-        log.msg('serial event processed')
-        win32file.WaitCommEvent(self._serial.hComPort, self._overlapped)
-    
-    def write(self, data):
-        log.msg('adding to write queue')
-        self.outQueue.put(data)
-
-    def doWrite(self):
-        return
-        log.msg('doing a write')
-        try:
-            dataToWrite = self.outQueue.get_nowait()
-        except:
-            log.msg('outQueue empty?')
-            return
-        #flags, comstat = win32file.ClearCommError(self._serial.hComPort)
-        win32file.WriteFile(self._serial.hComPort, dataToWrite, self._overlapped)
+        self._overlappedRead = win32file.OVERLAPPED()
+        self._overlappedRead.hEvent = win32event.CreateEvent(None, 0, 0, None)
+        self._overlappedWrite = win32file.OVERLAPPED()
+        self._overlappedWrite.hEvent = win32event.CreateEvent(None, 0, 0, None)
         
-    
-    def doRead(self):
-        log.msg('doing a read')
+        self.reactor.addEvent(self._overlappedRead.hEvent, self, self.serialReadEvent)
+        self.reactor.addEvent(self._overlappedWrite.hEvent, self, self.serialWriteEvent)
+
         flags, comstat = win32file.ClearCommError(self._serial.hComPort)
-        while 1:
-            log.msg('read loop iteration')
-            rc, data = win32file.ReadFile(self._serial.hComPort, comstat.cbInQue, self._overlapped)
-            data = str(data)
-            log.msg('read %r' % data)
-            if not len(data):
-                break
-            self.protocol.dataReceived(data)
+        rc, self.read_buf = win32file.ReadFile(self._serial.hComPort,
+                                               win32file.AllocateReadBuffer(1),
+                                               self._overlappedRead)
+
+    def serialReadEvent(self):
+        #get that character we set up
+        n = win32file.GetOverlappedResult(self._serial.hComPort, self._overlappedRead, 0)
+        if n:
+            first = str(self.read_buf[:n])
+            #now we should get everything that is already in the buffer
+            flags, comstat = win32file.ClearCommError(self._serial.hComPort)
+            rc, buf = win32file.ReadFile(self._serial.hComPort,
+                                         win32file.AllocateReadBuffer(comstat.cbInQue),
+                                         self._overlappedRead)
+            n = win32file.GetOverlappedResult(self._serial.hComPort, self._overlappedRead, 1)
+            #handle all the received data:
+            self.protocol.dataReceived(first + str(buf[:n]))
+
+        #set up next one
+        rc, self.read_buf = win32file.ReadFile(self._serial.hComPort,
+                                               win32file.AllocateReadBuffer(1),
+                                               self._overlappedRead)
+
+    def write(self, data):
+        if self.writeInProgress:
+            self.outQueue.append(data)
+        else:
+            self.writeInProgress = 1
+            win32file.WriteFile(self._serial.hComPort, data, self._overlappedWrite)
+
+    def serialWriteEvent(self):
+        try:
+            dataToWrite = self.outQueue.pop(0)
+        except IndexError:
+            self.writeInProgress = 0
+            return
+        else:
+            win32file.WriteFile(self._serial.hComPort, dataToWrite, self._overlappedWrite)
     
     def connectionLost(self, reason):
-        self.reactor.removeEvent(self._overlapped.hEvent)
+        self.reactor.removeEvent(self._overlappedRead.hEvent)
+        self.reactor.removeEvent(self._overlappedWrite.hEvent)
         abstract.FileDescriptor.connectionLost(self, reason)
         self._serial.close()
