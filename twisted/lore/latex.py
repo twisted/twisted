@@ -126,7 +126,7 @@ class LatexSpitter:
         # Write a caption for this source listing
         self.writer('\\begin{center}\\raisebox{1ex}[1ex]{Source listing for '
                     '\\begin{em}%s\\end{em}}\\end{center}' 
-                    % latexEscape(fileName))
+                    % latexEscape(os.path.basename(fileName)))
 
     def visitNode_a_href(self, node):
         self.visitNodeDefault(node)
