@@ -1,4 +1,20 @@
-# -*- coding: Latin-1 -*-
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 
 import sys
 
@@ -26,7 +42,7 @@ class AnonymousUser:
         return [1, 2, 3]
 
     def logout(self):
-        pass
+        print "Cleaning up anonymous user resources"
 
 class RegularUser:
     __implements__ = (IProtocolUser,)
@@ -48,13 +64,19 @@ class Administrator:
 
 class Protocol(basic.LineReceiver):
     user = None
-    avatar = AnonymousUser()
     portal = None
+    avatar = None
     logout = None
 
     def connectionMade(self):
-        self.sendLine("Login with USER <name> followed by PASS <password>")
+        self.sendLine("Login with USER <name> followed by PASS <password> or ANON")
         self.sendLine("Check privileges with PRIVS")
+
+    def connectionLost(self, reason):
+        if self.logout:
+            self.logout()
+            self.avatar = None
+            self.logout = None
     
     def lineReceived(self, line):
         f = getattr(self, 'cmd_' + line.upper().split()[0])
@@ -65,6 +87,14 @@ class Protocol(basic.LineReceiver):
                 self.sendLine("Wrong number of arguments.")
             except:
                 self.sendLine("Server error (probably your fault)")
+
+    def cmd_ANON(self):
+        if self.portal:
+            self.portal.login(credentials.Anonymous(), None, IProtocolUser
+                ).addCallbacks(self._cbLogin, self._ebLogin
+                )
+        else:
+            self.sendLine("DENIED")
     
     def cmd_USER(self, name):
         self.user = name
@@ -75,7 +105,6 @@ class Protocol(basic.LineReceiver):
             self.sendLine("USER required before PASS")
         else:
             if self.portal:
-                print self.user, password
                 self.portal.login(
                     credentials.UsernamePassword(self.user, password),
                     None,
@@ -113,7 +142,9 @@ class ServerFactory(protocol.ServerFactory):
 class Realm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IProtocolUser in interfaces:
-            if avatarId.isupper():
+            if avatarId == checkers.ANONYMOUS:
+                av = AnonymousUser()
+            elif avatarId.isupper():
                 # Capitalized usernames are administrators.
                 av = Administrator()
             else:
@@ -128,6 +159,7 @@ def main():
     c.addUser("auser", "thepass")
     c.addUser("SECONDUSER", "secret")
     p.registerChecker(c)
+    p.registerChecker(checkers.AllowAnonymousAccess())
     
     f = ServerFactory(p)
 
