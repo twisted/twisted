@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.31 $'[11:-2]
+__version__ = '$Revision: 1.32 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -319,9 +319,16 @@ class LineLog:
         """Empty the log"""
         self.log = [None]*self.size
 
+def raises(exception, f, *args, **kwargs):
+    """Determine whether the given call raises the given exception"""
+    try:
+        f(*args, **kwargs)
+    except exception:
+        return 1
+    return 0
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "spewer", "searchupwards", "LineLog"
+    "OrderedDict", "spewer", "searchupwards", "LineLog", "raises"
 ]

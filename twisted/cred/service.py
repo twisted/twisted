@@ -115,7 +115,9 @@ class Service(app.ApplicationService):
     def addPerspective(self, perspective):
         """Add a perspective to this Service.
         """
-        if not isinstance(perspective, Perspective):
+        try:
+            perspective = IPerspective(perspective)
+        except NotImplementedError:
             raise TypeError
         perspective.setService(self)
         self.perspectives[perspective.getPerspectiveName()] = perspective

@@ -38,6 +38,7 @@ from __future__ import nested_scopes
 # twisted imports
 from twisted.python.compat import *
 from twisted.python import reflect, log, failure, components
+import twisted.python.util
 
 import runner, util, reporter
 from twisted.trial.util import deferredResult, deferredError
@@ -90,14 +91,12 @@ class TestCase:
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
         try:
-            f(*args, **kwargs)
-        except exception:
-            return
+            if not twisted.python.util.raises(exception, f, *args, **kwargs):
+                raise FailTest, '%s not raised' % exception.__name__
         except:
+            import traceback; traceback.print_exc()
             raise FailTest, '%s raised instead of %s' % (sys.exc_info()[0],
                                                          exception.__name__)
-        else:
-            raise FailTest, '%s not raised' % exception.__name__
 
     def failUnlessEqual(self, first, second, msg=None):
         if not first == second:
