@@ -19,7 +19,7 @@ from twisted.protocols.sux import XMLParser
 import os, re
 
 normalizeRE = re.compile(r'\s{2,}')
-escapingRE = re.compile(r'([#$%&~_^\{}])')
+escapingRE = re.compile(r'([#$%&_\{}])')
 
 class LatexSpitter(XMLParser):
 
@@ -55,6 +55,8 @@ class LatexSpitter(XMLParser):
             data = normalizeRE.sub(' ', data)
         if self.escaping:
             data = escapingRE.sub(r'\\\1', data)
+            # ^ and ~ need to special escapes.
+            data = data.replace('~', '\\verb@~@').replace('^', '\\^{}')
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
@@ -117,8 +119,14 @@ class LatexSpitter(XMLParser):
                 # Source listings aren't cross-references.
                 return
             href = attrs['href']
-            if not href.startswith('http:') and not href.startswith('#'):
+            if href.startswith('#'):
+                self.ref = self.filename + 'HASH' + href[1:]
+            elif href.find('#') != 1 and not href.startswith('http:'):
+                self.ref = href.replace('#', 'HASH')
+            elif not href.startswith('http:'):
                 self.ref = href
+        elif attrs.has_key('name'):
+            self.writer('\\label{%sHASH%s}' % (self.filename, attrs['name']))
 
     def end_a(self, _):
         self.ignoring = 0
