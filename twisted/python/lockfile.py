@@ -58,13 +58,16 @@ class LockFile:
         self.touchLoop.start(60)
 
     def touch(self):
-        f = open(self.filename, 'w')
-        f.seek(0)
-        if self.writePID:
-            f.write(str(os.getpid()))
-        else:
-            f.write("a")
-        f.close() # keep the lock fresh
+        try:
+            f = open(self.filename, 'w+', 0)
+            f.seek(0)
+            if self.writePID:
+                f.write(str(os.getpid()))
+            else:
+                f.write("a")
+            f.close() # keep the lock fresh
+        except (OSError, IOError):
+            pass
 
     def remove(self):
         self.touchLoop.stop()
