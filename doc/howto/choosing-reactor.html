@@ -139,6 +139,9 @@ gtkreactor.install()
     <a name="qt" />
     <h3>Qt</h3>
 
+    <p>An example Twisted application that uses Qt can be found in
+    <span class="py-filename">doc/examples/qtdemo.py</span>.</p>
+
 <pre class="python">
 from qt import QApplication
 app = QApplication([])
@@ -150,6 +153,9 @@ reactor.addSystemEventTrigger('after', 'shutdown', app.quit )
 
 # install QT support
 qtsupport.install(app)
+
+# run reactor
+reactor.run()
 </pre>
 
     <a name="tkinter" />
