@@ -331,7 +331,7 @@ class ThreadedIterator:
                     being wrapped, which exists in another thread.
                 """
                 self.source     = source
-                self.isFinished = 0
+                self.stop       = 0
                 self.failure    = None
                 self.buff       = []
                 self.extend     = extend
@@ -345,7 +345,6 @@ class ThreadedIterator:
                     self.source.init()
                 except: 
                     self.failure = failure.Failure()
-                from twisted.internet.reactor import callFromThread
                 try:
                     while 1:
                         val = self.source.next()
@@ -354,19 +353,15 @@ class ThreadedIterator:
                         else:
                             self.buff.append(val)
                 except StopIteration:
-                    callFromThread(self.stop)
+                    self.stop = 1
                 except: 
                     if not self.failure:
                         self.failure = failure.Failure()
                 self.source = None
-            def setFailure(self, failure):
-                self.failure = failure
-            def stop(self):
-                self.isFinished = 1
             def next(self):
                 if self.buff:
                    return self.buff.pop(0)
-                if self.isFinished:  
+                if self.stop:  
                     raise StopIteration
                 if self.failure:
                     raise self.failure

@@ -63,7 +63,7 @@ that other flows in the system have a chance to produce results.  So, rather
 than blocking, the entire state of the iterator chain must be saved so that
 it can be resumed later.   This is what the flow module does.</p>
 
-<h3>Iterators and Wraps</h3>
+<h3>Iterators and generators</h3>
 
 <p>An iterator is basically an object which produces a sequence of values.
 Python's iterators are simply objects with an <code>__iter__()</code> 
@@ -259,13 +259,15 @@ for x in flow.Iterator(Consumer):
 
 </pre>
 
+<h3>Cooperate</h3>
+
 <p>This seems like quite the effort, wrapping each iterator and 
 then having to alter the calling sequence.  Why?  The answer is
 that it allows for a <code>flow.Cooperate</code> object to be
 returned.   When this happens, the entire call chain can be
-moved off the stack so that other flows can proceed.   For 
+paused so that other flows can use the call stack.   For 
 flow.Iterator (which blocks), the implementation of Cooperate
-simply puts the call chain to sleep</p>
+simply puts the call chain to sleep.</p>
 
 <pre class="python">
 from __future__ import generators
@@ -281,11 +283,13 @@ for x in flow.Iterator(lst):
 #   3
 </pre>
 
-<p>Perhaps a more clear example can be found when using the
-Merge function in Flow.  This simply zips two or more wrapped
-iterators together, without blocking one or the other.  In the
-example below, the <code>States</code> iterator isn't blocked 
-by the <code>Counter</code> iterator.
+<h3>Merging iterators</h3>
+
+<p>An application of Cooperate can be demonstrated with the
+Merge command.  This simply zips two or more wrapped iterators 
+together, without blocking one or the other.  In the example 
+below, the <code>States</code> iterator isn't blocked by the 
+<code>Counter</code> iterator.
 </p>
 
 <pre class="python">
@@ -318,14 +322,14 @@ for x in flow.Iterator(mrg):
 
 <h2>Deferred Flow</h2>
 
-<p>The real value in Flow comes not from its stand-alone use, in this
-case, Cooperate does very little and the overhead imposed by flow doesn't
-offset the functionality.  However, when flow is combined with Twisted's
-<code>reactor.callLater</code> and <code>internet.defer.Deferred</code>
-mechanism, things are very nice.  In the example below, the first two
-items in the list are produced (although they arn't delivered yet),
-other events in the reactor are allowed to proceed, and then the 
-last item in the list is produced.</p>
+<p>The real value in Flow comes not from its stand-alone use, in this case,
+<code>Cooperate</code> does very little and the overhead imposed by flow
+doesn't offset the functionality.  However, when flow is combined with
+Twisted's <code>reactor.callLater</code> and
+<code>internet.defer.Deferred</code> mechanism, things are very nice.  In
+the example below, the first two items in the list are produced (although
+they arn't delivered yet), other events in the reactor are allowed to
+proceed, and then the last item in the list is produced.</p>
 
 
 <pre class="python">
@@ -342,6 +346,96 @@ reactor.run()
 
 # prints
 #   [1,2,3]
+</pre>
+
+<h2>Dealing /w Threads</h2>
+
+<p>While the Flow module allows for multiple cooperative tasks
+to work in a single thread, sometimes it is necessary to have
+the output of another thread be consumed within a flow.  This
+can be done with the <code>ThreadedIterator</code>.  In the
+example, the following Count implementation blocks within
+a thread by using sleep.</p>
+
+<pre class="python">
+from __future__ import generators
+from twisted.internet import reactor
+import flow
+
+class Count(flow.ThreadedIterator):
+    def __init__(self, count):
+        flow.ThreadedIterator.__init__(self)
+        self.count = count
+    def next(self): # this is run in a separate thread
+        from time import sleep
+        sleep(.2)
+        val = self.count
+        if not(val): raise flow.StopIteration
+        self.count -= 1
+        print "producing", val
+        return val
+
+d = flow.Deferred(Count(5))
+def prn(x):
+    print "results", x
+d.addCallback(prn)
+reactor.callLater(4, reactor.stop)
+reactor.run()
+
+# results:
+#   producing 5
+#   producing 4
+#   producing 3
+#   producing 2
+#   producing 1
+#   results [5, 4, 3, 2, 1]
+</pre>
+
+
+<h3>Using database connections</h3>
+
+<p>Since most standard database drivers are thread based, 
+the flow builds on the <code>ThreadedIterator</code> by 
+providing a <code>QueryIterator</code>, which takes an sql
+query and a <code>ConnectionPool</code>.</p>
+
+<pre class="python">
+from __future__         import generators
+from twisted.enterprise import adbapi
+from twisted.internet   import reactor
+import flow
+
+dbpool = adbapi.ConnectionPool("SomeDriver",host='localhost', 
+             db='Database',user='User',passwd='Password')
+
+sql = """
+  (SELECT 'one')
+UNION ALL
+  (SELECT 'two')
+UNION ALL
+  (SELECT 'three')
+"""
+
+def consumer():
+    query = flow.Wrap(flow.QueryIterator(dbpool, sql))
+    while 1:
+        yield query
+        if query.stop: break
+        print "Processed result : ", query.result
+
+from twisted.internet import reactor
+def finish(result): 
+    print "Deferred Complete : ", result
+f = flow.Deferred(consumer())
+f.addBoth(finish)
+reactor.callLater(1,reactor.stop)
+reactor.run()
+
+# prints
+# Processed result :  ('one',)
+# Processed result :  ('two',)
+# Processed result :  ('three',)
+# Deferred Complete:  []
 </pre>
 
 
