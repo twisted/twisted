@@ -42,8 +42,9 @@ from twisted.names import common
 class Resolver(common.ResolverBase):
     """A resolver that services hosts(5) format files."""
     #TODO: IPv6 support
-
+    typeToMethod = common.typeToMethod
     def __init__(self, file='/etc/hosts', ttl = 60 * 60):
+        common.ResolverBase.__init__(self)
         self.file = file
         self.ttl = ttl
 

@@ -482,7 +482,11 @@ class HostsTestCase(unittest.TestCase):
     testIPv6.skip = 'IPv6 support is not in our hosts resolver yet'
 
     def testNotImplemented(self):
-        from twisted.trial import util
         self.assertRaises(
             NotImplementedError,
             lambda: dR(self.resolver.lookupMailExchange('EXAMPLE')))
+
+    def testQuery(self):
+        self.assertEquals(
+            dR(self.resolver.query(dns.Query('EXAMPLE')))[0][0].payload.dottedQuad(),
+            '1.1.1.1')

@@ -128,6 +128,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def handleQuery(self, message, protocol, address):
         # Discard all but the first query!  HOO-AAH HOOOOO-AAAAH
+        # (no other servers implement multi-query messages, so we won't either)
         query = message.queries[0]
         
         return self.resolver.query(query).addCallback(
