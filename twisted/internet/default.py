@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.86 2003/11/03 18:38:13 itamarst Exp $
+# $Id: default.py,v 1.87 2003/11/10 00:47:01 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -38,7 +38,7 @@ from twisted.internet import tcp, udp, defer
 
 from twisted.python import log, threadable, failure
 from twisted.persisted import styles
-from twisted.python.runtime import platform
+from twisted.python.runtime import platformType, platform
 
 from twisted.internet.base import ReactorBase
 
@@ -56,14 +56,14 @@ except ImportError:
 
 from main import CONNECTION_LOST
 
-if platform.getType() != 'java':
+if platformType != 'java':
     import select
     from errno import EINTR, EBADF
 
-if platform.getType() == 'posix':
+if platformType == 'posix':
     import process
 
-if platform.getType() == "win32":
+if platformType == "win32":
     try:
         import win32process
     except ImportError:
@@ -81,6 +81,11 @@ class PosixReactorBase(ReactorBase):
     if unixEnabled:
         __implements__ = __implements__ + (IReactorUNIX, IReactorUNIXDatagram, IReactorProcess)
 
+    def __init__(self):
+        ReactorBase.__init__(self)
+        if self.usingThreads or platformType == "posix":
+            self.installWaker()
+
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
         import signal
@@ -91,7 +96,7 @@ class PosixReactorBase(ReactorBase):
         if hasattr(signal, "SIGBREAK"):
             signal.signal(signal.SIGBREAK, self.sigBreak)
 
-        if platform.getType() == 'posix':
+        if platformType == 'posix':
             signal.signal(signal.SIGCHLD, self._handleSigchld)
 
     def _handleSigchld(self, signum, frame):
@@ -105,16 +110,14 @@ class PosixReactorBase(ReactorBase):
         callLater calls at any time, even interleaved inside it's own
         methods; it must block SIGCHLD if it is unable to guarantee this.
         """
-
         self.callLater(0, process.reapAllProcesses)
+        self.waker.wakeUp()
 
     def startRunning(self, installSignalHandlers=1):
         threadable.registerAsIOThread()
         self.fireSystemEvent('startup')
         if installSignalHandlers:
             self._handleSignals()
-        if self.usingThreads:
-            self.installWaker()
         self.running = 1
 
     def run(self, installSignalHandlers=1):
