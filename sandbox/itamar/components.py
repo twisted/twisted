@@ -113,19 +113,15 @@ class MetaInterface(interface.InterfaceClass):
                 _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
                 return adapter
             
-            try:
-                if default == _Nothing:
-                    adapter = interface.InterfaceClass.__call__(self, adaptable)
-                else:
-                    adapter = interface.InterfaceClass.__call__(self, adaptable, alternate=default)
-            except (TypeError, NotImplementedError), e:
-                if isinstance(e, CannotAdapt):
-                    raise
-                else:
-                    raise CannotAdapt(str(e))
-            if adapter == default:
+            marker = object()
+            adapter = interface.InterfaceClass.__call__(self, adaptable, alternate=marker)
+            if adapter == marker:
                 if hasattr(self, '__instadapt__'):
                     adapter = self.__instadapt__(adaptable, default)
+                else:
+                    adapter = default
+            if adapter == default and default == _Nothing:
+                raise CannotAdapt
             return adapter
         
         return __call__
