@@ -483,7 +483,7 @@ class Port(base.BasePort):
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
         self.host = host
-        if [1 for x in types.StringTypes if isinstance(port, x)]:
+        if [1 for x in (types.StringType, types.UnicodeType) if isinstance(port, x)]:
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
