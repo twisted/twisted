@@ -105,12 +105,13 @@ def addHTMLListings(document, d):
                cgi.escape(open(os.path.join(d, fn)).read()))
         _replaceWithListing(node, val, fn)
 
+def getHeaders(document):
+    return domhelpers.findElements(document, 
+                           lambda n,m=re.compile('h[23]$').match:m(n.nodeName))
 
 def generateToC(document):
-    headers = domhelpers.findElements(document, 
-                           lambda n,m=re.compile('h[23]$').match:m(n.nodeName))
     toc, level, id = '\n<ol>\n', 0, 0
-    for element in headers:
+    for element in getHeaders(document):
         elementLevel = int(element.tagName[1])-2
         toc += (level-elementLevel)*'</ul>\n'
         toc += (elementLevel-level)*'<ul>'
