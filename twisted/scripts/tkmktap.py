@@ -24,7 +24,8 @@ import Tkinter, tkMessageBox, tkFileDialog, StringIO, os, sys, inspect
 import traceback
 
 # Twisted imports
-from twisted.internet import tksupport, reactor, app
+from twisted.application import service
+from twisted.internet import tksupport, reactor
 from twisted.scripts import mktap
 from twisted.python import failure, usage, reflect
 from twisted.copyright import version
@@ -208,26 +209,40 @@ class TkMkAppFrame(Tkinter.Frame):
 
         exists = os.path.exists(self.options['filename'])
         if self.options['append'] and exists:
-            a = twistd.loadApplication(self.options, None)
+            a = service.loadApplication(
+                self.options['filename'],
+                self.options['type'],
+                self.options['passphrase']
+            )
         else:
             if exists:
                 overwrite = tkMessageBox.askyesno(title='File Exists', message='Overwrite?')
                 if not overwrite:
                     return
-            a = app.Application(self.coil.name, self.options['uid'], self.options['gid'])
+            a = service.Application(self.coil.name, self.options['uid'], self.options['gid'])
 
         try:
-            self.coil.load().updateApplication(a, self.options)
+            s = mktap.makeService(
+                self.coil.load(),
+                self.options['appname'],
+                self.options
+            )
         except usage.UsageError:
             f = StringIO.StringIO()
             traceback.print_stack(file=f)
             tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
         else:
             try:
-                a.save(filename=self.options['filename'])
+                service.addToApplication(
+                    s, self.coil.name, self.config['append'],
+                    self.config['appname'], self.config['type'],
+                    self.config['encrypted'], self.config['uid'],
+                    self.config['gid'],
+                )
             except:
                 f = StringIO.StringIO()
                 traceback.print_stack(file=f)
+                print f.getvalue()
                 tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
             else:
                 filename = self.options['filename']
