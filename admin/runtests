@@ -26,7 +26,7 @@ test-suite.
 Flags:
  -t -- always use text-mode (otherwise try GUI first)
  -v -- text-mode will be more verbose
- -q -- text-mode won't will be quieter (doesn't print progress dots)
+ -q -- text-mode will be quieter (doesn't print progress dots)
  --file -- path to a python file containing test cases
 """
 
