@@ -175,7 +175,7 @@ RESPONSE = {
         
 # -- Custom Exceptions --
 class TLDNotSetInRealmError(Exception):
-    '''raised if the tld (root) directory for the FTPRealm was not set 
+    '''raised if the tld (root) directory for the Realm was not set 
     before requestAvatar was called'''
     pass
 
@@ -218,7 +218,7 @@ class CmdNotImplementedForArgError(Exception):
 class FTPError(Exception):
     pass
 
-class FTPTimeoutError(Exception):
+class TimeoutError(Exception):
     pass
 
 class DTPError(Exception):
@@ -422,20 +422,8 @@ def cleanPath(path):
     log.debug('cleaned path: %s' % path)
     return path
 
-class FTP(object, basic.LineReceiver, policies.TimeoutMixin):      
-    """Protocol Interpreter for the File Transfer Protocol
-    
-    @ivar shell: The connected avatar
-    @ivar user: The username of the connected client
-    @ivar peerHost: The (type, ip, port) of the client
-    @ivar dtpTxfrMode: The current mode -- PASV or PORT
-    @ivar blocked: Command queue for command pipelining
-    @ivar binary: The transfer mode.  If false, ASCII.
-    @ivar dtpFactory: Generates a single DTP for this session
-    @ivar dtpPort: Port returned from listenTCP
-    @ivar dtpInetPort: dtpPort.getHost()
-    @ivar dtpHostPort: cluient (address, port) to connect to on a PORT command
-    """
+class FTP(basic.LineReceiver, policies.TimeoutMixin):      
+    """the File Transfer Protocol"""
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
     reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
@@ -507,7 +495,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
         #if self.dtpFactory is not None and self.dtpFactory.deferred is not None:
             #d, self.dtpFactory.deferred = self.dtpFactory.deferred, None
-            #d.errback(FTPTimeoutError('cleaning up dtp!'))
+            #d.errback(TimeoutError('cleaning up dtp!'))
 
     def setTimeout(self, seconds):
         log.msg('ftp.setTimeout to %s seconds' % str(seconds))
@@ -534,7 +522,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             log.debug('processing command %s' % cmdAndArgs)
             self.processCommand(*cmdAndArgs)
         except CmdSyntaxError, (e,):
-            self.reply(SYNTAX_ERR, string.upper(command))
+            self.reply(SYNTAX_ERR, e)
         except CmdArgSyntaxError, (e,):
             log.debug(e)
             self.reply(SYNTAX_ERR_IN_ARGS, e)
@@ -628,12 +616,12 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(self.factory.timeOut)       # restart timeOut clock after DTP returns
         r = error.trap(defer.TimeoutError,          # this is called when DTP times out
                        BogusClientError,            # called if PI & DTP clients don't match
-                       FTPTimeoutError,             # called when FTP connection times out
+                       TimeoutError,             # called when FTP connection times out
                        ClientDisconnectError)       # called if client disconnects prematurely during DTP transfer
                        
         if r == defer.TimeoutError:                     
             self.reply(CANT_OPEN_DATA_CNX)
-        elif r in (BogusClientError, FTPTimeoutError):
+        elif r in (BogusClientError, TimeoutError):
             self.reply(SVC_NOT_AVAIL_CLOSING_CTRL_CNX)
             self.transport.loseConnection()
         elif r == ClientDisconnectError:
@@ -715,7 +703,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         # called back when any DTP command has completed successfully
         log.debug("DTP Command success")
 
-    def ftp_USER(self, params):
+    def ftp_USER(self, params=None):
         # Get the login name, and reset the session
         # PASS is expected to follow
         # 
@@ -730,8 +718,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         # All transfer parameters are unchanged and any file transfer in progress
         # is completed under the old access control parameters.
 
-        if params=='':
-            raise CmdSyntaxError('no parameters')
+        if not params:
+            raise CmdSyntaxError('USER with no parameters')
         self.user = string.split(params)[0]
         log.debug('ftp_USER params: %s' % params)
         if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
@@ -769,7 +757,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 self.portal.login(
                         credentials.Anonymous(), 
                         None, 
-                        IFTPShell
+                        IShell
                     ).addCallbacks(self._cbAnonLogin, self._ebLogin
                     )
             else:
@@ -782,7 +770,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 self.portal.login(
                         credentials.UsernamePassword(self.user, self.passwd),
                         None,
-                        IFTPShell
+                        IShell
                     ).addCallbacks(self._cbLogin, self._ebLogin
                     )
             else:
@@ -790,7 +778,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def _cbAnonLogin(self, (interface, avatar, logout)):
         # sets up anonymous login avatar
-        assert interface is IFTPShell
+        assert interface is IShell
         peer = self.transport.getPeer()
         #log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
         self.shell = avatar
@@ -799,7 +787,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def _cbLogin(self, (interface, avatar, logout)):
         # sets up authorized user login avatar
-        assert interface is IFTPShell
+        assert interface is IShell
         self.shell = avatar
         self.logout = logout
         self.reply(USR_LOGGED_IN_PROCEED)
@@ -985,7 +973,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def ftp_STOU(self, path=''):
         self.reply(CMD_NOT_IMPLMNTD, 'STOU')
 
-class FTPFactory(protocol.Factory):
+class Factory(protocol.Factory):
     """A factory for producing ftp protocol instances
     @ivar maxProtocolInstances: the maximum number of FTP protocol instances
         this factory will create. When the maximum number is reached, a protocol
@@ -1011,7 +999,7 @@ class FTPFactory(protocol.Factory):
         pi            = protocol.Factory.buildProtocol(self, addr)
         pi.protocol   = self.protocol
         pi.portal     = self.portal
-        pi.timeOut    = FTPFactory.timeOut
+        pi.timeOut    = Factory.timeOut
         pi.factory    = self
         if self.maxProtocolInstances is not None:
             self.currentInstanceNum += 1
@@ -1115,7 +1103,7 @@ class IWriteableFile(IFile):
         """
         pass
 
-class IFTPShell(components.Interface):
+class IShell(components.Interface):
     """An abstraction of the shell commands used by the FTP protocol
     for a given user account
     """
@@ -1255,9 +1243,9 @@ class IFTPShell(components.Interface):
         """
         pass
 
-class IFTPHighLevelShell(components.Interface):
-    '''a slightly higher level version of the FTPShell
-    The FTP shell is intended to mimic a unix shell to some extent. It's a layer on top of the 
+class IHighLevelShell(components.Interface):
+    '''a slightly higher level version of the ftp.Shell
+    The FTP Shell is intended to mimic a unix shell to some extent. It's a layer on top of the 
     server filesystem, and you'll need to implement a way to convert paths as the client sees them
     into paths to resources on the server side. 
     
