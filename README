@@ -160,10 +160,8 @@ Documentation and Support
 
 Copyright
 
-  Most of the code in this distribution is (C) Matthew William Lefkowitz, AKA
-  "Glyph".  There are a few exceptions to this: the 'pyunit' directory is a
-  derivative work of PyUnit, which can be found at 
-  http://pyunit.sourceforge.net.
+  All of the code in this distribution is (C) Matthew William Lefkowitz, AKA
+  "Glyph". 
 
   Twisted is made available under version 2.1 of the GNU Lesser General Public
   License.  The included LICENSE file describes this in detail.

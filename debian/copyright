@@ -15,30 +15,8 @@ Travis B. "Nafai" Hartwell <slt5v@cc.usu.edu>
 
 Copyright:
 
-  Most of the code in this distribution is (C) Matthew William Lefkowitz, AKA
-  "Glyph".  There is 1 exception to this: the 'pyunit' directory is a
-  derivative work of PyUnit, which can be found at
-  http://pyunit.sourceforge.net.
+  All of the code in this distribution is (C) Matthew William Lefkowitz, AKA
+  "Glyph".
 
   Twisted is made available under the GNU Lesser General Public License.  The
   included LICENSE file describes this in detail.
-
-Note that pyunit is not packaged from this package.
-However, they are in the source package.
-Here is the license for pyunit:
-
-Copyright (c) 1999, 2000 Steve Purcell
-This module is free software, and you may redistribute it and/or modify
-it under the same terms as Python itself, so long as this copyright message
-and disclaimer are retained in their original form.
-
-IN NO EVENT SHALL THE AUTHOR BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF
-THIS CODE, EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
-DAMAGE.
-
-THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE.  THE CODE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS,
-AND THERE IS NO OBLIGATION WHATSOEVER TO PROVIDE MAINTENANCE,
-SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
