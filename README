@@ -44,7 +44,7 @@ What is this?
 
 What can I do with it?
 
-  To install Twisted, just make sure the Twisted-$VERSION/twisted directory
+  To install Twisted, just make sure the Twisted-$VERSION/ directory
   is in the "PYTHONPATH" environment variable. For example, if you extracted
   Twisted-0.18.0.tar.gz to /home/bob/, then you would have something like:
 
@@ -79,6 +79,10 @@ Unit Tests
 
    % admin/runtests
 
+  Some of these tests may fail if you don't have the Python XML packages
+  installed on your system.
+
+
   If you're feeling more brave, you can try the new "acceptance tests".  These
   require some setup and are mainly for the developers to decide if it's OK to
   release, but:
@@ -95,6 +99,8 @@ Basic Servers
 
   Note that the following examples only create the .tap files with the servers
   inside of them: to actually run the servers, see "Running Servers" below.
+  Also note that the commands used (mktap, coil, twistd, etc) can be found
+  in the bin directory of your Twisted installation.
 
   The normal type of server to create is a webserver.  You can run this
   command::
