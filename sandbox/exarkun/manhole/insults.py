@@ -299,6 +299,7 @@ NORMAL = 'NORMAL'
 class ServerProtocol(protocol.Protocol):
     __implements__ = (ITerminalTransport,)
 
+    protocolFactory = None
     protocol = None
 
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
@@ -307,12 +308,16 @@ class ServerProtocol(protocol.Protocol):
                   'F10', 'F11', 'F12'):
         exec '%s = object()' % (keyID,)
 
+    TAB = '\t'
+    BACKSPACE = '\x7f'
+
     lastWrite = ''
 
     state = 'data'
 
-    def __init__(self, protocolFactory, *a, **kw):
-        self.protocolFactory = protocolFactory
+    def __init__(self, protocolFactory=None, *a, **kw):
+        if protocolFactory is not None:
+            self.protocolFactory = protocolFactory
         self.protocolArgs = a
         self.protocolKwArgs = kw
 

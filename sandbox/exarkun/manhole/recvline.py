@@ -27,14 +27,14 @@ class RecvLine(insults.TerminalProtocol):
         self.keyHandlers = {
             t.LEFT_ARROW: self.handle_LEFT,
             t.RIGHT_ARROW: self.handle_RIGHT,
-            '\t': self.handle_TAB,
+            t.TAB: self.handle_TAB,
 
             # Both of these should not be necessary, but figuring out
             # which is necessary is a huge hassle.
             '\r': self.handle_RETURN,
             '\n': self.handle_RETURN,
 
-            '\x7f': self.handle_BACKSPACE,
+            t.BACKSPACE: self.handle_BACKSPACE,
             t.DELETE: self.handle_DELETE,
             t.INSERT: self.handle_INSERT,
             t.HOME: self.handle_HOME,
@@ -48,6 +48,10 @@ class RecvLine(insults.TerminalProtocol):
         self.transport.reset()
         self.transport.write(self.ps[self.pn])
         self.setInsertMode()
+
+    def currentLineBuffer(self):
+        s = ''.join(self.lineBuffer)
+        return s[:self.lineBufferIndex], s[self.lineBufferIndex:]
 
     def setInsertMode(self):
         self.mode = 'insert'
@@ -125,7 +129,7 @@ class RecvLine(insults.TerminalProtocol):
             self.transport.deleteCharacter()
 
     def handle_DELETE(self):
-        if self.lineBufferIndex < len(self.lineBuffer) - 1:
+        if self.lineBufferIndex < len(self.lineBuffer):
             del self.lineBuffer[self.lineBufferIndex]
             self.transport.deleteCharacter()
 
@@ -155,6 +159,10 @@ class HistoricRecvLine(RecvLine):
         t = self.transport
         self.keyHandlers.update({t.UP_ARROW: self.handle_UP,
                                  t.DOWN_ARROW: self.handle_DOWN})
+
+    def currentHistoryBuffer(self):
+        b = tuple(self.historyLines)
+        return b[:self.historyPosition], b[self.historyPosition:]
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
