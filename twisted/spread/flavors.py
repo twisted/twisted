@@ -323,8 +323,10 @@ class Cacheable(Copyable):
             type_ = self.getTypeToCopyFor(p)
             observer = RemoteCacheObserver(jellier.invoker, self, p)
             state = self.getStateToCacheAndObserveFor(p, observer)
+            l = jellier.prepare(self)
             jstate = jellier.jelly(state)
-            return type_, luid, jstate
+            l.extend([type_, luid, jstate])
+            return jellier.preserve(self, l)
         else:
             return cached_atom, luid
 
