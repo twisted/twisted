@@ -49,26 +49,41 @@ class Transaction:
 
 class ConnectionPool:
     """I represent a pool of connections to a DB-API 2.0 compliant database.
-
-    You can pass cp_min, cp_max or both to set the minimum and maximum
-    number of connections that will be opened by the pool. You can pass
-    the cp_noisy arg which determines whether informational log messages are
-    generated during the pool's operation.
-
-    You can pass a function cp_openfun which will get called after
-    every connect() operation on the underlying DB-API object. The
-    cp_openfun can setup per-connection state, such as charset,
-    timezone, etc.
     """
 
-    noisy = 1   # if true, generate informational log messages
-    min = 3     # minimum number of connections in pool
-    max = 5     # maximum number of connections in pool
-    running = 0 # true when the pool is operating
+    CP_ARGS = "min max noisy openfun".split()
 
+    noisy = True # if true, generate informational log messages
+    min = 3 # minimum number of connections in pool
+    max = 5 # maximum number of connections in pool
     openfun = None # A function to call on new connections
 
+    running = False # true when the pool is operating
+
     def __init__(self, dbapiName, *connargs, **connkw):
+        """Create a new ConnectionPool.
+
+        @param dbapiName: an import string to use to obtain a DB-API
+                          compatible module (e.g. 'pyPgSQL.PgSQL')
+
+        @param cp_min: the minimum number of connections in pool
+
+        @param cp_max: the maximum number of connections in pool
+
+        @param cp_noisy: generate information log message during
+                         operation (default False)
+
+        @param cp_openfun: a callback invoked after every connect()
+                           on the underlying DB-API object. The callback
+                           is passed a new DB-API connection object.
+                           This callback can setup per-connection
+                           state such as charset, timezone, etc.
+
+        Any remaining positional and keyword arguments are passed
+        to the DB-API object when connecting. Use these arguments
+        to pass database names, usernames, passwords, etc.
+        """
+
         self.dbapiName = dbapiName
         self.dbapi = reflect.namedModule(dbapiName)
 
@@ -81,21 +96,11 @@ class ConnectionPool:
         self.connargs = connargs
         self.connkw = connkw
 
-        if connkw.has_key('cp_min'):
-            self.min = connkw['cp_min']
-            del connkw['cp_min']
-
-        if connkw.has_key('cp_max'):
-            self.max = connkw['cp_max']
-            del connkw['cp_max']
-
-        if connkw.has_key('cp_noisy'):
-            self.noisy = connkw['cp_noisy']
-            del connkw['cp_noisy']
-
-        if connkw.has_key('cp_openfun'):
-            self.openfun = connkw['cp_openfun']
-            del connkw['cp_openfun']
+        for arg in self.CP_ARGS:
+            cp_arg = 'cp_%s' % arg
+            if connkw.has_key(cp_arg):
+                setattr(self, arg, connkw[cp_arg])
+                del connkw[cp_arg]
 
         self.min = min(self.min, self.max)
         self.max = max(self.min, self.max)
@@ -125,7 +130,7 @@ class ConnectionPool:
             self.shutdownID = reactor.addSystemEventTrigger('during',
                                                             'shutdown',
                                                             self.finalClose)
-            self.running = 1
+            self.running = True
 
     def runInteraction(self, interaction, *args, **kw):
         """Interact with the database and return the result.
@@ -173,7 +178,7 @@ class ConnectionPool:
         cursor's 'fetchall' method, or a Failure.
         """
 
-        return self._deferToThread(self._runQuery, *args, **kw)
+        return self.runInteraction(self._runQuery, *args, **kw)
 
     def runOperation(self, *args, **kw):
         """Execute an SQL query and return None.
@@ -191,7 +196,7 @@ class ConnectionPool:
 
         return: a Deferred which will fire None or a Failure.
         """
-        return self._deferToThread(self._runOperation, *args, **kw)
+        return self.runInteraction(self._runOperation, *args, **kw)
 
     def close(self):
         """Close all pool connections and shutdown the pool."""
@@ -207,7 +212,7 @@ class ConnectionPool:
     def finalClose(self):
         """This should only be called by the shutdown trigger."""
         self.threadpool.stop()
-        self.running = 0
+        self.running = False
         for conn in self.connections.values():
             self._close(conn)
         self.connections.clear()
@@ -266,29 +271,12 @@ class ConnectionPool:
             trans._connection.rollback()
             raise
 
-    def _runQuery(self, *args, **kw):
-        conn = self.connect()
-        curs = conn.cursor()
-        try:
-            curs.execute(*args, **kw)
-            result = curs.fetchall()
-            curs.close()
-            conn.commit()
-            return result
-        except:
-            conn.rollback()
-            raise
+    def _runQuery(self, trans, *args, **kw):
+        trans.execute(*args, **kw)
+        return trans.fetchall()
 
-    def _runOperation(self, *args, **kw):
-        conn = self.connect()
-        curs = conn.cursor()
-        try:
-            curs.execute(*args, **kw)
-            curs.close()
-            conn.commit()
-        except:
-            conn.rollback()
-            raise
+    def _runOperation(self, trans, *args, **kw):
+        trans.execute(*args, **kw)
 
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
