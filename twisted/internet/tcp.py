@@ -222,6 +222,11 @@ class BaseClient(Connection):
 
         Then, call the protocol's makeConnection, and start waiting for data.
         """
+        if not hasattr(self, "connector"):
+            # this happens when connection failed but doConnect
+            # was scheduled via a callLater in self._finishInit
+            return
+        
         if platform.getType() == "win32":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
