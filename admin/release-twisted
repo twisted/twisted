@@ -560,7 +560,7 @@ class InstallDebs(Transaction):
             sh("cp %(rel)s/debian-%(ver)s/*twisted* %(target)s/" % vars())
         sh("cp %(rel)s/debian-%(ver)s/woody/* %(target)s/woody/" % vars())
 
-    def undoIt(self):
+    def undoIt(self, opts, fail):
         rel = opts['release']
         ver = opts['version']
         target = self.target
