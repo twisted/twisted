@@ -311,6 +311,15 @@ class IMAP4Server(basic.LineReceiver):
     select_LOGOUT = unauth_LOGOUT
     logout_LOGOUT = unauth_LOGOUT
 
+    def unauth_QUIT(self, tag, args):
+        self.sendUntaggedResponse('BYE The correct way to terminate a session is LOGOUT')
+        self.sendPositiveResponse(tag, 'QUIT successful')
+        self.transport.loseConnection()
+
+    auth_QUIT = unauth_QUIT
+    select_QUIT = unauth_QUIT
+    logout_QUIT = unauth_QUIT
+
     def unauth_NOOP(self, tag, args):
         self.sendPositiveResponse(tag, 'NOOP No operation performed')
 
