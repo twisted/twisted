@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_tpfile -*-
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -29,6 +31,8 @@ import time
 
 # Twisted imports
 from twisted.internet import protocol
+from twisted.internet import defer
+from twisted.internet import interfaces
 from twisted.python import log
 
 
@@ -322,3 +326,67 @@ class StatefulStringProtocol:
             if self.state == 'done':
                 self.transport.loseConnection()
 
+class FileSender:
+    """A producer that sends the contents of a file to a consumer.
+    
+    This is a helper for protocols that, at some point, will take a
+    file-like object, read its contents, and write them out to the network,
+    optionally performing some transformation on the bytes in between.
+    
+    This API is unstable.
+    """
+    __implements__ = (interfaces.IProducer,)
+    
+    CHUNK_SIZE = 2 ** 14
+    
+    lastSent = ''
+    deferred = None
+
+    def beginFileTransfer(self, file, consumer, transform):
+        """Begin transferring a file
+        
+        @type file: Any file-like object
+        @param file: The file object to read data from
+        
+        @type consumer: Any implementor of IConsumer
+        @param consumer: The object to write data to
+        
+        @param transform: A callable taking one string argument and returning
+        the same.  All bytes read from the file are passed through this before
+        being written to the consumer.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback will be invoked when the file has been
+        completely written to the consumer.  The last byte written to the consumer
+        is passed to the callback.
+        """
+        self.file = file
+        self.consumer = consumer
+        self.transform = transform
+        
+        self.consumer.registerProducer(self, 0)
+        self.deferred = defer.Deferred()
+        return self.deferred
+    
+    def resumeProducing(self):
+        if self.file:
+            chunk = self.file.read(self.CHUNK_SIZE)
+        if not self.file or not chunk:
+            self.file = None
+            if self.deferred:
+                self.deferred.callback(self.lastSent)
+                self.deferred = None
+            self.consumer.unregisterProducer()
+            return
+        
+        chunk = self.transform(chunk)
+        self.consumer.write(chunk)
+        self.lastSent = chunk[-1]
+
+    def pauseProducing(self):
+        pass
+    
+    def stopProducing(self):
+        if self.deferred:
+            self.deferred.errback(Exception())
+            self.deferred = None
