@@ -15,10 +15,16 @@ Requirements:
   after a succesful login act as if user was logged in already.
 
 - The subpages requiring authentication may be deeply linked into from
-  each other or the non-aúthenticating pages.
+  each other or the non-authenticating pages.
 
-- The authentication should be shared amongst all the pages (TODO).
+- The authentication should be shared amongst all the pages.
 
+
+You need a patch to fix a bug in how twisted.web.woven.guard processes
+requests.  For example, the patch at
+http://www.twistedmatrix.com/users/roundup.twistd/twisted/msg1344
+should be suitable. Hopefully, a proper fix will get integrated to
+Twisted soon.
 
 """
 
