@@ -402,8 +402,8 @@ class ReactorBase:
             from twisted.python import threadpool
             for i in range(oldSize - size):
                 theThreadPool.q.put(threadpool.WorkerStop)
-            else:
-                theThreadPool._startSomeWorkers()
+        else:
+            theThreadPool._startSomeWorkers()
 
 
     # backwards compatibility
