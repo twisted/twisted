@@ -27,3 +27,49 @@ class MIssueRepository(MethodModel):
 
     def wmget_issuelist(self):
         return map(MIssue, self.repository.issues.values())
+
+from twisted.web.static import redirectTo, addSlash, File, Data
+from twisted.web.resource import Resource, IResource
+from twisted.web.error import NoResource
+from twisted.python import components
+import os
+import issueconduit
+class IssueSite(Resource):
+    def __init__(self, repository, wordserv, templateDir):
+        Resource.__init__(self)
+        self.repository = repository
+        self.wordserv = wordserv
+        self.templateDir = templateDir
+
+    def render(self, request):
+        return redirectTo(addSlash(request), request)
+
+    def makeView(self, model, name):
+        v = V.View(model, name)
+        v.templateDirectory = self.templateDir
+        return v
+
+    def child_index(self):
+        return self.makeView(MIssueRepository(self.repository),
+                             "webrepo_index.html")
+
+    def child_tasks(self):
+        return Data("Sorry check back later",
+                    "text/plain")
+
+    def child_issues(self):
+        return self.makeView(MIssueRepository(self.repository),
+                             "webrepo_issuelist.html")
+
+    def child_conduit(self):
+        return issueconduit.MWebConduit(self.wordserv, self.repository)
+
+    def getChild(self, path, request):
+        if path == '': path = 'index'
+        cm = getattr(self, "child_"+path, None)
+        if cm:
+            p = cm()
+            adapter = components.getAdapter(p, IResource, None)
+            if adapter:
+                return adapter
+        return NoResource()

@@ -1,0 +1,27 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html> <head>
+<title>Issue Detail View</title>
+</head>
+
+<body>
+<h1>Issue #<span model="number" /></h1>
+
+<ul model="statelist">
+  <li listItemOf="statelist">
+  <div caseFor="InQueue" />
+  <div caseFor="InTransfer" />
+  <div caseFor="InConversation" />
+  <div caseFor="PendingTaskCompletion" />
+  <div caseFor="PendingFinderConfirmation" />
+  <div caseFor="PendingFixerAnalysis" />
+  <div caseFor="FixerClosed" />
+  <div caseFor="Fixed" />
+  </li>
+</ul>
+
+
+
+<hr />
+<address><a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a></address>
+
+</body> </html>
