@@ -99,15 +99,6 @@ class MaildirMailbox(pop3.Mailbox):
                   os.path.join(self.path,'del',os.path.basename(self.list[i])))
         self.list[i] = 0
 
-    def getSubFolders(self):
-        """ UNDOCUMENTED
-        """
-        dirs = []
-        for dir in os.path.listdir(self.path):
-            if dir not in ['cur', 'new', 'del']:
-                dirs.append(dir)
-        return dirs
-
 
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
@@ -162,10 +153,3 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         my_digest = binascii.hexlify(my_digest)
         if digest == my_digest:
             return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
-
-    def getUserFolder(self, user, password, folder):
-        """ UNDOCUMENTED
-        """
-        if self.dbm.get(user) != password:
-            return None
-        return MaildirMailbox(os.path.join(self.root, user, folder))
