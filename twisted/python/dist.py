@@ -8,6 +8,10 @@ from distutils.command import build_scripts, install_data, build_ext, build_py
 from distutils.errors import CompileError
 from distutils import core
 
+twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
+                       "news", "pair", "runner", "web", "web2",
+                       "words", "xish"]
+
 
 def setup(**kw):
     if 'twisted_subproject' in kw:

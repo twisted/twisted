@@ -6,11 +6,6 @@
 # 'gs-common' (as of 2004-07-30).
 
 set -e
-if test "x$1" = "x" ; then
-	url=http://twistedmatrix.com/documents/TwistedDocs/current/api/%s.html
-else
-	url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
-fi
 
 templ=doc/core/howto/template.tpl
 
@@ -27,7 +22,7 @@ for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision
     echo "Lore-->Lint"
     $LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
     echo "Lore-->HTML"
-    $LORE -p --config template=$templ --config baseurl=$url \
+    $LORE -p --config template=$templ --config \
     --config ext=.html --config version=$1 -l ../howto/ \
     $doc/*.xhtml
     echo "Lore-->LaTeX"

@@ -15,13 +15,13 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
-from twisted.python import usage, util, failure
+from twisted.python import usage, util, failure, dist
 from twisted.python.release import replaceInFile, runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
 
 import shutil, re
 
-repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
-#repourl = 'file:///home/radix/Twisted.repo'
+#repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
+repourl = 'file:///home/radix/Twisted.repo'
 trunkurl = repourl + '/trunk'
 
 debug = False
@@ -176,21 +176,38 @@ def exportTemp(opts):
 
 
 def makeDocs(opts):
+    # XXX - this needs to do API docs per-subproject, not all at once.
     ver = opts['base-version']
     tdir = 'Twisted.exp'
 
     if not os.path.exists(tdir):
         raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
 
-    #sh('cd %s &&  ./admin/epyrun -o doc/api' % (tdir))
+    sh('cd %s &&  happydoc -o doc/api twisted' % (tdir))
 
     sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
 
     #shwack the crap
-    for ext in ['*.pyc', '.cvsignore']:
-        sh('find %s -name "%s" | xargs rm -f' % (tdir, ext))
+    sh('find %s -name "*.pyc" | xargs rm -f' % (tdir, ext))
 
 
+
+def makeTwistedCore(opts):
+    ver = opts['base-version']
+    tdir = "Twisted-%s" % (ver,)
+    if not os.path.exists('Twisted.exp'):
+        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
+                                   % tdir)
+
+    if not os.path.exists(tdir):
+        shutil.copytree('Twisted.exp', tdir)
+
+    excludes = ' '.join(['--exclude %s/twisted/%s' % (tdir, x)
+                         for x in dist.twisted_subprojects])
+
+    sh('''
+    tar %(excludes)s -cjf %(tdir)s.tar.bz2 %(tdir)s
+    ''' % locals())
 
 def makeBalls(opts):
     ver = opts['base-version']
@@ -200,10 +217,8 @@ def makeBalls(opts):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
                                    % tdir)
 
-    if os.path.exists(tdir):
-        raise DirectoryExists('MakeBalls: %s exists' % tdir)
-
-    shutil.copytree('Twisted.exp', tdir)
+    if not os.path.exists(tdir):
+        shutil.copytree('Twisted.exp', tdir)
 
     print "MakeBalls: Twisted_NoDocs."
     sh('''

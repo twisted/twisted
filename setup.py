@@ -71,9 +71,6 @@ def detectExtensions(builder):
 
 def dict(**kw): return kw
 
-twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
-                       "news", "pair", "runner", "web", "web2",
-                       "words", "xish"]
 
 setup_args = dict(
     # metadata
@@ -95,9 +92,9 @@ desktop environments, and your toaster.
 
     # build stuff
     packages=dist.getPackages(util.sibpath(__file__, 'twisted'),
-                              ignore=twisted_subprojects),
+                              ignore=dist.twisted_subprojects),
     data_files=dist.getDataFiles(util.sibpath(__file__, 'twisted'),
-                                 ignore=twisted_subprojects),
+                                 ignore=dist.twisted_subprojects),
     detectExtensions=detectExtensions,
     scripts= [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
