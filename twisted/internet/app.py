@@ -198,7 +198,7 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
         if self.serviceRunning:
             service.startService()
 
-class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
+class Application(log.Logger, styles.Versioned,
                   Accessor, _AbstractServiceCollection):
     """I am the `root object' in a Twisted process.
 
