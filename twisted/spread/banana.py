@@ -320,14 +320,14 @@ class Canana(Pynana):
         processed = cBanana.dataReceived(self.state, buffer, self.callExpressionReceived)
         self.buffer = buffer[processed:]
 
-try:
-    import cBanana
-    cBanana.pyb1282int = b1282int
-    cBanana.pyint2b128 = int2b128
-except ImportError:
-    pass
-else:
-    Banana = Canana
+#try:
+#    import cBanana
+#    cBanana.pyb1282int = b1282int
+#    cBanana.pyint2b128 = int2b128
+#except ImportError:
+#    pass
+#else:
+#    Banana = Canana
 
 
 # For use from the interactive interpreter
