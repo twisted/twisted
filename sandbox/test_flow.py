@@ -122,7 +122,7 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(result, [('a',3),('b',3)])
 
     def testThreaded(self):
-        class CountIterator(Iterator):
+        class CountIterator(ThreadedIterator):
             def next(self): # this is run in a separate thread
                 from time import sleep
                 sleep(.1)

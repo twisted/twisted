@@ -445,7 +445,7 @@ class LinkItem:
         self.stage = stage
         self.next  = next
 
-class Iterator:
+class ThreadedIterator:
     """
        This is an iterator base class which can be used to build
        iterators which are constructed and run within a Flow
@@ -516,7 +516,7 @@ class _TunnelIterator:
             raise self.failure
         raise PauseFlow
 
-class QueryIterator(Iterator):
+class QueryIterator(ThreadedIterator):
     def __init__(self, pool, sql, fetchall=0):
         Iterator.__init__(self)
         self.curs = None
