@@ -103,16 +103,16 @@ class OctTreeTest(unittest.TestCase):
     testNearBoundarySearch.skip = "write me"
 
     def testVisibility(self):
-        eye = (0, 0, 0)
-        viewpoint = (0, 1, 0)
-        fov = cos(pi / 4)
+        viewpoint = (0, 0, 0)
+        direction = (0, 1, 0)
+        fovAngle = cos(pi / 4)
         o = [Thingy(*c) for c in [(0, 1, 0), (0, 2, 0), (0, 3, 0)]]
 
         ot = octtree.OctTree([0, 0, 0], 20, 20, 20)
         for obj in o:
             ot.add(obj)
 
-        vis = list(ot.itervisible(eye, viewpoint, fov))
+        vis = list(ot.itervisible(viewpoint, direction, fovAngle))
         self.assertEquals(len(vis), len(o))
         vis.sort()
         o.sort()
