@@ -41,8 +41,15 @@ class Widget(View):
         # edit the python source to do anything they want.
         
         # we should at least check for and prevent the use of a semicolon
-        assert ';' not in self.id, "Semicolon is not legal in widget ids."
-        return eval ("self.model." + self.id)
+        id = self.id
+        if self.node:
+            nodexml = self.node.toxml()
+        assert id is not None, 'The model attribute was not set on the node; e.g. &lt;div model="foo" view="Text"&gt; would apply the Text widget to model.foo.'
+        assert ';' not in id, "Semicolon is not legal in widget ids."
+        try:
+            return eval ("self.model." + id)
+        except:
+            return ""
 
     def add(self, item):
         self.children.append(item)
@@ -57,15 +64,12 @@ class Widget(View):
     def cleanNode(self, node):
         # Do your part:
         # Prevent infinite recursion
-        try:
-            node.removeAttribute('model')
-        except KeyError: pass
-        try:
+#        if node.hasAttribute('model')
+#             node.removeAttribute('model')
+        if node.hasAttribute('controller'):
             node.removeAttribute('controller')
-        except KeyError: pass
-        try:
+        if node.hasAttribute('view'):
             node.removeAttribute('view')
-        except KeyError: pass
         return node
 
     def generateDOM(self, request, node):
@@ -80,11 +84,13 @@ class Widget(View):
                 item = item.generateDOM(request, node)
             node.appendChild(item)
         if self.become is None:
-            return node
-        become = self.become
-        self.become = None
-        become.add(self)
-        return become.generateDOM(request, node)
+            self.node = node
+        else:
+            become = self.become
+            self.become = None
+            become.add(self)
+            self.node = become.generateDOM(request, node)
+        return self.node
 
     def __setitem__(self, item, value):
         self.attributes[item] = value
@@ -170,10 +176,18 @@ class Anchor(Widget):
     def setLink(self, href):
         self['href'] = href
     
+    def setAttributes(self, request):
+        self['href'] = self.getData()
+        
     def generateDOM(self, request, node):
+        self.setAttributes(request)
         node = Widget.generateDOM(self, request, node)
-        node.appendChild(d.createTextNode(self.text))
+        node.appendChild(document.createTextNode(self.getData()))
         return node
+
+class GetAnchor(Anchor):
+    def setAttributes(self, request):
+        self['href'] = "?%s=%s" % (self.id, self.getData())
 
 class List(Widget):
     """
@@ -192,7 +206,6 @@ class List(Widget):
         node = Widget.generateDOM(self, request, node)
         # xxx with this implementation all elements of the list must use the same view widget
         listItem = domhelpers.get(node, 'listItem')
-        listItem.removeAttribute('model')
         domhelpers.clearNode(node)
         for itemNum in range(len(self.getData())):
             # theory: by appending copies of the li node
@@ -200,8 +213,6 @@ class List(Widget):
             # here because handleNode will then recurse into
             # the newly appended nodes
             
-            # Issue; how to spell each subnode's id?
-            # This is the real question that needs to be solved.
             newNode = listItem.cloneNode(1)
             
             domhelpers.superPrependAttribute(newNode, 'model', self.id + '[' + str(itemNum) + ']')

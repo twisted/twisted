@@ -135,7 +135,7 @@ class DefaultWidget(domwidgets.Widget):
         self.id = id
 
 
-class DOMTemplate(Resource):
+class DOMTemplate(Resource, View):
     """A resource that renders pages using DOM."""
     
     isLeaf = 1
@@ -223,12 +223,16 @@ class DOMTemplate(Resource):
             compiledTemplate = unp.load()
         return compiledTemplate
     
+    def setUp(self, request, document):
+        pass
+
     def handleDocument(self, request, document):
         """
         Handle the root node, and send the page if there are no
         outstanding callbacks when it returns.
         """
         try:
+            self.setUp(request, document)
             for node in document.childNodes:
                 self.handleNode(request, node)
             if not self.outstandingCallbacks:
@@ -360,10 +364,10 @@ class DOMTemplate(Resource):
             resultList.append((controller, data, node))
             results[success] = resultList
             setattr(self, 'handlerResults', results)
-        else:
-            if viewMethod is None:
-                viewMethod = view.generateDOM
-            self.mutateDOM(request, node, viewMethod)
+
+        if viewMethod is None:
+            viewMethod = view.generateDOM
+        self.mutateDOM(request, node, viewMethod)
 
     def mutateDOM(self, request, node, viewMethod):
         result = viewMethod(request, node)
@@ -388,21 +392,18 @@ class DOMTemplate(Resource):
             if successes:
                 self.handleSuccesses(request, successes)
 
-        page = str(self.d.toxml())
+        page = str(self.d.toprettyxml())
         request.write(page)
         request.finish()
         return page
 
     def handleFailures(self, request, failures):
-        for controller, data, node in failures:
-            controller.handleInvalid(data, request)
-            self.mutateDOM(request, node, controller.view.generateDOM)
+        print "There were failures: ", failures
         return 0
 
     def handleSuccesses(self, request, successes):
-        for controller, data, node in successes:
-            controller.handleValid(data, request)
-            self.mutateDOM(request, node, controller.view.generateDOM)
+        print "There were successes: ", successes
+        pass
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
