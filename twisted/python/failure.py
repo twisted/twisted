@@ -160,7 +160,7 @@ class Failure:
 
     def getBriefTraceback(self):
         io = StringIO()
-        self.printBriefTraceback(file=log.logfile)
+        self.printBriefTraceback(file=io)
         return io.getvalue()
 
 
