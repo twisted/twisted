@@ -387,4 +387,11 @@ class QueryArgumentsTestCase(unittest.TestCase):
         self.failUnlessEqual(cgi.parse_qs("a=&b=c"),
             http.parse_qs("a=&b=c"))
 
+    def testEscchar(self):
+        try:
+            from twisted.protocols import _c_urlarg
+        except ImportError:
+            raise unittest.SkipTest
+        self.failUnlessEqual("!@#+b",
+            _c_urlarg.unquote("+21+40+23+b", "+"))
 
