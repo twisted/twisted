@@ -352,7 +352,8 @@ class SQLReflectorTestCase(ReflectorTestCase):
             self.failUnless(rows[i][0] == i, "Values not returned.")
 
         # runInteraction
-        deferredResult(self.dbpool.runInteraction(self.interaction))
+        self.assertEquals(deferredResult(self.dbpool.runInteraction(self.interaction)),
+                          "done")
 
         # give the pool a workout
         ds = []
@@ -385,7 +386,8 @@ class SQLReflectorTestCase(ReflectorTestCase):
             self.failUnless(row[0] == i, "Value not returned.")
         # should test this, but gadfly throws an exception instead
         #self.failUnless(transaction.fetchone() is None, "Too many rows")
-
+        return "done"
+    
     def bad_interaction(self, transaction):
         if self.can_rollback:
             transaction.execute("insert into simple(x) values(0)")
