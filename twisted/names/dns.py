@@ -222,6 +222,19 @@ class DNS(DNSServerMixin, dns.DNS):
 class DNSOnTCP(DNSServerMixin, dns.DNSOnTCP):
     pass
 
+from cStringIO import StringIO
+
+class MX(dns.RR):
+
+    def encode(self, strio, compDict=None):
+        self.name.encode(strio, compDict)
+        s = StringIO()       
+        s.write(struct.pack('!H', self.data[0]))
+        dns.Name(self.data[1]).encode(s, compDict)
+        strio.write(struct.pack(self.fmt, self.type, self.cls,
+                                self.ttl, len(s.getvalue())))
+        strio.write(s.getvalue())
+
 
 class SimpleDomain:
 
@@ -230,10 +243,8 @@ class SimpleDomain:
         self.ip = string.join(map(chr, map(int, string.split(ip, '.'))), '')
 
     def getAnswer(self, name, type):
-        #MX's will probably need their own RR subclass.
-        #Need to read protocol reference - Moshe
-        #if type == dns.MX:
-        #    return dns.RR(name, type=dns.MX, cls=dns.IN, data=self.name)
+        if type == dns.MX:
+            return MX(name, type=dns.MX, cls=dns.IN, data=(5, self.name))
         if type == dns.A:
             return dns.RR(name, type=dns.A, cls=dns.IN, data=self.ip)
 
@@ -262,6 +273,5 @@ class DNSServerBoss(DNSBoss):
                 continue
             message.answers.append(self.domains[name].getAnswer(query.name.name,
                                                                 query.type))
-            print message.answers
         protocol.writeMessage(message)
         protocol.transport.loseConnection()
