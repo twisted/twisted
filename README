@@ -1,13 +1,11 @@
-Twisted 0.15.4
+Twisted 0.15.5
 
 Quote of the Release:
 
-<itamar> woo, more [<insert functionality here> --ed] tests 
-<radix> yay 
+<Blue> glyph: USE TWISTED
+[I don't think he knew that Glyph is the author of Twisted. --ed]
 
-[Thanks for all the unittests, Itamar. :-) --ed]
-
-For information on what's new in Twisted 0.15.4, see the ChangeLog file
+For information on what's new in Twisted 0.15.5, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 
@@ -44,13 +42,16 @@ What is this?
 What can I do with it?
 
   To install Twisted, just make sure the Twisted-$VERSION/twisted directory
-  is in your $PYTHONPATH. For example, if you extracted Twisted-0.15.0.tar.gz
-  to /home/bob/, then you would have something like: 
+  is in the "PYTHONPATH" environment variable. For example, if you extracted
+  Twisted-0.15.0.tar.gz to /home/bob/, then you would have something like:
 
     export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.15.0/
   
-  in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc etc.
-
+  in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc. If you use Windows NT,
+  2k, or XP, then set your environment variables by right-clicking on My
+  Computer and selecting Properties. If you use some other version of windows,
+  you'll need to set the variable at a command prompt, or in autoexec.bat, with
+  the 'set' command.
 
   Although there is a lot of infrastructure support in Twisted, the immediately
   useful applications for the end-user are Twisted Web and Instance Messenger.
