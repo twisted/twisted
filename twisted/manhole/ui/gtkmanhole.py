@@ -2,6 +2,9 @@ import gtk, sys
 
 from twisted.words.ui import gtkim
 from twisted.spread.ui import gtkutil
+from twisted.internet import ingtkernet
+from twisted.spread import pb
+ingtkernet.install()
 
 class Interaction(gtk.GtkWindow):
     def __init__(self):
