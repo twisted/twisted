@@ -179,6 +179,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
 
 
 class Perspective(pb.Perspective):
+    lastDeferred = 0
     def __init__(self, perspectiveName, identityName="Nobody"):
         pb.Perspective.__init__(self, perspectiveName, identityName)
         self.localNamespace = {
@@ -260,6 +261,10 @@ class Perspective(pb.Perspective):
                 self.detached(client, None)
 
 
+    def _cbResult(self, val, dnum):
+        self.console([('result', "Deferred #%s Result: %r\n" %(dnum, val))])
+        return val
+
     ### perspective_ methods, commands used by the client.
 
     def perspective_do(self, expr):
@@ -272,7 +277,13 @@ class Perspective(pb.Perspective):
         val = self.runInConsole(expr)
         if val is not None:
             self.localNamespace["_"] = val
-            self.console([("result", repr(val) + '\n')])
+            from twisted.internet.defer import Deferred
+            if isinstance(val, Deferred):
+                self.lastDeferred += 1
+                self.console([('result', "Waiting for Deferred #%s...\n" % self.lastDeferred)])
+                val.addBoth(self._cbResult, self.lastDeferred)
+            else:
+                self.console([("result", repr(val) + '\n')])
         log.msg("<<<")
 
     def perspective_explore(self, identifier):

@@ -25,7 +25,7 @@ from twisted.internet import defer
 from twisted.web.woven import interfaces
 
 
-def adaptToIModel(m, parent, submodel):
+def adaptToIModel(m, parent=None, submodel=None):
     adapted = components.getAdapter(m, interfaces.IModel, None)
     if adapted is None:
         adapted = Wrapper(m)

@@ -8,43 +8,89 @@ to format methods.  Currently this is only used by woven.
 
 """
 
+class InputError(Exception):
+    """
+    An error occurred with some input.
+    """
+
 class Argument:
     defaultDefault = None
-    def __init__(self, name, default=None, error=None):
+    def __init__(self, name, default=None, shortDesc=None, longDesc=None, hints=()):
         self.name = name
         if default is None:
             default = self.defaultDefault
         self.default = default
-        self.error = error
+        self.shortDesc = shortDesc
+        self.longDesc = longDesc
 
     def addHint(self, hint):
         self.hints.append(hint)
         hint.added(self)
 
+    def getShortDescription(self):
+        return self.shortDesc or self.name.capitalize()
+
+    def getLongDescription(self):
+        return self.longDesc or "The %s." % self.name
+
 class String(Argument):
     """A single string.
     """
+    def coerce(self, val):
+        return str(val)
 
 class Integer(Argument):
     """A single integer.
     """
+    def coerce(self, val):
+        return int(val)
+
+class Float(Argument):
+    def coerce(self, val):
+        return float(val)
 
 class Choice(Argument):
     """The result of a choice between enumerated types.
     """
-    def __init__(self, name, choices=[], default=None, *hints):
+    def __init__(self, name, choices=[], default=None, shortDesc=None, longDesc=None, hints=()):
         self.choices = choices
-        Argument.__init__(self, name, default, *hints)
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
-class FlagSet(Argument):
+    def coerce(self, inIdent):
+        for ident, val, desc in self.choices:
+            if ident == inIdent:
+                return val
+        else:
+            raise InputError("Invalid Choice: %s" % inIdent)
+
+
+class Flags(Argument):
     """The result of a checkbox group or multi-menu.
     """
-    def __init__(self, name, flags=[], default=[], *hints):
+    def __init__(self, name, flags=(), default=(), shortDesc=None, longDesc=None, hints=()):
         self.flags = flags
-        Argument.__init__(self, name, default, *hints)
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
+
+    def coerce(self, inFlagKeys):
+        outFlags = []
+        for inFlagKey in inFlagKeys:
+            for flagKey, flagVal, flagDesc in self.flags:
+                if inFlagKey == flagKey:
+                    outFlags.append(flagVal)
+            else:
+                raise InputError("Invalid Flag: %s" % inFlagKey)
+        return outFlags
+
 
 class Boolean(Argument):
-    pass
+    def coerce(self, inVal):
+        if not inVal:
+            return 0
+        lInVal = str(inVal).lower()
+        if lInVal in ('no', 'n', 'f', 'false'):
+            return 0
+        return 1
+
 
 class PresentationHint:
     """
@@ -73,15 +119,21 @@ class MethodSignature:
                 return a
 
     def method(self, callable):
-        return SignedMethod(self, callable)
+        return FormMethod(self, callable)
 
 
-class SignedMethod:
+class FormMethod:
     """A callable object with a signature.
     """
     def __init__(self, signature, callable):
         self.signature = signature
         self.callable = callable
+
+    def getArgs(self):
+        return tuple(self.signature.methodSignature)
+
+    def call(self,*args,**kw):
+        return self.callable(*args,**kw)
 
 
 def test():
@@ -90,18 +142,18 @@ def test():
     msf = MethodSignature(String("title"),
                           Boolean("checkone"),
                           Boolean("checktwo"),
-                          FlagSet("checkn", ["zero", "Count Zero",
-                                             "one", "Count One",
-                                             "two", "Count Two"],
-                                  ["one"],
-                                  # WebCheckGroup(style="color: orange"),
-                                  # GtkCheckGroup(border="3")
+                          Flags("checkn", ["zero", 0, "Count Zero",
+                                           "one", 1, "Count One",
+                                           "two", 2, "Count Two"],
+                                ["one"],
+                                # hints=[WebCheckGroup(style="color: orange"),
+                                # GtkCheckGroup(border="3")]
                                   ),
                           Choice("mnu",
-                                 [['IDENTIFIER', 'Some Innocuous String'],
-                                  ['TEST_FORM', 'Just another silly string.'],
-                                  ['CONEHEADS', 'Hoo ha.']],
-                                 # WebMenu()
+                                 [['IDENTIFIER', 'Sphere', 'Some Innocuous String'],
+                                  ['TEST_FORM', 'Cube', 'Just another silly string.'],
+                                  ['CONEHEADS', 'Cone', 'Hoo ha.']],
+                                 # hints=[WebMenu()]
                                  ))
     m = msf.method(funky)
 

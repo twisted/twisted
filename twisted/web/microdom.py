@@ -92,6 +92,12 @@ class Node:
         self.childNodes.append(child)
         child.parentNode = self
 
+    def insertBefore(self, new, ref):
+        i = self.childNodes.index(ref)
+        new.parentNode = self
+        self.childNodes.insert(i, new)
+        return new
+
     def removeChild(self, child):
         if child in self.childNodes:
             self.childNodes.remove(child)

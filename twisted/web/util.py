@@ -37,8 +37,15 @@ class Redirect(resource.Resource):
 def htmlrepr(x):
     return htmlReprTypes.get(type(x), htmlUnknown)(x)
 
+def saferepr(x):
+    try:
+        rx = repr(x)
+    except:
+        rx = "<repr failed! %s instance at %s>" % (x.__class__, id(x))
+    return rx
+
 def htmlUnknown(x):
-    return '<CODE>'+html.escape(repr(x))+'</code>'
+    return '<CODE>'+html.escape(saferepr(x))+'</code>'
 
 def htmlDict(d):
     io = StringIO()
@@ -64,14 +71,14 @@ def htmlInst(i):
     if hasattr(i, "__html__"):
         s = i.__html__()
     else:
-        s = '<code>'+html.escape(repr(i))+'</code>'
+        s = '<code>'+html.escape(saferepr(i))+'</code>'
     return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance @ 0x%x</td></tr>
               <tr bgcolor="#ff9999"><td>%s</td></tr>
               </table>
               ''' % (i.__class__, id(i), s)
 
 def htmlString(s):
-    return html.escape(repr(s))
+    return html.escape(saferepr(s))
 
 htmlReprTypes = {types.DictType: htmlDict,
                  types.ListType: htmlList,
