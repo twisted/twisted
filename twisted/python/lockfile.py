@@ -1,6 +1,5 @@
 from twisted.internet import defer
-import os
-import time
+import os, errno, time
 
 def createLock(lockedFile, retryCount = 10, retryTime = 5, usePID = 0):
     filename = lockedFile + ".lock"
@@ -37,6 +36,7 @@ class LockFile:
         self._killLaterTouch = reactor.callLater(60, self._laterTouch)
 
     def _laterTouch(self):
+        from twisted.internet import reactor
         self.touch()
         self._killLaterTouch = reactor.callLater(60, self._laterTouch)
 
