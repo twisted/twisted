@@ -270,8 +270,8 @@ class Controller:
     """
     __implements__ = IController
     
-    def __init__(self, model):
-        self.model = model
+    def __init__(self, *args):
+        self.model = args[-1]
 
     def setView(self, view):
         self.view = view
