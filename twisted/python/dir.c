@@ -336,7 +336,7 @@ PyDirObject_rewind(PyDirObject *self) {
 
 static PyObject *
 PyDirObject_seek(PyDirObject *self, PyObject* args) {
-	off_t pos;
+	long pos;
 	
 	if (!PyArg_ParseTuple(args, "l:seek", &pos))
 		return NULL;
