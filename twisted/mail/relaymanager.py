@@ -29,9 +29,9 @@ accepting mail for a small set of domains.
 The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 """
-from twisted.python import delay, log, failure
+from twisted.python import log, failure
 from twisted.mail import relay, mail, bounce
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol, app
 import os, string, time, cPickle
 
 class SMTPManagedRelayerFactory(protocol.ClientFactory):
@@ -91,7 +91,7 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         del self.messages[0]
         del self.names[0]
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """called when connection is broken
 
         notify manager we will try to send no more e-mail
@@ -286,8 +286,31 @@ class SmartHostSMTPRelayingManager:
             self.queue.relaying(message)
         factory = SMTPManagedRelayerFactory(toRelay, self)
         self.managed[factory] = nextMessages
+        
+        from twisted.internet import reactor
         reactor.connectTCP(self.smartHostAddr[0], self.smartHostAddr[1],
                            factory)
+
+
+class RelayStateHelper(app.ApplicationService):
+    """A helper to poke SmartHostSMTPRelayingManager.checkState()"""
+
+    def __init__(self, manager, delay, *args, **kw):
+        app.ApplicationService.__init__(self, *args, **kw)
+        self.manager = manager
+        self.delay = delay
+    
+    def startService(self):
+        self.loop()
+    
+    def loop(self):
+        from twisted.internet import reactor
+        self.loopCall = reactor.callLater(self.delay, self.loop)
+        self.manager.checkState()
+    
+    def stopService(self):
+        self.loopCall.cancel()
+        del self.loopCall
 
 
 class MXCalculator:
@@ -319,22 +342,3 @@ class MXCalculator:
                 deferrd.callback(answer)
                 return
         deferred.callback(answers[0])
-        
-
-# It's difficult to pickle methods
-# So just have a function call the method
-def checkState(manager):
-    """cause a manager to check the state"""
-    manager.checkState()
-
-
-def attachManagerToDelayed(manager, delayed, time=1):
-    """attach a a manager to a Delayed
-
-    manager should be an SMTPRelayManager, delayed should be a 
-    twisted.python.Delayed and time should be an integer in second,
-    specifying time between checking the state
-    """
-    delayed.ticktime = 1
-    loop = delay.Looping(time, checkState, delayed)
-    loop.delayed._later(loop.loop,loop.ticks,(manager,))

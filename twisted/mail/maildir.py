@@ -18,7 +18,7 @@
 """Mail support for twisted python.
 """
 
-import errno, stat, os, socket, time, md5, string
+import stat, os, socket, time, md5, string
 from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.mail import mail
@@ -149,6 +149,7 @@ class MaildirMailbox(pop3.Mailbox):
             try:
                 os.rename(trash, real)
             except OSError, (err, estr):
+                import errno
                 # If the file has been deleted from disk, oh well!
                 if err != errno.ENOENT:
                     raise
@@ -197,6 +198,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
                 return None
             name = 'postmaster'
         dir = os.path.join(self.root, name)
+        if not os.path.exists(dir):
+            initializeMaildir(dir)
         return dir
 
     def authenticateUserAPOP(self, user, magic, digest, domain):

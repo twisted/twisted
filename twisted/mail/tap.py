@@ -23,7 +23,7 @@ import string, os
 # Twisted Imports
 import mail, maildir, relay, relaymanager
 from twisted.protocols import pop3, smtp
-from twisted.python import usage, delay
+from twisted.python import usage
 
 import sys
 
@@ -112,11 +112,9 @@ def updateApplication(app, config):
         port = int(port)
         config.service.setQueue(relaymanager.Queue(dir))
         default = relay.DomainQueuer(config.service)
-        delayed = delay.Delayed()
         manager = relaymanager.SmartHostSMTPRelayingManager(config.service.queue, (ip, port))
-        relaymanager.attachManagerToDelayed(manager, delayed)
+        helper = relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', app)
         config.service.domains.setDefaultDomain(default)
-        app.addDelayed(delayed)
     
     if config['pop3']:
         app.listenTCP(config['pop3'], config.service.getPOP3Factory())

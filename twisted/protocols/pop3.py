@@ -44,15 +44,10 @@ class POP3(basic.LineReceiver):
         self.sendLine('-ERR ' + str(message))
 
     def lineReceived(self, line):
-#        print 'Received ', repr(line)
         try:
             return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
-    
-#    def sendLine(self, line):
-#        print 'Sending ', repr(line)
-#        basic.LineReceiver.sendLine(self, line)
     
     def processCommand(self, command, *args):
         command = string.upper(command)
@@ -65,6 +60,8 @@ class POP3(basic.LineReceiver):
 
     def do_APOP(self, user, digest):
         self.mbox = self.authenticateUserAPOP(user, digest)
+        if not self.mbox:
+            raise POP3Error("Invalid APOP response")
         self.successResponse('Authentication succeeded')
 
     def do_USER(self, user):
@@ -75,6 +72,8 @@ class POP3(basic.LineReceiver):
         user = self._userIs
         self._userIs = None
         self.mbox = self.authenticateUserPASS(user, password)
+        if not self.mbox:
+            raise POP3Error("Authentication failed")
         self.successResponse('Authentication succeeded')
 
     def do_STAT(self):
@@ -164,6 +163,7 @@ class POP3(basic.LineReceiver):
         try:
             self.mbox.undeleteMessages()
         except:
+            log.deferr()
             self.failResponse()
         else:
             self.highest = 1
@@ -250,7 +250,6 @@ class POP3Client(basic.LineReceiver):
                 self.welcomeCode = m.group(1)
 
     def _dispatch(self, command, default, *args):
-        # print 'pop3client dispatching:', command, default, args
         try:
             method = getattr(self, 'handle_'+command, default)
             if method is not None:
