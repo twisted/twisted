@@ -51,7 +51,7 @@ class ConnectionRefusedError(ConnectError):
     """Connection was refused by other side."""
 
 
-class TimedOutError(ConnectError):
+class TCPTimedOutError(ConnectError):
     """TCP connection timed out."""
 
 
@@ -63,6 +63,10 @@ class UserError(ConnectError):
     """User aborted connection."""
 
 
+class TimeoutError(UserError):
+    """User timeout caused connection failure."""
+
+
 class SSLError(ConnectError):
     """An SSL error occured."""
 
@@ -70,7 +74,7 @@ class SSLError(ConnectError):
 errnoMapping = {
     errno.ENETUNREACH: NoRouteError,
     errno.ECONNREFUSED: ConnectionRefusedError,
-    errno.ETIMEDOUT: TimedOutError,
+    errno.ETIMEDOUT: TCPTimedOutError,
 }
 
 def getConnectError(e):

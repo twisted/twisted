@@ -96,12 +96,13 @@ class ClientFactory(Factory):
     twisted.internet.app.Application.
     """
 
-    def startedConnecting(self, connector, connecting):
+    def startedConnecting(self, connector):
         """Called when a connection has been started.
 
         Arguments:
            - connector: a Connector object.
-           - connecting: a IConnecting object.
+
+        You can call connector.stopConnecting() to stop the connection attempt.
         """
 
     def connectionFailed(self, connector, reason):

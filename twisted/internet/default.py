@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.22 2002/07/26 12:52:03 glyph Exp $
+# $Id: default.py,v 1.23 2002/07/27 23:17:12 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -29,7 +29,7 @@ import signal
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
-from twisted.internet import main
+from twisted.internet import main, error, protocol, interfaces
 
 from twisted.internet import main, tcp, udp, task
 from twisted.python import log, threadable
@@ -54,36 +54,128 @@ if platform.getType() == 'posix':
     import process
 
 
+class BaseConnector:
+    """Basic implementation of connector.
 
-class FakeConnector:
-    """Used to emulate deprecated clientTCP/SSL/UNIX behaviour."""
+    State can be: "connecting", "connected", "disconnected"
+    """
+
+    __implements__ = interfaces.IConnector
 
     timeoutID = None
     
-    def __init__(self, protocol, reactor):
+    def __init__(self, reactor, factory, timeout):
+        self.state = "disconnected"
         self.reactor = reactor
-        self.protocol = protocol
+        self.factory = factory
+        self.timeout = timeout
 
-    def doTimeout(self, connecting, timeout=30):
-        if timeout is not None:
-            self.timeoutID = self.reactor.callLater(timeout, connecting.failIfNotConnected, "timeout")
+    def connect(self):
+        """Start connection to remote server."""
+        if self.state != "disconnected":
+            raise RuntimeError, "can't connect in this state"
+        
+        self.state = "connecting"
+        self.factory.doStart()
+        self.transport = transport = self._makeTransport()
+        if self.timeout is not None:
+            self.timeoutID = self.reactor.callLater(self.timeout, transport.failIfNotConnected, error.TimeoutError())
+        self.factory.startedConnecting(self)
 
+    def stopConnecting(self):
+        """Stop attempting to connect."""
+        if self.state != "connecting":
+            raise RuntimeError, "we're not trying to connect"
+
+        self.state = "disconnected"
+        self.transport.failIfNotConnected(error.UserError())
+        del self.transport
+    
     def cancelTimeout(self):
         if self.timeoutID:
-            self.reactor.cancelCallLater(self.timeoutID)
+            try:
+                self.reactor.cancelCallLater(self.timeoutID)
+            except ValueError:
+                pass
             del self.timeoutID
     
     def buildProtocol(self, addr):
+        self.state = "connected"
         self.cancelTimeout()
-        return self.protocol
+        return self.factory.buildProtocol(addr)
 
     def connectionFailed(self, reason):
         self.cancelTimeout()
-        self.protocol.connectionFailed()
-        del self.protocol
-    
+        self.state = "disconnected"
+        self.factory.connectionFailed(self, reason)
+        if self.state == "disconnected":
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+
     def connectionLost(self):
-        pass
+        self.state = "disconnected"
+        self.factory.connectionLost(self)
+        if self.state == "disconnected":
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+
+
+class TCPConnector(BaseConnector):
+
+    def __init__(self, reactor, host, port, factory, timeout, bindAddress):
+        self.host = host
+        self.port = port
+        self.bindAddress = bindAddress
+        BaseConnector.__init__(self, reactor, factory, timeout)
+
+    def _makeTransport(self):
+        return tcp.TCPClient(self.host, self.port, self, self.reactor)
+
+    def getDestination(self):
+        return ('INET', self.host, self.port)
+
+
+class UNIXConnector(BaseConnector):
+
+    def __init__(self, reactor, address, factory, timeout):
+        self.address = address
+        BaseConnector.__init__(self, reactor, factory, timeout)
+
+    def _makeTransport(self):
+        return tcp.UNIXClient(self.address, self, self.reactor)
+
+    def getDestination(self):
+        return ('UNIX', self.address)
+
+
+class SSLConnector(BaseConnector):
+
+    def __init__(self, reactor, host, port, factory, contextFactory, timeout, bindAddress):
+        self.host = host
+        self.port = port
+        self.bindAddress = bindAddress
+        self.contextFactory = contextFactory
+        BaseConnector.__init__(self, reactor, factory, timeout)
+
+    def _makeTransport(self):
+        return ssl.Client(self.host, self.port, self.contextFactory, self, self.reactor)
+
+    def getDestination(self):
+        return ('SSL', self.host, self.port)
+
+
+class BCFactory(protocol.ClientFactory):
+    """Factory for backwards compatability with old clientXXX APIs."""
+
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    def buildProtocol(self, addr):
+        return self.protocol
+
+    def connectionFailed(self, connector, reason):
+        self.protocol.connectionFailed()
+
 
 
 class PosixReactorBase(ReactorBase):
@@ -148,6 +240,16 @@ class PosixReactorBase(ReactorBase):
             self.waker = _Waker()
             self.addReader(self.waker)
 
+
+    # IReactorProcess
+    
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
+                     uid=None, gid=None):
+        if platform.getType() == 'posix':
+            return process.Process(executable, args, env, path, processProtocol, uid, gid)
+        else:
+            raise NotImplementedError, "process only available in this reactor on POSIX"
+
     # IReactorUDP
 
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
@@ -157,26 +259,25 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorUNIX
 
-    def startConnectUNIX(self, address, connector):
-        """See twisted.internet.interfaces.IReactorUNIX.startConnectUNIX
+    def connectUNIX(self, address, factory, timeout=30):
+        """See twisted.internet.interfaces.IReactorUNIX.connectUNIX
         """
-        return tcp.UNIXClient(address, connector, self)
+        c = UNIXConnector(self, address, factory, timeout)
+        c.connect()
+        return c
     
     def clientUNIX(self, address, protocol, timeout=30):
-        """See twisted.internet.interfaces.IReactorUNIX.clientUNIX
+        """Deprecated - use connectUNIX instead.
         """
         import warnings
-        warnings.warn("clientUNIX is deprecated - use startConnectUNIX instead.",
+        warnings.warn("clientUNIX is deprecated - use connectUNIX instead.",
                       category=DeprecationWarning, stacklevel=2)
-        connector = FakeConnector(protocol, self)
-        connecting = self.startConnectUNIX(address, connector)
-        connector.doTimeout(connecting, timeout)
-        return connecting
+        f = BCFactory(protocol)
+        self.connectUNIX(address, f, timeout)
 
     def listenUNIX(self, address, factory, backlog=5):
         """Listen on a UNIX socket.
         """
-        
         return tcp.Port(address, factory, backlog=backlog)
 
 
@@ -189,46 +290,40 @@ class PosixReactorBase(ReactorBase):
         p.startListening()
         return p
 
-    def startConnectTCP(self, host, port, connector):
-        """See twisted.internet.interfaces.IReactorTCP.startConnectTCP
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        """See twisted.internet.interfaces.IReactorTCP.connectTCP
         """
-        return tcp.TCPClient(host, port, connector, self)
+        c = TCPConnector(self, host, port, factory, timeout, bindAddress)
+        c.connect()
+        return c
     
     def clientTCP(self, host, port, protocol, timeout=30):
-        """See twisted.internet.interfaces.IReactorTCP.clientTCP
+        """Deprecated - use connectTCP instead.
         """
         import warnings
-        warnings.warn("clientTCP is deprecated - use startConnectTCP instead.",
+        warnings.warn("clientTCP is deprecated - use connectTCP instead.",
                       category=DeprecationWarning, stacklevel=2)
-        connector = FakeConnector(protocol, self)
-        connecting = self.startConnectTCP(host, port, connector)
-        connector.doTimeout(connecting, timeout)
-        return connecting
+        f = BCFactory(protocol)
+        self.connectTCP(host, port, f, timeout)
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
-                     uid=None, gid=None):
-        if platform.getType() == 'posix':
-            return process.Process(executable, args, env, path, processProtocol, uid, gid)
-        else:
-            raise NotImplementedError, "process only available in this reactor on POSIX"
 
     # IReactorSSL (sometimes, not implemented)
 
-    def startConnectSSL(self, host, port, contextFactory, connector):
-        """See twisted.internet.interfaces.IReactorSSL.startConnectSSL
+    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+        """See twisted.internet.interfaces.IReactorSSL.connectSSL
         """
-        return ssl.Client(host, port, contextFactory, connector, self)
+        c = SSLConnector(self, host, port, factory, contextFactory, timeout, bindAddress)
+        c.connect()
+        return c
     
     def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
-        """See twisted.internet.interfaces.IReactorSSL.clientSSL
+        """Deprecated - use connectSSL instead.
         """
         import warnings
-        warnings.warn("clientSSL is deprecated - use startConnectSSL instead.",
+        warnings.warn("clientSSL is deprecated - use connectSSL instead.",
                       category=DeprecationWarning, stacklevel=2)
-        connector = FakeConnector(protocol, self)
-        connecting = self.startConnectSSL(host, port, contextFactory, connector)
-        connector.doTimeout(connecting, timeout)
-        return connecting
+        f = BCFactory(protocol)
+        self.connectSSL(host, port, f, contextFactory, timeout)
     
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         p = ssl.Port(port, factory, contextFactory, backlog, interface)

@@ -32,63 +32,6 @@ from twisted.cred.authorizer import DefaultAuthorizer
 import main, defer
 
 
-class Connector:
-    """Default implementation of connector.
-
-    This is used by twisted.internet.app.Application.
-    """
-
-    __implements__ = interfaces.IConnector
-
-    timeoutID = None
-    
-    def __init__(self, factory, timeout, methodName, *args):
-        self.hasConnection = 0
-        self.factory = factory
-        self.timeout = timeout
-        self.methodName = methodName
-        self.args = args
-
-    def connect(self):
-        """Start connection to remote server."""
-        assert not self.hasConnection
-        self.hasConnection = 1
-        self.factory.doStart()
-        from twisted.internet import reactor
-        c = apply(getattr(reactor, "startConnect" + self.methodName), tuple(self.args) + (self,))
-        if self.timeout is not None:
-            self.timeoutID = reactor.callLater(self.timeout, c.stopConnecting)
-        self.factory.startedConnecting(self, c)
-
-    def cancelTimeout(self):
-        if self.timeoutID:
-            from twisted.internet import reactor
-            try:
-                reactor.cancelCallLater(self.timeoutID)
-            except ValueError:
-                pass
-            del self.timeoutID
-    
-    def buildProtocol(self, addr):
-        self.cancelTimeout()
-        return self.factory.buildProtocol(addr)
-
-    def connectionFailed(self, reason):
-        self.cancelTimeout()
-        self.hasConnection = 0
-        self.factory.connectionFailed(self, reason)
-        if not self.hasConnection:
-            # factory hasn't called our connect() method
-            self.factory.doStop()
-
-    def connectionLost(self):
-        self.hasConnection = 0
-        self.factory.connectionLost(self)
-        if not self.hasConnection:
-            # factory hasn't called our connect() method
-            self.factory.doStop()
-
-
 class _SSLlistener:
     """persistence utility; ignore me
     """
@@ -145,7 +88,9 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.sslPorts = []
         self._listenerDict = {}
         # a list of (tcp, ssl, udp) Connectors
-        self.connectors = []            # check
+        self.tcpConnectors = []
+        self.sslConnectors = []
+        self.unixConnectors = []
         # a list of twisted.python.delay.Delayeds
         self.delayeds = []              # check
         # a list of twisted.internet.cred.service.Services
@@ -406,38 +351,26 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         if self.running:
             reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
 
-    def connectTCP(self, host, port, factory, timeout=30):
-        """Connect a given client protocol factory to a specific TCP server.
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        """Connect a given client protocol factory to a specific TCP server."""
+        from twisted.internet import reactor
+        self.tcpConnectors.append((host, port, factory, timeout, bindAddress))
+        if self.running:
+            reactor.connectTCP(host, port, factory, timeout, bindAddress)
 
-        This creates a new Connector and returns it.
-        """
-        c = Connector(factory, timeout, "TCP", host, port) 
-        self.addConnector(c)
-        return c
-
-    def connectSSL(self, host, port, factory, ctxFactory, timeout=30):
-        """Connect a given client protocol factory to a specific SSL server.
-
-        This creates a new Connector and returns it.
-        """
-        c = Connector(factory, timeout, host, port, ctxFactory)
-        self.addConnector(c)
-        return c
+    def connectSSL(self, host, port, factory, ctxFactory, timeout=30, bindAddress=None):
+        """Connect a given client protocol factory to a specific SSL server."""
+        from twisted.internet import reactor
+        self.sslConnectors.append((host, port, factory, ctxFactory, timeout, bindAddress))
+        if self.running:
+            reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
 
     def connectUNIX(self, address, factory, timeout=30):
-        """Connect a given client protocol factory to a specific UNIX socket.
-
-        This creates a new Connector and returns it.
-        """
-        c = Connector(factory, timeout, "TCP", address) 
-        self.addConnector(c)
-        return c
-
-    def addConnector(self, connector):
-        """Add a connector to this Application."""
-        self.connectors.append(connector)
+        """Connect a given client protocol factory to a specific UNIX socket."""
+        from twisted.internet import reactor
+        self.unixConnectors.append((address, factory, timeout))
         if self.running:
-            connector.connect()
+            reactor.connectUNIX(address, factory, timeout)
 
     def addDelayed(self, delayed):
         """
@@ -553,23 +486,28 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             for port, factory, backlog, interface in self.tcpPorts:
                 try:
                     self._listenerDict[port, interface] = reactor.listenTCP(port, factory, backlog, interface)
-                except socket.error, msg:
+                except error.CannotListenError, msg:
                     log.msg('error on TCP port %s: %s' % (port, msg))
                     return
             for port, factory, interface, maxPacketSize in self.udpPorts:
                 try:
                     reactor.listenUDP(port, factory, interface, maxPacketSize)
-                except socket.error, msg:
+                except error.CannotListenError, msg:
                     log.msg('error on UDP port %s: %s' % (port, msg))
                     return
             for port, factory, ctxFactory, backlog, interface in self.sslPorts:
                 try:
                     reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
-                except socket.error, msg:
+                except error.CannotListenError, msg:
                     log.msg('error on SSL port %s: %s' % (port, msg))
                     return
-            for connector in self.connectors:
-                connector.connect()
+            for host, port, factory, ctxFactory, timeout, bindAddress in self.sslConnectors:
+                reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
+            for host, port, factory, timeout, bindAddress in self.tcpConnectors:
+                reactor.connectTCP(host, port, factory, timeout, bindAddress)
+            for address, factory, timeout in self.unixConnectors:
+                reactor.connectUNIX(address, factory, timeout)
+
             for service in self.services.values():
                 service.startService()
             self.running = 1

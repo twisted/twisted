@@ -18,14 +18,8 @@
 
 from twisted.python.components import Interface
 
+
 ### Reactor Interfaces
-
-class IConnecting(Interface):
-    """A connection in progress."""
-
-    def stopConnecting(self):
-        """Stop connecting."""
-
 
 class IConnector(Interface):
     """Object used to interface between connections and protocols.
@@ -33,23 +27,25 @@ class IConnector(Interface):
     Each IConnector manages one connection.
     """
 
-    def buildProtocol(self, addr):
-        """Return a protocol instance."""
+    def stopConnecting(self):
+        """Stop attempting to connect."""
 
-    def connectionFailed(self, reason):
-        """The connection attempt has failed.
+    def connect(self):
+        """Try to connect to remote address."""
 
-        Arguments:
+    def getDestination(self):
+        """Return destination this will try to connect to.
 
-         * reason -- a twisted.python.failure.Failure, encapsulating a
-                     twisted.internet.error.ConnectError exception.
+        This can be one of:
+        
+          TCP -- ('INET', host, port)
+          UNIX -- ('UNIX', address)
+          SSL -- ('SSL', host, port)
         """
-
-    def connectionLost(self):
-        """The remote connection has been lost."""
 
 
 class IReactorTCP(Interface):
+    
     def listenTCP(self, port, factory, backlog=5, interface=''):
        """Connects a given protocol factory to the given numeric TCP/IP port.
 
@@ -62,24 +58,7 @@ class IReactorTCP(Interface):
           a CannotListenError, as defined in twisted.internet.error, if it cannot listen on this port (e.g., it cannot bind to the required port number)
         """
 
-    def clientTCP(self, host, port, protocol, timeout=30):
-        """XXX Deprecated. XXX
-
-        Connect a TCP client.
-
-        Arguments:
-
-          * host: a host name
-
-          * port: a port number
-
-          * protocol: a twisted.internet.protocol.Protocol instance
-
-          * timeout: number of seconds to wait before assuming the connection
-            has failed.
-        """
-
-    def startConnectTCP(self, host, protocol, connector):
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """Connect a TCP client.
 
         Arguments:
@@ -88,27 +67,23 @@ class IReactorTCP(Interface):
 
           * port: a port number
 
-          * connector: object implemeting IConnector interface.
+          * factory: a twisted.internet.protocol.ClientFactory instance
 
-        Returns object implementing IConnecting interface.
+          * timeout: number of seconds to wait before assuming the connection
+            has failed.
 
-        If the connection fails, connector.connectionFailed will be called.
-        If the connection succeeds, connector.buildProtocol will be called,
-        and a new TCP transport will be connected to this new protocol.
+          * bindAddress: a (host, port) tuple of local address to bind to, or None.
+
+        Returns an object implementing IConnector.
         """
 
 
 class IReactorSSL(Interface):
-    def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
-        """XXX deprecated XXX.
-        
-        Connect a client Protocol to a remote SSL socket.
-        """
 
-    def startConnectSSL(self, host, port, contextFactory, connector):
-        """Connect to remote SSL server.
+    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+        """Connect a client Protocol to a remote SSL socket.
 
-        See IReactorTCP.startConnectTCP for description of behaviour.
+        Returns a IConnector.
         """
     
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
@@ -120,18 +95,12 @@ class IReactorSSL(Interface):
 
 
 class IReactorUNIX(Interface):
-    """UNIX socket methods.
-    """
-    def clientUNIX(address, protocol, timeout=30):
-        """XXX deprecated XXX.
+    """UNIX socket methods."""
+    
+    def connectUNIX(self, address, factory, timeout=30):
+        """Connect a client protocol to a UNIX socket.
 
-        Connect a client Protocol to a UNIX socket.
-        """
-
-    def startConnectUNIX(self, address, connector):
-        """Connect to UNIX socket.
-
-        See IReactorTCP.startConnectTCP for description of behaviour.
+        Returns a IConnector.
         """
     
     def listenUNIX(address, factory, backlog=5):
