@@ -58,6 +58,7 @@ class SSHTransportBase(protocol.Protocol):
     outgoingCompression = None
     incomingCompression = None
     sessionID = None
+    isAuthorized = 0
     service = None
 
     def connectionLost(self):
@@ -157,7 +158,7 @@ class SSHTransportBase(protocol.Protocol):
             for p in parts:
                 if p[:4]=='SSH-':
                     self.gotVersion = 1
-                    print 'got ssh version from other side:', p.strip()
+                    #print 'got ssh version from other side:', p.strip()
                     self.otherVersionString = p.strip()
                     if p.split('-')[1] not in ('1.99','2.0'): # bad version
                         self.sendDisconnect(DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED, 'bad version %s'%p.split('-')[1])
@@ -325,7 +326,7 @@ class SSHServerTransport(SSHTransportBase):
 
     def ssh_SERVICE_REQUEST(self, packet):
         service, rest = getNS(packet)
-        cls = self.factory.services.get(service, None)
+        cls = self.factory.getService(self, service)
         if not cls:
             self.sendDisconnect(DISCONNECT_SERVICE_NOT_AVAILABLE, "don't have service %s" % service)
             return

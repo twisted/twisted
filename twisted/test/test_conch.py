@@ -110,7 +110,6 @@ class SSHTestServerAuth(userauth.SSHUserAuthServer):
 
     def areDone(self):
         #self.tranport.factory.services['ssh-connection'] = SSHTestConnection
-        print 'auth',self.authenticatedWith
         return len(self.authenticatedWith)==2
 
     def isValidKeyFor(self, user, pubKey):
@@ -135,6 +134,10 @@ class SSHTestClientAuth(userauth.SSHUserAuthClient):
         return keys.getPublicKeyString('dsa_test.pub')
 
 class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
+
+    def checkFingerprint(self, fp):
+        self.test.assertEquals(fp,'34:f1:6f:02:29:ad:17:f9:8f:96:8a:9b:94:c7:49:43')
+        return 1
 
     def connectionSecure(self):
         self.requestService(SSHTestClientAuth('testuser',SSHTestConnection()))

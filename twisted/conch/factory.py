@@ -46,6 +46,10 @@ class SSHFactory(protocol.Factory):
         # returns g, p
         return primes.getDHPrimeOfBits(self.primes, bits)
 
+    def getService(self, transport, service):
+        if transport.isAuthorized or service == 'ssh-userauth':
+            return self.services[service]
+
 class OpenSSHFactory(SSHFactory):
     dataRoot = '/usr/local/etc'
     def getPublicKeys(self):
