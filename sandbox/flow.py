@@ -76,9 +76,8 @@ def wrap(obj, trap = None):
     except TypeError: pass
     if callable(obj):
         return Callable(obj, trap)
-    from twisted.internet.defer import Deferred
-    if isinstance(obj, Deferred):
-        return WrapDeferred(obj)
+    if hasattr(obj, 'addBoth'):
+        return DeferredWrapper(obj)
     assert 0, "cannot find an appropriate wrapper"
 
 class Instruction:
@@ -323,19 +322,22 @@ class DeferredWrapper(Stage):
     """
     def __init__(self, deferred, trap = None, delay = 0):
         Stage.__init__(self, trap)
-        deferred.addBoth(self_callback)
+        deferred.addBoth(self._callback)
         self._cooperate = Cooperate(delay)
-        self._finished = 0
-    def _callback(res):
-        self.result = res
-        self._finished = 1
+        self._result    = None
+        self._stop_next = 0
+    def _callback(self, res):
+        self._result = res
     def _yield(self):
         Stage._yield(self)
-        if not self._finished:
-            return self._cooperate
-        if self._stop_next or self.stop:
+        if self.stop or self._stop_next:
             self.stop = 1
             return
+        if not self._result:
+            return self._cooperate
+        if self._result:
+            self.result = self._result
+            self._stop_next = 1
 #
 # Items following this comment depend upon twisted.internet
 #
@@ -390,6 +392,7 @@ class Threaded(Stage):
             self.stop = 1
             return
         return self._cooperate
+
 
 from twisted.internet import defer
 class Deferred(defer.Deferred):

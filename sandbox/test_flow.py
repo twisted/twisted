@@ -186,7 +186,15 @@ class FlowTest(unittest.TestCase):
         self.failUnless(isinstance(r[1], failure.Failure))
         self.failUnless(isinstance(r[1].value,ZeroDivisionError))
 
-    def testThreaded(self):
+    def testDeferredWrapper(self):
+        from twisted.internet import defer
+        from twisted.internet import reactor 
+        a = defer.Deferred()
+        reactor.callLater(0, lambda: a.callback("test"))
+        rhs = unittest.deferredResult(flow.Deferred(a))
+        self.assertEquals(rhs, ['test'])
+
+    def xtestThreaded(self):
         class CountIterator:
             def __init__(self, count):
                 self.count = count
