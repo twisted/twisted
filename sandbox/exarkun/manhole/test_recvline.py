@@ -211,18 +211,23 @@ class EchoServer(recvline.HistoricRecvLine):
 
 # An insults API for this would be nice.
 left = "\x1b[D"
+right = "\x1b[C"
+up = "\x1b[A"
+down = "\x1b[B"
 insert = "\x1b[2~"
 home = "\x1b[1~"
 delete = "\x1b[3~"
 end = "\x1b[4~"
 backspace = "\x7f"
 
-class Loopback(unittest.TestCase):
+class _x:
+    serverProtocol = None
+
     def setUp(self):
         WIDTH = 80
         HEIGHT = 24
 
-        recvlineServer = EchoServer()
+        recvlineServer = self.serverProtocol()
         insultsServer = insults.ServerProtocol(lambda: recvlineServer)
         telnetServer = telnet.TelnetTransport(lambda: insultsServer)
         clientTransport = loopback.LoopbackRelay(telnetServer)
@@ -255,6 +260,9 @@ class Loopback(unittest.TestCase):
             '\n'.join(lines) +
             '\n' * (self.HEIGHT - len(lines)))
 
+class RecvlineLoopback(_x, unittest.TestCase):
+    serverProtocol = EchoServer
+
     def testSimple(self):
         self._test(
             "first line",
@@ -269,9 +277,9 @@ class Loopback(unittest.TestCase):
 
     def testRightArrow(self):
         self._test(
-            'right line' + left * 4 + "xxxx\n",
-            [">>> right xxxx",
-             "right xxxx",
+            'right line' + left * 4 + right * 2 + "xx\n",
+            [">>> right lixx",
+             "right lixx",
             ">>>"])
 
     def testBackspace(self):
@@ -315,3 +323,22 @@ class Loopback(unittest.TestCase):
             [">>> end line",
              "end line",
              ">>>"])
+
+class HistoricRecvlineLoopback(_x, unittest.TestCase):
+    serverProtocol = EchoServer
+
+    def testUpArrow(self):
+        self._test(
+            "first line\n" + up,
+            [">>> first line",
+             "first line",
+             ">>> first line"])
+
+    def testDownArrow(self):
+        self._test(
+            "first line\nsecond line\n" + up * 2 + down,
+            [">>> first line",
+             "first line",
+             ">>> second line",
+             "second line",
+             ">>> second line"])
