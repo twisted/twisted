@@ -299,7 +299,7 @@ class FormFillerWidget(widgets.Widget):
                 #send an empty content shell - we just want the node
                 inputNodes[nName] = self.convergeInput(request, lmx(),
                                                        argz[nName], inNode)
-                node.replaceChild(inputNodes[nName], inNode)
+                inNode.parentNode.replaceChild(inputNodes[nName], inNode)
                 del argz[nName]
             # TODO:
             # * some arg types should only have a single node (text, string, etc)
