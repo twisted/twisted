@@ -273,11 +273,8 @@ class WebClientSSLTestCase(WebClientTestCase):
         scheme, host, port, path = client._parse(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectSSL(host, port, factory, ssl.ClientContextFactory())
-        unittest.deferredResult(factory.deferred)
-        self.assertEquals(factory.status, '200')
-        self.assert_(factory.version.startswith('HTTP/'))
-        self.assertEquals(factory.message, 'OK')
-        self.assertEquals(factory.response_headers['content-length'][0], '10')
+        # The base class defines _cbFactoryInfo correctly for this
+        return factory.deferred.addCallback(self._cbFactoryInfo, factory)
 
 class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
     def getHTTPS(self, path):
@@ -319,9 +316,9 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
         del self.tlsPort
 
     def testHoppingAround(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("one"))),
-                          "FOUND IT!")
-
+        return client.getPage(self.getHTTP("one")
+            ).addCallback(self.assertEquals, "FOUND IT!"
+            )
 
 class FakeTransport:
     disconnecting = False
@@ -352,24 +349,26 @@ class CookieTestCase(unittest.TestCase):
         return "http://127.0.0.1:%d/%s" % (self.portno, path)
 
     def testNoCookies(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("cookiemirror"))),
-                          "[]")
+        return client.getPage(self.getHTTP("cookiemirror")
+            ).addCallback(self.assertEquals, "[]"
+            )
 
     def testSomeCookies(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("cookiemirror"),
-                                                                 cookies={'foo': 'bar',
-                                                                          'baz': 'quux'})),
-                          "[('baz', 'quux'), ('foo', 'bar')]")
+        cookies = {'foo': 'bar', 'baz': 'quux'}
+        return client.getPage(self.getHTTP("cookiemirror"), cookies=cookies
+            ).addCallback(self.assertEquals, "[('baz', 'quux'), ('foo', 'bar')]"
+            )
 
     def testRawNoCookies(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("rawcookiemirror"))),
-                          "None")
+        return client.getPage(self.getHTTP("rawcookiemirror")
+            ).addCallback(self.assertEquals, "None"
+            )
 
     def testRawSomeCookies(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("rawcookiemirror"),
-                                                                 cookies={'foo': 'bar',
-                                                                          'baz': 'quux'})),
-                          "'foo=bar; baz=quux'")
+        cookies = {'foo': 'bar', 'baz': 'quux'}
+        return client.getPage(self.getHTTP("rawcookiemirror"), cookies=cookies
+            ).addCallback(self.assertEquals, "'foo=bar; baz=quux'"
+            )
 
     def testCookieHeaderParsing(self):
         d = defer.Deferred()
