@@ -193,7 +193,10 @@ class DTP(protocol.Protocol):
         self.file = None
         self.pi.queuedfile = None
         self.action = None
-        self.dtpPort.loseConnection()
+        if hasattr(self.dtpPort, 'loseConnection'):
+            self.dtpPort.loseConnection()
+        else:
+            self.dtpPort.disconnect()
 
     #
     #   "RETR"
@@ -261,7 +264,7 @@ class DTP(protocol.Protocol):
         reactor.callLater(0.1, self.executeAction)
         
 
-class DTPFactory(protocol.Factory):
+class DTPFactory(protocol.ClientFactory):
     """The DTP-Factory.
     This class is not completely self-contained.
     """
@@ -282,8 +285,7 @@ class DTPFactory(protocol.Factory):
             if self.dtp.transport is not None:
                 self.dtp.transport.loseConnection()
             self.dtp = None
-        self.dtp = self.buildProtocol(self.peerport)
-        self.dtpPort = reactor.clientTCP(self.peerhost, self.peerport, self.dtp)
+        self.dtpPort = reactor.connectTCP(self.peerhost, self.peerport, self)
 
     def buildProtocol(self,addr):
         p = DTP()
