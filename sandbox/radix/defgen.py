@@ -84,7 +84,7 @@ def _deferGenerator(g, deferred=None, result=None):
             result.failure = f
             _deferGenerator(g, deferred, f)
         result.d.addCallbacks(gotResult, gotError)
-        # XXX log.err???? bad
+        # This shouldn't ever really happen
         result.d.addErrback(log.err)
     else:
         _deferGenerator(g, deferred, result)

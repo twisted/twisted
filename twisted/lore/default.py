@@ -17,8 +17,7 @@
 from __future__ import nested_scopes
 
 from twisted.lore import tree, latex, lint, process
-from twisted.web import microdom
-from twisted.protocols import sux
+from twisted.web import sux, microdom
 
 htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.html'}
 
