@@ -49,7 +49,7 @@ su pb; cd ~/Working; kill `cat twistd.pid`; twistd -f manhole-shutdown.tap; mv m
  * Upload to Sourceforge
 $SOMEWHERE/admin/release-twisted -n <sf username> -v <version> --sourceforge --release=/twisted/Releases
 
- * If everything's cool, edit WebSite/twistedmatrix.com/news.html, index, and products/download.html
+ * If everything's cool, edit WebSite/twistedmatrix.com/news.html, index, products/get-current.epy and products/download.html
  * cvs commit those
  * go to 
 su - pb
