@@ -23,15 +23,15 @@ import time
 shortName="IRC"
 longName="Internet Relay Chat"
 
-loginOptions=[["Nickname","username","my_nickname"],
-	      ["Real Name","realname","Twisted User"],
-              ["Password (optional)","password",""],
-              ["Server","server","localhost"],
-              ["Port #","port","6667"]]
+loginOptions=[["text","Nickname","username","my_nickname"],
+	      ["text","Real Name","realname","Twisted User"],
+              ["text","Password (optional)","password",""],
+              ["text","Server","server","localhost"],
+              ["text","Port #","port","6667"]]
 
 def makeConnection(im,server=None,port=None,**kw):
     c=apply(IRCGateway,(),kw)
-    im.attachGateway(c)
+    c.attachIM(im)
     try:
         port=int(port)
     except:
@@ -43,6 +43,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
     protocol=shortName
 
     def __init__(self,username=None,password="",realname=""):
+        gateway.Gateway.__init__(self)
         self._namreplies={}
         self.logonUsername=username
         self.nickname=username
@@ -59,14 +60,16 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.sendLine("USER %s foo bar :%s"%(self.nickname,self.realname))
 
     def connectionFailed(self):
-        self.im.connectionFailed(self,"Connection Failed!")
-        self.im.detachGateway(self)
+        self.im.send(self,"error",message="Connection Failed!")
+        self.detachIM()
 
     def connectionLost(self):
-        self.im.connectionLost(self,"Connection lost.")
-        self.im.detachGateway(self)
+        self.im.send(self,"error",message="Connection lost.")
+        self.detachIM()
 
     def loseConnection(self):
+#        for g in self._ingroups[self.nickname]:
+#            self.part(g)
         self.sendLine("QUIT :Goodbye!")
 	self.transport.loseConnection()
 
@@ -74,37 +77,39 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	self.username=nick
 	irc.IRCClient.setNick(self,nick)
 
-    def addContact(self,contact):
+    def event_addContact(self,contact):
         pass
 
-    def removeContact(self,contact):
+    def event_removeContact(self,contact):
         pass
 
-    def changeStatus(self, newStatus):
-        if newStatus=="Online":
+    def event_changeStatus(self, status):
+        if status=="Online":
             self.setNick(self.logonUsername)
             self.away('')
-        elif newStatus=="Away":
+        elif status=="Away":
             self.away("I'm not here right now.  Leave a message.")
             self.setNick(self.logonUsername+"|away")
 
-    def joinGroup(self,group):
+    def event_joinGroup(self,group):
         if self._groups.has_key(string.lower(group)):
-            return 1
+            return
         self.join(group)
         self._groups[string.lower(group)]=group
+        self.joinedGroup(group)
 
-    def leaveGroup(self,group):
+    def event_leaveGroup(self,group):
         self.leave(group)
+        self.leftGroup(group)
 
-    def getGroupMembers(self,group):
+    def event_getGroupMembers(self,group):
         pass # this gets automatically done
 
-    def directMessage(self,recipientName,message):
-        self.msg(recipientName,message)
+    def event_directMessage(self,user,message):
+        self.msg(user,message)
 
-    def groupMessage(self,groupName,message):
-        self.say(groupName,message)
+    def event_groupMessage(self,group,message):
+        self.say(group,message)
 
     def irc_RPL_NAMREPLY(self,prefix,params):
 	"""
@@ -138,8 +143,9 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def irc_NICK(self,prefix,params):
 	oldname=string.split(prefix,"!")[0]
-	self._ingroups[params[0]]=self._ingroups[oldname]
-	del self._ingroups[oldname]
+	if self._ingroups.has_key(oldname):
+            self._ingroups[params[0]]=self._ingroups[oldname]
+            del self._ingroups[oldname]
 	self.notifyNameChanged(oldname,params[0])
 
     def irc_JOIN(self,prefix,params):

@@ -25,13 +25,15 @@ protocol.
 loginOptions=[]
 """
 loginOptions is a list of 3-lists, of the form: 
-    [<GUI name>,<option name>,<default value>]
+    [<option type>,<GUI name>,<option name>,<default value>]
 it contains all the options needed to log the gateway in. an example:
-    [ ["Username","username","my_username"],
-      ["Password","password","my_password"],
-      ["Server","server","localhost"],
-      ["Port #","port","8000"] ]
+    [ ["text","Username","username","my_username"],
+      ["password","Password","password","my_password"],
+      ["text","Server","server","localhost"],
+      ["text","Port #","port","8000"] ]
       
+the option type is used to display the box correct, and should be in ["text",
+    "password"], at least for now.
 the GUI names are used in dialog boxes to get the value.
 the option names are used in the call to makeConnection().
 the default values are used in dialog boxes to show the user what they should
@@ -51,6 +53,20 @@ class Gateway:
     """
     This is the interface between a protocol (twisted.words, TOC, etc.) and 
     InstanceMessenger.
+    It is now event-based, so all the commands are prefixed with event_ so
+    that InstanceMessenger know they are bound to UI events.
+    Events that the UI should trigger, and their keys, are:
+        receiveContactList: contacts
+        receiveDirectMessage: user, message
+        statusChanged: contact, status
+        nameChanged: contact, name
+        joinedGroup: group
+        leftGroup: group
+        receiveGroupMembers: group, members
+        receiveGroupMessage, group, member, message
+        memberJoined: group, member
+        memberLeft: group, member
+    other events may be called, but they may not be implemented by GUIs
     """
     protocol=None # the name for the protocol this implements, gets set to the
                   # short name
@@ -63,25 +79,30 @@ class Gateway:
     
     def attachIM(self,im):
         """
-        attach us to an InstanceMessenger.
-        im := the InstanceMessenger to attach us to
+        Attach an InstanceMessanger to this gateway.
+        im := the InstanceMessanger to attach to (class InstanceMessanger)
         """
         self.im=im
+        self.im.connect_class(self,self)
+        self.im.send(self,"attach")
 
     def detachIM(self):
         """
-        detach us from an InstanceMessenger.
+        Detach an InstanceMessanger from this gateway.
+        im := the InstanceMessanger to attach from (class InstanceMessanger)
         """
+        self.im.disconnect_class(self,self)
+        self.im.send(self,"detach")
         self.im=None
 
-    def addContact(self,contact):
+    def event_addContact(self,contact):
         """
         add the given contact to the users contact list.
         contact := the username to add to the contact list
         """
         raise NotImplementedError # XXX: override for gateway
 
-    def removeContact(self,contact):
+    def event_removeContact(self,contact):
         """
         remove the given contact from the users contact list.
         contact := the username to remove from the contact list
@@ -93,7 +114,7 @@ class Gateway:
         called when the contact list is received.
         contacts := a list of the contacts on the contact list
         """
-        self.im.receiveContactList(self,contacts)
+        self.im.send(self,"receiveContactList",contacts=contacts)
 
     def receiveDirectMessage(self, sender, message):
         """
@@ -101,9 +122,9 @@ class Gateway:
         sender := the user who sent the message
         message := the actual message
         """
-        self.im.receiveDirectMessage(self,sender,message)
+        self.im.send(self,"receiveDirectMessage",user=sender,message=message)
     
-    def changeStatus(self, newStatus):
+    def event_changeStatus(self, status):
         """
         change the status for the user.
         newStatus := string for the new status (currently, one of: )
@@ -117,7 +138,7 @@ class Gateway:
         contact := the user whos status changed
         newStatus := their current status, one of ["Online","Offline","Away"]
         """
-        self.im.notifyStatusChanged(self,contact,newStatus)
+        self.im.send(self,"statusChanged",contact=contact,status=newStatus)
         
     def notifyNameChanged(self,contact,newName):
         """
@@ -127,9 +148,9 @@ class Gateway:
         contact := the /old/ contact name (string)
         newName := the new contact name (string)
         """
-        self.im.notifyNameChanged(self,contact,newName)
+        self.im.send(self,"nameChanged",contact=contact,name=newName)
 
-    def joinGroup(self,group):
+    def event_joinGroup(self,group):
         """
         join a group.
         if this method returns true, we are already in the group, and shouldn't
@@ -138,14 +159,20 @@ class Gateway:
         """
         raise NotImplementedError # XXX: override for gateway
 
-    def leaveGroup(self,group):
+    def joinedGroup(self,group):
+        self.im.send(self,"joinedGroup",group=group)
+
+    def event_leaveGroup(self,group):
         """
         leave a group.
         group := the name of the group to leave
         """
         raise NotImplementedError # XXX: override for gateway
 
-    def getGroupMembers(self,group):
+    def leftGroup(self,group):
+        self.im.send(self,"leftGroup",group=group)
+
+    def event_getGroupMembers(self,group):
         """
         ask for the members of a group we are in.
         group := the name of the group we want the members for
@@ -158,7 +185,7 @@ class Gateway:
         members := a list of users in the group
         group := the name of the group
         """
-        self.im.receiveGroupMembers(self,members,group)
+        self.im.send(self,"receiveGroupMembers",group=group,members=members)
 
     def receiveGroupMessage(self,member,group,message):
         """
@@ -167,7 +194,8 @@ class Gateway:
         group := the group the message was sent to
         message := the actual message
         """
-        self.im.receiveGroupMessage(self,member,group,message)
+        self.im.send(self,"receiveGroupMessage",group=group,member=member,
+                      message=message)
 
     def memberJoined(self,member,group):
         """
@@ -175,7 +203,7 @@ class Gateway:
         member := the member who joined
         group := the group they joined
         """
-        self.im.memberJoined(self,member,group)
+        self.im.send(self,"memberJoined",group=group,member=member)
 
     def memberLeft(self,member,group):
         """
@@ -183,9 +211,9 @@ class Gateway:
         member := the member who left
         group := the group they left
         """
-        self.im.memberLeft(self,member,group)
+        self.im.send(self,"memberLeft",group=group,member=member)
 
-    def directMessage(self,recipientName,message):
+    def event_directMessage(self,user,message):
         """
         send a direct message to recipientName.
         recipientName := the user to send the message to
@@ -193,7 +221,7 @@ class Gateway:
         """
         raise NotImplementedError # XXX: override for gateway
 
-    def groupMessage(self,groupName,message):
+    def event_groupMessage(self,group,message):
         """
         send a message to the group groupName.
         groupName := the group to send the message to

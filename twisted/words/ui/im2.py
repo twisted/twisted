@@ -166,7 +166,10 @@ class InstanceMessenger:
         gatewayname=gateway.username+"-"+gateway.protocol
         user=string.lower(string.replace(user," ",""))
         filename=path+os.sep+"im"+os.sep+gatewayname+"-"+user+".log"
-        f=open(filename,"a")
+        try:
+            f=open(filename,"a")
+        except IOError:
+            f=open(filename,"w")
         f.write("(%s) %s\n"%(time.asctime(time.localtime(time.time())),text))
         f.close()
         

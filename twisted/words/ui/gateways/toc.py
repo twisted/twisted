@@ -23,7 +23,11 @@ import string,re
 shortName="TOC"
 longName="AOL Instant Messenger/TOC"
 
-loginOptions=[["Nickname","username","my_screen_name"],["Password","password","my_password"],["Hostname","server","toc.oscar.aol.com"],["Port #","port","9898"]]
+loginOptions=[
+    ["text","Nickname","username","my_screen_name"],
+    ["password","Password","password","my_password"],
+    ["text","Hostname","server","toc.oscar.aol.com"],
+    ["text","Port #","port","9898"]]
 
 def makeConnection(im,server=None,port=None,**kwargs):
     try:
@@ -31,7 +35,7 @@ def makeConnection(im,server=None,port=None,**kwargs):
     except:
         pass
     c=apply(TOCGateway,(),kwargs)
-    im.attachGateway(c)
+    c.attachIM(im)
     tcp.Client(server,port,c)
     
 def dehtml(text):
@@ -60,21 +64,22 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         pass
 
     def connectionFailed(self):
-        self.im.connectionFailed(self,"Connection Failed!")
-        self.im.detachGateway(self)
+        self.im.send(self,"error",message="Connection Failed!")
+        self.detachIM()
 
     def connectionLost(self):
         if self.im:
-            self.im.connectionLost(self,"Connection lost.")
-            self.im.detachGateway(self)
+            self.im.send(self,"error",message="Connection lost.")
+            self.detachIM()
 
     def hearError(self,code,args):
         if code in [toc.BAD_ACCOUNT,toc.BAD_NICKNAME,toc.SERVICE_UNAVAILABLE,
                     toc.BAD_NICKNAME,toc.SERVICE_TEMP_UNAVAILABLE,
                     toc.WARNING_TOO_HIGH,toc.CONNECTING_TOO_QUICK,
                     toc.UNKNOWN_SIGNON]:
-            self.im.connectionLost(self,toc.STD_MESSAGE[code]%args+".")
-            self.im.detachGateway(self)
+            self.im.send(self,"error",message=toc.STD_MESSAGE[code]%args+".")
+            self.detachIM()
+
     def loseConnection(self):
         self.transport.loseConnection()
         
@@ -128,14 +133,15 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
     def chatJoined(self,roomid,roomname,users):
         if self._chatmapping.has_key(toc.normalize(roomname)):roomname=self._chatmapping[toc.normalize(roomname)]
         self._roomid[roomid]=roomname
-        self.receiveGroupMembers(users,roomname)
+        self.joinedGroup(roomname)
+        self.receiveGroupMembers(users, roomname)
 
     def chatUpdate(self,roomid,user,inroom):
         self.updateName(user)
         if inroom:
-            self.memberJoined(user,self._roomid[roomid])
+            self.memberJoined(user, self._roomid[roomid])
         else:
-            self.memberLeft(user,self._roomid[roomid])
+            self.memberLeft(user, self._roomid[roomid])
 
     def chatHearMessage(self,roomid,user,message):
         if user==self.username: return
@@ -148,11 +154,12 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         if self._chatmapping.has_key(toc.normalize(roomname)):
             del self._chatmapping[toc.normalize(roomname)]
         del self._roomid[roomid]
+        self.leftGroup(roomname)
     
     def writeNewConfig(self):
         self.set_config(self._savedmode,self._savedlist,self._permitlist,self._denylist)
 
-    def addContact(self,contact):
+    def event_addContact(self,contact):
         self.add_buddy([contact])
         try:
             k=self._savedlist.keys()[0]
@@ -164,7 +171,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self.writeNewConfig()
         self.notifyStatusChanged(contact,"Offline")
 
-    def removeContact(self,contact):
+    def event_removeContact(self,contact):
         self.del_buddy([contact])
         n=toc.normalize(contact)
         for u in range(len(self._currentusers)):
@@ -178,33 +185,33 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                     self.writeNewConfig()
                     return
 
-    def changeStatus(self,newStatus):
-        if newStatus=="Online":
+    def event_changeStatus(self,status):
+        if status=="Online":
             self.away('')
-        elif newStatus=="Away":
+        elif status=="Away":
             self.away("I'm not here right now.  Leave a message.")
 
-    def joinGroup(self,groupname):
-        n=toc.normalize(groupname)
+    def event_joinGroup(self,group):
+        n=toc.normalize(group)
         if self._chatmapping.has_key(n):
             return 1
-        self._chatmapping[n]=groupname
-        self.chat_join(4,groupname)
+        self._chatmapping[n]=group
+        self.chat_join(4,group)
 
-    def leaveGroup(self,groupname):
+    def event_leaveGroup(self,group):
         for i in self._roomid.keys():
-            if self._roomid[i]==groupname:
+            if self._roomid[i]==group:
                 self.chat_leave(i)
 
-    def getGroupMembers(self,groupname):
+    def event_getGroupMembers(self,group):
         pass
         
-    def directMessage(self,user,message):
+    def event_directMessage(self,user,message):
         self.say(user,message)
 
-    def groupMessage(self,groupname,message):
+    def event_groupMessage(self,group,message):
         for k in self._roomid.keys():
-            if self._roomid[k]==groupname:
+            if self._roomid[k]==group:
                 id=k
         if not id: return
         self.chat_say(id,message)

@@ -1,7 +1,7 @@
 from Tkinter import *
 from twisted.internet import tkinternet #, tcp
 from twisted.spread.ui import tkutil
-from twisted.words.ui import im2, gateways
+from twisted.words.ui import im3, gateways
 #from twisted.protocols import telnet
 import time, os, string
 import sys
@@ -165,8 +165,8 @@ class Conversation(Toplevel):
         return "break"
 
     def endConversation(self):
-        self.destroy()
         self.im.endConversation(self.gateway, self.target)
+        self.destroy()
 
     def messageReceived(self, message):
         self.out.insert(END,"\n%s <%s> %s" % (timeheader(), self.target, message))
@@ -194,8 +194,8 @@ class ContactList(Toplevel):
         menu.add_cascade(label="My IM",menu=myim)
         statuschange=Menu(myim)
         myim.add_cascade(label="Change Status",menu=statuschange)
-        for k in im2.STATUSES:
-            statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))
+        for k in im3.STATUSES:
+            statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))    
         myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
 #        myim.add_command(label="__reload__",command=self.reload)
@@ -374,8 +374,8 @@ class GroupSession(Toplevel):
         return "break"
 
     def leaveGroup(self):
-        self.destroy()
         self.im.leaveGroup(self.gateway,self.name)
+        self.destroy()
 
     def showExtrasMenu(self,e):
         m=Menu()
@@ -438,40 +438,18 @@ class GroupSession(Toplevel):
 
     def nickComplete(self, e):
         start=self.input.get("1.0",END)[:-1]
-        lstart=string.lower(start)
-        l=list(self.userlist.get(0,END))
-        ll=map(string.lower,l)
-        if lstart in ll:
-            i=ll.index(lstart)
+        users=self.userlist.get(0,END)
+        result=im3.nickComplete(start,users)
+        if type(result)==type(""):
             self.input.delete("1.0",END)
-            self.input.insert(END,l[i]+": ")
-            return "break"
-        matches=[]
-        for u in ll:
-            if len(u)>len(lstart) and u[:len(lstart)]==lstart:
-                matches.append(u)
-        if len(matches)==1:
-            i=ll.index(matches[0])
+            self.input.insert(END,result+": ")
+        else:
+            self.out.insert(END,"\n")
+            for u in result[0]:
+                self.out.insert(END,"[%s] "%u)
             self.input.delete("1.0",END)
-            self.input.insert(END,l[i]+": ")
-            return "break"
-        elif matches==[]:
-            return "break"
-        longestmatch=matches[0]
-        for u in matches:
-            if len(u)>len(longestmatch):
-                u=u[:len(longestmatch)]
-            c=0
-            while c<len(longestmatch) and longestmatch[c]==u[c]:
-                c=c+1
-            longestmatch=longestmatch[:c]
-        self.input.delete("1.0",END)
-        self.input.insert(END,longestmatch)
-        self.out.insert(END,"\n")
-        for u in matches:
-            i=ll.index(u)
-            self.out.insert(END,"[%s] "%l[i])
-        return "break"
+            self.input.insert(END,result[1])
+        return "break"        
 
 class ErrorWindow(Toplevel):
     def __init__(self,error,message,*args,**kw):
@@ -512,9 +490,9 @@ class AddAccount(Toplevel):
         self.options={}
         useroptions=gateways.__gateways__[gateway].loginOptions
         r=0
-        for title,key,default in useroptions:
+        for type,title,key,default in useroptions:
             dict={}
-            if len(key)>3 and key[:4]=="pass":
+            if type=="password":
                 dict["show"]="*"
             Label(self,text=title+": ").grid(column=0,row=r,sticky=W+N)
             entry=apply(Entry,(self,),dict)
@@ -538,7 +516,7 @@ class AddAccount(Toplevel):
             o[k]=self.options[k].get()
         auto=self.autologon.get()
         savepass=self.savepass.get()
-        self.acctman._addaccount(im2.Account(self.gateway,o,auto,savepass))
+        self.acctman._addaccount(im3.Account(self.gateway,o,auto,savepass))
         self.destroy()
 
 class ModifyAccount(Toplevel):
@@ -550,9 +528,9 @@ class ModifyAccount(Toplevel):
         self.options={}
         useroptions=gateways.__gateways__[account.gatewayname].loginOptions
         r=0
-        for title,key,default in useroptions:
+        for type,title,key,default in useroptions:
             dict={}
-            if len(key)>3 and key[:4]=="pass":
+            if type=="password":
                 dict["show"]="*"
             Label(self,text=title+": ").grid(column=0,row=r,sticky=W+N)
             if key!="username":
@@ -595,7 +573,7 @@ class AccountManager(Toplevel):
         self.im=im
         self.accounts=[]
         sb=Scrollbar(self)
-        self.list=tkutil.CList(self,["Username    ","Online","Auto-Logon","Gateway    "],yscrollcommand=sb.set)
+        self.list=tkutil.CList(self,["Username    ","Online","Auto-Logon","Gateway    "],disablesorting=1,yscrollcommand=sb.set)
         sb.config(command=self.list.yview)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
         sb.grid(column=1,row=0,sticky=N+S+E)
@@ -610,8 +588,8 @@ class AccountManager(Toplevel):
         self.columnconfigure(0,weight=1)
         self.protocol("WM_DELETE_WINDOW",self.close)
 
-        self.im.addCallback(None,"attached",self.handleAttached)
-        self.im.addCallback(None,"detached",self.handleDetached)
+        self.im.im.connect(self.event_attach,"attach")
+        self.im.im.connect(self.event_detach,"detach")
 
     def close(self):
         self.withdraw()
@@ -664,7 +642,7 @@ class AccountManager(Toplevel):
 
     def logonAccount(self,account):
         self._modifyaccount(account,"Attempting")
-        missing=im2.logonAccount(self.im,account)
+        missing=im3.logonAccount(self.im,account)
         while missing:
             for foo,key,bar in missing:
                 if key[:4]=="pass":
@@ -675,10 +653,10 @@ class AccountManager(Toplevel):
                     value=tkSimpleDialog.askstring("Enter %s for %s"%(foo, \
                                     account.options["username"]), foo+": ")
                 account.options[key]=value
-            missing=im2.logonAccount(self.im,account)
+            missing=im3.logonAccount(self.im,account)
 
     def logoffAccount(self,account):
-        im2.logoffAccount(self.im,account)
+        im3.logoffAccount(self.im,account)
 
     def deleteAccount(self):
         index=self.list.index(ACTIVE)
@@ -687,52 +665,57 @@ class AccountManager(Toplevel):
         self.logoffAccount(account)
         del self.accounts[index]
 
-    def handleAttached(self,im,gateway,event):
+    def event_attach(self,gateway):
         for account in self.accounts:
             if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"True")
 
-    def handleDetached(self,im,gateway,event):
+    def event_detach(self,gateway):
+        global im
         if im.cl!=None: im.cl.removeGateway(gateway)
         for account in self.accounts:
             if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"False")
 
-def handleError(im,gateway,event,code,message):
+def handleError(gateway,event_name,message):
+    global im
     strgate=str(gateway)
     for key,value in im.conversations.items():
         if key[:len(strgate)]==strgate:
             value.destroy()
-            im.endConversation(gateway,value.target)
+            im=endConversation(gateway,value.target)
     for key,value in im.groups.items():
         if key[:len(strgate)]==strgate:
             value.destroy()
             del im.groups[strgate+value.name]
 
 def main():
+    global im
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
-    im=im2.InstanceMessenger(Conversation, ContactList, GroupSession, ErrorWindow)
+    im=im3.InstanceMessengerGUI(im3.InstanceMessenger(),
+            Conversation, ContactList, GroupSession, ErrorWindow)
+#    im.logging=1
     im.am=AccountManager(im)
     path=os.path.expanduser("~"+os.sep+".imsaved")
     try:
         f=open(path,"r")
-        im.am.loadState(im2.getState(f))
+        im.am.loadState(im3.getState(f))
         f.close()
     except IOError:
         pass
-    im.addCallback(None,"error",handleError)
+    im.im.connect(handleError,"error")
 #    t=telnet.ShellFactory()
 #    import __main__
 #    t.namespace=__main__.__dict__
 #    t.namespace['im']=im
 #    tcp.Port(10023,t).startListening()
     mainloop()
-    for g in im.gateways.values():
-        g.loseConnection()
-    tkinternet.stop()
+    for a in im.am.accounts:
+        im3.logoffAccount(im,a)
     f=open(path,"w")
-    im2.saveState(f,im.am.getState())
+    im3.saveState(f,im.am.getState())
+    tkinternet.stop()
 
 if __name__=="__main__": main()

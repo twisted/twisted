@@ -20,7 +20,12 @@ from twisted.spread import pb
 from twisted.words.service import statuses
 from twisted.words.ui import gateway
 
-loginOptions=[["Username","username","guest"],["Password","password","guest"],["Service","service","twisted.words"],["Hostname","server","localhost"],["Port #","port",str(pb.portno)]]
+loginOptions=[
+    ["text","Username","username","guest"],
+    ["password","Password","password","guest"],
+    ["text","Service","service","twisted.words"],
+    ["text","Hostname","server","localhost"],
+    ["text","Port #","port",str(pb.portno)]]
 
 shortName="Words"
 longName="Twisted.Words"
@@ -45,19 +50,19 @@ class makeConnection:
         if self.connected:
             self.im.connectionFailed(self.ref,"Could not connect to host!\n"+tb)
             if self.attached:
-                self.im.detachGateway(self.ref)
+                self.ref.detachIM()
         self.connected=0
 
     def connectionLost(self):
         if self.connected:
             self.im.connectionLost(self.ref,"Connection lost.")
             if self.attached:
-                self.im.detachGateway(self.ref)
+                self.ref.detachIM()
         self.connected=0
     
     def pbCallback(self,perspective):
         perspective.broker.notifyOnDisconnect(self.connectionLost)
-        self.im.attachGateway(self.ref)
+        self.ref.attachIM(self.im)
         self.ref.connected(perspective)
         self.ref.b=perspective.broker
         self.attached=1
@@ -119,31 +124,33 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
     def remote_memberLeft(self,member,group):
         self.memberLeft(member,group)
 
-    def addContact(self,contact):
+    def event_addContact(self,contact):
         self.remote.addContact(contact)
     
-    def removeContact(self,contact):
+    def event_removeContact(self,contact):
         self.remote.removeContact(contact)
     
-    def changeStatus(self,newStatus):
-        self.remote.changeStatus(newStatus)
+    def event_changeStatus(self,status):
+        self.remote.changeStatus(statuses.index(status))
 
-    def joinGroup(self,group):
+    def event_joinGroup(self,group):
         self.remote.joinGroup(group)
+        self.joinedGroup(group)
 
     def leaveGroup(self,group):
         self.remote.leaveGroup(group)
+        self.leftGroup(group)
 
-    def getGroupMembers(self,group):
+    def event_getGroupMembers(self,group):
         self.remote.getGroupMembers(group,pberrback=lambda tb,s=self,g=group:s.noGroupMembers(g))
 
     def noGroupMembers(self,group):
         self.receiveGroupMembers([],group)
 
-    def directMessage(self,user,message):
+    def event_directMessage(self,user,message):
         self.remote.directMessage(user,message)
 
-    def groupMessage(self,group,message):
+    def event_groupMessage(self,group,message):
         self.remote.groupMessage(group,message)
 
 groupExtras=[]

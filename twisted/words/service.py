@@ -32,11 +32,7 @@ OFFLINE = 0
 ONLINE  = 1
 AWAY = 2
 
-statuses = {
-    0: "Offline",
-    1: "Online",
-    2: "Away"
-    }
+statuses = ["Offline","Online","Away"]
 
 class WordsError(pb.Error):
     pass

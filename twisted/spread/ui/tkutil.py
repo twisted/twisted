@@ -64,10 +64,11 @@ def grid_setexpand(widget):
         widget.rowconfigure(i,weight=1)
 
 class CList(Frame):
-    def __init__(self,parent,labels,**kw):
+    def __init__(self,parent,labels,disablesorting=0,**kw):
         Frame.__init__(self,parent)
         self.labels=labels
         self.lists=[]
+        self.disablesorting=disablesorting
         kw["exportselection"]=0
         for i in range(len(labels)):
             b=Button(self,text=labels[i],anchor=W,height=1,pady=0)
@@ -123,6 +124,8 @@ class CList(Frame):
         self._sort()
 
     def _sort(self):
+        if self.disablesorting:
+            return
         if self.sort==None:
             return
         ind,direc=self.sort
