@@ -158,6 +158,7 @@ def footnotes(document):
         footnoteContent.childNodes = [target]
         footnoteElement.childNodes.append(footnoteContent)
         footnote.parentNode.replaceChild(href, footnote)
+        id += 1
     body = domhelpers.findNodesNamed(document, "body")[0]
     header = microdom.parseString('<h2>Footnotes</h2>').documentElement
     body.childNodes.append(header)
