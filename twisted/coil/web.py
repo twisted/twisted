@@ -129,7 +129,7 @@ class AppConfiguratorPage(widgets.Presentation):
                 if elem:                # '' doesn't count
                     obj = obj.getStaticEntity(elem)
                     if obj is None:
-                        request.setResponseCode(http.MOVED_PERMANENTLY)
+                        request.setResponseCode(http.TEMPORARY_REDIRECT)
                         request.setHeader('location', request.prePathURL())
                         return ['Redirecting...']
         else:
@@ -266,7 +266,7 @@ class CollectionForm(widgets.Form):
         result.append(['menu', "%s to Insert" % self.coll.getEntityType(), "type", self.configurator.makeConfigMenu(self.coll.entityType)])
         return widgets.Form.getFormFields(self, request, result)
 
-    def process(self, write, request, submit, name, type, items=()):
+    def process(self, write, request, submit, name="", type=None, items=()):
         # write(str(('YAY', name, type)))
         # TODO: validation on the name?
         if submit == 'Delete':
@@ -276,12 +276,14 @@ class CollectionForm(widgets.Form):
             except:
                 raise widgets.FormInputError(str(sys.exc_info()[1]))
             write("<b>Items Deleted.</b><br>(%s)<br>" % html.escape(repr(items)))
-        else:
+        elif submit == "Insert":
             try:
                 obj = self.configurator.makeConfigurable(type, self.coll, name)
                 self.coll.putEntity(name, obj)
             except:
                 raise widgets.FormInputError(str(sys.exc_info()[1]))
             write("<b>%s created!</b>" % type)
+        else:
+            raise widgets.FormInputError("Don't know how to %s" % repr(submit))
         self.format(self.getFormFields(request), write, request)
 
