@@ -1,7 +1,12 @@
+2002-04-12  Kevin Turner  <acapnotic@users.sourceforge.net>
+
+	* twisted/coil/plugins/tendril.py (TendrilConfigurator): New coil
+	configurator for words.tendril.
+
 2002-04-10  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.0
-	
+
 2002-04-10  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* twisted/bugs: Gone. Separate plugin package.
@@ -17,7 +22,7 @@
 
 	* twisted/reality: Gone. This is now in a completely separate plugin
 	package.
-	
+
 2002-04-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * win32 process support seems to *finally* be working correctly. Many

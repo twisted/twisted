@@ -130,18 +130,42 @@ class ConnectorCollection(coil.ConfigCollection):
     def getStaticEntity(self, name):
         return self.app.connectors[self._getIndexFromName(name)]
 
-    def reallyPutEntity(self, name_is_discarded, entity):
+    def reallyPutEntity(self, name, connector):
         """Adds a Connector to the Application.
-
-        XXX: I completely ignore whatever 'name' is passed to me.
         """
-        self.app.addConnector(entity)
+        host, port = self._getHostPortFromName(name)
+        if not connector.host:
+            connector.host = host
+        if not connector.portno:
+            connector.portno = port
+
+        self.app.addConnector(connector)
 
     def delEntity(self, name):
         del self.app.connectors[self._getIndexFromName(name)]
 
     def getEntityType(self):
         return "Connector"
+
+    def nameConstraint(self, name):
+        try:
+            name = string.split(name, ',', 1)[0]
+            host, port = string.split(name, ':')
+        except:
+            raise roots.ConstraintViolation("Name %s is not a string"
+                                            "in \"host:port\" format."
+                                            % (repr(name),))
+        else:
+            return 1
+
+    def _getHostPortFromName(self, name):
+        hostport = string.split(name,',')[0]
+        host, port = string.split(hostport,':')
+        try:
+            port = int(port)
+        except ValueError:
+            pass
+        return (host, port)
 
     def _getIndexFromName(self, name):
         if ',' not in name:

@@ -1,4 +1,5 @@
-
+# -*- Python -*-
+# $Id: tendril.py,v 1.15 2002/04/12 19:02:29 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -15,24 +16,164 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.persisted import styles
-from twisted.protocols import irc
-from twisted.python import log
-from twisted.words import service
 from twisted import copyright
 from twisted.cred import authorizer
+from twisted.internet import tcp
+from twisted.persisted import styles
+from twisted.protocols import irc, protocol
+from twisted.python import log, reflect
+from twisted.words import service
 
 wordsService = service
 del service
 
 import string
-import sys
 import traceback
+import types
 
-_LOGALL = 0
+True = (1==1)
+False = not True
+
+_LOGALL = False
 
 # XXX FIXME -- This will need to be fixed to work asynchronously in order to
 # support multiple-server twisted.words and database access to accounts
+
+class Tendril(tcp.Connector, reflect.Accessor):
+    transport = None
+    host = None
+    portno = None
+    _readyToStart = False
+
+    networkSuffix = None
+    nickname = None
+
+    _theseThings = ('host', 'portno', 'networkSuffix', 'nickname')
+
+    def __init__(self, host, portno, protocolFactory, timeout=30):
+        tcp.Connector.__init__(self, host, portno, protocolFactory, timeout)
+        if self.host and self.portno:
+            self._readyToStart = True
+
+    def set_host(self, host):
+        """Set which host I connect to.
+
+        If I am currently connected to a host with a different name, I
+        will disconnect and switch to the new one.
+        """
+        oldhost = self.host
+        self.reallySet('host', host)
+
+        if (not oldhost) and (self.host and self.portno):
+            self._readyToStart = True
+        elif (oldhost != self.host) and self.transport \
+             and self.transport.connected:
+            self.transport.loseConnection()
+
+    def set_portno(self, portno):
+        """Set the port I connect to.
+
+        If I am currently connected to a different port, I will
+        disconnect and switch to the new one.
+        """
+        oldport = self.portno
+        self.reallySet('portno', portno)
+
+        if (not oldport) and (self.host and self.portno):
+            self._readyToStart = True
+        elif (oldport != self.portno) and self.transport \
+             and self.transport.connected:
+            self.transport.loseConnection()
+
+    def set_groupList(self, groupList):
+        if self.protocol:
+            oldlist = self.protocol.groupList
+            if groupList != oldlist:
+                newgroups = filter(lambda g, ol=oldlist: g not in ol,
+                                   groupList)
+                deadgroups = filter(lambda o, gl=groupList: o not in gl,
+                                    oldlist)
+
+            self.protocol.groupList[:] = groupList
+            for group in newgroups:
+                self.protocol.join(groupToChannelName(group))
+            for group in deadgroups:
+                self.protocol.part(groupToChannelName(group))
+
+    # Lets say you can't change this.
+    #
+    ##  def set_wordsService(self, wService):
+    ##      if self.protocol:
+    ##          if wService != self.protocol.wordsService:
+    ##              self.protocol.detach()
+    ##      self.reallySet('wordsService', wService)
+
+    def set_nickname(self, nick):
+        if self.protocol:
+            oldnick = self.protocol.nickname
+            if (oldnick != nick) and (self.transport and
+                                      self.transport.connected):
+                self.protocol.setNick(nick)
+        self.reallySet('nickname', nick)
+
+    def set_helptext(self, helptext):
+        if isinstance(helptext, types.StringType):
+            helptext = string.split(helptext, '\n')
+        if self.protocol:
+            self.protocol.helptext = helptext
+        self.reallySet('helptext', helptext)
+
+    def set_errorGroup(self, errorGroup):
+        if self.protocol:
+            oldgroup = self.protocol.errorGroup
+            if oldgroup != errorGroup:
+                self.protocol.joinGroup(errorGroup)
+                self.protocol.errorGroup = errorGroup
+                self.protocol.leaveGroup(oldgroup)
+
+    def get_errorGroup(self):
+        if self.protocol:
+            return self.protocol.errorGroup
+        else:
+            return TendrilClient.errorGroup
+
+    def startConnecting(self):
+        if not self._readyToStart:
+            # XXX: Should some Deferred action go on here or something?
+            raise RuntimeError("Insufficiently configured to start connecting."
+                               "  (host: %s port: %s)" % (repr(self.host),
+                                                          repr(self.portno)))
+
+        if not self.protocol or ((self.nickname != self.protocol.nickname) or
+                              (self.networkSuffix != self.protocol.networkSuffix)):
+            self.protocol = self.factory.buildProtocol((self.host, self.portno))
+
+        # Ermm.
+        ## self.protocol.__dict__.update(self.getConfiguration())
+        for k in self._theseThings:
+            setattr(self.protocol, k, getattr(self, k))
+
+        self.transport = self.transportFactory(self.host, self.portno,
+                                               self.protocol, self.timeout,
+                                               connector=self)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if state.has_key('protocol'):
+            del state['protocol']
+        if state.has_key('transport'):
+            del state['transport']
+        return state
+
+class TendrilFactory(protocol.Factory):
+    """I build Tendril connectors for a words service.
+    """
+
+    def __init__(self, service):
+        self.wordsService = service
+
+    def buildProtocol(self, unused):
+        return TendrilClient(self.wordsService)
 
 class ProxiedParticipant(wordsService.WordsClientInterface,
                          styles.Ephemeral):
@@ -71,7 +212,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.14 $'[11:-2]
+    versionNum = '$Revision: 1.15 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -124,10 +265,6 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
         self.service = service
         self.realname = 'Tendril to %s' % (service.serviceName,)
-
-        self.attachToWords()
-
-        self.joinGroup(self.errorGroup)
 
 
     def attachToWords(self):
@@ -355,6 +492,8 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
     def signedOn(self):
         """Join my groupList once I've signed on.
         """
+        self.attachToWords()
+        self.joinGroup(self.errorGroup)
         self.log("Welcomed by IRC server.", 'info')
         for group in self.groupList:
             self.join(groupToChannelName(group))
