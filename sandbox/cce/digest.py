@@ -4,15 +4,19 @@
 # 
 from twisted.web.resource import Resource
 from twisted.internet import defer
-from twisted.web.error import Error, ErrorPage
+from twisted.web.error import ErrorPage, Error
 import md5, time, random
-   
+  
 AuthenticationErrorPage = ErrorPage(401,'Authentication Required',"""
 This server could not verify that you are authorized to access 
 the document you requested.  Either you supplied the wrong 
 credentials (e.g., bad password), or your browser doesn't 
 understand how to supply the credentials required.
 """)
+
+MalformedAuthentication = Error(400,'Malformed Authentication',"""
+Your client (web browser) did not provide an appropriate authentication
+response.""")
 
 def digestPassword(username, realm, password):
     return md5.md5("%s:%s:%s" % (username,realm,password)).hexdigest()
@@ -68,9 +72,7 @@ class DigestAuthenticator:
             return defer.succeed(False)
         (authtype, auth) = auth.split(" ", 1)
         if 'Digest' != authtype:
-            # is not there a better way to wrap an exception?
-            return defer.fail(defer.failure.Failure(
-                     Error(400,"unknown authorization type")))
+            return defer.fail(defer.failure.Failure(MalformedAuthentication))
         amap = {}
         for itm in auth.split(", "):
             (k,v) = [s.strip() for s in itm.split("=",1)]
@@ -82,6 +84,7 @@ class DigestAuthenticator:
             realm    = amap['realm']
             response = amap['response']
             assert uri == request.uri
+            assert realm == self.realm
             qop      = amap.get('qop','')
             cnonce   = amap.get('cnonce','')
             nc       = amap.get('nc','00000000')
@@ -89,8 +92,7 @@ class DigestAuthenticator:
                 assert 'auth' == qop
                 assert nonce and nc
         except:
-            return defer.fail(defer.failure.Failure(
-                     Error(400,"mailformed credentials")))
+            return defer.fail(defer.failure.Failure(MalformedAuthentication))
         d = defer.maybeDeferred(self.userfunc,realm,username)
         d.addCallback(lambda ha1: self.compute(request,ha1,username,method,
                                       uri,nonce,nc,cnonce,qop,response))
@@ -108,6 +110,10 @@ class DigestResource(Resource):
         d = self.__authenticate(request)
         assert d.called, "digest resource doesn't work with deferreds"
         if d.result:
+            if isinstance(d.result,defer.failure.Failure):
+                err = d.result.value
+                d.result = None
+                return ErrorPage(400,err[1],err[2])
             return Resource.getChildWithDefault(self,path,request)
         else:
             return self.__authpage
@@ -117,7 +123,7 @@ def test():
     from twisted.web.server import Site
     from twisted.web.static import Data
     realm = "tag:clarkevans.com,2002:testing"
-    data  = Data("<html><body>protected resource</body></head>","text/html")
+    data  = Data("<html><body>protected resource</body></head>\n","text/html")
     def gethash(realm,username):
         """ dummy password hash, where user password is just reverse """
         password = list(username)
