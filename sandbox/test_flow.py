@@ -14,6 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import generators
 from flow import *
 import unittest
 
@@ -65,8 +66,8 @@ def testFlow():
     a.addBranch(dataSource, finished)
     a.addCallable(addOne)
     a.addCallable(printResult)
-    a.execute(2)
-    
+    #a.execute(2)
+
     class simpleIterator:
         def __init__(self, data): 
             self.data = data
@@ -76,20 +77,52 @@ def testFlow():
             if self.data < 0: raise StopIteration
             ret = self.data
             self.data -= 1
+            if ret % 2: 
+                raise PauseFlow
             return ret
-    import operator
+
+    def simpleGenerator(data):
+        for x in [1,2,3,4,5,6]:
+            if x % 2: raise PauseFlow
+            yield x
+
     b = Flow()
-    b.addBranch(simpleIterator)
-    b.addMerge(operator.add, 0)
+    b.addBranch(simpleGenerator)
     b.addCallable(printResult)
-  
+    b.execute(5)
+
+    class simpleIterator:
+        def __init__(self, data): 
+            self.data = data
+        def __iter__(self): 
+            return self
+        def next(self): 
+            print "."
+            if self.data < 0: raise StopIteration
+            ret = self.data
+            self.data -= 1
+            if ret % 2: 
+                raise PauseFlow
+            return ret
+    
     c = Flow()
-    c.addChain(a,b)
-    c.execute(3)
+    c.addBranch(simpleIterator)
+    c.addCallable(printResult)
+    #c.execute(5)
+
+    import operator
+    d = Flow()
+    d.addBranch(simpleIterator)
+    d.addMerge(operator.add, 0)
+    d.addCallable(printResult)
+
+    e = Flow()
+    e.addChain(a,d)
+    #e.execute(3)
 
 if '__main__' == __name__:
-    #testFlow()
-    testFlowIterator()
+    testFlow()
+    #testFlowIterator()
     from twisted.internet import reactor
     reactor.callLater(5,reactor.stop)
     reactor.run()

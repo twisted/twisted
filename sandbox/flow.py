@@ -26,6 +26,7 @@
     to allow the handler to return (for example, if must block), but 
     saving the handler's state so it can be resumed later. 
 """
+from twisted.python.reflect import getArgumentCount
 from twisted.python.compat import StopIteration, iter
 from __future__ import nested_scopes
 
@@ -58,7 +59,7 @@ class Flow:
         """ the no-op stage """
         return self._append(Stage())
 
-    def addCallable(self, callable, stop=None, withContext = 0):
+    def addCallable(self, callable, stop=None):
         """ wraps a function or other callable for use in a flow
 
             This wraps a callable with a single input parameter
@@ -71,11 +72,11 @@ class Flow:
                     # the next stage
                     return data
              
-            Optionally, the callable will be passed a context object
-            as the first argument and the data value as the second
-            argument when registered with withContext true.  The 
-            context exists for the life of the flow, so it can be 
-            used to stuff away variables as needed.
+            Optionally, if the callback happens to accept two 
+            arguments rather than one, it will be passed the 
+            context first and the data value second.  The context
+            exists for the life of the flow, so it can be used
+            to stuff away variables as needed.
 
                 def func(context, data):
                     # context is mutable to 
@@ -86,9 +87,9 @@ class Flow:
             in most cases each callable finishes executing before the 
             next stage is pushed onto the stack.
         """
-        return self._append(Callable(callable, stop, withContext))
+        return self._append(Callable(callable, stop))
 
-    def addBranch(self, callable, onFinish = None, withContext = 0):
+    def addBranch(self, callable, onFinish = None):
         """ wraps an iterator; in effect one-to-many behavior
 
             This wraps an iterable object so that it can be used
@@ -114,17 +115,14 @@ class Flow:
             
             Optionally, an onFinish function can be provided which 
             is executed after the iteration finishes.  This function
-            takes no arguments.
-
-            And, just like addCallable, if withContext is true, then
-            the context is passed as the first argument to both the 
-            first stage and also to the onFinish function, if it was
-            provided.
+            takes no arguments.  And, just like addCallable, if the 
+            callable has two arguments, then the current context 
+            is passed as the first argument.
         """            
-        return self._append(Branch(callable, onFinish, withContext))
+        return self._append(Branch(callable, onFinish))
     
     def addMerge(self, callable, start = None, bucket = None, 
-                 withContext =0, passThru = 0, isGlobal = 0, reduce = 1):
+                 passThru = 0, isGlobal = 0, inplace = 0, reduce = 1):
         """ condences results; in effect many-to-one behavior
 
             This stage is the opposite of the Branch stage, it accepts
@@ -154,20 +152,26 @@ class Flow:
                            previous stage; also the final 'notificaton'
                            of the next stage will be skipped.  This is 
                            only useful if the bucket name is provided.
+
+                inplace    If inplace is true, then the result of the 
+                           callable will not be used to set the 
+                           accumulated value
  
-                reduce     If this boolean value is true, then the result
-                           of the function will be the new aggregate value;
-                           in this way most operators can be used.  Clearly,
-                           then, if reduce is true, the merge will pass one
-                           and only one value to the next stage
-    
-                           Otherwise, the argument is expected to be a tuple;
-                           first is the new accumulated value and the second 
-                           is a value to be passed on to the next stage.  
-                           To handle mutable reductions, if the result is None
-                           then the accumulated value won't be replaced and
-                           a result won't be passed on; this works if the 
-                           function is mutating the accumulated value
+                reduce     By reduce, we mean that incremental data is
+                           not passed on to the subordinate flows.  In
+                           this case, if the update is not inplace, 
+                           the return value of the function gives the 
+                           new aggregate value
+
+                           Otherwise, the callable will be passing on
+                           events to subsequent stages, if inplace is
+                           false, then a tuple is expected; the first 
+                           item in the tuple is the new aggregate, and
+                           the second item is the value for subsequent
+                           processing stages.  
+
+                           Note that passThru and not(reduce) are 
+                           mutually exclusive.
     
             Since reducing to a single list is often useful, the default
             parameters of this function do exactly that.   Note that this
@@ -175,8 +179,8 @@ class Flow:
             bucket; thus placement of Context stages could be used to 
             capture intermediate results, etc.
         """
-        return self._append(Merge(callable, start, bucket, withContext, 
-                                 passThru, isGlobal, reduce))
+        return self._append(Merge(callable, start, bucket, passThru, 
+                                  isGlobal, inplace, reduce))
 
     def addMergeToList(self, passThru = 0, isGlobal = 0, bucket=None):
         """ accumulates events into a list """
@@ -236,10 +240,10 @@ class Stage:
         pass
  
 class Callable(Stage):
-    def __init__(self, callable, stop = None, withContext = 0):
-        self.callable   = callable
-        self.stop       = stop
-        self.withContext = withContext
+    def __init__(self, callable, stop = None):
+        self.callable    = callable
+        self.stop        = stop
+        self.withContext = (2 == getArgumentCount(callable, 1))
      
     def __call__(self, flow, data):
         """
@@ -252,10 +256,10 @@ class Callable(Stage):
             flow.push(ret)
 
 class Branch(Stage):
-    def __init__(self, callable, onFinish = None, withContext = 0):
-        self.callable   = callable
-        self.onFinish   = onFinish
-        self.withContext = withContext
+    def __init__(self, callable, onFinish = None):
+        self.callable    = callable
+        self.onFinish    = onFinish
+        self.withContext = (2 == getArgumentCount(callable, 1))
       
     def __call__(self, flow, data):
         if self.withContext:
@@ -280,17 +284,18 @@ class Branch(Stage):
 
 class Merge(Stage):
     def __init__(self, callable = lambda lst, val: lst.append(val) or lst,
-                       start = lambda: [], bucket = None, withContext = 0,
-                       passThru = 0, isGlobal = 0, reduce = 1):
+                       start = lambda: [], bucket = None, passThru = 0, 
+                       isGlobal = 0, inplace = 0, reduce = 1):
         if not bucket: bucket = "_%d" % id(self)
         self.bucket      = bucket
         self.start       = start
         self.callable    = callable
         self.reduce      = reduce
-        self.withContext = withContext
+        self.inplace     = inplace
         self.isGlobal    = isGlobal
         self.passThru    = passThru
-        assert reduce or self.passThru
+        self.withContext = (3 == getArgumentCount(callable, 2))
+        if self.passThru: assert reduce
     #
     def __call__(self, flow, data):
         if self.isGlobal: cntx = flow.global_context
@@ -298,22 +303,26 @@ class Merge(Stage):
         if not hasattr(cntx, self.bucket):
              start = self.start
              if callable(start): start = start()
-             setattr(cntx,self.bucket,start)
+             setattr(cntx, self.bucket, start)
              if not self.passThru:
                  cntx.addFlush(flow.nextLinkItem(), self.bucket)
+        curr = getattr(cntx, self.bucket)
         if self.withContext:
-            curr = self.callable(cntx, getattr(cntx,self.bucket), data)
+            curr = self.callable(cntx, curr, data)
         else:
-            curr = self.callable(getattr(cntx,self.bucket), data)
+            curr = self.callable(curr, data)
         if self.reduce:
-            setattr(cntx, self.bucket, curr)
+            if not self.inplace:
+                setattr(cntx, self.bucket, curr)
             if self.passThru:
                 flow.push(data)
         else:
             if curr:
-                (save, data) = curr
-                setattr(cntx, self.bucket, save)
-                if data: flow.push(data)
+                if not self.inplace:
+                    (save, curr) = curr
+                    setattr(cntx, self.bucket, save)
+                if curr is not None: 
+                    flow.push(curr)
 
 class Context(Stage):
     def __init__(self, onFlush = None):
@@ -430,32 +439,6 @@ class _Context:
     
     def __getattr__(self, attr):
         return getattr(self._parent, attr)
-
-    #
-    #  Making the flow context emulate a mapping,
-    #  by recursively handling particular operations
-    # 
-    #    def _search(self, key):
-    #        curr = self
-    #        while curr:
-    #            if key in curr._dict:
-    #                return curr._dict
-    #            curr = self._parent
-    #    def __contains__(self, key):
-    #        if self._search(key):
-    #            return 1
-    #    def __getitem__(self, key):
-    #        dict = self._search(key)
-    #        if dict: return dict[key]
-    #        raise KeyError(key)
-    #    def __setitem__(self, key, val):
-    #        self._dict[key] = val
-    #    def get(self, key, default):
-    #        dict = self._search(key)
-    #        if dict: return dict[key]
-    #        return default
-    #    def has_key(self,key):
-    #        return self._search(key)
 
 class LinkItem:
     """
