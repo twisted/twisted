@@ -139,8 +139,7 @@ class ServiceNetwork:
         self.app.preStartService()
 
     def save(self, tag=None, filename=None, passphrase=None):
-        p = self.app.getComponent(persist.IPersistable)
-        p.save(tag, filename, passphrase)
+        persist.IPersistable(self.app).save(tag, filename, passphrase)
 
     def logPrefix(self):
         return '*%s*' % self.app.name

@@ -14,17 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-import os
+import os, md5
 import cPickle as pickle
 import cStringIO as StringIO
 from twisted.python import components, log, runtime
 
 def encrypt(passphrase, data):
-    import md5
     from Crypto.Cipher import AES as cipher
     leftover = len(data) % cipher.block_size
     if leftover:
-        data = data + ' '*(cipher.block_size - leftover)
+        data += ' '*(cipher.block_size - leftover)
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
 

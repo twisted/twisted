@@ -40,7 +40,7 @@ class Service:
     parent = None
 
     def __getstate__(self):
-        dict = self.__dict__
+        dict = self.__dict__.copy()
         if dict.has_key("running"):
             del dict['running']
         return dict
