@@ -23,7 +23,7 @@ import sys, operator
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet.interfaces import ITransport
-from twisted.internet import reactor
+from twisted.internet import reactor, error
 from twisted.python import log
 
 
@@ -265,3 +265,101 @@ class SpewingProtocol(ProtocolWrapper):
 
 class SpewingFactory(WrappingFactory):
     protocol = SpewingProtocol
+
+
+class LimitConnectionsByPeerProtocol(ProtocolWrapper):
+    def connectionLost(self):
+        self.factory.peerDisconnected(self)
+        self.wrappedProtocol.connectionLost(self)
+    
+
+class LimitConnectionsByPeer(WrappingFactory):
+    protocol = LimitConnectionsByPeerProtocol
+
+    maxConnectionsPerPeer = 5
+
+    def startFactory(self):
+        self.peerConnections = {}
+        
+    def buildProtocol(self, addr):
+        peerHost = addr[1]
+        connectionCount = self.peerConnections.get(peerHost, 0)
+        if connectionCount >= self.maxConnectionsPerPeer:
+            return None
+        self.peerConnections[peerHost] = connectionCount + 1
+        return WrappingFactory.buildProtocol(self, addr)
+
+    def unregisterProtocol(self, p):
+        peerHost = p.getPeer()[1]
+        self.peerConnections[peerHost] -= 1
+        if self.peerConnections[peerHost] == 0:
+            del self.peerConnections[peerHost]
+
+
+class TimeoutProtocol(ProtocolWrapper):
+    """Protocol that automatically disconnects when the connection is idle."""
+
+    def __init__(self, factory, wrappedProtocol, timeoutPeriod):
+        """Constructor.
+
+        @param factory: An L{IFactory}.
+        @param wrappedProtocol: A L{Protocol} to wrapp.
+        @param timeoutPeriod: Number of seconds to wait for activity before timing out.
+        """
+        ProtocolWrapper.__init__(self, factory, wrappedProtocol)
+        self.timeoutCall = None
+        self.setTimeout(timeoutPeriod)
+
+    def setTimeout(self, timeoutPeriod):
+        """Set a timeout.
+        
+        This will cancel any existing timeouts."""
+        self.cancelTimeout()
+        self.timeoutPeriod = timeoutPeriod
+        self.timeoutCall = reactor.callLater(self.timeoutPeriod, self.loseConnection)
+
+    def cancelTimeout(self):
+        """Cancel the timeout.
+        
+        If the timeout was already cancelled, this does nothing."""
+        if self.timeoutCall:
+            try:
+                self.timeoutCall.cancel()
+            except error.AlreadyCalled:
+                pass
+            self.timeoutCall = None
+    
+    def resetTimeout(self):
+        """Reset the timeout, usually because some activity just happened."""
+        if self.timeoutCall:
+            self.timeoutCall.reset(self.timeoutPeriod)
+
+    def write(self, data):
+        self.resetTimeout()
+        ProtocolWrapper.write(self, data)
+
+    def writeSequence(self, seq):
+        self.resetTimeout()
+        ProtocolWrapper.writeSequence(self, seq)
+
+    def dataReceived(self, data):
+        self.resetTimeout()
+        ProtocolWrapper.dataReceived(self, data)
+
+    def connectionLost(self, reason):
+        self._cancelTimeout()
+        ProtocolWrapper.connectionLost(self, reason)
+
+class TimeoutFactory(WrappingFactory):
+    protocol = TimeoutProtocol
+
+    def __init__(self, wrappedFactory, timeoutPeriod=30*60):
+        self.timeoutPeriod = timeoutPeriod
+        WrappingFactory.__init__(self, wrappedFactory)
+
+    def buildProtocol(self, addr):
+        return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
+                             timeoutPeriod=self.timeoutPeriod)    
+
+
+

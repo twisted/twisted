@@ -16,6 +16,7 @@
 #
 
 """Test code for policies."""
+from __future__ import nested_scopes
 
 from twisted.trial import unittest
 
@@ -69,6 +70,32 @@ class Server(protocol.ServerFactory):
 
     protocol = EchoProtocol
 
+
+class SimpleSenderProtocol(SimpleProtocol):
+    finished = 0
+    data = ''
+    def __init__(self, testcase):
+        self.testcase = testcase
+    def connectionMade(self):
+        SimpleProtocol.connectionMade(self)
+        self.writeSomething()
+    def writeSomething(self):
+        if self.disconnected:
+            if not self.finished:
+                self.fail()
+            else:
+                reactor.stop()
+        if not self.disconnected:
+            self.transport.write('foo')
+            reactor.callLater(1, self.writeSomething)
+    def finish(self):
+        self.finished = 1
+        self.transport.loseConnection()
+    def fail(self):
+        self.testcase.failed = 1
+    def dataReceived(self, data):
+        self.data += data
+        
 
 
 class ThrottlingTestCase(unittest.TestCase):
@@ -126,8 +153,8 @@ class ThrottlingTestCase(unittest.TestCase):
         
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        while len(c1.buffer) < 10 and len(c2.buffer) < 10:
-            reactor.iterate()
+        reactor.iterate(); reactor.iterate()
+        reactor.iterate(); reactor.iterate()
 
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
@@ -180,10 +207,8 @@ class ThrottlingTestCase(unittest.TestCase):
 
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-
-        while len(c1.buffer) < 10 and len(c2.buffer) < 10:
-            reactor.iterate()
-
+        reactor.iterate(); reactor.iterate()
+        reactor.iterate(); reactor.iterate()
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 20)
@@ -197,10 +222,8 @@ class ThrottlingTestCase(unittest.TestCase):
         # write some more - data should *not* get written for another second
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-
-        while len(c1.buffer) < 10 and len(c2.buffer) < 10:
-            reactor.iterate()
-
+        reactor.iterate(); reactor.iterate()
+        reactor.iterate(); reactor.iterate()
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 0)
@@ -215,3 +238,64 @@ class ThrottlingTestCase(unittest.TestCase):
         for p in tServer.protocols.keys():
             p.loseConnection()
         reactor.iterate(); reactor.iterate()
+
+
+class TimeoutTestCase(unittest.TestCase):
+    def setUp(self):
+        self.failed = 0
+    
+    def testTimeout(self):
+        # Create a server which times out inactive connections
+        server = policies.TimeoutFactory(Server(), 3)
+        port = reactor.listenTCP(0, server)
+        
+        # Create a client tha sends and receive nothing
+        client = SimpleProtocol()
+        f = SillyFactory(client)
+        reactor.connectTCP("127.0.0.1", port.getHost()[2], f)
+
+        for i in range(10):
+            reactor.iterate()
+            self.assert_(client.connected)
+        
+        time.sleep(3.5)
+        for i in range(3):
+            reactor.iterate()
+        self.assert_(client.disconnected)
+
+        # Clean up
+        port.loseConnection()
+        for i in range(10):
+            reactor.iterate()
+        
+    def testThatSendingDataAvoidsTimeout(self):
+        # Create a server which times out inactive connections
+        server = policies.TimeoutFactory(Server(), 2)
+        port = reactor.listenTCP(0, server)
+        
+        # Create a client that sends and receive nothing
+        client = SimpleSenderProtocol(self)
+        f = SillyFactory(client)
+        f.protocol = client
+        reactor.connectTCP("127.0.0.1", port.getHost()[2], f)
+        reactor.callLater(3.5, client.finish)
+        reactor.run()
+        
+        self.failUnlessEqual(self.failed, 0)
+        self.failUnlessEqual(client.data, 'foo'*4)
+        
+    def testThatReadingDataAvoidsTimeout(self):
+        # Create a server that sends occasionally
+        server = SillyFactory(SimpleSenderProtocol(self))
+        port = reactor.listenTCP(0, server, interface='127.0.0.1')
+    
+        clientFactory = policies.WrappingFactory(SillyFactory(SimpleProtocol()))
+        port = reactor.connectTCP('127.0.0.1', port.getHost()[2], clientFactory)
+
+        reactor.iterate()
+        reactor.iterate()
+        reactor.callLater(5, server.p.finish)
+        reactor.run()
+        
+        self.failUnlessEqual(self.failed, 0)
+
