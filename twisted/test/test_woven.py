@@ -392,6 +392,28 @@ class HugeTest(WovenTC):
     def testHugeTest(self):
         pass
 
+
+class ListOfDeferredsTest(WovenTC):
+    """Test rendering a model which is a list of Deferreds."""
+    
+    modelFactory = lambda self: [defer.succeed("hello"), defer.succeed("world")]
+    resourceFactory = page.Page
+
+    def prerender(self):
+        t = '''<div model="." view="List">
+                  <b pattern="listItem" view="Text" />
+               </div>'''
+        self.t.template = t
+
+    def testResult(self):
+        n = self.d.firstChild()
+        self.assertEquals(len(n.childNodes), 2)
+        for c in n.childNodes:
+            self.assertEquals(c.nodeName, "b")
+        self.assertEquals(n.firstChild().firstChild().toxml(), "hello")
+        self.assertEquals(n.lastChild().firstChild().toxml(), "world")
+
+
 class FakeHTTPChannel:
     # TODO: this should be an interface in twisted.protocols.http... lots of
     # things want to fake out HTTP
