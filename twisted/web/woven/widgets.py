@@ -706,6 +706,9 @@ class List(Widget):
                                         "please use listItemOf instead",
                                         DeprecationWarning)
 
+            seq = domhelpers.getIfExists(newNode,'listIndex')
+            if seq:
+                seq.setAttribute('value',str(itemNum))
             appendModel(newNode, itemNum)
             if not newNode.getAttribute("view"):
                 newNode.setAttribute("view", self.defaultItemView)
