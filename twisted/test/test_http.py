@@ -107,7 +107,7 @@ Accept: text/html
         # one byte at a time, to stress it.
         for byte in self.requests:
             a.dataReceived(byte)
-        a.connectionLost()
+        a.connectionLost(IOError("all one"))
         value = b.getvalue()
         if value != self.expected_response:
             for i in range(len(value)):
@@ -282,7 +282,7 @@ class ParsingTestCase(unittest.TestCase):
         # one byte at a time, to stress it.
         for byte in httpRequest:
             a.dataReceived(byte)
-        a.connectionLost()
+        a.connectionLost(IOError("all done"))
         self.assertEquals(self.didRequest, 1)
         del self.didRequest
 
