@@ -19,10 +19,10 @@ time, the current state of each request must be managed.  A typical way to
 keep the current state is to use the call stack, a stack of functions and
 their arguments.  Unfortunately, things get complicated quick.</p>
 
-<p>One primary approach to this problem is preemptive mutlti-tasking, where
+<p>One primary approach to this problem is preemptive multi-tasking, where
 each request is handled by a new process or thread which has its own
-callstack.  The difference between processes and threads, from the
-programmer's perspective, is primarly in how objects common to multiple
+call stack.  The difference between processes and threads, from the
+programmer's perspective, is primarily in how objects common to multiple
 requests are shared.   For processes, one must use sockets or shared memory;
 in threads, the programmer must take care to lock objects which could be
 touched by other threads.  In either case, the underlying system preempts
@@ -32,17 +32,17 @@ that any part of their code uses shared objects appropriately.</p>
 <p>Another approach, is to use a event-driven approach, where each request
 is broken down into distinct chunks of work, and when each chunk is done, it
 schedules the next chunk to be run.  This is called cooperative
-multi-tasking.   The Twisted framework primarly uses this approach to
+multi-tasking.   The Twisted framework primarily uses this approach to
 handling multiple requests.  In Twisted, the execution of each chunk is
 typically scheduled with <code>reactor.callLater</code> and the result of
-each chunk is reported with a callback, usually managed by a
+each chunk is reported with a call-back, usually managed by a
 <code>internet.defer.Deferred</code> object.</p>
 
 <p>While this <code>Deferred</code> approach is very good, it starts to have
 problems when the flow of the request is not a simple linear chain.
 Basically, for each state of the request you would have a code block that is
 executed, with a <code>Deferred</code> object used to register its
-callbacks.  Each callback is then typically used to <code>callLater</code>
+call-backs.  Each call-back is then typically used to <code>callLater</code>
 the next state in the data flow.   Things get complicated when one stage
 needs to report results incrementally, or when the following state depends
 upon information from the current state.</p>
@@ -53,7 +53,7 @@ information from previous stages.   This approach allows for a more granular
 control of the flow, giving both incremental results and also allowing the
 next state of the information to be chosen more dynamically.  Unfortunately,
 this approach is somewhat complicated since building iterators isn't easy.
-Luckly, in version 2.2 and up, Python has generators, which are, in short,
+Luckily, in version 2.2 and up, Python has generators, which are, in short,
 syntax sugar for making iterators.</p>
 
 <p>A further complication to this iterator based approach is that every once
@@ -139,7 +139,7 @@ dump(States())
 
 </pre>
 
-<p>Luckly, with Python 2.2, there is a wonderful syntax sugar for creating
+<p>Luckily, with Python 2.2, there is a wonderful syntax sugar for creating
 iterators... generators.   When a generator is first executed, an iterator
 is returned.  And from there on, each invocation of <code>next()</code>
 gives the subsequent value produced by the <code>yield</code> statement.
@@ -172,10 +172,10 @@ dump(States())
 
 <p>An important detail here, is that code which uses both iterators and
 generators (dump) can be expressed in a manner which works in with 2.1 and
-thus can be included in Twisted's codebase.  One technical difference
+thus can be included in Twisted's code base.  One technical difference
 between iterators and generators, is that raising an exception from a
 generator permanently halts the generator, while raising an exception from
-an iterator's <code>next()</code> method does not necessarly stop the
+an iterator's <code>next()</code> method does not necessarily stop the
 iterator, that is, one could call the <code>next()</code> method again and
 possibly get results.   From here on, we use the generator syntax for
 expressing iterators.</p>
