@@ -34,7 +34,6 @@ class OctTree(object):
         self.height = height
         self._children = {}
         self.n = n
-        self._children = []
 
     def _getChild(self, p):
         left = p[0] < self.center[0]
