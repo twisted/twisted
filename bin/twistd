@@ -65,7 +65,7 @@ class ServerOptions(usage.Options):
         except ImportError:
             print "Error: Package %s not found. Is it in your ~/TwistedPlugins directory?" % pkgname
             sys.exit()
-        self.python = os.path.join(fname, 'config.tac')
+        self.opts['python'] = os.path.join(fname, 'config.tac')
 
     def opt_version(self):
         """Print version information and exit.
@@ -87,14 +87,14 @@ except usage.error, ue:
 platformType = runtime.platform.getType()
 if platformType != 'java':
     # java can't chdir
-    os.chdir(config.rundir)
+    os.chdir(config.opts['rundir'])
     
 register.checkLicenseFile()
-sys.path.append(config.rundir)
+sys.path.append(config.opts['rundir'])
 
-if platformType != 'posix' or config.debug:
+if platformType != 'posix' or config.opts['debug']:
     # only posix can fork, and debugging requires nodaemon
-    config.nodaemon = 1
+    config.opts['nodaemon'] = 1
 
 # Twisted Imports
 from twisted.python import usage, log, runtime
@@ -119,11 +119,11 @@ initRun = 0
 mainMod = sys.modules['__main__']
 
 
-if os.path.exists(config.pidfile):
+if os.path.exists(config.opts['pidfile']):
     try:
-        pid = int(open(config.pidfile).read())
+        pid = int(open(config.opts['pidfile']).read())
     except ValueError:
-        sys.exit('Pidfile %s contains non numeric value' % config.pidfile)
+        sys.exit('Pidfile %s contains non numeric value' % config.opts['pidfile'])
 
     try:
         os.kill(pid, 0)
@@ -131,23 +131,23 @@ if os.path.exists(config.pidfile):
 	import errno
 	if why[0] == errno.ESRCH:
 	    # The pid doesnt exists.
-	    if not config.quiet:
-		print 'Removing stale pidfile %s' % config.pidfile
-		os.remove(config.pidfile)
+	    if not config.opts['quiet']:
+		print 'Removing stale pidfile %s' % config.opts['pidfile']
+		os.remove(config.opts['pidfile'])
 	else:
-	    sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config.pidfile, why[1]))
+	    sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config.opts['pidfile'], why[1]))
     else:
         sys.exit('A server is already running, PID %s' %  pid)
 
-if config.logfile == '-':
-    if not config.nodaemon:
+if config.opts['logfile'] == '-':
+    if not config.opts['nodaemon']:
         print 'daemons cannot log to stdout'
         os._exit(1)
     logFile = sys.stdout
-elif config.nodaemon and not config.logfile:
+elif config.opts['nodaemon'] and not config.opts['logfile']:
     logFile = sys.stdout
 else:
-    logPath = os.path.abspath(config.logfile or 'twistd.log')
+    logPath = os.path.abspath(config.opts['logfile'] or 'twistd.log')
     logFile = logfile.LogFile(os.path.basename(logPath), os.path.dirname(logPath))
     
     # rotate logs on SIGUSR1
@@ -174,15 +174,15 @@ if register.LICENSE_KEY:
 if register.LICENSE_ORG:
     log.msg("organization: %s" % register.LICENSE_ORG)
 
-if not config.python:
-    print "Loading %s..." % config.file
+if not config.opts['python']:
+    print "Loading %s..." % config.opts['file']
     sys.modules['__main__'] = EverythingEphemeral()
-    application = load(open(config.file,'rb'))
+    application = load(open(config.opts['file'],'rb'))
     sys.modules['__main__'] = mainMod
     main.theApplication = application
     styles.doUpgrade()
 else:
-    pyfile = os.path.abspath(config.python)
+    pyfile = os.path.abspath(config.opts['python'])
     print "Loading %s..." % pyfile
     dict = {'__file__': pyfile}
     execfile(pyfile, dict, dict)
@@ -195,7 +195,7 @@ else:
 print "Loaded."
 initRun = 1
 
-if not config.nodaemon:
+if not config.opts['nodaemon']:
     # Turn into a daemon.
     if os.fork():   # launch child and...
         os._exit(0) # kill off parent
@@ -207,7 +207,7 @@ if not config.nodaemon:
 # java doesn't have getpid, and Windows' getpid is near-useless
 usepid = ((os.name != 'java') and (os.name != 'nt'))
 if usepid:
-    open(config.pidfile,'wb').write(str(os.getpid()))
+    open(config.opts['pidfile'],'wb').write(str(os.getpid()))
 
 if os.name == 'nt':
     # C-c can't interrupt select.select in win32.
@@ -220,21 +220,21 @@ if os.name == 'nt':
     main.addDelayed(Win32KillTimeout())
 
 try:
-    if config.profile:
+    if config.opts['profile']:
         import profile
-        profile.run("application.run(%d)" % (not config.no_save))
-    elif config.debug:
+        profile.run("application.run(%d)" % (not config.opts['no_save']))
+    elif config.opts['debug']:
         import pdb
-        pdb.run("application.run(%d)" % (not config.no_save))
+        pdb.run("application.run(%d)" % (not config.opts['no_save']))
     else:
-        application.run(not config.no_save)
+        application.run(not config.opts['no_save'])
 except:
-    if config.nodaemon:
+    if config.opts['nodaemon']:
         file = oldstdout
     else:
         file = open("TWISTD-CRASH.log",'a')
     traceback.print_exc(file=file)
     file.flush()
 if usepid:
-    os.unlink(config.pidfile)
+    os.unlink(config.opts['pidfile'])
 print "Server Shut Down."

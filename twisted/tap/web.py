@@ -71,7 +71,7 @@ twisted.web.test in it."""
         any other files that you want to be served up raw.
         """
 
-        self.opts['root'] = static.File(path)
+        self.opts['root'] = static.File(os.path.abspath(path))
         self.opts['root'].processors = {
             '.cgi': twcgi.CGIScript,
             '.php3': twcgi.PHPScript,
