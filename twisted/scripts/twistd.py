@@ -50,6 +50,7 @@ class ServerOptions(usage.Options):
                 ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
+                ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
                 ['euid', '',     "Set only effective user-id rather than real user-id. "
                                   "(This option has no effect unless the server is running as root, "
@@ -318,6 +319,13 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
         log.msg(s)
         log.deferr()
         sys.exit('\n' + s + '\n')
+    
+    if not config['originalname']:
+        if application.processName and application.processName != sys.argv[0]:
+            exe = os.path.realpath(sys.executable)
+            args = (application.processName, sys.argv[0], '--originalname') + tuple(sys.argv[1:])
+            log.msg('Changing process name to ' + application.processName)
+            os.execl(exe, *args)
 
     # If we're asked to chroot and os.chroot does not exist,
     # just fail.

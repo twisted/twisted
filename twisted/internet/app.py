@@ -241,6 +241,8 @@ class Application(log.Logger, styles.Versioned,
     """
 
     running = 0
+    processName = None
+
     def __init__(self, name, uid=None, gid=None, authorizer=None, authorizer_=None):
         """Initialize me.
 

@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.24 2003/02/03 12:09:07 spiv Exp $
+# $Id: mktap.py,v 1.25 2003/02/14 16:40:40 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -70,7 +70,8 @@ class GeneralOptions(usage.Options):
     optParameters = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
                   ['append', 'a', None,   "An existing .tap file to append the plugin to, rather than creating a new one."],
-                  ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."]]
+                  ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
+                  ['appname', 'n', None, "The process name to use for this application."]]
 
     optFlags = [['xml', 'x',       "DEPRECATED: same as --type=xml"],
                 ['source', 's',    "DEPRECATED: same as --type=source"],
@@ -155,6 +156,9 @@ def run():
         print "Usage Error: %s" % ue
         options.subOptions.opt_help()
         sys.exit(1)
+
+    if options['appname']:
+        app.processName = options['appname']
 
     # backwards compatible interface
     if hasattr(mod, "getPorts"):
