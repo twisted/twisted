@@ -342,7 +342,11 @@ class HTTPClient(basic.LineReceiver):
 
 
 # response codes that must have empty bodies
-NO_BODY_CODES = (204, 304)
+# possibly 303 and 302 shouldn't be here, since they might in theory
+# have a body, but since then our chunking algorithm decides
+# they should be chunked, we get a screw up of sorts since for
+# some reason an empty chunk to end the redirect is never sent.
+NO_BODY_CODES = (204, 304, 302, 303)
 
 class Request:
     """A HTTP request.
