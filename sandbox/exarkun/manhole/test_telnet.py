@@ -67,16 +67,18 @@ class TelnetTestCase(unittest.TestCase):
         # into \n.
         h = self.p.protocol
 
-        L = ["here is the first line",
-             "here is the second line",
-             "here is the third line",
-             "here is the last line"]
-        nl = ["\r\n", "\r\0"] * 2
+        L = ["here is the first line\r\n",
+             "here is the second line\r\0",
+             "here is the third line\r\n",
+             "here is the last line\r\0"]
 
         for b in L:
-            self.p.dataReceived(b + nl.pop())
+            self.p.dataReceived(b)
 
-        self.assertEquals(h.bytes, "\n".join(L) + "\n")
+        self.assertEquals(h.bytes, L[0][:-2] + '\n' +
+                          L[1][:-2] + '\r' +
+                          L[2][:-2] + '\n' +
+                          L[3][:-2] + '\r')
 
     def testIACEscape(self):
         # Send a bunch of bytes and a couple quoted \xFFs.  Unquoted,

@@ -334,8 +334,10 @@ class Telnet(protocol.Protocol):
                 del self.command
                 self.commandReceived(command, b)
             elif self.state == 'newline':
-                if b == '\n' or b == '\0':
+                if b == '\n':
                     self.applicationDataReceived('\n')
+                elif b == '\0':
+                    self.applicationDataReceived('\r')
                 else:
                     self.applicationDataReceived('\r' + b)
                 self.state = 'data'
