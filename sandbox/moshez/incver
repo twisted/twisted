@@ -1,0 +1,98 @@
+from twisted.python import usage
+
+class Options(usage.Options):
+    updates = ()
+    optParameters = [
+     ["type", "t", "alpha", "Type of release -- alpha, RC or final"],
+     ["qotr", "q", None, "Quote of the release"],
+    ]
+    optFlags = [
+      ["head", "h", "Start from HEAD"],
+      ["dry-run", "n", "Do nothing"],
+    ]
+    def opt_update(self, file):
+        self.updates = self.updates+(file,)
+
+def getrevision():
+    text = urllib2.urlopen('http://cvs.twistedmatrix.com/cvs/README')
+    while 1:
+        line = text.readline()
+        if not line:
+            break
+        if line=="<br>CVS Tags:\n":
+            text.readline()
+            tag = parsetag(text.readline())
+            if tag:
+                break
+    text.close()
+    return tag
+
+def parsetag(tag):
+    tag = tag[tag.index('=')+1:tag.rindex('"')]
+    if not tag.startswith('release-'):
+        return
+    major, minor, patch = tag[tag.index('-')+1:].split('_')
+    try:
+        patch = int(patch)
+        patch = str(patch), 'final', 1
+    except ValueError:
+        m = re.match('(\d+)(.+?)(\d+)', patch)
+        patch = m.groups()
+    return tag, (major, minor, patch)
+
+
+def strtag(major, minor, patch):
+    spatch = ''.join(patch)
+    if patch[1]=='final':
+        if patch[2]==1:
+            spatch = patch[0]
+        else:
+            spatch = str(int(patch[0])+1)
+    return '.'.join([major, minor, patch])
+
+def calcnext(version, type):
+    major, minor, patch = version
+    order=['alpha', 'rc', 'final']
+    then, now = order.index(patch[1]), order.index(type)
+    if now>then:
+        patch = patch[0], type, '1'
+    elif now<then:
+        patch = str(int(patch[0])+1), type, '1'
+    else:
+        patch = patch[0], type, str(int(patch[2])+1)
+    return strtag(major, minor, patch)
+
+def system(command):
+    n = os.system(command)
+    if n:
+        sys.exit(n)
+
+def setquotr(quotr)
+    if quotr is None:
+        return
+    res = []
+    fp = file("README")
+    for line in fp:
+        res.append(line)
+        if line=="Quote of the Release:\n"
+            res.append(fp.next()) # blank line
+            res.append(quotr)
+            for line in fp:
+                if line=='\n':
+                    break
+            res.append(line)
+    res = ''.join(res)
+    file("README", 'w').write(res)
+
+def run(config):
+    tag, version = getrevision()
+    command = 'cvs -d :ext:cvs.twistedmatrix.com:/cvs co -d Twisted.CVS'
+    if not config['head']:
+        command += "-r %s" % tag
+    system(command)
+    tag = calcnext(tag, config['type'])
+    print "next version is", tag
+    os.chdir("Twisted.CVS")
+    system("cvs up -A %s" % ' '.join(config['updates']))
+    os.system("./admin/release-twisted --upver %s" % tag)
+    setquotr(config['quotr'])
