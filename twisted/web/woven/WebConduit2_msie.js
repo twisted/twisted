@@ -33,6 +33,7 @@ function woven_eventHandler(eventName, node) {
     if (!woven_eventQueueBusy) {
         woven_sendTopEvent()
     }
+    return false
 }
 
 function woven_sendTopEvent() {

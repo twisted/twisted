@@ -423,7 +423,7 @@ class Widget(view.View):
             extraArgs = ''
             for x in args:
                 extraArgs += " ,'" + x.replace("'", "\\'") + "'"
-            widget[eventName] = "woven_eventHandler('%s', this%s); return false" % (eventName, extraArgs)
+            widget[eventName] = "return woven_eventHandler('%s', this%s)" % (eventName, extraArgs)
             setattr(self, 'wevent_' + eventName, handler)
         self.addUpdateMethod(handlerUpdateStep)
         
