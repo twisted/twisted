@@ -140,6 +140,12 @@ class DefaultWidget(domwidgets.Widget):
         self.submodel = submodel
 
 
+def renderFailure(ignored, request):
+    f = failure.Failure()
+    request.write(widgets.formatFailure(f))
+    request.finish()
+
+
 class DOMTemplate(Resource, View):
     """A resource that renders pages using DOM."""
     
@@ -258,9 +264,7 @@ class DOMTemplate(Resource, View):
             if not self.outstandingCallbacks:
                 return self.sendPage(request)
         except:
-            f = failure.Failure()
-            request.write(widgets.formatFailure(f))
-            request.finish()
+            renderFailure(None, request)
     
     def dispatchResult(self, request, node, result):
         """
@@ -276,7 +280,7 @@ class DOMTemplate(Resource, View):
             return self.processNode(request, result.generateDOM(request, node), node)
         elif isinstance(result, Deferred):
             self.outstandingCallbacks += 1
-            result.addCallbacks(self.callback, callbackArgs=(request, node))
+            result.addCallbacks(self.callback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
             # Got to wait until the callback comes in
             return result
         elif isinstance(result, types.StringType):

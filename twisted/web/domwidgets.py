@@ -150,7 +150,7 @@ class Widget(mvc.View):
         self.setData(result)
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallback(self.callback, request, node)
+            data.addCallbacks(self.callback, domtemplate.renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
             return data
         self.setUp(request, node, data)
         return self.generateDOM(request, node)
