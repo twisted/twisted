@@ -1,3 +1,14 @@
+2002-05-25  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/spread/pb.py, twisted/internet/defer.py, 
+	  twisted/python/failure.py, etc:
+	  
+	  Perspective broker now supports Failures! This should make writing
+	  robust PB clients *much* easier. What this means is that errbacks will
+	  recieve instances of t.python.failure.Failure instead of just strings
+	  containing the traceback -- so you can easily .trap() particular
+	  errors and handle them appropriately.
+
 2002-05-24  Itamar Shtull-Trauring, Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted.mail cleanups:
@@ -6,18 +17,77 @@
 
 		* mail domains now receive service in __init__
 
-		* split file system stuff into Queue (renamed from MessageCollection)
+		* split file system stuff into Queue (renamed from 
+	          MessageCollection)
 
 		* Put a Queue in service
 	* twisted/protocol/smtp.py: changed SMTPClient API so that it returns
 	a file for the message content, instead of a string.
 
+2002-05-23  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* Twisted applications can now be persisted to XML files (.tax) with
+	the --xml option -- this is pretty verbose and needs some optimizations.
+	
+2002-05-22  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/persisted/marmalade.py: Marmalade: Jelly, with just a hint
+	of bitterness. An XML object serialization module designed so
+	people can hand-edit persisted objects (like Twisted Applications).
+
+2002-05-21  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted/internet/gtkreactor.py: GTK+ support for win32; input_add
+	is not supported in win32 and had to be worked around.
+	
+2002-05-20  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted/pythor/defer.py, twisted/protocols/protocol.py,
+	  twisted/internet/defer.py, twisted/internet/protocol.py:
+	
+	    Moved defer and protocol to twisted.internet to straighten
+	    out dependancies.
+	
+2002-05-18  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/metrics, twisted/forum: Metrics and Forum are no longer
+	a part of Twisted proper; They are now in different CVS modules, and
+	will be released separately.
+	
 2002-05-15  Andrew Bennetts <andrew-twisted@puzzling.org>
 
 	* twisted/protocols/ftp.py: Small fixes to FTPClient that have
         changed the interface slightly -- return values from callbacks
 	are now consistent for active and passive FTP.  Have a look at
 	doc/examples/ftpclient.py for details.
+
+2002-05-12  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* doc/specifications/banana.html: Documentation of the Banana protocol.
+	
+2002-05-06  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/im/gtkchat.py: Some more UI improvements to InstanceMessenger:
+	Nicks are now colorful (each nick is hashed to get a color) and
+	messages now have timestamps.
+	
+2002-05-04  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* Reactor Refactor! Pretty much all of the twisted.internet.* classes
+	are being depracated in favor of a single, central class called the
+	"reactor". Interfaces are defined in twisted.internet.interfaces.
+	For a much more descriptive comment about this change, see
+	http://twistedmatrix.com/pipermail/twisted-commits/2002-May/002104.html.
+
+2002-05-04  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/spread/pb.py: There is now some resource limiting in PB.
+	Clients can now have the number of references to an object limited.
+	
+2002-04-29  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/im/*: Refactored Twisted InstanceMessenger to seperate GUI
+	and logic. Also improved the UI a bit.
 
 2002-04-28  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
@@ -29,7 +99,12 @@
 	* twisted/lumberjack/logfile.py: reversed order of rotated
 	logs - higer numbers are now older.
 
-2002-04-24  Itamar Shtull-Trauring <twisted@itamarst.org>
+2002-04-24  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* doc/examples/ircLogBot.py: We now have a sample IRC bot that logs
+	all messages to a file.
+
+2002-04-24  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* twisted/python/components.py: Twisted's interfaces are now
 	more like Zope's - __implements__ is an Interface subclass
@@ -37,6 +112,18 @@
 	implement an interface even if its class doesn't have an
 	__implements__.
 
+2002-04-22  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/python/usage.py: Minor niceties for usage.Options:
+	You can now look up the options of an Options object with
+	optObj['optName'], and you if you define opt_* methods with
+	underscores in them, using dashes on the command line will work.
+
+2002-04-21  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/scripts/mktap.py: No more --manhole* options, use 
+	'--append=my.tap manhole' now.
+	
 2002-04-20  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.4.
