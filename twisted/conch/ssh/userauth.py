@@ -206,7 +206,8 @@ class SSHUserAuthClient(service.SSHService):
         if publicKey:
             self.lastPublicKey = publicKey
             self.triedPublicKeys.append(publicKey)
-            keyType = getNS('publicKey')[0]
+            keyType = getNS(publicKey)[0]
+            log.msg('using key of type %s' % keyType)
             self.askForAuth('publickey', '\x00' + NS(keyType) + \
                             NS(publicKey))
             return 1

@@ -229,6 +229,7 @@ class SSHTransportBase(protocol.Protocol):
 
     def sendDisconnect(self, reason, desc):
         self.sendPacket(MSG_DISCONNECT, struct.pack('>L', reason) + NS(desc) + NS(''))
+        log.msg('Disconnecting with error, code %s\nreason: %s' % (reason, desc))
         self.transport.loseConnection()
         
     # client methods

@@ -221,6 +221,7 @@ class SSHChannel:
         log.msg('other side refused channel %s' % self.id)
 
     def addWindowBytes(self, bytes):
+        log.msg('adding bytes to window')
         self.windowSize = self.windowSize + bytes
         self.windowLeft = self.windowLeft + bytes
 
@@ -247,6 +248,7 @@ class SSHChannel:
     # transport stuff
     def write(self, data):
         if len(data) > self.windowLeft:
+            log.msg('adjusting window %s %s' % (self.windowLeft, len(data)))
             self.conn.adjustWindow(self, len(data))
         self.conn.sendData(self, data)
 
