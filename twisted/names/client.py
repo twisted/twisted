@@ -106,28 +106,36 @@ class Resolver(common.ResolverBase):
         d['connections'] = []
         d['_parseCall'] = None
         return d
+
     
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.maybeParseConfig()
 
+
     def maybeParseConfig(self):
-        if self.resolv is not None:
-            try:
-                resolvConf = file(self.resolv)
-            except IOError, e:
-                if e.errno == errno.ENOENT:
-                    pass
-                else:
-                    raise
+        if self.resolv is None:
+            # Don't try to parse it, don't set up a call loop
+            return
+
+        try:
+            resolvConf = file(self.resolv)
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                pass
             else:
-                mtime = os.fstat(resolvConf.fileno()).st_mtime
-                if mtime != self._lastResolvTime:
-                    log.msg('%s changed, reparsing' % (self.resolv,))
-                    self._lastResolvTime = mtime
-                    self.parseConfig(resolvConf)
+                raise
+        else:
+            mtime = os.fstat(resolvConf.fileno()).st_mtime
+            if mtime != self._lastResolvTime:
+                log.msg('%s changed, reparsing' % (self.resolv,))
+                self._lastResolvTime = mtime
+                self.parseConfig(resolvConf)
+
+        # Check the mtime again in a little while
         from twisted.internet import reactor
         self._parseCall = reactor.callLater(self._resolvReadInterval, self.maybeParseConfig)
+
 
     def parseConfig(self, resolvConf):
         servers = []
