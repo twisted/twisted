@@ -215,9 +215,6 @@ class TestCase:
         for i in xrange(timesOrSeconds):
             reactor.iterate()
             
-class PerformanceTestCase(TestCase):
-    pass
-                                 
 class Tester:
     """I contain all the supporting machinery for running a single test method.
     """
@@ -319,21 +316,27 @@ class TestSuite:
     moduleGlob = 'test_*.py'
     sortTests = 1
 
-    def __init__(self):
+    def __init__(self, benchmark=0):
+        self.benchmark = benchmark
         self.numTests = 0
         self.couldNotImport = {}
         self.tests = []
-        self.stats = {}
+        if benchmark:
+            self.stats = {}
         
     def addMethod(self, method):
         """Add a single method of a test case class to this test suite.
         """
-        testAdapter = runner.SingletonRunner(method)
+        if self.benchmark:
+            testAdapter = runner.PerformanceSingletonRunner(method, self.stats)
+        else:
+            testAdapter = runner.SingletonRunner(method)
+            
         self.tests.append(testAdapter)
         self.numTests += testAdapter.numTests()
 
     def addTestClass(self, testClass):
-        if issubclass(testClass, PerformanceTestCase):
+        if self.benchmark:
             testAdapter = runner.PerformanceTestClassRunner(testClass, self.stats)
         else:
             testAdapter = runner.TestClassRunner(testClass)
@@ -410,6 +413,7 @@ class TestSuite:
         for name, exc in self.couldNotImport.items():
             output.reportImportError(name, exc)
 
-        pickle.dump(self.stats, open("test.stats", 'wb'))
+        if self.benchmark:
+            pickle.dump(self.stats, open("test.stats", 'wb'))
 
         output.stop()

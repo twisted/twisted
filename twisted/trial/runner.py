@@ -120,22 +120,25 @@ def runTest(method):
     # matches SingletonRunner.runTest and TestClassRunner.runTest .
     method()
 
+
 class PerformanceTestClassRunner(TestClassRunner):
     methodPrefixes = ('benchmark',)
 
-    def runTests(self, output):
-        self.testCase = self.testClass()
-        self.testCase._resultReporter_ = output
-        self.testCase.setUpClass()
-        for methodName in self.methodNames:
-            fullName = "%s.%s" % (self.testCase.__class__, methodName)
-            log.msg("--> %s <--" % fullName)
-            method = getattr(self.testCase, methodName)
-            output.reportStart(self.testClass, method)
-            self.testCase.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
-            t = unittest.Tester(self.testClass, self.testCase, method, self.runTest)            
-            results = t.run()
-            output.reportResults(self.testClass, method, *results)
-        self.testCase.tearDownClass()
+    def runTest(self, method):
+        fullName = "%s.%s" % (method.im_class, method.im_func.__name__)
+        assert method.__name__ in self.methodNames
+        method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
+        method()
+
+
+class PerformanceSingletonRunner(SingletonRunner):
+
+    def runTest(self, method):
+        assert method.__name__ in self.methodNames
+        method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
+        method()
+
+
+
 
 import unittest

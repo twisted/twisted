@@ -39,6 +39,7 @@ class Options(usage.Options):
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger"],
                 ["profile", None, "Run tests under the Python profiler"],
+                ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["recurse", "R", "Search packages recursively"]]
 
@@ -228,7 +229,7 @@ def run():
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
 
-    suite = unittest.TestSuite()
+    suite = unittest.TestSuite(config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
     if config['recurse']:
         for package in config['packages']:
