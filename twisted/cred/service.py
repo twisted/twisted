@@ -93,7 +93,7 @@ class Service(app.ApplicationService):
         if self.perspectives.has_key(perspective.perspectiveName):
             return
         self.perspectives[perspective.perspectiveName] = perspective
-        perspective._service_cached = 1
+        perspective.setCached()
 
     def uncachePerspective(self, perspective):
         """Uncache a perspective loaded from an external data source.
@@ -101,7 +101,7 @@ class Service(app.ApplicationService):
         Perspectives that were 'loaded' from memory will not be uncached.
         """
         if self.perspectives.has_key(perspective.perspectiveName):
-            if perspective._service_cached:
+            if perspective.isCached():
                 del self.perspectives[perspective.perspectiveName]
 
     def createPerspective(self, name):

@@ -24,9 +24,43 @@ Future Plans: Errors may be changed to unify reporting in twisted.cred.
 
 """
 
-from twisted.python import log, reflect
+from twisted.python import log, reflect, components
 from twisted.cred import identity
 import types
+
+class IPerspective(components.Interface):
+    def setIdentityName(self, name):
+        """"""
+    
+    def setIdentity(self, identity):
+        """"""
+    
+    def makeIdentity(self, password):
+        """"""
+    
+    def getPerspectiveName(self):
+        """"""
+    
+    def getService(self):
+        """"""
+    
+    def setService(self, service):
+        """"""
+    
+    def getIdentityRequest(self):
+        """"""
+    
+    def attached(self, reference, identity):
+        """"""
+    
+    def detached(self, reference, identity):
+        """"""
+    
+    def setCached(self):
+        """"""
+    
+    def isCached(self):
+        """"""
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -36,6 +70,8 @@ class Perspective:
     perform upon a service, and the state associated with that
     user for that service.
     """
+    
+    __implements__ = IPerspective,
 
     _service_cached = 0 # Has my service cached me from a loaded store, or do I live in memory usually?
 
@@ -101,6 +137,12 @@ class Perspective:
         """Change what service I am a part of.
         """
         self.service = service
+    
+    def setCached(self):
+        self._service_cached = 1
+    
+    def isCached(self):
+        return self._service_cached
 
     def getIdentityRequest(self):
         """Request my identity.
