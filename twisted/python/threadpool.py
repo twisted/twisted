@@ -70,8 +70,8 @@ class ThreadPool:
         assert isinstance(owner, log.Logger), "owner isn't logger"
         if self.joined: return
         o=(owner,func,args,kw)
-        self._startSomeWorkers()
         self.q.put(o)
+        self._startSomeWorkers()
     
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
