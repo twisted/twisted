@@ -32,9 +32,13 @@ import operator
 import struct
 
 if os.name == 'nt':
-    EWOULDBLOCK = 10035
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
+    from errno import WSAEINTR as EINTR
+    from errno import WSAEMSGSIZE as EMSGSIZE
+    from errno import WSAECONNREFUSED as ECONNREFUSED
+    from errno import WSAEAGAIN as EAGAIN
 elif os.name != 'java':
-    from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED
+    from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
 # Twisted Imports
 from twisted.internet import protocol, base
@@ -52,6 +56,7 @@ class Port(base.BasePort):
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
+    maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
     
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """Initialize with a numeric port to listen on.
@@ -93,11 +98,19 @@ class Port(base.BasePort):
 
     def doRead(self):
         """Called when my socket is ready for reading."""
-        try:
-            data, addr = self.socket.recvfrom(self.maxPacketSize)
-            self.protocol.datagramReceived(data, addr)
-        except:
-            log.deferr()
+        read = 0
+        while read < self.maxThroughput:
+            try:
+                data, addr = self.socket.recvfrom(self.maxPacketSize)
+                read += len(data)
+                self.protocol.datagramReceived(data, addr)
+            except socket.error, se:
+                if se.args[0] in (EAGAIN, EINTR):
+                    return
+                else:
+                    raise
+            except:
+                log.deferr()
 
     def write(self, datagram, (host, port)):
         """Write a datagram."""
@@ -188,14 +201,22 @@ class ConnectedPort(Port):
         self.loseConnection()
         self.protocol.connectionFailed(reason)
         del self.protocol
-    
+
     def doRead(self):
         """Called when my socket is ready for reading."""
-        try:
-            data, addr = self.socket.recvfrom(self.maxPacketSize)
-            self.protocol.datagramReceived(data)
-        except:
-            log.deferr()
+        read = 0
+        while read < self.maxThroughput:
+            try:
+                data, addr = self.socket.recvfrom(self.maxPacketSize)
+                read += len(data)
+                self.protocol.datagramReceived(data)
+            except socket.error, se:
+                if se.args[0] in (EAGAIN, EINTR):
+                    return
+                else:
+                    raise
+            except:
+                log.deferr()
 
     def write(self, data):
         """Write a datagram."""
