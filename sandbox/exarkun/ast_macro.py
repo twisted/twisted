@@ -73,6 +73,16 @@ class MacroExpander(object):
         meth = getattr(self, 'visit' + className, self.default)
         return meth(node)
 
+    def _setupNamespace(self, callFunc, names):
+        if len(callFunc.args) != len(names):
+            raise TypeError("Macro called with wrong number of arguments")
+        r = []
+        for (aExpr, aName) in zip(callFunc.args, names):
+            name = '__macro_special_' + aName
+            ass = ast.AssName(name, 'OP_ASSIGN')
+            r.append(ast.Assign([ass], aExpr))
+        return r
+
     def visitRaise(self, node):
         stmts = []
         for n in ('expr1', 'expr2', 'expr3'):
@@ -99,17 +109,42 @@ class MacroExpander(object):
                     # Set the expression of the raise to load the saved name
                     setattr(node, n, ast.Name('__macro_return_' + n))
         if stmts:
+            stmts.append(node)
             return stmts
 
-    def _setupNamespace(self, callFunc, names):
-        if len(callFunc.args) != len(names):
-            raise TypeError("Macro called with wrong number of arguments")
-        r = []
-        for (aExpr, aName) in zip(callFunc.args, names):
-            name = '__macro_special_' + aName
-            ass = ast.AssName(name, 'OP_ASSIGN')
-            r.append(ast.Assign([ass], aExpr))
-        return r
+    def visitPrint(self, node):
+        stmts = []
+        nodes = []
+        for i, n in enumerate(node.nodes):
+            if isinstance(n, ast.CallFunc):
+                replacement = self.macros.get(n.node.name)
+                if replacement is not None:
+                    macroArguments, macroStatements = replacement
+
+                    # Pass the arguments into macro-land
+                    stmts.extend(self._setupNamespace(e, macroArguments))
+
+                    # Insert the body of the macro
+                    stmts.extend(macroStatements)
+
+                    # Save the return value in a uniquely named variable
+                    ass = ast.AssName('__macro_return_' + str(i), 'OP_ASSIGN')
+                    saveret = ast.Assign([ass], ast.Name('__macro_return'))
+                    stmts.append(saveret)
+
+                    # Delete the commonly named macro return variable
+                    delret = ast.AssName('__macro_return', 'OP_DELETE')
+                    stmts.append(delret)
+
+                    nodes.append(ast.Name('__macro_return_' + str(i)))
+                else:
+                    nodes.append(n)
+                    self.dispatch(n)
+            else:
+                nodes.append(n)
+                self.dispatch(n)
+        if stmts:
+            pass
 
     def expand(self, f):
         filename = inspect.getsourcefile(f)
@@ -157,6 +192,8 @@ def async():
 def simpleFunction():
     print 'beginnin'
     raise wait(async())
+    print 'asdl;kajsd'
+
 
 def noise():
     reactor.callLater(0.5, noise)
