@@ -21,7 +21,7 @@ This module provides support for Twisted to interact with the PyGTK mainloop.
 In order to use this support, simply do the following::
 
     |  from twisted.internet import gtkreactor
-    |  gtkreactor.install() 
+    |  gtkreactor.install()
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
@@ -30,6 +30,11 @@ intended to be called directly.
 __all__ = ['install']
 
 # System Imports
+try:
+    import pygtk
+    pygtk.require('1.2')
+except ImportError, AttributeError:
+    pass # maybe we're using pygtk before this hack existed.
 import gtk
 import sys
 
@@ -84,7 +89,7 @@ class GtkReactor(default.PosixReactorBase):
         if delay != 0:
             log.msg("Error, gtk doIteration() only supports delay of 0")
         gtk.mainiteration()
-    
+
     def crash(self):
         gtk.mainquit()
 
@@ -148,7 +153,7 @@ class PortableGtkReactor(default.SelectReactor):
 
     input_add is not supported on GTK+ for Win32, apparently.
     """
-    
+
     def crash(self):
         gtk.mainquit()
 
