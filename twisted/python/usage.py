@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.35 2002/11/07 09:09:02 exarkun Exp $
+# $Id: usage.py,v 1.36 2002/11/10 10:45:36 moshez Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -152,6 +152,11 @@ class Options(UserDict.UserDict):
     def opt_help(self):
         """Display this help and exit."""
         print self.__str__()
+        sys.exit(0)
+
+    def opt_version(self):
+        from twisted import copyright
+        print "Twisted version:", copyright.version
         sys.exit(0)
 
     #opt_h = opt_help # this conflicted with existing 'host' options.
