@@ -74,20 +74,16 @@ class Dispatcher:
                      (owner, func)+args, kw)
     
     def dispatch(self, owner, func, *args, **kw):
+        """Dispatch a function to be a run in a thread.
+        
+        owner must be a loggable object.
+        """
         if self.joined: return
         o=(owner,func,args,kw)
         self.startSomeWorkers()
         self.q.put(o)
 
         
-    def withThisOwned(self, owner, func, *args, **kw):
-        self.own(owner)
-        try:
-            return apply(func,args,kw)
-        finally:
-            self.disown(owner)
-
-
     def work(self):
         """
         Process OS dispatches (i.e. those which must be handled in the

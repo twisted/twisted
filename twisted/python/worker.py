@@ -34,13 +34,6 @@ class Dispatcher:
 
     dispatchOS = dispatch
     
-    def withThisOwned(self, owner, func, *args, **kw):
-        self.own(owner)
-        try:
-            return apply(func,args,kw)
-        finally:
-            self.disown(owner)
-        
     def work(self):
         """
         Do some work (run all the previously registered callbacks).
