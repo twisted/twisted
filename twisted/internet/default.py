@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.31 2002/08/19 19:39:56 itamarst Exp $
+# $Id: default.py,v 1.32 2002/08/27 10:56:13 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -24,7 +24,6 @@ from bisect import insort
 from time import time, sleep
 import os
 import socket
-import signal
 import sys
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
@@ -221,6 +220,7 @@ class PosixReactorBase(ReactorBase):
 
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
+        import signal
         signal.signal(signal.SIGINT, self.sigInt)
         signal.signal(signal.SIGTERM, self.sigTerm)
 

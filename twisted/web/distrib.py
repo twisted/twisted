@@ -18,7 +18,7 @@
 
 # System Imports
 import types, os, copy, string, cStringIO
-if os.sys.platform != 'win32':
+if (os.sys.platform != 'win32') and (os.name != 'java'):
     import pwd
 
 # Twisted Imports

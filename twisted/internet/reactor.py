@@ -16,10 +16,14 @@
 """
 See twisted.internet.interfaces.IReactor*.
 """
-
-from twisted.python import log
-log.msg("Installing SelectReactor, since unspecified.")
 import sys
 del sys.modules['twisted.internet.reactor']
-from twisted.internet import default
-default.install()
+from twisted.python import runtime
+if runtime.platform.getType() == 'java':
+    from twisted.internet import javareactor
+    javareactor.install()
+else:
+    #from twisted.python import log
+    #log.msg("Installing SelectReactor, since unspecified.")
+    from twisted.internet import default
+    default.install()

@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-import errno, socket, types
+import socket, types
 
 
 class BindError(Exception):
@@ -74,12 +74,15 @@ class TimeoutError(UserError):
 class SSLError(ConnectError):
     """An SSL error occured."""
 
-
-errnoMapping = {
-    errno.ENETUNREACH: NoRouteError,
-    errno.ECONNREFUSED: ConnectionRefusedError,
-    errno.ETIMEDOUT: TCPTimedOutError,
-}
+try:
+    import errno
+    errnoMapping = {
+        errno.ENETUNREACH: NoRouteError,
+        errno.ECONNREFUSED: ConnectionRefusedError,
+        errno.ETIMEDOUT: TCPTimedOutError,
+    }
+except ImportError:
+    errnoMapping = {}
 
 def getConnectError(e):
     """Given a socket exception, return connection error."""

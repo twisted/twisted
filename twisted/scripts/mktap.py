@@ -15,13 +15,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.16 2002/08/17 03:11:07 radix Exp $
+# $Id: mktap.py,v 1.17 2002/08/27 10:56:11 glyph Exp $
 
 """ Implementation module for the `mktap` command.
 """
 
-from twisted.internet import default
-default.install()
 from twisted.protocols import telnet
 from twisted.internet import app
 from twisted.python import usage

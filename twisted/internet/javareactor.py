@@ -70,11 +70,15 @@ class JConnection(abstract.FileDescriptor,
 
     def connectionLost(self, arg=None):
         if not self.disconnected:
+            self.disconnected = 1
+            self.skt.shutdownInput()
+            self.skt.shutdownOutput()
             self.skt.close()
-            self.protocol.connectionLost()
-            abstract.FileDescriptor.connectionLost(self)
+            self.protocol.connectionLost(arg)
+            abstract.FileDescriptor.connectionLost(self, arg)
 
     def loseConnection(self):
+        self.disconnecting = 1
         self.writeQ.put(None)
 
     def getHost(self):
@@ -278,7 +282,7 @@ class JavaPort:
         transport = JConnection(skt, protocol, self)
 
         # make read and write blockers
-        protocol.makeConnection(transport, self)
+        protocol.makeConnection(transport)
         wb = WriteBlocker(transport, self.reactor.q)
         wb.start()
         transport.writeBlocker = wb
