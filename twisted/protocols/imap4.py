@@ -488,8 +488,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
+    def sendLine(self, line):
+        print 'C:', repr(line)
+        return basic.LineReceiver.sendLine(self, line)
+
     def lineReceived(self, line):
-        # print 'S:', repr(line)
+        print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -1222,12 +1226,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_FETCH(self, tag, messages, query, uid=0):
         maybeDeferred(self.mbox.fetch, messages, query, uid=uid).addCallbacks(
             self.__cbFetch, self.__ebFetch,
-            (tag, uid), None, (tag,), None
+            (tag, query, uid), None, (tag,), None
         )
 
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
 
-    def __cbFetch(self, results, tag, uid):
+    def __cbFetch(self, results, tag, query, uid):
         if isinstance(results, dict):
             import warnings
             warnings.warn(
@@ -1235,9 +1239,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 "Return an iterable instead.", DeprecationWarning, stacklevel=2
             )
             results = results.iteritems()
-        self._consumeFetchResponse(results, tag, uid)
+        self._consumeFetchResponse(results, tag, query, uid)
 
-    def _consumeFetchResponse(self, results, tag, uid):
+    def _consumeFetchResponse(self, results, tag, query, uid):
         try:
             msgId, parts = results.next()
         except StopIteration:
@@ -1247,13 +1251,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 if 'UID' not in parts:
                     parts['UID'] = str(msgId)
             finalParts = []
-            for p in parts.iteritems():
-                finalParts.extend(p)
+            for p in query:
+                try:
+                    finalParts.extend((str(p).upper(), parts[str(p)]))
+                except KeyError:
+                    log.err("imap4.IMailbox.fetch() did not return %s response" % (str(p),))
             self.sendUntaggedResponse(
                 '%d FETCH %s' % (msgId, collapseNestedLists([finalParts]))
             )
             from twisted.internet import reactor
-            reactor.callLater(0, self._consumeFetchResponse, results, tag, uid)
+            reactor.callLater(0, self._consumeFetchResponse, results, tag, query, uid)
 
     def __ebFetch(self, failure, tag):
         log.err(failure)
@@ -3748,24 +3755,31 @@ class _FetchParser:
 
     class Flags:
         type = 'flags'
+        __str__ = lambda self: 'flags'
 
     class InternalDate:
         type = 'internaldate'
+        __str__ = lambda self: 'internaldate'
 
     class RFC822Header:
         type = 'rfc822header'
+        __str__ = lambda self: 'rfc822.header'
 
     class RFC822Text:
         type = 'rfc822text'
+        __str__ = lambda self: 'rfc822.text'
 
     class RFC822Size:
         type = 'rfc822size'
+        __str__ = lambda self: 'rfc822.size'
 
     class RFC822:
         type = 'rfc822'
+        __str__ = lambda self: 'rfc822'
 
     class UID:
         type = 'uid'
+        __str__ = lambda self: 'uid'
 
     class Body:
         type = 'body'
@@ -3791,6 +3805,7 @@ class _FetchParser:
 
     class BodyStructure:
         type = 'bodystructure'
+        __str__ = lambda self: 'bodystructure'
 
     # These three aren't top-level, they don't need type indicators
     class Header:
