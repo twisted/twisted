@@ -101,13 +101,15 @@ install-indep-stamp: install-base-stamp
 		done;\
 	done
 
-	set -e;for file in debian/$(DEFAULTPACKAGE)/usr/bin/*;\
-		do target=`echo $$file | sed "s/$(DEFAULT)$$//"`;\
-		ln -s `basename $$file` $$target;\
-		manname=`basename $$target`.1.gz;\
-		ln -s `basename $$file`.1.gz \
-		      debian/$(DEFAULTPACKAGE)/usr/share/man/man1/$$manname;\
-	done
+	if [ -d debian/$(DEFAULTPACKAGE)/usr/bin/ ]; then \
+	  set -e;for file in debian/$(DEFAULTPACKAGE)/usr/bin/*;\
+		  do target=`echo $$file | sed "s/$(DEFAULT)$$//"`;\
+		  ln -s `basename $$file` $$target;\
+		  manname=`basename $$target`.1.gz;\
+		  ln -s `basename $$file`.1.gz \
+		        debian/$(DEFAULTPACKAGE)/usr/share/man/man1/$$manname;\
+	  done;\
+	fi
 
 	set -e; for version in $(versions); \
 		do package=python$$version-twisted-conch;\
