@@ -135,13 +135,14 @@ class DeferredResolver:
         self.waiting = []
 
     def gotRealResolver(self, resolver):
-        for d in self.waiting:
-            d.callback(resolver)
+        w = self.waiting
         self.__dict__ = resolver.__dict__
         self.__class__ = resolver.__class__
+        for d in w:
+            d.callback(resolver)
 
     def __getattr__(self, name):
-        if name.startswith('lookup') or name == 'getHostByName':
+        if name.startswith('lookup') or name in ('getHostByName', 'query'):
             self.waiting.append(defer.Deferred())
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
@@ -155,7 +156,7 @@ def bootstrap(resolver):
     """
     domains = [chr(ord('a') + i) for i in range(13)]
     from twisted.python import log
-    f = lambda r: (log.msg(r), r)[1]
+    f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
     L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
     d = defer.DeferredList(L)
     d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
