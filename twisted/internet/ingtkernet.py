@@ -15,6 +15,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+This module provides support for Twisted to interact with the PyGTK mainloop.
+
+In order to use this support, simply do the following::
+
+    |  from twisted.internet import ingtkernet
+    |  ingtkernet.install()
+
+Then use twisted.internet APIs as usual.  The other methods here are not
+intended to be called directly.
+"""
+
+__all__ = ['install']
 
 # System Imports
 import gtk
@@ -103,6 +116,8 @@ def simulate():
 
 def install():
     # Replace 'main' methods with my own
+    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """
     main.addWriter = addWriter
     main.removeWriter = removeWriter
     main.addReader = addReader

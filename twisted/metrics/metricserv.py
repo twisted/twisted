@@ -96,9 +96,6 @@ class MetricsManagerService(pb.Service):
         # push to the database
         self.manager.insertMetricsItem(sourceName, name, value)
 
-    def registerWith(self, authorizer):
-        authorizer.registerService(self.serviceName, self.createPerspective)
-
     def setActive(self, perspectiveName, value):
         self.sources[perspectiveName].setActive(value)
 

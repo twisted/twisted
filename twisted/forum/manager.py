@@ -17,9 +17,12 @@
 #
 # WARNING: experimental database code!
 
+# twisted imports
 from twisted.python import defer
 from twisted.enterprise import adbapi
 
+# sibling imports
+import service
 
 class ForumDB(adbapi.Augmentation):
     """This class handles interactions with the forums database. It holds all the SQL
@@ -107,6 +110,16 @@ CREATE TABLE forum_permissions
         d = self.runQuery(sql, self.gotForums, self.gotError)
         return d
 
+    def getPerspectiveRequest(self, name):
+        return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % name, self._finishPerspective, self._errorPerspective)
+
+    def _finishPerspective(self, result):
+        identity_name, user_name, signature = result[0]
+        return service.ForumUser(identity_name, user_name, signature)
+
+    def _errorPerspective(self, error):
+        print "Error generating forum perspective! %s" % error
+
     def gotError(self, error):
         print "ERROR: couldn't load forums.", error
         
@@ -120,17 +133,27 @@ CREATE TABLE forum_permissions
         return self.forums.get(id, "ERROR - no Forum for this ID")
 
 
-    def newUser(self, username, signature):
+    def createUser(self, username, signature):
         """Create a new user in the system and set default permissions.
         This is complex as it must interface with the dbAuthorizer.
         """
         
+        return self.runInteraction(self._userCreator, username, signature)
+     
+    def _userCreator(self, trans, username, signature):
         sql = """INSERT INTO forum_perspectives
                  (identity_name, user_name, signature)
                  VALUES
                  ('%s', '%s', '%s')""" % (username, username, signature)
-        self.runOperation(sql)
-        
+        trans.execute(sql)
+        trans.execute("SELECT forum_id FROM forums WHERE default_access = 1")
+        forum_ids = trans.fetchall()
+        for forum_id, in forum_ids:
+            toExec = ("INSERT INTO forum_permissions VALUES ('%s', %s, 1, 1)"
+                          % (username, forum_id))
+            print toExec
+            trans.execute(toExec)
+
     def createForum(self, name, description):
         """Create a new forum with this name.
         """

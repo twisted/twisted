@@ -78,32 +78,37 @@ class AuthForm(widgets.Form):
         self.sessionPerspective = sessionPerspective
         self.sessionIdentity = sessionIdentity
 
-    def gotIdentity(self, ident, password, request, perspectiveName):
-        if ident.verifyPlainPassword(password):
-            try:
-                perspective = ident.getPerspectiveForKey(self.reqauth.serviceName, perspectiveName)
-            except KeyError:
-                traceback.print_exc()
-            else:
-                # TODO: fix this...
-                resKey = string.join(['AUTH',self.reqauth.serviceName], '_')
-                sess = request.getSession()
-                setattr(sess, resKey, perspective)
-                if self.sessionPerspective:
-                    setattr(sess, self.sessionPerspective, perspective)
-                if self.sessionIdentity:
-                    setattr(sess, self.sessionIdentity, ident)
-                p = perspective.attached(sess, ident)
-                _Detacher(sess, ident, p)
-                return self.reqauth.reallyRender(request)
-        else:
-            print 'password not verified'
-        # TODO: render the form as if an exception were thrown from the
-        # data processing step...
+    def gotPerspective(self, perspective, request, ident):
+        # TODO: fix this...
+        resKey = string.join(['AUTH',self.reqauth.serviceName], '_')
+        sess = request.getSession()
+        setattr(sess, resKey, perspective)
+        if self.sessionPerspective:
+            setattr(sess, self.sessionPerspective, perspective)
+            if self.sessionIdentity:
+                setattr(sess, self.sessionIdentity, ident)
+            p = perspective.attached(sess, ident)
+            _Detacher(sess, ident, p)
+        return self.reqauth.reallyRender(request)
+    
+    def didntGetPerspective(self, error, request):
+        print 'Password not verified! Error:', error
         io = StringIO()
         io.write(self.formatError("Login incorrect."))
         self.format(self.getFormFields(request), io.write, request)
-        return io.getvalue()
+        return [io.getvalue()]
+
+    def gotIdentity(self, ident, password, request, perspectiveName):
+        if ident.verifyPlainPassword(password):
+            ret = ident.requestPerspectiveForKey(self.reqauth.serviceName,
+                                                  perspectiveName).addCallbacks(
+                self.gotPerspective, self.didntGetPerspective,
+                callbackArgs=(request,ident),
+                errbackArgs=(request,))
+            ret.needsHeader = 1
+            return [ret]
+        else:
+            return self.didntGetPerspective("no such identity", request)
 
     def didntGetIdentity(self, unauth, request):
         io = StringIO()

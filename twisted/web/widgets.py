@@ -406,6 +406,7 @@ class Form(StreamWidget):
     def shouldProcess(self, request):
         args = request.args
         fid = self.getFormID()
+        print 'TESTING FORM SHOULD PROCESS',args, self.__class__, fid
         return (args and # there are arguments to the request
                 args.has_key('__formtype__') and # this is a widgets.Form request
                 args['__formtype__'][0] == str(self.__class__) and # it is for a form of my type
@@ -423,7 +424,7 @@ class Form(StreamWidget):
                 return self._doProcess(form, write, request)
             except FormInputError, fie:
                 write(self.formatError(str(fie)))
-        self.format(form, write, request)
+        return self.format(form, write, request)
 
 
 class DataWidget(Widget):
@@ -474,72 +475,123 @@ def possiblyDeferWidget(widget, request):
         return html.PRE(io.getvalue())
 
 class RenderSession:
+    """I handle rendering of a list of deferreds, outputting their
+    results in correct order."""
+
+    class Sentinel:
+        pass
+
     def __init__(self, lst, request):
         self.lst = lst
         self.request = request
-        self.position = 0
         self.needsHeaders = 0
-        pos = 0
+        self.beforeBody = 1
+
         toArm = []
-        # You might want to set a header from a deferred, in which case you
-        # have to set an attribute -- needsHeader.
-        for item in lst:
+        for i in range(len(self.lst)):
+            item = self.lst[i]
             if isinstance(item, defer.Deferred):
-                self._addDeferred(item, pos)
+                self.lst[i] = (self._addDeferred(item), item)
                 toArm.append(item)
-            pos = pos + 1
+    
         self.keepRendering()
-        # print "RENDER: DONE WITH INITIAL PASS"
         for item in toArm:
             item.arm()
 
-    def _addDeferred(self, deferred, position):
+    def _addDeferred(self, deferred):
+        sentinel = self.Sentinel()
         if hasattr(deferred, 'needsHeader'):
+            # You might want to set a header from a deferred, in which
+            # case you have to set an attribute -- needsHeader.
             self.needsHeaders = self.needsHeaders + 1
-            args = (position, 1)
+            args = (sentinel, 1)
         else:
-            args = (position, 0)
+            args = (sentinel, 0)
         deferred.addCallbacks(self.callback, self.callback,
                               callbackArgs=args, errbackArgs=args)
+        return sentinel
 
-    def callback(self, result, position, decNeedsHeaders):
+    def callback(self, result, sentinel, decNeedsHeaders):
         if result != FORGET_IT:
             self.needsHeaders = self.needsHeaders - decNeedsHeaders
         else:
             result = [FORGET_IT]
-        for i in xrange(len(result)):
-            if isinstance(result[i], defer.Deferred):
-                self._addDeferred(result[i], position+i)
-        # print 'CALLBACK:',self.lst, position, result
-        if not isinstance(result, types.ListType):
+        
+        # Make sure result is a sequence,
+        if not type(result) in (types.ListType, types.TupleType):
             result = [result]
-        self.lst[position:position+1] = result
-        assert self.position <= position
+
+        # If the deferred does not wish to produce it's result all at
+        # once, it can give us a partial result as
+        #  (NOT_DONE_YET, partial_result)
+        if result[0] is NOT_DONE_YET:
+            done = 0
+            result = result[1]
+            if not type(result) in (types.ListType, types.TupleType):
+                result = [result]
+        else:
+            done = 1
+
+        toArm = []
+        for i in xrange(len(result)):
+            item = result[i]
+            if isinstance(item, defer.Deferred):
+                result[i] = (self._addDeferred(item), item)
+                toArm.append(item)
+
+        for position in range(len(self.lst)):
+            item = self.lst[position]
+            if type(item) is types.TupleType and len(item) > 0:
+                if item[0] is sentinel:
+                    break
+        else:
+            raise 'Sentinel for Deferred not found!'
+
+        if done:
+            self.lst[position:position+1] = result
+        else:
+            self.lst[position:position] = result
+
+        # Consolidate strings to minimize length of list,
+        # Good try, but this seems really buggy
+##        for i in range(1, len(self.lst)):
+##            last = type(self.lst[i-1]) is types.StringType
+##            this = type(self.lst[i]) is types.StringType
+##            if last and this:
+##                self.lst[i-1:i+1] = [self.lst[i-1] + self.lst[i]]
+
         self.keepRendering()
-        for r in result:
-            if isinstance(r, defer.Deferred):
-                r.arm()
+        for r in toArm:
+            r.arm()
 
 
     def keepRendering(self):
         if self.needsHeaders:
-            # short circuit actual rendering process until we're sure no more
-            # deferreds need to set headers...
+            # short circuit actual rendering process until we're sure no
+            # more deferreds need to set headers...
             return
+
         assert self.lst is not None, "This shouldn't happen."
         while 1:
-            item = self.lst[self.position]
-            if self.position == 0 and item == FORGET_IT:
-                # If I haven't moved yet, and the widget wants to take over the page, let it do so!
+            item = self.lst[0]
+            if self.beforeBody and item == FORGET_IT:
+                # If I haven't moved yet, and the widget wants to take
+                # over the page, let it do so!
                 return
+            
             if isinstance(item, types.StringType):
+                self.beforeBody = 0
                 self.request.write(item)
-            elif isinstance(item, defer.Deferred):
-                return
+            elif type(item) is types.TupleType and len(item) > 0:
+                if isinstance(item[0], self.Sentinel):
+                    return
             else:
-                self.request.write("RENDERING UNKNOWN: %s" % html.PRE(repr(item)))
-            self.position = self.position + 1
-            if self.position == len(self.lst):
+                self.beforeBody = 0
+                unknown = html.PRE(repr(item))
+                self.request.write("RENDERING UNKNOWN: %s" % unknown)
+
+            del self.lst[0]
+            if len(self.lst) == 0:
                 self.lst = None
                 self.request.finish()
                 return

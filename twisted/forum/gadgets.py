@@ -3,7 +3,7 @@
 
 import string
 
-from twisted.web import widgets
+from twisted.web import widgets, guard
 from twisted.python import defer
 from twisted.internet import passport
 
@@ -68,6 +68,12 @@ class ForumBaseGadget(widgets.Gadget, widgets.StreamWidget):
   The ForumGadget contains widgets to perform each of these functions.
   
 """
+
+class GuardedForum(guard.ResourceGuard):
+    def __init__(self, service):
+        guard.ResourceGuard.__init__(self, ForumsGadget(service.application, service),
+                                     service.serviceName, "forumIdentity", "forumPerspective")
+
 class ForumsGadget(ForumBaseGadget):
     title = "Posting Board"
 
@@ -89,17 +95,17 @@ class ForumsGadget(ForumBaseGadget):
 
     def gotForums(self, data):
         l = []
-        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
-        l.append( '<tr bgcolor="#ff9900">' )
-        l.append( '<td COLOR="#000000"><b> Forum Name </b> </td>' )
-        l.append( '<td COLOR="#000000"><b> Posts </b> </td>' )
-        l.append( '<td COLOR="#000000"><b> Description </b> </td>' )        
-        l.append( '</tr>\n' )
+        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">'
+                  '<tr bgcolor="#ff9900">'
+                  '<td COLOR="#000000"><b> Forum Name </b> </td>'
+                  '<td COLOR="#000000"><b> Posts </b> </td>'
+                  '<td COLOR="#000000"><b> Description </b> </td>'
+                  '</tr>\n' )
 
         for (id, name, desc, posts) in data:
             l.append( "<tr> <td> <a href='/threads/?forum_id=%d'>%s</a></td><td> %d </td> <td> %s</d></tr>\n" % (id,name, posts, desc) )
-        l.append("</table>")
-        l.append( '<hr> <i> Twisted Forums </i>' )        
+        l.append('</table>'
+                 '<hr> <i> Twisted Forums </i>' )
         return l
             
 
@@ -430,27 +436,28 @@ class RegisterUser(widgets.Form, widgets.Gadget):
 
         newIdentity = passport.Identity(name, self.service.application)
         newIdentity.setPassword(password1)
-        write("Created identity.<br>")        
         newPerspective = self.service.createPerspective(name)
         newIdentity.addKeyForPerspective(newPerspective)
-        write("Created perspective.<br>")                
         self.name = name
         self.signature = signature
-
-        write("Creating in database...<br>")
-        
         # create the identity in the database
-        return self.service.application.authorizer.addIdentity(newIdentity, self.doneIdentity, self.errIdentity)
+        return ["Creating identity...",self.service.application.authorizer.addIdentity(newIdentity, self.doneIdentity, self.errIdentity)]
 
-    def doneIdentity(self):
+    def doneIdentity(self, result):
         print "Created Identity Successfully for %s" % self.name
         print "Creating forum user."
         
         # create the forum user in the database
-        self.service.manager.newUser(self.name, self.signature)
-        
-        #write("Created new user %s.<hr>" % name)
-        #write("<a href='/threads/'>Return to Forums</a>")
+        defr = self.service.manager.createUser(self.name, self.signature)
+        defr.addCallbacks(self.donePerspective, self.errPerspective)
+        return ["Created identity...<br>Creating perspective...", defr]
 
-    def errIdentity(self):
+    def donePerspective(self, result):
+        return ["Created perspective.  <hr><a href='/threads/'>Return to Forums</a>"]
+
+    def errPerspective(self, error):
+        return ["Couldn't create perspective."]
+
+    def errIdentity(self, error):
         print "ERROR: couldn't create identity."
+        return ["Drat and blast!  No identity created: %s." % error]

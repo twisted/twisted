@@ -75,6 +75,9 @@ class Hose(telnet.Telnet):
             nm = r.getServiceName()
             for serviceName, perspectiveName in identity.getAllKeys():
                 if serviceName == nm:
+                    ### XXX FIXME
+                    ### This can't really be done this way.
+                    ### getPerspectiveNamed ought to be asynchronous.
                     characters.append(r.getPerspectiveNamed(perspectiveName))
             lc = len(characters)
             if lc == 1:

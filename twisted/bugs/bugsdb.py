@@ -95,12 +95,12 @@ class BugsDatabase(adbapi.Augmentation):
             security = 't'
         else:
             security = 'f'
-        return self.runOperation(sql, (name, email, version, os, security, bug_type, status, summary, description))
+        return self.runOperation(sql, name, email, version, os, security, bug_type, status, summary, description)
     
     def createComment(self, bug_id, name, email, comment):
         sql = """INSERT into bugs_comments (bug_id, submittor_name, submittor_email, comment)
                  VALUES (%s, %s, %s, %s)"""
-        return self.runOperation(sql, (bug_id, name, email, comment))
+        return self.runOperation(sql, bug_id, name, email, comment)
     
     def getAllBugs(self, callbackIn, errbackIn):
         """Returns a set of columns for all bugs."""

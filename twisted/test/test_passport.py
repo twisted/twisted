@@ -97,6 +97,7 @@ class ServiceTestCase(unittest.TestCase):
         self.service.getPerspective(pname)
 
     def testGetSetPerspetiveSanity(self):
+        # XXX OBSOLETE
         pname = "perspective for service-test"
         p = passport.Perspective(pname)
         self.service.addPerspective(p)
@@ -109,6 +110,7 @@ class ServiceTestCase(unittest.TestCase):
                           ForeignObject("Not a Perspective"))
 
     def testgetPerspectiveNamed_invalid(self):
+        # XXX OBSOLETE
         self.assertRaises(KeyError, self.service.getPerspectiveNamed,
                           "NoSuchPerspectiveNameAsThis")
 
@@ -295,18 +297,6 @@ class IdentityTestCase(unittest.TestCase):
 
         self.ident.addKeyForPerspective(perspective)
         self.assert_(("one", "two") in self.ident.getAllKeys())
-
-    def test_getPerspectiveForKey(self):
-        service = self.Service("one", self.app)
-        perspective = self.Perspective("two")
-
-        self.ident.addKeyForPerspective(perspective)
-        p = self.ident.getPerspectiveForKey("one","two")
-        self.assert_(p is perspective)
-
-    def test_getPerspectiveForKey_invalid(self):
-        self.assertRaises(KeyError, self.ident.getPerspectiveForKey,
-                          "none","such")
 
     def test_getAllKeys(self):
         self.assert_(len(self.ident.getAllKeys()) == 0)

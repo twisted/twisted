@@ -1,3 +1,11 @@
+2002-01-15  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
+
+	* twisted/internet/passport.py: (and friends) Retrieval of
+	perspectives is now asynchronous, hooray (this took way too long)!
+	Perspectives may now be stored in external data sources.  Lurching
+	slowly towards a stable API for the Passport system, along with
+	Sean's recent commits of tools to manipulate it.
+
 2002-01-14  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/python/explorer.py: reimplementated.  So it's better.

@@ -26,6 +26,7 @@ class WordsTestCase(unittest.TestCase):
         s = service.Service('twisted.words',a)
         s.createParticipant("glyph")
         s.createParticipant("sean")
+        # XXX OBSOLETE: should be async getPerspectiveRequest
         glyph = s.getPerspectiveNamed("glyph")
         sean = s.getPerspectiveNamed("sean")
         glyph.addContact("sean")

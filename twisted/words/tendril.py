@@ -31,6 +31,9 @@ import traceback
 
 _LOGALL = 0
 
+# XXX FIXME -- This will need to be fixed to work asynchronously in order to
+# support multiple-server twisted.words and database access to accounts
+
 class ProxiedParticipant(wordsService.WordsClientInterface,
                          styles.Ephemeral):
     """I'm the client of a participant who is connected through Tendril.
@@ -68,7 +71,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.9 $'[11:-2]
+    versionNum = '$Revision: 1.10 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (

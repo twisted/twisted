@@ -50,6 +50,7 @@ class Deferred:
                                     "has already been armed.")
         self.callbacks.append(((callback, callbackArgs, callbackKeywords),
                               (errback, errbackArgs, errbackKeywords)))
+        return self
 
 
     def callback(self, result):
@@ -79,6 +80,9 @@ class Deferred:
     def _runCallbacks(self, result, isError):
         self.called = isError + 1
         if self.armed:
+            if isError:
+                print "Uncaught Deferred Error:"
+                print result
             for item in self.callbacks:
                 callback, args, kw = item[isError]
                 args = args or ()
@@ -86,7 +90,7 @@ class Deferred:
                 try:
                     # print callback, result, args, kw
                     # print 'defres:',callback,result
-                    result = apply(callback, (result,)+args, kw)
+                    result = apply(callback, (result,)+tuple(args), kw)
                     if type(result) != types.StringType:
                         isError = 0
                 except:

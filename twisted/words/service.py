@@ -185,6 +185,8 @@ class Participant(pb.Perspective, styles.Versioned):
         self.changeStatus(OFFLINE)
 
     def addContact(self, contactName):
+        # XXX This should use a database or something.  Doing it synchronously
+        # like this won't work.
         contact = self.service.getPerspectiveNamed(contactName)
         self.contacts.append(contact)
         contact.reverseContacts.append(self)
@@ -240,6 +242,9 @@ class Participant(pb.Perspective, styles.Versioned):
         self.client.memberLeft(member.name, group.name)
 
     def directMessage(self, recipientName, message):
+        # XXX getPerspectiveNamed is misleading here -- this ought to look up
+        # the user to make sure they're *online*, and if they're not, it may
+        # need to query a database.
         recipient = self.service.getPerspectiveNamed(recipientName)
         recipient.receiveDirectMessage(self, message)
 

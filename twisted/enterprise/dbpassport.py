@@ -46,7 +46,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
             # note, we don't actually know perspective type at this point...
             s.append("INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" % (usernm, pname, svcname))
         sql = string.join(s, '; \n')
-        return self.runOperation(sql, callback, errback)
+        return self.runOperation(sql).addCallbacks(callback, errback)
 
 
     def getIdentityRequest(self, name):
@@ -69,7 +69,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
     def gotIdentityData(self, identData):
         if len(identData) == 0:
             # no rows! User doesnt exist
-            raise KeyError("Identity not found" )
+            raise KeyError("Identity not found")
 
         realIdentName = identData[0][0]
         base64pass = identData[0][1]
@@ -78,28 +78,11 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         i.setAlreadyHashedPassword(hashedPass)
         for ign, ign2, pname, sname in identData:
             print "Adding Perspective", realIdentName, pname, sname
-            if self.perspectiveCreators.has_key(sname):
-                self.perspectiveCreators[sname](pname)
-                i.addKeyByString(sname, pname)
-            else:
-                print "ERROR: No perspective creation method found!"
+            i.addKeyByString(sname, pname)
         return i
 
     def gotIdentityError(self, err):
         raise Exception("Database Error: "+str(err))
-
-    def registerService(self, serviceName, perspectiveCreator):
-        """This should be called by services when they start up to tell
-        the authorizer how to create perspective objects for that service.
-        The perspectiveCreator should be a callback method that will be passed
-        the perspective name of the user - it should return a perspective or an object
-        derived from passport.Perspective.
-
-        It is assumed that the creator function will add the perspective to the
-        service the way passport.Service.CreatePerspective() does.
-        """
-        print "Registering service", serviceName
-        self.perspectiveCreators[serviceName] = perspectiveCreator
 
     #################### Web Admin Interface Below ##############################
 
@@ -131,13 +114,13 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """
         passwd = base64.encodestring(hashedPassword)
         sql = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (identityName, passwd)
-        return self.runOperation(sql, callback, errback)
+        return self.runOperation(sql).addCallbacks(callback, errback)
 
     def addPerspective(self, identityName, perspectiveName, serviceName, callback=None, errback=None):
         """Add a perspective by name to an identity.
         """
         sql = "INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" % (identityName, perspectiveName, serviceName)
-        return self.runOperation(sql, callback, errback)                    
+        return self.runOperation(sql).addCallbacks(callback, errback)
 
 
     def removeIdentity(self, identityName, callback=None, errback=None):
@@ -145,7 +128,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """
         sql = """DELETE FROM twisted_identities WHERE identity_name = '%s';
                  DELETE FROM twisted_perspectives WHERE identity_name = '%s'""" % (identityName, identityName)
-        return self.runOperation(sql, callback, errback)
+        return self.runOperation(sql).addCallbacks(callback, errback)
 
     def removePerspective(self, identityName, perspectiveName, callback=None, errback=None):
         """Delete a perspective for an identity
@@ -153,13 +136,13 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         sql = """DELETE FROM twisted_perspectives
                  WHERE identity_name = '%s'
                  AND perspective_name = '%s'""" % (identityName, perspectiveName)
-        return self.runOperation(sql, callback, errback)
+        return self.runOperation(sql).addCallbacks(callback, errback)
 
     def changePassword(self, identityName, hashedPassword, callback=None, errback=None):
         passwd = base64.encodestring(hashedPassword)        
         sql = """UPDATE twisted_identities
                  SET password = '%s'
                  WHERE identity_name = '%s'""" % ( passwd,identityName)
-        return self.runOperation(sql, callback, errback)        
+        return self.runOperation(sql).addCallbacks(callback, errback)
         
         

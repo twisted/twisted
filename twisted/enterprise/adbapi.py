@@ -79,31 +79,30 @@ class ConnectionPool(pb.Referenceable):
         return result
 
 
-    def _runOperation(self, qstr, args=None):
+    def _runOperation(self, args, kw):
         """This is used for non-query operations that don't want "fetch*" to be called
         """
         # print 'running operation'
         conn = self.connect()
         curs = conn.cursor()
         try:
-            if args:
-                apply(curs.execute, (qstr,) + tuple(args), {})
-            else:
-                curs.execute(qstr)
+            print args
+            print kw
+            apply(curs.execute, args, kw)
             result = None
             curs.close()
             conn.commit()
         except:
             conn.rollback()
-            # traceback.print_exc()
+            traceback.print_exc()
             raise
         return result
 
     def query(self, qstr, callback, errback, eater=None, chunkSize=1):
         threadtask.dispatch(callback, errback, self._runQuery, qstr, eater, chunkSize)
 
-    def operation(self, qstr, callback, errback, eater=None, chunkSize=1, args=None):
-        threadtask.dispatch(callback, errback, self._runOperation, qstr, args)
+    def operation(self, callback, errback, *args, **kw):
+        threadtask.dispatch(callback, errback, self._runOperation, args, kw)
 
     def interaction(self, interaction, callback, errback, *args, **kw):
         """Interact with the database.
@@ -181,11 +180,9 @@ class Augmentation:
         self.dbpool.query(querySQL, d.callback, d.errback)
         return d
 
-    def runOperation(self, updateSQL, args=None, callback=None, errback=None):
+    def runOperation(self, *args, **kw):
         d = defer.Deferred()
-        d.addCallbacks(callback or self.operationDone,
-                       errback or self.operationError)
-        self.dbpool.operation(updateSQL, d.callback, d.errback, args=args)
+        apply(self.dbpool.operation, (d.callback,d.errback)+args, kw)
         return d
 
     def runInteraction(self, interaction, *args, **kw):

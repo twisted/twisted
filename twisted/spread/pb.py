@@ -319,7 +319,9 @@ class ViewPoint(Referenceable):
     a perspective::
 
      | def perspective_getViewPointForOther(self, name):
-     |     return ViewPoint(self, self.service.getPerspectiveNamed(name))
+     |     defr = self.service.getPerspectiveRequest(name)
+     |     defr.addCallbacks(lambda x, self=self: ViewPoint(self, x), log.msg)
+     |     return defr
 
     This will allow you to have references to Perspective objects in two
     different ways.  One is through the initial 'attach' call -- each
@@ -1492,14 +1494,16 @@ class IdentityWrapper(Referenceable):
     def remote_attach(self, serviceName, perspectiveName, remoteRef):
         """Attach the remote reference to a requested perspective.
         """
+        return self.identity.requestPerspectiveForKey(
+            serviceName, perspectiveName).addCallbacks(
+            self._attached, lambda x: x,
+            callbackArgs = [remoteRef])
 
-        perspective = self.identity.getPerspectiveForKey(serviceName, perspectiveName)
+    def _attached(self, perspective, remoteRef):
         perspective = perspective.attached(remoteRef, self.identity)
         # Make sure that when connectionLost happens, this perspective
         # will be tracked in order that 'detached' will be called.
-        # self.broker.perspectives.append((perspective, remoteRef, self.identity))
-        self.broker.notifyOnDisconnect(
-            _Detacher(perspective, remoteRef, self.identity).detach)
+        self.broker.notifyOnDisconnect(_Detacher(perspective, remoteRef, self.identity).detach)
         return AsReferenceable(perspective, "perspective")
 
     # (Possibly?) TODO: Implement 'remote_detach' as well.

@@ -8,7 +8,6 @@ from twisted.internet import app, passport
 
 class DateTimeTest(unittest.TestCase):
     """Test date parsing functions."""
-    
     def testRoundtrip(self):
         for i in range(10000):
             time = random.randint(0, 2000000000)
@@ -18,6 +17,7 @@ class DateTimeTest(unittest.TestCase):
 
 
 class DummyRequest:
+    uri='http://dummy/'
     def __init__(self, postpath, session=None):
         self.sitepath = []
         self.written = []

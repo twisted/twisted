@@ -12,6 +12,11 @@ from pyPgSQL import PgSQL
 import gadgets
 import manager
 
+class ForumUser(pb.Perspective):
+    def __init__(self, identity_name, user_name, sig):
+        pb.Perspective.__init__(self, identity_name, user_name)
+        self.signature = sig
+
 class ForumService(pb.Service):
 
     def __init__(self, name, app, dbpool):
@@ -20,5 +25,6 @@ class ForumService(pb.Service):
         self.manager = manager.ForumDB(dbpool)
 
         
-        
+    def getPerspectiveRequest(self, name):
+        return self.manager.getPerspectiveRequest(name)
 

@@ -73,12 +73,22 @@ class Service:
         self.perspectives[perspective.getPerspectiveName()] = perspective
 
     def getPerspectiveNamed(self, name):
-        """Return a perspective that represents a user for this service.
+        """Return a perspective that represents a user for this service. (DEPRECATED)
 
         Raises a KeyError if no such user exists.  Override this method to
         provide dynamic instantiation of perspectives.
         """
         return self.perspectives[name]
+
+    def getPerspectiveRequest(self, name):
+        """Return a Deferred which is a request for a perspective on this service.
+        """
+        req = defer.Deferred()
+        try:
+            req.callback(self.getPerspectiveNamed(name))
+        except Exception, e:
+            req.errback(e)
+        return req
 
     def getServiceName(self):
         """The name of this service.
@@ -89,16 +99,6 @@ class Service:
         """Get a string describing the type of this service.
         """
         return self.serviceType or str(self.__class__)
-
-    def registerWith(self, authorizer):
-        """This is called on the service when it is added to an application.
-        It expects the service to register itself with the authorizer provided
-        so that the authorizer knows how to create perspectives for this service.
-
-        This should be implemented by services that create perspective objects
-        that derive from passport.Perspective.
-        """
-        authorizer.registerService(self.serviceName, self.createPerspective)
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -263,7 +263,21 @@ class Identity:
         perspectiveName) pair, I will raise KeyError.
         """
         check = self.keyring[(serviceName, perspectiveName)]
-        return self.application.getServiceNamed(serviceName).getPerspectiveNamed(perspectiveName)
+        return self.application.getServiceNamed(serviceName).authorizedPerspective(perspectiveName)
+
+    def requestPerspectiveForKey(self, serviceName, perspectiveName):
+        """Get a perspective for the given key.
+
+        If this identity does not have access to the given (serviceName,
+        perspectiveName) pair, I will raise KeyError.
+        """
+        try:
+            check = self.keyring[(serviceName, perspectiveName)]
+        except KeyError, ke:
+            d = defer.Deferred()
+            d.errback(ke)
+            return d
+        return self.application.getServiceNamed(serviceName).getPerspectiveRequest(perspectiveName)
 
     def getAllKeys(self):
         """Returns a list of all services and perspectives this identity can connect to.
@@ -353,18 +367,13 @@ class Authorizer:
         """
         raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
 
-    def registerService(self, serviceName, perspectiveCreator):
-        """used to tell the authorizer how to create perspectives for
-        services. See twisted.enterprise.dbpassport
-        """
-        raise NotImplementedError("%s.registerService"%str(self.__class__))
 
 class DefaultAuthorizer(Authorizer):
-
     """I am an authorizer which requires no external dependencies.
 
     I am implemented as a hash of Identities.
     """
+
     def __init__(self):
         """Create a hash of identities.
         """
@@ -396,7 +405,3 @@ class DefaultAuthorizer(Authorizer):
             req.errback("unauthorized")
         return req
 
-    def registerService(self, serviceName, perspectiveCreator):
-        """this authorizer does not create perspectives.
-        """
-        pass
