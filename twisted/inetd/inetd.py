@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-import os, pwd, grp, traceback, socket
+import os, pwd, grp, traceback, socket, commands
 
 from twisted.internet.app import Application
 from twisted.internet import reactor
@@ -24,6 +24,12 @@ from twisted.python import log, usage
 from twisted.protocols import wire
 
 import inetdconf
+
+try:
+    import portmap
+    rpcOk = 1
+except ImportError:
+    rpcOk = 0
 
 # A dict of known 'internal' services (i.e. those that don't involve spawning
 # another process.
@@ -34,6 +40,9 @@ internalProtocols = {
     'daytime': wire.Daytime,
     'time': wire.Time,
 }
+            
+# Protocol map
+protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
 class InetdProtocol(Protocol):
     def connectionMade(self):
@@ -99,27 +108,11 @@ class RPCFactory(ServerFactory):
 
     def setPort(self, portNo):
         """Inform the portmapper daemon where this service is listening"""
-        service = self.service
         # FIXME: ignores any errors
+        proto = protocolDict[self.service.protocol[4:]]
         for version in self.rpcVersions:
-            pmap_set(self.rpcPort, version, service.protocol[4:], portNo,
-                     service.name)
+            portmap.set(self.rpcPort, version, proto, portNo)
         
-class PortmapSetProtocol(Protocol):
-    """Simply dumps its arguments to the process's stdin and closes it."""
-    def __init__(self, *args):
-        self.args = args
-
-    def connectionMade(self):
-        self.transport.write(' '.join(map(str, self.args)))
-        self.transport.loseConnection()
-
-
-def pmap_set(rpcPort, rpcVersion, ipProto, portNo, name):
-    return reactor.spawnProcess(PortmapSetProtocol(rpcPort, rpcVersion, 
-                                                   ipProto, portNo, name), 
-                                '/sbin/pmap_set')
-
 
 class InetdOptions(usage.Options):
     optParameters = [['file', 'f', '/etc/inetd.conf'],]
@@ -141,9 +134,6 @@ def main(options=None):
         # We'll survive even if we can't read /etc/rpc
         log.deferr()
     
-    # RPC support requires running /sbin/pmap_set
-    rpcOk = os.access('/sbin/pmap_set', os.X_OK)
-
     app = Application('tinetd')
 
     for service in conf.services:
@@ -155,10 +145,14 @@ def main(options=None):
             continue
 
         if rpc:
-            protocol = protocol[4:]     # trim 'rpc/'
             service.port = 0            # listen on a random ephemeral port
 
             # RPC has extra options, so extract that
+            protocol = protocol[4:]     # trim 'rpc/'
+            if not protocolDict.has_key(protocol):
+                log.msg('Bad protocol: ' + protocol)
+                continue
+            
             try:
                 name, rpcVersions = service.name.split('/')
             except ValueError:
