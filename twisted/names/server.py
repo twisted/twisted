@@ -70,7 +70,7 @@ class Authority:
 class DNSServerFactory(protocol.ServerFactory):
     def __init__(self, authorities):
         self.authorities = authorities
-    
+
 
     def buildProtocol(self, addr):
         p = dns.TCPDNSClientProtocol(self)
@@ -82,7 +82,7 @@ class DNSServerFactory(protocol.ServerFactory):
         pass
 
 
-    def messageReceived(self, message, protocol, address = None):
+    def handleQuery(self, message, protocol, address):
         answers = []
         for q in message.queries:
             print 'Looking up results for query ', q.name, ' : ', dns.QUERY_TYPES[q.type]
@@ -92,10 +92,51 @@ class DNSServerFactory(protocol.ServerFactory):
                         if q.type == r.TYPE or q.type == dns.ALL_RECORDS:
                             answers.append(dns.RRHeader(str(q.name), q.type, q.cls, 10))
                             answers[-1].payload = r
-        message.answers = answers
-        message.answer = 1
-        message.auth = 1
+        if len(answers):
+            message.answers = answers
+            message.auth = 1
+        else:
+            message.answers = []
+            message.rCode = dns.ENAME
         try:
             protocol.writeMessage(message)
         except TypeError:
             protocol.writeMessage(message, address)
+
+
+    def handleInverseQuery(self, message, protocol, address):
+        message.rCode = dns.ENOTIMP
+        try:
+            protocol.writeMessage(message)
+        except TypeError:
+            protocol.writeMessage(message, address)
+
+
+    def handleStatus(self, message, protocol, address):
+        message.rCode = dns.ENOTIMP
+        try:
+            protocol.writeMessage(message)
+        except TypeError:
+            protocol.writeMessage(message, address)
+        
+
+    def handleOther(self, message, protocol, address):
+        message.rCode = dns.ENOTIMP
+        try:
+            protocol.writeMessage(message)
+        except TypeError:
+            protocol.writeMessage(message, address)
+
+
+    def messageReceived(self, message, protocol, address = None):
+        message.recAv = 0
+        message.answer = 1
+        
+        if message.opCode == dns.OP_QUERY:
+            self.handleQuery(message, protocol, address)
+        elif message.opCode == dns.OP_INVERSE:
+            self.handleInverseQuery(message, protocol, address)
+        elif message.opCode == dns.OP_STATUS:
+            self.handleStatus(message, protocol, address)
+        else:
+            self.handleOther(message, protocol, address)

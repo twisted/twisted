@@ -65,7 +65,7 @@ del k, v
 
 
 # Opcodes
-QUERY, IQUERY, STATUS = range(3)
+OP_QUERY, OP_INVERSE, OP_STATUS = range(3)
 
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
