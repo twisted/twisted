@@ -337,14 +337,13 @@ class Request(object):
                 response.headers.setHeader('content-length', response.stream.length)
         self.chanRequest.writeHeaders(response.code, response.headers)
         
-        # if this is a "HEAD" request, we shouldn't return any data
-        if self.method == "HEAD":
+        # if this is a "HEAD" request, or a special response code,
+        # don't return any data.
+        if self.method == "HEAD" or response.code in NO_BODY_CODES:
+            response.stream.close()
+            self._finished(None)
             return
-        
-        # for certain result codes, we should never return any data
-        if response.code in NO_BODY_CODES:
-            return
-
+            
         d = stream.StreamProducer(response.stream).beginProducing(self.chanRequest)
         d.addCallback(self._finished).addErrback(self._error)
 
@@ -654,7 +653,7 @@ class HTTPChannelRequest:
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support persistent connections.
             if (headers.getHeader('Content-Length') is None and
-                not (code in NO_BODY_CODES)):
+                self.command != "HEAD" and code not in NO_BODY_CODES):
                 if self.version >= (1,1):
                     l.append("%s: %s\r\n" % ('Transfer-Encoding', 'chunked'))
                     self.chunkedOut = True
