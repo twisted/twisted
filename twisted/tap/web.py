@@ -32,8 +32,6 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap web [options]"
     optStrings = [["port", "p", "8080","Port to start the server on."],
-                  ["index","i", "index.html",
-                   "Use an index name other than \"index.html\"."],
                   ["telnet", "t", None,
                    "Run a telnet server on this port."]]
     optFlags = [["personal", "",
@@ -46,6 +44,18 @@ This creates a web.tap file that can be used by twistd.  If you specify
 no arguments, it will be a demo webserver that has the Test class from
 twisted.web.test in it."""
 
+    def __init__(self):
+        usage.Options.__init__(self)
+        self.indexes = []
+
+    def opt_index(self, indexName):
+        """Add the name of a file used to check for directory indexes.
+        [default: index, index.html]
+        """
+        self.indexes.append(indexName)
+
+    opt_i = opt_index
+        
     def opt_user(self):
         """Makes a server with ~/public_html and ~/.twistd-web-service support for users.
         """
@@ -78,7 +88,8 @@ def getPorts(app, config):
         ports.append((int(config.telnet), factory))
     try:
         root = config.root
-        config.root.indexName = config.index
+        if config.indexes:
+            config.root.indexNames = config.indexes
     except AttributeError:
         # This really ought to be web.Admin or something
         root = test.Test()

@@ -41,6 +41,7 @@ from twisted.python import threadable, log
 from twisted.internet import abstract
 from twisted.spread import pb
 from twisted.manhole import coil
+from twisted.persisted import styles
 
 class Data(resource.Resource):
     """
@@ -74,7 +75,7 @@ class DirectoryListing(widgets.StreamWidget):
             write('<LI><A HREF="%s">%s</a>' % (urllib.quote(path, "/:"), path))
         write("</UL>\n")
 
-class File(resource.Resource, coil.Configurable):
+class File(resource.Resource, coil.Configurable, styles.Versioned):
     """
     File is a resource that represents a plain non-interpreted file.
     It's constructor takes a file path.
@@ -109,7 +110,16 @@ class File(resource.Resource, coil.Configurable):
 
     processors = {}
 
-    indexName = "index.html"
+    indexNames = ["index", "index.html"]
+
+    ### Versioning
+
+    persistenceVersion = 1
+
+    def upgradeToVersion1(self):
+        if hasattr(self, 'indexName'):
+            self.indexNames = [self.indexName]
+            del self.indexName
 
     ### Configuration
 
@@ -166,20 +176,20 @@ class File(resource.Resource, coil.Configurable):
 
 
     def getChild(self, path, request):
-        """
-        Move 'zig'. For great justice.
+        """See twisted.web.Resource.getChild.
         """
         if path == '..':
             return error.NoResource()
         if path == '':
-            path = self.indexName
-            # This next step is so urls like
-            #     /foo/bar/baz/
-            # will be represented (internally) as
-            #     ['foo','bar','baz','index.qux']
-            # So that request.childLink() will work correctly.
-            if os.path.exists(os.path.join(self.path,self.indexName)):
-                request.prepath[-1] = self.indexName
+            for path in self.indexNames:
+                # This next step is so urls like
+                #     /foo/bar/baz/
+                # will be represented (internally) as
+                #     ['foo','bar','baz','index.qux']
+                # So that request.childLink() will work correctly.
+                if os.path.exists(os.path.join(self.path, path)):
+                    request.prepath[-1] = path
+                    break
             else:
                 return widgets.WidgetPage(DirectoryListing(self.path))
         newpath = os.path.join(self.path, path)
@@ -190,7 +200,7 @@ class File(resource.Resource, coil.Configurable):
             return processor(newpath)
         f = File(newpath)
         f.processors = self.processors
-        f.indexName = self.indexName
+        f.indexNames = self.indexNames[:]
         return f
 
 
