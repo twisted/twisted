@@ -89,7 +89,7 @@ class FTPClientTests(unittest.TestCase):
 
     def writeResponses(self, protocol, responses):
         for response in responses:
-            reactor.callLater(0, protocol.lineReceived, response)
+            reactor.callLater(0.1, protocol.lineReceived, response)
 
 
 class FTPServerTests(unittest.TestCase):
