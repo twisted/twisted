@@ -4,12 +4,12 @@
 import string
 import time
 
-from twisted.web import widgets, guard, webpassport, html
+from twisted.web import widgets, guard, webcred, html
 from twisted.python import defer
-from twisted.internet import passport
+from twisted.cred.identity import Identity
 
 
-class ForumPage(webpassport.SessionPerspectiveMixin, widgets.WidgetPage):
+class ForumPage(webcred.SessionPerspectiveMixin, widgets.WidgetPage):
     """This class and stylesheet give forum pages a look different from the
     default web widgets pages.
     """
@@ -61,7 +61,7 @@ class ForumPage(webpassport.SessionPerspectiveMixin, widgets.WidgetPage):
 p    '''
 
     def __init__(self, widget):
-        webpassport.SessionPerspectiveMixin.__init__(self, widget.service)
+        webcred.SessionPerspectiveMixin.__init__(self, widget.service)
         widgets.WidgetPage.__init__(self, widget)
 
     def header(self, request):
@@ -80,7 +80,7 @@ p    '''
         return "<hr> <i> Twisted Forums - %s </i>  (%d users online)" % (
             self.widget.service.desc, self.widget.service.usersOnline)
 
-class ForumBaseWidget(webpassport.SessionPerspectiveMixin, widgets.StreamWidget):
+class ForumBaseWidget(webcred.SessionPerspectiveMixin, widgets.StreamWidget):
 
     defaultUsername = "poster"
 
@@ -344,7 +344,7 @@ class ActionsWidget(widgets.StreamWidget):
             write( "[ %s ]\n" % (text) )
 
 
-class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form):
+class ReplyForm(webcred.SessionPerspectiveMixin, widgets.Form):
 
     title = "Reply to Posted message:"
     page = ForumPage
@@ -388,7 +388,7 @@ class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form):
 
         return widgets.Form.display(self, self.request)
 
-class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
+class NewPostForm(webcred.SessionPerspectiveMixin, widgets.Form):
     title = "Post a new message:"
 
     def __init__(self, service):
@@ -417,7 +417,7 @@ class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
                 "<a href='threads?forum_id=%s'>Return to Threads</a>" % (subject, self.forum_id)]
 
 
-class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
+class RegisterUser(webcred.SessionPerspectiveMixin, widgets.Form):
     """This creates a new identity and perspective for the user.
     """
 
@@ -443,7 +443,7 @@ class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
     def process(self, write, request, submit, name, password1, password2, signature, login_now):
         if password1 != password2:
             raise widgets.FormInputError("Your passwords do not match.")
-        newIdentity = passport.Identity(name, self.service.application)
+        newIdentity = Identity(name, self.service.application)
         newIdentity.setPassword(password1)
         newPerspective = self.service.createPerspective(name)
         newIdentity.addKeyForPerspective(newPerspective)
@@ -473,7 +473,7 @@ class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
     def donePerspective(self, result):
         return ['Created perspective.  <hr><a href="threads">Return to Forums</a>']
 
-class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
+class NewForumForm(webcred.SessionPerspectiveMixin, widgets.Form):
 
     title = "Create a new forum:"
     page = ForumPage
@@ -499,7 +499,7 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
         write("<a href='../'>Return</a>")
 
 
-class LoginForm(webpassport.LogInForm, ForumBaseWidget):
+class LoginForm(webcred.LogInForm, ForumBaseWidget):
     title = "Enter the forum"
     def display(self, request):
         return widgets.Form.display(self, request) + [

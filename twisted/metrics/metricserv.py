@@ -26,7 +26,6 @@ can be viewed by a web interface...?)
 import time
 import copy
 
-from twisted.internet import passport
 from twisted.spread import pb
 from twisted.enterprise import adbapi
 from twisted.python import defer, log

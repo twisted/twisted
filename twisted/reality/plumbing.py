@@ -29,6 +29,9 @@ from twisted.internet import tcp
 from twisted.web import resource, html, widgets, guard
 from twisted import copyright
 
+# New-style Imports
+from twisted.cred.util import Unauthorized
+
 portno  = 8889
 tportno = 8888
 
@@ -86,7 +89,7 @@ class Hose(telnet.Telnet):
                 p = characters[0]
                 self.transport.write("TODO: character selection menu\r\n")
             else:
-                raise passport.Unauthorized("that identity has no TR characters")
+                raise Unauthorized("that identity has no TR characters")
 
             p = p.attached(self, identity)
             self.player = p

@@ -25,7 +25,7 @@ TODO:
  * Authorization
    Anonymous are included
    User / Password is stored in a dict (factory.userdict) in plaintext
-   Use passport
+   Use cred
    Filelevel access
    Separate USER / PASS from mainloop
 

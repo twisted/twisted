@@ -5,12 +5,12 @@ This is designed to integrate with twisted.internet.threadtask.
 """
 
 from twisted.spread import pb
-from twisted.internet import task, threadtask
+from twisted.internet import threadtask
 from twisted.python import reflect, log, defer
 
 class Transaction:
-    def __init__(self, pool, connection):
-        self._connection = connection
+    def __init__(self, pool):
+        self._connection = connection = pool.connect()
         cursor = self._cursor = connection.cursor()
         self.execute = cursor.execute
         self.fetchone = cursor.fetchone
@@ -101,7 +101,7 @@ class ConnectionPool(pb.Referenceable):
         apply(threadtask.dispatch, (callback, errback, self._runInteraction, interaction) + args, kw)
 
     def _runInteraction(self, interaction, *args, **kw):
-        trans = Transaction(self, self.connect())
+        trans = Transaction(self)
         try:
             apply(interaction, (trans,)+args, kw)
         except:
@@ -153,10 +153,11 @@ class Augmentation:
         return self.runOperation(self.schema, self.schemaCreated, self.schemaNotCreated)
 
     def schemaCreated(self, result):
-        log.msg("Successfully created schema for %s." % str(self.__class__))
+        log.msg("Successfully created schema for %s. (%s)" % (
+            (str(self.__class__), result))
 
     def schemaNotCreated(self, error):
-        log.msg("Schema already exists for %s." % str(self.__class__))
+        log.msg("Schema already exists for %s. (%s)" % (str(self.__class__), error))
 
     def runQuery(self, *args, **kw):
         d = defer.Deferred()

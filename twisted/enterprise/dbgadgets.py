@@ -23,7 +23,6 @@ Has pages to:
 import md5
 
 from twisted.web import widgets
-from twisted.python import defer
 
 class IdentitiesGadget(widgets.Gadget, widgets.StreamWidget):
     title = "Database Identities"
