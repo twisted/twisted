@@ -1,3 +1,7 @@
+2004-06-25  Paul Swartz  <z3p@twistedmatrix.com>
+	* twisted/conch/checkers.py: Use functionality of crypt module instead
+	of an external module.
+
 2004-06-25  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/spread/banana.py: Disabled automatic import and use of

@@ -8,7 +8,7 @@ Requirements
        PyPAM (optional - http://www.tummy.com/Software/PyPam/index.html)
         GMPy (optional - http://gmpy.sf.net)
         PyShadow (optional -
-            http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.1.tar.gz)
+            http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.2.tar.gz)
   On Windows win32all is recommended (or ActivePython)
       http://starship.python.net/crew/mhammond/win32/Downloads.html
 

@@ -7,11 +7,9 @@ else:
     import crypt
 
 try:
-    # get these from http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.1.tar.gz
-    import md5_crypt
+    # get this from http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.2.tar.gz
     import shadow
 except:
-    md5_crypt = None
     shadow = None
 
 try:
@@ -30,12 +28,10 @@ from credentials import ISSHPrivateKey, IPluggableAuthenticationModules
 
 def verifyCryptedPassword(crypted, pw):
     if crypted[0] == '$': # md5_crypt encrypted
-        if not md5_crypt: return 0
-        salt = crypted.split('$')[2]
-        return md5_crypt.md5_crypt(pw, salt) == crypted
-    if not pwd:
-        return 0
-    return crypt.crypt(pw, crypted[:2]) == crypted
+        salt = '$1$' + crypted.split('$')[2]
+    else:
+        salt = crypted[:2]
+    return crypt.crypt(pw, salt) == crypted
 
 class UNIXPasswordDatabase:
     credentialInterfaces = IUsernamePassword,
