@@ -34,6 +34,9 @@ sample of XML.
 from twisted.protocols.sux import XMLParser
 from twisted.python import reflect
 
+class ParseError(Exception):
+    pass
+
 import copy
 
 class Node:
@@ -289,7 +292,7 @@ class MicroDOMParser(XMLParser):
             self._autoclose()
         el = self.elementstack.pop()
         if el.tagName != name:
-            raise Exception("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" %
+            raise ParseError("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" %
                             ((el.tagName, name)+self.saveMark()+el._markpos) )
         if not self.elementstack:
             self.documents.append(el)
