@@ -37,6 +37,17 @@ from cPickle import load
 import traceback
 import imp
 
+reactorTypes = {
+    'gtk': 'twisted.internet.gtkreactor',
+    'default': 'twisted.internet.default',
+    'win32': 'twisted.internet.win32eventreactor',
+    'win': 'twisted.internet.win32eventreactor',
+    'poll': 'twisted.internet.pollreactor',
+    'qt': 'twisted.internet.qtreactor',
+    'c' : 'twisted.internet.cReactor',
+    }
+
+
 class ServerOptions(usage.Options):
     synopsis = "Usage: twistd [options]"
 
@@ -66,7 +77,7 @@ class ServerOptions(usage.Options):
                   ['rundir','d','.',
                    'Change to a supplied directory before running'],
                   ['reactor', 'r', 'default',
-                   'Which ReactorCore module to use.']]
+                   'Which reactor to use out of: %s.' % string.join(reactorTypes.keys(), ", ")]]
 
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
@@ -194,15 +205,6 @@ if platformType == 'java':
     from twisted.internet import javareactor
     javareactor.install()
 else:
-    reactorTypes = {
-        'gtk': 'twisted.internet.gtkreactor',
-        'default': 'twisted.internet.default',
-        'win32': 'twisted.internet.win32eventreactor',
-        'win': 'twisted.internet.win32eventreactor',
-        'poll': 'twisted.internet.pollreactor',
-        'qt': 'twisted.internet.qtreactor',
-        'c' : 'twisted.internet.cReactor',
-        }
     from twisted.python.reflect import namedModule
     namedModule(reactorTypes[config['reactor']]).install()
 
