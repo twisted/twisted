@@ -442,16 +442,3 @@ if threadable.threaded:
 
 # Sibling Import
 import process
-
-def daemonize(logFile):
-    if os.fork():
-        os._exit(0)
-    os.setsid()
-    os.close(0)
-    os.close(1)
-    os.close(2)
-    if os.fork():
-        os._exit(0)
-    os.umask(0)
-    logFile = open(logFile, 'ab+')
-    log.startLogging(logFile)
