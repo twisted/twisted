@@ -49,6 +49,7 @@ def runApp(config):
     apprun.initialLog()
     os.chdir(config['rundir'])
     application = apprun.getApplication(config, passphrase)
+    from twisted.internet import reactor
     service.IService(application).privilegedStartService()
     service.IService(application).startService()
     if not config['no_save']:

@@ -155,6 +155,7 @@ def startApplication(config, application):
     if not config['originalname']:
         launchWithName(process.processName)
     setupEnvironment(config)
+    from twisted.internet import reactor
     service.IService(application).privilegedStartService()
     shedPrivileges(config['euid'], process.uid, process.gid)
     service.IService(application).startService()
