@@ -257,7 +257,7 @@ class Int16StringReceiver(protocol.Protocol):
         """
         self.recvd = self.recvd + recd
         while len(self.recvd) > 1:
-            length ,= struct.unpack("!h",self.recvd[:2])
+            length = (ord(self.recvd[0]) * 256) + ord(self.recvd[1])
             if len(self.recvd) < length+2:
                 break
             packet = self.recvd[2:length+2]
