@@ -30,9 +30,9 @@ import xmlrpclib
 
 # Sibling Imports
 from twisted.web import resource, server
-from twisted.internet import defer
+from twisted.internet import defer, protocol, reactor
 from twisted.python import log
-
+from twisted.protocols import http
 
 # Error codes for Twisted, if they conflict with yours then
 # modify them at runtime.
@@ -171,4 +171,68 @@ class _DeferredResult:
         del self.resource
 
 
-__all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault"]
+
+class QueryProtocol(http.HTTPClient):
+
+    def connectionMade(self):
+        self.sendCommand('POST', self.factory.url)
+        self.sendHeader('User-Agent', 'Twisted/XMLRPClib')
+        self.sendHeader('Host', self.factory.host)
+        self.sendHeader('Content-type', 'text/xml')
+        self.sendHeader('Content-length', str(len(self.factory.payload)))
+        self.endHeaders()
+        self.transport.write(self.factory.payload)
+
+    def handleStatus(self, version, status, message):
+        if status != '200':
+            self.factory.badStatus(status, message)
+
+    def handleResponse(self, contents):
+        self.factory.parseResponse(contents)
+
+payloadTemplate = """<?xml version="1.0"?>
+<methodCall>
+<methodName>%s</methodName>
+%s
+</methodCall>
+"""
+
+
+class QueryFactory(protocol.ClientFactory):
+
+    deferred = None
+    protocol = QueryProtocol
+
+    def __init__(self, url, host, method, *args):
+        self.url, self.host = url, host
+        self.payload = payloadTemplate % (method, xmlrpclib.dumps(args))
+        self.deferred = defer.Deferred()
+    
+    def parseResponse(self, contents):
+        if not self.deferred:
+            return
+        try:
+            response = xmlrpclib.loads(contents)
+        except xmlrpclib.Fault, error:
+            self.deferred.errback(error)
+            self.deferred = None
+        else:
+            self.deferred.callback(response[0][0])
+            self.deferred = None
+
+    def clientConnectionLost(self, _, reason):
+        self.deferred.errback(reason)
+        self.deferred = None
+
+    clientConnectionFailed = clientConnectionLost
+
+    def badStatus(self, status, message):
+        self.deferred.errback(IOError(status, message))
+        self.deferred = None
+
+def query(server, port, url, method, *args):
+    factory = QueryFactory(url, server, method, *args)
+    reactor.connectTCP(server, port, factory)
+    return factory.deferred
+
+__all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault", "query"]
