@@ -117,9 +117,9 @@ db = AgeDatabase(dbpool)
  
 # These will *not* block.  Hooray! 
 db.getAge("Andrew").addCallbacks(gotAge, db.operationError, 
-                                 callbackArgs=name)
+                                 callbackArgs="Andrew")
 db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
-                                callbackArgs=name)
+                                callbackArgs="Glyph")
 </pre>
 
     <p>This is straightforward, except perhaps for the return value
