@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.names.test.test_names -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -16,9 +16,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import operator, time, copy
+from zope.interface import implements
 
 from twisted.names import dns
-from twisted.python import failure, log
+from twisted.python import failure, log, components
 from twisted.internet import interfaces, defer
 
 import common
@@ -26,7 +27,7 @@ import common
 class CacheResolver(common.ResolverBase):
     """A resolver that serves records from a local, memory cache."""
 
-    __implements__ = (interfaces.IResolver,)
+    implements(interfaces.IResolver)
     
     cache = None
     
@@ -104,3 +105,5 @@ class CacheResolver(common.ResolverBase):
     def clearEntry(self, query):
         del self.cache[query]
         del self.cancel[query]
+
+components.backwardsCompatImplements(CacheResolver)

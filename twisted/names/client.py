@@ -35,13 +35,13 @@ import time
 # Twisted imports
 from twisted.python.runtime import platform
 from twisted.internet import defer, protocol, interfaces, threads
-from twisted.python import log, failure
+from twisted.python import log, failure, components
 from twisted.names import dns
-
+from zope.interface import implements
 import common
 
 class Resolver(common.ResolverBase):
-    __implements__ = (interfaces.IResolver,)
+    implements(interfaces.IResolver)
 
     index = 0
     timeout = None
@@ -285,6 +285,8 @@ class Resolver(common.ResolverBase):
         reactor.connectTCP(host, port, factory)
         return d.addCallback(lambda x: (x, [], []))
 
+components.backwardsCompatImplements(Resolver)
+
 
 class AXFRController:
     def __init__(self, name, deferred):
@@ -319,7 +321,7 @@ class AXFRController:
 
 
 class ThreadedResolver:
-    __implements__ = (interfaces.IResolverSimple,)
+    implements(interfaces.IResolverSimple)
 
     def __init__(self):
         self.cache = {}
@@ -329,6 +331,8 @@ class ThreadedResolver:
         d = threads.deferToThread(socket.gethostbyname, name)
         d.setTimeout(timeout)
         return d
+
+components.backwardsCompatImplements(ThreadedResolver)
 
 
 class DNSClientFactory(protocol.ClientFactory):

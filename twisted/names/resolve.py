@@ -28,7 +28,8 @@ the query, or someway to specify (authority|ttl|cache behavior|more?)
 
 from twisted.internet import defer, interfaces
 from twisted.names import dns
-
+from twisted.python import components
+from zope.interface import implements
 import common
 
 class FailureHandler:
@@ -47,7 +48,7 @@ class FailureHandler:
 class ResolverChain(common.ResolverBase):
     """Lookup an address using multiple C{IResolver}s"""
     
-    __implements__ = (interfaces.IResolver,)
+    implements(interfaces.IResolver)
 
 
     def __init__(self, resolvers):
@@ -72,3 +73,5 @@ class ResolverChain(common.ResolverBase):
                 FailureHandler(r.lookupAllRecords, name, timeout)
             )
         return d
+
+components.backwardsCompatImplements(ResolverChain)
