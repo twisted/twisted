@@ -148,9 +148,15 @@ class IMAP4Server(basic.LineReceiver):
     # Challenge generators for AUTHENTICATE command
     challengers = None
 
-    def __init__(self):
+    def __init__(self, contextFactory = None):
         self.challengers = {}
         self.CAPABILITIES = self.CAPABILITIES.copy()
+        self.ctx = contextFactory
+
+    def connectionMade(self):
+        if self.transport.canStartTLS() and self.ctx:
+            self.CAPABILITIES['LOGINDISABLED'] = None
+            self.CAPABILITIES['STARTTLS'] = None
 
     def registerChallenger(self, chal):
         """Register a new form of authentication
@@ -222,7 +228,7 @@ class IMAP4Server(basic.LineReceiver):
                 self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
             except Exception, e:
                 self.sendBadResponse(tag, 'Server error: ' + str(e))
-                log.deferr()
+                log.err()
         else:
             self.sendBadResponse(tag, 'Unsupported command')
 
@@ -348,7 +354,18 @@ class IMAP4Server(basic.LineReceiver):
     def __ebAuthChunk(self, failure, tag):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(falure.value))
 
+    def unauth_STARTTLS(self, tag, args):
+        if self.transport.canStartTLS() and self.ctx:
+            self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
+            self.transport.startTLS(self.ctx)
+            del self.CAPABILITIES['LOGINDISABLED']
+            del self.CAPABILITIES['STARTTLS']
+
     def unauth_LOGIN(self, tag, args):
+        if 'LOGINDISABLED' in self.CAPABILITIES:
+            self.sendBadResponse(tag, 'LOGIN is disabled before STARTTLS')
+            return
+
         args = parseNestedParens(args)
         if len(args) != 2:
             self.sendBadResponse(tag, 'Wrong number of arguments')
@@ -844,7 +861,7 @@ class IMAP4Client(basic.LineReceiver):
     queued = None
     tagID = 1
     state = None
-
+    
     # Capabilities are not allowed to change during the session
     # So cache the first response and use that for all later
     # lookups
@@ -862,10 +879,13 @@ class IMAP4Client(basic.LineReceiver):
         'MESSAGES': int, 'RECENT': int, 'UNSEEN': int
     }
 
-    def __init__(self):
+    context = None
+
+    def __init__(self, contextFactory = None):
         self.tags = {}
         self.queued = []
         self.authenticators = {}
+        self.context = contextFactory
         
         self._tag = None
         self._parts = []
@@ -974,7 +994,7 @@ class IMAP4Client(basic.LineReceiver):
             try:
                 f(tag, rest)
             except:
-                log.deferr()
+                log.err()
                 self.transport.loseConnection()
         else:
             log.err("Cannot dispatch: %s, %s, %s" % (self.state, tag, rest))
@@ -1070,17 +1090,23 @@ class IMAP4Client(basic.LineReceiver):
         self.waiting = t
         return cmd.defer
 
-    def getCapabilities(self):
+    def getCapabilities(self, useCache=1):
         """Request the capabilities available on this server.
 
         This command is allowed in any state of connection.
+
+        @type useCache: C{bool}
+        @param useCache: Specify whether to use the capability-cache or to
+        re-retrieve the capabilities from the server.  Server capabilities
+        should never change, so for normal use, this flag should never be
+        false.
 
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a
         dictionary mapping capability types to lists of supported
         mechanisms, or to None if a support list is not applicable.
         """
-        if self._capCache is not None:
+        if useCache and self._capCache is not None:
             return defer.succeed(self._capCache)
         cmd = 'CAPABILITY'
         args = ''
@@ -1181,7 +1207,9 @@ class IMAP4Client(basic.LineReceiver):
     def login(self, username, password):
         """Authenticate with the server using a username and password
 
-        This command is allowed in the Non-Authenticated state.
+        This command is allowed in the Non-Authenticated state.  If the
+        server supports the STARTTLS capability and our transport support
+        TLS, TLS is negotiated before the login command is issued.
 
         @type username: C{str}
         @param username: The username to log in with
@@ -1193,9 +1221,61 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
-        cmd = 'LOGIN'
+        d = maybeDeferred(None, self.getCapabilities)
+        d.addCallbacks(
+            self.__cbLoginCaps,
+            self.__ebLoginCaps,
+            callbackArgs=(username, password),
+        )
+        return d
+
+    def _getContextFactory(self):
+        if self.context is not None:
+            return self.context
+        try:
+            from twisted.internet import ssl
+        except ImportError:
+            return None
+        else:
+            context = ssl.ClientContextFactory()
+            context.method = ssl.SSL.TLSv1_METHOD
+            return context
+
+    def __cbLoginCaps(self, capabilities, username, password):
+        tryTLS = 'STARTTLS' in capabilities and self.transport.canStartTLS()
+        if tryTLS:
+            ctx = self._getContextFactory()
+            if ctx:
+                d = self.sendCommand(Command('STARTTLS'))
+                d.addCallbacks(
+                    self.__cbLoginTLS,
+                    self.__ebLoginTLS,
+                    callbackArgs=(username, password, ctx),
+                )
+                return d
+            else:
+                log.err("Server wants us to use TLS, but we don't have "
+                        "a Context Factory!")
+        else:
+            log.msg("Server has no TLS support. logging in over cleartext!")
+            args = ' '.join((username, password))
+            return self.sendCommand(Command('LOGIN', args))
+
+    def __ebLoginCaps(self, failure):
+        log.err(failure)
+        return failure
+    
+    def __cbLoginTLS(self, result, username, password, context):
+        self.transport.startTLS(context)
+        self.context = context
+        # Flush capability cache now!
+        self._capCache = None
         args = ' '.join((username, password))
-        return self.sendCommand(Command(cmd, args))
+        return self.sendCommand(Command('LOGIN', args))
+        
+    def __ebLoginTLS(self, failure):
+        log.err(failure)
+        return failure
 
     def select(self, mailbox):
         """Select a mailbox

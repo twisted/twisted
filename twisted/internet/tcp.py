@@ -184,6 +184,9 @@ class Connection(abstract.FileDescriptor):
         self.fileno = skt.fileno
         self.protocol = protocol
         
+    def canStartTLS(self):
+        return bool(SSL)
+
     def startTLS(self, ctx):
         if not SSL:
             raise RuntimeException, "No SSL support available"
