@@ -31,7 +31,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet import main, error
-from twisted.python import threadable, log, failure
+from twisted.python import threadable, log, failure, reflect
 from twisted.internet.defer import Deferred, DeferredList
 
 
@@ -84,11 +84,7 @@ class DelayedCall:
         raise TypeError
 
     def __str__(self):
-        try:
-            func = str(self.func)
-        except Exception, e:
-            func = '(%r).%s' % (e, self.func.func_name)
-        return "<DelayedCall [%ds] %s%s>" % (self.time - time(), func, self.args)
+       return "<DelayedCall [%ds] %s%s>" % (self.time - time(), reflect.safe_repr(func), reflect.safe_repr(self.args))
 
 class ReactorBase:
     """Default base class for Reactors.

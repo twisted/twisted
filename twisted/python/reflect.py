@@ -32,6 +32,12 @@ import cStringIO
 import string
 import pickle
 import new
+try:
+    from pydoc import TextRepr
+    _textRepr = TextRepr()
+    _safe_repr = _textRepr.repr
+except:
+    _safe_repr = repr
 
 # Sibling Imports
 import reference
@@ -441,10 +447,10 @@ def safe_repr(obj):
     object's __repr__ raised an exception) """
 
     try:
-        return repr(obj)
+        return _safe_repr(obj)
     except:
         io = cStringIO.StringIO()
-        failure.printTraceback(file=io)
+        failure.Failure().printTraceback(file=io)
         return "exception in repr!\n"+ io.getvalue()
 
 
