@@ -124,24 +124,15 @@ def clearIgnores():
 def err(_stuff=None,**kw):
     """
     Write a failure to the log.
-    This method is thread-safe; it automatically runs in the mainloop.
     """
     if _stuff is None:
         _stuff = failure.Failure()
-    if not threadable.isInIOThread():
-        # Always call in the main reactor thread
-        from twisted.internet import reactor
-        reactor.callFromThread(_err, _stuff, kw)
-    else:
-        _err(_stuff, kw)
-    
-def _err(_stuff,kw):
     if isinstance(_stuff, failure.Failure):
         if _keepErrors:
             if _ignoreErrors:
                 keep = 0
-                for theError in _ignoreErrors:
-                    r = _stuff.check(theError)
+                for err in _ignoreErrors:
+                    r = _stuff.check(err)
                     if r:
                         keep = 0
                         break
@@ -186,6 +177,8 @@ logOwner = EscapeFromTheMeaninglessConfinesOfCapital()
 class LogPublisher:
     """Class for singleton log message publishing."""
 
+    synchronized = ['msg']
+
     def __init__(self):
         self.observers = []
 
@@ -203,21 +196,11 @@ class LogPublisher:
         self.observers.remove(other)
 
     def msg(self, *message, **kw):
-        """Log a new message.
-        This method is thread-safe; it automatically runs in the mainloop.
-        """
+        """Log a new message."""
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        if not threadable.isInIOThread():
-            # Always call in the main reactor thread
-            from twisted.internet import reactor
-            reactor.callFromThread(self._msg, actualEventDict)
-        else:
-            self._msg(actualEventDict)
-        
-    def _msg(self, actualEventDict):
         for i in xrange(len(self.observers) - 1, -1, -1):
             try:
                 self.observers[i](actualEventDict)
@@ -236,6 +219,16 @@ except NameError:
     addObserver = theLogPublisher.addObserver
     removeObserver = theLogPublisher.removeObserver
     msg = theLogPublisher.msg
+
+
+def initThreads():
+    global msg
+    # after the log publisher is synchronized, grab its method again so we get
+    # the hooked version
+    msg = theLogPublisher.msg
+
+threadable.synchronize(LogPublisher)
+threadable.whenThreaded(initThreads)
 
 
 class FileLogObserver:
