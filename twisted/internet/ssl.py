@@ -115,6 +115,9 @@ class Connection(tcp.Connection):
     def writeSomeData(self, data):
         """See tcp.Connection.writeSomeData for details.
         """
+        if not data:
+            return 0
+
         try:
             return tcp.Connection.writeSomeData(self, data)
         except SSL.WantWriteError:
