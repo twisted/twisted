@@ -45,7 +45,7 @@ def html(text):
     text=string.replace(text,'&lt;','<')
     text=string.replace(text,'&gt;','>')
     text=string.replace(text,"\n","<br>")
-    return '<font color="#ffffff" back="#000000 size=3>%s</font>'%text
+    return '<font color="#000000" back="#ffffff" size=3>%s</font>'%text
 
 class TOCPerson(basesupport.AbstractPerson):
     def isOnline(self):
@@ -140,7 +140,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def hearError(self, code, args):
         print '*** TOC ERROR ***', repr(code), repr(args)
     def hearWarning(self, newamount, username):
-        print '*** TOC ERROR ***', repr(newamount), repr(username)
+        print '*** TOC WARNING ***', repr(newamount), repr(username)
     ### Buddy Messages
     def hearMessage(self,username,message,autoreply):
         if autoreply:
