@@ -115,9 +115,10 @@ class ContactsList:
             if person.isOnline():
                 self.onlinePeople.append(person)
                 online.append([person.name, str(person.getStatus()),
-                               person.getIdleTime(), person.client.accountName])
+                               person.getIdleTime(),
+                               person.account.accounName])
                 self.countOnline = self.countOnline + 1
-            offline.append([person.name, person.client.accountName,
+            offline.append([person.name, person.account.accountName,
                             'Aliasing Not Implemented', 'Groups Not Implemented'])
         self.xml.get_widget("OnlineCount").set_text("Online: %d" % self.countOnline)
         online.thaw()
@@ -165,7 +166,8 @@ class Conversation(InputOutputWindow):
             self.myColor, self.personColor)
 
     def getTitle(self):
-        return "Conversation - %s (%s)" % (self.person.name, self.person.client.accountName)
+        return "Conversation - %s (%s)" % (self.person.name,
+                                           self.person.account.accountName)
 
     # Chat Interface Implementation
 
@@ -183,7 +185,8 @@ class Conversation(InputOutputWindow):
     # Internal
 
     def _cbTextSent(self, result, text, metadata=None):
-        _msgDisplay(self.output, self.person.client.name, text, self.myColor,
+        _msgDisplay(self.output, self.person.account.client.name,
+                    text, self.myColor,
                     (metadata and metadata.get("style", None) == "emote"))
 
 class GroupConversation(InputOutputWindow):
@@ -198,7 +201,7 @@ class GroupConversation(InputOutputWindow):
         self._colorcache = {}
         alloc_color = self.output.get_colormap().alloc
         self.myColor = alloc_color("#0000ff")
-        self.xml.get_widget("NickLabel").set_text(self.group.client.name)
+        self.xml.get_widget("NickLabel").set_text(self.group.account.client.name)
         participantList = self.xml.get_widget("ParticipantList")
         groupBox = self.xml.get_widget("GroupActionsBox")
         for method in group.getGroupCommands():
@@ -239,7 +242,7 @@ class GroupConversation(InputOutputWindow):
             personBox.remove(child)
 
     def on_ParticipantList_select_row(self, w, row, column, event):
-        self.selectedPerson = self.group.client.getPerson(self.members[row])
+        self.selectedPerson = self.group.account.client.getPerson(self.members[row])
         print 'selected', self.selectedPerson
         personBox = self.xml.get_widget("PersonActionsBox")
         personFrame = self.xml.get_widget("PersonFrame")
@@ -331,7 +334,8 @@ class GroupConversation(InputOutputWindow):
     # Internal
 
     def _cbTextSent(self, result, text, metadata=None):
-        _msgDisplay(self.output, self.group.client.name, text, self.myColor,
+        _msgDisplay(self.output, self.group.account.client.name,
+                    text, self.myColor,
                     (metadata and metadata.get("style", None) == "emote"))
 
     def refreshMemberList(self):
@@ -399,16 +403,20 @@ class GtkChatClientUI:
             conv.hide()
         return conv
 
-    def getPerson(self, name, account, Class):
+    # ??? Why doesn't this inherit the basechat.ChatUI implementation?
+
+    def getPerson(self, name, client):
+        account = client.account
         p = self.personCache.get((name, account))
         if not p:
-            p = Class(name, account, self)
+            p = account.getPerson(name)
             self.personCache[name, account] = p
         return p
 
-    def getGroup(self, name, account, Class):
+    def getGroup(self, name, client):
+        account = client.account
         g = self.groupCache.get((name, account))
-        if not g:
-            g = Class(name, account, self)
+        if g is None:
+            g = account.getGroup(name)
             self.groupCache[name, account] = g
         return g

@@ -1,3 +1,23 @@
+2003-02-11  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/im/interfaces.py (IAccount): 1.4 New instance attribute:
+	"client".  Also, added methods getGroup and getPerson.
+
+	* twisted/im/basechat.py (ChatUI.getPerson, .getGroup): 1.7 No
+	longer accept a Class parameter.  The class of the person/group is
+	determined by the account they are obtained through.
+
+	* twisted/im/basesupport.py (AbstractPerson, AbstractGroup): 1.15
+	Hold a reference to account, not client.  Also, lose the "chatui"
+	parameter -- this may require follow-up.
+	(AbstractAccount.__setstate__): 1.15 remove this method.  (Why
+	was self.port = int(self.port) in __setstate__?)
+	(AbstractAccount): 1.15 implement getGroup and getPerson here,
+	using _groupFactory and _personFactory factory attributes.
+
+	* twisted/im/gtkchat.py (GtkChatClientUI.getPerson, .getGroup): 1.15
+	follow ChatUI interface changes.
+
 2003-02-09  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/error.py (ProcessDone,ProcessTerminated):
@@ -18,7 +38,7 @@
 
 2003-02-08  Moshe Zadka <moshez@twistedmatrix.com>
 
-	* twisted/tap/mail.py twisted/mail/tap.py twisted/plugins.tml: 
+	* twisted/tap/mail.py twisted/mail/tap.py twisted/plugins.tml:
 	Moved from tap to mail, trying to thin down twisted.tap a little.
 
 2003-02-07  Moshe Zadka <moshez@twistedmatrix.com>
@@ -36,10 +56,10 @@
 2003-02-06  Bob Ippolito  <bob@redivi.com>
 
 	* twisted/protocols/smtp.py: sendEmail supports multipartboundary
-	keyword argument, which is useful for doing HTML emails if passed 
+	keyword argument, which is useful for doing HTML emails if passed
 	"alternative" as opposed to the default "mixed".  Uses 7bit
 	encoding for mime types that start with 'text', base64 otherwise.
-    
+
 2003-02-04  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/app.py: listenUNIX and unlistenUNIX methods added

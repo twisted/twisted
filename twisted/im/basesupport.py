@@ -22,12 +22,12 @@ from locals import ONLINE, OFFLINE
 from twisted.internet.protocol import Protocol
 
 from twisted.python.reflect import prefixedMethods
+from twisted.persisted import styles
 
 class AbstractGroup:
-    def __init__(self,name,baseClient,chatui):
+    def __init__(self, name, account):
         self.name = name
-        self.client = baseClient
-        self.chat = chatui
+        self.account = account
 
     def getGroupCommands(self):
         """finds group commands
@@ -52,14 +52,13 @@ class AbstractGroup:
         return '<%s %r>' % (self.__class__, self.name)
 
     def __str__(self):
-        return '%s@%s' % (self.name, self.client.account.accountName)
+        return '%s@%s' % (self.name, self.account.accountName)
 
 class AbstractPerson:
-    def __init__(self, name, baseClient, chatui):
+    def __init__(self, name, baseAccount):
         self.name = name
-        self.client = baseClient
+        self.account = baseAccount
         self.status = OFFLINE
-        self.chat = chatui
 
     def getPersonCommands(self):
         """finds person commands
@@ -75,14 +74,11 @@ class AbstractPerson:
         """
         return '--'
 
-    def imperson_converse(self):
-        self.chat.getConversation(self)
-
     def __repr__(self):
         return '<%s %r/%s>' % (self.__class__, self.name, self.status)
 
     def __str__(self):
-        return '%s@%s' % (self.name, self.client.account.accountName)
+        return '%s@%s' % (self.name, self.account.accountName)
 
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
@@ -103,14 +99,12 @@ class AbstractClientMixin:
         self._logonDeferred = logonDeferred
 
     def connectionMade(self):
-        self.account._isOnline = 1
         self._protoBase.connectionMade(self)
 
-    def connectionLost(self, other):
-        self.account._isConnecting = 0
-        self.account._isOnline = 0
+    def connectionLost(self, reason):
+        self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
-        self._protoBase.connectionLost(self, other)
+        return self._protoBase.connectionLost(self, reason)
 
     def unregisterAsAccountClient(self):
         """Tell the chat UI that I have `signed off'.
@@ -118,8 +112,17 @@ class AbstractClientMixin:
         self.chat.unregisterAccountClient(self)
 
 
-class AbstractAccount:
-    """
+class AbstractAccount(styles.Versioned):
+    """Base class for Accounts.
+
+    I am the start of an implementation of L{<interfaces.IAccount>IAccount}, I
+    implement L{isOnline} and most of L{logOn}, though you'll need to implement
+    L{_startLogOn} in a subclass.
+
+    @cvar _groupFactory: A Callable that will return a L{IGroup} appropriate
+        for this account type.
+    @cvar _personFactory: A Callable that will return a L{IPerson} appropriate
+        for this account type.
 
     @type _isConnecting: boolean
     @ivar _isConnecting: Whether I am in the process of establishing a
@@ -134,8 +137,15 @@ class AbstractAccount:
     @ivar host:
     @ivar port:
     """
+
     _isOnline = 0
     _isConnecting = 0
+    client = None
+
+    _groupFactory = AbstractGroup
+    _personFactory = AbstractPerson
+
+    persistanceVersion = 2
 
     def __init__(self, accountName, autoLogin, username, password, host, port):
         self.accountName = accountName
@@ -145,19 +155,18 @@ class AbstractAccount:
         self.host = host
         self.port = port
 
-    def __setstate__(self, d):
-        if d.has_key('isOnline'):
-            del d['isOnline']
-        if d.has_key('_isOnline'):
-            del d['_isOnline']
-        if d.has_key('_isConnecting'):
-            del d['_isConnecting']
-        self.__dict__ = d
-        self.port = int(self.port)
+        self._groups = {}
+        self._persons = {}
+
+    def upgrateToVersion2(self):
+        # Added in CVS revision 1.16.
+        for k in ('_groups', '_persons'):
+            if not hasattr(self, k):
+                setattr(self, k, {})
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        for k in ('_isOnline', '_isConnecting'):
+        state = styles.Versioned.__getstate__(self)
+        for k in ('client', '_isOnline', '_isConnecting'):
             try:
                 del state[k]
             except KeyError:
@@ -181,10 +190,35 @@ class AbstractAccount:
             self._isConnecting = 1
             d = self._startLogOn(chatui)
             d.addErrback(self._loginFailed)
+            d.addCallback(self._cb_logOn)
             d.addCallback(chatui.registerAccountClient)
             return d
         else:
             raise error.ConnectionInProgress()
+
+    def getGroup(self, name):
+        """Group factory.
+
+        @param name: Name of the group on this account.
+        @type name: string
+        """
+        group = self._groups.get(name)
+        if group is None:
+            group = self._groupFactory(name, self)
+            self._groups[name] = group
+        return group
+
+    def getPerson(self, name):
+        """Person factory.
+
+        @param name: Name of the person on this account.
+        @type name: string
+        """
+        person = self._persons.get(name)
+        if person is None:
+            person = self._personFactory(name, self)
+            self._persons[name] = person
+        return person
 
     def _startLogOn(self, chatui):
         """Start the sign on process.
@@ -195,11 +229,26 @@ class AbstractAccount:
         """
         raise NotImplementedError()
 
+    def _cb_logOn(self, client):
+        self._isConnecting = 0
+        self._isOnline = 1
+        self.client = client
+        return client
+
     def _loginFailed(self, reason):
         """Errorback for L{logOn}.
 
         @type reason: Failure
+
+        @returns: I{reason}, for further processing in the callback chain.
+        @returntype: Failure
         """
         self._isConnecting = 0
         self._isOnline = 0 # just in case
+        return reason
+
+    def _clientLost(self, client, reason):
+        self.client = None
+        self._isConnecting = 0
+        self._isOnline = 0
         return reason

@@ -268,38 +268,41 @@ class ChatUI:
             conv.show()
         return conv
 
-    def getPerson(self, name, client, Class):
+    def getPerson(self, name, client):
         """For the given name and account client, returns the instance of the
         AbstractPerson subclass, or creates and returns a new AbstractPerson
         subclass of the type Class
 
         @type name: string
         @type client: L{Client<interfaces.IClient>}
-        @type Class: L{Person<interfaces.IPerson>} class
 
         @returntype: L{Person<interfaces.IPerson>}
         """
-        p = self.persons.get((name, client))
+        account = client.account
+        p = self.persons.get((name, account))
         if not p:
-            p = Class(name, client, self)
-            self.persons[name, client] = p
+            p = account.getPerson(name)
+            self.persons[name, account] = p
         return p
 
-    def getGroup(self, name, client, Class):
+    def getGroup(self, name, client):
         """For the given name and account client, returns the instance of the
         AbstractGroup subclass, or creates and returns a new AbstractGroup
         subclass of the type Class
 
         @type name: string
         @type client: L{Client<interfaces.IClient>}
-        @type Class: L{Group<interfaces.IGroup>} class
 
         @returntype: L{Group<interfaces.IGroup>}
         """
-        g = self.groups.get((name, client))
+        # I accept 'client' instead of 'account' in my signature for
+        # backwards compatibility.  (Groups changed to be Account-oriented
+        # in CVS revision 1.8.)
+        account = client.account
+        g = self.groups.get((name, account))
         if not g:
-            g = Class(name, client, self)
-            self.groups[name, client] = g
+            g = account.getGroup(name)
+            self.groups[name, account] = g
         return g
 
     def contactChangedNick(self, oldnick, newnick):
@@ -310,13 +313,13 @@ class ChatUI:
         @type oldnick: string
         @type newnick: string
         """
-        if self.persons.has_key((person.name, person.client)):
+        if self.persons.has_key((person.name, person.account)):
             conv = self.conversations.get(person)
             if conv:
                 conv.contactChangedNick(person, newnick)
 
             self.contactsList.contactChangedNick(person, newnick)
 
-            del self.persons[person.name, person.client]
+            del self.persons[person.name, person.account]
             person.name = newnick
-            self.persons[person.name, person.client] = person
+            self.persons[person.name, person.account] = person

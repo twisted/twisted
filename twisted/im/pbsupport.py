@@ -28,8 +28,8 @@ import basesupport
 class TwistedWordsPerson(basesupport.AbstractPerson):
     """I a facade for a person you can talk to through a twisted.words service.
     """
-    def __init__(self, name, wordsClient, chatui):
-        basesupport.AbstractPerson.__init__(self, name, wordsClient, chatui)
+    def __init__(self, name, wordsAccount):
+        basesupport.AbstractPerson.__init__(self, name, wordsAccount)
         self.status = OFFLINE
 
     def isOnline(self):
@@ -43,25 +43,24 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
         """Return a deferred...
         """
         if metadata:
-            d=self.client.perspective.directMessage(self.name,
-                                                     text, metadata)
+            d=self.account.client.perspective.directMessage(self.name,
+                                                            text, metadata)
             d.addErrback(self.metadataFailed, "* "+text)
             return d
         else:
-            return self.client.perspective.callRemote('directMessage',self.name, text)
+            return self.account.client.perspective.callRemote('directMessage',self.name, text)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text
-        return self.client.perspective.directMessage(self.name, text)
-
+        return self.account.client.perspective.directMessage(self.name, text)
 
     def setStatus(self, status):
         self.status = status
         self.chat.getContactsList().setContactStatus(self)
 
 class TwistedWordsGroup(basesupport.AbstractGroup):
-    def __init__(self, name, wordsClient, chatui):
-        basesupport.AbstractGroup.__init__(self, name, wordsClient, chatui)
+    def __init__(self, name, wordsClient):
+        basesupport.AbstractGroup.__init__(self, name, wordsClient)
         self.joined = 0
 
     def sendGroupMessage(self, text, metadata=None):
@@ -69,23 +68,24 @@ class TwistedWordsGroup(basesupport.AbstractGroup):
         """
         #for backwards compatibility with older twisted.words servers.
         if metadata:
-            d=self.client.perspective.callRemote('groupMessage', self.name,
-                                                  text, metadata)
+            d=self.account.client.perspective.callRemote(
+                'groupMessage', self.name, text, metadata)
             d.addErrback(self.metadataFailed, "* "+text)
             return d
         else:
-            return self.client.perspective.callRemote('groupMessage',
-                                                      self.name, text)
+            return self.account.client.perspective.callRemote('groupMessage',
+                                                              self.name, text)
 
     def setTopic(self, text):
-        self.client.perspective.callRemote(
+        self.account.client.perspective.callRemote(
             'setGroupMetadata',
             {'topic': text, 'topic_author': self.client.name},
             self.name)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text
-        return self.client.perspective.callRemote('groupMessage', self.name, text)
+        return self.account.client.perspective.callRemote('groupMessage',
+                                                          self.name, text)
 
     def joining(self):
         self.joined = 1
@@ -94,7 +94,8 @@ class TwistedWordsGroup(basesupport.AbstractGroup):
         self.joined = 0
 
     def leave(self):
-        return self.client.perspective.callRemote('leaveGroup', self.name)
+        return self.account.client.perspective.callRemote('leaveGroup',
+                                                          self.name)
 
 
 
@@ -112,10 +113,10 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
         self._logonDeferred = _logonDeferred
 
     def getPerson(self, name):
-        return self.chat.getPerson(name, self, TwistedWordsPerson)
+        return self.chat.getPerson(name, self)
 
     def getGroup(self, name):
-        return self.chat.getGroup(name, self, TwistedWordsGroup)
+        return self.chat.getGroup(name, self)
 
     def getGroupConversation(self, name):
         return self.chat.getGroupConversation(self.getGroup(name))
@@ -140,14 +141,14 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
         self.getGroupConversation(group).memberLeft(member)
 
     def remote_notifyStatusChanged(self, name, status):
-        self.chat.getPerson(name, self, TwistedWordsPerson).setStatus(status)
+        self.chat.getPerson(name, self).setStatus(status)
 
     def remote_receiveDirectMessage(self, name, message, metadata=None):
-        self.chat.getConversation(self.chat.getPerson(name, self, TwistedWordsPerson)).showMessage(message, metadata)
+        self.chat.getConversation(self.chat.getPerson(name, self)).showMessage(message, metadata)
 
     def remote_receiveContactList(self, clist):
         for name, status in clist:
-            self.chat.getPerson(name, self, TwistedWordsPerson).setStatus(status)
+            self.chat.getPerson(name, self).setStatus(status)
 
     def remote_setGroupMetadata(self, dict_, groupName):
         if dict_.has_key("topic"):
@@ -187,6 +188,9 @@ pbFrontEnds = {
 
 class PBAccount(basesupport.AbstractAccount):
     gatewayType = "PB"
+    _groupFactory = TwistedWordsGroup
+    _personFactory = TwistedWordsPerson
+
     def __init__(self, accountName, autoLogin, username, password, host, port,
                  services=None):
         """
@@ -218,6 +222,7 @@ class PBAccount(basesupport.AbstractAccount):
                 for success, result in results:
                     if success:
                         chatui.registerAccountClient(result)
+                        self._cb_logOn(result)
                     else:
                         log.err(result)
             d.addCallback(registerMany)

@@ -26,7 +26,7 @@ import basesupport
 class IRCPerson(basesupport.AbstractPerson):
 
     def imperson_whois(self):
-        self.client.sendLine("WHOIS %s" % self.name)
+        self.account.client.sendLine("WHOIS %s" % self.name)
 
     ### interface impl
 
@@ -43,9 +43,9 @@ class IRCPerson(basesupport.AbstractPerson):
     def sendMessage(self, text, meta=None):
         for line in string.split(text, '\n'):
             if meta and meta.get("style", None) == "emote":
-                self.client.ctcpMakeQuery(self.name,[('ACTION', line)])
+                self.account.client.ctcpMakeQuery(self.name,[('ACTION', line)])
             else:
-                self.client.msg(self.name, line)
+                self.account.client.msg(self.name, line)
         return succeed(text)
 
 class IRCGroup(basesupport.AbstractGroup):
@@ -55,26 +55,26 @@ class IRCGroup(basesupport.AbstractGroup):
 
     def imtarget_kick(self, target):
         reason = "for great justice!"
-        self.client.sendLine("KICK #%s %s :%s" % (
+        self.account.client.sendLine("KICK #%s %s :%s" % (
             self.name, target.name, reason))
 
     ### Interface Implementation
 
     def setTopic(self, topic):
-        self.client.topic(self.name, topic)
+        self.account.client.topic(self.name, topic)
 
     def sendGroupMessage(self, text, meta={}):
         if meta and meta.get("style", None) == "emote":
-            self.client.me(self.name,text)
+            self.account.client.me(self.name,text)
             return succeed(text)
         #standard shmandard, clients don't support plain escaped newlines!
         for line in string.split(text, '\n'):
-            self.client.say(self.name, line)
+            self.account.client.say(self.name, line)
         return succeed(text)
 
     def leave(self):
-        self.client.leave(self.name)
-        self.client.getGroupConversation(self.name,1)
+        self.account.client.leave(self.name)
+        self.account.client.getGroupConversation(self.name,1)
 
 class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def __init__(self, account, chatui, logonDeferred=None):
@@ -85,12 +85,13 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self._groups={}
         self._topics={}
 
-    def getGroupConversation(self, name,hide=0):
+    def getGroupConversation(self, name, hide=0):
         name=string.lower(name)
-        return self.chat.getGroupConversation(self.chat.getGroup(name,self,IRCGroup),stayHidden=hide)
+        return self.chat.getGroupConversation(self.chat.getGroup(name, self),
+                                              stayHidden=hide)
 
     def getPerson(self,name):
-        return self.chat.getPerson(name,self,IRCPerson)
+        return self.chat.getPerson(name, self)
 
     def connectionMade(self):
         # XXX: Why do I duplicate code in IRCClient.register?
@@ -121,7 +122,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         """
         print 'ono i was kicked', channel, kicker, message
         return self.chat.getGroupConversation(
-            self.chat.getGroup(channel[1:],self,IRCGroup),1)
+            self.chat.getGroup(channel[1:], self), 1)
 
     def userKicked(self, kickee, channel, kicker, message):
         print 'whew somebody else', kickee, channel, kicker, message
@@ -239,6 +240,10 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
 
 class IRCAccount(basesupport.AbstractAccount):
     gatewayType = "IRC"
+
+    _groupFactory = IRCGroup
+    _personFactory = IRCPerson
+
     def __init__(self, accountName, autoLogin, username, password, host, port,
                  channels=''):
         basesupport.AbstractAccount.__init__(self, accountName, autoLogin,

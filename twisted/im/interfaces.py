@@ -22,6 +22,9 @@ class IAccount(Interface):
 
     @cvar gatewayType: Identifies the protocol used by this account.
     @type gatewayType: string
+
+    @ivar client: The Client currently connecting to this account, if any.
+    @type client: L{IClient}
     """
 
     def __init__(self, accountName, autoLogin, username, password, host, port):
@@ -49,6 +52,16 @@ class IAccount(Interface):
 
     def logOff(self):
         """Sign off.
+        """
+
+    def getGroup(self, groupName):
+        """
+        @returntype: L{<IGroup>Group}
+        """
+
+    def getPerson(self, personName):
+        """
+        @returntype: L{<IPerson>Person}
         """
 
 class IClient(Interface):
@@ -82,6 +95,15 @@ class IClient(Interface):
 
 
 class IPerson(Interface):
+    def __init__(self, name, account):
+        """Initialize me.
+
+        @param name: My name, as the server knows me.
+        @type name: string
+        @param account: The account I am accessed through.
+        @type account: I{Account}
+        """
+
     def isOnline(self):
         """Am I online right now?
 
@@ -108,6 +130,26 @@ class IPerson(Interface):
 
 
 class IGroup(Interface):
+    """A group which you may have a conversation with.
+
+    Groups generally have a loosely-defined set of members, who may
+    leave and join at any time.
+
+    @ivar name: My name, as the server knows me.
+    @type name: string
+    @param account: The account I am accessed through.
+    @type account: I{Account}
+    """
+
+    def __init__(self, name, account):
+        """Initialize me.
+
+        @param name: My name, as the server knows me.
+        @type name: string
+        @param account: The account I am accessed through.
+        @type account: I{Account}
+        """
+
     def setTopic(self, text):
         pass
 
@@ -226,6 +268,7 @@ class IChatUI(Interface):
 
         @returntype: L{Conversation<IConversation>}
         """
+
     def getGroupConversation(self,group,Class,stayHidden=0):
         """For the given group object, returns the group conversation window or
         creates and returns a new group conversation window if it doesn't exist.
@@ -237,26 +280,24 @@ class IChatUI(Interface):
         @returntype: L{GroupConversation<interfaces.IGroupConversation>}
         """
 
-    def getPerson(self, name, client, Class):
-        """For the given name and account client, returns the instance of the
-        AbstractPerson subclass, or creates and returns a new AbstractPerson
-        subclass of the type Class
+    def getPerson(self, name, client):
+        """Get a Person for a client.
+
+        Duplicates IAccount.getPerson.
 
         @type name: string
         @type client: L{Client<interfaces.IClient>}
-        @type Class: L{Person<interfaces.IPerson>} class
 
         @returntype: L{Person<interfaces.IPerson>}
         """
 
-    def getGroup(self, name, client, Class):
-        """For the given name and account client, returns the instance of the
-        AbstractGroup subclass, or creates and returns a new AbstractGroup
-        subclass of the type Class
+    def getGroup(self, name, client):
+        """Get a Group for a client.
+
+        Duplicates IAccount.getGroup.
 
         @type name: string
         @type client: L{Client<interfaces.IClient>}
-        @type Class: L{Group<interfaces.IGroup>} class
 
         @returntype: L{Group<interfaces.IGroup>}
         """

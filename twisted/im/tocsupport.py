@@ -66,23 +66,23 @@ class TOCPerson(basesupport.AbstractPerson):
         if meta:
             if meta.get("style", None) == "emote":
                 text="* "+text+"* "
-        self.client.say(self.name,html(text))
+        self.account.client.say(self.name,html(text))
         return succeed(text)
 
 class TOCGroup(basesupport.AbstractGroup):
-    def __init__(self,name,tocClient,chatui):
-        basesupport.AbstractGroup.__init__(self, name, tocClient, chatui)
+    def __init__(self, name, tocAccount):
+        basesupport.AbstractGroup.__init__(self, name, tocAccount)
         self.roomID = self.client.roomID[self.name]
 
     def sendGroupMessage(self, text, meta=None):
         if meta:
             if meta.get("style", None) == "emote":
                 text="* "+text+"* "
-        self.client.chat_say(self.roomID,html(text))
+        self.account.client.chat_say(self.roomID,html(text))
         return succeed(text)
 
     def leave(self):
-        self.client.chat_leave(self.roomID)
+        self.account.client.chat_leave(self.roomID)
 
 class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def __init__(self, account, chatui, logonDeferred):
@@ -95,10 +95,9 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def _debug(self, m):
         pass #print '<toc debug>', repr(m)
 
-    def getGroupConversation(self, name,hide=0):
+    def getGroupConversation(self, name, hide=0):
         return self.chat.getGroupConversation(
-            self.chat.getGroup(name,self,TOCGroup),
-            hide)
+            self.chat.getGroup(name, self), hide)
 
     def addContact(self, name):
         self.add_buddy([name])
@@ -111,7 +110,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         self.set_config(self._config_mode, self._buddylist, self._permit, self._deny)
 
     def getPerson(self,name):
-        return self.chat.getPerson(name,self,TOCPerson)
+        return self.chat.getPerson(name, self)
 
     def onLine(self):
         self.account._isOnline = 1
@@ -204,6 +203,9 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
 
 class TOCAccount(basesupport.AbstractAccount):
     gatewayType = "AIM (TOC)"
+
+    _groupFactory = TOCGroup
+    _personFactory = TOCPerson
 
     def _startLogOn(self, chatui):
         logonDeferred = defer.Deferred()
