@@ -49,7 +49,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.119 $"[11:-2]
+__version__ = "$Revision: 1.120 $"[11:-2]
 
 # Future Imports
 from __future__ import nested_scopes
@@ -273,7 +273,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """
         assert callable(callback)
         self.disconnectCallbacks.append(callback)
-        if len(self.disconnectCallbacks):
+        if len(self.disconnectCallbacks) == 1:
             self.broker.notifyOnDisconnect(self._disconnected)
 
     def dontNotifyOnDisconnect(self, callback):
