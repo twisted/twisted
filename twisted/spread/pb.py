@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.155 $"[11:-2]
+__version__ = "$Revision: 1.156 $"[11:-2]
 
 
 # System Imports
@@ -1639,6 +1639,9 @@ class PBServerFactory(protocol.ServerFactory):
 
     unsafeTracebacks = 0
     
+    # object broker factory
+    protocol = Broker
+    
     def __init__(self, root, unsafeTracebacks=False):
         self.root = IPBRoot(root)
         self.unsafeTracebacks = unsafeTracebacks
@@ -1646,7 +1649,7 @@ class PBServerFactory(protocol.ServerFactory):
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
         """
-        proto = Broker(0)
+        proto = self.protocol(0)
         proto.factory = self
         proto.setNameForLocal("root", self.root.rootObject(proto))
         return proto

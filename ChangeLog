@@ -1,3 +1,8 @@
+2003-12-29  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/spread/pb.py: Changed PBServerFactory to use "protocol"
+	instance attribute for Broker creation.
+
 2003-12-26  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/web/server.py: display of tracebacks on web pages can
