@@ -226,8 +226,8 @@ class File(resource.Resource, styles.Versioned):
             if index:
                 return index.render(request)
     
-            dirwidget = DirectoryListing(self.path)
-            return widgets.RenderSession(dirwidget.display(request), request)
+            dirListingPage = WidgetPage(DirectoryListing(self.path))
+            return dirListingPage.render(request)
 
         request.setHeader('accept-ranges','bytes')
         request.setHeader('last-modified', http.datetimeToString(mtime))
