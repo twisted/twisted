@@ -296,11 +296,11 @@ class Server(Connection):
             self.hostname = client[0]
         except:
             self.hostname = 'unix'
-        self.startReading()
-        self.connected = 1
         self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
-
+        self.startReading()
+        self.connected = 1
+    
     def __repr__(self):
         """A string representation of this connection.
         """
@@ -464,3 +464,10 @@ class Port(abstract.FileDescriptor):
         """Returns the name of my class, to prefix log entries with.
         """
         return str(self.factory.__class__)
+
+    def getHost(self):
+        """Returns a tuple of ('INET', hostname, port).
+
+        This indicates the servers address.
+        """
+        return ('INET',)+self.socket.getsockname()

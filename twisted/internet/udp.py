@@ -239,3 +239,10 @@ class Port(abstract.FileDescriptor):
         """Returns the name of my class, to prefix log entries with.
         """
         return self.logstr
+    
+    def getHost(self):
+        """
+        Returns a tuple of ('INET_UDP', hostname, port), indicating
+        the servers address
+        """
+        return ('INET_UDP',)+self.socket.getsockname()
