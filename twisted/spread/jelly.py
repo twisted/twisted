@@ -108,34 +108,6 @@ instance_atom = 'instance'          # i
 
 # errors
 unpersistable_atom = "unpersistable"# u
-
-typeNames = {
-    types.StringType: "string",
-    types.IntType: "int",
-    types.LongType: "long",
-    types.FloatType: "float",
-    types.ClassType: "class",
-    types.DictType: "dictionary",
-    types.ListType: "list",
-    types.TupleType: "tuple",
-    types.BuiltinMethodType: "builtin_function_or_method",
-    types.FunctionType: "function",
-    types.ModuleType: "module",
-    types.InstanceType: "instance",
-    types.MethodType: "instance_method",
-    types.NoneType: "None",
-    }
-
-if hasattr(types, 'UnicodeType'):
-    typeNames[types.UnicodeType] = 'unicode'
-
-try:
-    from org.python.core import PyStringMap
-    typeNames[PyStringMap] = "dictionary"
-except ImportError:
-    pass
-
-
 unjellyableRegistry = {}
 
 def setUnjellyableForClass(classname, unjellyable):
@@ -231,14 +203,14 @@ class Unpersistable:
 class Jellyable:
     """Inherit from me to Jelly yourself directly.
     """
-    def getStateFor(self, actor):
+    def getStateFor(self, jellier):
         return self.__dict__
 
     def jellyFor(self, jellier):
         sxp = jellier.prepare(self)
         sxp.extend([
             str(self.__class__),
-            jellier.jelly(self.getStateFor(actor))])
+            jellier.jelly(self.getStateFor(jellier))])
         return jellier.preserve(self, sxp)
 
 class Unjellyable:
@@ -708,6 +680,7 @@ class SecurityOptions:
         # except perhaps "reference"...
         self.allowedTypes = {"None": 1,
                              "string": 1,
+                             "str": 1,
                              "int": 1,
                              "float": 1}
         if hasattr(types, 'UnicodeType'):
