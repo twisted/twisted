@@ -421,6 +421,17 @@ def gatherResults(deferredList):
     d.addCallback(_parseDListResult)
     return d
 
+def makeBlocking(d):
+    from twisted.internet import reactor
+    succ, fail = [], []
+    d.addCallback(succ.append)
+    d.addErrback(fail.append)
+    d.addBoth(lambda _: reactor.stop())
+    reactor.run()
+    if succ:
+        return succ[0]
+    else:
+        raise fail[0].value
 
 # Constants for use with DeferredList
 
@@ -428,4 +439,5 @@ SUCCESS = 1
 FAILURE = 0
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError", "gatherResults"]
+           "AlreadyCalledError", "TimeoutError", "gatherResults",
+           "makeBlocking"]
