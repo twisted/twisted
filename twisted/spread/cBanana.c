@@ -914,6 +914,7 @@ static PyObject *util_FromImport(const char *name, const char *from_item)
 extern EXTERN_API void initcBanana(void)
 {
   cBananaStateType.ob_type = &PyType_Type;
+  cBananaBufType.ob_type = &PyType_Type;
   cBanana_module = Py_InitModule("cBanana", cBanana__methods__);
   cBanana_dict = PyModule_GetDict(cBanana_module);
   BananaError = util_FromImport("twisted.spread.banana", "BananaError");
