@@ -34,9 +34,10 @@ class _BackRelay(protocol.ProcessProtocol):
             self.errReceived = self.errReceivedIsBad
 
     def errReceivedIsBad(self, text):
-        self.deferred.errback(failure.Failure(IOError("got stderr")))
-        self.deferred = None
-        self.transport.loseConnection()
+        if self.deferred is not None:
+            self.deferred.errback(failure.Failure(IOError("got stderr: %r" % text)))
+            self.deferred = None
+            self.transport.loseConnection()
 
     def errReceivedIsGood(self, text):
         self.s.write(text)
