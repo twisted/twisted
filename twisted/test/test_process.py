@@ -389,14 +389,14 @@ class FDChecker(protocol.ProcessProtocol):
             return
         self.done = True
 
-class FDTest(unittest.TestCase):
+class FDTest(SignalMixin, unittest.TestCase):
     def NOTsetUp(self):
         from twisted.internet import process
         process.Process.debug_child = True
     def NOTtearDown(self):
         from twisted.internet import process
         process.Process.debug_child = False
-        
+
     def testFD(self):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_fds.py")
@@ -412,8 +412,9 @@ class FDTest(unittest.TestCase):
         self.failIf(p.failed, p.failed)
 
     def testLinger(self):
-        # see what happens when all the pipes close before the process
-        # actually stops
+        # See what happens when all the pipes close before the process
+        # actually stops. This test *requires* SIGCHLD catching to work,
+        # as there is no other way to find out the process is done.
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_linger.py")
         p = Accumulator()

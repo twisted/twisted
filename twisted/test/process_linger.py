@@ -9,6 +9,7 @@ print "here is some text"
 time.sleep(1)
 print "goodbye"
 os.close(1)
+os.close(2)
 
 time.sleep(2)
 
