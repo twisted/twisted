@@ -71,9 +71,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
     def callExpressionReceived(self, obj):
         #print '---'
-        #import pprint
+        #import pprint, sys
         #pprint.pprint(obj)
         #print '***'
+        #sys.stdout.flush()
         if self.currentDialect:
             self.expressionReceived(obj)
         else:

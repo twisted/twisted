@@ -26,6 +26,12 @@
 #	define EXTERN_API
 #endif
 
+#ifdef __GNUC__
+#       define TM_INLINE inline
+#else
+#       define TM_INLINE /* */
+#endif
+
 #include <Python.h>
 
 /* Python module initialization */
@@ -92,6 +98,7 @@ struct listItem
 {
   struct listItem *lastList;
   PyObject *thisList;
+  int currentIndex;
   int size;
 };
 
@@ -184,13 +191,9 @@ cBananaBuf_getattr(PyObject *self, char* attrname) {
 static void cBananaBuf_write_internal(cBananaBuf* me, const char* src, unsigned int len) {
   unsigned int index;
   while (len > (me -> available)) {
-    char* newbuf;
     unsigned int newsize;
     newsize = me->size * 2;
-    newbuf = malloc(newsize);
-    memcpy(newbuf, me->contents, me->size - me->available);
-    free(me->contents);
-    me->contents = newbuf;
+    me->contents = realloc(me->contents, newsize);
     me->available += me->size;
     me->size = newsize;
   }
@@ -198,6 +201,16 @@ static void cBananaBuf_write_internal(cBananaBuf* me, const char* src, unsigned 
   memcpy((me->contents)+index, src, len);
   me->available -= len;
 }
+
+#define cBananaBuf_append_byte(me, byte) \
+  do { \
+    if (me->available >= 1) { \
+      me->contents[me->size - me->available] = byte; \
+      me->available--; \
+    } else { \
+      cBananaBuf_write_internal(me, &byte, 1); \
+    } \
+  } while (0)
 
 extern EXTERN_API PyObject*
 cBananaBuf_write(PyObject *self, PyObject *args) {
@@ -267,7 +280,7 @@ cBananaState_dealloc(PyObject* self)
   PyObject_Del(self);
 }
 
-const char *vocab[] = {
+static const char *vocab[] = {
   /* Filler so we start at 1 not 0 */
   "Dummy",  /* 0 */
   /* Jelly Data Types */
@@ -307,7 +320,7 @@ const char *vocab[] = {
 };
 
 
-const char *findVocab(int offset)
+static const char *findVocab(int offset)
 {
   if (offset < 0 || offset > NUM_VOCABS) {
     return NULL;
@@ -315,27 +328,27 @@ const char *findVocab(int offset)
   return vocab[offset];
 }
 
-void int2b128(long integer, cBananaBuf* writeobj) {
-  char singleByte;
+static void int2b128(long integer, cBananaBuf* writeobj) {
+  char typeByte;
   if (integer == 0) {
-    singleByte = 0;
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    typeByte = 0;
+    cBananaBuf_append_byte(writeobj, typeByte);
     return;
   }
   while (integer) {
-    singleByte = (char) integer & 0x7f;
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    typeByte = (char) integer & 0x7f;
+    cBananaBuf_append_byte(writeobj, typeByte);
     integer >>= 7;
   }
 }
 
 PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
-  char singleByte;
+  char typeByte;
   if (PyList_Check(encodeobj)) {
     int counter;
     int2b128(PyList_Size(encodeobj), writeobj);
-    singleByte = LIST;
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    typeByte = LIST;
+    cBananaBuf_append_byte(writeobj, typeByte);
     for (counter=0; counter < PyList_Size(encodeobj); counter ++) {
       if (!cBanana_encode_internal(PyList_GetItem(encodeobj, counter), writeobj)) {
 	return NULL;
@@ -344,8 +357,8 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
   } else if (PyTuple_Check(encodeobj)) {
     int counter;
     int2b128(PyTuple_Size(encodeobj), writeobj);
-    singleByte = LIST;
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    typeByte = LIST;
+    cBananaBuf_append_byte(writeobj, typeByte);
     for (counter=0; counter < PyTuple_Size(encodeobj); counter ++) {
       if (!cBanana_encode_internal(PyTuple_GetItem(encodeobj, counter), writeobj)) {
 	return NULL;
@@ -355,12 +368,12 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
     long integer = PyInt_AsLong(encodeobj);
     if (integer >= 0) {
       int2b128(integer, writeobj);
-      singleByte = INT;
-      cBananaBuf_write_internal(writeobj, &singleByte, 1);
+      typeByte = INT;
+      cBananaBuf_append_byte(writeobj, typeByte);
     } else {
       int2b128(-integer, writeobj);
-      singleByte = NEG;
-      cBananaBuf_write_internal(writeobj, &singleByte, 1);
+      typeByte = NEG;
+      cBananaBuf_append_byte(writeobj, typeByte);
     }
   } else if (PyLong_Check(encodeobj)) {
     PyObject* result;
@@ -368,10 +381,10 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
     argtup = PyTuple_New(2);
     Py_INCREF(encodeobj);
     if (PyObject_Compare(encodeobj, PyLong_FromDouble(0.0)) == -1) {
-      singleByte = LONGNEG;
+      typeByte = LONGNEG;
       PyTuple_SetItem(argtup, 0, PyNumber_Negative(encodeobj));
     } else {
-      singleByte = LONGINT;
+      typeByte = LONGINT;
       PyTuple_SetItem(argtup, 0, encodeobj);
     }
     /* Py_INCREF(writeobj); */
@@ -382,7 +395,7 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
       return NULL;
     }
     Py_DECREF(result);
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    cBananaBuf_append_byte(writeobj, typeByte);
   } else if (PyFloat_Check(encodeobj)) {
     double x;
     int s;
@@ -445,8 +458,8 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
     floatbuf[6] = (flo>>8) & 0xFF;
     floatbuf[7] = flo & 0xFF;
     
-    singleByte = FLOAT;
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    typeByte = FLOAT;
+    cBananaBuf_append_byte(writeobj, typeByte);
     /* it's CALLING PYTHON FUNCTIONS FOR FUN AND PROFIT!!! */
     cBananaBuf_write_internal(writeobj, floatbuf, sizeof(floatbuf));
   } else if (PyString_Check(encodeobj)) {
@@ -454,8 +467,8 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
     char* src;
     PyString_AsStringAndSize(encodeobj, &src, &len);
     int2b128(len, writeobj);
-    singleByte = STRING;
-    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    typeByte = STRING;
+    cBananaBuf_append_byte(writeobj, typeByte);
     cBananaBuf_write_internal(writeobj, src, len);
   } else {
     char errmsg[256];
@@ -484,7 +497,7 @@ PyObject* cBanana_encode(PyObject* self, PyObject *args) {
 }
 
 
-long b1282int(unsigned char *str, int begin, int end) {
+static long b1282int(unsigned char *str, int begin, int end) {
   long result = 0;
   long place = 0;
   int count;
@@ -509,11 +522,11 @@ long b1282int(unsigned char *str, int begin, int end) {
  ** "object" argument must be a new reference -- I steal a reference to it.
  **************/
 
-int gotPythonItem(PyObject *object, struct listItem *currentList, PyObject *expressionReceived)
+static TM_INLINE int gotPythonItem(PyObject *object, struct listItem *currentList, PyObject *expressionReceived)
 {
   if (currentList) {
-    PyList_Append(currentList->thisList, object);
-    Py_DECREF(object);
+    PyList_SET_ITEM(currentList->thisList, currentList->currentIndex, object);
+    currentList->currentIndex++;
     return 1;
   }
   else {
@@ -534,7 +547,7 @@ int gotPythonItem(PyObject *object, struct listItem *currentList, PyObject *expr
 /**************
 ** Helper function to add a float
 **************/
-int gotItemFloat(double value, struct listItem *currentList, PyObject *expressionReceived)
+static TM_INLINE int gotItemFloat(double value, struct listItem *currentList, PyObject *expressionReceived)
 {
   PyObject *object = PyFloat_FromDouble(value);
   return gotPythonItem(object, currentList, expressionReceived);
@@ -543,7 +556,7 @@ int gotItemFloat(double value, struct listItem *currentList, PyObject *expressio
 /**************
 ** Helper function to add an int
 **************/
-int gotItemInt(int value, struct listItem *currentList, PyObject *expressionReceived)
+static TM_INLINE int gotItemInt(int value, struct listItem *currentList, PyObject *expressionReceived)
 {
   PyObject *object = PyInt_FromLong(value) ;
   return gotPythonItem(object, currentList, expressionReceived);
@@ -552,7 +565,7 @@ int gotItemInt(int value, struct listItem *currentList, PyObject *expressionRece
 /**************
 ** Helper function to add a string
 **************/
-int gotItemString(const char *value, int len, struct listItem *currentList, PyObject *expressionReceived)
+static TM_INLINE int gotItemString(const char *value, int len, struct listItem *currentList, PyObject *expressionReceived)
 {
   PyObject *object;
   object = PyString_FromStringAndSize(value, len);
@@ -562,7 +575,7 @@ int gotItemString(const char *value, int len, struct listItem *currentList, PyOb
 /**************
 ** Helper function to add a list
 **************/
-int gotItemList(PyObject *listObject, struct listItem *currentList, PyObject *expressionReceived)
+static TM_INLINE int gotItemList(PyObject *listObject, struct listItem *currentList, PyObject *expressionReceived)
 {
   return gotPythonItem(listObject, currentList, expressionReceived);
 }
@@ -647,12 +660,14 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       if (!state->currentList)  {
         state->currentList = (struct listItem *)malloc(sizeof(struct listItem));
         state->currentList->lastList = NULL;
+        state->currentList->currentIndex = 0;
         state->currentList->size = num;
-        state->currentList->thisList = PyList_New(0);
+        state->currentList->thisList = PyList_New(num);
       } else {
         struct listItem *newList = (struct listItem *) malloc(sizeof(struct listItem));
         newList->size = num;
-        newList->thisList = PyList_New(0);
+        newList->thisList = PyList_New(num);
+        newList->currentIndex = 0;
         newList->lastList = state->currentList;
         state->currentList = newList;
       }
@@ -821,7 +836,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     /* If there is a list, check if it is full */
     if (state->currentList) {
       /* printf("bufferSize: %d  listSize: %d\n", PyList_Size(state->currentList->thisList), state->currentList->size); */
-      while (state->currentList && PyList_Size(state->currentList->thisList) == state->currentList->size) {
+      while (state->currentList && (state->currentList->currentIndex == state->currentList->size)){
         PyObject *list;
         struct listItem *tmp;
 
@@ -852,5 +867,4 @@ extern EXTERN_API void initcBanana(void)
   BananaError = PyErr_NewException("cBanana.error", NULL, NULL);
   PyDict_SetItemString(cBanana_dict, "cBanana.error", BananaError);
 }
-
 
