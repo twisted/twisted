@@ -209,7 +209,7 @@ class Options(usage.Options):
 
     def __init__(self):
         usage.Options.__init__(self)
-	self['verbosity'] = 0 # default
+        self['verbosity'] = 0 # default
 
     def opt_verbose(self):
         self['verbosity'] = self['verbosity']+1
