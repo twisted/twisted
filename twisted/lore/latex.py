@@ -59,10 +59,10 @@ class BaseLatexSpitter:
         getattr(self, 'visitNode_'+node.tagName, self.visitNodeDefault)(node)
 
     def visitNodeDefault(self, node):
-        self.writer(getattr(self, 'start_'+node.tagName, None) or '')
+        self.writer(getattr(self, 'start_'+node.tagName, ''))
         for child in node.childNodes:
             self.visitNode(child)
-        self.writer(getattr(self, 'end_'+node.tagName, None) or '')
+        self.writer(getattr(self, 'end_'+node.tagName, ''))
 
     def visitNode_a(self, node):
         if node.hasAttribute('class'):

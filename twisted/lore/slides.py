@@ -59,7 +59,8 @@ from twisted.lore import default
 from twisted.web import domhelpers, microdom
 from twisted.python import text
 # These should be factored out
-from twisted.lore.latex import BaseLatexSpitter, processFile, getLatexText
+from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile, \
+                               getLatexText, HeadingLatexSpitter
 from twisted.lore.tree import getHeaders
 
 import os, os.path, re
@@ -180,7 +181,6 @@ class MagicpointOutput(BaseLatexSpitter):
         return 'font "%s"' % name
 
     start_h2 = "%page\n\n"
-    #end_h2 = '\n\n%font "typewriter", size 2\n\n%font "standard"\n'
     end_h2 = '\n\n\n'
 
     _start_ul = '\n'
@@ -285,9 +285,30 @@ def doFile(fn, linkrel, ext, url, templ):
     for slide, index in zip(slides, range(len(slides))):
         slide.dom.writexml(open(os.path.splitext(fn)[0]+'-'+str(index)+ext, 'wb'))
 
+# Prosper output
+
+class ProsperSlides(LatexSpitter):
+    firstSlide = 1
+    start_html = '\\documentclass[pdf]{prosper}\n'
+    start_body = '\\begin{document}\n'
+    start_div_author = '\\author{'
+    end_div_author = '}'
+    def visitNode_h2(self, node):
+        if self.firstSlide:
+            self.firstSlide = 0
+            self.end_body = '\\end{slide}\n\n' + self.end_body
+        else:
+            self.writer('\\end{slide}\n\n')
+        self.writer('\\begin{slide}{')
+        spitter = HeadingLatexSpitter(self.writer, self.currDir, self.filename)
+        spitter.visitNodeDefault(node)
+        self.writer('}')
+
 
 class SlidesProcessingFunctionFactory(default.ProcessingFunctionFactory):
     doFile = [doFile]
+    latexSpitters = default.ProcessingFunctionFactory.latexSpitters.copy()
+    latexSpitters['prosper'] = ProsperSlides
 
     def generate_mgp(self, d):
         template = d.get('template', 'template.mgp')
