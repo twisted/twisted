@@ -53,11 +53,28 @@ class ServerFactory(protocol.ServerFactory):
 # If no services remain on server, server terminates
 
 class MigrationServer(pb.Avatar):
+    __implements__ = (pb.Avatar.__implements__, jelliers.IJanitor)
+
     descriptorChannelAllocated = False
 
     def __init__(self, servers):
         self.servers = servers
         self.transition = {}
+        self.tracking = {}
+
+    # IJanitor
+    def track(self, id, cleanup, revert):
+        self.tracking.setdefault(id, []).append((cleanup, revert))
+
+    def cleanup(self, id):
+        functions = [c for (c, r) in self.tracking.pop(id)]
+        map(apply, functions)
+
+    def revert(self, id):
+        functions = [r for (c, r) in self.tracking.pop(id)]
+        map(apply, functions)
+
+    # Other stuff
 
     def cbChannelAllocate(self, result):
         self.descriptorChannelAllocated = True
@@ -80,14 +97,18 @@ class MigrationServer(pb.Avatar):
         if not self.descriptorChannelAllocated:
             raise DescriptorChannelNotAllocated()
         self.transition[name] = self.servers.pop(name)
+        self.sendingServerID = name
         return self.transition[name]
 
     def perspective_gotServer(self, name):
         server = self.transition.pop(name)
-        server.socket.close()
-        server.socket = None
+        self.cleanup(name)
         if not self.servers and not self.transition:
             self.outOfServers()
+
+    def perspective_nevermind(self, name):
+        self.revert(name)
+        self.servers[name] = self.transition.pop(name)
 
     def outOfServers(self):
         pass

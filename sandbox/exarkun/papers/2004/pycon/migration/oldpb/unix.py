@@ -17,6 +17,8 @@ class Server(unix.Server):
         """
         @param fileno: An iterable of the file descriptors to pass.
         """
+        fileno = list(fileno)
+        print 'Sending', fileno
         payload = struct.pack("%di" % len(fileno), *fileno)
         r = sendmsg(self.fileno(), data, 0, (socket.SOL_SOCKET, SCM_RIGHTS, payload))
         return r
@@ -36,32 +38,29 @@ class Client(unix.Client):
     def doRead(self):
         if not self.connected:
             return
-        try:
-            print 'Woop'
-            msg, flags, ancillary = recvmsg(self.fileno())
-        except socket.error, e:
-            print 'feh', e
-            if e[0] == errno.EAGAIN:
-                pass
-            else:
+        while True:
+            try:
+                msg, flags, ancillary = recvmsg(self.fileno())
+            except socket.error, e:
+                if e[0] == errno.EAGAIN:
+                    break
+                else:
+                    log.msg('recvmsg():')
+                    log.err()
+            except:
                 log.msg('recvmsg():')
                 log.err()
-        except:
-            log.msg('recvmsg():')
-            log.err()
-        else:
-            print repr(msg), flags, ancillary
-            if ancillary:
-                buf = ancillary[0][2]
-                fds = struct.unpack('%di' % (len(buf) / 4), buf)
-                try:
-                    print 'Wakka wakka', fds
-                    self.protocol.fileDescriptorsReceived(fds)
-                except:
-                    log.msg('protocol.fileDescriptorsReceived')
-                    log.err()
             else:
-                print 'Nothing!'
+                if ancillary:
+                    buf = ancillary[0][2]
+                    fds = struct.unpack('%di' % (len(buf) / 4), buf)
+                    try:
+                        self.protocol.fileDescriptorsReceived(fds)
+                    except:
+                        log.msg('protocol.fileDescriptorsReceived')
+                        log.err()
+                else:
+                    break
         return unix.Client.doRead(self)
 
 class Connector(unix.Connector):

@@ -9,6 +9,17 @@ from twisted.spread import jelly
 from twisted.internet import interfaces as iinternet
 from twisted.internet import defer
 
+# Support needed from TPTB
+class IJanitor(components.Interface):
+    def track(self, id, cleanup, revert):
+        pass
+
+    def cleanup(self, id):
+        pass
+
+    def revert(self, id):
+        pass
+
 #
 # Blah MetaInterface is not type
 #
@@ -96,8 +107,14 @@ class FileDescriptorJellier(components.Adapter):
         return state
 
     def jellyFor(self, jellier):
+        log.msg("Jellying %s" % (self.original,))
         self.original.stopReading()
         self.original.stopWriting()
+        a = jellier.invoker.serializingPerspective
+        j = IJanitor(a)
+        j.track(a.sendingServerID,
+                lambda: self.original.socket.close(),
+                lambda: (self.original.startReading(), self.original.startWriting()))
         sxp = jellier.prepare(self.original)
         sxp.extend([
             reflect.qual(self.original.__class__),
@@ -132,6 +149,7 @@ class FileDescriptorUnjellier:
         self.mode = mode
 
     def __call__(self, unjellier, jellyList):
+        log.msg("Unellying! %s" % (jellyList,))
         # Second half of the icky hack!
         fdproto = unjellier.invoker.fdproto
         klass = reflect.namedAny(jellyList[0])
@@ -139,7 +157,12 @@ class FileDescriptorUnjellier:
         inst.__class__ = klass
         state = unjellier.unjelly(jellyList[1])
         inst.__dict__ = state
-        handleToSocket(fdproto.fds.pop(0), klass.addressFamily, klass.socketType,
+
+        # Groan.  All transports should provide this information.
+        addressFamily = getattr(klass, 'addressFamily', socket.AF_INET)
+        socketType = getattr(klass, 'socketType', socket.SOCK_STREAM)
+
+        handleToSocket(fdproto.fds.pop(0), addressFamily, socketType,
             ).addCallback(socketInMyPocket, inst, 'socket', self.mode
             ).addErrback(log.err
             )
@@ -150,6 +173,6 @@ for mod in ('tcp',):
     jelly.setUnjellyableForClass(portBase % mod, FileDescriptorUnjellier(READ))
 del portBase, mod
 
-connBase = 'twisted.internet.%s.Connection'
+connBase = 'twisted.internet.%s.Server'
 for mod in ('tcp',):
     jelly.setUnjellyableForClass(connBase % mod, FileDescriptorUnjellier(READ | WRITE))
