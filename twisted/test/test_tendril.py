@@ -23,6 +23,10 @@ import StringIO
 
 tendril._LOGALL = 1
 
+# Needs more tests!
+#  irc join/part/quit
+#  irc reconnection
+
 class MessageCatcher:
     def receiveDirectMessage(self, sender, message):
         self.dmessages.append((sender.name, message))
