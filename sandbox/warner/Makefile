@@ -7,7 +7,7 @@ banana.html: banana.xhtml
 		--config ext=.html $<
 
 test:
-	../../bin/trial -v test_banana test_schema
+	../../bin/trial -v test_banana test_schema test_pb
 
 clean:
 	rm -f *~ *.pyc *.xhtml

@@ -41,6 +41,8 @@ modifiers:
 """
 
 import types
+from twisted.python import failure
+
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
      LONGINT, LONGNEG, VOCAB, FLOAT, OPEN
 
@@ -538,10 +540,10 @@ class Optional(Constraint):
         seen.append(self)
         return self.constraint.maxDepth(seen)
 
-class FailureConstraint(ClassConstraint):
-    def __init__(self):
-        ClassConstraint.__init__(self, Failure)
-
+#class FailureConstraint(ClassConstraint):
+#    def __init__(self):
+#        ClassConstraint.__init__(self, failure.Failure)
+FailureConstraint = StringConstraint
 
 def makeConstraint(t):
     if isinstance(t, Constraint):

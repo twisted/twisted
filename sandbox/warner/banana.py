@@ -167,9 +167,9 @@ class Banana(protocol.Protocol):
     # input side
 
     def initReceive(self):
-        root = self.unslicerClass()
-        root.protocol = self
-        self.receiveStack = [root]
+        self.rootUnslicer = self.unslicerClass()
+        self.rootUnslicer.protocol = self
+        self.receiveStack = [self.rootUnslicer]
         self.objectCounter = 0
         self.objects = {}
         self.inOpen = 0

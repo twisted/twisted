@@ -544,6 +544,29 @@ object to a python function.
 
 </p>
 
+<h3>Streaming Methods</h3>
+
+<p>It would be neat if a method could indicate that it would like to receive
+its arguments in a streaming fashion. This would involve calling the method
+early (as soon as the objectID and method name were known), then somehow
+feeding objects to it as they arrive. The object could return a handler or
+consumer sub-object which would be fed as tokens arrive over the wire. This
+consumer should have a way to enforce a constraint on its input.</p>
+
+<p>This consumer object sounds a lot like an Unslicer, so maybe the method
+schema should indicate that the method will would like to be called right
+away so it can return an Unslicer to be pushed on the stack. That Unslicer
+could do whatever it wanted with the incoming tokens, and could enforce
+constraints with the usual checkToken/doOpen/receiveChild/receiveClose
+methods.</p>
+
+<p>On the sending side, it would be neat to let a callRemote() invocation
+provide a Producer or a generator that will supply data as the network
+buffer becomes available. This could involve pushing a Slicer. Maybe Slicers
+should be generators. </p>
+
+
+
 <h2>Common token sequences</h2>
 
 <h3>Base Python Types</h3>
