@@ -138,10 +138,15 @@ class LatexSpitter(BaseLatexSpitter):
         lines = lines[int(node.getAttribute('skipLines', 0)):]
         self.writer(text.removeLeadingTrailingBlanks('\n'.join(lines)))
         self.writer('\\end{verbatim}')
+
         # Write a caption for this source listing
-        self.writer('\\begin{center}\\raisebox{1ex}[1ex]{Source listing for '
+        fileName = os.path.basename(fileName)
+        caption = domhelpers.getNodeText(node)
+        if caption == fileName:
+            caption = 'Source listing'
+        self.writer('\\begin{center}\\raisebox{1ex}[1ex]{%s --- '
                     '\\begin{em}%s\\end{em}}\\end{center}' 
-                    % latexEscape(os.path.basename(fileName)))
+                    % (latexEscape(caption), latexEscape(fileName)))
 
     def visitNode_a_href(self, node):
         supported_schemes=['http', 'https', 'ftp', 'mailto']

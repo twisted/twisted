@@ -93,9 +93,12 @@ def addPyListings(document, d):
 
 
 def _replaceWithListing(node, val, fn):
+    caption = domhelpers.getNodeText(node)
+    if caption == os.path.basename(fn):
+        caption = 'Source listing'
     text = ('<div class="py-listing">%s<div class="py-caption">%s - '
             '<span class="py-filename">%s</span></div></div>' %
-            (val, domhelpers.getNodeText(node), fn))
+            (val, caption, fn))
     newnode = microdom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
 
