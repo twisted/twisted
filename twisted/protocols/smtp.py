@@ -169,27 +169,6 @@ def quoteaddr(addr):
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
-class NDeferred:
-
-    def __init__(self, n, deferred):
-        self.n = n
-        self.deferred = deferred
-        self.done = 0
-
-    def callback(self, arg):
-        if self.done:
-            return
-        self.n = self.n - 1
-        if self.n == 0:
-            self.deferred.callback(arg)
-            self.done = 1
-
-    def errback(self, arg):
-        if self.done:
-            return
-        self.deferred.errback(arg)
-        self.done = 1
-
 class AddressError(SMTPError):
     "Parse error in address"
 
@@ -601,14 +580,10 @@ class SMTP(basic.LineReceiver):
                 if not self.__messages:
                     self._messageHandled("thrown away")
                     return
-                deferred = defer.Deferred()
-                deferred.addCallback(self._messageHandled)
-                deferred.addErrback(self._messageNotHandled)
-                ndeferred = NDeferred(len(self.__messages), deferred)
-                for message in self.__messages:
-                    deferred = message.eomReceived()
-                    deferred.addCallback(ndeferred.callback)
-                    deferred.addErrback(ndeferred.errback)
+                defer.DeferredList([
+                    m.eomReceived() for m in self.__messages
+                ]).addCallback(self._messageHandled
+                ).addErrback(self._messageNotHandled)
                 del self.__messages
                 return
             line = line[1:]
@@ -641,12 +616,19 @@ class SMTP(basic.LineReceiver):
 
     def _messageHandled(self, _):
         self.sendCode(250, 'Delivery in progress')
+        fmt = 'Accepted message for delivery: from=%s to=%s'
+        log.msg(fmt % (self.__from, self.__to))
 
     def _messageNotHandled(self, failure):
         if failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
+            fmt = 'Message not handled: (%d) %s'
+            log.msg(fmt % (failure.value.code, failure.value.resp))
         else:
             self.sendCode(550, 'Could not send e-mail')
+            log.msg('Message not handled: (550) Could not send e-mail')
+        log.err(failure)
+
 
     # overridable methods:
     def receivedHeader(self, helo, origin, recipents):
