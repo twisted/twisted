@@ -167,7 +167,6 @@ class TestSuite(Timed):
         packageDir = os.path.dirname(package.__file__)
         os.path.walk(packageDir, self._packageRecurse, None)
 
-
     def _getBenchmarkStats(self):
         stat = {}
         for r in self.children:

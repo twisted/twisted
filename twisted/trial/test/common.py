@@ -91,17 +91,25 @@ class BogusReporter(reporter.TreeReporter):
     def cleanupErrors(self, errs):
         self.cleanerrs = errs
 
-    def verify(self):
+    def verify(self, failIfImportErrors=True):
         for v in self.setUpReporterCalled, self.tearDownReporterCalled:
             assert_(v)
         for n in self.names:
             assertEqual(self.startCtr[n], self.endCtr[n])
-        assert_(not self.importError)
+        if failIfImportErrors:
+            assert_(not self.importError)
 
 
 class RegistryBaseMixin(object):
     trialGlobalNames = ('_trialRegistry', '_setUpAdapters', 'registerAdapter', 'adaptWithDefault')
     _suite = None
+
+    # the following is a flag to the reporter.verify() method that gets reset to 
+    # True after each testMethod. Most testMethods should not raise importErrors,
+    # however, if a test needs to, and it is not an erroneous condition, the testMethod
+    # should set this to False before the method returns
+    failIfImportErrors = True
+
     def setUpClass(self):
         # here we replace the trial.__init__ adapter registry 
         # with our own to make sure tests don't alter global state
@@ -132,7 +140,8 @@ class RegistryBaseMixin(object):
 
     def tearDown(self):
         self.registry._clearAdapterRegistry()
-        self.reporter.verify()
+        self.reporter.verify(self.failIfImportErrors)
+        self.failIfImportErrors = True
         self._suite = None
 
     def tearDownClass(self):

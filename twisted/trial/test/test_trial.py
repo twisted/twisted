@@ -221,5 +221,12 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assertSubstring(trialtest3.CLASS_WARNING_MSG, self.stdio)
         assertSubstring(trialtest3.MODULE_WARNING_MSG, self.stdio)
         assertSubstring(trialtest3.METHOD_WARNING_MSG, self.stdio)
+
+    def testImportErrorsFailRun(self):
+        self.suite.addModule('twisted.trial.test.importErrors')
+        self.suite.run()
+        assertEqual(itrial.ITestStats(self.suite).allPassed, False)
+        self.failIfImportErrors = False
+
         
 FunctionalTest.timeout = 30.0

@@ -137,6 +137,8 @@ class TestStats(TestStatsBase):
         for r in self.original.children:
             if not itrial.ITestStats(r).allPassed:
                 return False
+        if self.original.couldNotImport:
+            return False
         return True
     allPassed = property(allPassed)
        
