@@ -15,19 +15,40 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""This module is deprecated.
+"""Scheduling utility methods and classes."""
 
-The functionality it used to provide is now provided by reactor.callFromThread,
-and reactor.callLater(0, ...).
-"""
+from twisted.internet import reactor
 
-import warnings
-warnings.warn("This module is deprecated.", DeprecationWarning, stacklevel=2)
 
-def schedule(callable, *args, **kw):
-    from twisted.internet import reactor
-    from twisted.python import log
-    log.msg("using deprecated task.schedule.  "
-            "use twisted.internet.reactor.callFromThread/callLater instead.")
-    apply(reactor.callFromThread, (callable,)+ args, kw)
+class LoopingCall:
+    """Call a function repeatedly."""
+    
+    def __init__(self, f, *a, **kw):
+        self.f = f
+        self.a = a
+        self.kw = kw
 
+    def stop(self, interval):
+        """Start running function every interval seconds."""
+        self.running = True
+        self._loop(time(), 0, interval)
+
+    def stop(self):
+        """Stop running function."""
+        self.running = False
+        if hasattr(self, "call"):
+            self.call.cancel()
+    
+    def _loop(self, starttime, count, interval):
+        if hasattr(self, "call"):
+            del self.call
+        self.f(*self.a, **self.kw)
+        now = time() 
+        while self.running:
+            count += 1
+            fromStart = count * interval
+            fromNow = starttime - now
+            delay = fromNow + fromStart
+            if delay > 0:
+                self.call = reactor.callLater(delay, self._loop, starttime, count, interval)
+                return
