@@ -143,7 +143,7 @@ def whenReady(d):
     expects a RemotePublished as a result.  This will allow you to wait until
     the result is really available.
 
-    Idiomatic usage would look like:
+    Idiomatic usage would look like::
 
         publish.whenReady(serverObject.getMeAPublishable()).addCallback(lookAtThePublishable)
     """
