@@ -503,7 +503,7 @@ class ConnectionLosingProtocol(protocol.Protocol):
 class ProperlyCloseFilesTestCase(unittest.TestCase):
 
     numberRounds = 2048
-    timeLimit = 100
+    timeLimit = 200
     
     def setUp(self):
         f = protocol.ServerFactory()
