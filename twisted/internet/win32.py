@@ -29,12 +29,6 @@
 
 """A win32event based implementation of the twisted main loop.
 
-To install the event loop (and you should do this before any connections,
-listeners or connectors are added):
-
-    from twisted.internet import win32
-    win32.install()
-
 This requires win32all to be installed.
 
 TODO:
@@ -62,7 +56,7 @@ import pywintypes
 import msvcrt
 
 # Twisted imports
-from twisted.internet import abstract, main, task
+from twisted.internet import abstract, main, task, default
 from twisted.python import log, threadable
 
 # System imports
@@ -79,119 +73,132 @@ writes = {}
 events = {}
 
 
-def _makeSocketEvent(fd, action, why, events=events):
-    """Make a win32 event object for a socket."""
-    event = CreateEvent(None, 0, 0, None)
-    WSAEventSelect(fd, event, why)
-    events[event] = (fd, action)
-    return event
-
-def addEvent(event, fd, action, events=events):
-    """Add a new win32 event to the event loop."""
-    events[event] = (fd, action)
-
-def removeEvent(event):
-    """Remove an event."""
-    del events[event]
-
-def addReader(reader, reads=reads):
-    """Add a socket FileDescriptor for notification of data available to read.
-    """
-    if not reads.has_key(reader):
-        reads[reader] = _makeSocketEvent(reader, reader.doRead, FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
-        
-def addWriter(writer, writes=writes):
-    """Add a socket FileDescriptor for notification of data available to write.
-    """
-    if not writes.has_key(writer):
-        writes[writer] = 1
-
-def removeReader(reader):
-    """Remove a Selectable for notification of data available to read.
-    """
-    if reads.has_key(reader):
-        del events[reads[reader]]
-        del reads[reader]
-
-def removeWriter(writer, writes=writes):
-    """Remove a Selectable for notification of data available to write.
-    """
-    if writes.has_key(writer):
-        del writes[writer]
-
-def removeAll():
-    """Remove all selectables, and return a list of them."""
-    result = reads.keys() + writes.keys()
-    reads.clear()
-    writes.clear()
-    events.clear()
-    return result
-
-def doWaitForMultipleEvents(timeout,
-                            reads=reads,
-                            writes=writes):
-    if timeout is None:
-        #timeout = INFINITE
-        timeout = 5000
-    else:
-        timeout = int(timeout * 1000)
+class Win32Reactor(default.DefaultSelectReactor):
+    """Reactor that uses Win32 event APIs."""
     
-    if not (events or writes):
-        # sleep so we don't suck up CPU time
-        time.sleep(timeout / 1000.0)
-        return
-    
-    canDoMoreWrites = 0
-    for fd in writes.keys():
-        log.logOwner.own(fd)
-        closed = 0
-        try:
-            closed = fd.doWrite()
-        except:
-            log.deferr()
-            closed = 1
+    def _makeSocketEvent(self, fd, action, why, events=events):
+        """Make a win32 event object for a socket."""
+        event = CreateEvent(None, 0, 0, None)
+        WSAEventSelect(fd, event, why)
+        events[event] = (fd, action)
+        return event
 
-        if closed:
-            removeReader(fd)
-            removeWriter(fd)
+    def addEvent(self, event, fd, action, events=events):
+        """Add a new win32 event to the event loop."""
+        events[event] = (fd, action)
+
+    def removeEvent(self, event):
+        """Remove an event."""
+        del events[event]
+
+    def addReader(self, reader, reads=reads):
+        """Add a socket FileDescriptor for notification of data available to read.
+        """
+        if not reads.has_key(reader):
+            reads[reader] = self._makeSocketEvent(reader, reader.doRead, FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
+
+    def addWriter(self, writer, writes=writes):
+        """Add a socket FileDescriptor for notification of data available to write.
+        """
+        if not writes.has_key(writer):
+            writes[writer] = 1
+
+    def removeReader(self, reader):
+        """Remove a Selectable for notification of data available to read.
+        """
+        if reads.has_key(reader):
+            del events[reads[reader]]
+            del reads[reader]
+
+    def removeWriter(self, writer, writes=writes):
+        """Remove a Selectable for notification of data available to write.
+        """
+        if writes.has_key(writer):
+            del writes[writer]
+
+    def removeAll(self):
+        """Remove all selectables, and return a list of them."""
+        result = reads.keys() + writes.keys()
+        reads.clear()
+        writes.clear()
+        events.clear()
+        return result
+
+    def doWaitForMultipleEvents(self, timeout,
+                                reads=reads,
+                                writes=writes):
+        if timeout is None:
+            #timeout = INFINITE
+            timeout = 5000
+        else:
+            timeout = int(timeout * 1000)
+
+        if not (events or writes):
+            # sleep so we don't suck up CPU time
+            time.sleep(timeout / 1000.0)
+            return
+
+        canDoMoreWrites = 0
+        for fd in writes.keys():
+            log.logOwner.own(fd)
+            closed = 0
             try:
-                fd.connectionLost()
+                closed = fd.doWrite()
             except:
                 log.deferr()
-        elif closed is None:
-            canDoMoreWrites = 1
-        log.logOwner.disown(fd)
-    
-    if canDoMoreWrites:
-        timeout = 0
-    
-    if not events:
-        time.sleep(timeout / 1000.0)
-        return
-    
-    handles = events.keys()
-    val = WaitForMultipleObjects(handles, 0, timeout)
-    if val == WAIT_TIMEOUT:
-        return
-    elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
-        fd, action = events[handles[val - WAIT_OBJECT_0]]
-        closed = 0
-        log.logOwner.own(fd)
-        try:
-            closed = action()
-        except:
-            log.deferr()
-            closed = 1
+                closed = 1
 
-        if closed:
-            removeReader(fd)
-            removeWriter(fd)
+            if closed:
+                self.removeReader(fd)
+                self.removeWriter(fd)
+                try:
+                    fd.connectionLost()
+                except:
+                    log.deferr()
+            elif closed is None:
+                canDoMoreWrites = 1
+            log.logOwner.disown(fd)
+
+        if canDoMoreWrites:
+            timeout = 0
+
+        if not events:
+            time.sleep(timeout / 1000.0)
+            return
+
+        handles = events.keys()
+        val = WaitForMultipleObjects(handles, 0, timeout)
+        if val == WAIT_TIMEOUT:
+            return
+        elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
+            fd, action = events[handles[val - WAIT_OBJECT_0]]
+            closed = 0
+            log.logOwner.own(fd)
             try:
-                fd.connectionLost()
+                closed = action()
             except:
                 log.deferr()
+                closed = 1
 
-        log.logOwner.disown(fd)
+            if closed:
+                self.removeReader(fd)
+                self.removeWriter(fd)
+                try:
+                    fd.connectionLost()
+                except:
+                    log.deferr()
+
+            log.logOwner.disown(fd)
+
+    doSelect = doWaitForMultipleEvents
+
+    
+    def install(self):
+        default.DefaultSelectReactor.install(self)
+        threadable.init(1)
+        # change when we redo process stuff - process is probably
+        # borked anyway.
+        process.Process = Process
 
 
 class Process(abstract.FileDescriptor):
@@ -328,29 +335,5 @@ class Process(abstract.FileDescriptor):
             task.schedule(self.handleError, data)
 
 
-def install():
-    """Install the win32 event loop."""
-    import main, process
-    threadable.init(1)
-    main.addReader = addReader
-    main.addWriter = addWriter
-    main.removeReader = removeReader
-    main.removeWriter = removeWriter
-    main.doSelect = doWaitForMultipleEvents
-    main.removeAll = removeAll
-    process.Process = Process
-
-
-def initThreads():
-    """Do initialization for threads."""
-    import main
-    if main.wakerInstalled:
-        # make sure waker is registered with us
-        removeReader(main.waker)
-        addReader(main.waker)
-
-threadable.whenThreaded(initThreads)
-
-
-__all__ = ["install"]
+__all__ = ["Win32Reactor"]
 
