@@ -393,7 +393,7 @@ class DOMTemplate(Resource, View):
             if successes:
                 process = self.handleSuccesses(request, successes)
                 if self.controller:
-                    self.controller.process(self, process)
+                    self.controller.process(request, **process)
                 else:
                     self.process(request, **process)
 
