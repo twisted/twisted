@@ -16,7 +16,7 @@ Simple usage:
         def testAdd(self):  ## test method names begin 'test*'
             self.assertEquals((1 + 2), 3)
             self.assertEquals(0 + 1, 1)
-        def testMultiply(self);
+        def testMultiply(self):
             self.assertEquals((0 * 10), 0)
             self.assertEquals((5 * 8), 40)
 
@@ -149,9 +149,7 @@ class TestCase:
            not have a method with the specified name.
         """
         try:
-            self.__testMethodName = methodName
-            testMethod = getattr(self, methodName)
-            self.__testMethodDoc = testMethod.__doc__
+            self.testMethod = getattr(self, methodName)
         except AttributeError:
             raise ValueError, "no such test method in %s: %s" % \
                   (self.__class__, methodName)
@@ -177,18 +175,18 @@ class TestCase:
         The default implementation of this method returns the first line of
         the specified test method's docstring.
         """
-        doc = self.__testMethodDoc
+        doc = self.testMethod.__doc__
         return doc and string.strip(string.split(doc, "\n")[0]) or None
 
     def id(self):
-        return "%s.%s" % (self.__class__, self.__testMethodName)
+        return "%s.%s" % (self.__class__, self.testMethod.__name__)
 
     def __str__(self):
-        return "%s (%s)" % (self.__testMethodName, self.__class__)
+        return "%s (%s)" % (self.testMethod.__name__, self.__class__)
 
     def __repr__(self):
         return "<%s testMethod=%s>" % \
-               (self.__class__, self.__testMethodName)
+               (self.__class__, self.testMethod.__name__)
 
     def run(self, result=None):
         return self(result)
@@ -196,28 +194,27 @@ class TestCase:
     def __call__(self, result=None):
         if result is None: result = self.defaultTestResult()
         result.startTest(self)
-        testMethod = getattr(self, self.__testMethodName)
         try:
             try:
                 self.setUp()
             except:
-                result.addError(self,self.__exc_info())
+                result.addError(self, self._exc_info())
                 return
 
             ok = 0
-            twisted.python.log.msg("---- Running Test: %s.%s ----- " % (self.__class__, self.__testMethodName))
+            twisted.python.log.msg("---- Running Test: %s.%s ----- " % (self.__class__, self.testMethod.__name__))
             try:
-                testMethod()
+                self.testMethod()
                 ok = 1
             except self.failureException, e:
-                result.addFailure(self,self.__exc_info())
+                result.addFailure(self, self._exc_info())
             except:
-                result.addError(self,self.__exc_info())
+                result.addError(self, self._exc_info())
 
             try:
                 self.tearDown()
             except:
-                result.addError(self,self.__exc_info())
+                result.addError(self, self._exc_info())
                 ok = 0
             for e in twisted.python.log.flushErrors():
                 result.addError(self, e)
@@ -232,7 +229,7 @@ class TestCase:
         getattr(self, self.__testMethodName)()
         self.tearDown()
 
-    def __exc_info(self):
+    def _exc_info(self):
         """Return a version of sys.exc_info() with the traceback frame
            minimised; usually the top level of the traceback frame is not
            needed.
@@ -296,6 +293,114 @@ class TestCase:
 
     assert_ = failUnless
 
+
+class DeferredTestCase(TestCase):
+    """
+    I provide a convenient framework for testing things that involve
+    Deferreds.
+
+    Use me like you would use unittest.TestCase, but when you have a test
+    that uses a deferred operation, just set up some callbacks and return
+    the Deferred object.
+    """
+    from twisted.internet import defer
+    
+    def deferredFail(self, failure):
+        failure.trap(self.failureException)
+        self.testResult.addFailure(self, failure)
+        
+    def deferredError(self, failure):
+        self.testResult.addError(self, failure)
+
+    def _deferredFURaisesErrback(self, failure, *args):
+        expected = args[0]
+        failure.trap(expected)
+    def _deferredFURaisesCallback(self, success, *args):
+        expected = args[0]
+        if hasattr(expected, '__name__'):
+            excName = expected.__name__
+        else: excName = str(expected)
+        raise self.failureException, expected 
+
+    def deferredFailUnlessRaises(self, deferred, expected):
+        """
+        I fail unless the Deferred fails with the given exception. 
+        """
+        deferred.addCallbacks(callback=self._deferredFURaisesCallback,
+                              errback=self._deferredFURaisesErrback,
+                              callbackArgs=[expected],
+                              errbackArgs=[expected])
+
+
+    def _deferredFUEqualCallback(self, success, expected):
+        self.failUnlessEqual(expected, success)
+        
+    def deferredFailUnlessEqual(self, deferred, expected):
+        """
+        I fail unless the Deferred return value is equal to expected.
+        """
+        deferred.addCallback(self._deferredFUEqualCallback, expected)
+
+    def _runSetUp(self):
+        testDeferred = 0
+        self.testResult.startTest(self)
+        try:
+            d = self.setUp()
+            if d is not None and isinstance(d, defer.Deferred):
+                d.addCallbacks(callback=self._runTest, errback=self.deferredError)
+                d.addBoth(self.cleanup)
+                testDeferred = 1
+        except:
+            self.testResult.addError(self, self._exc_info())
+            self.cleanup()
+            return
+        if not testDeferred:
+            self._runTest()
+
+    def _runTest(self, ignored=None):
+        tearDownDeferred = 0
+        try:
+            d = self.testMethod()
+            if d is not None and isinstance(d, defer.Deferred):
+                d.addErrback(self.deferredFail)
+                d.addErrback(self.deferredError)
+                d.addBoth(self._runTearDown)
+                tearDownDeferred = 1
+        except self.failureException, e:
+            self.testResult.addFailure(self, self._exc_info())
+        except:
+            self.testResult.addError(self, self._exc_info())
+        if not tearDownDeferred:
+            self._runTearDown()
+
+    def _runTearDown(self, ignored=None):
+        cleanupDeferred = 0
+        try:
+            d = self.tearDown()
+            if d is not None and isinstance(d, defer.Deferred):
+                d.addErrback(self.deferredError)
+                d.addBoth(self.cleanup)
+                cleanupDeferred = 1
+        except:
+            testResult.addError(self, self._exc_info())
+        for e in log.flushErrors():
+            self.testResult.addError(self, e)
+        if not cleanupDeferred:
+            self.cleanup()
+
+    def cleanup(self, ignored=None):
+        from twisted.internet import reactor
+        self.testResult.stopTest(self)
+        reactor.stop()
+        if self.testResult.wasSuccessful():
+            self.testResult.addSuccess(self)
+
+    def __call__(self, testResult=None):
+        from twisted.internet import reactor
+        if testResult is None: testResult = self.defaultTestResult()
+        self.testResult = testResult
+        self._runSetUp()
+        reactor.run()
 
 
 class TestSuite:
