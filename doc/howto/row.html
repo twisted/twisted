@@ -10,13 +10,14 @@
   <body>
     <h1>Twisted Enterprise Row Objects</h1>
 
-    <p>The Twisted Enterprise "row" module is a method of
-    interfacing simple python objects with rows in relational
-    database tables. It has two components: the Row class which
+    <p>The <code class="API">twisted.enterprise.row</code> module is
+    a method of interfacing simple python objects with rows in
+    relational database tables. It has two components: the <code
+    class="API" base="twisted.enterprise.row">RowObject</code> class which
     developers sub-class for each relational table that their code
-    interacts with, and the DbReflector which generates and
-    contains the SQL to perform updates, inserts, queries and
-    deletes against the database.</p>
+    interacts with, and the <code class="API" base="twisted.enterprise.row"
+    >DBReflector</code> which generates and contains the SQL to perform
+    updates, inserts, queries and deletes against the database.</p>
 
     <p>The row module is intended for applications such as on-line
     games, and web-site that require a back-end database interface.
@@ -27,11 +28,13 @@
     database, and slightly less suited to added database
     persistance to an existing python application.</p>
 
+    <p>Currently, the row module requires the use of PostgreSQL.</p>
+
     <h2>Class Definitions</h2>
 
     <p>To interface to relational database tables, the developer
-    must create a class derived from the
-    twisted.enterprise.row.RowObject class for each table. These
+    must create a class derived from the <code class="API"
+    >twisted.enterprise.row.RowObject</code> class for each table. These
     derived classes must define a class attribute "rowColumns"
     which contains a list of the columns in the database table that
     class corresponds to. The class should also define a class
@@ -46,7 +49,7 @@ class RoomRow(row.RowObject):
 
     <p>The items in the rowColumns list will become data members of
     classes of this type when they are created by the
-    DbReflector.</p>
+    DBReflector.</p>
 
     <h2>Initialization</h2>
 
@@ -92,7 +95,7 @@ reflector = row.DBReflector(dbpool, stubs, runTests)
 
     <p>To load a set of rows from the database and create RowObject
     instances for each of the rows, use the loadObjectsFrom method
-    of the DbReflector. This takes a tableName, primary key
+    of the DBReflector. This takes a tableName, primary key
     columns, a "user data" parameter, an SQL "where clause". The
     where clause may be omitted which will retrieve all the rows
     from the table. For example:</p>
