@@ -1,0 +1,14 @@
+rebuild.ImmutableObjectAdapter,types.IntType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.LongType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.FloatType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.StringType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.BufferType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.UnicodeType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.BooleanType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.BuiltinFunctionType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.BuildinMethodType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.CodeType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.NoneType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.SliceType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.FileType,rebuild.IRebuildable
+rebuild.ClassicClassAdapter,types.InstanceType,rebuild.IRebuildable
