@@ -208,23 +208,27 @@ class DNS(protocol.Protocol):
         message = Message()
         message.fromStr(data)
         if message.answer == 0:
-            message.answer = 1
-            message.rCode = ENOTIMP
-            self.writeMessage(message)
-            self.transport.loseConnection()
+            self.processQuery(message)
         else:
             self.factory.boss.accomplish(message.id, message)
             self.transport.loseConnection()
+
+    def processQuery(self, message):
+        print message.__dict__
+        message.answer = 1
+        message.rCode = ENOTIMP
+        self.writeMessage(message)
+        self.transport.loseConnection()
 
     def writeMessage(self, message):
         if not self.connected:
             raise "Not connected"
         self.transport.write(message.toStr())
 
-    def query(self, name, callback):
+    def query(self, name, callback, type=1, cls=1, recursive=1):
         id = self.factory.boss.addPending(callback)
-        message = Message(id)
-        message.addQuery(name)
+        message = Message(id, recDes=recursive)
+        message.addQuery(name, type, cls)
         self.writeMessage(message)
 
 
@@ -249,8 +253,8 @@ class DNSOnTCP(DNS):
                 DNS.dataReceived(self, self.buffer[2:size+2])
                 self.buffer = self.buffer[size+2:]
 
-    def setQuery(self, name, callback):
-        self._query = name, callback
+    def setQuery(self, name, callback, type, cls):
+        self._query = name, callback, type, cls
 
     def writeMessage(self, message):
         if not self.connected:

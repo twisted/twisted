@@ -63,16 +63,16 @@ class DNSBoss:
         self.startListening(0, portNum)
         self.startListening( 1, portNum)
 
-    def queryUDP(self, addr, name, callback):
+    def queryUDP(self, addr, name, callback, type=1, cls=1, recursive=1):
         self.startListeningUDP()
         transport = self.ports[0].createConnection(addr)
-        transport.protocol.query(name, callback)
+        transport.protocol.query(name, callback, type, cls, recursive)
 
-    def queryTCP(self, addr, name, callback):
+    def queryTCP(self, addr, name, callback, type=1, cls=1, recursive=1):
         self.createTCPFactory()
         protocol = self.factories[1].buildProtocol(addr)
-        protocol.setQuery(name, callback)
-        transport = tcp.Client(addr[0], addr[1], protocol)
+        protocol.setQuery(name, callback, type, cls)
+        transport = tcp.Client(addr[0], addr[1], protocol, recursive)
 
     def stopReading(self, i):
         if self.ports[i] is not None:
