@@ -1,4 +1,3 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -184,7 +183,7 @@ class FakeSMTPServer(protocols.basic.LineReceiver):
         self.clientData = self.clientData[:]
         self.clientData.reverse()
         self.sendLine(self.clientData.pop())
-    
+
     def lineReceived(self, line):
         self.buffer.append(line)
         if line == "QUIT":
@@ -198,7 +197,7 @@ class FakeSMTPServer(protocols.basic.LineReceiver):
         if self.clientData:
             self.sendLine(self.clientData.pop())
 
-        
+
 class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
 
     expected_output = [
@@ -245,11 +244,11 @@ class DummyProto:
 
     def receivedHeader(*spam):
         return None
-    
+
     def validateTo(self, user):
         self.delivery = DummyDelivery()
         return lambda: self.startMessage([user])
-    
+
     def validateFrom(self, helo, origin):
         return origin
 
@@ -356,13 +355,13 @@ class AnotherSMTPTestCase(AnotherTestCase, unittest.TestCase):
 
 class DummyChecker:
     implements(cred.checkers.ICredentialsChecker)
-    
+
     users = {
         'testuser': 'testpassword'
     }
-    
+
     credentialInterfaces = (cred.credentials.IUsernameHashedPassword,)
-    
+
     def requestAvatarId(self, credentials):
         return defer.maybeDeferred(
             credentials.checkPassword, self.users[credentials.username]
@@ -375,15 +374,15 @@ class DummyChecker:
 
 class DummyDelivery:
     implements(smtp.IMessageDelivery)
-    
+
     def validateTo(self, user):
         return user
-    
+
     def validateFrom(self, helo, origin):
         return origin
-    
+
     def receivedHeader(*args):
-        return None 
+        return None
 
 class DummyRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
@@ -401,7 +400,7 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
 
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         client.registerAuthenticator(cAuth)
-        
+
         self.loopback(server, client)
 
         self.assertEquals(server.authenticated, 1)
@@ -413,14 +412,14 @@ class SMTPHelperTestCase(unittest.TestCase):
             m = smtp.messageid('testcase')
             self.failIf(m in d)
             d[m] = None
-    
+
     def testQuoteAddr(self):
         cases = [
             ['user@host.name', '<user@host.name>'],
             ['"User Name" <user@host.name>', '<user@host.name>'],
             [smtp.Address('someguy@someplace'), '<someguy@someplace>'],
         ]
-        
+
         for (c, e) in cases:
             self.assertEquals(smtp.quoteaddr(c), e)
 
@@ -435,7 +434,7 @@ class SMTPHelperTestCase(unittest.TestCase):
             ('\0\1\2\3\4\5', '+00+01+02+03+04+05'),
             ('e=mc2@example.com', 'e+3Dmc2@example.com')
         ]
-        
+
         for (case, expected) in cases:
             self.assertEquals(case.encode('xtext'), expected)
             self.assertEquals(expected.decode('xtext'), case)
@@ -443,7 +442,7 @@ class SMTPHelperTestCase(unittest.TestCase):
 
 class NoticeTLSClient(MyESMTPClient):
     tls = False
-    
+
     def esmtpState_starttls(self, code, resp):
         MyESMTPClient.esmtpState_starttls(self, code, resp)
         self.tls = True
@@ -452,12 +451,12 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
     def testTLS(self):
         clientCTX = ClientTLSContext()
         serverCTX = ServerTLSContext()
-        
+
         client = NoticeTLSClient(contextFactory=clientCTX)
         server = DummyESMTP(contextFactory=serverCTX)
-        
+
         self.loopback(server, client)
-        
+
         self.assertEquals(client.tls, True)
         self.assertEquals(server.startedTLS, True)
 

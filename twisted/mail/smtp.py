@@ -1195,7 +1195,7 @@ class ESMTPClient(SMTPClient):
                                          self.log.str()))
 
     def esmtpTLSRequired(self, code=-1, resp=None):
-        self.sendError(TLSRequiredError(502, "Server does not support secure communication via TLS / SSL", 
+        self.sendError(TLSRequiredError(502, "Server does not support secure communication via TLS / SSL",
                                         self.log.str()))
 
     def esmtpTLSFailed(self, code=-1, resp=None):
