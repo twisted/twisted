@@ -114,7 +114,7 @@ class FileAuthority(common.ResolverBase):
                     for rec in self.records.get(n.lower(), ()):
                         if rec.TYPE == dns.A:
                             additional.append(
-                                dns.RRHeader(n, dns.A, dns.IN, rec.ttl, rec, auth=True)
+                                dns.RRHeader(n, dns.A, dns.IN, rec.ttl or default_ttl, rec, auth=True)
                             )
             return defer.succeed((results, authority, additional))
         except KeyError:
