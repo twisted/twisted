@@ -105,7 +105,7 @@ class FileDescriptor(log.Logger):
         if not self.connected:
             return
         if data:
-            if not self.unsent:
+            if (not self.unsent) and (self.producer is None):
                 l = self.writeSomeData(data)
                 if l == len(data):
                     # all data was sent, our work here is done
