@@ -45,20 +45,20 @@ class Controller(resource.Resource):
     __implements__ = (interfaces.IController, resource.IResource)
     setupStacks = 1
     controllerLibraries = []
-    def __init__(self, m, inputhandlers=None):
+    def __init__(self, m, inputhandlers=None, view=None):
         #self.start = now()
         resource.Resource.__init__(self)
         self.model = m
         self.subcontrollers = []
         if self.setupStacks:
             self.setupControllerStack()
-        if self.model is not None:
+        if self.model is not None and view is None:
             viewFactory = components.getAdapterClass(self.model.__class__, interfaces.IView, None)
-        else:
-            viewFactory = None
-        if viewFactory is not None:
-            self.view = viewFactory(self.model, controller=self)
-            self.view.setController(self)
+            if viewFactory:
+                view = viewFactory(self.model, controller=self)
+        if view:
+            self.view = view
+            view.setController(self)
         if inputhandlers is None:
             self._inputhandlers = []
         else:

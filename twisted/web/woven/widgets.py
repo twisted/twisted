@@ -341,7 +341,7 @@ class Widget(view.View):
         self.become = self.errorFactory(self.model, message)
 #        self.modelChanged({'request': request})
 
-    def getPattern(self, name, default = None):
+    def getPattern(self, name, default=None, clone=1):
         """Get a named slot from the incoming template node. Returns a copy
         of the node and all its children. If there was more than one node with
         the same slot identifier, they will be returned in a round-robin fashion.
@@ -367,11 +367,13 @@ class Widget(view.View):
             self.slots[name] = slots
         slot = slots.pop(0)
         slots.append(slot)
-        parentNode = slot.parentNode
-        slot.parentNode = None
-        clone = slot.cloneNode(1)
-        slot.parentNode = parentNode
-        return clone
+        if clone:
+            parentNode = slot.parentNode
+            slot.parentNode = None
+            clone = slot.cloneNode(1)
+            slot.parentNode = parentNode
+            return clone
+        return slot
 
     def addUpdateMethod(self, updateMethod):
         """Add a method to this widget that will be called when the widget
