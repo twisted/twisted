@@ -18,7 +18,7 @@ interacts with, and the <code>Reflector</code> which is responsible
 for updates, inserts, queries and deletes against the database.</p>
 
 <p>The row module is intended for applications such as on-line
-games, and web-site that require a back-end database interface.
+games, and websites that require a back-end database interface.
 It is not a full functioned object-relational mapper for python
 - it deals best with simple data types structured in ways that
 can be easily represented in a relational database. It is well
@@ -26,6 +26,9 @@ suited to building a python interface to an existing relational
 database, and slightly less suited to added database persistance
 to an existing python application.</p>
 
+<p><em>If row does not fit your model, you will be best off using
+the <a href="enterprise.xhtml">low-level database API</a> directly, 
+or writing your own object/relational layer on top of it.</em></p>
 
 <h2>Class Definitions</h2>
 
