@@ -46,7 +46,7 @@ except ImportError:
 NOT_DONE_YET = 1
 
 # Twisted Imports
-from twisted.spread import pb, refpath
+from twisted.spread import pb
 from twisted.internet import reactor, protocol, defer
 from twisted.protocols import http
 from twisted.python import log, reflect, roots, failure, components
@@ -352,6 +352,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         Get a previously-remembered URL.
         """
         return self.appRootURL
+
 
 class _RemoteProducerWrapper:
     def __init__(self, remote):
