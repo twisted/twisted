@@ -112,6 +112,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 buffer = rest
                 num = b1282int(num)
                 gotItem(long(num))
+            elif typebyte == LONGNEG:
+                buffer = rest
+                num = b1282int(num)
+                gotItem(-long(num))
             elif typebyte == NEG:
                 buffer = rest
                 num = -b1282int(num)

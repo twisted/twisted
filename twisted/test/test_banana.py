@@ -75,7 +75,9 @@ class BananaTestCase(unittest.TestCase):
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(self.result))
 
     def testPartial(self):
-        foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10]]
+        foo = [1, 2, [3, 4], [30.5, 40.2], 5,
+               ["six", "seven", ["eight", 9]], [10],
+               1024**10l, -1024**10l]
         self.enc.sendEncoded(foo)
         for byte in self.io.getvalue():
             self.enc.dataReceived(byte)
