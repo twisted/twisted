@@ -145,28 +145,21 @@ def implements(obj, interfaceClass):
     return 0
 
 
-# map attrname, tuple-of-interfaces to list of all interfaces object implements
-_interfacesCache = {}
-
 def getInterfaces(obj, attr='__implements__'):
     """Return list of all interfaces an object implements, using a particular
-    attribute name.
+    attribute name.  For example, if you wish to discover what interfaces a
+    class implements directly, pass '__class_implements__' as the attribute
+    name.
     """
     if not hasattr(obj, attr):
         return []
 
-    tupTree = getattr(obj,attr,())
-    result = _interfacesCache.get((attr, tupTree))
-    if result:
-        return result[:]
-    
     result = []
     for i in tupleTreeToList(getattr(obj,attr,())):
         result.append(i)
         result.extend(reflect.allYourBase(i, Interface))
     result = util.uniquify(result)
     result.remove(Interface)
-    _interfacesCache[(attr, tupTree)] = result[:]
     return result
 
 def superInterfaces(interface):
@@ -178,8 +171,8 @@ def superInterfaces(interface):
     return result
 
 def classToInterfaces(k):
-    l = [k]
-    l.extend(getInterfaces(k))
+    l = getInterfaces(k)
+    l.insert(0, k)
     return l
 
 
