@@ -46,6 +46,7 @@ class LatexSpitter:
         self.writer = writer
         self.currDir = currDir
         self.filename = filename
+        self.seenAPIs = {}
 
     def visitNode(self, node):
         if not hasattr(node, 'tagName'):
@@ -73,7 +74,21 @@ class LatexSpitter:
         fout = StringIO()
         getLatexText(node, fout.write, latexEscape)
         data = fout.getvalue()
+        
+        # Automatically fully-qualify the first (and only the first) mention of
+        # APIs, i.e turn "pb.Root" into "twisted.spread.pb.Root".
+        if node.getAttribute('class') == 'API':
+            base = node.getAttribute('base', '')
+            if base:
+                base += '.'
+            fullAPI = base + data
+            if not self.seenAPIs.has_key(fullAPI):
+                self.seenAPIs[fullAPI] = 1
+                data = fullAPI
+        
+        # Insert hyphenation points at what look like reasonable spots.
         olddata = data
+        # Try inserting them between lower- and upper-case letters.
         data = lowerUpperRE.sub(r'\1\\textrm{\\-}\2', data)
         if data == olddata:
             # No hyphenation points were added, so fall back to adding
@@ -201,14 +216,16 @@ class LatexSpitter:
     mapStart_body = '\\begin{document}\n\\maketitle\n'
     mapEnd_body = '\\end{document}'
 
-    mapStart_dl = mapStart_ul = '\\begin{description}\n'
-    mapEnd_dl = mapEnd_ul = '\\end{description}\n'
+    mapStart_dl = '\\begin{description}\n'
+    mapEnd_dl = '\\end{description}\n'
+    mapStart_ul = '\\begin{itemize}\n'
+    mapEnd_ul = '\\end{itemize}\n'
 
     mapStart_ol = '\\begin{enumerate}\n'
     mapEnd_ol = '\\end{enumerate}\n'
 
-    mapStart_li = '\\item '
-    mapEnd_li = '\n'
+    mapStart_li = mapStart_ul = '\\item '
+    mapEnd_li = mapEnd_ul = '\n'
 
     mapStart_dt = '\\item['
     mapEnd_dt = ']'

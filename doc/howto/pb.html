@@ -71,7 +71,7 @@ make accessible over the network.  In order to provide you with a grounding for
 where to start, PB provides various <q>top level</q> abstractions.</p>
 
 <p>The two topmost things you need to be concerned about are your
-<code>Service</code>, and your <code>Perspective</code>.  The exact definitions
+<em>Service</em>, and your <em>Perspective</em>.  The exact definitions
 of these abstractions will vary from system to system, but in general, they
 represent the same things.</p>
 
@@ -89,14 +89,17 @@ later. </p>
 and Perspective</a>
 
 <p>For examples of these, we're returning to the TwistedQuotes project
-discussed in the <q>Writing Plugins</q>.  The PB <code>Service</code> for
+discussed in the <q>Writing Plugins</q>.  The PB <code
+class="python">Service</code> for
 TwistedQuotes is pretty small.  The only thing it needs to keep track of for
 itself is the quoter object; PB's service, that we will inherit from, already
 keeps track of perspectives.</p>
 
-<p>The perspective is a <code>QuoteReader</code>, which publishes one method.
-By subclassing <code>Perspective</code>, we are declaring that all methods with
-the <code>perspective_</code> prefix are remotely accessible.</p>
+<p>The perspective is a <code class="python">QuoteReader</code>, which
+publishes one method.
+By subclassing <code class="API" base="twisted.spread.pb">Perspective</code>,
+we are declaring that all methods with
+the <code class="python">perspective_</code> prefix are remotely accessible.</p>
 
 <p>In order to get this Service published, so that we can actually connect to
 it, we need to re-visit the TAP building plugin, so we can actually get an
@@ -106,32 +109,38 @@ port for PB is 8787.)  </p>
 <a href="listings/TwistedQuotes/quotetap2.py" class="py-listing">TAP Plugin
 with PB Quotes Service support</a>
 
-<p>In the TAP builder, we create a <code>QuoteService</code> that wraps the
-quoter.  We then create a <code>QuoteReader</code> perspective and attach it to
-the <code>QuoteService</code>, through the <code>createPerspective</code> call
-inherited from <code>pb.Service</code>. Finally, we register with the
-<code>QuoteService</code>'s authorizer.  </p>
+<p>In the TAP builder, we create a <code class="python">QuoteService</code>
+that wraps the quoter.  We then create a 
+<code class="python">QuoteReader</code> perspective and attach it to the 
+<code class="python">QuoteService</code>, through the 
+<code class="python">createPerspective</code> call inherited from 
+<code class="API" base="twisted.spread.pb">Service</code>.  Finally, we
+register with the <code class="python">QuoteService</code>'s authorizer.</p>
 
 <p>Accessing this through a client is fairly easy, as we can use the
-<code>pb.connect</code> convenience function.</p>
+<code class="API" base="twisted.spread">pb.connect</code> convenience
+function.</p>
 
 <a href="listings/TwistedQuotes/pbquoteclient.py" class="py-listing">PB Quotes
 Client Code</a>
 
-<p> <code>pb.connect</code> will handle all the details of creating a
-connection and authenticating.  It returns a <code>Deferred</code>, which will
-have its callback called when <code>pb.connect</code> connects to a
-perspective, and have its <code>errback</code> called when the
+<p><code class="API" base="twisted.spread">pb.connect</code> will handle all
+the details of creating a
+connection and authenticating.  It returns a 
+<code class="API" base="twisted.internet.defer">Deferred</code>, which will
+have its callback called when 
+<code class="API" base="twisted.spread">pb.connect</code> connects to a
+perspective, and have its <code class="python">errback</code> called when the
 object-connection fails for any reason, whether it's host lookup failure,
 connection refusal, or incorrect authentication credentials.  </p>
 
 <p>An API that uses PB-based URLs to avoid the large number of arguments being
 passed is forthcoming.</p>
 
-<p>In this example, the <code>connected</code> callback should be made when the
-script is run.  Looking at the code, it should be clear that in the event of a
-connection success, the client will print out a quote and exit.  If you start
-up a server, you can see:</p>
+<p>In this example, the <code class="python">connected</code> callback should
+be made when the script is run.  Looking at the code, it should be clear that
+in the event of a connection success, the client will print out a quote and
+exit.  If you start up a server, you can see:</p>
 
 <pre class="shell">
 % <em>mktap qotd --pb 8787</em>
@@ -142,19 +151,23 @@ Saved.
 An apple a day keeps the doctor away.
 </pre>
 
-<p>The argument to this callback, <code>perspective</code>, is a <code
-class="API">twisted.spread.pb.RemoteReference</code>.  The
-<code>perspective</code> reference represents a reference to a
-<code>QuoteReader</code> perspective object.</p>
+<p>The argument to this callback, <code class="python">perspective</code>, is a
+<code class="API" base="twisted.spread.pb">RemoteReference</code>.  The
+<code class="python">perspective</code> reference represents a reference to a
+<code class="python">QuoteReader</code> perspective object.</p>
 
-<p><code class="API">twisted.spread.pb.RemoteReference</code> objects have one
-method which is their purpose for being: <code>callRemote</code>.  This method
-allows you to call a remote method on the object being referred to by the
-Reference.  <code>RemoteReference.callRemote</code>, like
-<code>pb.connect</code>, returns a <code>Deferred</code>.  When a response to
-the method-call being sent arrives, the <code>Deferred</code>'s
-<code>callback</code> or <code>errback</code> will be made, depending on
-whether an error occurred in processing the method-call.  </p>
+<p><code class="API" base="twisted.spread.pb">RemoteReference</code> objects
+have one method which is their purpose for being: 
+<code class="python">callRemote</code>.  This method allows you to call a
+remote method on the object being referred to by the Reference.  
+<code class="API" base="twisted.spread.pb">RemoteReference.callRemote</code>,
+like <code class="API" base="twisted.spread">pb.connect</code>, returns a
+<code class="API" base="twisted.internet.defer">Deferred</code>.  When a
+response to the method-call being sent arrives, the 
+<code class="API" base="twisted.internet.defer">Deferred</code>'s
+<code class="python">callback</code> or <code class="python">errback</code>
+will be made, depending on whether an error occurred in processing the
+method-call.</p>
 
 <p>This introduction to PB does not showcase all of the features that it
 provides, but hopefully it gives you a good idea of where to get started
@@ -164,8 +177,11 @@ can use.</p>
 <h3>Things you can Call Remotely</h3>
 
 <p>At this writing, there are three <q>flavors</q> of objects that can be
-accessed remotely through <code>RemoteReference</code> objects.  Each of these
-flavors has a rule for how the <code>callRemote</code> message is transformed
+accessed remotely through 
+<code class="API" base="twisted.spread.pb">RemoteReference</code> objects.
+Each of these
+flavors has a rule for how the <code class="python">callRemote</code> message
+is transformed
 into a local method call on the server.  In order to use one of these
 <q>flavors</q>, subclass them and name your published methods with the
 appropriate prefix.
@@ -190,7 +206,7 @@ appropriate prefix.
   return a perspective directly. </p>
   
   <p>Remotely accessible methods on Perspectives are named with the
-  <code>perspective_</code> prefix. </p>
+  <code class="python">perspective_</code> prefix. </p>
   </li>
  
   <li><code class="API">twisted.spread.flavors.Referenceable</code>
@@ -203,7 +219,7 @@ appropriate prefix.
   tell who called it.</p>
   
   <p>Remotely accessible methods on Referenceables are named with the
-  <code>remote_</code> prefix.</p>
+  <code class="python">remote_</code> prefix.</p>
   
   </li>
 
@@ -215,7 +231,7 @@ appropriate prefix.
   include the Perspective representing the calling user.</p>
 
   <p>Remotely accessible methods on Viewables are named with the
-  <code>view_</code> prefix.</p>
+  <code class="python">view_</code> prefix.</p>
 
   </li>
   
@@ -231,7 +247,8 @@ can return structured copies of local objects.</p>
 <p>There are 2 basic flavors that allow for copying objects remotely.  Again,
 you can use these by subclassing them.  In order to specify what state you want
 to have copied when these are serialized, you can either use the Python default
-<code>__getstate__</code> or specialized method calls for that flavor.</p>
+<code class="python">__getstate__</code> or specialized method calls for that
+flavor.</p>
 
 <p>
 <ul>
@@ -241,16 +258,20 @@ to have copied when these are serialized, you can either use the Python default
   object is returned from a method or passed as an argument, it is serialized
   and unserialized.</p>
 
-  <p><code>Copyable</code> provides a method you can override,
+  <p><code class="API" base="twisted.spread.flavors">Copyable</code> provides a
+  method you can override,
   <code class="py-prototype">getStateToCopyFor(perspective)</code>, which
   allows you to decide what an object will look like for the user who is
-  requesting it. The <code>perspective</code> argument will be an instance of
-  the <code>Perspective</code> subclass for your service, the one which is
+  requesting it. The <code class="python">perspective</code> argument will be
+  an instance of
+  the <code class="API" base="twisted.spread.pb">Perspective</code> subclass
+  for your service, the one which is
   either pasing an argument or returning a result an instance of your Copyable
   class. </p>
   
   <p>For security reasons, in order to allow a particular Copyable class to
-  actually be copied, you must declare a <code>RemoteCopy</code> handler for
+  actually be copied, you must declare a <code class="python">RemoteCopy</code>
+  handler for
   that Copyable subclass.  The easiest way to do this is to declare both in the
   same module, like so:
 
@@ -295,29 +316,38 @@ flavors.setCopierForClass(str(Foo), RemoteFoo)
   stored and updated.
   </p>
 
-  <p>Similar to <code>getStateToCopyFor</code>,
-<code>getStateToCacheAndObserveFor</code> passes a <code>Perspective</code>
-  instance from your service.  It also passes an <code>observer</code>, which
-  is a remote reference to a <q>secret</q> fourth referenceable flavor:
-  <code>RemoteCache</code>.</p>
+  <p>Similar to 
+  <code class="python">getStateToCopyFor</code>,
+  <code class="python">getStateToCacheAndObserveFor</code> passes a
+  <code class="API" base="twisted.spread.pb">Perspective</code>
+  instance from your service.  It also passes an 
+  <code class="python">observer</code>, which is a remote reference to a
+  <q>secret</q> fourth referenceable flavor:
+  <code class="API" base="twisted.spread.pb">RemoteCache</code>.</p>
 
-  <p>A <code>RemoteCache</code> is simply the object that represents your
-  <code>Cacheable</code> on the other side of the connection.  It is registered
-  using the same method as <code>RemoteCopy</code>, above.  RemoteCache is
-  different, however, in that it will be referenced by its peer.  It acts as a
-  Referenceable, where all methods prefixed with <code>observe_</code> will be
-callable remotely.  It is recommended that your object maintain a list (note:
-library support for this is forthcoming!) of observers, and update them using
-<code>callRemote</code> when the Cacheable changes in a way that should be
-noticeable to its clients.  </p>
+  <p>A <code class="API" base="twisted.spread.pb">RemoteCache</code> is simply
+  the object that represents your
+  <code class="API" base="twisted.spread.pb">Cacheable</code> on the other side
+  of the connection.  It is registered using the same method as 
+  <code class="API" base="twisted.spread.pb">RemoteCopy</code>, above.
+  RemoteCache is different, however, in that it will be referenced by its peer.
+  It acts as a Referenceable, where all methods prefixed with 
+  <code class="python">observe_</code> will be callable remotely.  It is
+  recommended that your object maintain a list (note: library support for this
+  is forthcoming!) of observers, and update them using
+  <code class="python">callRemote</code> when the Cacheable changes in a way
+  that should be noticeable to its clients.  </p>
 
-  <p>Finally, when all references to a Cacheable from a given Perspective are
-lost, <code class="py-signature">stoppedObserving(perspective, observer)</code>
-will be called on the Cacheable, with the same perspective/observer pair that
-<code>getStateToCacheAndObserveFor</code> was originally called with.  Any
-cleanup remote calls can be made there, as well as removing the observer object
-from any lists which it was previously in.  Any further calls to this observer
-object will be invalid.</p>
+  <p>Finally, when all references to a 
+  <code class="API" base="twisted.spread.pb">Cacheable</code> from a given 
+  <code class="API" base="twisted.spread.pb">Perspective</code> are lost, 
+  <code class="py-prototype">stoppedObserving(perspective, observer)</code>
+  will be called on the 
+  <code class="API" base="twisted.spread.pb">Cacheable</code>, with the same
+  perspective/observer pair that <code>getStateToCacheAndObserveFor</code> was
+  originally called with.  Any cleanup remote calls can be made there, as well
+  as removing the observer object from any lists which it was previously in.
+  Any further calls to this observer object will be invalid.</p>
   </li>
 </ul>
 </p>
@@ -329,28 +359,38 @@ members of the Twisted development team.  It is ready to write applications
 with today.  However, as such a critical library, it is going to be enhanced
 and expanded as time goes on. </p>
 
-<p>A few of the changes have already been mentioned: URLs for pb.connect, and
-library support for monitoring Cacheable observers.  One other area we are
+<p>A few of the changes have already been mentioned: URLs for 
+<code class="API" base="twisted.spread">pb.connect</code>, and
+library support for monitoring 
+<code class="API" base="twisted.spread.pb">Cacheable</code>observers.  One
+other area we are
 going to be focusing on is optimization: while PB is already faster than most
 XMLRPC implementations, it's still pretty slow when compared to CORBA.  PB will
 support killing references.  Also, monitoring reference loss (for types other
-than Cacheable, that is).  In other words, we hope to implement a
-<code>stoppedViewing</code> (and possibly <code>stoppedReferencing</code>) in
-parallel with <code>stoppedObserving</code>.  <code>Perspective.detached</code>
-already implements this for Perspectives.
+than <code class="API" base="twisted.spread.pb">Cacheable</code>, that is).  In
+other words, we hope to implement a
+<code class="python">stoppedViewing</code> (and possibly
+<code class="python">stoppedReferencing</code>) in
+parallel with <code class="python">stoppedObserving</code>.  
+<code class="python">Perspective.detached</code> already implements this for
+<code class="API" base="twisted.spread.pb">Perspective</code>s.
 </p>
 
 <p>There are also some addenda to this document in progress, documenting
 features that already exist but are more subtle to explain:
 
 <ul>
-  <li>Pageable objects, that can be broken up into pages (chunks) so that very
-  large results don't need to be serialized and written all at once. </li>
+  <li><em>Pageable</em> objects, that can be broken up into pages (chunks) so
+  that very large results don't need to be serialized and written all at once.
+  </li>
   
-  <li>Sturdy references to objects that pb.connect can access.</li>
+  <li><code class="API" base="twisted.spread.pb">sturdy</code>, automatically
+  reconnecting references to objects that 
+  <code class="API" base="twisted.spread">pb.connect</code>can access.</li>
 
-  <li>Publishable objects: Cacheable-like objects whose observed state persists
-  across sessions.</li>
+  <li><code class="API" base="twisted.spread.pb.publish">Publishable</code>
+  objects: <code class="API" base="twisted.spread.pb">Cacheable</code>-like
+  objects whose observed state persists across sessions.</li>
 </ul>
 
 </p>
