@@ -1,0 +1,28 @@
+Before releasing, make the following tests:
+
+* build debs
+  * debuild
+* run lintian on *.changes, check you disagree with every warning/error
+  * [debuild should do that]
+* install all debs (there should be no conflicts)
+  * dpkg -i *.deb
+* deinstall all debs
+  * dpkg --remove twisted-doc python2.1-twisted python2.2-twisted python-twisted
+* install again
+  * dpkg -i *.deb
+* run python2.1 admin/runtests
+* run python2.2 admin/runtests
+* hack admin/accepttests to set bindir to /usr/bin and run 
+  python2.1 admin/accepttests
+* make sure distributed web servers are working; test on zaibach.
+  * run a --user server on port 3080 
+    ('mktap web --user -p 3080; twistd -f web.tap')
+  * create a --presonal web server from own user
+  * check it works
+  * kill --user server
+  * run tap2deb
+  * install the deb
+  * check it still works
+  * dpkg --purge it
+* repeat all last steps with python2.2: mktap->mktap2.2 etc.
+* check t-im works
