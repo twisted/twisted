@@ -134,27 +134,39 @@ class SendBanana:
             except StopIteration:
                 if self.debug: print "StopIteration"
                 self.popSlicer()
-            except Violation, v:
+            except Violation, v1:
                 # Violations that occur because of Constraints are caught
                 # before the Slicer is pushed. A Violation that is caught
                 # here was either raised inside .next() or re-raised by
                 # .childAborted(). Either case indicates that the Slicer
                 # should be abandoned.
 
-                # should we send an ABORT? Only if the OPEN has already been
-                # sent, which happens in pushSlicer. For now, assume this
-                # has happened. TODO: maybe have pushSlicer set a flag when
-                # the OPEN is sent so we can do this precisely.
-                self.sendAbort()
+                # the parent .childAborted might re-raise the Violation, so we
+                # have to loop this until someone stops complaining
+                v = v1
+                while True:
+                    # should we send an ABORT? Only if the OPEN has already
+                    # been sent, which happens in pushSlicer. For now,
+                    # assume this has happened. TODO: maybe have pushSlicer
+                    # set a flag when the OPEN is sent so we can do this
+                    # precisely.
+                    self.sendAbort()
 
-                # should we pop the Slicer? again, we assume that pushSlicer
-                # has completed.
-                self.popSlicer()
-                if not self.slicerStack:
-                    if self.debug: print "RootSlicer died!"
-                    raise BananaError("Hey! You killed the RootSlicer!")
-                topSlicer = self.slicerStack[-1][0]
-                topSlicer.childAborted(v)
+                    # should we pop the Slicer? again, we assume that
+                    # pushSlicer has completed.
+                    self.popSlicer()
+                    if not self.slicerStack:
+                        if self.debug: print "RootSlicer died!"
+                        raise BananaError("Hey! You killed the RootSlicer!")
+                    topSlicer = self.slicerStack[-1][0]
+                    try:
+                        topSlicer.childAborted(v)
+                    except Violation, v2:
+                        v = v2 # not sure this is necessary
+                        continue
+                    else:
+                        break
+
         assert self.slicerStack # should never be empty
 
     def newSlicerFor(self, obj):
@@ -268,7 +280,11 @@ class SendBanana:
         # suitable for use as an errback handler.
         print "SendBanana.sendFailed:", f
         log.err(f)
-        self.transport.loseConnection(f)
+        try:
+            self.transport.loseConnection(f)
+        except:
+            print "exception during self.transport.loseConnection"
+            log.err()
 
 
 class ReceiveBanana:

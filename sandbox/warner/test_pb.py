@@ -6,6 +6,8 @@ from zope.interface import implements, implementsOnly
 from twisted.python import components
 from twisted.trial import unittest
 
+dr = unittest.deferredResult
+
 import schema, pb, flavors
 from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import UnbananaFailure
@@ -89,8 +91,8 @@ class TestAnswer(unittest.TestCase):
         req = pb.PendingRequest(defer.Deferred())
 
     def testAccept1(self):
-        req = pb.PendingRequest()
-        self.broker.waitingForAnswers[12] = req
+        req = pb.PendingRequest(12)
+        self.broker.addRequest(req)
         u = self.newUnslicer()
         u.checkToken(INT, 0)
         u.receiveChild(12) # causes broker.getRequest
@@ -101,9 +103,9 @@ class TestAnswer(unittest.TestCase):
         self.failUnlessEqual(self.broker.answers, [(True, req, "results")])
 
     def testAccept2(self):
-        req = pb.PendingRequest()
+        req = pb.PendingRequest(12)
         req.setConstraint(schema.makeConstraint(str))
-        self.broker.waitingForAnswers[12] = req
+        self.broker.addRequest(req)
         u = self.newUnslicer()
         u.checkToken(INT, 0)
         u.receiveChild(12) # causes broker.getRequest
@@ -116,17 +118,17 @@ class TestAnswer(unittest.TestCase):
 
     def testReject1(self):
         # answer a non-existent request
-        req = pb.PendingRequest()
-        self.broker.waitingForAnswers[12] = req
+        req = pb.PendingRequest(12)
+        self.broker.addRequest(req)
         u = self.newUnslicer()
         u.checkToken(INT, 0)
         self.failUnlessRaises(BananaError, u.receiveChild, 13)
 
     def testReject2(self):
         # answer a request with a result that violates the constraint
-        req = pb.PendingRequest()
+        req = pb.PendingRequest(12)
         req.setConstraint(schema.makeConstraint(int))
-        self.broker.waitingForAnswers[12] = req
+        self.broker.addRequest(req)
         u = self.newUnslicer()
         u.checkToken(INT, 0)
         u.receiveChild(12)
@@ -147,6 +149,9 @@ class Loopback:
 #   implements(interfaces.ITransport)
     def write(self, data):
         self.peer.dataReceived(data)
+    def loseConnection(self, why):
+        self.protocol.connectionLost(why)
+        self.peer.connectionLost(why)
 
 class IMyTarget(pb.IRemoteInterface):
     # method constraints can be declared directly:
@@ -204,9 +209,11 @@ class TargetMixin:
         self.targetTransport = Loopback()
         self.targetTransport.peer = self.callingBroker
         self.targetBroker.transport = self.targetTransport
+        self.targetTransport.protocol = self.targetBroker
         self.callingTransport = Loopback()
         self.callingTransport.peer = self.targetBroker
         self.callingBroker.transport = self.callingTransport
+        self.callingTransport.protocol = self.callingBroker
 
     def setupTarget(self, target):
         objID = self.targetBroker.putObj(target)
@@ -399,3 +406,66 @@ class TestCall(unittest.TestCase, TargetMixin):
 # crosses the wire, then verify that it gets transformed back into the
 # original Referenceable when it comes back
 
+
+class MyCopyable1(pb.Copyable):
+    pass
+class MyRemoteCopy1(pb.RemoteCopy):
+    pass
+pb.registerRemoteCopy("MyCopyable1", MyRemoteCopy1)
+
+class MyCopyable2(pb.Copyable):
+    def getTypeToCopy(self):
+        return "MyCopyable2name"
+    def getStateToCopy(self):
+        return {"a": 1, "b": self.b}
+class MyRemoteCopy2(pb.RemoteCopy):
+    def setCopyableState(self, state):
+        self.c = 1
+        self.d = state["b"]
+pb.registerRemoteCopy("MyCopyable2name", MyRemoteCopy2)
+
+class MyCopyable3(MyCopyable2):
+    def getAlternateCopyableState(self):
+        return {"e": 2}
+
+class MyCopyable3Slicer(flavors.CopyableSlicer):
+    def slice(self, streamable, banana):
+        yield 'copyable'
+        yield self.obj.getTypeToCopy()
+        state = self.obj.getAlternateCopyableState()
+        for k,v in state.iteritems():
+            yield k
+            yield v
+# register MyCopyable3Slicer as an ISlicer adapter for MyCopyable3, so we
+# can verify that it overrides the inherited CopyableSlicer behavior
+# TODO: registerAdapter(MyCopyable3Slicer, 
+#pb.registerUnslicer(    
+
+class HelperTarget(pb.Referenceable):
+    def remote_store(self, obj):
+        self.obj = obj
+        return True
+
+class TestCopyable(unittest.TestCase, TargetMixin):
+
+    def send(self, arg):
+        self.setupBrokers()
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("store", obj=arg)
+        self.failUnless(dr(d))
+        return target.obj
+
+    def testCopy0(self):
+        res = self.send(1)
+        self.failUnlessEqual(res, 1)
+        
+    def testCopy1(self):
+        obj = MyCopyable1() # just copies the dict
+        obj.a = 12
+        obj.b = "foo"
+        res = self.send(obj)
+        self.failUnless(isinstance(res))
+        self.failUnlessEqual(res.__class__, MyRemoteCopy1)
+        self.failUnlessEqual(res.a, 12)
+        self.failUnlessEqual(res.b, "foo")
+        print res.__dict__

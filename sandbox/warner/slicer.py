@@ -51,7 +51,7 @@ class BaseSlicer:
     def sliceBody(self, streamable, banana):
         raise NotImplementedError
     def childAborted(self, v):
-        pass
+        raise v
 
     def describe(self):
         return "??"
@@ -238,11 +238,13 @@ class RootSlicer:
         # UnsafeSlicerTable's InstanceSlicer
         slicer = tokens.ISlicer(obj, None)
         if slicer:
+            if self.debug: print "got ISlicer", slicer
             return slicer
         slicerFactory = self.slicerTable.get(type(obj))
         if slicerFactory:
             if self.debug: print " got slicerFactory", slicerFactory
             return slicerFactory(obj)
+        if self.debug: print "cannot serialize %s %s" % (obj, type(obj))
         raise Violation("cannot serialize %s (%s)" % (obj, type(obj)))
 
     def slice(self):

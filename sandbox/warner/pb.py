@@ -10,13 +10,14 @@ import slicer, schema, tokens, banana
 from tokens import BananaError, Violation, ISlicer
 from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
 ScopedSlicer = slicer.ScopedSlicer
-from flavors import getRemoteInterfaces, getRemoteInterfaceNames, \
-     RemoteCopy, registerRemoteCopy
+from flavors import getRemoteInterfaces, getRemoteInterfaceNames
+from flavors import Copyable, RemoteCopy, registerRemoteCopy
 from flavors import Referenceable, IRemoteInterface, RemoteInterfaceRegistry
 
 class PendingRequest(object):
     active = True
-    def __init__(self):
+    def __init__(self, reqID):
+        self.reqID = reqID
         self.deferred = defer.Deferred()
         self.constraint = None # this constrains the results
     def setConstraint(self, constraint):
@@ -31,6 +32,9 @@ class PendingRequest(object):
         if self.active:
             self.active = False
             self.deferred.errback(why)
+        else:
+            log.msg("multiple failures")
+            log.err(why)
 
 class RemoteReference(object):
     def __init__(self, broker, refID, interfaceNames):
@@ -81,7 +85,7 @@ class RemoteReference(object):
         try:
             # in this clause, we validate the outbound arguments against our
             # notion of what the other end will accept (the RemoteInterface)
-            req = PendingRequest()
+            req = PendingRequest(reqID)
 
             methodSchema = None
             if self.schema:
@@ -124,7 +128,7 @@ class RemoteReference(object):
             # local or a remote failure, so we must be prepared to accept an
             # answer. After this point, we assign all responsibility to the
             # PendingRequest structure.
-            self.broker.waitingForAnswers[reqID] = req
+            self.broker.addRequest(req)
 
             # TODO: there is a decidability problem here: if the reqID made
             # it through, the other end will send us an answer (possibly an
@@ -329,7 +333,7 @@ class CallUnslicer(BaseUnslicer):
                 self.argname = None
     def receiveClose(self):
         if self.stage != 3 or self.argname != None:
-            raise BananaError("sequence ended too early")
+            raise BananaError("'call' sequence ended too early")
         self.stage = 4
         if self.methodSchema:
             # ask them again so they can look for missing arguments
@@ -528,6 +532,7 @@ class AnswerSlicer(ScopedSlicer):
     opentype = ('answer',)
 
     def __init__(self, reqID, results):
+        ScopedSlicer.__init__(self, None)
         self.reqID = reqID
         self.results = results
 
@@ -535,10 +540,11 @@ class AnswerSlicer(ScopedSlicer):
         yield self.reqID
         yield self.results
 
-class ErrorSlicer(AnswerSlicer):
+class ErrorSlicer(ScopedSlicer):
     opentype = ('error',)
 
     def __init__(self, reqID, f):
+        ScopedSlicer.__init__(self, None)
         self.reqID = reqID
         self.f = f
 
@@ -567,6 +573,8 @@ class FailureSlicer(slicer.BaseSlicer):
         state['frames'] = []
         state['stack'] = []
         if isinstance(self.value, failure.Failure):
+            # TODO: how can this happen? I got rid of failure2Copyable, so
+            # if this case is possible, something needs to replace it
             state['value'] = failure2Copyable(self.value,
                                               banana.unsafeTracebacks)
         else:
@@ -602,13 +610,14 @@ class CallSlicer(ScopedSlicer):
     opentype = ('call',)
 
     def __init__(self, reqID, refID, methodname, args):
+        ScopedSlicer.__init__(self, None)
         self.reqID = reqID
         self.refID = refID
         self.methodname = methodname
         self.args = args
 
     def sliceBody(self, streamable, banana):
-        yield self.refID
+        yield self.reqID
         yield self.refID
         yield self.methodname
         keys = self.args.keys()
@@ -641,6 +650,10 @@ class Broker(banana.BaseBanana):
                                # when the last decref message is received.
         self.activeLocalCalls = {}
 
+    def connectionLost(self, why):
+        self.abandonAllRequests(why)
+        banana.BaseBanana.connectionLost(self, why)
+
     def newLocalID(self):
         """Generate a new LUID.
         """
@@ -669,18 +682,25 @@ class Broker(banana.BaseBanana):
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
 
+    def addRequest(self, req):
+        self.waitingForAnswers[req.reqID] = req
+
     def getRequest(self, reqID):
         try:
-            req = self.waitingForAnswers[reqID]
-            del self.waitingForAnswers[reqID]
-            return req
+            return self.waitingForAnswers[reqID]
         except KeyError:
             raise BananaError("non-existent reqID '%d'" % reqID)
 
     def gotAnswer(self, req, results):
+        del self.waitingForAnswers[req.reqID]
         req.complete(results)
     def gotError(self, req, failure):
+        del self.waitingForAnswers[req.reqID]
         req.fail(failure)
+    def abandonAllRequests(self, why):
+        for req in self.waitingForAnswers.values():
+            req.fail(why)
+        self.waitingForAnswers = {}
 
     # decref is also invoked on the calling side (the pb.Referenceable
     # holder) when the other side sends us a decref message

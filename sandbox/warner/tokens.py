@@ -77,7 +77,7 @@ class BananaError(Exception):
         if self.where:
             return "BananaError(in %s): %s" % (self.where, self.why)
         else:
-            return "BananaError: %s" % (self.where,)
+            return "BananaError: %s" % (self.why,)
 
 class UnbananaFailure(Failure):
     """This subclass of Failure adds a .where attribute which records the
