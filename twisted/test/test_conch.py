@@ -484,7 +484,7 @@ class SSHTransportTestCase(unittest.TestCase):
         """test the SSH server against the OpenSSH client
         """
         if os.name != 'posix': return
-        cmdline = ('ssh -v -l testuser -p %i '
+        cmdline = ('ssh -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
                    '-oPasswordAuthentication=no '
                    # Always use the RSA key, since that's the one in kh_test.
