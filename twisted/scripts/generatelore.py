@@ -15,58 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from __future__ import nested_scopes
 
-import sys, os
-from twisted.lore import tree, math
+import sys
+from twisted.lore import process
 from twisted.python import usage
-from twisted.web import microdom
-
-cols = 79
-
-def dircount(d):
-    return len([1 for el in d.split("/") if el != '.'])
-
-
-class Walker:
-
-    def __init__(self, df, fext, linkrel):
-        self.df = df
-        self.linkrel = linkrel
-        self.fext = fext
-        self.walked = []
-
-    def walkdir(self, topdir):
-        self.basecount = dircount(topdir)
-        os.path.walk(topdir, self.walk, None)
-
-    def walk(self, ig, d, names):
-        linkrel = '../' * (dircount(d) - self.basecount)
-        for name in names:
-            fullpath = os.path.join(d, name)
-            fext = os.path.splitext(name)[1]
-            if fext == self.fext:
-                self.walked.append((linkrel, fullpath))
-                
-    def generate(self):
-        i = 0
-        for linkrel, fullpath in self.walked:
-            linkrel = self.linkrel + linkrel
-            i += 1
-            fname = os.path.splitext(fullpath)[0]
-            self.percentdone((float(i) / len(self.walked)), fname)
-            self.df(fullpath, linkrel)
-        self.percentdone(1., "*Done*")
-
-    def percentdone(self, percent, fname):
-        # override for neater progress bars
-        proglen = 40
-        hashes = int(percent * proglen)
-        spaces = proglen - hashes
-        progstat = "[%s%s] (%s)" %('#' * hashes, ' ' * spaces,fname)
-        progstat += (cols - len(progstat)) * ' '
-        progstat += '\r'
-        sys.stdout.write(progstat)
-        sys.stdout.flush()
-
 
 class Options(usage.Options):
 
@@ -87,6 +38,8 @@ class Options(usage.Options):
 
 
 def makeProcessingFunction(d):
+    from twisted.lore import tree
+    from twisted.web import microdom
     if d['ext'] == "None":
         ext = ""
     else:
@@ -106,7 +59,7 @@ def run():
         print '%s: Try --help for usage details.' % (sys.argv[0])
         sys.exit(1)
     df = makeProcessingFunction(opt)
-    w = Walker(df, '.html', opt['linkrel'])
+    w = process.Walker(df, '.html', opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
             w.walked.append(('', fn))
