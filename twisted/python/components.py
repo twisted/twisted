@@ -466,6 +466,17 @@ class Componentized(styles.Versioned):
             self._adapterCache[reflect.qual(k)] = v
 
 
+class ReprableComponentized(Componentized):
+    def __init__(self):
+        Componentized.__init__(self)
+
+    def __repr__(self):
+        from cStringIO import StringIO
+        from pprint import pprint
+        sio = StringIO()
+        pprint(self._adapterCache, sio)
+        return sio.getvalue()
+
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
-           "AdapterRegistry", "Adapter"]
+           "AdapterRegistry", "Adapter", "ReprableComponentized"]
