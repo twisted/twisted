@@ -44,7 +44,8 @@ class Argument:
     # default value for argument, if no other default is given
     defaultDefault = None
 
-    def __init__(self, name, default=None, shortDesc=None, longDesc=None, hints=None):
+    def __init__(self, name, default=None, shortDesc=None, longDesc=None,
+                 hints=None):
         self.name = name
         if default is None:
             default = self.defaultDefault
@@ -104,7 +105,8 @@ class Integer(Argument):
 
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None):
+    def __init__(self, name, allowNone=1, default=None,
+                 shortDesc=None, longDesc=None, hints=None):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
 
@@ -121,7 +123,8 @@ class Float(Argument):
 
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None):
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None,
+                 longDesc=None, hints=None):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
 
@@ -135,9 +138,17 @@ class Float(Argument):
 
 
 class Choice(Argument):
-    """The result of a choice between enumerated types.
     """
-    def __init__(self, name, choices=[], default=None, shortDesc=None, longDesc=None, hints=None):
+    The result of a choice between enumerated types.  The choices should
+    be a list of tuples of tag, value, and description.  The tag will be
+    the value returned if the user hits "Submit", and the description
+    is the bale for the enumerated type.  default is a list of all the
+    tags (values to be returned upon hitting "Submit").  If no defaults
+    are specified, initially nothing will be selected.  Only one item
+    can (should) be selected at once.
+    """
+    def __init__(self, name, choices=[], default=[], shortDesc=None,
+                 longDesc=None, hints=None):
         self.choices = choices
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
@@ -150,9 +161,17 @@ class Choice(Argument):
 
 
 class Flags(Argument):
-    """The result of a checkbox group or multi-menu.
     """
-    def __init__(self, name, flags=(), default=(), shortDesc=None, longDesc=None, hints=None):
+    The result of a checkbox group or multi-menu.  The flags should be a
+    list of tuples of tag, value, and description. The tag will be
+    the value returned if the user hits "Submit", and the description
+    is the bale for the enumerated type.  default is a list of all the
+    tags (values to be returned upon hitting "Submit").  If no defaults
+    are specified, initially nothing will be selected.  Several items may
+    be selected at once.
+    """
+    def __init__(self, name, flags=(), default=(), shortDesc=None,
+                 longDesc=None, hints=None):
         self.flags = flags
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
@@ -198,7 +217,8 @@ class Date(Argument):
 
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None):
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None,
+                 longDesc=None, hints=None):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
         if not allowNone:
@@ -232,7 +252,8 @@ class Submit(Choice):
 
     def __init__(self, name, choices=[("Submit", "submit", "Submit form")],
                  reset=0, shortDesc=None, longDesc=None):
-        Choice.__init__(self, name, choices=choices, shortDesc=shortDesc, longDesc=longDesc)
+        Choice.__init__(self, name, choices=choices, shortDesc=shortDesc,
+                        longDesc=longDesc)
         self.reset = reset
 
 

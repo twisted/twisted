@@ -18,6 +18,9 @@ from twisted.web.woven import model, view, controller, widgets, input, interface
 from twisted.web.microdom import parseString, lmx
 
 
+#other imports
+import math
+
 # map formmethod.Argument to functions that render them:
 _renderers = {}
 
@@ -56,153 +59,203 @@ class FormFillerWidget(widgets.Widget):
         return argument.default
 
     def createShell(self, request, node, data):
-        """Create a `shell' node that will hold the additional form elements, if one is required.
+        """Create a `shell' node that will hold the additional form
+        elements, if one is required.
         """
         return lmx(node).table(border="0")
     
-    def input_single(self, request, content, arg):
-        value = self.getValue(request, arg)
-        if value == None:
-            value = ""
-        else:
-            value = str(value)
-        return content.input(type="text",
-                             size="60",
-                             name=arg.name,
-                             value=value)
+    def input_single(self, request, content, model, templateAttributes={}):
+        """
+        Returns a text input node built based upon the node model.
+        Optionally takes an already-coded DOM node merges that
+        information with the model's information.  Returns a new (??)
+        lmx node.
+        """
+        #in a text field, only the following options are allowed (well, more
+        #are, but they're not supported yet - can add them in later)
+        attribs = ['type', 'name', 'value', 'size', 'maxlength',
+                   'readonly'] #only MSIE recognizes readonly and disabled
 
-    def input_text(self, request, content, arg):
-        r = content.textarea(cols=arg.getHint('columns', '60'),
-                             rows=arg.getHint('rows', '10'),
-                             name=arg.name,
-                             wrap=arg.getHint('wrap', "virtual"))
-        r.text(str(self.getValue(request, arg)))
-        return r
+        arguments = {}
+        for attrib in attribs:
+            #model hints and values override anything in the template
+            val = model.getHint(attrib, templateAttributes.get(attrib, None))
+            if val:
+                arguments[attrib] = val
+            
+        value = self.getValue(request, model)
+        if value:
+            arguments["value"] = value
 
-    def input_string(self, request, content, arg):
-        node = self.input_single(request, content, arg)
-        node['size'] = arg.getHint('size', '60')
-        return node
+        arguments["type"] = "text"  #these are default
+        arguments["name"] = model.name
+
+        return content.input(**arguments)
+
+    def input_string(self, request, content, model, templateAttributes={}):
+        if not templateAttributes.has_key("size"):
+            templateAttributes["size"] = '60'
+        return self.input_single(request, content, model, templateAttributes)
 
     input_integer = input_single
-    #input_string = input_single
     input_float = input_single
 
-    def input_choice(self, request, content, arg):
-        s = content.select(name=arg.name)
-        default = self.getValue(request, arg)
-        for tag, value, desc in arg.choices:
-            if value == default:
-                kw = {'selected' : '1'}
-            else:
-                kw = {}
-            s.option(value=tag, **kw).text(desc)
-        return s
+    def input_text(self, request, content, model, templateAttributes={}):
+        r = content.textarea(
+            cols=model.getHint('cols', templateAttributes.get('cols', '60')),
+            rows=model.getHint('rows', templateAttributes.get('rows', '10')),
+            name=model.name,
+            wrap=model.getHint('wrap',
+                               templateAttributes.get('wrap', "virtual")))
+        r.text(str(self.getValue(request, model)))
+        return r
 
-    def input_radiogroup(self, request, content, arg):
-        s = content.div()
-        defaults = self.getValues(request, arg)
-        for tag, value, desc in arg.choices:
-            if value in defaults:
-                kw = {'checked' : '1'}
-            else:
-                kw = {}
-            s.div().input(name=arg.name,
-                          type="radio", **kw).text(desc)
-        return s
+    def input_password(self, request, content, model, templateAttributes={}):
+        return content.input(
+            type="password",
+            size=templateAttributes.get('size', "60"),
+            name=model.name)
 
-    def input_checkgroup(self, request, content, arg):
-        s = content.div()
-        defaults = self.getValues(request, arg)
-        for tag, value, desc in arg.flags:
-            if value in defaults:
-                kw = {'checked' : '1'}
-            else:
-                kw = {}
-            s.input(type="checkbox",
-                    name=arg.name,
-                    value=tag, **kw).text(desc)
-        return s
-
-    def input_boolean(self, request, content, arg):
-        if self.getValue(request, arg):
-            kw = {'checked' : '1'}
-        else:
-            kw = {}
-        i = content.input(type="checkbox",
-                          name=arg.name, **kw)
-        return i
-
-    def input_password(self, request, content, arg):
-        return content.input(type="password",
-                             size="60",
-                             name=arg.name)
-
-    def input_flags(self, request, content, arg):
-        defaults = self.getValues(request, arg)
-        for key, val, label in arg.flags:
-            if val in defaults:
-                kw = {'checked' : '1'}
-            else:
-                kw = {}
-            nn = content.input(type="checkbox",
-                               name=arg.name,
-                               value=str(key), **kw)
-            nn.text(label)
-        return content
-
-    def input_hidden(self, request, content, arg):
+    def input_hidden(self, request, content, model, templateAttributes={}):
         return content.input(type="hidden",
-                             name=arg.name,
-                             value=self.getValue(request, arg))
+                             name=model.name,
+                             value=self.getValue(request, model))
 
-    def input_submit(self, request, content, arg):
+    def input_submit(self, request, content, model, templateAttributes={}):
         div = content.div()
-        for tag, value, desc in arg.choices:
-            div.input(type="submit", name=arg.name, value=tag)
+        for tag, value, desc in model.choices:
+            div.input(type="submit", name=model.name, value=tag)
             div.text(" ")
-        if arg.reset:
+        if model.reset:
             div.input(type="reset")
         return div
 
-    def input_date(self, request, content, arg):
-        breakLines = arg.getHint('breaklines', 1)
-        date = self.getValues(request, arg)
+    def input_choice(self, request, content, model, templateAttributes={}):
+        s = content.select(name=model.name)
+        default = self.getValue(request, model)
+        for tag, value, desc in model.choices:
+            kw = {}
+            if value == default:
+                kw = {'selected' : '1'}
+            s.option(value=tag, **kw).text(desc)
+        return s
+
+    def input_group(self, request, content, model, groupValues, inputType,
+                    templateAttributes={}):
+        """
+        Base code for a group of objects.  Checkgroup will use this, as
+        well as radiogroup.  In the attributes, rows means how many rows
+        the group should be arranged into, cols means how many cols the
+        group should be arranged into.  Columns take precedence over
+        rows: if both are specified, the output will always generate the
+        correct number of columns.  However, if the number of elements
+        in the group exceed (or is smaller than) rows*cols, then the
+        number of rows will be off.  A cols attribute of 1 will mean that
+        all the elements will be listed one underneath another.  The
+        default is a rows attribute of 1:  everything listed next to each
+        other.
+        """
+        rows = model.getHint('rows', templateAttributes.get('rows', None))
+        cols = model.getHint('cols', templateAttributes.get('cols', None))
+        defaults = self.getValues(request, model)
+        state = "row"
+        if (rows and rows>1) or (cols and cols>1):  #build a table
+            s = content.table(border="0")
+            if cols:
+                breakat = cols
+            else:
+                breakat = math.ceil(float(len(groupValues))/rows)
+            for i in range(0, len(groupValues), breakat):
+                tr = s.tr()
+                for j in range(0, breakat):
+                    if i+j >= len(groupValues):
+                        break
+                    tag, value, desc = groupValues[i+j]
+                    kw = {}
+                    if value in defaults:
+                        kw = {'checked' : '1'}
+                    tr.td().input(type=inputType, name=model.name,
+                        value=tag, **kw).text(desc)
+                        
+        else:
+            s = content.div()
+            for tag, value, desc in groupValues:
+                kw = {}
+                if value in defaults:
+                    kw = {'checked' : '1'}
+                s.input(type=inputType, name=model.name,
+                        value=tag, **kw).text(desc)
+                if cols:
+                    s.br()
+
+        return s
+
+    def input_checkgroup(self, request, content, model, templateAttributes={}):
+        return self.input_group(request, content, model, model.flags,
+                                "checkbox", templateAttributes)
+
+    def input_radiogroup(self, request, content, model, templateAttributes={}):
+        return self.input_group(request, content, model, model.choices,
+                                "radio", templateAttributes)
+
+    #I don't know why they're the same, but they were.  So I removed the
+    #excess code.  Maybe someone should look into removing it entirely.
+    input_flags = input_checkgroup 
+
+    def input_boolean(self, request, content, model, templateAttributes={}):
+        kw = {}
+        if self.getValue(request, model):
+            kw = {'checked' : '1'}
+        return content.input(type="checkbox", name=model.name, **kw)
+
+    def input_date(self, request, content, model, templateAttributes={}):
+        breakLines = model.getHint('breaklines', 1)
+        date = self.getValues(request, model)
         if date == None:
             year, month, day = "", "", ""
         else:
             year, month, day = date
         div = content.div()
         div.text("Year: ")
-        div.input(type="text", size="4", maxlength="4", name=arg.name, value=str(year))
+        div.input(type="text", size="4", maxlength="4", name=model.name, value=str(year))
         if breakLines:
             div.br()
         div.text("Month: ")
-        div.input(type="text", size="2", maxlength="2", name=arg.name, value=str(month))
+        div.input(type="text", size="2", maxlength="2", name=model.name, value=str(month))
         if breakLines:
             div.br()
         div.text("Day: ")
-        div.input(type="text", size="2", maxlength="2", name=arg.name, value=str(day))
+        div.input(type="text", size="2", maxlength="2", name=model.name, value=str(day))
         return div
+
+
+    def convergeInput(self, request, content, model, templateNode):
+        name = model.__class__.__name__.lower()
+        if _renderers.has_key(model.__class__):
+            imeth = _renderers[model.__class__]
+        else:
+            imeth = getattr(self,"input_"+name)
+
+        return imeth(request, content, model, templateNode.attributes).node
     
-    def createInput(self, request, shell, arg):
-        name = arg.__class__.__name__.lower()
-        if _renderers.has_key(arg.__class__):
-            imeth = _renderers[arg.__class__]
+    def createInput(self, request, shell, model, templateAttributes={}):
+        name = model.__class__.__name__.lower()
+        if _renderers.has_key(model.__class__):
+            imeth = _renderers[model.__class__]
         else:
             imeth = getattr(self,"input_"+name)
         if name == "hidden":
-            return (imeth(request, shell, arg).node, lmx())
+            return (imeth(request, shell, model).node, lmx())
         elif name == "submit":
             td = shell.tr().td(valign="top", colspan="2")
-            return (imeth(request, td, arg).node, lmx())
+            return (imeth(request, td, model).node, lmx())
         else:
             tr = shell.tr()
-            tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
+            tr.td(align="right", valign="top").text(model.getShortDescription()+":")
             content = tr.td(valign="top")
-            return (imeth(request, content, arg).node, 
+            return (imeth(request, content, model).node, 
                     content.div(_class="formDescription"). # because class is a keyword
-                    text(arg.getLongDescription()).node)
+                    text(model.getLongDescription()).node)
 
     def setUp(self, request, node, data):
         # node = widgets.Widget.generateDOM(self,request,node)
@@ -226,14 +279,20 @@ class FormFillerWidget(widgets.Widget):
             argz[arg.name] = arg
         inNodes = domhelpers.findElements(
             node,
-            lambda n: n.tagName.lower() in ('textarea', 'select', 'input'))
+            lambda n: n.tagName.lower() in ('textarea', 'select', 'input',
+                                            'div'))
         for inNode in inNodes:
             t = inNode.getAttribute("type")
             if t and t.lower() == "submit":
                 hasSubmit = 1
+            if not inNode.hasAttribute("name"):
+                continue
             nName = inNode.getAttribute("name")
             if argz.has_key(nName):
-                inputNodes[nName] = inNode
+                #send an empty content shell - we just want the node
+                inputNodes[nName] = self.convergeInput(request, lmx(),
+                                                       argz[nName], inNode)
+                node.replaceChild(inputNodes[nName], inNode)
                 del argz[nName]
             # TODO:
             # * some arg types should only have a single node (text, string, etc)
