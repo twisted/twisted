@@ -25,7 +25,9 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-import os, sys, types
+import os
+import sys
+import types
 
 from twisted.protocols.imap4 import MessageSet
 from twisted.protocols import imap4
@@ -208,6 +210,111 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         for (case, expected) in zip(answers, cases):
             self.assertEquals('(' + imap4.collapseNestedLists(case) + ')', expected)
+
+    def testFetchParserSimple(self):
+        cases = [
+            ['ALL', 'All'],
+            ['FULL', 'Full'], 
+            ['FAST', 'Fast'],
+            ['ENVELOPE', 'Envelope'],
+            ['FLAGS', 'Flags'],
+            ['INTERNALDATE', 'InternalDate'],
+            ['RFC822.HEADER', 'RFC822Header'],
+            ['RFC822.SIZE', 'RFC822Size'],
+            ['RFC822.TEXT', 'RFC822Text'],
+            ['RFC822', 'RFC822'],
+            ['UID', 'UID'],
+            ['BODYSTRUCTURE', 'BodyStructure'],
+        ]
+        
+        for (inp, outp) in cases:
+            p = imap4._FetchParser()
+            p.parseString(inp)
+            self.assertEquals(len(p.result), 1)
+            self.failUnless(isinstance(p.result[0], getattr(p, outp)))
+
+    def testFetchParserBody(self):
+        P = imap4._FetchParser
+        
+        p = P()
+        p.parseString('BODY')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, False)
+        self.assertEquals(p.result[0].header, None)
+        
+        p = P()
+        p.parseString('BODY.PEEK')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, True)
+
+        p = P()
+        p.parseString('BODY[HEADER]')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, False)
+        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertEquals(p.result[0].header.negate, False)
+        self.assertEquals(p.result[0].header.fields, None)
+
+        p = P()
+        p.parseString('BODY.PEEK[HEADER]')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, True)
+        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertEquals(p.result[0].header.negate, False)
+        self.assertEquals(p.result[0].header.fields, None)
+
+        p = P()
+        p.parseString('BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, False)
+        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertEquals(p.result[0].header.negate, False)
+        self.assertEquals(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+
+        p = P()
+        p.parseString('BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, True)
+        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertEquals(p.result[0].header.negate, False)
+        self.assertEquals(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+
+        p = P()
+        p.parseString('BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, True)
+        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertEquals(p.result[0].header.negate, True)
+        self.assertEquals(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        
+        p = P()
+        p.parseString('BODY[1.MIME]<10.50>')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, False)
+        self.failUnless(isinstance(p.result[0].mime, p.MIME))
+        self.assertEquals(p.result[0].mime.part, (1,))
+        self.assertEquals(p.result[0].partialBegin, 10)
+        self.assertEquals(p.result[0].partialLength, 50)
+
+        p = P()
+        p.parseString('BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].peek, True)
+        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertEquals(p.result[0].header.part, (1, 3, 9, 11))
+        self.assertEquals(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
+        self.assertEquals(p.result[0].partialBegin, 103)
+        self.assertEquals(p.result[0].partialLength, 69)
+
 
     def testFiles(self):
         inputStructure = [
@@ -1215,7 +1322,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def fetch(self, messages, parts, uid):
         self.server_received_uid = uid
-        self.server_received_parts = parts
+        self.server_received_parts = [p.__class__.__name__.upper() for p in parts]
         self.server_received_messages = str(messages)
         return self.expected
     

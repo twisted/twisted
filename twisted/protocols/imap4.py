@@ -701,11 +701,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         fetch-att
         """
-        query = parseNestedParens(line)
-        while len(query) == 1 and isinstance(query[0], types.ListType):
-            query = query[0]
-
-        return (query, '')
+        p = _FetchParser()
+        p.parseString(line)
+        return (p.result, '')
 
     def arg_flaglist(self, line):
         """
@@ -2637,7 +2635,18 @@ class IMAP4Client(basic.LineReceiver):
 
     def _fetch(self, messages, useUID=0, **terms):
         fetch = useUID and 'UID FETCH' or 'FETCH'
-        cmd = '%s %s' % (messages, ' '.join([s.upper() for s in terms.keys()]))
+
+        if 'rfc822text' in terms:
+            del terms['rfc822text']
+            terms['rfc822.text'] = True
+        if 'rfc822size' in terms:
+            del terms['rfc822size']
+            terms['rfc822.size'] = True
+        if 'rfc822header' in terms:
+            del terms['rfc822header']
+            terms['rfc822.header'] = True
+                
+        cmd = '%s (%s)' % (messages, ' '.join([s.upper() for s in terms.keys()]))
         d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
         return d
 
@@ -3686,6 +3695,235 @@ class IMailbox(components.Interface):
         @raise ReadOnlyMailbox: Raised if this mailbox is not open for
         read-write.
         """
+
+
+class _FetchParser:
+    class All:
+        pass
+    class Fast:
+        pass
+    class Full:
+        pass
+    class Envelope:
+        pass
+    class Flags:
+        pass
+    class InternalDate:
+        pass
+    class RFC822Header:
+        pass
+    class RFC822Text:
+        pass
+    class RFC822Size:
+        pass
+    class RFC822:
+        pass
+    class UID:
+        pass
+    class Body:
+        peek = False
+        header = None
+        partialBegin = None
+        partialLength = None
+    class BodyStructure:
+        pass
+    class Header:
+        negate = False
+        fields = None
+        part = None
+    class Text:
+        part = None
+    class MIME:
+        part = None
+
+    parts = None
+
+    _simple_fetch_att = [
+        ('envelope', Envelope),
+        ('flags', Flags),
+        ('internaldate', InternalDate),
+        ('rfc822.header', RFC822Header),
+        ('rfc822.text', RFC822Text),
+        ('rfc822.size', RFC822Size),
+        ('rfc822', RFC822),
+        ('uid', UID),
+        ('bodystructure', BodyStructure),
+    ]
+
+    def __init__(self):
+        self.state = ['initial']
+        self.result = []
+        self.remaining = ''
+
+    def parseString(self, s):
+        s = self.remaining + s
+        try:
+            while s or self.state:
+                print 'Entering state_' + self.state[-1] + ' with', repr(s)
+                state = self.state.pop()
+                try:
+                    s = s[getattr(self, 'state_' + state)(s):]
+                except:
+                    self.state.append(state)
+                    raise
+        finally:
+            self.remaining = s
+    
+    def state_initial(self, s):
+        # In the initial state, the literals "ALL", "FULL", and "FAST"
+        # are accepted, as is a ( indicating the beginning of a fetch_att
+        # token, as is the beginning of a fetch_att token.
+        if s == '':
+            return 0
+        
+        l = s.lower()
+        if l.startswith('all'):
+            self.result.append(self.All())
+            return 3
+        if l.startswith('full'):
+            self.result.append(self.Full())
+            return 4
+        if l.startswith('fast'):
+            self.result.append(self.Fast())
+            return 4
+        
+        if l.startswith('('):
+            self.state.extend(('close_paren', 'maybe_fetch_att', 'fetch_att'))
+            return 1
+        
+        self.state.append('fetch_att')
+        return 0
+    
+    def state_close_paren(self, s):
+        if s.startswith(')'):
+            return 1
+        raise Exception("Missing )")
+    
+    def state_whitespace(self, s):
+        # Eat up all the leading whitespace
+        if not s or not s[0].isspace():
+            raise Exception("Whitespace expected, none found")
+        i = 0
+        for i in range(len(s)):
+            if not s[i].isspace():
+                break
+        return i
+
+    def state_maybe_fetch_att(self, s):
+        if not s.startswith(')'):
+            self.state.extend(('maybe_fetch_att', 'fetch_att', 'whitespace'))
+        return 0
+
+    def state_fetch_att(self, s):
+        # Allowed fetch_att tokens are "ENVELOPE", "FLAGS", "INTERNALDATE",
+        # "RFC822", "RFC822.HEADER", "RFC822.SIZE", "RFC822.TEXT", "BODY",
+        # "BODYSTRUCTURE", "UID",
+        # "BODY [".PEEK"] [<section>] ["<" <number> "." <nz_number> ">"]
+
+        l = s.lower()
+        for (name, cls) in self._simple_fetch_att:
+            if l.startswith(name):
+                self.result.append(cls())
+                return len(name)
+        
+        b = self.Body()
+        if l.startswith('body.peek'):
+            b.peek = True
+            used = 9
+        elif l.startswith('body'):
+            used = 4
+        else:
+            raise Exception("Nothing recognized in fetch_att: %s" % (l,))
+        
+        self.pending_body = b
+        self.state.extend(('got_body', 'maybe_partial', 'maybe_section'))
+        return used
+    
+    def state_got_body(self, s):
+        self.result.append(self.pending_body)
+        del self.pending_body
+        return 0
+    
+    def state_maybe_section(self, s):
+        if not s.startswith("["):
+            return 0
+        
+        self.state.extend(('section', 'part_number'))
+        return 1
+    
+    def state_part_number(self, s):
+        last = -1
+        dot = s.find('.')
+        parts = []
+        while dot != -1 and s[last + 1].isdigit():
+            parts.append(int(s[last + 1:dot]))
+            last, dot = dot, s.find('.', dot + 1)
+        self.parts = parts
+        return last + 1
+
+    def state_section(self, s):
+        # Grab [HEADER] or [HEADER.FIELDS (Header list)] or 
+        # [HEADER.FIELDS.NOT (Header list)], [TEXT], or [MIME]
+        l = s.lower()
+        used = 0
+        if l.startswith('header]'):
+            o = self.pending_body.header = self.Header()
+            used += 7
+        elif l.startswith('text]'):
+            o = self.pending_body.text = self.Text()
+            used += 5
+        elif l.startswith('mime]'):
+            o = self.pending_body.mime = self.MIME()
+            used += 5
+        else:
+            o = h = self.Header()
+            if l.startswith('header.fields.not'):
+                h.negate = True
+                used += 17
+            elif l.startswith('header.fields'):
+                used += 13
+            else:
+                raise Exception("Unhandled section contents")
+            
+            self.pending_body.header = h
+            self.state.extend(('finish_section', 'header_list', 'whitespace'))
+        o.part = tuple(self.parts)
+        self.parts = None
+        return used
+    
+    def state_finish_section(self, s):
+        if not s.startswith(']'):
+            raise Exception("section must end with ]")
+        return 1
+
+    def state_header_list(self, s):
+        if not s.startswith('('):
+            raise Exception("Header list must begin with (")
+        end = s.find(')')
+        if end == -1:
+            raise Exception("Header list must end with )")
+        
+        headers = s[1:end].split()
+        self.pending_body.header.fields = map(str.upper, headers)
+        return end + 1
+    
+    def state_maybe_partial(self, s):
+        # Grab <number.number> or nothing at all
+        if not s.startswith('<'):
+            return 0
+        end = s.find('>')
+        if end == -1:
+            raise Exception("Found < but not >")
+        
+        partial = s[1:end]
+        parts = partial.split('.', 1)
+        if len(parts) != 2:
+            raise Exception("Partial specification did not include two .-delimited integers")
+        begin, length = map(int, parts)
+        self.pending_body.partialBegin = begin
+        self.pending_body.partialLength = length
+        
+        return end + 1
 
 import codecs
 def modified_base64(s):
