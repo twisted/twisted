@@ -60,19 +60,19 @@ class DelayedCall(styles.Ephemeral):
 
     def getTime(self):
         """Return the time at which this call will fire
-        
+
         @rtype: C{float}
         @return: The number of seconds after the epoch at which this call is
         scheduled to be made.
         """
         return self.time
-    
+
     def cancel(self):
         """Unschedule this call
-        
+
         @raise AlreadyCancelled: Raised if this call has already been
         unscheduled.
-        
+
         @raise AlreadyCalled: Raised if this call has already been made.
         """
         if self.cancelled:
@@ -85,11 +85,11 @@ class DelayedCall(styles.Ephemeral):
 
     def reset(self, secondsFromNow):
         """Reschedule this call for a different time
-        
+
         @type secondsFromNow: C{float}
         @param secondsFromNow: The number of seconds from the time of the
         C{reset} call at which this call will be scheduled.
-        
+
         @raise AlreadyCancelled: Raised if this call has been cancelled.
         @raise AlreadyCalled: Raised if this call has already been made.
         """
@@ -103,7 +103,7 @@ class DelayedCall(styles.Ephemeral):
 
     def delay(self, secondsLater):
         """Reschedule this call for a later time
-        
+
         @type secondsLater: C{float}
         @param secondsLater: The number of seconds after the originally
         scheduled time for which to reschedule this call.
@@ -121,7 +121,7 @@ class DelayedCall(styles.Ephemeral):
 
     def active(self):
         """Determine whether this call is still pending
-        
+
         @rtype: C{bool}
         @return: True if this call has not yet been made or cancelled,
         False otherwise.
@@ -529,7 +529,7 @@ class BaseConnector(styles.Ephemeral):
 
     timeoutID = None
     factoryStarted = 0
-    
+
     def __init__(self, factory, timeout, reactor):
         self.state = "disconnected"
         self.reactor = reactor
@@ -587,7 +587,7 @@ class BaseConnector(styles.Ephemeral):
             # factory hasn't called our connect() method
             self.factory.doStop()
             self.factoryStarted = 0
-    
+
     def connectionLost(self, reason):
         self.state = "disconnected"
         self.factory.clientConnectionLost(self, reason)
@@ -599,10 +599,10 @@ class BaseConnector(styles.Ephemeral):
 
 class BasePort(abstract.FileDescriptor):
     """Basic implementation of a ListeningPort."""
-    
+
     addressFamily = None
     socketType = None
-    
+
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
