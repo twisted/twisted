@@ -1,3 +1,15 @@
+2002-05-24  Itamar Shtull-Trauring, Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted.mail cleanups:
+
+		* removed telnet from mail tap
+
+		* mail domains now receive service in __init__
+
+		* split file system stuff into Queue (renamed from MessageCollection) 
+
+		* Put a Queue in service
+
 2002-05-15  Andrew Bennetts <andrew-twisted@puzzling.org>
 
 	* twisted/protocols/ftp.py: Small fixes to FTPClient that have

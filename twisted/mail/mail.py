@@ -48,6 +48,9 @@ class DomainWithDefaultDict:
         self.domains = domains
         self.default = default
 
+    def setDefaultDomain(self, domain):
+        self.default = domain
+    
     def has_key(self, name):
         return 1
 
@@ -68,8 +71,10 @@ class BounceDomain:
         """
         failure(user)
 
-class FileMessage:
 
+class FileMessage:
+    """A file we can write an email too."""
+    
     __implements__ = smtp.IMessage
 
     def __init__(self, fp, name, finalName):
@@ -98,10 +103,17 @@ class IDomain(components.Interface):
 
 class MailService(service.Service):
     """An email service."""
-    
-    # path where email will be stored
-    storagePath = "/tmp/changeme"
-    
-    def __init__(self, name, app):
-        service.Service.__init__(self, name, app)
+
+    def __init__(self, name):
+        service.Service.__init__(self, name)
         self.domains = DomainWithDefaultDict({}, BounceDomain())
+
+    def getPOP3Factory(self):
+        return createDomainsFactory(pop3.VirtualPOP3, self.domains)
+
+    def getSMTPFactory(self):
+        return createDomainsFactory(smtp.DomainSMTP, self.domains)
+
+    def setQueue(self, queue):
+        """Set the queue for outgoing emails."""
+        self.queue = queue

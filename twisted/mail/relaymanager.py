@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -15,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""infrastructure for relaying mail through smart host
+"""Infrastructure for relaying mail through smart host
 
 Today, internet e-mail has stopped being Peer-to-peer for many problems,
 spam (unsolicited bulk mail) among them. Instead, most nodes on the
@@ -31,13 +30,12 @@ The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 """
 from twisted.python import delay, log
-from twisted.mail import relay
+from twisted.mail import relay, mail
 from twisted.internet import reactor
-import os, string
+import os, string, time
 
 
 class SMTPManagedRelayer(relay.SMTPRelayer):
-
     """SMTP Relayer which notifies a manager
 
     Notify the manager about successful main, failed mail
@@ -84,11 +82,38 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         self.manager.notifyDone(self)
 
 
-class MessageCollection:
-
-    def __init__(self):
+class Queue:
+    """A queue of ougoing emails."""
+    
+    def __init__(self, directory):
+        self.directory = directory
+        self._init()
+    
+    def _init(self):
+        self.n = 0
         self.waiting = {}
         self.relayed = {}
+        self.readDirectory()
+    
+    def __getstate__(self):
+        """(internal) delete volatile state"""
+        return {'directory' : self.directory}
+
+    def __setstate__(self, state):
+        """(internal) restore volatile state"""
+        self.__dict__.update(state)
+        self._init()
+
+    def readDirectory(self):
+        """Read the messages directory.
+
+        look for new messages.
+        """ 
+        for message in os.listdir(self.directory):
+            # Skip non data files
+            if message[-2:]!='-D':
+                continue
+            self.addMessage(message[:-2])
 
     def getWaiting(self):
         return self.waiting.keys()
@@ -112,11 +137,31 @@ class MessageCollection:
             self.waiting[message] = 1
 
     def done(self, message):
+        """Remove message to from queue."""
+        os.remove(message+'-D')
+        os.remove(message+'-H')
+        message = os.path.basename(message)
         del self.relayed[message]
+
+    def getPath(self, message):
+        """Get the path in the filesystem of a message."""
+        return os.path.join(self.directory, message)
+
+    def createNewMessage(self):
+        """Create a new message in the queue.
+
+        Return a tuple - file-like object for headers, and ISMTPMessage.
+        """
+        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
+        self.n = self.n + 1
+        headerFile = open(os.path.join(self.directory, fname+'-H'), 'wb')
+        tempFilename = os.path.join(self.directory, fname+'-C')
+        finalFilename = os.path.join(self.directory, fname+'-D')
+        messageFile = open(tempFilename, 'wb')
+        return headerFile, mail.FileMessage(messageFile, tempFilename, finalFilename)
 
 
 class SmartHostSMTPRelayingManager:
-
     """Manage SMTP Relayers
 
     Manage SMTP relayers, keeping track of the existing connections,
@@ -126,7 +171,7 @@ class SmartHostSMTPRelayingManager:
     Someone should press .checkState periodically
     """
 
-    def __init__(self, directory, smartHostAddr, maxConnections=1, 
+    def __init__(self, queue, smartHostAddr, maxConnections=1, 
                  maxMessagesPerConnection=10):
         """initialize
 
@@ -138,19 +183,14 @@ class SmartHostSMTPRelayingManager:
 
         Default values are meant for a small box with 1-5 users.
         """
-        self.directory = directory
         self.maxConnections = maxConnections
         self.maxMessagesPerConnection = maxMessagesPerConnection
         self.smartHostAddr = smartHostAddr
-        self.managed = {}
-        self.messageCollection = MessageCollection()
-        self.readDirectory()
+        self.managed = {} # SMTP clients we're managing
+        self.queue = queue
 
     def _finish(self, message):
-        os.remove(message+'-D')
-        os.remove(message+'-H')
-        message = os.path.basename(message)
-        self.messageCollection.done(message)
+        self.queue.done(message)
 
     def notifySuccess(self, relay, message):
         """a relay sent a message successfully
@@ -160,6 +200,7 @@ class SmartHostSMTPRelayingManager:
         self._finish(message)
 
     def notifyFailure(self, relay, message):
+        """Relaying the message has failed."""
         log.msg("could not relay "+message)
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
@@ -167,41 +208,32 @@ class SmartHostSMTPRelayingManager:
         self._finish(message)
 
     def notifyDone(self, relay):
-        """a relay finished
+        """A relaying SMTP client is disconnected.
 
         unmark all pending messages under this relay's resposibility
         as being relayed, and remove the relay.
         """
         for message in self.managed[relay]:
-            self.messageCollection.waiting(message) 
+            self.queue.waiting(message)
         del self.managed[relay]
 
     def notifyNoConnection(self, relay):
+        """Relaying SMTP client couldn't connect.
+
+        Useful because it tells us our upstream server is unavailable.
+        """
         pass
 
     def __getstate__(self):
         """(internal) delete volatile state"""
         dct = self.__dict__.copy()
-        del dct['managed'], dct['messageCollection']
+        del dct['managed']
         return dct
 
     def __setstate__(self, state):
         """(internal) restore volatile state"""
         self.__dict__.update(state)
-        self.messageCollection = MessageCollection()
         self.managed = {}
-        self.readDirectory()
-
-    def readDirectory(self):
-        """read the messages directory
-
-        look for new messages
-        """ 
-        for message in os.listdir(self.directory):
-            # Skip non data files
-            if message[-2:]!='-D':
-                continue
-            self.messageCollection.addMessage(message[:-2])
 
     def checkState(self):
         """call me periodically to check I am still up to date
@@ -209,20 +241,20 @@ class SmartHostSMTPRelayingManager:
         synchronize with the state of the world, and maybe launch
         a new relay
         """
-        self.readDirectory() 
+        self.queue.readDirectory() 
         if (len(self.managed) >= self.maxConnections or 
-            not self.messageCollection.hasWaiting()):
+            not self.queue.hasWaiting()):
             return
-        nextMessages = self.messageCollection.getWaiting()
+        nextMessages = self.queue.getWaiting()
         nextMessages = nextMessages[:self.maxMessagesPerConnection]
         toRelay = []
         for message in nextMessages:
-            toRelay.append(os.path.join(self.directory, message))
-            self.messageCollection.relaying(message)
+            toRelay.append(self.queue.getPath(message))
+            self.queue.relaying(message)
         protocol = SMTPManagedRelayer(toRelay, self)
         self.managed[protocol] = nextMessages
-        transport = reactor.clientTCP(self.smartHostAddr[0], self.smartHostAddr[1], 
-                                      protocol)
+        reactor.clientTCP(self.smartHostAddr[0], self.smartHostAddr[1], protocol)
+
 
 class MXCalculator:
 

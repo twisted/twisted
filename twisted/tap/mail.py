@@ -33,8 +33,6 @@ class Options(usage.Options):
     optParameters = [["pop", "p", 8110, "Port to start the POP3 server on."],
                   ["smtp", "s", 8025,
                    "Port to start the SMTP server on."],
-                  ["telnet", "t", None,
-                   "Run a telnet server on this port."],
                   ["relay", "r", None,
                    "relay mail we do not know how to handle to this IP,"
                    " using the given path as a queue directory"]]
@@ -42,7 +40,7 @@ class Options(usage.Options):
     longdesc = "This creates a mail.tap file that can be used by twistd."
 
     def __init__(self):
-        self.domains = {}
+    	self.service = mail.MailService("twisted.mail")
         self.last_domain = None
         usage.Options.__init__(self)
 
@@ -51,8 +49,8 @@ class Options(usage.Options):
         """
 
         name, path = string.split(domain, '=')
-        self.last_domain = maildir.MaildirDirdbmDomain(os.path.abspath(path))
-        self.domains[name] = self.last_domain
+        self.last_domain = maildir.MaildirDirdbmDomain(self.service, os.path.abspath(path))
+        self.service.domains[name] = self.last_domain
     opt_d = opt_domain
 
     def opt_user(self, user_pass):
@@ -70,21 +68,16 @@ class Options(usage.Options):
 
 
 def updateApplication(app, config):
-    if config.opts['telnet']:
-        from twisted.protocols import telnet
-        factory = telnet.ShellFactory()
-        app.listenTCP(int(config.opts['telnet']), factory)
     if config.opts['relay']:
         addr, dir = string.split(config.opts['relay'], '=', 1)
         ip, port = string.split(addr, ',', 1)
         port = int(port)
-        default = relay.DomainPickler(dir)
+        config.service.setQueue(relaymanager.Queue(dir))
+        default = relay.DomainQueuer(config.service)
         delayed = delay.Delayed()
-        manager = relaymanager.SmartHostSMTPRelayingManager(dir, (ip, port))
+        manager = relaymanager.SmartHostSMTPRelayingManager(config.service.queue, (ip, port))
         relaymanager.attachManagerToDelayed(manager, delayed)
-        config.domains = mail.DomainWithDefaultDict(config.domains, default)
+        config.service.domains.setDefaultDomain(default)
         app.addDelayed(delayed)
-    app.listenTCP(int(config.opts['pop']),
-                 mail.createDomainsFactory(pop3.VirtualPOP3, config.domains))
-    app.listenTCP(int(config.opts['smtp']),
-                 mail.createDomainsFactory(smtp.DomainSMTP, config.domains))
+    app.listenTCP(int(config.opts['pop']), config.service.getPOP3Factory())
+    app.listenTCP(int(config.opts['smtp']), config.service.getSMTPFactory())

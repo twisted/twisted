@@ -22,17 +22,12 @@ from twisted.mail import mail
 
 import os, time, cPickle
 
-class DomainPickler:
 
-    """An SMTP domain which keeps relayable pickles of all messages"""
+class DomainQueuer:
+    """An SMTP domain which add messages to a queue."""
 
-    def __init__(self, path):
-        """Initialize
-
-        First argument is the directory in which pickles are kept
-        """
-        self.path = path
-        self.n = 0
+    def __init__(self, service):
+        self.service = service
 
     def exists(self, user, success, failure):
         """Check whether we will relay
@@ -55,29 +50,22 @@ class DomainPickler:
         return peer[0] != 'INET' or peer[1] == '127.0.0.1'
 
     def startMessage(self, user):
-        """save a relayable pickle of the message
-
-        The filename is uniquely chosen.
-        The pickle contains a tuple: from, to, message
-        """
-        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
-        self.n = self.n+1
-        fp = open(os.path.join(self.path, fname+'-H'), 'w')
+        """Add envelope to queue and returns ISMTPMessage."""
+        queue = self.service.queue
+        envelopeFile, smtpMessage = queue.createNewMessage()
         try:
-            cPickle.dump([user.orig, '%s@%s' % (user.name, user.domain)], fp)
+            cPickle.dump([user.orig, '%s@%s' % (user.name, user.domain)], envelopeFile)
         finally:
-            fp.close()
-        fp = open(os.path.join(self.path, fname+'-C'), 'w')
-        return mail.FileMessage(fp, os.path.join(self.path, fname+'-C'), 
-                                    os.path.join(self.path, fname+'-D'))
+            envelopeFile.close()
+        return smtpMessage
 
 
 class SMTPRelayer(smtp.SMTPClient):
 
-    def __init__(self, messages):
+    def __init__(self, messagePaths):
         self.messages = []
         self.names = []
-        for message in messages:
+        for message in messagePaths:
             fp = open(message+'-H')
             try:
                 messageContents = cPickle.load(fp)

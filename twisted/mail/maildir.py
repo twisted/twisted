@@ -43,7 +43,7 @@ class AbstractMaildirDomain:
     
     __implements__ = mail.IDomain
     
-    def __init__(self, root):
+    def __init__(self, service, root):
         """Initialize.
         """
         self.root = root
@@ -129,7 +129,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
 
-    def __init__(self, root, postmaster=0):
+    def __init__(self, service, root, postmaster=0):
         """Initialize
 
         The first argument is where the Domain directory is rooted.
@@ -141,7 +141,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         /passwd <-- a dirdbm file
         /USER/inbox/{cur,new,del} <-- each user has these three directories
         """
-        AbstractMaildirDomain.__init__(self, root)
+        AbstractMaildirDomain.__init__(self, service, root)
         self.dbm = dirdbm.open(os.path.join(root, 'passwd'))
         self.postmaster = postmaster
 
