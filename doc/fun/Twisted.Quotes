@@ -4944,7 +4944,16 @@ person.
 <dash> dizzyd: yeah, i got bored of that whole college thing after a while
 <dash> so i graduated
 %
+<jimbug> You know, I would knock the curses author over the head if he didn't invent rogue.
+%
+<glyph> exarkun: you could just write a C module that would do all that ugly dl module crud
+<exarkun> glyph: yea, but then I'd have to write a C module
+<exarkun> Py_Incref in Python is neat, I think :)
+<glyph> exarkun: that guy who wrote pyrex is spinning in his grave, and he isn't even dead
+%
 <morning> yes, but i almost wrote a book on orthogonal persistence, until i realized i couldn't spell it.
+%
+<radix> ayn rand had sex?
 %
 <glyph> I am going up through levels of abstraction so fast, reading from top to bottom, I am worried about getting the bends
 %
@@ -4974,4 +4983,7 @@ person.
 <dialtone> and have my watch sync with my clock
 <exarkun> what time is it right now
 <dialtone> don't have my watch on right now
+%
+<e> birthday paradox cake
+<exarkun> e: Is that the paradox where, if you have more than 30 people in a room, they'll eat your birthday cake?
 %
