@@ -14,6 +14,12 @@ OFFLINE = 0
 ONLINE  = 1
 AWAY = 2
 
+statuses = {
+    0: "Offline",
+    1: "Online",
+    2: "Away"
+    }
+
 class Participant(pb.Perspective):
     def __init__(self, name, password, service):
         self.name = name
@@ -53,19 +59,31 @@ class Participant(pb.Perspective):
         self.changeStatus(OFFLINE)
 
     def addContact(self, contactName):
-        # TODO: make this consentual
         contact = self.service.getPerspectiveNamed(contactName)
         self.contacts.append(contact)
         contact.reverseContacts.append(self)
+        self.notifyStatusChanged(contact)
+
+    def removeContact(self, contactName):
+        for contact in self.contacts:
+            if contact.name == contactName:
+                self.contacts.remove(contact)
+                contact.reverseContacts.remove(self)
+                return
+        raise pb.Error("No such contact.")
 
     def joinGroup(self, name):
-        client = self.client
         group = self.service.getGroup(name)
         group.addMember(self)
-        self.groups.append(self)
+        self.groups.append(group)
 
-    def leaveGroup(self, group):
-        group.removeMember(self)
+    def leaveGroup(self, name):
+        for group in self.groups:
+            if group.name == name:
+                self.groups.remove(group)
+                group.removeMember(self)
+                return
+        raise pb.Error("You're not in that group.")
 
     def receiveDirectMessage(self, sender, message):
         if self.client:
@@ -73,29 +91,40 @@ class Participant(pb.Perspective):
         else:
             raise pb.Error("%s not logged in" % self.name)
 
+    def receiveGroupMessage(self, sender, group, message):
+        if sender is not self and self.client:
+            self.client.receiveGroupMessage(sender.name, group.name, message)
+
     def memberJoined(self, member, group):
-        self.client.memberJoined(member, group)
+        self.client.memberJoined(member.name, group.name)
 
     def memberLeft(self, member, group):
-        self.client.memberLeft(member, group)
+        self.client.memberLeft(member.name, group.name)
 
     def directMessage(self, recipientName, message):
         recipient = self.service.getPerspectiveNamed(recipientName)
         recipient.receiveDirectMessage(self, message)
 
     def groupMessage(self, groupName, message):
-        raise NotImplementedError()
+        for group in self.groups:
+            if group.name == groupName:
+                group.sendMessage(self, message)
+                return
+        raise pb.Error("You're not in that group.")
 
     # Establish client protocol for PB.
     perspective_joinGroup = joinGroup
     perspective_directMessage = directMessage
     perspective_addContact = addContact
+    perspective_removeContact = removeContact
 
 
 class Group(pb.Cached):
+
     def __init__(self, name):
         self.name = name
         self.members = []
+        self.topic = "Welcome to '%s'." % self.name
 
     def getStateToCopyFor(self, participant):
         assert participant in self.members, "illegal copy of group"
@@ -105,13 +134,17 @@ class Group(pb.Cached):
 
     def addMember(self, participant):
         for member in self.members:
-            member.memberJoined(participant)
+            member.memberJoined(participant, self)
         self.members.append(participant)
 
     def removeMember(self, participant):
         self.members.remove(participant)
         for member in self.members:
-            member.memberLeft(participant)
+            member.memberLeft(participant, self)
+
+    def sendMessage(self, sender, message):
+        for member in self.members:
+            member.receiveGroupMessage(sender, self, message)
 
 
 class Service(pb.Service):
@@ -123,7 +156,11 @@ class Service(pb.Service):
         self.groups = {}
 
     def getGroup(self, name):
-        return self.groups[name]
+        group = self.groups.get(name)
+        if not group:
+            group = Group(name)
+            self.groups[name] = group
+        return group
 
     def addParticipant(self, name, password):
         if not self.participants.has_key(name):
