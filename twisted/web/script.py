@@ -29,6 +29,26 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 import traceback
+import resource
+
+class SimpleErrorPage(resource.Resource):
+    def render(self, request):
+        return """<html><head><title>Whoops!</title></head><body>
+<h1>Whoops!</h1>
+<p>
+You forgot to assign to the variable "resource" in your .rpy script. For example:
+</p>
+
+<pre>
+# MyCoolWebApp.rpy
+
+import mygreatresource
+
+resource = mygreatresource.MyGreatResource()
+</pre>
+</body>
+</html>
+"""
 
 def ResourceScript(path):
     """
@@ -36,7 +56,7 @@ def ResourceScript(path):
     be an instance of (a subclass of) web.resource.Resource; it will be
     renderred.
     """
-    globals = {'__file__': path}
+    globals = {'__file__': path, 'resource': SimpleErrorPage()}
 
     execfile(path, globals, globals)
 
