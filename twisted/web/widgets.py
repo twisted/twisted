@@ -168,7 +168,7 @@ class WidgetMixin(Widget):
         raise NotImplementedError("%s.display" % self.__class__)
 
     def displayMixedWidget(self, request):
-        for base in reflect.allBases(self.__class__):
+        for base in reflect.allYourBase(self.__class__):
             if issubclass(base, Widget) and not issubclass(base, WidgetMixin):
                 return base.display(self, request)
 

@@ -295,7 +295,7 @@ def prefixedMethodNames(classObj, prefix):
     addMethodNamesToDict(classObj, dct, prefix)
     return dct.keys()
 
-def allBases(classObj):
+def allYourBase(classObj):
     """A list of all bases of a particular class object.
     """
     l = []
