@@ -119,7 +119,7 @@ class Getter:
         """The Deferred mechanism provides a mechanism to signal error
            conditions.  In this case, even numbers are bad.
         """
-        if x % 2:
+        if x % 2 == 0:
             self.d.callback(x*3)
         else:
             self.d.errback(ValueError("You used an even number!"))
