@@ -451,7 +451,6 @@ class RemoteCache(RemoteCopy, Serializable):
         """
 
         assert broker is self.broker, "You cannot exchange cached proxies between brokers."
-        print 'local cache',self.luid
         return 'lcache', self.luid
 
     def __really_del__(self):

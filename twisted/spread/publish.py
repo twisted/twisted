@@ -68,13 +68,10 @@ class RemotePublished(flavors.RemoteCache):
         try:
             data = open(self.getFileName()).read()
         except IOError:
-            print "** Didn't find the file."
             recent = 0
         else:
             newself = jelly.unjelly(banana.decode(data))
-            print '** Found the file.'
             recent = (newself.timestamp == self.timestamp)
-            print '** ', newself.timestamp, self.timestamp, recent
         if recent:
             self._cbGotUpdate(newself.__dict__)
             self._wasCleanWhenLoaded = 1
