@@ -97,9 +97,6 @@ class TwistedWordsClient(pb.Referenceable):
         for name, status in clist:
             getPerson(name, self, TwistedWordsPerson).setStatus(status)
 
-    def getGroup(self, name):
-        return getGroup(name, self, TwistedWordsGroup)
-
     def joinGroup(self, name):
         self.getGroup(name).joining()
         return self.perspective.joinGroup(name).addCallback(self._cbGroupJoined, name)

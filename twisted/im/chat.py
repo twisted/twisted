@@ -42,6 +42,7 @@ class ContactsList:
         self.countOnline = 0
         autoConnectMethods(self)
         self.selectedPerson = None
+        self.xml.get_widget("OnlineCount").set_text("Online: 0")
 
     def setContactStatus(self, person):
         if person not in self.people:
