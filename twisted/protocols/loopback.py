@@ -75,7 +75,7 @@ def loopback(server, client, logFile=None):
     server.makeConnection(serverToClient)
     client.makeConnection(clientToServer)
     while 1:
-        reactor.iterate() # this is to clear any deferreds
+        reactor.iterate(0.01) # this is to clear any deferreds
         serverToClient.clearBuffer()
         clientToServer.clearBuffer()
         if serverToClient.shouldLose:
@@ -112,7 +112,7 @@ def loopbackTCP(server, client, port=0):
     reactor.connectTCP('127.0.0.1', serverPort.getHost()[2], clientF)
     
     while not clientF.disconnected:
-        reactor.iterate()
+        reactor.iterate(0.01)
 
     serverPort.stopListening()
     reactor.iterate()
@@ -130,7 +130,7 @@ def loopbackUNIX(server, client):
     reactor.connectUNIX(path, clientF)
     
     while not clientF.disconnected:
-        reactor.iterate()
+        reactor.iterate(0.01)
 
     serverPort.stopListening()
     reactor.iterate()

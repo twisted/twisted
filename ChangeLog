@@ -1,5 +1,8 @@
 2003-04-23  Brian Warner  <warner@lothar.com>
 
+	* twisted/protocols/loopback.py: use reactor.iterate(0.01) so the
+	tests hammer the CPU slightly less
+
 	* twisted/test/test_trial.py (LoopbackTests.testError): .type is a
 	string
 	* twisted/trial/remote.py (JellyReporter.reportResults): stringify
