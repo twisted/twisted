@@ -31,17 +31,15 @@ class EverythingEphemeral(styles.Ephemeral):
         try:
             return getattr(mainMod, key)
         except AttributeError:
-            if initRun:
-                raise
-            else:
-                log.msg("Warning!  Loading from __main__: %s" % key)
-                return styles.Ephemeral()
+            log.msg("Warning!  Loading from __main__: %s" % key)
+            return styles.Ephemeral()
 
-#
 
 class LoaderCommon:
     """Simple logic for loading persisted data"""
+
     loadmessage = "Loading %s..."
+
     def __init__(self, filename, encrypted=None, passphrase=None):
         self.filename = filename
         self.encrypted = encrypted
@@ -57,9 +55,9 @@ class LoaderCommon:
             self.read()
         return self.decode()       
         
-    def read(self, filename):
-        pass
-
+    def read(self):
+        self.data = open(self.filename, 'r').read()
+        
     def decrypt(self):
         try:
             import md5
@@ -71,10 +69,11 @@ class LoaderCommon:
     def decode(self):
         pass
 
+
 class LoaderXML(LoaderCommon):
+
     loadmessage = '<Loading file="%s" />' 
-    def read(self, filename):
-        self.data = open(filename, 'r').read()
+
     def decode(self):
         from twisted.persisted.marmalade import unjellyFromXML
         sys.modules['__main__'] = EverythingEphemeral()
@@ -83,24 +82,28 @@ class LoaderXML(LoaderCommon):
         styles.doUpgrade()
         return application
 
+
 class LoaderPython(LoaderCommon):
+
+    def read(self):
+        pass
+
     def decrypt(self):
         log.msg("Python files are never encrypted")
-    
+
     def decode(self):
         pyfile = os.path.abspath(self.filename)
         d = {'__file__': self.filename}
-        execfile(pyfile, dict, dict)
+        execfile(pyfile, d, d)
         try:
-            application = dict['application']
+            application = d['application']
         except KeyError:
             log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % repr(self.filename))
             sys.exit()
         return application
 
+
 class LoaderSource(LoaderCommon):
-    def read(self):
-        self.data = open(self.filename, 'r').read()
 
     def decode(self):
         from twisted.persisted.aot import unjellyFromSource
@@ -111,9 +114,8 @@ class LoaderSource(LoaderCommon):
         styles.doUpgrade()
         return application
 
+
 class LoaderTap(LoaderCommon):
-    def read(self):
-        self.data = open(self.filename, 'rb').read()
 
     def decode(self):
         sys.modules['__main__'] = EverythingEphemeral()
@@ -122,10 +124,12 @@ class LoaderTap(LoaderCommon):
         styles.doUpgrade()
         return application
 
+
 loaders = {'python': LoaderPython,
            'xml': LoaderXML,
            'source': LoaderSource,
            'pickle': LoaderTap}
+
 
 def loadPersisted(filename, kind, encrypted, passphrase):
     "Loads filename, of the specified kind and returns an application"
@@ -133,6 +137,7 @@ def loadPersisted(filename, kind, encrypted, passphrase):
     l = Loader(filename, encrypted, passphrase)
     application = l.load()
     return application
+
 
 def savePersisted(app, filename, encrypted):
     if encrypted:
@@ -143,6 +148,7 @@ def savePersisted(app, filename, encrypted):
             print "The --encrypt flag requires the PyCrypto module, no file written."
     else:
         app.save(filename=filename)
+
 
 class ConvertOptions(usage.Options):
     synopsis = "Usage: tapconvert [options]"
@@ -170,22 +176,25 @@ def run():
         passphrase = getpass.getpass('Passphrase: ')
 
     if options["typein"] == "guess":
-        if options["in"][-3:] == '.py':
-            options["typein"] = 'python'
-        else:
-            try:
-                options["typein"] = ({ '.tap': 'pickle',
-                                       '.tas': 'source',
-                                       '.tax': 'xml' }[options["in"][-4:]])
-            except KeyError:
-                print "Error: Could not guess the type."
-                return
+        ext = os.path.splitext(options["in"])[1]
+        try:
+            options["typein"] = ({ '.py':  'python',
+                                   '.tap': 'pickle',
+                                   '.tas': 'source',
+                                   '.tax': 'xml' }[ext])
+        except KeyError:
+            print "Error: Could not guess the type."
+            return
 
     if None in [options['in']]:
         options.opt_help()
     a = loadPersisted(options["in"], options["typein"], options["decrypt"], passphrase)
-    a.persistStyle = ({'xml': 'xml',
-                       'source': 'aot', 
-                       'pickle': 'pickle'}
-                       [options["typeout"]])
+    try:
+        a.persistStyle = ({'xml': 'xml',
+                           'source': 'aot', 
+                           'pickle': 'pickle'}
+                          [options["typeout"]])
+    except KeyError:
+        print "Error: Unsupported output type."
+        return
     savePersisted(a, filename=options["out"], encrypted=options["encrypt"])
