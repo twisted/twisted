@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.1 2002/04/12 19:02:31 acapnotic Exp $
+# $Id: tendril.py,v 1.2 2002/04/19 01:44:35 acapnotic Exp $
 
 # Copyright (C) 2001, 2002 Matthew W. Lefkowitz
 #
@@ -27,7 +27,7 @@ class TendrilConfigurator(coil.Configurator):
 
     configName = "IRC Tendril from Twisted Words"
     configurableClass = tendril.Tendril
-    
+
     configTypes = {
         'host': (types.StringType, "Host", "The host this Tendril will connect to."),
         'portno': (types.IntType, "Port", "The port on the host to connect to."),
