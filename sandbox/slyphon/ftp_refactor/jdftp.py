@@ -298,7 +298,7 @@ class DTP(object, protocol.Protocol):
         #TODO: need to test this. taken directly from the pop3 code
         #      so i don't know if the commented-out chunk on the right
         #      is necessary
-        return chunk.replace('\n', '\r\n') #.replace('\r\n.', '\r\n..')
+        return chunk.replace('\n', '\r\n') 
 
     def dtp_RETR(self): # RETR = sendFile
         """ssnds a file object out the wire

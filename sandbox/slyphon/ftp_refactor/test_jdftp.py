@@ -24,9 +24,9 @@ from StringIO import StringIO
 from twisted import internet
 from twisted.trial import unittest
 from twisted.protocols import basic
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol, defer, interfaces
 from twisted.cred import error, portal, checkers, credentials
-from twisted.python import log
+from twisted.python import log, components
 
 import jdftp as ftp
 import jdftp
@@ -388,12 +388,10 @@ class BogusAvatar(object):
         del text[(size - 2):]
         text.extend(endln)
         sio = NonClosingStringIO(''.join(text))
-        #import cStringIO
-        #sio = cStringIO.StringIO(''.join(text))
-        #sio.truncate(size)
         self.finalFileSize = len(sio.getvalue())
         log.msg("BogusAvatar.retr: file size = %d" % self.finalFileSize)
         sio.seek(0)
+        self.sentfile = sio
         return (sio, self.finalFileSize)
 
 
@@ -426,6 +424,35 @@ class FTPTestCase(unittest.TestCase):
         for d in delayeds:
             d.cancel()
         self.cnx = None
+
+class TestUtilityFunctions(unittest.TestCase):
+    def testCleanPath(self):
+        evil_paths = [r"..\/*/foobar/ding//dong/\\**"]
+        for ep in evil_paths:
+            log.msg(ftp.cleanPath(ep))
+
+TestUtilityFunctions.todo = 'workin on it'
+    
+
+class TestFTPFactory(FTPTestCase):
+    def testBuildProtocol(self):
+        ftpf = ftp.FTPFactory()
+        cinum = ftpf.currentInstanceNum
+        p = ftpf.buildProtocol(('i', None, 30000))
+        self.failUnless(components.implements(ftpf, interfaces.IProtocolFactory))
+        self.failUnless(components.implements(p, interfaces.IProtocol))
+
+        self.failUnlessEqual(p.protocol, ftpf.protocol)
+        self.failUnlessEqual(p.protocol, ftp.FTP)
+
+        self.failUnlessEqual(p.portal, ftpf.portal)
+        self.failUnlessEqual(p.timeOut, ftp.FTPFactory.timeOut)
+        self.failUnlessEqual(p.factory, ftpf)
+
+        self.failUnlessEqual(ftpf.currentInstanceNum, cinum + 1)
+        self.failUnlessEqual(p.instanceNum, ftpf.currentInstanceNum)
+        self.failUnlessEqual(len(ftpf.instances), 1)
+        self.failUnlessEqual(ftpf.instances[0], p)
 
         
 class TestFTPServer(FTPTestCase):
@@ -573,14 +600,15 @@ class TestDTPTesting(FTPTestCase):
         iop.flush()
         diop.flush()
         log.debug('dc.lines size: %d' % len(dc.lines))
-        lenRx = len(''.join(dc.lines))
-        sizes = 'filesize before txmit: %d, filesize after txmit: %d' % (avatar.finalFileSize, lenRx)
-        percent = 'percent actually received %f' % ((float(lenRx) / float(avatar.finalFileSize))*100)
+        rxLines = ''.join(dc.lines)
+        lenRxLines = len(rxLines)
+        sizes = 'filesize before txmit: %d, filesize after txmit: %d' % (avatar.finalFileSize, lenRxLines)
+        percent = 'percent actually received %f' % ((float(lenRxLines) / float(avatar.finalFileSize))*100)
         log.debug(sizes)
         log.debug(percent)
         print sizes
         print percent
-        #self.assert_(len(dc.lines) >= 1)
+        self.assertEquals(avatar.sentfile.getvalue(), sr.fp.getvalue())
 
     testEffectsOfChunkSizeOnDTPTesting.todo = "let's find out what's wrong"
 
