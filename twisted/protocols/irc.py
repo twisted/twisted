@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.72 $'[11:-2]
+__version__ = '$Revision: 1.73 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -178,14 +178,23 @@ class IRC(protocol.Protocol):
             # mIRC is a big pile of doo-doo
             command = string.upper(command)
             # DEBUG: log.msg( "%s %s %s" % (prefix, command, params))
-            method = getattr(self, "irc_%s" % command, None)
-            try:
-                if method is not None:
-                    method(prefix, params)
-                else:
-                    self.irc_unknown(prefix, command, params)
-            except:
-                log.deferr()
+            
+            self.handleCommand(command, prefix, params)
+
+
+    def handleCommand(self, command, prefix, params):
+        """Determine the function to call for the given command and call
+        it with the given arguments.
+        """
+        method = getattr(self, "irc_%s" % command, None)
+        try:
+            if method is not None:
+                method(prefix, params)
+            else:
+                self.irc_unknown(prefix, command, params)
+        except:
+            log.deferr()
+
 
     def irc_unknown(self, prefix, command, params):
         """Implement me!"""
@@ -970,13 +979,24 @@ class IRCClient(basic.LineReceiver):
           prefix, command, params = parsemsg(line)
           if numeric_to_symbolic.has_key(command):
               command = numeric_to_symbolic[command]
-          method = getattr(self, "irc_%s" % command, None)
-          if method is not None:
-              method(prefix, params)
-          else:
-              self.irc_unknown(prefix, command, params)
+          self.handleCommand(command, prefix, params)
       except IRCBadMessage:
           apply(self.badMessage, (line,) + sys.exc_info())
+
+
+    def handleCommand(self, command, prefix, params):
+        """Determine the function to call for the given command and call
+        it with the given arguments.
+        """
+        method = getattr(self, "irc_%s" % command, None)
+        try:
+            if method is not None:
+                method(prefix, params)
+            else:
+                self.irc_unknown(prefix, command, params)
+        except:
+            log.deferr()
+
 
     def __getstate__(self):
         dct = self.__dict__.copy()
