@@ -28,7 +28,7 @@ any extensions.
 \fB\-d\fR, \fB\--debfile\fR \fI<debfile>\fR
 The name of the debian package. Default is 'twisted-'+protocol.
 .TP
-\fB\-v\fR, \fB\--version\fR \fI<version>\fR
+\fB\-V\fR, \fB\--set-version\fR \fI<version>\fR
 The version of the Debian package. The default is 1.0
 .TP
 \fB\-e\fR, \fB\--description\fR \fI<description>\fR
@@ -41,6 +41,9 @@ this being an automatic package created from tap2deb.
 \fB\-m\fR, \fB\--maintainer\fR \fI<maintainer>\fR
 The maintainer, as "Name Lastname <email address>". This will
 go in the meta-files, as well as be used as the id to sign the package.
+.TP
+\fB\-v\fR, \fB\--version\fR
+Output version information and exit.
 .SH AUTHOR
 Written by Moshe Zadka, based on twistd's help messages
 .SH "REPORTING BUGS"

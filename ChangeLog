@@ -1,3 +1,8 @@
+2003-03-04  Tommi Virtanen  <tv@twistedmatrix.com>
+
+	* twisted/scripts/tap2deb.py, doc/man/tap2deb.1: Option --version=
+	collided with global options, renamed to --set-version=.
+
 2003-03-01  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/scripts/twistd.py: Added --report-profile flag to twistd

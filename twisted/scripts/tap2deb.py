@@ -26,7 +26,7 @@ class MyOptions(usage.Options):
                   ["protocol", "p", ""],
                   ["description", "e", ""],
                   ["long_description", "l", ""],
-                  ["version", "v", "1.0"],
+                  ["set-version", "V", "1.0"],
                   ["debfile", "d", None],
                   ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python'"]]
 
@@ -54,7 +54,7 @@ def run():
     base_tap_file = os.path.basename(config['tapfile'])
     protocol = (config['protocol'] or os.path.splitext(base_tap_file)[0])
     deb_file = config['debfile'] or 'twisted-'+protocol
-    version = config['version']
+    version = config['set-version']
     maintainer = config['maintainer']
     description = config['description'] or ('A TCP server for %(protocol)s' %
                                             vars())
