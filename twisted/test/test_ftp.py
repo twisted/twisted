@@ -76,10 +76,13 @@ class FTPClientTests(FTPTest):
         d.arm()
 
         # Wait for the result
-        reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
+        id = reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
         while not hasattr(self, 'result') and not hasattr(self, 'error'):
             reactor.iterate()
-        
+        try:
+            reactor.cancelCallLater(id)
+        except ValueError: pass
+
         error = getattr(self, 'error', None)
         if error:
             raise error[0], error[1], error[2]
@@ -112,10 +115,13 @@ class FTPClientTests(FTPTest):
         d.arm()
 
         # Wait for a result
-        reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
+        id = reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
         while not hasattr(self, 'result') and not hasattr(self, 'error'):
             reactor.iterate()
-
+        try:
+            reactor.cancelCallLater(id)
+        except ValueError: pass
+        
         error = getattr(self, 'error', None)
         if error:
             raise error[0], error[1], error[2]
