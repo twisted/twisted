@@ -395,6 +395,7 @@ class List(Widget):
     A List should be specified in the template HTML as so:
 
        | <ul id="blah" view="List">
+       |     <li id="emptyList">This will be displayed if the list is empty.</li>
        |     <li id="listItem" view="Text">Foo</li>
        | </ul>
 
@@ -402,6 +403,7 @@ class List(Widget):
 
        | <table model="blah" view="List">
        |     <tr class="listHeader"><th>A</th><th>B</th></tr>
+       |     <tr class="emptyList"><td colspan='2'>***None***</td></tr>
        |     <tr class="listItem">
        |         <td><span view="Text" model="1" /></td>
        |         <td><span view="Text" model="2" /></td>
@@ -417,6 +419,7 @@ class List(Widget):
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
         listHeader = domhelpers.getIfExists(node, 'listHeader')
+        emptyList = domhelpers.getIfExists(node, 'emptyList')
         # xxx with this implementation all elements of the list must use the same view widget
         listItems = domhelpers.locateNodes(node, 'itemOf', self.submodel.split('/')[-1])
         if not listItems:
@@ -427,22 +430,25 @@ class List(Widget):
         submodel = self.submodel
         data = self.getData()
         currentListItem = 0
-        for itemNum in range(len(data)):
-            # theory: by appending copies of the li node
-            # each node will be handled once we exit from
-            # here because handleNode will then recurse into
-            # the newly appended nodes
-            
-            newNode = listItems[currentListItem].cloneNode(1)
-            if currentListItem >= len(listItems) - 1:
-                currentListItem = 0
-            else:
-                currentListItem += 1
-            
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix', self.submodel)
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix', str(itemNum))
-            node.appendChild(newNode)
-            newNode.parentNode = node
+        if len(data):
+            for itemNum in range(len(data)):
+                # theory: by appending copies of the li node
+                # each node will be handled once we exit from
+                # here because handleNode will then recurse into
+                # the newly appended nodes
+
+                newNode = listItems[currentListItem].cloneNode(1)
+                if currentListItem >= len(listItems) - 1:
+                    currentListItem = 0
+                else:
+                    currentListItem += 1
+
+                domhelpers.superAppendAttribute(newNode, '_submodel_prefix', self.submodel)
+                domhelpers.superAppendAttribute(newNode, '_submodel_prefix', str(itemNum))
+                node.appendChild(newNode)
+                newNode.parentNode = node
+        elif not emptyList is None:
+            node.appendChild(emptyList)
         return node
 
 class ColumnList(List):
