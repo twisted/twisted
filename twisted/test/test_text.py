@@ -75,4 +75,31 @@ class WrapTest(unittest.TestCase):
                                    lineWidth, failures))
 
 
-testCases = [WrapTest]
+class SplitTest(unittest.TestCase):
+    """Tests for text.splitQuoted()"""
+
+    def test_oneWord(self):
+        """Splitting strings with one-word phrases."""
+        s = 'This code "works."'
+        r = text.splitQuoted(s)
+        self.failUnlessEqual(['This', 'code', 'works.'], r)
+
+    def test_multiWord(self):
+        s = 'The "hairy monkey" likes pie.'
+        r = text.splitQuoted(s)
+        self.failUnlessEqual(['The', 'hairy monkey', 'likes', 'pie.'], r)
+
+    # Some of the many tests that would fail:
+
+    #def test_preserveWhitespace(self):
+    #    phrase = '"MANY     SPACES"'
+    #    s = 'With %s between.' % (phrase,)
+    #    r = text.splitQuoted(s)
+    #    self.failUnlessEqual(['With', phrase, 'between.'], r)
+
+    #def test_escapedSpace(self):
+    #    s = r"One\ Phrase"
+    #    r = text.splitQuoted(s)
+    #    self.failUnlessEqual(["One Phrase"], r)
+
+testCases = [WrapTest, SplitTest]

@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.65 $'[11:-2]
+__version__ = '$Revision: 1.66 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -98,7 +98,7 @@ def parsemsg(s):
 
 def split(str, length = 80):
     """I break a message into multiple lines.
-    
+
     I prefer to break at whitespace near str[length].  I also break at \n.
 
     @returns: list of strings
@@ -370,12 +370,12 @@ class IRCClient(basic.LineReceiver):
 
     def receivedMOTD(self, motd):
         """I received a message-of-the-day banner from the server.
-        
+
         motd is a list of strings, where each string was sent as a seperate
         message from the server. To display, you might want to use::
-        
+
             string.join(motd, '\\n')
-        
+
         to get a nicely formatted string.
         """
         pass
@@ -504,6 +504,16 @@ class IRCClient(basic.LineReceiver):
 
         self.ctcpMakeQuery(user, [('DCC', args)])
 
+    def dccResume(self, user, fileName, port, resumePos):
+        """Send a DCC RESUME request to another user."""
+        self.ctcpMakeQuery(user, [
+            (DCC, ['RESUME', fileName, port, resumePos])])
+
+    def dccAcceptResume(self, user, fileName, port, resumePos):
+        """Send a DCC ACCEPT response to clients who have requested a resume.
+        """
+        self.ctcpMakeQuery(user, [
+            (DCC, ['ACCEPT', fileName, port, resumePos])])
 
     ### server->client messages
     ### You might want to fiddle with these,
@@ -579,7 +589,6 @@ class IRCClient(basic.LineReceiver):
             self.nickname = params[0]
         else:
             self.userRenamed(nick, params[0])
-
 
     def irc_KICK(self, prefix, params):
         """Kicked?  Who?  Not me, I hope.
@@ -746,75 +755,14 @@ class IRCClient(basic.LineReceiver):
 
     def ctcpQuery_DCC(self, user, channel, data):
         """Initiate a Direct Client Connection
-
-        Supported connection types: SEND, CHAT
         """
 
-        data = string.split(data)
-        if len(data) < 4:
-            raise IRCBadMessage, "malformed DCC request: %s" % (data,)
-
-        (dcctype, arg, address, port) = data[:4]
-
-        # workaround for clients that send '"file name.ext"' instead of 'file_name.ext'.
-        # XXX: What does the standard say? (haw haw)
-        if arg[0] == '"':
-          dcctype = data[0]
-          args = data[1:]
-          port = args.pop()
-          address = args.pop()
-          arg = string.join(args,' ')[1:-1]
-
-        try:
-            port = int(port)
-        except ValueError:
-            raise IRCBadMessage, "Indecipherable port %r" % (port,)
-
-        if '.' in address:
-            pass
-        else:
-            try:
-                address = long(address)
-            except ValueError:
-                raise IRCBadMessage,\
-                      "Indecipherable address %r" % (address,)
-            else:
-                address = (
-                    (address >> 24) & 0xFF,
-                    (address >> 16) & 0xFF,
-                    (address >> 8) & 0xFF,
-                    address & 0xFF,
-                    )
-                # The mapping to 'int' is to get rid of those accursed
-                # "L"s which python 1.5.2 puts on the end of longs.
-                address = string.join(map(str,map(int,address)), ".")
-
-        if self.dcc_sessions is None:
-            self.dcc_sessions = []
-
-        if dcctype == 'SEND':
-            log.msg("hah! how dare you try to DCC me!")
-            # Commented out because because we don't want the default
-            # IRC implementation to write arbitrarily named files to
-            # the user's disk without their knowledge or consent.
-##            size = -1
-##            if len(data) >= 5:
-##                try:
-##                    size = int(data[4])
-##                except ValueError:
-##                    pass
-
-##            filename = path.basename(arg)
-##            protocol = DccFileReceive(filename, size,
-##                                      (user,channel,data),self.dcc_destdir)
-
-##            reactor.clientTCP(address, port, protocol)
-##            self.dcc_sessions.append(protocol)
-
-        elif dcctype == 'CHAT':
-            factory = DccChatFactory(self, queryData=(user, channel, data))
-            reactor.connectTCP(address, port, factory)
-            self.dcc_sessions.append(factory)
+        dcctype = data.split(None, 1).upper()
+        handler = getattr(self, "dcc_" + dcctype, None)
+        if handler:
+            if self.dcc_sessions is None:
+                self.dcc_sessions = []
+            handler(user, channel, data)
         else:
             nick = string.split(user,"!")[0]
             self.ctcpMakeReply(nick, [('ERRMSG',
@@ -822,6 +770,91 @@ class IRCClient(basic.LineReceiver):
                                        % (data, dcctype))])
             self.quirkyMessage("%s offered unknown DCC type %s"
                                % (user, dcctype))
+
+    def dcc_SEND(self, user, channel, data):
+        # Use splitQuoted for those who send files with spaces in the names.
+        data = text.splitQuoted(data)
+        if len(data) < 3:
+            raise IRCBadMessage, "malformed DCC SEND request: %r" % (data,)
+
+        (filename, address, port) = data[:3]
+
+        address = dccParseAddress(address)
+        try:
+            port = int(port)
+        except VauleError:
+            raise IRCBadMessage, "Indecipherable port %r" % (port,)
+
+        size = -1
+        if len(data) >= 4:
+            try:
+                size = int(data[3])
+            except ValueError:
+                pass
+
+        # XXX Should we bother passing this data?
+        self.dccDoSend(user, address, port, filename, size, data)
+
+    def dcc_ACCEPT(self, user, channel, data):
+        data = text.splitQuoted(data)
+        if len(data) < 3:
+            raise IRCBadMessage, "malformed DCC ACCEPT request: %r" % (data,)
+        (filename, port, resumePos) = data[:3]
+
+        self.dccDoAcceptResume(user, filename, port, resumePos)
+
+    def dcc_RESUME(self, user, channel, data):
+        data = text.splitQuoted(data)
+        if len(data) < 3:
+            raise IRCBadMessage, "malformed DCC RESUME request: %r" % (data,)
+        (filename, port, resumePos) = data[:3]
+        self.dccDoResume(user, filename, port, resumePos)
+
+    def dcc_CHAT(self, user, channel, data):
+        data = text.splitQuoted(data)
+        if len(data) < 3:
+            raise IRCBadMessage, "malformed DCC CHAT request: %r" % (data,)
+
+        (filename, address, port) = data[:3]
+
+        address = dccParseAddress(address)
+        try:
+            port = int(port)
+        except VauleError:
+            raise IRCBadMessage, "Indecipherable port %r" % (port,)
+
+        self.dccDoChat(user, channel, address, port, data)
+
+    ### The dccDo methods are the slightly higher-level siblings of
+    ### common dcc_ methods; the arguments have been parsed for them.
+
+    def dccDoSend(self, user, address, port, fileName, size, data):
+        """Called when I receive a DCC SEND offer from a client.
+
+        By default, I do nothing here."""
+        ## filename = path.basename(arg)
+        ## protocol = DccFileReceive(filename, size,
+        ##                           (user,channel,data),self.dcc_destdir)
+        ## reactor.clientTCP(address, port, protocol)
+        ## self.dcc_sessions.append(protocol)
+        pass
+
+    def dccDoResume(self, user, file, port, resumePos):
+        """Called when a client is trying to resume an offered file
+        via DCC send.  It should be either replied to with a DCC
+        ACCEPT or ignored (default)."""
+        pass
+
+    def dccDoAcceptResume(self, user, file, port, resumePos):
+        """Called when a client has verified and accepted a DCC resume
+        request made by us.  By default it will do nothing."""
+        pass
+
+    def dccDoChat(self, user, channel, address, port, data):
+        pass
+        #factory = DccChatFactory(self, queryData=(user, channel, data))
+        #reactor.connectTCP(address, port, factory)
+        #self.dcc_sessions.append(factory)
 
     #def ctcpQuery_SED(self, user, data):
     #    """Simple Encryption Doodoo
@@ -840,22 +873,20 @@ class IRCClient(basic.LineReceiver):
                  % (user, tag, data))
 
     def ctcpMakeReply(self, user, messages):
-        """Send one or more extended messages as a CTCP reply.
+        """Send one or more X{extended messages} as a CTCP reply.
 
-        'messages' takes a list of extended messages.
-        An extended message is a (tag, data) tuple, where 'data' may be
-        None.
+        @type messages: a list of extended messages.  An extended
+        message is a (tag, data) tuple, where 'data' may be C{None}.
         """
         self.notice(user, ctcpStringify(messages))
 
     ### client CTCP query commands
 
     def ctcpMakeQuery(self, user, messages):
-        """Send one or more extended messages as a CTCP query.
+        """Send one or more X{extended messages} as a CTCP query.
 
-        'messages' takes a list of extended messages.
-        An extended message is a (tag, data) tuple, where 'data' may be
-        None.
+        @type messages: a list of extended messages.  An extended
+        message is a (tag, data) tuple, where 'data' may be C{None}.
         """
         self.msg(user, ctcpStringify(messages))
 
@@ -916,7 +947,8 @@ class IRCClient(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        # some servers (dalnet!) break RFC and send their first few lines just delimited by \n
+        # some servers (dalnet!) break RFC and send their first few
+        # lines just delimited by \n
         lines = string.split(line,'\n')
         for line in lines:
           line = lowDequote(line)
@@ -939,6 +971,26 @@ class IRCClient(basic.LineReceiver):
         return dct
 
 
+def dccParseAddress(address):
+    if '.' in address:
+        pass
+    else:
+        try:
+            address = long(address)
+        except ValueError:
+            raise IRCBadMessage,\
+                  "Indecipherable address %r" % (address,)
+        else:
+            address = (
+                (address >> 24) & 0xFF,
+                (address >> 16) & 0xFF,
+                (address >> 8) & 0xFF,
+                address & 0xFF,
+                )
+            address = '.'.join(map(str,address))
+    return address
+
+
 class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
     """Bare protocol to receive a Direct Client Connection SEND stream.
 
@@ -948,8 +1000,9 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
 
     bytesReceived = 0
 
-    def __init__(self):
-        self.bytesReceived = 0
+    def __init__(self, resumeOffset=0):
+        self.bytesReceived = resumeOffset
+        self.resume = (resumeOffset != 0)
 
     def dataReceived(self, data):
         """Called when data is received.
@@ -960,7 +1013,6 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
         """
         self.bytesReceived = self.bytesReceived + len(data)
         self.transport.write(struct.pack('!i', self.bytesReceived))
-        # these two were the wrong way around.
 
 
 class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
@@ -1191,7 +1243,8 @@ class DccFileReceive(DccFileReceiveBasic):
 
     I allow you to change the file's name and destination directory.
     I won't overwrite an existing file unless I've been told it's okay
-    to do so.
+    to do so. If passed the resumeOffset keyword argument I will attempt to
+    resume the file from that amount of bytes.
 
     XXX: I need to let the client know when I am finished.
     XXX: I need to decide how to keep a progress indicator updated.
@@ -1206,8 +1259,9 @@ class DccFileReceive(DccFileReceiveBasic):
     fromUser = None
     queryData = None
 
-    def __init__(self, filename, fileSize=-1, queryData=None,destDir='.'):
-        DccFileReceiveBasic.__init__(self)
+    def __init__(self, filename, fileSize=-1, queryData=None,
+                 destDir='.', resumeOffset=0):
+        DccFileReceiveBasic.__init__(self, resumeOffset)
         self.filename = filename
         self.destDir = destDir
         self.fileSize = fileSize
@@ -1247,13 +1301,18 @@ class DccFileReceive(DccFileReceiveBasic):
         self.overwrite = boolean
 
 
-
-
     # Protocol-level methods.
 
     def connectionMade(self):
         dst = path.abspath(path.join(self.destDir,self.filename))
-        if self.overwrite or not path.exists(dst):
+        exists = path.exists(dst)
+        if self.resume and exists:
+            # I have been told I want to resume, and a file already
+            # exists - Here we go
+            self.file = open(dst, 'ab')
+            log.msg("Attempting to resume %s - starting from %d bytes" %
+                    (self.file, self.file.tell()))
+        elif self.overwrite or not exists:
             self.file = open(dst, 'wb')
         else:
             raise OSError(errno.EEXIST,
@@ -1294,6 +1353,8 @@ class DccFileReceive(DccFileReceiveBasic):
         self.transport.log(logmsg)
 
     def __str__(self):
+        if not self.connected:
+            return "<Unconnected DccFileReceive object at %x>" % (id(self),)
         from_ = self.transport.getPeer()
         if self.fromUser:
             from_ = "%s (%s)" % (self.fromUser, from_)
@@ -1302,7 +1363,7 @@ class DccFileReceive(DccFileReceiveBasic):
         return s
 
     def __repr__(self):
-        s = ("<%s at %s: GET %s>"
+        s = ("<%s at %x: GET %s>"
              % (self.__class__, id(self), self.filename))
         return s
 
@@ -1416,12 +1477,26 @@ def ctcpDequote(s):
     return xEscape_re.sub(sub, s)
 
 def ctcpStringify(messages):
+    """
+    @type messages: a list of extended messages.  An extended
+    message is a (tag, data) tuple, where 'data' may be C{None}, a
+    string, or a list of strings to be joined with whitespace.
+
+    @returns: String
+    """
     coded_messages = []
     for (tag, data) in messages:
         if data:
+            if not isinstance(data, types.StringType):
+                try:
+                    # data as list-of-strings
+                    data = " ".join(map(str, data))
+                except TypeError:
+                    # No?  Then use it's %s representation.
+                    pass
             m = "%s %s" % (tag, data)
         else:
-            m = tag
+            m = str(tag)
         m = ctcpQuote(m)
         m = "%s%s%s" % (X_DELIM, m, X_DELIM)
         coded_messages.append(m)
