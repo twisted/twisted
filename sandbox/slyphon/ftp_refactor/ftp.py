@@ -91,34 +91,51 @@ from twisted.python import log, components
 # a 3-digit number identifies the meaning
 # used by Ftp.reply(key)
 ftp_reply = {
-    'file':      '150 File status okay; about to open data connection.',
+    'restart_marker':   '110 MARK yyyy-mmmm', # TODO: this must be fixed
+    'delay':            '120 service ready in %s minutes',
+    'datacnxopen':      '125 Data connection already open, starting transfer',
+    'file':             '150 File status okay; about to open data connection.',
 
-    'type':      '200 Type set to %s.',
-    'ok':        '200 %s command successful.',
-    'size':      '213 %s',
-    'syst':      '215 UNIX Type: L8',
-    'abort':     '226 Abort successful',
-    'welcome':   '220 Welcome, twisted.ftp at your service.',
-    'goodbye':   '221 Goodbye.',
-    'fileok':    '226 Transfer Complete.',
-    'epsv':      '229 Entering Extended Passive Mode (|||%s|).',
-    'cwdok':     '250 CWD command successful.',
-    'pwd':       '257 "%s" is current directory.',
+    'type':             '200 Type set to %s.',
+    'ok':               '200 %s command successful.',
+    'superfl':          '202 command not implemented, superfluous at this site',
+    'sysstat':          '211 system status reply',
+    'dirstat':          '212 %s',
+    'size':             '213 %s',
+    'help':             '214 help: %s',
+    'syst':             '215 UNIX Type: L8',
+    'abort':            '226 Abort successful',
+    'welcome':          '220 Welcome, twisted.ftp at your service.',
+    'goodbye':          '221 Goodbye.',
+    'dcnx_noxfr':       '225 data connection open, no transfer in progress',
+    'fileok':           '226 Transfer Complete.',
+    'pasv':             '227 entering passive mode',
 
-    'user':      '331 Password required for %s.',
-    'userotp':   '331 Response to %s.',
-    'guest':     '331 Guest login ok, type your name as password.',
-    'userok':    '230 User %s logged in.',
-    'guestok':   '230 Guest login ok, access restrictions apply.',
+    # where is epsv defined in the rfc's?
+    'epsv':             '229 Entering Extended Passive Mode (|||%s|).',
+    'usrlogdin':        '230 User logged in, proceed',
+    'cwdok':            '250 CWD command successful.',
+    'pwd':              '257 "%s" is current directory.',
 
-    'getabort':  '426 Transfer aborted.  Data connection closed.',
-    'unknown':   "500 '%s': command not understood.",
-    'nouser':    '503 Login with USER first.',
-    'notimpl':   '504 Not implemented.',
-    'nopass':    '530 Please login with USER and PASS.',
-    'noauth':    '530 Sorry, Authentication failed.',
-    'nodir':     '550 %s: No such file or directory.',
-    'noperm':    '550 %s: Permission denied.'
+    'user':             '331 Password required for %s.',
+    'userotp':          '331 Response to %s.',
+    'guest':            '331 Guest login ok, type your name as password.',
+    'userok':           '230 User %s logged in.',
+    'guestok':          '230 Guest login ok, access restrictions apply.',
+
+    'getabort':         '426 Transfer aborted.  Data connection closed.',
+    'unknown':          "500 '%s': command not understood.",
+    'syntax_err':       '501 syntax error in %s.',
+    'notimpl':          "502 command '%s' not implemented",
+    'wrong_seq':        '503 Incorrect sequence of commands: %s',
+    'notimplforparam':  "504 Not implemented for parameter '%s'.",
+    'nopass':           '530 Please login with USER and PASS.',
+    'noauth':           '530 Sorry, Authentication failed.',
+    'needacct':         '532 Need an account for storing files',
+    'nodir':            '550 %s: No such file or directory.',
+    'noperm':           '550 %s: Permission denied.',
+    'exceedquota',      '552 requested file action aborted, exceeded file storage allocation',
+    'badfilename',      '553 requested action not taken, file name not allowed'
     }
 
 
@@ -449,7 +466,7 @@ class FTP(basic.LineReceiver, DTPFactory):
             identification for access control.
         """
         if not self.user:
-            self.reply('nouser')
+            self.reply('wrong_seq', 'USER required before PASS')
             return
         
         if self.factory.anonymous and self.user == self.factory.useranonymous:
@@ -611,12 +628,12 @@ class FTP(basic.LineReceiver, DTPFactory):
         peerport = int(params[4])*256+int(params[5])
         # Simple countermeasurements against bouncing
         if peerport < 1024:
-            self.reply('notimpl')
+            self.reply('notimplforparam', str(1024))
             return
         if not self.factory.thirdparty:
             sockname = self.transport.getPeer()
             if not (peerhost == sockname[1]):
-                self.reply('notimpl')
+                self.reply('notimplforparam', "no third-party transfers")
                 return
         self.peerhost = peerhost
         self.peerport = peerport
@@ -750,7 +767,7 @@ class FTP(basic.LineReceiver, DTPFactory):
         if self.checkauth():
             return
         if self.dtpPort is None:
-            self.reply('notimpl')   # and will not be; standard noauth-reply
+            self.reply('notimpl','LIST')   # and will not be; standard noauth-reply
             return
         if params == "-a": params = '' # bug in konqueror
         if params == "-aL": params = '' # bug in gFTP 2.0.15
