@@ -11,12 +11,16 @@ class _Attribute(object):
             self.children.append(item)
         return self
 
-    def serialize(self, write, attrs):
+    def serialize(self, write, attrs=None):
+        if attrs is None:
+            attrs = helper.CharacterAttribute()
+
         for ch in self.children:
             if isinstance(ch, str):
+                write(attrs.toVT102(only=True))
                 write(ch)
             else:
-                ch.serialize(write, attrs)
+                ch.serialize(write, attrs.copy())
 
 class _ColorAttr(_Attribute):
     def __init__(self, color, ground):
@@ -24,14 +28,11 @@ class _ColorAttr(_Attribute):
         self.ground = ground
         self.children = []
 
-    def serialize(self, write, attrs):
+    def serialize(self, write, attrs=None):
         if not self.children:
             return
 
-        if getattr(attrs, self.ground) != self.color:
-            write("\x1b[%dm" % (self.color,))
-            setattr(attrs, self.ground, self.color)
-
+        setattr(attrs, self.ground, self.color)
         super(_ColorAttr, self).serialize(write, attrs)
 
 class _NormalAttr(_Attribute):
@@ -42,9 +43,7 @@ class _NormalAttr(_Attribute):
         if not self.children:
             return
 
-        if helper.CharacterAttribute() != attrs:
-            write('\x1b[m')
-            attrs.__init__()
+        attrs.__init__()
         super(_NormalAttr, self).serialize(write, attrs)
 
 class _OtherAttr(_Attribute):
@@ -64,13 +63,9 @@ class _OtherAttr(_Attribute):
             # We have to turn everything off, then turn back on everything
             # except this one attribute.
             setattr(attrs, self.attrname, False)
-            write(attrs.toVT102(only=True))
         elif not getattr(attrs, self.attrname) and self.attrvalue:
             # We just need to turn on one little thing.
-            a = helper.CharacterAttribute()
-            setattr(a, self.attrname, True)
             setattr(attrs, self.attrname, True)
-            write(a.toVT102(only=False))
 
         super(_OtherAttr, self).serialize(write, attrs)
 

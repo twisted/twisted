@@ -29,6 +29,11 @@ class CharacterAttribute:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def copy(self):
+        c = self.__class__()
+        c.__dict__.update(vars(self))
+        return c
+
     def toVT102(self, only=False):
         # Spit out a vt102 control sequence that will set up
         # all the attributes set here.  Except charset.
