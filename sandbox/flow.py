@@ -15,18 +15,29 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 # USA
 
-"""I am an data consumer driven by a state machine"""
+"""I am state machine driven data consumer"""
+
+#from __future__ import generators
+
+# support iterators for 2.1
+try:
+   StopIteration = StopIteration
+except:
+   class StopIteration(Exception): pass
+
+initialState = "__initial__"
+failureState = "__failure__"
 
 (_FUNC_CONSUME,_FUNC_START,_FUNC_FINISH) = range(3)
 class Flow:
     '''
-       This is a data consumer driven by a state-machine
+       This is a state machine driven data consumer.
 
        Flow objects are used to dispatch data from a producer, 
        such as a database query, through various filter functions 
-       until the data is eventually consumed. 
+       until the data is eventually dispatchd. 
 
-       As data is introduced into the Flow using the 'consume' 
+       As data is introduced into the Flow using the 'dispatch' 
        method, the Flow looks up the appropriate handler, and 
        calls it with the data provided.  If the callee wishes
        processing to continue, it responds with a (state,data)
@@ -49,14 +60,14 @@ class Flow:
         self.bases        = bases or []
         self.stack        = []
     #     
-    def register(self, state, consumeHandler,
+    def register(self, dispatchHandler, state = initialState,
                  startHandler = None, finishHandler = None ):
         '''
             This allows the registration of callback functions
             which are applied whenever an appropriate event of
             a given state is encountered.
         '''
-        self.states[state] = (consumeHandler, startHandler, finishHandler)
+        self.states[state] = (dispatchHandler, startHandler, finishHandler)
     #
     def _lookup(self,state,fnc=_FUNC_CONSUME):
         fncs = self.states.get(state,None)
@@ -68,7 +79,7 @@ class Flow:
         errmsg = "\nstate '%s' not found for:%s"
         raise KeyError(errmsg % (state, str(self)))
     #
-    def start(self,state):
+    def start(self,state=initialState):
         '''
            In some cases, hierarchical behavior is useful to 
            model; if the data flow is hierarchical, this is 
@@ -84,7 +95,7 @@ class Flow:
         fnc = self._lookup(val,_FUNC_FINISH)
         if fnc: fnc()
     #
-    def consume(self,data,state='initial'):
+    def dispatch(self,data,state=initialState):
         '''
            This is the primary dispatch loop which
            processes the data until the given handlers
@@ -99,7 +110,7 @@ class Flow:
             if len(tpl) > 2:  # fork
                 arr = list(tpl[1:])
                 self.start(state)
-                while arr: self.consume(arr.pop(0),state)
+                while arr: self.dispatch(arr.pop(0),state)
                 self.finish(state)
                 return
     #
@@ -111,12 +122,75 @@ class Flow:
                   indent2.join(self.states.keys()),indent,
                   "".join(map(lambda a: a.__str__(indlvl+1), self.bases)))
     #
-    def __setitem__(self,key,val): self.register(key,val)
+    def __setitem__(self,key,val): self.register(val,key)
 
-#
-# Following is just test code.
-#
-if '__main__' == __name__:
+
+def _putIterationInFlow(flow, f, args, kwargs):
+    """Send the results of an iteration to a flow object.
+       The function called should return an object
+       with a next() operator.
+    """
+    from twisted.internet.reactor import callFromThread
+    try:
+        itr = apply(f, args, kwargs)
+        callFromThread(flow.start)
+        while 1: callFromThread(flow.dispatch, itr.next())
+    except StopIteration:
+        callFromThread(flow.finish)
+    except:
+        callFromThread(flow.dispatch, failure.Failure(), failureState)
+
+def runIterationInThread( f, *args, **kwargs):
+    """Run the results of an iterator in a thread.
+
+       The function passed, when arguments applied, should
+       return an object with a next() method raising
+       StopIteration when there isn't any more content.
+       Thus a 2.2 generator works perfectly, as is any
+       iterator object.  Although this will work in 2.1 
+       as well.
+
+       Returns a Flow who's events are the result of
+       the iterator.
+    """
+    from twisted.internet.reactor import callInThread
+    flow = Flow()
+    callInThread(_putIterationInFlow, flow, f, args, kwargs)
+    return flow
+
+from twisted.enterprise.adbapi import ConnectionPool
+class FlowConnectionPool(ConnectionPool):
+    def _runQueryChunked(self, args, kw):
+        conn = self.connect()
+        curs = conn.cursor()
+        apply(curs.execute, args, kw)
+        class chunkIterator:
+            def __init__(self,curs):
+                self.curs = curs
+                self.curr = None
+            def __iter__(self): 
+                return self
+            def next(self):
+                if not self.curr:
+                    self.curr = self.curs.fetchmany()
+                if not self.curr:
+                    self.curs.close()
+                    raise StopIteration
+                return self.curr.pop(0)
+        return chunkIterator(curs)
+    def queryChunked(self, *args, **kw):
+        """ Sets up a deferred execution query that returns
+            one or more result chunks.
+      
+            This method returns a MultiDeferred, which is notified when
+            the query has finished via its FinishCallback.
+        """
+        return runIterationInThread(self._runQueryChunked, args, kw)
+
+def testFlow():
+    '''
+        A very boring unit test for the Flow object
+    '''
 
     def addOne(data):
         return "multiplyTwo", data+1
@@ -129,14 +203,14 @@ if '__main__' == __name__:
         print data
     
     f = Flow()
-    f.register("initial", addOne)
-    f.register("addOne", addOne)
-    f.register("multiplyTwo", multiplyTwo)
-    f.register("printResult", printResult)
+    f.register(addOne)
+    f.register(addOne,"addOne")
+    f.register(multiplyTwo, "multiplyTwo")
+    f.register(printResult,"printResult")
     
-    f.consume(1)
-    f.consume(5)
-    f.consume(11)
+    f.dispatch(1)
+    f.dispatch(5)
+    f.dispatch(11)
     
     
     def printHTML(data):
@@ -145,29 +219,72 @@ if '__main__' == __name__:
     def finishList(): print "</ul>"
     
     fHTML = Flow(f)
-    fHTML.register("printResult", printHTML, startList, finishList)
+    fHTML.register(printHTML,"printResult", startList, finishList)
     
     fHTML.start("printResult")
-    fHTML.consume(1)
-    fHTML.consume(5)
-    fHTML.consume(11)
+    fHTML.dispatch(1)
+    fHTML.dispatch(5)
+    fHTML.dispatch(11)
     fHTML.finish("printResult")
     
     def forkBegin(data):
         return "printResult", data+1, data+2
     fFork = Flow(f)
-    fFork.register("initial",forkBegin)
+    fFork.register(forkBegin)
     
-    fFork.consume(1)
-    fFork.consume(5)
-    fFork.consume(11)
+    fFork.dispatch(1)
+    fFork.dispatch(5)
+    fFork.dispatch(11)
     
     def foo(data):
         return "flarbis", data / 99
     
     
     bad = Flow(fFork)
-    bad.register("initial", addOne)
-    bad.register("multiplyTwo", foo)
+    bad.register(addOne)
+    bad.register(foo,"multiplyTwo")
     
-    bad.consume(5)
+    bad.dispatch(5)
+
+def testFlowThread():
+    class producer:
+        def __init__(self):
+            self.val = 9
+        def next(self):
+            val = self.val
+            if val < 1: raise StopIteration
+            self.val -= 1
+            return val
+    def bldr(): return producer()
+    def printResult(x): print x
+    def printDone(): print "done"
+    d = runIterationInThread(bldr)
+    d.register(printResult, finishHandler = printDone)
+
+#def testFlowThreadUsingGenerator():
+#    def gene(start=99):
+#        while(start > 90):
+#            yield start
+#            start -= 1
+#    def printResult(x): print x
+#    def printDone(): print "done"
+#    d = runIterationInThread(gene)
+#    d.register(printResult, finishHandler = printDone)
+#import mx.ODBC.EasySoft
+#mx.ODBC.EasySoft.threadsaftey = 1
+#print mx.ODBC.EasySoft.threadsaftey
+
+def testFlowConnect():
+    pool = FlowConnectionPool("mx.ODBC.EasySoft","SomeDSN")
+    def printResult(x): print x
+    def printDone(): print "done"
+    d = pool.queryChunked("SELECT some-query")
+    d.register(printResult, finishHandler = printDone)
+
+if '__main__' == __name__:
+    from twisted.internet import reactor
+    testFlowThread()
+#    testFlowConnect()
+#    testFlowThreadUsingGenerator()
+    reactor.run()
+    testFlow()
