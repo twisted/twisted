@@ -532,7 +532,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         """ % (adbapi.safe(group),)
         
         return self.runQuery(sql).addCallback(
-            lambda results: (group, [res[0] for res in results])
+            lambda results, group = group: (group, [res[0] for res in results])
         )
 
 

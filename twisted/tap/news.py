@@ -18,7 +18,7 @@ from twisted.enterprise import adbapi
 from twisted.news import news, database
 from twisted.python import usage
 
-import sys
+import sys, getpass
 
 class Options(usage.Options):
     synopsis = "Usage: mktap news [options]"
@@ -34,15 +34,18 @@ class Options(usage.Options):
     ]
     
     def postOptions(self):
-        self['groups'] = [g.strip() for g in file(self['groups']) if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in file(self['servers']) if not s.startswith('#')]
+        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
+        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
 
 
 def updateApplication(app, config):
     if config['backend'].lower() == 'sql':
-        info = {}
+        info = {
+            'dbapiName': 'pyPgSQL.PgSQL', 'host': 'localhost',
+            'user': 'news', 'database': 'news'
+        }
         while 1:
-            info['dbapiName'] = raw_input('DB-API 2.0 module: ')
+            info['dbapiName'] = raw_input('DB-API 2.0 module [%s]: ' % (info['dbapiName'],)) or info['dbapiName']
             try:
                 __import__(info['dbapiName'])
             except ImportError:
@@ -50,15 +53,13 @@ def updateApplication(app, config):
             else:
                 break
 
-        info['host'] = raw_input('Database host: ')
-        info['user'] = raw_input('Database username: ')
-        info['database'] = raw_input('Database name: ')
+        info['host'] = raw_input('Database host [%s]: ' % (info['host'],)) or info['host']
+        info['user'] = raw_input('Database username [%s]: ' % (info['user'],)) or info['user']
+        info['database'] = raw_input('Database name [%s]: ' % (info['database'],)) or info['database']
+        pwd = getpass.getpass('Database password: ')
 
-        db = database.NewsStorageAugmentation(adbapi.ConnectionPool(**info))
-        db.createSchema()
-        for g in config['groups']:
-            db.addGroup(g)
-
+        db = database.NewsStorageAugmentation(adbapi.ConnectionPool(password = pwd, **info))
+        db.createSchema().addCallbacks(schemaCreated, createFailed, callbackArgs=(config,db))
     elif config['backend'].lower() == 'pickle':
         filename = raw_input('Pickle file: ')
         
@@ -66,11 +67,19 @@ def updateApplication(app, config):
     else:
         raise usage.UsageError('Valid arguments to --backend are: sql pickle')
 
-
     app.listenTCP(
         int(config['port']),
         news.NNTPFactory(db),
         interface = config['interface']
     )
-    
+
     db.dbpool.close()
+
+def schemaCreated(result, config, db):
+    for g in config['groups']:
+        db.addGroup(g).addErrback(addFailed)
+
+def addFailed(failure):
+    print 'Failed to add news group:'
+    print failure
+
