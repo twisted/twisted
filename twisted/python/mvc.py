@@ -31,11 +31,10 @@ http://www.object-arts.com/EducationCentre/Overviews/ModelViewPresenter.htm
 
 Pretty pictures, for sure. I'll try to keep this implementation simple
 while trying to learn as much as possible from previous implementations.
-"""
 
-# TODO: Warning, Danger, Danger, Warning
-# This module creates lots of circular references
-# Do we care?
+This module creates many circular references. It is therefore recommended
+that subclasses do not implement a __del__ method.
+"""
 
 import types
 
