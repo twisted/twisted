@@ -19,6 +19,7 @@
 
 import urllib
 from twisted.web.microdom import parseString
+from twisted.web import domhelpers
 
 
 #sibling imports
@@ -28,7 +29,7 @@ import view
 import utils
 
 from twisted.python import components, failure
-from twisted.python import domhelpers, log
+from twisted.python import log
 from twisted.internet import defer
 
 document = parseString("<xml />")

@@ -15,9 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pyunit import unittest
-from twisted.web import server, resource, microdom
+from twisted.web import server, resource, microdom, domhelpers
 from twisted.protocols import http
-from twisted.python import domhelpers
 from twisted.test import test_web
 from twisted.internet import reactor, defer
 
