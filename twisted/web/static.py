@@ -175,6 +175,7 @@ def loadMimeTypes():
         ".tif": "image/tiff",
         ".tiff": "image/tiff",
         ".txt": "text/plain",
+        ".wml": "text/vnd.wap.wml",
         ".xul": "application/vnd.mozilla.xul+xml",
         ".zip": "application/x-zip",
         ".patch": "text/plain",
