@@ -125,10 +125,10 @@ class XMLParser(Protocol):
             if self.tagName:
                 return 'attrs'
             else:
-                self._parseError("no tag name")
+                self._parseError("Whitespace before tag-name")
         elif byte in '!?':
             if self.tagName:
-                self._parseError("exclamation point!?")
+                self._parseError("Invalid character in tag-name")
             else:
                 self.tagName += byte
                 self.termtag = 1
@@ -136,7 +136,7 @@ class XMLParser(Protocol):
             if self.tagName == '!':
                 return 'expectcdata'
             else:
-                self._parseError("hurk")
+                self._parseError("Invalid '[' in tag-name")
         elif byte == '/':
             if self.tagName:
                 return 'afterslash'
@@ -149,7 +149,7 @@ class XMLParser(Protocol):
                 self.gotTagStart(self.tagName, {})
             return 'bodydata'
         else:
-            self._parseError('unexpected %r'% byte)
+            self._parseError('Invalid tag character: %r'% byte)
 
     def begin_expectcdata(self, byte):
         self.cdatabuf = byte
@@ -162,11 +162,11 @@ class XMLParser(Protocol):
             if cd.startswith(cdb):
                 return
             else:
-                self._parseError("Uh, cdata section looked hella malformed")
+                self._parseError("Mal-formed CDATA header")
         if cd == cdb:
             self.cdatabuf = ''
             return 'cdata'
-        self._parseError("uh, cdata looks badz0r")
+        self._parseError("Mal-formed CDATA header")
 
     def do_cdata(self, byte):
         self.cdatabuf += byte
@@ -193,7 +193,7 @@ class XMLParser(Protocol):
         elif byte == '>':
             self.gotTagStart(self.tagName, self.tagAttributes)
             return 'bodydata'
-        self._parseError("Unexpected character: %s" % repr(byte))
+        self._parseError("Unexpected character: %r" % byte)
 
     def begin_doctype(self, byte):
         self.doctype = byte
@@ -222,21 +222,21 @@ class XMLParser(Protocol):
         elif byte == '=':
             return 'beforeattrval'
         else:
-            self._parseError("not well formed, etc")
+            self._parseError("Invalid attribute name")
 
     def do_beforeattrval(self, byte):
         if byte in string.whitespace:
             return
         elif byte in '"\'':
             return 'attrval'
-        self._parseError("Not well formed, etc")
+        self._parseError("Invalid attribute value")
 
     def do_beforeeq(self, byte):
         if byte in string.whitespace:
             return
         elif byte == '=':
             return 'beforeattrval'
-        self._parseError("Not well formed, etc")
+        self._parseError("Invalid attribute")
 
     def begin_attrval(self, byte):
         self.quotetype = byte
@@ -256,9 +256,9 @@ class XMLParser(Protocol):
     def do_afterslash(self, byte):
         # this state is only after a self-terminating slash, e.g. <foo/>
         if self._after_slash_closed:
-            self._parseError("Not well formed, etc")
+            self._parseError("Mal-formed")#XXX When does this happen??
         if byte != '>':
-            self._parseError("Not well formed, etc")
+            self._parseError("No data allowed after '/'")
         self._after_slash_closed = 1
         self.gotTagStart(self.tagName, self.tagAttributes)
         self.gotTagEnd(self.tagName)
@@ -282,6 +282,8 @@ class XMLParser(Protocol):
         self.erefbuf = ''
 
     def do_entityref(self, byte):
+        if byte in string.whitespace:
+            self._parseError("Bad entity reference")
         if byte != ';':
             self.erefbuf += byte
         else:
