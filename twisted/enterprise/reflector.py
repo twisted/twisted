@@ -41,9 +41,15 @@ class Reflector:
         self.schema = {}        
         self.populatedCallback = populatedCallback
         self._populate()
-        
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        del d['rowCache']
+        return d
+
     def __setstate__(self, state):
         self.__dict__ = state
+        self.rowCache = weakref.WeakValueDictionary()
         self._populate()
 
     def _populate(self):
