@@ -129,7 +129,7 @@ def clearIgnores():
 
 def err(_stuff=None,**kw):
     """
-    Write a failure to the log. Returns the failure object written.
+    Write a failure to the log.
     """
     if _stuff is None:
         _stuff = failure.Failure()
@@ -153,7 +153,6 @@ def err(_stuff=None,**kw):
         msg(failure=failure.Failure(_stuff), isError=1, **kw)
     else:
         msg(repr(_stuff), isError=1, **kw)
-    return _stuff
 
 deferr = err
 
