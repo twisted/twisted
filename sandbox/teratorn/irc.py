@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.2 $'[11:-2]
+__version__ = '$Revision: 1.3 $'[11:-2]
 
 from twisted.internet import reactor, protocol, defer
 from twisted.persisted import styles
@@ -324,7 +324,211 @@ class IRC(protocol.Protocol):
         @param where: The channel the user is joining.
         """
         self.sendLine(":%s PART %s" % (who, where))
+
+
+class DccFileWriter(protocol.Protocol, styles.Ephemeral):
+    def __init__(self, factory):
+        self.factory = factory
+        self.file_obj = factory.file_obj
+        self.deferred = factory.deferred
+        self.bytesReceived = factory.resumePos
+        self.proposedSize = factory.proposedSize
+        self._mode = factory._mode 
+
+    def dataReceived(self, data):
+        self.bytesReceived += len(data)
+        if not self._mode == 'turbo':
+            self.transport.write(struct.pack('!i', self.bytesReceived)) #acknowledge
+
+        try:
+            self.file_obj.write(data)
+        except: # abort transfer
+            self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        self.file_obj.flush()
+        self.file_obj.close()
+        if self.bytesReceived == self.proposedSize:
+            self.deferred.callback(self.factory)
+        else:
+            self.deferred.errback(reason)
+
+
+class IncomingDccFile(protocol.ClientFactory):
+    """An incoming DCC file offer.
+
+    The L{IRCClient.gotIncomingFile} method will receive an instance of this class for each DCC SEND we receive.
+    .
+    You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independantly of the irc protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
+    protocol = DccFileWriter
+    accepted = False
+    resume_overwrite = False
+    deferred = None
+    file_obj = None
+    resumePos = 0 # default - change later if resuming.
+     
+    def __init__(self, ircClient, user, address, port, default_filename, size, mode):
+        self._ircClient = ircClient
+        self.destdir = ircClient.default_dcc_destdir # default dir to save to, if unspecified
+        self.user = user
+        self.address = address
+        self.port = port
+        self.default_filename = default_filename
+        self.proposedSize = size
+        self._mode = mode
+
+        self.deferred = defer.Deferred()
+
+    def accept(self, destfile=None, resume_overwrite=False):
+        """
+        Call this to retreive the incoming dcc file.
         
+        @param destfile: An optional parameter. If unset, we will use the default directory and filename. Or you may pass a path to use, or a file-like-object that data will be written to. 
+        @type destfile: A string, a file-like-object, or None.
+        @param resume_overwrite: An optional parameter. Specifies whether to resume, overwrite, or do neither (default). 
+        @type resume_overwrite: One of \"resume\", \"overwrite\", or False.
+
+        @return: A L{Deferred}. It will callback when the file is saved, or errback if an error occurs along the way (including if the file sizes mismatch).
+
+        @raise IOError: If destfile is a path and opening it failed.
+        @raise DccFileExists: If destfile is a path, and resume_overwrite is False, and the path exists.
+        """
+        if self.accepted:
+            raise "accept() already called successfully!"
+
+        if hasattr(destfile, 'write'): #assume it's a file-obj
+            self.file_obj = destfile
+        else: #see if it's None or a string
+            if destfile is None: #use the default (given by the remote client)
+                if self.destdir.endswith(path.sep):
+                    destfile = self.destdir + self.default_filename
+                else:
+                    destfile = self.destdir + path.sep + self.default_filename
+            elif type(destfile) == types.StringType: #use as-is
+                pass
+            else:
+                raise 'destfile must be None, a string, or a file-like-object'
+            
+            # sanity check so we don't blow away files by accident
+            if path.exists(destfile):
+                if not resume_overwrite: # it's there, but we can't resume or overwrite
+                    raise DccFileExists()
+
+            # now we need to open the destination file
+
+            # we open it differently if we are resuming
+            if resume_overwrite == 'resume': # yes - open for appending
+                self.file_obj = file(destfile, 'a+b')
+            else: # no - open for writing (and possibly truncate)
+                self.file_obj = file(destfile, 'wb')
+
+        # we now have a file-obj to work with
+                
+        # do we need to resume first?
+        if resume_overwrite == 'resume': # yes - send the request
+            self.resumePos = fileSize(self.file_obj)
+            self.ircClient.ctcpMakeQuery(self.user.split('!')[0], [
+                ('DCC', ['RESUME', self.default_filename, str(self.port), str(self.resumePos)])])
+        else: # no, we aren't resuming - we can connect right now
+            self._makeConnection()
+
+        self.accepted = True
+        return self.deferred
+
+    def reject(self):
+        """Reject this transfer before it has begun."""
+        if self.accepted:
+            raise "Can't call reject() after accept() was called successfully!"
+
+        self.deferred.errback(None)
+
+    def abort(self):
+        """Abort after we've called accept() successfully."""
+        if not self.accepted:
+            raise "Can't call abort() unless you've already called accept() successfully!"
+        
+        self.protocol_instance.transport.loseConnection(connDone=DccAborted())
+
+    def _resumeRequestAccepted(self): # have to get this before we connect
+        self._makeConnection()        # a transfer where we asked to resume
+   
+    def _makeConnection(self):
+        # at this point, we don't need a reference to the IRCClient any more
+        del self._ircClient
+        reactor.connectTCP(self.address, self.port, self)
+        
+    def buildProtocol(self, addr):
+        print 'protocol'
+        self.protocol_instance = self.protocol(self)
+        return self.protocol_instance
+
+class DccFileReader(protocol.Protocol, styles.Ephemeral):
+    """A protocol for sending a file over DCC"""
+    def connectionMade(self):
+        self.factory.listeningPort.stopListening()
+        d = basic.FileSender().beginFileTransfer(self.factory.file_obj, self.transport)
+        d.chainDeferred(self.factory.deferred)
+        
+    def dataReceived(self, data):
+        print 'dataReceived:', repr(data)
+
+class OutgoingDccFile(protocol.Factory):
+    """An outgoing DCC file offer - don't use this class directly - use L{IRCClient.sendFile} instead.
+
+    When you call sendFile() an instance of this class will be returned to you. These instances contain a 'deferred' attribute which will callback once the file is successfully sent, or errback if some bad happend along the way..
+    
+    You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independantly of the irc protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
+    protocol = DccFileReader
+    def __init__(self, file_obj, user, ircClient, mode=None, resumable=True):
+        # XXX resumable
+        self.file_obj = file_obj
+        self.user = user
+        self._ircClient = ircClient
+        self.mode = mode
+        self.resumable = resumable
+
+        self.deferred = defer.Deferred()
+        self.resumePos = False
+        self.listeningPort = reactor.listenTCP(0, self)
+        sock_info = self.listeningPort.getHost()
+
+        name = file_obj.name.split(path.sep)[-1]
+        dottedquad = ircClient.transport.getHost()[1]
+        # dotted-quad -> long integer
+        addr = str(struct.unpack("!I", "".join(map(lambda x:chr(int(x)), dottedquad.split('.'))))[0])
+        port = str(sock_info[2])
+        size = str(fileSize(file_obj))
+
+        self._ircClient.ctcpMakeQuery(self.user.split('!')[0], [
+            ('DCC', ['SEND', name, addr, port, size])])
+
+    def _gotResumeRequest(self, filename, resumePos):
+        if not self.resumable:
+            return
+        # passing the filename here is only useful so we may respond
+        # with the same filename. Apparently clients such as mirc will
+        # send a dummy filename that may not match what we sent out.
+        port = str(self.listeningPort.getHost()[2])
+        self.ircClient.ctcpMakeQuery(self.user.split('!')[0], [
+            ('DCC', ['ACCEPT', filename, port, str(resumePos)])])
+        self.resumePos = resumePos
+
+    def buildProtocol(self, addr):
+        # we don't need our reference to the ircClient any more
+        del self._ircClient
+        self.protocol_instance = self.protocol()
+        self.protocol_instance.factory = self
+        return self.protocol_instance
+
+ 
+class DccFileExists(Exception):
+    def __str__(self):
+        return "Destination file already exists, and we were told not to overwrite or resume"
+
+class DccAborted(Exception):
+    def __str__(self):
+        return "abort() was called on this IncomingDccFile instance."
+
 
 class IRCClient(basic.LineReceiver):
     """Internet Relay Chat client protocol, with sprinkles.
@@ -396,9 +600,12 @@ class IRCClient(basic.LineReceiver):
 
     delimiter = '\n' # '\r\n' will also work (see dataReceived)
 
-    dccReceiver = None
-    dccSender = None
-    
+    incomingDccFiles = []
+    outgoingDccFiles = []
+    incomingDccFileClass = IncomingDccFile
+    outgoingDccFileClass = OutgoingDccFile
+    default_dcc_destdir = "."
+
     __pychecker__ = 'unusednames=params,prefix,channel'
         
     def sendLine(self, line):
@@ -1094,10 +1301,22 @@ class IRCClient(basic.LineReceiver):
             self.quirkyMessage("%s offered unknown DCC type %s"
                                % (user, dcctype))
 
-    def dcc_SEND(self, user, channel, data):
-        if not self.dccReceiver:
-            return
-        
+    def gotIncomingFile(self, incomingFile):
+        """Got a DCC SEND offer.
+        Implement this method with your app-specific logic.
+        By default we reject all incoming files.
+        @param incomingFile: An instance of IncomingDccFile"""
+        incomingFile.reject()
+
+    def _cbIncomingFileDone(self, arg, incomingFile):
+        self.incomingDccFiles.remove(incomingFile)
+        return arg
+
+    def dcc_TSEND(self, user, channel, data):
+        self.dcc_SEND(user, channel, data, mode='turbo')
+
+    def dcc_SEND(self, user, channel, data, mode='normal'):
+        print 'dcc_SEND'
         # Use splitQuoted for those who send files with spaces in the names.
         data = text.splitQuoted(data)
         if len(data) < 3:
@@ -1118,12 +1337,12 @@ class IRCClient(basic.LineReceiver):
             except ValueError:
                 pass
 
-        self.dccReceiver.gotDCC_SEND(self, user, address, port, filename, size)
-
+        incomingFile = self.incomingDccFileClass(self, user, address, port, filename, size, mode)
+        self.incomingDccFiles.append(incomingFile)
+        incomingFile.deferred.addBoth(self._cbIncomingFileDone, incomingFile)
+        self.gotIncomingFile(incomingFile)
+ 
     def dcc_ACCEPT(self, user, channel, data):
-        if not self.dccReceiver:
-            return
-
         data = text.splitQuoted(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND ACCEPT request: %r" % (data,)
@@ -1134,7 +1353,32 @@ class IRCClient(basic.LineReceiver):
         except ValueError:
             return
 
-        self.dccReceiver.gotDCC_ACCEPT(self, user, filename, port, resumePos)
+        #lets find the incomingFile that was waiting for this
+        for f in self.incomingDccFiles:
+            if f.user == user and f.port == port and resumePos == f.resumePos:
+                f._resumeRequestAccepted()
+                return
+        log.msg("Odd, we got a DCC ACCEPT, but couldn't find a matching incomingFile")
+
+    def sendFile(self, srcfile, user, mode='fast', resumable=True):
+        """Offer a file to a remote user."""
+
+        # need to get a file-object if we weren't passed one
+        if type(srcfile) == types.StringType:
+            file_obj = file(srcfile, 'rb')
+        elif hasattr(srcfile, 'read'):
+            file_obj = srcfile
+        else:
+            raise "srcfile must be a string or file-like-object"
+
+        outgoingFile = self.outgoingDccFileClass(file_obj, user, self, mode, resumable)
+        self.outgoingDccFiles.append(outgoingFile)
+        outgoingFile.deferred.addBoth(self._cbOutgoingFileDone, outgoingFile)
+        return outgoingFile
+
+    def _cbOutgoingFileDone(self, arg, outgoingFile):
+        self.outgoingDccFiles.remove(outgoingFile)
+        return arg
 
     def dcc_RESUME(self, user, channel, data):
         data = text.splitQuoted(data)
@@ -1146,7 +1390,11 @@ class IRCClient(basic.LineReceiver):
             resumePos = int(resumePos)
         except ValueError:
             return
-        self.dccDoResume(user, filename, port, resumePos)
+        # lets see which outgoingFile this goes to
+        for f in self.outgoingDccFiles:
+            if f.user == user and f.port == port:
+                f._gotResumeRequest(filename, resumePos)
+                return
 
     def dcc_CHAT(self, user, channel, data):
         data = text.splitQuoted(data)
@@ -1301,185 +1549,6 @@ class IRCClient(basic.LineReceiver):
         dct['_pings'] = None
         return dct
 
-class DccFileWriter(protocol.Protocol, styles.Ephemeral):
-    def __init__(self, factory):
-        self.factory = factory
-        self.file_obj = factory.file_obj
-        self.deferred = factory.deferred
-        self.bytesReceived = factory.resumePos
-        self.proposedSize = factory.proposedSize
-        
-    def dataReceived(self, data):
-        self.bytesReceived += len(data)
-        self.transport.write(struct.pack('!i', self.bytesReceived)) #acknowledge
-
-        try:
-            self.file_obj.write(data)
-        except: # abort transfer
-            self.transport.loseConnection()
-
-    def connectionLost(self, reason):
-        self.file_obj.flush()
-        self.file_obj.close()
-        if self.bytesReceived == self.proposedSize:
-            self.deferred.callback(self.factory)
-        else:
-            self.deferred.errback(reason)
-
-
-class IncomingDccFile(protocol.ClientFactory):
-    accepted = False
-    resume_overwrite = False
-
-    deferred = None
-    protocol = DccFileWriter
-    file_obj = None
-
-    resumePos = 0 # default - change later if resuming.
-    
-    def __init__(self, ircClient, default_destdir, user,
-                 address, port, default_filename, size):
-        self.ircClient = ircClient
-        self.default_destdir = default_destdir
-        self.user = user
-        self.address = address
-        self.port = port
-        self.default_filename = default_filename
-        self.proposedSize = size
-
-        self.deferred = defer.Deferred()
-        
-    def accept(self, destfile=None, resume_overwrite=False):
-        """
-        Call this to retreive and save the incoming dcc file.
-        
-        The 'destfile' parameter is optional. If unset, we will use the default directory and filename. Or you may pass a path to use, or an open file-like-object that data will be written to.
-        
-        Unless you pass a file-object, we will attempt to open the destination path immediately.
-        If that fails, either IOError or DccFileExists will be raised.
-        
-        If all goes well, a Deferred will be returned.
-        It will callback when the file is saved, or errback is something funky happens along the way.
-
-        @param destfile: The path, or a file-object, to save to. 
-        @type destfile: A string or a file-like-object
-        @param resume_overwrite: Whether to resume, overwrite, or do neither. 
-        @type resume_overwrite: One of \"resume\", \"overwrite\", or False.
-
-        @return: A L{Deferred<defer.Deferred>} instance or raises an exception.
-
-        @raise IOError: If destfile is a path and opening it failed.
-        @raise DccFileExists: If destfile is a path, and resume_overwrite is False, and the path exists.
-        """
-
-        if self.accepted:
-            raise "accept() already called successfully!"
-
-        if hasattr(destfile, 'write'): #assume it's a file-obj
-            self.file_obj = destfile
-        else: #see if it's None or a string
-            if destfile is None: #use the default (given by the remote client)
-                destfile = self.default_filename
-            elif type(destfile) == types.StringType: #use as-is
-                pass
-            else:
-                raise 'destfile must be None, a string, or a file-like-object'
-            
-            # sanity check so we don't blow away files by accident
-            if path.exists(destfile):
-                if not resume_overwrite: # it's there, but we can't resume or overwrite
-                    raise DccFileExists()
-
-            # now we need to open the destination file
-
-            # we open it differently if we are resuming
-            if resume_overwrite == 'resume': # yes - open for appending
-                self.file_obj = file(destfile, 'a+b')
-            else: # no - open for writing (and possibly truncate)
-                self.file_obj = file(destfile, 'wb')
-
-        # we now have a file-obj to work with
-                
-        # do we need to resume first?
-        if resume_overwrite == 'resume': # yes - send the request
-            self.resumePos = fileSize(self.file_obj)
-            self.ircClient.ctcpMakeQuery(self.user.split('!')[0], [
-                ('DCC', ['RESUME', self.default_filename, self.port, self.resumePos])])
-        # no, we aren't resuming - we can connect right now
-        else: 
-            self._makeConnection()
-
-        self.accepted = True
-        return self.deferred
-
-    def reject(self):
-        """Reject this transfer before it has begun."""
-        if self.accepted:
-            raise "Can't call reject() after accept() was called successfully!"
-
-        self.deferred.errback(None)
-
-    def abort(self):
-        """Abort after we've called accept() successfully."""
-        if not self.accepted:
-            raise "Can't call abort() unless you've already called accept() successfully!"
-        
-        self.protocol_instance.transport.loseConnection(connDone=DccAborted())
-
-    def _resumeRequestWasAccepted(self): # have to get this before we accept a transfer where we asked to resume
-        self._makeConnection() 
-   
-    def _makeConnection(self):
-        reactor.connectTCP(self.address, self.port, self)
-        
-    def buildProtocol(self, addr):
-        p = self.protocol(self)
-        return p
-        
-
-class DccReceiver:
-    """
-    Manages each DCC SEND request that each associated IRCClient receives.
-    """
-
-    incomingFileClass = IncomingDccFile
-    default_destdir = "."
-
-    def __init__(self):
-        self.incomingFiles = [] #they get removed from here once their deferred fires
-        
-    def gotIncomingFile(self, incomingFile):
-        """Implement this method with your app-specific logic.
-        By default we reject all incoming files."""
-        incomingFile.reject()
-    
-    def gotDCC_SEND(self, ircClient, user, address, port, filename, size):
-        incomingFile = self.incomingFileClass(ircClient, self.default_destdir, user, address, port, filename, size)
-        self.incomingFiles.append(incomingFile)
-        incomingFile.deferred.addBoth(self._cbIncomingFileDone, incomingFile)
-        self.gotIncomingFile(incomingFile)
-        
-    def gotDCC_ACCEPT(self, ircClient, user, filename, port, resumePos):
-        #lets find the incomingFile that was waiting for this
-        for f in self.incomingFiles:
-            if f.ircClient == ircClient and f.user == user and f.port == port:
-                f._resumeRequestWasAccepted()
-                return
-        log.msg("Odd, we got a DCC ACCEPT, but couldn't find a matching incomingFile")
-
-    def _cbIncomingFileDone(self, arg, incomingFile):
-        self.incomingFiles.remove(incomingFile)
-        return arg
-
-class DccFileExists(Exception):
-    def __str__(self):
-        return "Destination file already exists, and we were told not to overwrite or resume"
-
-class DccAborted(Exception):
-    def __str__(self):
-        return "abort() was called on this IncomingDccFile instance."
-
-        
 def dccParseAddress(address):
     if '.' in address:
         pass
