@@ -150,7 +150,15 @@ class Walker:
         for linkrel, fname, fullpath, d in self.walked:
             i += 1
             self.percentdone((float(i) / len(self.walked)), fname)
-            document = dom.parse(open(fullpath))
+            try:
+                document = dom.parse(open(fullpath))
+            except dom.MismatchedTags, e:
+                print "%s:%s:%s: begin mismatched tags <%s>/</%s>" % (e.filename, e.begLine, e.begCol, e.got, e.expect)
+                print "%s:%s:%s: end mismatched tags <%s>/</%s>" % (e.filename, e.endLine, e.endCol, e.got, e.expect)
+                continue
+            except dom.ParseError, e:
+                print e
+                continue
             template = self.templ.cloneNode(1)
             munge(document, template, linkrel, d, fullpath, self.ext, self.cache)
             template.writexml(open(fname+self.ext, 'wb'))
@@ -307,7 +315,15 @@ def main():
     c = Cache(opt['apidir'], 'http://twistedmatrix.com/documents/TwistedDocs/Twisted-%s/' % opt['version'])
     if opt['files']:
         for fn in opt['files']:
-            doc = dom.parse(open(fn))
+            try:
+                doc = dom.parse(open(fn))
+            except dom.MismatchedTags, e:
+                print "%s:%s:%s: begin mismatched tags <%s>/</%s>" % (e.filename, e.begLine, e.begCol, e.got, e.expect)
+                print "%s:%s:%s: end mismatched tags <%s>/</%s>" % (e.filename, e.endLine, e.endCol, e.got, e.expect)
+                continue
+            except dom.ParseError, e:
+                print e
+                continue
             cn = templ.cloneNode(1)
             munge(doc, cn, '', opt['docsdir'], fn, ext, c)
             cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
