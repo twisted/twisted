@@ -958,8 +958,8 @@ class RegisterProxy(Proxy):
     registry = None # should implement IRegistry
 
     authorizers = {
-        'basic': BasicAuthorizer(),
-        'digest': DigestAuthorizer(),
+#        'basic': BasicAuthorizer(),
+#        'digest': DigestAuthorizer(),
     }
     
     def __init__(self, *args, **kw):
