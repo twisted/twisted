@@ -127,16 +127,16 @@ class Banana(protocol.Protocol):
         'list'           :  -8,
         'module'         :  -9,
         'persistent'     : -10,
-        'reference'      : -11,
-        'tuple'          : -12,
-        'unpersistable'  : -13,
+        'tuple'          : -11,
+        'unpersistable'  : -12,
 
         # PB Data Types
-        'copy'           : -14,
-        'cache'          : -15,
-        'cached'         : -16,
-        'remote'         : -17,
-        'local'          : -18,
+        'copy'           : -13,
+        'cache'          : -14,
+        'cached'         : -15,
+        'remote'         : -16,
+        'local'          : -17,
+        'lcache'         : -18,
 
         # PB Protocol Messages
         'version'        : -19,
@@ -145,7 +145,7 @@ class Banana(protocol.Protocol):
         'challenge'      : -22,
         'perspective'    : -23,
         'inperspective'  : -24,
-        'challenge'      : -25,
+        'cachemessage'   : -25,
         'message'        : -26,
         'answer'         : -27,
         'error'          : -28,
