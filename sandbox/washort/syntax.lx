@@ -1,0 +1,49 @@
+import logix
+import types
+baselang = logix.baselang
+deflang twisted(baselang)
+
+from twisted.python.failure import Failure
+print "Zoop."
+
+defop 0 "when" $deferred:expr "->" $result:term ":"
+        $successBlock:block
+        $excepts:( [eol]/- "except" $trap:[ $exc:expr $arg:["," term]/it ]/0 ":" 
+                   $handler:block )*
+
+        macro deferred result excepts successBlock:
+            setlang logix.stdlang
+            gensyms dfrd failure
+            errbacks = listfor ex in excepts:
+                        if ex.trap:
+                            arg = logix.data.Symbol(ex.trap.arg)
+                            `\dfrd.addErrback lambda \failure: do: (\failure.trapExpr \(ex.trap.exc)); \arg = \failure.value; \*(ex.handler)
+                        else:
+                            `\dfrd.addErrback lambda it: do: \*(ex.handler)
+
+            `do:
+                \dfrd = \deferred.addCallback lambda \result: do: \*successBlock
+                \*errbacks
+                \dfrd
+
+
+defop 90 $obj:expr "<-" $method:term "(" $args:($stdargs:([","]/- term $default:["=" term ])*
+                                                $varargs:[[","]/- '*' term]
+                                                $varkws:[[","]/- '**' term])
+                                     ")"
+    macro obj method args:
+        setlang logix.stdlang
+        gensyms argx kwargx
+        pos, varargs, kwargs = [], [], [:]
+        if hasattr args 'varkws':
+            kwargs = args.varkws
+        if hasattr args 'varargs':
+            varargs = args.varargs
+        if args.stdargs:
+            pos = [arg:[0] for arg in args.stdargs]
+        `do:
+            \argx = \varargs
+            \kwargx = \kwargs
+            from twisted.internet.defer import maybeDeferred 
+            maybeDeferred (\obj . \method) \*pos @ \argx : \kwargx
+            
