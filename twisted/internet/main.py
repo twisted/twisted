@@ -389,7 +389,7 @@ wakerInstalled = 0
 def installWaker():
     """Install a `waker' to allow other threads to wake up the IO thread.
     """
-    global addReader, addWriter, waker, wakerInstalled
+    global waker, wakerInstalled
     if not wakerInstalled:
         wakerInstalled = 1
         waker = _Waker()
