@@ -64,7 +64,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.144 $"[11:-2]
+__version__ = "$Revision: 1.145 $"[11:-2]
 
 
 # System Imports
@@ -93,7 +93,7 @@ import banana
 # Tightly coupled sibling import
 from flavors import Serializable
 from flavors import Referenceable
-from flavors import Root
+from flavors import Root, IPBRoot
 from flavors import ViewPoint
 from flavors import Viewable
 from flavors import Copyable
@@ -1636,13 +1636,6 @@ class IPerspective(Interface):
     The concept of attached/detached is no longer implemented by
     the framework. The realm is expected to do so if relevant.
     """
-
-
-class IPBRoot(Interface):
-    """Factory for root Referenceable objects for PB servers."""
-
-    def rootObject(self, broker):
-        """Return root Referenceable for broker."""
 
 
 class _PortalRoot:

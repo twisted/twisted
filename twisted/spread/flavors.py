@@ -31,7 +31,7 @@ but may have a small impact on users who subclass and override methods.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.30 $"[11:-2]
+__version__ = "$Revision: 1.31 $"[11:-2]
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
@@ -42,7 +42,7 @@ __version__ = "$Revision: 1.30 $"[11:-2]
 import types
 
 # twisted imports
-from twisted.python import log, reflect
+from twisted.python import log, reflect, components
 
 # sibling imports
 from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
@@ -60,6 +60,12 @@ cache_atom = "cache"
 cached_atom = "cached"
 remote_atom = "remote"
 
+
+class IPBRoot(components.Interface):
+    """Factory for root Referenceable objects for PB servers."""
+
+    def rootObject(self, broker):
+        """Return root Referenceable for broker."""
 
 
 class Serializable(Jellyable):
@@ -141,6 +147,8 @@ class Root(Referenceable):
     See also: L{pb.getObjectAt}
     """
 
+    __implements__ = IPBRoot,
+    
     def rootObject(self, broker):
         """A L{pb.BrokerFactory} is requesting to publish me as a root object.
 
