@@ -1,4 +1,4 @@
-Twisted 0.12.1
+Twisted 0.12.2-pre
 
 Quote of the Release:
 
@@ -32,7 +32,7 @@ What is this?
   
   For more information, visit http://www.twistedmatrix.com.
 
-What's new in 0.12.1?
+What's new in 0.12.2-pre?
 
   This is mainly a bug fix release, with some minor new features.
 
