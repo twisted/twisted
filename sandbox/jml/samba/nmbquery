@@ -1,51 +1,22 @@
 #!/bin/env python
 import nmb
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 import sys
 
 def disaster(failure):
     print 'FAILED. Reason: ',failure
     reactor.stop()
 
-class Lookup(nmb.NetBIOSLookup):
-    def __init__(self, name, server, broadcast):
-        self.name = name
-        self.server = server
-        self.broadcast = broadcast
-
-    def startProtocol(self):
-        nmb.NetBIOSLookup.startProtocol(self)
-        d = self.lookupName(self.name, destServer=self.server,
-                            broadcast=self.broadcast)
-        d.addCallback(self.gotName)
-        d.addErrback(disaster)
-
-    def gotName(self, result):
-        print '%s = %s' % (self.name, result[0].ip)
-        reactor.stop()
-
-
-class NodeStatus(nmb.NetBIOSNode):
-    def __init__(self, name, server, broadcast):
-        self.name = name
-        self.server = server
-        self.broadcast = broadcast
-
-    def startProtocol(self):
-        nmb.NetBIOSNode.startProtocol(self)
-        d = self.getNodeStatus(self.name, destServer=self.server,
-                               broadcast=self.broadcast)
-        d.addCallback(self.gotStatus)
-        d.addErrback(disaster)
-
-    def gotStatus(self, result):
-        print result
-        reactor.stop()
-
+def finish(results):
+    print results
+    reactor.stop()
 
 def main(name, nameServer, port=137):
-    proto = NodeStatus(name, nameServer, False)
-    reactor.listenUDP(0, proto)
+    d = defer.gatherResults([nmb.lookup(name, nameServer),
+                             nmb.queryNode(name, nameServer)])
+    d.addCallback(finish)
+    d.addErrback(disaster)
+    
     reactor.run()
 
 if __name__ == '__main__':

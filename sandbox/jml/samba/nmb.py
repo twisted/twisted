@@ -35,7 +35,6 @@ TYPE_MASTER_BROWSER = 0x1D
 TYPE_BROWSER = 0x1E
 
 
-
 class NetBIOSException(Exception):
     def __init__(self, errorCode):
         msg = '%s (%d)' % (self.errors.get(errorCode, 'Unknown error.'),
@@ -51,6 +50,7 @@ class NetBIOSQueryException(NetBIOSException):
         0x04: 'Unsupported request',
         0x05: 'Request refused'
         }
+
 
 class NetBIOSSessionException(NetBIOSException):
     errors = { 0x80: 'Not listening on called name',
@@ -79,7 +79,6 @@ class NBNodeEntry:
                    TYPE_MASTER_BROWSER: 'Master Browser',
                    TYPE_BROWSER: 'Browser Server',
                    TYPE_DOMAIN_MASTER: 'Domain Master' }
-
     
     def __init__(self, name, nameType, isGroup, nodeType, deleting,
                  isConflict, isActive, isPermanent):
@@ -157,34 +156,33 @@ def decodeName(name):
         return offset + 1, decoded_name, decoded_domain
 
 
-
-class NetBIOSBase(protocol.DatagramProtocol):
-    def startProtocol(self):
+class NetBIOS(protocol.DatagramProtocol):
+    def __init__(self):
         self.transactions = {}
+        self.handlers = {}
 
     def beginTransaction(self):
-        trxID = random.randint(1, 32000)
-        while self.transactions.has_key(trxID):
-            trxID = random.randint(1, 32000)
+        trxID = random.randint(0, 32000)
+        while trxID in self.transactions:
+            trxID = random.randint(0, 32000)
         self.transactions[trxID] = defer.Deferred()
         return trxID
 
     def endTransaction(self, trxID):
         del self.transactions[trxID]
+        del self.handlers[trxID]
 
+    def getTransaction(self, trxID):
+        return self.transactions[trxID]
 
     def datagramReceived(self, data, (destServer, destPort)):
         trxID = struct.unpack('>H', data[:2])[0]
-        if trxID in self.transactions:
-            d = self.transactions[trxID]
-        else:
+        if trxID not in self.transactions:
             raise NetBIOSQueryException()
+        d = self.transactions[trxID]
         self._checkReturnCode(data)
-        ret = self.gotData(trxID, data)        
+        ret = self.handlers[trxID](trxID, data)
         d.callback(ret)
-
-    def gotData(self, trxID, data):
-        pass
 
     def _checkReturnCode(self, data):
         returnCode = ord(data[3]) & 0x0f
@@ -203,17 +201,16 @@ class NetBIOSBase(protocol.DatagramProtocol):
                    + struct.pack('>HH', requestFlag, 0x01))
         return request
 
-
-class NetBIOSLookup(NetBIOSBase):
-    def lookupName(self, name, type=TYPE_WORKSTATION, scope=None,
-                   destServer=None, destPort=137, broadcast=False):
+    def lookupName(self, name, destServer=None, destPort=137, broadcast=False,
+                   type=TYPE_WORKSTATION, scope=None):
         trxID = self.beginTransaction()
         request = self._constructRequest(0x20, trxID, name, type, scope,
                                          broadcast)
+        self.handlers[trxID] = self.gotData_lookup
         self.transport.write(request, (destServer, destPort))
         return self.transactions[trxID]
 
-    def gotData(self, trxID, data):
+    def gotData_lookup(self, trxID, data):
         addresses = []
         qnLength, qnName, qnScope = decodeName(data[12:])
         offset = 20 + qnLength
@@ -230,18 +227,8 @@ class NetBIOSLookup(NetBIOSBase):
         self.endTransaction(trxID)
         return addresses
 
-
-def lookup(name, server, type=TYPE_WORKSTATION, scope=None,
-           port=137, broadcast=False):
-    from twisted.internet import reactor
-    l = NetBIOSLookup()
-    reactor.listenUDP(0, l)
-    return l.lookupName(name, type, scope, server, port, broadcast)
-    
-
-class NetBIOSNode(NetBIOSBase):
-    def getNodeStatus(self, name, type=TYPE_WORKSTATION, scope=None,
-                      broadcast=False, destServer=None, destPort=137):
+    def getNodeStatus(self, name, destServer, destPort=137, broadcast=False,
+                      type=TYPE_WORKSTATION, scope=None):
         """Returns a list of NBNodeEntry instances containing node status
         information for nbname. If destaddr contains an IP address, then this
         will become an unicast query on the destaddr.
@@ -252,9 +239,10 @@ class NetBIOSNode(NetBIOSBase):
         request = self._constructRequest(0x21, trxID, name, type, scope,
                                          broadcast)
         self.transport.write(request, (destServer, destPort))
+        self.handlers[trxID] = self.gotData_nodeStatus
         return self.transactions[trxID]
 
-    def gotData(self, trxID, data):
+    def gotData_nodeStatus(self, trxID, data):
         nodes = [ ]
         numNames = ord(data[56])
         for i in range(numNames):
@@ -267,6 +255,20 @@ class NetBIOSNode(NetBIOSBase):
                                      flags & 0x0400, flags & 0x0200))
                              
         return nodes
+
+
+def lookup(*args, **kwargs):
+    from twisted.internet import reactor
+    nb = NetBIOS()
+    reactor.listenUDP(0, nb)
+    return nb.lookupName(*args, **kwargs)
+
+
+def queryNode(*args, **kwargs):
+    from twisted.internet import reactor
+    nb = NetBIOS()
+    reactor.listenUDP(0, nb)
+    return nb.getNodeStatus(*args, **kwargs)
 
 
 class NetBIOSSession(protocol.Protocol):
@@ -317,4 +319,3 @@ class NetBIOSSession(protocol.Protocol):
                 self.gotPacket(data)
             else:
                 return None
-        
