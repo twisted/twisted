@@ -70,10 +70,16 @@ class Data(resource.Resource):
         return self.data
 
 def addSlash(request):
-    return "http%s://%s%s/" % (
+    qs = ''
+    qindex = string.find(request.uri, '?')
+    if qindex != -1:
+        qs = request.uri[qindex:]
+        
+    return "http%s://%s%s/%s" % (
         request.isSecure() and 's' or '',
         request.getHeader("host"),
-        (string.split(request.uri,'?')[0]))
+        (string.split(request.uri,'?')[0]),
+        qs)
 
 class Redirect(resource.Resource):
     def __init__(self, request):
