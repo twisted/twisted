@@ -1618,13 +1618,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + mailbox)
         else:
-            maybeDeferred(
-                self.mbox.fetch, messages,
-                ['BODY', [], 'INTERNALDATE', 'FLAGS'],
-                uid=uid
-            ).addCallbacks(
-                self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag,),
-            )
+            maybeDeferred(self.mbox.fetch, messages, uid
+                ).addCallbacks(self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag,),
+                )
 
     select_COPY = (do_COPY, arg_seqset, arg_astring)
 
@@ -1633,13 +1629,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedDeferreds = []
         addedIDs = []
         failures = []
-        for (id, msg) in messages.iteritems():
-            body = msg.getBodyFile()
+        for (id, msg) in messages:
+            body = StringIO.StringIO(_formatHeaders(msg.getHeaders(True)) + '\r\n' + msg.getBodyFile().read())
             flags = msg.getFlags()
             date = msg.getInternalDate()
             try:
                 d = mbox.addMessage(body, flags, date)
             except Exception, e:
+                log.err()
                 failures.append(e)
             else:
                 if isinstance(d, defer.Deferred):
@@ -1650,7 +1647,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbCopied, addedIDs, failures, tag, mbox)
 
     def __cbCopied(self, deferredIds, ids, failures, tag, mbox):
-        for (result, status) in deferredIds:
+        for (status, result) in deferredIds:
             if status:
                 ids.append(result)
             else:
