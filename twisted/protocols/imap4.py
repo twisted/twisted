@@ -332,12 +332,17 @@ class Command:
     _OK_RESPONSES = ('UIDVALIDITY', 'READ-WRITE', 'READ-ONLY', 'UIDNEXT', 'PERMANENTFLAGS')
     defer = None
     
-    def __init__(self, command, args='', continuation=None, wantResponse=()):
+    def __init__(self, command, args=None, continuation=None, wantResponse=()):
         self.command = command
         self.args = args
         self.continuation = continuation
         self.wantResponse = wantResponse
         self.lines = []
+
+    def format(self, tag):
+        if self.args is None:
+            return ' '.join((tag, self.command))
+        return ' '.join((tag, self.command, self.args))
     
     def finish(self, lastLine, unusedCallback):
         send = []
@@ -1647,7 +1652,7 @@ class IMAP4Client(basic.LineReceiver):
             cmd = self.queued.pop(0)
             t = self.makeTag()
             self.tags[t] = cmd
-            self.sendLine(' '.join((t, cmd.command, cmd.args)))
+            self.sendLine(cmd.format(t))
             self.waiting = t
     
     def _extraInfo(self, lines):
@@ -1682,7 +1687,7 @@ class IMAP4Client(basic.LineReceiver):
             return cmd.defer
         t = self.makeTag()
         self.tags[t] = cmd
-        self.sendLine(' '.join((t, cmd.command, cmd.args)))
+        self.sendLine(cmd.format(t))
         self.waiting = t
         return cmd.defer
 
