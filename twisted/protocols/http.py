@@ -847,6 +847,9 @@ class Request:
         # Authorization, (mostly) per the RFC
         try:
             authh = self.getHeader("Authorization")
+            if not authh:
+                self.user = self.password = ''
+                return
             bas, upw = authh.split()
             if bas.lower() != "basic":
                 raise ValueError
