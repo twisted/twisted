@@ -126,7 +126,18 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(reader.readLines(), [])
         reader.close()
 
-    def testaNoPermission(self):
+    def testModePreservation(self):
+        "logfile: check rotated files have same permissions as original."
+        if not hasattr(os, "chmod"): return
+        f = open(self.path, "w").close()
+        os.chmod(self.path, 0707)
+        mode = os.stat(self.path)[0]
+        log = logfile.LogFile(self.name, self.dir)
+        log.write("abc")
+        log.rotate()
+        self.assertEquals(mode, os.stat(self.path)[0])
+
+    def testNoPermission(self):
         "logfile: check it keeps working when permission on dir changes."
         log = logfile.LogFile(self.name, self.dir)
         log.write("abc")

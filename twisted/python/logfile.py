@@ -34,13 +34,16 @@ class LogFile:
     """
 
     synchronized = ["write", "rotate"]
-
     
     def __init__(self, name, directory, rotateLength=1000000):
         self.directory = directory
         self.name = name
         self.path = os.path.join(directory, name)
         self.rotateLength = rotateLength
+        if os.path.exists(self.path) and hasattr(os, "chmod"):
+            self.defaultMode = os.stat(self.path)[0]
+        else:
+            self.defaultMode = None
         self._openFile()
     
     def _openFile(self):
@@ -53,6 +56,9 @@ class LogFile:
         else:
             self.size = 0
             self._file = open(self.path, "w+")
+        # set umask to be same as original log file
+        if self.defaultMode is not None:
+            os.chmod(self.path, self.defaultMode)
     
     def __getstate__(self):
         state = self.__dict__.copy()
