@@ -1,5 +1,6 @@
 
 from twisted.internet import defer
+from twisted.internet.defer import maybeDeferred
 from twisted.python import failure, reflect, components
 from twisted.cred import error
 
@@ -57,8 +58,9 @@ class Portal:
         for i in ifac:
             c = self.checkers.get(i)
             if c is not None:
-                return c.requestAvatarId(credentials).addCallback(
-                    self.realm.requestAvatar, mind, *interfaces)
+                return maybeDeferred(c.requestAvatarId, credentials
+                    ).addCallback(self.realm.requestAvatar, mind, *interfaces
+                    )
         return defer.fail(failure.Failure(error.UnhandledCredentials(
             "No checker for %s" % ' ,'.join(map(reflect.qual, ifac)))))
 
