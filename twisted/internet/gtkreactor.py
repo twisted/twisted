@@ -35,6 +35,7 @@ import sys
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime
+from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
 import main, default
@@ -51,6 +52,8 @@ _simtag = None
 class GtkReactor(default.PosixReactorBase):
     """GTK+ event loop reactor.
     """
+
+    __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
 
     def addReader(self, reader):
         if not hasReader(reader):
