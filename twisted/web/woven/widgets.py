@@ -627,6 +627,23 @@ class Anchor(Widget):
         self.add(Text(self.text or data, self.raw, 0))
         return Widget.generateDOM(self, request, node)
 
+
+class SubAnchor(Anchor):
+    def generateDOM(self, request, node):
+        href = self.baseHREF
+        params = urllib.urlencode(self.parameters)
+        if params:
+            href = href + '?' + params
+        data = self.getData()
+        if not href:
+            href = node.getAttribute('href')
+        self['href'] = href + str(data) + self.trailingSlash
+        if data is None:
+            data = ""
+        self.add(Text(self.text or data, self.raw, 0))
+        return Widget.generateDOM(self, request, node)
+
+
 wvfactory_Anchor = viewFactory(Anchor)
 
 
