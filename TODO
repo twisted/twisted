@@ -65,9 +65,9 @@ this file directly.
     across or in tandem with a PB connection without breaking anything would be
     very good.
 
-009 HEAD and other HTTP subtleties for Twisted.Web.  There are many things in
-    the HTTP RFC(s) that Twisted.Web does not do properly and should.  This
-    could perhaps be broken out into multiple TODO items.
+009 [[Itamar]] HEAD and other HTTP subtleties for Twisted.Web.  There are many
+    things in the HTTP RFC(s) that Twisted.Web does not do properly and should.
+    This could perhaps be broken out into multiple TODO items.
 
 010 Profiling, and possibly C optimization of, twisted.internet.main loop and
     select calls.  There also needs to be some serious load-testing of Twisted
@@ -84,19 +84,20 @@ this file directly.
 013 [[Allen Short]] Destroy the sun.
 
 014 *{Glyph Lefkowitz}* Web authentication widget which combines Passport with
-    Web so that asynchronous authentication won't bother web pages.
+    Web so that asynchronous authentication won't bother web pages. (this is
+    twisted.web.guard)
 
 015 [[Itay Ben-Yaacov]] Twisted Names, a full replacement for BIND.
 
-016 [[Glyph Lefkowitz]] Web Session Expiry. (30 minutes seems like a reasonable
-    default...
+016 *{Glyph Lefkowitz}* Web Session Expiry. (30 minutes seems like a reasonable
+    default...)
 
 017 mod_pb, an apache module which allows communication with Twisted servers --
     hopefully compatible with the current twisted.web spread model.
 
-018 Better win32 integration. Support for running twisted servers as WinNT
-    services. twisted.internet support for the win32 event loop as provided by
-    win32all.
+018 [[Ying Li]] Better win32 integration. Support for running twisted servers
+    as WinNT services. twisted.internet support for the win32 event loop as
+    provided by win32all.
 
 019 IMAP support, possibly based on alpha code written by Michel Pelletier
     (http://www.zope.org/Members/michel/MyWiki/IMAPServer).
@@ -112,9 +113,25 @@ this file directly.
 
 023 [[Allen Short]] Emacs integration with PB.
 
-024 [[Glyph Lefkowitz]] Refactor twisted.internet so that there is a
+024 *{Glyph Lefkowitz}* Refactor twisted.internet so that there is a
     single defined API for connecting protocols to their transports.
     (listenTCP, listenSSL, connectTCP, connectSSL, etc)
 
 025 Jelly needs to handle floats and longs correctly, using the appropriate
     types for struct.pack.
+
+026 More ircd-style names for virtual nicks in words; LoginServ (or maybe
+    NickServ) instead of *login*.  The asterisks break some clients.
+
+027 Unit testing of I/O code.  There are two possible approaches, both of which
+    are probably worthwhile at some point: one is to create a virtual_select
+    and virtual_socket module and a dummy application, sending data to
+    pre-determined fake FDs.  (Note: this could also work with a virtual_gtk
+    module).  Another approach is to create a test framework that starts
+    separate client and server processes and compares some condition after both
+    have finished running (or times out if they take too long)
+
+028 [[Kevin Turner]] proper DCC and CTCP support for IRCClient.
+
+029 DCC and CTCP parsing for IRCGateway, to allow interactions with clients on
+    other protocols. (This depends on 008)
