@@ -101,6 +101,7 @@ class Options(dict):
         super(Options, self).__init__()
 
         self.opts = self
+        self.defaults = {}
 
         # These are strings/lists we will pass to getopt
         self.longOpt = []
@@ -123,6 +124,7 @@ class Options(dict):
             self.docs.update(docs)
 
             self.opts.update(settings)
+            self.defaults.update(settings)
 
             self.synonyms.update(synonyms)
             self.__dispatch.update(dispatch)
@@ -150,7 +152,6 @@ class Options(dict):
 
         if options is None:
             options = sys.argv[1:]
-
         try:
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
@@ -370,6 +371,10 @@ class Options(dict):
         return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
     def getSynopsis(self):
+        """ Returns a string containing a description of these options and how to
+            pass them to the executed file.
+        """
+
         default = "%s%s" % (path.basename(sys.argv[0]),
                             (self.longOpt and " [options]") or '')
         if self.parent is None:
@@ -434,7 +439,7 @@ class Options(dict):
                  'short': longToShort[opt],
                  'doc': self.docs[opt],
                  'optType': optType,
-                 'default': self.opts.get(opt, None)
+                 'default': self.defaults.get(opt, None)
                  })
 
         if not (getattr(self, "longdesc", None) is None):
