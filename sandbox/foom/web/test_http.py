@@ -15,34 +15,84 @@
 
 from __future__ import nested_scopes
 
+import string, random, urllib, cgi
 from twisted.trial import unittest
-from twisted.protocols import http, loopback
+from twisted.protocols import loopback, basic
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
-import string, random, urllib, cgi
+from twisted.python.util import OrderedDict
 
+import http
 
-class OrderedDict:
+class SuxHTTPClient(basic.LineReceiver):
+    """A client for HTTP 1.0
 
-    def __init__(self, dict):
-        self.dict = dict
-        self.l = dict.keys()
+    Notes:
+    You probably want to send a 'Host' header with the name of
+    the site you're connecting to, in order to not break name
+    based virtual hosting.
+    """
+    length = None
+    firstLine = 1
+    __buffer = ''
 
-    def __setitem__(self, k, v):
-        self.l.append(k)
-        self.dict[k] = v
+    def sendCommand(self, command, path):
+        self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
 
-    def __getitem__(self, k):
-        return self.dict[k]
+    def sendHeader(self, name, value):
+        self.transport.write('%s: %s\r\n' % (name, value))
 
-    def items(self):
-        result = []
-        for i in self.l:
-            result.append((i, self.dict[i]))
-        return result
+    def endHeaders(self):
+        self.transport.write('\r\n')
 
-    def __getattr__(self, attr):
-        return getattr(self.dict, attr)
+    def lineReceived(self, line):
+        if self.firstLine:
+            self.firstLine = 0
+            try:
+                version, status, message = line.split(None, 2)
+            except ValueError:
+                # sometimes there is no message
+                version, status = line.split(None, 1)
+                message = ""
+            self.handleStatus(version, status, message)
+            return
+        if line:
+            key, val = line.split(':', 1)
+            val = val.lstrip()
+            self.handleHeader(key, val)
+            if key.lower() == 'content-length':
+                self.length = int(val)
+        else:
+            self.handleEndHeaders()
+            self.setRawMode()
+
+    def connectionLost(self, reason):
+        self.handleResponseEnd()
+
+    def handleResponseEnd(self):
+        if self.__buffer != None:
+            b = self.__buffer
+            self.__buffer = None
+            self.handleResponse(b)
+    
+    def handleResponsePart(self, data):
+        self.__buffer += data
+
+    def connectionMade(self):
+        pass
+
+    handleStatus = handleHeader = handleEndHeaders = lambda *args: None
+
+    def rawDataReceived(self, data):
+        if self.length is not None:
+            data, rest = data[:self.length], data[self.length:]
+            self.length -= len(data)
+        else:
+            rest = ''
+        self.handleResponsePart(data)
+        if self.length == 0:
+            self.handleResponseEnd()
+            self.setLineMode(rest)
 
 
 class DummyHTTPHandler(http.Request):
@@ -62,7 +112,7 @@ class DummyHTTPHandler(http.Request):
         self.finish()
 
 
-class LoopbackHTTPClient(http.HTTPClient):
+class LoopbackHTTPClient(SuxHTTPClient):
 
     def connectionMade(self):
         self.sendCommand("GET", "/foo/bar")
