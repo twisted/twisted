@@ -7,11 +7,6 @@ register("Twisted Words",
          description="A chat and collaboration system.",
          type='coil')
 
-# register("Twisted Reality",
-         # "twisted.reality.reality",
-         # description="MUD and MOO-like services for Twisted.",
-         # type='coil')
-
 register("Twisted Web",
          "twisted.coil.plugins.web",
          description="Web servers & services for Twisted",
@@ -79,11 +74,6 @@ register("Twisted Mail Automated TAP builder",
 
 register("Twisted Manhole Automated TAP builder",
          "twisted.tap.manhole",
-         description="automated TAP building",
-         type="tap")
-
-register("Twisted Reality Automated TAP builder",
-         "twisted.tap.reality",
          description="automated TAP building",
          type="tap")
 

@@ -73,24 +73,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import otp
     
     
-    def test_reality(self):
-        """Test importing reality
-        """
-        from twisted.reality import reality
-        from twisted.reality import thing
-        from twisted.reality import sentence
-        from twisted.reality import source
-        from twisted.reality import error
-        from twisted.reality import player
-        from twisted.reality import plumbing
-        from twisted.reality import room
-        from twisted.reality import container
-        from twisted.reality import geometry
-        from twisted.reality import clothing
-        from twisted.reality import door
-        from twisted.reality import furniture
-        from twisted.reality import lock
-
     def test_protocols(self):
         """Test importing protocols
         """

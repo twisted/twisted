@@ -21,7 +21,6 @@ from twisted.python import rebuild
 
 import crash_test_dummy
 from twisted.python.rebuild import rebuild
-from twisted.reality import thing
 from twisted.web import server
 from twisted.python import delay
 f = crash_test_dummy.foo
@@ -44,7 +43,6 @@ class RebuildTestCase(unittest.TestCase):
         d.run()
         d.run()
         
-        rebuild(thing,0)
         rebuild(server,0)
         assert f is crash_test_dummy.foo, 'huh?'
         #x[0].do()

@@ -29,7 +29,7 @@ Password for manhole service. If none is given manhole will not be setup.
 \fB\--manholePort\fR
 Port for manhole service [default:8787].
 .PP
-\fIapptype\fR can be 'stupid', 'web', 'irc', 'reality', 'toc', 'mail', \
+\fIapptype\fR can be 'stupid', 'web', 'irc', 'toc', 'mail', \
 'telnet', 'socks', 'ftp', 'manhole' and 'words'. Each of those support \
 different options.
 .PP
@@ -74,14 +74,6 @@ Use an index name other than "index.html"
 This creates a web.tap file that can be used by twistd. If you
 specify no arguments, it will be a demo webserver that has the Test
 class from twisted.web.test in it.
-.SH \fBreality\fR options
-.TP
-\fB\-m\fR \fI<map.rpl>\fR
-map.rpl should be a reality pickle.
-.PP
-Reality PickLe files are created using the gnusto(1) utility on a build_map file
-from a Twisted Reality distribution.  Some realities can be found at
-http://twistedmatrix.com/reality.epy.
 .SH \fBtoc\fR options
 .TP
 \fB\-p\fR \fI<port>\fR

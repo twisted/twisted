@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.29 2002/04/02 04:31:11 glyph Exp $
+$Id: setup.py,v 1.30 2002/04/10 01:03:19 carmstro Exp $
 """
 
 import distutils, os, sys, string
@@ -191,8 +191,6 @@ your toaster.
         "twisted.protocols",
         "twisted.protocols.ldap",
         "twisted.python",
-        "twisted.reality",
-        "twisted.reality.ui",
         "twisted.scripts",
         "twisted.spread",
         "twisted.spread.ui",
