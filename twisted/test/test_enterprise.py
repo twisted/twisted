@@ -1,19 +1,19 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
+#
 
 """Tests for twisted.enterprise."""
 
@@ -50,7 +50,7 @@ try: import psycopg
 except: psycopg = None
 
 try: import kinterbasdb
-except: kinterbasedb = None
+except: kinterbasdb = None
 
 tableName = "testTable"
 childTableName = "childTable"
@@ -472,7 +472,7 @@ class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
         return ConnectionPool('pyPgSQL.PgSQL', database=self.DB_NAME,
                               user=self.DB_USER, password=self.DB_PASS,
                               cp_min=0)
-			      
+
 class PsycopgTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using psycopg for Postgres.
     """
@@ -549,7 +549,7 @@ else:
         conn.close()
     except Exception, e:
         PostgresTestCase.skip = "Connection to PgSQL server failed: " + str(e)
-	
+
 if psycopg is None: PsycopgTestCase.skip = "psycopg module not available"
 else:
     try:
