@@ -20,23 +20,43 @@ from twisted.persisted import sob
 
 class IService(components.Interface):
 
+    """
+    @type name:            C{string}
+    @ivar name:            The name of the service (or None)
+    @type running:         C{boolean}
+    @ivar running:         Whether the service is running.
+    """
+
     def setName(self, name):
-        pass
+        """Set the name of the service.
+
+        @type name: C{str}
+        @raise L{RuntimeError}: Raised if the service already has a parent.
+        """
 
     def setServiceParent(self, parent):
-        pass
+        """Set the parent of the service.
+
+        @type name: C{IServiceCollection}
+        @raise L{RuntimeError}: Raised if the service already has a parent
+        or if the service has a name and the parent already has a child
+        by that name.
+        """
 
     def disownServiceParent(self):
-        pass
+        """Remove the parent of the service."""
 
     def startService(self):
-        pass
+        """Start the the service."""
 
     def stopService(self):
-        pass
+        """Stop the the service."""
 
     def privilegedStartService(self):
-        pass
+        """Do preperation work for starting the service.
+
+        Here things which should be done before changing directory,
+        root or shedding privileges are done."""
 
 
 class Service:
@@ -80,20 +100,32 @@ class Service:
 
 class IServiceCollection(components.Interface):
 
-    def getService(self, idx):
-        pass
-
     def getServiceNamed(self, name):
-        pass
+        """Get the child service with a given name.
+
+        @type name: C{str}
+        @rtype: C{IService}
+        @raise L{KeyError}: Raised if the service has no child with the
+        given name.
+        """
 
     def __iter__(self):
-        pass
+        """Get an iterator over all child services"""
 
     def addService(self, service):
-        pass
+         """Add a child service.
+
+        @type service: C{IService}
+        @raise L{RuntimeError}: Raised if the service has a child with
+        the given name.
+        """
 
     def removeService(self, service):
-        pass
+        """Remove a child service.
+        
+        @type service: C{IService}
+        @raise L{ValueError}: Raised if the given service is not a child.
+        """
 
 
 class MultiService(Service):
@@ -122,9 +154,6 @@ class MultiService(Service):
             l.append(defer.maybeDeferred(service.stopService))
         return defer.DeferredList(l)
 
-    def getService(self, idx):
-        return self.services[idx]
-
     def getServiceNamed(self, name):
         return self.namedServices[name]
 
@@ -149,7 +178,17 @@ class MultiService(Service):
 
 
 class IProcess(components.Interface):
-    pass
+
+    """
+    Represents parameters for how processes should be run.
+
+    @ivar processName: the name the process should have in ps (or None)
+    @type processName: C{str}
+    @ivar uid: the user-id the process should run under.
+    @type uid: C{int}
+    @ivar gid: the group-id the process should run under.
+    @type gid: C{int}
+    """
 
 
 class Process:
@@ -164,6 +203,13 @@ class Process:
     
 
 def Application(name, uid=None, gid=None):
+    """Return a compound class.
+
+    Return an object supporting the C{IService}, C{IServiceCollection},
+    C{IProcess} and C{sob.IPersistable} interfaces, with the given
+    parameters. Always access the return value by explicit casting to
+    one of the interfaces.
+    """
     ret = components.Componentized()
     for comp in (MultiService(), sob.Persistant(ret, name), Process(uid, gid)):
         ret.addComponent(comp, ignoreClass=1)
