@@ -41,7 +41,7 @@ class BaseLogFile:
         if defaultMode is None and os.path.exists(self.path) and hasattr(os, "chmod"):
             self.defaultMode = os.stat(self.path)[0]
         else:
-            self.defaultMode = None
+            self.defaultMode = defaultMode
         self._openFile()
     
     def shouldRotate(self):
