@@ -1,3 +1,8 @@
+2004-01-04  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/internet/gladereactor.py: logs all network traffic for
+	TCP/SSL/Unix sockets, allowing traffic to be displayed.
+
 2004-01-04  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: test deleting rows not in cache

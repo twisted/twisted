@@ -21,8 +21,8 @@ crazy shit
 __all__ = ['install']
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure, util, reflect
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.python import log, threadable, runtime, failure, util, reflect, components
+from twisted.internet.interfaces import IReactorFDSet, ITransport
 
 # Sibling Imports
 from twisted.internet import main, default, error
@@ -37,14 +37,52 @@ COLUMN_TRANSPORT = 1
 COLUMN_READING = 2
 COLUMN_WRITING = 3
 
+
 class GladeReactor(sup):
     """GTK+-2 event loop reactor with GUI.
     """
+
+    def listenTCP(self, port, factory, backlog=5, interface=''):
+        from _inspectro import LoggingFactory
+        factory = LoggingFactory(factory)
+        return sup.listenTCP(self, port, factory, backlog, interface)
+    
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        from _inspectro import LoggingFactory
+        factory = LoggingFactory(factory)
+        return sup.connectTCP(self, host, port, factory, timeout, bindAddress)
+
+    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
+        from _inspectro import LoggingFactory
+        factory = LoggingFactory(factory)
+        return sup.listenSSL(self, port, factory, contextFactory, backlog, interface)
+
+    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+        from _inspectro import LoggingFactory
+        factory = LoggingFactory(factory)
+        return sup.connectSSL(self, host, port, factory, contextFactory, timeout, bindAddress)
+
+    def connectUNIX(self, address, factory, timeout=30):
+        from _inspectro import LoggingFactory
+        factory = LoggingFactory(factory)
+        return sup.connectUNIX(self, address, factory, timeout)
+
+    def listenUNIX(self, address, factory, backlog=5, mode=0666):
+        from _inspectro import LoggingFactory
+        factory = LoggingFactory(factory)
+        return sup.listenUNIX(self, address, factory, backlog, mode)
 
     def on_disconnect_clicked(self, w):
         store, iter = self.servers.get_selection().get_selected()
         store[iter][COLUMN_TRANSPORT].loseConnection()
 
+    def on_viewlog_clicked(self, w):
+        store, iter = self.servers.get_selection().get_selected()
+        data = store[iter][1]
+        from twisted.internet._inspectro import LogViewer
+        if hasattr(data, "protocol") and not data.protocol.logViewer:
+            LogViewer(data.protocol)
+    
     def on_inspect_clicked(self, w):
         store, iter = self.servers.get_selection().get_selected()
         data = store[iter]

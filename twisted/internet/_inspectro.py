@@ -1,5 +1,6 @@
 #!/usr/bin/python2.3
 
+import time
 import gtk
 import gobject
 import gtk.glade
@@ -9,10 +10,11 @@ from twisted.python import reflect
 from twisted.manhole.ui import gtk2manhole
 from twisted.python.components import Adapter, Interface, registerAdapter
 from twisted.python import log
+from twisted.protocols import policies
 
 # the glade file uses stock icons, which requires gnome to be installed
 import gnome
-version = "$Revision: 1.3 $"[11:-2]
+version = "$Revision: 1.4 $"[11:-2]
 gnome.init("gladereactor Inspector", version)
 
 class ConsoleOutput(gtk2manhole.ConsoleOutput):
@@ -240,6 +242,110 @@ class Inspectro:
 
     def on_row_activated(self, tv, path, column):
         self.select(self.model.on_get_iter(path).original)
+
+
+class LoggingProtocol(policies.ProtocolWrapper):
+    """Log network traffic."""
+
+    logging = True
+    logViewer = None
+    
+    def __init__(self, *args):
+        policies.ProtocolWrapper.__init__(self, *args)
+        self.inLog = []
+        self.outLog = []
+
+    def write(self, data):
+        if self.logging:
+            self.outLog.append((time.time(), data))
+            if self.logViewer:
+                self.logViewer.updateOut(self.outLog[-1])
+        policies.ProtocolWrapper.write(self, data)
+
+    def dataReceived(self, data):
+        if self.logging:
+            self.inLog.append((time.time(), data))
+            if self.logViewer:
+                self.logViewer.updateIn(self.inLog[-1])
+        policies.ProtocolWrapper.dataReceived(self, data)
+
+    def __repr__(self):
+        r = "wrapped " + repr(self.wrappedProtocol)
+        if self.logging:
+            r += " (logging)"
+        return r
+
+
+class LoggingFactory(policies.WrappingFactory):
+    """Wrap protocols with logging wrappers."""
+
+    protocol = LoggingProtocol
+    logging = True
+    
+    def buildProtocol(self, addr):
+        p = self.protocol(self, self.wrappedFactory.buildProtocol(addr))    
+        p.logging = self.logging
+        return p
+
+    def __repr__(self):
+        r = "wrapped " + repr(self.wrappedFactory)
+        if self.logging:
+            r += " (logging)"
+        return r
+
+
+class LogViewer:
+    """Display log of network traffic."""
+    
+    def __init__(self, p):
+        self.p = p
+        vals = [time.time()]
+        if p.inLog:
+            vals.append(p.inLog[0][0])
+        if p.outLog:
+            vals.append(p.outLog[0][0])
+        self.startTime = min(vals)
+        p.logViewer = self
+        self.xml = x = gtk.glade.XML(sibpath(__file__, "logview.glade"))
+        self.xml.signal_autoconnect(self)
+        self.loglist = self.xml.get_widget("loglist")
+        # setup model, connect it to my treeview
+        self.model = gtk.ListStore(str, str, str)
+        self.loglist.set_model(self.model)
+        self.loglist.set_reorderable(1)
+        self.loglist.set_headers_clickable(1)
+        # self.servers.set_headers_draggable(1)
+        # add a column
+        for col in [
+            gtk.TreeViewColumn('Time',
+                               gtk.CellRendererText(),
+                               text=0),
+            gtk.TreeViewColumn('D',
+                               gtk.CellRendererText(),
+                               text=1),
+            gtk.TreeViewColumn('Data',
+                               gtk.CellRendererText(),
+                               text=2)]:
+            self.loglist.append_column(col)
+            col.set_resizable(1)
+        r = []
+        for t, data in p.inLog:
+            r.append(((str(t - self.startTime), "R", repr(data)[1:-1])))
+        for t, data in p.outLog:
+            r.append(((str(t - self.startTime), "S", repr(data)[1:-1])))
+        r.sort()
+        for i in r:
+            self.model.append(i)
+    
+    def updateIn(self, (time, data)):
+        self.model.append((str(time - self.startTime), "R", repr(data)[1:-1]))
+
+    def updateOut(self, (time, data)):
+        self.model.append((str(time - self.startTime), "S", repr(data)[1:-1]))
+
+    def on_logview_destroy(self, w):
+        self.p.logViewer = None
+        del self.p
 
 
 def main():

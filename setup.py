@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.150 2003/11/20 23:08:03 pahan Exp $
+$Id: setup.py,v 1.151 2004/01/04 23:09:45 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -305,6 +305,7 @@ wovenPath = os.path.join('twisted', 'web', 'woven')
 wovenFiles = ['FlashConduitGlue.html', 'WebConduitGlue.html',
               'FlashConduit.fla', 'WebConduit2_mozilla.js',
               'FlashConduit.swf', 'WebConduit2_msie.js']
+internetPath = os.path.join("twisted", "internet")
 
 setup_args['data_files']=[
     (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
@@ -312,6 +313,9 @@ setup_args['data_files']=[
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
     (lorePath, [os.path.join(lorePath, "template.mgp")]),
     ('twisted', [os.path.join('twisted', 'plugins.tml')]),
+    (internetPath, [os.path.join(internetPath, 'gladereactor.glade')]),
+    (internetPath, [os.path.join(internetPath, 'inspectro.glade')]),
+    (internetPath, [os.path.join(internetPath, 'logview.glade')]),
     ]
 
 for pathname, filenames in [(wovenPath, wovenFiles),
