@@ -238,3 +238,15 @@ class MicroDOMTest(TestCase):
         self.assertEquals(len(c1.childNodes), len(c2.childNodes))
         self.failIfEquals(c1.firstChild(), c2.firstChild())
         self.assertEquals(s, clone.toxml())
+
+    def testLMX(self):
+        n = microdom.Element("p")
+        lmx = microdom.lmx(n)
+        lmx.text("foo")
+        b = lmx.b(a="c")
+        b.foo()["z"] = "foo"
+        b.foo()
+        b.add("bar", c="y")
+        
+        s = '<p>foo<b a="c"><foo z="foo" /><foo /><bar c="y" /></b></p>'
+        self.assertEquals(s, n.toxml())
