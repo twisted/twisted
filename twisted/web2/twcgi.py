@@ -52,7 +52,6 @@ def createCGIEnvironment(ctx, request=None):
         "SERVER_PORT":       str(request.getHost()[2]),
         "REQUEST_METHOD":    request.method,
         "SCRIPT_NAME":       script_name, # XXX
-        "SCRIPT_FILENAME":   self.filename,
         "REQUEST_URI":       request.uri,
         "CONTENT_LENGTH":    str(request.stream.length),
         })
@@ -115,6 +114,7 @@ class CGIScript(resource.LeafResource):
         if request.stream.length is None:
             return http.Response(responsecode.LENGTH_REQUIRED)
         env = createCGIEnvironment(ctx, request=request)
+        env['SCRIPT_FILENAME'] = self.filename
         return self.runProcess(env, request, qargs)
 
     def http_POST(self, ctx):
