@@ -401,20 +401,14 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
     done = False
     
     def outReceived(self, data):
-        log.msg('o: %s' % repr(data))
         self.buf += data
         theTest.fac.proto.expectedLoseConnection = 1
 
-    def errReceived(self, data):
-        log.msg('\n'.join(['ssh: '+line for line in data.split('\r\n')]))
-
     def processEnded(self, reason):
-        log.msg('process ended')
         global theTest
         self.done = True
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
         theTest.assertEquals(self.buf, 'hello\r\n')
-        log.msg('we are done here')
 
 class SSHTransportTestCase(unittest.TestCase):
 
@@ -465,7 +459,6 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        return
         cmdline = 'ssh -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
         global theTest
         theTest = self

@@ -541,7 +541,6 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         return self.fd
 
     def maybeCallProcessEnded(self):
-        log.msg('mcpe %s' % self.lostProcess)
         if self.lostProcess == 2:
             try:
                 if self.status != -1:
