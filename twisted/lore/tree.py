@@ -192,7 +192,8 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     for nodeList in (domhelpers.findNodesNamed(template, "title"),
                      domhelpers.findElementsWithAttribute(template, "class",
                                                           'title')):
-        nodeList[0].childNodes.extend(title)
+        if nodeList:
+            nodeList[0].childNodes.extend(title)
     body = domhelpers.findNodesNamed(document, "body")[0]
     tmplbody = domhelpers.findElementsWithAttribute(template, "class",
                                                               "body")[0]
