@@ -119,17 +119,20 @@ reactor.run()
     <h2>A Higher-Level Example: ircLogBot</h2>
     
     <h3>Overview of ircLogBot</h3>
-    <p>The clients so far have been fairly simple.  A more complicated example
-    comes with Twisted in the doc/examples directory.  ircLogBot.py connects to
-    an IRC server, joins a channel, and logs all traffic on it to a file.  It
-    demonstrates some of the connection-level logic of reconnecting on a lost
-    connection, as well as storing persistent data in the Factory.</p>
+
+    <p>The clients so far have been fairly simple.  A more complicated
+    example comes with Twisted in the doc/examples directory.  <a
+    href="../examples/ircLogBot.py">ircLogBot.py</a> connects to an
+    IRC server, joins a channel, and logs all traffic on it to a file.
+    It demonstrates some of the connection-level logic of reconnecting
+    on a lost connection, as well as storing persistent data in the
+    Factory.</p>
     
     <h3>Reconnection</h3>
     <p>Many times, the connection of a client will be lost unintentionally due
     to network errors.  In the case of the ircLogBot, leaving the bot
     disconnected will result in the loss of the log data until the
-    administrator reconnects the bot.  However, with the new API this can be
+    administrator reconnects the bot.  However, with the API this can be
     automated.  The relevant part of ircLogBot.py follows:</p>
     <pre class="python">
 from twisted.internet import protocol
@@ -146,11 +149,12 @@ class LogBotFactory(protocol.ClientFactory):
     start the connection over again from scratch.</p>
     
     <h3>Persistent Data in the Factory</h3>
+
     <p>Since the Protocol instance is recreated each time the connection is
     made, the client needs some way to keep track of data that should be
-    persisted.  In the case of ircLogBot.py: (<code
-	    class="python">LogBot.log()</code> just logs the data to the file
-    object stored in <code class="python">LogBot.file</code>)</p>
+    persisted.  In the case of the logging bot, it needs to know which channel
+    it is logging, and where to log it to.</p>
+
     <pre class="python">
 from twisted.internet import protocol
 from twisted.protocols import irc
@@ -159,13 +163,16 @@ class LogBot(irc.IRCClient):
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         self.file = open(self.factory.filename, "a")
-        self.log("[connected at %s]" %
+        self.file.write("[connected at %s]" %
                  time.asctime(time.localtime(time.time())))
     
     def signedOn(self):
         self.join(self.factory.channel)
+
     
 class LogBotFactory(protocol.ClientFactory):
+    
+    protocol = LogBot
     
     def __init__(self, channel, filename):
         self.channel = channel
