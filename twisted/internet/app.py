@@ -232,16 +232,20 @@ class Application(log.Logger, styles.Versioned):
         for port in self.ports:
             port.factory.stopFactory()
 
-    def save(self, tag=None):
+    def save(self, tag=None, filename=None):
         """Save a pickle of this application to a file in the current directory.
         """
         from cPickle import dump
-        if tag:
-            filename = self.name+'-'+tag+'-2.tap'
-            finalname = self.name+'-'+tag+'.tap'
+        if filename:
+            finalname = filename
+            filename = finalname + "-2"
         else:
-            filename = self.name+"-2.tap"
-            finalname = self.name+".tap"
+            if tag:
+                filename = self.name+'-'+tag+'-2.tap'
+                finalname = self.name+'-'+tag+'.tap'
+            else:
+                filename = self.name+"-2.tap"
+                finalname = self.name+".tap"
         log.msg("Saving "+self.name+" application to "+finalname+"...")
         f = open(filename, 'wb')
         dump(self, f, 1)

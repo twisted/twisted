@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.27 2002/03/27 23:52:09 jh Exp $
+$Id: setup.py,v 1.28 2002/03/29 10:15:38 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -220,7 +220,8 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 if os.name == 'posix':
     setup_args['scripts'] = [
         'bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd',
-        'bin/im', 'bin/t-im', 'bin/faucet', 'bin/tap2deb', 'bin/eco'
+        'bin/im', 'bin/t-im', 'bin/faucet', 'bin/tap2deb', 'bin/eco',
+        'bin/coil',
     ]
 else:
     # new script schema only for win32, for now
