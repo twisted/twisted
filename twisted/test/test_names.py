@@ -30,7 +30,7 @@ from twisted.protocols import dns
 from twisted.python import log, failure
 
 # Contort ourselves horribly until inet_pton is standard
-IPV6 = hasattr(socket, 'inet_pton')
+IPV6 = hasattr(socket, 'AF_INET6')
 
 def justPayload(results):
     return [r.payload for r in results[0]]
