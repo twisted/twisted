@@ -74,10 +74,8 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.buffer = ""
 
     def outReceived(self, data):
-        print data, 
         self.buffer += data
         if len(self.buffer) == 70070:
-            print "done"
             self.transport.loseConnection()
     
     def processEnded(self, reason):
