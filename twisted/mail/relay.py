@@ -7,7 +7,11 @@ class DomainPickler:
         self.n = 0
 
     def exists(self, user, domain):
-        return 1
+        return self.willRelay()
+
+    def willRelay(self):
+        peer = self.transport.getPeer()
+        return peer[0] != 'INET' or peer[1] == '127.0.0.1'
 
     def saveMessage(self, origin, name, message, domain):
         fname = "%s_%s_%s" % (os.getpid(), os.time(), self.n)
