@@ -111,6 +111,12 @@ class _TLSMixin:
             return main.CONNECTION_LOST
 
     def doWrite(self):
+        if self.writeBlockedOnRead:
+            if select.select([self.socket], [], [], 0)[0]:
+                return self.doRead()
+            else:
+                self.stopWriting()
+                return
         if self.readBlockedOnWrite:
             self.readBlockedOnWrite = 0
             # XXX - This is touching internal guts bad bad bad
@@ -120,16 +126,11 @@ class _TLSMixin:
         return Connection.doWrite(self)
 
     def writeSomeData(self, data):
-        # this sslState thing is the most HORRIBLE THING EVER
-        # ask itamar about it if you have questions
-        sslState = self.socket.state_string()
         try:
             return Connection.writeSomeData(self, data)
         except SSL.WantWriteError:
             return 0
         except SSL.WantReadError:
-            if self.socket.state_string() == sslState:
-                self.stopWriting()
             self.writeBlockedOnRead = 1
             return 0
         except SSL.SysCallError, e:
