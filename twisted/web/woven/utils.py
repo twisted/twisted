@@ -29,7 +29,7 @@ def _getModel(self):
 
 
 def doSendPage(self, d, request):
-    page = str(d.toxml())
+    page = str(d.toprettyxml())
     request.write(page)
     request.finish()
     return page
@@ -152,20 +152,34 @@ class Stack:
         return self.stack[item]
 
 
-def createGetFunction(namespace):
-    def getFunction(request, node, model, viewName):
-        """Get a name from the namespace in my closure.
+class GetFunction:
+    def __init__(self, namespace):
+        self.namespace = namespace
+    
+    def __call__(self, request, node, model, viewName):
+        """Get a name from my namespace.
         """
         if viewName == "None":
             from twisted.web.woven import widgets
             return widgets.DefaultWidget(model)
     
-        vc = getattr(namespace, viewName, None)
+        vc = getattr(self.namespace, viewName, None)
         if vc:
             return vc(model)
-    return getFunction
+
+
+def createGetFunction(namespace):
+    return GetFunction(namespace)
+
+
+class SetId:
+    def __init__(self, theId):
+        self.theId = theId
+    
+    def __call__(self, request, wid, data):
+        wid['id'] = self.theId
+
 
 def createSetIdFunction(theId):
-    def setId(request, wid, data):
-        wid['id'] = theId
-    return setId
+    return SetId(theId)
+
