@@ -367,7 +367,8 @@ class IMAP4Server(basic.LineReceiver):
                 delim = box.getHierarchicalDelimiter()
                 self.sendUntaggedResponse('LIST %s "%s" %s' % (flags, delim, name))
             self.sendPositiveResponse(tag, 'LIST completed')
-    
+    select_UNSUBSCRIBE = auth_UNSUBSCRIBE
+
     def auth_LSUB(self, tag, args):
         args = splitQuoted(args)
         if len(args) != 2:
@@ -381,6 +382,7 @@ class IMAP4Server(basic.LineReceiver):
                     delim = box.getHierarchicalDelimiter()
                     self.sendUntaggedResponse('LSUB %s "%s" %s' % (flags, delim, name))
             self.sendPositiveResponse(tag, 'LSUB completed')
+    select_LSUB = auth_LSUB
 
     def auth_STATUS(self, tag, args):
         names = parseNestedParens(args)
@@ -397,7 +399,8 @@ class IMAP4Server(basic.LineReceiver):
                 d.addErrback(self._ebStatus, tag, mailbox)
             else:
                 self._cbStatus(d, tag)
-    
+    select_STATUS = auth_STATUS
+
     def _cbStatus(self, status, tag, box):
         line = ' '.join(['%s %s' % x for x in status.items()])
         self.sendUntaggedResponse('STATUS %s (%s)' % (box, line))
@@ -405,6 +408,8 @@ class IMAP4Server(basic.LineReceiver):
     
     def _ebStatus(self, failure, tag, box):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
+    
+    
 
 class UnhandledResponse(IMAP4Exception): pass
 
