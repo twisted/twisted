@@ -17,7 +17,7 @@
 """Rudimentary slide support for Lore.
 
 TODO:
-    - Complete mgp output target 
+    - Complete mgp output target
         - syntax highlighting
         - saner font handling
         - probably lots more
@@ -27,30 +27,30 @@ TODO:
 
 Example input file::
     <html>
-    
+
     <head><title>Title of talk</title></head>
-    
+
     <body>
     <h1>Title of talk</h1>
-    
+
     <h2>First Slide</h2>
-    
+
     <ul>
       <li>Bullet point</li>
       <li>Look ma, I'm <strong>bold</strong>!</li>
       <li>... etc ...</li>
     </ul>
-    
-    
+
+
     <h2>Second Slide</h2>
-    
+
     <pre class="python">
     # Sample code sample.
     print "Hello, World!"
     </pre>
-    
+
     </body>
-    
+
     </html>
 """
 from __future__ import nested_scopes
@@ -186,10 +186,10 @@ class MagicpointOutput(BaseLatexSpitter):
     end_h2 = '\n\n\n'
 
     _start_ul = '\n'
-    
+
     _start_li = "\t"
     end_li = "\n"
-    
+
 
 def convertFile(filename, outputter, template, ext=".mgp"):
     fout = open(os.path.splitext(filename)[0]+ext, 'w')
@@ -226,7 +226,7 @@ def insertPrevNextLinks(slides, filename, ext):
                (slide.pos < len(slides)-1 and name == "next"):
                 for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
                     node.appendChild(microdom.Text(slides[slide.pos+offset].title))
-                    node.setAttribute('href', '%s-%d%s' 
+                    node.setAttribute('href', '%s-%d%s'
                                       % (filename[0], slide.pos+offset, ext))
             else:
                 for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
@@ -273,7 +273,7 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
         pos += 1
 
     insertPrevNextLinks(slides, os.path.splitext(os.path.basename(fullpath)), ext)
-    
+
     return slides
 
 
@@ -315,7 +315,7 @@ class PagebreakLatex(LatexSpitter):
     everyN = 1
     currentN = 0
     seenH2 = 0
-        
+
     start_html = LatexSpitter.start_html+"\\date{}\n"
     start_body = '\\begin{document}\n\n'
 
@@ -349,10 +349,9 @@ class SlidesProcessingFunctionFactory(default.ProcessingFunctionFactory):
     def getDoFile(self):
         return doFile
 
-    def generate_mgp(self, d):
+    def generate_mgp(self, d, fileNameGenerator=None):
         template = d.get('template', 'template.mgp')
         df = lambda file, linkrel: convertFile(file, MagicpointOutput, template, ext=".mgp")
         return df
 
 factory=SlidesProcessingFunctionFactory()
-

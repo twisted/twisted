@@ -79,7 +79,7 @@ class ManConverter:
         if not self.tp and not self.para:
             self.write('<p>')
             self.para = 1
-    
+
     def macro_TH(self, line):
         self.write('<html><head>\n')
         parts = [stripQuotes(x) for x in line.split(' ', 2)] + ['', '']
@@ -147,7 +147,7 @@ class ManConverter:
 
 class ProcessingFunctionFactory:
 
-    def generate_lore(self, d):
+    def generate_lore(self, d, filenameGenerator=None):
         ext = d.get('ext', '.html')
         return lambda file,_: ManConverter().convert(open(file),
                                     open(os.path.splitext(file)[0]+ext, 'w'))

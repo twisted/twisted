@@ -48,7 +48,7 @@ class ProcessingFunctionFactory:
                      'book': latex.BookLatexSpitter,
                      }
 
-    def generate_latex(self, options):
+    def generate_latex(self, options, filenameGenerator=None):
         spitter = self.latexSpitters[None]
         for (key, value) in self.latexSpitters.items():
             if key and options.get(key):
@@ -59,7 +59,7 @@ class ProcessingFunctionFactory:
     def getLintChecker(self):
         return lint.getDefaultChecker()
 
-    def generate_lint(self, options):
+    def generate_lint(self, options, filenameGenerator=None):
         checker = self.getLintChecker()
         return lambda file, linkrel: lint.doFile(file, checker)
 
