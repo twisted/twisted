@@ -1,4 +1,16 @@
-2004-05-31  Dave Peticolas <dave@krondo.com>
+2004-05-31  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/enterprise/sqlreflector.py: don't use Augmentation
+
+	* twisted/enterprise/populate.sql: remove
+
+	* twisted/enterprise/schema.sql: remove
+
+	* twisted/enterprise/row.py: remove deprecated classes
+
+	* twisted/enterprise/dbgadgets.py: remove
+
+	* twisted/enterprise/dbcred.py: remove
 
 	* twisted/test/test_enterprise.py: Fix Firebird test case.
 
@@ -3721,5 +3733,4 @@
 --- 0.13.0 Release ---
 
 # Local Variables:
-# add-log-time-format: add-log-iso8601-time-string
 # End:

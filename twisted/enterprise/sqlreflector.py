@@ -21,7 +21,7 @@ from twisted.enterprise.row import RowObject
 
 from twisted.python import reflect
 
-class SQLReflector(reflector.Reflector, adbapi.Augmentation):
+class SQLReflector(reflector.Reflector):
     """I reflect on a database and load RowObjects from it.
 
     In order to do this, I interrogate a relational database to

@@ -23,7 +23,6 @@ Maintainer: U{Dave Peticolas<mailto:davep@twistedmatrix.com>}
 """
 
 import string
-import warnings
 
 from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn, dbTypeMap
 
@@ -124,41 +123,3 @@ class RowObject:
         for keyName, keyType in self.rowKeyColumns:
             keys.append( getattr(self, keyName) )
         return tuple(keys)
-        
-
-class KeyFactory:
-    """I create unique keys to use as primary key columns in database tables.
-    I am able to use a specified range. I am deprecated, don't use me.
-    (NOTE: not thread safe....)
-    """
-    def __init__(self, minimum, pool):
-        warnings.warn("This is deprecated. Use the underlying database to generate keys, or just roll your own.", DeprecationWarning)
-        self.min = minimum
-        self.pool = minimum + pool
-        self.current = self.min
-
-    def getNextKey(self):
-        next = self.current + 1
-        self.current = next
-        if self.current >= self.pool:
-            raise "Key factory key pool exceeded."
-        return next
-
-
-class StatementBatch:
-    """I keep a set of SQL statements to be executed in a single batch. But I am deprecated so don't use me.
-    """
-    def __init__(self):
-        warnings.warn("This is deprecated. Just use ';'.join(statements)", DeprecationWarning)
-        self.statements = []
-
-    def addStatement(self, statement):
-        self.statements.append(statement)
-
-    def batchSQL(self):
-        batchSQL =  string.join(self.statements,";\n")
-        self.statements = []
-        return batchSQL
-
-    def getSize(self):
-        return len(self.statements)
