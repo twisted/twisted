@@ -302,7 +302,7 @@ do_inno_script_template = r'''
 import inno
 import os.path
 options = %(options-repr)s
-scr = inno.Script(destination=r"{pf}\%(name)s", **options)
+scr = inno.Script(**options)
 scr.collect(os.path.join("dist", "%(name)ssvc"))
 outname = "%(name)s.iss"
 out = file(outname, "w+")
