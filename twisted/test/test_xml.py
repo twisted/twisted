@@ -130,6 +130,13 @@ class MicroDOMTest(TestCase):
         self.assertEquals(e.getAttribute('a'), 'a')
         self.assertEquals(e.getAttribute('b'), 'b')
 
+    def testLinebreaks(self):
+        s = '<test \na="a"\n\tb="#b" />'
+        d = microdom.parseString(s)
+        e = d.documentElement
+        self.assertEquals(e.getAttribute('a'), 'a')
+        self.assertEquals(e.getAttribute('b'), '#b')
+
     def testMismatchedTags(self):
         for s in '<test>', '<test> </tset>', '</test>':
             self.assertRaises(microdom.MismatchedTags, microdom.parseString, s)
