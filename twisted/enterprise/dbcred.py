@@ -45,7 +45,8 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
 
     """
 
-    def __init__(self, dbpool):
+    def __init__(self, dbpool, serviceCollection=None):
+        authorizer.Authorizer.__init__(self, serviceCollection)
         self.perspectiveCreators = {}
         adbapi.Augmentation.__init__(self, dbpool)
 
@@ -88,7 +89,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
         realIdentName = identData[0][0]
         base64pass = identData[0][1]
         hashedPass = base64.decodestring(base64pass)
-        i = identity.Identity(realIdentName, self.application)
+        i = identity.Identity(realIdentName, self)
         i.setAlreadyHashedPassword(hashedPass)
         for ign, ign2, pname, sname in identData:
             i.addKeyByString(sname, pname)
