@@ -200,3 +200,62 @@ class Arrows(unittest.TestCase):
         kR(self.pt.LEFT_ARROW)
         kR('B')
         self.assertEquals(self.p.currentLineBuffer(), ('xyB', ''))
+
+
+import telnet, helper
+from twisted.protocols import loopback
+
+class EchoServer(recvline.HistoricRecvLine):
+    def lineReceived(self, line):
+        self.transport.write(line + '\n' + self.ps[self.pn])
+
+class Loopback(unittest.TestCase):
+    def setUp(self):
+        WIDTH = 80
+        HEIGHT = 24
+
+        recvlineServer = EchoServer()
+        insultsServer = insults.ServerProtocol(lambda: recvlineServer)
+        telnetServer = telnet.TelnetTransport(lambda: insultsServer)
+        clientTransport = loopback.LoopbackRelay(telnetServer)
+
+        recvlineClient = helper.TerminalBuffer()
+        insultsClient = insults.ClientProtocol(lambda: recvlineClient)
+        telnetClient = telnet.TelnetTransport(lambda: insultsClient)
+        serverTransport = loopback.LoopbackRelay(telnetClient)
+
+        telnetClient.makeConnection(clientTransport)
+        telnetServer.makeConnection(serverTransport)
+
+        serverTransport.clearBuffer()
+        clientTransport.clearBuffer()
+
+        # Hack cough grunk stfu
+        self.objs = locals()
+        self.__dict__.update(locals())
+
+    def testLineEditing(self):
+        exec ''
+        locals().update(self.objs)
+        telnetClient.write("first line")
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> first line" + (recvlineClient.fill * (WIDTH - 14)) + "\n" +
+            "\n".join([recvlineClient.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+
+        # An insults API for this would be nice.
+        telnetClient.write("\x1b[D\x1b[D\x1b[D\x1b[Dxxxx\n")
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> first xxxx" + (recvlineClient.fill * (WIDTH - 14)) + "\n" +
+            "first xxxx" + (recvlineClient.fill * (WIDTH - 10)) + "\n" +
+            ">>> " + (recvlineClient.fill * (WIDTH - 4)) + "\n" +
+            "\n".join([recvlineClient.fill * WIDTH for i in xrange(HEIGHT - 3)]))

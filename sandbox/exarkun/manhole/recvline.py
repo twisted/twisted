@@ -47,7 +47,7 @@ class RecvLine(insults.TerminalProtocol):
         # For now we will just take over the whole terminal.
         self.transport.reset()
         self.transport.write(self.ps[self.pn])
-        self.setInsertMode()
+        self.setTypeoverMode()
 
     def currentLineBuffer(self):
         s = ''.join(self.lineBuffer)
@@ -55,11 +55,11 @@ class RecvLine(insults.TerminalProtocol):
 
     def setInsertMode(self):
         self.mode = 'insert'
-        self.transport.setModes([insults.IRM])
+        self.transport.resetModes([insults.IRM])
 
     def setTypeoverMode(self):
         self.mode = 'typeover'
-        self.transport.resetModes([insults.IRM])
+        self.transport.setModes([insults.IRM])
 
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new cursor position

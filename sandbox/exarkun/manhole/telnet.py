@@ -646,17 +646,20 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
 
     disconnecting = False
 
+    protocolFactory = None
     protocol = None
 
-    def __init__(self, protocolFactory, *a, **kw):
+    def __init__(self, protocolFactory=None, *a, **kw):
         Telnet.__init__(self)
-        self.protocolFactory = protocolFactory
-        self.protocolArgs = a
-        self.protocolKwArgs = kw
+        if protocolFactory is not None:
+            self.protocolFactory = protocolFactory
+            self.protocolArgs = a
+            self.protocolKwArgs = kw
 
     def connectionMade(self):
-        p = self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-        p.makeConnection(self)
+        if self.protocolFactory is not None:
+            self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self.protocol.makeConnection(self)
 
     def enableLocal(self, option):
         return self.protocol.enableLocal(option)
