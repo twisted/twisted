@@ -5,7 +5,17 @@
 """
 
 from twisted.python import log
-from twisted.web2 import static
+from twisted.web2 import static, wsgi
+
+def simple_app(environ, start_response):
+    """Simplest possible application object"""
+    status = '200 OK'
+    response_headers = [('Content-type','text/html')]
+    start_response(status, response_headers)
+    data = environ['wsgi.input'].read()
+#    return environ['wsgi.file_wrapper'](open('/etc/hostconfig'))
+    return ['<form method="POST"><input name="foo" /></form>\nData:<pre>', data, '</pre>']
+
 
 class Test(static.Data):
     def __init__(self):
@@ -30,6 +40,8 @@ demo can be put back in using more up-to-date Twisted APIs.
             return static.File('/'), segments[1:]
         if name == 'foo':
             return Foo(), segments[1:]
+        if name == 'wsgi':
+            return wsgi.WSGIResource(simple_app), segments[1:]
         return None, ()
 
 from twisted.web2 import resource, stream, http
