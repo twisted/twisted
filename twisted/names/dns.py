@@ -17,7 +17,7 @@
 
 from twisted.protocols import dns, protocol
 from twisted.internet import tcp, udp, main
-import random, string
+import random, string, struct
 
 DNS, TCP = range(2)
 
@@ -125,9 +125,28 @@ class SentQuery:
         self.removeAll()
         if not message.answers:
             self.errback()
-        else:
-            answer = random.choice(message.answers)
-            self.callback(string.join(map(str, map(ord, answer.data)), "."))
+            return
+        process = getattr(self, 'processAnswer_%d' % message.answers[0].type, 
+                          None)
+        if process is None:
+            self.errback()
+            return
+        self.callback(process(message))
+
+    def processAnswer_1(self, message):
+        answer = random.choice(message.answers)
+        return string.join(map(str, map(ord, answer.data)), '.')
+
+    def processAnswer_15(self, message):
+        answers = []
+        for answer in message.answers:
+            priority = struct.unpack("!H", answer.data[:2])
+            answer.strio.seek(answer.strioOff+2)
+            n = dns.Name()
+            n.decode(answer.strio)
+            answers.append((priority, n.name))
+        answers.sort()
+        return answers
 
     def timeOut(self):
         if not self.done:

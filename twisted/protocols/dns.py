@@ -115,6 +115,9 @@ class RR:
         buff = readPrecisely(strio, l)
         self.type, self.cls, self.ttl, l = struct.unpack(self.fmt, buff )
         self.data = readPrecisely(strio, l)
+        # Moshe - temp
+        self.strio = strio
+        self.strioOff = strio.tell()-l
 
 class Message:
     headerFmt = "!H2B4H"
@@ -214,7 +217,6 @@ class DNS(protocol.Protocol):
             self.transport.loseConnection()
 
     def processQuery(self, message):
-        print message.__dict__
         message.answer = 1
         message.rCode = ENOTIMP
         self.writeMessage(message)
