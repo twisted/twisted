@@ -71,6 +71,11 @@ class IMAP4HelperTestCase(unittest.TestCase):
             '''Hello "World!"''',
             '''World "Hello" "How are you?"''',
             '''"Hello world" How "are you?"''',
+            '''foo bar "baz buz" NIL''',
+            '''foo bar "baz buz" "NIL"''',
+            '''foo NIL "baz buz" bar''',
+            '''foo "NIL" "baz buz" bar''',
+            '''"NIL" bar "baz buz" foo''',
         ]
         
         answers = [
@@ -78,6 +83,11 @@ class IMAP4HelperTestCase(unittest.TestCase):
             ['Hello', 'World!'],
             ['World', 'Hello', 'How are you?'],
             ['Hello world', 'How', 'are you?'],
+            ['foo', 'bar', 'baz buz', None],
+            ['foo', 'bar', 'baz buz', 'NIL'],
+            ['foo', None, 'baz buz', 'bar'],
+            ['foo', 'NIL', 'baz buz', 'bar'],
+            ['NIL', 'bar', 'baz buz', 'foo'],
         ]
         
         errors = [

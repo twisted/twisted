@@ -31,6 +31,9 @@ from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.cred import identity, error, perspective
 
+from twisted.python.components import implements
+from twisted.internet.interfaces import ITLSTransport
+
 import base64, binascii, operator, re, string, time, types, rfc822, random
 
 try:
@@ -153,7 +156,7 @@ class IMAP4Server(basic.LineReceiver):
         self.ctx = contextFactory
 
     def connectionMade(self):
-        if self.transport.canStartTLS() and self.ctx:
+        if self.ctx and implements(self.transport, ITLSTransport):
             self.CAPABILITIES['LOGINDISABLED'] = None
             self.CAPABILITIES['STARTTLS'] = None
 
@@ -367,7 +370,7 @@ class IMAP4Server(basic.LineReceiver):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(falure.value))
 
     def unauth_STARTTLS(self, tag, args):
-        if self.transport.canStartTLS() and self.ctx:
+        if self.ctx and implements(self.transport, ITLSTransport):
             self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
             del self.CAPABILITIES['LOGINDISABLED']
@@ -1260,7 +1263,7 @@ class IMAP4Client(basic.LineReceiver):
             return context
 
     def __cbLoginCaps(self, capabilities, username, password):
-        tryTLS = 'STARTTLS' in capabilities and self.transport.canStartTLS()
+        tryTLS = 'STARTTLS' in capabilities and implements(self.transport, ITLSTransport)
         if tryTLS:
             ctx = self._getContextFactory()
             if ctx:
@@ -2447,7 +2450,10 @@ def splitQuoted(s):
     if inQuote:
         raise MismatchedQuoting(s)
     if inWord:
-        result.append(s[start:])
+        if s[start:] == 'NIL':
+            result.append(None)
+        else:
+            result.append(s[start:])
     return result
 
 
