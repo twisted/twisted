@@ -103,7 +103,7 @@ class MicroDOMTest(TestCase):
         self.assertEquals(len(l), 1)
 
     def testPreserveCase(self):
-        s = '<eNcApSuLaTe><sUxor /><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
+        s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
         s2 = s.lower().replace('text', 'TeXt')
         # these are the only two option permutations that *can* parse the above
         d = microdom.parseString(s, caseInsensitive=1, preserveCase=1)
@@ -273,7 +273,7 @@ class MicroDOMTest(TestCase):
     def testDoctype(self):
         s = ('<?xml version="1.0"?>'
         '<!DOCTYPE foo PUBLIC "baz" "http://www.example.com/example.dtd">'
-        '<foo />')
+        '<foo></foo>')
         s2 = '<foo/>'
         d = microdom.parseString(s)
         d2 = microdom.parseString(s2)
@@ -282,9 +282,9 @@ class MicroDOMTest(TestCase):
         self.failIfEqual(d, d2)
         self.failUnlessEqual(d.documentElement, d2.documentElement)
 
-    samples = [("<foo/>", "<foo />"),
+    samples = [("<img/>", "<img />"),
                ("<foo A='b'>x</foo>", '<foo A="b">x</foo>'),
-               ("<foo><BAR /></foo>", "<foo><BAR /></foo>"),
+               ("<foo><BAR /></foo>", "<foo><BAR></BAR></foo>"),
                ("<foo>hello there &amp; yoyoy</foo>", "<foo>hello there &amp; yoyoy</foo>"),
                ]
 
@@ -382,7 +382,7 @@ class MicroDOMTest(TestCase):
         b.foo()
         b.add("bar", c="y")
 
-        s = '<p>foo<b a="c"><foo z="foo" /><foo /><bar c="y" /></b></p>'
+        s = '<p>foo<b a="c"><foo z="foo"></foo><foo></foo><bar c="y"></bar></b></p>'
         self.assertEquals(s, n.toxml())
 
     def testDict(self):

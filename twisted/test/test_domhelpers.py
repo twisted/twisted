@@ -143,26 +143,26 @@ class DomHelpersTest(TestCase):
         b_node=doc2.documentElement.childNodes[0]
         domhelpers.clearNode(b_node)
         actual=doc2.documentElement.toxml()
-        expected='<a><b /></a>'
+        expected='<a><b></b></a>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
         doc3=microdom.parseString('<a><b><c><d/></c></b></a>')
         c_node=doc3.documentElement.childNodes[0].childNodes[0]
         domhelpers.clearNode(c_node)
         actual=doc3.documentElement.toxml()
-        expected='<a><b><c /></b></a>'
+        expected='<a><b><c></c></b></a>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
     def test_get(self):
         doc1=microdom.parseString('<a><b id="bar"/><c class="foo"/></a>')
         node=domhelpers.get(doc1, "foo")
         actual=node.toxml()
-        expected='<c class="foo" />'
+        expected='<c class="foo"></c>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
         node=domhelpers.get(doc1, "bar")
         actual=node.toxml()
-        expected='<b id="bar" />'
+        expected='<b id="bar"></b>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
         self.assertRaises(domhelpers.NodeLookupError, 
@@ -174,7 +174,7 @@ class DomHelpersTest(TestCase):
         doc1=microdom.parseString('<a><b id="bar"/><c class="foo"/></a>')
         node=domhelpers.getIfExists(doc1, "foo")
         actual=node.toxml()
-        expected='<c class="foo" />'
+        expected='<c class="foo"></c>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
         node=domhelpers.getIfExists(doc1, "pzork")
@@ -184,7 +184,7 @@ class DomHelpersTest(TestCase):
         doc1=microdom.parseString('<a><b id="foo"><c></c></b></a>')
         node=domhelpers.getAndClear(doc1, "foo")
         actual=node.toxml()
-        expected='<b id="foo" />'
+        expected='<b id="foo"></b>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
     def test_locateNodes(self):
@@ -192,19 +192,20 @@ class DomHelpersTest(TestCase):
         node_list=domhelpers.locateNodes(doc1.childNodes, 'foo', 'olive',
                                          noNesting=1)
         actual=''.join([node.toxml() for node in node_list])
-        expected='<b foo="olive"><c foo="olive" /></b>'
+        expected='<b foo="olive"><c foo="olive"></c></b>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
         node_list=domhelpers.locateNodes(doc1.childNodes, 'foo', 'olive',
                                          noNesting=0)
         actual=''.join([node.toxml() for node in node_list])
-        expected='<b foo="olive"><c foo="olive" /></b><c foo="olive" />'
+        expected='<b foo="olive"><c foo="olive"></c></b><c foo="olive"></c>'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
     def test_getParents(self):
         doc1=microdom.parseString('<a><b><c><d/></c><e/></b><f/></a>')
         node_list=domhelpers.getParents(doc1.childNodes[0].childNodes[0].childNodes[0])
-        actual=''.join([node.tagName for node in node_list if hasattr(node, 'tagName')])
+        actual=''.join([node.tagName for node in node_list
+                        if hasattr(node, 'tagName')])
         expected='cba'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 

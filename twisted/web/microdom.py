@@ -449,8 +449,9 @@ class Element(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
-        NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title', 'script',
-                          'textarea', 'select', 'style')
+        ALLOWSINGLETON = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param',
+                          'area', 'input', 'col', 'basefont', 'isindex',
+                          'frame')
         # this should never be necessary unless people start
         # changing .tagName on the fly(?)
         if not self.preserveCase:
@@ -468,7 +469,7 @@ class Element(Node):
             for child in self.childNodes:
                 child.writexml(stream, newindent, addindent, newl, strip)
             w(j((newl, indent, "</", self.endTagName, '>')))
-        elif self.tagName.lower() in NEVERSINGLETON:
+        elif self.tagName.lower() not in ALLOWSINGLETON:
             w(j(('></', self.endTagName, '>')))
         else:
             w(" />")
