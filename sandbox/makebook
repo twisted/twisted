@@ -1,0 +1,11 @@
+#!/bin/sh
+cp sandbox/book.tex doc/howto
+cd doc/howto
+for file in *.html
+    do ../../sandbox/latex.py $file
+done
+latex book.tex
+dvips -o book.ps book.dvi
+rm -f book.ps.bz2
+bzip2 -9 book.ps
+rm *.tex *.aux *.log book.dvi
