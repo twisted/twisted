@@ -1,3 +1,12 @@
+class PersonState:pass
+class Online(PersonState):pass
+class Away(PersonState):
+    def __init__(self, message):
+        self.message = message
+class Idle(PersonState):
+    def __init__(self, seconds):
+        self.seconds = seconds
+
 class IPerson(Interface):
     """
     The generic IM person.
@@ -10,10 +19,10 @@ class IPerson(Interface):
 
         possible statuses:
 
-        ("online")
-        ("offline")
-        ("away", message)
-        ("idle", time)
+        ( Online(), )
+        ( Online(), Away("eating dinner") )
+        ( Online(), Away("auto message"), Idle(600) )
+        () # offline
         <whatever else ICQ and Jabber support>
         """
 
@@ -153,6 +162,15 @@ class IInstantMessageConnection(Interface):
         Set the privacy state.
 
         See retrievePrivacy() for what state should be.
+
+        Returns a Deferred that will be called back when this succeeds.
+        """
+
+    def setStatus(self, statusList):
+        """
+        Set our status.
+
+        status is a list of PersonStatus subclasses.
 
         Returns a Deferred that will be called back when this succeeds.
         """
