@@ -41,10 +41,9 @@ class LockFile:
         self._killLaterTouch = reactor.callLater(60, self._laterTouch)
 
     def touch(self):
-        f = open(self.filename, 'r+')
-        data = f.read()
+        f = open(self.filename, 'w')
         f.seek(0)
-        f.write(data)
+        f.write(str(os.getpid()))
         f.close() # keep the lock fresh
 
     def remove(self):
