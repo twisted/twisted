@@ -16,11 +16,11 @@ class Interaction(gtk.GtkWindow):
 
         self.output = gtk.GtkText()
         gtkim.defocusify(self.output)
-        vp.add1(gtkim.scrolltxt(self.output))
+        vp.pack1(gtkim.scrolltxt(self.output), gtk.TRUE, gtk.FALSE)
 
         self.input = gtk.GtkText()
         self.input.set_editable(gtk.TRUE)
-        vp.add2(gtkim.scrolltxt(self.input))
+        vp.pack2(gtkim.scrolltxt(self.input), gtk.FALSE, gtk.TRUE)
 
         self.send = gtkim.cbutton("Send", self.sendMessage)
         vb.pack_start(vp, 1,1,0)
