@@ -515,8 +515,9 @@ class Request:
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         """Set an outgoing HTTP cookie.
         
-        In general, you should consider using sessions instead of cookies,
-        see self.getSession and the Session class for details.
+        In general, you should consider using sessions instead of cookies, see
+        twisted.web.server.Resource.getSession and the
+        twisted.web.server.Session class for details.
         """
         cookie = '%s=%s' % (k, v)
         if expires != None:
