@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.61 2002/10/11 22:28:25 itamarst Exp $
+$Id: setup.py,v 1.62 2002/10/11 22:51:58 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -241,7 +241,7 @@ class build_ext_twisted(build_ext):
                                     ["twisted/inetd/portmap.c"],
                                     define_macros=define_macros) )
         else:
-            self.announce("Sun-RPC portmap support is unavailable on this system.")
+            self.announce("Sun-RPC portmap support is unavailable on this system (but that's OK, you probably don't need it anyway).")
 
         self.extensions.extend(exts)
 
