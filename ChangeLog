@@ -3,6 +3,8 @@
 	* .: Releasing Twisted 1.0.6rc3. Fixed a security bug in
 	twisted.web.
 
+	* .: Releasing Twisted 1.0.6rc4. One more twisted.web bug.
+
 2003-06-26  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.6rc1.
