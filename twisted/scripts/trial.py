@@ -99,7 +99,7 @@ def run():
        log.startLogging(open(config['logfile'], 'a'), 0)
 
     if config['verbose']:
-        reporter = unittest.VerboseTextReporter(sys.stdout)
+        reporter = unittest.TreeReporter(sys.stdout)
     else:
         reporter = unittest.TextReporter(sys.stdout)
 

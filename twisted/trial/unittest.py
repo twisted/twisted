@@ -333,6 +333,44 @@ class VerboseTextReporter(TextReporter):
         self.writeln('[SKIPPED]')
         Reporter.reportSkip(self, testCase, method, exc_info)
 
+class TreeReporter(TextReporter):
+    columns = 79
+    
+    def __init__(self, stream=sys.stdout):
+        TextReporter.__init__(self, stream)
+        self.lastModule = None
+        self.lastClass = None
+
+    def reportStart(self, testCase, method):
+        if testCase.__module__ != self.lastModule:
+            self.writeln(testCase.__module__)
+            self.lastModule = testCase.__module__
+        if testCase != self.lastClass:
+            self.writeln('  %s' % testCase.__name__)
+            self.lastClass = testCase
+        self.currentLine = '    %s ... ' % method.__name__
+        self.write(self.currentLine)
+
+    def endLine(self, message):
+        import string
+        self.writeln(string.rjust(message, self.columns - len(self.currentLine)))
+
+    def reportSuccess(self, testCase, method):
+        self.endLine('[OK]')
+        Reporter.reportSuccess(self, testCase, method)
+
+    def reportFailure(self, testCase, method, exc_info):
+        self.endLine('[FAIL]')
+        Reporter.reportFailure(self, testCase, method, exc_info)
+
+    def reportError(self, testCase, method, exc_info):
+        self.endLine('[ERROR]')
+        Reporter.reportError(self, testCase, method, exc_info)
+
+    def reportSkip(self, testCase, method, exc_info):
+        self.endLine('[SKIPPED]')
+        Reporter.reportSkip(self, testCase, method, exc_info)
+
 def deferredResult(d, timeout=None):
     """Waits for a Deferred to arrive, then returns or throws an exception,
     based on the result.
