@@ -310,6 +310,18 @@ because it makes creating relative links far easier, ironically ;-)</p>
 <p>Use the <code>RawText</code> view.</p>
 
 
+<h3>When trying to use Guard, I get infinite redirects to URLs with long
+hexadecimal numbers. What's the deal?</h3>
+
+<p>Are you using an RPY? Add a single line containing <code>cache()</code> as
+the first line of your RPY.</p>
+
+<p>An RPY file is executed every time it is accessed, so the call to <code
+class="API" base="twisted.web.woven">guard.SessionWrapper</code> is executed
+once per request, making a new SessionWrapper for each request. There should be
+only one SessionWrapper object for your application. Caching the RPY file
+enforces this.</p>
+
 <h2>Perspective Broker</h2>
 
 <h3>How can I get the reference to a client from a Perspective?</h3>
