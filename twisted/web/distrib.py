@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web.test.test_web -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -28,7 +29,7 @@ if (os.sys.platform != 'win32') and (os.name != 'java'):
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.protocols import http
+from twisted.web import http
 from twisted.python import log
 from twisted.persisted import styles
 from twisted.web.woven import page
