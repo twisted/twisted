@@ -87,6 +87,12 @@ class ServerOptions(usage.Options):
 
     opt_g = opt_plugin
 
+
+# make default be "--help"
+import sys
+if len(sys.argv) == 1:
+    sys.argv.append("--help")
+
 config = ServerOptions()
 try:
     config.parseOptions()
