@@ -21,7 +21,7 @@
 #include "structmember.h"
 
 static char dir__doc__[] =
-"Wrapper for opendir(3), readdir(3), and scandir(3)";
+"Wrapper for opendir(3) and related functions.";
 
 /* We link this module statically for convenience.  If compiled as a shared
    library instead, some compilers don't allow addresses of Python objects
@@ -372,17 +372,41 @@ PyDirObject_close(PyDirObject *self)
 	return Py_None;
 }
 
+static char PyDirObject_rewind_doc[] =
+	"Seek to the beginning of this directory.";
+
+static char PyDirObject_tell_doc[] =
+	"Return an opaque handle for use by DirType.seek()\n"
+	"\n"
+	"The object returned is valid for one use only, and only for\n"
+	"use by this DirType instance.\n";
+
+static char PyDirObject_seek_doc[] =
+	"Return to a previous position in the directory.\n"
+	"\n"
+	"The argument passed must have been returned by a call to this\n"
+	"instances' tell() method, and must not have been passed to\n"
+	"seek() before.  After this call returns, the argument may not\n"
+	"be passed to this method again.\n";
+
+static char PyDirObject_scan_doc[] =
+	"Create an iterator for the contents of this directory.\n"
+	"\n"
+	"The elements created by the returned iterator will be two-tuples\n"
+	"of file name (str) and file type (int).  If an argument is provided,\n"
+	"it is called for each element with the file name and file type, and\n"
+	"that element is only produced by the iterator if the call returns a\n"
+	"true value.\n";
+
+static char PyDirObject_close_doc[] =
+	"Close this directory.\n";
+
 static PyMethodDef PyDirObject_methods[] = {
-	{"rewind", (PyCFunction)PyDirObject_rewind, METH_NOARGS,
-		"rewind() -> seek to the beginning of this directory"},
-	{"tell", (PyCFunction)PyDirObject_tell, METH_NOARGS,
-		"tell() -> report the current position in this directory"},
-	{"seek", (PyCFunction)PyDirObject_seek, METH_VARARGS,
-		"seek(pos) -> change the current position in this directory"},
-	{"scan", (PyCFunction)PyDirObject_scan, METH_VARARGS,
-		"scan(pred) -> iterate over some of the contents of this directory"},
-	{"close", (PyCFunction)PyDirObject_close, METH_NOARGS,
-		"close(pos) -> close this directory"},
+	{"rewind", (PyCFunction)PyDirObject_rewind, METH_NOARGS, PyDirObject_rewind_doc},
+	{"tell", (PyCFunction)PyDirObject_tell, METH_NOARGS, PyDirObject_tell_doc},
+	{"seek", (PyCFunction)PyDirObject_seek, METH_VARARGS, PyDirObject_seek_doc},
+	{"scan", (PyCFunction)PyDirObject_scan, METH_VARARGS, PyDirObject_scan_doc},
+	{"close", (PyCFunction)PyDirObject_close, METH_NOARGS, PyDirObject_close_doc},
 	{NULL,	NULL},
 };
 
