@@ -4373,3 +4373,10 @@ experience is characterised by waves of confusion and euphoria."
 <kwaker>	and my hard drive to burn in flames
 <fzZzy>	yes
 %
+<exarkun> slyphon: Nagle is a little gnome who ships inside every TCP stack
+<exarkun> slyphon: He grabs your sockets and squeezes them
+<exarkun> slyphon: So the bits can't fit through
+<exarkun> slyphon: Later, he lets go
+<exarkun> slyphon: Turning off TCP_NODELAY hits Nagle with a sledge hammer.
+<exarkun> slyphon: While he's unconscious, no one does the job of squeezing your sockets.  
+%
