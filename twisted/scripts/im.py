@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -15,16 +13,19 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+import os
 
-### Twisted Preamble
-# This makes sure that users don't have to set up their environment
-# specially in order to run these programs from bin/.
-import sys, os, string
-if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
-    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
-sys.path.insert(0, os.curdir)
-### end of preamble
+def run():
+    if os.name == 'java':
+        from twisted.internet import javareactor
+        javareactor.install()
+        from twisted.im.jyaccount import AccountManager
+        AccountManager()
+    else:
+        from twisted.internet import gtkreactor
+        gtkreactor.install()
+        from twisted.im.gtkaccount import AccountManager
+        AccountManager()
 
-from twisted.scripts import im
-im.run()
-
+    from twisted.internet import reactor
+    reactor.run()
