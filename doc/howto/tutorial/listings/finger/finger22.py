@@ -4,7 +4,6 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic, irc
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc, microdom
-from twisted.web.woven import page, model, interfaces
 from twisted.spread import pb
 from OpenSSL import SSL
 import cgi
@@ -145,53 +144,61 @@ components.registerAdapter(IRCClientFactoryFromService,
                            IFingerService,
                            IIRCClientFactory)
 
-class UsersModel(model.MethodModel):
+class UserStatusTree(resource.Resource):
 
-    def initialize(self, *args, **kwargs):
-        self.service=args[0]
+    def __init__(self, service):
+        resource.Resource.__init__(self)
+        self.service=service
 
-    def wmfactory_users(self, request):
-        return self.service.getUsers()
+        # add a specific child for the path "RPC2"
+        self.putChild("RPC2", UserStatusXR(self.service))
 
-components.registerAdapter(UsersModel, IFingerService, interfaces.IModel)
+        # need to do this for resources at the root of the site
+        self.putChild("", self)
 
-class UserStatusTree(page.Page):
+    def _cb_render_GET(self, users, request):
+        userOutput = ''.join(["<li><a href=\"%s\">%s</a></li>" % (user, user)
+                for user in users])
+        request.write("""
+            <html><head><title>Users</title></head><body>
+            <h1>Users</h1>
+            <ul>
+            %s
+            </ul></body></html>""" % userOutput)
+        request.finish()
+        
+    def render_GET(self, request):
+        d = self.service.getUsers()
+        d.addCallback(self._cb_render_GET, request)
 
-    template = """<html><head><title>Users</title></head><body>
-    <h1>Users</h1>
-    <ul model="users" view="List">
-    <li pattern="listItem"><a view="Anchor" /></li>
-    </ul></body></html>"""
+        # signal that the rendering is not complete
+        return server.NOT_DONE_YET
 
-    def initialize(self, *args, **kwargs):
-        self.service=args[0]
-
-    def getDynamicChild(self, path, request):
+    def getChild(self, path, request):
         return UserStatus(user=path, service=self.service)
-
-    def wchild_RPC2 (self, request):
-        return UserStatusXR(self.service)
 
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
+class UserStatus(resource.Resource):
 
-class UserStatus(page.Page):
+    def __init__(self, user, service):
+        resource.Resource.__init__(self)
+        self.user = user
+        self.service = service
 
-    template='''<html><head><title view="Text" model="user"/></head>
-    <body><h1 view="Text" model="user"/>
-    <p model="status" view="Text" />
-    </body></html>'''
+    def _cb_render_GET(self, status, request):
+        request.write("""<html><head><title>%s</title></head>
+        <body><h1>%s</h1>
+        <p>%s</p>
+        </body></html>""" % (self.user, self.user, status))
+        request.finish()
+    
+    def render_GET(self, request):
+        d = self.service.getUser(self.user)
+        d.addCallback(self._cb_render_GET, request)
 
-    def initialize(self, **kwargs):
-        self.user = kwargs['user']
-        self.service = kwargs['service']
-
-    def wmfactory_user(self, request):
-        return self.user
-
-    def wmfactory_status(self, request):
-        return self.service.getUser(self.user)
-
+        # signal that the rendering is not complete
+        return server.NOT_DONE_YET
 
 class UserStatusXR(xmlrpc.XMLRPC):
 
