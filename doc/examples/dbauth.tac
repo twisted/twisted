@@ -6,7 +6,7 @@ from twisted.words import service, ircservice
 from twisted.enterprise import adbapi, dbpassport, dbgadgets
 from twisted.web import server
 
-auth = dbpassport.DatabaseAuthorizer(adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean"))
+auth = dbpassport.DatabaseAuthorizer(adbapi.ConnectionPool("pyPgSQL.PgSQL"))
 a = Application("db-auth", authorizer=auth)
 ws = service.Service("twisted.words", a)
 
