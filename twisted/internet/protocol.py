@@ -224,7 +224,7 @@ class ReconnectingClientFactory(ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         if self.continueTrying:
             self.connector = connector
-            if not reason.check(error.UserError) or reason.check(defer.TimeoutError):
+            if not reason.check(error.UserError) or reason.check(error.TimeoutError):
                 self.retry()
 
     def clientConnectionLost(self, connector, unused_reason):
