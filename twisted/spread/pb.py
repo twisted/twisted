@@ -144,7 +144,10 @@ class Perspective:
         args = broker.unserialize(args, self)
         kw = broker.unserialize(kw, self)
         method = getattr(self, "perspective_%s" % message)
-        state = apply(method, args, kw)
+        try:
+            state = apply(method, args, kw)
+        except TypeError:
+            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
         return broker.serialize(state, self, method, args, kw)
 
     def attached(self, broker):
@@ -201,7 +204,10 @@ class Referenced(Serializable):
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
         method = getattr(self, "remote_%s" % message)
-        state = apply(method, args, kw)
+        try:
+            state = apply(method, args, kw)
+        except TypeError:
+            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
         return broker.serialize(state, self.perspective)
 
     def remoteSerialize(self, broker):
@@ -271,7 +277,10 @@ class Proxy(Referenced):
         args = broker.unserialize(args, self.perspective)
         kw = broker.unserialize(kw, self.perspective)
         method = getattr(self.object, "proxy_%s" % message)
-        state = apply(method, (self.perspective,)+args, kw)
+        try:
+            state = apply(method, (self.perspective,)+args, kw)
+        except TypeError:
+            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
         rv = broker.serialize(state, self.perspective, method, args, kw)
         return rv
 
@@ -387,7 +396,11 @@ class Cache(Copy):
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
         method = getattr(self, "observe_%s" % message)
-        state = apply(method, args, kw)
+        try:
+            state = apply(method, args, kw)
+        except TypeError:
+            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
+
         return broker.serialize(state, None, method, args, kw)
 
 copyTags = {}
