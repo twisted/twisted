@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import operator
+import operator, time, copy
 
 from twisted.protocols import dns
 from twisted.python import failure, log
@@ -39,18 +39,38 @@ class CacheResolver(common.ResolverBase):
         self.verbose = verbose
 
 
+    def addHeader(self, results, name, cls):
+        """Mark all these results as cache hits"""
+        for r in results:
+            r = copy.copy(r)
+            r.cachedResponse = 1
+            r.ttl = r.ttl - time.time()
+        results = common.ResolverBase.addHeader(self, results, name, cls)
+        return [r for r in results if r.ttl > 0]
+
+
     def _lookup(self, name, cls, type, timeout):
+        now = time.time()
         try:
-            r = defer.succeed(self.cache[name.lower()][cls][type])
-            if self.verbose:
-                log.msg('Cache hit for ' + repr(name))
-            return r
+            records = self.cache[name.lower()][cls][type] = [r for r in self.cache[name.lower()][cls][type] if r.ttl > now]
         except KeyError:
             if self.verbose > 1:
                 log.msg('Cache miss for ' + repr(name))
             return defer.fail(failure.Failure(dns.DomainError(name)))
-    
-    
+        else:
+            records = [copy.copy(r) for r in records]
+            for r in records:
+                r.ttl = int(r.ttl - now)
+            if len(records):
+                if self.verbose:
+                    log.msg('Cache hit for ' + repr(name))
+                return defer.succeed(records)
+            else:
+                if self.verbose:
+                    log.msg('Cache miss (expired) for ' + repr(name))
+                return defer.fail(failure.Failure(dns.DomainError(name)))
+
+
     def lookupAllRecords(self, name, timeout = 10):
         try:
             r = defer.succeed(
@@ -78,6 +98,8 @@ class CacheResolver(common.ResolverBase):
             type, []
         )
         if payload not in l:
+            payload = copy.copy(payload)
+            payload.ttl = time.time() + payload.ttl
             if self.verbose > 1:
                 log.msg('Adding %r to cache' % name)
             l.append(payload)

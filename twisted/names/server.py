@@ -28,6 +28,7 @@ Future plans: Better config file format maybe;
 """
 
 from __future__ import nested_scopes
+import copy
 
 # Twisted imports
 from twisted.internet import protocol, defer
@@ -71,9 +72,13 @@ class Authority(common.ResolverBase):
 
     def _lookup(self, name, cls, type, timeout = 10):
         try:
-            return defer.succeed([
-                rec for rec in self.records[name.lower()] if rec.TYPE == type
-            ])
+            r = []
+            for rec in self.records[name.lower()]:
+                if rec.TYPE == type or type == dns.ALL_RECORDS:
+                    rec = copy.copy(rec)
+                    rec.ttl = max(self.soa[1].minimum, self.soa[1].expire)
+                    r.append(rec)
+            return defer.succeed(r)
         except KeyError:
             if name.lower().endswith(self.soa[0].lower()):
                 # We are the authority and we didn't find it.  Goodbye.
@@ -145,11 +150,11 @@ class DNSServerFactory(protocol.ServerFactory):
                 )
             )
         if self.cache:
-            # Hmm, we're caching cache hits - probably bad
             for res in responses:
-                self.cache.cacheResult(
-                    res.name, res.type, res.cls, res.payload
-                )
+                if not res.cachedResponse:
+                    self.cache.cacheResult(
+                        res.name, res.type, res.cls, res.payload
+                    )
 
 
     def gotResolverError(self, failure, protocol, message, address):

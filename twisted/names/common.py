@@ -19,15 +19,7 @@ import operator
 
 from twisted.protocols import dns
 from twisted.internet import defer
-
-def addHeader(results, name, cls, ttl):
-    """Add the RR header to each of a list of answers"""
-    return [
-        dns.RRHeader(
-            name, r.TYPE, cls,
-            ttl, r
-        ) for r in results
-    ]
+from twisted.python import failure
 
 class ResolverBase:
     typeToMethod = None
@@ -38,10 +30,19 @@ class ResolverBase:
             self.typeToMethod[k] = getattr(self, v)
 
 
+    def addHeader(self, results, name, cls):
+        """Add the RR header to each of a list of answers"""
+        return [
+            dns.RRHeader(
+                name, r.TYPE, cls,
+                r.ttl, r
+            ) for r in results
+        ]
+
     def query(self, query, timeout = 10):
         try:
             d = self.typeToMethod[query.type](str(query.name), timeout)
-            return d.addCallback(addHeader, str(query.name), query.cls, 10)
+            return d.addCallback(self.addHeader, str(query.name), query.cls)
         except KeyError:
             return defer.fail(failure.Failure(ValueError(dns.ENOTIMP)))
 

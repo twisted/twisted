@@ -272,6 +272,8 @@ class RRHeader:
     cls = None
     ttl = None
     payload = None
+    
+    cachedResponse = None
 
     def __init__(self, name='', type=A, cls=IN, ttl=0, payload=None):
         """
@@ -321,7 +323,7 @@ class RRHeader:
     
     
     def __str__(self):
-        return '<RR %s %s %s %d>' % (
+        return '<RR %s %s %s %ds>' % (
             self.name, QUERY_TYPES[self.type],
             QUERY_CLASSES[self.cls], self.ttl
         )

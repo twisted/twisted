@@ -173,7 +173,10 @@ class Resolver(common.ResolverBase):
             if message.trunc:
                 return self.queryTCP(message.queries).addCallback(self.filterAnswers(type))
             else:
-                return [n.payload for n in message.answers if not type or n.type == type]
+                results = [(ans.payload, ans.ttl) for ans in message.answers if not type or ans.type == type]
+                for r in results:
+                    r[0].ttl = r[1]
+                return [r[0] for r in results]
         return getOfType
 
 
