@@ -83,24 +83,17 @@ HTML_ESCAPE_CHARS = (('&', '&amp;'),
 
 XML_ESCAPE_CHARS = HTML_ESCAPE_CHARS + (("'", '&apos;'),)
 
-def unescape(text, chars=XML_ESCAPE_CHARS):
+def unescape(text, chars=HTML_ESCAPE_CHARS):
     "Perform the exact opposite of 'escape'."
     for s, h in chars:
         text = text.replace(h, s)
     return text
 
-def escape(text, chars=XML_ESCAPE_CHARS):
+def escape(text, chars=HTML_ESCAPE_CHARS):
     "Escape a few XML special chars with XML entities."
     for s, h in chars:
         text = text.replace(s, h)
     return text
-
-def escapehtml(text):
-    "Like escape, but with the HTML special-character set"
-    return escape(text, chars=HTML_ESCAPE_CHARS)
-
-def unescapehtml(text):
-    return unescape(text, chars=HTML_ESCAPE_CHARS)
 
 
 class MismatchedTags(Exception):
@@ -378,7 +371,7 @@ class Element(Node):
         else:
             self.attributes = attributes
             for k, v in self.attributes.items():
-                self.attributes[k] = v.replace('&quot;', '"')
+                self.attributes[k] = unescape(v)
         self.endTagName = self.nodeName = self.tagName = tagName
         self._filename = filename
         self._markpos = markpos

@@ -24,9 +24,7 @@ from twisted.web import resource
 import traceback, string
 
 from cStringIO import StringIO
-from microdom import escapehtml, unescapehtml
-escape=escapehtml
-unescape=unescapehtml
+from microdom import escape, unescape
 
 def PRE(text):
     "Wrap <pre> tags around some text and escape it with web.escapehtml."

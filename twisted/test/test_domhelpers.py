@@ -235,11 +235,11 @@ class DomHelpersTest(TestCase):
     # def test_substitute FIXME
 
     def test_escape(self):
-        j='this string " contains many &\' characters> xml< won\'t like'
-        expected='this string &quot; contains many &amp;&apos; characters&gt; xml&lt; won&apos;t like'
+        j='this string " contains many & characters> xml< won\'t like'
+        expected='this string &quot; contains many &amp; characters&gt; xml&lt; won\'t like'
         self.assertEqual(domhelpers.escape(j), expected)
 
     def test_unescape(self):
-        j='this string &quot; has &&amp;&apos; entities &gt; &lt; and some characters xml won\'t like<'
-        expected='this string " has &&\' entities > < and some characters xml won\'t like<'
+        j='this string &quot; has &&amp; entities &gt; &lt; and some characters xml won\'t like<'
+        expected='this string " has && entities > < and some characters xml won\'t like<'
         self.assertEqual(domhelpers.unescape(j), expected)
