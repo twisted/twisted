@@ -410,6 +410,18 @@ class CompoundStreamTest:
     True
     >>> s.length
     0
+
+    Error handling works using Deferreds:
+    >>> m = MemoryStream("after")
+    >>> s = CompoundStream([TestStreamer([defer.fail(ZeroDivisionError())]), m])
+    >>> l = []; x = s.read().addErrback(lambda _: l.append(1))
+    >>> l
+    [1]
+    >>> s.length
+    0
+    >>> m.length # streams after the failed one got closed
+    0
+
 	"""
 
 __doctests__ = ['twisted.web2.test.test_stream.CompoundStreamTest']

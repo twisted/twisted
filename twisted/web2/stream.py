@@ -289,17 +289,29 @@ class CompoundStream:
             return None
         
         if sendfile and ISendfileableStream.providedBy(self.buckets[0]):
-            result = self.buckets[0].read(sendfile)
+            try:
+                result = self.buckets[0].read(sendfile)
+            except:
+                return self._gotFailure(Failure())
         else:
-            result = self.buckets[0].read()
+            try:
+                result = self.buckets[0].read()
+            except:
+                return self._gotFailure(Failure())
         
         if isinstance(result, Deferred):
             self.deferred = result
-            result.addCallback(self._gotRead, sendfile)
+            result.addCallback(self._gotRead, sendfile).addErrback(self._gotFailure)
             return result
         
         return self._gotRead(result, sendfile)
-        
+
+    def _gotFailure(self, f):
+        self.deferred = None
+        del self.buckets[0]
+        self.close()
+        return f
+    
     def _gotRead(self, result, sendfile):
         if result is None:
             del self.buckets[0]
