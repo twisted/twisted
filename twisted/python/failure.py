@@ -147,7 +147,12 @@ class Failure:
             frames.append([m, f, l, map(stringize, lo), map(stringize, gl)])
         c['pickled'] = 1
         return c
-    
+
+    def cleanFailure(self):
+        """Remove references to other objects, replacing them with strings.
+        """
+        self.__dict__ = self.__getstate__()
+
     def getErrorMessage(self):
         if isinstance(self.value, Failure):
             return self.value.getErrorMessage()

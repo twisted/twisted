@@ -211,34 +211,39 @@ class Deferred:
 
 
     def _runCallbacks(self):
-        if self.paused:
-            return
-        cb = self.callbacks
-        self.callbacks = []
-        while cb:
-            item = cb.pop(0)
-            callback, args, kw = item[self.isError]
-            args = args or ()
-            kw = kw or {}
-            try:
-                self.result = apply(callback, (self.result,)+tuple(args), kw)
-                if isinstance(self.result, Deferred):
-                    self.callbacks = cb
-                    # note: this will cause _runCallbacks to be called
-                    # recursively sometimes... this shouldn't cause any
-                    # problems, since all the state has been set back to the
-                    # way it's supposed to be, but it is useful to know in case
-                    # something goes wrong
-                    self.result.addCallbacks(self._continue,
-                                             self._continue,
-                                             callbackArgs=(0,),
-                                             errbackArgs=(1,))
-                    break
-                if not isinstance(self.result, failure.Failure):
-                    self.isError = 0
-            except:
-                self.result = failure.Failure()
-                self.isError = 1
+        if not self.paused:
+            cb = self.callbacks
+            self.callbacks = []
+            while cb:
+                item = cb.pop(0)
+                callback, args, kw = item[self.isError]
+                args = args or ()
+                kw = kw or {}
+                try:
+                    self.result = apply(callback,
+                                        (self.result,)+tuple(args), kw)
+                    if isinstance(self.result, Deferred):
+                        self.callbacks = cb
+                        
+                        # note: this will cause _runCallbacks to be called
+                        # "recursively" sometimes... this shouldn't cause any
+                        # problems, since all the state has been set back to
+                        # the way it's supposed to be, but it is useful to know
+                        # in case something goes wrong.  deferreds really ought
+                        # not to return themselves from their callbacks.
+                        
+                        self.result.addCallbacks(self._continue,
+                                                 self._continue,
+                                                 callbackArgs=(0,),
+                                                 errbackArgs=(1,))
+                        break
+                    if not isinstance(self.result, failure.Failure):
+                        self.isError = 0
+                except:
+                    self.result = failure.Failure()
+                    self.isError = 1
+        if self.isError and isinstance(self.result, failure.Failure):
+            self.result.cleanFailure()
 
 
     def arm(self):
