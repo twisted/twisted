@@ -46,6 +46,7 @@ class Issue:
                       "Connection to distributed server lost:" +
                       html.PRE(expt)).
             render(self.request))
+        self.request.finish()
 
 
 class ResourceSubscription(resource.Resource):
