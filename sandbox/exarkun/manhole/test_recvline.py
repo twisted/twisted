@@ -209,6 +209,13 @@ class EchoServer(recvline.HistoricRecvLine):
     def lineReceived(self, line):
         self.transport.write(line + '\n' + self.ps[self.pn])
 
+# An insults API for this would be nice.
+left = "\x1b[D"
+insert = "\x1b[2~"
+home = "\x1b[1~"
+end = "\x1b[4~"
+backspace = "\x7f"
+
 class Loopback(unittest.TestCase):
     def setUp(self):
         WIDTH = 80
@@ -230,122 +237,74 @@ class Loopback(unittest.TestCase):
         serverTransport.clearBuffer()
         clientTransport.clearBuffer()
 
-        # An insults API for this would be nice.
-        left = "\x1b[D"
-        insert = "\x1b[2~"
-        home = "\x1b[1~"
-        end = "\x1b[4~"
-        backspace = "\x7f"
+        self.HEIGHT = HEIGHT
+        self.recvlineClient = recvlineClient
+        self.telnetClient = telnetClient
+        self.clientTransport = clientTransport
+        self.serverTransport = serverTransport
 
-        # Hack cough grunk stfu
-        self.objs = locals()
-        self.__dict__.update(locals())
+    def _test(self, s, lines):
+        self.telnetClient.write(s)
+
+        self.clientTransport.clearBuffer()
+        self.serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(self.recvlineClient),
+            '\n'.join(lines) +
+            '\n' * (self.HEIGHT - len(lines)))
 
     def testSimple(self):
-        exec ''
-        locals().update(self.objs)
-        telnetClient.write("first line")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> first line\n" +
-            "\n" * (HEIGHT - 2))
+        self._test(
+            "first line",
+            [">>> first line"])
 
     def testLeftArrow(self):
-        exec ''
-        locals().update(self.objs)
+        self._test(
+            'first line' + left * 4 + "xxxx\n",
+            [">>> first xxxx",
+             "first xxxx",
+             ">>>"])
 
-        telnetClient.write('first line' + left * 4 + "xxxx\n")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> first xxxx\n" +
-            "first xxxx\n" +
-            ">>>\n" +
-            "\n" * (HEIGHT - 4))
+    def testRightArrow(self):
+        self._test(
+            'right line' + left * 4 + "xxxx\n",
+            [">>> right xxxx",
+             "right xxxx",
+            ">>>"])
 
     def testBackspace(self):
-        exec ''
-        locals().update(self.objs)
-
-        telnetClient.write("second line" + backspace * 4 + "xxxx\n")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> second xxxx\n" +
-            "second xxxx\n" +
-            ">>>\n" +
-            "\n" * (HEIGHT - 4))
+        self._test(
+            "second line" + backspace * 4 + "xxxx\n",
+            [">>> second xxxx",
+             "second xxxx",
+             ">>>"])
 
     def testInsert(self):
-        exec ''
-        locals().update(self.objs)
-
-        telnetClient.write("third ine" + left * 3 + insert + "l\n")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> third line\n" +
-            "third line\n" +
-            ">>>\n" +
-            "\n" * (HEIGHT - 4))
+        self._test(
+            "third ine" + left * 3 + insert + "l\n",
+            [">>> third line",
+             "third line",
+             ">>>"])
 
     def testTypeover(self):
-        exec ''
-        locals().update(self.objs)
-
-        telnetClient.write("fourth xine" + left * 4 + insert * 2 + "l\n")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> fourth line\n" +
-            "fourth line\n" +
-            ">>>\n" +
-            "\n" * (HEIGHT - 4))
+        self._test(
+            "fourth xine" + left * 4 + insert * 2 + "l\n",
+            [">>> fourth line",
+             "fourth line",
+             ">>>"])
 
     def testHome(self):
-        exec ''
-        locals().update(self.objs)
-
-        telnetClient.write("blah line" + home + "home\n")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> home line\n" +
-            "home line\n" +
-            ">>>\n" +
-            "\n" * (HEIGHT - 4))
+        self._test(
+            "blah line" + home + "home\n",
+            [">>> home line",
+             "home line",
+             ">>>"])
 
     def testEnd(self):
-        exec ''
-        locals().update(self.objs)
+        self._test(
+            "end " + left * 4 + end + "line\n",
+            [">>> end line",
+             "end line",
+             ">>>"])
 
-        telnetClient.write("end " + left * 4 + end + "line\n")
-
-        clientTransport.clearBuffer()
-        serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(recvlineClient),
-            ">>> end line\n" +
-            "end line\n" +
-            ">>>\n" +
-            "\n" * (HEIGHT - 4))
