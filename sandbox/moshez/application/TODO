@@ -13,6 +13,7 @@
   * tapconvert.py
   * twistd.py
   * twistw.py
+* Improve twistw -- add service registration/running abilities
 * Manual
   * What is Service and ServiceCollection
     * Writing new services
