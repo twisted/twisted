@@ -44,7 +44,7 @@ class ManConverter:
         self.write = outf.write
         longline = ''
         for line in inf.readlines():
-            if line.rstrip()[-1] == '\\':
+            if line.rstrip() and line.rstrip()[-1] == '\\':
                 longline += line.rstrip()[:-1] + ' '
                 continue
             if longline:
