@@ -22,7 +22,10 @@ API Stability: Unstable
 
 Future plans: Better config file format maybe;
   Make sure to differentiate between different classes;
-  notice truncation bit; probably other stuff.
+  notice truncation bit; zone transfers, oh man, how will
+  I do this!  I have no idea.  Also, authorization probably
+  needs to go in a better place, and be expanded to more than
+  it is now, obviously.
 
 @author: U{Jp Calderone <exarkun@twistedmatrix.com>}
 """
@@ -165,7 +168,10 @@ class DNSServerFactory(protocol.ServerFactory):
         message.recAv = self.canRecurse
         message.answer = 1
 
-        if message.opCode == dns.OP_QUERY:
+        if not self.allowQuery(message, protocol, address):
+            message.rCode = dns.EREFUSED
+            self.sendReply(protocol, message, address)
+        elif message.opCode == dns.OP_QUERY:
             self.handleQuery(message, protocol, address)
         elif message.opCode == dns.OP_INVERSE:
             self.handleInverseQuery(message, protocol, address)
@@ -173,3 +179,7 @@ class DNSServerFactory(protocol.ServerFactory):
             self.handleStatus(message, protocol, address)
         else:
             self.handleOther(message, protocol, address)
+
+
+    def allowQuery(self, message, protocol, address):
+        return 1

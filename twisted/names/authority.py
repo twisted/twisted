@@ -15,13 +15,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os, copy
+import os, copy, StringIO
 
 from twisted.protocols import dns
 from twisted.internet import defer
 from twisted.python import failure
 
-import common
+import common, bind
 
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""
@@ -35,6 +35,14 @@ class FileAuthority(common.ResolverBase):
 
 
     def _lookup(self, name, cls, type, timeout = 10):
+# XXX - How to do this?  Grar, I think it needs to go through a different
+# interface entirely
+#
+#        if type == dns.AXFR or type == dns.IXFR:
+#            s = StringIO.StringIO()
+#            bind.writeAuthority(self.soa, self.records, file=s)
+#            return defer.succeed(s.getvalue())
+#
         try:
             r = []
             for rec in self.records[name.lower()]:
