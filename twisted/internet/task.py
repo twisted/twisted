@@ -20,11 +20,11 @@
 
 # System Imports
 
-import traceback, copy, thread
+import traceback
 
 # Twisted Imports
 
-from twisted.python import threadable, reflect, log
+from twisted.python import threadable, log
 
 
 class ThreadedScheduler:
@@ -48,12 +48,14 @@ class ThreadedScheduler:
     """
     def __init__(self):
         self.threadTasks = {}
+        self._lock = thread.allocate_lock()
 
     def __getstate__(self):
-        dict = copy.copy(self.__dict__)
-        dict['threadTasks'] = {}
-        return dict
-
+        return None
+    
+    def __setstate__(self):
+        self.__init__()
+    
     def addTask(self, function, *args, **kwargs):
         """Schedule a function to be called by the main event-loop thread.
         
@@ -63,10 +65,15 @@ class ThreadedScheduler:
         hadNoTasks = (threadTasks == {})
         id = thread.get_ident()
         
-        if not threadTasks.has_key(id):
-            threadTasks[id] = [(function, args, kwargs)]
-        else:
-            threadTasks[id].append((function, args, kwargs))
+        self._lock.acquire()
+        try:
+            if not threadTasks.has_key(id):
+                threadTasks[id] = [(function, args, kwargs)]
+            else:
+                threadTasks[id].append((function, args, kwargs))
+        finally:
+            self._lock.release()
+        
         if hadNoTasks:
             main.wakeUp()
     
@@ -80,14 +87,18 @@ class ThreadedScheduler:
 
     def runUntilCurrent(self):
         threadTasks = self.threadTasks
-        for thread, tasks in threadTasks.items():
-            func, args, kwargs = tasks.pop(0)
+        tasksTodo = []
+        
+        self._lock.acquire()
+        try:
+            for thread, tasks in threadTasks.items():
+                tasksTodo.append(tasks.pop(0))
+                if len(tasks) == 0: del threadTasks[thread]
+        finally:
+            self._lock.release()
+        
+        for func, args, kwargs in tasksTodo:
             apply(func, args, kwargs)
-            if len(tasks) == 0: del threadTasks[thread]
-
-    synchronized = ["addTask", "runUntilCurrent"]
-
-threadable.synchronize(ThreadedScheduler)
 
 
 class Scheduler:
@@ -117,6 +128,7 @@ class Scheduler:
 
 threadable.requireInit()
 if threadable.threaded:
+    import thread
     theScheduler = ThreadedScheduler()
 else:
     theScheduler = Scheduler()
