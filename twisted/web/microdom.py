@@ -245,7 +245,7 @@ class MicroDOMParser(XMLParser):
         if self.caseInsensitive:
             name = name.lower()
         if el.tagName != name:
-            raise Exception("expected closing %s, got closing %s line: %s col: %s, began line: %s col: %s" %
+            raise Exception("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" %
                             ((el.tagName, name)+self.saveMark()+el._markpos) )
         if not self.elementstack:
             self.documents.append(el)
