@@ -33,7 +33,7 @@ from twisted.python import log, components, reflect
 from twisted.internet import defer, app
 
 # Sibling Imports
-from perspective import Perspective
+from perspective import IPerspective, Perspective
 
 # System Imports
 import types
