@@ -10,6 +10,8 @@ Test cases for defer module.
 
 from __future__ import nested_scopes
 
+import random
+
 from twisted.trial import unittest, util
 from twisted.internet import reactor, defer
 from twisted.python import failure, log
@@ -540,3 +542,37 @@ class OtherPrimitives(unittest.TestCase):
         lock.release()
         self.failIf(lock.locked)
 
+    def testSemaphore(self):
+        N = 13
+        sem = defer.DeferredSemaphore(N)
+
+        controlDeferred = defer.Deferred()
+        def helper(self, arg):
+            self.arg = arg
+            return controlDeferred
+
+        results = []
+        uniqueObject = object()
+        resultDeferred = sem.run(helper, self=self, arg=uniqueObject)
+        resultDeferred.addCallback(results.append)
+        resultDeferred.addCallback(self._incr)
+        self.assertEquals(results, [])
+        self.assertEquals(self.arg, uniqueObject)
+        controlDeferred.callback(None)
+        self.assertEquals(results.pop(), None)
+        self.assertEquals(self.counter, 1)
+
+        self.counter = 0
+        for i in range(1, 1 + N):
+            sem.acquire().addCallback(self._incr)
+            self.assertEquals(self.counter, i)
+
+        sem.acquire().addCallback(self._incr)
+        self.assertEquals(self.counter, N)
+
+        sem.release()
+        self.assertEquals(self.counter, N + 1)
+
+        for i in range(1, 1 + N):
+            sem.release()
+            self.assertEquals(self.counter, N + 1)

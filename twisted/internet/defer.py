@@ -650,7 +650,43 @@ def deferredGenerator(f):
     return lambda *args, **kwargs: _deferGenerator(f(*args, **kwargs))
 
 
-class DeferredLock(object):
+class _ConcurrencyPrimitive(object):
+    def __init__(self):
+        self.waiting = []
+
+    def _releaseAndReturn(self, r):
+        self.release()
+        return r
+
+    def run(*args, **kwargs):
+        """Acquire, run, release.
+
+        This function takes a callable as its first argument and any
+        number of other positional and keyword arguments.  When the
+        lock or semaphore is acquired, the callable will be invoked
+        with those arguments.
+
+        @return Deferred of function result.
+        """
+        if len(args) < 2:
+            if not args:
+                raise TypeError("run() takes at least 2 arguments, none given.")
+            raise TypeError("%s.run() takes at least 2 arguments, 1 given" % (
+                args[0].__class__.__name__,))
+        self, f = args[:2]
+        args = args[2:]
+
+        def execute(ignoredResult):
+            d = maybeDeferred(f, *args, **kwargs)
+            d.addBoth(self._releaseAndReturn)
+            return d
+
+        d = self.acquire()
+        d.addCallback(execute)
+        return d
+
+
+class DeferredLock(_ConcurrencyPrimitive):
     """A lock for event driven systems.
 
     API stability: Unstable
@@ -661,9 +697,6 @@ class DeferredLock(object):
     """
 
     locked = 0
-
-    def __init__(self):
-        self.waiting = []
 
     def acquire(self):
         """Attempt to acquire the lock.
@@ -692,40 +725,46 @@ class DeferredLock(object):
             d = self.waiting.pop(0)
             d.callback(self)
 
-    def _releaseAndReturn(self, r):
-        self.release()
-        return r
+class DeferredSemaphore(_ConcurrencyPrimitive):
+     """A semaphore for event driven systems.
+     """
 
-    def run(*args, **kwargs):
-        """Acquire lock, run function, release lock.
+     def __init__(self, tokens):
+         _ConcurrencyPrimitive.__init__(self)
+         self.tokens = tokens
+         self.limit = tokens
 
-        This function takes a callable as its first argument and any
-        number of other positional and keyword arguments.  When the
-        lock is acquired, the callable will be invoked with those
-        arguments.
+     def acquire(self):
+         """Attempt to acquire the token.
 
-        @return Deferred of function result.
-        """
-        if len(args) < 2:
-            if not args:
-                raise TypeError("DeferredLock.run() takes at least 2 arguments, none given.")
-            raise TypeError("%s.run() takes at least 2 arguments, %d given" % (
-                args[0].__class__.__name__, len(args)))
-        self, f = args[:2]
-        args = args[2:]
+         @return Deferred which returns on token acquisition.
+         """
+         assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
+         d = Deferred()
+         if not self.tokens:
+             self.waiting.append(d)
+         else:
+             self.tokens = self.tokens - 1
+             d.callback(self)
+         return d
 
-        def execute(ignoredResult):
-            d = maybeDeferred(f, *args, **kwargs)
-            d.addBoth(self._releaseAndReturn)
-            return d
+     def release(self):
+         """Release the token.
 
-        d = self.acquire()
-        d.addCallback(execute)
-        return d
+         Should be called by whoever did the acquire() when the shared
+         resource is free.
+         """
+         assert self.tokens < self.limit, "Someone released me too many times: too many tokens!"
+         self.tokens = self.tokens + 1
+         if self.waiting:
+             # someone is waiting to acquire token
+             self.tokens = self.tokens - 1
+             d = self.waiting.pop(0)
+             d.callback(self)
 
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred", "waitForDeferred", "deferredGenerator",
-           "DeferredLock",
+           "DeferredLock", "DeferredSemaphore"
           ]
