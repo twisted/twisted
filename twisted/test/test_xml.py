@@ -411,3 +411,25 @@ alert("I hate you");
         esc1=microdom.escape(input)
         self.assertEquals(esc1, cooked)
         self.assertEquals(microdom.unescape(esc1), input)
+
+    def testNamespaces(self):
+        s = '''
+        <x xmlns="base" xmlns:x="a" xmlns:y="b">
+        <y />
+        <y q="1" x:q="2" y:q="3" />
+        <y:y xml:space="1">here is    some space </y:y>
+        <y:y />
+        <x:y />
+        </x>
+        '''
+        d = microdom.parseString(s)
+        # at least make sure it doesn't traceback
+        d.toprettyxml()
+        self.assertEquals(d.documentElement.namespace,
+                          "base")
+        self.assertEquals(d.documentElement.childNodes[0].namespace,
+                          "base")
+        self.assertEquals(d.documentElement.childNodes[1].getAttributeNS('a','q'),
+                          '2')
+        self.assertEquals(d.documentElement.childNodes[1].getAttributeNS('base','q'),
+                          '1')

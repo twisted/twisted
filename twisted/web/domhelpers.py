@@ -175,7 +175,7 @@ class RawText(microdom.Text):
     node, it would be parsed then.
     """
 
-    def writexml(self, writer, indent="", addindent="", newl="", strip=0):
+    def writexml(self, writer, indent="", addindent="", newl="", strip=0, nsprefixes=None, namespace=None):
         writer.write("%s%s%s" % (indent, self.data, newl))
 
 def findNodes(parent, matcher, accum=None):
