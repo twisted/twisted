@@ -112,7 +112,7 @@ class HTTPPageGetter(http.HTTPClient):
         if not self.quietLoss:
             http.HTTPClient.connectionLost(self, reason)
             self.factory.noPage(reason)
-
+    
     def handleResponse(self, response):
         if self.quietLoss:
             return
@@ -214,6 +214,9 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.deferred = defer.Deferred()
         self.response_headers = None
 
+    def __repr__(self):
+        return "<%s: %s>" % (self.__class__.__name__, self.url)
+    
     def setURL(self, url):
         self.url = url
         scheme, host, port, path = _parse(url)
