@@ -235,7 +235,8 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
         val = outfile.getvalue()
 
         text = str('<div class="py-listing">'
-                   '<pre class="python">%s</pre>'
+                   #'<pre class="python">%s</pre>' #redundant?
+                   '%s'
                    '<div class="py-caption">%s - '
                    '<span class="py-filename">%s</span></div></div>' % (
             val, getNodeText(node), node.getAttribute("href")))
