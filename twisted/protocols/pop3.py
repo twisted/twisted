@@ -88,7 +88,6 @@ class POP3(basic.LineReceiver):
         self.sendLine('-ERR ' + str(message))
 
     def lineReceived(self, line):
-        # print 'S:', repr(line)
         try:
             return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
@@ -161,20 +160,21 @@ class POP3(basic.LineReceiver):
 
     def do_LIST(self, i=None):
         messages = self.mbox.listMessages()
-        self.successResponse(len(messages))
-        i = 1
-        for message in messages:
-            if message:
-                self.sendLine('%d %d' % (i, message))
-            i = i+1
+        lines = []
+        for msg in messages:
+            lines.append('%d %d' % (len(lines) + 1, msg))
+        self.successResponse(len(lines))
+        map(self.sendLine, lines)
         self.sendLine('.')
 
     def do_UIDL(self, i=None):
         messages = self.mbox.listMessages()
         self.successResponse()
-        for i in range(len(messages)):
-            if messages[i]:
-                self.sendLine('%d %s' % (i+1, self.mbox.getUidl(i)))
+        i = 0
+        for msg in messages:
+            if msg:
+                self.sendLine('%d %s' % (i + 1, self.mbox.getUidl(i)))
+            i += 1
         self.sendLine('.')
 
     def getMessageFile(self, i):
