@@ -440,6 +440,12 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
     if usepid:
         try:
             os.unlink(config['pidfile'])
+        except OSError, e:
+            if e.errno == errno.EACCES or e.errno == errno.EPERM:
+                log.msg("Warning: No permission to delete pid file")
+            else:
+                log.msg("Failed to unlink PID file:")
+                log.deferr()
         except:
             log.msg("Failed to unlink PID file:")
             log.deferr()
