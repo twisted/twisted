@@ -130,12 +130,12 @@ Documentation and Support
 Copyright
 
   Most of the code in this distribution is (C) Twisted Matrix Laboratories.
-  (Twisted Matrix Laboratories is a trademark of Matthew W. Lefkowitz,
-  throughout this archive referred to as "Glyph").  There are 2 exceptions to
-  this: the 'pyunit' directory is a derivative work of PyUnit, which can
-  be found at http://pyunit.sourceforge.net; and the contrib/ directory, which
-  are user-contributed works that may have additional copyright encumbrances,
-  as noted by those files individually.
+  (Twisted Matrix Laboratories is not a legal entity, but a DBA for Matthew
+  W. Lefkowitz, throughout this archive referred to as "Glyph").  There are 2
+  exceptions to this: the 'pyunit' directory is a derivative work of PyUnit,
+  which can be found at http://pyunit.sourceforge.net; and the contrib/
+  directory, which are user-contributed works that may have additional
+  copyright encumbrances, as noted by those files individually.
 
   Twisted is made available under the GNU Lesser General Public License.  The
   included LICENSE file describes this in detail.
