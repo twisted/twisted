@@ -4417,7 +4417,30 @@ class IMessageCopier(components.Interface):
         with the UID when the copy finishes.
         """
 
-class IMailbox(components.Interface):
+class IMailboxInfo(components.Interface):
+    """Interface specifying only the methods required for C{listMailboxes}.
+    
+    Implementations can return objects implementing only these methods for
+    return to C{listMailboxes} if it can allow them to operate more
+    efficiently.
+    """
+
+    def getFlags(self):
+        """Return the flags defined in this mailbox
+
+        Flags with the \\ prefix are reserved for use as system flags.
+
+        @rtype: C{list} of C{str}
+        @return: A list of the flags that can be set on messages in this mailbox.
+        """
+
+    def getHierarchicalDelimiter(self):
+        """Get the character which delimits namespaces for in this mailbox.
+
+        @rtype: C{str}
+        """
+
+class IMailbox(IMailboxInfo):
     def getUIDValidity(self):
         """Return the unique validity identifier for this mailbox.
 
@@ -4438,15 +4461,6 @@ class IMailbox(components.Interface):
 
         @rtype: C{int}
         @return: The UID of the message.
-        """
-
-    def getFlags(self):
-        """Return the flags defined in this mailbox
-
-        Flags with the \\ prefix are reserved for use as system flags.
-
-        @rtype: C{list} of C{str}
-        @return: A list of the flags that can be set on messages in this mailbox.
         """
 
     def getMessageCount(self):
@@ -4480,12 +4494,6 @@ class IMailbox(components.Interface):
         If necessary, all resources held by this mailbox should be cleaned
         up here.  This function _must_ set the \\Noselect flag on this
         mailbox.
-        """
-
-    def getHierarchicalDelimiter(self):
-        """Get the character which delimits namespaces for in this mailbox.
-
-        @rtype: C{str}
         """
 
     def requestStatus(self, names):
