@@ -532,18 +532,19 @@ class TestFixedClasses(unittest.TestCase):
         f = Fixture(1, 2.0, None)
         uid = self.db.insert(f)
         whiteboxOid, whiteboxGenhash = struct.unpack("!ii", uid.decode("hex"))
-        whiteboxGenhash |= 0xabcd
-        self.assertRaises(KeyError, self.db.retrieve,
-                          struct.pack("!ii", whiteboxOid,
-                                      whiteboxGenhash).encode("hex"))
+        junkGenhash = whiteboxGenhash ^ 0xabcd
+        junkuid = struct.pack("!ii", whiteboxOid,
+                              junkGenhash).encode("hex")
+        self.assertRaises(KeyError, self.db.retrieve, junkuid)
         f = None
         import gc
         gc.collect()
+        self.assertRaises(KeyError, self.db.retrieve, junkuid)
         newf = self.db.retrieve(uid)
         self.assertEquals(newf.intTest, 1)
         self.assertEquals(newf.floatTest, 2.0)
         self.assertEquals(newf.storTest, None)
-        self.assertIdentical( self.db.retrieve(uid), newf )
+        self.assertIdentical(self.db.retrieve(uid), newf)
 
         f2 = Fixture(3, 4.0, newf)
         uid2 = self.db.insert(f2)
