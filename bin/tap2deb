@@ -102,6 +102,7 @@ logfile=/var/log/%(deb_file)s.log
 
 test -x /usr/bin/twistd%(python_version)s || exit 0
 test -r $file || exit 0
+test -r /usr/share/%(deb_file)/package-installed || exit 0
 
 
 case "$1" in
@@ -153,7 +154,7 @@ if [ "$1" = "configure" ]; then
 fi
 
 update-rc.d %(deb_file)s defaults >/dev/null
-sh /etc/init.d/%(deb_file)s start
+invoke-rc.d %(deb_file)s start
 ''' % vars())
 
 save_to_file(os.path.join('.build', directory, 'debian', 'prerm'),
@@ -162,7 +163,9 @@ save_to_file(os.path.join('.build', directory, 'debian', 'prerm'),
 if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/%(deb_file)s ]; then
 	rm -f /usr/doc/%(deb_file)s
 fi
-sh /etc/init.d/%(deb_file)s stop
+
+invoke-rc.d %(deb_file)s stop
+update-rc.d %(deb_file)s remove >/dev/null
 ''' % vars())
 
 save_to_file(os.path.join('.build', directory, 'debian', 'postrm'),
@@ -192,7 +195,7 @@ Source: %(deb_file)s
 Section: net
 Priority: extra
 Maintainer: %(maintainer)s
-Build-Depends: debhelper
+Build-Depends-Indep: debhelper
 Standards-Version: 3.5.6
 
 Package: %(deb_file)s
@@ -226,6 +229,7 @@ etc/init.d
 etc/default
 var/lib/%(deb_file)s
 usr/share/doc/%(deb_file)s
+usr/share/%(deb_file)s
 ''' % vars())
 
 save_to_file(os.path.join('.build', directory, 'debian', 'rules'),
@@ -258,6 +262,7 @@ install-stamp: build-stamp
 	cp debian/default debian/tmp/etc/default/%(deb_file)s
 	cp debian/copyright debian/tmp/usr/share/doc/%(deb_file)s/
 	cp debian/README.Debian debian/tmp/usr/share/doc/%(deb_file)s/
+	touch debian/tmp/usr/share/%(deb_file)s/package-installed
 	touch install-stamp
 
 binary-arch: build install
