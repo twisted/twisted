@@ -1,3 +1,12 @@
+2002-09-20  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/web/microdom.py: You can now specify tags that the
+	parser will automatically close if they are not closed
+	immediately.  This is to support output from HTML editors which
+	will not output XML, but still have a predictable
+	almost-but-not-quite XML structure.  Specifically it has been
+	tested with Mozilla Composer.
+
 2002-9-20  Jp Calderone <exarkun@twistedmatrix.com>            
 
 	* twisted/internet/error.py twisted/internet/process.py:
