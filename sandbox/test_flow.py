@@ -17,27 +17,48 @@
 #
 # to run test, use 'trial test_flow.py'
 #
+from __future__ import generators
 from __future__ import nested_scopes
 import flow
+from twisted.python.compat import True, False
 from twisted.trial import unittest
 from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
 
+
+class onetwothree:
+    """ iterator version of the following generator... 
+
+        def onetwothree():
+            yield 'one'
+            yield 'two'
+            yield flow.Cooperate()
+            yield 'three'
+
+    """
+    def __iter__(self):
+        self.list = ['one','two',flow.Cooperate(),'three']
+        return self
+    def next(self):
+        if self.list:
+            return self.list.pop(0)
+        raise flow.StopIteration
+
 class producer:
     """ iterator version of the following generator... 
 
-    def producer():
-        lst = flow.wrap([1,2,3])
-        nam = flow.wrap(['one','two','three'])
-        while 1: 
-            yield lst; yield nam
-            if lst.stop or nam.stop:
-                return
-            yield (lst.result, nam.result)
+        def producer():
+            lst = flow.wrap([1,2,3])
+            nam = flow.wrap(onetwothree())
+            while True: 
+                yield lst
+                yield nam
+                yield (lst.next(),nam.next())
+
     """
     def __iter__(self):
         self.lst   = flow.wrap([1,2,3])
-        self.nam   = flow.wrap(['one','two','three'])
+        self.nam   = flow.wrap(onetwothree())
         self.next = self.yield_lst
         return self
     def yield_lst(self):
@@ -48,23 +69,20 @@ class producer:
         return self.nam
     def yield_results(self):
         self.next = self.yield_lst
-        if self.lst.stop or self.nam.stop:
-            raise flow.StopIteration
-        return (self.lst.result, self.nam.result)
+        return (self.lst.next(), self.nam.next())
 
 class consumer:
     """ iterator version of the following generator...
 
-    def consumer():
-        title = flow.wrap(['Title'])
-        lst = flow.wrap(producer())
-        yield title
-        yield title.next()
-        try:
-            while 1:
-                yield lst
-                yield lst.next()
-        except flow.StopIteration: pass
+        def consumer():
+            title = flow.wrap(['Title'])
+            prod = flow.wrap(producer())
+            yield title
+            yield title.next()
+            yield prod
+            for data in prod:
+                yield data
+                yield prod
     """    
     def __iter__(self):
         self.title = flow.wrap(['Title'])
@@ -83,6 +101,7 @@ class consumer:
     def yield_result(self):
         self.next = self.yield_lst
         return self.lst.next()
+
 
 class badgen:
     """ a bad generator...
@@ -152,7 +171,7 @@ class testconcur:
     def yield_result(self):
         self.next = self.yield_both
         stage = self.both.next()
-        return (stage.name, stage.result) 
+        return (stage.name, stage.next())
 
 class echoServer:
     """ a simple echo protocol, server side
@@ -202,11 +221,20 @@ class echoClient:
  
 class FlowTest(unittest.TestCase):
     def testNotReady(self):
-        lhs = [1,2,3]
-        x = flow.wrap(lhs)
+        x = flow.wrap([1,2,3])
         self.assertRaises(flow.NotReadyError,x.next)
 
     def testBasic(self):
+        lhs = ['string']
+        rhs = list(flow.Block('string'))
+        self.assertEqual(lhs,rhs)
+
+    def testBasicIterator(self):
+        lhs = ['one','two','three']
+        rhs = list(flow.Block(onetwothree()))
+        self.assertEqual(lhs,rhs)
+
+    def testBasicList(self):
         lhs = [1,2,3]
         rhs = list(flow.Block([1,2,flow.Cooperate(),3]))
         self.assertEqual(lhs,rhs)
@@ -228,15 +256,15 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(['x',ZeroDivisionError],
                          list(flow.Block(flow.wrap(badgen()),ZeroDivisionError)))
 
-    def testMerge(self):
-        lhs = [1,'a',2,'b','c',3]
-        mrg = flow.Merge([1,2,flow.Cooperate(),3],['a','b','c'])
-        rhs = list(flow.Block(mrg))
-        self.assertEqual(lhs,rhs)
-
     def testZip(self):
         lhs = [(1,'a'),(2,'b'),(3,'c')]
         mrg = flow.Zip([1,2,flow.Cooperate(),3],['a','b','c'])
+        rhs = list(flow.Block(mrg))
+        self.assertEqual(lhs,rhs)
+
+    def testMerge(self):
+        lhs = ['one', 1, 2, 'two', 3, 'three']
+        mrg = flow.Merge(onetwothree(),[1,2,flow.Cooperate(),3])
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
@@ -250,51 +278,8 @@ class FlowTest(unittest.TestCase):
         out = flow.Block(buildlist(src)).next()
         self.assertEquals(out,[1,2,3])
 
-    def testCallback(self):
-        cb = flow.Callback()
-        d = flow.Deferred(buildlist(cb))
-        for x in range(9):
-            cb.callback(x)
-        cb.finish()
-        rhs = unittest.deferredResult(d)
-        self.assertEquals([range(9)],rhs)
-
-    def testConcurrent(self):
-        ca = flow.Callback()
-        ca.name = 'a'
-        cb = flow.Callback()
-        cb.name = 'b'
-        d = flow.Deferred(testconcur(ca,cb))
-        ca.callback(1)
-        cb.callback(2)
-        ca.callback(3)
-        ca.callback(4)
-        ca.finish()
-        cb.callback(5)
-        cb.finish()
-        rhs = unittest.deferredResult(d)
-        self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
-
-    def testCallbackFailure(self):
-        cb = flow.Callback()
-        d = flow.Deferred(buildlist(cb))
-        for x in range(3):
-            cb.callback(x)
-        cb.errback(flow.Failure(IOError()))
-        r = unittest.deferredError(d)
-        self.failUnless(isinstance(r, failure.Failure))
-        self.failUnless(isinstance(r.value, IOError))
-
     def testDeferredFailure(self):
         d = flow.Deferred(badgen())
-        r = unittest.deferredError(d) 
-        self.failUnless(isinstance(r, failure.Failure))
-        self.failUnless(isinstance(r.value, ZeroDivisionError))
-
-    def testZipFailure(self):
-        lhs = [(1,'a'),(2,'b'),(3,'c')]
-        mrg = flow.Zip([1,2,flow.Cooperate(),3],badgen())
-        d = flow.Deferred(mrg)
         r = unittest.deferredError(d) 
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, ZeroDivisionError))
@@ -303,6 +288,14 @@ class FlowTest(unittest.TestCase):
         d = flow.Deferred(badgen(), ZeroDivisionError)
         r = unittest.deferredResult(d)
         self.assertEqual(r, ['x',ZeroDivisionError])
+
+    def testZipFailure(self):
+        lhs = [(1,'a'),(2,'b'),(3,'c')]
+        mrg = flow.Zip([1,2,flow.Cooperate(),3],badgen())
+        d = flow.Deferred(mrg)
+        r = unittest.deferredError(d) 
+        self.failUnless(isinstance(r, failure.Failure))
+        self.failUnless(isinstance(r.value, ZeroDivisionError))
 
     def testDeferredWrapper(self):
         from twisted.internet import defer
@@ -322,6 +315,42 @@ class FlowTest(unittest.TestCase):
         r = unittest.deferredError(d)
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, IOError))
+
+    def testCallback(self):
+        cb = flow.Callback()
+        d = flow.Deferred(buildlist(cb))
+        for x in range(9):
+            cb.callback(x)
+        cb.finish()
+        rhs = unittest.deferredResult(d)
+        self.assertEquals([range(9)],rhs)
+
+    def testCallbackFailure(self):
+        cb = flow.Callback()
+        d = flow.Deferred(buildlist(cb))
+        for x in range(3):
+            cb.callback(x)
+        cb.errback(flow.Failure(IOError()))
+        r = unittest.deferredError(d)
+        self.failUnless(isinstance(r, failure.Failure))
+        self.failUnless(isinstance(r.value, IOError))
+
+    def testConcurrentCallback(self):
+        ca = flow.Callback()
+        ca.name = 'a'
+        cb = flow.Callback()
+        cb.name = 'b'
+        d = flow.Deferred(testconcur(ca,cb))
+        ca.callback(1)
+        cb.callback(2)
+        ca.callback(3)
+        ca.callback(4)
+        ca.finish()
+        cb.callback(5)
+        cb.finish()
+        rhs = unittest.deferredResult(d)
+        self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
+
 
     def testProtocol(self):
         PORT = 8392
