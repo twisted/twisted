@@ -1,3 +1,12 @@
+2003-1-20  Jp Calderone <exarkun@twistedmatrix.com>
+
+	* twisted/internet/interfaces.py: type argument removed from
+	IReactorCore.resolve method.  IReactorPluggableResolver interface
+	added.
+
+	* twisted/internet/base.py: IReactorPluggable added to
+	ReactorBase.__implements__ and ReactorBase.installResolver added.
+
 2003-1-18  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/trial/unittest.py twisted/scripts/trial.py: adding --summary
