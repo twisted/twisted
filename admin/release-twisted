@@ -54,8 +54,8 @@ class Options(usage.Options):
 
         ## set up some convenience ##
 
-        # BRANCH, CHECKOUT, FUCKAROUND, COMMIT, TAG, EXPORT, TARBALL,
-        # RELEASE, FINALIZE
+        # BRANCH, CHECKOUT, MUNGE (cough), COMMIT, TAG, EXPORT,
+        # TARBALL, RELEASE, FINALIZE
 
         self['wipurl'] = '%s/branches/wip-%s' % (repourl,
                                                  self['base-version'])
@@ -132,7 +132,7 @@ def copyTrunkToWIP(opts):
        % (opts['base-version'], trunkurl, opts['wipurl']))
 
 
-checkoutdir = 'Twisted.WIP'
+checkoutdir = 'Twisted.exp'
 
 def checkoutWIP(opts):
     if os.path.exists(checkoutdir):
@@ -171,7 +171,7 @@ def tagTemp(opts):
 
 def exportTemp(opts):
     if os.path.exists('Twisted.exp'):
-        raise DirectoryExists("ExportTemp: 'Twisted' already exists")
+        raise DirectoryExists("ExportTemp: 'Twisted.exp' already exists")
     sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
 
 
@@ -206,21 +206,23 @@ def makeBallCore(opts):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
                                    % tdir)
 
-    if not os.path.exists(tdir):
-        shutil.copytree('Twisted.exp', tdir)
-
-    excludes = []
-    for subProjectContainer in ['twisted', 'doc', 'bin']:
-        excludes += ['--exclude %s/%s/%s' % (tdir, subProjectContainer, x)
-                    for x in dist.twisted_subprojects]
-    excludes.append('--exclude %s/README' % (tdir,))
-    excludes = ' '.join(excludes)
+    os.makedirs(os.path.join(tdir, 'twisted'))
+    os.makedirs(os.path.join(tdir, 'bin'))
+    
+    twisted_subprojects = ','.join(dist.twisted_subprojects)
 
     sh('''
-    tar %(excludes)s -c  %(tdir)s |
-      tarcust -s "s,doc/core,doc," -s "s,twisted/topfiles/,,"|
-        bzip2 > %(tdir)s.tar.bz2
+    ln -s `pwd`/Twisted.exp/twisted/* %(tdir)s/twisted/
+    ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
+    rm -f %(tdir)s/twisted/{%(twisted_subprojects)s}
+    rm -f %(tdir)s/twisted/topfiles
+    ln -s `pwd`/Twisted.exp/twisted/topfiles/* %(tdir)s/
+    ln -s `pwd`/Twisted.exp/doc/core %(tdir)s/doc
+    ln -s `pwd`/Twisted.exp/bin/* %(tdir)s/bin
+    rm -f %(tdir)s/bin/{%(twisted_subprojects)s}
     ''' % locals())
+
+    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
 
 def createSubprojectDirectory(proj, version):
