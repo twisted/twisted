@@ -9,7 +9,7 @@ if os.name == 'posix':
     class LockFileTest(unittest.TestCase):
 
         def testCreate(self):
-            d = lockfile.createLock('test', usePID=1)
+            d = lockfile.createLock('test', reactor.callLater, usePID=1)
             lf = util.deferredResult(d)
             self.assertEquals(lf.filename, "test.lock")
             self.assert_(os.path.exists("test.lock"))
@@ -22,7 +22,7 @@ if os.name == 'posix':
 
         def testWaiting(self):
             open("test2.lock","w").write('')
-            d = lockfile.createLock('test2', retryTime=2)
+            d = lockfile.createLock('test2', reactor.callLater, retryTime=2)
             self.lockFile = []
             d.addCallback(lambda x,s=self:s.lockFile.append(x))
             reactor.callLater(0,lambda:os.remove("test2.lock"))

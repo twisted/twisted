@@ -77,7 +77,7 @@ class Port(tcp.Port):
             lf = []
             error = []
             #d = defer.Deferred()
-            d = lockfile.createLock(self.port, retryCount=1, usePID=1)
+            d = lockfile.createLock(self.port, self.reactor.callLater, retryCount=1, usePID=1)
             d.addCallback(lambda f,l=lf:l.append(f))
             d.addErrback(lambda f,e=error:e.append(f))
             #log.msg('calling lockfile')
