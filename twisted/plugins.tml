@@ -3,49 +3,49 @@
 ## Coil modules
 
 register("Twisted Words",
-         "twisted.words.service",
+         "twisted.coils.words",
          description="A chat and collaboration system.",
          type='coil')
 
-register("Twisted Reality",
-         "twisted.reality.reality",
-         description="MUD and MOO-like services for Twisted.",
-         type='coil')
+# register("Twisted Reality",
+         # "twisted.reality.reality",
+         # description="MUD and MOO-like services for Twisted.",
+         # type='coil')
 
 register("Twisted Web",
-         "twisted.web.server",
+         "twisted.coils.web",
          description="Web servers & services for Twisted",
          type='coil')
 
 register("Twisted Manhole",
-         "twisted.manhole.service",
+         "twisted.coils.manhole",
          description="Mail protocol implementation for Twisted.",
          type='coil')
 
 register("Telnet Shell",
-         "twisted.protocols.telnet",
+         "twisted.coils.telnet",
          description="Shell access through telnet.  Warning: This is insecure!",
          type='coil')
 
 register("TCP Port Forwarder",
-         "twisted.internet.stupidproxy",
+         "twisted.coils.stupidproxy",
          description="TCP port forwarding.",
          type='coil')
 
 register("SOCKSv4 Proxy",
-         "twisted.protocols.socks",
+         "twisted.coils.socks",
          description="SOCKSv4 proxy for firewalls.",
          type='coil')
 
 register("FTP Server",
-         "twisted.protocols.ftp",
+         "twisted.coils.ftp",
          description="FTP Server.",
          type='coil')
 
-register("Twisted Mail",
-         "twisted.mail.mail",
-         description="Email services for Twisted.",
-         type='coil')
+# register("Twisted Mail",
+         # "twisted.mail.mail",
+         # description="Email services for Twisted.",
+         # type='coil')
 
 ## Pending making this realistically work...
 ##register("Twisted Forum",

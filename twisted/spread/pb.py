@@ -51,7 +51,6 @@ from twisted.protocols import protocol
 from twisted.internet import tcp
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
-from twisted.manhole import coil
 
 # Sibling Imports
 import jelly
@@ -882,7 +881,7 @@ class Broker(banana.Banana):
         del self.locallyCachedObjects[objectID]
 
 
-class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
+class BrokerFactory(protocol.Factory, styles.Versioned):
     """I am a server for object brokerage.
     """
     persistenceVersion = 3
@@ -915,7 +914,6 @@ class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
                               self.objectToBroker.rootObject(proto))
         return proto
 
-coil.registerClass(BrokerFactory)
 
 ### AUTH STUFF
 

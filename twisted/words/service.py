@@ -23,7 +23,6 @@ import types
 # Twisted Imports
 from twisted.spread import pb
 from twisted.python import log, roots
-from twisted.manhole import coil
 from twisted.persisted import styles
 from twisted import copyright
 from twisted.cred import authorizer
@@ -379,45 +378,14 @@ class Group(styles.Versioned):
         del self.topic
         self.metadata['topic_author'] = 'admin'
 
-class Service(pb.Service, styles.Versioned, coil.Configurable):
+
+class Service(pb.Service, styles.Versioned):
     """I am a chat service.
     """
     def __init__(self, name, app):
         pb.Service.__init__(self, name, app)
         self.participants = {}
         self.groups = {}
-        self._setConfigDispensers()
-
-    # Configuration stuff.
-    def _setConfigDispensers(self):
-        import ircservice, webwords
-        self.configDispensers = [
-            ['makeIRCGateway', ircservice.IRCGateway, "IRC chat gateway to %s" % self.serviceName],
-            ['makeWebAccounts', webwords.WordsGadget, "Public Words Website for %s" % self.serviceName]
-            ]
-
-    def makeWebAccounts(self):
-        import webwords
-        return webwords.WordsGadget(self)
-
-    def makeIRCGateway(self):
-        import ircservice
-        return ircservice.IRCGateway(self)
-
-    def configInit(self, container, name):
-        self.__init__(name, container.app)
-
-    def getConfiguration(self):
-        return {"name": self.serviceName}
-
-    configTypes = {
-        'name': types.StringType
-        }
-
-    configName = 'Twisted Words PB Service'
-
-    def config_name(self, name):
-        raise coil.InvalidConfiguration("You can't change a Service's name.")
 
     ## Persistence versioning.
     persistenceVersion = 2
@@ -460,5 +428,3 @@ class Service(pb.Service, styles.Versioned, coil.Configurable):
                                         self.application.name,
                                         id(self))
         return s
-
-coil.registerClass(Service)

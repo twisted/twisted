@@ -14,24 +14,24 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Twisted COIL: COnfiguration ILlumination.
 
-## THIS CODE IS NOT FINISHED YET. ##
+An end-user direct-manipulation interface to Twisted, accessible through the
+web.
+
+This is a work in progress.
+"""
 
 # System Imports
 import types
 import string
 import sys
-import new
 import os
 
 # Twisted Imports
 from twisted.python.util import uniquify, getPluginDirs
+from twisted.python import log
 
-"""Twisted COIL: COnfiguration ILlumination.
-
-An end-user direct-manipulation interface to Twisted, accessible through the
-web.
-"""
 
 def getAllBases(inClass):
     """Get all super-classes of a given class.
@@ -39,10 +39,12 @@ def getAllBases(inClass):
     Recursively determine the entire hierarchy above a certain class, and
     return it as a list.
     """
-    classes = list(inClass.__bases__)
+    # in older versions of jython list() doesn't return a copy
+    classes = list(inClass.__bases__)[:]
     for base in inClass.__bases__:
         classes.extend(getAllBases(base))
     return uniquify(classes)
+
 
 def getClass(name):
     """Turn a fully-qualified class name into a class.
@@ -55,6 +57,7 @@ def getClass(name):
     for n in name[1:]:
         obj = getattr(obj, n)
     return obj
+
 
 class ClassHierarchy:
     """A class which represents a hierarchy of classes.
@@ -79,8 +82,8 @@ class ClassHierarchy:
         else:
             className = classOrString
         if not self.classes.has_key(className):
-            print 'no class %s registered' % className
-            return []
+            log.msg('no class %s registered' % className)
+            return ()
         superClasses, subClasses = self.classes[className]
         if asClasses:
             return tuple(map(getClass, subClasses))
@@ -122,32 +125,62 @@ class ClassHierarchy:
                 baseSub.append(className)
                 superClasses.append(baseName)
 
+
 theClassHierarchy = ClassHierarchy()
-registerClass = theClassHierarchy.registerClass
+configurators = {}
+configurables = {}
+factories = {}
+
+def registerConfigurator(configuratorClass, factory):
+    """Register a configurator and factory for a class.
+    
+    If factory is None then new instances will not be created directly
+    by coil.
+    """
+    configurableClass = configuratorClass.configurableClass
+    theClassHierarchy.registerClass(configuratorClass)
+    configurators[configurableClass] = configuratorClass
+    configurables[configuratorClass] = configurableClass
+    if factory is not None:
+        factories[configurableClass] = factory
+
+def hasFactory(configurableClass):
+    return factories.has_key(configurableClass)
+
+def getConfigurableClass(configuratorClass):
+    return configurables[configuratorClass]
+
+def getConfigurator(instance):
+    """Return a configurator for a configurable instance, or None."""
+    klass = instance.__class__
+    try:
+        configuratorClass = configurators[klass]
+    except KeyError:
+        return None
+    return configuratorClass(instance)
 
 
 class InvalidConfiguration(Exception):
     """I am is raised in the case of an invalid configuration.
     """
 
-def createConfigurable(configClass, container, name):
+def createConfigurable(configurableClass, container, name):
     """Instantiate a configurable.
 
-    First, I will create an instance object of class configClass.
-    Then I will call its configInit, with 'container' and 'name'
-    as arguments.  If the class passed in is not a subclass of
-    Configurable, I will fail.
+    First, I will find the factory for class configurableClass.
+    Then I will call it, with 'container' and 'name' as arguments.
     """
-    if not issubclass(configClass, Configurable):
-        raise TypeError("%s is not a subclass of %s" %
-                        (configClass, Configurable))
-    instance = new.instance(configClass, {})
-    instance.configInit(container, name)
-    return instance
+    if not factories.has_key(configurableClass):
+        raise TypeError("No configurator registered for %s" % configurableClass)
+    return factories[configurableClass](container, name)
 
-class Configurable:
-    """A configurable object.
 
+class Configurator:
+    """A configurator object.
+
+    I have an attribute, configurableClass, which is the class of objects
+    I can configure.
+    
     I have a dictionary attribute, configTypes, that indicates what sort of
     objects I will allow to be configured.  It is a mapping of variable names
     to variable types.  Variable types may be either python type objects,
@@ -156,36 +189,27 @@ class Configurable:
 
     I have a list attribute, configDispensers, that indicates what methods on
     me may be called with no arguments to create an instance of another
-    Configurable.  It is a list of the form [(method name, class, descString), ...].
-
+    configurable.  It is a list of the form [(method name, class, descString), ...].
+    The class should be a configurator class.
+    
     Custom handling of configuration-item-setting can be had by adding
-    configure_%s(self, value) methods to my subclass.
+    configure_%s(self, value) methods to my subclass. The default is to set
+    an attribute on the instance that will be configured.
     """
 
     # Change this attribute in subclasses.
+    configurableClass = None
+    
     configTypes = {}
 
     configName = None
 
     configDispensers = []
 
-    configCreatable = 1
 
-    def __init__(self):
-        """Initialize me.
-
-        Note that I need to be initialized even if you're initializing directly
-        from configInit; if you subclass me, be sure to run
-        Configurable.__init__(self) inside configInit if you override it.
-        """
-        self.configuration = {}
-
-    def configInit(self, container, name):
-        """Initialize me to a base state from which it may be configured.
-
-        By default, I will run self.__init__ with no arguments.
-        """
-        self.__init__()
+    def __init__(self, instance):
+        """Initialize this configurator with the instance it will be configuring."""
+        self.instance = instance
 
     def configure(self, dict):
         """Set a list of configuration variables.
@@ -211,10 +235,16 @@ class Configurable:
             if func:
                 func(value)
             else:
-                self.configuration[name] = value
+                setattr(self.instance, name, value)
 
     def getConfiguration(self):
         """Return a mapping of key/value tuples describing my configuration.
+        
+        By default gets the attributes from the instance being configured,
+        override in subclasses if necessary.
         """
-        return self.configuration
+        result = {}
+        for k in self.configTypes.keys():
+            result[k] = getattr(self.instance, k)
+        return result
 

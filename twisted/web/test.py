@@ -26,8 +26,6 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 
-# Twisted Imports
-from twisted.manhole import coil
 
 class FunkyForm(widgets.Form):
     formFields = [
@@ -49,7 +47,7 @@ class FunkyForm(widgets.Form):
         ]
 
 
-class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
+class Test(widgets.Gadget, widgets.Presentation):
     """I am a trivial example of a 'web application'.
     """
     template = '''
@@ -62,12 +60,9 @@ class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
     </ul>
     '''
 
-    configName = 'Twisted Web Test Page'
-
     def __init__(self):
         """Initialize.
         """
-        coil.Configurable.__init__(self)
         widgets.Gadget.__init__(self)
         widgets.Presentation.__init__(self)
 
@@ -87,5 +82,3 @@ class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
         y = 2
         z = "some string"; self.goDeeper()
 
-
-coil.registerClass(Test)

@@ -23,78 +23,13 @@ import socket
 
 # Twisted Imports
 from twisted.protocols import protocol
-from twisted.python import log, roots, reflect
+from twisted.python import log
 from twisted.persisted import styles
 from twisted.python.runtime import platform
-from twisted.cred import service, authorizer
-
-class PortCollection(roots.Homogenous):
-    """A collection of Ports; names may only be strings which represent port numbers.
-    """
-    entityType = protocol.Factory
-
-    def __init__(self, app, ptype):
-        self.app = app
-        self.mod = reflect.namedModule('twisted.internet.'+ptype)
-        self.ptype = ptype
-        roots.Homogenous.__init__(self)
-
-    def listStaticEntities(self):
-        ret = []
-        for port in self.app.ports:
-            if isinstance(port, self.mod.Port):
-                ret.append((str(port.port), port.factory))
-        return ret
-
-    def getStaticEntity(self, name):
-        idx = int(name)
-        for port in self.app.ports:
-            if isinstance(port, self.mod.Port):
-                if port.port == idx:
-                    return port.factory
-
-    def reallyPutEntity(self, portno, factory):
-        getattr(self.app, 'listen'+string.upper(self.ptype))(int(portno), factory)
-
-    def delEntity(self, portno):
-        getattr(self.app, 'dontListen'+string.upper(self.ptype))(int(portno))
-
-    def nameConstraint(self, name):
-        """Enter a port number.
-        """
-        try:
-            portno = int(name)
-        except ValueError:
-            raise roots.ConstraintViolation("Not a port number: %s" % repr(name))
-        else:
-            return 1
-
-    def getEntityType(self):
-        return "Protocol Factory"
-
-    def getNameType(self):
-        return "Port Number"
+from twisted.cred import authorizer
 
 
-class ServiceCollection(roots.Homogenous):
-    entityType = service.Service
-
-    def __init__(self, app):
-        roots.Homogenous.__init__(self)
-        self.app = app
-
-    def listStaticEntities(self):
-        return self.app.services.items()
-
-    def getStaticEntity(self, name):
-        return self.app.services.get(name)
-
-    def reallyPutEntity(self, name, entity):
-        # No need to put the entity!  It will be automatically registered...
-        pass
-
-
-class Application(log.Logger, styles.Versioned, roots.Locked):
+class Application(log.Logger, styles.Versioned):
     """I am the `root object' in a Twisted process.
 
     I represent a set of persistent, potentially interconnected listening TCP
@@ -118,8 +53,6 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         If uid and gid arguments are not provided, this application will
         default to having the uid and gid of the user and group who created it.
         """
-        roots.Constrained.__init__(self)
-
         self.name = name
         # a list of (tcp, ssl, udp) Ports
         self.ports = []
@@ -136,20 +69,6 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
         self.resolver = main.resolver
-        self._addEntitiesAndLock()
-
-    def _addEntitiesAndLock(self):
-        l = roots.Locked()
-        self.putEntity('ports', l)
-        l.putEntity("tcp", PortCollection(self, 'tcp'))
-        try:
-            l.putEntity("ssl", PortCollection(self, 'ssl'))
-        except ImportError:
-            pass
-        l.putEntity("udp", PortCollection(self, 'udp'))
-        l.lock()
-        self.putEntity("services", ServiceCollection(self))
-        self.lock()
 
 
     persistenceVersion = 4
@@ -162,8 +81,9 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
     def upgradeToVersion3(self):
         """Version 3 Persistence Upgrade
         """
-        roots.Locked.__init__(self)
-        self._addEntitiesAndLock()
+        #roots.Locked.__init__(self)
+        #self._addEntitiesAndLock()
+        pass
 
     def upgradeToVersion2(self):
         """Version 2 Persistence Upgrade

@@ -29,7 +29,6 @@ from twisted.protocols import irc, protocol
 from twisted.spread import pb
 from twisted.python import log
 from twisted import copyright
-from twisted.manhole import coil
 
 # sibling imports
 import service
@@ -912,10 +911,11 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             # self.sendMessage(irc.RPL_ISON, ":" + string.join(ison))
             pass
 
-class IRCGateway(protocol.Factory, coil.Configurable):
-    configCreatable = 0
+class IRCGateway(protocol.Factory):
+    
     def __init__(self, service):
         self.service = service
+    
     def buildProtocol(self, connection):
         """Build an IRC protocol to talk to my chat service.
         """
@@ -937,4 +937,3 @@ def ctcpToWords(query_tag):
 def wordsToCtcp(style):
     return mapWordsToCtcp.get(style, style)
 
-coil.registerClass(IRCGateway)

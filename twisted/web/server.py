@@ -46,7 +46,6 @@ from twisted.internet import main
 from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots, failure
 from twisted import copyright
-from twisted.manhole import coil
 from twisted.cred import util
 
 # Sibling Imports
@@ -541,7 +540,7 @@ class Session:
 
 version = "TwistedWeb/%s" % copyright.version
 
-class Site(protocol.Factory, coil.Configurable, roots.Collection):
+class Site(protocol.Factory, roots.Collection):
     counter = 0
 
     def __init__(self, resource):
@@ -549,17 +548,6 @@ class Site(protocol.Factory, coil.Configurable, roots.Collection):
         """
         self.sessions = {}
         self.resource = resource
-
-    # configuration
-    
-    configTypes = {'resource': resource.Resource}
-    configName = 'HTTP Web Site'
-
-    def config_resource(self, res):
-        self.resource = res
-
-    def getConfiguration(self):
-        return {"resource": self.resource}
 
     # emulate collection for listing
 
@@ -569,19 +557,6 @@ class Site(protocol.Factory, coil.Configurable, roots.Collection):
     def getStaticEntity(self, name):
         if name == 'resource':
             return self.resource
-
-    def configInit(self, container, name):
-        from twisted.web import static
-        d = static.Data(
-            """
-            <html><head><title>Blank Page</title></head>
-            <body>
-            <h1>This Page Left Intentionally Blank</h1>
-            </body>
-            </html>""",
-            "text/html")
-        d.isLeaf = 1
-        self.__init__(d)
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)
@@ -646,6 +621,5 @@ class Site(protocol.Factory, coil.Configurable, roots.Collection):
         request.sitepath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 
-coil.registerClass(Site)
 
 import html

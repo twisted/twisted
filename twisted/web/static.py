@@ -40,7 +40,6 @@ from twisted.protocols import http
 from twisted.python import threadable, log
 from twisted.internet import abstract
 from twisted.spread import pb
-from twisted.manhole import coil
 from twisted.persisted import styles
 
 class Data(resource.Resource):
@@ -75,7 +74,7 @@ class DirectoryListing(widgets.StreamWidget):
             write('<LI><A HREF="%s">%s</a>' % (urllib.quote(path, "/:"), path))
         write("</UL>\n")
 
-class File(resource.Resource, coil.Configurable, styles.Versioned):
+class File(resource.Resource, styles.Versioned):
     """
     File is a resource that represents a plain non-interpreted file.
     It's constructor takes a file path.
@@ -120,44 +119,6 @@ class File(resource.Resource, coil.Configurable, styles.Versioned):
         if hasattr(self, 'indexName'):
             self.indexNames = [self.indexName]
             del self.indexName
-
-    ### Configuration
-
-    configTypes = {'path': types.StringType,
-                   'execCGI': 'boolean',
-                   'execEPY': 'boolean'}
-
-    configName = 'Web Filesystem Access'
-
-    def config_path(self, path):
-        self.path = path
-
-    def config_execCGI(self, allowed):
-        if allowed:
-            import twcgi
-            self.processors['.cgi'] = twcgi.CGIScript
-        else:
-            if self.processors.has_key('.cgi'):
-                del self.processors['.cgi']
-
-    def config_execEPY(self, allowed):
-        if allowed:
-            import script
-            self.processors['.epy'] = script.PythonScript
-        else:
-            if self.processors.has_key('.epy'):
-                del self.processors['.epy']
-
-
-    def getConfiguration(self):
-        return {'path': self.path,
-                'execCGI': self.processors.has_key('.cgi'),
-                'execEPY': self.processors.has_key('.epy')}
-
-    def configInit(self, container, name):
-        self.__init__("nowhere/nohow")
-
-    ### End Configuration
 
     def __init__(self, path):
         """Create a file with the given path.
@@ -266,7 +227,7 @@ class File(resource.Resource, coil.Configurable, styles.Versioned):
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
-coil.registerClass(File)
+
 
 class FileTransfer(pb.Viewable):
     """

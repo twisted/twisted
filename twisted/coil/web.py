@@ -14,22 +14,30 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""A web frontend to coil."""
+
+# System Imports
 import types
 import sys
 import string
 
+# Twisted Imports
 from twisted.web import widgets
 from twisted.python import roots
 from twisted.python.plugin import getPlugIns
 from twisted.web import widgets, html
 from twisted.protocols import protocol, http
 
-import coil
+# Sibling Imports
+import coil, app
+
 
 class ConfigRoot(widgets.Gadget, widgets.Widget):
+    """The root of the coil web interface."""
+    
     def __init__(self, application):
         widgets.Gadget.__init__(self)
-        self.putWidget("config", Configurator(application))
+        self.putWidget("config", AppConfiguratorPage(application))
         self.putWidget('plugin', PluginLoader())
         self.addFile("images")
 
@@ -41,6 +49,8 @@ class ConfigRoot(widgets.Gadget, widgets.Widget):
 
 
 class PluginLoader(widgets.Form):
+    """Form for loading plugins."""
+    
     def getFormFields(self, request):
         plugins = getPlugIns("coil")
         mnuList = []
@@ -62,14 +72,15 @@ class PluginLoader(widgets.Form):
         else:
             write( 'could not load' + plugin.module )
 
-class Configurator(widgets.Presentation):
+
+class AppConfiguratorPage(widgets.Presentation):
     """A web configuration interface for Twisted.
 
     This configures the toplevel application.
     """
-    def __init__(self, app):
+    def __init__(self, application):
         widgets.Presentation.__init__(self)
-        self.app = app
+        self.app = app.ApplicationConfig(application)
         # mapping of config class names to lists of tuples of (callable
         # object that can create the class, descriptive string)
         self.dispensers = {}
@@ -125,20 +136,25 @@ class Configurator(widgets.Presentation):
             obj = self.app
         ret = []
         linkfrom = string.join(['config']+request.postpath, '/') + '/'
-        if isinstance(obj, coil.Configurable) and obj.configTypes:
-            ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, obj, linkfrom)).display(request))
-        if isinstance(obj, roots.Homogenous): # and isinstance(obj.entityType, coil.Configurable):
+        cfg = coil.getConfigurator(obj)
+        if cfg and cfg.configTypes:
+            ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, cfg, linkfrom)).display(request))
+        if isinstance(obj, roots.Homogenous): # and isinstance(obj.entityType, coil.Configurator):
             ret.extend(widgets.TitleBox("Listing", CollectionForm(self, obj, linkfrom)).display(request))
         ret.append(html.PRE(str(obj)))
         return ret
 
     def makeConfigMenu(self, cfgType):
+        configuratorType = coil.configurators.get(cfgType, None)
         l = []
-        for claz in coil.theClassHierarchy.getSubClasses(cfgType, 1):
-            if issubclass(claz, coil.Configurable) and claz.configCreatable:
-                nm = getattr(claz, 'configName', None) or str(claz)
-                l.append(['new '+str(claz), 'new '+nm])
-        for methId, desc in self.dispensers.get(cfgType, []):
+        if configuratorType:
+            for claz in coil.theClassHierarchy.getSubClasses(configuratorType, 1):
+                if issubclass(claz, coil.Configurator):
+                    realClass = coil.getConfigurableClass(claz)
+                    if coil.hasFactory(realClass):
+                        nm = getattr(claz, 'configName', None) or str(claz.configurableClass)
+                        l.append(['new '+str(claz.configurableClass), 'new '+nm])
+        for methId, desc in self.dispensers.get(configuratorType, []):
             l.append(['dis '+str(methId), desc])
         return l
 
@@ -149,20 +165,30 @@ class Configurator(widgets.Presentation):
         elif cmd == "dis": # dispense
             methodId = int(args)
             obj = self.dispenseMethods[methodId]()
-        if isinstance(obj, coil.Configurable):
-            for methodName, klass, desc in obj.configDispensers:
+        
+        configurator = coil.getConfigurator(obj)
+        
+        if configurator:
+            for methodName, klass, desc in configurator.configDispensers:
                 supclas = coil.theClassHierarchy.getSuperClasses(klass, 1) + (klass,)
                 for k in supclas:
                     if not self.dispensers.has_key(k):
                         self.dispensers[k] = []
-                    meth = getattr(obj, methodName)
+                    meth = getattr(configurator, methodName)
                     self.dispensers[k].append([id(meth), desc])
                     self.dispenseMethods[id(meth)] = meth
+            print self.dispensers
+            print self.dispenseMethods
         return obj
 
+
 class ConfigForm(widgets.Form):
+    """A form for configuring an object."""
+    
     def __init__(self, configurator, cfgr, linkfrom):
-        self.configurator = configurator
+        if not isinstance(cfgr, coil.Configurator):
+            raise TypeError
+        self.configurator = configurator  # this is actually a AppConfiguratorPage
         self.cfgr = cfgr
         self.linkfrom = linkfrom
     
@@ -216,8 +242,10 @@ class ConfigForm(widgets.Form):
 
 
 class CollectionForm(widgets.Form):
+    """Form for a collection of objects - adding, deleting, etc."""
+    
     def __init__(self, configurator, coll, linkfrom):
-        self.configurator = configurator
+        self.configurator = configurator # this is actually a AppConfiguratorPage
         self.coll = coll
         self.linkfrom = linkfrom
 

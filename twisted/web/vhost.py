@@ -22,7 +22,6 @@
 import string
 
 # Twisted Imports
-from twisted.manhole import coil
 from twisted.python import roots
 
 # Sibling Imports
@@ -44,7 +43,8 @@ class VirtualHostCollection(roots.Homogenous):
     def reallyPutEntity(self, name, entity):
         self.nvh.addHost(name, entity)
 
-class NameVirtualHost(resource.Resource, coil.Configurable):
+
+class NameVirtualHost(resource.Resource):
     """I am a resource which represents named virtual hosts.
     """
 
@@ -99,5 +99,3 @@ class NameVirtualHost(resource.Resource, coil.Configurable):
         """
         resrc = self._getResourceForRequest(request)
         return resrc.getChildWithDefault(path, request)
-
-coil.registerClass(NameVirtualHost)

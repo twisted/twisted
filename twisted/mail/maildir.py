@@ -21,7 +21,6 @@
 import stat, os, socket, time, md5, string
 from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
-from twisted.manhole import coil
 from twisted.mail import mail
 
 
@@ -123,7 +122,7 @@ class MaildirMailbox(pop3.Mailbox):
         self.list[i] = 0
 
 
-class MaildirDirdbmDomain(AbstractMaildirDomain, coil.Configurable):
+class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
 
@@ -180,7 +179,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain, coil.Configurable):
         if digest == my_digest:
             return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
     
-    # config interfaces
+    # XXX config interfaces - port these to new coil
     def configInit(self, container, name):
         path = os.path.join(container.storagePath, name)
         if not os.path.exists(path):
@@ -196,5 +195,3 @@ class MaildirDirdbmDomain(AbstractMaildirDomain, coil.Configurable):
 
     def config_postmaster(self, postmaster):
         self.postmaster = postmaster
-
-coil.registerClass(MaildirDirdbmDomain)

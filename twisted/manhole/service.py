@@ -17,12 +17,8 @@
 
 # twisted imports
 from twisted import copyright
-
 from twisted.spread import pb
 from twisted.python import explorer, log
-
-# sibling imports
-import coil
 
 # system imports
 from cStringIO import StringIO
@@ -315,7 +311,7 @@ class Perspective(pb.Perspective):
                               self.receiveExplorer)
 
 
-class Service(pb.Service, coil.Configurable):
+class Service(pb.Service):
     perspectiveClass = Perspective
     serviceType = "manhole"
 
@@ -352,22 +348,3 @@ class Service(pb.Service, coil.Configurable):
                                             getattr(self.application,
                                                     'name', "???"))
         return s
-
-    # Config interfaces for coil
-    def configInit(self, container, name):
-        self.__init__(name, container.app)
-
-    def getConfiguration(self):
-        return {"name": self.serviceName}
-
-    configTypes = {
-        'name': types.StringType
-        }
-
-    configName = 'Twisted Manhole PB Service'
-
-    def config_name(self, name):
-        raise coil.InvalidConfiguration("You can't change a Service's name.")
-
-
-coil.registerClass(Service)

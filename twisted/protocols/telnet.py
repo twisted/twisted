@@ -27,7 +27,6 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted import copyright
 from twisted.python import log, failure
-from twisted.manhole import coil
 
 # Sibling Imports
 import protocol
@@ -356,7 +355,7 @@ class Shell(Telnet):
 
 
 
-class ShellFactory(protocol.Factory, coil.Configurable):
+class ShellFactory(protocol.Factory):
     username = "admin"
     password = "admin"
 
@@ -379,26 +378,4 @@ class ShellFactory(protocol.Factory, coil.Configurable):
         p = Shell()
         p.factory = self
         return p
-    
-    # config interface
-    def configInit(self, container, name):
-        self.__init__()
 
-    def getConfiguration(self):
-        return {"username": self.username, "password": self.password}
-
-    configTypes = {
-        'username': types.StringType,
-        'password': types.StringType,
-        }
-
-    configName = 'Telnet Python Shell'
-
-    def config_username(self, username):
-        self.username = username
-    
-    def config_password(self, password):
-        self.password = password
-
-
-coil.registerClass(ShellFactory)

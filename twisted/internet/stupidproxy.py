@@ -22,7 +22,6 @@ A simple port forwarder.
 # Twisted imports
 from twisted.internet import tcp
 from twisted.protocols import protocol
-from twisted.manhole import coil
 
 # System imports
 import types
@@ -51,34 +50,15 @@ class StupidProtocolServer(StupidProtocol):
         self.setPeer(client)
 
 
-class StupidFactory(protocol.Factory, coil.Configurable):
+class StupidFactory(protocol.Factory):
     """Factory for port forwarder."""
     
     protocol = StupidProtocolServer
     
-    def __init__(self, host="localhost", port=80):
+    def __init__(self, host, port):
         self.host = host
         self.port = port
-    
-    # configuration
-    
-    configName = 'TCP Port Forwarder'
-    configTypes = {'host': types.StringType,
-                   'port': types.IntType
-                  }
-    
-    def config_host(self, host):
-        self.host = host
 
-    def config_port(self, port):
-        if not (65536 > port > 0):
-            raise ValueError, "not a valid IP port"
-        self.port = port
-    
-    def getConfiguration(self):
-        return {"host": self.host, "port": self.port}
-
-coil.registerClass(StupidFactory)
 
 # backwards compatible interface
 makeStupidFactory = StupidFactory

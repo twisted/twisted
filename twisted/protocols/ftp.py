@@ -69,7 +69,7 @@ from twisted.internet import abstract, tcp
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.protocols import protocol
-from twisted.manhole import coil
+
 
 # the replies from the ftp server
 # a 3-digit number identifies the meaning
@@ -627,7 +627,7 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('unknown', string.upper(command))
 
 
-class FTPFactory(protocol.Factory, coil.Configurable):
+class FTPFactory(protocol.Factory):
     command = ''
     userdict = {}
     anonymous = 0
@@ -640,46 +640,6 @@ class FTPFactory(protocol.Factory, coil.Configurable):
         p=FTP()
         p.factory = self
         return p
-    
-    # config interfaces
-    def configInit(self, container, name):
-        self.__init__()
 
-    def getConfiguration(self):
-        return {"anonymous": self.anonymous, 
-                "anonymous_username": self.useranonymous,
-                "otp": self.otp,
-                "root": self.root,
-                "thirdparty": self.thirdparty
-               }
 
-    configTypes = {"anonymous": "boolean",
-                   "anonymous_username": types.StringType,
-                   "otp": "boolean",
-                   "root": types.StringType,
-                   "thirdparty": "boolean"
-                  }
-
-    configName = 'FTP Server'
-
-    def config_anonymous(self, anonymous):
-        self.anonymous = anonymous
     
-    def config_anonymous_username(self, anonymous_username):
-        self.useranonymous = anonymous_username
-    
-    def config_otp(self, otp):
-        self.otp = otp
-    
-    def config_thirdparty(self, thirdparty):
-        self.thirdparty = thirdparty
-    
-    def config_root(self, root):
-        if not os.path.exists(root):
-            raise coil.InvalidConfiguration("No such path: %s" % root)
-        elif not os.access(root, os.O_RDONLY):
-            raise coil.InvalidConfiguration("No permission to read path: %s" % root)
-        else:
-            self.root = root
-
-coil.registerClass(FTPFactory)

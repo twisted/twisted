@@ -21,7 +21,6 @@ import time
 from twisted.web import html, server, error, widgets
 from twisted.cred import identity
 from twisted.persisted import styles
-from twisted.manhole import coil
 
 #Sibling imports
 import service
@@ -106,9 +105,11 @@ class ParticipantListWidget(widgets.Gadget, widgets.Widget, styles.Versioned):
         else:
             return error.NoResource("That participant does not exist.")
 
-class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned, coil.Configurable):
+class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned):
+    
     persistenceVersion = 2
     title = "Welcome to WebWords"
+    
     def __init__(self, svc):
         widgets.Gadget.__init__(self)
         self.section = ""
@@ -128,10 +129,11 @@ class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned, coil.Configu
                                ["users",
                                 "View the list of Participants"]])]
 
-coil.registerClass(WordsGadget)
 
 class WebWordsAdminSite(styles.Versioned):
+    
     persistenceVersion = 2
+
     def upgradeToVersion2(self):
         self.__class__ = server.Site
         if hasattr(self, 'service'):

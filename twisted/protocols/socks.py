@@ -24,7 +24,6 @@ import protocol
 
 # twisted imports
 from twisted.internet import tcp
-from twisted.manhole import coil
 from twisted.python import log
 
 # python imports
@@ -164,7 +163,7 @@ class SOCKSv4(protocol.Protocol):
             return 0
 
 
-class SOCKSv4Factory(protocol.Factory, coil.Configurable):
+class SOCKSv4Factory(protocol.Factory):
     """A factory for a SOCKSv4 proxy.
     
     Constructor accepts one argument, a logfile.
@@ -175,25 +174,6 @@ class SOCKSv4Factory(protocol.Factory, coil.Configurable):
     
     def buildProtocol(self,addr):
         return SOCKSv4(self.logging)
-
-    # config interface
-    
-    def configInit(self, container, name):
-        self.__init__(None)
-    
-    def getConfiguration(self):
-        return {"logging": self.logging}
-
-    configTypes = {
-        'logging': types.StringType,
-        }
-
-    configName = 'SOCKSv4 Proxy'
-
-    def config_logging(self, logging):
-        self.logging = logging
-
-coil.registerClass(SOCKSv4Factory)
 
 
 class SOCKSv4IncomingFactory(protocol.Factory):
