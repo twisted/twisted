@@ -1,0 +1,46 @@
+
+from slides import Slide, Bullet, SubBullet, URL, Image, PRE
+from twslides import Lecture
+
+class PythonSource:
+    def __init__(self, content):
+        self.content = content
+    def toHTML(self):
+        return '<pre class="python">%s</pre>' % (self.content,)
+
+class Raw:
+    def __init__(self, content):
+        self.content = content
+    def toHTML(self):
+        return self.content + '\n'
+
+lecture = Lecture(
+    "Transluscent Inter-Process Service Migration",
+    Slide("What is migration?"),
+    Slide("Why do we need migration?"),
+    Slide("Naive solutions"),
+    Slide("Problems with naive solutions"),
+    Slide("Load balancing"),
+    Slide("Upgrading code"),
+    Slide("Upgrading hardware"),
+    Slide("Fail-over"),
+    Slide("Problems with migration"),
+    Slide("Different migration models"),
+    Slide("execl()"),
+    Slide("Problems with execl()"),
+    Slide("Multiple processes, one machine"),
+    Slide("Problems with multiple processes"),
+    Slide("Multiple machines"),
+    Slide("Problems with multiple machines"),
+    Slide("Example of simple (stateless) migration"),
+    Slide("Example of complex (stateful) migration"),
+    Slide("Rapid migration - a demonstration"),
+    Slide("Walk-through of rapid migration"),
+    Slide("Gradual migration - a demonstration"),
+    Slide("Walk-through of gradual migration"),
+    Slide("Integration with existing software"),
+    Slide("Design for migratability"),
+    Slide("Conclusions"),
+    Slide("Future directions"),
+    Slide("Further reading"),
+    Slide("Questions"))
