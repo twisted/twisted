@@ -100,10 +100,6 @@ if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
     object.__setattr__(str, 'rstrip', rstrip)
     object.__setattr__(str, 'strip', strip)
 
-for k in locals().keys():
-    exec "del " + k
-del k
-
 import types, socket, struct
 
 # Compatibility with compatibility
