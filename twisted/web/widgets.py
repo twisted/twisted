@@ -4,7 +4,7 @@ import string, time, types, traceback, copy, pprint, sys, os
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.python import defer, rebuild
+from twisted.python import defer, rebuild, reflect
 from twisted.protocols import http
 
 # Sibling Imports
@@ -17,6 +17,7 @@ from server import NOT_DONE_YET
 class Widget:
     def display(self, request):
         raise NotImplementedError("twisted.web.widgets.Widget.display")
+
 
 class StreamWidget(Widget):
     def stream(self, write, request):
@@ -31,6 +32,62 @@ class StreamWidget(Widget):
             io = StringIO()
             traceback.print_exc(file=io)
             return [html.PRE(io.getvalue())]
+
+
+class Presentation(Widget):
+    template = '''
+    hello %%%%world%%%%
+    '''
+    def __init__(self, template=None, filename=None):
+        if filename:
+            self.template = open(filename).read()
+        elif template:
+            self.template = template
+        self.variables = {}
+        self.tmpl = string.split(self.template, "%%%%")
+
+    def addClassVars(self, namespace, Class):
+        for base in Class.__bases__:
+            # Traverse only superclasses that know about Presentation.
+            if issubclass(base, Presentation) and base is not Presentation:
+                self.addClassVars(namespace, base)
+        # 'lower' classes in the class heirarchy take precedence.
+        for k in Class.__dict__.keys():
+            namespace[k] = getattr(self, k)
+
+    def addVariables(self, namespace, request):
+        self.addClassVars(namespace, self.__class__)
+
+    def display(self, request):
+        tm = []
+        flip = 0
+        namespace = {}
+        self.addVariables(namespace, request)
+        # This variable may not be obscured...
+        namespace['request'] = request
+        for elem in self.tmpl:
+            flip = not flip
+            if flip:
+                tm.append(elem)
+            else:
+                try:
+                    x = eval(elem, namespace, namespace)
+                except:
+                    io = StringIO()
+                    io.write("Traceback evaluating code in %s:" % str(self.__class__))
+                    traceback.print_exc(file = io)
+                    tm.append(html.PRE(io.getvalue()))
+                else:
+                    if isinstance(x, types.ListType):
+                        tm.extend(x)
+                    elif isinstance(x, Widget):
+                        tm.extend(x.display(request))
+                    else:
+                        # Only two allowed types here should be deferred and
+                        # string.
+                        tm.append(x)
+        return tm
+
 
 def htmlFor_hidden(write, name, value):
     write('<INPUT TYPE="hidden" NAME="%s" VALUE="%s">' % (name, value))
@@ -69,16 +126,18 @@ class Form(StreamWidget):
         'int': int
     }
 
-    # Subclasses should override this!
-    form = [
+    formFields = [
     ]
+
+    def getFormFields(self, request):
+        return self.formFields
 
     submitName = 'OK'
 
-    def format(self, write):
+    def format(self, form, write):
         write('<FORM ENCTYPE="multipart/form-data" METHOD="post">\n'
               '<TABLE BORDER="0">\n')
-        for inputType, displayName, inputName, inputValue in self.form:
+        for inputType, displayName, inputName, inputValue in form:
             write('<TR>\n<TD ALIGN="right" VALIGN="top"><B>%s</b></td>\n'
                   '<TD VALIGN="%s">\n' %
                   (displayName, ((inputType == 'text') and 'top') or 'middle'))
@@ -94,31 +153,31 @@ class Form(StreamWidget):
     def process(self, write, request, **kw):
         write(pprint.PrettyPrinter().pformat(kw))
 
-    def doProcess(self, write, request):
+    def doProcess(self, form, write, request):
         args = request.args
-        del args['__formtype__']
         kw = {}
-        for inputType, displayName, inputName, inputValue in self.form:
+        for inputType, displayName, inputName, inputValue in form:
             if not args.has_key(inputName):
-                raise FormInputError("suck ït down!")
+                raise FormInputError("missing field %s." % repr(inputName))
             formData = args[inputName]
             del args[inputName]
             if not len(formData) == 1:
-                raise FormInputError("Suck it Down!!")
+                raise FormInputError("multiple values for field %s." %repr(inputName))
             formData = formData[0]
             method = self.formParse.get(inputType)
             if method:
                 formData = method(formData)
             kw[inputName] = formData
-        if args.has_key('submit'):
-            del args['submit']
+        for field in ['submit', '__formtype__']:
+            if args.has_key(field):
+                del args[field]
         if args:
-            raise FormInputError("SUCK IT DOWN!!! %s" % repr(args))
+            raise FormInputError("unknown fields" % repr(args))
         apply(self.process, (write, request), kw)
 
-    # Form generation HTML constants:
     def stream(self, write, request):
         args = request.args
+        form = self.getFormFields(request)
         if args and args.has_key('__formtype__') and args['__formtype__'][0] == str(self.__class__):
             try:
                 return self.doProcess(write, request)
@@ -144,44 +203,10 @@ class TextDeferred(Widget):
         return [d]
 
 class Time(Widget):
-    """A demonstration synchronous widget.
-    """
     def display(self, request):
-        """Display the time.
-        """
         return [time.ctime(time.time())]
 
-class TitleBox(Widget):
-    templateBegin = ('<table cellpadding=1 cellspacing=0 border=0><tr>'
-                     '<td bgcolor="#000000"><center><font color="#FFFFFF">')
-    # Title
-    templateMiddle = ('</font></center><table cellpadding=3 cellspacing=0 border=0>'
-                      '<tr><td bgcolor="#FFFFFF">')
-    # Content
-    templateEnd = '</td></tr></table></td></tr></table>'
-    def __init__(self, title, widget):
-        """Wrap a widget with a given title.
-        """
-        self.widget = widget
-        self.title = title
-
-    def display(self, request):
-        """Return a list of HTML components.
-        """
-        d = [self.templateBegin, self.title, self.templateMiddle]
-        try:
-            disp = self.widget.display()
-        except:
-            io = StringIO()
-            traceback.print_exc(file = io)
-            disp = [html.PRE(io.getvalue())]
-        d.extend(self.widget.display())
-        d.append(self.templateEnd)
-        return d
-
 class Container(Widget):
-    """A container of HTML.
-    """
     def __init__(self, *widgets):
         self.widgets = widgets
 
@@ -236,11 +261,68 @@ class RenderSession:
                 return
 
 
-class Page(resource.Resource, Container):
-    isLeaf = 1
-    def __init__(*args):
-        resource.Resource.__init__(args[0])
-        apply(Container.__init__, args)
+class Page(resource.Resource, Presentation):
+
+    def __init__(self):
+        resource.Resource.__init__(self)
+        Presentation.__init__(self)
+
+    def render(self, request):
+        RenderSession(self.display(request), request)
+        return NOT_DONE_YET
+
+
+class WidgetPage(Page):
+
+    stylesheet = '''
+    A
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+        color: #336699;
+        text-decoration: none;
+    }
+
+    TH
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+    PRE, CODE
+    {
+        font-family: Courier New, Courier;
+    }
+
+    P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+        color: #000000;
+    }
+    '''
+
+    template = '''
+    <HTML>
+    <STYLE>
+    %%%%stylesheet%%%%
+    </style>
+    <HEAD><TITLE>%%%%title%%%%</title></head>
+    <BODY>
+    <H1>%%%%title%%%%</h1>
+    %%%%widget%%%%
+    </body>
+    </html>
+    '''
+
+    title = 'No Title'
+    widget = 'No Widget'
+
+    def __init__(self, widget):
+        Page.__init__(self)
+        self.widget = widget
+        self.title = getattr(widget, 'title', None) or str(widget.__class__)
+        if hasattr(widget, 'stylesheet'):
+            self.stylesheet = widget.stylesheet
 
     def render(self, request):
         RenderSession(self.display(request), request)
@@ -249,94 +331,58 @@ class Page(resource.Resource, Container):
 class Gadget(resource.Resource):
     widgets = {
     }
-    resources = {
-    }
     files = [
     ]
     modules = [
     ]
+    page = WidgetPage
 
-    def getChild(self, path, resource):
+    def getChild(self, path, request):
         if path == '':
             path = 'index'
         widget = self.widgets.get(path)
         if widget:
-            return Page(widget)
+            if isinstance(widget, resource.Resource):
+                return widget
+            else:
+                return self.page(widget)
         elif path in self.files:
             prefix = getattr(sys.modules[self.__module__], '__file__', '')
             if prefix:
                 prefix = os.path.abspath(os.path.dirname(prefix))
             return static.File(os.path.join(prefix, path))
         elif path == '__reload__':
-            return Page(Reloader(map(reflect.named_module, [self.__module__] + self.modules)))
+            return self.page(Reloader(map(reflect.named_module, [self.__module__] + self.modules)))
         else:
             return error.NoResource()
 
 
-class Presentation(Widget):
-    template = 'hello %%%%world%%%%'
+class TitleBox(Presentation):
 
-    def __init__(self, template=None, filename=None):
-        if filename:
-            self.template = open(filename).read()
-        elif template:
-            self.template = template
-        self.tmpl = string.split(self.template, "%%%%")
+    template = '''\
+    <table cellpadding="1" cellspacing="0" border="0"><tr>\
+    <td bgcolor="#000000"><center><font color="#FFFFFF">%%%%title%%%%</font\
+    ></center><table cellpadding="3" cellspacing="0" border="0"><tr>\
+    <td bgcolor="#FFFFFF"><font color="#000000">%%%%widget%%%%</font></td>\
+    </tr></table></td></tr></table>\
+    '''
 
-    def addClassVars(self, namespace, Class):
-        for base in Class.__bases__:
-            # Traverse only superclasses that know about Presentation.
-            if issubclass(base, Presentation) and base is not Presentation:
-                self.addClassVars(namespace, base)
-        # 'lower' classes in the class heirarchy take precedence.
-        for k in Class.__dict__.keys():
-            namespace[k] = getattr(self, k)
+    title = 'No Title'
+    widget = 'No Widget'
 
-    def addVariables(self, namespace, request):
-        self.addClassVars(namespace, self.__class__)
+    def __init__(self, title, widget):
+        """Wrap a widget with a given title.
+        """
+        self.widget = widget
+        self.title = title
 
-    def display(self, request):
-        "display me..."
-        tm = []
-        flip = 0
-        namespace = {}
-        self.addVariables(namespace, request)
-        # This variable may not be obscured...
-        namespace['request'] = request
-        for elem in self.tmpl:
-            flip = not flip
-            if flip:
-                tm.append(elem)
-            else:
-                try:
-                    x = eval(elem, namespace, namespace)
-                except:
-                    io = StringIO()
-                    traceback.print_exc(file = io)
-                    tm.append(html.PRE(io.getvalue()))
-                else:
-                    if isinstance(x, types.ListType):
-                        tm.extend(x)
-                    elif isinstance(x, Widget):
-                        tm.extend(x.display(request))
-                    else:
-                        # Only two allowed types here should be deferred and
-                        # string.
-                        tm.append(x)
-        return tm
 
 class Reloader(Presentation):
     template = '''
-    <html>
-    <head><title>Reloader</title></head>
-    <body>
-    <h1>Reloader</h1>
     Reloading...
     <ul>
     %%%%reload(request)%%%%
     </ul> ... reloaded!
-    </body>
-    </html>
     '''
     def __init__(self, modules):
         Presentation.__init__(self)

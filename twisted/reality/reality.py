@@ -26,6 +26,7 @@ from copy import copy
 import string
 
 # Twisted Imports
+import twisted
 from twisted.python import reflect, reference, delay
 from twisted.spread import pb
 from twisted.internet import passport
@@ -176,5 +177,21 @@ result = thing._default = reality.Reality('%s')
         write("del thing._default\n")
         del self.sourcemods
 
-# this for the 'get rid of known bad refs' hack...
-#from twisted import ui
+
+def fromSourceFile(pathName, application=None):
+    """Load a Reality from a Python source file.
+
+    I will load and return a Reality from a python source file, similiar to one
+    output by Reality.printSource.  I will optionally attach it to an
+    application.
+    """
+    
+    ns = {}
+    execfile(pathName, ns, ns)
+    result = ns['result']
+    result.resolveAll()
+    if application:
+        result.setApplication(application)
+        application.addDelayed(result)
+    result.addPlayersAsIdentities()
+    return result

@@ -47,6 +47,7 @@ class Perspective(pb.Perspective):
         fakeerr = FakeStdIO("err", output)
         resfile = FakeStdIO("result", output)
         errfile = FakeStdIO("error", output)
+        code = None
         try:
             code = compile(mesg, fn, 'eval')
         except:
@@ -56,22 +57,23 @@ class Perspective(pb.Perspective):
                 io = StringIO()
                 traceback.print_exc(file=io)
                 errfile.write(io.getvalue()+'\n')
-        try:
-            out = sys.stdout
-            err = sys.stderr
-            sys.stdout = fakeout
-            sys.stderr = fakeerr
+        if code:
             try:
-                val = eval(code, self.service.namespace)
-                if val is not None:
-                    resfile.write(str(val)+'\n')
-            finally:
-                sys.stdout = out
-                sys.stderr = err
-        except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            errfile.write(io.getvalue()+'\n')
+                out = sys.stdout
+                err = sys.stderr
+                sys.stdout = fakeout
+                sys.stderr = fakeerr
+                try:
+                    val = eval(code, self.service.namespace)
+                    if val is not None:
+                        resfile.write(str(val)+'\n')
+                finally:
+                    sys.stdout = out
+                    sys.stderr = err
+            except:
+                io = StringIO()
+                traceback.print_exc(file=io)
+                errfile.write(io.getvalue()+'\n')
         log.msg("<<<")
         return output
 

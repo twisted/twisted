@@ -52,12 +52,12 @@ this file directly.
     such interaction could be event-based rather than dependant upon blocking
     DB APIs.  This is a nastier problem than it sounds like.
 
-007 Web widgetry.  Twisted.Web ought to have a way of assembling pages where
-    bits of the pages can be rendered asynchronously (for example, from pb
-    requests or fetched from other URLs) but the resource author shouldn't have
-    to manually juggle NOT_DONE_YET requests.  twisted.web.lmx might aid with
-    this.  Put more simply: web application pages should be collections of
-    components, not just flat text generators.
+007 [[Glyph Lefkowitz]] Web widgetry.  Twisted.Web ought to have a way of
+    assembling pages where bits of the pages can be rendered asynchronously
+    (for example, from pb requests or fetched from other URLs) but the resource
+    author shouldn't have to manually juggle NOT_DONE_YET requests.
+    twisted.web.lmx might aid with this.  Put more simply: web application
+    pages should be collections of components, not just flat text generators.
 
 008 File Transfer layer for PB.  This would be especially nice for
     twisted.words; having standard a way to transfer "large" (100MB+) packets
@@ -86,3 +86,5 @@ this file directly.
     asynchronous authentication won't bother web pages.
 
 015 Twisted Names, a full replacement for BIND.
+
+016 Web Session Expiry. (30 minutes seems like a reasonable default...
