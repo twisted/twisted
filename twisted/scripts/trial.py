@@ -281,6 +281,12 @@ def run():
     sys.exit(not reporter.allPassed())
 
 def reallyRun(config):
+    # do this part of debug setup first for easy debugging of import failures
+    if config['debug']:
+        from twisted.internet import defer
+        from twisted.python import failure
+        defer.Deferred.debug = True
+        failure.startDebugMode()
 
     suite = unittest.TestSuite(config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
@@ -347,10 +353,6 @@ def reallyRun(config):
     if config['debug']:
         reporter.debugger = 1
         import pdb
-        from twisted.internet import defer
-        from twisted.python import failure
-        defer.Deferred.debug = True
-        failure.startDebugMode()
         dbg = pdb.Pdb()
         try:
             rcFile = open("../.pdbrc")
