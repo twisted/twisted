@@ -124,8 +124,9 @@ Basic Servers
   So far the IRC gateway has only been tested with mIRC, XChat, and ircII; I
   believe that these are relatively diverse clients, but YMMV.
 
-  The "Instance Messenger" client is a GTK front-end to the twisted.words
-  service which communicates with it using PB.  You can invoke it like this::
+  The "Instance Messenger" client is a TKinter front-end to the various chat
+  services that Twisted can interface with, which are IRC, AIM, and,
+  twisted.words.  You can invoke it like this::
 
     % im
 
