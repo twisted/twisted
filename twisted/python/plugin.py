@@ -178,11 +178,11 @@ def getPluginFileList(debugInspection=None, showProgress=None):
                 continue
             incr = increments * (1.0 / len(subDirs))
             for plugindir in subDirs:
-                if seenNames.has_key(plugindir):
-                    debugInspection('Seen %s already' % plugindir)
-                    continue
-                seenNames[plugindir] = 1
                 tmlname = join((d, plugindir, "plugins.tml"))
+                if seenNames.has_key(tmlname):
+                    debugInspection('Seen %s already' % tmlname)
+                    continue
+                seenNames[tmlname] = 1
                 if exists(tmlname):
                     result.append(tmlname)
                     debugInspection('Found ' + tmlname)
