@@ -98,13 +98,6 @@ name must be looked up in the unjellyableRegistry (and the class located, and
 the __implements__ list consulted) before any of the object's tokens are
 accepted.
 
-* document Unslicer interface: what attributes are set
-
-at the moment: .protocol, .openCount, .parent
-
-maybe use constructor instead of start()? Or would that make adaptation
-harder?
-
 * security TODOs:
 
 ** size constraints on the set-vocab sequence
@@ -456,3 +449,9 @@ receive-side should use it too (instead of f.raiseException)
 ** implement/test some streaming Slicers
 
 ** test producer Banana
+
+* profiling/optimization
+
+Several areas where I suspect performance issues but am unwilling to fix
+them before having proof that there is a problem:
+

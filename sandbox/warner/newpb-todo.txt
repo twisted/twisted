@@ -186,11 +186,9 @@ them. It also means thinking of SOAP/XML-RPC schemas and having a syntax
 that can represent everything at once.
 
 
-* make ISliceable and some adapters to match
+* use adapters to enable pass-by-reference or pass-by-value
 
-This can be used in lieu of subclassing from pb.Referenceable or pb.Copyable.
-
-Also, it should be possible to pass a reference with variable forms:
+It should be possible to pass a reference with variable forms:
 
  rr.callRemote("foo", 1, Reference(obj))
  rr.callRemote("bar", 2, Copy(obj))

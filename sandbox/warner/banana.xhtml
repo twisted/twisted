@@ -618,6 +618,47 @@ another exception (which causes the connection to be abandoned).</p>
 
 <h3>Unslicer Lifecycle</h3>
 
+<p>Each Unslicer has access to the following attributes:</p>
+
+<ul>
+  <li><code>.parent</code>: This is set by the ReceiveBanana before
+  <code>.start</code> is invoked, and provides a reference to the Unslicer
+  responsible for the containing object. You can follow <code>.parent</code>
+  all the way up the object graph to the single <code>RootUnslicer</code>
+  object for this connection. It is appropriate to invoke
+  <code>openerCheckToken</code> and <code>open</code> on your parent.</li>
+
+  <li><code>.protocol</code>: This is set by the ReceiveBanana before
+  <code>.start</code> is invoked, and provides access to the Banana object
+  which maintains the connection on which this object is being received. It
+  is appropriate to examine the <code>.debugReceive</code> attribute on the
+  protocol. It is also appropriate to invoke <code>.setObject</code> on it
+  to register references for shared containers (like lists).</li>
+
+  <li><code>openCount</code>: This is set by the ReceiveBanana before
+  <code>.start</code> is invoked, and contains the optional OPEN-count for
+  this object, an implicit sequence number incremented for each OPEN token
+  seen on the wire. During protocol development and testing the OPEN tokens
+  may include an explicit OPEN-count value, but usually it is left out of
+  the packet. If present, it is used by Banana.handleClose to assert that
+  the CLOSE token is associated with the right OPEN token. Unslicers will
+  not normally have a use for it.</li>
+
+  <li><code>.count</code>: This is provided as the <q>count</q> argument to
+  <code>.start</code>, and contains the <q>object counter</q> for this
+  object. This is incremented for each new object which is created by the
+  receive Banana code. This is similar to (but not always the same as) the
+  OPEN-count. Containers should call <code>self.protocol.setObject</code> to
+  register a Deferred during <code>start</code>, then call it again in
+  <code>receiveClose</code> with the real (finished) object. It is sometimes
+  also included in a debug message.</li>
+
+  <li><code>.broker</code>: PB objects are given .broker, which is exactly
+  equal to the .protocol attribute. The synonym exists because it makes
+  several PB routines easier to read.</li>
+
+</ul>
+
 <p>Each Unslicer handles a single <q>OPEN sequence</q>, which starts with an
 OPEN token and ends with a CLOSE token.</p>
 
@@ -650,6 +691,13 @@ This method can do one of the following things:</p>
 whatever internal state is necessary to record the incoming content tokens.
 Each created object will have a separate Unslicer instance. The start method
 can run normally, or raise a Violation exception.</p>
+
+<p><code>.start</code> is distinct from the Unslicer's constructor function
+to minimize the parameter-passing requirements for doOpen() and friends. It
+is also conceivable that keeping arguments out of <code>__init__</code>
+would make it easier to use adapters in this context, although it is not
+clear why that might be useful on the Unslicing side. TODO: consider merging
+<code>.start</code> into the constructor.</p>
 
 <p>This Unslicer is responsible for all incoming tokens until either 1: it
 pushes a new one on the stack, or 2: it receives a CLOSE token.</p>
