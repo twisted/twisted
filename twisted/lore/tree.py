@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import re, os, cStringIO, stat, time, cgi
+import re, os, cStringIO, stat, time, cgi, glob
 from twisted import copyright
 from twisted.python import usage, htmlizer
 from twisted.web import microdom, domhelpers
@@ -24,31 +24,25 @@ class Cache:
         self.stuff = {}
         self.basePath = basePath
         self.baseURL = baseURL
-        os.path.walk(basePath, self.addFiles, None)
+        for file in glob.glob(os.path.join(basePath, "*.html")):
+            file = os.path.basename(file)
+            module = file[:-len('.html')].split('.')
+            for i in range(len(module)-1):
+                self.stuff['.'.join(module[i:])] = self.baseURL+file
 
-    def addFiles(self, arg, path, files):
-        path = path.replace(self.basePath, '')
-        for file in files:
-            file = os.path.join(path, file)
-            module = (file.replace('.py.html', '')
-                      .replace('/', '.'))
-
-            self.stuff[module] = self.baseURL + file
 
     def match(self, name):
         """
         I take a fully-qualified *or* relative module or class-name, and return
         an URL to the Twisted API documentation for that name.
         """
-        # Evil is fun.
-        if not '.' in name:
-            raise ValueError("Gimme more than just *%s* to work with, "
-                             "will ya?!?" % name)
-        name = '.*' + name.replace('.', '\.') + "\.html$"
-        pat = re.compile(name)
-        for k,v in self.stuff.items():
-            if pat.match(k):
-                return v
+        ret = self.stuff.get(name)
+        if ret:
+            return ret
+        parts = name.split('.')
+        if len(parts)>1:
+            return self.stuff.get('.'.join(parts[:-1]))
+
 
 def fontifyFiles(infile, outfile):
     htmlizer.filter(infile, outfile)
@@ -57,10 +51,9 @@ def fontifyFiles(infile, outfile):
 def fixLinks(document, ext):
     for node in domhelpers.findElementsWithAttribute(document, 'href'):
         href = node.getAttribute("href")
-        if not (href.startswith("http://") or href.startswith("mailto:")):
+        if '/' not in href and href.endswith('.html'):
             fname = os.path.splitext(href)
-            if len(fname) == 2 and fname[1] == '.html':
-                node.setAttribute("href", fname[0] + ext)
+            node.setAttribute("href", fname[0] + ext)
 
 
 def addMtime(document, fullpath):
