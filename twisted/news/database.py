@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 from twisted.protocols.nntp import NNTPError
 from twisted.internet import defer
 from twisted.enterprise import adbapi
@@ -30,6 +32,12 @@ OVERVIEW_FMT = [
 
 def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
     return string.join(map(lambda x: hex(ord(x))[2:], md5.digest()), '')
+
+try:
+    # Does this version of Python have staticmethod?
+    staticmethod
+except:
+    staticmethod = lambda f: lambda s, *args, **kwargs: f(*args, **kwargs)
 
 class Article:
     def __init__(self, head, body):
