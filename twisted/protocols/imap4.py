@@ -79,6 +79,8 @@ class IllegalOperation(IMAP4Exception): pass
 class IllegalMailboxEncoding(IMAP4Exception): pass
 
 class IMailboxListener(components.Interface):
+    """Interface for objects interested in mailbox events"""
+    
     def modeChanged(self, writeable):
         """Indicates that the write status of a mailbox has changed.
         
@@ -830,6 +832,11 @@ class NoSupportedAuthentication(IMAP4Exception):
 class IllegalServerResponse(IMAP4Exception): pass
 
 class IMAP4Client(basic.LineReceiver):
+    """IMAP4 client protocol implementation
+    
+    @ivar state: A string representing the state the connection is currently
+    in.
+    """
     __implements__ = (IMailboxListener,)
 
     tags = None
