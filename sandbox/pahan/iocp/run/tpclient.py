@@ -1,18 +1,15 @@
 """Throughput test."""
 
 import time, sys
-#import proactor
-#proactor.install()
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
 from twisted.python import log
 
-#TIMES = 10000
 TIMES = 10000
-S = "0123456789" * 1240
+S = "0123456789" * 1
 
-toReceive = len(S) * TIMES
+toSend = len(S) * TIMES
 
-log.startLogging(sys.stdout, setStdout = False)
+log.startLogging(sys.stdout)
 
 class Sender(protocol.Protocol):
 
@@ -47,20 +44,26 @@ def start():
 
 def shutdown(success):
     if not success:
-        raise SystemExit, "failure or something"
-    passed = time.time() - started
-    print "Throughput (send): %s kbytes/sec" % ((toReceive / passed) / 1024)
-#    reactor.stop()
+        print "didn't succeed"
+    else:
+        passed = time.time() - started
+        print "Throughput (send): %s kbytes/sec" % ((toSend / passed) / 1024)
+    from twisted.internet import reactor
+    reactor.stop()
 
 
 def main():
+    if sys.argv[3] == "1":
+        from twisted.internet import iocpreactor
+        iocpreactor.install()
     f = protocol.ClientFactory()
     f.protocol = Sender
-    for i in range(10):
+    from twisted.internet import reactor
+    for i in range(1):
         reactor.connectTCP(sys.argv[1], int(sys.argv[2]), f)
     reactor.run()
 
 
 if __name__ == '__main__':
-    #log.startLogging(sys.stdout)
     main()
+

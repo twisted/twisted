@@ -5,7 +5,7 @@ from twisted.internet import reactor
 from twisted.python import log
 import sys
 
-log.startLogging(sys.stdout, setStdout = 0)
+log.startLogging(sys.stdout)
 
 root = static.File(".")
 site = server.Site(root)

@@ -16,7 +16,10 @@ while 1:
     c.settimeout(30)
 #    signal.alarm(5)
     while 1:
-        d = c.recv(16384)
-        if not d:
+        try:
+            d = c.recv(16384)
+            if not d:
+                break
+        except socket.error, se:
             break
     c.close()
