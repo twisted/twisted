@@ -1,0 +1,222 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>The Banana Protocol</title>
+<style src="stylesheet-unprocessed.css"></style>
+</head>
+
+<body>
+<h1>The Banana Protocol</h1>
+
+<em>NOTE! This is all preliminary and is more an exercise in semiconscious
+protocol design than anything else. Do not believe this document. This
+sentence is lying. So there.</em>
+
+<h2>Banana tokens</h2>
+
+<p>At the lowest layer, the wire transport takes the form of Tokens. These
+all take the shape of header/type-byte/body, where the type byte has its
+high bit set, to distinguish it from the header bytes that precede it. Some
+tokens have bodies, some do not, and the length of all bodies are determined
+by data in the header. The bodies are composed of arbitrary bytes. For most
+tokens, the header is a base-128 number, but for some it may be a UTF-7
+encoded string. (?? maybe just strict ASCII. the high bit of all bytes in
+the header must be zero).</p>
+
+<p>The possible Token types are:</p>
+
+<ul>
+  <li>
+  <code>0x80: LIST (old): [len-LIST]</code>
+
+  <p>This token marks the beginning of a list with LEN elements. It acts as
+  the <q>open parenthesis</q>, and the matching <q>close parenthesis</q> is
+  implicit, based upon the length of the list. It will be followed by LEN
+  things, which may be tokens like INTs or STRINGS, or which may be
+  sublists. Banana keeps a list stack to handle nested sublists.</p>
+
+  <p>This token (and the notion of length-prefixed lists in general) is from
+  oldbanana. In newbanana it is only used during the initial dialect
+  negotiation (so that oldbanana peers can be detected). Newbanana requires
+  that LIST(old) tokens be followed exclusively by strings and have a rather
+  limited allowable length (say, 640 dialects long).</p>
+  </li>
+
+  <li>
+  <code>0x81: INT: [value-INT]</code>
+
+  <p>This token defines a single positive short integer. The range is
+  defined as <q>whatever fits in a Python IntType</q>, as opposed to a
+  LongType.</p>
+  </li>
+
+  <li>
+  <code>0x82: STRING [len-STRING-chars]</code>
+
+  <p>This token defines a string. To be precise, it defines a sequence of
+  bytes. The length is a base-128-encoded integer. The type byte is followed
+  by LEN bytes of data which make up the string. LEN is required to be
+  shorter than 640k: this is intended to reduce the amount of memory that
+  can be consumed on the receiving end before user code gets to decide
+  whether to accept the data or not.</p>
+  </li>
+
+  <li>
+  <code>0x83: NEG: [value-NEG]</code>
+
+  <p>This token defines a negative short integer.</p>
+  </li>
+
+  <li>
+  <code>0x84: FLOAT [FLOAT-value]</code>
+
+  <p>This token defines a floating-point number. There is no header, and the
+  type byte is followed by 8 bytes which are a 64-bit IEEE <q>double</q>, as
+  defined by <code class="python">struct.pack("!d", num)</code>.</p>
+  </li>
+
+  <li>
+  <code>0x85: LONGINT: [value-LONGINT]</code>
+  <code>0x86: LONGNEG: [value-LONGNEG]</code>
+
+  <p>These define positive/negative long integers, defined as Python's
+  <q>long integer</q> types.</p>
+  </li>
+
+  <li>
+  <code>0x87: VOCAB: [index-VOCAB]</code>
+  
+  <p>This defines a tokenized string. Banana keeps a mapping of common
+  strings, each one is assigned a small integer. These strings can be sent
+  compressed as a two-byte (index, VOCAB) sequence. They are delivered to
+  Jelly as plain strings with no indication that they were compressed for
+  transit.</p>
+
+  <p>The strings in this mapping are fixed and defined in banana.py, but the
+  intention is for dialect negotiation to allow other strings to be added to
+  the table.</p>
+  </li>
+
+  <li>
+  <code>??: OPEN: [[num]-OPEN]</code>
+  <code>??: CLOSE: [[num]-CLOSE]</code>
+
+  <p>These tokens are the newbanana parenthesis markers. They carry an
+  optional number in their header: if present, the number counts the
+  appearance of OPEN tokens in the stream, starting at 0 for the first OPEN
+  used for a given connection and incrementing by 1 for each subsequent
+  OPEN. The matching CLOSE token must contain an identical number. These
+  numbers are solely for debugging and may be omitted. They may be removed
+  from the protocol once development has been completed.</p>
+
+  <p>In contrast to oldbanana (with the LIST token), newbanana does not use
+  length-prefixed lists. Instead it relies upon the Banana layer to track
+  OPEN/CLOSE tokens.</p>
+
+  <p>The token which follows an OPEN marker must be a string: either a
+  STRING token or a VOCAB token. This string indicates what kind of new
+  sub-expression is being started.</p>
+  </li>
+  
+</ul>
+
+<p>TODO: add token to re-set the list of abbreviated strings</p>
+
+<h2>Banana Slices</h2>
+
+<p>A <em>Banana Slicer</em> is responsible for serializing a single user
+object: it <q>slices</q> the object into a series of Banana tokens. On the
+receiving end, there is a corresponding <em>Banana Unslicer</em> which
+accepts the incoming tokens and re-creates the user object. There are
+different kinds of Slicers and Unslicers for lists, tuples, dictionaries,
+and instances. Classes can provide their own Slicers if they want more
+control over the serialization process.</p>
+
+<p>types and classes are classified into containers and non-containers. The
+containers are further divided into mutable and non-mutable. Some examples
+of non-mutable containers are tuples and bound methods. Lists and dicts are
+mutable containers. Ints and strings are non-containers.</p>
+
+<h2>The Banana Stack</h2>
+
+<p>The serialization context is stored in a <q>???</q> object (name still to
+be decided). This holds a stack of Banana Slicers, one per object currently
+being serialized. E.g.: suppose a class instance is being serialized, and
+this class chose to use a dictionary to hold its instance state. That
+dictionary holds a list of numbers in one of its values. The Banana Stack
+would hold the root slice, an InstanceSlicer, a DictSlicer, and finally a
+ListSlicer.</p>
+
+<p>(it might be possible to move the functionality of the ??? object into
+the <q>root slice</q>). </p>
+
+<p>Upon unserialization, the <q>Unbanana</q> object holds this context. A
+stack of <q>Unslicer</q> objects handle incoming tokens. The <q>Unbanana</q>
+is responsible for tracking OPEN and CLOSE tokens, making sure a failure in
+an Unslicer doesn't cause a loss of synchronization. Unslicer methods may
+raise exceptions: these are caught by the Unbanana and cause the object
+currently being unserialized to fail: its parent gets a UnbananaFailure
+instead of the dict or list or instance that it would normally have
+received.</p>
+
+<h2>Bananaing</h2>
+
+<p>Serialization starts</p>
+
+Any given object has a Jellier object that knows how to turn it into a
+sequence of Banana tokens. Jelly provides for the standard built-in types
+(list, dict, tuple, etc). Class instances have a set of methods (from the
+IJellyable interface) which are used to serialize them.
+
+Banana keeps strict track of the nesting level.
+
+Banana is asked to serialize an object. It creates a Jellier based upon the
+type of that object. The Jellier does banana.sendOpen, banana.sendToken
+
+<h2>Unbananaing</h2>
+
+<p>The Unbanana object has an UnslicerParent at the base of it's banana
+stack. As tokens arrive, they are broken into several types:</p>
+
+<ul>
+  <li> <q>OPEN</q>: this token includes a string to specify what kind of
+  node is being created. The string is passed to the <q>doOpen</q> method on
+  the stack, and each slice is asked in turn what new Unslicer object should
+  be created to handle the new node. The first one to return non-None
+  wins.</li>
+
+  <li> <q>STRING</q>, <q>NUMBER</q>: these are sent to the
+  <q>receiveToken</q> method of the top-most slice.</li>
+
+  <li> <q>ABORT</q>: this indicates that something went wrong on the sending
+  side and that the current object is to be aborted. It causes the receiver
+  to ignore all tokens until the CLOSE token which closes the current node.
+  This is implemented by replacing the top-most slice with a
+  DiscardUnslicer.</li>
+
+  <li> <q>CLOSE</q>: this finishes the current node. The slice will pass its
+  completed object up to the <q>childFinished</q> method of its parent.
+  </li>
+
+</ul>
+
+
+
+<h2>Unjellying: the Banana Leaf Stack</h2>
+
+Unserialization in newbanana is done with something that could be described
+as <q>streaming s-expressions</q>. The tokens on the wire describe a
+depth-first traversal of a tree structure. When describing a node with
+children, some number of tokens are sent for the node itself, followed by
+tokens for each of its children. Those children may involve a sublist.
+
+Each time a OPEN token (and the associated type string) is received, a new
+leaf is added to the stack. Each object in the stack has a chance to
+influence the type of the object that will be added to the stack.
+
+multiple stacks:
+ recipient of tokens
+ decider of new objects on the token-recipient stack
+ taster objects
+
+
+</body> </html>
