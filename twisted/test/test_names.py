@@ -38,7 +38,7 @@ except:
 # IPv6 support is spotty at best!
 try:
     socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-except socket.error:
+except:
     IPV6 = False
 else:
     IPv6 = True
@@ -343,3 +343,13 @@ class ServerDNSTestCase(unittest.TestCase):
             self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
             reduce(operator.add, test_domain_com.records.values())
         )
+
+class HelperTestCase(unittest.TestCase):
+    def testSerialGenerator(self):
+        f = self.mktemp()
+        a = authority.getSerial(f)
+        for i in range(20):
+            print a
+            b = authority.getSerial(f)
+            self.failUnless(a < b)
+            a = b

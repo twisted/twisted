@@ -25,6 +25,28 @@ from twisted.python import failure
 
 import common
 
+def getSerial(filename = '/tmp/twisted-names.serial'):
+    # Never forget to bump the serial again
+    import time, os
+    serial = time.strftime('%Y%m%d')
+
+    os.umask(0177)
+    if not os.path.exists(filename):
+        f = file(filename, 'w')
+        f.write(serial + ' 0')
+        f.close()
+
+    serialFile = file(filename, 'r')
+    lastSerial, ID = serialFile.readline().split()
+    ID = (lastSerial == serial) and (int(ID) + 1) or 0
+    serialFile.close()
+    serialFile = file(filename, 'w')
+    serialFile.write('%s %d' % (serial, ID))
+    serialFile.close()
+    serial = serial + ('%02d' % (ID,))
+    return serial
+
+
 #class LookupCacherMixin(object):
 #    _cache = None
 #
