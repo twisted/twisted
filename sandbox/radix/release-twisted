@@ -482,8 +482,8 @@ class MakeDebs(Transaction):
     def doIt(self, opts):
         #rel = os.path.abspath('.')
         ver = opts['full-version']
-        tgz = 'Twisted-%s.tar.gz' % (ver,)
-        unique = '%s.%s' % (time.time(), os.getpid())
+        tgz = os.path.abspath('Twisted-%s.tar.gz' % (ver,))
+        unique = 't-r-%s.%s' % (time.time(), os.getpid())
         debdir = 'debian-%s' % ver
         lastdeb = opts['lastdeb']
 
