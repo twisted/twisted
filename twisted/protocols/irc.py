@@ -207,8 +207,26 @@ class IRCClient(basic.LineReceiver):
 
     dcc_destdir = '.'
     dcc_sessions = None
+    
+    # Delay between sending lines
+    lineRate = 1
 
     __pychecker__ = 'unusednames=params,prefix,channel'
+
+    def __init__(self):
+        self.queue = []
+        reactor.callLater(self.lineRate, self._sendLine)
+
+    # Don't flood!
+    def sendLine(self, line):
+        self.queue.append(line)
+
+    
+    def _sendLine(self):
+        if len(self.queue):
+            basic.LineReceiver.sendLine(self, self.queue.pop(0))
+        reactor.callLater(self.lineRate, self._sendLine)
+
 
     ### Interface level client->user output methods
     ###
@@ -299,12 +317,7 @@ class IRCClient(basic.LineReceiver):
             self.sendLine(fmt % (message,))
         else:
             lines = split(message, length - len(fmt) - 2)
-            self.reducingMsg(fmt, lines)
-
-    def reducingMsg(self, fmt, lines):
-        self.sendLine(fmt % lines[0])
-        if len(lines) > 1:
-            reactor.callLater(2, self.reducingMsg, fmt, lines[1:])
+            map(lambda line: self.sendLine(fmt % line), lines)
 
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
