@@ -1,5 +1,9 @@
 2004-09-30  Brian Warner  <warner@lothar.com>
 
+	* glib2reactor.py: new reactor that uses just glib2, not gtk2.
+	This one doesn't require a DISPLAY, and cannot be used for GUI
+	apps.
+
 	* gtk2reactor.py: import gobject *after* pygtk.require, to make
 	sure we get the same versions of both
 

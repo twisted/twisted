@@ -154,6 +154,12 @@ win32eventreactor.install()
     (<code>gtk2reactor</code>). Sample applications using GTK+ and
     Twisted are available in the Twisted CVS.</p>
 
+    <p>GTK-2.0 split the event loop out of the GUI toolkit, into a separate
+    module called <q>glib</q>. To run an application using the glib event
+    loop, use the <code>glib2reactor</code>. This will be slightly faster
+    than <code>gtk2reactor</code> (and does not require a working X display),
+    but cannot be used to run GUI applications.</p>
+
 <pre class="python">
 from twisted.internet import gtkreactor # for gtk-1.2
 gtkreactor.install()
@@ -162,6 +168,11 @@ gtkreactor.install()
 <pre class="python">
 from twisted.internet import gtk2reactor # for gtk-2.0
 gtk2reactor.install()
+</pre>
+
+<pre class="python">
+from twisted.internet import glib2reactor # for non-GUI apps
+glib2reactor.install()
 </pre>
 
     <h3>Cocoa</h3><a name="cfreactor" />
