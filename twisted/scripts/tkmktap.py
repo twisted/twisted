@@ -78,6 +78,14 @@ class TkMkAppFrame(Tkinter.Frame):
         f.pack(side=Tkinter.TOP, anchor=Tkinter.E)
 
         f = Tkinter.Frame(appFrame)
+        nameLabel = Tkinter.Label(f, text='Application Process Name')
+        self.appname = Tkinter.Entry(f, background='white')
+
+        nameLabel.pack(side=Tkinter.LEFT)
+        self.appname.pack(side=Tkinter.LEFT)
+        f.pack(side=Tkinter.TOP, anchor=Tkinter.E)
+
+        f = Tkinter.Frame(appFrame)
         encLabel = Tkinter.Label(f, text='Passphrase')
         self.passphrase = Tkinter.Entry(f, background='white')
 
@@ -164,6 +172,7 @@ class TkMkAppFrame(Tkinter.Frame):
         extra = self.optFrame.updateConfig(self.options)
     
         self.options['filename'] = self.tapfile.get()
+        self.options['appname'] = self.appname.get()
         self.options['passphrase'] = self.passphrase.get()
 
         self.options['append'] = self.append.get()

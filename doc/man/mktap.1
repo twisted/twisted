@@ -3,7 +3,7 @@
 mktap \- create twisted.servers
 .SH SYNOPSIS
 .B mktap
-\fIapptype\fR [\fIapplication_option\fR]...
+[\fIoptions\fR] \fIapptype\fR [\fIapplication_option\fR]...
 .PP
 .B mktap
 --help \fIapptype\fR
@@ -20,6 +20,11 @@ Application belongs to this gid, and should run with its permissions.
 \fB\--append\fR, \fB\-a\fR \fI<file>\fR
 Append given servers to given file, instead of creating a new one.
 File should be be a tap file.
+.TP
+\fB\--appname\fR, \fB\-n\fR \fI<name>\fR
+Use the specified name as the process name when the application is run with
+\fItwistd(1)\fR.  This option also causes some initialization code to be
+duplicated when \fItwistd(1)\fR is run.
 .TP 
 \fB\--xml\fR, \fB\-x\fR
 Output as a .tax XML file rather than a pickle.

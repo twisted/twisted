@@ -23,6 +23,10 @@ Sending a SIGINT signal to the process will drop it into the debugger.
 \fB\-o\fR, \fB\--no_save\fR 
 Do not save shutdown state
 .TP
+\fB\--originalname\fR
+Behave as though the specified Application has no process name set, and run
+with the standard process name (the python binary in most cases).
+.TP
 \fB\-l\fR, \fB\--logfile\fR \fI<logfile>\fR
 Log to a specified file, - for stdout (default twistd.log).
 The log file will be rotated on SIGUSR1.
