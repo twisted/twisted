@@ -1,12 +1,22 @@
 from socket import * # har har har
 from eunuchs.recvmsg import recvmsg
 from struct import unpack
-from os import fdopen
+from os import fdopen, read, close
 from time import sleep
 
 s = socket(AF_UNIX, SOCK_STREAM)
 s.connect("fd_control")
+foo = read(s.fileno(), 1)
+print "got foo", foo
 (message, addr, crap, ancillary) = recvmsg(s.fileno())
+print message, ancillary
+try:
+    close(4)
+    close(5)
+    print "descriptors WERE passed"
+except:
+    print "descriptors weren't passed"
+"""
 fds = []
 tfds = ancillary[0][2]
 #while 1:
@@ -23,4 +33,5 @@ tf1.seek(0)
 tf2.seek(0)
 print "Message #1:", tf1.read()
 print "Message #2:", tf2.read()
+"""
 
