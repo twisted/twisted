@@ -194,6 +194,7 @@ class TkMkAppFrame(Tkinter.Frame):
                 self.options.parseArgs(extra.split())
             except TypeError:
                 raise usage.UsageError("Wrong number of extra arguments")
+        self.options.postOptions()
 
 
     def createApplication(self):
@@ -233,15 +234,15 @@ class TkMkAppFrame(Tkinter.Frame):
             tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
         else:
             try:
-                service.addToApplication(
-                    s, self.coil.name, self.config['append'],
-                    self.config['appname'], self.config['type'],
-                    self.config['encrypted'], self.config['uid'],
-                    self.config['gid'],
+                mktap.addToApplication(
+                    s, self.coil.name, self.options['append'],
+                    self.options['appname'], self.options['type'],
+                    self.options['encrypted'], self.options['uid'],
+                    self.options['gid'],
                 )
             except:
                 f = StringIO.StringIO()
-                traceback.print_stack(file=f)
+                traceback.print_exc(file=f)
                 print f.getvalue()
                 tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
             else:
