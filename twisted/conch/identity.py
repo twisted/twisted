@@ -38,11 +38,21 @@ try:
     import shadow
 except:
     shadow = None
+    md5_crypt = None
 
 from twisted.cred import identity
 from twisted.internet import defer
 
 import error
+
+def verifyCryptedPassword(crypted, pw):
+    if crypted[0] == '$': # md5_crypted
+        if not md5_crypt: return 0
+        salt = crypted.split('$')[2]
+        return md5_crypt.md5_crypt(pw, salt) == crypted
+    if not pwd:
+        return 0
+    return crypt.crypt(pw, crypted[:2]) == crypted 
 
 class ConchIdentity(identity.Identity):
 
@@ -107,8 +117,7 @@ class OpenSSHConchIdentity(ConchIdentity):
                 return defer.fail(error.ConchError('no such user'))
             else:
                 if cryptedPass not in ['*', 'x']:
-                    ourCryptedPass = crypt.crypt(password, cryptedPass[:2])
-                    if ourCryptedPass == cryptedPass:
+                    if verifyCryptedPassword(cryptedPass, password):
                         return defer.succeed('')
                     return defer.fail(error.ConchError('bad password'))
 
@@ -117,8 +126,7 @@ class OpenSSHConchIdentity(ConchIdentity):
                 shadowPass = shadow.getspnam(self.name)[1]
             except KeyError:
                 return defer.fail(error.ConchError('no such user'))
-            salt = shadowPass.split('$')[2]
-            if shadowPass == md5_crypt.md5_crypt(password, salt):
+            if verifyCryptedPassword(shadowPass, password):
                 return defer.succeed('')
             return defer.fail(error.ConchError('bad password'))
 
