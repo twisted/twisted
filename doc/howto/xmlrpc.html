@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Creating XML-RPC Servers with Twisted</title>
+    <meta http-equiv="content-type"
+    content="text/html; charset=ISO-8859-1" />
+  </head>
+
+  <body text="#000000" bgcolor="#ffffff">
+<h1>Creating XML-RPC Servers with Twisted</h1>
+
+<h2>Introduction</h2>
+
+<p><a href="http://www.xmlrpc.com">XML-RPC</a> is a simple request/reply protocol that runs over HTTP. It is simple,
+easy to implement and supported by most computer languages. Twisted's XML-RPC
+support uses the xmlrpclib library for parsing - it's included with Python 2.2,
+but can be downloaded for Python 2.1 from <a href="http://www.pythonware.com/products/xmlrpc/">Pythonware</a>.</p>
+
+<h2>Creating a XML-RPC server</h2>
+
+<p>Making a server is very easy - all you need to do is inherit from <code class="API">twisted.web.xmlrpc.XMLRPC</code>.
+You then create methods beginning with <code>xmlrpc_</code>. The methods'
+arguments determine what arguments it will accept from XML-RPC clients.
+The result is what will be returned to the clients.</p>
+
+<p>Methods published via XML-RPC can return all the basic XML-RPC types,
+e.g. strings, lists and so on. They can also return Failure instances to indicate
+an error has occured, or <code base="twisted.web.xmlrpc" class="API">Binary</code>, 
+<code base="twisted.web.xmlrpc" class="API">Boolean</code> or 
+<code base="twisted.web.xmlrpc" class="API">DateTime</code> instances (all of these
+are the same as the respective classes in xmlrpclib. In addition, XML-RPC
+published methods can return <code base="twisted.python.defer" class="API">Deferred</code> 
+instances whose results are one of
+the above. This allows you to return results that can't be calculated immediately,
+such as database queries. See the <a href="defer.html">Deferred documentation</a> for more details.</p>
+
+<p><code base="twisted.web.xmlrpc" class="API">XMLRPC</code> instances are Resource objects, and they can thus be published using
+a Site. The following example has two methods published via XML-RPC, 
+<code>add(a, b)</code> and <code>echo(x)</code>. You can run it directly
+or with <code class="shell">twistd -y script.py</code></p>
+
+<pre class="python">
+from twisted.web import xmlrpc, server
+
+class Example(xmlrpc.XMLRPC):
+    """An example object to be published."""
+    
+    def xmlrpc_echo(self, x):
+        """Return all passed args."""
+        return x
+    
+    def xmlrpc_add(self, a, b):
+        """Return sum of arguments."""
+        return a + b
+
+
+def main():
+    from twisted.internet.app import Application
+    app = Application("xmlrpc")
+    r = Example()
+    app.listenTCP(7080, server.Site(r))
+    return app
+
+application = main()
+
+if __name__ == '__main__':
+    application.run(save=0)
+</pre>
+
+<p>After we run this command, we can connect with a client and send commands
+to the server:</p>
+
+<pre class="python-interpreter">
+&gt;&gt;&gt; import xmlrpclib
+&gt;&gt;&gt; s = xmlrpclib.Server('http://localhost:7080/')
+&gt;&gt;&gt; s.echo("lala")
+'lala'
+&gt;&gt;&gt; s.add(1, 2)
+3
+</pre>
+  </body>
+</html>
+
