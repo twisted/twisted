@@ -729,6 +729,7 @@ class RenderSession:
                 return
 
 
+## XXX: is this needed?
 class WidgetResource(resource.Resource):
     def __init__(self, widget):
         self.widget = widget
@@ -751,7 +752,10 @@ class Page(resource.Resource, Presentation):
 
 
 class WidgetPage(Page):
-
+    """
+    I am a Page that takes a Widget in its constructor, and displays that
+    Widget wrapped up in a simple HTML template.
+    """
     stylesheet = '''
     A
     {
@@ -813,6 +817,10 @@ class WidgetPage(Page):
         return NOT_DONE_YET
 
 class Gadget(resource.Resource):
+    """I am a collection of Widgets, to be rendered through a Page Factory.
+    self.pageFactory should be a Resource that takes a Widget in its
+    constructor. The default is twisted.web.widgets.WidgetPage.
+    """
     page = WidgetPage
 
     isLeaf = 0
@@ -822,10 +830,10 @@ class Gadget(resource.Resource):
         self.widgets = {}
         self.files = []
         self.modules = []
+        self.paths = {}
 
     def render(self, request):
-        """Redirect to view this entity as a collection.
-        """
+        #Redirect to view this entity as a collection.
         request.setResponseCode(http.MOVED_PERMANENTLY)
         request.setHeader("location","http://%s%s/" % (
             request.getHeader("host"),
@@ -833,18 +841,45 @@ class Gadget(resource.Resource):
         return "NO DICE!"
 
     def putWidget(self, path, widget):
+        """
+        Gadget.putWidget(path, widget)
+        Add a Widget to this Gadget. It will be rendered through the
+        pageFactory associated with this Gadget, whenever 'path' is requested.
+        """
         self.widgets[path] = widget
 
+    #this is an obsolete function
     def addFile(self, path):
-        self.files.append(path)
+        """
+        Gadget.addFile(path)
+        Add a static path to this Gadget. This method is obsolete, use
+        Gadget.putPath instead.
+        """
+        
+        print "Gadget.addFile() is deprecated."
+        self.paths[path] = path
+
+    def putPath(self, path, pathname):
+        """
+        Gadget.putPath(path, pathname)
+        Add a static path to this Gadget. Whenever 'path' is requested,
+        twisted.web.static.File(pathname) is sent.
+        """
+        self.paths[path] = pathname
 
     def getWidget(self, path, request):
         return self.widgets.get(path)
 
-    def pageFactory(self, *obj):
-        #This is a nasty backwards-compatibility hack.
+    def pageFactory(self, *args, **kwargs):
+        """
+        Gadget.pageFactory(*args, **kwargs) -> Resource
+        By default, this method returns self.page(*args, **kwargs). It
+        is only for backwards-compatibility -- you should set the 'pageFactory'
+        attribute on your Gadget inside of its __init__ method.
+        """
         if hasattr(self, "page"):
-            return apply(self.page, obj, {})
+            print "Gadget.page is deprecated, use Gadget.pageFactory instead"
+            return apply(self.page, args, kwargs)
 
     def getChild(self, path, request):
         if path == '':
@@ -859,11 +894,12 @@ class Gadget(resource.Resource):
                 p = self.pageFactory(widget)
                 p.isLeaf = getattr(widget,'isLeaf',0)
                 return p
-        elif path in self.files:
+        elif self.paths.has_key(path):
             prefix = getattr(sys.modules[self.__module__], '__file__', '')
             if prefix:
                 prefix = os.path.abspath(os.path.dirname(prefix))
-            return static.File(os.path.join(prefix, path))
+            return static.File(os.path.join(prefix, self.paths[path]))
+        
         elif path == '__reload__':
             return self.pageFactory(Reloader(map(reflect.namedModule, [self.__module__] + self.modules)))
         else:
