@@ -1036,7 +1036,7 @@ class NewCredTestCase(unittest.TestCase):
     def testBadLogin(self):
         factory = pb.PBClientFactory()
         for username, password in [("nosuchuser", "pass"), ("user", "wrongpass")]:
-            d = factory.login(credentials.UsernamePassword("user1", "pass"), "BRAINS!")
+            d = factory.login(credentials.UsernamePassword(username, password), "BRAINS!")
             c = reactor.connectTCP("127.0.0.1", self.portno, factory)
             p = unittest.deferredError(d)
             self.failUnless(p.check("twisted.cred.error.UnauthorizedLogin"))
