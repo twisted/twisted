@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-import weakref
+import weakref, types
 
 from twisted.python import components, failure
 from twisted.internet import defer
@@ -10,31 +10,73 @@ from tokens import BananaError, Violation
 from slicer import UnbananaFailure
 
 class PendingRequest(object):
-    def __init__(self, constraint=None):
+    def __init__(self):
         self.deferred = defer.Deferred()
-        self.constraint = constraint # this constrains the results
+        self.constraint = None # this constrains the results
+    def setConstraint(self, constraint):
+        self.constraint = constraint
 
 class RemoteReference(object):
-    def __init__(self, broker, refID, interfaces=None):
+    def __init__(self, broker, refID, interfaces=None, schema=None):
         self.broker = broker
         self.refID = refID
         self.interfaces = interfaces
+        self.schema = schema
 
     def __del__(self):
         self.broker.freeRemoteReference(self.refID)
 
-    def callRemote(self, _name, *args, **kwargs):
-        reqID = self.broker.newRequestID()
+    def callRemote(self, _name, _resultConstraint=None, *args, **kwargs):
+        # for consistency, *all* failures are reported asynchronously.
+        try:
+            # newRequestID() could fail with a StaleBrokerError
+            reqID = self.broker.newRequestID()
+            req = PendingRequest()
+            self.broker.waitingForAnswers[reqID] = req
 
-        # TODO: check args against arg constraint
-        assert not args # TODO: turn positional arguments into kwargs
+            methodSchema = None
+            if self.schema:
+                # getMethodSchema() could raise KeyError for bad methodnames
+                methodSchema = self.schema.getMethodSchema(_name)
 
-        resultConstraint = None # TODO: get return value constraint
-        req = PendingRequest(resultConstraint)
-        self.broker.waitingForAnswers[reqID] = req
+            if methodSchema:
+                # turn positional arguments into kwargs
 
-        child = CallSlicer(self.broker)
-        self.broker.slice2(child, (reqID, self.refID, _name, kwargs))
+                # mapArguments() could fail for bad argument names or
+                # missing required parameters
+                argsdict = methodSchema.mapArguments(args, kwargs)
+                c = methodSchema.getArgsConstraint()
+                if c:
+                    # check args against arg constraint. This could fail if
+                    # any arguments are of the wrong type
+                    c.checkArgs(kwargs)
+                # get return value constraint
+                req.setConstraint(methodSchema.getResponseConstraint())
+            else:
+                assert not args
+                argsdict = kwargs
+
+            if _resultConstraint:
+                req.setConstraint(_resultConstraint) # overrides schema
+
+            child = CallSlicer(self.broker)
+            # this could fail if any of the arguments (or their children)
+            # are unsliceable
+            self.broker.slice2(child, (reqID, self.refID, _name, argsdict))
+        except:
+            req.deferred.errback(Failure())
+
+        # the remote end could send back an error response for many reasons:
+        #  bad method name
+        #  bad argument types (violated their schema)
+        #  exception during method execution
+        #  method result violated the results schema
+        # something else could occur to cause an errback:
+        #  connection lost before response completely received
+        #  exception during deserialization of the response
+        #   [but only if it occurs after the reqID is received]
+        #  method result violated our results schema
+        # if none of those occurred, the callback will be run
 
         return req.deferred
 
@@ -404,8 +446,19 @@ class CallSlicer(BaseSlicer):
             self.send(argname)
             self.send(args[argname])
 
+PBSlicerRegistry = {}
+PBSlicerRegistry.update(slicer.BaseSlicerRegistry)
+del PBSlicerRegistry[types.InstanceType]
+
 class PBRootSlicer(slicer.RootSlicer):
-    pass
+    SlicerRegistry = PBSlicerRegistry
+
+    def slicerFactoryForObject(self, obj):
+        if isinstance(obj, Referenceable):
+            return ReferenceableSlicer
+        if isinstance(obj, Copyable):
+            return CopyableSlicer
+        return slicer.RootSlicer.slicerFactoryForObject(self, obj)
 
 
 class Broker(banana.Banana):

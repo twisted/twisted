@@ -282,6 +282,14 @@ class BooleanConstraint(Constraint):
         return 1+self._myint.maxDepth(seen)
 
 class InterfaceConstraint(Constraint):
+    """This constraint accepts any instance which implements the given
+    Interface. The object may be a RemoteCopy if the classname they provide
+    maps to a local class which implements the given interface, or it may be
+    a RemoteReference if they claim the backing object implements the
+    interface.
+    """
+    # TODO: do we need an string-to-Interface map just like we have a
+    # classname-to-class/factory map?
     taster = openTaster
     opentypes = ["instance"]
 
@@ -586,6 +594,51 @@ class MethodArgumentsConstraint(Constraint):
             raise UnboundedSchema
         # TODO: implement the rest of maxSize, just like a dictionary
         raise NotImplementedError
+
+class RemoteMethodSchema:
+    # under development
+    def __init__(self):
+        self.argumentNames = []
+        self.argsConstraint = None
+        self.responseConstraint = None
+        self.options = {} # return, wait, reliable, etc
+
+    def mapArguments(self, args, kwargs):
+        """Create a dictionary of arguments. All positional arguments must
+        be turned into keyword ones. All default arguments should be filled
+        in (?).
+        """
+        # python probably provides a utility function for this
+
+        # TODO: this does not really work. Fix it.
+
+        # TODO: this would also be a good place to implement the
+        # schema-driven Copyable vs Referenceable decisions
+        for i in range(len(args)):
+            name = self.argumentNames[i]
+            if kwargs.has_key(name):
+                raise TypeError(
+                    "got multiple values for keyword argument '%s'" % name)
+            kwargs[name] = args[i]
+        return kwargs
+
+    def getArgsConstraint(self):
+        # return a MethodArgumentsConstraint
+        return self.argsConstraint
+
+    def getResponseConstraint(self):
+        return self.responseConstraint
+
+class RemoteReferenceSchema:
+    # under development
+    def __init__(self):
+        self.methods = {} # values are RemoteMethodSchema instances
+    def getMethods(self):
+        return self.methods.keys()
+    def getMethodSchema(self, methodname):
+        return self.methods[methodname]
+    
+
 
 #TODO
 class Shared(Constraint):

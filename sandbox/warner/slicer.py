@@ -244,8 +244,33 @@ class ReferenceSlicer(BaseSlicer):
 
     def slice(self, obj):
         self.protocol.sendToken(self.refid)
+    
+BaseSlicerRegistry = {
+    types.UnicodeType: UnicodeSlicer,
+    types.ListType: ListSlicer,
+    types.TupleType: TupleSlicer,
+    types.DictType: OrderedDictSlicer, #DictSlicer
+    types.InstanceType: InstanceSlicer,
+    types.NoneType: NoneSlicer,
+    }
+
+try:
+    from types import BooleanType
+    BaseSlicerRegistry[BooleanType] = BooleanSlicer
+except ImportError:
+    pass
+
+BaseSlicerRegistry2 = {}
+BaseSlicerRegistry2.update(BaseSlicerRegistry)
+BaseSlicerRegistry2.update({
+    types.ModuleType: ModuleSlicer,
+    types.ClassType: ClassSlicer,
+    types.MethodType: MethodSlicer,
+    types.FunctionType: FunctionSlicer,
+    })
 
 class RootSlicer(BaseSlicer):
+    SlicerRegistry = BaseSlicerRegistry
     # this lives at the bottom of the Slicer stack, at least for our testing
     # purposes
 
@@ -261,15 +286,19 @@ class RootSlicer(BaseSlicer):
     def finish(self, obj):
         self.references = {}
 
+    def slicerFactoryForObject(self, obj):
+        slicerClass = self.SlicerRegistry.get(type(obj))
+        return slicerClass
+
     def newSlicer(self, obj):
         refid = self.protocol.getRefID(obj)
         if refid is not None:
             slicer = ReferenceSlicer(refid)
             return slicer
-        slicerClass = SlicerRegistry.get(type(obj))
-        if not slicerClass:
+        slicerFactory = self.slicerFactoryForObject(obj)
+        if not slicerFactory:
             raise KeyError, "I don't know how to slice %s" % type(obj)
-        slicer = slicerClass()
+        slicer = slicerFactory()
         return slicer
 
 
@@ -285,45 +314,14 @@ class RootSlicer(BaseSlicer):
         return refid
 
 class RootSlicer2(RootSlicer):
+    SlicerRegistry = BaseSlicerRegistry2
 
-    def newSlicer(self, obj):
-        refid = self.protocol.getRefID(obj)
-        if refid is not None:
-            slicer = ReferenceSlicer(refid)
-            return slicer
-        slicerClass = SlicerRegistry2.get(type(obj))
+    def slicerFactoryForObject(self, obj):
+        slicerClass = self.SlicerRegistry.get(type(obj))
         if not slicerClass:
             if issubclass(type(obj), type):
                 slicerClass = ClassSlicer
-        if not slicerClass:
-            raise KeyError, "I don't know how to slice %s" % type(obj)
-        slicer = slicerClass()
-        return slicer
-    
-SlicerRegistry = {
-    types.UnicodeType: UnicodeSlicer,
-    types.ListType: ListSlicer,
-    types.TupleType: TupleSlicer,
-    types.DictType: OrderedDictSlicer, #DictSlicer
-    types.InstanceType: InstanceSlicer,
-    types.NoneType: NoneSlicer,
-    }
-
-try:
-    from types import BooleanType
-    SlicerRegistry[BooleanType] = BooleanSlicer
-except ImportError:
-    pass
-
-SlicerRegistry2 = {}
-SlicerRegistry2.update(SlicerRegistry)
-SlicerRegistry2.update({
-    types.ModuleType: ModuleSlicer,
-    types.ClassType: ClassSlicer,
-    types.MethodType: MethodSlicer,
-    types.FunctionType: FunctionSlicer,
-    })
-
+        return slicerClass
 
 
 class IBananaUnslicer:

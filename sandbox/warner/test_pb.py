@@ -76,7 +76,7 @@ class TestAnswer(unittest.TestCase):
         return unslicer
 
     def testAccept1(self):
-        req = pb.PendingRequest(None)
+        req = pb.PendingRequest()
         self.broker.waitingForAnswers[12] = req
         u = self.newUnslicer()
         u.checkToken(INT)
@@ -88,7 +88,8 @@ class TestAnswer(unittest.TestCase):
         self.failUnlessEqual(self.broker.answers, [(True, req, "results")])
 
     def testAccept2(self):
-        req = pb.PendingRequest(schema.makeConstraint(str))
+        req = pb.PendingRequest()
+        req.setConstraint(schema.makeConstraint(str))
         self.broker.waitingForAnswers[12] = req
         u = self.newUnslicer()
         u.checkToken(INT)
@@ -102,7 +103,7 @@ class TestAnswer(unittest.TestCase):
 
     def testReject1(self):
         # answer a non-existent request
-        req = pb.PendingRequest(None)
+        req = pb.PendingRequest()
         self.broker.waitingForAnswers[12] = req
         u = self.newUnslicer()
         u.checkToken(INT)
@@ -110,7 +111,8 @@ class TestAnswer(unittest.TestCase):
 
     def testReject2(self):
         # answer a request with a result that violates the constraint
-        req = pb.PendingRequest(schema.makeConstraint(int))
+        req = pb.PendingRequest()
+        req.setConstraint(schema.makeConstraint(int))
         self.broker.waitingForAnswers[12] = req
         u = self.newUnslicer()
         u.checkToken(INT)
@@ -126,7 +128,7 @@ class TestAnswer(unittest.TestCase):
 
     def testReject3(self):
         # answer a request but explode before the CLOSE token is received
-        req = pb.PendingRequest(None)
+        req = pb.PendingRequest()
         self.broker.waitingForAnswers[12] = req
         u = self.newUnslicer()
         u.checkToken(INT)
