@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.web2.test.test_web -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -25,7 +24,7 @@ from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from zope.interface import implements
 
-dangerousPathError = error.Error(responsecode.NOT_FOUND, "Invalid request URL.")
+dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request URL."
 
 def redirectTo(URL, request):
     # FIXME:
@@ -203,7 +202,7 @@ class File:
     def putChild(self, name, child):
         self.children[name] = child
         
-    def locateChild(self, request, segments):
+    def locateChild(self, ctx, segments):
         r = self.children.get(segments[0], None)
         if r:
             return r, segments[1:]
@@ -243,10 +242,10 @@ class File:
 
         return self.createSimilarFile(fpath.path), segments[1:]
 
-    def renderHTTP(self, context):
+    def renderHTTP(self, ctx):
         """You know what you doing."""
         self.fp.restat()
-        request = iweb.IRequest(context)
+        request = iweb.IRequest(ctx)
         response = http.Response()
         
         if self.type is None:
@@ -271,7 +270,7 @@ class File:
         except IOError, e:
             import errno
             if e[0] == errno.EACCES:
-                return error.ForbiddenResource().render(request)
+                return responsecode.FORBIDDEN
             else:
                 raise
 
@@ -291,13 +290,7 @@ class File:
             weak=weak)
         
         response.headers.setHeader('etag', etag)
-        
-        http.checkPreconditions(request, response)
-        
         response.headers.setHeader('content-length', size)
-        
-        # return data
-        request.acceptData() #FIXME
         
         response.stream = stream.FileStream(f, 0, size)
         return response

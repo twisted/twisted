@@ -9,7 +9,7 @@
 #from twisted.web2 import resource
 from twisted.web2 import responsecode
 
-class Error(Exception):
+class OldError(Exception):
     def __init__(self, code, message = None, response = None):
         message = message or responsecode.RESPONSES.get(code)
         Exception.__init__(self, code, message, response)
@@ -19,7 +19,7 @@ class Error(Exception):
     def __str__(self):
         return '%s %s' % (self[0], self[1])
 
-class PageRedirect(Error):
+class PageRedirect(OldError):
     """A request that resulted in a responsecode.redirect """
     def __init__(self, code, message = None, response = None, location = None):
         message = message or ("%s to %s" % (responsecode.RESPONSES.get(code), location))
@@ -70,7 +70,7 @@ class PageRedirect(Error):
 # 416 - Should include Content-Range
 # 503 - Should include Retry-After
 
-class MethodNotAllowed(Error):
+class MethodNotAllowed(OldError):
     """Raised by a resource when faced with an unsupported request method.
 
     This exception's first argument MUST be a sequence of the methods the

@@ -56,8 +56,9 @@ class Resource(object):
         return self
         
     def putChild(self, path, child):
-        """Register a static child.
-
+        """Register a static child. "o.putChild('foo', something)" is the
+        same as "o.child_foo = something".
+        
         You almost certainly don't want '/' in your path. If you
         intended to have the root of a folder, e.g. /foo/, you want
         path to be ''.
@@ -84,17 +85,17 @@ class Resource(object):
         return m(ctx)
 
     def http_HEAD(self, ctx):
-        """By default render_HEAD just renders the whole body (by calling render),
-        calculates the body size, and eats the body (does not send it to the client).
+        """By default http_HEAD just calls http_GET. The body is discarded
+        when the result is being written.
         
         Override this if you want to handle it differently.
         """
-        self.rejectData()
-        self.render(ctx)
-        
+        return self.http_GET(ctx)
+    
     def http_GET(self, ctx):
+        """Ensures there is no incoming body data, and calls render."""
         self.rejectData()
-        self.render(self, ctx)
+        return self.render(self, ctx)
 
     def render(self, ctx):
         """Your class should implement this method to do default page rendering.
@@ -103,10 +104,13 @@ class Resource(object):
     
 class PostableResource(Resource):
     def http_POST(self, ctx):
+        """Reads and parses the incoming body data then calls render."""
         request = iweb.IRequest(ctx)
-        request.acceptData()
-        # do stuff with post content
-        self.render(self, ctx)
+        while repeatALot:
+            request.stream.read()
+            FIXME
+        
+        return self.render(self, ctx)
     
 components.backwardsCompatImplements(Resource)
 

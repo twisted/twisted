@@ -45,6 +45,19 @@ from twisted.internet import interfaces as ti_interfaces, defer
 import mmap
 
 class IStream(Interface):
+    """A stream of arbitrary data."""
+    
+    def read():
+        """Read some data.
+        Returns some object or else a Deferred.
+        """
+        
+    def close():
+        """Prematurely close."""
+
+class IByteStream(IStream):
+    """A stream which is of bytes."""
+    
     length = Attribute("""How much data is in this stream. Can be None if unknown.""")
     
     def read():
@@ -75,7 +88,7 @@ class ISendfileableStream(Interface):
         """
         
 class SimpleStream:
-    implements(IStream)
+    implements(IByteStream)
     
     length = None
     start = None
@@ -148,8 +161,8 @@ class FileStream(SimpleStream):
 
         if sendfile and length > SENDFILE_THRESHOLD:
             # XXX: Yay using non-existent sendfile support!
-            # XXX: if we return a SendfileBuffer, and then sendfile
-            #      fails, then what? Or, what if file is too short?
+            # FIXME: if we return a SendfileBuffer, and then sendfile
+            #        fails, then what? Or, what if file is too short?
             readSize = min(length, SENDFILE_LIMIT)
             res = SendfileBuffer(self.f, self.start, readSize)
             self.length -= readSize
@@ -212,9 +225,9 @@ class MemoryStream(SimpleStream):
         SimpleStream.close(self)
         
 class CompoundStream:
-    """An IStream which is composed of a bunch of substreams."""
+    """An IByteStream which is composed of a bunch of substreams."""
     
-    implements(IStream, ISendfileableStream)
+    implements(IByteStream, ISendfileableStream)
     deferred = None
     length = 0
     
@@ -300,6 +313,8 @@ class CompoundStream:
             bucket.close()
         self.buckets = []
         self.length = 0
+
+
 
 def readAndDiscard(stream):
     def _gotData(data):
@@ -442,28 +457,27 @@ class PostTruncaterStream:
 
             
 class ProducerStream:
-    """Turns producers into a IStream.
-    Thus, implements IConsumer and IStream."""
+    """Turns producers into a IByteStream.
+    Thus, implements IConsumer and IByteStream."""
 
-    implements(IStream, ti_interfaces.IConsumer)
+    implements(IByteStream, ti_interfaces.IConsumer)
     length = None
     closed = False
     producer = None
-    producerPause = False
+    producerPaused = False
     deferred = None
     
     bufferSize = 5
     
-    def __init__(self):
+    def __init__(self, length=None):
         self.buffer = []
 
-    # IStream implementation
+    # IByteStream implementation
     def read(self):
         if self.buffer:
-            result = self.buffer[0]
-            del self.buffer[0]
-            return result
+            return self.buffer.pop(0)
         elif self.closed:
+            self.length = 0
             return None
         else:
             deferred = self.deferred = Deferred()
@@ -484,7 +498,7 @@ class ProducerStream:
             self.producer.stopProducing()
             self.producer = None
         self.deferred = None
-    
+        
     # IConsumer implementation
     def write(self, data):
         if self.closed:
@@ -592,3 +606,5 @@ class StreamProducer:
             self.consumer.unregisterProducer()
             
         self.finishedCallback = self.deferred = self.consumer = self.stream = None
+
+__all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream', 'fallbackSplit', 'ProducerStream', 'StreamProducer']

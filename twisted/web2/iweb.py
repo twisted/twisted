@@ -8,6 +8,21 @@ from zope.interface import Attribute
 
 # server.py interfaces
 class IResource(components.Interface):
+    """
+        I am a web resource.
+    """
+
+    def locateChild(self, ctx, segments):
+        """Locate another object which can be adapted to IResource
+        Return a tuple of resource, path segments
+        """
+
+    def renderHTTP(self, ctx):
+        """Return an IResponse or a deferred which will fire an IResponse. This response
+        will be written to the web browser which initiated the request.
+        """
+
+class IOldResource(components.Interface):
     # Shared interface with inevow.IResource
     """
         I am a web resource.
@@ -21,6 +36,10 @@ class IResource(components.Interface):
     def renderHTTP(self, ctx):
         """Return a string or a deferred which will fire a string. This string
         will be written to the web browser which initiated this request.
+
+        Unlike iweb.IResource, this expects the incoming data to have already been read
+        and parsed into request.args and request.content, and expects to return a
+        string instead of a response object.
         """
 
 class ICanHandleException(components.Interface):
@@ -55,41 +74,26 @@ class ICurrentSegments(components.Interface):
 
 # http.py interfaces
 class IResponse(components.Interface):
+    """I'm a response."""
     code = Attribute("The HTTP response code")
     headers = Attribute("A http_headers.Headers instance of headers to send")
-    stream = Attribute("A stream.IStream")
+    stream = Attribute("A stream.IByteStream of outgoing data, or else None.")
 
 class IRequest(components.Interface):
     """I'm a request for a web resource
-    First draft of public interface.
     """
 
-    def acceptData(self):
-        pass
-    def finish(self):
-        pass
-    def write(self, data):
-        pass
+    method = Attribute("The HTTP method from the request line, e.g. GET")
+    uri = Attribute("The raw URI from the request line. May or may not include host.")
+    clientproto = Attribute("Protocol from the request line, e.g. HTTP/1.1")
     
-    def checkPreconditions(self, entityExists=True):
-        pass
-    def checkIfRange(self):
-        pass
-
-    def registerProducer(self, producer, streaming):
-        pass
-    def unregisterProducer(self):
-        pass
+    headers = Attribute("A http_headers.Headers instance of incoming headers.")
+    stream = Attribute("A stream.IByteStream of incoming data.")
     
-    chanRequest = Attribute("")
-    method = Attribute("")
-    uri = Attribute("")
-    clientproto = Attribute("")
-    in_headers = Attribute("")
-    
-    startedWriting = Attribute("")
-    out_headers = Attribute("")
-    sentLength = Attribute("")
+    def writeResponse(response):
+        """Write an IResponse object to the client"""
+        
+    chanRequest = Attribute("The ChannelRequest. I wonder if this is public really?")
 
 class IOldRequest(components.Interface):
     """I'm an old request, completely unspecified. :("""

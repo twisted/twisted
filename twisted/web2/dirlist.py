@@ -38,7 +38,7 @@ class DirectoryLister(rend.Page):
         rend.Page.__init__(self)
 
     def data_listing(self, context, data):
-        from nevow.static import getTypeAndEncoding
+        from twisted.web2.static import getTypeAndEncoding
 
         if self.dirs is None:
             directory = os.listdir(self.path)

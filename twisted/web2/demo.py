@@ -26,6 +26,8 @@ demo can be put back in using more up-to-date Twisted APIs.
         name = segments[0]
         if name == '':
             return self, ()
+        if name == 'file':
+            return static.File('/'), segments[1:]
         return None, ()
 
 if __name__ == '__builtin__':

@@ -69,8 +69,10 @@ class StringTransport:
         return getattr(self.__dict__['s'], attr)
 
 class HTTPError(Exception):
-    pass
-
+    def __init__(self, codeOrResponse):
+        Exception.__init__(self)
+        self.response = iweb.IResponse(codeOrResponse)
+        
 class Response(object):
     implements(iweb.IResponse)
     
@@ -87,22 +89,21 @@ class Response(object):
             self.headers = http_headers.Headers()
         self.stream = stream
         
-class NotModifedResponse(Response):
-    def __init__(oldResponse=None):
-        Response.__init__(self, responsecode.NOT_MODIFIED)
-        
-        if oldResponse is not None:
-            headers=http_headers.Headers()
-            for header in (
-                # Required from sec 10.3.5:
-                'date', 'etag', 'content-location', 'expires',
-                'cache-control', 'vary',
-                # Others:
-                'server', 'proxy-authenticate', 'www-authenticate', 'warning'):
-                header = oldResponse.headers.getRawHeaders(header)
-                if header is not None:
-                    self.headers.setRawHeaders(header)
-    
+def NotModifiedResponse(oldResponse=None):
+    if oldResponse is not None:
+        headers=http_headers.Headers()
+        for header in (
+            # Required from sec 10.3.5:
+            'date', 'etag', 'content-location', 'expires',
+            'cache-control', 'vary',
+            # Others:
+            'server', 'proxy-authenticate', 'www-authenticate', 'warning'):
+            value = oldResponse.headers.getRawHeaders(header)
+            if value is not None:
+                headers.setRawHeaders(header, value)
+    else:
+        headers = None
+    return Response(code=responsecode.NOT_MODIFIED, headers=headers)
     
 
 def checkPreconditions(request, response, entityExists=True):
@@ -199,6 +200,29 @@ def checkIfRange(request, response):
     else:
         return ifrange == response.headers.getHeader("last-modified")
 
+class _NotifyingProducerStream(stream.ProducerStream):
+    doStartReading = None
+
+    def __init__(self, length=None, doStartReading=None):
+        stream.ProducerStream.__init__(self, length=length)
+        self.doStartReading = doStartReading
+    
+    def read(self):
+        if self.doStartReading is not None:
+            doStartReading = self.doStartReading
+            self.doStartReading = None
+            doStartReading()
+            
+        return stream.ProducerStream.read(self)
+
+    def write(self, data):
+        self.doStartReading = None
+        stream.ProducerStream.write(self, data)
+
+    def finish(self):
+        self.doStartReading = None
+        stream.ProducerStream.finish(self)
+
 # response codes that must have empty bodies
 NO_BODY_CODES = (responsecode.NO_CONTENT, responsecode.NOT_MODIFIED)
 
@@ -221,11 +245,6 @@ class Request(object):
     implements(iweb.IRequest, interfaces.IConsumer)
 
     known_expects = ('100-continue',)
-    startedWriting = False
-    
-    _acceptedData = False
-    
-    _forceSSL = False
     
     def __init__(self, chanRequest, command, path, version, headers):
         """
@@ -237,8 +256,21 @@ class Request(object):
         self.clientproto = version
         
         self.headers = headers
-
-        self.process()
+        
+        if '100-continue' in self.headers.getHeader('Expect', ()):
+            doStartReading = self._sendContinue
+        else:
+            doStartReading = None
+        self.stream = _NotifyingProducerStream(headers.getHeader('content-length', None), doStartReading)
+        self.stream.registerProducer(self.chanRequest, True)
+        
+    def checkExpect(self):
+        """Ensure there are no expectations that cannot be met.
+        Checks Expect header against self.known_expects."""
+        expects = self.headers.getHeader('Expect', ())
+        for expect in expects:
+            if expect not in self.known_expects:
+                raise HTTPError(responsecode.EXPECTATION_FAILED)
     
     def process(self):
         """called by __init__ to let you process the request.
@@ -247,48 +279,26 @@ class Request(object):
         pass
     
     def handleContentChunk(self, data):
-        """Called by channel when a piece of data has been received.
-
-        Should be overridden by a subclass to do something appropriate."""
-        pass
+        """Callback from channel when a piece of data has been received.
+        Puts the data in .stream"""
+        self.stream.write(data)
     
     def handleContentComplete(self):
-        """Called by channel when all data has been received.
-        
-        Should be overridden by a subclass to do something appropriate."""
+        """Callback from channel when all data has been received. """
+        self.stream.unregisterProducer()
+        self.stream.finish()
         
     def connectionLost(self, reason):
         """connection was lost"""
         pass
 
-
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
 
-    # The following is the public interface that people should be
-    # writing to.
-
-    def checkExpect(self):
-        expects = self.headers.getHeader('Expect', ())
-        for expect in expects:
-            if expect not in self.known_expects:
-                raise error.Error(responsecode.EXPECTATION_FAILED)
-        
-    def acceptData(self):
-        """Notify the client that you will accept the incoming data.
-        Should be called after checking if the request is valid.
-        
-        If you don't want to accept the data, write a response before
-        calling this method. That may cause keepalive to be canceled,
-        and the connection closed, so you shouldn't do that except
-        when sending an error code (4xx/5xx).
-        
-        """
-        self._acceptedData = True
-        if not self.startedWriting and '100-continue' in self.headers.getHeader('Expect', ()):
-            self.chanRequest.writeIntermediateResponse(responsecode.CONTINUE)
+    def _sendContinue(self):
+        self.chanRequest.writeIntermediateResponse(responsecode.CONTINUE)
             
-    def _finish(self, x):
+    def _finished(self, x):
         """We are finished writing data."""
         # log request
         log.msg(type=iweb.IRequest, object=self)
@@ -302,13 +312,22 @@ class Request(object):
         """
         Write a response.
         """
-        if not self._acceptedData:
+        if self.stream.doStartReading is not None:
+            # Expect: 100-continue was requested, but 100 response has not been
+            # sent, and there's a possibility that data is still waiting to be
+            # sent.
+            # 
+            # Ideally this means the remote side will not send any data.
+            # However, because of compatibility requirements, it might timeout,
+            # and decide to do so anyways at the same time we're sending back 
+            # this response. Thus, the read state is unknown after this.
+            # We must close the connection.
             self.chanRequest.persistent = False
-            if response.code < 300:
-                warnings.warn("Warning! Didn't call acceptData, but responded with success code.", stacklevel=2)
+            # Nothing more will be read
+            self.chanRequest.allContentReceived()
 
-        self.startedWriting = True
-        if response.code not in NO_BODY_CODES:
+        if response.code != responsecode.NOT_MODIFIED:
+            # Not modified response is *special* and doesn't get a content-length.
             if response.stream is None:
                 response.headers.setHeader('content-length', 0)
             elif response.stream.length is not None:
@@ -324,7 +343,7 @@ class Request(object):
             return
 
         d = stream.StreamProducer(response.stream).beginProducing(self.chanRequest)
-        d.addCallback(self._finish).addErrback(self._error)
+        d.addCallback(self._finished).addErrback(self._error)
 
 components.backwardsCompatImplements(Request)
 
@@ -513,6 +532,7 @@ class HTTPChannelRequest:
         
         self.connHeaders = connHeaders
         self.request = request
+        self.request.process()
         
     def allContentReceived(self):
         self.finishedReading = True
@@ -688,11 +708,11 @@ class HTTPChannelRequest:
             self.persistent = False
             self.channel.requestReadFinished(self, self.persistent)
         
-        if self.producer:
-            self.producer.stopProducing()
-            self.unregisterProducer()
-        
         if closeWrite:
+            if self.producer:
+                self.producer.stopProducing()
+                self.unregisterProducer()
+            
             self.finished = True
             if self.queued:
                 self.transport.reset()
@@ -1217,3 +1237,4 @@ class HTTPFactory(protocol.ServerFactory):
 
 #     def isSecure(self):
 #         return self._forceSSL or components.implements(self.chanRequest.transport, interfaces.ISSLTransport)
+

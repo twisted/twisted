@@ -5,9 +5,9 @@ from urllib import quote, string
 import UserDict, math
 from cStringIO import StringIO
 
-from twisted.web2 import http_headers, iweb
-
+from twisted.web2 import http_headers, iweb, http, stream
 from twisted.web import http as old_http
+from twisted.internet import defer
 
 from zope.interface import implements
 
@@ -42,7 +42,7 @@ class HeaderAdapter(UserDict.DictMixin):
 
     def has_key(self, name):
         return self._headers.hasHeader(name)
-    
+
 class OldRequestAdapter(object):
     """Adapt old requests to new request
     """
@@ -56,53 +56,65 @@ class OldRequestAdapter(object):
             original._oldRequest = object.__new__(claz, original)
         return original._oldRequest
     
-    def _getFromOriginal(name):
+    def _getFrom(where, name):
         def _get(self):
-            return getattr(self.original, name)
+            return getattr(getattr(self, where), name)
         return property(_get)
 
-    def _getsetFromOriginal(name):
+    def _getsetFrom(where, name):
         def _get(self):
-            return getattr(self.original, name)
+            return getattr(getattr(self, where), name)
         def _set(self, new):
-            setattr(self.original, name, new)
+            setattr(getattr(self, where), name, new)
         return property(_get, _set)
 
-    def _getHeaders(name):
+    def _getHeaders(where):
         def _get(self):
-            headers = getattr(self.original, name)
+            headers = getattr(self, where).headers
             return HeaderAdapter(headers)
         return property(_get)
-
-    code = _getsetFromOriginal('code')
+    
+    code = _getsetFrom('response', 'code')
     code_message = ""
-    method = _getsetFromOriginal('method')
-    clientproto = _getsetFromOriginal('clientproto')
-    uri = _getsetFromOriginal('uri')
-    received_headers = _getHeaders('in_headers')
-    headers = _getHeaders('out_headers')
-    path = _getsetFromOriginal('path')
+    
+    method = _getsetFrom('request', 'method')
+    uri = _getsetFrom('request', 'uri')
+    clientproto = _getsetFrom('request', 'clientproto')
+    
+    received_headers = _getHeaders('request')
+    headers = _getHeaders('response')
+    path = _getsetFrom('request', 'path')
+    
     # cookies = # Do I need this?
     # received_cookies = # Do I need this?
     content = StringIO() #### FIXME
     args = {} #### FIXME
     # stack = # WTF is stack?
-    prepath = _getsetFromOriginal('prepath')
-    postpath = _getsetFromOriginal('postpath')
+    prepath = _getsetFrom('request', 'prepath')
+    postpath = _getsetFrom('request', 'postpath')
     # client = ####
     # host = ####
     
-    def __init__(self, original):
-        self.original = original
+    def __init__(self, request):
+        self.request = request
+        self.response = http.Response(stream=stream.ProducerStream())
 
-    registerProducer = _getFromOriginal('registerProducer')
-    registerProducer = _getFromOriginal('unregisterProducer')
-    finish = _getFromOriginal('finish')
-    write = _getFromOriginal('write')
-
-    
+    def _getData(self):
+        return defer.succeed(None)
+    def registerProducer(self, producer, streaming):
+        self.response.stream.registerProducer(producer, streaming)
+        
+    def unregisterProducer(self):
+        self.response.stream.unregisterProducer()
+        
+    def finish(self):
+        self.response.stream.finish()
+        
+    def write(self, data):
+        self.response.stream.write(data)
+        
     def getHeader(self, name):
-        raw = self.in_headers.getRawHeaders(name)
+        raw = self.request.headers.getRawHeaders(name)
         if raw is None:
             return None
         return ', '.join(raw)
@@ -110,35 +122,37 @@ class OldRequestAdapter(object):
     def setHeader(self, name, value):
         """Set an outgoing HTTP header.
         """
-        self.out_headers.setRawHeaders(name, [value])
+        self.response.headers.setRawHeaders(name, [value])
         
     def setResponseCode(self, code, message=None):
         # message ignored
-        self.original.code = code
+        self.response.code = code
 
     def setLastModified(self, when):
+        # FIXME
         when = long(math.ceil(when))
-        self.original.out_headers.setHeader('Last-Modified', long(math.ceil(when)))
+        self.response.headers.setHeader('Last-Modified', when)
         try:
             self.original.checkPreconditions()
-        except error.Error, err:
-            self.original.code = err.code
+        except http.HTTPError, err:
+            self.original.code = err.response.code
             return old_http.CACHED
         return None
 
     def setETag(self, etag):
+        # FIXME
         self.original.out_headers.setRawHeaders('ETag', etag)
         try:
             self.original.checkPreconditions()
-        except error.Error, err:
-            self.original.code = err.code
+        except http.HTTPError, err:
+            self.original.code = err.responsecode
             return old_http.CACHED
 
     def getAllHeaders(self):
-        return dict(self.headers.iteritems())
+        return dict(self.request.headers.iteritems())
 
     def getRequestHostname(self):
-        return self.original.host.split(':')[0]
+        return self.request.host.split(':')[0]
 
 
 ### TODO:
@@ -237,3 +251,35 @@ class OldRequestAdapter(object):
         Get a previously-remembered URL.
         """
         return self.appRootURL
+
+class OldResourceAdapter(object):
+    implements(iweb.IResource)
+    
+    def __init__(self, original):
+        self.__dict__['_OldResourceAdapter__original']=original
+        
+    def locateChild(self, ctx, segments):
+        self.__original.locateChild(ctx, segments)
+    
+    def renderHTTP(self, ctx):
+        oldRequest = iweb.IOldRequest(ctx)
+        return oldRequest._getData().addCallback(self._processForm, ctx).addCallback(self._reallyRender, ctx)
+
+    def _processForm(self, ignored, ctx):
+        # Do form processing of request content
+        pass
+
+    def _finish(self, data, ctx):
+        oldRequest = iweb.IOldRequest(ctx)
+        oldRequest.write(data)
+        oldRequest.finish()
+        return oldRequest.response
+
+    def _reallyRender(self, ignored, ctx):
+        return defer.maybeDeferred(self.__original.renderHTTP, ctx).addCallback(self._finish, ctx)
+
+    def __getattr__(self, name):
+        return getattr(self.__original, name)
+
+    def __setattr__(self, name):
+        return setattr(self.__original, name)

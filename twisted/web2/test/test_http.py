@@ -13,7 +13,6 @@ from zope.interface import implements
 
 
 class PreconditionTestCase(unittest.TestCase):
-    skip = "Skip this for now while I figure out the exception API"
     def checkPreconditions(self, request, headers, expectedResult, expectedCode,
                            initCode=responsecode.OK, entityExists=True):
         response = TestResponse()
@@ -25,7 +24,7 @@ class PreconditionTestCase(unittest.TestCase):
             http.checkPreconditions(request, response, entityExists=entityExists)
         except http.HTTPError, e:
             preconditionsPass = False
-            code = e.code
+            code = e.response.code
         self.assertEquals(preconditionsPass, expectedResult)
         self.assertEquals(code, expectedCode)
 
@@ -391,7 +390,6 @@ class CoreHTTPTestCase(HTTPTests):
         cmds[0] += [('init', 'GET', '/', (0,9), ()), ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].acceptData()
         response = TestResponse()
         response.headers.setRawHeaders("Yo", ("One", "Two"))
         cxn.requests[0].writeResponse(response)
@@ -426,7 +424,6 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].acceptData()
         response = TestResponse()
         response.headers.setRawHeaders("Yo", ("One", "Two"))
         cxn.requests[0].writeResponse(response)
@@ -460,7 +457,6 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].acceptData()
         response0 = TestResponse()
         response0.headers.setRawHeaders("Content-Length", ("6", ))
         response0.headers.setRawHeaders("Yo", ("One", "Two"))
@@ -483,7 +479,6 @@ class CoreHTTPTestCase(HTTPTests):
         self.compareResult(cxn, cmds, data)
 
         
-        cxn.requests[1].acceptData()
         response1 = TestResponse()
         response1.headers.setRawHeaders("Content-Length", ("0", ))
         cxn.requests[1].writeResponse(response1)
@@ -520,7 +515,6 @@ class CoreHTTPTestCase(HTTPTests):
         
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].acceptData()
         response0 = TestResponse()
         response0.headers.setRawHeaders("Content-Length", ("6", ))
         cxn.requests[0].writeResponse(response0)
@@ -544,7 +538,6 @@ class CoreHTTPTestCase(HTTPTests):
 
         # Let's write out the third request before the second.
         # This should not cause anything to be written to the client.
-        cxn.requests[2].acceptData()
         response2 = TestResponse()
         response2.headers.setRawHeaders("Content-Length", ("5", ))
         cxn.requests[2].writeResponse(response2)
@@ -554,7 +547,6 @@ class CoreHTTPTestCase(HTTPTests):
         
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[1].acceptData()
         response1 = TestResponse()
         response1.headers.setRawHeaders("Content-Length", ("3", ))
         cxn.requests[1].writeResponse(response1)
@@ -573,7 +565,6 @@ class CoreHTTPTestCase(HTTPTests):
         data += "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nThree"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[3].acceptData()
         response3 = TestResponse()
         response3.headers.setRawHeaders("Content-Length", ("0",))
         cxn.requests[3].writeResponse(response3)
@@ -606,7 +597,6 @@ class CoreHTTPTestCase(HTTPTests):
         cmds[0] += [('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].acceptData()
         response = TestResponse()
         cxn.requests[0].writeResponse(response)
         response.write("Output")
@@ -632,8 +622,8 @@ class CoreHTTPTestCase(HTTPTests):
         cmds[0] += [('init', 'GET', '/', (1,1),
                      (('Content-Length', ['5']), ('Host', ['localhost']), ('Expect', ['100-continue'])))]
         self.compareResult(cxn, cmds, data)
-        
-        cxn.requests[0].acceptData()
+
+        cxn.requests[0].stream.read()
         data += "HTTP/1.1 100 Continue\r\n\r\n"
         self.compareResult(cxn, cmds, data)
 
@@ -692,7 +682,6 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].acceptData()
         response = TestResponse()
         response.headers.setRawHeaders("Content-Length", ("0",))
         cxn.requests[0].writeResponse(response)
@@ -844,7 +833,6 @@ class PipelinedErrorTestCase(ErrorTestCase):
         self.iterate(cxn)
         self.assertEquals(cxn.client.data, '')
         
-        cxn.requests[0].acceptData()
         response = TestResponse()
         response.headers.setRawHeaders("Content-Length", ("0",))
         cxn.requests[0].writeResponse(response)

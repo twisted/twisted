@@ -28,8 +28,9 @@ from twisted.python import log, components, failure
 from twisted import copyright
 
 # Sibling Imports
-from twisted.web2 import resource, http, iweb, responsecode
-from twisted.web2 import http_headers, context, error
+from twisted.web2 import resource, http, iweb
+from twisted.web2.responsecode import *
+from twisted.web2 import http_headers, context, error, stream
 
 from twisted.web2 import version as web2_version
 
@@ -42,6 +43,89 @@ def defaultHeadersFilter(request, response):
     if not response.headers.hasHeader('date'):
         response.headers.setHeader('date', time.time())
     return response
+defaultHeadersFilter.handleErrors = True
+
+def preconditionfilter(request, response):
+    newresponse = http.checkPreconditions(request, response)
+    if newresponse is not None:
+        return newresponse
+    return response
+
+ERROR_MESSAGES = {
+    # 300
+    # no MULTIPLE_CHOICES
+    MOVED_PERMANENTLY: 'The document has permanently moved <a href="%(location)s">here</a>.',
+    FOUND: 'The document has temporarily moved <a href="%(location)s">here</a>.',
+    SEE_OTHER: 'The results are available <a href="%(location)s">here</a>.',
+    # no NOT_MODIFIED
+    USE_PROXY: "Access to this resource must be through the proxy %(location)s.",
+    # 306 unused
+    TEMPORARY_REDIRECT: 'The document has temporarily moved <a href="%(location)s">here</a>.',
+
+    # 400
+    BAD_REQUEST: "Your browser sent an invalid request.",
+    UNAUTHORIZED: "You are not authorized to view the resource at %(uri)s. Perhaps you entered a wrong password, or perhaps your browser doesn't support authentication.",
+    PAYMENT_REQUIRED: "Payment Required (useful result code, this...).",
+    FORBIDDEN: "You don't have permission to access %(uri)s.",
+    NOT_FOUND: "The resource %(uri)s cannot be found.",
+    NOT_ALLOWED: "The requested method %(method)s is not supported by %(uri)s.",
+    NOT_ACCEPTABLE: "No representation of %(uri)s that is acceptable to your client could be found.",
+    PROXY_AUTH_REQUIRED: "You are not authorized to view the resource at %(uri)s. Perhaps you entered a wrong password, or perhaps your browser doesn't support authentication.",
+    REQUEST_TIMEOUT: "Server timed out waiting for your client to finish sending the HTTP request.",
+    CONFLICT: "Conflict (?)",
+    GONE: "The resource %(uri)s has been permanently removed.",
+    LENGTH_REQUIRED: "The resource %(uri)s requires a Content-Length header.",
+    PRECONDITION_FAILED: "A precondition evaluated to false.",
+    REQUEST_ENTITY_TOO_LARGE: "The provided request entity data is too longer than the maximum for the method %(method)s at %(uri)s.",
+    REQUEST_URI_TOO_LONG: "The request URL is longer than the maximum on this server.",
+    UNSUPPORTED_MEDIA_TYPE: "The provided request data has a format not understood by the resource at %(uri)s.",
+    REQUESTED_RANGE_NOT_SATISFIABLE: "None of the ranges given in the Range request header are satisfiable by the resource %(uri)s.",
+    EXPECTATION_FAILED: "The server does support one of the expectations given in the Expect header.",
+
+    # 500
+    INTERNAL_SERVER_ERROR: "An internal error occurred trying to process your request. Sorry.",
+    NOT_IMPLEMENTED: "Some functionality requested is not implemented on this server.",
+    BAD_GATEWAY: "An upstream server returned an invalid response.",
+    SERVICE_UNAVAILABLE: "This server cannot service your request becaues it is overloaded.",
+    GATEWAY_TIMEOUT: "An upstream server is not responding.",
+    HTTP_VERSION_NOT_SUPPORTED: "HTTP Version not supported.",
+    INSUFFICIENT_STORAGE_SPACE: "There is insufficient storage space available to perform that request.",
+    NOT_EXTENDED: "This server does not support the a mandatory extension requested."
+}
+
+# Is there a good place to keep this function?
+def _escape(original):
+    if original is None:
+        return None
+    return original.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+
+def defaultErrorHandler(request, response):
+    if response.stream is not None:
+        # Already got an error message
+        return response
+    if response.code < 300:
+        # We only do error messages
+        return response
+
+    
+    message = ERROR_MESSAGES.get(response.code, None)
+    if message is None:
+        # No message specified for that code
+        return response
+    
+    message = message % {
+        'uri':_escape(request.uri),
+        'location':_escape(response.headers.getHeader('location')),
+        'method':_escape(request.method)
+        }
+
+    title = RESPONSES.get(response.code, "")
+    body = ("<html><head><title>%d %s</title></head>"
+            "<body><h1>%s</h1>%s</body></html>") % (
+        response.code, title, title, message)
+    response.stream = stream.MemoryStream(body)
+    return response
+defaultErrorHandler.handleErrors = True
 
 import rangefilter
 
@@ -50,7 +134,7 @@ class Request(http.Request):
     
     site = None
     _initialprepath = None
-    responseFilters = [rangefilter.rangefilter, defaultHeadersFilter]
+    responseFilters = [rangefilter.rangefilter, defaultErrorHandler, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):
         self.notifications = []
@@ -94,7 +178,7 @@ class Request(http.Request):
         host = self.headers.getHeader('host')
         if not host:
             if self.clientproto >= (1,1):
-                raise error.Error(responsecode.BAD_REQUEST)
+                raise http.HTTPError(BAD_REQUEST)
             host = self.chanRequest.channel.transport.getHost().host
         return host
 
@@ -108,32 +192,17 @@ class Request(http.Request):
         
         try:
             self.checkExpect()
-            #self.defaultHeaders()
-            #response.headers.setHeader('content-type', http_headers.MimeType('text','html', charset='UTF-8'))
             self.parseURL()
             self.host = self.getHost()
-        except error.Error:
-            self._processingFailed(requestContext)
+        except:
+            self._processingFailed(failure.Failure(), requestContext)
             return
         
-        # make content string.
-        # FIXME: make resource interface for choosing how to
-        # handle content.
-        self.content = StringIO.StringIO()
-
-        self.deferredContext = self._getChild(requestContext,
+        deferredContext = self._getChild(requestContext,
                                               self.site.getRootResource(),
                                               self.postpath)
-        self.deferredContext.addErrback(self._processingFailed, requestContext)
-        
-    def handleContentChunk(self, data):
-        # FIXME: this sucks.
-        self.content.write(data)
-    
-    def handleContentComplete(self):
-        # This sets up a seperate deferred chain because we don't want the
-        # errbacks for rendering to be called for errors from before.
-        self.deferredContext.addCallback(self._renderAndFinish)
+        deferredContext.addErrback(self._processingFailed, requestContext)
+        deferredContext.addCallback(self._renderAndFinish)
         
     def _getChild(self, ctx, res, path):
         """Create a PageContext for res, call res.locateChild, and pass the
@@ -165,7 +234,7 @@ class Request(http.Request):
         newres, newpath = result
         # If the child resource is None then display a error page
         if newres is None:
-            return self._processingFailed(error.Error(code=responsecode.NOT_FOUND), pageContext)
+            raise http.HTTPError(NOT_FOUND)
 
         # If we got a deferred then we need to call back later, once the
         # child is actually available.
@@ -197,13 +266,17 @@ class Request(http.Request):
         d.addErrback(self._processingFailed, pageContext)
         
     def _processingFailed(self, reason, ctx):
-        # Give a ICanHandleException implementer a chance to render the page.
+        if reason.check(http.HTTPError) is not None:
+            # If the exception was an HTTPError, leave it alone
+            d = defer.succeed(reason.value.response)
+        else:
+            # Otherwise, it was a random exception, so give a
+            # ICanHandleException implementer a chance to render the page.
+            def _processingFailed_inner(ctx, reason):
+                handler = iweb.ICanHandleException(ctx)
+                return handler.renderHTTP_exception(ctx, reason)
+            d = defer.maybeDeferred(_processingFailed_inner, ctx, reason)
         
-        def _processingFailed_inner(ctx, reason):
-            handler = iweb.ICanHandleException(ctx)
-            return handler.renderHTTP_exception(ctx, reason)
-        
-        d = defer.maybeDeferred(_processingFailed_inner, ctx, reason)
         d.addCallback(self._cbFinishRender, ctx)
         d.addErrback(self._processingReallyFailed, ctx, reason)
         d.addBoth(lambda result: _errorMarker)
@@ -219,26 +292,33 @@ class Request(http.Request):
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         
         response = http.Response()
-        response.code = responsecode.INTERNAL_SERVER_ERROR
+        response.code = INTERNAL_SERVER_ERROR
         response.headers.setHeader('content-type', http_headers.MimeType('text','html'))
         response.headers.setHeader('content-length', len(body))
         response.stream = stream.MemoryStream(body)
-        return response
+        self.writeResponse(response)
 
     def _cbFinishRender(self, result, ctx):
-        resource = iweb.IResource(result, None)
-        if resource:
-            pageContext = context.PageContext(tag=resource, parent=ctx)
-            d = defer.maybeDeferred(resource.renderHTTP, pageContext)
-            d.addCallback(self._cbFinishRender, pageContext)
-            return d
+        def filterit(response, f):
+            if (hasattr(f, 'handleErrors') or
+                (response.code >= 200 and response.code < 300 and response.code != 204)):
+                return f(self, response)
+            else:
+                return response
+        
+        response = iweb.IResponse(result)
+        if response:
+            d = defer.succeed(response)
+            for f in self.responseFilters:
+                d.addCallback(filterit, f)
+            d.addCallback(self.writeResponse)
         else:
-            response = iweb.IResponse(result)
-            if response:
-                d = defer.succeed(response)
-                for f in self.responseFilters:
-                    d.addCallback(lambda response: f(self, response))
-                d.addCallback(self.writeResponse)
+            resource = iweb.IResource(result, None)
+            if resource:
+                pageContext = context.PageContext(tag=resource, parent=ctx)
+                d = defer.maybeDeferred(resource.renderHTTP, pageContext)
+                d.addCallback(self._cbFinishRender, pageContext)
+                return d
             else:
                 raise TypeError("html is not a resource or a response")
         return
@@ -254,13 +334,14 @@ class Request(http.Request):
         self.notifications.append(defer.Deferred())
         return self.notifications[-1]
 
-    def connectionLost(self, reason):
+    def _error(self, reason):
+        http.Request._error(self, reason)
         for d in self.notifications:
             d.errback(reason)
         self.notifications = []
 
-    def finish(self):
-        http.Request.finish(self)
+    def _finished(self, x):
+        http.Request._finished(self, x)
         for d in self.notifications:
             d.callback(None)
         self.notifications = []
