@@ -190,9 +190,6 @@ class BaseClient(Connection):
             self.disconnected or
             not (hasattr(self, "connector"))):
             return
-        # XXX workaround for sillines in reactor.resolve()
-        if err == "address not found":
-            err = error.UnknownHostError()
         self.connector.connectionFailed(failure.Failure(err))
         if hasattr(self, "reactor"):
             # this doesn't happens if we failed in __init__
