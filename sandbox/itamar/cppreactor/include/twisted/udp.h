@@ -2,9 +2,7 @@
 #include <resolv.h>
 #include <sys/socket.h>
 #include <boost/python.hpp> 
-using namespace boost::python;
 #include <boost/python/call_method.hpp> 
-using namespace boost::python;
 #include "Python.h"
 #include "twisted/util.h"
 
@@ -13,6 +11,8 @@ using namespace boost::python;
 
 namespace Twisted
 {
+    using namespace boost::python;
+
     class DatagramProtocol;     // forward definition
 
     // The resulting Python class should be wrapped in to the transports

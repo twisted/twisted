@@ -1,11 +1,11 @@
 #include "Python.h"
 #include <boost/python.hpp> 
-using namespace boost::python;
 
 #ifndef TWISTED_UTIL_H
 #define TWISTED_UTIL_H
 
 namespace Twisted {
+    using namespace boost::python;
 
     /* Deallocate a buffer. */
     class Deallocator
