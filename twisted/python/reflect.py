@@ -498,7 +498,7 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 and (len(optName))):
                 dict[optName] = 1
 
-def prefixedMethods(obj, prefix):
+def prefixedMethods(obj, prefix=''):
     """A list of methods with a given prefix on a given instance.
     """
     dct = {}
