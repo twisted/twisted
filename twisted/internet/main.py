@@ -230,6 +230,19 @@ def iterate(timeout=0.):
     doSelect(timeout)
 
 
+def handleSignals():
+    """Install the signal handlers for the Twisted event loop."""
+    signal.signal(signal.SIGINT, shutDown)
+    signal.signal(signal.SIGTERM, shutDown)
+
+    # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, shutDown)
+
+    if platform.getType() == 'posix':
+        signal.signal(signal.SIGCHLD, process.reapProcess)
+
+
 def run(installSignalHandlers=1):
     """Run input/output and dispatched/delayed code.
 
@@ -240,16 +253,10 @@ def run(installSignalHandlers=1):
     global running
     running = 1
     threadable.registerAsIOThread()
+    
     if installSignalHandlers:
-        signal.signal(signal.SIGINT, shutDown)
-        signal.signal(signal.SIGTERM, shutDown)
-
-        # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
-        if hasattr(signal, "SIGBREAK"):
-            signal.signal(signal.SIGBREAK, shutDown)
-
-        if platform.getType() == 'posix':
-            signal.signal(signal.SIGCHLD, process.reapProcess)
+        handleSignals()
+    
     for function in _whenRunning:
         function()
     _whenRunning[:] = []
