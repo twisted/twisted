@@ -32,14 +32,18 @@ import service, common, ttymodes
 
 class SSHConnection(service.SSHService):
     name = 'ssh-connection'
-    localChannelID = 0 # this is the current # to use for channel ID
-    localToRemoteChannel = {} # local channel ID -> remote channel ID
-    channels = {} # local channel ID -> subclass of SSHChannel
-    channelsToRemoteChannel = {} # subclass of SSHChannel -> remote channel ID
-    deferreds = {} # local channel -> list of deferreds for pending requests
-                   # or 'global' -> list of deferreds for global requests
-    remoteForwards = {} # list of ports we should accept from server
-                        # (client only)
+
+    def __init__(self):
+        self.localChannelID = 0 # this is the current # to use for channel ID
+        self.localToRemoteChannel = {} # local channel ID -> remote channel ID
+        self.channels = {} # local channel ID -> subclass of SSHChannel
+        self.channelsToRemoteChannel = {} # subclass of SSHChannel -> 
+                                          # remote channel ID
+        self.deferreds = {} # local channel -> list of deferreds for pending 
+                            # requests or 'global' -> list of deferreds for 
+                            # global requests
+        self.remoteForwards = {} # list of ports we should accept from server
+                            # (client only)
 
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
@@ -175,7 +179,7 @@ class SSHConnection(service.SSHService):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         if self.deferreds.has_key(localChannel):
             d = self.deferreds[localChannel].pop(0)
-            d.errback(ConchError('channel request failed'))
+            d.errback(error.ConchError('channel request failed'))
 
     # methods for users of the connection to call
 
