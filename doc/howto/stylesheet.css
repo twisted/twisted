@@ -113,6 +113,12 @@ pre
 {
   font-style: italic;
   }
+
+.manhole-output
+{
+  color: blue;
+}
+
 hr
 {
   display: inline;

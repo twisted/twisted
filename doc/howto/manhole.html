@@ -235,11 +235,11 @@ box:</p>
 
 <pre class="python-interpreter">
 /browse ["hello", "there"]
- <font
-color="blue">&lt;ObjectLink of ["hello", "there"] type list&gt;:
+ <span class="manhole-output"
+>&lt;ObjectLink of ["hello", "there"] type list&gt;:
   ['hello',
    'there',]
-</font>
+</span>
 
 class A:
     def foo(self):
@@ -247,22 +247,22 @@ class A:
 
 x = A()
 /browse x
-<font color="blue">&lt;ObjectLink of x type instance&gt;:
+<span class="manhole-output">&lt;ObjectLink of x type instance&gt;:
   {members: {}
    class: 'A'
    methods: {}}
-</font>
+</span>
 
 /watch x
- <font color="blue"> &lt;ObjectLink of x type instance&gt;:
+ <span class="manhole-output"> &lt;ObjectLink of x type instance&gt;:
   {members: {}
    class: 'A'
    methods: {}}
-</font>
+</span>
 
 x.foo()
 
-<font color="blue">&lt;ObjectLink of x type instance&gt;:
+<span class="manhole-output">&lt;ObjectLink of x type instance&gt;:
   {members: {x: 1}
    class: 'twisted.python.explorer.WatchingA8195574'
    methods:
@@ -305,7 +305,7 @@ x.foo()
            file: /home/punck/cvs/Twisted/twisted/python/explorer.py
            name: __call__}
         }}
-</font>
+</span>
    
 </pre>
 
