@@ -16,6 +16,8 @@
 #
 from twisted.trial import unittest
 from twisted.application import app, service
+from twisted.persisted import sob
+import os
 
 class TestAppSupport(unittest.TestCase):
 
@@ -67,3 +69,32 @@ application = service.Application("hello")
 """)
         a1 = app.loadApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
+
+    def test_loadOrCreate(self):
+        # make sure nothing exists
+        file = "applicationfile"
+        if os.path.exists(file):
+            os.remove(file)
+        appl = app.loadOrCreate("lala", file, "procname", 5, 7)
+        self.assertEqual(service.IProcess(appl).uid, 5)
+        self.assertEqual(service.IProcess(appl).gid, 7)
+        self.assertEqual(service.IProcess(appl).processName, "procname")
+        self.assertEqual(list(service.IServiceCollection(appl)), [])
+        self.assertEqual(service.IService(appl).name, "lala")
+        self.assertEqual(sob.IPersistable(appl).name, "lala")
+        self.assertEqual(sob.IPersistable(appl).style, "pickle")
+        sob.IPersistable(appl).save(filename=file)
+        appl = app.loadOrCreate("lolo", file, "notname", 8, 9)
+        self.assertEqual(service.IProcess(appl).uid, 5)
+        self.assertEqual(service.IProcess(appl).gid, 7)
+        self.assertEqual(service.IProcess(appl).processName, "notname")
+        self.assertEqual(list(service.IServiceCollection(appl)), [])
+        self.assertEqual(service.IService(appl).name, "lala")
+        self.assertEqual(sob.IPersistable(appl).name, "lala")
+        self.assertEqual(sob.IPersistable(appl).style, "pickle")
+        
+        
+'''
+def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
+def startApplication(application, save):
+'''
