@@ -194,7 +194,3 @@ twisted (0.9.4-1) unstable; urgency=low
   * Initial Release. (closes: #105843)
 
  -- Moshe Zadka <moshez@debian.org>  Thu, 26 Jul 2001 21:09:53 +0300
-
-Local variables:
-mode: debian-changelog
-End:
