@@ -210,14 +210,13 @@ class SocketPort:
         skt.listen(self.backlog)
         self.accepting = 1
         self.socket = skt
-        self.handle = skt.fileno()
         self.startAccepting()
 
     def startAccepting(self):
         op = self.accept_op()
         op.addCallback(self.acceptDone)
         op.addErrback(self.acceptErr)
-        op.initiateOp(self.handle)
+        op.initiateOp(self.socket)
 
     def acceptDone(self, (sock, addr)):
         if self.accepting:

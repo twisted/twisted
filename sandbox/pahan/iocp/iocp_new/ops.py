@@ -4,6 +4,8 @@ import struct
 
 from twisted.internet import defer
 
+from getsockinfo import getsockinfo
+
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 
 # async op does:
@@ -84,14 +86,15 @@ class AcceptExOp(OverlappedOp):
         self.list.setsockopt(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", self.list.fileno()))
         self.callback((self.list, self.list.getpeername()))
 
-    def initiateOp(self, handle):
-        # TODO: how do I determine these? from handle somehow?
+    def initiateOp(self, sock):
+        # TODO:
         # create this socket in C code and return it from issueAcceptEx
         # also, determine size and create buffer there. No reason to propagate that idiocy into Python
-        self.list = socket(AF_INET, SOCK_STREAM)
+        family, type, protocol = getsockinfo(sock) # TODO: AHAHAHAHA FIX ME
+        self.list = socket(family, type, protocol)
         self.buffer = self.reactor.AllocateReadBuffer(64) # save a reference so that things don't blow up
-        self.handle = handle
-        (ret, bytes) = self.reactor.issueAcceptEx(handle, self.list.fileno(), self.buffer, self.ovDone)
+        self.handle = sock.fileno()
+        (ret, bytes) = self.reactor.issueAcceptEx(self.handle, self.list.fileno(), self.buffer, self.ovDone)
         print "in AcceptExOp.initiateOp, issueAcceptEx returned (%(ret)s, %(bytes)s)" % locals()
         # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
         # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)

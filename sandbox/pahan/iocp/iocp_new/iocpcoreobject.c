@@ -171,9 +171,9 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     Py_BEGIN_ALLOW_THREADS;
     res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
     Py_END_ALLOW_THREADS;
-    printf("gqcs returned %d\n", res);
+//    printf("gqcs returned %d\n", res);
     err = GetLastError();
-    printf("    GLE returned %d\n", err);
+//    printf("    GLE returned %d\n", err);
     if(!res) {
         if(!ov) {
             if(err != WAIT_TIMEOUT) {
@@ -199,7 +199,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
         Py_DECREF(ret);
         Py_DECREF(object);
     }
-    free(ov);
+    PyMem_Free(ov);
     return Py_BuildValue("");
 }
 
@@ -222,7 +222,7 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
     }
-    ov = malloc(sizeof(MyOVERLAPPED));
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
@@ -262,7 +262,7 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
     }
-    ov = malloc(sizeof(MyOVERLAPPED));
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
@@ -301,7 +301,7 @@ static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
     }
-    ov = malloc(sizeof(MyOVERLAPPED));
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
@@ -342,7 +342,7 @@ static PyObject *iocpcore_WSASend(iocpcore* self, PyObject *args) {
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
     }
-    ov = malloc(sizeof(MyOVERLAPPED));
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
@@ -382,7 +382,7 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
     }
-    ov = malloc(sizeof(MyOVERLAPPED));
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
@@ -400,6 +400,80 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
         return PyErr_SetFromWindowsErr(err);
     }
     return Py_BuildValue("ll", err, bytes);
+}
+
+// yay, rape'n'paste of getsockaddrarg from socketmodule.c. "I couldn't understand what it does, so I removed it!"
+static int makesockaddr(PyObject *args, struct sockaddr **addr_ret, int *len_ret)
+{
+    int sock_family = AF_INET; // FIXME
+    switch (sock_family) {
+    case AF_INET:
+    {
+        struct sockaddr_in* addr;
+        char *host;
+        int port;
+        unsigned long result;
+        if(!PyTuple_Check(args)) {
+            PyErr_Format(PyExc_TypeError, "AF_INET address must be tuple, not %.500s", args->ob_type->tp_name);
+            return 0;
+        }
+        if(!PyArg_ParseTuple(args, "si", &host, &port)) {
+            return 0;
+        }
+        addr = PyMem_Malloc(sizeof(struct sockaddr_in));
+        result = inet_addr(host);
+        if(result == -1) {
+            PyMem_Free(addr);
+            PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
+            return 0;
+        }
+        addr->sin_addr.s_addr = result;
+        addr->sin_family = AF_INET;
+        addr->sin_port = htons((short)port);
+        *addr_ret = (struct sockaddr *) addr;
+        *len_ret = sizeof *addr;
+        return 1;
+    }
+    default:
+        PyErr_SetString(PyExc_ValueError, "bad family");
+        return 0;
+    }
+}
+
+static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
+    SOCKET handle;
+    int res, addrlen;
+    DWORD err;
+    PyObject *object, *address;
+    MyOVERLAPPED *ov;
+    struct sockaddr *addr;
+    if(!PyArg_ParseTuple(args, "lOOO", &handle, &address, &object)) {
+        return NULL;
+    }
+    if(!makesockaddr(address, &addr, &addrlen)) {
+        return NULL;
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+    Py_BEGIN_ALLOW_THREADS;
+    res = ConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
+    Py_END_ALLOW_THREADS;
+    PyMem_Free(addr);
+    err = GetLastError();
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, 0);
 }
 
 PyObject *iocpcore_AllocateReadBuffer(PyObject *self, PyObject *args)
