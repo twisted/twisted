@@ -1,5 +1,11 @@
 2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
 
+	* doc/howto/woven-reference.html: Added this new documentation file.
+	* doc/howto/index.html: Added woven-reference to index
+	* admin/: Added woven-reference.tex to book.tex
+
+2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
+
 	* twisted/web/woven/widgets.py: Stop the 'Option' widget from having a
     name="" attribute. Closes issue255.
 

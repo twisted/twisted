@@ -1,0 +1,260 @@
+<html><head><title>Woven</title></head>
+<body>
+<h1>Woven</h1>
+
+<div class="doit">This document is intended as a reference guide for all the
+woven builtins and signatures you need in order to write a woven application.
+<a href="mailto:stephen@thorne.id.au">Please Give Me Feedback!"</a></div>
+
+<h2>Common Factory Signatures</h2>
+<pre class="python">
+class MyPage(page.Page):
+    def wchild_foo(self, request):
+        """ Return the Resource for /mypage/foo/ """
+
+    def wmfactory_foo(self, request):
+        """ Return the Model object for model="/foo" """
+
+    def wvfactory_cool(self, request, node, model):
+        """ Return node for view="cool" """
+
+    def wvupdate_thumbnail(self, request, widget, data):
+        """ Update and Return the widget for view="thumbnail" """
+
+    def wcfactory_adjuster(self, request, node, model):
+        """ Return the controller for controller="adjuster" """
+</pre>
+
+<h2>Built-in Widgets</h2>
+
+<h3>Attributes</h3>
+<p> For dressing a node with extra attributes from the model. </p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+    &lt;a view="Attributes" model="/mylink"> My Link! &lt;/a>
+    """
+
+MyPage({'mylink' : {'href':'/path/to'} })
+</pre>
+
+<h3>Text, RawText</h3>
+<p> For putting text into a node. This will escape any HTML/XML special characters turning them into HTML entities, i.e. &amp;lt;foo&amp;gt;.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+    &lt;span view="Text" model="/mytext" />
+    """
+
+MyPage({'mytext' : 'abc'})
+</pre>
+
+<h3>ParagraphText</h3>
+<p> For taking text, one paragraph per line, and dressing it with &lt;p&gt; tags.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+    &lt;span view="ParagraphText" model="/mytext" />
+    """
+
+MyPage({'mytext' : """
+This is one Paragraph.
+This is a second one. It has two sentences.
+"""})
+</pre>
+
+
+<h3>Image</h3>
+<p>Displaying Images. Easy.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+    &lt;img view="Image" alt="MyImage" model="/myimg" />
+    """
+
+MyPage({'myimg' : '/images/myimage.png'})
+</pre>
+
+<h3>Error</h3>
+<p>Displaying an error. In red.</p>
+<h3>Div</h3>
+<p>A Div.</p>
+<h3>Span</h3>
+<p>A Span.</p>
+<h3>Br</h3>
+<p>A Br.</p>
+
+<h3>Input</h3>
+<p>An Input, it takes 'value', 'name' and 'id'. If 'name' isn't supplied, it
+reverts to the value of 'id', if 'id' isn't supplied either, it takes the name
+of the submodel. The other input classes extend this one, and give it a proper
+'type'.</p>
+
+<h3>CheckBox</h3>
+<p>As Input, but.. boxy.</p>
+
+<h3>RadioButton</h3>
+<p>As Input, but.. kinda button like.</p>
+
+<h3>File</h3>
+<p>As Input, but.. more chance of 1's and 0's. And a dialog on some user-agents.</p>
+
+<h3>Password</h3>
+<p>Renders a password text field. no option for maxlength, quite strange.</p>
+
+<h3>Button</h3>
+<p>Button</p>
+
+<h3>Select</h3>
+<p>This falls under input, but instead of taking a value, you have to fiddle
+with options for that. There's no way to specify type="multiple" either it
+seems.</p>
+
+<h3>Option</h3>
+<p>Option widgets have the methods .setText() and .setValue(), but if your text
+and your value co-incide, they can just be put in the model and it will all be
+hunky and/or dory.</p>
+
+<h3>Anchor</h3>
+<p>To create an anchor, including safe handling of parameters.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+    &lt;a view="Anchor" model="/anchorone" />
+    &lt;a view="myanchor" model="/anchortwo" />
+    """
+
+    def wvfactory_myanchor(self, request, node, model):
+        a = Anchor()
+        a.setText(model['text'])
+        a.setParameter('thingy', model['thingy'])
+        a.setLink(model['href'])
+
+MyPage({
+    'anchorone' : '/pages/otherpage'
+    'anchortwo' : {
+        'href':'/pages/thisotherpage/',
+        'thingy':'foobar',
+        'text':'The Text Of The Link'
+    })
+</pre>
+
+<h3>DirectoryAnchor</h3>
+<p>Exactly like Anchor, but given a model which contains '/pages/otherpage' it will provide a link to '/pages/otherpage/' with a trailing slash.</p>
+
+<h3>List</h3>
+<p>List is a nice view for displaying the contents of a list. You can choose
+not to specifiy listHeader, listFooter and emptyList. Specifying listItem twice
+or more will cause alternation.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+         &lt;table model="blah" view="List">
+             &lt;tr pattern="listHeader">&lt;th>A&lt;/th>&lt;th>B&lt;/th>&lt;/tr>
+             &lt;tr pattern="emptyList">&lt;td colspan='2'>***None***&lt;/td>&lt;/tr>
+             &lt;tr pattern="listItem">
+                 &lt;td>&lt;span view="Text" model="0" />&lt;/td>
+                 &lt;td>&lt;span view="Text" model="1" />&lt;/td>
+             &lt;/tr>
+             &lt;tr pattern="listFooter">&lt;td colspan="2">All done!&lt;/td>&lt;/tr>
+         &lt;/table>
+    """
+
+MyPage({ 'blah' : [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')] })
+</pre>
+
+<h3>KeyedList</h3>
+<p>KeyedList is similar to List above, works nearly the same way, except the
+model is a dictionary, not a list. If you need access to the key in your
+listItems, make your listItem use a view that will inspect the model=''
+attribute, as the KeyedList widget will create subwidgets, respecting view=''
+but overriding model=''.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+         &lt;table model="blah" view="List">
+             &lt;tr pattern="listHeader">&lt;th>A&lt;/th>&lt;th>B&lt;/th>&lt;/tr>
+             &lt;tr pattern="emptyList">&lt;td colspan='2'>***None***&lt;/td>&lt;/tr>
+             &lt;tr pattern="listItem">
+                 &lt;td>&lt;span view="Text" model="0" />&lt;/td>
+                 &lt;td>&lt;span view="Text" model="1" />&lt;/td>
+             &lt;/tr>
+             &lt;tr pattern="listFooter">&lt;td colspan="2">All done!&lt;/td>&lt;/tr>
+         &lt;/table>
+    """
+
+MyPage({ 'blah' : [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')] })
+</pre>
+
+<h3>Bold</h3>
+<p>A Bold (b, shouldn't this make a 'strong'?).</p>
+<h3>Table</h3>
+<p>A Table.</p>
+<h3>Row</h3>
+<p>A Row (tr).</p>
+<h3>Cell</h3>
+<p>A Cell (td).</p>
+<h3>Link</h3>
+<p>A Link (a) tag. Similar to Anchor.</p>
+<pre class="python">
+class MyPage(page.Page):
+    template = """
+    &lt;a view="Link" model="/anchorone"> My Text &lt;/a>
+    &lt;a view="Link" model="/anchortwo" />
+    """
+
+MyPage({
+    'anchorone' : '/pages/otherpage'
+    'anchortwo' : {
+        'href':'/pages/thisotherpage/',
+        'text':'The Text Of The Link'
+    })
+</pre>
+
+<h3>RootRelativeLink</h3>
+<p>Extends Link, and adds the functionality that it will respect this
+request.getRootURL, so that we can be deployed in different roots easily.
+<span class="python">self['href'] = request.getRootURL() + '/' +
+self['href']</span>.  </p>
+
+<h3>ExpandMacro</h3>
+    <p>A Macro expansion widget modeled after the METAL expander
+    in ZPT/TAL/METAL.</p>
+    
+    <p>In the Page that is being rendered, place the ExpandMacro widget
+    on the node you want replaced with the Macro, and provide nodes
+    tagged with fill-slot= attributes which will fill slots in the Macro:</p>
+    
+<pre class="python">
+class MyPage(page.Page):
+    def wvfactory_myMacro(self, request, node, model):
+        return ExpandMacro(
+            model,
+            macroFile="MyMacro.html",
+            macroName="main")
+</pre>
+        
+<pre class="html">
+&lt;div view="myMacro">
+    &lt;span fill-slot="greeting">Hello&lt;/span>
+    &lt;span fill-slot="greetee">World&lt;/span>
+&lt;/div>
+</pre>
+    
+<p>
+    Then, in your Macro template file ("MyMacro.html" in the above
+    example) designate a node as the macro node, and nodes
+    inside that as the slot nodes::
+</p>
+    
+<pre class="html">
+&lt;div macro="main">
+    &lt;h3>&lt;span slot="greeting" />, &lt;span slot="greetee" />!&lt;/h3>
+&lt;/div>
+</pre>
+
+<h3>DeferredWidget</h3>
+<p>Wraps around a deferred. Usage unknown.</p>
+
+</body>
+</html>
