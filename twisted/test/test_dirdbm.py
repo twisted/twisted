@@ -32,6 +32,15 @@ class DirDbmTestCase(unittest.TestCase):
     
     def tearDown(self):
         shutil.rmtree(self.path)
+        
+    def testRebuildInteraction(self):
+        from twisted.persisted import dirdbm
+        from twisted.python import rebuild
+        
+        s = dirdbm.Shelf('dirdbm.rebuild.test')
+        s['key'] = 'value'
+        rebuild.rebuild(dirdbm)
+        # print s['key']
 
     def testDbm(self):
         d = self.dbm

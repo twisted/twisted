@@ -34,7 +34,11 @@ import base64
 import string
 import glob
 import cPickle
-_open = open
+
+try:
+    _open
+except NameError:
+    _open = open
 
 
 class DirDBM:
