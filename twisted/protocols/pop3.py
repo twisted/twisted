@@ -164,13 +164,15 @@ class POP3Client(basic.LineReceiver):
 
     mode = SHORT
     command = 'WELCOME'
+    import re
+    welcomeRe = re.compile('<(.*)>')
 
     def sendShort(self, command, params):
         self.transport.write('%s %s\r\n' % (command, params))
         self.command = command
         self.mode = SHORT
 
-    def sendLong(self, command):
+    def sendLong(self, command, params):
         self.transport.write('%s %s\r\n' % (command, params))
         self.command = command
         self.mode = FIRST_LONG
@@ -178,6 +180,15 @@ class POP3Client(basic.LineReceiver):
     def handle_default(self, line):
         if line[:-4] == '-ERR':
             self.mode = NONE
+
+    def handle_WELCOME(self, line):
+        code, data = string.split(line)
+        if code != '+OK':
+            self.transport.loseConnection()
+        else:
+            m = self.welcomeRe.match(line)
+            if m:
+                self.welcomeCode = m.group(1)
 
     def lineReceived(self, line):
         if self.mode == SHORT or self.mode == FIRST_LONG:
@@ -189,7 +200,7 @@ class POP3Client(basic.LineReceiver):
                 self.mode = NEXT[self.mode]
                 method = getattr(self, 'handle_'+self.command+'_end', None)
                 if method is not None:
-                    method(line)
+                    method()
                 return
             if line[:1] == '.':
                 line = line[1:]
@@ -197,6 +208,13 @@ class POP3Client(basic.LineReceiver):
             if method is not None:
                 method(line)
 
+    def apopAuthenticate(self, user, password):
+        digest = md5.new(magic+password).digest()
+        digest = string.join(map(lambda x: "%02x"%ord(x), digest), '')
+        self.apop(user, digest)
+
+    def apop(self, user, digest):
+        self.sendLong('APOP', user+' '+digest)
     def retr(self, i):
         self.sendLong('RETR', i)
     def dele(self, i):
@@ -210,7 +228,7 @@ class POP3Client(basic.LineReceiver):
     def pass_(self, pass_):
         self.sendShort('PASS', pass_)
     def quit(self):
-        self.sendShort('QUIT')
+        self.sendShort('QUIT', '')
 
 
 class VirtualPOP3(POP3):

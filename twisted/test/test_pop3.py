@@ -24,7 +24,8 @@ from twisted import mail
 import twisted.protocols.pop3, twisted.protocols.protocol
 from twisted import protocols
 from twisted.test.test_protocols import StringIOWithoutClosing
-import StringIO
+from twisted.protocols import loopback
+import StringIO, string
 
 class MyVirtualPOP3(protocols.pop3.VirtualPOP3):
 
@@ -64,7 +65,33 @@ class ListMailbox:
 
     def sync(self):
         pass
-           
+
+class MyPOP3Downloader(protocols.pop3.POP3Client):
+
+    def handle_WELCOME(self, line):
+        protocols.pop3.POP3Client.handle_WELCOME(self, line)
+        self.apop('hello@baz.com', 'world')
+
+    def handle_APOP(self, line):
+        parts = string.split(line)
+        code = parts[0]
+        data = (parts[1:] or ['NONE'])[0]
+        if code != '+OK':
+            raise AssertionError, 'code is '+code
+        self.lines = []
+        self.retr(1)
+
+    def handle_RETR_continue(self, line):
+        self.lines.append(line)
+
+    def handle_RETR_end(self):
+        self.message = string.join(self.lines, '\n')+'\n'
+        self.quit()
+
+    def handle_QUIT(self, line):
+        code, data = string.split(line)
+        if code != '+OK':
+            raise AssertionError, 'code is '+code
 
 
 class POP3TestCase(unittest.TestCase):
@@ -107,8 +134,15 @@ Someone set up us the bomb!\015
         protocol.lineReceived('RETR 1')
         protocol.lineReceived('QUIT')
         if self.output.getvalue() != self.expectedOutput:
-            print `self.output.getvalue()`
-            print `self.expectedOutput`
+            #print `self.output.getvalue()`
+            #print `self.expectedOutput`
             raise AssertionError(self.output.getvalue(), self.expectedOutput)
+
+    def testLoopback(self):
+        protocol =  MyVirtualPOP3()
+        protocol.factory = self.factory
+        clientProtocol = MyPOP3Downloader()
+        loopback.loopback(protocol, clientProtocol)
+        self.failUnlessEqual(clientProtocol.message, self.message)
 
 testCases = [POP3TestCase]
