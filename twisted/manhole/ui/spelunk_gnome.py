@@ -1,6 +1,9 @@
 # -*- Python -*-
 
-# $Id: spelunk_gnome.py,v 1.1 2001/11/15 23:09:30 acapnotic Exp $
+# $Id: spelunk_gnome.py,v 1.2 2001/11/19 06:30:16 acapnotic Exp $
+
+# TODO:
+#  gzigzag-style navigation
 
 class SillyModule:
     def __init__(self, module, prefix):
@@ -29,6 +32,8 @@ import gtk
 (True, False) = (gtk.TRUE, gtk.FALSE)
 gtk = SillyModule(gtk, 'Gtk')
 
+import GDK
+
 from twisted.python import explorer, reflect, text
 from twisted.spread import pb
 
@@ -37,31 +42,39 @@ import string, sys, types
 _PIXELS_PER_UNIT=10
 
 class SpelunkDisplay(gnome.Canvas):
-    faces = None
     def __init__(self, aa=False):
         gnome.Canvas.__init__(self, aa)
         self.set_pixels_per_unit(_PIXELS_PER_UNIT)
-        self.faces = {}
+
+    def makeDefaultCanvas(self):
+        # Ugh.  For some reason, the 'canvas' and 'parent' properties of
+        # CanvasItems aren't accessible thorugh pygnome.
+        Explorer.canvas = self
 
 class Explorer(pb.RemoteCache):
     # From our cache:
     id = None
     identifier = None
+    explorerClass = None
+    attributeGroups = None
+    canvas = None
 
-    def newRootItem(self, group):
+    def newVisage(self, group, canvas=None):
         klass = spelunkerClassTable.get(self.explorerClass, None)
         if (not klass) or (klass[0] is None):
             print self.explorerClass, "not in table, using generic"
-            klass = SpelunkGenericRoot
+            klass = SpelunkGenericVisage
         else:
             klass = klass[0]
-        spelunker = klass(self, group)
+        spelunker = klass(self, group, canvas or self.canvas)
 
         self.give_properties(spelunker)
 
         for a in self.attributeGroups:
             things = getattr(self, a)
             spelunker.fill_attributeGroup(a, things)
+
+        return spelunker
 
     def newAttributeItem(self, group):
         klass = spelunkerClassTable.get(self.explorerClass, None)
@@ -83,7 +96,7 @@ class Explorer(pb.RemoteCache):
         spelunker.fill_properties(valuelist)
 
 
-class SpelunkRoot(gnome.CanvasGroup):
+class SpelunkVisage(gnome.CanvasGroup):
     color = {'border': '#006644'}
     border_width = 8
     detail_level = 0
@@ -93,10 +106,10 @@ class SpelunkRoot(gnome.CanvasGroup):
     propertyLabels = {}
     groupLabels = {}
 
-    def __init__(self, explorer, parentGroup):
+    def __init__(self, explorer, rootGroup, canvas):
         # Ugh.  PyGtk/GtkObject/GnomeCanvas interfacing grits.
         gnome.CanvasGroup.__init__(self,
-                                   _obj = parentGroup.add('group')._o)
+                                   _obj = rootGroup.add('group')._o)
 
         self.propertyLabels = {}
         reflect.accumulateClassDict(self.__class__, 'propertyLabels',
@@ -109,9 +122,11 @@ class SpelunkRoot(gnome.CanvasGroup):
         self.identifier = explorer.identifier
         self.objectId = explorer.id
 
-        self.parent = parentGroup
+        self.canvas = canvas
+        self.rootGroup = rootGroup
 
         self.ebox = gtk.EventBox()
+        self.ebox.set_name("Visage")
         self.frame = gtk.Frame(self.identifier)
         self.container = gtk.VBox()
         self.ebox.add(self.frame)
@@ -158,7 +173,6 @@ class SpelunkRoot(gnome.CanvasGroup):
             label.set_data("property", p)
             table.attach(label, 0, 1, row, row + 1)
             label.set_alignment(0, 0)
-            print row, p, name
             row = row + 1
 
         # XXX: make these guys collapsable
@@ -181,13 +195,12 @@ class SpelunkRoot(gnome.CanvasGroup):
 
         row = 0
         for value in propValues:
-            print "property value", type(value), value
             if type(value) is not types.InstanceType:
                 widget = gtk.Label(str(value))
-                widget.set_name("PropertyValue")
                 widget.set_alignment(0, 0)
             else:
                 widget = value.newAttributeItem(self)
+            widget.set_name("PropertyValue")
 
             table.attach(widget, 1, 2, row, row+1)
             row = row + 1
@@ -216,7 +229,6 @@ class SpelunkRoot(gnome.CanvasGroup):
 
             if type(value) is types.StringType:
                 widget = gtk.Label(value)
-                widget.set_name("PropertyValue")
                 widget.set_alignment(0, 0)
             else:
                 widget = value.newAttributeItem(self)
@@ -249,33 +261,53 @@ class SpelunkRoot(gnome.CanvasGroup):
 
         del self.ebox
         del self.frame
-        del self.table
+        del self.container
 
         self.subtable.clear()
 
 class SpelunkAttribute(gtk.Widget):
-    def __init__(self, explorer, parentGroup):
+    def __init__(self, explorer, parent):
+        self.parent = parent
+
         self.explorer = explorer
         self.identifier = explorer.identifier
         self.id = explorer.id
 
         widgetObj = self._makeWidgetObject()
         gtk.Widget.__init__(self, _obj=widgetObj)
+        self.set_name("AttributeValue")
         self.connect("destroy", self.signal_destroy, None)
+        self.connect("button-press-event", self.signal_buttonPressEvent,
+                     None)
+
+    def getTextForLabel(self):
+        return self.identifier
 
     def _makeWidgetObject(self):
-        widget = gtk.Label(self.identifier)
-        widget.set_alignment(0,0)
-        return widget._o
+        ebox = gtk.EventBox()
+        label = gtk.Label(self.getTextForLabel())
+        label.set_alignment(0,0)
+        ebox.add(label)
+        return ebox._o
 
     def signal_destroy(self, unused_object, unused_data):
         del self.explorer
 
+    def signal_buttonPressEvent(self, widget, eventButton, unused_data):
+        if eventButton.type == GDK._2BUTTON_PRESS:
+            visage = self.explorer.newVisage(self.parent.rootGroup,
+                                             self.parent.canvas)
+            (x, y, w, h) = self.get_allocation()
+            wx, wy = self.parent.canvas.c2w(x, y)
+
+            x1, y1, x2, y2 = self.parent.get_bounds()
+
+            visage.move(x2, wy + y1)
 
 class ExplorerInstance(Explorer):
     pass
 
-class SpelunkInstanceRoot(SpelunkRoot):
+class SpelunkInstanceVisage(SpelunkVisage):
     # Detail levels:
     # Just me
     # me and my class
@@ -287,8 +319,8 @@ class SpelunkInstanceRoot(SpelunkRoot):
 
     detail = 0
 
-    def __init__(self, explorer, group):
-        SpelunkRoot.__init__(self, explorer, group)
+    def __init__(self, explorer, group, canvas):
+        SpelunkVisage.__init__(self, explorer, group, canvas)
 
         class_identifier = self.explorer.klass.name
         # XXX: include partial module name in class?
@@ -296,30 +328,23 @@ class SpelunkInstanceRoot(SpelunkRoot):
                                                class_identifier,
                                                self.objectId))
 
-
 class SpelunkInstanceAttribute(SpelunkAttribute):
-    def _makeWidgetObject(self):
-        widget = gtk.Label("%s instance" % (self.explorer.klass.name))
-        widget.set_alignment(0,0)
-        return widget._o
-
+    def getTextForLabel(self):
+        return "%s instance" % (self.explorer.klass.name,)
 
 class ExplorerClass(Explorer):
     properties = ["bases", "name", "module"]
     attributeGroups = ["data", "methods"]
 
 class SpelunkClassAttribute(SpelunkAttribute):
-    def _makeWidgetObject(self):
-        widget = gtk.Label(self.explorer.name)
-        widget.set_alignment(0,0)
-        return widget._o
-
+    def getTextForLabel(self):
+        return self.explorer.name
 
 class ExplorerFunction(Explorer):
     properties = ["name","signature"] # ...
 
 class SpelunkFunctionAttribute(SpelunkAttribute):
-    def _makeWidgetObject(self):
+    def getTextForLabel(self):
         signature = self.explorer.signature
         arglist = []
         for arg in xrange(len(signature)):
@@ -340,9 +365,7 @@ class SpelunkFunctionAttribute(SpelunkAttribute):
                 a = name
             arglist.append(a)
 
-        widget = gtk.Label(string.join(arglist, ", "))
-        widget.set_alignment(0,0)
-        return widget._o
+        return string.join(arglist, ", ")
 
 class ExplorerMethod(ExplorerFunction):
     properties = ["class", "self"]
@@ -361,39 +384,34 @@ class ExplorerSequence(Explorer):
     pass
 
 class SpelunkSequenceAttribute(SpelunkAttribute):
-    def _makeWidgetObject(self):
+    def getTextForLabel(self):
         # XXX: Differentiate between lists and tuples.
         if self.explorer.len:
-            widget = gtk.Label("list of length %d" % (self.explorer.len,))
+            txt = "list of length %d" % (self.explorer.len,)
         else:
-            widget = gtk.Label("[]")
-        widget.set_alignment(0,0)
-        return widget._o
+            txt = "[]"
+        return txt
 
 class ExplorerMapping(Explorer):
     pass
 
 class SpelunkMappingAttribute(SpelunkAttribute):
-    def _makeWidgetObject(self):
+    def getTextForLabel(self):
         if self.explorer.len:
-            widget = gtk.Label("dict with %d elements"
-                               % (self.explorer.len,))
+            txt = "dict with %d elements" % (self.explorer.len,)
         else:
-            widget = gtk.Label("{}")
-        widget.set_alignment(0,0)
-        return widget._o
+            txt = "{}"
+        return txt
 
 class ExplorerImmutable(Explorer):
     pass
 
 class SpelunkImmutableAttribute(SpelunkAttribute):
-    def _makeWidgetObject(self):
-        widget = gtk.Label(repr(self.explorer.value))
-        widget.set_alignment(0,0)
-        return widget._o
+    def getTextForLabel(self):
+        return repr(self.explorer.value)
 
 spelunkerClassTable = {
-    "ExplorerInstance": (SpelunkInstanceRoot, SpelunkInstanceAttribute),
+    "ExplorerInstance": (SpelunkInstanceVisage, SpelunkInstanceAttribute),
     "ExplorerFunction": (None, SpelunkFunctionAttribute),
     "ExplorerMethod": (None, SpelunkMethodAttribute),
     "ExplorerImmutable": (None, SpelunkImmutableAttribute),
@@ -401,7 +419,7 @@ spelunkerClassTable = {
     "ExplorerSequence": (None, SpelunkSequenceAttribute),
     "ExplorerMapping": (None, SpelunkMappingAttribute),
     }
-SpelunkGenericRoot = SpelunkRoot
+SpelunkGenericVisage = SpelunkVisage
 SpelunkGenericAttribute = SpelunkAttribute
 
 pb.setCopierForClassTree(sys.modules[__name__],
