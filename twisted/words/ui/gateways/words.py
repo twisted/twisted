@@ -124,6 +124,9 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
     def remote_memberLeft(self,member,group):
         self.memberLeft(member,group)
 
+    def remote_setGroupMeta(self,dict):
+        pass # we'll handle this later
+
     def event_addContact(self,contact):
         self.remote.addContact(contact)
     
@@ -137,7 +140,7 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
         self.remote.joinGroup(group)
         self.joinedGroup(group)
 
-    def leaveGroup(self,group):
+    def event_leaveGroup(self,group):
         self.remote.leaveGroup(group)
         self.leftGroup(group)
 
