@@ -16,7 +16,11 @@ def _get(node, nodeId):
     if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId)):
         return node
     if node.hasChildNodes():
-        for childNum in range(node.childNodes.length):
+        if hasattr(node.childNodes, 'length'):
+            length = node.childNodes.length
+        else:
+            length = len(node.childNodes)
+        for childNum in length:
             result = _get(node.childNodes[childNum], nodeId)
             if result: return result
 
@@ -72,4 +76,4 @@ def superPrependAttribute(node, key, value):
         node.setAttribute(key, value)
     if node.hasChildNodes():
         for child in node.childNodes:
-            superSetAttribute(child, key, value)
+            superPrependAttribute(child, key, value)
