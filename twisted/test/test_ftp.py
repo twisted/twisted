@@ -30,8 +30,6 @@ from twisted.test.test_protocols import StringIOWithoutClosing
 
 from twisted.python import log
 
-FTP_PORT = 2121
-
 class BufferProtocol(Protocol):
     def __init__(self):
         self.buf = StringIO()
@@ -42,6 +40,11 @@ class BufferProtocol(Protocol):
 class FTPClientTests(unittest.TestCase):
     def testFailedRETR(self):
         try:
+            f = Factory()
+            f.noisy = 0
+            f.protocol = Protocol
+            port = reactor.listenTCP(0, f)
+            n = port.getHost()[2]
             # This test data derived from a bug report by ranty on #twisted
             responses = ['220 ready, dude (vsFTPd 1.0.0: beat me, break me)',
                          # USER anonymous
@@ -51,7 +54,8 @@ class FTPClientTests(unittest.TestCase):
                          # TYPE I
                          '200 Binary it is, then.',
                          # PASV
-                         '227 Entering Passive Mode (127,0,0,1,10,0)',
+                         '227 Entering Passive Mode (127,0,0,1,%d,%d)' %
+                         (n>>8, n&0xff),
                          # RETR /file/that/doesnt/exist
                          '550 Failed to open file.']
 
@@ -59,10 +63,6 @@ class FTPClientTests(unittest.TestCase):
             client = ftp.FTPClient(passive=1)
             client.makeConnection(FileWrapper(b))
             self.writeResponses(client, responses)
-            f = Factory()
-            f.noisy = 0
-            f.protocol = Protocol
-            port = reactor.listenTCP(10*256 + 0, f)
             p = Protocol()
             d = client.retrieveFile('/file/that/doesnt/exist', p)
             d.addCallback(lambda r, self=self: 
@@ -104,7 +104,8 @@ class FTPServerTests(unittest.TestCase):
         serverPath = os.path.dirname(test_ftp.__file__)
         self.serverFactory.root = serverPath
 
-        self.serverPort = reactor.listenTCP(FTP_PORT, self.serverFactory)
+        self.serverPort = reactor.listenTCP(0, self.serverFactory)
+        self.ftp_port = self.serverPort.getHost()[2]
 
     def tearDown(self):
         self.serverPort.stopListening()
@@ -136,7 +137,7 @@ class FTPClientAndServerTests(FTPServerTests):
         factory = ClientFactory()
         factory.noisy = 0
         factory.buildProtocol = lambda s, c=client: c
-        reactor.connectTCP('localhost', FTP_PORT, factory)
+        reactor.connectTCP('localhost', self.ftp_port, factory)
 
         # Issue the command and set the callbacks
         fileList = ftp.FTPFileListProtocol()
@@ -169,7 +170,7 @@ class FTPClientAndServerTests(FTPServerTests):
         factory = ClientFactory()
         factory.noisy = 0
         factory.buildProtocol = lambda s, c=client: c
-        reactor.connectTCP('localhost', FTP_PORT, factory)
+        reactor.connectTCP('localhost', self.ftp_port, factory)
 
         # Issue the command and set the callbacks
         p = BufferProtocol()
@@ -202,7 +203,7 @@ class FTPClientAndServerTests(FTPServerTests):
         factory = ClientFactory()
         factory.noisy = 0
         factory.buildProtocol = lambda s, c=client: c
-        reactor.connectTCP('localhost', FTP_PORT, factory)
+        reactor.connectTCP('localhost', self.ftp_port, factory)
 
         # Download this module's file (test_ftp.py/.pyc/.pyo)
         import test_ftp
@@ -260,7 +261,7 @@ class FTPClientAndServerTests(FTPServerTests):
         factory = ClientFactory()
         factory.noisy = 0
         factory.buildProtocol = lambda s,c=client: c
-        reactor.connectTCP('localhost', FTP_PORT, factory)
+        reactor.connectTCP('localhost', self.ftp_port, factory)
         while None in errors and not self.callbackException:
             reactor.iterate()
 
