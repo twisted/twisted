@@ -21,7 +21,11 @@
 
 # Twisted imports
 from twisted.protocols import basic
-from twisted.internet import protocol, defer, reactor
+from twisted.protocols import policies
+from twisted.internet import protocol
+from twisted.internet import defer
+from twisted.internet import reactor
+from twisted.internet.interfaces import ITLSTransport
 from twisted.python import log
 from twisted.python import components
 from twisted.python import util
@@ -477,7 +481,7 @@ class IMessage(components.Interface):
         """Set this message as being delivered within its queue.
         """
 
-class SMTP(basic.LineReceiver):
+class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     """SMTP server-side protocol."""
     
     timeout = 600
@@ -490,10 +494,9 @@ class SMTP(basic.LineReceiver):
         self._helo = None
         self._to = []
 
-    def timedout(self):
-        self.timeoutID = None
-        self.sendCode(421, '%s Timeout. Try talking faster next time!' %
-                      self.host)
+    def timeoutConnection(self):
+        msg = '%s Timeout. Try talking faster next time!' % (self.host,)
+        self.sendCode(421, msg)
         self.transport.loseConnection()
 
     def greeting(self):
@@ -501,8 +504,7 @@ class SMTP(basic.LineReceiver):
 
     def connectionMade(self):
         self.sendCode(220, self.greeting())
-        if self.timeout:
-            self.timeoutID = reactor.callLater(self.timeout, self.timedout)
+        self.setTimeout(self.timeout)
 
     def sendCode(self, code, message=''):
         "Send an SMTP code with a message."
@@ -514,11 +516,7 @@ class SMTP(basic.LineReceiver):
                                                lastline and lastline[0] or ''))
 
     def lineReceived(self, line):
-        # print self.mode, 'S:', repr(line)
-        if self.timeout:
-            self.timeoutID.cancel()
-            self.timeoutID = reactor.callLater(self.timeout, self.timedout)
-
+        self.resetTimeout()
         return getattr(self, 'state_' + self.mode)(line)
     
     def state_COMMAND(self, line):
@@ -724,8 +722,7 @@ class SMTP(basic.LineReceiver):
                 del self.__messages
             except AttributeError:
                 pass
-        if self.timeout:
-            self.timeoutID.cancel()
+        self.setTimeout(None)
 
     def do_RSET(self, rest):
         self._from = None
@@ -1168,7 +1165,7 @@ class ESMTP(SMTP):
 
     def connectionMade(self):
         SMTP.connectionMade(self)
-        self.canStartTLS = implements(self.transport, ITLSTransport)
+        self.canStartTLS = components.implements(self.transport, ITLSTransport)
 
     def extensions(self):
         ext = {'AUTH': self.challengers.keys()}
