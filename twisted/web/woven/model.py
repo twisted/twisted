@@ -261,6 +261,38 @@ class Wrapper:
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
                                                             id(self), self.orig)
 
+class ObjectWrapper(Wrapper):
+    """
+    I may wrap an object and allow it to interact with the Woven models
+    and submodels.  By default, I am not registered for use with anything.
+    """
+    __implements__ = interfaces.IModel
+
+    parent = None
+    name = None
+    def getSubmodel(self, name):
+        return getattr(self.orig, name)
+
+    def setSubmodel(self, name, value):
+        setattr(self.orig, name, value)
+
+class UnsafeObjectWrapper(ObjectWrapper):
+    """
+    I may wrap an object and allow it to interact with the Woven models
+    and submodels.  By default, I am not registered for use with anything.
+    I am unsafe because I allow methods to be called. In fact, I am
+    dangerously unsafe.  Be wary or I will kill your security model!
+    """
+    __implements__ = interfaces.IModel
+
+    parent = None
+    name = None
+    def getSubmodel(self, name):
+        value = getattr(self.orig, name)
+        if callable(value):
+            return value()
+        return value
+
 from twisted.internet import defer
 
 try:
