@@ -1,0 +1,4 @@
+register("Web Proxy",
+         "exarkun.proxy",
+         description="Proxy for web jazz",
+         type="tap")
