@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_rootresolve -*-
+# -*- test-case-name: twisted.names.test.test_rootresolve -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 

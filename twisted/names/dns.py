@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_dns -*-
+# -*- test-case-name: twisted.names.test.test_dns -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
