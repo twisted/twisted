@@ -29,12 +29,14 @@ class Options(usage.Options):
     optParameters = [
         ["interface", "i", "",   "The interface to which to bind"],
         ["port",      "p", "53", "The port on which to listen"],
-        ["resolv-conf", None, None, "Override location of resolv.conf"],
+        ["resolv-conf", None, None,
+            "Override location of resolv.conf (implies --recursive)"],
     ]
     
     optFlags = [
         ["cache",       "c", "Enable record caching"],
         ["recursive",   "r", "Perform recursive lookups"],
+        ["iterative",   "I", "Perform lookups using the root servers"],
         ["verbose",     "v", "Log verbosely"]
     ]
 
@@ -67,6 +69,11 @@ class Options(usage.Options):
 
 
     def postOptions(self):
+        if self['resolv-conf']:
+            self['recursive'] = True
+        if self['iterative'] and self['recursive']:
+            raise usage.UsageError("--iterative and --recursive are mutually exclusive.")
+
         self.zones = []
         for f in self.zonefiles:
             try:

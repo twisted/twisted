@@ -290,19 +290,24 @@ class DNSClientFactory(protocol.ClientFactory):
         return p
 
 
-def createResolver(servers = None, resolvconf = None):
-    import resolve, cache, hosts
+def createResolver(servers = None, resolvconf = None, hosts = None):
+    import resolve, cache, hosts, root
     if platform.getType() == 'posix':
         if resolvconf is None:
             resolvconf = '/etc/resolv.conf'
+        if hosts is None:
+            hosts = '/etc/hosts'
         theResolver = Resolver(resolvconf, servers)
-        hostResolver = hosts.Resolver()
+        hostResolver = hosts.Resolver(hosts)
     else:
-        if resolvconf is None:
-            resolvconf = r'c:\windows\hosts'
-        theResolver = ThreadedResolver()
-        hostResolver = hosts.Resolver(resolvconf)
-    return resolve.ResolverChain([hostResolver, cache.CacheResolver(), theResolver])
+        if hosts is None:
+            hosts = r'c:\windows\hosts'
+        bootstrap = ThreadedResolver()
+        hostResolver = hosts.Resolver(hosts)
+        theResolver = root.bootstrap(bootstrap)
+
+    L = [hostResolver, cache.CacheResolver(), theResolver]
+    return resolve.ResolverChain(L)
 
 try:
     theResolver

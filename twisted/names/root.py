@@ -34,7 +34,6 @@ from twisted.python import log
 from twisted.internet import defer
 from twisted.protocols import dns
 from twisted.names import common
-from twisted.names import client
 
 class _DummyController:
     def messageReceived(self, *args):
@@ -52,6 +51,7 @@ class Resolver(common.ResolverBase):
         return d
     
     def discoveredAuthority(self, auth, name, cls, type, timeout):
+        from twisted.names import client
         q = dns.Query(name, cls, type)
         r = client.Resolver(servers=[(auth, dns.PORT)])
         d = r.queryUDP([q], timeout)
@@ -122,3 +122,41 @@ def discoverAuthority(host, roots, timeout=10, p=None, cache=None):
         d.addCallback(gotAuthority)
         d.addCallback(lookupNext)
         return d
+
+def makePlaceholder(deferred, name):
+    def placeholder(*args, **kw):
+        deferred.addCallback(lambda r: getattr(r, name)(*args, **kw))
+        return deferred
+    return placeholder
+
+class DeferredResolver:
+    def __init__(self, resolverDeferred):
+        resolverDeferred.addCallback(self.gotRealResolver)
+        self.waiting = []
+
+    def gotRealResolver(self, resolver):
+        for d in self.waiting:
+            d.callback(resolver)
+        self.__dict__ = resolver.__dict__
+        self.__class__ = resolver.__class__
+
+    def __getattr__(self, name):
+        if name.startswith('lookup') or name == 'getHostByName':
+            self.waiting.append(defer.Deferred())
+            return makePlaceholder(self.waiting[-1], name)
+        raise AttributeError(name)
+
+def bootstrap(resolver):
+    """Lookup the root nameserver addresses using the given resolver
+    
+    Return a Resolver which will eventually become a C{root.Resolver}
+    instance that has references to all the root servers that we were able
+    to look up.
+    """
+    domains = [chr(ord('a') + i) for i in range(13)]
+    from twisted.python import log
+    f = lambda r: (log.msg(r), r)[1]
+    L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
+    d = defer.DeferredList(L)
+    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
+    return DeferredResolver(d)
