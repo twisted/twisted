@@ -37,7 +37,32 @@ class PersistTestCase(unittest.TestCase):
                 o1 = persist.load('persisttest.'+style, style)
                 self.failUnlessEqual(o, o1)
 
+    def testEncryptedStyles(self):
+        try:
+            import Crypto
+        except ImportError:
+            raise unittest.SkipTest()
+        for o in objects:
+            phrase='once I was the king of spain'
+            p = persist.Persistant(o, '')
+            for style in 'xml source pickle'.split():
+                p.setStyle(style)
+                p.save(filename='epersisttest.'+style, passphrase=phrase)
+                o1 = persist.load('epersisttest.'+style, style, phrase)
+                self.failUnlessEqual(o, o1)
+
     def testPython(self):
         open("persisttest.python", 'w').write('foo=[1,2,3]')
         o = persist.loadValueFromFile('persisttest.python', 'foo')
+        self.failUnlessEqual(o, [1,2,3])
+
+    def testEncryptedPython(self):
+        try:
+            import Crypto
+        except ImportError:
+            raise unittest.SkipTest()
+        phrase='once I was the king of spain'
+        open("epersisttest.python", 'w').write(
+                          persist._encrypt(phrase, 'foo=[1,2,3]'))
+        o = persist.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.failUnlessEqual(o, [1,2,3])

@@ -168,8 +168,8 @@ def load(filename, style, passphrase=None):
     else:
         load, mode = pickle.load, 'rb'
     if passphrase:
-        fp = StringIO.StringIO(_decrypt(open(filename, 'rb').read(),
-                                        passphrase))
+        fp = StringIO.StringIO(_decrypt(passphrase,
+                                        open(filename, 'rb').read()))
     else:
         fp = open(filename, mode)
     mainMod = sys.modules['__main__']
