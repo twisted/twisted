@@ -80,11 +80,6 @@ class String(Argument):
     defaultDefault = ''
 
     def coerce(self, val):
-        if not val.strip():
-            if self.allowNone:
-                return ''
-            else:
-                raise InputError, "Cannot be empty"
         return str(val)
 
 
