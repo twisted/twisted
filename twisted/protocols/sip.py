@@ -1045,7 +1045,7 @@ class RegisterProxy(Proxy):
         if message.headers.has_key("contact"):
             contact = message.headers["contact"][0]
 
-        if message.headers.get("expires", "0") == "0":
+        if message.headers.get("expires", None) == "0":
             self.unregister(message, contact)
         else:
             if contact is not None:
