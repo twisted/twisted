@@ -259,8 +259,8 @@ class FormErrorWidget(FormFillerWidget):
         for k, f in self.model.err.items():
             en = self.errorNodes[k]
             tn = self.inputNodes[k]
-            for n in en, tn:
-                n.setAttribute('class', "formError")
+            en.setAttribute('class', 'formError')
+            tn.setAttribute('class', 'formInputError')
             en.childNodes[:]=[] # gurfle, CLEAR IT NOW!@#
             if isinstance(f, failure.Failure):
                 f = f.getErrorMessage()
@@ -275,6 +275,8 @@ class FormErrorModel(FormDisplayModel):
     def initialize(self, fmethod, args, err):
         FormDisplayModel.initialize(self, fmethod)
         self.args = args
+        if isinstance(err, failure.Failure):
+            err = err.value
         if isinstance(err, Exception):
             self.err = getattr(err, "descriptions", {})
             self.desc = err
@@ -285,21 +287,12 @@ class FormErrorModel(FormDisplayModel):
     def wmfactory_description(self, request):
         return str(self.desc)
 
-
-class ThankYou(view.View):
-    template = '''
-    <html>
-    <head>
-    <title> Thank You </title>
-    </head>
-    <body>
-    <h1>Thank You for Using Woven</h1>
-    <div model=".">
-    </div>
-    </body>
-    </html>
-    '''
-
+class _RequestHack(model.MethodModel):
+    def wmfactory_hack(self, request):
+        rv = [[str(a), repr(b)] for (a, b)
+              in request._outDict.items()]
+        print 'hack', rv
+        return rv
 
 class FormProcessor(resource.Resource):
     def __init__(self, formMethod, callback=None, errback=None):
@@ -340,15 +333,20 @@ class FormProcessor(resource.Resource):
                 err = request.errorInfo = self.errorModelFactory(request.args, outDict, e)
                 return self.errback(err).render(request)
             else:
+                request._outDict = outDict # CHOMP CHOMP!
+                # I wanted better default behavior for debugging, so I could
+                # see the arguments passed, but there is no channel for this in
+                # the existing callback structure.  So, here it goes.
                 if isinstance(outObj, defer.Deferred):
-                    def _cbModel(result):
-                        return self.callback(self.modelFactory(result))
                     def _ebModel(err):
                         if err.trap(formmethod.FormException):
                             mf = self.errorModelFactory(request.args, outDict, err.value)
                             return self.errback(mf)
                         raise err
-                    outObj.addCallback(_cbModel).addErrback(_ebModel)
+                    (outObj
+                     .addCallback(self.modelFactory)
+                     .addCallback(self.callback)
+                     .addErrback(_ebModel))
                     return tapestry._ChildJuggler(outObj).render(request)
                 else:
                     return self.callback(self.modelFactory(outObj)).render(request)
@@ -362,6 +360,11 @@ class FormProcessor(resource.Resource):
         <html>
         <head>
         <title> Form Error View </title>
+        <style>
+        .formDescription {color: green}
+        .formError {color: red; font-weight: bold}
+        .formInputError {color: #900}
+        </style>
         </head>
         <body>
         Error: <span model="description" />
@@ -379,7 +382,33 @@ class FormProcessor(resource.Resource):
 
     def viewFactory(self, model):
         # return getAdapter(model, interfaces.IView)
-        return ThankYou(model)
+        if model is None:
+            bodyStr = '''
+            <table model="hack" style="background-color: #99f">
+            <tr pattern="listItem" view="Widget">
+            <td model="0" style="font-weight: bold">
+            </td>
+            <td model="1">
+            </td>
+            </tr>
+            </table>
+            '''
+            model = _RequestHack()
+        else:
+            bodyStr = '<div model="." />'
+        v = view.View(model)
+        v.template = '''
+        <html>
+        <head>
+        <title> Thank You </title>
+        </head>
+        <body>
+        <h1>Thank You for Using Woven</h1>
+        %s
+        </body>
+        </html>
+        ''' % bodyStr
+        return v
 
     # mangliezrs
 

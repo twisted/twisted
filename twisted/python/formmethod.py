@@ -157,6 +157,8 @@ class Flags(Argument):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
     def coerce(self, inFlagKeys):
+        if not inFlagKeys:
+            return []
         outFlags = []
         for inFlagKey in inFlagKeys:
             for flagKey, flagVal, flagDesc in self.flags:
