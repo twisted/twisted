@@ -112,12 +112,6 @@ register("Twisted Coil",
          description="A web-based configuration manager.",
          type="tap")
 
-register("Twisted Instance Messenger",
-         "twisted.im.tap",
-         description="A multi-protocol chat client.",
-         type="tap",
-         tapname="im")
-
 register("Twisted Sibling 'Parent'",
          "twisted.sibling.parentap",
          description="Parent service.",
