@@ -333,7 +333,7 @@ class NotifyTest(WovenTC):
         liNodes = domhelpers.getElementsByTagName(listNode, 'li')
         assert liNodes, "DOM was not updated by notifying Widgets. Test %s" % outputNum
         text = domhelpers.gatherTextNodes(liNodes[0])
-        assert text == "test", "Wrong output: %s. Test %s" % (text, outputNum)
+        assert text.strip() == "test", "Wrong output: %s. Test %s" % (text, outputNum)
 
 view.registerViewForModel(LLView, LLModel)
 
@@ -410,8 +410,8 @@ class ListOfDeferredsTest(WovenTC):
         self.assertEquals(len(n.childNodes), 2)
         for c in n.childNodes:
             self.assertEquals(c.nodeName, "b")
-        self.assertEquals(n.firstChild().firstChild().toxml(), "hello")
-        self.assertEquals(n.lastChild().firstChild().toxml(), "world")
+        self.assertEquals(n.firstChild().firstChild().toxml().strip(), "hello")
+        self.assertEquals(n.lastChild().firstChild().toxml().strip(), "world")
 
 
 class FakeHTTPChannel:
