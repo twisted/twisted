@@ -306,13 +306,22 @@ class DTP(protocol.Protocol):
 class DTPFactory(protocol.ClientFactory):
     """The DTP-Factory.
     This class is not completely self-contained.
+
+    from the RFC:
+        The data transfer process establishes and manages the data
+        connection.  The DTP can be passive or active.
     """
+    # a new DTP factory is generated for each action (?)
     dtpClass = DTP
     dtp = None      # The DTP-protocol
     dtpPort = None  # The TCPClient / TCPServer
     action = None
 
     def createPassiveServer(self):
+        """In FTP, this creates a port/address to listen on
+        and tells the client to connect to it, Rather than connecting
+        *to* the client. useful when dealing with firewalled clients
+        """
         if self.dtp is not None:
             if self.dtp.transport is not None:
                 self.dtp.transport.loseConnection()
@@ -321,6 +330,8 @@ class DTPFactory(protocol.ClientFactory):
         self.dtpPort = reactor.listenTCP(0, self)
  
     def createActiveServer(self):
+        """A direct connection to the client process
+        """
         if self.dtp is not None:
             if self.dtp.transport is not None:
                 self.dtp.transport.loseConnection()
@@ -381,6 +392,7 @@ class FTP(basic.LineReceiver, DTPFactory):
         else:
             return None
         
+    # should probably allow for a configurable "hello" message
     def connectionMade(self):
         self.reply('welcome')
 
@@ -391,6 +403,18 @@ class FTP(basic.LineReceiver, DTPFactory):
     def ftp_User(self, params):
         """Get the login name, and reset the session
         PASS is expected to follow
+
+        from the rfc:
+            The argument field is a Telnet string identifying the user.
+            The user identification is that which is required by the
+            server for access to its file system.  This command will
+            normally be the first command transmitted by the user after
+            the control connections are made
+
+            This has the effect of flushing any user, password, and account
+            information already supplied and beginning the login sequence
+            again.  All transfer parameters are unchanged and any file transfer
+            in progress is completed under the old access control parameters.
         """
         if params=='':
             return 1
@@ -417,6 +441,12 @@ class FTP(basic.LineReceiver, DTPFactory):
             
     def ftp_Pass(self, params):
         """Authorize the USER and the submitted password
+
+        from the rfc:
+            The argument field is a Telnet string specifying the user's
+            password.  This command must be immediately preceded by the
+            user name command, and, for some sites, completes the user's
+            identification for access control.
         """
         if not self.user:
             self.reply('nouser')
@@ -448,6 +478,11 @@ class FTP(basic.LineReceiver, DTPFactory):
         Sometimes used by clients to avoid a time-out.
         TODO: Add time-out, let Noop extend this time-out.
         Add a No-Transfer-Time-out as well to get rid of idlers.
+
+        from the rfc:
+            This command does not affect any parameters or previously
+            entered commands. It specifies no action other than that the
+            server send an OK reply.
         """
         if self.checkauth(): return
         self.reply('ok', 'NOOP')
@@ -455,15 +490,33 @@ class FTP(basic.LineReceiver, DTPFactory):
     def ftp_Syst(self, params):
         """Return the running operating system to the client
         However, due to security-measures, it will return a standard 'L8' reply
+
+        from the rfc:
+            This command is used to find out the type of operating
+            system at the server.  The reply shall have as its first
+            word one of the system names listed in the current version
+            of the Assigned Numbers document [4].
         """
         if self.checkauth(): return
         self.reply('syst')
         
     def ftp_Pwd(self, params):
+        """ Print working directory command
+        """
         if self.checkauth(): return
         self.reply('pwd', self.wd)
 
     def ftp_Cwd(self, params):
+        """Change working directory
+
+        from the rfc:
+            This command allows the user to work with a different
+            directory or dataset for file storage or retrieval without
+            altering his login or accounting information.  Transfer
+            parameters are similarly unchanged.  The argument is a
+            pathname specifying a directory or other system dependent
+            file group designator.
+        """
         if self.checkauth(): return
         wd = os.path.normpath(params)
         if not os.path.isabs(wd):
@@ -482,9 +535,41 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('cwdok')
 
     def ftp_Cdup(self, params):
+        """Changes to parent directory
+        """
         self.ftp_Cwd('..')
 
     def ftp_Type(self, params):
+        """ sets data representation type
+
+        from the rfc:
+
+            The argument specifies the representation type as described
+            in the Section on Data Representation and Storage.  Several
+            types take a second parameter.  The first parameter is
+            denoted by a single Telnet character, as is the second
+            Format parameter for ASCII and EBCDIC; the second parameter
+            for local byte is a decimal integer to indicate Bytesize.
+            The parameters are separated by a <SP> (Space, ASCII code
+            32).
+
+            The following codes are assigned for type:
+
+                         \    /
+               A - ASCII |    | N - Non-print
+                         |-><-| T - Telnet format effectors
+               E - EBCDIC|    | C - Carriage Control (ASA)
+                         /    \
+               I - Image
+               
+               L <byte size> - Local byte Byte size
+
+
+            The default representation type is ASCII Non-print.  If the
+            Format parameter is changed, and later just the first
+            argument is changed, Format then returns to the Non-print
+            default.
+        """
         if self.checkauth(): return
         params = string.upper(params)
         if params in ['A', 'I']:
@@ -500,6 +585,24 @@ class FTP(basic.LineReceiver, DTPFactory):
         An extra approach is to disable port'ing to a third-party ip,
         which is optional through ALLOW_THIRDPARTY.
         Note that this disables 'Cross-ftp' 
+
+        from the rfc:
+
+            The argument is a HOST-PORT specification for the data port
+            to be used in data connection.  There are defaults for both
+            the user and server data ports, and under normal
+            circumstances this command and its reply are not needed.  If
+            this command is used, the argument is the concatenation of a
+            32-bit internet host address and a 16-bit TCP port address.
+            This address information is broken into 8-bit fields and the
+            value of each field is transmitted as a decimal number (in
+            character string representation).  The fields are separated
+            by commas.  A port command would be:
+
+               PORT h1,h2,h3,h4,p1,p2
+
+            where h1 is the high order 8 bits of the internet host
+            address.
         """
         if self.checkauth(): return
         params = string.split(params, ',')
@@ -521,7 +624,15 @@ class FTP(basic.LineReceiver, DTPFactory):
         self.reply('ok', 'PORT')
 
     def ftp_Pasv(self, params):
-        "Request for a passive connection"
+        """Request for a passive connection
+
+        from the rfc:
+            This command requests the server-DTP to "listen" on a data
+            port (which is not its default data port) and to wait for a
+            connection rather than initiate one upon receipt of a
+            transfer command.  The response to this command includes the
+            host and port address this server is listening on.
+        """
         if self.checkauth():
             return
         self.createPassiveServer()
@@ -555,6 +666,8 @@ class FTP(basic.LineReceiver, DTPFactory):
         return os.path.normpath(npath) # finalize path appending 
 
     def ftp_Size(self, params):
+        # is this specified in the RFC?
+        """"""
         if self.checkauth():
             return
         npath = self.buildFullpath(params)
@@ -564,6 +677,9 @@ class FTP(basic.LineReceiver, DTPFactory):
         self.reply('size', os.path.getsize(npath))
 
     def ftp_Dele(self, params):
+        """ This command causes the file specified in the pathname to be
+        deleted at the server site. 
+        """
         if self.checkauth():
             return
         npath = self.buildFullpath(params)
@@ -574,6 +690,11 @@ class FTP(basic.LineReceiver, DTPFactory):
         self.reply('fileok')
 
     def ftp_Mkd(self, params):
+        """ This command causes the directory specified in the pathname
+        to be created as a directory (if the pathname is absolute)
+        or as a subdirectory of the current working directory (if
+        the pathname is relative).
+        """
         if self.checkauth():
             return
         npath = self.buildFullpath(params)
@@ -584,6 +705,11 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('nodir')
 
     def ftp_Rmd(self, params):
+        """ This command causes the directory specified in the pathname
+        to be removed as a directory (if the pathname is absolute)
+        or as a subdirectory of the current working directory (if
+        the pathname is relative). 
+        """
         if self.checkauth():
             return
         npath = self.buildFullpath(params)
@@ -597,12 +723,30 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('nodir')
  
     def ftp_List(self, params):
+        """ This command causes a list to be sent from the server to the
+        passive DTP.  If the pathname specifies a directory or other
+        group of files, the server should transfer a list of files
+        in the specified directory.  If the pathname specifies a
+        file then the server should send current information on the
+        file.  A null argument implies the user's current working or
+        default directory.
+        """
         self.getListing(params)
 
     def ftp_Nlst(self, params):
+        """This command causes a directory listing to be sent from
+        server to user site.  The pathname should specify a
+        directory or other system-specific file group descriptor; a
+        null argument implies the current directory. This command is intended
+        to return information that can be used by a program to
+        further process the files automatically.  For example, in
+        the implementation of a "multiple get" function.
+        """
         self.getListing(params, 'NLST')
 
     def getListing(self, params, action='LIST'):
+        """generates data for the ftp_List and ftp_Nlist methods
+        """
         if self.checkauth():
             return
         if self.dtpPort is None:
@@ -623,6 +767,11 @@ class FTP(basic.LineReceiver, DTPFactory):
         self.setAction(action)
  
     def ftp_Retr(self, params):
+        """ This command causes the server-DTP to transfer a copy of the
+        file, specified in the pathname, to the server- or user-DTP
+        at the other end of the data connection.  The status and
+        contents of the file at the server site shall be unaffected.
+        """
         if self.checkauth():
             return
         npath = self.buildFullpath(params)
@@ -637,6 +786,14 @@ class FTP(basic.LineReceiver, DTPFactory):
         self.setAction('RETR')
 
     def ftp_Stor(self, params):
+        """This command causes the server-DTP to accept the data
+        transferred via the data connection and to store the data as
+        a file at the server site.  If the file specified in the
+        pathname exists at the server site, then its contents shall
+        be replaced by the data being transferred.  A new file is
+        created at the server site if the file specified in the
+        pathname does not already exist.
+        """
         if self.checkauth():
             return
         # The reason for this long join, is to exclude access below the root
@@ -650,6 +807,30 @@ class FTP(basic.LineReceiver, DTPFactory):
         self.setAction('STOR')
 
     def ftp_Abor(self, params):
+        """This command tells the server to abort the previous FTP
+        service command and any associated transfer of data.  The
+        abort command may require "special action", as discussed in
+        the Section on FTP Commands, to force recognition by the
+        server.  No action is to be taken if the previous command
+        has been completed (including data transfer).  The control
+        connection is not to be closed by the server, but the data
+        connection must be closed.
+
+        There are two cases for the server upon receipt of this
+        command: (1) the FTP service command was already completed,
+        or (2) the FTP service command is still in progress.
+
+           In the first case, the server closes the data connection
+           (if it is open) and responds with a 226 reply, indicating
+           that the abort command was successfully processed.
+
+           In the second case, the server aborts the FTP service in
+           progress and closes the data connection, returning a 426
+           reply to indicate that the service request terminated
+           abnormally.  The server then sends a 226 reply,
+           indicating that the abort command was successfully
+           processed.
+        """
         if self.checkauth():
             return
         if self.dtp.transport.connected:
@@ -704,8 +885,8 @@ class FTPFactory(protocol.Factory):
         warnings.warn("The FTP server is INSECURE, please don't run it on the internet")
     
     def buildProtocol(self, addr):
-        p=FTP()
-        p.factory = self
+        p = FTP()
+        p.factory = self    # I AM A FACTORY! is this necessary?
         return p
 
 
@@ -809,6 +990,8 @@ class SenderProtocol(Protocol):
     
 def decodeHostPort(line):
     """Decode an FTP response specifying a host and port.
+    
+    see RFC sec. 4.1.2 "PORT"
 
     @returns: a 2-tuple of (host, port).
     """
