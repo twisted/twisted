@@ -43,7 +43,9 @@ def bSTR(str):
 def bERROR(str):
     assert len(str) < 128
     return chr(len(str)) + "\x8d" + str
-    
+def bABORT(count):
+    assert count < 128
+    return chr(count) + "\x8A"
 # DecodeTest (24): turns tokens into objects, tests objects and UFs
 # EncodeTest (13): turns objects/instance into tokens, tests tokens
 # FailedInstanceTests (2): 1:turn instances into tokens and fail, 2:reverse
@@ -121,7 +123,7 @@ class UnbananaTestMixin:
         f = self.banana.transport.disconnectReason
         self.failUnless(f, "didn't fail, ret=%s" % obj)
         if not isinstance(f, BananaFailure):
-            self.fail("disconnectReason wasn't a Failure:", f)
+            self.fail("disconnectReason wasn't a Failure: %s" % f)
         if not f.check(BananaError):
             self.fail("wrong exception type: %s" % f)
         self.hangup = True # to stop the tearDown check
@@ -157,11 +159,14 @@ class TestBanana(debug.LoggingStorageBanana):
     def reportViolation(self, why):
         self.violation = why
 
+    def reportReceiveError(self):
+        debug.LoggingStorageBanana.reportReceiveError(self)
+        self.transport.disconnectReason = BananaFailure()
 
 class TestTransport(StringIO.StringIO):
     disconnectReason = None
-    def loseConnection(self, why="unknown"):
-        self.disconnectReason = why
+    def loseConnection(self):
+        pass
 
 class TestBananaMixin:
     def setUp(self):
@@ -221,7 +226,7 @@ class TestBananaMixin:
         if not f:
             self.fail("didn't fail, ret=%s" % ret)
         if not isinstance(f, BananaFailure):
-            self.fail("disconnectReason wasn't a Failure:", f)
+            self.fail("disconnectReason wasn't a Failure: %s" % f)
         if not f.check(BananaError):
             self.fail("wrong exception type: %s" % f)
         self.makeBanana() # need a new one, we squished the last one
@@ -290,7 +295,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         f = self.shouldFail([tOPEN(0),'list', 1, tABORT, tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1]")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1]")
         self.failUnlessEqual(f.value.args[0], "ABORT received")
 
     def test_aborted_list2(self):
@@ -300,7 +305,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1]")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1]")
         self.failUnlessEqual(f.value.args[0], "ABORT received")
 
     def test_aborted_list3(self):
@@ -312,7 +317,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1].[3].[2]")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1].[3].[2]")
         self.failUnlessEqual(f.value.args[0], "ABORT received")
 
     def test_nested_list(self):
@@ -339,7 +344,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         f = self.shouldDropConnection([tOPEN(0),'dict',
                                        "a",1,"a",2,
                                        tCLOSE(0)])
-        self.failUnlessEqual(f.value.where, "root.{}")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.{}")
         self.failUnlessEqual(f.value.args[0], "duplicate key 'a'")
 
     def test_dict_with_list(self):
@@ -362,7 +367,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         f = self.shouldDropConnection([tOPEN(0),'dict',
                                         tOPEN(1),'list', 1, 2, tCLOSE(1), "a",
                                        tCLOSE(0)])
-        self.failUnlessEqual(f.value.where, "root.{}")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.{}")
         self.failUnlessEqual(f.value.args[0], "unhashable key '[1, 2]'")
 
     def test_instance(self):
@@ -387,7 +392,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                    tOPEN(2),'instance', 37, "d", 4, tCLOSE(2),
                   tCLOSE(0)]
         f = self.shouldDropConnection(tokens)
-        self.failUnlessEqual(f.value.where, "root.<Foo>.c.<??>")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.<Foo>.c.<??>")
         self.failUnlessEqual(f.value.args[0],
                              "InstanceUnslicer classname must be string")
 
@@ -402,7 +407,8 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                    tCLOSE(2),
                   tCLOSE(0)]
         f = self.shouldDropConnection(tokens)
-        self.failUnlessEqual(f.value.where, "root.<Foo>.c.<Bar>.attrname??")
+        self.failUnlessEqual(f.value.where,
+                             "<RootUnslicer>.<Foo>.c.<Bar>.attrname??")
         self.failUnlessEqual(f.value.args[0],
                              "InstanceUnslicer keys must be STRINGs")
 
@@ -498,7 +504,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1]")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1]")
         self.failUnlessEqual(f.value.args[0], "unknown OPEN type ('bad',)")
 
     def test_failed_dict2(self):
@@ -508,7 +514,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1].{}")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1].{}")
         self.failUnlessEqual(f.value.args[0], "dead in start")
 
     def test_failed_dict3(self):
@@ -518,7 +524,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1].{}")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1].{}")
         self.failUnlessEqual(f.value.args[0], "aaagh")
 
         res = self.do([tOPEN(2),'list', 3, 4, tCLOSE(2)])
@@ -534,7 +540,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1].{}[b]")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1].{}[b]")
         self.failUnlessEqual(f.value.args[0], "aaaaaaaaargh")
         
     def test_failed_dict5(self):
@@ -547,7 +553,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                              tCLOSE(0)])
         self.failUnless(isinstance(f, BananaFailure))
         self.failUnless(f.check(Violation))
-        self.failUnlessEqual(f.value.where, "root.[1].{}")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.[1].{}")
         self.failUnlessEqual(f.value.args[0], "dead in receiveClose()")
 
 class Bar:
@@ -786,7 +792,7 @@ class EncodeFailureTest(unittest.TestCase):
         d = self.send(s)
         e = self.waitForError(d)
         self.failUnless(e.check(Violation))
-        self.failUnlessEqual(e.value.where, "<Root>")
+        self.failUnlessEqual(e.value.where, "<RootSlicer>")
         self.failUnlessEqual(e.value.args, ("slice failed",))
 
     def test2(self):
@@ -795,7 +801,7 @@ class EncodeFailureTest(unittest.TestCase):
         d = self.send(s)
         e = self.waitForError(d)
         self.failUnless(e.check(Violation))
-        self.failUnlessEqual(e.value.where, "<Root>.ErrorfulSlicer[1]")
+        self.failUnlessEqual(e.value.where, "<RootSlicer>.ErrorfulSlicer[1]")
         self.failUnlessEqual(e.value.args, ("next failed",))
 
     def test3(self):        
@@ -805,7 +811,7 @@ class EncodeFailureTest(unittest.TestCase):
         d = self.send(s)
         e = self.waitForError(d)
         self.failUnless(e.check(Violation))
-        self.failUnlessEqual(e.value.where, "<Root>.ErrorfulSlicer[1]")
+        self.failUnlessEqual(e.value.where, "<RootSlicer>.ErrorfulSlicer[1]")
         self.failUnlessEqual(e.value.args, ("parent not streamable",))
 
     def test4(self):
@@ -814,7 +820,7 @@ class EncodeFailureTest(unittest.TestCase):
         d = self.send(s)
         e = self.waitForError(d)
         self.failUnless(e.check(Violation))
-        self.failUnlessEqual(e.value.where, "<Root>.ErrorfulSlicer[1]")
+        self.failUnlessEqual(e.value.where, "<RootSlicer>.ErrorfulSlicer[1]")
         self.failUnless("cannot serialize <open file" in e.value.args[0])
         self.failUnless(s.childDied)
 
@@ -921,6 +927,9 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
                           bSTR("b"),
                           bCLOSE(0),
                          )
+    abortStream = join(bOPEN("errorful", 0), bINT(1),
+                       bOPEN("list", 1), bINT(2), bABORT(1), bCLOSE(1),
+                       bCLOSE(0))
 
     def setUp(self):
         TestBananaMixin.setUp(self)
@@ -959,7 +968,7 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
         # violation raised in top.openerCheckToken
         self.banana.mode = "openerCheckToken"
         f = self.shouldFail(self.nestedStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
@@ -976,7 +985,7 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
         # violation raised in top.checkToken
         self.banana.mode = "checkToken"
         f = self.shouldFail(self.listStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
@@ -994,77 +1003,89 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
         self.banana.mode = "checkToken"
         #self.banana.debugReceive=True
         f = self.shouldFail(self.nestedStream2)
-        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
         self.testSuccess1()
 
     def testReceiveChild1(self):
         self.banana.mode = "receiveChild"
         f = self.shouldFail(self.listStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
     def testReceiveChild2(self):
         self.banana.mode = "receiveChild"
         f = self.shouldFail(self.nestedStream2)
-        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+
+    def testReceiveChild3(self):
+        self.banana.mode = "receiveChild"
+        # the ABORT should be ignored, since it is in the middle of a
+        # sequence which is being ignored. One possible bug is that the
+        # ABORT delivers a second Violation. In this test, we only record
+        # the last Violation, so we'll catch that case.
+        f = self.shouldFail(self.abortStream)
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        # (the other Violation would be at 'root', of type 'ABORT received'
         self.testSuccess1()
 
     def testReceiveClose1(self):
         self.banana.mode = "receiveClose"
         f = self.shouldFail(self.listStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
     def testReceiveClose2(self):
         self.banana.mode = "receiveClose"
         f = self.shouldFail(self.nestedStream2)
-        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
         self.testSuccess1()
 
     def testFinish1(self):
         self.banana.mode = "finish"
         f = self.shouldFail(self.listStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
     def testFinish2(self):
         self.banana.mode = "finish"
         f = self.shouldFail(self.nestedStream2)
-        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
         self.testSuccess1()
 
     def testStart1(self):
         self.banana.mode = "start"
         f = self.shouldFail(self.listStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
     def testStart2(self):
         self.banana.mode = "start"
         f = self.shouldFail(self.nestedStream2)
-        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
         self.testSuccess1()
 
     def testDoOpen1(self):
         self.banana.mode = "doOpen"
         f = self.shouldFail(self.nestedStream)
-        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
         self.testSuccess1()
 
     def testDoOpen2(self):
         self.banana.mode = "doOpen"
         f = self.shouldFail(self.nestedStream2)
-        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
         self.testSuccess1()
         
@@ -1176,11 +1197,11 @@ class InboundByteStream(TestBananaMixin, unittest.TestCase):
         self.check("", "\x00" * 64 + "\x82")
 
         f = self.shouldDropConnection("\x00" * 65)
-        self.failUnlessEqual(f.value.where, "root")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>")
         self.failUnlessEqual(f.value.args[0],
                              "token prefix is limited to 64 bytes")
         f = self.shouldDropConnection("\x00" * 65 + "\x82")
-        self.failUnlessEqual(f.value.where, "root")
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>")
         self.failUnlessEqual(f.value.args[0],
                              "token prefix is limited to 64 bytes")
 
@@ -1258,7 +1279,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
         self.conform2("\x0a\x82" + "a"*10 + "extra", "a"*10,
                     schema.StringConstraint(10))
         self.violate2("\x0b\x82" + "a"*11 + "extra",
-                      "root",
+                      "<RootUnslicer>",
                       schema.StringConstraint(10))
 
     def NOTtestFoo(self):
@@ -1268,7 +1289,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
             self.violate2(join(bOPEN('list',1),
                                bOPEN('list',2), a100, b100, bCLOSE(2),
                                bCLOSE(1)),
-                          "root.[0].[0]",
+                          "<RootUnslicer>.[0].[0]",
                           schema.ListOf(
                 schema.ListOf(schema.StringConstraint(99), 2), 2))
 
@@ -1281,7 +1302,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
                            bINT(1), bINT(2), bCLOSE(3),
                            bCLOSE(2),
                            bCLOSE(1)),
-                      "root.[0].[0]", None)
+                      "<RootUnslicer>.[0].[0]", None)
 
 
 
@@ -1292,7 +1313,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
                       schema.ListOf(int))
         self.violate2(join(bOPEN('list',1), bINT(1), "\x01\x82b",
                            bCLOSE(1)),
-                      "root.[1]",
+                      "<RootUnslicer>.[1]",
                       schema.ListOf(int))
         self.conform2(join(bOPEN('list',1),
                             bINT(1), bINT(2), bINT(3),
@@ -1302,7 +1323,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
         self.violate2(join(bOPEN('list',1),
                             bINT(1), bINT(2), bINT(3), bINT(4),
                            bCLOSE(1)),
-                      "root.[3]",
+                      "<RootUnslicer>.[3]",
                       schema.ListOf(int, maxLength=3))
         a100 = chr(100) + "\x82" + "a"*100
         b100 = chr(100) + "\x82" + "b"*100
@@ -1310,10 +1331,10 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
                       ["a"*100, "b"*100],
                       schema.ListOf(schema.StringConstraint(100), 2))
         self.violate2(join(bOPEN('list',1), a100, b100, bCLOSE(1)),
-                      "root.[0]",
+                      "<RootUnslicer>.[0]",
                       schema.ListOf(schema.StringConstraint(99), 2))
         self.violate2(join(bOPEN('list',1), a100, b100, a100, bCLOSE(1)),
-                      "root.[2]",
+                      "<RootUnslicer>.[2]",
                       schema.ListOf(schema.StringConstraint(100), 2))
 
         self.conform2(join(bOPEN('list',1),
@@ -1335,7 +1356,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
                              bINT(21), bINT(22), bINT(23),
                             bCLOSE(3),
                            bCLOSE(1)),
-                      "root.[1].[2]",
+                      "<RootUnslicer>.[1].[2]",
                       schema.ListOf(schema.ListOf(int, maxLength=2)))
 
     def testConstrainedTuple(self):
@@ -1346,12 +1367,12 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
         self.violate2(join(bOPEN('tuple',1),
                            bINT(1), bINT(2), bINT(3),
                            bCLOSE(1)),
-                      "root.[2]",
+                      "<RootUnslicer>.[2]",
                       schema.TupleOf(int, int))
         self.violate2(join(bOPEN('tuple',1),
                            bINT(1), bSTR("not a number"),
                            bCLOSE(1)),
-                      "root.[1]",
+                      "<RootUnslicer>.[1]",
                       schema.TupleOf(int, int))
         self.conform2(join(bOPEN('tuple',1),
                            bINT(1), bSTR("twine"),
@@ -1384,7 +1405,7 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
                              bOPEN('list',4), bINT(3), bCLOSE(4),
                             bCLOSE(2),
                            bCLOSE(1)),
-                      "root.[1].[0].[0]",
+                      "<RootUnslicer>.[1].[0].[0]",
                       schema.TupleOf(int, schema.ListOf(schema.ListOf(int))))
 
     def testConstrainedDict(self):
@@ -1407,14 +1428,14 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
                            bINT(2), bINT(10),
                            bINT(3), bSTR("c"),
                            bCLOSE(1)),
-                      "root.{}[2]",
+                      "<RootUnslicer>.{}[2]",
                       schema.DictOf(int, str))
         self.violate2(join(bOPEN('dict',1),
                            bINT(1), bSTR("a"),
                            bINT(2), bSTR("b"),
                            bINT(3), bSTR("c"),
                            bCLOSE(1)),
-                      "root.{}",
+                      "<RootUnslicer>.{}",
                       schema.DictOf(int, str, maxKeys=2))
 
     def TRUE(self):
@@ -1443,10 +1464,10 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
 
         # but true/false is a constraint, and is reported with Violation
         self.violate2(self.TRUE(),
-                      "root.<bool>",
+                      "<RootUnslicer>.<bool>",
                       schema.BooleanConstraint(False))
         self.violate2(self.FALSE(),
-                      "root.<bool>",
+                      "<RootUnslicer>.<bool>",
                       schema.BooleanConstraint(True))
 
 

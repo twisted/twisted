@@ -478,18 +478,18 @@ class Banana(protocol.Protocol):
     def dataReceived(self, chunk):
         try:
             self.handleData(chunk)
-        except BananaError, e:
-            # send them the text of the error
-            e.where = self.describeReceive()
-            self.sendError(str(e))
-            if self.logReceiveErrors:
-                log.err()
-            self.transport.loseConnection(BananaFailure())
-        except:
-            # don't reveal the reason, just hang up
-            if self.logReceiveErrors:
-                log.err()
-            self.transport.loseConnection(BananaFailure())
+        except Exception, e:
+            if isinstance(e, BananaError):
+                # only reveal the reason if it is a protocol error
+                e.where = self.describeReceive()
+                self.sendError(str(e)) # send them the text of the error
+            self.reportReceiveError()
+
+    def reportReceiveError(self):
+        # tests can override this to log a BananaFailure
+        if self.logReceiveErrors:
+            log.err()
+        self.transport.loseConnection()
 
 
     def handleData(self, chunk):
@@ -662,6 +662,16 @@ class Banana(protocol.Protocol):
                 # when receiveChild raises a Violation. The .handleViolation
                 # will pop the now-useless Unslicer and start discarding
                 # tokens just as if the Unslicer had made the decision.
+                if rejected:
+                    if self.debugReceive:
+                        print "DROP (ABORT)"
+                    # I'm ignoring you, LALALALALA.
+                    #
+                    # In particular, do not deliver a second Violation
+                    # because of the ABORT that we're supposed to be
+                    # ignoring because of a first Violation that happened
+                    # earlier.
+                    continue
                 try:
                     # slightly silly way to do it, but nice and uniform
                     raise Violation("ABORT received")

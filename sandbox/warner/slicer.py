@@ -294,7 +294,7 @@ class RootSlicer:
         return objectSentDeferred
 
     def describe(self):
-        return "<Root>"
+        return "<RootSlicer>"
 
     def connectionLost(self, why):
         # abandon everything we wanted to send
@@ -1154,7 +1154,7 @@ class RootUnslicer(BaseUnslicer):
         return self.protocol.reportViolation(why)
 
     def describe(self):
-        return "root"
+        return "<RootUnslicer>"
 
     def setObject(self, counter, obj):
         pass

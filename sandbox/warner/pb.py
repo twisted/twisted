@@ -38,10 +38,13 @@ class PendingRequest(object):
     def fail(self, why):
         if self.active:
             self.active = False
+            self.failure = why
             self.deferred.errback(why)
         else:
             log.msg("multiple failures")
-            log.err(why)
+            log.msg("first one was:", self.failure)
+            log.msg("this one was:", why)
+            log.err("multiple failures indicate a problem")
 
 class RemoteReference(object):
     def __init__(self, broker, refID, interfaces):
@@ -165,7 +168,7 @@ class RemoteReference(object):
         # arguments. If serialization fails, the PendingRequest needs to be
         # flunked (because we aren't guaranteed that the far end will do it).
 
-        d.addErrback(req.fail)
+        d.addErrback(self.broker.gotError, req)
 
         # the remote end could send back an error response for many reasons:
         #  bad method name
@@ -197,7 +200,7 @@ class DecRefUnslicer(BaseUnslicer):
     refID = None
 
     def checkToken(self, typebyte, size):
-        if self.refID == None:
+        if self.refID is None:
             if typebyte != tokens.INT:
                 raise BananaError("reference ID must be an INT")
         else:
@@ -208,10 +211,14 @@ class DecRefUnslicer(BaseUnslicer):
         self.refID = token
 
     def receiveClose(self):
-        if self.refID == None:
+        if self.refID is None:
             raise BananaError("sequence ended too early")
         return self.broker.decref(self.refID)
 
+    def describe(self):
+        if self.refID is None:
+            return "<decref-?>"
+        return "<decref-%s>" % self.refID
 
 class CallUnslicer(BaseUnslicer):
     stage = 0 # 0:reqID, 1:objID, 2:methodname, 3: [(argname/value)]..
@@ -256,11 +263,15 @@ class CallUnslicer(BaseUnslicer):
         return unslicer
 
     def reportViolation(self, f):
+        # if the Violation is because we received an ABORT, then we know
+        # that the sender knows there was a problem, so don't respond.
+        if f.value.args[0] == "ABORT received":
+            return f
+
         # if the Violation was raised after we know the reqID, we can send
         # back an Error.
-        #print "CallUnslicer.reportViolation"
         if self.stage > 0:
-            self.broker.sendError(f, self.reqID)
+            self.broker.callFailed(f, self.reqID)
         return f # give up our sequence
 
     def receiveChild(self, token):
@@ -327,7 +338,7 @@ class CallUnslicer(BaseUnslicer):
             self.methodSchema.checkArgs(self.args)
         # this is where we actually call the method. doCall must now take
         # responsibility for the request (specifically for catching any
-        # exceptions and doing sendError)
+        # exceptions and doing callFailed)
         self.broker.doCall(self.reqID, self.obj, self.methodname,
                            self.args, self.methodSchema)
 
@@ -389,7 +400,7 @@ class AnswerUnslicer(BaseUnslicer):
     def receiveChild(self, token):
         if self.request == None:
             reqID = token
-            # may raise BananaError for bad reqIDs
+            # may raise Violation for bad reqIDs
             self.request = self.broker.getRequest(reqID)
             self.resultConstraint = self.request.constraint
         else:
@@ -400,11 +411,11 @@ class AnswerUnslicer(BaseUnslicer):
         # if the Violation was received after we got the reqID, we can tell
         # the broker it was an error
         if self.request != None:
-            self.broker.gotError(self.request, f)
+            self.broker.gotError(f, self.request)
         return f # give up our sequence
 
     def receiveClose(self):
-        self.broker.gotAnswer(self.request, self.results)
+        self.broker.gotAnswer(self.results, self.request)
 
     def describe(self):
         if self.request:
@@ -435,7 +446,7 @@ class ErrorUnslicer(BaseUnslicer):
     def reportViolation(self, f):
         # a failure while receiving the failure. A bit daft, really.
         if self.request != None:
-            self.broker.gotError(self.request, f)
+            self.broker.gotError(f, self.request)
         return f # give up our sequence
 
     def receiveChild(self, token):
@@ -450,7 +461,13 @@ class ErrorUnslicer(BaseUnslicer):
             self.gotFailure = True
 
     def receiveClose(self):
-        self.broker.gotError(self.request, self.failure)
+        self.broker.gotError(self.failure, self.request)
+
+    def describe(self):
+        if self.request is None:
+            return "<error-?>"
+        return "<error-%s>" % self.request.reqID
+
 
 PBTopRegistry = {
     ("decref",): DecRefUnslicer,
@@ -565,6 +582,9 @@ class AnswerSlicer(ScopedSlicer):
         yield self.reqID
         yield self.results
 
+    def describe(self):
+        return "<answer-%s>" % self.reqID
+
 class ErrorSlicer(ScopedSlicer):
     opentype = ('error',)
 
@@ -577,6 +597,9 @@ class ErrorSlicer(ScopedSlicer):
         yield self.reqID
         # TODO: need CopyableFailures
         yield self.f.getBriefTraceback()
+
+    def describe(self):
+        return "<error-%s>" % self.reqID
 
 # failures are sent as Copyables
 class FailureSlicer(slicer.BaseSlicer):
@@ -634,6 +657,8 @@ class DecRefSlicer(slicer.BaseSlicer):
         self.refID = refID
     def sliceBody(self, streamable, banana):
         yield self.refID
+    def describe(self):
+        return "<decref-%s>" % self.refID
 
 class CallSlicer(ScopedSlicer):
     opentype = ('call',)
@@ -654,6 +679,9 @@ class CallSlicer(ScopedSlicer):
         for argname in keys:
             yield argname
             yield self.args[argname]
+
+    def describe(self):
+        return "<call-%s-%s-%s>" % (self.reqID, self.refID, self.methodname)
 
 class PBRootSlicer(slicer.RootSlicer):
     def registerReference(self, refid, obj):
@@ -798,12 +826,12 @@ class Broker(banana.Banana):
         try:
             return self.waitingForAnswers[reqID]
         except KeyError:
-            raise BananaError("non-existent reqID '%d'" % reqID)
+            raise Violation("non-existent reqID '%d'" % reqID)
 
-    def gotAnswer(self, req, results):
+    def gotAnswer(self, results, req):
         del self.waitingForAnswers[req.reqID]
         req.complete(results)
-    def gotError(self, req, failure):
+    def gotError(self, failure, req):
         del self.waitingForAnswers[req.reqID]
         req.fail(failure)
     def abandonAllRequests(self, why):
@@ -813,7 +841,7 @@ class Broker(banana.Banana):
 
 
     # remote-method-invocation methods, target-side (Referenceable):
-    # doCall, callFinished, sendError
+    # doCall, callFinished, callFailed
 
     def doCall(self, reqID, obj, methodname, args, methodSchema):
         try:
@@ -822,7 +850,7 @@ class Broker(banana.Banana):
         except:
             # TODO: implement FailureConstraint
             f = failure.Failure()
-            self.sendError(f, reqID)
+            self.callFailed(f, reqID)
         else:
             if not isinstance(res, defer.Deferred):
                 res = defer.succeed(res)
@@ -830,7 +858,7 @@ class Broker(banana.Banana):
             # our schema prohibits us from sending the result (perhaps the
             # method returned an int but the schema insists upon a string).
             res.addCallback(self.callFinished, reqID, methodSchema)
-            res.addErrback(self.sendError, reqID)
+            res.addErrback(self.callFailed, reqID)
 
     def callFinished(self, res, reqID, methodSchema):
         assert self.activeLocalCalls[reqID]
@@ -847,7 +875,7 @@ class Broker(banana.Banana):
             log.err()
         del self.activeLocalCalls[reqID]
 
-    def sendError(self, f, reqID):
+    def callFailed(self, f, reqID):
         assert self.activeLocalCalls[reqID]
         self.send(ErrorSlicer(reqID, f))
         del self.activeLocalCalls[reqID]

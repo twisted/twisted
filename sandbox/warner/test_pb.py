@@ -19,12 +19,10 @@ from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import BananaFailure
 
 class TestBroker(pb.Broker):
-    def gotAnswer(self, req, results):
+    def gotAnswer(self, results, req):
         self.answers.append((True, req, results))
-    def gotError(self, req, f):
+    def gotError(self, f, req):
         self.answers.append((False, req, f))
-    def abandonUnslicer(self, failure, leaf=None):
-        pass
     def freeRemoteReference(self, refID):
         pass
 
@@ -122,7 +120,7 @@ class TestAnswer(unittest.TestCase):
         self.broker.addRequest(req)
         u = self.newUnslicer()
         u.checkToken(INT, 0)
-        self.failUnlessRaises(BananaError, u.receiveChild, 13)
+        self.failUnlessRaises(Violation, u.receiveChild, 13)
 
     def testReject2(self):
         # answer a request with a result that violates the constraint
@@ -726,22 +724,20 @@ class ThreeWayHelper:
     passed = False
 
     def start(self):
-        print "start"
         d = pb.getRemoteURL_TCP("localhost", self.portnum1, "", RIHelper)
         d.addCallback(self.step2)
         d.addErrback(self.err)
         return d
 
     def step2(self, remote1):
-        print "step2", remote1
+        # .remote1 is our RRef to server1's "t1" HelperTarget
         self.remote1 = remote1
         d = pb.getRemoteURL_TCP("localhost", self.portnum2, "", RIHelper)
         d.addCallback(self.step3)
         return d
 
     def step3(self, remote2):
-        print "step3", remote2
-        print " remote1", self.remote1.broker.disconnected
+        # and .remote2 is our RRef to server2's "t2" helper target
         self.remote2 = remote2
         # sending a RemoteReference back to its source should be ok
         d = self.remote1.callRemote("set", self.remote1)
@@ -749,22 +745,19 @@ class ThreeWayHelper:
         return d
 
     def step4(self, res):
-        print "step4", res
         assert self.target1.obj is self.target1
         # but sending one to someone else is not
         d = self.remote2.callRemote("set", self.remote1)
-        d.addCallback(self.step5bad)
-        d.addErrback(self.step5good)
+        d.addCallback(self.step5_callback)
+        d.addErrback(self.step5_errback)
         return d
 
-    def step5bad(self, res):
-        print "step5bad", res
+    def step5_callback(self, res):
         why = unittest.FailTest("sending a 3rd-party reference did not fail")
         self.err(failure.Failure(why))
         return None
 
-    def step5good(self, why):
-        print "step5good", why
+    def step5_errback(self, why):
         bad = None
         if why.type != tokens.Violation:
             bad = "%s failure should be a Violation" % why.type
@@ -785,10 +778,9 @@ class Test3Way(unittest.TestCase):
 
     def tearDown(self):
         for p in self.ports:
-            p.stopListening()
+            dr(p.stopListening())
 
     def test3Way(self):
-        raise unittest.SkipTest("works, but kills TestAnswer")
         helper = ThreeWayHelper()
 
         t1 = HelperTarget()

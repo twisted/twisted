@@ -264,7 +264,7 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         self.deferred.callback(obj)
         return obj
 
-    def describeSelf(self):
+    def describe(self):
         if self.classname == None:
             return "<??>"
         me = "<%s>" % self.classname
@@ -378,7 +378,10 @@ class ReferenceUnslicer(slicer.BaseUnslicer):
         return self.broker.registerRemoteReference(self.clid,
                                                    self.interfaces)
 
-
+    def describe(self):
+        if self.clid is None:
+            return "<ref-?>"
+        return "<ref-%s>" % self.clid
 
 class YourReferenceSlicer(slicer.BaseSlicer):
     """I handle pb.RemoteReference objects (being sent back home to the
@@ -391,6 +394,9 @@ class YourReferenceSlicer(slicer.BaseSlicer):
             # only send to home broker
             raise Violation("RemoteReferences can only be sent back to their home Broker")
         yield self.obj.refID # either string or int
+    def describe(self):
+        return "<your-ref-%s>" % self.obj.refID
+
 # the registerAdapter() is performed in pb.py, since RemoteReference lives
 # there
 
@@ -411,3 +417,6 @@ class YourReferenceUnslicer(slicer.LeafUnslicer):
         if not obj:
             raise Violation("unknown clid '%s'" % self.clid)
         return obj
+
+    def describe(self):
+        return "<your-ref-%s>" % self.obj.refID
