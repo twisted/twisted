@@ -31,7 +31,6 @@ class AccountCreationWidget(widgets.Form):
     def __init__(self, service):
         self.service = service
 
-
     def process(self, write, request, **args):
         if args.has_key("username"):
             u,p = request.args['username'][0], request.args['password'][0]
@@ -46,29 +45,6 @@ class AccountCreationWidget(widgets.Form):
                 write("Participant Added.")
             else:
                 write("Duplicate.")
-
-##        if request.args.has_key("username"):
-##            u, p = request.args['username'][0], request.args['password'][0]
-##            print u, p
-##            svc = request.site.service
-##            app = svc.application
-##            ident = passport.Identity(u, app)
-##            ident.setPassword(p)
-##            app.authorizer.addIdentity(ident)
-##            part = svc.createParticipant(u)
-##            part.setIdentity(ident)
-##            ident.addKeyForPerspective(part)
-##            if part:
-##                return "Participant Added."
-##            else:
-##                return "Duplicate Name"
-##        else:
-##            return self.box(request,
-##                            "New Account",
-##                            self.form(request,
-##                                      [['string', "Username:", "username", ""],
-##                                       ['password', "Password:", "password", ""]])
-##                            )
 
 
 class ParticipantInfoWidget(widgets.Widget):
@@ -85,7 +61,8 @@ class ParticipantInfoWidget(widgets.Widget):
         Current status: %s<br>
         ''' % (self.part.name,
                map(lambda x: x.name, self.part.groups),
-               {0: "Offline", 1: "Online"}[self.part.status])]
+               {0: "Offline", 1: "Online", 2: "Away"}[self.part.status])]
+
 
 class ParticipantListWidget(widgets.Gadget, widgets.Widget):
     def __init__(self, service):
@@ -147,6 +124,3 @@ class WebWordsAdminSite(server.Site):
     def __init__(self, svc):
         res = WordsGadget(svc)
         server.Site.__init__(self, res)
-
-        
-
