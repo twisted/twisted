@@ -7,6 +7,36 @@
 	almost-but-not-quite XML structure.  Specifically it has been
 	tested with Mozilla Composer.
 
+2002-9-20  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* Documenting for others
+
+	* setup.py: now setup.py can function as a module
+
+	* twisted/enterprise/xmlreflector.py: deprintified
+
+	* twisted/internet/abstract.py twisted/internet/fdesc.py twisted/internet/app.py twisted/internet/gtkreactor.py twisted/internet/main.py twisted/internet/protocol.py twisted/internet/ssl.py twisted/internet/tksupport.py twisted/internet/pollreactor.py twisted/internet/defer.py: added and modified __all__
+
+	* twisted/internet/base.py: changed ReactorBase's __name__, added 
+	__all__
+
+	* twisted/internet/default.py twisted/internet/error.py twisted/internet/process.py twisted/internet/win32eventreactor.py: reaping all processes on 
+	SIGCHLD, changes in process's API
+
+	* twisted/python/components.py: added Adapter and setComponent
+
+	* twisted/python/log.py: logging several strings works
+
+	* twisted/python/reflect.py: fixed namedModule() to handle packages
+
+	* twisted/web/dom*.py: added submodels, moved to microdom, removed
+	unsafe code
+
+	* twisted/python/mvc.py: changed submodel support, added ListModel,
+	Wrapper
+
+	* twisted/web/microdom.py: minidom compat fixes
+
 2002-9-20  Jp Calderone <exarkun@twistedmatrix.com>            
 
 	* twisted/internet/error.py twisted/internet/process.py:
