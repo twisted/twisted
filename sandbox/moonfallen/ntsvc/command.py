@@ -22,7 +22,7 @@ class TwistedAppDistribution(py2exe.Distribution):
     """
     def __init__(self, attrs):
         if os.path.isfile('ntsvc.cfg'):
-            del attrs['appconfig'] # eliminates a warning from py2exe
+            attrs.pop('appconfig', 'DONTCARE') # eliminates a distutils warning
             cp = ConfigParser.ConfigParser()
             cp.read('ntsvc.cfg')
             self.twisted = dict(cp.items('service'))
