@@ -563,11 +563,13 @@ class Request:
 
     def registerProducer(self, producer, streaming):
         """Register a producer."""
-
+        if self.producer:
+            raise ValueError, "registering producer before previous one was unregistered"
+        
         self.streamingProducer = streaming
-
+        self.producer = producer
+        
         if self.queued:
-            self.producer = producer
             producer.pauseProducing()
         else:
             self.transport.registerProducer(producer, streaming)
