@@ -1,5 +1,9 @@
 2003-04-12  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_tcp.py (LocalRemoteAddressTestCase): iterate
+	harder. some systems might not connect to localhost before
+	iterate() is called, flunking the test
+
 	* twisted/test/test_process.py: only install SIGCHLD handler if the
 	reactor offers a hook for it.
 

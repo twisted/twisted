@@ -408,8 +408,6 @@ class LocalRemoteAddressTestCase(PortCleanerUpper):
     """Tests for correct getHost/getPeer values and that the correct address
     is passed to buildProtocol.
     """
-
-
     def testHostAddress(self):
         f1 = MyServerFactory()
         p1 = reactor.listenTCP(0, f1, interface='127.0.0.1')
@@ -419,7 +417,8 @@ class LocalRemoteAddressTestCase(PortCleanerUpper):
         f2 = MyOtherClientFactory()
         p2 = reactor.connectTCP('127.0.0.1', n, f2)
 
-        reactor.iterate()
+        for i in range(5):
+            reactor.iterate(0.01)
 
         self.assertEquals(p1.getHost(), f2.address)
         self.assertEquals(p1.getHost(), p2.transport.getPeer())
