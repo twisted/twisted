@@ -3,7 +3,7 @@ import time
 
 from twisted.trial import unittest
 
-from test_recvline import _x
+from test_recvline import _TelnetMixin
 
 import manhole
 
@@ -11,7 +11,7 @@ ctrlc = '\x03'
 ctrlq = '\x04'
 ctrld = '\x1c'
 
-class ManholeLoopback(_x, unittest.TestCase):
+class ManholeLoopback(_TelnetMixin, unittest.TestCase):
     serverProtocol = manhole.ColoredManhole
 
     def testSimpleExpression(self):

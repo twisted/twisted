@@ -220,7 +220,7 @@ delete = "\x1b[3~"
 end = "\x1b[4~"
 backspace = "\x7f"
 
-class _x:
+class _TelnetMixin:
     serverProtocol = None
 
     def setUp(self):
@@ -260,7 +260,7 @@ class _x:
             '\n'.join(lines) +
             '\n' * (self.HEIGHT - len(lines)))
 
-class RecvlineLoopback(_x, unittest.TestCase):
+class RecvlineLoopback(_TelnetMixin, unittest.TestCase):
     serverProtocol = EchoServer
 
     def testSimple(self):
