@@ -131,6 +131,14 @@ class Application(log.Logger, styles.Versioned):
         if running and self.running:
             delayeds.append(delayed)
 
+    def removeDelayed(self, delayed):
+        """
+        Remove a Delayed previously added to the main event loop with addDelayed.
+        """ 
+        self.delayeds.remove(delayed)
+        if delayed in delayeds:
+            delayeds.remove(delayed)
+
     def setUID(self):
         """Retrieve persistent uid/gid pair (if possible) and set the current process's uid/gid
         """
@@ -231,6 +239,7 @@ running = None
 delayeds = [theTimeouts]
 shutdowns = [theTimeouts.runEverything]
 resolver = DummyResolver()
+interruptCountdown = 5
 
 def shutDown(a=None, b=None):
     """Run all shutdown callbacks (save all running Applications) and exit.
@@ -239,14 +248,17 @@ def shutDown(a=None, b=None):
     the process to exit.  It can also be called directly in order
     to trigger a clean shutdown.
     """
-    global running
+    global running, interruptCountdown
     if running:
         if threadable.threaded:
             removeReader(waker)
         running = 0
         log.msg('Starting Shutdown Sequence.')
+    elif interruptCountdown > 0:
+        log.msg('Raising exception in %s more interrupts!' % interruptCountdown)
+        interruptCountdown = interruptCountdown - 1
     else:
-        log.msg('Duplicate Shutdown Ignored.')
+        raise RuntimeError("Shut Down!")
 
 
 def runUntilCurrent():
