@@ -16,18 +16,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-
-from __future__ import nested_scopes
-
-import sys,os,string
-
-if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
-    sys.path.append(os.path.dirname(
-      os.path.dirname(os.path.abspath(sys.argv[0]))))
-sys.path.append('.')
+import sys, os, string
+if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
+sys.path.insert(0, os.curdir)
 ### end of preamble
 
 #
