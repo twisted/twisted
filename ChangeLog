@@ -1,3 +1,13 @@
+2003-01-06  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/python/microdom.py: Added beExtremelyLenient mode (for
+	parsing "tag soup").  While this isn't quite as lenient as Mozilla
+	or IE's code (it will, for example, translate
+	<div><i><b>foo</i>bar</b></div> to <div><i><b>foo</b></i>bar</div>
+	) I am still rather proud of the wide range of complete garbage
+	that it will mangle into at least reasonably similar XHTML-esque
+	documents.
+
 2003-01-05  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/cReactor/*, setup.py: Implement getDelayedCalls for
