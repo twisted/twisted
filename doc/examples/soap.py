@@ -18,8 +18,8 @@
 
 Sample usage::
 
-   >>> import SOAP
-   >>> p = SOAP.SOAPProxy('http://localhost:8080/')
+   >>> import SOAPpy
+   >>> p = SOAPpy.SOAPProxy('http://localhost:8080/')
    >>> p.add(a=1)
    1
    >>> p.add(a=1, b=3)
@@ -30,7 +30,7 @@ Sample usage::
 """
 
 from twisted.web import soap, server
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
 
 class Example(soap.SOAPPublisher):
@@ -41,10 +41,12 @@ class Example(soap.SOAPPublisher):
 
     def soap_add(self, a=0, b=0):
         return a + b
-
     soap_add.useKeywords = 1
 
-    
+    def soap_deferred(self):
+        return defer.succeed(2)
+
+
 reactor.listenTCP(8080, server.Site(Example()))
 reactor.run()
 

@@ -1,6 +1,22 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 """SOAP support for twisted.web.
 
-Requires SOAPpy.
+Requires SOAPpy 0.10.1 or later.
 
 API Stability: unstable
 
@@ -13,11 +29,7 @@ Figure out why None doesn't work, and write tests.
 """
 
 # SOAPpy
-import SOAP
-
-# fix 2.2 issues with SOAP
-SOAP.SOAPBuilder.dump_str = SOAP.SOAPBuilder.dump_string 
-SOAP.SOAPBuilder.dump_dict = SOAP.SOAPBuilder.dump_dictionary
+import SOAPpy
 
 # twisted imports
 from twisted.web import server, resource
@@ -26,71 +38,78 @@ from twisted.python import log, failure
 
 
 class SOAPPublisher(resource.Resource):
-    """Publish methods beginning with 'soap_'.
+    """Publish SOAP methods.
 
-    If the method has an attribute 'useKeywords', it well get the
-    arguments passed as keyword args.
+    By default, publish methods beginning with 'soap_'. If the method
+    has an attribute 'useKeywords', it well get the arguments passed
+    as keyword args.
     """
 
     isLeaf = 1
     
     # override to change the encoding used for responses
     encoding = "UTF-8"
+
+    def lookupFunction(self, functionName):
+        """Lookup published SOAP function.
+
+        Override in subclasses. Default behaviour - publish methods
+        starting with soap_, if they have true attribute useKeywords
+        they are expected to accept keywords.
+        
+        @return: tuple (callable, useKeywords), or (None, None) if not found.
+        """
+        function = getattr(self, "soap_%s" % functionName, None)
+        if function:
+            return function, getattr(function, "useKeywords", False)
+        else:
+            return None
     
     def render(self, request):
         """Handle a SOAP command."""
         data = request.content.read()
 
-        p, header, body, attrs = SOAP.parseSOAPRPC(data, 1, 1, 1)
+        p, header, body, attrs = SOAPpy.parseSOAPRPC(data, 1, 1, 1)
 
-        method, args, kwargs, ns = p._name, p._aslist, p._asdict, p._ns
-        function = getattr(self, "soap_%s" % method, None)
+        methodName, args, kwargs, ns = p._name, p._aslist, p._asdict, p._ns
+        function, useKeywords = self.lookupFunction(methodName)
         
         if not function:
-            self._methodNotFound(request, method)
+            self._methodNotFound(request, methodName)
             return server.NOT_DONE_YET
         else:
-            try:
-                if hasattr(function, "useKeywords"):
-                    keywords = {}
-                    for k, v in kwargs.items():
-                        keywords[str(k)] = v
-                    result = function(**keywords)
-                else:
-                    result = function(*args)
-            except:
-                f = failure.Failure()
-                log.err(f)
-                self._gotError(f, request, method)
-                return server.NOT_DONE_YET
+            if hasattr(function, "useKeywords"):
+                keywords = {}
+                for k, v in kwargs.items():
+                    keywords[str(k)] = v
+                d = defer.maybeDeferred(function, **keywords)
+            else:
+                d = defer.maybeDeferred(function, *args)
 
-        if isinstance(result, defer.Deferred):
-            result.addCallback(self._gotResult, request, method)
-            result.addErrback(self._gotError, request, method)
-        else:
-            self._gotResult(result, request, method)
+        d.addCallback(self._gotResult, request, methodName)
+        d.addErrback(self._gotError, request, methodName)
         return server.NOT_DONE_YET
 
     def _methodNotFound(self, request, methodName):
-        response = SOAP.buildSOAP(SOAP.faultType("%s:Client" % SOAP.NS.ENV_T,
+        response = SOAPpy.buildSOAP(SOAPpy.faultType("%s:Client" % SOAPpy.NS.ENV_T,
                                                  "Method %s not found" % methodName),
                                   encoding=self.encoding)
         self._sendResponse(request, response, status=500)
     
     def _gotResult(self, result, request, methodName):
-        if not isinstance(result, SOAP.voidType):
+        if not isinstance(result, SOAPpy.voidType):
             result = {"Result": result}
-        response = SOAP.buildSOAP(kw={'%sResponse' % methodName: result},
+        response = SOAPpy.buildSOAP(kw={'%sResponse' % methodName: result},
                                   encoding=self.encoding)
         self._sendResponse(request, response)
 
     def _gotError(self, failure, request, methodName):
         e = failure.value
-        if isinstance(e, SOAP.faultType):
+        if isinstance(e, SOAPpy.faultType):
             fault = e
         else:
-            fault = SOAP.faultType("%s:Server" % SOAP.NS.ENV_T, "Method %s failed." % methodName)
-        response = SOAP.buildSOAP(fault, encoding=self.encoding)
+            fault = SOAPpy.faultType("%s:Server" % SOAPpy.NS.ENV_T, "Method %s failed." % methodName)
+        response = SOAPpy.buildSOAP(fault, encoding=self.encoding)
         self._sendResponse(request, response, status=500)
 
     def _sendResponse(self, request, response, status=200):
