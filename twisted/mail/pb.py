@@ -26,7 +26,7 @@ class Maildir(pb.Referencable):
     def getFolderMessage(self, folder, name):
         if '/' in name:
             raise IOError("can only open files in '%s' directory'" % folder)
-        fp = open(os.path.join(self.directory, 'new', name)
+        fp = open(os.path.join(self.directory, 'new', name))
         try:
             return fp.read()
         finally:
@@ -78,7 +78,7 @@ class Maildir(pb.Referencable):
     def _isSubFolder(self, name):
         return (not os.path.isdir(os.path.join(self.rootDirectory, name)) or
                 not os.path.isfile(os.path.join(self.rootDirectory, name, 
-                                                'maildirfolder'))
+                                                'maildirfolder')))
 
 
 class MaildirCollection(pb.Referencable):
