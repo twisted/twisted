@@ -1,3 +1,9 @@
+2003-11-18  Jonathan Simms  <jonathan@embassynetworks.com>
+
+	* twisted/protocols/ftp.py: refactored to add cred support, 
+	pipelining, security.
+	* twisted/test/test_ftp.py: tests for the new ftp
+
 2003-11-18  Sam Jordan  <sam@twistedmatrix.com>
 
 	* twisted/protocols/msn.py: support for MSNP8
