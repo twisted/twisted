@@ -77,12 +77,14 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
             l = ["'"]
             for c in value:
                 i = ord(c)
-                if i == 92:
-                    l.append(c); l.append(c)
+                if i == 0:
+                    l.append("\\\\000")
+                elif i == 92:
+                    l.append(c * 4)
                 elif 32 <= i <= 126:
                     l.append(c)
                 else:
-                    l.append("\%03o" % i)
+                    l.append("\\%03o" % i)
             l.append("'")
             return "".join(l)
         if not isinstance(value, types.StringType):
