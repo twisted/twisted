@@ -86,6 +86,22 @@ class BufferTestCase(unittest.TestCase):
             s[5:] + (self.term.fill * (WIDTH - len(s[5:]))) + '\n' +
             '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
 
+    def testIndex(self):
+        self.term.index()
+        self.assertEquals(self.term.reportCursorPosition(), (0, 1))
+        self.term.cursorDown(HEIGHT)
+        self.assertEquals(self.term.reportCursorPosition(), (0, HEIGHT - 1))
+        self.term.index()
+        self.assertEquals(self.term.reportCursorPosition(), (0, HEIGHT - 1))
+
+    def testReverseIndex(self):
+        self.term.reverseIndex()
+        self.assertEquals(self.term.reportCursorPosition(), (0, 0))
+        self.term.cursorDown(2)
+        self.assertEquals(self.term.reportCursorPosition(), (0, 2))
+        self.term.reverseIndex()
+        self.assertEquals(self.term.reportCursorPosition(), (0, 1))
+
 class Loopback(unittest.TestCase):
     def setUp(self):
         self.server = ServerProtocol()
