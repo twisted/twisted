@@ -33,8 +33,7 @@ import struct
 # Twisted imports
 from twisted.internet import defer
 from twisted.python import log
-
-import dns
+from twisted.protocols import dns
 
 class Resolver:
     index = 0
