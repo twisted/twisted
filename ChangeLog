@@ -1,6 +1,33 @@
+2002-02-28  Chris Armstrong  <carmstro@twistedmatrix.com
+
+	* .: Releasing 0.15.3.
+
+2002-02-27  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/mail/*, twisted/plugins.tml: The Mail server is now
+	COILable.
+
+	* bin/twistd: security fix: use a secure umask (077, rather than 0)
+	for twistd.pid.
+
+2002-02-26  Allen Short  <washort@twistedmatrix.com>
+
+	* twisted/eco/eco.py, twisted/eco/sexpy.py: ECO now supports
+	backquoting and macros.
+
+2002-02-26  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/protocols/ftp.py, twisted/plugins.tml: Made the FTP
+	server COILable!
+
+2002-02-26  Benjamin Bruheim  <phed@twistedmatrix.com>
+
+	* twisted/web/distrib.py: Fixed a win32-compatibility bug.
+
 2002-02-24  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
-	* Made SOCKSv4 coilable, and fixed a bug so it'd work with Mozilla.
+	* twisted/protocols/socks.py: Made SOCKSv4 coilable, and fixed a 
+	bug so it'd work with Mozilla.
 
 2002-02-24  Chris Armstrong  <carmstro@twistedmatrix.com>
 

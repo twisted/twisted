@@ -1,12 +1,10 @@
-Twisted 0.15.2
+Twisted 0.15.3
 
 Quote of the Release:
 
-<thirmite> srbaker: www.twistedmatrix.com - a framework for building 
-asynchronous network based apps
-<dreid> in other words, doing cool stuff with little work and even less 
-documentation
-[*ahem*, hopefully not for long --ed]
+<Acapnotic> Ooh, I just figured out what my first twisted.reality creation will be.
+<dash> Acapnotic: oh?
+<Acapnotic> "Being Glyph Lefkowitz"
 
 For information on what's new in Twisted 0.15.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
