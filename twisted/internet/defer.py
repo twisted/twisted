@@ -762,6 +762,56 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
              d = self.waiting.pop(0)
              d.callback(self)
 
+class QueueOverflow(Exception):
+    pass
+
+class QueueUnderflow(Exception):
+    pass
+
+
+class DeferredQueue(object):
+     """An event driven queue.
+
+     API stability: Unstable
+
+     Objects may be added as usual to this queue.  When an attempt is
+     made to retrieve an object when the queue is empty, a Deferred is
+     returned which will fire when an object becomes available.
+
+     @ivar size: The maximum number of objects to allow into the queue
+     at a time.  When an attempt to add a new object would exceed this
+     limit, QueueOverflow is raised synchronously.  None for no limit.
+
+     @ivar backlog: The maximum number of Deferred gets to allow at
+     one time.  When an attempt is made to get an object which would
+     exceed this limit, QueueUnderflow is raised synchronously.  None
+     for no limit.
+     """
+
+     def __init__(self, size=None, backlog=None):
+         self.waiting = []
+         self.pending = []
+         self.size = size
+         self.backlog = backlog
+
+     def put(self, obj):
+         if self.waiting:
+             self.waiting.pop(0).callback(obj)
+         elif self.size is not None and len(self.pending) < self.size:
+             self.pending.append(obj)
+         else:
+             raise QueueOverflow()
+
+     def get(self):
+         if self.pending:
+             return succeed(self.pending.pop(0))
+         elif self.size is not None and len(self.waiting) < self.backlog:
+             d = Deferred()
+             self.waiting.append(d)
+             return d
+         else:
+             raise QueueUnderflow()
+
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
