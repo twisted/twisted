@@ -25,17 +25,19 @@ from twisted.scripts import tkunzip
 def run(argv=sys.argv):
     sitepackages=join(sysconfig.get_config_var('BINLIBDEST'),
                       "site-packages")
-    scripts=join(sysconfig.get_config_var('prefix'), 'scripts')
-    install(sitepackages, scripts)
+    prefix=sysconfig.get_config_var('prefix')
+    install(sitepackages, prefix)
 
 
-def install(sitepackages, scripts):
+def install(sitepackages, prefix):
     # bat files for pys so twisted command prompt works
+    scripts=join(prefix, 'scripts')
+    pyexe=join(prefix, 'python.exe')
     for bat in """twistd.bat mktap.bat websetroot.bat lore.bat 
                manhole.bat tapconvert.bat trial.bat coil.bat""".split():
         f=join(scripts, bat)
         scriptpy=f.replace('.bat', '.py')
-        file(f, 'w').write("@%s %s" % (sys.executable, scriptpy))
+        file(f, 'w').write("@%s %s" % (pyexe, scriptpy))
 
     args=['tkunzip']
     doczip=join(sitepackages, 'twisteddoc.zip')
