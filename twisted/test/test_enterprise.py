@@ -505,6 +505,7 @@ class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
     DB_NAME = os.path.join(DB_DIR, SQLReflectorTestCase.DB_NAME)
 
     def startDB(self):
+        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
         os.chmod(self.DB_DIR, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)
         sql = 'create database "%s" user "%s" password "%s"'
         sql %= (self.DB_NAME, self.DB_USER, self.DB_PASS);
