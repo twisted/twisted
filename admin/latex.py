@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
 from twisted.protocols.sux import XMLParser
-import os
+import os, re
+
+normalizeRE = re.compile(r'\s{2,}')
 
 class LatexSpitter(XMLParser):
 
@@ -28,7 +30,11 @@ class LatexSpitter(XMLParser):
         if self.ignoring:
             return
         if self.normalizing:
-            data = ' '.join(data.split())+' '
+            # Convert CR and LF to ordinary spaces...
+            data = data.replace('\r', ' ')
+            data = data.replace('\n', ' ')
+            # ...and collapse consecutive spaces to a single space.
+            data = normalizeRE.sub(' ', data)
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
@@ -58,7 +64,7 @@ class LatexSpitter(XMLParser):
     def _headerStart(self, h, attributes):
         level = int(h[1])-2
         level += self.baseLevel
-        self.writer('\\'+level*'sub'+'section{')
+        self.writer('\n\n\\'+level*'sub'+'section{')
 
     def start_h1(self, _, _1):
         self.ignoring = 1
