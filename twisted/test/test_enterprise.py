@@ -313,6 +313,7 @@ class SQLReflectorTestCase(ReflectorTestCase):
     def createReflector(self):
         self.startDB()
         self.dbpool = self.makePool()
+        self.dbpool.start()
         deferredResult(self.dbpool.runOperation(main_table_schema))
         deferredResult(self.dbpool.runOperation(child_table_schema))
         deferredResult(self.dbpool.runOperation(simple_table_schema))
@@ -352,10 +353,6 @@ class SQLReflectorTestCase(ReflectorTestCase):
 
         # runInteraction
         deferredResult(self.dbpool.runInteraction(self.interaction))
-
-        # DELETE ME when connection pool is fixed
-        if self.dbpool.max == 1:
-            return
 
         # give the pool a workout
         ds = []
@@ -404,22 +401,6 @@ class NoSlashSQLReflector(SQLReflector):
         return text.replace("'", "''")
 
 
-# DELETE ME when connection pool is fixed
-class SingleConnectionPool(ConnectionPool):
-    connection = None
-
-    def connect(self):
-        if self.connection is None:
-            self.connection = apply(self.dbapi.connect,
-                                    self.connargs, self.connkw)
-        return self.connection
-
-    def finalClose(self):
-        if self.connection is not None:
-            self.connection.close()
-            self.connection = None
-
-
 class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using Gadfly.
     """
@@ -442,8 +423,7 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
         conn.close()
 
     def makePool(self):
-        return SingleConnectionPool('gadfly', self.DB_NAME,
-                                    self.DB_DIR, cp_max=1)
+        return ConnectionPool('gadfly', self.DB_NAME, self.DB_DIR, cp_max=1)
 
 
 class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -459,7 +439,7 @@ class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
         if os.path.exists(self.database): os.unlink(self.database)
 
     def makePool(self):
-        return SingleConnectionPool('sqlite', database=self.database, cp_max=1)
+        return ConnectionPool('sqlite', database=self.database, cp_max=1)
 
 
 class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):

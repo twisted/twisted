@@ -1,5 +1,11 @@
 2003-07-27  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_enterprise.py: enable tests that depend on
+	cp_min and cp_max
+
+	* twisted/enterprise/adbapi.py: use threadpool to handle cp_min and
+	cp_max arguments
+
 	* twisted/test/test_threadpool.py: test existing work
 
 	* twisted/python/threadpool.py: check for existing work in start()
