@@ -749,11 +749,14 @@ class SecurityOptions:
             self.allowedTypes[string.replace(typ, ' ', '_')]=1
 
     def allowInstancesOf(self, *classes):
-        """SecurityOptions.allowInstances(klass, klass, ...): allow instances of the specified classes
-        This will also allow the 'instance', 'class', and 'module' types, as well as basic types.
+        """SecurityOptions.allowInstances(klass, klass, ...): allow instances
+        of the specified classes
+        
+        This will also allow the 'instance', 'class' (renamed 'classobj' in
+        Python 2.3), and 'module' types, as well as basic types.
         """
         self.allowBasicTypes()
-        self.allowTypes("instance", "class", "module")
+        self.allowTypes("instance", "class", "classobj", "module")
         for klass in classes:
             self.allowTypes(qual(klass))
             self.allowModules(klass.__module__)
