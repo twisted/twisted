@@ -14,3 +14,7 @@ span.footnote:after
   content: "]";
 }
 
+div.note:before
+{
+  content: "Note: ";
+}
