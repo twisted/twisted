@@ -158,7 +158,10 @@ x.foo()
 
     <pre class="shell"># FIXME: there is no qotd plug-in for mktap.
 % mktap qotd -p 8123
-% mktap -a qotd.tap manhole -u username -w sekrit
+% mktap -a qotd.tap manhole -u username
+Password:
+Confirm:
+% twistd -f qotd.tap
 </pre>
 
     <p>Start this running, and test it out with <code class="shell">nc
@@ -171,7 +174,8 @@ An apple a day keeps the doctor away.
 </pre>
 
     <p>Then start the <tt>manhole</tt> client and point it at the
-    application: username is <tt>username</tt>, password is <tt>sekrit</tt>.
+    application: username is <tt>username</tt>, password is whatever
+    you typed in at the prompt.
     The following is a transcript of the manhole session, and looks just
     like the normal python interpreter, with lines you type prefixed with
     <tt>&gt;&gt;&gt;</tt>.</p>
@@ -224,7 +228,7 @@ Wed Sep 25 11:14:58 2002
       <a href="mailto:carmstro@twistedmatrix.com">Chris
       Armstrong</a>
     </address>
-    <!-- hhmts start -->Last modified: Wed Sep 25 13:40:14 PDT 2002 <!-- hhmts end -->
+    <!-- hhmts start -->Last modified: Wed Sep 25 14:39:50 PDT 2002 <!-- hhmts end -->
   </body>
 </html>
 
