@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.90 $'[11:-2]
+__version__ = '$Revision: 1.91 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -260,7 +260,7 @@ class IRC(protocol.Protocol):
         """
         self.sendLine(":%s ACTION %s :%s" % (sender, recip, message))
 
-    def topic(self, user, channel, topic):
+    def topic(self, user, channel, topic, author=None):
         """Send the topic to a user.
         
         @type user: C{str}
@@ -272,8 +272,34 @@ class IRC(protocol.Protocol):
         
         @type topic: C{str}
         @param topic: The topic string.
+        
+        @type author: C{str}
+        @param author: If the topic is being changed, the full username and hostmask
+        of the person changing it.
         """
-        self.sendLine(":%s %d %s %s :%s" % (self.hostname, RPL_TOPIC, user, channel, topic))
+        if author is None:
+            self.sendLine(":%s %s %s %s :%s" % (
+                self.hostname, RPL_TOPIC, user, channel, topic))
+        else:
+            self.sendLine(":%s TOPIC %s :%s" % (author, channel, topic))
+
+    def names(self, user, channel, names):
+        """Send the names of a channel's participants to a user.
+        
+        @type user: C{str}
+        @param user: The user receiving the topic.  Only their nick name, not
+        the full hostmask.
+        
+        @type channel: C{str}
+        @param channel: The channel for which this is the topic.
+        
+        @type names: C{list} of C{str}
+        @param names: The names to send.
+        """
+        self.sendLine(":%s %s %s = %s :%s" % (
+            self.hostname, RPL_NAMREPLY, user, channel, ' '.join(names)))
+        self.sendLine(":%s %s %s %s :End of /NAMES list" % (
+            self.hostname, RPL_ENDOFNAMES, user, channel))
 
     def join(self, who, where):
         """Send a join message.
