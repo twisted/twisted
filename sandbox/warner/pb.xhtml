@@ -100,6 +100,144 @@ the Request object waiting on the remote side.</p>
 finally callbacked with the results of the method (or errbacked with a
 Failure or RemoteFailure object).</p>
 
+
+<h3>Example</h3>
+
+<p>This code runs on the <q>local</q> side: the one with the
+<code>pb.Referenceable</code> which will respond to a remote invocation. </p>
+
+<pre class="python">
+class Responder(pb.Referenceable):
+    def remote_add(self, a, b):
+        return a+b
+</pre>
+
+<p>and the following code runs on the <q>remote</q> side (the one which holds
+a <code>pb.RemoteReference</code>):</p>
+
+<pre class="python">
+def gotAnswer(results):
+    print results
+
+d = rr.callRemote("add", a=1, b=2)
+d.addCallback(gotAnswer)
+</pre>
+
+<p>Note that the arguments are passed as named parameters: oldpb used both
+positional parameters and named (keyword) arguments, but newpb prefers just
+the keyword arguments. TODO: newpb will probably convert positional
+parameters to keyword arguments (based upon the schema) before sending them
+to the remote side.</p>
+
+
+<h3>Using RemoteInterfaces</h3>
+
+<p>To nail down the types being sent across the wire, you can use a
+<code>RemoteInterface</code> to define the methods that are implemented by
+any particular <code>pb.Referenceable</code>:</p>
+
+<pre class="python">
+class RIAdding(pb.RemoteInterface):
+    def add(a=int, b=int): return int
+
+class Responder(pb.Referenceable):
+    implements(RIAdding)
+    def remote_add(self, a, b):
+        return a+b
+
+# and on the remote side:
+d = rr.callRemote(RIAdding.add, a=1, b=2)
+d.addCallback(gotAnswer)
+</pre>
+
+<p>In this example, the <q>RIAdding</q> remote interface defines a single
+method <q>add</q>, which accepts two integer parameters and returns an
+integer. This method (technically a classmethod) is used instead of the
+string form of the method name. What does this get us?</p>
+
+<ul>
+  <li>The calling side will pre-check its arguments against the constraints
+  that it believes to be imposed by the remote side. It will raise a
+  Violation rather than send parameters that it thinks will be rejected.</li>
+
+  <li>The receiving side will enforce the constraints, causing the method
+  call to errback (with a Violation) if they are not met. This means the code
+  in <code>remote_add</code> does not need to worry about what strange types
+  it might be given, such as two strings, or two lists.</li>
+
+  <li>The receiving side will pre-check its return argument before sending it
+  back. If the method returns a string, it will cause a Violation exception
+  to be raised. The caller will get this Violation as an errback instead of
+  whatever (illegal) value the remote method computed.</li>
+
+  <li>The sending side will enforce the return-value constraint (raising a
+  Violation if it is not met). This means the calling side (in this case the
+  <code>gotAnswer</code> callback function) does not need to worry about what
+  strange type the remote method returns.</li>
+</ul>
+
+<p>You can use either technique: with RemoteInterfaces or without. To get the
+type-checking benefits, you must use them. If you do not, PB cannot protect
+you against memory consumption attacks.</p>
+
+
+<h3>RemoteInterfaces</h3>
+
+<p>RemoteInterfaces are passed by name. Each side of a PB connection has a
+table which maps names to RemoteInterfaces (subclasses of
+<code>pb.RemoteInterface</code>). Metaclass magic is used to add an entry to
+this table each time you define a RemoteInterface subclass.</p>
+
+<p>Each <code>Referenceable</code> that goes over the wire is accompanied by
+the list of RemoteInterfaces which it claims to implement. On the receiving
+side, these RemoteInterface names are looked up in the table and mapped to
+actual (local) RemoteInterface classes.</p>
+
+<p>TODO: it might be interesting to serialize the RemoteInterface class and
+ship it over the wire, rather than assuming both sides have a copy (and that
+they agree). However, if one side does not have a copy, it is unlikely that
+it will be able to do anything very meaningful with the remote end.</p>
+
+<p>The syntax of RemoteInterface is still in flux. The basic idea is that
+each method of the RemoteInterface defines a remotely invokable method,
+something that will exist with a <q>remote_</q> prefix on any
+<code>pb.Referenceable</code>s which claim to implement it.</p>
+
+<p>Those methods are defined with a number of named parameters. The default
+value of each parameter is something which can be turned into a
+<code>Constraint</code> according to the rules of schema.makeConstraint .
+This means you can use things like <code>(int, str, str)</code> to mean a
+tuple of exactly those three items.</p>
+
+<p>Note that the methods of the RemoteInterface do <em>not</em> list
+<q>self</q> as a parameter. As the zope.interface documentation points out,
+<q>self</q> is an implemenation detail, and does not belong in the interface
+specification. Another way to think about it is that, when you write the code
+which calls a method in this interface, you don't include <q>self</q> in the
+arguments you provide, therefore it should not appear in the public
+documentation of those methods.</p>
+
+<p>The method is required to return a value which can be handled by
+schema.makeConstraint: this constraint is then applied to the return value of
+the remote method.</p>
+
+<p>Other attributes of the method (perhaps added by decorators of some sort)
+will, some day, be able to specify specialized behavior of the method. The
+brainstorming sessions have come up with the following ideas:</p>
+
+<ul>
+  <li>.wait=False: don't wait for an answer</li>
+  <li>.reliable=False: feel free to send this over UDP</li>
+  <li>.ordered=True: but enforce order between successive remote calls</li>
+  <li>.priority=3: use priority queue / stream #3</li>
+  <li>.failure=Full: allow/expect full Failure contents (stack frames)</li>
+  <li>.failure=ErrorMessage: only allow/expect truncated CopiedFailures</li>
+</ul>
+
+<p>We are also considering how to merge the RemoteInterface with other useful
+interface specifications, in particular zope.interface and formless.</p>
+
+
 <h2>Argument Transformation</h2>
 
 <p>To understand this section, it may be useful to review the <a
@@ -353,6 +491,8 @@ and Copyable are merely special cases. They have Slicers which implement
 specific behaviors when they appear before the serialization process. You
 can implement your own Slicers to do other things.</p>
 
+<p>TODO: more text</p>
+
 <h3>Arbitrary Instances are NOT serialized</h3>
 
 <p>Arbitrary instances (that is, anything which does not have an
@@ -396,13 +536,13 @@ object).</p>
 <table border="" width="">
   <TR><TD colspan="2">PB (method call) Sequences</TD></TR>
 
-  <TR><TD>method call</TD>
+  <TR><TD>method call (<code>callRemote</code>)</TD>
       <TD>OPEN(call) INT(request-id) INT/STR(your-reference-id)
         STRING(methodname)
         (STRING(argname),argvalue)..
         CLOSE</TD></TR>
 
-  <TR><TD>method call++</TD>
+  <TR><TD>method call++ (<code>callRemoteInterface</code>)</TD>
       <TD>OPEN(call2) INT(request-id) INT/STR(your-reference-id)
         STRING(interfacename) STRING(methodname)
         (STRING(argname),argvalue)..
@@ -485,14 +625,14 @@ objects with the same <code>puid</code> are serialized identically.</p>
 
 <p>All Referenceables sent over the wire (as arguments or return values for
 remote methods) are given a <q>connection-local ID</q> (<code>clid</code>)
-which is scoped to one end of the connection. The Referenceable is
-serialized with this number, using a banana sequence of <code>OPEN
-"my-reference" clid</code>. The remote peer (the side that holds the
-<code>RemoteReference</code>) knows the Referenceable by the
+which is scoped to one end of the connection. The Referenceable is serialized
+with this number, using a banana sequence of <code>(OPEN "my-reference"
+clid)</code>. The remote peer (the side that holds the
+<code>RemoteReference</code>) knows the <code>Referenceable</code> by the
 <code>clid</code> sent to represent it. These are small integers. From a
 security point of view, any object sent across the wire (and thus given a
-<code>clid</code>) is forever accessible to the remote end (or at least
-until the connection is dropped).</p>
+<code>clid</code>) is forever accessible to the remote end (or at least until
+the connection is dropped).</p>
 
 <p>The sending side uses the <code>Broker.clids</code> dict to map
 <code>puid</code> to <code>clid</code>. It uses the
@@ -509,18 +649,20 @@ scope while the remote end holds a reference.</p>
 
 <p>In response to the incoming <code>my-reference</code> sequence, the
 receiving side creates a <code>RemoteReference</code> that remembers its
-Broker and the <code>clid</code> value. The RemoteReference is stashed in
-the <code>Broker.remoteReferences</code> weakref dictionary (which maps from
+Broker and the <code>clid</code> value. The RemoteReference is stashed in the
+<code>Broker.remoteReferences</code> weakref dictionary (which maps from
 <code>clid</code> to <code>RemoteReference</code>), to make sure that a
 single <code>Referenceable</code> is always turned into the same
 <code>RemoteReference</code>. Note that this is not infallible: if the
-recipient forgets about the <code>RemoteReference</code>, PB will too. But
-if they really do forget about it, then they won't be able to tell that the
-replacement is not the same as the original<span class="footnote">unless
-they do something crazy like remembering the <code>id(obj)</code> of the old
+recipient forgets about the <code>RemoteReference</code>, PB will too. But if
+they really do forget about it, then they won't be able to tell that the
+replacement is not the same as the original<span class="footnote">unless they
+do something crazy like remembering the <code>id(obj)</code> of the old
 object and check to see if it is the same as that of the new one. But
-<code>id(obj)</code> is only unique among live objects anyway</span>. It
-will have a different <code>clid</code>.</p>
+<code>id(obj)</code> is only unique among live objects anyway</span>. It will
+have a different <code>clid</code>.<span class="footnote">and note that I
+think there is a race condition here, in which the reference is sent over the
+wire at the same time the other end forgets about it</span></p>
 
 <p>This <code>RemoteReference</code> is where the <code>.callRemote</code>
 method lives. When used to invoke remote methods, the <code>clid</code> is
@@ -535,7 +677,7 @@ back to them as the <code>your-reference-id</code> argument of the
 methods: it could appear in an argument or a return value instead: the goal
 is to have the <code>Referenceable</code>-holder see their same
 <code>Referenceable</code> come back to them. In this case, the
-<code>clid</code> is put as the first token of a <code>your-reference</code>
+<code>clid</code> is used in a <code>(OPEN "your-reference" clib)</code>
 sequence. The <code>Referenceable</code>-holder looks up the
 <code>clid</code> in their <code>.localObjects</code> table and puts the
 result in the method argument or return value.</p>
@@ -555,11 +697,11 @@ functions.</p>
 
 <p>To access these, a <code>URLRemoteReference</code> must be created that
 refers to a string <code>clid</code> instead of a numeric one. This is a
-simple subclass of <code>RemoteReference</code>: it behaves exactly the
-same. The <code>URLRemoteReference</code> is created manually by
+simple subclass of <code>RemoteReference</code>: it behaves exactly the same.
+The <code>URLRemoteReference</code> is created manually by
 <code>pb.getRemoteURL</code>, rather than being generated automatically upon
 the receipt of a <code>my-reference</code> sequence. It also assumes a list
-of Interface names (which are usually provided by the holder of the
+of RemoteInterface names (which are usually provided by the holder of the
 <code>Referenceable</code>).</p>
 
 <p>To invoke methods on a URL-indexed object, a string token is used as the

@@ -5,6 +5,56 @@ can not otherwise be done casually. Many of these involve fundamental
 protocol issues, and therefore need to be decided sooner rather than later.
 
 
+* change the method-call syntax to include an interfacename
+
+Scope the method name to the interface. This implies (I think) one of two
+things:
+
+ callRemote() must take a RemoteInterface argument
+
+ each RemoteReference handles just a single Interface
+
+Probably the latter, maybe have the RR keep both default RI and a list of
+all implemented ones, then adapting the RR to a new RI can be a simple copy
+(and change of the default one) if the Referenceable knows about the RI.
+Otherwise something on the local side will need to adapt one RI to another.
+Need to handle reference-counting/DECREF properly for these shared RRs.
+
+From glyph:
+
+ callRemote(methname, **args) # searches RIs
+ callRemoteInterface(remoteinterface, methname, **args) # single RI
+
+ getRemoteURL(url, *interfaces)
+
+ URL-RRefs should turn into the original Referenceable (in args/results)
+  (map through the factory's table upon receipt)
+
+ URL-RRefs will not survive round trips. leave reference exchange for later.
+  (like def remote_foo(): return GlobalReference(self) )
+
+ move method-invocation code into pb.Referenceable (or IReferenceable
+ adapter). Continue using remote_ prefix for now, but make it a property of
+ that code so it can change easily.
+  <warner> ok, for today I'm just going to stick with remote_foo() as a
+  low-budget decorator, so the current restrictions are 1: subclass
+  pb.Referenceable, 2: implements() a RemoteInterface with method named "foo",
+  3: implement a remote_foo method
+  <warner> and #1 will probably go away within a week or two, to be replaced by
+  #1a: subclass pb.Referenceable OR #1b: register an IReferenceable adapter
+
+ try serializing with ISliceable first, then try IReferenceable. The
+ IReferenceable adapter must implements() some RemoteInterfaces and gets
+ serialized with a MyReferenceSlicer.
+
+http://svn.twistedmatrix.com/cvs/trunk/pynfo/admin.py?view=markup&rev=44&root=pynfo
+
+** use the methods of the RemoteInterface as the "method name"
+
+ rr.callRemote(RIFoo.add, **args)
+
+Nice and concise.
+
 
 * create UnslicerRegistry, registerUnslicer
 
@@ -77,6 +127,11 @@ Requires a .wantVocabString flag in the parser, which is kind of icky but
 fixes the annoying asymmetry between set (vocab sequence) and get (VOCAB
 token). Might want a CLEARVOCAB token too.
 
+On second thought, this won't work. There isn't room for both a vocab number
+and a variable-length string in a single token. It must be an open sequence.
+However, it could be an add/del/set-vocab sequence, allowing the vocab to be
+modified incrementally.
+
 ** VOCABize interface/method names
 
 One possibility is to make a list of all strings used by all known
@@ -128,50 +183,6 @@ Some lingering questions in this area:
 * RemoteInterface instances should have an "RI-" prefix instead of "I-"
 
 DONE
-
-* change the method-call syntax to include an interfacename
-
-Scope the method name to the interface. This implies (I think) one of two
-things:
-
- callRemote() must take a RemoteInterface argument
-
- each RemoteReference handles just a single Interface
-
-Probably the latter, maybe have the RR keep both default RI and a list of
-all implemented ones, then adapting the RR to a new RI can be a simple copy
-(and change of the default one) if the Referenceable knows about the RI.
-Otherwise something on the local side will need to adapt one RI to another.
-Need to handle reference-counting/DECREF properly for these shared RRs.
-
-From glyph:
-
- callRemote(methname, **args) # searches RIs
- callRemoteInterface(remoteinterface, methname, **args) # single RI
-
- getRemoteURL(url, *interfaces)
-
- URL-RRefs should turn into the original Referenceable (in args/results)
-  (map through the factory's table upon receipt)
-
- URL-RRefs will not survive round trips. leave reference exchange for later.
-  (like def remote_foo(): return GlobalReference(self) )
-
- move method-invocation code into pb.Referenceable (or IReferenceable
- adapter). Continue using remote_ prefix for now, but make it a property of
- that code so it can change easily.
-  <warner> ok, for today I'm just going to stick with remote_foo() as a
-  low-budget decorator, so the current restrictions are 1: subclass
-  pb.Referenceable, 2: implements() a RemoteInterface with method named "foo",
-  3: implement a remote_foo method
-  <warner> and #1 will probably go away within a week or two, to be replaced by
-  #1a: subclass pb.Referenceable OR #1b: register an IReferenceable adapter
-
- try serializing with ISliceable first, then try IReferenceable. The
- IReferenceable adapter must implements() some RemoteInterfaces and gets
- serialized with a MyReferenceSlicer.
-
-http://svn.twistedmatrix.com/cvs/trunk/pynfo/admin.py?view=markup&rev=44&root=pynfo
 
 * merge my RemoteInterface syntax with zope.interface's
 
@@ -259,6 +270,12 @@ with people I don't like
 <glyph> moshez: outside of python
 <moshez> glyph: I meant, "what specific types"
 <moshez> I'd appreciate a blog on that
+
+* have Copyable/RemoteCopy default to __getstate__/__setstate__?
+
+At the moment, the default implementations of getStateToCopy() and
+setCopyableState() get and set __dict__ directly. Should the default instead
+be to call __getstate__() or __setstate__()?
 
 * make slicer/unslicers for pb.RemoteInterfaces
 
