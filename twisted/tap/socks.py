@@ -27,7 +27,7 @@ class Options(usage.Options):
     synopsis = "Usage: mktap socks [-i <interface>] [-p <port>] [-l <file>]"
     optParameters = [["interface", "i", "127.0.0.1", "local interface to which we listen"],
                   ["port", "p", 1080, "Port on which to listen"],
-                  ["log", "l", "None", "file to log connection data to"]]
+                  ["log", "l", None, "file to log connection data to"]]
 
     longdesc = "Makes a SOCKSv4 server."
 
@@ -39,7 +39,6 @@ def updateApplication(app, config):
         print "  This may allow intruders to access your local network"
         print "  if you run this on a firewall."
         print
-    if config.opts['log']=="None": config.opts['log']=None
     t = socks.SOCKSv4Factory(config.opts['log'])
     portno = int(config.opts['port'])
     app.listenTCP(portno, t, interface=config.opts['interface'])
