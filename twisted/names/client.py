@@ -338,20 +338,7 @@ class AXFRController:
             self.deferred.callback(self.records)
 
 
-class ThreadedResolver:
-    implements(interfaces.IResolverSimple)
-
-    def __init__(self):
-        self.cache = {}
-
-    def getHostByName(self, name, timeout = 10):
-        # XXX - Make this respect timeout
-        d = threads.deferToThread(socket.gethostbyname, name)
-        d.setTimeout(timeout)
-        return d
-
-components.backwardsCompatImplements(ThreadedResolver)
-
+from twisted.internet.base import ThreadedResolver
 
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):

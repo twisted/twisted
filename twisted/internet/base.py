@@ -15,6 +15,7 @@ from zope.interface import implements
 
 import sys
 import warnings
+import operator
 from heapq import heappush, heappop, heapreplace, heapify
 
 try:
@@ -24,9 +25,9 @@ except ImportError:
 import traceback
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
-from twisted.internet.interfaces import IReactorPluggableResolver
+from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
-from twisted.internet import main, error, abstract, defer
+from twisted.internet import main, error, abstract, defer, threads
 from twisted.python import threadable, log, failure, reflect, components
 from twisted.python.runtime import seconds
 from twisted.internet.defer import Deferred, DeferredList
@@ -160,6 +161,49 @@ class DelayedCall(styles.Ephemeral):
 
 components.backwardsCompatImplements(DelayedCall)
 
+class ThreadedResolver:
+    implements(IResolverSimple)
+
+    def __init__(self, reactor):
+        self.reactor = reactor
+        self._runningQueries = {}
+
+    def _fail(self, name, err):
+        err = error.DNSLookupError("address %r not found: %s" % (name, err))
+        return failure.Failure(err)
+
+    def _cleanup(self, name, lookupDeferred):
+        userDeferred, cancelCall = self._runningQueries.pop(lookupDeferred)
+        userDeferred.errback(self._fail(name, "timeout error"))
+
+    def _checkTimeout(self, result, name, lookupDeferred):
+        try:
+            userDeferred, cancelCall = self._runningQueries.pop(lookupDeferred)
+        except KeyError:
+            pass
+        else:
+            cancelCall.cancel()
+
+            if isinstance(result, failure.Failure):
+                userDeferred.errback(self._fail(name, result.getErrorMessage()))
+            else:
+                userDeferred.callback(result)
+
+    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+        if timeout:
+            timeoutDelay = reduce(operator.add, timeout)
+        else:
+            timeoutDelay = 60
+        userDeferred = defer.Deferred()
+        lookupDeferred = threads.deferToThread(socket.gethostbyname, name)
+        cancelCall = self.reactor.callLater(
+            timeoutDelay, self._cleanup, name, lookupDeferred)
+        self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
+        lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
+        return userDeferred
+
+components.backwardsCompatImplements(ThreadedResolver)
+
 
 class ReactorBase:
     """Default base class for Reactors.
@@ -178,7 +222,7 @@ class ReactorBase:
         self._cancellations = 0
         self.running = 0
         self.waker = None
-        self.resolver = None
+        self.resolver = ThreadedResolver(self)
         self.usingThreads = 0
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
@@ -197,7 +241,10 @@ class ReactorBase:
         raise NotImplementedError()
 
     def installResolver(self, resolver):
+        assert IResolverSimple.providedBy(resolver)
+        oldResolver = self.resolver
         self.resolver = resolver
+        return oldResolver
 
     def callFromThread(self, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorThreads.callFromThread.
@@ -244,19 +291,7 @@ class ReactorBase:
             return defer.succeed('0.0.0.0')
         if abstract.isIPAddress(name):
             return defer.succeed(name)
-        if self.resolver is None:
-            return self._internalResolve(name, timeout)
         return self.resolver.getHostByName(name, timeout)
-
-    def _internalResolve(self, name, timeout):
-        # XXX timeout really shouldn't be ignored here, *especially* since
-        # socket.gethostbyname could block for a very, very, very long time.
-        try:
-            address = socket.gethostbyname(name)
-        except socket.error:
-            return defer.fail(failure.Failure(error.DNSLookupError("address %r not found" % name)))
-        else:
-            return defer.succeed(address)
 
     # Installation.
 

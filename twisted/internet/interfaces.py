@@ -607,6 +607,8 @@ class IReactorPluggableResolver(Interface):
 
         @type resolver: An object implementing the L{IResolverSimple} interface
         @param resolver: The new resolver to use.
+        
+        @return: The previously installed resolver.
         """
 
 
