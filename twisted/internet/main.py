@@ -35,7 +35,7 @@ threadable.requireInit()
 
 import task, tcp, passport, threadtask
 
-class Application(log.Logger):
+class Application(log.Logger, styles.Versioned):
     running = 0
     def __init__(self, name, uid=None, gid=None, authorizer=None):
         self.name = name
@@ -50,6 +50,15 @@ class Application(log.Logger):
         if os.name == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
+
+    persistentVersion = 1
+
+    def upgradeToVersion1(self):
+        """Version 1 Persistence Upgrade
+        """
+        log.msg("Upgrading %s Application." % repr(self.name))
+        self.authorizer = passport.DefaultAuthorizer()
+        self.services = {}
 
     def getServiceNamed(self, serviceName):
         """Retrieve the named service from this application.
@@ -67,7 +76,7 @@ class Application(log.Logger):
         return "<%s app>" % self.name
 
     def __getstate__(self):
-        dict = copy.copy(self.__dict__)
+        dict = styles.Versioned.__getstate__(self)
         if dict.has_key("running"):
             del dict['running']
         return dict
@@ -160,14 +169,6 @@ class Application(log.Logger):
                 except socket.error:
                     print 'port %s already bound' % port.port
                     return
-            # backwards compat hack...
-            if not hasattr(self, 'services'):
-                self.authorizer = passport.DefaultAuthorizer()
-                self.services = {}
-                for port in self.ports:
-                    f = port.factory
-                    if isinstance(f, passport.Service):
-                        self.services[f.getServiceName()] = f
             for service in self.services.values():
                 service.startService()
             self.running = 1

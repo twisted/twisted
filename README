@@ -18,6 +18,9 @@ What's new in 0.10.0?
   one account with the system, but can access it through whatever protocols are
   available.
 
+  "Versioned" persistence style, which provides for a smooth way to upgrade
+  state from one version of Twisted persistent state to another.
+
   Many minor bugfixes and enhancements to Twisted Web/Reality/Spread/Internet.
 
   Copyright text added.

@@ -104,7 +104,7 @@ if hasattr(cStringIO, 'OutputType'):
     copy_reg.pickle(cStringIO.OutputType,
                 pickleStringO,
                 unpickleStringO)
-                
+
 def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
@@ -132,3 +132,75 @@ class Ephemeral:
     def __setstate__(self, state):
         print "WARNING: unserializing ephemeral", self.__class__
         self.__class__ = Ephemeral
+
+
+versionedsToUpgrade = {}
+upgraded = {}
+
+def doUpgrade():
+    global versionedsToUpgrade, upgraded
+    for versioned in versionedsToUpgrade.keys():
+        requireUpgrade(versioned)
+    versionedsToUpgrade = {}
+    upgraded = {}
+
+def requireUpgrade(obj):
+    """Require that a Versioned instance be upgraded completely first.
+    """
+    if versionedsToUpgrade.has_key(obj) and not upgraded.has_key(obj):
+        upgraded[obj] = 1
+        obj.versionUpgrade()
+        return obj
+
+class Versioned:
+    """
+    This type of object is persisted with versioning information.
+
+    I have a single class attribute, the int persistenceVersion.  After I am
+    unserialized (and styles.doUpgrade() is called), self.upgradeToVersionX()
+    will be called for each version upgrade I must undergo.
+
+    For example, if I serialize an instance of a Foo(Versioned) at version 4
+    and then unserialize it when the code is at version 9, the calls::
+
+      self.upgradeToVersion5()
+      self.upgradeToVersion6()
+      self.upgradeToVersion7()
+      self.upgradeToVersion8()
+      self.upgradeToVersion9()
+
+    will be made.  If any of these methods are undefined, a warning message
+    will be printed.
+    """
+    persistenceVersion = 1
+
+    def __setstate__(self, state):
+        currentVers = self.__class__.persistenceVersion
+        persistVers = (state.get('persistenceVersion') or 0)
+        assert currentVers >= persistVers, "Sorry, can't go backwards in time. %s<%s" % (currentVers, persistVers)
+        if currentVers > persistVers:
+            versionedsToUpgrade[self] = 1
+        self.__dict__ = state
+
+    def __getstate__(self, dict=None):
+        """Get state, adding a version number to it on its way out.
+        """
+        dct = copy.copy(dict or self.__dict__)
+        dct['persistenceVersion'] = self.__class__.persistenceVersion
+        return dct
+
+    def versionUpgrade(self):
+        """(internal) Do a version upgrade.
+        """
+        currentVers = self.__class__.persistenceVersion
+        persistVers = (self.__dict__.get('persistenceVersion') or 0)
+        if persistVers:
+            del self.__dict__['persistenceVersion']
+        while persistVers < currentVers:
+            persistVers = persistVers + 1
+            method = getattr(self, 'upgradeToVersion%s' % persistVers, None)
+            if method:
+                method()
+            else:
+                print 'Warning: cannot upgrade %s to version %s' % (self.__class__, persistVers)
+

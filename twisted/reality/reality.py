@@ -29,10 +29,15 @@ import string
 from twisted.python import reflect, reference, delay
 from twisted.spread import pb
 from twisted.internet import passport
+from twisted.persisted import styles
+
+# Sibling Imports
+import player
 
 class Reality(delay.Delayed,
               reference.Resolver,
-              pb.Service):
+              pb.Service,
+              styles.Versioned):
 
     serviceName = 'twisted.reality'
     def __init__(self, name='twisted.reality', app=None):
@@ -47,13 +52,31 @@ class Reality(delay.Delayed,
         """Add all players with passwords as identities.
         """
         for th in self.__ids.values():
-            if hasattr(th, 'password'):
+            if isinstance(th, player.Player) and hasattr(th, 'password'):
+                styles.requireUpgrade(th)
                 idname = th.name
                 print "Adding identity %s" % idname
                 ident = passport.Identity(idname, self.application)
                 ident.setAlreadyHashedPassword(th.password)
                 ident.addKeyForPerspective(th)
-                self.application.authorizer.addIdentity(ident)
+                try:
+                    self.application.authorizer.addIdentity(ident)
+                except KeyError:
+                    print 'unable to add reality identity for %s' % idname
+
+    def __setstate__(self, state):
+        # mix the two varieties of state together.
+        styles.Versioned.__setstate__(self, state)
+        delay.Delayed.__setstate__(self, self.__dict__)
+
+    persistentVersion = 1
+
+    def upgradeToVersion1(self):
+        print 'Upgrading Twisted Reality instance.'
+        from twisted.internet.main import theApplication
+        styles.requireUpgrade(theApplication)
+        pb.Service.__init__(self, 'twisted.reality', theApplication)
+        self.addPlayersAsIdentities()
 
     def getThingById(self, thingid):
         return self.__ids[thingid]

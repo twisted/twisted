@@ -21,6 +21,7 @@ import string
 
 # Twisted Imports
 from twisted.spread import pb
+from twisted.internet import passport
 from twisted.python import authenticator, log
 from twisted.persisted import styles
 from twisted import copyright
@@ -37,7 +38,7 @@ statuses = {
     2: "Away"
     }
 
-class Participant(pb.Perspective):
+class Participant(pb.Perspective, styles.Versioned):
     def __init__(self, name, service):
         pb.Perspective.__init__(self, name, service)
         self.name = name
@@ -47,6 +48,24 @@ class Participant(pb.Perspective):
         self.groups = []
         self.client = None
         self.info = ""
+
+    persistentVersion = 1
+
+    def upgradeToVersion1(self):
+        self.status = OFFLINE
+        self.client = None
+        styles.requireUpgrade(self.service)
+        pb.Perspective.__init__(self, self.name, self.service)
+        log.msg("Creating account for %s" % self.name)
+        ident = passport.Identity(self.name, self.service.application)
+        ident.setAlreadyHashedPassword(self.password)
+        del self.password
+        self.setIdentity(ident)
+        ident.addKeyForPerspective(self)
+        try:
+            self.service.application.authorizer.addIdentity(ident)
+        except KeyError:
+            print 'unable to add words identity for %s'% self.name
 
     def attached(self, client, identity):
         if ((self.client is not None)
@@ -178,13 +197,20 @@ class Group(pb.Cached):
             member.receiveGroupMessage(sender, self, message)
 
 
-class Service(pb.Service):
+class Service(pb.Service, styles.Versioned):
     """I am a chat service.
     """
     def __init__(self, name, app):
         pb.Service.__init__(self, name, app)
         self.participants = {}
         self.groups = {}
+
+    persistenceVersion = 1
+
+    def upgradeToVersion1(self):
+        from twisted.internet.main import theApplication
+        styles.requireUpgrade(theApplication)
+        pb.Service.__init__(self, 'twisted.words', theApplication)
 
     def getGroup(self, name):
         group = self.groups.get(name)

@@ -70,7 +70,7 @@ class Deferred:
                 args = args or ()
                 kw = kw or {}
                 try:
-                    print callback, result, args, kw
+                    # print callback, result, args, kw
                     result = apply(callback, (result,)+args, kw)
                 except:
                     traceback.print_exc()

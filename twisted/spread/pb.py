@@ -1212,7 +1212,7 @@ class Broker(banana.Banana):
         """
         self.currentLocalID = self.currentLocalID + 1
         return self.currentLocalID
-        
+
     def newRequestID(self):
         """Generate a new request ID.
         """
@@ -1220,9 +1220,9 @@ class Broker(banana.Banana):
         return self.currentRequestID
 
     def sendMessage(self, perspective, objectID, message, args, kw, callback, errback):
-        
+
         """(internal) Send a message to a remote object.
-        
+
         Arguments:
 
           * perspective: a perspective to serialize with/for.
@@ -1247,7 +1247,7 @@ class Broker(banana.Banana):
         """(internal) Similiar to sendMessage, but for cached.
         """
         self._sendMessage('cache',perspective, cacheID, message, args, kw, callback, errback)
-    
+
     def _sendMessage(self, prefix, perspective, objectID, message, args, kw, callback, errback):
         if self.disconnected:
             raise ProtocolError("Calling Stale Broker")
@@ -1392,14 +1392,19 @@ class Broker(banana.Banana):
         """
         del self.locallyCachedObjects[objectID]
 
-class BrokerFactory(protocol.Factory):
+class BrokerFactory(protocol.Factory, styles.Versioned):
     """I am a server for object brokerage.
     """
 
     def __init__(self, application):
-        """Initialize me, indicating an authorizer.
+        """Initialize me, indicating an object with a getService method.
         """
         self.app = application
+
+    def upgradeToVersion1(self):
+        del self.services
+        from twisted.internet.main import theApplication
+        self.__init__(theApplication)
 
     # XXX REFACTOR: addService AND getService REMOVED.
     def buildProtocol(self, addr):

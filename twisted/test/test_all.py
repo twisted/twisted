@@ -28,7 +28,6 @@ import test_protocols
 import test_smtp
 import test_pop3
 import test_dirdbm
-#import test_sexpy
 import test_jelly
 import test_import
 import test_pb
@@ -38,6 +37,7 @@ import test_banana
 import test_rebuild
 import test_toc
 import test_words
+import test_persisted
 
 from pyunit import unittest
 
@@ -60,7 +60,7 @@ def testSuite():
              test_explorer.testCases   + test_banana.testCases     +
              test_rebuild.testCases    + test_toc.testCases        +
              test_smtp.testCases       + test_pop3.testCases       +
-             test_words.testCases      + 
+             test_words.testCases      + test_persisted.testCases  +
              # Leave this one at the end.
              test_import.testCases)
     return makeBigSuite(cases)

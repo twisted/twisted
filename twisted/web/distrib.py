@@ -24,6 +24,7 @@ from twisted.spread import pb
 from twisted.protocols import http
 from twisted.internet import tcp
 from twisted.python import log
+from twisted.persisted import styles
 
 # Sibling Imports
 import resource
@@ -152,11 +153,21 @@ class ResourceSubscription(resource.Resource):
                                    pberrback=i.failed)
         return NOT_DONE_YET
 
-class ResourcePublisher(pb.Service, pb.Perspective):
+class ResourcePublisher(pb.Service, pb.Perspective, styles.Versioned):
     def __init__(self, site, app, name='twisted.web.distrib'):
         pb.Service.__init__(self, name, app)
         pb.Perspective.__init__(self, "any", self, "any")
         self.site = site
+
+    persistentVersion = 1
+
+    def upgradeToVersion1(self):
+        """Version 1 Persistence Upgrade
+        """
+        from twisted.internet.main import theApplication
+        styles.requireUpgrade(theApplication)
+        pb.Service.__init__(self, 'twisted.web.distrib', theApplication)
+        pb.Perspective.__init__(self, "any", self, "any")
 
     def getPerspectiveNamed(self, name):
         return self

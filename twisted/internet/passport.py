@@ -58,7 +58,7 @@ class Service:
         off until things are actually running, such as connecting to a
         database, opening files, etcetera.
         """
-        log.msg("(%s started up!)" % str(self.__class__))
+        log.msg("(%s %s started up!)" % (str(self.__class__), repr(self.getServiceName())))
 
     def setApplication(self, application):
         assert not self.application, "Application already set!"

@@ -25,6 +25,7 @@ import traceback
 # Twisted Imports
 from twisted.python import threadable, reflect, log, authenticator, rebuild
 from twisted.spread import pb
+from twisted.persisted import styles
 
 # Sibling Imports
 import thing
@@ -38,17 +39,27 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 
-class Player(thing.Thing, pb.Perspective):
+class Player(styles.Versioned, thing.Thing, pb.Perspective):
     """Player
 
     A convenience class for sentient beings (implying turing-test quality AI)
     """
-
     def __init__(self, name, reality='', identityName="Nobody"):
         """Initialize me.
         """
         self.identityName = identityName
         thing.Thing.__init__(self, name, reality)
+
+    def __getstate__(self):
+        st1 = thing.Thing.__getstate__(self)
+        st2 = styles.Versioned.__getstate__(self, st1)
+        return st2
+
+    persistentVersion = 1
+
+    def upgradeToVersion1(self):
+        print 'upgrading player',self.name
+        pb.Perspective.__init__(self, self.name, self.reality)
 
     def set_reality(self, reality):
         if self.reality is reality:
