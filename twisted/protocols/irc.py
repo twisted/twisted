@@ -809,6 +809,57 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
                             self.client.nickname, line)
 
 
+def dccDescribe(data):
+    """Given the data chunk from a DCC query, return a descriptive string.
+    """
+
+    orig_data = data
+    data = string.split(data)
+    if len(data) < 4:
+        return orig_data
+
+    (dcctype, arg, address, port) = data[:4]
+
+    if '.' in address:
+        pass
+    else:
+        try:
+            address = long(address)
+        except ValueError:
+            pass
+        else:
+            address = (
+                (address >> 24) & 0xFF,
+                (address >> 16) & 0xFF,
+                (address >> 8) & 0xFF,
+                address & 0xFF,
+                )
+            # The mapping to 'int' is to get rid of those accursed
+            # "L"s which python 1.5.2 puts on the end of longs.
+            address = string.join(map(str,map(int,address)), ".")
+
+    if dcctype == 'SEND':
+        filename = arg
+
+        size_txt = ''
+        if len(data) >= 5:
+            try:
+                size = int(data[4])
+                size_txt = ' of size %d bytes' % (size,)
+            except ValueError:
+                pass
+
+        dcc_text = ("SEND for file '%s'%s at host %s, port %s"
+                    % (filename, size_txt, address, port))
+    elif dcctype == 'CHAT':
+        dcc_text = ("CHAT for host %s, port %s"
+                    % (address, port))
+    else:
+        dcc_text = orig_data
+
+    return dcc_text
+
+
 class DccFileReceive(DccFileReceiveBasic):
     """Higher-level coverage for getting a file from DCC SEND.
 
