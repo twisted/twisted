@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.6 $'[11:-2]
+__version__ = '$Revision: 1.7 $'[11:-2]
 
 from twisted.internet import reactor, protocol, defer
 from twisted.persisted import styles
@@ -419,7 +419,7 @@ class IncomingDccFile(protocol.ClientFactory):
         # do we need to resume first?
         if resume_overwrite == 'resume': # yes - send the request
             self.resumePos = fileSize(self.file_obj)
-            self.ircClient.ctcpMakeQuery(self.user.split('!')[0], [
+            self.ircClient.ctcpMakeQuery(self.user.split('!', 1)[0], [
                 ('DCC', ['RESUME', self.default_filename, str(self.port), str(self.resumePos)])])
         else: # no, we aren't resuming - we can connect right now
             self._makeConnection()
@@ -498,7 +498,7 @@ class OutgoingDccFile(protocol.Factory):
         port = str(sock_info[2])
         size = str(fileSize(file_obj))
 
-        self._ircClient.ctcpMakeQuery(self.user.split('!')[0], [
+        self._ircClient.ctcpMakeQuery(self.user.split('!', 1)[0], [
             ('DCC', ['SEND', name, addr, port, size])])
 
     def _gotResumeRequest(self, filename, resumePos):
@@ -507,9 +507,9 @@ class OutgoingDccFile(protocol.Factory):
         # passing the filename here is only useful so we may respond
         # with the same filename. Apparently clients such as mirc will
         # send a dummy filename that may not match what we sent out.
-        port = str(self.listeningPort.getHost()[2])
-        self.ircClient.ctcpMakeQuery(self.user.split('!')[0], [
-            ('DCC', ['ACCEPT', filename, port, str(resumePos)])])
+        port = self.listeningPort.getHost()[2]
+        self._ircClient.ctcpMakeQuery(self.user.split('!', 1)[0], [
+            ('DCC', ['ACCEPT', filename, str(port), str(resumePos)])])
         self.resumePos = resumePos
 
     def buildProtocol(self, addr):
@@ -523,7 +523,7 @@ class OutgoingDccFile(protocol.Factory):
  
 class DccFileExists(Exception):
     def __str__(self):
-        return "Destination file already exists, and we were told not to overwrite or resume"
+        return "Destination file already exists, and we were told not to overwrite or resume."
 
 class DccAborted(Exception):
     def __str__(self):
