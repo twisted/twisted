@@ -19,6 +19,8 @@ from twisted.conch.ssh import common, keys, userauth, agent
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 
+import agent
+
 import os, sys, base64, getpass
 
 def verifyHostKey(transport, host, pubKey, fingerprint):

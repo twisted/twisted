@@ -18,10 +18,10 @@
 
 #""" Implementation module for the `conch` command.
 #"""
-from twisted.conch.client import connect, default, options
+from twisted.conch.client import agent, connect, default, options
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import userauth, connection, common
-from twisted.conch.ssh import session, forwarding, channel, agent
+from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.internet.error import CannotListenError
 from twisted.python import log, usage
@@ -255,7 +255,7 @@ class SSHConnection(connection.SSHConnection):
 
     def channel_auth_agent_openssh_com(self, windowSize, maxPacket, data):
         if options['agent'] and keyAgent:
-            return SSHAgentForwardingChannel(remoteWindow = windowSize,
+            return agent.SSHAgentForwardingChannel(remoteWindow = windowSize,
                                              remoteMaxPacket = maxPacket,
                                              conn = self)
         else:
@@ -423,47 +423,6 @@ class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
         if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
-class SSHAgentClient(agent.SSHAgentClient):
-    
-    def __init__(self):
-        agent.SSHAgentClient.__init__(self)
-        self.blobs = []
-
-    def getPublicKeys(self):
-        return self.requestIdentities().addCallback(self._cbPublicKeys)
-
-    def _cbPublicKeys(self, blobcomm):
-        log.msg('got %i public keys' % len(blobcomm))
-        self.blobs = [x[0] for x in blobcomm]
-
-    def getPublicKey(self):
-        if self.blobs:
-            return self.blobs.pop(0)
-        return None
-
-class SSHAgentForwardingChannel(channel.SSHChannel):
-
-    def channelOpen(self, specificData):
-        cc = protocol.ClientCreator(reactor, SSHAgentForwardingLocal)
-        d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
-        d.addCallback(self._cbGotLocal)
-        d.addErrback(lambda x:self.loseConnection())
-        self.buf = ''
-
-    def _cbGotLocal(self, local):
-        self.local = local
-        self.dataReceived = self.local.transport.write
-        self.local.dataReceived = self.write
-   
-    def dataReceived(self, data): 
-        self.buf += data
-
-    def closed(self):
-        if self.local:
-            self.local.loseConnection()
-            self.local = None
-
-class SSHAgentForwardingLocal(protocol.Protocol): pass
 
 if __name__ == '__main__':
     run()
