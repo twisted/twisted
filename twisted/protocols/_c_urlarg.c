@@ -55,7 +55,7 @@ TM_INLINE int ishexdigit(unsigned char c) {
 static PyObject *unquote(PyObject *self, PyObject *args)
 {
     unsigned char *s, *r;
-    unsigned char quotedchar, quotedchartmp, tmp;
+    unsigned char quotedchar, quotedchartmp = 0, tmp;
     int state = STATE_INITIAL;
     PyObject *output, *str;
     if (!PyArg_ParseTuple(args, "s:unquote", &s)) {
