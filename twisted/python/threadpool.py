@@ -73,7 +73,8 @@ class ThreadPool:
         self.joined = 0
         self.started = 1
         for i in range(self.min):
-            threading.Thread(target=self._worker).start()
+            name = "PoolThread-%s-%s" % (id(self), i)
+            threading.Thread(target=self._worker, name=name).start()
 
     def __setstate__(self, state):
         self.__dict__ = state
@@ -88,8 +89,9 @@ class ThreadPool:
     def _startSomeWorkers(self):
         if not self.waiters:
             if self.workers < self.max:
-                self.workers=self.workers+1
-                threading.Thread(target=self._worker).start()
+                self.workers = self.workers + 1
+                name = "PoolThread-%s-%s" % (id(self), self.workers)
+                threading.Thread(target=self._worker, name=name).start()
 
     def dispatch(self, owner, func, *args, **kw):
         """Dispatch a function to be a run in a thread.

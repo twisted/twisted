@@ -25,27 +25,32 @@ import defer
 # this will get initialized when threading is enabled
 theThreadPool = None
 
-def initThreading():
+def _initThreading():
     """Called the first time callInThread is called."""
+    global theThreadPool
+    if theThreadPool:
+        return
+
     from twisted.python import threadpool
     from twisted.internet import reactor
     threadable.init(1)
-    
-    global theThreadPool
     theThreadPool = threadpool.ThreadPool(0, 10)
     theThreadPool.start()
-    reactor.addSystemEventTrigger('during', 'shutdown', theThreadPool.stop)
+    reactor.addSystemEventTrigger('during', 'shutdown', shutdown)
+
 
 def shutdown():
     """Close the thread pool."""
+    global theThreadPool
     if theThreadPool:
         theThreadPool.stop()
+        theThreadPool = None
 
 
 def suggestThreadPoolSize(size):
     """Suggest the maximum size of the thread pool."""
     if not theThreadPool:
-        initThreading()
+        _initThreading()
     oldSize = theThreadPool.max
     theThreadPool.max = size
     if oldSize > size:
@@ -59,7 +64,7 @@ def suggestThreadPoolSize(size):
 def callInThread(f, *args, **kwargs):
     """Run a function in a separate thread."""
     if not theThreadPool:
-        initThreading()
+        _initThreading()
     apply(theThreadPool.dispatch, (log.logOwner.owner(), f) + args, kwargs)
 
 

@@ -21,6 +21,10 @@ from pyunit import unittest
 from twisted.internet import threads, reactor
 from twisted.python import threadable, failure
 
+# make sure thread pool is shutdown
+import atexit
+atexit.register(threads.shutdown)
+
 
 class Counter:    
     index = 0
@@ -44,12 +48,6 @@ threadable.synchronize(Counter)
 class ThreadsTestCase(unittest.TestCase):
     """Test twisted.internet.threads."""
 
-    def setUp(self):
-        threads.initThreading()
-
-    def tearDown(self):
-        threads.shutdown()
-    
     def testCallInThread(self):
         c = Counter()
         
