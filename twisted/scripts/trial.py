@@ -49,9 +49,9 @@ class Options(usage.Options):
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
                       "Run tests in random order using the specified seed"],
-                     ["coverage", None, None,
-                      "Generate coverage information in the given directory (relative to _trial_temp). Requires Python 2.3.3."],
                      ]
+
+    tracer = None
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -60,6 +60,16 @@ class Options(usage.Options):
         self['testcases'] = []
         self['methods'] = []
         self['_couldNotImport'] = {}
+
+    def opt_coverage(self, coverdir):
+        """Generate coverage information in the given directory
+        (relative to _trial_temp). Requires Python 2.3.3."""
+        import trace
+
+        #countfile = abs(os.path.join('_trial_temp', 'coverage.count'))
+        self.coverdir = os.path.abspath(os.path.join('_trial_temp', coverdir))
+        self.tracer = trace.Trace(count=1, trace=0)#, infile=countfile, outfile=countfile)
+        sys.settrace(self.tracer.globaltrace)
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
@@ -244,18 +254,12 @@ def run():
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
 
-    if config['coverage']:
-        import trace
-        abs = os.path.abspath
+    reporter = reallyRun(config)
 
-        #countfile = abs(os.path.join('_trial_temp', 'coverage.count'))
-        coverdir = abs(os.path.join('_trial_temp', config['coverage']))
-        t = trace.Trace(count=1, trace=0)#, infile=countfile, outfile=countfile)
-        reporter = t.runfunc(reallyRun, config)
-        results = t.results()
-        results.write_results(show_missing=1, summary=False, coverdir=coverdir)
-    else:
-        reporter = reallyRun(config)
+    if config.tracer:
+        sys.settrace(None)
+        results = config.tracer.results()
+        results.write_results(show_missing=1, summary=False, coverdir=config.coverdir)
 
     sys.exit(not reporter.allPassed())
 
