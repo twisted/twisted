@@ -107,7 +107,7 @@ class _HeadersPlusNLines:
 class POP3Error(Exception):
     pass
 
-class POP3(basic.LineReceiver, policies.TimeoutMixin):
+class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     __implements__ = (interfaces.IProducer,)
 
