@@ -61,7 +61,11 @@ def run():
         print '%s: no such input: %s' % (sys.argv[0], opt['input'])
         sys.exit(1)
     module = module.load()
-    df = process.getProcessor(module, opt['output'], opt.config)
+    try:
+        df = process.getProcessor(module, opt['output'], opt.config)
+    except process.NoProcessorError, e:
+        print "%s: %s" % (sys.argv[0], e)
+        sys.exit(1)
     klass = process.Walker
     if opt['plain']: 
         klass = process.PlainReportingWalker

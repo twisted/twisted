@@ -16,6 +16,9 @@
 #
 import sys, os
 
+class NoProcessorError(Exception):
+    pass
+
 cols = 79
 
 def dircount(d):
@@ -73,4 +76,8 @@ class PlainReportingWalker(Walker):
 
 
 def getProcessor(module, output, d):
-    return getattr(module.factory, 'generate_'+output)(d)
+    try:
+        m = getattr(module.factory, 'generate_'+output)
+    except AttributeError:
+        raise NoProcessorError("cannot generate "+output+" output")
+    return m(d)

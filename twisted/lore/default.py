@@ -16,8 +16,9 @@
 #
 from __future__ import nested_scopes
 
-from twisted.lore import tree, latex, lint
+from twisted.lore import tree, latex, lint, process
 from twisted.web import microdom
+from twisted.protocols import sux
 
 htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.xhtml'}
 
@@ -33,7 +34,13 @@ class ProcessingFunctionFactory:
             ext = ""
         else:
             ext = d['ext']
-        templ = microdom.parse(open(d['template']))
+        try:
+            fp = open(d['template'])
+            templ = microdom.parse(fp)
+        except IOError, e:
+            raise process.NoProcessorError(e.filename+": "+e.strerror)
+        except sux.ParseError, e:
+            raise process.NoProcessorError(str(e))
         df = lambda file, linkrel: self.doFile[0](file, linkrel, d['ext'],
                                            d['baseurl'], templ)
         return df
