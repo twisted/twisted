@@ -6,9 +6,10 @@
 from __future__ import generators
 
 import sys, time, pdb, string, types
-import traceback, sets, os.path as osp, warnings
+import traceback, os.path as osp, warnings
 
 from twisted.python import reflect, failure, log
+from twisted.python.compat import sets
 from twisted.internet import defer
 from twisted.trial import itrial 
 import zope.interface as zi
