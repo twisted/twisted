@@ -318,9 +318,6 @@ class AXFRController:
                 self.soa = self.records[0]
         if len(self.records) > 1 and self.records[-1].type == dns.SOA:
             #print "It's the second SOA! We're done."
-
-            # I'm pretty sure this key has to exist if we're at
-            # this point
             self.deferred.callback(self.records)
 
 

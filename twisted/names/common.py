@@ -105,7 +105,7 @@ class ResolverBase:
 
     def getHostByName(self, name, timeout = None, effort = 10):
         # XXX - respect timeout
-        return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout
+        return self.lookupAllRecords(name, timeout
             ).addCallback(self._cbRecords, name, effort
             )
 

@@ -23,9 +23,10 @@ from __future__ import nested_scopes
 
 import sys, socket, operator, copy
 from twisted.trial import unittest
+from twisted.trial.util import deferredResult as dR
 
 from twisted.internet import reactor, protocol, defer, error
-from twisted.names import client, server, common, authority
+from twisted.names import client, server, common, authority, hosts
 from twisted.protocols import dns
 from twisted.python import log, failure
 
@@ -446,3 +447,42 @@ class AXFRTest(unittest.TestCase):
             m.answers = [records.pop(0)]
             self.controller.messageReceived(m, None)
         self.assertEquals(self.results, self.records)
+
+class HostsTestCase(unittest.TestCase):
+    def setUp(self):
+        f = open('EtcHosts', 'w')
+        f.write('''
+1.1.1.1    EXAMPLE EXAMPLE.EXAMPLETHING
+1.1.1.2    HOOJY
+::1        ip6thingy
+''')
+        f.close()
+        self.resolver = hosts.Resolver('EtcHosts')
+
+    def testGetHostByName(self):
+        data = [('EXAMPLE', '1.1.1.1'),
+                ('EXAMPLE.EXAMPLETHING', '1.1.1.1'),
+                ('HOOJY', '1.1.1.2'),
+                ]
+        
+        for name, ip in data:
+            self.assertEquals(
+                dR(self.resolver.getHostByName(name)),
+                ip)
+
+    def testLookupAddress(self):
+        stuff = dR(self.resolver.lookupAddress('HOOJY'))
+        self.assertEquals(stuff[0][0].payload.dottedQuad(), '1.1.1.2')
+
+    def testIPv6(self):
+        self.assertEquals(
+            dR(self.resolver.lookupIPV6Address('ip6thingy')),
+            '::1') #???
+
+    testIPv6.skip = 'IPv6 support is not in our hosts resolver yet'
+
+    def testNotImplemented(self):
+        from twisted.trial import util
+        self.assertRaises(
+            NotImplementedError,
+            lambda: dR(self.resolver.lookupMailExchange('EXAMPLE')))
