@@ -108,6 +108,7 @@ int main(int argc, char **argv)
         """
         Determine which extension modules we should build on this system.
         """
+        self.extensions = []
         # always define WIN32 under Windows
         if os.name == 'nt':
             global_define_macros = [("WIN32", 1)]
@@ -125,6 +126,8 @@ int main(int argc, char **argv)
         # XXX hack here XXX fdrake will hate me XXX
         from __main__ import context
         extfn = os.path.join(context._working_dir, context._pkgname, 'EXTENSIONS.cfg')
+        if not os.path.exists(extfn):
+            return
         # end hack (maybe)
         ns = {'builder': self,
               'Extension': Extension}

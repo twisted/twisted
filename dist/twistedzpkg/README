@@ -3,10 +3,12 @@ maybe some general purpose extensions, as well, which will hopefully
 be integrated into mainline zpkgtools eventually).
 
 
-EXTENSIONS.cfg: This is a new configuration file that you can put in
-your packages that contains python code that creates an 'extensions'
-list, full of Distutils Extension instances. Its namespace has
-'builder' and 'Extension' defined. 'builder' is the instance of
+EXTENSIONS.cfg: This is a new configuration file that lets you specify
+the extension modules your package has, in a flexible way (especially
+facilitating conditional compile). You put python code in it that
+creates an 'extensions' list, full of Distutils Extension
+instances. The config file is evaluated with a namespace containing
+'builder' and 'Extension'. 'builder' is the instance of
 zpkgsupport.build_ext_twisted, and 'Extension' is the distutils
 Extension classe.
 

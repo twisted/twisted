@@ -18,3 +18,5 @@
 * finish refactoring/rewriting release-twisted to support releasing of
   all of our packages
 
+
+* Poke Martin to release PyOpenSSL when 2.0 is almost out.
