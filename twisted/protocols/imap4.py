@@ -77,7 +77,10 @@ class MessageSet(object):
     used when iterating through the MessageSet. By default, a function
     returning the next integer is supplied, but as this can be rather
     inefficient for sparse UID iterations, it is recommended to supply
-    one when messages are requested by UID.
+    one when messages are requested by UID.  The argument is provided
+    as a hint to the implementation and may be ignored if it makes sense
+    to do so (eg, if an iterator is being used that maintains its own
+    state, it is guaranteed that it will not be called out-of-order).
     """
     _empty = []
 
