@@ -38,7 +38,7 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
-from twisted.python import log, components, util, failure
+from twisted.python import log, components, util, failure, text
 from twisted.cred import perspective
 from twisted.python.components import implements
 from twisted.internet import interfaces
@@ -47,7 +47,7 @@ from twisted import cred
 import twisted.cred.error
 import twisted.cred.credentials
 
-import inspect
+import rfc822
 import base64
 import binascii
 import hmac
