@@ -1,3 +1,8 @@
+2003-01-10  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twistd: in debug mode, jump into debugger for any
+	logged exception.
+
 2003-01-10  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/trial/unittest.py: enable test cruft checking

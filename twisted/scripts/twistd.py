@@ -392,6 +392,11 @@ def runApp(config):
                 tmp.close()
         elif config['debug']:
             import pdb
+            def newerr(stuff, err=log.err):
+                r = err(stuff)
+                pdb.post_mortem(sys.exc_info()[2])
+                return r
+            log.err = newerr
             sys.stdout = oldstdout
             sys.stderr = oldstderr
             if os.name == "posix":
