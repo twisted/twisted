@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.88 $'[11:-2]
+__version__ = '$Revision: 1.89 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -378,6 +378,82 @@ class IRCClient(basic.LineReceiver):
     ### Interface level client->user output methods
     ###
     ### You'll want to override these.
+
+    ### Methods relating to the server itself
+    
+    def created(self, when):
+        """Called with creation date information about the server, usually at logon.
+        
+        @type when: C{str}
+        @param when: A string describing when the server was created, probably.
+        """
+    
+    def yourHost(self, info):
+        """Called with daemon information about the server, usually at logon.
+        
+        @type info: C{str}
+        @param when: A string describing what software the server is running, probably.
+        """
+    
+    def myInfo(self, servername, version, umodes, cmodes):
+        """Called with information about the server, usually at logon.
+        
+        @type servername: C{str}
+        @param servername: The hostname of this server.
+        
+        @type version: C{str}
+        @param version: A description of what software this server runs.
+        
+        @type umodes: C{str}
+        @param umodes: All the available user modes.
+        
+        @type cmodes: C{str}
+        @param cmodes: All the available channel modes.
+        """
+    
+    def luserClient(self, info):
+        """Called with information about the number of connections, usually at logon.
+        
+        @type info: C{str}
+        @param info: A description of the number of clients and servers
+        connected to the network, probably.
+        """
+    
+    def bounce(self, info):
+        """Called with information about where the client should reconnect.
+        
+        @type info: C{str}
+        @param info: A plaintext description of the address that should be
+        connected to.
+        """
+    
+    def isupport(self, options):
+        """Called with various information about what the server supports.
+        
+        @type options: C{list} of C{str}
+        @param options: Descriptions of features or limits of the server, possibly
+        in the form "NAME=VALUE".
+        """
+
+    def luserChannels(self, channels):
+        """Called with the number of channels existant on the server.
+        
+        @type channels: C{int}
+        """
+
+    def luserOp(self, ops):
+        """Called with the number of ops logged on to the server.
+        
+        @type ops: C{int}
+        """
+
+    def luserMe(self, info):
+        """Called with information about the server connected to.
+        
+        @type info: C{str}
+        @param info: A plaintext string describing the number of users and servers
+        connected to this server.
+        """
 
     ### Methods involving me directly
 
@@ -804,9 +880,42 @@ class IRCClient(basic.LineReceiver):
     def irc_RPL_ENDOFMOTD(self, prefix, params):
         self.receivedMOTD(self.motd)
 
+    def irc_RPL_CREATED(self, prefix, params):
+        self.created(params[1])
+    
+    def irc_RPL_YOURHOST(self, prefix, params):
+        self.yourHost(params[1])
+    
+    def irc_RPL_MYINFO(self, prefix, params):
+        self.myInfo(*params[1:])
+    
+    def irc_RPL_BOUNCE(self, prefix, params):
+        # 005 is doubly assigned.  Piece of crap dirty trash protocol.
+        if params[-1] == "are available on this server":
+            self.isupport(params[1:-1])
+        else:
+            self.bounce(params[1])
+    
+    def irc_RPL_LUSERCLIENT(self, prefix, params):
+        self.luserClient(params[1])
+    
+    def irc_RPL_LUSEROP(self, prefix, params):
+        try:
+            self.luserOp(int(params[1]))
+        except ValueError:
+            pass
+    
+    def irc_RPL_LUSERCHANNELS(self, prefix, params):
+        try:
+            self.luserChannels(int(params[1]))
+        except ValueError:
+            pass
+    
+    def irc_RPL_LUSERME(self, prefix, params):
+        self.luserMe(params[1])
+
     def irc_unknown(self, prefix, command, params):
         pass
-
 
     ### Receiving a CTCP query from another party
     ### It is safe to leave these alone.
