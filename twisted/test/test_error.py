@@ -1,0 +1,134 @@
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+from twisted.trial import unittest
+from twisted.internet import error
+import socket
+
+class TestStringification(unittest.TestCase):
+    """Test that the exceptions have useful stringifications.
+    """
+
+    listOfTests = [
+        #(output, exception[, args[, kwargs]]),
+
+        ("An error occurred binding to an interface.",
+         error.BindError),
+
+        ("Couldn't listen on eth0:4242: Foo",
+         error.CannotListenError,
+         ('eth0', 4242, socket.error('Foo'))),
+
+        ("Message is too long to send.",
+         error.MessageLengthError),
+
+        ("DNS lookup failed.",
+         error.DNSLookupError),
+
+        ("An error occurred while connecting.",
+         error.ConnectError),
+
+        ("Couldn't bind.",
+         error.ConnectBindError),
+
+        ("Hostname couldn't be looked up.",
+         error.UnknownHostError),
+
+        ("No route to host.",
+         error.NoRouteError),
+
+        ("Connection was refused by other side.",
+         error.ConnectionRefusedError),
+
+        ("TCP connection timed out.",
+         error.TCPTimedOutError),
+
+        ("File used for UNIX socket is no good.",
+         error.BadFileError),
+
+        ("Service name given as port is unknown.",
+         error.ServiceNameUnknownError),
+
+        ("User aborted connection.",
+         error.UserError),
+
+        ("User timeout caused connection failure.",
+         error.TimeoutError),
+
+        ("An SSL error occurred.",
+         error.SSLError),
+
+        ("Connection to the other side was lost in a non-clean fashion.",
+         error.ConnectionLost),
+
+        ("Connection was closed cleanly.",
+         error.ConnectionDone),
+
+        ("Uh.", #TODO nice docstring, you've got there.
+         error.ConnectionFdescWentAway),
+
+        ("Tried to cancel an already-called event.",
+         error.AlreadyCalled),
+
+        ("Tried to cancel an already-cancelled event.",
+         error.AlreadyCancelled),
+
+        ("A process has ended without apparent errors.: process finished with exit code 0",
+         error.ProcessDone,
+         [None]),
+
+        ("A process has ended with a probable error condition.: process ended",
+         error.ProcessTerminated),
+
+        # TODO the period is ugly. Search for ".:" in this file for more.
+        ("A process has ended with a probable error condition.: process ended with exit code 42",
+         error.ProcessTerminated,
+         [],
+         {'exitCode': 42}),
+
+        ("A process has ended with a probable error condition.: process ended by signal SIGBUS",
+         error.ProcessTerminated,
+         [],
+         {'signal': 'SIGBUS'}),
+
+        ("The Connector was not connecting when it was asked to stop connecting.",
+         error.NotConnectingError),
+
+        ("The Port was not listening when it was asked to stop listening.",
+         error.NotListeningError),
+
+        ]
+
+    def testThemAll(self):
+        for entry in self.listOfTests:
+            output = entry[0]
+            exception = entry[1]
+            try:
+                args = entry[2]
+            except IndexError:
+                args = ()
+            try:
+                kwargs = entry[3]
+            except IndexError:
+                kwargs = {}
+
+            self.failUnlessEqual(
+                str(exception(*args, **kwargs)),
+                output)
+
+if __name__ == '__main__':
+    unittest.main()
