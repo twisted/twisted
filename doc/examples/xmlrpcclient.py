@@ -19,3 +19,6 @@ reactor.run()
 proxy = Proxy('http://advogato.org/XMLRPC')
 proxy.callMethod('test.sumprod', 3, 5).addCallbacks(printValue, printError)
 reactor.run()
+proxy.callMethod('test.capitalize', 'moshe zadka').addCallbacks(printValue,
+                                                                printError)
+reactor.run()
