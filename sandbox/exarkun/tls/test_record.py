@@ -51,9 +51,17 @@ class MiddleSubByteFields(Record):
                   ('e', Integer(8))]
     EXPECTED_ENCODED_SIZE = 9
 
+class CrossByteField(Record):
+    __format__ = [('a', Integer(6)),
+                  ('b', Integer(6)),
+                  ('c', Integer(6)),
+                  ('c', Integer(6))]
+    EXPECTED_ENCODED_SIZE = 3
+
 records = [SingleSignedByte, SingleUnsignedByte, SingleSignedShort,
            SingleUnsignedShort, SingleSignedLong, SingleUnsignedLong,
-           MultiByte, MultiType, SubByteFields, MiddleSubByteFields]
+           MultiByte, MultiType, SubByteFields, MiddleSubByteFields,
+           CrossByteField]
 
 def randomValue(type):
     if type.signed:
