@@ -143,6 +143,9 @@ class FileDescriptor(log.Logger):
                     self.producer.pauseProducing()
             self.startWriting()
 
+    def writeSequence(self, iovec):
+        self.write("".join(iovec))
+
     def loseConnection(self):
         """Close the connection at the next available opportunity.
 

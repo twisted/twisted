@@ -17,6 +17,7 @@
 # These class's names should have been based on Onanism, but were
 # censored by the PSU
 
+# Twisted Imports
 from twisted.internet import interfaces, protocol
 from twisted.python import hook
 
@@ -37,6 +38,9 @@ class LoopbackRelay:
         self.buffer = self.buffer + data
         if self.logFile:
             self.logFile.write("loopback writing %s\n" % repr(data))
+
+    def writeSequence(self, iovec):
+        self.write("".join(iovec))
 
     def clearBuffer(self):
         if self.logFile:

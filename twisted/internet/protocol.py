@@ -21,6 +21,7 @@ Start here if you are looking to write a new protocol implementation for
 Twisted Python.  The Protocol class contains some introductory material.
 """
 
+# Twisted Imports
 from twisted.python import log
 from twisted.internet import interfaces
 
@@ -252,6 +253,9 @@ class FileWrapper:
     def stopConsuming(self):
         self.unregisterProducer()
         self.loseConnection()
+
+    def writeSequence(self, iovec):
+        self.write("".join(iovec))
 
     def loseConnection(self):
         self.closed = 1

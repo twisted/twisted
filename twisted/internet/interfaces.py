@@ -498,12 +498,20 @@ class ITransport(Interface):
     """
 
     def write(self, data):
-        '''Write some data to the physical connection, in sequence.
+        """Write some data to the physical connection, in sequence.
 
         If possible, make sure that it is all written.  No data will
         ever be lost, although (obviously) the connection may be closed
         before it all gets through.
-        '''
+        """
+
+    def writeSequence(self, data):
+        """Write a list of strings to the physical connection.
+
+        If possible, make sure that all of the data is written to
+        the socket at once, without first copying it all into a
+        single string.
+        """
 
     def loseConnection(self):
         """Close my connection, after writing all pending data.

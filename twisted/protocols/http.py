@@ -509,7 +509,7 @@ class Request:
                     l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
                 l.append("\r\n")
                                 
-                self.transport.write("".join(l))
+                self.transport.writeSequence(l)
             
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == "HEAD":
