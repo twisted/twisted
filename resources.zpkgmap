@@ -1,3 +1,11 @@
+# This is a zpkg resource map. Type 
+
+#   zpkg -m file:///path/to/this/file [resourcename]
+
+# where "resourcename" is one of the things in the left column here,
+# and a "resourcename.tgz" file will be created.
+
+twistedsumo packages/sumo
 twisted twisted
 twisted.conch twisted/conch
 twisted.flow twisted/flow
