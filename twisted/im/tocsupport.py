@@ -60,7 +60,7 @@ class TOCPerson(basesupport.AbstractPerson):
     def setStatusAndIdle(self, status, idletime):
         self.status = status
         self.idletime = idletime
-        self.chat.getContactsList().setContactStatus(self)
+        self.account.client.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
         if meta:

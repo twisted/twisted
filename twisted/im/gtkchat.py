@@ -116,7 +116,7 @@ class ContactsList:
                 self.onlinePeople.append(person)
                 online.append([person.name, str(person.getStatus()),
                                person.getIdleTime(),
-                               person.account.accounName])
+                               person.account.accountName])
                 self.countOnline = self.countOnline + 1
             offline.append([person.name, person.account.accountName,
                             'Aliasing Not Implemented', 'Groups Not Implemented'])
