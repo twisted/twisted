@@ -26,7 +26,6 @@ class Server(unix.Server):
         """
         payload = struct.pack("%di" % len(fileno), *fileno)
         r = sendmsg(self.fileno(), data, 0, (socket.SOL_SOCKET, SCM_RIGHTS, payload))
-        print 'Sent', fileno, '(', r, ')'
         return r
 
 
@@ -39,6 +38,7 @@ class Client(unix.Client):
         try:
             msg, flags, ancillary = recvmsg(self.fileno())
         except:
+            log.msg('recvmsg():')
             log.err()
         else:
             buf = ancillary[0][2]
@@ -49,9 +49,10 @@ class Client(unix.Client):
             try:
                 self.protocol.fileDescriptorsReceived(fds)
             except:
+                log.msg('protocol.fileDescriptorsReceived')
                 log.err()
         return unix.Client.doRead(self)
-
+    
 class Connector(unix.Connector):
     def _makeTransport(self):
         return Client(self.address, self, self.reactor)
@@ -92,6 +93,8 @@ class FileDescriptorReceivingProtocol(protocol.Protocol):
         self.factory.rDeferred.callback(self)
 
 def makeServer(service):
+    if os.path.exists('fd_control'):
+        raise Exception("Server already listening")
     f = protocol.ServerFactory()
     f.protocol = FileDescriptorSendingProtocol
     s = UNIXServer('fd_control', f)
@@ -108,12 +111,14 @@ def makeClient(service):
     return c
 
 def main():
+    import sys
     from twisted.application import service
     
     a = service.Application("File Descriptor Passing Application")
-    makeServer(a)
-    makeClient(a)
-
+    try:
+        makeServer(a)
+    except:
+        makeClient(a)
     return a
 
 application = main()
