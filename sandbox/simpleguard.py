@@ -49,17 +49,16 @@ from twisted.python import urlpath
 class ParentRedirect(resource.Resource):
     isLeaf = 1
     def render(self, request):
-        return util.redirectTo(urlpath.URLPath.fromRequest(request).here(),
-                               request)
+        return util.redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
 
     def getChild(self, request):
         return self
 
-def guardResource(resource, checkers, callback=lambda _: ParentRedirect()):
+def guardResource(resource, checkers, callback=lambda _: ParentRedirect(), errback=None):
     myPortal = portal.Portal(MarkingRealm(resource))
     for checker in checkers:
         myPortal.registerChecker(checker)
-    return SessionWrapper(UsernamePasswordWrapper(myPortal, callback=callback))
+    return SessionWrapper(UsernamePasswordWrapper(myPortal, callback=callback, errback=errback))
 
 # Everything below here is user code:
 if __name__ == '__main__':
