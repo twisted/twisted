@@ -598,11 +598,14 @@ def _setUpTestdir():
        try:
            shutil.rmtree(testdir)
        except OSError, e:
-           print "caught OSError [Errno %s]: %s: could not remove path %s" % (e.errno,e.strerror,e.filename)
+           print "could not remove path, caught OSError [Errno %s]: %s" % (e.errno,e.strerror)
+           s = os.stat(testdir)
+           from pprint import pformat
+           print "os.stat(%s): %s" % (testdir, pformat(dict([(name, getattr(s, name)) for name in dir(s) if not name.startswith('__')])))
            try:
                os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
            except OSError, e:
-               print "caught OSError [Errno %s]: %s: could not rename path %s" % (e.errno,e.strerror,e.filename)
+               print "could not rename path, caught OSError [Errno %s]: %s" % (e.errno,e.strerror)
                raise
 
     os.mkdir(testdir)
