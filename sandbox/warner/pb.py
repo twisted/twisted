@@ -26,9 +26,15 @@ class RemoteReference(object):
     def __del__(self):
         self.broker.freeRemoteReference(self.refID)
 
-    def callRemote(self, _name, _resultConstraint=None, *args, **kwargs):
+    def callRemote(self, _name, *args, **kwargs):
         # for consistency, *all* failures are reported asynchronously.
         try:
+            # this implements an argument _resultConstraint=None, but keeps
+            # it from interfering with any positional parameters
+            _resultConstraint = kwargs.get("_resultConstraint")
+            if kwargs.has_key("_resultConstraint"):
+                del kwargs["_resultConstraint"]
+
             # newRequestID() could fail with a StaleBrokerError
             reqID = self.broker.newRequestID()
             req = PendingRequest()
