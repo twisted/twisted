@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_defer -*-
+# 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #

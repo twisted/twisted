@@ -124,5 +124,12 @@ class DeferredTestCase(unittest.TestCase):
         d.unpause()
         self.assertEquals(l, ["fail"])
 
+    def testUnpauseBeforeCallback(self):
+        d = defer.Deferred()
+        d.pause()
+        d.addCallback(self._callback)
+        d.unpause()
+
+
 
 testCases = [DeferredTestCase]
