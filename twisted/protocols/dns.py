@@ -75,7 +75,7 @@ del k, v
 
 
 # Opcodes
-OP_QUERY, OP_INVERSE, OP_STATUS = range(3)
+OP_QUERY, OP_INVERSE, OP_STATUS, OP_NOTIFY = range(4)
 
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
@@ -944,6 +944,8 @@ class Message:
                  | ( self.recDes & 1 ) )
         byte4 = ( ( (self.recAv & 1 ) << 7 )
                   | (self.rCode & 0xf ) )
+        
+        print 'Replying with %d answers' % len(self.answers)
         strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
                                 len(self.queries), len(self.answers), 
                                 len(self.ns), len(self.add)))

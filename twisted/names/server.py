@@ -147,6 +147,13 @@ class DNSServerFactory(protocol.ServerFactory):
             log.msg("Status request from %r" % (address,))
 
 
+    def handleNotify(self, message, protocol, address):
+        message.rCode = dns.ENOTIMP
+        self.sendReply(protocol, message, address)
+        if self.verbose:
+            log.msg("Notify message from %r" % (address,))
+
+
     def handleOther(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
@@ -178,6 +185,8 @@ class DNSServerFactory(protocol.ServerFactory):
             self.handleInverseQuery(message, protocol, address)
         elif message.opCode == dns.OP_STATUS:
             self.handleStatus(message, protocol, address)
+        elif message.opCode == dns.OP_NOTIFY:
+            self.handleNotify(message, protocol, address)
         else:
             self.handleOther(message, protocol, address)
 
