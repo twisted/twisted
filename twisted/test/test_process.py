@@ -679,7 +679,7 @@ class UtilTestCase(unittest.TestCase):
         ])
 
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
-if (runtime.platform.getType() != 'posix') or (not components.implements(reactor, interfaces.IReactorProcess)):
+if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
     PosixProcessTestCase.skip = skipMessage
     PosixProcessTestCasePTY.skip = skipMessage
     TestTwoProcessesPosix.skip = skipMessage
@@ -688,7 +688,7 @@ else:
     # do this before running the tests: it uses SIGCHLD and stuff internally
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
 
-if (runtime.platform.getType() != 'win32') or (not components.implements(reactor, interfaces.IReactorProcess)):
+if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTestCase.skip = skipMessage
     TestTwoProcessesNonPosix.skip = skipMessage
 
@@ -696,5 +696,5 @@ if runtime.platform.getType() == 'win32':
     ProcessTestCase.testEcho.im_func.todo = "goes into infinite loop in win32eventreactor :("
     UtilTestCase.todo = "do not assume that platform retains 'executable' mode"
 
-if (not components.implements(reactor, interfaces.IReactorProcess)):
+if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage

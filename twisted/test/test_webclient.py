@@ -107,7 +107,7 @@ class WebClientTestCase(unittest.TestCase):
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
-        self.portno = self.port.getHost()[2]
+        self.portno = self.port.getHost().port
 
     def tearDown(self):
         if serverCallID and serverCallID.active():
@@ -332,7 +332,7 @@ class CookieTestCase(unittest.TestCase):
         site = server.Site(root, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
-        self.portno = self.port.getHost()[2]
+        self.portno = self.port.getHost().port
 
     def tearDown(self):
         self.port.stopListening()
@@ -396,7 +396,7 @@ if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
         case.skip = "OpenSSL not present"
 
-if not components.implements(reactor, interfaces.IReactorSSL):
+if not interfaces.IReactorSSL(reactor, None):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
         case.skip = "Reactor doesn't support SSL"
 

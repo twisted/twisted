@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.python import components
-
+from zope import interface
 
 def foo():
     return 2
@@ -37,7 +37,7 @@ class IX(components.Interface):
     pass
 
 class XA(components.Adapter):
-    __implements__ = (IX,)
+    interface.implements(IX)
 
     def method(self):
         # Kick start :(

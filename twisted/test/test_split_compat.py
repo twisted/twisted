@@ -1,6 +1,6 @@
 import os, string, shutil
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.python import reflect
 
 
@@ -21,4 +21,7 @@ class TestCompatibility(unittest.TestCase):
             for someName in [x for x in vars(new).keys() if x != '__doc__']:
                 self.assertIdentical(getattr(old, someName),
                                      getattr(new, someName))
+    testCompatibility = util.suppressWarnings(testCompatibility,
+                                              ('', DeprecationWarning))
+    
             

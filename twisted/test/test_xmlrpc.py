@@ -96,7 +96,7 @@ class XMLRPCTestCase(unittest.TestCase):
     def setUp(self):
         self.p = reactor.listenTCP(0, server.Site(Test()),
                                    interface="127.0.0.1")
-        self.port = self.p.getHost()[2]
+        self.port = self.p.getHost().port
 
     def tearDown(self):
         self.p.stopListening()
@@ -145,7 +145,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         xmlrpc = Test()
         addIntrospection(xmlrpc)
         self.p = reactor.listenTCP(0, server.Site(xmlrpc),interface="127.0.0.1")
-        self.port = self.p.getHost()[2]
+        self.port = self.p.getHost().port
 
     def testListMethods(self):
         d = self.proxy().callRemote("system.listMethods")

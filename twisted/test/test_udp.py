@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 from twisted.internet import protocol, reactor, error, defer, interfaces, address
 from twisted.python import failure, components
@@ -60,7 +60,6 @@ class GoodClient(Server):
 
 
 class OldConnectedUDPTestCase(unittest.TestCase):
-        
     def testStartStop(self):
         client = Client()
         port2 = reactor.connectUDP("127.0.0.1", 8888, client)
@@ -74,6 +73,9 @@ class OldConnectedUDPTestCase(unittest.TestCase):
         reactor.iterate()
         self.assertEquals(client.stopped, 1)
         self.assertEquals(len(l), 1)
+    testStartStop = util.suppressWarnings(testStartStop,
+                                          ('use listenUDP and then transport.connect',
+                                           DeprecationWarning))
 
     def testDNSFailure(self):
         client = Client()
@@ -84,24 +86,30 @@ class OldConnectedUDPTestCase(unittest.TestCase):
         self.assert_(client.failure.trap(error.DNSLookupError))
         self.assertEquals(client.stopped, 0)
         self.assertEquals(client.started, 0)
-
+    testDNSFailure = util.suppressWarnings(testDNSFailure,
+                                           ('use listenUDP and then transport.connect',
+                                           DeprecationWarning))
     def testSendPackets(self):
         server = Server()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
         client = Client()
-        port2 = reactor.connectUDP("127.0.0.1", server.transport.getHost()[2], client)
+        port2 = reactor.connectUDP("127.0.0.1", server.transport.getHost().port, client)
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
-        server.transport.write("hello", client.transport.getHost()[1:])
+        server.transport.write("hello", (client.transport.getHost().host,
+                                         client.transport.getHost().port))
         client.transport.write("world")
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(client.packets, ["hello"])
-        self.assertEquals(server.packets, [("world", ("127.0.0.1", client.transport.getHost()[2]))])
+        self.assertEquals(server.packets, [("world", ("127.0.0.1", client.transport.getHost().port))])
         port1.stopListening(); port2.stopListening()
         reactor.iterate(); reactor.iterate()
+    testSendPackets = util.suppressWarnings(testSendPackets,
+                                            ('use listenUDP and then transport.connect',
+                                             DeprecationWarning))
 
     def testConnectionRefused(self):
         # assume no one listening on port 80 UDP
@@ -117,13 +125,18 @@ class OldConnectedUDPTestCase(unittest.TestCase):
         server.transport.write("c", ("127.0.0.1", 80))
         server.transport.write("d", ("127.0.0.1", 80))
         server.transport.write("e", ("127.0.0.1", 80))
-        server.transport.write("toserver", port2.getHost()[1:])
-        server.transport.write("toclient", port.getHost()[1:])
+        server.transport.write("toserver", (port2.getHost().host,
+                                            port2.getHost().port))
+        server.transport.write("toclient", (port.getHost().host,
+                                            port.getHost().port))
         reactor.iterate(); reactor.iterate()
         self.assertEquals(client.refused, 1)
         port.stopListening()
         port2.stopListening()
         reactor.iterate(); reactor.iterate()
+    testConnectionRefused = util.suppressWarnings(testConnectionRefused,
+                                                  ('use listenUDP and then transport.connect',
+                                                   DeprecationWarning))
 
 
 class UDPTestCase(unittest.TestCase):
@@ -135,6 +148,9 @@ class UDPTestCase(unittest.TestCase):
         addr = p.getHost()
         self.assertEquals(addr, ('INET_UDP', addr.host, addr.port))
         p.stopListening()
+    testOldAddress = util.suppressWarnings(testOldAddress,
+                                           ('IPv4Address.__getitem__',
+                                            DeprecationWarning))
     
     def testStartStop(self):
         server = Server()
@@ -164,7 +180,7 @@ class UDPTestCase(unittest.TestCase):
     def testBindError(self):
         server = Server()
         port = reactor.listenUDP(0, server, interface='127.0.0.1')
-        n = port.getHost()[2]
+        n = port.getHost().port
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
@@ -246,7 +262,7 @@ class MulticastTestCase(unittest.TestCase):
         self.client = Client()
         # multicast won't work if we listen over loopback, apparently
         self.port1 = reactor.listenMulticast(0, self.server)
-        self.port2 = reactor.connectMulticast("127.0.0.1", self.server.transport.getHost()[2], self.client)
+        self.port2 = reactor.connectMulticast("127.0.0.1", self.server.transport.getHost().port, self.client)
         reactor.iterate()
         reactor.iterate()
 
@@ -315,10 +331,10 @@ class MulticastTestCase(unittest.TestCase):
     testMultiListen.skip = "on non-linux platforms it appears multiple processes can listen, but not multiple sockets in same process?"
 
 
-if not components.implements(reactor, interfaces.IReactorUDP):
+if not interfaces.IReactorUDP(reactor, None):
     UDPTestCase.skip = "This reactor does not support UDP"
 if not hasattr(reactor, "connectUDP"):
     OldConnectedUDPTestCase.skip = "This reactor does not support connectUDP"
-if not components.implements(reactor, interfaces.IReactorMulticast):
+if not interfaces.IReactorMulticast(reactor, None):
     MulticastTestCase.skip = "This reactor does not support multicast"
 
