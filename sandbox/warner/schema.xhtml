@@ -205,5 +205,98 @@ _uncache(objID): remove obj from self.locallyCachedObjects[objID]
 
 </pre>
 
+<h2>stuff</h2>
+
+<p>A RemoteReference/RemoteCopy (called a Remote for now) has a schema
+attached to it. remote.callRemote(methodname, *args) does
+schema.getMethodSchema(methodname) to obtain a MethodConstraint that
+describes the individual method. This MethodConstraint (or MethodSchema) has
+other attributes which are used by either end: what arguments are allowed
+and/or expected, calling conventions (synchronous, in-order, priority, etc),
+and how the return value should be constrained.</p>
+
+<p>To use the Remote like a RemoteCopy ...</p>
+
+<pre>
+
+Remote:
+ .methods
+ .attributes
+ .getMethodSchema(methodname) -> MethodConstraint
+ .getAttributeSchema(attrname) -> a Constraint
+
+XPCOM idl specifies methods and attributes (readonly, readwrite). A Remote
+object which represented a distant XPCOM object would have a Schema that is
+created by parsing the IDL. Its callRemote would do the appropriate
+marshalling. Issue1: XPCOM lets methods have in/out/inout parameters.. these
+must be detected and a wrapper generated. Issue2: what about attribute
+set/get operations? Could add setRemote and getRemote for these.
+
+---
+
+Some of the schema questions come down to how PBRootSlicer should deal with
+instances. The question is whether to treat the instance as a Referenceable
+(copy-by-reference: create and transmit a reference number, which will be
+turned into a RemoteReference on the other end), or as a Copyable
+(copy-by-value: collect some instance state and send it as an instance).
+This decision could be made by looking at what the instance inherits from:
+
+  if isinstance(obj, pb.Referenceable):
+      sendByReference(obj)
+  elif isinstance(obj, pb.Copyable):
+      sendByValue(obj)
+  else:
+      raise InsecureJellyError
+
+or by what it can be adapted to:
+
+  r = IReferenceable(obj, None)
+  if r:
+      sendByReference(r)
+  else:
+      r = ICopyable(obj, None)
+      if r:
+          sendByValue(r)
+      else:
+          raise InsecureJellyError
+
+The decision could also be influenced by the sending schema currently in
+effect. Side A invokes a method on side B. A knows of a schema which states
+that the 'foo' argument of this method should be a CopyableSpam, so it
+requires the object be adaptable to ICopyableSpam (which is then copied by
+value) tries to comply when that argument is serialized. B will enforce its
+own schema. When B returns a result to A, the method-result schema on B's
+side can influence how the return value is handled.
+
+For bonus points, it may be possible to send the object as a combination of
+these two. That may get pretty hard to follow, though.
+
+</pre>
+
+<h2>adapters and Referenceable/Copyable</h2>
+
+<p>One possibility: rather than using a SlicerRegistry, use Adapters. The
+ISliceable interface has one method: getSlicer(). Slicer.py would register
+adapters for basic types (list, dict, etc) that would just return an
+appropriate ListSlicer, etc. Instances which would have been pb.Copyable
+subclasses in oldpb can still inherit from pb.Copyable, which now implements
+ISliceable and produces a Slicer (opentype='instance') that calls
+getStateToCopy() (although the subclass-__implements__ handling is now more
+important than before). pb.Referenceable implements ISlicer and produces a
+Slicer (opentype='reference'?) which (possibly) registers itself in the
+broker and then sends the reference number (along with a schema if necessary
+(and the other end wants them)).</p>
+
+<p>Classes are also welcome to implement ISlicer themselves and produce
+whatever clever (streaming?) Slicer objects they like.</p>
+
+<p>On the receiving side, we still need a registry to provide reasonable
+security. There are two registries. The first is the
+RootUnslicer.openRegistry, and maps OPEN types to Unslicer factories. It is
+used in doOpen().</p>
+
+<p>The second registry should map opentype=instance class names to something
+which can handle the instance contents. Should this be a replacement
+Unslicer?</p>
 
 </body> </html>

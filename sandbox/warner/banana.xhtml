@@ -343,7 +343,8 @@ completed object up to the <q>childFinished</q> method of its parent.</p>
 non-containers. The containers are further divided into mutable and
 immutable. Some examples of immutable containers are tuples and bound
 methods. Lists and dicts are mutable containers. Ints and strings are
-non-containers.</p>
+non-containers. Non-containers are always leaf nodes in the object
+graph.</p>
 
 <p>During unserialization, objects are in one of three states: uncreated,
 referenceable (but not complete), and complete. Only mutable containers can
@@ -358,20 +359,28 @@ list without trouble.</p>
 The object cannot be created until all its components are referenceable.
 While it is guaranteed that these component objects will be complete before
 the graph traversal exits the current node, the child nodes are allowed to
-reference the current node during that traversal. To handle this, the
-TupleUnslicer installs a Deferred into the object table when it begins
-unserializing (in the .start method). When the tuple is finally complete,
-the object table is updated and the Deferred is fired with the new
-tuple.</p>
+reference the current node during that traversal. The classic example is the
+graph created by the following Python fragment:</p>
+
+<pre class="python">
+a = ([],)
+a[0].append((a,))
+</pre>
+
+<p>To handle these cases, the TupleUnslicer installs a Deferred into the
+object table when it begins unserializing (in the .start method). When the
+tuple is finally complete, the object table is updated and the Deferred is
+fired with the new tuple.</p>
 
 <p>Containers (both mutable and immutable) are required to pay attention to
-the types of their incoming children. These containers are not complete (in
-the sense described above) until those Deferreds have been replaced with
-referenceable objects. When the container receives the Deferred, it should
-attach a callback to it which will perform the replacement. In addition,
-immutable containers should check after each update to see if all the
-Deferreds have been cleared, and if so, complete the object (and fired their
-own Deferreds so any containers <em>they</em> are a child of may be updated
+the types of their incoming children and notice when they receive Deferreds
+instead of normal objects. These containers are not complete (in the sense
+described above) until those Deferreds have been replaced with referenceable
+objects. When the container receives the Deferred, it should attach a
+callback to it which will perform the replacement. In addition, immutable
+containers should check after each update to see if all the Deferreds have
+been cleared, and if so, complete their own object (and fire their own
+Deferreds so any containers <em>they</em> are a child of may be updated
 and/or completed).</p>
 
 
@@ -457,6 +466,15 @@ confusion caused by time-distributed serialization. PB method calls must
 retain their current in-order execution, and it must not be possible to
 interleave serialized state (big mess).</p>
 
+<p>To actually accomplish this, objects should be able to provide their own
+Slicers. It may be convenient to do this entirely with Adapters, so Banana
+registers ListSlicer, etc as an ISlicer adapter for the fundamental types;
+pb.Copyable implements ISlicer by having a method to return a new Slicer;
+etc.</p>
+
+<p>Likewise on the receiving end, the Unslicer is created when the OPEN
+token is received, and then receives all the tokens destined for that
+object.</p>
 
 <h3>CBanana, CBananaRun, RunBananaRun</h3>
 
@@ -695,7 +713,7 @@ created them.</p>
   <li>XRangeType</li>
 
   <li>- types that aren't really that useful</li>
-  <li>BufferType</li
+  <li>BufferType</li>
   <li>BuiltinFunctionType</li>
   <li>BuiltinMethodType</li>
   <li>CodeType</li>
