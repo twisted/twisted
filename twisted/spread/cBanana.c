@@ -18,9 +18,21 @@ PyObject* cBanana_dict;
 
 
 /* Python accessible */
+/* Encoding */
 extern EXTERN_API PyObject *cBanana_encode( PyObject *self, PyObject *args );
 extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args );
+
+/* State Object */
 extern EXTERN_API PyObject *cBananaState_new( PyObject *self, PyObject *args );
+extern EXTERN_API void      cBananaState_dealloc(PyObject* self);
+
+/* Buffer Object */
+extern EXTERN_API PyObject *cBananaBuf_new( PyObject *self, PyObject *args );
+extern EXTERN_API void      cBananaBuf_dealloc(PyObject* self);
+extern EXTERN_API PyObject *cBananaBuf_getattr(PyObject* self, char* attrname);
+extern EXTERN_API PyObject *cBananaBuf_write( PyObject *self, PyObject *args );
+extern EXTERN_API PyObject *cBananaBuf_get( PyObject *self, PyObject *args );
+extern EXTERN_API PyObject *cBananaBuf_clear( PyObject *self, PyObject *args );
 
 // function table passed into Python by initcBanana()
 static PyMethodDef cBanana__methods__[] =
@@ -28,8 +40,18 @@ static PyMethodDef cBanana__methods__[] =
     { "dataReceived", cBanana_dataReceived, METH_VARARGS },
     { "encode", cBanana_encode, METH_VARARGS },
     { "newState", cBananaState_new, METH_VARARGS },
+    { "newBuf", cBananaBuf_new, METH_VARARGS },
     { NULL, NULL }        /* Sentinel */
   };
+
+static PyMethodDef cBananaBuf__methods__[] =
+  {
+    { "write", cBananaBuf_write, METH_VARARGS },
+    { "clear", cBananaBuf_clear, METH_VARARGS },
+    { "get", cBananaBuf_get, METH_VARARGS },
+    { NULL, NULL }        /* Sentinel */
+  };
+
 
 static PyObject *BananaError;
 
@@ -63,7 +85,142 @@ typedef struct {
   struct listItem *currentList;
 } cBananaState;
 
-staticforward PyTypeObject cBananaStateType;
+static PyTypeObject cBananaStateType = {
+  PyObject_HEAD_INIT(NULL)
+  0,
+  "cBananaState",
+  sizeof(cBananaState),
+  0,
+  cBananaState_dealloc, /* dealloc */
+  0, /* print */
+  0, /* getattr */
+  0, /* setattr */
+  0, /* compare */
+  0, /* repr */
+  0, /* as_number */
+  0, /* as_sequence */
+  0, /* as_mapping */
+  0, /* hash */
+};
+
+typedef struct {
+  PyObject_HEAD
+  char* contents;
+  unsigned int available;
+  unsigned int size;
+} cBananaBuf;
+
+static PyTypeObject cBananaBufType = {
+  PyObject_HEAD_INIT(NULL)
+  0,
+  "cBananaBuf",
+  sizeof(cBananaBuf),
+  0,
+  cBananaBuf_dealloc, /* dealloc */
+  0, /* print */
+  cBananaBuf_getattr, /* getattr */
+  0, /* setattr */
+  0, /* compare */
+  0, /* repr */
+  0, /* as_number */
+  0, /* as_sequence */
+  0, /* as_mapping */
+  0, /* hash */
+  0, /* call */
+};
+
+#define INITIAL_BUF_SZ 1024
+
+extern EXTERN_API PyObject*
+cBananaBuf_new(PyObject *self, PyObject *args) {
+  cBananaBuf* buf;
+  if (!PyArg_ParseTuple(args, ":newState")){
+    return NULL;
+  }
+  buf = PyObject_NEW(cBananaBuf, &cBananaBufType);
+  buf->contents = malloc(INITIAL_BUF_SZ);
+  buf->size = INITIAL_BUF_SZ;
+  buf->available = INITIAL_BUF_SZ;
+  return (PyObject*) buf;
+}
+
+extern EXTERN_API void
+cBananaBuf_dealloc(PyObject *self) {
+  cBananaBuf* buf;
+  buf = (cBananaBuf*) self;
+  if (buf->contents) {
+    free(buf->contents);
+  }
+  buf->contents = 0;
+  buf->available = 0;
+  buf->size = 0;
+  PyObject_Del(self);
+}
+
+extern EXTERN_API PyObject*
+cBananaBuf_getattr(PyObject *self, char* attrname) {
+  return Py_FindMethod(cBananaBuf__methods__, self, attrname);
+}
+
+static void cBananaBuf_write_internal(cBananaBuf* me, const char* src, unsigned int len) {
+  unsigned int index;
+  while (len > (me -> available)) {
+    char* newbuf;
+    unsigned int newsize;
+    newsize = me->size * 2;
+    newbuf = malloc(newsize);
+    memcpy(newbuf, me->contents, me->size - me->available);
+    free(me->contents);
+    me->contents = newbuf;
+    me->available += me->size;
+    me->size = newsize;
+  }
+  index = me->size - me->available;
+  memcpy((me->contents)+index, src, len);
+  me->available -= len;
+}
+
+extern EXTERN_API PyObject*
+cBananaBuf_write(PyObject *self, PyObject *args) {
+  cBananaBuf* me;
+  char* src;
+  int len;
+  me = (cBananaBuf*) self;
+  if (PyArg_ParseTuple(args, "s#:write", &src, &len)) {
+    cBananaBuf_write_internal(me, src, len);
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+  return NULL;
+}
+
+
+static void cBananaBuf_clear_internal(cBananaBuf* me) {
+  me->available = me->size;
+}
+
+extern EXTERN_API PyObject*
+cBananaBuf_clear(PyObject *self, PyObject *args) {
+  cBananaBuf* me;
+  me = (cBananaBuf*) self;
+  if (PyArg_ParseTuple(args, ":clear")) {
+    cBananaBuf_clear_internal(me);
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+  return NULL;
+}
+
+extern EXTERN_API PyObject*
+cBananaBuf_get(PyObject *self, PyObject *args) {
+  cBananaBuf* me;
+  me = (cBananaBuf*) self;
+  if (PyArg_ParseTuple(args, ":get")) {
+    return PyString_FromStringAndSize(me->contents, me->size - me->available);
+  }
+  return NULL;
+}
+
 
 extern EXTERN_API PyObject*
 cBananaState_new(PyObject *self, PyObject *args) {
@@ -84,30 +241,12 @@ cBananaState_dealloc(PyObject* self)
   thisList = ((cBananaState*)self) -> currentList;
   while (thisList) {
     thatList = thisList->lastList;
-    Py_XDECREF(thisList->thisList);
+    Py_DECREF(thisList->thisList);
     free(thisList);
     thisList = thatList;
   }
-  PyMem_DEL(self);
+  PyObject_Del(self);
 }
-
-static PyTypeObject cBananaStateType = {
-  PyObject_HEAD_INIT(NULL)
-  0,
-  "cBananaState",
-  sizeof(cBananaState),
-  0,
-  cBananaState_dealloc, /* dealloc */
-  0, /* print */
-  0, /* getattr */
-  0, /* setattr */
-  0, /* compare */
-  0, /* repr */
-  0, /* as_number */
-  0, /* as_sequence */
-  0, /* as_mapping */
-  0, /* hash */
-};
 
 const char *vocab[] = {
   // Filler so we start at 1 not 0
@@ -157,36 +296,27 @@ const char *findVocab(int offset)
   return vocab[offset];
 }
 
-void callWithChar(PyObject* writeobj, char x) {
-  PyObject *argtup;
-  PyObject *argstring;
-
-  argtup = PyTuple_New(1);
-  argstring = PyString_FromStringAndSize(&x, 1);
-  
-  PyTuple_SetItem(argtup, 0, argstring);
-  PyObject_CallObject(writeobj, argtup);
-  Py_XDECREF(argtup);
-  Py_XDECREF(argstring);
-}
-
-void int2b128(long integer, PyObject* writeobj) {
+void int2b128(long integer, cBananaBuf* writeobj) {
+  char singleByte;
   if (integer == 0) {
-    callWithChar(writeobj, '\0');
+    singleByte = 0;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
     return;
   }
   while (integer) {
-    callWithChar(writeobj, (char) integer &0x7f);
+    singleByte = (char) integer & 0x7f;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
     integer >>= 7;
   }
 }
 
-PyObject* cBanana_encode_internal(PyObject* encodeobj, PyObject* writeobj) {
-  
+PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
+  char singleByte;
   if (PyList_Check(encodeobj)) {
     int counter;
     int2b128(PyList_Size(encodeobj), writeobj);
-    callWithChar(writeobj, LIST);
+    singleByte = LIST;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
     for (counter=0; counter < PyList_Size(encodeobj); counter ++) {
       if (!cBanana_encode_internal(PyList_GetItem(encodeobj, counter), writeobj)) {
 	return NULL;
@@ -195,25 +325,40 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, PyObject* writeobj) {
   } else if (PyTuple_Check(encodeobj)) {
     int counter;
     int2b128(PyTuple_Size(encodeobj), writeobj);
-    callWithChar(writeobj, LIST);
+    singleByte = LIST;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
     for (counter=0; counter < PyTuple_Size(encodeobj); counter ++) {
       if (!cBanana_encode_internal(PyTuple_GetItem(encodeobj, counter), writeobj)) {
 	return NULL;
       }
     }
   } else if (PyInt_Check(encodeobj)) {
-    long integer = PyInt_AS_LONG(encodeobj);
+    long integer = PyInt_AsLong(encodeobj);
     if (integer >= 0) {
       int2b128(integer, writeobj);
-      callWithChar(writeobj, INT);
+      singleByte = INT;
+      cBananaBuf_write_internal(writeobj, &singleByte, 1);
     } else {
       int2b128(-integer, writeobj);
-      callWithChar(writeobj, NEG);
+      singleByte = NEG;
+      cBananaBuf_write_internal(writeobj, &singleByte, 1);
     }
   } else if (PyLong_Check(encodeobj)) {
-    PyErr_SetString(BananaError,
+    /*PyErr_SetString(BananaError,
 		    "Longs not yet supported.");
-    return NULL;
+		    return NULL; */
+    PyObject* argtup;
+    argtup = PyTuple_New(2);
+    Py_INCREF(encodeobj);
+    PyTuple_SetItem(argtup, 0, encodeobj);
+    Py_INCREF(writeobj);
+    PyTuple_SetItem(argtup, 1, PyObject_GetAttrString((PyObject*) writeobj, "write"));
+    if (!PyObject_CallObject(PyObject_GetAttrString(cBanana_module, "pyint2b128"), argtup)) {
+      return NULL;
+    }
+    Py_DECREF(argtup);
+    singleByte = LONGINT;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
   } else if (PyFloat_Check(encodeobj)) {
     double x;
     int s;
@@ -221,9 +366,6 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, PyObject* writeobj) {
     double f;
     long fhi, flo;
     char floatbuf[8];
-    PyObject *argtup;
-    PyObject *argstring;
-    PyObject* ret;
     x = PyFloat_AS_DOUBLE(encodeobj);
     if (x < 0) {
       s = 1;
@@ -279,28 +421,18 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, PyObject* writeobj) {
     floatbuf[6] = (flo>>8) & 0xFF;
     floatbuf[7] = flo & 0xFF;
     
-    callWithChar(writeobj, FLOAT);
+    singleByte = FLOAT;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
     /* it's CALLING PYTHON FUNCTIONS FOR FUN AND PROFIT!!! */
-    argtup = PyTuple_New(1);
-    argstring = PyString_FromStringAndSize(floatbuf, 8);
-
-    PyTuple_SetItem(argtup, 0, argstring);
-    ret = PyObject_CallObject(writeobj, argtup);
-    Py_XDECREF(argtup);
-    Py_XDECREF(argstring);
-    return ret;
+    cBananaBuf_write_internal(writeobj, floatbuf, sizeof(floatbuf));
   } else if (PyString_Check(encodeobj)) {
-    PyObject* argtup;
-    PyObject* ret;
-    int2b128(PyString_Size(encodeobj), writeobj);
-    callWithChar(writeobj, STRING);
-
-    argtup = PyTuple_New(1);
-
-    PyTuple_SetItem(argtup, 0, encodeobj);
-    ret = PyObject_CallObject(writeobj, argtup);
-    Py_XDECREF(argtup);
-    return ret;
+    int len;
+    char* src;
+    PyString_AsStringAndSize(encodeobj, &src, &len);
+    int2b128(len, writeobj);
+    singleByte = STRING;
+    cBananaBuf_write_internal(writeobj, &singleByte, 1);
+    cBananaBuf_write_internal(writeobj, src, len);
   } else {
     PyErr_SetString(BananaError, "Unknown Python Type.  Can't deal with it.");
     return NULL;
@@ -318,11 +450,11 @@ PyObject* cBanana_encode(PyObject* self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "OO", &encodeobj, &writeobj)) {
     return NULL;
   }
-  if (!PyCallable_Check(writeobj)) {
-    Py_INCREF(Py_None);
-    return Py_None;
+  if (writeobj->ob_type != &cBananaBufType) {
+    PyErr_SetString(BananaError, "Encoding only accepts BananaBufs");
+    return NULL;
   }
-  return cBanana_encode_internal(encodeobj, writeobj);
+  return cBanana_encode_internal(encodeobj, (cBananaBuf*) writeobj);
 }
 
 
@@ -333,7 +465,6 @@ long long b1282int(unsigned char *str, int begin, int end) {
 
   for (count=begin; count < end; count++) {
     unsigned char num = str[count];
-    /*printf("b1282int: num = %d\n", num);*/
     if (place) {
       result = result +  (num << (7 * place)); // (num * (128 ^ place));
     } else {
@@ -361,11 +492,9 @@ int gotPythonItem(PyObject *object, struct listItem *currentList, PyObject *expr
   else {
     args = PyTuple_New(1);
     if (PyTuple_SetItem(args, 0, object) != 0) {
-      //printf("Couldn't add item to tuple\n");
       return 0;
     }
 
-    /*printf("Calling expressionReceived.\n");*/
     result = PyObject_CallObject(expressionReceived, args);
     if (!result) {
       return 0;
@@ -447,14 +576,12 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
   int nEndPos;
   unsigned char typeByte;
 
-  /* printf("Entering cBanana_dataReceived!\n"); */
 
   if( !PyArg_ParseTuple( args, "OOO", &stateobj, &newChunk, &expressionReceived) )
     return NULL;
 
   if (!PyCallable_Check(expressionReceived) ) {
     // ERROR - must be a callback we can use
-    //printf("ERROR - must be a callback we can use.\n");
     Py_INCREF(Py_None);
     return Py_None;
   }
@@ -564,7 +691,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       if (!negval) {
 	return NULL;
       }
-      Py_XDECREF(rval);
+      Py_DECREF(rval);
       if (!gotPythonItem(negval, state->currentList, expressionReceived)) {
 	return NULL;
       }

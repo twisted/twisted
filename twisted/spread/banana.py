@@ -277,8 +277,15 @@ class Canana(Banana):
 
     def connectionMade(self):
         self.state = cBanana.newState()
-        # self._encode = cBanana.encode
+        self.cbuf = cBanana.newBuf()
         Pynana.connectionMade(self)
+
+    def sendEncoded(self, obj):
+        self.cbuf.clear()
+        cBanana.encode(obj, self.cbuf)
+        rv = self.cbuf.get()
+        # print repr(rv)
+        self.transport.write(rv)
 
     def dataReceived(self, chunk):
         buffer = self.buffer + chunk
@@ -291,13 +298,12 @@ Pynana = Banana
 try:
     import cBanana
     cBanana.pyb1282int = b1282int
+    cBanana.pyint2b128 = int2b128
 except ImportError:
     print 'using python banana'
-    pass
 else:
     print 'using C banana'
     Banana = Canana
-
 # For use from the interactive interpreter
 _i = Banana()
 _i.connectionMade()
@@ -305,8 +311,10 @@ _i._selectDialect("none")
 
 def encode(lst):
     io = cStringIO.StringIO()
-    _i._encode(lst, io.write)
+    _i.transport = io
+    _i.sendEncoded(lst)
     return io.getvalue()
+
 
 def decode(st):
     l=[]
