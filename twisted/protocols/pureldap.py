@@ -238,7 +238,7 @@ class LDAPAttributeValueAssertion(BERSequence):
     def __init__(self, attributeDesc=None, assertionValue=None,
                  encoded=None, berdecoder=None):
         BERSequence.__init__(self, value=[])
-        if self.attributeDesc!=None:
+        if attributeDesc!=None:
             assert encoded==None
             self.attributeDesc=attributeDesc
             self.assertionValue=assertionValue
@@ -254,6 +254,14 @@ class LDAPAttributeValueAssertion(BERSequence):
         return str(BERSequence([self.attributeDesc,
                                 self.assertionValue],
                                tag=self.tag))
+
+    def __repr__(self):
+        if self.tag==self.__class__.tag:
+            return self.__class__.__name__+"(attributeDesc=%s, assertionValue=%s)"\
+                   %(repr(self.attributeDesc), repr(self.assertionValue))
+        else:
+            return self.__class__.__name__+"(attributeDesc=%s, assertionValue=%s, tag=%d)"\
+                   %(repr(self.attributeDesc), repr(self.assertionValue), self.tag)
 
 
 class LDAPFilter:
@@ -335,6 +343,17 @@ class LDAPFilter_substrings(BERSequence):
         return str(BERSequence([
             LDAPString(self.type),
             BERSequence(self.substrings)], tag=self.tag))
+
+    def __repr__(self):
+        if self.tag==self.__class__.tag:
+            return self.__class__.__name__\
+                   +"(type=%s, substrings=%s)"\
+                   %(repr(self.type), repr(self.substrings))
+        else:
+            return self.__class__.__name__\
+                   +"(type=%s, substrings=%s, tag=%d)"\
+                   %(repr(self.type), repr(self.substrings), self.tag)
+
 
 class LDAPFilter_greaterOrEqual(LDAPAttributeValueAssertion):
     tag = CLASS_CONTEXT|0x05
