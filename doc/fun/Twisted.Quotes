@@ -2889,4 +2889,9 @@ dollars, instead of being dead, i am now an oil magnate in my native country."
 * glyph/#twisted thinks x++ should have been named "<xml type="programming">
     <increment /> <increment> </xml>"
 %
-
+<raph> i was going to publish a spec for bitmap images much along similar lines as BLOAT
+<raph> ie, <pixel><color><component name="red" value="34"/> ...
+<raph> now here is the evil thought
+<raph> do up an XLST stylesheet to render it as a huge html table with cell backgrounds for each pixel
+<raph> so you can view it in mozilla
+%
