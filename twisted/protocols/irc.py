@@ -235,7 +235,7 @@ class IRCClient(basic.LineReceiver):
     ### Your client will want to invoke these.
 
     # i have tried to keep backward compatibility with the 0.16
-    # way of doings (join('channel') when you really want #channel), 
+    # way of doings (join('channel') when you really want #channel),
     # however trying to join channels like ##foo and ###foo will
     # work differently now. leave, say and me all have the same issue
     # the old way made it impossible to join &channel's (and IMHO
