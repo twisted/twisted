@@ -1337,9 +1337,25 @@ class SMTPSenderFactory(protocol.ClientFactory):
     protocol = SMTPSender
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5):
+        """
+        @param fromEmail: The RFC 2821 address from which to send this
+        message.
+        
+        @param toEmail: A sequence of RFC 2821 addresses to which to
+        send this message.
+        
+        @param file: A file-like object containing the message to send.
+        
+        @param deferred: A Deferred to callback or errback when sending
+        of this message completes.
+        
+        @param retries: The number of times to retry delivery of this
+        message.
+        """
         if isinstance(toEmail, types.StringTypes):
             toEmail = [toEmail]
         self.fromEmail = Address(fromEmail)
+        self.nEmails = len(toEmail)
         self.toEmail = iter(toEmail)
         self.file = file
         self.result = deferred
@@ -1363,7 +1379,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.sendFinished -= 1
 
     def buildProtocol(self, addr):
-        p = self.protocol(self.domain, len(self.toEmail)*2+2)
+        p = self.protocol(self.domain, self.nEmails*2+2)
         p.factory = self
         return p
 
