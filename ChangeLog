@@ -13,6 +13,8 @@
 
 	* twisted.mail cleanups:
 
+		* basic bounce support.
+
 		* removed telnet from mail tap
 
 		* mail domains now receive service in __init__
@@ -21,6 +23,7 @@
 	          MessageCollection)
 
 		* Put a Queue in service
+
 	* twisted/protocol/smtp.py: changed SMTPClient API so that it returns
 	a file for the message content, instead of a string.
 
