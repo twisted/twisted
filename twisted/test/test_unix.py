@@ -18,6 +18,7 @@ from twisted.internet import interfaces, reactor, protocol
 from twisted.python import components
 from twisted.protocols import loopback
 import test_smtp
+import stat, os, tempfile
 
 class TestClientFactory(protocol.ClientFactory):
     def startedConnecting(self, c):
@@ -40,8 +41,17 @@ class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
         loopback.loopbackUNIX(client, server)
 
     def testDumber(self):
-        filename = ".unixtest"
+        filename = tempfile.mktemp()
         l = reactor.listenUNIX(filename, Factory())
+        reactor.connectUNIX(filename, TestClientFactory())
+        for i in xrange(100):
+            reactor.iterate()
+        l.stopListening()
+
+    def testMode(self):
+        filename = tempfile.mktemp()
+        l = reactor.listenUNIX(filename, Factory(), mode = 0600)
+        self.assertEquals(stat.S_IMODE(os.stat(filename)[0]), 0600)
         reactor.connectUNIX(filename, TestClientFactory())
         for i in xrange(100):
             reactor.iterate()

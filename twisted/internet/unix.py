@@ -49,8 +49,9 @@ class Port(tcp.Port):
     
     transport = Server
 
-    def __init__(self, fileName, factory, backlog=5, reactor=None):
+    def __init__(self, fileName, factory, backlog=5, mode=0666, reactor=None):
         tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
+        self.mode = mode
 
     def __repr__(self):
         return '<%s on %r>' % (self.factory.__class__, self.port)
@@ -70,7 +71,7 @@ class Port(tcp.Port):
             raise CannotListenError, (None, self.port, le)
         else:
             # Make the socket readable and writable to the world.
-            os.chmod(self.port, 0666)
+            os.chmod(self.port, self.mode)
             skt.listen(self.backlog)
             self.connected = True
             self.socket = skt
@@ -96,8 +97,8 @@ class Client(tcp.BaseClient):
     socketType = socket.SOCK_STREAM
     
     REQ_FLAGS = (stat.S_IFSOCK | # that's not a socket
-                 stat.S_IROTH  | # that's not readable
-                 stat.S_IWOTH)   # that's not writable
+                 stat.S_IRUSR  | # that's not readable
+                 stat.S_IWUSR)   # that's not writable
 
     def __init__(self, filename, connector, reactor=None):
         # Base __init__ is invoked later.  Yea, it's evil.

@@ -284,7 +284,7 @@ class Application(log.Logger, styles.Versioned,
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
 
-    persistenceVersion = 11
+    persistenceVersion = 12
 
     _authorizer = None
 
@@ -295,6 +295,12 @@ class Application(log.Logger, styles.Versioned,
             self._authorizer = DefaultAuthorizer()
             self._authorizer.setApplication(self)
         return self._authorizer
+
+    def upgradeToVersion12(self):
+        up = []
+        for port, factory, backlog in self.unixPorts:
+            up.append((port, factory, backlog, 0666))
+        self.unixPorts = up
 
     def upgradeToVersion11(self):
         self._extraListeners = {}
@@ -446,19 +452,19 @@ class Application(log.Logger, styles.Versioned,
         if self._listenerDict.has_key((port_, interface_)):
             self._listenerDict[port_,interface_].stopListening()
 
-    def listenUNIX(self, filename, factory, backlog=5):
+    def listenUNIX(self, filename, factory, backlog=5, mode=0666):
         """
         Connects a given protocol factory to the UNIX socket with the given filename.
         """
-        self.unixPorts.append((filename, factory, backlog))
+        self.unixPorts.append((filename, factory, backlog, mode))
         if self.running:
             from twisted.internet import reactor
-            return reactor.listenUNIX(filename, factory, backlog)
+            return reactor.listenUNIX(filename, factory, backlog, mode)
 
     def unlistenUNIX(self, filename):
         toRemove = []
         for t in self.unixPorts:
-            filename_, factory_, backlog_ = t
+            filename_, factory_, backlog_, mode_ = t
             if filename == filename_:
                 toRemove.append(t)
         for t in toRemove:
@@ -683,9 +689,9 @@ class Application(log.Logger, styles.Versioned,
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
             
-            for filename, factory, backlog in self.unixPorts:
+            for filename, factory, backlog, mode in self.unixPorts:
                 try:
-                    self._listenerDict[filename] = reactor.listenUNIX(filename, factory, backlog)
+                    self._listenerDict[filename] = reactor.listenUNIX(filename, factory, backlog, mode)
                 except error.CannotListenError, msg:
                     log.msg('error on UNIX socket %s: %s' % (filename, msg))
                     return

@@ -1,3 +1,9 @@
+2003-2-20  Paul Swartz  <z3p@twistedmatrix.com>
+
+	( twisted/internet/{app,default,interface,unix}.py: Add 'mode' argument
+	to the listenUNIX interface, which sets the filesystem mode for the
+        socket.
+
 2003-2-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Release 1.0.4alpha1.

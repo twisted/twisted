@@ -271,7 +271,7 @@ class IReactorUNIX(Interface):
         @returns: an L{IConnector}.
         """
 
-    def listenUNIX(self, address, factory, backlog=5):
+    def listenUNIX(self, address, factory, backlog=5, mode=0666):
         """Listen on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -279,6 +279,8 @@ class IReactorUNIX(Interface):
         @param factory: a L{twisted.internet.protocol.Factory} instance.
 
         @param backlog: number of connections to allow in backlog.
+
+        @param mode: mode to set on the unix socket.
         """
 
 

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.63 2003/02/03 23:53:30 exarkun Exp $
+# $Id: default.py,v 1.64 2003/02/19 22:23:54 z3p Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -216,10 +216,10 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
 
-    def listenUNIX(self, address, factory, backlog=5):
+    def listenUNIX(self, address, factory, backlog=5, mode=0666):
         """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
-        p = unix.Port(address, factory, backlog, self)
+        p = unix.Port(address, factory, backlog, mode, self)
         p.startListening()
         return p
 
