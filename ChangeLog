@@ -1,3 +1,8 @@
+2002-01-14  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/manhole/ui/spelunk_gnome.py: Less duplication of visages,
+	and they're draggable now too.
+
 2002-01-13  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* Changed twisted.enterprise.adabi so operations can accept lists
@@ -9,5 +14,5 @@
 
 	  Problem is that different adaptors may have different codes for
 	  quoting.
-   
+
 	* First go at database for twisted.bugs. I hate RDBMS. I hate web.
