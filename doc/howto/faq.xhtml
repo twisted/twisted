@@ -269,6 +269,13 @@ error.  Pass the <code>installSignalHandlers=0</code> keyword argument to
 this.</p>
 
 
+<h3>I'm trying to stop my program with <code>sys.exit()</code>, but Twisted
+seems to catch it!  How do I exit my program?</h3>
+
+<p>Use <code>reactor.stop()</code> instead.  This will cleanly shutdown the
+reactor.</p>
+
+
 <h2>Web</h2>
 
 <h3>Is the Twisted web server a toy?</h3>
