@@ -1,3 +1,11 @@
+2003-12-04  Brian Warner  <warner@lothar.com>
+
+	* twisted/persisted/sob.py (Persistent): fix misspelled class name,
+	add compatibility binding to "Persistant" (sic).
+
+	* twisted/test/test_sob.py: use Persistent
+	* twisted/application/service.py (Application): use Persistent
+
 2003-12-03  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/python/log.py: Added exception handling to

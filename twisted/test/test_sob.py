@@ -35,7 +35,7 @@ objects = [
 class PersistTestCase(unittest.TestCase):
     def testStyles(self):
         for o in objects:
-            p = sob.Persistant(o, '')
+            p = sob.Persistent(o, '')
             for style in 'xml source pickle'.split():
                 p.setStyle(style)
                 p.save(filename='persisttest.'+style)
@@ -45,7 +45,7 @@ class PersistTestCase(unittest.TestCase):
     def testStylesBeingSet(self):
         o = Dummy()
         o.foo = 5
-        o.setComponent(sob.IPersistable, sob.Persistant(o, 'lala'))
+        o.setComponent(sob.IPersistable, sob.Persistent(o, 'lala'))
         for style in 'xml source pickle'.split():
             sob.IPersistable(o).setStyle(style)
             sob.IPersistable(o).save(filename='lala.'+style)
@@ -56,7 +56,7 @@ class PersistTestCase(unittest.TestCase):
 
     def testNames(self):
         o = [1,2,3]
-        p = sob.Persistant(o, 'object')
+        p = sob.Persistent(o, 'object')
         for style in 'xml source pickle'.split():
             p.setStyle(style)
             p.save()
@@ -74,7 +74,7 @@ class PersistTestCase(unittest.TestCase):
             raise unittest.SkipTest()
         for o in objects:
             phrase='once I was the king of spain'
-            p = sob.Persistant(o, '')
+            p = sob.Persistent(o, '')
             for style in 'xml source pickle'.split():
                 p.setStyle(style)
                 p.save(filename='epersisttest.'+style, passphrase=phrase)

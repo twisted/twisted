@@ -270,7 +270,7 @@ def Application(name, uid=None, gid=None):
     one of the interfaces.
     """
     ret = components.Componentized()
-    for comp in (MultiService(), sob.Persistant(ret, name), Process(uid, gid)):
+    for comp in (MultiService(), sob.Persistent(ret, name), Process(uid, gid)):
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret

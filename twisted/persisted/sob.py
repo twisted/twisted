@@ -68,7 +68,7 @@ class IPersistable(components.Interface):
         """
 
 
-class Persistant:
+class Persistent:
 
     __implements__ = IPersistable,
 
@@ -138,6 +138,8 @@ class Persistant:
         os.rename(filename, finalname)
         log.msg("Saved.")
 
+# "Persistant" has been present since 1.0.7, so retain it for compatibility
+Persistant = Persistent
 
 class _EverythingEphemeral(styles.Ephemeral):
 
@@ -226,5 +228,5 @@ def guessType(filename):
         '.etax': 'xml'
     }[ext]
 
-__all__ = ['loadValueFromFile', 'load', 'Persistant', 'IPersistable',
-           'guessType']
+__all__ = ['loadValueFromFile', 'load', 'Persistent', 'Persistant',
+           'IPersistable', 'guessType']
