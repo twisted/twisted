@@ -402,6 +402,7 @@ class IMAP4HelperMixin:
         self.client = SimpleClient(d)
         self.connected = d
 
+        SimpleMailbox.messages = []
         theAccount = Account('testuser')
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
@@ -785,17 +786,18 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
         message = open(infile)
-        SimpleServer.theAccount.addMailbox('root/subthing')
+        SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login('testuser', 'password-test')
         def append():
             message = file(infile)
             continuation = defer.Deferred()
             continuation.addCallback(self.client._IMAP4Client__cbContinueAppend, message)
+            continuation.addErrback(self.client._IMAP4Client__ebContinueAppend)
             return self.client.sendCommand(
                 imap4.Command(
                     'APPEND',
-                    'INBOX (\\SEEN) "Right now" {%d}' % os.path.getsize(infile),
+                    'PARTIAL/SUBTHING (\\SEEN) "Right now" {%d}' % os.path.getsize(infile),
                     continuation
                 )
             ).addCallback(self.client._IMAP4Client__cbAppend)
@@ -803,12 +805,13 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d = self.connected.addCallback(strip(login))
         d.addCallbacks(strip(append), self._ebGeneral)
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d.setTimeout(5)
         self.loopback()
         
-        mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
+        mb = SimpleServer.theAccount.mailboxes['PARTIAL/SUBTHING']
         self.assertEquals(1, len(mb.messages))
         self.assertEquals(
-            (['\\SEEN', '\\DELETED'], 'This Date String Is Illegal', 0),
+            (['\\SEEN'], 'Right now', 0),
             mb.messages[0][1:]
         )
         self.assertEquals(open(infile).read(), mb.messages[0][0].getvalue())
@@ -1107,7 +1110,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopback(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client)
         
         # Ensure no short-circuiting wierdness is going on
         self.failIf(self.result is self.expected)
@@ -1152,7 +1155,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopback(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client)
         
         # Ensure no short-circuiting wierdness is going on
         self.failIf(self.result is self.expected)
