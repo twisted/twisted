@@ -37,6 +37,14 @@ import twisted.cred.credentials
 import twisted.cred.checkers
 import twisted.cred.error
 
+INTERNAL_ERROR = '''\
+From: Twisted.mail Internals
+Subject: An Error Occurred
+
+  An internal server error has occurred.  Please contact the
+  server administrator.
+'''
+
 class _MaildirNameGenerator:
     """Utility class to generate a unique maildir name
     """
@@ -181,6 +189,32 @@ class MaildirMailbox(pop3.Mailbox):
         self.deleted.clear()
 
 
+class StringListMailbox:
+    __implements__ = (pop3.IMailbox,)
+    
+    def __init__(self, msgs):
+        self.msgs = msgs
+    
+    def listMessages(self, i=None):
+        if i is None:
+            return map(len, self.msgs)
+        return len(self.msgs[i])
+    
+    def getMessage(self, i):
+        return StringIO.StringIO(self.msgs[i])
+    
+    def getUidl(self, i):
+        return md5.new(self.msgs[i]).hexdigest()
+    
+    def deleteMessage(self, i):
+        pass
+    
+    def undeleteMessages(self):
+        pass
+    
+    def sync(self):
+        pass
+     
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
@@ -243,9 +277,16 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     ## IRealm
     ##
     def requestAvatar(self, avatarId, mind, *interfaces):
+        if pop3.IMailbox not in interfaces:
+            raise NotImplementedError("No interface")
+        if avatarId == cred.checkers.ANONYMOUS:
+            mbox = StringListMailbox([INTERNAL_ERROR])
+        else:
+            mbox = MaildirMailbox(os.path.join(self.root, avatarId))
+                
         return (
-            interfaces[0],
-            MaildirMailbox(os.path.join(self.root, avatarId)),
+            pop3.IMailbox,
+            mbox,
             lambda: None
         )
 
