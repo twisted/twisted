@@ -147,7 +147,7 @@ DL_EXPORT(void) init_c_urlarg(void)
         hexdigits[i] = 10 + (i - 'a');
     }
     for(i = 'A'; i <= 'F'; i++) {
-        hexdigits[i] = 10 + (i - 'a');
+        hexdigits[i] = 10 + (i - 'A');
     }
     /* Check for errors */
     if (PyErr_Occurred()) {
