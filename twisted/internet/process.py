@@ -33,10 +33,22 @@ except:
     pty = None
 
 try:
-    from initgroups import initgroups
-    import pwd
+    import pwd, grp
+    def initgroups(uid, primaryGid):
+        username = pwd.getpwuid(uid)[0]
+        l=[primaryGid]
+        for groupname, password, gid, userlist in grp.getgrall():
+            if username in userlist:
+                l.append(gid)
+        os.setgroups(l)
 except:
-    def initgroups(*args): pass
+    def initgroups(uid, primaryGid):
+        pass
+
+def switch_uid(uid, gid):
+    os.setgid(gid)
+    initgroups(uid, gid)
+    os.setuid(uid)
 
 from twisted.persisted import styles
 from twisted.python import log, failure
@@ -229,9 +241,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                     os.chdir(path)
                 # set the UID before I actually exec the process
                 if settingUID:
-                    os.setgid(gid)
-                    initgroups(pwd.getpwuid(uid)[0], gid)
-                    os.setuid(uid)
+                    switch_uid(uid, gid)
                 os.execvpe(command, args, environment)
             except:
                 # If there are errors, bail and try to write something
@@ -482,9 +492,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
 
                 # set the UID before I actually exec the process
                 if settingUID:
-                    os.setgid(gid)
-                    initgroups(pwd.getpwuid(uid)[0], gid)
-                    os.setuid(uid)
+                    switch_uid(uid, gid)
                 os.execvpe(command, args, environment)
             except:
                 stderr = os.fdopen(1, 'w')
