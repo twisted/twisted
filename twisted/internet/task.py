@@ -51,7 +51,8 @@ class LoopingCall:
         C{self} when C{self.stop} is called, or whose errback will be
         invoked if the function raises an exception.
         """
-        assert not self.running
+        assert not self.running, ("Tried to start an already running "
+                                  "LoopingCall.")
         if interval < 0:
             raise ValueError, "interval must be >= 0"
         self.running = True
@@ -68,7 +69,7 @@ class LoopingCall:
     def stop(self):
         """Stop running function.
         """
-        assert self.running, ("Tried to stop an LoopingCall that was "
+        assert self.running, ("Tried to stop a LoopingCall that was "
                               "not running.")
         self.running = False
         if self.call is not None:

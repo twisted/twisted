@@ -7,6 +7,7 @@
 import os
 import sys
 import time
+import imp
 
 def shortPythonVersion():
     hv = sys.hexversion
@@ -64,6 +65,14 @@ class Platform:
                 return 0
         # not windows at all...
         return 0
+
+    def supportsThreads(self):
+        """Can threads be created?
+        """
+        try:
+            return imp.find_module('thread')[0] is None
+        except ImportError:
+            return False
 
 platform = Platform()
 platformType = platform.getType()

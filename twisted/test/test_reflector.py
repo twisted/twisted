@@ -8,7 +8,7 @@ from twisted.trial import unittest
 
 import os, random
 
-from twisted.internet import defer
+from twisted.internet import reactor, interfaces, defer
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.reflector import *
 from twisted.enterprise.sqlreflector import SQLReflector
@@ -94,6 +94,9 @@ def rowMatches(row, values):
 
 class ReflectorTestBase:
     """Base class for testing reflectors."""
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = "No thread support, no reflector tests"
 
     count = 100 # a parameter used for running iterative tests
 

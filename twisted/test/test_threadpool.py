@@ -3,11 +3,11 @@
 # See LICENSE for details.
 
 
+import pickle, time
+
 from twisted.trial import unittest
-import pickle, time, threading
-
-from twisted.python import threadpool, threadable, log
-
+from twisted.python import log, threadable
+from twisted.internet import reactor, interfaces
 
 class Counter(log.Logger):    
     index = 0
@@ -18,7 +18,6 @@ class Counter(log.Logger):
     synchronized = ["add"]
 
 threadable.synchronize(Counter)
-
 
 class ThreadPoolTestCase(unittest.TestCase):
     """Test threadpools."""
@@ -92,3 +91,10 @@ class RaceConditionTestCase(unittest.TestCase):
         if not self.event.isSet():
             self.event.set()
             raise RuntimeError, "test failed"
+
+if interfaces.IReactorThreads(reactor, None) is None:
+    for cls in ThreadPoolTestCase, RaceConditionTestCase:
+        setattr(cls, 'skip', "No thread support, nothing to test here")
+else:
+    import threading
+    from twisted.python import threadpool

@@ -13,6 +13,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import socket # needed only for sync-dns
 from zope.interface import implements
 
+import imp
 import sys
 import warnings
 import operator
@@ -29,7 +30,7 @@ from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolv
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer, threads
 from twisted.python import threadable, log, failure, reflect, components
-from twisted.python.runtime import seconds
+from twisted.python.runtime import seconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
@@ -225,7 +226,12 @@ class ReactorBase:
     """Default base class for Reactors.
     """
 
-    implements(IReactorCore, IReactorTime, IReactorThreads, IReactorPluggableResolver)
+    _implList = [IReactorCore, IReactorTime, IReactorPluggableResolver]
+    if platform.supportsThreads():
+        _implList.append(IReactorThreads)
+    implements(*_implList)
+    del _implList
+
     installed = 0
 
     __name__ = "twisted.internet.reactor"
@@ -238,20 +244,23 @@ class ReactorBase:
         self._cancellations = 0
         self.running = 0
         self.waker = None
-        self.usingThreads = 0
-        self.resolver = ThreadedResolver(self)
+
+        if platform.supportsThreads():
+            self.resolver = ThreadedResolver(self)
+        else:
+            self.resolver = BlockingResolver()
+
+
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
-        threadable.whenThreaded(self.initThreads)
+
+        self.usingThreads = 0
+        if platform.supportsThreads():
+            threadable.whenThreaded(self._initThreads)
 
     # override in subclasses
 
     _lock = None
-
-    def initThreads(self):
-        import thread
-        self.usingThreads = 1
-        self.installWaker()
 
     def installWaker(self):
         raise NotImplementedError()
@@ -261,16 +270,6 @@ class ReactorBase:
         oldResolver = self.resolver
         self.resolver = resolver
         return oldResolver
-
-    def callFromThread(self, f, *args, **kw):
-        """See twisted.internet.interfaces.IReactorThreads.callFromThread.
-        """
-        assert callable(f), "%s is not callable" % f
-        # lists are thread-safe in CPython, but not in Jython
-        # this is probably a bug in Jython, but until fixed this code
-        # won't work in Jython.
-        self.threadCallQueue.append((f, args, kw))
-        self.wakeUp()
 
     def wakeUp(self):
         """Wake up the event loop."""
@@ -551,31 +550,52 @@ class ReactorBase:
             heapify(self._pendingTimedCalls)
 
     # IReactorThreads
+    if platform.supportsThreads():
+        threadpool = None
 
-    threadpool = None
+        def _initThreads(self):
+            import thread
+            self.usingThreads = 1
+            self.installWaker()
 
-    def _initThreadPool(self):
-        from twisted.python import threadpool, threadable
-        threadable.init(1)
-        self.threadpool = threadpool.ThreadPool(0, 10)
-        self.threadpool.start()
-        self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
+        def callFromThread(self, f, *args, **kw):
+            """See twisted.internet.interfaces.IReactorThreads.callFromThread.
+            """
+            assert callable(f), "%s is not callable" % (f,)
+            # lists are thread-safe in CPython, but not in Jython
+            # this is probably a bug in Jython, but until fixed this code
+            # won't work in Jython.
+            self.threadCallQueue.append((f, args, kw))
+            self.wakeUp()
 
-    def callInThread(self, _callable, *args, **kwargs):
-        """See twisted.internet.interfaces.IReactorThreads.callInThread.
-        """
-        if not self.threadpool:
-            self._initThreadPool()
-        self.threadpool.callInThread(_callable, *args, **kwargs)
+        def _initThreadPool(self):
+            from twisted.python import threadpool
+            threadable.init(1)
+            self.threadpool = threadpool.ThreadPool(0, 10)
+            self.threadpool.start()
+            self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
 
-    def suggestThreadPoolSize(self, size):
-        """See twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize.
-        """
-        if size == 0 and not self.threadpool:
-            return
-        if not self.threadpool:
-            self._initThreadPool()
-        self.threadpool.adjustPoolsize(maxthreads=size)
+        def callInThread(self, _callable, *args, **kwargs):
+            """See twisted.internet.interfaces.IReactorThreads.callInThread.
+            """
+            if not self.threadpool:
+                self._initThreadPool()
+            self.threadpool.callInThread(_callable, *args, **kwargs)
+
+        def suggestThreadPoolSize(self, size):
+            """See twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize.
+            """
+            if size == 0 and not self.threadpool:
+                return
+            if not self.threadpool:
+                self._initThreadPool()
+            self.threadpool.adjustPoolsize(maxthreads=size)
+    else:
+        # This is for signal handlers.
+        def callFromThread(self, f, *args, **kw):
+            assert callable(f), "%s is not callable" % (f,)
+            # See comment in the other callFromThread implementation.
+            self.threadCallQueue.append((f, args, kw))
 
 components.backwardsCompatImplements(ReactorBase)
 

@@ -9,7 +9,7 @@ from twisted.trial import unittest
 import os, stat, tempfile
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
-from twisted.internet import defer
+from twisted.internet import reactor, defer, interfaces
 from twisted.python import log
 
 simple_table_schema = """
@@ -22,6 +22,9 @@ class ADBAPITestBase:
     """Test the asynchronous DB-API code."""
 
     openfun_called = {}
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = "ADB-API requires threads, no way to test without them"
 
     def wait(self, d, timeout=10.0):
         return unittest.wait(d, timeout=timeout)
@@ -159,6 +162,9 @@ ADBAPITestBase.timeout = 30.0
 
 class ReconnectTestBase:
     """Test the asynchronous DB-API code with reconnect."""
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = "ADB-API requires threads, no way to test without them"
 
     def wait(self, d, timeout=10.0):
         return unittest.wait(d, timeout=timeout)

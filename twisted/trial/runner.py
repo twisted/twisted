@@ -60,7 +60,7 @@ import os, glob, types, warnings, time, sys, cPickle as pickle, signal, inspect
 import os.path as osp, fnmatch, random
 from os.path import join as opj
 
-from twisted.internet import defer
+from twisted.internet import defer, interfaces
 from twisted.python import components, reflect, log, failure
 from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
@@ -205,7 +205,11 @@ class TestSuite(Timed):
         d = defer.Deferred()
         reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
         reactor.fireSystemEvent('shutdown') # radix's suggestion
-        reactor.suggestThreadPoolSize(0)
+
+        treactor = interfaces.IReactorThreads(reactor, None)
+        if treactor is not None:
+            treactor.suggestThreadPoolSize(0)
+
         util.wait(d) # so that the shutdown event completes
 
     def _setUpSigchldHandler(self):

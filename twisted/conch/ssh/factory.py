@@ -17,14 +17,6 @@ try:
 except ImportError:
     resource = None
 
-try:
-    import PAM
-except:
-    pass
-else: # PAM requires threading
-    from twisted.python import threadable
-    threadable.init(1)
-
 from twisted.internet import protocol
 from twisted.python import log
 

@@ -13,14 +13,11 @@ if ssl and not ssl.supported:
     ssl = None
 
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
-from twisted.python import util, threadable, log
-threadable.init(1)
+from twisted.python import util, log
 
 import sys
 import time
-import threading
 import types
-
 
 class SystemEventTestCase(unittest.TestCase):
     def setUp(self):
@@ -292,19 +289,26 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(calls, ['f1', 'f2', 'f3'])
 
     def testWakeUp(self):
-        """reactor.wakeUp should terminate reactor.iterate(5)"""
-        def wake(reactor=reactor):
+        """reactor.wakeUp should terminate reactor.iterate(5)
+        """
+
+        def wake():
             time.sleep(0.5)
             reactor.wakeUp()
+
         start = time.time()
-        t = threading.Thread(target=wake).start()
+        reactor.callInThread(wake)
         reactor.iterate(5)
+
         # it may wake up right away. Accept this, but it really depends upon
         # a more formal specification of how reactor.iterate is supposed to
         # behave
         elapsed = time.time() - start
         self.failUnless(elapsed > 0 and elapsed < 1,
                         "woke up after %f, wanted 0..1" % elapsed)
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        testWakeUp.skip = "Nothing to wake up for without thread support"
 
 
 class ReactorCoreTestCase(unittest.TestCase):
@@ -511,16 +515,11 @@ class Order:
         self.stage = 3
 
 
-class ThreadOrder(threading.Thread, Order):
-
-    def run(self):
-        self.schedule(self.a)
-        self.schedule(self.b)
-        self.schedule(self.c)
-
-
 class callFromThreadTestCase(unittest.TestCase):
     """Task scheduling from threads tests."""
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = "Nothing to test without thread support"
 
     def schedule(self, *args, **kwargs):
         """Override in subclasses."""

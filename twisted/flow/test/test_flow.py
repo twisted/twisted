@@ -11,11 +11,10 @@ from __future__ import generators
 from twisted.flow import flow
 from twisted.flow.threads import Threaded, QueryIterator
 from twisted.trial import unittest
-from twisted.python import failure, threadable
-from twisted.internet import defer, reactor, protocol
+from twisted.python import failure
+from twisted.internet import defer, reactor, protocol, interfaces
 from time import sleep
 from twisted.trial.util import wait
-threadable.init()
 
 class slowlist:
     """ this is a generator based list
@@ -327,8 +326,6 @@ class FlowTest(unittest.TestCase):
         return unittest.assertFailure(d, ZeroDivisionError)
 
     def testDeferredWrapper(self):
-        from twisted.internet import defer
-        from twisted.internet import reactor
         a = defer.Deferred()
         reactor.callLater(0, lambda: a.callback("test"))
         b = flow.Merge(a, slowlist([1,2,flow.Cooperate(),3]))
@@ -342,8 +339,6 @@ class FlowTest(unittest.TestCase):
         self.assertEquals(["test"], list(flow.Block(a)))
 
     def testDeferredWrapperFail(self):
-        from twisted.internet import defer
-        from twisted.internet import reactor
         d = defer.Deferred()
         f = lambda: d.errback(flow.Failure(IOError()))
         reactor.callLater(0, f)
@@ -395,7 +390,7 @@ class FlowTest(unittest.TestCase):
         self.assertEquals('testing', wait(client.d))
 
     testProtocolLocalhost.skip = "XXX freezes, fixme"
-    
+
     def testProtocol(self):
         from twisted.protocols import loopback
         server = flow.Protocol()
@@ -405,6 +400,13 @@ class FlowTest(unittest.TestCase):
         client.factory.d = defer.Deferred()
         loopback.loopback(server, client)
         self.assertEquals('testing', wait(client.factory.d))
+
+
+class ThreadedFlowTest(unittest.TestCase):
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = ("No thread support in reactor, "
+                "cannot test threaded flow constructs.")
+
 
     def testThreaded(self):
         expect = [5,4,3,2,1]

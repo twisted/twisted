@@ -2,16 +2,15 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
 """
 Test cases for timeoutqueue module.
 """
-import threading, time
+
+import time
 
 from twisted.trial import unittest
 from twisted.python import timeoutqueue
-
+from twisted.internet import reactor, interfaces
 
 class TimeoutQueueTest(unittest.TestCase):
     
@@ -46,5 +45,8 @@ class TimeoutQueueTest(unittest.TestCase):
         if result != 1:
             raise AssertionError, "didn't get item we put in"
 
-
-testCases = [TimeoutQueueTest]
+    if interfaces.IReactorThreads(reactor, None) is None:
+        testGet.skip = "No thread support, no way to test putting during a blocked get"
+    else:
+        global threading
+        import threading

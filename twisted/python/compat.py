@@ -196,6 +196,47 @@ except AttributeError:
             yield top, dir, nondir
     os.walk = walk
 
+# OpenSSL/__init__.py imports OpenSSL.tsafe.  OpenSSL/tsafe.py imports
+# threading.  threading imports thread.  All to make this stupid threadsafe
+# version of its Connection class.  We don't even care about threadsafe
+# Connections.  In the interest of not screwing over some crazy person
+# calling into OpenSSL from another thread and trying to use Twisted's SSL
+# support, we don't totally destroy OpenSSL.tsafe, but we will replace it
+# with our own version which imports threading as late as possible.
+
+class tsafe(object):
+    class Connection:
+        """
+        OpenSSL.tsafe.Connection, defined in such a way as to not blow.
+        """
+        __module__ = 'OpenSSL.tsafe'
+
+        def __init__(self, *args):
+            from OpenSSL import SSL as _ssl
+            self._ssl_conn = apply(_ssl.Connection, args)
+            from threading import _RLock
+            self._lock = _RLock()
+
+        for f in ('get_context', 'pending', 'send', 'write', 'recv',
+                  'read', 'renegotiate', 'bind', 'listen', 'connect',
+                  'accept', 'setblocking', 'fileno', 'shutdown',
+                  'close', 'get_cipher_list', 'getpeername',
+                  'getsockname', 'getsockopt', 'setsockopt',
+                  'makefile', 'get_app_data', 'set_app_data',
+                  'state_string', 'sock_shutdown',
+                  'get_peer_certificate', 'want_read', 'want_write',
+                  'set_connect_state', 'set_accept_state',
+                  'connect_ex', 'sendall'):
+
+            exec """def %s(self, *args):
+                self._lock.acquire()
+                try:
+                    return apply(self._ssl_conn.%s, args)
+                finally:
+                    self._lock.release()\n""" % (f, f)
+sys.modules['OpenSSL.tsafe'] = tsafe
+
+
 
 # Compatibility with compatibility
 # We want to get rid of these as quickly as we can

@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.trial.test.test_util -*-
 from twisted.python import failure, log
 from twisted.python.runtime import platformType
-from twisted.internet import defer, reactor, threads
+from twisted.internet import defer, reactor, threads, interfaces
 from twisted.trial import unittest, util, runner
 
 # this is ok, the module has been designed for this usage
@@ -26,7 +26,7 @@ class TestUserMethod(unittest.TestCase):
         except:
             f = failure.Failure()
         return defer.fail(f)
-    
+
     def testErrorHandling(self):
         """wrapper around user code"""
         umw = runner.UserMethodWrapper(self.errorfulMethod, self.janitor)
@@ -42,24 +42,31 @@ class TestUserMethod(unittest.TestCase):
 
 
 class WaitReentrancyTest(unittest.TestCase):
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = ("This test probably doesn't really need threads "
+                "but hell if I can figure out how to rewrite it "
+                "without them.  Skipping in the absence of "
+                "thread-support.")
+
     def _returnedDeferredThenWait(self):
         def threadedOperation():
             time.sleep(0.1)
             return "Beginning"
         d = threads.deferToThread(threadedOperation)
         return d.addCallback(self._cbDoWait)
-    
+
     def _cbDoWait(self, result):
         assertEquals(result, "Beginning")
         d = defer.Deferred()
         self.laterCall = reactor.callLater(0.1, d.callback, "End")
         assertEquals(unittest.wait(d), "End")
-    
+
     def testReturnedDeferredThenWait(self):
         d = self._returnedDeferredThenWait()
         assertRaises(util.WaitIsNotReentrantError, unittest.wait, d)
         self.laterCall.cancel()
-    
+
     def _reentrantWait(self):
         def threadedOperation(n):
             time.sleep(n)
@@ -68,7 +75,7 @@ class WaitReentrancyTest(unittest.TestCase):
         d2 = threads.deferToThread(threadedOperation, 0.250)
         d1.addCallback(lambda ignored: unittest.wait(d2))
         unittest.wait(d1)
-    
+
     def testReentrantWait(self):
         assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
 
@@ -81,7 +88,7 @@ class TestWait2(unittest.TestCase):
             raise RuntimeError, "i am a complete and utter failure"
         except RuntimeError:
             return failure.Failure()
-    
+
     def _errorfulMethod(self):
         L = [self._generateFailure() for x in xrange(self.NUM_FAILURES)]
         raise util.MultiError(L)
@@ -137,9 +144,9 @@ class TestMktemp(unittest.TestCase):
 
 class TestWaitInterrupt(unittest.TestCase):
     def testKeyboardInterrupt(self):
-        # Test the KeyboardInterrupt is *not* caught by wait -- we want to allow
-        # users to Ctrl-C test runs.  And the use of the useWaitError should not
-        # matter in this case.
+        # Test the KeyboardInterrupt is *not* caught by wait -- we
+        # want to allow users to Ctrl-C test runs.  And the use of the
+        # useWaitError should not matter in this case.
         def raiseKeyInt(ignored):
             raise KeyboardInterrupt, "Simulate user hitting Ctrl-C"
 
@@ -152,7 +159,7 @@ class TestWaitInterrupt(unittest.TestCase):
         d.addCallback(raiseKeyInt)
         reactor.callLater(0, d.callback, True)
         self.assertRaises(KeyboardInterrupt, util.wait, d, useWaitError=True)
-        
+
 
 # glyph's contributed test
 # http://twistedmatrix.com/bugs/file317/failing.py

@@ -26,7 +26,7 @@ from twisted.internet import tcp, udp
 
 from twisted.python import log, threadable, failure, components
 from twisted.persisted import styles
-from twisted.python.runtime import platformType
+from twisted.python.runtime import platformType, platform
 
 from twisted.internet.base import ReactorBase
 
@@ -176,7 +176,7 @@ class PosixReactorBase(ReactorBase):
         if platformType == 'posix':
             signal.signal(signal.SIGCHLD, self._handleSigchld)
 
-    def _handleSigchld(self, signum, frame):
+    def _handleSigchld(self, signum, frame, _threadSupport=platform.supportsThreads()):
         """Reap all processes on SIGCHLD.
 
         This gets called on SIGCHLD. We do no processing inside a signal
@@ -185,7 +185,10 @@ class PosixReactorBase(ReactorBase):
         eventloop round prevents us from violating the state constraints
         of arbitrary classes.
         """
-        self.callFromThread(process.reapAllProcesses)
+        if _threadSupport:
+            self.callFromThread(process.reapAllProcesses)
+        else:
+            self.callLater(0, process.reapAllProcesses)
 
     def startRunning(self, installSignalHandlers=1):
         # Just in case we're started on a different thread than

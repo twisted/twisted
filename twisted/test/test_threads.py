@@ -4,16 +4,12 @@
 
 """Test methods in twisted.internet.threads and reactor thread APIs."""
 
+import time, sys
+
 from twisted.trial import unittest
 
-from twisted.internet import threads, reactor
-from twisted.python import threadable, failure
-
-import time
-# make sure thread pool is shutdown
-import atexit
-#atexit.register(reactor.suggestThreadPoolSize, 0)
-import sys
+from twisted.internet import reactor, interfaces, threads
+from twisted.python import failure, threadable
 
 class Counter:    
     index = 0
@@ -37,12 +33,14 @@ class Counter:
         self.index = next
     
     synchronized = ["sync_add"]
-
 threadable.synchronize(Counter)
 
 
 class ThreadsTestCase(unittest.TestCase):
     """Test twisted.internet.threads."""
+
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = "No thread support, nothing to test here"
 
     def setUp(self):
         reactor.suggestThreadPoolSize(8)
@@ -126,6 +124,9 @@ class ThreadsTestCase(unittest.TestCase):
 class DeferredResultTestCase(unittest.TestCase):
     """Test threads.deferToThread"""
 
+    if interfaces.IReactorThreads(reactor, None) is None:
+        skip = "No thread support, nothing to test here"
+
     def setUp(self):
         reactor.suggestThreadPoolSize(8)
         self.done = 0
@@ -167,7 +168,7 @@ class DeferredResultTestCase(unittest.TestCase):
         self.failUnless(self.gotResult, "timeout")
         if t.active(): t.cancel()
 
-    def OFFtestDeferredFailure2(self):
+    def testDeferredFailure2(self):
         # set up a condition that causes cReactor to hang. These conditions
         # can also be set by other tests when the full test suite is run in
         # alphabetical order (test_flow.FlowTest.testThreaded followed by
