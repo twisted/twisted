@@ -94,8 +94,22 @@ class FunctionsTestCase(unittest.TestCase):
         listed = []
         for D in os.listdir(os.pardir):
             Dir = os.path.join(os.pardir, D)
-            if os.path.isdir(Dir) and not os.path.islink(Dir):
+            if os.path.isdir(Dir):
                 listed.append(D)
         listed.sort()
         
         self.assertEquals(listed, d)
+
+    def testListLinks(self):
+        os.symlink('d', 'c')
+        os.symlink('c', 'b')
+        os.symlink('b', 'a')
+        
+        file('b', 'w').close()
+
+        links = dir.listLinks('.')
+        links.sort()
+        expected = filter(os.path.islink, os.listdir('.'))
+        expected.sort()        
+        self.assertEquals(links, expected)
+        

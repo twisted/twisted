@@ -20,8 +20,6 @@
 #include "Python.h"
 #include "structmember.h"
 
-#include <string.h>
-
 static char dir__doc__[] =
 "Wrapper for opendir(3), readdir(3), and scandir(3)";
 
@@ -35,7 +33,9 @@ static char dir__doc__[] =
 #define DEFERRED_ADDRESS(ADDR) 0
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
+#include <string.h>
 
 static PyObject *PyDirObject_Error;
 
@@ -58,6 +58,12 @@ PyDirObject_readdir(PyDirObject *self);
 
 staticforward PyTypeObject PyDirObjectIterator_Type;
 staticforward PyTypeObject PyDirObject_Type;
+
+char ospathsep;
+char* pardir;
+char* curdir;
+
+typedef int (*select_func)(const char *, const char *, int);
 
 #define PyDirObject_Check(o) (PyObject_TypeCheck((o), &PyDirObject_Type))
 #define PyDirObject_CheckExact(o) ((o)->ob_type == &PyDirObject_Type)
@@ -330,7 +336,7 @@ PyDirObject_rewind(PyDirObject *self) {
 
 static PyObject *
 PyDirObject_seek(PyDirObject *self, PyObject* args) {
-	int pos;
+	off_t pos;
 	
 	if (!PyArg_ParseTuple(args, "i:seek", &pos))
 		return NULL;
@@ -447,42 +453,94 @@ DEFINE(Whiteout, DT_WHT)
 
 #undef DEFINE
 
-int select_dirs(const struct dirent* ent) {
-	return
-		ent->d_type == DT_DIR && 
-		strcmp(ent->d_name, ".") &&
-		strcmp(ent->d_name, "..");
+int select_dirs(const char* path, const char* name, int type) {
+	if (type == DT_DIR) {
+		if (strcmp(name, curdir) && strcmp(name, pardir))
+			return 1;
+	} else if (type == DT_LNK) {
+		struct stat m;
+		char buf[1024];
+		int ret;
+
+		ret = snprintf(&buf[0], 1024, "%s%c%s", path, ospathsep, name);
+		if (ret < 0 || ret > 1024) {
+			perror("select_dirs(): snprintf");
+			return 0;
+		} 
+
+		if (stat(buf, &m) < 0) {
+			perror("select_dirs(): stat");
+			return 0;
+		}
+		return (m.st_mode & S_IFDIR) == S_IFDIR;
+	}
+	return 0;
 }
 
-int select_links(const struct dirent* ent) {
-	return ent->d_type == DT_LNK;
+int select_links(const char *path, const char *name, int type) {
+	return type == DT_LNK;
 }
+
+int select_all(const struct dirent* ent) {
+	return 1;
+}
+
 
 static PyObject *
-dir_list(PyObject *self, PyObject *args, int (*select)(const struct dirent *)) {
+dir_list(PyObject *self, PyObject *args, select_func select) {
 	int ret;
-	int i;
+	int i, j;
 	char *path;
 	PyObject *list;
+	PyObject *empty;
 	PyObject *ent;
 	struct dirent **ents;
 	
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 	
-	ret = scandir(path, &ents, select, NULL);
+	
+	ret = scandir(path, &ents, select_all, NULL);
 	if (ret == -1) {
 		PyErr_SetFromErrno(PyDirObject_Error);
 		return NULL;
 	}
 	
-	list = PyList_New(ret);
+	if (!(list = PyList_New(ret)))
+		return NULL;
+
+	j = 0;
 	for (i = 0; i < ret; ++i) {
-		if (!(ent = PyString_FromString(ents[i]->d_name))) {
-			Py_DECREF(list);
+		if (select(path, ents[i]->d_name, ents[i]->d_type)) {
+			if (!(ent = PyString_FromString(ents[i]->d_name))) {
+				Py_DECREF(list);
+				return NULL;
+			}
+			if (PyList_SetItem(list, j, ent) < 0) {
+				Py_DECREF(list);
+				return NULL;
+			}
+			++j;
+			free(ents[i]);
+		}
+	}
+	free(ents);
+	for (i = j ; i < ret; ++i) {
+		Py_INCREF(Py_None);
+		if (PyList_SetItem(list, i, Py_None) < 0) {
+	    	Py_DECREF(list);
 			return NULL;
 		}
-		PyList_SetItem(list, i, ent);
+	}
+	if (!(empty = PyList_New(0))) {
+		Py_DECREF(list);
+		return NULL;
+	}
+	
+	if (PyList_SetSlice(list, j, i, empty) < 0) {
+		Py_DECREF(list);
+		Py_DECREF(empty);
+		return NULL;
 	}
 	return list;
 }
@@ -526,6 +584,10 @@ DL_EXPORT(void)
 initdir(void)
 {
 	PyObject *m, *d;
+	PyObject *os, *path, *sep;
+	PyObject *cur, *par;
+	char *pathsep;
+	
 
 	PyDirObject_Error = PyErr_NewException("dir.error", PyDirObject_Error, NULL);
 	if (PyDirObject_Error == NULL)
@@ -553,8 +615,26 @@ initdir(void)
 	if (PyDict_SetItemString(d, "DirType",
 				 (PyObject *) &PyDirObject_Type) < 0)
 		return;
+
 	Py_INCREF(&PyDirObjectIterator_Type);
 	if (PyDict_SetItemString(d, "DirIteratorType",
 				 (PyObject *) &PyDirObjectIterator_Type) < 0)
 		return;
+	
+	os = PyImport_ImportModule("os");
+	path = PyObject_GetAttrString(os, "path");
+	sep = PyObject_GetAttrString(path, "sep");
+	Py_INCREF(sep);
+	pathsep = PyString_AsString(sep);
+	ospathsep = pathsep[0];
+	
+	
+	cur = PyObject_GetAttrString(os, "curdir");
+	par = PyObject_GetAttrString(os, "pardir");
+
+	Py_INCREF(cur);
+	curdir = PyString_AsString(cur);
+	
+	Py_INCREF(par);
+	pardir = PyString_AsString(par);
 }
