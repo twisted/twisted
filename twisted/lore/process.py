@@ -70,3 +70,7 @@ class PlainReportingWalker(Walker):
     def percentdone(self, percent, fname):
         if fname:
             print fname
+
+
+def getProcessor(module, output, d):
+    return getattr(module.factory, 'generate_'+output)(d)
