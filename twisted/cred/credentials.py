@@ -22,11 +22,6 @@ import hmac
 import time
 import random
 
-try:
-    import crypt
-except ImportError:
-    crypt = None
-
 class ICredentials(components.Interface):
     """I check credentials.
 
