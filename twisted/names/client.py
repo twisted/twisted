@@ -293,8 +293,12 @@ class Resolver(common.ResolverBase):
         controller = AXFRController(name, d)
         factory = DNSClientFactory(controller, timeout)
         factory.noisy = False #stfu
-        reactor.connectTCP(host, port, factory)
-        return d.addCallback(lambda x: (x, [], []))
+        connector = reactor.connectTCP(host, port, factory)
+        return d.addCallback(self._cbLookupZone, connector)
+
+    def _cbLookupZone(self, result, connector):
+        connector.disconnect()
+        return (result, [], [])
 
 components.backwardsCompatImplements(Resolver)
 
