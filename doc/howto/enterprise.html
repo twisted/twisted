@@ -99,17 +99,20 @@ dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password')
 
 <pre class="python">
 # equivalent of cursor.execute(statement), return cursor.fetchall():
-def getAges():
-    return dbpool.runQuery("SELECT age FROM users")
+def getAge(user):
+    return dbpool.runQuery("SELECT age FROM users WHERE name = ?", user)
 
 def printResult(l):
-    print l
+    if l:
+        print l[0], "years old"
+    else:
+        print "No such user"
 
-getAges().addCallback(printResult)
+getAge("joe").addCallback(printResult)
 </pre>
 
     <p>This is straightforward, except perhaps for the return value
-    of <code>getAges</code>. It returns a <code
+    of <code>getAge</code>. It returns a <code
     class="API">twisted.internet.defer.Deferred</code>, which allows
     arbitrary callbacks to be called upon completion (or upon
     failure).  More documentation on Deferred is available <a
