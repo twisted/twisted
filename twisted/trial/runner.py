@@ -98,7 +98,7 @@ class TestClassRunner:
         return len(self.methodNames)
 
     def runTest(self, method):
-        assert method.__name__ in self.methodNames
+        assert method.__name__ in self.methodNames, "Method %s is not a test method!" % (method.__name__,)
         method()
 
     def runTests(self, output):
