@@ -22,7 +22,14 @@ import string,re
 
 loginOptions=[["Nickname","username","my_screen_name"],["Password","password","my_password"],["Hostname","server","toc.oscar.aol.com"],["Port #","port","9898"]]
 
+shortName="TOC"
+longName="AOL Instant Messenger/TOC"
+
 def makeConnection(im,server=None,port=None,**kwargs):
+    try:
+        port=int(port)
+    except:
+        pass
     c=apply(TOCGateway,(im,),kwargs)
     tcp.Client(server,port,c)
     im.attachGateway(c)
@@ -51,6 +58,11 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
     def _debug(self,text):
         pass
 
+    def connectionFailed(self):
+        self.im.connectionFailed(self.name,"Connection Failed!")
+
+    def connectionLost(self):
+        self.im.connectionLost(self.name,"Connection lost.")
     def gotConfig(self,mode,buddylist,permit,deny):
         users=[]
         for k in buddylist.keys():

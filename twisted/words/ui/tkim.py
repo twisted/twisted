@@ -20,7 +20,7 @@ import tkSimpleDialog
 from twisted.spread.ui import tkutil
 from twisted.internet import tkinternet
 from twisted.words.ui import im2
-from twisted.words.ui.gateways import words
+from twisted.words.ui import gateways
 import time
 import string
 
@@ -32,6 +32,7 @@ class ErrorWindow(Toplevel):
         Label(f,text=message).grid()
         f.pack()
         self.protocol("WM_DELETE_WINDOW",self.destroy)
+        
 class AddContact(Toplevel):
     def __init__(self,im,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
@@ -49,6 +50,7 @@ class AddContact(Toplevel):
         Button(self,text="Cancel",command=self.destroy).grid(column=1,row=2)
         self.protocol('WM_DELETE_WINDOW',self.destroy)
         tkutil.grid_setexpand(self)
+
     def addContact(self,*args):
         contact=self.contact.get()
         gatewayname=self.gates.get(ACTIVE)
@@ -114,30 +116,37 @@ class GroupSession(Toplevel):
         self.rowconfigure(2,weight=0)
         self._nolist=1
         self.im.getGroupMembers(self.gatewayname,self.name)
+
     def close(self):
         self.im.leaveGroup(self.gatewayname,self.name)
         self.destroy()
+    
     def _out(self,text):
         self.output.config(state=NORMAL)
         #self.outputhtml.feed(text)
         self.output.insert(END,text)
         self.output.see(END)
         self.output.config(state=DISABLED)
+    
     def receiveGroupMembers(self,list):
         self._nolist=0
         for m in list:
             self.list.insert(END,m)
+    
     def displayMessage(self,user,message):
         self._out("<%s> %s\n"%(user,message))
+    
     def memberJoined(self,user):
         self._out("%s joined!\n"%user)
         if not self._nolist:self.list.insert(END,user)
+    
     def memberLeft(self,user):
         self._out("%s left!\n"%user)
         if not self._nolist:
             users=list(self.list.get(0,END))
             i=users.index(user)
             self.list.delete(i)
+    
     def say(self,*args):
         text=self.input.get("1.0",END)[:-1]
         if not text: return
@@ -145,6 +154,7 @@ class GroupSession(Toplevel):
         self.im.groupMessage(self.gatewayname,self.name,text)
         self._out("<<%s>> %s\n"%(self.im.gateways[self.gatewayname].username,text))
         return "break"
+        
 class Conversation(Toplevel):
     def __init__(self,im,gatewayname,contact,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
@@ -167,19 +177,23 @@ class Conversation(Toplevel):
         tkutil.grid_setexpand(self)
         self.rowconfigure(0,weight=3)
         self.columnconfigure(1,weight=0)
+    
     def close(self):
         del self.im.conversations[self.gatewayname+self.contact]
         self.destroy()
+    
     def _addtext(self,text):
         self.output["state"]=NORMAL
         #self.outputhtml.feed(text)
         self.output.insert(END,text)
         self.output["state"]=DISABLED
+    
     def messageReceived(self,message,sender=None):
         y,mon,d,h,min,sec,ig,no,re=time.localtime(time.time())
         text="%s:%s:%s %s: %s\n"%(h,min,sec,sender or self.contact,message)
         self._addtext(text)
         self.output.see(END)
+    
     def say(self,event):
         message=self.input.get('1.0',END)[:-1]
         self.input.delete('1.0',END)
@@ -187,18 +201,20 @@ class Conversation(Toplevel):
             self.messageReceived(message,self.im.gateways[self.gatewayname].username)
             self.im.directMessage(self.gatewayname,self.contact,message)
         return "break" # don't put the newline in
+
 class ContactList(Toplevel):
     def __init__(self,im,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
         self.im=im
-        #menu=Menu(self)
-        #self.config(menu=menu)
-        #myim=Menu(menu)
-        #menu.add_cascade(label="My IM",menu=myim)
+        menu=Menu(self)
+        self.config(menu=menu)
+        myim=Menu(menu)
+        menu.add_cascade(label="My IM",menu=myim)
         #statuschange=Menu(myim)
         #myim.add_cascade(label="Change Status",menu=statuschange)
         #for k in service.statuses.keys():
         #    statuschange.add_command(label=service.statuses[k],command=lambda im=self.im,status=k:im.remote.changeStatus(status))
+        myim.add_command(label="Account Manager",command=lambda i=self.im:AccountManager(i))
         self.list=Listbox(self,height=2)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
         bar=Scrollbar(self)
@@ -215,15 +231,19 @@ class ContactList(Toplevel):
         self.protocol("WM_DELETE_WINDOW",self.close)
         self.columnconfigure(0,weight=1)
         self.rowconfigure(0,weight=1)
+    
     def close(self):
         self.tk.quit()
         self.destroy()
+
     def addContact(self):
         AddContact(self.im)
+    
     def removeContact(self):
         gatewayname,contact,state=string.split(self.list.get(ACTIVE)," : ")
         self.list.delete(ACTIVE)
         self.im.removeContact(gatewayname,contact)
+    
     def changeContactStatus(self,gatewayname,contact,status):
         users=list(self.list.get(0,END))
         start="%s : %s" % (gatewayname,contact)
@@ -232,36 +252,146 @@ class ContactList(Toplevel):
                 row=users.index(u)
                 self.list.delete(row)
         self.list.insert(END,"%s : %s : %s"%(gatewayname,contact,status))
+    
     def sendMessage(self):
         gatewayname,user,state=string.split(self.list.get(ACTIVE)," : ")
         self.im.conversationWith(gatewayname,user)
+    
     def joinGroup(self):
         JoinGroup(self.im)
+        
+class ChooseGateway(Toplevel):
+    def __init__(self,callback,**kw):
+        apply(Toplevel.__init__,(self,),kw)
+        self.callback=callback
+        self.title("Choose a Gateway - Instance Messenger")
+        self.gateways=[]
+        self.list=Listbox(self)
+        for k in gateways.__gateways__.keys():
+            self.gateways.append(k)
+            self.list.insert(END,gateways.__gateways__[k].shortName)
+        self.list.grid(column=0,row=0,columnspan=2,sticky=N+E+S+W)
+        Button(self,text="OK",command=self.choose).grid(column=0,row=1,sticky=E+S)
+        Button(self,text="Cancel",command=self.destroy).grid(column=1,row=1,sticky=E+S)
+        self.protocol('WM_DELETE_WINDOW',self.destroy)
+    
+    def choose(self):
+        index=self.list.index(ACTIVE)
+        self.callback(self.gateways[index])
+        self.destroy()
+
+class AddGateway(Toplevel):
+    def __init__(self,gateway,acctman,**kw):
+        apply(Toplevel.__init__,(self,),kw)
+        self.gateway=gateway
+        self.acctman=acctman
+        self.title("Add %s Gateway - Instance Messenger"%gateways.__gateways__[gateway].shortName)
+        self.options={}
+        useroptions=gateways.__gateways__[gateway].loginOptions
+        r=0
+        for title,key,default in useroptions:
+            dict={}
+            if len(key)>3 and key[:4]=="pass":
+                dict["show"]="*"
+            Label(self,text=title).grid(column=0,row=r,sticky=W+N)
+            entry=apply(Entry,(self,),dict)
+            entry.insert(0,default)
+            entry.grid(column=1,row=r,sticky=E+N)
+            self.options[key]=entry
+            r=r+1
+        self.autologon=IntVar()
+        Checkbutton(self,text="Auto Logon?",variable=self.autologon).grid(column=0,row=r,columnspan=2,sticky=W+E+N)
+        r=r+1
+        self.savepass=IntVar()
+        Checkbutton(self,text="Save Password?",variable=self.savepass).grid(column=0,row=r,columnspan=2,sticky=W+E+N)
+        r=r+1
+        Button(self,text="OK",command=self.addGateway).grid(column=0,row=r,sticky=N+W)
+        Button(self,text="Cancel",command=self.destroy).grid(column=1,row=r,sticky=E+W)
+        self.protocol("WM_DELETE_WINDOW",self.destroy)
+
+    def addGateway(self):
+        o={}
+        for k in self.options.keys():
+            o[k]=self.options[k].get()
+        auto=self.autologon.get()
+        savepass=self.savepass.get()
+        self.acctman._addgateway(self.gateway,o,auto,savepass)
+        self.destroy()
+
+class AccountManager(Toplevel):
+    def __init__(self,im,*args,**kw):
+        apply(Toplevel.__init__,(self,)+args,kw)
+        self.title("Account Manager - Instance Messenger")
+        self.im=im
+        self.gateways={}
+        sb=Scrollbar(self)
+        self.list=tkutil.CList(self,["Username    ","Online","Auto-Logon","Gateway    "],yscrollcommand=sb.set)
+        sb.config(command=self.list.yview)
+        self.list.grid(column=0,row=0,columnspan=4,sticky=N+E+S+W)
+        sb.grid(column=4,row=0,sticky=N+S)
+        Button(self,text="Add",command=self.addGateway).grid(column=0,row=1,sticky=E+S+W)
+        Button(self,text="Modify",command=self.modifyGateway).grid(column=1,row=1,sticky=E+S+W)
+        Button(self,text="Log On/Off",command=self.logOnOff).grid(column=2,row=1,sticky=E+S+W)
+        Button(self,text="Delete",command=self.deleteGateway).grid(column=3,row=1,sticky=E+S+W)
+        tkutil.grid_setexpand(self)
+        self.protocol("WM_DELETE_WINDOW",self.close)
+
+    def close(self):
+        self.destroy()
+        if self.im.cl==None: self.tk.quit() 
+    def addGateway(self):
+        ChooseGateway(callback=lambda g,s=self:AddGateway(g,s))
+        
+    def _addgateway(self,gateway,options,autologon,savepass):
+        sn=gateways.__gateways__[gateway].shortName
+        name=sn+" "+options["username"] # assumes username is an option
+        self.gateways[name]=options,autologon,savepass
+        auto=autologon and "True" or "False"
+        self.list.insert(END,(options["username"],"Not Being Used",auto,sn))
+        
+    def modifyGateway(self):
+        print "modify doesn't work yet" 
+        
+    def logOnOff(self):
+        index=self.list.index(ACTIVE)
+        username,online,auto,gateway=self.list.get(index)
+        name=gateway+" "+username
+        options=self.gateways[name]
+        for k in gateways.__gateways__.keys():
+            if gateways.__gateways__[k].shortName==gateway:
+                gateway=k
+                break
+        apply(gateways.__gateways__[gateway].makeConnection,(self.im,),options[0])
+    def deleteGateway(self):
+        index=self.list.index(ACTIVE)
+        l=self.list.get(index)
+        if not l: return
+        username,online,auto,gateway=l
+        name=gateway+" "+username
+        #del self.
+        print "doesn't work yet"
 
 im2.Conversation=Conversation
 im2.ContactList=ContactList
 im2.GroupSession=GroupSession
-
-def fix_apply_values(func,loginoptions,args,kw):
-    k={}
-    for key,real,foo in loginoptions:
-        if kw.has_key(string.lower(key)):
-            k[real]=kw[string.lower(key)]
-    apply(func,args,k)
+im2.ErrorWindow=lambda gn,code,error,message:ErrorWindow(code,message)
 
 def main():
+    global im
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
+    root.withdraw()
     im=im2.InstanceMessenger()
-    im.logging=1
-    o=[]
-    for label,key,default in words.loginOptions:
-        if key[:4]=="pass": # probably a password
-            o.append([label,default,{"show":"*"}])
-        else:
-            o.append([label,default])
-    lw=tkutil.GenericLogin(lambda kw,f=words.makeConnection,o=words.loginOptions,a=(im,):fix_apply_values(f,o,a,kw),o)
+    #im.logging=1
+    #o=[]
+    #for label,key,default in words.loginOptions:
+    #    if key[:4]=="pass": # probably a password
+    #        o.append([label,default,{"show":"*"}])
+    #    else:
+    #        o.append([label,default])
+    #lw=tkutil.GenericLogin(lambda kw,f=words.makeConnection,o=words.loginOptions,a=(im,):fix_apply_values(f,o,a,kw),o)
+    AccountManager(im)
     mainloop()
     tkinternet.stop()
 

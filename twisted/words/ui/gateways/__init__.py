@@ -18,3 +18,16 @@
 """
 Twisted Words UI Gateways: user-interface gateways for various services.
 """
+
+# XXX: evil code to figure out and import all the gateways
+import os
+l=os.listdir(__path__[0])
+g={}
+for f in l:
+    if f[:8]=="__init__":
+        pass
+    elif f[-3:]==".py" and not g.has_key(f[:-3]):
+            g[f[:-3]]=__import__("twisted.words.ui.gateways."+f[:-3],{},{},["foo"])
+    elif f[-4:]==".pyc" and not g.has_key(f[:-4]):
+            g[f[:-4]]=__import__("twisted.words.ui.gateways."+f[:-4],{},{},["foo"])
+__gateways__=g

@@ -19,6 +19,9 @@ import string
 import time
 from twisted.spread import pb
 from twisted.words.ui import gateway
+
+ERROR,CONNECTIONFAILED,CONNECTIONLOST=range(3)
+
 class Conversation:
     def __init__(self,im,gatewayname,target):
         raise NotImplementedError
@@ -29,6 +32,10 @@ class ContactList:
 
 class GroupSession:
     def __init__(self,name,im,gatewayname):
+        raise NotImplementedError
+        
+class ErrorWindow:
+    def __init__(self,gatewayname,code,name,error):
         raise NotImplementedError
 
 class InstanceMessenger:
@@ -125,7 +132,14 @@ class InstanceMessenger:
         gateway=self.gateways[gatewayname]
         gateway.directMessage(user,message)
         self._log(gatewayname,user,"<%s> %s"%(gateway.username,message))
+    
     def groupMessage(self,gatewayname,group,message):
         gateway=self.gateways[gatewayname]
         gateway.groupMessage(group,message)
         self._log(gatewayname,group+".chat","<<%s>> %s"%(gateway.username,message))
+
+    def connectionFailed(self,gatewayname,message):
+        ErrorWindow(gatewayname,CONNECTIONFAILED,"Connection Failed!",message)
+
+    def connectionLost(self,gatewayname,message):
+        ErrorWindow(gatewayname,CONNECTIONLOST,"Connection Lost!",message)

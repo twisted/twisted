@@ -22,23 +22,26 @@ from twisted.words.ui import gateway
 
 loginOptions=[["Username","username","guest"],["Password","password","guest"],["Service","service","twisted.words"],["Hostname","server","localhost"],["Port #","port",str(pb.portno)]]
 
+shortName="Words"
+longName="Twisted.Words"
 
 class makeConnection:
     def __init__(self,im,server=None,port=None,username=None,password=None,service=None):
         self.im=im
-        b=pb.Broker()
-        b.requestIdentity(username,password,callback=self.gotIdentity,errback=self.notConnected)
-        self.username=username
         self.service=service
+        self.ref=WordsGateway(im,username)
+        b=pb.Broker()
+        b.requestIdentity(username,password,callback=self.gotIdentity,errback=self.connectionFailed)
+        b.notifyOnDisconnect(self.connectionLost)
         tcp.Client(server,int(port),b)
 
-    def notConnected(self,tb):
-        print "NOT CONNECTED!"
-        print tb
+    def connectionFailed(self,tb):
+        im.connectionFailed(self.ref.name,"Could not connect to host!\n"+tb)
     
+    def connectionLost(self):
+        im.connectionLost(self.ref.name,"Connection lost.")
+        
     def gotIdentity(self,identity):
-        self.ref=WordsGateway(self.im)
-        self.ref.username=self.username
         identity.attach(self.service,self.username,self.ref,pbcallback=self.pbCallback)
 
     def pbCallback(self,perspective):
@@ -49,8 +52,10 @@ class WordsGateway(gateway.Gateway,pb.Referenced):
     """This is the interface between IM and a twisted.words service
     """
     protocol="Words"
-    def __init__(self,im):
+    def __init__(self,im,username):
         gateway.Gateway.__init__(self,im)
+        self.username=username
+        self.name="%s (%s)"%(self.username,self.protocol)
         self._connected=0
         self._list=()
         self._changes=[]
@@ -58,7 +63,6 @@ class WordsGateway(gateway.Gateway,pb.Referenced):
 #The PB interface.
     def connected(self, perspective):
         self.remote = perspective
-        self.name="%s (%s)"%(self.username,self.protocol)
         self._connected=1
         if self._list:
             self.receiveContactList(self._list)

@@ -34,6 +34,110 @@ def grid_setexpand(widget):
     for i in range(rows):
         widget.rowconfigure(i,weight=1)
 
+class CList(Frame):
+    def __init__(self,parent,labels,**kw):
+        Frame.__init__(self,parent)
+        self.labels=labels
+        self.lists=[]
+        kw["exportselection"]=0
+        for i in range(len(labels)):
+            Label(self,text=labels[i],anchor=W,relief=RAISED).grid(column=i,row=0,sticky=N+E+W)
+            box=apply(Listbox,(self,),kw)
+            box.grid(column=i,row=1,sticky=N+E+S+W)
+            self.lists.append(box)
+        grid_setexpand(self)
+        self._callall("bind",'<Button-1>',self.Button1)
+        self._callall("bind",'<B1-Motion>',self.Button1)
+        self.bind('<Up>',self.UpKey)
+        self.bind('<Down>',self.DownKey)
+
+    def _callall(self,funcname,*args,**kw):
+        rets=[]
+        for l in self.lists:
+            func=getattr(l,funcname)
+            ret=apply(func,args,kw)
+            if ret: rets.append(ret)
+        if rets: return rets
+        
+    def Button1(self,e):
+        index=self.nearest(e.y)
+        self.select_clear(0,END)
+        self.select_set(index)
+        return "break"
+
+    def UpKey(self,e):
+        index=self.index(ACTIVE)
+        if index:
+            self.select_clear(0,END)
+            self.select_set(index-1)
+        return "break"
+
+    def DownKey(self,e):
+        index=self.index(ACTIVE)
+        if index!=self.size()-1:
+            self.select_clear(0,END)
+            self.select_set(index+1)
+        return "break"
+
+    def activate(self,index):
+        self._callall("activate",index)
+
+   # def bbox(self,index):
+   #     return self._callall("bbox",index)
+
+    def curselection(self):
+        return self.lists[0].curselection()
+
+    def delete(self,*args):
+        apply(self._callall,("delete",)+args)
+
+    def get(self,*args):
+        return apply(self._callall,("get",)+args)
+
+    def index(self,index):
+        return self.lists[0].index(index)
+
+    def insert(self,index,items):
+        for i in range(len(items)):
+            self.lists[i].insert(index,items[i])
+
+    def nearest(self,y):
+        return self.lists[0].nearest(y)
+
+    def see(self,index):
+        self._callall("see",index)
+
+    def size(self):
+        return self.lists[0].size()
+
+    def selection_anchor(self,index):
+        self._callall("selection_anchor",index)
+   
+    select_anchor=selection_anchor
+   
+    def selection_clear(self,*args):
+        apply(self._callall,("selection_clear",)+args)
+        
+    select_clear=selection_clear
+    
+    def selection_includes(self,index):
+        return self.lists[0].select_includes(index)
+    
+    select_includes=selection_includes
+
+    def selection_set(self,*args):
+        apply(self._callall,("selection_set",)+args)
+
+    select_set=selection_set
+    
+    def xview(self,*args):
+        if not args: return self.lists[0].xview()
+        apply(self._callall,("xview",)+args)
+        
+    def yview(self,*args):
+        if not args: return self.lists[0].yview()
+        apply(self._callall,("yview",)+args)
+
 class GenericLogin(Toplevel):
     def __init__(self,callback,buttons):
         Toplevel.__init__(self)
