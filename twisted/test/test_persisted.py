@@ -154,6 +154,9 @@ class B:
     def bmethod(self):
         pass
 
+def funktion():
+    pass
+
 try:
     from twisted.persisted import marmalade
 except ImportError:
@@ -224,9 +227,6 @@ else:
         def gotSequenceItem(self, seqitem, num):
             self.sequence[num] = seqitem
 
-
-    def funktion():
-        pass
 
     class MarmaladeTestCase(unittest.TestCase):
 
