@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: adding features
+    to the finger service</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: adding features to the finger service</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the second part of the Twisted tutorial <a
+href="tutorial.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this section of the tutorial, our finger server will continue to sprout
+features: the ability for users to set finger announces, and using our finger
+service to send those announcements on the web, on IRC and over XML-RPC.</p>
+
+<h2>Setting Message By Local Users</h2>
+
+<p>Now that port 1079 is free, maybe we can run on it a different
+server, one which will let people set their messages. It does
+no access control, so anyone who can login to the machine can
+set any message. We assume this is the desired behavior in
+our case. Testing it can be done by simply:
+</p>
+
+<pre class="shell">
+% nc localhost 1079   # or telnet localhost 1079
+moshez
+Giving a tutorial now, sorry!
+^D
+</pre>
+
+<a href="listings/finger/finger12.py" class="py-listing">finger12.py</a>
+
+
+<h2>Use Services to Make Dependencies Sane</h2>
+
+<p>The previous version had the setter poke at the innards of the
+finger factory. It's usually not a good idea: this version makes
+both factories symmetric by making them both look at a single
+object. Services are useful for when an object is needed which is
+not related to a specific network server. Here, we moved all responsibility
+for manufacturing factories into the service. Note that we stopped
+subclassing: the service simply puts useful methods and attributes
+inside the factories. We are getting better at protocol design:
+none of our protocol classes had to be changed, and neither will
+have to change until the end of the tutorial.</p>
+
+<a href="listings/finger/finger13.py" class="py-listing">finger13.py</a>
+
+
+
+
+<h2>Read Status File</h2>
+
+<p>This version shows how, instead of just letting users set their
+messages, we can read those from a centrally managed file. We cache
+results, and every 30 seconds we refresh it. Services are useful
+for such scheduled tasks.</p>
+
+<a href="listings/finger/etc.users" class="listing">sample /etc/users file</a>
+
+<a href="listings/finger/finger14.py" class="py-listing">finger14.py</a>
+
+
+<h2>Announce on Web, Too</h2>
+
+<p>The same kind of service can also produce things useful for
+other protocols. For example, in twisted.web, the factory
+itself (the site) is almost never subclassed -- instead,
+it is given a resource, which represents the tree of resources
+available via URLs. That hierarchy is navigated by site,
+and overriding it dynamically is possible with getChild.</p>
+
+<a href="listings/finger/finger15.py" class="py-listing">finger15.py</a>
+
+
+<h2>Announce on IRC, Too</h2>
+
+<p>This is the first time there is client code. IRC clients often
+act a lot like servers: responding to events from the network.
+The reconnecting client factory will make sure that severed links
+will get re-established, with intelligent tweaked exponential
+back-off algorithms. The IRC client itself is simple: the only
+real hack is getting the nickname from the factory in connectionMade.</p>
+
+<a href="listings/finger/finger16.py" class="py-listing">finger16.py</a>
+
+
+<h2>Add XML-RPC Support</h2>
+
+<p>In Twisted, XML-RPC support is handled just as though it was
+another resource. That resource will still support GET calls normally
+through render(), but that is usually left unimplemented. Note
+that it is possible to return deferreds from XML-RPC methods.
+The client, of course, will not get the answer until the deferred
+is triggered.</p>
+
+<a href="listings/finger/finger17.py" class="py-listing">finger17.py</a>
+
+<p>A simple client to test the XMLRPC finger:</p>
+
+<a href="listings/finger/fingerXRclient.py" class="py-listing">fingerXRclient.py</a>
+
+
+</body>
+</html>
