@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 name=`dpkg-parsechangelog |grep Source | awk -F: '{print $2}'|tr -d ' '`
 version=`dpkg-parsechangelog |grep Version | awk -F: '{print $2}'|awk -F- '{print $1}'|tr -d ' '`
 build=../debian-build
@@ -12,3 +13,4 @@ cd $dir
 dpkg-buildpackage -rfakeroot -uc -us
 cd ..
 rm -rf $name-$version
+lintian *.changes
