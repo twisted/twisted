@@ -863,18 +863,16 @@ class IProtocolFactory(Interface):
     """
 
     def buildProtocol(self, addr):
-        """Return an object implementing L{IProtocol}, or None.
-
-        This method will be called when a connection has been established
-        to addr.
+        """Called when a connection has been established to addr.
 
         If None is returned, the connection is assumed to have been refused,
         and the Port will close the connection.
 
-        TODO:
-          - Document 'addr' argument -- what format is it in?
-          - Is the phrase \"incoming server connection\" correct when Factory
-            is a ClientFactory?
+        @param addr: The address of the newly-established connection
+        @ptype addr: (host, port)
+        @returns: None if the connection was refused, otherwise an object
+        implementing IProtocol.
+        @rtype: None or L{IProtocol}.
         """
 
     def doStart(self):
