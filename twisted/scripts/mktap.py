@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.23 2003/02/03 11:11:07 spiv Exp $
+# $Id: mktap.py,v 1.24 2003/02/03 12:09:07 spiv Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,7 @@ from twisted.internet import app
 from twisted.python import usage, util
 from twisted.spread import pb
 
-import sys, traceback, os, cPickle, glob, string
+import sys, traceback, os, cPickle, glob
 
 from twisted.python.plugin import getPlugIns
 
@@ -49,7 +49,7 @@ def loadPlugins(debug = 0, progress = 0):
         if hasattr(plug, 'tapname'):
             shortTapName = plug.tapname
         else:
-            shortTapName = string.split(plug.module, '.')[-1]
+            shortTapName = plug.module.split('.')[-1]
         tapLookup[shortTapName] = plug
 
     return tapLookup
@@ -60,7 +60,7 @@ def getModule(tapLookup, type):
         mod = tapLookup[type].load()
         return mod
     except KeyError:
-        print """Please select one of: %s""" % string.join(tapLookup.keys())
+        print """Please select one of: %s""" % ' '.join(tapLookup.keys())
         sys.exit(2)
 
 class GeneralOptions(usage.Options):
@@ -89,7 +89,6 @@ class GeneralOptions(usage.Options):
         self.subCommands.sort()
         self['help'] = 0 # default
 
-
     def opt_help(self):
         """display this message"""
         # Ugh, we can't print the help now, we need to let getopt
@@ -99,6 +98,12 @@ class GeneralOptions(usage.Options):
     def postOptions(self):
         self['progress'] = int(self['progress'])
         self['debug'] = int(self['debug'])
+
+        # backwards compatibility for old --xml and --source options
+        if self['xml']:
+            self['type'] = 'xml'
+        if self['source']:
+            self['type'] = 'source'
 
     def parseArgs(self, *args):
         self.args = args
@@ -156,12 +161,6 @@ def run():
         print "The use of getPorts() is deprecated."
         for portno, factory in mod.getPorts():
             a.listenTCP(portno, factory)
-
-    # backwards compatibility for old --xml and --source options
-    if options['xml']:
-        options['type'] = 'xml'
-    if options['source']:
-        options['type'] = 'source'
 
     a.persistStyle = ({'xml': 'xml',
                        'source': 'aot',
