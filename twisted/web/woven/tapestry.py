@@ -7,7 +7,7 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.7 $"[11:-2]
+__version__ = "$Revision: 1.8 $"[11:-2]
 
 # System Imports
 import time
@@ -56,7 +56,10 @@ class ModelLoader(Resource):
     def __init__(self, parent, templateFile=None):
         Resource.__init__(self)
         self.parent = parent
-        self._templateFile = templateFile
+        self.templateFile = templateFile
+
+    def modelClass(self, other):
+        return other
 
     def getChild(self, path, request):
         d = self.loadModel(path, request)
@@ -79,7 +82,6 @@ class ModelLoader(Resource):
         """
         from twisted.internet.defer import execute
         return execute(self.loadModelNow, path, request)
-
 
 class Tapestry(Resource):
     """
@@ -132,4 +134,6 @@ class Tapestry(Resource):
             adapter = components.getAdapter(p, IResource, None)
             if adapter is not None:
                 return adapter
+        # maybe we want direct support for ModelLoader?
+        # cl = getattr(self, "wload_"+path, None) #???
         return Resource.getChild(self, path, request)

@@ -193,7 +193,7 @@ class DOMTemplate(Resource):
         self.outstandingCallbacks = 0
         self.failed = 0
 
-    def render(self, request, block=0):
+    def render(self, request, block=1):
         template = self.getTemplate(request)
         if template:
             self.d = microdom.parseString(template)

@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.53 $"[11:-2]
+__version__ = "$Revision: 1.54 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -96,7 +96,7 @@ class View(template.DOMTemplate):
         self.viewStack.push(namespace)
         return self
 
-    def render(self, request, doneCallback=None, block=None):
+    def render(self, request, doneCallback=None, block=1):
         request.currentId = 0
         request.currentPage = self
         if self.controller is None:
