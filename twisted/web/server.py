@@ -379,7 +379,18 @@ class Site(protocol.Factory):
         r.site = self
         return r
 
+    isLeaf = 0
+
+    def render(self, request):
+        """Redirect because a Site is always a directory.
+        """
+        request.setHeader("location","http://%s%s/" % (
+            request.getHeader("host"),
+            (string.split(request.uri,'?')[0])))
+        
     def getChildWithDefault(self, request):
+        """Emulate a resource's getChild method.
+        """
         request.site = self
         return self.resource.getChildWithDefault(self, request)
 
