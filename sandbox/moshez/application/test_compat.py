@@ -66,3 +66,12 @@ class TestInternet(unittest.TestCase):
             reactor.iterate(0.1)
         s.stopService()
         self.assertEqual(factory.line, 'lalala')
+
+    def testServices(self):
+        s = service.MultiService()
+        c = compat.IOldApplication(s)
+        ch = service.Service()
+        ch.setName("lala")
+        ch.setServiceParent(c)
+        self.assertEqual(c.getServiceNamed("lala"), ch)
+        ch.disownServiceParent()

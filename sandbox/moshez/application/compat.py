@@ -120,6 +120,9 @@ class ServiceNetwork:
     def addService(self, service):
         self.app.addService(service)
 
+    def removeService(self, service):
+        self.app.removeService(service)
+
     def getServiceNamed(self, name):
         return self.app.getServiceNamed(name)
 
