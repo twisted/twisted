@@ -6,35 +6,65 @@
   </head>
 
   <body>
-    <h1>Running tasks at intervals</h1>
+    <h2>Spreading tasks over time</h2>
 
     <p>
-      Sometimes we want to run a task every few minutes, or expire sessions after 15 minutes,
-      or other events that are generated based on time. We do this using objects that conform 
-      to the Delayed interface (see twisted.python.delay).
+      Sometimes we want to spread out a number of tasks over time, e.g. a long calculation that might block twisted if
+      the whole thing were to be run at once. We do this using objects that conform  to the Delayed interface 
+      (see <code>twisted.python.delay</code>).
     <p>
     
     <p>
      A delayed must define two functions:
      <ul>
-      <li> timeout() -- return number of seconds until we should next run, or None
-      <li>runUntilCurrent() -- run the command when the time has passed.
+      <li><code>timeout(self)</code> -- return maximum number of seconds until we should next run, or None if we have nothing to run.
+      <li><code>runUntilCurrent(self)</code> -- this command will be run at the very latest when the time returned by <code>timeout</code> has passed.
     </ul>
     For example:
     <pre>
-class OnceAMinute:
-    """Runs once a minute."""
+class LongCalculation:
+    """Runs at least 100 multipications a minute."""
+    
+    value = 1L
     
     def timeout(self):
-        return 60.0
+        return 0.01
     
     def runUntilCurrent(self):
-        print "a minute has passed"
+       self.value = self.value * 2L
 
 # register the Delayed object with the Twisted event loop:
-o = OnceAMinute()
+o = LongCalculation()
 from twisted.internet import main
 main.addDelayed(o)
+
+</pre>
+    </p>
+
+   <h2>Running tasks at intervals</h2>
+   
+   <p>Using this infrastrucure, we can now schedule tasks to be run at intervals, e.g. once a minute:
+   
+   <pre>
+from twisted.python import delay
+
+def OnceAMinute:
+    """Should be run once a minute."""
+    print "a minute has passed"
+
+# create a delayed object
+d = delay.Delayed()
+
+# set the number of seconds each tick is
+d.ticktime = 10
+
+# run OnceAMinute every 6 ticks, and since we set each tick to be 10 seconds,
+# OnceAMinute will be called every 60 seconds
+d.loop(OnceAMinute, 6)
+
+# register the Delayed object with the Twisted event loop:
+from twisted.internet import main
+main.addDelayed(d)
 
 </pre>
     </p>
