@@ -6,20 +6,33 @@
 
 """Component architecture for Twisted, based on Zope3 components.
 
-IMPORTANT: In old code the meaning of 'implementing' was too vague. In this
-version we will switch to the Zope3 meaning (objects provide interfaces,
-if a class implements interfaces that means its *instances* provide them).
-However, some methods (e.g. implements()) are confusing because they actually
-check if object *provides* an interface.
+IMPORTANT: In old code the meaning of 'implementing' was too vague. In
+this version we will switch to the Zope3 meaning (objects provide
+interfaces, if a class implements interfaces that means its
+*instances* provide them).  However, some deprecated methods
+(e.g. twisted.python.components.implements()) are confusing because
+they actually check if object *provides* an interface. Don't use them.
 
 Using the Zope3 API directly is thus strongly recommended. Everything
 you need is in the top-level of the zope.interface package, e.g.:
 
-   from zope.interface import Interface
+   from zope.interface import Interface, implements
 
-The one exception is registerAdapter, which is in this module and is
-still the way to register adapters (at least, if you want Twisted's
+   class IFoo(Interface):
+       pass
+
+   class Foo:
+       implements(IFoo)
+
+   print IFoo.implementedBy(Foo) # True
+   print IFoo.providedBy(Foo()) # True
+
+The one exception is twisted.python.components.registerAdapter, which
+is still the way to register adapters (at least, if you want Twisted's
 global adapter registry).
+
+
+Backwards Compatability:
 
 Possible bugs in your code may happen because you rely on
 __implements__ existing and/or have only that and assumes that means
@@ -617,4 +630,5 @@ class ReprableComponentized(Componentized):
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
            "Adapter", "ReprableComponentized", "backwardsCompatImplements",
-           "fixClassImplements", "MetaInterface", "getRegistry", "ComponentsDeprecationWarning"]
+           "fixClassImplements", "MetaInterface", "getRegistry", "ComponentsDeprecationWarning",
+           "globalRegistry"]
