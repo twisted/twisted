@@ -26,9 +26,24 @@ import threading
 import types
 
 
-class InterfaceTestCase(unittest.TestCase):
-
-    def testTriggerSystemEvent(self):
+class SystemEventTestCase(unittest.TestCase):
+    def setUp(self):
+        self.triggers = []
+    def addTrigger(self, event, phase, func):
+        t = reactor.addSystemEventTrigger(event, phase, func)
+        self.triggers.append(t)
+        return t
+    def removeTrigger(self, trigger):
+        reactor.removeSystemEventTrigger(trigger)
+        self.triggers.remove(trigger)
+    def tearDown(self):
+        for t in self.triggers:
+            try:
+                reactor.removeSystemEventTrigger(t)
+            except:
+                pass
+    
+    def testTriggerSystemEvent1(self):
         l = []
         l2 = []
         d = Deferred()
@@ -44,28 +59,31 @@ class InterfaceTestCase(unittest.TestCase):
         ##         d.addCallback(lambda x: sys.stdout.write("firing d\n"))
         ##         d2.addCallback(lambda x: sys.stdout.write("firing d2\n"))
         r = reactor
-        r.addSystemEventTrigger("before", "test", _appendToList)
-        r.addSystemEventTrigger("during", "test", _appendToList)
-        r.addSystemEventTrigger("after", "test", _appendToList)
+
+        self.addTrigger("before", "test", _appendToList)
+        self.addTrigger("during", "test", _appendToList)
+        self.addTrigger("after", "test", _appendToList)
         self.assertEquals(len(l), 0, "Nothing happened yet.")
         r.fireSystemEvent("test")
         r.iterate()
         self.assertEquals(len(l), 3, "Should have filled the list.")
+
         l[:]=[]
-        r.addSystemEventTrigger("before", "defer", _returnDeferred)
-        r.addSystemEventTrigger("before", "defer", _returnDeferred2)
-        r.addSystemEventTrigger("during", "defer", _appendToList)
-        r.addSystemEventTrigger("after", "defer", _appendToList)
+        self.addTrigger("before", "defer", _returnDeferred)
+        self.addTrigger("before", "defer", _returnDeferred2)
+        self.addTrigger("during", "defer", _appendToList)
+        self.addTrigger("after", "defer", _appendToList)
         r.fireSystemEvent("defer")
         self.assertEquals(len(l), 0, "Event should not have fired yet.")
         d.callback(None)
         self.assertEquals(len(l), 0, "Event still should not have fired yet.")
         d2.callback(None)
         self.assertEquals(len(l), 2)
+
         l[:]=[]
-        a = r.addSystemEventTrigger("before", "remove", _appendToList)
-        b = r.addSystemEventTrigger("before", "remove", _appendToList2)
-        r.removeSystemEventTrigger(b)
+        a = self.addTrigger("before", "remove", _appendToList)
+        b = self.addTrigger("before", "remove", _appendToList2)
+        self.removeTrigger(b)
         r.fireSystemEvent("remove")
         self.assertEquals(len(l), 1)
         self.assertEquals(len(l2), 0)
@@ -91,11 +109,11 @@ class InterfaceTestCase(unittest.TestCase):
         # to test this properly, the triggers must fire in this sequence:
         # _returnDeferred, _fireDeferred, _returnDeferred2 . cReactor happens
         # to run triggers in the order in which they were added.
-        r.addSystemEventTrigger("before", "defer2", _returnDeferred)
-        r.addSystemEventTrigger("before", "defer2", _fireDeferred)
-        r.addSystemEventTrigger("before", "defer2", _returnDeferred2)
-        r.addSystemEventTrigger("during", "defer2", _appendToList)
-        r.addSystemEventTrigger("after", "defer2", _appendToList)
+        self.addTrigger("before", "defer2", _returnDeferred)
+        self.addTrigger("before", "defer2", _fireDeferred)
+        self.addTrigger("before", "defer2", _returnDeferred2)
+        self.addTrigger("during", "defer2", _appendToList)
+        self.addTrigger("after", "defer2", _appendToList)
         r.fireSystemEvent("defer2")
         self.assertEquals(len(l), 0, "Event should not have fired yet.")
         d2.callback(None)
@@ -114,12 +132,12 @@ class InterfaceTestCase(unittest.TestCase):
         def _ignore(failure):
             return None
         r = reactor
-        b1 = r.addSystemEventTrigger("before", "defer3", _returnDeferred)
-        b2 = r.addSystemEventTrigger("after", "defer3", _appendToList)
+        b1 = self.addTrigger("before", "defer3", _returnDeferred)
+        b2 = self.addTrigger("after", "defer3", _appendToList)
         r.fireSystemEvent("defer3")
         self.assertEquals(len(l), 0, "Event should not have fired yet.")
-        r.removeSystemEventTrigger(b1)
-        r.removeSystemEventTrigger(b2)
+        self.removeTrigger(b1)
+        self.removeTrigger(b2)
         try:
             d.callback(None) # cReactor gives errback to deferred
         except ValueError:
@@ -143,10 +161,10 @@ class InterfaceTestCase(unittest.TestCase):
         def _appendToList2(l2=l2):
             l2.append(1)
         r = reactor
-        r.addSystemEventTrigger("before", "event1", _returnDeferred)
-        r.addSystemEventTrigger("after", "event1", _appendToList)
-        r.addSystemEventTrigger("before", "event2", _returnDeferred2)
-        r.addSystemEventTrigger("after", "event2", _appendToList2)
+        self.addTrigger("before", "event1", _returnDeferred)
+        self.addTrigger("after", "event1", _appendToList)
+        self.addTrigger("before", "event2", _returnDeferred2)
+        self.addTrigger("after", "event2", _appendToList2)
         r.fireSystemEvent("event1")
         # event1 should be waiting on deferred 'd'
         r.fireSystemEvent("event2")
@@ -169,14 +187,17 @@ class InterfaceTestCase(unittest.TestCase):
         def _appendToList(l=l):
             l.append(1)
         r = reactor
-        b = r.addSystemEventTrigger("after", "event1", _appendToList)
-        r.removeSystemEventTrigger(b)
+        b = self.addTrigger("after", "event1", _appendToList)
+        self.removeTrigger(b)
         if type(b) == types.IntType:
             bogus = b + 40
             self.failUnlessRaises(ValueError,
                                   r.removeSystemEventTrigger, bogus)
-            self.failUnlessRaises(TypeError,
-                                  r.removeSystemEventTrigger, None)
+        self.failUnlessRaises(TypeError,
+                              r.removeSystemEventTrigger, None)
+
+
+class InterfaceTestCase(unittest.TestCase):
 
     _called = 0
 
@@ -244,6 +265,85 @@ class InterfaceTestCase(unittest.TestCase):
         reactor.iterate(5)
         self.assert_( abs(time.time() - start - 0.5) < 0.5 )
 
+
+class ReactorCoreTestCase(unittest.TestCase):
+    def setUp(self):
+        self.triggers = []
+        self.timers = []
+    def addTrigger(self, event, phase, func):
+        t = reactor.addSystemEventTrigger(event, phase, func)
+        self.triggers.append(t)
+        return t
+    def removeTrigger(self, trigger):
+        reactor.removeSystemEventTrigger(trigger)
+        self.triggers.remove(trigger)
+    def addTimer(self, when, func):
+        t = reactor.callLater(when, func)
+        self.timers.append(t)
+        return t
+    def removeTimer(self, timer):
+        try:
+            timer.cancel()
+        except error.AlreadyCalled:
+            pass
+        self.timers.remove(timer)
+        
+    def tearDown(self):
+        for t in self.triggers:
+            try:
+                reactor.removeSystemEventTrigger(t)
+            except:
+                pass
+    def crash(self):
+        reactor.crash()
+    def stop(self):
+        reactor.stop()
+        
+    def testIterate(self):
+        reactor.callLater(0.1, self.stop)
+        reactor.run() # returns once .stop is called
+        reactor.callLater(0.1, self.stop)
+        reactor.run() # returns once .stop is called
+
+    def timeout(self):
+        print "test timed out"
+        self.problem = 1
+        self.fail("test timed out")
+    def count(self):
+        self.counter += 1
+
+    def testStop(self):
+        # make sure shutdown triggers are run when the reactor is stopped
+        self.counter = 0
+        self.problem = 0
+        self.addTrigger("before", "shutdown", self.count)
+        self.addTimer(0.1, self.stop)
+        self.addTimer(5, self.timeout)
+        reactor.run()
+        self.failUnless(self.counter == 1,
+                        "reactor.stop didn't invoke shutdown triggers")
+        self.failIf(self.problem, "the test timed out")
+
+    def testCrash(self):
+        self.counter = 0
+        self.problem = 0
+        self.addTrigger("before", "shutdown", self.count)
+        # reactor.crash called from an "after-startup" trigger is too early
+        # for the gtkreactor: gtk_mainloop is not yet running. Same is true
+        # when called with reactor.callLater(0). Must be >0 seconds in the
+        # future to let gtk_mainloop start first.
+        self.addTimer(0.1, self.crash)
+        self.addTimer(5, self.timeout)
+        reactor.run()
+        # this will fire reactor.crash, which ought to exit .run without
+        # running the event triggers
+        self.failUnless(self.counter == 0,
+                        "reactor.crash invoked shutdown triggers, "
+                        "but it isn't supposed to")
+        self.failIf(self.problem, "the test timed out")
+        
+        
+        
 class DelayedTestCase(unittest.TestCase):
     def setUp(self):
         self.finished = 0
@@ -363,7 +463,7 @@ class ThreadOrder(threading.Thread, Order):
 
 
 class callFromThreadTestCase(unittest.TestCase):
-    """Task scheduling rom threads tests."""
+    """Task scheduling from threads tests."""
 
     def schedule(self, *args, **kwargs):
         """Override in subclasses."""
