@@ -156,7 +156,8 @@ class _TLSMixin:
         when the socket is writable.
         """
         self.disconnected=1
-        self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
+        if hasattr(self.socket, 'set_shutdown'):
+            self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
         return self._sendCloseAlert()
 
     _first=False
