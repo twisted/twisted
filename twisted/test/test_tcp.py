@@ -750,8 +750,6 @@ class LargeBufferTestCase(PortCleanerUpper):
                 spinUntil(lambda :f.done and clientF.done)
             except defer.TimeoutError:
                 if clientF.len == rxlen:
-                    print "testWrite is about to fail - here's some information about the system load"
-                    os.system("w | grep 'load average'")
                     raise
                 # if we're still making progress, keep trying
                 continue

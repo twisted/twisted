@@ -401,11 +401,8 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def __del__(self):
         """Do distributed reference counting on finalization.
         """
-        try:
-            if self.doRefCount:
-                self.broker.sendDecRef(self.luid)
-        except:
-            log.err()
+        if self.doRefCount:
+            self.broker.sendDecRef(self.luid)
 
 setUnjellyableForClass("remote", RemoteReference)
 components.backwardsCompatImplements(RemoteReference)
