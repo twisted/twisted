@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.5 2002/11/09 04:27:58 z3p Exp $
+# $Id: conch.py,v 1.6 2002/11/10 02:58:04 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -91,7 +91,10 @@ def run():
     except:
         old = None
     try:
-        reactor.run()
+        import hotshot
+        p = hotshot.Profile('hotshot.log')
+        p.runcall(reactor.run)
+        p.close()
     finally:
         if old:
             tty.tcsetattr(fd, tty.TCSADRAIN, old)
@@ -204,6 +207,7 @@ class SSHSession(connection.SSHChannel):
 
     def extReceived(self, t, data):
         if t==connection.EXTENDED_DATA_STDERR:
+            log.msg('got %s stderr data' % len(data))
             sys.stderr.write(data)
             sys.stderr.flush()
 

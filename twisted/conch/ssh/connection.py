@@ -115,9 +115,12 @@ class SSHConnection(service.SSHService):
                                                 channel.localWindowSize))
             self.adjustWindow(channel, channel.localWindowSize - \
                                 channel.localWindowLeft)
+        #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
+        #                                    channel.localWindowSize))
         channel.dataReceived(data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
+        log.msg('extended data here')
         localChannel, typeCode = struct.unpack('>2L', packet[:8])
         data = common.getNS(packet[8:])[0]
         self.channels[localChannel].extReceived(typeCode, data)
@@ -188,22 +191,30 @@ class SSHConnection(service.SSHService):
         return d
 
     def adjustWindow(self, channel, bytesToAdd):
+        if channel not in self.channelsToRemoteChannel.keys():
+            return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L',
                                     self.channelsToRemoteChannel[channel], 
                                     bytesToAdd))
         channel.localWindowLeft += bytesToAdd
         
     def sendData(self, channel, data):
+        if channel not in self.channelsToRemoteChannel.keys():
+            return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L',
                                     self.channelsToRemoteChannel[channel]) + \
                                     common.NS(data))
 
     def sendExtendedData(self, channel, dataType, data):
+        if channel not in self.channelsToRemoteChannel.keys():
+            return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>2L',
                                     self.channelsToRemoteChannel[channel]), 
                                     dataType + common.NS(data))
 
     def sendEOF(self, channel):
+        if channel not in self.channelsToRemoteChannel.keys():
+            return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L',
                                     self.channelsToRemoteChannel[channel]))
 
@@ -249,23 +260,23 @@ class SSHChannel:
     def __init__(self, localWindow = 0, localMaxPacket = 0, 
                        remoteWindow = 0, remoteMaxPacket = 0,
                        conn = None):
-        self.conn = conn
-        self.localWindowSize = localWindow or 65536 
+        self.localWindowSize = localWindow or 131072 
         self.localWindowLeft = self.localWindowSize 
-        self.localMaxPacket = localMaxPacket or 16384
+        self.localMaxPacket = localMaxPacket or 32768
         self.remoteWindowLeft = remoteWindow
         self.remoteMaxPacket = remoteMaxPacket
+        self.conn = conn
         self.specificData = ''
         self.buf = ''
 
-    def channelOpen(self):
+    def channelOpen(self, specificData = ''):
         log.msg('channel %s open' % self.id)
 
     def openFailed(self, reason):
         log.msg('other side refused channel %s\nreason: %s' % (self.id, reason))
 
     def addWindowBytes(self, bytes):
-        log.msg('adding bytes to rwindow %s' % bytes)
+        log.msg('adding bytes to rwindow %s %s' % (bytes, self.remoteWindowLeft))
         self.remoteWindowLeft = self.remoteWindowLeft + bytes
         if self.buf:
             self.write('')

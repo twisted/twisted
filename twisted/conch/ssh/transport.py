@@ -125,15 +125,23 @@ class SSHTransportBase(protocol.Protocol):
     def getPacket(self):
         bs = self.currentEncryptions and self.currentEncryptions.dec_block_size  or 8
         if len(self.buf) < bs: return # not enough data
-        if self.currentEncryptions:
-            first = self.currentEncryptions.decrypt(self.buf[:bs])
+        if not hasattr(self, 'first'):
+            if self.currentEncryptions:
+                first = self.currentEncryptions.decrypt(self.buf[:bs])
+            else:
+                first = self.buf[:bs]
         else:
-            first = self.buf[:bs]
+            first = self.first
+            del self.first
         packetLen, randomLen = struct.unpack('!LB',first[:5])
         if packetLen > 1048576: # 1024 ** 2
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length %s' % packetLen)
+            log.msg(buffer_dump(self.buf, title = 'encrypted:\t'))
+            log.msg(buffer_dump(first, title = 'plain:\t'))
             return           
-        if len(self.buf) < packetLen: return # not enough packet
+        if len(self.buf) < packetLen: 
+            self.first = first
+            return # not enough packet
         if (packetLen+4)%bs != 0:
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet mod (%s%%%s == %s' % (packetLen+4,bs,(packetLen+4)%bs))
             return
@@ -610,8 +618,8 @@ class SSHCiphers:
         c.update(data)
         return mac == c.digest()
 
-def buffer_dump(b):
-    r=''
+def buffer_dump(b, title = None):
+    r=title or ''
     while b:
         c, b = b[:16], b[16:]
         while c:
