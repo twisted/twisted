@@ -31,7 +31,7 @@ expectGimmieAFailure = [re.compile(r'.*test_adapters.py.*in gimmeAFailure'),
                         re.compile(r'.*BogusError.*'),
                         re.compile(r'.*test_adapters\.BogusError: %s' % (ERROR_MSG,))]
 
-re_psep = re.escape(os.path.sep)
+re_psep = re.escape(os.sep)
 
 expectFailureInSetUp = [re.compile(r'.*twisted%(sep)sinternet%(sep)sdefer.py.*maybeDeferred' % {'sep': re_psep}), # XXX: this may break
                         None,
