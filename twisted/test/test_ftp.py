@@ -28,11 +28,14 @@ from twisted.internet import reactor, protocol, defer, interfaces
 from twisted.cred import error, portal, checkers, credentials
 from twisted.python import log, components
 
-from twisted.protocols import ftp
+from twisted.protocols import ftp, loopback
 
 class NonClosingStringIO(StringIO):
     def close(self):
         pass
+
+StringIOWithoutClosing = NonClosingStringIO
+
 
 class CustomFileWrapper(protocol.FileWrapper):
     def write(self, data):
@@ -103,102 +106,6 @@ class IOPump:
     def getTuple(self):
         return (self.client, self.server, self.pump, self.flush)
 
-class TestAnonymousAvatar:#(unittest.TestCase):
-    def setUp(self):
-        self.cnx = ConnectedFTPServer()
-
-    def tearDown(self):
-        delayeds = reactor.getDelayedCalls()
-        for d in delayeds:
-            d.cancel()
-
-    def testAnonymousLogin(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
-        pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
-        c.sendLine('USER anonymous')
-        pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_NAME_OK_NEED_EMAIL])
-        c.sendLine('PASS w00t@twistedmatrix.com')
-        pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED], c.f.lines)
-
-
-    def doAnonymousLogin(self,c,s,pump):
-        c, s, pump = self.cnx.getCSPumpTuple()
-        pump.flush()
-        c.sendLine('USER anonymous')
-        pump.flush()
-        c.sendLine('PASS w00t@twistedmatrix.com')
-        pump.flush()
-
-
-    def testPWDOnLogin(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
-        self.doAnonymousLogin(c,s,pump)
-        c.sendLine('PWD')
-        pump.flush()
-        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
-
-
-    def testCWD(self):
-        import warnings
-        warnings.warn("""This test is VERY FRAGILE! in fact, its so fragile it won't run on any other computer but mine""")
-        c, s, pump = self.cnx.getCSPumpTuple()
-        send = c.sendLine
-        flush = pump.flush
-
-        self.doAnonymousLogin(c,s,pump)
-
-        send('CWD src'); flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
-
-        send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
-
-        send('CWD freemind'); flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
-
-        send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
-
-        send('CWD ../radix'); flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
-
-        send('PWD'); flush()
-        send('CWD ../../../'); flush()
-
-
-    def testCDUP(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
-        send = c.sendLine
-        flush = pump.flush
-
-        self.doAnonymousLogin(c,s,pump)
-        send('CWD src/freemind/doc'); flush()
-
-        send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src/freemind/doc" is current directory.')
-    
-        send('CDUP'); flush()
-        send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
-
-        send('CDUP'); flush()
-        send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
-
-        send('CDUP'); flush()
-        send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
-
-
-    def testWelcomeMessage(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
-        pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
-
-TestAnonymousAvatar.skip = 'skip until we can support it'
 
 
 def getPortal():
@@ -730,5 +637,171 @@ class TestFTPClient:#(FTPClientTestCase):
         self.assertEquals(s.lines[-1], 'test')
     
     
+
+
+class TestAnonymousAvatar(FTPTestCase):
+    def testAnonymousLogin(self):
+        c, s, pump = self.cnx.getCSPumpTuple()
+        pump.flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
+        c.sendLine('USER anonymous')
+        pump.flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_NAME_OK_NEED_EMAIL])
+        c.sendLine('PASS w00t@twistedmatrix.com')
+        pump.flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED], c.f.lines)
+
+
+    def doAnonymousLogin(self,c,s,pump):
+        c, s, pump = self.cnx.getCSPumpTuple()
+        pump.flush()
+        c.sendLine('USER anonymous')
+        pump.flush()
+        c.sendLine('PASS w00t@twistedmatrix.com')
+        pump.flush()
+
+
+    def testPWDOnLogin(self):
+        c, s, pump = self.cnx.getCSPumpTuple()
+        self.doAnonymousLogin(c,s,pump)
+        c.sendLine('PWD')
+        pump.flush()
+        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
+
+
+    def testCWD(self):
+        import warnings
+        warnings.warn("""This test is VERY FRAGILE! in fact, its so fragile it won't run on any other computer but mine""")
+        c, s, pump = self.cnx.getCSPumpTuple()
+        send = c.sendLine
+        flush = pump.flush
+
+        self.doAnonymousLogin(c,s,pump)
+
+        send('CWD src'); flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
+
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
+
+        send('CWD freemind'); flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
+
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
+
+        send('CWD ../radix'); flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
+
+        send('PWD'); flush()
+        send('CWD ../../../'); flush()
+
+
+    def testCDUP(self):
+        c, s, pump = self.cnx.getCSPumpTuple()
+        send = c.sendLine
+        flush = pump.flush
+
+        self.doAnonymousLogin(c,s,pump)
+        send('CWD src/freemind/doc'); flush()
+
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src/freemind/doc" is current directory.')
+    
+        send('CDUP'); flush()
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
+
+        send('CDUP'); flush()
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
+
+        send('CDUP'); flush()
+        send('PWD'); flush()
+        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
+
+
+    def testWelcomeMessage(self):
+        c, s, pump = self.cnx.getCSPumpTuple()
+        pump.flush()
+        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
+
+TestAnonymousAvatar.skip = 'skip until we can support it'
+
+# -- Client Tests -----------------------------------------------------------
+
+
+
+class FTPFileListingTests(unittest.TestCase):
+    def testOneLine(self):
+        # This example line taken from the docstring for FTPFileListProtocol
+        fileList = ftp.FTPFileListProtocol()
+        class PrintLine(protocol.Protocol):
+            def connectionMade(self):
+                self.transport.write('-rw-r--r--   1 root     other        531 Jan 29 03:26 README\n')
+                self.transport.loseConnection()
+        loopback.loopback(PrintLine(), fileList)
+        file = fileList.files[0]
+        self.failUnless(file['filetype'] == '-', 'misparsed fileitem')
+        self.failUnless(file['perms'] == 'rw-r--r--', 'misparsed perms')
+        self.failUnless(file['owner'] == 'root', 'misparsed fileitem')
+        self.failUnless(file['group'] == 'other', 'misparsed fileitem')
+        self.failUnless(file['size'] == 531, 'misparsed fileitem')
+        self.failUnless(file['date'] == 'Jan 29 03:26', 'misparsed fileitem')
+        self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
+
+class FTPClientTests(unittest.TestCase):
+    def testFailedRETR(self):
+        try:
+            f = protocol.Factory()
+            f.noisy = 0
+            f.protocol = protocol.Protocol
+            port = reactor.listenTCP(0, f, interface="127.0.0.1")
+            n = port.getHost()[2]
+            # This test data derived from a bug report by ranty on #twisted
+            responses = ['220 ready, dude (vsFTPd 1.0.0: beat me, break me)',
+                         # USER anonymous
+                         '331 Please specify the password.',
+                         # PASS twisted@twistedmatrix.com
+                         '230 Login successful. Have fun.',
+                         # TYPE I
+                         '200 Binary it is, then.',
+                         # PASV
+                         '227 Entering Passive Mode (127,0,0,1,%d,%d)' %
+                         (n>>8, n&0xff),
+                         # RETR /file/that/doesnt/exist
+                         '550 Failed to open file.']
+
+            b = StringIOWithoutClosing()
+            client = ftp.FTPClient(passive=1)
+            client.makeConnection(protocol.FileWrapper(b))
+            self.writeResponses(client, responses)
+            p = protocol.Protocol()
+            d = client.retrieveFile('/file/that/doesnt/exist', p)
+            d.addCallback(lambda r, self=self:
+                            self.fail('Callback incorrectly called: %r' % r))
+            d.addBoth(lambda ignored,r=reactor: r.crash())
+
+            id = reactor.callLater(2, self.timeout)
+            reactor.run()
+            log.flushErrors(ftp.FTPError)
+            try:
+                id.cancel()
+            except:
+                pass
+        finally:
+            try:
+                port.stopListening()
+                reactor.iterate()
+            except:
+                pass
+
+    def timeout(self):
+        reactor.crash()
+        self.fail('Timed out')
+
+    def writeResponses(self, protocol, responses):
+        for response in responses:
+            reactor.callLater(0.1, protocol.lineReceived, response)
 
 
