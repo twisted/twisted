@@ -28,6 +28,8 @@ todo: robustify it
       documentation
 """
 
+from __future__ import generators
+
 import random
 
 from twisted.flow import flow
