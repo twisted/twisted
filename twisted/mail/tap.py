@@ -182,18 +182,21 @@ def updateApplication(app, config):
         helper = relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', app)
         config.service.domains.setDefaultDomain(default)
 
-    
+    if config['certificate']:
+        from twisted.mail.protocols import SSLContextFactory
+        ctx = SSLContextFactory(config['certificate'])
+
     if config['pop3']:
         app.listenTCP(config['pop3'], config.service.getPOP3Factory())
     if config['pop3s']:
-        from twisted.mail.protocols import SSLContextFactory
         app.listenSSL(
             config['pop3s'],
             config.service.getPOP3Factory(),
-            SSLContextFactory(config['certificate'])
+            ctx,
         )
     if config['smtp']:
         f = smtpFactory()
+        f.context = ctx
         if config['hostname']:
             f.domain = config['hostname']
             f.fArgs = (f.domain,)

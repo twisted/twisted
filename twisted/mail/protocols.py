@@ -132,6 +132,7 @@ class SMTPFactory(smtp.SMTPFactory):
 
 class ESMTPFactory(SMTPFactory):
     protocol = smtp.ESMTP
+    context = None
 
     def __init__(self, *args):
         SMTPFactory.__init__(self, *args)
@@ -142,6 +143,7 @@ class ESMTPFactory(SMTPFactory):
     def buildProtocol(self, addr):
         p = SMTPFactory.buildProtocol(self, addr)
         p.challengers = self.challengers
+        p.ctx = self.context
         return p
 
 class VirtualPOP3(pop3.POP3):
