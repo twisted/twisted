@@ -233,10 +233,14 @@ class SSHUserAuthClient(service.SSHService):
         if partial:
             self.authenticatedWith.append(self.lastAuth)
         def _(x, y):
-            i1 = self.preferredOrder.index(x)
-            i2 = self.preferredOrder.index(y)
-            if i1 < 0: return 1
-            if i2 < 0: return -1
+            try:
+                i1 = self.preferredOrder.index(x)
+            except ValueError:
+                return 1
+            try:
+                i2 = self.preferredOrder.index(y)
+            except ValueError:
+                return -1 
             return cmp(i1, i2)
         canContinue.sort(_)
         log.msg('can continue with: %s' % canContinue)
