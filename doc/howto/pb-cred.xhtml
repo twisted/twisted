@@ -42,20 +42,21 @@ look something like this:</p>
 <pre class="python">
 class ChatServer(pb.Referenceable):
 
-  def __init__(self):
-    self.groups = {} # indexed by name
-    self.users = {} # indexed by name
-  def remote_joinGroup(self, username, groupname):
-    if not self.groups.has_key(groupname):
-      self.groups[groupname] = []
-    self.groups[groupname].append(self.users[username])
-  def remote_sendMessage(self, from_username, groupname, message):
-    group = self.groups[groupname]
-    if group:
-      # send the message to all members of the group
-      for user in group:
-        user.callRemote("print", "&lt;%s&gt; says: %s" % (from_username,
-                                                          message))
+    def __init__(self):
+        self.groups = {} # indexed by name
+        self.users = {} # indexed by name
+    def remote_joinGroup(self, username, groupname):
+        if not self.groups.has_key(groupname):
+            self.groups[groupname] = []
+        self.groups[groupname].append(self.users[username])
+    def remote_sendMessage(self, from_username, groupname, message):
+        group = self.groups[groupname]
+        if group:
+            # send the message to all members of the group
+            for user in group:
+                user.callRemote("print",
+                                "&lt;%s&gt; says: %s" % (from_username,
+                                                         message))
 </pre>
 
 <p>For now, assume that all clients have somehow acquired a
@@ -70,7 +71,7 @@ remotegroup.callRemote("sendMessage", "alice", "Hi, my name is alice.")
 </pre>
 
 
-<h3>False Arguments</h3>
+<h3>Incorrect Arguments</h3>
 
 <p>You've probably seen the first problem: users can trivially spoof each
 other. We depend upon the user to pass a correct value in their
@@ -106,30 +107,30 @@ your audience work for <em>something</em></span>, let's call this the
 
 <pre class="python">
 class User(pb.Referenceable):
-  def __init__(self, username, server, clientref):
-    self.name = username
-    self.server = server
-    self.remote = clientref
-  def remote_joinGroup(self, groupname):
-    self.server.joinGroup(groupname, self)
-  def remote_sendMessage(self, groupname, message):
-    self.server.sendMessage(self.name, groupname, message)
-  def send(self, message):
-    self.remote.callRemote("print", message)
+    def __init__(self, username, server, clientref):
+        self.name = username
+        self.server = server
+        self.remote = clientref
+    def remote_joinGroup(self, groupname):
+        self.server.joinGroup(groupname, self)
+    def remote_sendMessage(self, groupname, message):
+        self.server.sendMessage(self.name, groupname, message)
+    def send(self, message):
+        self.remote.callRemote("print", message)
 
 class ChatServer:
-  def __init__(self):
-    self.groups = {} # indexed by name
-  def joinGroup(self, groupname, user):
-    if not self.groups.has_key(groupname):
-      self.groups[groupname] = []
-    self.groups[groupname].append(user)
-  def sendMessage(self, from_username, groupname, message):
-    group = self.groups[groupname]
-    if group:
-      # send the message to all members of the group
-      for user in group:
-        user.send("&lt;%s&gt; says: %s" % (from_username, message))
+    def __init__(self):
+        self.groups = {} # indexed by name
+    def joinGroup(self, groupname, user):
+        if not self.groups.has_key(groupname):
+            self.groups[groupname] = []
+        self.groups[groupname].append(user)
+    def sendMessage(self, from_username, groupname, message):
+        group = self.groups[groupname]
+        if group:
+            # send the message to all members of the group
+            for user in group:
+                user.send("&lt;%s&gt; says: %s" % (from_username, message))
 </pre>
 
 <p>Again, assume that each remote client gets access to a single
@@ -173,64 +174,117 @@ per-group object. We'll go out on a limb and call this the
 
 <pre class="python">
 class User(pb.Referenceable):
-  def __init__(self, username, server, clientref):
-    self.name = username
-    self.server = server
-    self.remote = clientref
-  def remote_joinGroup(self, groupname, allowMattress=True):
-    return self.server.joinGroup(groupname, self)
-  def send(self, message):
-    self.remote.callRemote("print", message)
+    def __init__(self, username, server, clientref):
+        self.name = username
+        self.server = server
+        self.remote = clientref
+    def remote_joinGroup(self, groupname, allowMattress=True):
+        return self.server.joinGroup(groupname, self)
+    def send(self, message):
+        self.remote.callRemote("print", message)
 
 class Group(pb.Referenceable):
-  def __init__(self, groupname, allowMattress):
-    self.name = groupname
-    self.allowMattress = allowMattress
-    self.users = []
-  def remote_send(self, from_user, message):
-    if not self.allowMattress and message.find("mattress") != -1:
-      raise ValueError, "Don't say that word"
-    for user in self.users:
-      user.send("&lt;%s&gt; says: %s" % (from_user.name, message))
-  def addUser(self, user):
-    self.users.append(user)
+    def __init__(self, groupname, allowMattress):
+        self.name = groupname
+        self.allowMattress = allowMattress
+        self.users = []
+    def remote_send(self, from_user, message):
+        if not self.allowMattress and message.find("mattress") != -1:
+            raise ValueError, "Don't say that word"
+        for user in self.users:
+            user.send("&lt;%s&gt; says: %s" % (from_user.name, message))
+    def addUser(self, user):
+        self.users.append(user)
 
 class ChatServer:
-  def __init__(self):
-    self.groups = {} # indexed by name
-  def joinGroup(self, groupname, user, allowMattress):
-    if not self.groups.has_key(groupname):
-      self.groups[groupname] = Group(groupname, allowMattress)
-    self.groups[groupname].addUser(user)
-    return self.gropus[groupname]
+    def __init__(self):
+        self.groups = {} # indexed by name
+    def joinGroup(self, groupname, user, allowMattress):
+        if not self.groups.has_key(groupname):
+            self.groups[groupname] = Group(groupname, allowMattress)
+        self.groups[groupname].addUser(user)
+        return self.groups[groupname]
 </pre>
 
 
 <p>This example takes advantage of the fact that
 <code>pb.Referenceable</code> objects sent over a wire can be returned to
 you, and they will be turned into references to the same object that you
-originally sent. The client cannot modify the object in any way, so you can
-be sure that the <code>.name</code> attribute remains the same as you left
-it. In this case, the client code would look something like this:</p>
+originally sent. The client cannot modify the object in any way: all they
+can do is point at it and invoke its <code>remote_*</code> methods. Thus,
+you can be sure that the <code>.name</code> attribute remains the same as
+you left it. In this case, the client code would look something like
+this:</p>
 
 <pre class="python">
 class ClientThing(pb.Referenceable):
-  def remote_print(self, message):
-    print message
-  def join(self):
-    d = self.remoteUser.callRemote("joinGroup", "#twisted",
-                                   allowMattress=False)
-    d.addCallback(self.gotGroup)
-  def gotGroup(self, group):
-    group.callRemote("send", self.remoteUser, "hi everybody")
+    def remote_print(self, message):
+        print message
+    def join(self):
+        d = self.remoteUser.callRemote("joinGroup", "#twisted",
+                                       allowMattress=False)
+        d.addCallback(self.gotGroup)
+    def gotGroup(self, group):
+        group.callRemote("send", self.remoteUser, "hi everybody")
 </pre>
 
 <p>The <code>User</code> object is sent from the server side, and is turned
 into a <code>pb.RemoteReference</code> when it arrives at the client. The
 client sends it back to <code>Group.remote_send</code>, and PB turns it back
 into a reference to the original <code>User</code> when it gets there.
-<code>Group.remote_send</code> uses its <code>.name</code> attribute as the
-sender of the message.</p>
+<code>Group.remote_send</code> can then use its <code>.name</code> attribute
+as the sender of the message.</p>
+
+<div class="note">
+
+<p>Third party references (there aren't any)</p>
+
+<p>This technique also relies upon the fact that the
+<code>pb.Referenceable</code> reference can <em>only</em> come from someone
+who holds a corresponding <code>pb.RemoteReference</code>. The design of the
+serialization mechanism (implemented in <code
+class="API">twisted.spread.jelly</code>: pb, jelly, spread.. get it? Also
+look for <q>banana</q> and <q>marmalade</q>. What other networking framework
+can claim API names based on sandwich ingredients?) makes it impossible for
+a client to obtain a reference that they weren't explicitly given.
+References passed over the wire are given id numbers and recorded in a
+per-connection dictionary. If you didn't give them the reference, the id
+number won't be in the dict, and no amount of guessing by a malicious client
+will give them anything else. The dict goes away when the connection is
+dropped, further limiting the scope of those references.</p>
+
+<p>Futhermore, it is not possible for Bob to send <em>his</em>
+<code>User</code> reference to Alice (perhaps over some other PB channel
+just between the two of them). Outside the context of Bob's connection to
+the server, that reference is just a meaningless number. To prevent
+confusion, PB will tell you if you try to give it away: when you try to hand
+a <code>pb.RemoteReference</code> to a third party, you'll get an exception
+(implemented with an assert in pb.py:364 RemoteReference.jellyFor).</p>
+
+<p>This helps the security model somewhat: only the client you gave the
+reference to can cause any damage with it. Of course, the client might be a
+brainless zombie, simply doing anything some third party wants. When it's
+not proxying <code>callRemote</code> invocations, it's probably terrorizing
+the living and searching out human brains for sustenance. In short, if you
+don't trust them, don't give them that reference.</p>
+
+<p>And remember that everything you've ever given them over that connection
+can come back to you. If expect the client to invoke your method with some
+object A that you sent to them earlier, and instead they send you object B
+(that you also sent to them earlier), and you don't check it somehow, then
+you've just opened up a security hole (we'll see an example of this
+shortly). It may be better to keep such objects in a dictionary on the
+server side, and have the client send you an index string instead. Doing it
+that way makes it obvious that they can send you anything they want, and
+improves the chances that you'll remember to implement the right checks.
+(This is exactly what PB is doing underneath, with a per-connection
+dictionary of <code>Referenceable</code> objects, indexed by a number).</p>
+
+<p>And, of course, you have to make sure you don't accidentally hand out a
+reference to the wrong object.</p>
+
+</div>
+
 
 <p>But again, note the vulnerability. If Alice holds a
 <code>RemoteReference</code> to <em>any</em> object on the server side that
@@ -239,16 +293,21 @@ has a <code>.name</code> attribute, she can use that name as a spoofed
 like:</p>
 
 <pre class="python">
-  def gotGroup(self, group):
-    group.callRemote("send", from_user=group, "hi everybody")
+class ClientThing(pb.Referenceable):
+    def join(self):
+        d = self.remoteUser.callRemote("joinGroup", "#twisted")
+        d.addCallback(self.gotGroup)
+    def gotGroup(self, group):
+        group.callRemote("send", from_user=group, "hi everybody")
 </pre>
 
 <p>This would let her send a message that appeared to come from
-<q>#twisted</q> rather than <q>Alice</q>. If she joined a group named
-<q>#bob</q> (perhaps populated by Alice and the countless others who spend
-their days pretending to be the man himself), then she would be able to emit
-a message that looked like <q>&lt;#bob&gt; says: hi there</q>, which is very
-close to accomplishing her goal.</p>
+<q>#twisted</q> rather than <q>Alice</q>. If she joined a group that
+happened to be named <q>bob</q> (perhaps it is the <q>How To Be Bob</q>
+channel, populated by Alice and countless others, a place where they can
+share stories about their best impersonating-Bob moments), then she would be
+able to emit a message that looked like <q>&lt;bob&gt; says: hi there</q>,
+and she has accomplished her lifelong goal.</p>
 
 
 <h3>Argument Typechecking</h3>
@@ -259,49 +318,6 @@ remotely-invokable methods do type-checking on their arguments: if
 User)</code> then Alice couldn't use non-User objects to do her spoofing,
 and hopefully the rest of the system is designed well enough to prevent her
 from obtaining access to somebody else's User object.</p>
-
-<div class="note">
-
-<p>Third party references (there aren't any): It is not possible for Bob to
-send <em>his</em> <code>User</code> reference to Alice, over some other PB
-channel just between the two of them.</p>
-
-<p>The reference that the server gives to a client is only useable by that
-one client: if they try to hand it off to a third party, they'll get an
-exception (XXX: which? looks like an assert in pb.py:290
-RemoteReference.jellyFor). This helps somewhat: only the client you gave the
-reference to can cause any damage with it. Of course, the client might be a
-brainless zombie, simply doing anything some third party wants. When it's
-not proxying <code>callRemote</code> invocations, it's probably terrorizing
-the living and searching out human brains for sustenance. In short, if you
-don't trust them, don't give them that reference.</p>
-
-<p>Also note that the design of the serialization mechanism (implemented in
-<code class="API">twisted.spread.jelly</code>: pb, jelly, spread.. get it?
-Also look for <q>banana</q> and <q>marmalade</q>. What other networking
-framework can claim API names based on sandwich ingredients?) makes it
-impossible for the client to obtain a reference that they weren't explicitly
-given. References passed over the wire are given id numbers and recorded in
-a per-connection dictionary. If you didn't give them the reference, the id
-number won't be in the dict, and no amount of id guessing by a malicious
-client will give them anything else. The dict goes away when the connection
-is dropped, limiting further the scope of those references.</p>
-
-<p>Of course, everything you've ever given them over that connection can
-come back to you. If expect the client to invoke your method with some
-object A that you sent to them earlier, and instead they send you object B
-(that you also sent to them earlier), and you don't check it somehow, then
-you've just opened up a security hole. It may be better to keep such objects
-in a dictionary on the server side, and have the client send you an index
-string instead. Doing it that way makes it obvious that they can send you
-anything they want, and improves the chances that you'll remember to
-implement the right checks. (This is exactly what PB is doing underneath,
-with a per-connection dictionary of <code>Referenceable</code> objects,
-indexed by a number).</p>
-
-<p>And of course you have to make sure you don't accidentally hand out a
-reference to the wrong object.</p>
-</div>
 
 
 <h3>Objects as Capabilities</h3>
@@ -316,24 +332,24 @@ that it will ever use, so no lookups are needed:</p>
 
 <pre class="python">
 class UserGroup(pb.Referenceable):
-  def __init__(self, user, group):
-    self.user = user
-    self.group = group
-  def remote_send(self, message):
-      self.group.send(self.user.name, message)
+    def __init__(self, user, group):
+        self.user = user
+        self.group = group
+    def remote_send(self, message):
+        self.group.send(self.user.name, message)
 
 class Group:
-  def __init__(self, groupname, allowMattress):
-    self.name = groupname
-    self.allowMattress = allowMattress
-    self.users = []
-  def send(self, from_user, message):
-    if not self.allowMattress and message.find("mattress") != -1:
-      raise ValueError, "Don't say that word"
-    for user in self.users:
-      user.send("&lt;%s&gt; says: %s" % (from_user.name, message))
-  def addUser(self, user):
-    self.users.append(user)
+    def __init__(self, groupname, allowMattress):
+        self.name = groupname
+        self.allowMattress = allowMattress
+        self.users = []
+    def send(self, from_user, message):
+        if not self.allowMattress and message.find("mattress") != -1:
+            raise ValueError, "Don't say that word"
+        for user in self.users:
+            user.send("&lt;%s&gt; says: %s" % (from_user.name, message))
+    def addUser(self, user):
+        self.users.append(user)
 </pre>
 
 <p>The only message-sending method Alice has left is
@@ -344,6 +360,9 @@ no remaining ways to influence the <q>from</q> name.</p>
 set of capabilities. Security is achieved by only granting a minimal set of
 abilities to each remote user.</p>
 
+<p>PB provides a shortcut which makes this technique easier to use. The
+<code>Viewable</code> class will be discussed <a
+href="#viewable">below</a>.</p>
 
 <h2>Avatars and Perspectives</h2>
 
@@ -594,27 +613,52 @@ Avatar later, once the lookup had completed.</p>
 <code>MyRealm.requestAvatar</code>:</p>
 
 <pre class="python">
-  # pre-existing, static avatars
-  def requestAvatar(self, avatarID, mind, *interfaces):
-    assert pb.IPerspective in interfaces
-    avatar = self.avatars[avatarID]
-    return pb.IPerspective, avatar, lambda:None
+    # pre-existing, static avatars
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        assert pb.IPerspective in interfaces
+        avatar = self.avatars[avatarID]
+        return pb.IPerspective, avatar, lambda:None
 
-  # database lookup and unpickling
-  def requestAvatar(self, avatarID, mind, *interfaces):
-    assert pb.IPerspective in interfaces
-    d = self.database.fetchAvatar(avatarID)
-    d.addCallback(self.doUnpickle)
-    return pb.IPerspective, d, lambda:None
-  def doUnpickle(self, pickled):
-    avatar = pickle.loads(pickled)
-    return avatar
+    # database lookup and unpickling
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        assert pb.IPerspective in interfaces
+        d = self.database.fetchAvatar(avatarID)
+        d.addCallback(self.doUnpickle)
+        return pb.IPerspective, d, lambda:None
+    def doUnpickle(self, pickled):
+        avatar = pickle.loads(pickled)
+        return avatar
 
-  # everybody shares the same Avatar
-  def requestAvatar(self, avatarID, mind, *interfaces):
-    assert pb.IPerspective in interfaces
-    return pb.IPerspective, self.theOneAvatar, lambda:None
+    # everybody shares the same Avatar
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        assert pb.IPerspective in interfaces
+        return pb.IPerspective, self.theOneAvatar, lambda:None
+
+    # anonymous users share one Avatar, named users each get their own
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        assert pb.IPerspective in interfaces
+        if avatarID == checkers.ANONYMOUS:
+            return pb.IPerspective, self.anonAvatar, lambda:None
+        else:
+            return pb.IPerspective, self.avatars[avatarID], lambda:None
+
+    # anonymous users get independent (but temporary) Avatars
+    # named users get their own persistent one
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        assert pb.IPerspective in interfaces
+        if avatarID == checkers.ANONYMOUS:
+            return pb.IPerspective, MyAvatar(), lambda:None
+        else:
+            return pb.IPerspective, self.avatars[avatarID], lambda:None
 </pre>
+
+<p>The last example, note that the new <code>MyAvatar</code> instance is not
+saved anywhere: it will vanish when the connection is dropped. By contrast,
+the avatars that live in the <code>self.avatars</code> dictionary will
+probably get persisted into the .tap file along with the Realm, the Portal,
+and anything else that is referenced by the top-level Application object.
+This is an easy way to manage saved user profiles.</p>
+
 
 <h3>Connecting and Disconnecting</h3>
 
@@ -633,74 +677,39 @@ when the connection is lost.</p>
 
 <pre class="python">
 class MyPerspective(pb.Avatar):
-  def __init__(self):
-    self.clients = []
-  def attached(self, mind):
-    self.clients.append(mind)
-    print "attached to", mind
-  def detached(self, mind):
-    self.clients.remove(mind)
-    print "detached from", mind
-  def update(self, message):
-    for c in self.clients:
-      c.callRemote("update", message)
+    def __init__(self):
+        self.clients = []
+    def attached(self, mind):
+        self.clients.append(mind)
+        print "attached to", mind
+    def detached(self, mind):
+        self.clients.remove(mind)
+        print "detached from", mind
+    def update(self, message):
+        for c in self.clients:
+            c.callRemote("update", message)
 
 class MyRealm:
-  def requestAvatar(self, avatarID, mind, *interfaces):
-    assert pb.IPerspective in interfaces
-    avatar = self.avatars[avatarID]
-    avatar.attached(mind)
-    return pb.IPerspective, avatar, lambda a=avatar:a.detached(mind)
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        assert pb.IPerspective in interfaces
+        avatar = self.avatars[avatarID]
+        avatar.attached(mind)
+        return pb.IPerspective, avatar, lambda a=avatar:a.detached(mind)
 </pre>
 
 
+<h3>Viewable</h3> <a name="viewable" />
 
-<h2>Code Walkthrough: pb.PBClientFactory</h2><a name="walkthrough" />
-
-<p>So, now that you've seen the complete sequence, it's time for a code
-walkthrough. This will give you a chance to see the places where you might
-write subclasses to implement different behaviors. We will look at what
-happens when <code>pb6client1.py</code> meets <code>pb6server.py</code>. We
-tune in just as the client has run the <code
-class="python">login()</code> call.</p>
-
-<p>The client-side code can be summarized by the following sequence of
-function calls, all implemented in twisted/spread/pb.py . <code
-class="python">login()</code> calls <code
-class="python">getRootObject()</code> directly, after that each step is
-executed as a callback when the previous step completes.</p>
-
-<pre>
-getRootObject():
- root.callRemote("login", credentials.username)
- challenger.callRemote("respond",
-                       respond(challenge, credentials.password), client)
-</pre>
-
-<p>The client does <code class="python">reactor.connectTCP()</code> to
-connect to the given host and port, and <code
-class="python">reactor.connectTCP()</code> to retrieve the object named
-<code>root</code>. On the server side, the <code>PBServerFactory</code>
-accepts the connection and creates a wrapper around the <code>Portal</code>
-to handle the authentication. The portal uses the checker registered to do a
-challenge/response stage, and then asks the <code>Realm</code> that it wraps
-for a <code>IPerspective</code>.</p>
-
-<p>The client gives the <code>IPerspective</code> reference to the callback
-that was attached to the <code>Deferred</code> that
-<code>login()</code> returned, which brings us back up to the code
-visible in <code>pb6client1.py</code>.</p>
-
-<h2>Viewable</h2>
-
-<p>Once you have <code>IPerspective</code> objects to represent users, the
-<code class="API" base="twisted.spread.flavors">Viewable</code> class can
-come into play. This class behaves a lot like <code>Referenceable</code>: it
-turns into a <code>RemoteReference</code> when sent over the wire, and
-certain methods can be invoked by the holder of that reference. However, the
-methods that can be called have names that start with <code>view_</code>
-instead of <code>remote_</code>, and those methods are always called with an
-extra <code>perspective</code> argument:</p>
+<p>Once you have <code>IPerspective</code> objects (i.e. the Avatar) to
+represent users, the <code class="API"
+base="twisted.spread.flavors">Viewable</code> class can come into play. This
+class behaves a lot like <code>Referenceable</code>: it turns into a
+<code>RemoteReference</code> when sent over the wire, and certain methods
+can be invoked by the holder of that reference. However, the methods that
+can be called have names that start with <code>view_</code> instead of
+<code>remote_</code>, and those methods are always called with an extra
+<code>perspective</code> argument that points to the Avatar through which
+the reference was sent:</p>
 
 <pre class="python">
 class Foo(pb.Viewable):
@@ -714,6 +723,38 @@ the same object. The <code>view_</code> methods can use the
 gives them a way to do additional permission checks, do per-user accounting,
 etc.</p>
 
+<p>This is the shortcut which makes per-user-per-group capability objects
+much easier to use. Instead of creating such per-(user,group) objects, you
+just have per-group objects which inherit from <code>pb.Viewable</code>, and
+give the user references to them. The local <code>pb.Avatar</code> object
+will automatically show up as the <q>perspective</q> argument in the
+<code>view_*</code> method calls, give you a chance to involve the Avatar in
+the process.</p>
+
+
+<h3>Chat Server with Avatars</h3>
+
+<p>Combining all the above techniques, here is an example chat server which
+uses a fixed set of identities (say, for the three members of your bridge
+club, who hang out in <q>#NeedAFourth</q> hoping that someone will discover
+your server, guess somebody's password, break in, join the group, and also
+be available for a game next saturday afternoon).</p>
+
+<a href="listings/pb/chatserver.py" class="py-listing">chatserver.py</a>
+
+<p>Notice that the client uses <code>perspective_joinGroup</code> to both
+join a group and retrieve a <code>RemoteReference</code> to the
+<code>Group</code> object. However, the reference they get is actually to a
+special intermediate object called a <code>pb.ViewPoint</code>. When they do
+<code>group.callRemote("send", "message")</code>, their avatar is inserted
+into the argument list that <code>Group.view_send</code> actually sees. This
+lets the group get their username out of the Avatar without giving the
+client an opportunity to spoof someone else.</p>
+
+<p>The client side code that joins a group and sends a message would look
+like this:</p>
+
+<a href="listings/pb/chatclient.py" class="py-listing">chatclient.py</a>
 
 
 </body> </html>

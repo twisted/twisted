@@ -4,8 +4,7 @@
 
 2003-10-16  Brian Warner  <warner@lothar.com>
 
-	* doc/howto/pb-cred.xhtml: update for newcred (for issue172, still
-	needs some review)
+	* doc/howto/pb-cred.xhtml: update for newcred. Closes issue172.
 
 2003-10-15  Brian Warner  <warner@lothar.com>
 
