@@ -317,7 +317,7 @@ class IRCClient(basic.LineReceiver):
             self.sendLine(fmt % (message,))
         else:
             lines = split(message, length - len(fmt) - 2)
-            map(lambda line: self.sendLine(fmt % line), lines)
+            map(lambda line, self=self: self.sendLine(fmt % line), lines)
 
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
