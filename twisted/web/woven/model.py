@@ -24,6 +24,10 @@ WModel = mvc.Model
 
 
 class ListModel:
+    """
+    I wrap a Python list and allow it to interact with the Woven
+    models and submodels.
+    """
     __implements__ = mvc.IModel
     
     parent = None
@@ -53,6 +57,10 @@ except:
     pass
 
 class DictionaryModel:
+    """
+    I wrap a Python dictionary and allow it to interact with the Woven
+    models and submodels.
+    """
     __implements__ = mvc.IModel
 
     parent = None
@@ -74,6 +82,10 @@ class DictionaryModel:
 
 
 class Wrapper:
+    """
+    I'm a generic wrapper to provide limited interaction with the
+    Woven models and submodels.
+    """
     __implements__ = mvc.IModel
     
     parent = None
