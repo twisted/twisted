@@ -24,7 +24,9 @@ from twisted.trial import unittest
 import gzip, os, popen2, time, sys
 
 # Twisted Imports
-from twisted.internet import reactor, utils
+from twisted.internet import reactor, utils, interfaces
+from twisted.python import components
+
 
 class UtilsTestCase(unittest.TestCase):
     """Test running a process."""
@@ -53,3 +55,7 @@ class UtilsTestCase(unittest.TestCase):
 
     def saveOutput(self, o):
         self.output = o
+
+
+if not components.implements(reactor, interfaces.IReactorProcess):
+    UtilsTestCase.skip = "reactor doesn't implement IReactorProcess"
