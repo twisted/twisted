@@ -56,13 +56,16 @@ def updateApplication(app, config):
         info['host'] = raw_input('Database host [%s]: ' % (info['host'],)) or info['host']
         info['user'] = raw_input('Database username [%s]: ' % (info['user'],)) or info['user']
         info['database'] = raw_input('Database name [%s]: ' % (info['database'],)) or info['database']
-        pwd = getpass.getpass('Database password: ')
+        schema = raw_input('File to output SQL initialisation to [schema.sql]: ') or 'schema.sql'
 
-        db = database.NewsStorageAugmentation(adbapi.ConnectionPool(password = pwd, **info))
-        db.createSchema().addCallbacks(schemaCreated, createFailed, callbackArgs=(config,db))
+        open(schema, 'w').write(
+            database.NewsStorageAugmentation.schema + '\n' +
+            database.NewsStorageAugmentation.makeGroupSQL(config['groups']) + '\n' +
+            database.NewsStorageAugmentation.makeOverviewSQL()
+        )
+        db = database.NewsStorageAugmentation(info)
     elif config['backend'].lower() == 'pickle':
         filename = raw_input('Pickle file: ')
-        
         db = database.PickleStorage(filename, config['groups'])
     else:
         raise usage.UsageError('Valid arguments to --backend are: sql pickle')
@@ -72,14 +75,3 @@ def updateApplication(app, config):
         news.NNTPFactory(db),
         interface = config['interface']
     )
-
-    db.dbpool.close()
-
-def schemaCreated(result, config, db):
-    for g in config['groups']:
-        db.addGroup(g).addErrback(addFailed)
-
-def addFailed(failure):
-    print 'Failed to add news group:'
-    print failure
-

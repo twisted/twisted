@@ -495,7 +495,7 @@ class NNTPServer(NNTPClient):
     def _gotList(self, list):
         self.sendLine('215 newsgroups in form "group high low flags"')
         for i in list:
-            self.sendLine('%s %d %d %s' % i)
+            self.sendLine('%s %d %d %s' % tuple(i))
         self.sendLine('.')
 
 

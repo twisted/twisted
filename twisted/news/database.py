@@ -13,11 +13,13 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+from twisted.protocols.nntp import NNTPError
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
 
-import pickle, time, socket, md5, string
+import getpass, pickle, time, socket, md5, string
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
 
@@ -400,11 +402,32 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         header      TEXT
     );
     """
+    
+    def __init__(self, info):
+        adbapi.Augmentation.__init__(self, None)
+        self.info = info
+        
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.info['password'] = getpass.getpass('Database password for %s: ' % (self.info['user'],))
+        self.dbpool = adbapi.ConnectionPool(**self.info)
+        del self.info['password']
 
 
     def listRequest(self):
+        # COALESCE may not be totally portable
+        # it is shorthand for
+        # CASE WHEN (first parameter) IS NOT NULL then (first parameter) ELSE (second parameter) END
         sql = """
-            SELECT name FROM groups ORDER BY name
+            SELECT groups.name,
+                COALESCE(MAX(postings.article_index), 0),
+                COALESCE(MIN(postings.article_index), 0),
+                groups.flags
+            FROM groups LEFT OUTER JOIN postings
+            ON postings.group_id = groups.group_id
+            GROUP BY groups.name, groups.flags
+            ORDER BY groups.name
         """
         return self.runQuery(sql)
 
@@ -426,6 +449,9 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
     def _doPost(self, transaction, article):
         # Get the group ids
         groups = article.getHeader('Newsgroups').split()
+        if not len(groups):
+            raise NNTPError('Missing Newsgroups header')
+
         sql = """
             SELECT name, group_id FROM groups
             WHERE name IN (%s)
@@ -436,21 +462,23 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         
         # No relevant groups, bye bye!
         if not len(result):
-            return 0
+            raise NNTPError('None of groups in Newsgroup header carried')
         
         # Got some groups, now find the indices this article will have in each
         sql = """
-            SELECT group_id, MAX(article_index) + 1 FROM postings
-            WHERE group_id IN (%s)
-            GROUP BY group_id
-        """ % (', '.join([("%d" % (id,)) for (group, id) in results]),)
+            SELECT groups.group_id, COALESCE(MAX(postings.article_index), 1)
+            FROM groups LEFT OUTER JOIN postings
+            ON postings.group_id = groups.group_id
+            WHERE groups.group_id IN (%s)
+            GROUP BY groups.group_id
+        """ % (', '.join([("%d" % (id,)) for (group, id) in result]),)
 
         transaction.execute(sql)
         indices = transaction.fetchall()
 
         # XXX - This condition is an error, log it
         if not len(indices):
-            return 0
+            raise NNTPError('Internal server error - no indices found')
         
         # Associate indices with group names
         gidToName = dict([(b, a) for (a, b) in result])
@@ -458,13 +486,12 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         
         nameIndex = []
         for i in gidToName:
-            nameIndex.append(gidToName[i], gidToIndex[i])
-            
+            nameIndex.append((gidToName[i], gidToIndex[i]))
         
         # Build xrefs
         xrefs = socket.gethostname().split()[0]
-        xrefs = xrefs + ' '.join([('%s:%d' % (group, id)) for (group, id) in nameIndex])
-        article.putHeader('Xref', xref)
+        xrefs = xrefs + ' ' + ' '.join([('%s:%d' % (group, id)) for (group, id) in nameIndex])
+        article.putHeader('Xref', xrefs)
         
         # Hey!  The article is ready to be posted!  God damn f'in finally.
         sql = """
@@ -536,12 +563,17 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         )
 
 
-    def groupRequest(self, group):
+    def groupRequest(self, group): 
         sql = """
-            SELECT groups.name, COUNT(postings.article_index),
-                   MAX(postings.article_index), MIN(postings.article_index),
-                   groups.flags FROM groups,postings
-            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
+            SELECT groups.name,
+                COUNT(postings.article_index),
+                COALESCE(MAX(postings.article_index), 0),
+                COALESCE(MIN(postings.article_index), 0),
+                groups.flags
+            FROM groups LEFT OUTER JOIN postings
+            ON postings.group_id = groups.group_id
+            WHERE groups.name = '%s'
+            GROUP BY groups.name, groups.flags
         """ % (adbapi.safe(group),)
         
         return self.runQuery(sql).addCallback(
@@ -595,9 +627,17 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
     ####
     #### Extension to NewsStorage
     ####
-    def addGroup(self, groupName):
-        sql = """
-            INSERT INTO groups (name) VALUE ('%s')
-        """ % adbapi.safe(groupName)
-        
-        return self.runQuery(sql)
+    def makeGroupSQL(groups):
+        res = ''
+        for g in groups:
+            res = res + """\n    INSERT INTO groups (name) VALUES ('%s');\n""" % (adbapi.safe(g),)
+        return res
+    makeGroupSQL = staticmethod(makeGroupSQL)
+
+
+    def makeOverviewSQL():
+        res = ''
+        for o in OVERVIEW_FMT:
+            res = res + """\n    INSERT INTO overview (header) VALUES ('%s');\n""" % (adbapi.safe(o),)
+        return res
+    makeOverviewSQL = staticmethod(makeOverviewSQL)
