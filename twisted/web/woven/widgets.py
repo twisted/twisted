@@ -732,7 +732,7 @@ class KeyedList(List):
 
     A KeyedList should be specified in the template HTML as so::
 
-       | <ul model="blah" view="List">
+       | <ul model="blah" view="KeyedList">
        |     <li pattern="emptyList">This will be displayed if the list is
        |         empty.</li>
        |     <li pattern="keyedListItem" view="Text">Foo</li>

@@ -33,7 +33,7 @@ def substitute(request, node, subs):
 def _get(node, nodeId, nodeAttrs=('id','class','model','pattern')):
     """
     (internal) Get a node with the specified C{nodeId} as any of the C{class},
-    C{id} or C{model} attributes.
+    C{id} or C{pattern} attributes.
     """
     
     if hasattr(node, 'hasAttributes') and node.hasAttributes():
@@ -52,7 +52,7 @@ def _get(node, nodeId, nodeAttrs=('id','class','model','pattern')):
 def get(node, nodeId):
     """
     Get a node with the specified C{nodeId} as any of the C{class},
-    C{id} or C{model} attributes. If there is no such node, raise
+    C{id} or C{pattern} attributes. If there is no such node, raise
     L{NodeLookupError}.
     """
     result = _get(node, nodeId)
@@ -62,12 +62,16 @@ def get(node, nodeId):
 def getIfExists(node, nodeId):
     """
     Get a node with the specified C{nodeId} as any of the C{class},
-    C{id} or C{model} attributes.  If there is no such node, return
+    C{id} or C{pattern} attributes.  If there is no such node, return
     C{None}.
     """
     return _get(node, nodeId)
 
 def getAndClear(node, nodeId):
+    """Get a node with the specified C{nodeId} as any of the C{class},
+    C{id} or C{pattern} attributes. If there is no such node, raise
+    L{NodeLookupError}. Remove all child nodes before returning.
+    """
     result = get(node, nodeId)
     if result:
         clearNode(result)
