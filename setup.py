@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.66 2002/10/16 03:49:44 itamarst Exp $
+$Id: setup.py,v 1.67 2002/10/18 01:43:54 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -251,7 +251,19 @@ setup_args['ext_modules'] = [
     Extension("twisted.spread.cBanana",
               ["twisted/spread/cBanana.c"],
               define_macros=define_macros),
-
+    Extension("twisted.inetd.portmap",
+              ["twisted/inetd/portmap.c"],
+              define_macros=define_macros),
+    Extension("twisted.internet.cReactor",
+              ["twisted/internet/cReactor/cReactorModule.c",
+               "twisted/internet/cReactor/cReactor.c",
+               "twisted/internet/cReactor/cReactorTime.c",
+               "twisted/internet/cReactor/cReactorTCP.c",
+               "twisted/internet/cReactor/cReactorTransport.c",
+               "twisted/internet/cReactor/cReactorBuffer.c",
+               "twisted/internet/cReactor/cReactorUtil.c",
+               "twisted/internet/cReactor/cReactorThread.c"],
+              define_macros=define_macros)    
     ]
 
 if __name__ == '__main__':
