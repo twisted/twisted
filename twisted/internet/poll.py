@@ -110,12 +110,14 @@ def doPoll(timeout,
            POLLIN=select.POLLIN,
            POLLOUT=select.POLLOUT):
     """Poll the poller for new events."""
-    timeout = int(timeout * 1000) # convert seconds to milliseconds
-
+    if timeout is None:
+        timeout = 1000
+    else:
+        timeout = int(timeout * 1000) # convert seconds to milliseconds
+    
     try:
         l = poller.poll(timeout)
     except select.error, e:
-        log.deferr()
         if e[0] == errno.EINTR:
             return
         else:
@@ -130,15 +132,17 @@ def doPoll(timeout,
             why = main.CONNECTION_LOST
         else:
             try:
-                if event & POLLIN: why = selectable.doRead()
-                if event & POLLOUT: why = selectable.doWrite()
+                if event & POLLIN:
+                    why = selectable.doRead()
+                if not why and event & POLLOUT:
+                    why = selectable.doWrite()
                 if not selectable.fileno() == fd:
                     why = main.CONNECTION_LOST
             except:
                 log.deferr()
                 why = main.CONNECTION_LOST
         
-        if why == main.CONNECTION_LOST:
+        if why:
             removeReader(selectable)
             removeWriter(selectable)
             try:
