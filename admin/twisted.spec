@@ -2,9 +2,7 @@
 %define version  SVN-trunk
 %define release  1tummy
 %define prefix   %{_prefix}
-
-%{expand:%%define py_ver %(python -V 2>&1| awk '{print $2}')}
-%{expand:%%define py_libver %(python -V 2>&1| awk '{print $2}'|cut -d. -f1-2)}
+%define py_libver 2.3
 
 Summary:	Twisted is an event-based framework for internet applications.
 Name:		%{name}
@@ -54,10 +52,10 @@ cp -a doc/man/*.1 "$RPM_BUILD_ROOT"/%{_mandir}/man1/
 
 %files
 %defattr(755,root,root)
-%doc ChangeLog CREDITS LICENSE README
+%doc CREDITS LICENSE README
 %{_bindir}/*
 %attr(644,-,-) %{_mandir}/man1/*
-%{_libdir}/python%{py_libver}/site-packages/twisted/*
+%{_libdir}/python%{py_libver}/site-packages/twisted/
 
 %files doc
 %defattr(-,root,root)
