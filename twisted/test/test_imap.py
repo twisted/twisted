@@ -675,7 +675,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile).read()
+        message = open(infile)
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():
             return self.client.login('testuser', 'password-test')
@@ -688,14 +688,12 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.loopback()
         
         mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
+        self.assertEquals(1, len(mb.messages))
         self.assertEquals(
-            1,
-            len(mb.messages)
+            ((), 'This Date String Is Illegal', 0),
+            mb.messages[0][1:]
         )
-        self.assertEquals(
-            [(message, (), 'This Date String Is Illegal', 0)],
-            mb.messages
-        )
+        self.assertEquals(open(infile).read(), mb.messages[0][0].read())
 
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')

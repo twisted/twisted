@@ -34,6 +34,11 @@ from twisted.cred import identity, error, perspective
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
 
+try:
+    import cStringIO as StringIO
+except:
+    import StringIO
+
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
     _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
@@ -131,6 +136,8 @@ class IMAP4Server(basic.LineReceiver):
     # The currently selected mailbox
     mbox = None
 
+    _memoryFileLimit = 1024 * 1024 * 10
+
     # Command data to be processed when literal data is received
     _pendingLiteral = None
     _pendingBuffer = None
@@ -164,17 +171,19 @@ class IMAP4Server(basic.LineReceiver):
     def rawDataReceived(self, data):
         self._pendingSize -= len(data)
         if self._pendingSize > 0:
-            self._pendingBuffer.append(data)
+            self._pendingBuffer.write(data)
         else:
             passon = ''
             if self._pendingSize < 0:
                 data, passon = data[:self._pendingSize], data[self._pendingSize:]
-            self._pendingBuffer.append(data)
-            rest = ''.join(self._pendingBuffer)
+            self._pendingBuffer.write(data)
+            rest = self._pendingBuffer
             self._pendingBuffer = None
             self._pendingSize = None
-            self._pendingLiteral.callback(rest)
+            callback = self._pendingLiteral.callback
             self._pendingLiteral = None
+            rest.seek(0, 0)
+            callback(rest)
             if passon:
                 self.setLineMode(passon)
 
@@ -239,12 +248,27 @@ class IMAP4Server(basic.LineReceiver):
         self.sendLine('+ ' + msg)
 
     def _setupForLiteral(self, octets):
-        self._pendingBuffer = []
+        self._pendingBuffer = self.messageFile(octets)
         self._pendingSize = octets
         self._pendingLiteral = defer.Deferred()
         self.sendContinuationRequest('Ready for %d octets of text' % octets)
         self.setRawMode()
         return self._pendingLiteral
+    
+    def messageFile(self, octets):
+        """Create a file to which an incoming message may be written.
+        
+        @type octets: C{int}
+        @param octets: The number of octets which will be written to the file
+        
+        @rtype: Any object which implements C{write(string)} and
+        C{seek(int, int)}
+        @return: A file-like object
+        """
+        if octets > self._memoryFileLimit:
+            return tempfile.TemproraryFile()
+        else:
+            return StringIO.StringIO()
 
     def _respond(self, state, tag, message):
         if not tag:
@@ -1371,7 +1395,7 @@ class IMAP4Client(basic.LineReceiver):
         @type mailbox: C{str}
         @param mailbox: The mailbox to which to add this message.
 
-        @type message: C{str}
+        @type message: Any file-like object
         @param message: The message to add, in RFC822 format.
 
         @type flags: Any iterable of C{str}
@@ -1384,7 +1408,9 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
         """
-        L = len(message)
+        message.seek(0, 2)
+        L = message.tell()
+        message.seek(0, 0)
         fmt = '%s (%s)%s%s {%d}'
         if date:
             date = '"%s"' % date
@@ -1399,7 +1425,8 @@ class IMAP4Client(basic.LineReceiver):
         return d
 
     def __cbContinueAppend(self, lines, message):
-        self.transport.write(message)
+        # XXX
+        self.transport.write(message.read())
 
     def __cbAppend(self, result):
         return None
@@ -2788,7 +2815,7 @@ class IMailbox(components.Interface):
     def addMessage(self, message, flags = (), date = None):
         """Add the given message to this mailbox.
 
-        @type message: C{str}
+        @type message: A file-like object
         @param message: The RFC822 formatted message
 
         @type flags: Any iterable of C{str}
