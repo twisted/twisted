@@ -454,7 +454,12 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         # Ensure user-code always gets something sane for _helo
-        self._helo = (None, self.transport.getPeer().host)
+        peer = self.transport.getPeer()
+        try:
+            host = peer.host
+        except AttributeError: # not a UPV4Address
+            host = str(peer)
+        self._helo = (None, host)
         self.sendCode(220, self.greeting())
         self.setTimeout(self.timeout)
 
@@ -507,8 +512,12 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self.sendCode(500, 'Command not implemented')
 
     def do_HELO(self, rest):
-        peer = self.transport.getPeer().host
-        self._helo = (rest, peer)
+        peer = self.transport.getPeer()
+        try:
+            host = peer.host
+        except AttributeError:
+            host = str(peer)
+        self._helo = (rest, host)
         self._from = None
         self._to = []
         self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, peer))
