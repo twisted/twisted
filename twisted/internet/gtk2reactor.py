@@ -25,8 +25,9 @@ In order to use this support, simply do the following::
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
 
-The reactor will only use gtk+ if it's already been imported, otherwise
-it will run directly on the gobject event loop.
+When installing the reactor, you can choose whether to use the glib
+event loop or the GTK+ event loop which is based on it but adds GUI
+integration.
 
 API Stability: stable
 
@@ -36,16 +37,15 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 __all__ = ['install']
 
 # System Imports
-import sys, time
+import sys
 import gobject
 try:
     if not hasattr(sys, 'frozen'):
         # Don't want to check this for py2exe
         import pygtk
         pygtk.require('2.0')
-except ImportError, AttributeError:
+except (ImportError, AttributeError):
     pass # maybe we're using pygtk before this hack existed.
-import gtk
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure
@@ -76,11 +76,25 @@ class Gtk2Reactor(default.PosixReactorBase):
 
     __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
 
-    def __init__(self):
+    def __init__(self, useGtk=True):
         self.context = gobject.main_context_default()
         self.loop = gobject.MainLoop()
         default.PosixReactorBase.__init__(self)
-
+        # pre 2.3.91 the glib iteration and mainloop functions didn't release
+        # global interpreter lock, thus breaking thread and signal support.
+        if (hasattr(gobject, "pygtk_version") and gobject.pygtk_version >= (2, 3, 91)
+            and not useGtk):
+            self.__pending = self.context.pending
+            self.__iteration = self.context.iteration
+            self.__crash = self.loop.quit
+            self.__run = self.loop.run
+        else:
+            import gtk
+            self.__pending = gtk.events_pending
+            self.__iteration = gtk.main_iteration
+            self.__crash = gtk.main_quit
+            self.__run = gtk.main
+    
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
     # as the input source. The pygtk2 input_add does not do this. The
@@ -135,8 +149,8 @@ class Gtk2Reactor(default.PosixReactorBase):
         # idiom because lots of IO (in particular test_tcp's
         # ProperlyCloseFilesTestCase) can keep us from ever exiting.
         log.msg(channel='system', event='iteration', reactor=self)
-        if gtk.events_pending():
-            gtk.main_iteration(0)
+        if self.__pending():
+            self.__iteration(0)
             return
         # nothing to do, must delay
         if delay == 0:
@@ -144,7 +158,7 @@ class Gtk2Reactor(default.PosixReactorBase):
         self.doIterationTimer = gobject.timeout_add(int(delay * 1000),
                                                 self.doIterationTimeout)
         # This will either wake up from IO or from a timeout.
-        gtk.main_iteration(1) # block
+        self.__iteration(1) # block
         # note: with the .simulate timer below, delays > 0.1 will always be
         # woken up by the .simulate timer
         if self.doIterationTimer:
@@ -153,22 +167,17 @@ class Gtk2Reactor(default.PosixReactorBase):
             self.doIterationTimer = None
 
     def crash(self):
-        gtk.main_quit() #self.__crash()
+        self.__crash()
 
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
-        if True: #sys.modules.has_key("gtk"):
-            import gtk
-            self.__crash = gtk.main_quit
-            gtk.main()
-        else:
-            self.__crash = self.loop.quit
-            self.loop.run()
+        self.__run()
     
     def _doReadOrWrite(self, source, condition, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
-        error.ConnectionLost: failure.Failure(error.ConnectionLost())  }):
+        error.ConnectionLost: failure.Failure(error.ConnectionLost()),
+        }):
         why = None
         if condition & POLL_DISCONNECTED and \
                not (condition & gobject.IO_IN):
@@ -247,15 +256,18 @@ class PortableGtkReactor(default.SelectReactor):
         _simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
 
 
-def install():
+def install(useGtk=True):
     """Configure the twisted mainloop to be run inside the gtk mainloop.
+
+    @param useGtk: should glib rather than GTK+ event loop be
+    used (this will be slightly faster but does not support GUI).
     """
-    reactor = Gtk2Reactor()
+    reactor = Gtk2Reactor(useGtk)
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
 
-def portableInstall():
+def portableInstall(useGtk=True):
     """Configure the twisted mainloop to be run inside the gtk mainloop.
     """
     reactor = PortableGtkReactor()
