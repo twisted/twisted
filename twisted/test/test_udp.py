@@ -312,6 +312,8 @@ class MulticastTestCase(unittest.TestCase):
         p.stopListening()
         p2.stopListening()
 
+    testMultiListen.skip = "on non-linux platforms it appears multiple processes can listen, but not multiple sockets in same process?"
+
 
 if not components.implements(reactor, interfaces.IReactorUDP):
     UDPTestCase.skip = "This reactor does not support UDP"
