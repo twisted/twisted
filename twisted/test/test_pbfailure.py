@@ -27,7 +27,6 @@ from twisted.python import log
 from twisted.cred import authorizer
 
 
-PORTNO = 54321
 
 ##
 # test exceptions
@@ -71,7 +70,7 @@ class PBFailureTest(unittest.TestCase):
         auth = authorizer.DefaultAuthorizer()
         appl = app.Application("pbfailure", authorizer=auth)
         SimpleService("pbfailure",auth,appl,self).getPerspectiveNamed("guest").makeIdentity("guest")
-        p = reactor.listenTCP(PORTNO, pb.BrokerFactory(pb.AuthRoot(auth)))
+        p = reactor.listenTCP(0, pb.BrokerFactory(pb.AuthRoot(auth)))
         self.n = p.getHost()[2]
         appl.run(save=0)
         log.flushErrors(PoopError, FailError, DieError)
