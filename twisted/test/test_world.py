@@ -551,3 +551,26 @@ class TestFixedClasses(unittest.TestCase):
         f2 = None
         newf2 = self.db.retrieve(uid2)
         self.assertIdentical(newf2.storTest, newf)
+
+from twisted.world.util import Backwards
+
+class TestBackwards(unittest.TestCase):
+    def testSlice(self):
+        lst = range(20)
+        lst2 = list(lst)
+        lst2.reverse()
+        b = Backwards(lst)
+        self.failUnlessEqual(lst2[0:10], b[0:10])
+        self.failUnlessEqual(lst2[-10:-4], b[-10:-4])
+        self.failUnlessEqual(lst2[:4], b[:4])
+        self.failUnlessEqual(len(lst2), len(b))
+    
+    def testIndexes(self):
+        lst = range(20)
+        lst2 = list(lst)
+        lst2.reverse()
+        b = Backwards(lst)
+        self.failUnlessEqual(b[4], lst2[4])
+        self.failUnlessEqual(b[0], lst2[0])
+        self.failUnlessEqual(b[19], lst2[19])
+        self.failUnlessEqual(len(lst2), len(b))
