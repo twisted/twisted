@@ -340,7 +340,10 @@ class ReactorBase:
                     callable(*args, **kw)
                 except:
                     log.deferr()
-
+        # now that we've called all callbacks, no need to store
+        # references to them anymore, in fact this can cause problems.
+        del self._eventTriggers[eventType]
+    
     def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
