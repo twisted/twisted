@@ -63,18 +63,18 @@ class Threaded(Stage):
     """
     class Instruction(CallLater):
         def __init__(self):
-            self.flow = None
-            self.final = False
+            self.callable = None
+            self.immediate = False
         def callLater(self, callable):
-            if self.final:
+            if self.immediate:
                 reactor.callLater(0,callable)
             else:
-                self.flow = callable
-        def __call__(self, final = False):
-            self.final = final
-            if self.flow:
-                reactor.callFromThread(self.flow)
-                self.flow = None
+                self.callable = callable
+        def __call__(self):
+            callable = self.callable
+            if callable:
+                self.callable = None
+                callable()
 
     def __init__(self, iterable, *trap):
         Stage.__init__(self, trap)
@@ -82,9 +82,15 @@ class Threaded(Stage):
         self._cooperate = Threaded.Instruction()
         self.srcchunked = getattr(iterable, 'chunked', False)
         reactor.callInThread(self._process)
+  
+    def _process_result(self, val):
+        if self.srcchunked:
+            self.results.extend(val)
+        else:
+            self.results.append(val)
+        self._cooperate()
 
     def _process(self):
-        """ pull values from the iterable and add them to the buffer """
         try:
             self._iterable = iter(self._iterable)
         except: 
@@ -93,16 +99,13 @@ class Threaded(Stage):
             try:
                 while True:
                     val = self._iterable.next()
-                    if self.srcchunked:
-                        self.results.extend(val)
-                    else:
-                        self.results.append(val)
-                    self._cooperate()
+                    reactor.callFromThread(self._process_result, val)
             except StopIteration:
                 self.stop = True
             except: 
                 self.failure = Failure()
-        self._cooperate(final=True)
+        self._cooperate.immediate = True
+        reactor.callFromThread(self._cooperate)
 
     def _yield(self):
         if self.results or self.stop or self.failure:
