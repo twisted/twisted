@@ -349,8 +349,10 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 dict[optName] = 1
 
 def accumulateMethods(obj, dict, prefix='', curClass=None):
-    """Raped'n'pasted from addMethodNamesToDict. This takes an *instance*
-    object, and accumulates a dict of methname: *instance*MethObj pairs.
+    """accumulateMethods(instance, dict, prefix)
+    I recurse through the bases of instance.__class__, and add methods
+    beginning with 'prefix' to 'dict', in the form of
+    {'methodname':*instance*method_object}.
     """
     if not curClass:
         curClass = obj.__class__
