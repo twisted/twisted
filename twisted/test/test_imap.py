@@ -1321,6 +1321,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def expunge():
             return self.client.expunge()
         def expunged(results):
+            self.failIf(self.server.mbox is None)
             self.results = results
 
         self.results = None

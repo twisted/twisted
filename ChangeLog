@@ -1,3 +1,8 @@
+2003-11-24  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/imap4.py: Fix incorrect behavior of closing the
+	mailbox in response to an EXPUNGE command.
+
 2003-11-21  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/trial/runner.py: Added missing calls to setUpClass and

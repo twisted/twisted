@@ -1313,9 +1313,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         for e in result:
             self.sendUntaggedResponse('%d EXPUNGE' % e)
         self.sendPositiveResponse(tag, 'EXPUNGE completed')
-        self.mbox.removeListener(self)
-        self.mbox = None
-        self.state = 'auth'
 
     def __ebExpunge(self, failure, tag):
         self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
