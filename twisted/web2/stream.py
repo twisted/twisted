@@ -35,7 +35,7 @@ from __future__ import generators
 import copy,os
 from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
-from twisted.internet import interfaces as ti_interfaces, defer
+from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error
 
 import mmap
 
@@ -334,22 +334,49 @@ class CompoundStream:
 
 
 
-def readAndDiscard(stream):
-    """Read all the data from the given stream, and throw it out.
-    FIXME: do something more useful with read errors.
-    """
-    def _gotData(data):
-        if data is not None:
-            readAndDiscard(stream)
+class _StreamPuller:
+    """Process a stream's data using callbacks for data and stream finish."""
+
+    def __init__(self, stream, gotDataCallback):
+        self.stream = stream
+        self.gotDataCallback = gotDataCallback
+        self.result = Deferred()
+
+    def run(self):
+        self._read()
+        return self.result
     
-    while True:
-        result = stream.read()
-        if result is None:
-            break
+    def _read(self):
+        result = self.stream.read()
         if isinstance(result, Deferred):
             # FIXME: what about errback?
-            result.addCallback(_gotData)
-            break
+            result.addCallback(self._gotData)
+        else:
+            self._gotData(result)
+    
+    def _gotData(self, data):
+        if data is None:
+            self.result.callback(None)
+            del self.result
+            return
+        self.gotDataCallback(data)
+        reactor.callLater(0, self._read)
+
+def pullStream(stream, gotDataCallback):
+    """Pass a stream's data to a callback.
+
+    Returns Deferred which will be triggered on finish.
+    """
+    return _StreamPuller(stream, gotDataCallback).run()
+
+
+def readAndDiscard(stream):
+    """Read all the data from the given stream, and throw it out.
+
+    Returns Deferred which will be triggered on finish.
+    """
+    return pullStream(stream, lambda _: None)
+
 
 def fallbackSplit(stream, point):
     after = PostTruncaterStream(stream, point)
@@ -632,6 +659,71 @@ class StreamProducer:
         self.finishedCallback = self.deferred = self.consumer = self.stream = None
 
 
+class _ProcessStreamerProtocol(protocol.ProcessProtocol):
+
+    def __init__(self, inputStream, outStream, errStream):
+        self.inputStream = inputStream
+        self.outStream = outStream
+        self.errStream = errStream
+        self.resultDeferred = defer.Deferred()
+    
+    def connectionMade(self):
+        p = StreamProducer(self.inputStream)
+        d = p.beginProducing(self.transport)
+        d.addCallback(lambda _: self.transport.closeStdin())
+
+    def outReceived(self, data):
+        self.outStream.write(data)
+
+    def errReceived(self, data):
+        self.errStream.write(data)
+
+    def outConnectionLost(self):
+        self.outStream.finish()
+
+    def errConnectionLost(self):
+        self.errStream.finish()
+    
+    def processEnded(self, reason):
+        self.resultDeferred.errback(reason)
+        del self.resultDeferred
+
+
+class ProcessStreamer:
+    """Runs a process hooked up to streams.
+
+    Requires an input stream, has attributes 'outStream' and 'errStream'
+    for stdout and stderr.
+
+    outStream and errStream are public attributes providing streams
+    for stdout and stderr of the process.
+    """
+
+    def __init__(self, inputStream, program, args, env={}):
+        self.outStream = ProducerStream()
+        self.errStream = ProducerStream()
+        self._protocol = _ProcessStreamerProtocol(inputStream, self.outStream, self.errStream)
+        self._program = program
+        self._args = args
+        self._env = env
+    
+    def run(self, wantResult=False):
+        """Run the process.
+
+        if wantResult is True, returns Deferred which will eventually
+        have errback with twisted.internet.error.ProcessDone or
+        ProcessTerminated.
+        """
+        # XXX what happens if spawn fails?
+        reactor.spawnProcess(self._protocol, self._program, self._args, env=self._env)
+        del self._env
+        if wantResult:
+            return self._protocol.resultDeferred
+        else:
+            # keep clean exit from being logged
+            self._protocol.resultDeferred.addErrback(lambda _: _.trap(error.ProcessDone))
+
+
 class BufferedStream(object):
     """A stream which buffers its data to provide operations like
     readline and readExactly."""
@@ -718,4 +810,5 @@ class BufferedStream(object):
 
 __all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream',
            'readAndDiscard', 'fallbackSplit', 'ProducerStream', 'StreamProducer',
-           'BufferedStream']
+           'BufferedStream', 'pullStream', 'ProcessStreamer']
+

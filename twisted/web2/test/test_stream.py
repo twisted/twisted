@@ -1,4 +1,4 @@
-import tempfile, operator
+import tempfile, operator, sys, os
 
 from twisted.trial import unittest
 from twisted.trial.util import wait, spinUntil
@@ -152,7 +152,7 @@ class FallbackSplitTest(unittest.TestCase):
         assertEquals(right.length, None)
         
         assertEquals(bufstr(left.read()), 'abcd')
-        assertEquals(bufstr(left.read().result), 'e')
+        assertEquals(bufstr(wait(left.read())), 'e')
         assertEquals(left.read(), None)
 
         assertEquals(bufstr(right.read().result), 'fgh')
@@ -219,8 +219,7 @@ class FallbackSplitTest(unittest.TestCase):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
         left,right = stream.fallbackSplit(s, 5)
         left.close()
-
-        assertEquals(bufstr(right.read().result), 'fgh')
+        assertEquals(bufstr(wait(right.read())), 'fgh')
         assertEquals(bufstr(right.read()), 'ijkl')
         assertEquals(right.read(), None)
 
@@ -233,6 +232,45 @@ class FallbackSplitTest(unittest.TestCase):
         assertEquals(left.read(), None)
         
         assertEquals(s.closeCalled, 1)
+
+
+class ProcessStreamerTest(unittest.TestCase):
+
+    def runCode(self, code, inputStream=None):
+        if inputStream is None:
+            inputStream = stream.MemoryStream("")
+        return stream.ProcessStreamer(inputStream, sys.executable, [sys.executable, "-c", code],
+                                      os.environ)
+
+    def test_output(self):
+        p = self.runCode("import sys\nfor i in range(100): sys.stdout.write('x' * 1000)")
+        l = []
+        d = stream.pullStream(p.outStream, l.append)
+        def verify(_):
+            assertEquals("".join(l), ("x" * 1000) * 100)
+        p.run()
+        return d.addCallback(verify)
+
+    def test_errouput(self):
+        p = self.runCode("import sys\nfor i in range(100): sys.stderr.write('x' * 1000)")
+        l = []
+        d = stream.pullStream(p.errStream, l.append)
+        def verify(_):
+            assertEquals("".join(l), ("x" * 1000) * 100)
+        p.run()
+        return d.addCallback(verify)
+
+    def test_input(self):
+        p = self.runCode("import sys\nsys.stdout.write(sys.stdin.read())",
+                         stream.MemoryStream("hello world"))
+        l = []
+        d = stream.pullStream(p.outStream, l.append)
+        d2 = p.run(True)
+        def verify(_):
+            assertEquals("".join(l), "hello world")
+            return d2
+        from twisted.internet import error
+        return d.addCallback(verify).addErrback(lambda _: _.trap(error.ProcessDone))
 
 
 from twisted.web2.stream import *
