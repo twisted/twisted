@@ -482,7 +482,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         for gid in gidToName:
             sql = """
                 INSERT INTO postings (group_id, article_id, article_index)
-                VALUES (%d, (SELECT last_value FROM articles_article_id_sequence), %d)
+                VALUES (%d, (SELECT last_value FROM articles_article_id_seq), %d)
             """ % (gid, gidToIndex[gid])
             transaction.execute(sql)
         
@@ -590,3 +590,14 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         """ % (adbapi.safe(group), index)
         
         return self.runQuery(sql).addCallback(lambda result: result[0][0])
+
+
+    ####
+    #### Extension to NewsStorage
+    ####
+    def addGroup(self, groupName):
+        sql = """
+            INSERT INTO groups (name) VALUE ('%s')
+        """ % adbapi.safe(groupName)
+        
+        return self.runQuery(sql)
