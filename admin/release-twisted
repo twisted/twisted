@@ -93,7 +93,7 @@ class Options(usage.Options):
                 commands += [
                     finalizeTag,
                     releaseBalls,
-                   releaseSourceforge,
+                    releaseSourceforge,
                     ]
                 commands += [updateWebDocs]
 
@@ -265,48 +265,9 @@ makeBallWeb2 = makeMakeBall('web2')
 makeBallWords = makeMakeBall('words')
 
 
-def makeBalls(opts):
-    ver = opts['base-version']
-    tdir = "Twisted-%s" % (ver,)
-
-    if not os.path.exists('Twisted.exp'):
-        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
-                                   % tdir)
-
-    if not os.path.exists(tdir):
-        shutil.copytree('Twisted.exp', tdir)
-
-    print "MakeBalls: Twisted_NoDocs."
-    sh('''
-    tar --exclude %(tdir)s/doc -cf - %(tdir)s \
-        |gzip -9 > Twisted_NoDocs-%(ver)s.tar.gz && 
-    tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s
-    ''' % locals())
-
-    print "MakeBalls: Twisted"
-    sh('''
-    tar cf - %(tdir)s | gzip -9 > %(tdir)s.tar.gz&&
-    tar cjf   %(tdir)s.tar.bz2 %(tdir)s
-    ''' % locals())
-
-    print "MakeBalls: TwistedDocs"
-    docdir = "TwistedDocs-%s" % ver
-    sh('''
-    cd %(tdir)s && 
-    mv doc %(docdir)s
-
-    tar cf -  %(docdir)s | gzip -9 > %(docdir)s.tar.gz&& 
-    mv %(docdir)s.tar.gz ../ && 
-
-    tar cjf   %(docdir)s.tar.bz2 %(docdir)s && 
-    mv %(docdir)s.tar.bz2 ../
-    ''' % locals())
-
-
 def finalizeTag(opts):
     sh('svn mv -m "Finalizing release of %s" %s %s'
        % (opts['base-version'], opts['temptagurl'], opts['tagurl']))
-
 
 
 def releaseBalls(opts):
