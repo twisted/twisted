@@ -5129,3 +5129,11 @@ person.
 to write Java.
 <tjs> I don't have that problem.
 %
+$ php sucks.php
+
+PHP EQUALITY -- An experiment:
+0 == "": TRUE.
+0 == "0": TRUE.
+"" == "0": FALSE.
+'none' == 0: TRUE.
+%
