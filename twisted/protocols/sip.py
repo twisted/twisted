@@ -1014,7 +1014,7 @@ class RegisterProxy(Proxy):
                 return self.login(message, host, port)
     
     def unauthorized(self, message, host, port):
-        m = self.responseFromRequest(401, message)
+        m = self.responseFromRequest(407, message)
         for (scheme, auth) in self.authorizers.iteritems():
             chal = auth.getChallenge((host, port))
             if chal is None:
