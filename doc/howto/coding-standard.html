@@ -295,6 +295,18 @@ except ImportError:
     Underscores in method names in twisted code are therefore
     expected to have some semantic associated with them.</p>
 
+    <p>Some methods, in particular <code>addCallback</code> and its
+    cousins return self to allow for chaining calls.  In this case,
+    wrap the chain in parenthesis, and start each chained call on
+    a separate line, for example:</p>
+
+<pre class="python">
+    return (foo()
+            .addCallback(bar)
+            .addCallback(thud)
+            .addCallback(wozers))
+</pre>
+
     <h2>Special Methods</h2>
 
     <p>The augmented assignment protocol, defined by __iadd__ and other
