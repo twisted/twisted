@@ -262,6 +262,7 @@ class AOTUnjellier:
     """
     def __init__(self):
         self.references = {}
+        self.stack = []
 
     ##
     # unjelly helpers (copied pretty much directly from marmalade XXX refactor)
@@ -297,6 +298,7 @@ class AOTUnjellier:
         """Unjelly an Abstract Object and everything it contains.
         I return the real object.
         """
+        self.stack.append(ao)
         t = type(ao)
         if t is types.InstanceType:
             #Abstract Objects
@@ -397,12 +399,17 @@ class AOTUnjellier:
         else:
             raise TypeError("Unsupported AOT type: %s" % t)
 
+        del self.stack[-1]
+
         
     def unjelly(self, ao):
-        l = [None]
-        self.unjellyInto(l, 0, ao)
-        return l[0]
-
+        try:
+            l = [None]
+            self.unjellyInto(l, 0, ao)
+            return l[0]
+        except:
+            print "Error jellying object! Stacktrace follows::"
+            print string.join(self.stack, "\n")
 #########
 # Jelly #
 #########
@@ -526,5 +533,6 @@ class AOTJellier:
             ao = self.jellyToAO(obj)
             return ao
         except:
+            print "Error jellying object! Stacktrace follows::"
             print string.join(self.stack, '\n')
             raise
