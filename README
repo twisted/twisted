@@ -20,8 +20,8 @@ RELEASE CANDIDATE
   Until then, don't expect this to be bug-free. :-)
 
   Known Issues with rc2:
-    * Twisted Sister unit tests don't pass. There was an API change, as well
-      as some other Real Bugs involved.
+    * Twisted Sister unit tests don't pass, and even cause the runtests process
+      to eventually totally freeze.
     * FTP unit tests *still* fail, with an error about "test_ftp.py" not being
       in the file listing.
     * There are other issues with wakeUp on win32 which are causing unit tests
