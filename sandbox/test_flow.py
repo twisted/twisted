@@ -27,8 +27,8 @@ class producer:
     """ iterator version of the following generator... 
 
     def producer():
-        lst = flow.Generator([1,2,3])
-        nam = flow.Generator(['one','two','three'])
+        lst = flow.Wrap([1,2,3])
+        nam = flow.Wrap(['one','two','three'])
         while 1: 
             yield lst; yield nam
             if lst.stop or nam.stop:
@@ -36,8 +36,8 @@ class producer:
             yield (lst.result, nam.result)
     """
     def __iter__(self):
-        self.lst   = flow.Generator([1,2,3])
-        self.nam   = flow.Generator(['one','two','three'])
+        self.lst   = flow.Wrap([1,2,3])
+        self.nam   = flow.Wrap(['one','two','three'])
         self.state = self.yield_lst
         return self
     def yield_lst(self):
@@ -58,8 +58,8 @@ class consumer:
     """ iterator version of the following generator...
 
     def consumer():
-        title = flow.Generator(['Title'])
-        lst = flow.Generator(producer())
+        title = flow.Wrap(['Title'])
+        lst = flow.Wrap(producer())
         yield title
         yield title.getResult()
         try:
@@ -69,8 +69,8 @@ class consumer:
         except flow.StopIteration: pass
     """    
     def __iter__(self):
-        self.title = flow.Generator(['Title'])
-        self.lst   = flow.Generator(producer())
+        self.title = flow.Wrap(['Title'])
+        self.lst   = flow.Wrap(producer())
         self.state = self.yield_title
         return self
     def yield_title(self):

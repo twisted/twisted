@@ -22,15 +22,15 @@ from __future__ import nested_scopes
     the use of generators.  While this module does not use generators in
     its implementation, it isn't very useable without them.   A data flow
     is constructed with a top level generator, which can have three 
-    types of yield statements:  flow.Cooperate, flow.Generator, or
+    types of yield statements:  flow.Cooperate, flow.Wrap, or
     any other return value with exceptions wrapped using failure.Failure
     An example program...
 
         from __future__ import generators
         import flow
         def producer():
-            lst = flow.Generator([1,2,3])
-            nam = flow.Generator(['one','two','three'])
+            lst = flow.Wrap([1,2,3])
+            nam = flow.Wrap(['one','two','three'])
             while 1:
                 yield lst; yield nam
                 if lst.stop or nam.stop: 
@@ -38,10 +38,10 @@ from __future__ import nested_scopes
                 yield (lst.result, nam.result)
     
         def consumer():
-            title = flow.Generator(['Title'])
+            title = flow.Wrap(['Title'])
             yield title
             print title.getResult()
-            lst = flow.Generator(producer())
+            lst = flow.Wrap(producer())
             try:
                 while 1:
                     yield lst
@@ -77,7 +77,7 @@ class Cooperate(FlowCommand):
     def __init__(self, timeout = 0):
         self.timeout = timeout
 
-class Generator(FlowCommand):
+class Wrap(FlowCommand):
     """ Wraps a generator or other iterator for use in a flow 
 
         Creates a nested generation stage (a producer) which can provide
@@ -149,7 +149,7 @@ class Flow:
                                 the errback being called with the failure.
         """
         self._results = []
-        self._stack   = [Generator(iterable)]
+        self._stack   = [Wrap(iterable)]
         self.failureAsResult = failureAsResult
     def __iter__(self):
         return self
@@ -174,7 +174,7 @@ class Flow:
                 if isinstance(result, FlowCommand):
                     if isinstance(result, Cooperate):
                         return result.timeout
-                    assert(isinstance(result, Generator))
+                    assert(isinstance(result, Wrap))
                     self._stack.append(result)
                 else:
                     if len(self._stack) > 1:
