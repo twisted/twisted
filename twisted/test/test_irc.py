@@ -49,7 +49,7 @@ class QuotingTest(unittest.TestCase):
 class IRCClientWithoutLogin(irc.IRCClient):
     def connectionMade(self):
         """Normally, this does a little login dance.
-        
+
         But that's not what we're looking for in this test.
         """
 

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -34,13 +34,13 @@ class ContainmentTestCase(unittest.TestCase):
         self.room =   reality.Room   ("room", r)
         self.area =   reality.Room   ("area", r)
 
-        
+
     def tearDown(self):
         for x in 'ball', 'table', 'slab', 'bob', 'room':
             getattr(self, x).destroy()
             delattr(self, x)
-            
-            
+
+
     def testBasicContainment(self):
         self.ball.location = self.room
         assert self.room.find('ball') is self.ball
@@ -55,7 +55,7 @@ class ContainmentTestCase(unittest.TestCase):
         assert self.ball.location is None, "location attribute didn't go None"
         assert self.ball.place is None, "place didn't go None"
 
-        
+
     def testComponentContainment(self):
         self.ball.location = self.table
         self.ball.component = 1
@@ -78,8 +78,8 @@ class ContainmentTestCase(unittest.TestCase):
             pass
         else:
             assert 0, "reference cruft left on 'table'."
-        
-        
+
+
     def testMultiContainment(self):
         self.table.grab(self.ball)
         self.room.grab(self.ball)
@@ -97,7 +97,7 @@ class ContainmentTestCase(unittest.TestCase):
                 pass
             else:
                 assert 0, "Shoudldn't be able to find 'ball'"
-    
+
     def testSurfaceContainment(self):
         self.table.surface = 1
         self.ball.location = self.table
@@ -109,7 +109,7 @@ class ContainmentTestCase(unittest.TestCase):
             repr(self.ball.locations))
         del self.table.location
         del self.ball.location
-        
+
         ## Mixing it up a little bit -- applying the surface bit at
         ## the end instead of the beginning.
         self.ball.location = self.table
@@ -121,7 +121,7 @@ class ContainmentTestCase(unittest.TestCase):
                "place is "+repr(self.ball.place)
 
         self.table.surface = 0
-        
+
     def testMultiSurfaceContainment(self):
         ## adding yet more complexity -- 2 levels deep.
         self.table.location = self.room
@@ -160,17 +160,17 @@ class ContainmentTestCase(unittest.TestCase):
             thing = reality.Thing("thing"+str(i), self.reality)
             thing.surface = 1
             things.append(thing)
-            
+
         things[0].location = self.box
-        
+
         for i in range(len(things)):
             thing = things[i]
             if i:
                 thing.location = things[i-1]
         assert things[largeNumber-1] == self.room.find('thing' + str(largeNumber-1)),\
                "thing not found"
-        
+
         for thing in things:
             thing.destroy()
-        
+
 testCases = [ContainmentTestCase]

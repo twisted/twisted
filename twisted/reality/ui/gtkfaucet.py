@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -59,7 +59,7 @@ class ResponseWindow(gtk.GtkWindow):
         okb.set_flags(gtk.HAS_DEFAULT)
         bb.add(okb)
         vb.add(bb,expand=gtk.FALSE)
-        
+
         self.add(vb)
         self.set_usize(300,200)
         self.connect('delete_event',dontgo)
@@ -74,7 +74,7 @@ class ResponseWindow(gtk.GtkWindow):
         self.callback.cancel()
         self.destroy()
 
-    
+
 class GameWindow(gtk.GtkWindow, pb.Referenceable):
 
     shortcuts = {"n":"go north",
@@ -87,7 +87,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
                  "se":"go southeast",
                  "u":"go up",
                  "d":"go down"}
-    
+
     keycuts = {gtk.GDK.KP_0:"go up",
                gtk.GDK.KP_1:"go southwest",
                gtk.GDK.KP_2:"go south",
@@ -102,7 +102,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
     histpos = 0
     def __hash__(self):
         return id(self)
-    
+
     def __init__(self):
         #print self.send_
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
@@ -115,12 +115,12 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         self.descbox.set_word_wrap(gtk.TRUE)
         self.descscrl=gtkutil.scrollify(self.descbox)
         gtkutil.defocusify(self.descbox)
-        
+
         self.itembox=gtk.GtkText()
         self.itembox.set_word_wrap(gtk.TRUE)
         self.itemscrl=gtkutil.scrollify(self.itembox)
         gtkutil.defocusify(self.itembox)
-        
+
         self.happenings=gtk.GtkText()
         self.happenings.set_word_wrap(gtk.TRUE)
         self.happscrl=gtkutil.scrollify(self.happenings)
@@ -130,21 +130,21 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         self.hpaned=gtk.GtkHPaned()
         self.hpaned.add1(self.descscrl)
         self.hpaned.add2(self.itemscrl)
-        
+
         self.vpaned=gtk.GtkVPaned()
         self.vpaned.add1(self.hpaned)
         self.vpaned.add2(self.happscrl)
 
         self.vbox=gtk.GtkVBox()
         self.vbox.pack_start(self.namelabel, expand=0)
-        
+
         self.vbox.add(self.vpaned)
         self.vbox.pack_start(self.cmdarea, expand=0)
-        
+
         self.add(self.vbox)
-        
+
         self.signal_connect('destroy',gtk.mainquit,None)
-        
+
         self.cmdarea.connect("key_press_event", self.processKey)
         self.cmdarea.grab_focus()
 
@@ -157,12 +157,12 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         rem.broker.notifyOnDisconnect(self.connectionLost)
         self.remote = rem
         self.show_all()
-        lw.hide()
+        self.loginWindow.hide()
 
     def connectionLost(self):
         self.hide()
-        lw.show_all()
-        lw.loginReport("Disconnected from Server.")
+        self.loginWindow.show_all()
+        self.loginWindow.loginReport("Disconnected from Server.")
 
     def sendVerb(self, verb):
         self.seeEvent("> "+verb,boldFont)
@@ -210,7 +210,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
             gtk.idle_add(self.focus_text)
         else: return
         self.clear_key()
-        
+
     def historyUp(self):
         if self.histpos > 0:
             l = self.cmdarea.get_text()
@@ -219,7 +219,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
             self.history[self.histpos] = l
             self.histpos = self.histpos - 1
             self.cmdarea.set_text(self.history[self.histpos])
-            
+
     def historyDown(self):
         if self.histpos < len(self.history) - 1:
             l = self.cmdarea.get_text()
@@ -237,7 +237,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         for i in open(filename).readlines():
             i=i[:-1]
             self.sendVerb(i)
-    
+
     def sendText(self, entry):
         tosend=entry.get_text()
         if not tosend:
@@ -258,9 +258,9 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         # tosend should now be the "final" command sent to the server
         self.cmdarea.set_sensitive(gtk.FALSE)
         self.cmdarea.set_editable(gtk.FALSE)
-        
+
         self.sendVerb(tosend)
-    
+
     bswp = 0
 
     def seeEvent(self,phrase,f=normalFont,fg=None,bg=None):
@@ -273,9 +273,9 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         adj=txt.get_vadjustment()
         txt.thaw()
         adj.set_value(adj.upper - adj.page_size)
-        
+
     remote_seeEvent = seeEvent
-    
+
     def remote_seeName(self,name):
         self.namelabel.set_text(name)
 
@@ -283,15 +283,15 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         try: del self.items[key]
         except: print 'tried to remove nonexistant item %s' % str(key)
         self.reitem()
-        
+
     def remote_seeNoItems(self):
         self.items={}
         self.reitem()
-    
+
     def remote_seeItem(self,key,parent,value):
         self.items[key]=value
         self.reitem()
-        
+
     def remote_seeDescription(self,key,value):
         self.descriptions[key]=value
         self.redesc()
@@ -306,7 +306,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
 
     def reexit(self):
         self.remote_seeDescription('__EXITS__',"\nObvious Exits: %s"%string.join(self.exits,', '))
-        
+
     def remote_seeExit(self,exit):
         self.exits.append(exit)
         self.reexit()
@@ -362,10 +362,10 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
 
 
 def main():
-    global lw
     gw = GameWindow()
     lw = gtkutil.Login(gw.connected, gw,
                        initialUser="guest", initialPassword="guest",
                        initialHostname="localhost", initialService="twisted.reality")
+    gw.loginWindow = lw
     lw.show_all()
     gtk.mainloop()

@@ -2,30 +2,19 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-
-usageMessage = """
-Usage::
-
-  mktap *apptype* *application_options*
-  mktap --help *apptype*
-
-So far *apptype* can be 'web', 'words', 'reality', 'toc', 'mail' and 'telnet'
-
-"""
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
@@ -39,14 +28,43 @@ sys.path.append('.')
 ### end of preamble
 
 from twisted.protocols import telnet
-from twisted.internet import main,tcp
+from twisted.internet import main, tcp, passport
 from twisted.python import usage
+from twisted.spread import pb
+from twisted.manhole import service
+manholeService = service
+del service
+
 import sys, traceback, os, cPickle
 
+
 class GeneralOptions(usage.Options):
+    synopsis="""\
+Usage::
+
+  mktap *apptype* *application_options*
+  mktap --help *apptype*
+
+So far *apptype* can be 'web', 'words', 'reality', 'toc', 'mail' and 'telnet'
+""" # XXX: This list is never kept up to date --
+    #     we should auto-generate it.
+
     optFlags = [['help', 'h']]
-    optStrings = [['uid', 'u', '0'], ['gid', 'g', '0'],
-                  ['append', 'a', '']]
+    optStrings = [['uid', 'u', '0'],
+                  ['gid', 'g', '0'],
+                  ['append', 'a', ''],
+                  ['manholeUser', None, 'manhole',
+                   "Login username for manhole service."],
+                  ['manholePass', None, None,
+                   "Password for manhole service."
+                   " (If a password is not specified,"
+                   " no manhole service will be created.)"]]
+
+
+    def opt_help(self):
+        # Ugh, we can't print the help now, we need to let getopt
+        # finish parsinsg and parseArgs to run.
+        self.help = 1
 
     def parseArgs(self, *args):
         self.args = args
@@ -66,17 +84,19 @@ if hasattr(os, 'getgid'):
     options.gid = os.getgid()
 try:
     options.parseOptions(sys.argv[1:])
-except:
-    print usageMessage
+except Exception, e:
+    print str(e)
+    print str(options)
     sys.exit()
 
 if options.help or not options.args:
     if options.args:
         mod = getModule(options.args[0])
-        print mod.usage_message
+        config = mod.Options()
+        config.opt_help()
         sys.exit()
     else:
-        print usageMessage
+        usage.Options.opt_help(options)
         sys.exit()
 else:
     mod = getModule(options.args[0])
@@ -84,14 +104,31 @@ try:
     config = mod.Options()
     config.parseOptions(options.args[1:])
 except usage.error, ue:
-    print mod.usage_message
     print "Usage Error: %s" % ue
+    config.opt_help()
     sys.exit()
 
 if not options.append:
     a = main.Application(options.args[0], int(options.uid), int(options.gid))
 else:
     a = cPickle.load(open(options.append))
+
+haveBroker = 0
 for num, proto in mod.getPorts(a, config):
+    if isinstance(proto, pb.BrokerFactory):
+        haveBroker = 1
     a.listenOn(num, proto)
+
+# Have the option to build a manhole into anything.
+if options.manholePass:
+    if not haveBroker:
+        bkr = pb.BrokerFactory(pb.AuthRoot(a))
+        a.listenOn(pb.portno, bkr)
+
+    i = passport.Identity(options.manholeUser, a)
+    i.setPassword(options.manholePass)
+    a.authorizer.addIdentity(i)
+    svc = manholeService.Service(application=a)
+    i.addKeyForPerspective(svc.getPerspectiveNamed(options.manholeUser))
+
 a.save()

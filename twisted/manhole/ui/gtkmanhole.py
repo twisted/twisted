@@ -1,22 +1,23 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import gtk, sys, string
 
+from twisted.python import usage
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
@@ -50,7 +51,7 @@ def isCursorOnLastLine(entry):
     if entry.get_point() >= string.rfind(string.rstrip(entry.get_chars(0,-1)), '\n'):
         #print "cursor is on last line"
         return 1
-    
+
 
 class Interaction(gtk.GtkWindow):
     def __init__(self):
@@ -94,7 +95,7 @@ class Interaction(gtk.GtkWindow):
         elif self.histpos == len(self.history) - 1:
             self.histpos = self.histpos + 1
             self.input.delete_text(0, -1)
-    
+
     def processKey(self, entry, event):
         if event.keyval == gtk.GDK.Return:
             l = self.input.get_length()
@@ -131,7 +132,7 @@ class Interaction(gtk.GtkWindow):
         self.input.grab_focus()
         return gtk.FALSE # do not requeue
     maxBufSz = 10000
-    
+
     def messageReceived(self, message):
         # print "received: ", message
         t = self.output
@@ -151,7 +152,7 @@ class Interaction(gtk.GtkWindow):
         self.input.grab_focus()
 
     blockcount = 0
-    
+
     def sendMessage(self, unused_data=None):
         text = self.input.get_chars(0,-1)
         if self.linemode:
@@ -167,8 +168,8 @@ class Interaction(gtk.GtkWindow):
                             pbcallback=self.messageReceived)
 
     def connected(self, perspective):
-        self.name = lw.username.get_text()
-        lw.hide()
+        self.loginWindow.hide()
+        self.name = self.loginWindow.username.get_text()
         self.perspective = perspective
         self.show_all()
         win = self.get_window()
@@ -180,16 +181,3 @@ class Interaction(gtk.GtkWindow):
         self.textStyles = {"out": black,   "err": orange,
                            "result": blue, "error": red,
                            "command": gray}
-
-
-def main():
-    global lw
-    i = Interaction()
-    lw = gtkutil.Login(i.connected,
-                       initialUser="guest",
-                       initialPassword="guest",
-                       initialService="twisted.manhole")
-    lw.show_all()
-    gtk.mainloop()
-
-if __name__=='__main__':main()

@@ -341,7 +341,7 @@ def run():
     """Run input/output and dispatched/delayed code.
 
     This call never returns.  It is the main loop which runs
-    delayed timers (see twisted.python.delay and addDelayed), 
+    delayed timers (see twisted.python.delay and addDelayed),
     and the I/O monitor (doSelect).
     """
     global running
@@ -349,11 +349,11 @@ def run():
     threadable.registerAsIOThread()
     signal.signal(signal.SIGINT, shutDown)
     signal.signal(signal.SIGTERM, shutDown)
-    
+
     # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
     if hasattr(signal, "SIGBREAK"):
         signal.signal(signal.SIGBREAK, shutDown)
-    
+
     if platform.getType() == 'posix':
         signal.signal(signal.SIGCHLD, process.reapProcess)
 

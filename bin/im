@@ -2,25 +2,22 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-"""
-Usage: im [--toolkit gtk]
-
-This script runs Instance Messenger, a client for Twisted.Words
+"""This script runs Instance Messenger, a client for Twisted.Words
 """
 
 ### TwistedPython Preamble
@@ -30,13 +27,14 @@ import sys,os,string
 
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
     sys.path.append(os.path.dirname(
-        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+        os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
 from twisted.python import usage
 
 class Options(usage.Options):
-    optStrings = [["toolkit", "t", "tk"]]
+    synopsis = "Usage: im [--toolkit gtk]"
+    optStrings = [["toolkit", "t", "tk", "One of: tk, gtk"]]
 
 config = Options()
 config.parseOptions()

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -28,7 +28,7 @@ import interfaces
 
 class FileDescriptor(log.Logger):
     """An object which can be operated on by select().
-    
+
     This is an abstract superclass of all objects which may be notified when
     they are readable or writable; e.g. they have a file-descriptor that is
     valid to be passed to select(2).
@@ -40,12 +40,12 @@ class FileDescriptor(log.Logger):
     producer = None
     disconnected = 0
     __reap = 0
-    
+
     __implements__ = (interfaces.IProducer,)
-    
+
     def connectionLost(self):
         """The connection was lost.
-        
+
         This is called when the connection on a selectable object has been
         lost.  It will be called whether the connection was closed explicitly,
         an exception occurred in an event handler, or the other end of the
@@ -62,7 +62,7 @@ class FileDescriptor(log.Logger):
 
     def writeSomeData(self, data):
         """Write as much as possible of the given data, immediately.
-        
+
         This is called to invoke the lower-level writing functionality, such as
         a socket's send() method, or a file's write(); this method returns an
         integer.  If positive, it is the number of bytes written; if negative,
@@ -96,7 +96,7 @@ class FileDescriptor(log.Logger):
 
     def write(self, data):
         """Reliably write some data.
-        
+
         This adds data to be written the next time this file descriptor is
         ready for writing.  If necessary, it will wake up the I/O thread to add
         this FileDescriptor for writing, that the write will happen as soon as
@@ -128,7 +128,7 @@ class FileDescriptor(log.Logger):
 
     def stopReading(self):
         """Stop waiting for read availability.
-        
+
         Call this to remove this selectable from being notified when it is
         ready for reading.
         """
@@ -137,7 +137,7 @@ class FileDescriptor(log.Logger):
 
     def stopWriting(self):
         """Stop waiting for write availability.
-        
+
         Call this to remove this selectable from being notified when it is ready
         for writing.
         """
@@ -146,7 +146,7 @@ class FileDescriptor(log.Logger):
 
     def startReading(self):
         """Start waiting for read availability.
-        
+
         Call this to remove this selectable notified whenever it is ready for
         reading.
         """
@@ -155,7 +155,7 @@ class FileDescriptor(log.Logger):
 
     def startWriting(self):
         """Start waiting for write availability.
-        
+
         Call this to have this FileDescriptor be notified whenever it is ready for
         writing.
         """
@@ -210,11 +210,11 @@ class FileDescriptor(log.Logger):
 
     def stopProducing(self):
         self.loseConnection()
-    
-    
+
+
     def fileno(self):
         """File Descriptor number for select().
-        
+
         This method must be overridden or assigned in subclasses to
         indicate a valid file descriptor for the operating system.
         """
@@ -237,4 +237,3 @@ def isIPAddress(addr):
 
 # Sibling Imports
 import main
-

@@ -54,9 +54,9 @@ class Service:
     def startService(self):
         """A hook called when the application that this service is a part of has fully loaded.
 
-        This can be used to perform 'unserialization' tasks that are best put
-        off until things are actually running, such as connecting to a
-        database, opening files, etcetera.
+        This can be used to perform 'unserialization' tasks that
+        are best put off until things are actually running, such
+        as connecting to a database, opening files, etcetera.
         """
         log.msg("(%s %s started up!)" % (str(self.__class__), repr(self.getServiceName())))
 
@@ -93,16 +93,17 @@ class Service:
 class Perspective:
     """I am an Identity's view onto a service.
 
-    I am the interface through which most 'external' code should interact with
-    a service; I represent the actions a user may perform upon a service, and
-     the state associated with that user for that service.
+    I am the interface through which most 'external' code should
+    interact with a service; I represent the actions a user may
+    perform upon a service, and the state associated with that
+    user for that service.
     """
     def __init__(self, perspectiveName, service, identityName="Nobody"):
         """Create me.
 
-        I require a name for myself and a reference to the service I
-        participate in.  (My identity name will be 'Nobody' by default, which
-        will normally not resolve.)
+        I require a name for myself and a reference to the service
+        I participate in.  (My identity name will be 'Nobody' by
+        default, which will normally not resolve.)
         """
         self.perspectiveName = perspectiveName
         self.service = service
@@ -119,9 +120,9 @@ class Perspective:
     def makeIdentity(self, password):
         """Make an identity from this perspective with a password.
 
-        This is a utility method, which can be used in circumstances where the
-        distinction between Perspective and Identity is weak, such as
-        single-Service servers.
+        This is a utility method, which can be used in circumstances
+        where the distinction between Perspective and Identity is weak,
+        such as single-Service servers.
         """
         ident = Identity(self.perspectiveName, self.service.application)
         self.setIdentityName(self.perspectiveName)
@@ -155,13 +156,13 @@ class Perspective:
         """Called when a remote reference is 'attached' to me.
 
         After being authorized, a remote actor can attach to me
-        through its identity.  This call will be made when that happens, and
-        the return value of this method will be used as the _actual_
-        perspective to which I am attached.
+        through its identity.  This call will be made when that
+        happens, and the return value of this method will be used
+        as the _actual_ perspective to which I am attached.
 
-        Note that the symmetric call, detached, will be made on whatever
-        this method returns, _not_ on me.  Therefore, by default I return
-        'self'.
+        Note that the symmetric call, detached, will be made on
+        whatever this method returns, _not_ on me.  Therefore,
+        by default I return 'self'.
         """
         log.msg('attached [%s]' % str(self.__class__))
         return self
@@ -171,9 +172,10 @@ class Perspective:
 
         See 'attached'.
 
-        When a remote actor disconnects (or times out, for example, with
-        HTTP), this is called in order to indicate that the reference
-        associated with that peer is no longer attached to this perspective.
+        When a remote actor disconnects (or times out, for example,
+        with HTTP), this is called in order to indicate that the
+        reference associated with that peer is no longer attached to
+        this perspective.
         """
         log.msg('detached [%s]' % str(self.__class__))
 
@@ -206,8 +208,8 @@ class Identity:
 
     An identity represents a user's permissions with a particular
     application.  It is a username, a password, and a collection of
-    Perspective/Service name pairs, each of which is a perspective that this
-    identity is allowed to access.
+    Perspective/Service name pairs, each of which is a perspective
+    that this identity is allowed to access.
     """
     hashedPassword = None
 
@@ -231,7 +233,8 @@ class Identity:
     def addKeyByString(self, serviceName, perspectiveName):
         """Put a key on my keyring.
 
-        This key will give me a token to access to some service in the future.
+        This key will give me a token to access to some service in the
+        future.
         """
         self.keyring[(serviceName, perspectiveName)] = 1
 
@@ -272,8 +275,9 @@ class Identity:
     def challenge(self):
         """I return some random data.
 
-        This is a method in addition to the module-level function because it is
-        anticipated that we will want to change this to store salted passwords.
+        This is a method in addition to the module-level function
+        because it is anticipated that we will want to change this
+        to store salted passwords.
         """
         return challenge()
 
@@ -290,9 +294,10 @@ class Identity:
     def verifyPlainPassword(self, plaintext):
         """Verify plain text password.
 
-        This is insecure, but necessary to support legacy protocols such as
-        IRC, POP3, HTTP, etc.
+        This is insecure, but necessary to support legacy protocols such
+        as IRC, POP3, HTTP, etc.
         """
+
         md = md5.new()
         md.update(plaintext)
         userPass = md.digest()
@@ -316,11 +321,11 @@ class Authorizer:
     def getIdentityRequest(self, name):
         """Request an identity, and make the given callback when it's received.
 
-        Override this to provide a method for retrieving identities than the
-        hash provided by default.
+        Override this to provide a method for retrieving identities than
+        the hash provided by default.
 
-        Note that this is asynchronous specifically to provide support for
-        authenticating users from a database.
+        Note that this is asynchronous specifically to provide support
+        for authenticating users from a database.
         """
         raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
 
@@ -349,11 +354,12 @@ class DefaultAuthorizer(Authorizer):
     def getIdentityRequest(self, name):
         """Get a Deferred callback registration object.
 
-        I return a deferred (twisted.python.defer.Deferred) which will be
-        called back to when an identity is discovered to be available (or
-        errback for unavailable).  It will be returned unarmed, so you must arm
-        it yourself.
+        I return a deferred (twisted.python.defer.Deferred) which will
+        be called back to when an identity is discovered to be available
+        (or errback for unavailable).  It will be returned unarmed, so
+        you must arm it yourself.
         """
+
         req = defer.Deferred()
         if self.identities.has_key(name):
             req.callback(self.identities[name])

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -37,7 +37,7 @@ def _no_log_output(func, *args, **kw):
         return result, io.getvalue()
     finally:
         sys.stdout = old
-        
+
 
 def _log_output(func, *args, **kw):
     io = Output()
@@ -47,14 +47,14 @@ def _log_output(func, *args, **kw):
         return result, io.getvalue()
     finally:
         logOwner.disown(io)
-        
+
 
 def output(func, *args, **kw):
     return apply([_no_log_output, _log_output]
                  [isinstance(sys.stdout, Log)],
                  (func,)+args,kw)
-        
-        
+
+
 file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
                  'readline', 'readlines', 'seek', 'softspace', 'tell',
                  'write', 'writelines']
@@ -78,14 +78,14 @@ def startLogging(file):
     global logfile, logOwner
     import threadable
     threadable.requireInit()
-    
+
     lgr = Logger()
     if threadable.threaded:
         logOwner = ThreadedLogOwner(lgr)
     else:
         logOwner = LogOwner(lgr)
     logfile = Log(file, logOwner)
-    
+
     sys.stdout = sys.stderr = logfile
     msg( "Log opened." )
 
@@ -132,22 +132,22 @@ class Output:
     def __init__(self):
         self.io = StringIO.StringIO()
 
-        
+
     def log(self, bytes):
         self.io.write(bytes)
-        
-        
+
+
     def getvalue(self):
         return self.io.getvalue()
-        
+
 
 class LogOwner:
     """Allow object to register themselves as owners of the log."""
-    
+
     def __init__(self, defaultOwner):
         self.owners = []
         self.defaultOwner = defaultOwner
-    
+
     def own(self, owner):
         """Set an object as owner of the log."""
         if owner is not None:
@@ -169,13 +169,13 @@ class LogOwner:
 
 class ThreadedLogOwner:
     """Allow object to register themselves as owners of the log, per thread."""
-    
+
     def __init__(self, defaultOwner):
         import thread
         self.threadId = thread.get_ident
         self.ownersPerThread = {}
         self.defaultOwner = defaultOwner
-    
+
     def own(self, owner):
         """Set an object as owner of the log."""
         if owner is not None:
@@ -192,7 +192,7 @@ class ThreadedLogOwner:
             x = owners.pop()
             assert x is owner, "Bad disown: %s != %s" % (x, owner)
             if not owners: del self.ownersPerThread[i]
-    
+
     def owner(self):
         """Return the owner of the log."""
         i = self.threadId()
@@ -203,27 +203,27 @@ class ThreadedLogOwner:
 
 
 class Log:
-    
+
     synchronized = ['write', 'writelines']
-    
+
     def __init__(self, file, ownable):
 
         """
         Log(file, ownable)
-        
+
         This will create a Log file (intended to be written to with
         'print', but usable from anywhere that a file is) from a file
         and an 'ownable' object.  The ownable object must have a
         method called 'owner', which takes no arguments and returns a
         Logger.
         """
-        
+
         self.file = file
         for attr in file_protocol:
             if not hasattr(self,attr):
                 setattr(self,attr,getattr(file,attr))
         self.ownable = ownable
-        
+
     def write(self,bytes):
         if not bytes:
             return

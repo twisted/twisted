@@ -174,7 +174,7 @@ All your base are belong to us
     print string.join(p.retr(1)[1], '\n')
     p.quit()
     killit()
-    
+
 
 def runAllTests():
     message("Starting test.")
@@ -202,5 +202,6 @@ except KeyError:
             "  * IRCCLIENT: an IRC client in the style of ircii",
             "  * USER: your UNIX username.")
 else:
-    runAllTests()
-
+    runManholeTest()
+    runMailTest()
+    # runAllTests()

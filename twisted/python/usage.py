@@ -69,6 +69,7 @@ import os
 import sys
 import new
 import getopt
+from os import path
 
 # Sibling Imports
 import reflect
@@ -110,11 +111,11 @@ class Options:
             self.synonyms.update(synonyms)
             self.__dispatch.update(dispatch)
 
-    def opt_help(self, v=None):
-        pass
-        # XXX
+    def opt_help(self):
+        print self.__str__()
+        sys.exit(0)
 
-    opt_h = opt_help
+    #opt_h = opt_help # this conflicted with existing 'host' options.
 
     def parseOptions(self, options=None):
         """The guts of the command-line parser.
@@ -274,8 +275,9 @@ class Options:
 
             doc = getattr(method, '__doc__', None)
             if doc:
-                # Only use the first line.
-                docs[name] = string.split(doc, '\n')[0]
+                ## Only use the first line.
+                #docs[name] = string.split(doc, '\n')[0]
+                docs[name] = doc
             else:
                 docs[name] = None
 
@@ -333,7 +335,29 @@ class Options:
                  'short': longToShort[opt],
                  'doc': self.docs[opt],
                  'optType': optType,
+                 'default': getattr(self, opt, None)
                  })
+
+        synopsis = getattr(self, "synopsis",
+                           "Usage: %s%s"
+                           % (path.basename(sys.argv[0]),
+                              (optDicts and " [options]") or ''))
+
+        if not synopsis[-len('\n'):] == '\n':
+            synopsis = synopsis + '\n'
+
+        if not (getattr(self, "longdesc", None) is None):
+            longdesc = self.longdesc
+        else:
+            import __main__
+            if getattr(__main__, '__doc__', None):
+                longdesc = __main__.__doc__
+            else:
+                longdesc = ''
+
+        if longdesc:
+            longdesc = ('\n' +
+                        string.join(text.wordWrap(longdesc, width), '\n'))
 
         if optDicts:
             chunks = docMakeChunks(optDicts, width)
@@ -341,7 +365,7 @@ class Options:
         else:
             s = "Options: None\n"
 
-        return s
+        return synopsis + s + longdesc
 
     #def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
@@ -368,7 +392,7 @@ def docMakeChunks(optList, width=80):
             if opt.get('optType', None) != "flag":
                 # these take up an extra character
                 optLen = optLen + 1
-            maxOptLen = max(len(opt.get('long', '')), maxOptLen)
+            maxOptLen = max(optLen, maxOptLen)
 
     colWidth1 = maxOptLen + len("  -s, --  ")
     colWidth2 = width - colWidth1
@@ -400,11 +424,16 @@ def docMakeChunks(optList, width=80):
 
         column1 = "  %2s%c --%s  " % (short, comma, long)
 
-        if opt.get('doc', None):
-            if opt.get('default', None):
-                doc = "%s [%s]" % (opt['doc'], opt['default'])
-            else:
-                doc = opt['doc']
+        if opt.get('doc', ''):
+            doc = opt['doc']
+        else:
+            doc = ''
+
+        if (opt.get("optType", None) != "flag") \
+           and not (opt.get('default', None) is None):
+            doc = "%s [%s]" % (doc, opt['default'])
+
+        if doc:
             column2_l = text.wordWrap(doc, colWidth2)
         else:
             column2_l = ['']
@@ -436,6 +465,6 @@ def padTo(n, seq, default=None):
 
     blank = [default] * n
 
-    blank[:len(seq)] = seq
+    blank[:len(seq)] = list(seq)
 
     return blank

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -95,15 +95,15 @@ class GroupSession(gtk.GtkWindow):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("%s - Instance Messenger" % groupName)
         self.connect('destroy', self.leaveGroup)
-        
+
         vb = gtk.GtkVBox()
         hb = gtk.GtkHBox()
-        
+
         self.output = gtk.GtkText()
         self.output.set_word_wrap(gtk.TRUE)
         gtkutil.defocusify(self.output)
         hb.pack_start(gtkutil.scrollify(self.output), 1,1,1)
-        
+
         userlist = gtk.GtkCList(1, ["Users"])
         userlist.set_shadow_type(gtk.SHADOW_OUT)
         gtkutil.defocusify(userlist)
@@ -116,7 +116,7 @@ class GroupSession(gtk.GtkWindow):
 #                    userlist.append_items([member.name])
 
         self.userlist = userlist
-        
+
         vb.pack_start(hb, 1,1,1)
         self.input = gtk.GtkEntry()
         vb.pack_start(self.input,0,0,1)
@@ -165,7 +165,7 @@ class GroupSession(gtk.GtkWindow):
         if not val:
             return
         self.histpos = len(self.history) - 1
-        self.history[self.histpos] = val 
+        self.history[self.histpos] = val
         self.histpos = self.histpos + 1
         self.history.append('')
 
@@ -200,7 +200,7 @@ class MessageSent:
     def failure(self, tb):
         self.conv.messageReceived("could not send message %s: %s"
                                   % (repr(self.mesg), tb), "error", gtkutil.errorFont )
-        
+
 
 
 class JoinGroup(gtkutil.GetString):
@@ -223,19 +223,19 @@ class ContactList(gtk.GtkWindow):
         self.signal_connect('destroy', gtk.mainquit, None)
         self.set_title("Instance Messenger")
         # self.set_usize(200,400)
-        
+
         # Vertical Box packing
         vb = gtk.GtkVBox(gtk.FALSE, 5)
-        
+
         # Contact List
         self.list = gtk.GtkCList(2, ["Status", "Contact"])
         self.list.set_shadow_type(gtk.SHADOW_OUT)
         self.list.set_column_width(1, 150)
         self.list.set_column_width(0, 50)
         self.list.signal_connect("select_row", self.contactSelected)
-       
+
         vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
-        
+
         addContactButton = gtkutil.cbutton("Add Contact", self.addContactWindow)
         removeContactButton = gtkutil.cbutton("Remove Contact", self.removeContact)
         sendMessageButton = gtkutil.cbutton("Send Message", self.sendMessage)
@@ -245,7 +245,7 @@ class ContactList(gtk.GtkWindow):
         hb.pack_start(removeContactButton)
         hb.pack_start(sendMessageButton)
         hb.pack_start(joinGroupButton)
-        
+
         vb.pack_start(hb, gtk.FALSE, gtk.FALSE, 0)
         self.add(vb)
         self.show_all()
@@ -285,17 +285,25 @@ class ContactList(gtk.GtkWindow):
 
 im.Conversation=Conversation
 im.ContactList=ContactList
-def our_connected(perspective):
-    b.name=lw.username.get_text()
-    lw.hide()
-    b.connected(perspective)
+
+class OurConnected:
+    loginWindow = None
+    b = None
+    def __init__(self):
+        pass
+
+    def __call__(self, perspective):
+        self.b.name = self.loginWindow.username.get_text()
+        self.loginWindow.hide()
+        self.b.connected(perspective)
+
 def main():
-    global lw,b
     b = im.InstanceMessenger()
+    our_connected = OurConnected()
     lw = gtkutil.Login(our_connected, b,
                        initialHostname='twistedmatrix.com',
                        initialService="twisted.words")
     lw.show_all()
+    our_connected.loginWindow = lw
+    our_connected.b = b
     gtk.mainloop()
-
-

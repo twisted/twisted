@@ -2,16 +2,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -59,18 +59,26 @@ import traceback
 import imp
 
 class ServerOptions(usage.Options):
-    optFlags = [['nodaemon','n'],
-                ['profile','p'],
-                ['threaded','t'],
-                ['quiet','q'],
-                ['no_save','o']]
-    optStrings = [['logfile','l',None],
-                  ['file','f','twistd.tap'],
-                  ['python','y',''],
-                  ['pidfile','','twistd.pid'],
+    synopsis = "Usage: twistd [options]"
+    longdesc = "This reads an twisted.internet.main.Application out of a file and runs it."
+
+    optFlags = [['nodaemon','n',"don't daemonize"],
+                ['profile','p',"run profiler"],
+                ['threaded','t',"use threads"],
+                ['quiet','q',"be a little more quiet"],
+                ['no_save','o',"do not save state on shutdown"]]
+
+    optStrings = [['logfile','l', None,
+                   "log to a specified file, - for stdout"],
+                  ['file','f','twistd.tap',"read the given .tap file"],
+                  ['python','y', None,
+                   "read an application from within a Python file"],
+                  ['pidfile','','twistd.pid',"use a pidfile"],
                   ['rundir','d','.']]
 
     def opt_plugin(self, pkgname):
+        """read config.tac from a plugin package, as with -y
+        """
         fname = imp.find_module(pkgname)[1]
         self.python = os.path.join(fname, 'config.tac')
 

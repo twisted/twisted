@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -59,22 +59,22 @@ class POP3(basic.LineReceiver):
         self.successResponse()
 
     def do_LIST(self, i=None):
-        messages = self.mbox.listMessages() 
+        messages = self.mbox.listMessages()
         total = reduce(operator.add, messages, 0)
         self.successResponse(len(messages))
         i = 1
         for message in messages:
             if message:
-                self.transport.write('%d %d\r\n' % (i, message)) 
+                self.transport.write('%d %d\r\n' % (i, message))
             i = i+1
         self.transport.write('.\r\n')
 
     def do_UIDL(self, i=None):
-        messages = self.mbox.listMessages() 
+        messages = self.mbox.listMessages()
         self.successResponse()
         for i in range(len(messages)):
             if messages[i]:
-                self.transport.write('%d %s\r\n' % (i+1, self.mbox.getUidl(i))) 
+                self.transport.write('%d %s\r\n' % (i+1, self.mbox.getUidl(i)))
         self.transport.write('.\r\n')
 
     def getMessageFile(self, i):
@@ -106,7 +106,7 @@ class POP3(basic.LineReceiver):
                 line = '.'+line
             self.transport.write(line[:size]+'\r\n')
             size = size-len(line[:size])
-            
+
 
     def do_RETR(self, i):
         resp, fp = self.getMessageFile(i)

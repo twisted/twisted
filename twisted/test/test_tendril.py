@@ -182,7 +182,7 @@ class TendrilTest(unittest.TestCase):
         self.participant.groupMessage('tendriltest', "Greetings!")
         output = self.file.getvalue()
 
-        self.failUnlessEqual(expected_output, output, self.file.getAll())
+        self.failUnlessEqual(expected_output, output)
 
     def test_participantToNick(self):
         """Testing words directMessage -> IRC user

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -23,7 +23,7 @@ import string
 
 class Resource:
     """I define a web-accessible resource.
-    
+
     I serve 2 main purposes; one is to provide a standard representation for
     what HTTP specification calls an 'entity', and the other is to provide an
     abstract directory structure for URL retrieval.
@@ -44,7 +44,7 @@ class Resource:
         """Retrieve a 'child' resource from me.
 
         Arguments:
-        
+
            path: a string, describing the child
 
            request: a twisted.web.server.Request specifying meta-information
@@ -58,7 +58,7 @@ class Resource:
         left as a list of the remaining path elements.
 
         For example, the URL /foo/bar/baz will normally be::
-        
+
           |  site.resource.getChild('foo').getChild('bar').getChild('baz').
 
         However, if the resource returned by 'bar' has isLeaf set to true, then
