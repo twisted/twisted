@@ -1781,11 +1781,7 @@ class FTPClient(basic.LineReceiver):
             pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
             results = [cmdsDeferred, pasvCmd.deferred, protocol.deferred]
-            d = DeferredList(results, fireOnOneErrback=1)
-
-            # Suppress errors; we've already reported this via d
-            # FIXME: Do the other components of this DeferredList need this too?
-            cmdsDeferred.addErrback(lambda err: None)   
+            d = DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
 
             # Ensure the connection is always closed
             def close(x, m=_mutable):
