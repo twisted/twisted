@@ -217,7 +217,7 @@ class ConfigForm(widgets.Form):
             else:
                 inputType = 'string'
                 inputValue = "<UNKNOWN>"
-            myFields.append([inputType, prompt, name, inputValue])
+            myFields.append([inputType, prompt, name, inputValue, description])
         return myFields
 
     def process(self, write, request, submit, **values):
