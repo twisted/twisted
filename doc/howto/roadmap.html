@@ -58,14 +58,18 @@
         API on to other main loops which it does not necessarily
         control.</td>
 
-        <td>Connectors for SSL. UDP refactor.</td>
+        <td>connectTCP should take a factory, not a client.  Application needs
+          to be decoupled from cred; services need to manage their own authorizers, not
+          have one handed to them by the application.  Connectors for SSL.  UDP
+          refactor.</td>
 
         <td>Improved Jython support, and support for Java 1.4's
         nbio, C optimization of the regular mainloop, refactor of
         app.connectTCP so Connector doesn't touch reactor
         implementation.</td>
 
-        <td>None known.</td>
+        <td>New connectTCP signature will be incompatible.  cred will work
+          differently once Application is removed from the picture.</td>
 
         <td>1.0</td>
       </tr>
