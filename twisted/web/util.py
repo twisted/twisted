@@ -34,7 +34,7 @@ def redirectTo(URL, request):
     return """
 <html>
     <head>
-        <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
+        <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\"></meta>
     </head>
     <body bgcolor=\"#FFFFFF\" text=\"#000000\">
     <a href=\"%(url)s\">click here</a>
