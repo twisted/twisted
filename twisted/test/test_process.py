@@ -27,6 +27,13 @@ import cStringIO, gzip, os, popen2, time, sys
 from twisted.internet import reactor, protocol, error
 from twisted.python import util, runtime
 
+class TrivialProcessProtocol(protocol.ProcessProtocol):
+    finished = 0
+    def processEnded(self, reason):
+        self.finished = 1
+        self.reason = reason
+
+
 class TestProcessProtocol(protocol.ProcessProtocol):
 
     finished = 0
@@ -63,7 +70,6 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.finished = 1
         self.reason = reason
 
-
 class EchoProtocol(protocol.ProcessProtocol):
 
     s = "1234567" * 1001
@@ -97,7 +103,7 @@ class ProcessTestCase(unittest.TestCase):
 
         # test status code
         f = p.reason
-        f.trap(error.ProcessEnded)
+        f.trap(error.ProcessTerminated)
         self.assertEquals(f.value.exitCode, 23)
         
         try:
@@ -160,21 +166,21 @@ class PosixProcessTestCase(unittest.TestCase):
         p.transport.write("123")
         p.transport.closeStdin()
         while not p.closed:
-            reactor.iterate()
+            reactor.iterate(0.01)
         self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
     
     def testProcess(self):
         if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
         elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
-        else: raise "gzip not found in /bin or /usr/bin"
+        else: raise RuntimeError("gzip not found in /bin or /usr/bin")
         s = "there's no place like home!\n" * 3
-	p = Accumulator()
+        p = Accumulator()
         reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp")
         p.transport.write(s)
         p.transport.closeStdin()
 
         while not p.closed:
-            reactor.iterate()
+            reactor.iterate(0.01)
         f = p.outF
         f.seek(0, 0)
         gf = gzip.GzipFile(fileobj=f)
@@ -182,15 +188,32 @@ class PosixProcessTestCase(unittest.TestCase):
     
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
-        if not os.path.exists('/bin/ls'): raise "/bin/ls not found"
-
-	p = Accumulator()
+        if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
+        
+        p = Accumulator()
         reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
 
         while not p.closed:
-            reactor.iterate()
+            reactor.iterate(0.01)
         self.assertEquals(lsOut, p.errF.getvalue())
     
+
+    def testNormalTermination(self):
+        p = TrivialProcessProtocol()
+        reactor.spawnProcess(p, '/bin/true', ['true'])
+        while not p.finished:
+            reactor.iterate(0.01)
+        p.reason.trap(error.ProcessDone)
+        self.assertEquals(p.reason.value.exitCode, 0)
+
+
+    def testAbnormalTermination(self):
+        p = TrivialProcessProtocol()
+        reactor.spawnProcess(p, '/bin/false', ['false'])
+        while not p.finished:
+            reactor.iterate(0.01)
+        p.reason.trap(error.ProcessTerminated)
+        self.assertEquals(p.reason.value.exitCode, 1)
 
 
 class Win32ProcessTestCase(unittest.TestCase):

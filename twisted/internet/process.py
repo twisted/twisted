@@ -344,7 +344,10 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                         exitCode = self.status >> 8
                     else:
                         exitCode = None # wonder when this happens
-                    self.proto.processEnded(failure.Failure(error.ProcessEnded(exitCode)))
+                    if exitCode:
+                        self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode)))
+                    else:
+                        self.proto.processEnded(failure.Failure(error.ProcessDone()))
                 except:
                     log.deferr()
             else:
