@@ -2,16 +2,16 @@
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -59,18 +59,18 @@ class IMessageDelivery(components.Interface):
     def receivedHeader(self, helo, origin, recipients):
         """
         Generate the Received header for a message
-        
+
         @type helo: C{(str, str)}
         @param helo: The argument to the HELO command and the client's IP
         address.
 
         @type origin: C{Address}
         @param origin: The address the message is from
-        
+
         @type recipients: C{list} of C{str}
         @param recipients: A list of the addresses for which this message
         is bound.
-        
+
         @rtype: C{str}
         @return: The full "Received" header string.
         """
@@ -78,7 +78,7 @@ class IMessageDelivery(components.Interface):
     def validateTo(self, user):
         """
         Validate the address for which the message is destined.
-        
+
         @type user: C{User}
         @param user: The address to validate.
 
@@ -87,7 +87,7 @@ class IMessageDelivery(components.Interface):
         takes no arguments and returns an object implementing C{IMessage}.
         This will be called and the returned object used to deliver the
         message when it arrives.
-        
+
         @raise SMTPBadRcpt: Raised if messages to the address are
         not to be accepted.
         """
@@ -95,18 +95,18 @@ class IMessageDelivery(components.Interface):
     def validateFrom(self, helo, origin):
         """
         Validate the address from which the message originates.
-        
+
         @type helo: C{(str, str)}
         @param helo: The argument to the HELO command and the client's IP
         address.
 
         @type origin: C{Address}
         @param origin: The address the message is from
-        
+
         @rtype: C{Deferred} or C{Address}
         @return: C{origin} or a C{Deferred} whose callback will be
         passed C{origin}.
-        
+
         @raise SMTPBadSender: Raised of messages from this address are
         not to be accepted.
         """
@@ -154,7 +154,7 @@ class SMTPAddressError(SMTPServerError):
 
     def __str__(self):
         return "%.3d <%s>... %s" % (self.code, self.addr, self.resp)
-    
+
 class SMTPBadRcpt(SMTPAddressError):
     def __init__(self, addr, code=550,
                  resp='Cannot receive for specified address'):
@@ -187,7 +187,7 @@ def rfc822date(timeinfo=None,local=1):
             tz = -time.altzone
         else:
             tz = -time.timezone
-            
+
         (tzhr, tzmin) = divmod(abs(tz), 3600)
         if tz:
             tzhr *= int(abs(tz)/tz)
@@ -233,7 +233,7 @@ def quoteaddr(addr):
 
     if isinstance(addr, Address):
         return '<%s>' % str(addr)
-    
+
     res = rfc822.parseaddr(addr)
 
     if res == (None, None):
@@ -255,10 +255,10 @@ class Address:
 
     Source routes are stipped and ignored, UUCP-style bang-paths
     and %-style routing are not parsed.
-    
+
     @type domain: C{str}
     @ivar domain: The domain within which this address resides.
-    
+
     @type local: C{str}
     @ivar local: The local (\"user\") portion of this address.
     """
@@ -292,8 +292,8 @@ class Address:
                     raise AddressError, "Unbalanced <>"
                 atl = atl[1:-1]
             elif atl[0] == '@':
-                atl = atl[1:]  
-                if not local:  
+                atl = atl[1:]
+                if not local:
                     # Source route
                     while atl and atl[0] != ':':
                         # remove it
@@ -305,7 +305,7 @@ class Address:
                     raise AddressError, "Too many @"
                 else:
                     # Now in domain
-                    domain = ['']  
+                    domain = ['']
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] !=  '.':
                 raise AddressError, "Parse error at %r of %r" % (atl[0], (addr, atl))
             else:
@@ -314,14 +314,14 @@ class Address:
                 else:
                     domain.append(atl[0])
                 atl = atl[1:]
-               
+
         self.local = ''.join(local)
         self.domain = ''.join(domain)
         if self.domain == '':
             if defaultDomain is None:
                 defaultDomain = DNSNAME
             self.domain = defaultDomain
-        
+
     dequotebs = re.compile(r'\\(.)')
 
     def dequote(self,addr):
@@ -378,7 +378,7 @@ class User:
 
 class IMessage(components.Interface):
     """Interface definition for messages that can be sent via SMTP."""
-    
+
     def lineReceived(self, line):
         """handle another line"""
 
@@ -397,13 +397,13 @@ class IMessage(components.Interface):
 
 class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     """SMTP server-side protocol."""
-    
+
     timeout = 600
     host = DNSNAME
     portal = None
     delivery = None
     _onLogout = None
-    
+
     def __init__(self, delivery=None):
         self.mode = COMMAND
         self._from = None
@@ -435,7 +435,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     def lineReceived(self, line):
         self.resetTimeout()
         return getattr(self, 'state_' + self.mode)(line)
-    
+
     def state_COMMAND(self, line):
         words = line.split(None, 1)
         try:
@@ -453,7 +453,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def lookupMethod(self, command):
         return getattr(self, 'do_' + command.upper(), None)
-        
+
     def lineLengthExceeded(self, line):
         if self.mode is DATA:
             for message in self.__messages:
@@ -582,11 +582,11 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self.mode = DATA
         helo, origin = self._helo, self._from
         recipients = self._to
-        
+
         self._from = None
         self._to = []
         self.datafailed = None
-        
+
         try:
             self.__messages = [f() for (u, f) in recipients]
         except SMTPServerError, e:
@@ -702,7 +702,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._onLogout = logout
         self.authenticated = 1
         self.challenger = None
-    
+
     def _ebAuthenticated(self, reason):
         self.challenge = None
         if reason.check(cred.error.UnauthorizedLogin):
@@ -717,25 +717,25 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     def validateFrom(self, helo, origin):
         """
         Validate the address from which the message originates.
-        
+
         @type helo: C{(str, str)}
         @param helo: The argument to the HELO command and the client's IP
         address.
 
         @type origin: C{Address}
         @param origin: The address the message is from
-        
+
         @rtype: C{Deferred} or C{Address}
         @return: C{origin} or a C{Deferred} whose callback will be
         passed C{origin}.
-        
+
         @raise SMTPBadSender: Raised of messages from this address are
         not to be accepted.
         """
         if self.delivery:
             return defer.maybeDeferred(self.delivery.validateFrom,
                 helo, origin)
-        
+
         # No login has been performed, no default delivery object has been
         # provided: try to perform an anonymous login and then invoke this
         # method again.
@@ -751,7 +751,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     def validateTo(self, user):
         """
         Validate the address for which the message is destined.
-        
+
         @type user: C{User}
         @param user: The address to validate.
 
@@ -760,7 +760,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         takes no arguments and returns an object implementing C{IMessage}.
         This will be called and the returned object used to deliver the
         message when it arrives.
-        
+
         @raise SMTPBadRcpt: Raised if messages to the address are
         not to be accepted.
         """
@@ -781,12 +781,12 @@ class SMTPFactory(protocol.ServerFactory):
     domain = DNSNAME
     timeout = 600
     protocol = SMTP
-    
+
     portal = None
-    
+
     def __init__(self, portal = None):
         self.portal = portal
-    
+
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.portal = self.portal
@@ -834,11 +834,11 @@ class SMTPClient(basic.LineReceiver):
             return
 
         self.resp.append(line[4:])
-        
+
         if line[3:4] == '-':
             # continuation
             return
-        
+
         if self.code in self._expected:
             why = self._okresponse(self.code,'\n'.join(self.resp))
             self.lastfailed = 0
@@ -927,8 +927,8 @@ class SMTPClient(basic.LineReceiver):
         self.sendLine('RSET')
         self._expected = SUCCESS
         self._okresponse = self.smtpState_from
-     
-    ##   
+
+    ##
     ## Helpers for FileSender
     ##
     def transformChunk(self, chunk):
@@ -971,10 +971,10 @@ class SMTPClient(basic.LineReceiver):
         and resp is an informative message.
 
         @param numOK: the number of addresses accepted by the remote host.
-        
+
         @param addresses: is a list of tuples (address, code, resp) listing
             the response to each RCPT command.
-        
+
         @param log: is the SMTP session log
         """
         raise NotImplementedError
@@ -1005,7 +1005,7 @@ class ESMTPClient(SMTPClient):
         self._expected = [220]
         self._okresponse = self.esmtpState_ehlo
         self._failresponse = self.smtpConnectionFailed
-    
+
     def esmtpState_ehlo(self, code, resp):
         self.sendLine('EHLO ' + self.identity)
         self._expected = SUCCESS
@@ -1035,13 +1035,13 @@ class ESMTPClient(SMTPClient):
             self._okresponse = self.smtpState_disconnect
         else:
             self.authenticate(code, resp, items)
-    
+
     def esmtpState_starttls(self, code, resp):
         self.transport.startTLS(self.context)
         items = self._carryon
         self._carryon = None
         self.authenticate(code, resp, items)
-    
+
     def authenticate(self, code, resp, items):
         if self.secret and items.get('AUTH'):
             schemes = items['AUTH'].split()
@@ -1064,7 +1064,7 @@ class ESMTPClient(SMTPClient):
         auth = self._authinfo
         del self._authinfo
         self._authResponse(auth, resp)
-    
+
     def _authResponse(self, auth, challenge):
         try:
             challenge = base64.decodestring(challenge)
@@ -1084,7 +1084,7 @@ class ESMTP(SMTP):
     ctx = None
     canStartTLS = False
     startedTLS = False
-    
+
     authenticated = False
 
     def __init__(self, chal = None, contextFactory = None):
@@ -1157,7 +1157,7 @@ class ESMTP(SMTP):
             self.sendCode(504, 'Unrecognized authentication type')
             return
         self.authenticate(chal)
-    
+
     def authenticate(self, challenger):
         if self.portal:
             challenge = challenger.getChallenge()
@@ -1170,7 +1170,7 @@ class ESMTP(SMTP):
 
     def state_AUTH(self, rest):
         self.mode = COMMAND
-        
+
         if rest == '*':
             self.sendCode(501, 'Authentication aborted')
             self.challenger.abort()
@@ -1182,22 +1182,19 @@ class ESMTP(SMTP):
         except binascii.Error, e:
             self._ebAuthenticated(failure.Failure(e))
         else:
-            parts = uncoded.split(None, 1)
-            if len(parts) != 2:
-                self.sendCode(501, "Invalid challenge response")
-                return
-                
-            self.challenger.username = parts[0]
-            self.challenger.response = parts[1]
-            self.portal.login(self.challenger, None, IMessageDelivery
-                ).addCallback(self._cbAuthenticated
-                ).addCallback(lambda _: self.sendCode(235, 'Authentication successful.')
-                ).addErrback(self._ebAuthenticated
-                )
+            self.challenger.setResponse(uncoded)
+            if self.challenger.moreChallenges():
+                self.authenticate(self.challenger)
+            else:
+                self.portal.login(self.challenger, None, IMessageDelivery
+                    ).addCallback(self._cbAuthenticated
+                    ).addCallback(lambda _: self.sendCode(235, 'Authentication successful.')
+                    ).addErrback(self._ebAuthenticated
+                    )
 
 class SMTPSender(SMTPClient):
     """Utility class for sending emails easily - use with SMTPSenderFactory."""
-    
+
     done = 0
 
     def getMailFrom(self):
@@ -1236,7 +1233,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
     domain = DNSNAME
     protocol = SMTPSender
-    
+
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5):
         if isinstance(toEmail, types.StringTypes):
             toEmail = [toEmail]
@@ -1251,7 +1248,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     def _removeDeferred(self, argh):
         del self.result
         return argh
-    
+
     def clientConnectionFailed(self, connector, error):
         self.result.errback(error)
 
@@ -1301,28 +1298,28 @@ def sendmail(smtphost, from_addr, to_addrs, msg):
     if not hasattr(msg,'read'):
         # It's not a file
         msg = StringIO(str(msg))
-        
+
     d = defer.Deferred()
     factory = SMTPSenderFactory(from_addr, to_addrs, msg, d)
     reactor.connectTCP(smtphost, 25, factory)
 
     return d
-    
+
 def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments = None, multipartbody = "mixed"):
     """Send an email, optionally with attachments.
 
     @type smtphost: str
     @param smtphost: hostname of SMTP server to which to connect
-    
+
     @type fromEmail: str
     @param fromEmail: email address to indicate this email is from
-    
+
     @type toEmail: str
     @param toEmail: email address to which to send this email
-    
+
     @type content: str
     @param content: The body if this email.
-    
+
     @type headers: dict
     @param headers: Dictionary of headers to include in the email
 
@@ -1353,7 +1350,7 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
         # Setup the mail headers
         for (header, value) in headers.items():
             writer.addheader(header, value)
-            
+
         headkeys = [k.lower() for k in headers.keys()]
     else:
         headkeys = ()
