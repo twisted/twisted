@@ -254,6 +254,7 @@ components.registerAdapter(MemoryStream, buffer, IByteStream)
 
 class CompoundStream:
     """A stream which is composed of many other streams.
+
     Call addStream to add substreams.
     """
     
@@ -261,8 +262,8 @@ class CompoundStream:
     deferred = None
     length = 0
     
-    def __init__(self):
-        self.buckets = []
+    def __init__(self, buckets=()):
+        self.buckets = [IByteStream(s) for s in buckets]
         
     def addStream(self, bucket):
         """Add a stream to the output"""

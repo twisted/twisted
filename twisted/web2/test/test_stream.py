@@ -318,6 +318,12 @@ class CompoundStreamTest:
     >>> s.length
     0
 
+    We can also create CompoundStream more easily like so:
+    >>> s = CompoundStream(['hello', MemoryStream(' world')])
+    >>> str(s.read())
+    'hello'
+    >>> str(s.read())
+    ' world'
     
     For a more complicated example, let's try reading from a file:
     >>> s = CompoundStream()
