@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.41 $"[11:-2]
+__version__ = "$Revision: 1.42 $"[11:-2]
 
 import types
 import weakref
@@ -308,9 +308,11 @@ class MethodModel(Model):
             name = request
             request = None
 
+        cached = self.submodels.has_key(name)
         sm = Model.getSubmodel(self, request, name)
         if sm is not None:
-            sm.cachedFor = id(request)
+            if not cached:
+                sm.cachedFor = id(request)
             sm._getter = getattr(self, "wmfactory_"+name)
         return sm
 
