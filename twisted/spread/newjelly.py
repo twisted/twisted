@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.7 $"[11:-2]
+__version__ = "$Revision: 1.8 $"[11:-2]
 
 # System Imports
 import string
@@ -358,7 +358,7 @@ class _Jellier:
                 return ['module', obj.__name__]
             elif objType is BooleanType:
                 return ['boolean', obj and 'true' or 'false']
-            elif objType is ClassType:
+            elif objType is ClassType or issubclass(objType, type):
                 return ['class', qual(obj)]
             else:
                 # "Mutable" Types

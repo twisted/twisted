@@ -22,7 +22,7 @@ import types
 from twisted.trial import unittest
 from twisted.spread import newjelly, pb
 
-from twisted.python.compat import bool
+from twisted.python.compat import *
 
 class A:
     """
@@ -48,6 +48,12 @@ class C:
     """
     def cmethod(self):
         pass
+
+
+class D(object):
+    """
+    newstyle class
+    """
 
 
 class SimpleJellyTest:
@@ -153,6 +159,11 @@ class JellyTestCase(unittest.TestCase):
         except self.jc.InsecureJelly:
             # OK, works
             pass
+
+    def testNewStyleClasses(self):
+        j = self.jc.jelly(D)
+        uj = self.jc.unjelly(D)
+        self.assertIdentical(D, uj)
 
     def testLotsaTypes(self):
         """
