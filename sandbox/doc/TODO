@@ -1,0 +1,12 @@
+---Async---
+
+Existing docs: 
+
+ - the defer.xhtml howto needs to become the "more on deferreds" howto, with
+   simple deferred info moving to async.xhtml
+
+New docs:
+
+ - the async.xhtml discussion of what Deferreds can't do calls for an answer to
+   the question "well... if /Deferreds/ don't make my function non-blocking,
+   how /can/ I make them non-blocking?" guide.
