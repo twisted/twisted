@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.36 2002/09/01 10:41:06 acapnotic Exp $
+# $Id: default.py,v 1.37 2002/09/02 08:07:13 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -283,8 +283,9 @@ class PosixReactorBase(ReactorBase):
     def listenUNIX(self, address, factory, backlog=5):
         """Listen on a UNIX socket.
         """
-        return tcp.Port(address, factory, backlog=backlog)
-
+        p = tcp.Port(address, factory, backlog=backlog)
+        p.startListening()
+        return p
 
     # IReactorTCP
 
