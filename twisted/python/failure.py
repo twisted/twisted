@@ -255,18 +255,10 @@ class Failure:
     def __getstate__(self):
         """Avoid pickling objects in the traceback.
         """
+        if self.pickled:
+            return self.__dict__
         c = self.__dict__.copy()
-#
-# Function calls in Python are slow.
-#
-#        frames = c['frames'] = []
-#        stack = c['stack'] = []
-#        stringize = lambda (x, y): (x, repr(y))
-#        for m, f, l, lo, gl in self.frames:
-#            frames.append([m, f, l, map(stringize, lo), map(stringize, gl)])
-#        for m, f, l, lo, gl in self.stack:
-#            stack.append([m, f, l, map(stringize, lo), map(stringize, gl)])
-
+        
         c['frames'] = [
             [
                 v[0], v[1], v[2],
