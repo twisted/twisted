@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.39 $'[11:-2]
+__version__ = '$Revision: 1.40 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -460,12 +460,20 @@ class IntervalDifferential:
     Given a list of intervals, generate the amount of time to sleep between
     \"instants\".
     
-    For example, given 7, 11 and 13 generate the values:
+    For example, given 7, 11 and 13, the three (infinite) sequences
     
-    7, 4, 2, 1, 7, 1, 4, 2, 5, 2, 4, 5, ...
+        7 14 21 28 35 ...
+        11 22 33 44 ...
+        13 26 39 52 ...
     
-    New intervals may be added or removed as iteration proceeds.
+    will be generated, merged, and used to produce:
+    
+        (7, 0) (4, 1) (2, 2) (1, 0) (7, 0) (1, 1) (4, 2) (2, 0) (5, 1) (2, 0)
+    
+    New intervals may be added or removed as iteration proceeds using the
+    proper methods.
     """
+
     def __init__(self, intervals, default=60):
         """
         @type intervals: C{list} of C{int}, C{long}, or C{float} param
@@ -483,38 +491,32 @@ class IntervalDifferential:
 
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
-        self.intervals = [[e, e] for e in i]
+        
+        self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
     
     def next(self):
         if not self.intervals:
-            return self.default
-#        print 'self.intervals[0][0]', self.intervals[0][0]
-#        print 'self.intervals[0][1]', self.intervals[0][1]
-#        print 'self.last', self.last
-        last = self.intervals[0][0]
+            return (self.default, None)
+        last, index = self.intervals[0][0], self.intervals[0][2]
         self.intervals[0][0] += self.intervals[0][1]
         self.intervals.sort()
         result = last - self.last
         self.last = last
-        return result
-
-def nextInterval(intervals):
-    intervals[:] = [[e, e] for e in intervals]
-    intervals.sort()
-    last = 0
-    while True:
-        yield i[0][0] - last
-        last = i[0][0]
-        if isinstance(i[-1], (int, long, float)):
-            i[-1] = [last + i[-1], i[-1]]
-        i[0][0] += i[0][1]
-        i.sort()
+        return result, index
+    
+    def addInterval(self, i):
+        if self.intervals:
+            delay = self.intervals[0][0] - self.intervals[0][1]
+            self.intervals.append([delay + i, i, len(self.intervals)])
+            self.intervals.sort()
+        else:
+            self.intervals.append([i, i, 0])
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "spewer", "searchupwards", "LineLog", "raises",
-    "nextInterval",
+    "IntervalDifferential",
 ]
