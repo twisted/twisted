@@ -458,7 +458,8 @@ class Request:
         This method is not intended for users."""
         cookietxt = self.getHeader("cookie")
         if cookietxt:
-            for cook in cookietxt.split('; '):
+            for cook in cookietxt.split(';'):
+                cook.lstrip()
                 try:
                     k, v = cook.split('=')
                     self.received_cookies[k] = v
