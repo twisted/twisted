@@ -98,6 +98,7 @@ class FormFillerWidget(widgets.Widget):
         return self.input_single(request, content, model, templateAttributes)
 
     input_integer = input_single
+    input_integerrange = input_single
     input_float = input_single
 
     def input_text(self, request, content, model, templateAttributes={}):
@@ -500,6 +501,7 @@ class FormProcessor(resource.Resource):
     mangle_password = mangle_single
     mangle_text = mangle_single
     mangle_integer = mangle_single
+    mangle_integerrange = mangle_single
     mangle_float = mangle_single
     mangle_choice = mangle_single
     mangle_boolean = mangle_single
