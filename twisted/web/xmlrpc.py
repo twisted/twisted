@@ -36,15 +36,50 @@ NOT_FOUND = 8001
 FAILURE = 8002
 
 
+# Useful so people don't need to import xmlrpclib directly
+Fault = xmlrpclib.Fault
+
+
 class NoSuchFunction(Exception):
     """There is no function by the given name."""
     pass
+
+
+class Handler:
+    """Handle a XML-RPC request and store the state for a request in progress.
+
+    Override the run() method and return result using self.result,
+    a Deferred.
+
+    We require this class since we're not using threads, so we can't
+    encapsulate state in a running function if we're going  to have
+    to wait for results.
+
+    For example, lets say we want to authenticate against twisted.cred,
+    run a LDAP query and then pass its result to a database query, all
+    as a result of a single XML-RPC command. We'd use a Handler instance
+    to store the state of the running command.
+    """
+
+    def __init__(self, resource, *args):
+        self.resource = resource # the XML-RPC resource we are connected to
+        self.result = defer.Deferred()
+        self.run(*args)
+    
+    def run(self, *args):
+        # event driven equivalent of 'raise UnimplementedError'
+        self.result.errback(NotImplementedError("Implement run() in subclasses"))
 
 
 class XMLRPC(resource.Resource):
     """A resource that implements XML-RPC.
     
     You probably want to connect this to '/RPC2'.
+
+    Methods published can return XML-RPC serializable results, Faults,
+    Deferreds, or Handler instances.
+
+    By default methods beginning with 'xmlrpc_' are published.
     """
     
     isLeaf = 1
@@ -62,22 +97,24 @@ class XMLRPC(resource.Resource):
         try:
             function = self._getFunction(functionPath)
         except NoSuchFunction:
-            result = xmlrpclib.Fault(NOT_FOUND, "no such function %s" % functionPath)
+            result = Fault(NOT_FOUND, "no such function %s" % functionPath)
         else:
             try:
                 result = apply(function, args)
             except:
                 log.deferr()
-                result = xmlrpclib.Fault(FAILURE, "error")
+                result = Fault(FAILURE, "error")
         
         request.setHeader("content-type", "text/xml")
+        if isinstance(result, Handler):
+            result = result.result
         if isinstance(result, defer.Deferred):
-            responder = Result(self, request)
+            responder = _DeferredResult(self, request)
             self.requests[responder] = 1
             result.addCallbacks(responder.gotResult, responder.gotFailure)
             return server.NOT_DONE_YET
         else:
-            if not isinstance(result, xmlrpclib.Fault):
+            if not isinstance(result, Fault):
                 result = (result,) # wrap as tuple
             return xmlrpclib.dumps(result, methodresponse=1)
     
@@ -85,7 +122,7 @@ class XMLRPC(resource.Resource):
         """Given a string, return a function, or raise NoSuchFunction.
         
         This returned function will be called, and should return the result
-        of the call, a Deferred, or a xmlrpclib.Fault instance.
+        of the call, a Deferred, or a Fault instance.
         
         Override in subclasses if you want your own policy. The default
         policy is that given functionPath 'foo', return the method at
@@ -98,8 +135,8 @@ class XMLRPC(resource.Resource):
             raise NoSuchFunction
 
 
-class Result:
-    """The result of an XML-RPC request."""
+class _DeferredResult:
+    """The deferred result of an XML-RPC request."""
     
     def __init__(self, resource, request):
         self.resource = resource
@@ -107,14 +144,19 @@ class Result:
     
     def gotResult(self, result):
         """Callback for when request finished."""
-        self.finish((result,))
+        if not isinstance(result, Fault):
+            result = (result,)
+        self.finish(result)
 
     def gotFailure(self, error):
         """Callback for when request failed."""
-        self.finish(xmlrpclib.Fault(FAILURE, "error"))
+        self.finish(Fault(FAILURE, "error"))
 
     def finish(self, result):
         self.request.write(xmlrpclib.dumps(result, methodresponse=1))
         self.request.finish()
         self.resource.requestFinished(self)
         del self.resource
+
+
+__all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault"]
