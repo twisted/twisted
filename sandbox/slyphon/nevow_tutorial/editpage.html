@@ -1,0 +1,62 @@
+<html>
+<head>
+<title>The EditPage</title>
+</head>
+<body bgcolor="white">
+<h1>The EditPage</h1>
+<h2>Overview</h2>
+<p>
+This page provides the user a table of all bookmarks in the application, and
+allows them to select a bookmark to edit or delete. In the 
+<a href="src/templates/edit_page.html">template</a> for this page, we've also
+included a link to allow users to add a bookmark.
+</p>
+<a href="src/EditPage.py" class="py-listing"></a>
+
+<h2>wmfactory_db_table</h2>
+<p>
+Because we've taken the time to build our storage backend the way we did,
+we can simplify the model in this Page. The storage object returns a 
+BookmarkContainer object (which is basically just a list), with all of the 
+Bookmarks stored by the application.
+</p>
+<h2>wvupdate_table_data</h2>
+<p>
+Here's where the interesting part happens. First we're going to create a new
+lmx object <q>wrapped</q> around the node that had the view=<q>table_data</q> 
+attribute defined. lmx is a thin wrapper around the w3c's DOM API (because
+of it's high suck factor), and allows us to write large amounts HTML from
+Python. You can read more about the details of using lmx module in the 
+<a href="http://www.twistedmatrix.com/documents/howto/viewindepth#auto4">View In Depth</a>
+howto.
+</p>
+<p>
+First, we sort the table data by category to make it more readable. Then we
+create the actual html table. Each bookmark gets an 'edit' and 'delete' link
+next to it in the table to allow the user to select the corresponding action.
+In the case of an 'edit' link, the root of the url is EditLink, which is the
+page we'll use to edit the bookmarks, and the child is the id number of the
+bookmark the user wishes to edit. This is where the magic of getDynamicChild()
+comes into play.
+</p>
+
+
+
+        <!-- Navigation Links ------------------------ -->
+        <p>
+        <table cellpadding="" cellspacing="5" border="0">
+            <tr>
+                <td>
+                <a href="editlinkpage.xhtml">next</a>  
+                </td>
+                <td>
+                   <a href="superpage.xhtml">prev</a>  
+                </td>
+                <td>
+                    <a href="toc.xhtml">toc</a>
+                </td>
+            </tr>  
+        </table>
+        </p>
+    </body>
+</html>

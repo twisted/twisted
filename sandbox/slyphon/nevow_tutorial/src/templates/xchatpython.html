@@ -1,0 +1,173 @@
+<html><head>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html;charset=iso-8859-1">
+<title>XchatPython - CncMoin</title><meta name="KEYWORDS" content="Xchat, Python">
+<link rel="stylesheet" type="text/css" href="/css/moinmoin.css">
+<link rel="Start" href="/FrontPage">
+<link rel="Alternate" title="Wiki Markup" href="/XchatPython?action=raw">
+<link rel="Alternate" media="print" title="Print View" href="/XchatPython?action=print">
+<link rel="Search" href="/FindPage">
+<link rel="Index" href="/TitleIndex">
+<link rel="Glossary" href="/WordIndex">
+<link rel="Help" href="/HelpOnFormatting">
+</head>
+<body onload="window.defaultStatus='CncMoin'" lang="en" dir="ltr"><a name="top"></a>
+<table width="100%"><tr><td>
+<a href="/FrontPage"><img src="/img/cnc.png" border="0" alt="CncMoin"></a>
+</td><td width="99%" valign="middle" class="headline">&nbsp;
+<a title="Click here to do a full-text search for this title" href="/XchatPython?action=fullsearch&value=XchatPython&literal=1&case=1&context=40">XchatPython</a>
+</td>
+<td valign="bottom" align="left" nowrap>
+<font face="Verdana" size="1"><a href="/UserPreferences">UserPreferences</a><br>&nbsp;</font>
+</td></tr></table>
+
+<a href="/HelpContents" target="_blank" title="HelpContents"><img src="/img/moin-help.gif" alt="HelpContents" width="12" height="11" border="0" hspace="2" align="right"></a>
+<a href="/FindPage?value=XchatPython" title="FindPage"><img src="/img/moin-search.gif" alt="FindPage" width="12" height="12" border="0" hspace="2" align="right"></a>
+<a href="/XchatPython?action=diff" title="Diffs"><img src="/img/moin-diff.gif" alt="Diffs" width="15" height="11" border="0" hspace="2" align="right"></a>
+<a href="/XchatPython?action=info" title="Info"><img src="/img/moin-info.gif" alt="Info" width="12" height="11" border="0" hspace="2" align="right"></a>
+<a href="/XchatPython?action=edit" title="Edit"><img src="/img/moin-edit.gif" alt="Edit" width="12" height="12" border="0" hspace="2" align="right"></a>
+<a href="/XchatPython?action=subscribe" title="Subscribe"><img src="/img/moin-email-x.gif" alt="Subscribe" width="14" height="10" border="0" hspace="2" vspace="1" align="right"></a>
+<a href="/XchatPython?action=format&mimetype=text/xml" title="XML"><img src="/img/moin-xml.gif" alt="XML" width="20" height="13" border="0" hspace="2" align="right"></a>
+<a href="/XchatPython?action=print" title="Print"><img src="/img/moin-print.gif" alt="Print" width="16" height="14" border="0" hspace="2" align="right"></a>
+<a href="/XchatPython" title="View"><img src="/img/moin-show.gif" alt="View" width="12" height="13" border="0" hspace="2" align="right"></a>
+
+<table class="navibar" cellpadding=0 cellspacing=3 border=0><tr><td class="navibar" valign=top align=center bgcolor="#E8E8E8"><font class="navibar" face="Arial,Helvetica" size="-1">&nbsp;<b>CncMoin</b>&nbsp;</font></td>
+<td class="navibar" valign=top align=center bgcolor="#E8E8E8"><font class="navibar" face="Arial,Helvetica" size="-1">&nbsp;<a class="navibar" href="/FrontPage">FrontPage</a>&nbsp;</font></td>
+<td class="navibar" valign=top align=center bgcolor="#E8E8E8"><font class="navibar" face="Arial,Helvetica" size="-1">&nbsp;<a class="navibar" href="/RecentChanges">RecentChanges</a>&nbsp;</font></td>
+<td class="navibar" valign=top align=center bgcolor="#E8E8E8"><font class="navibar" face="Arial,Helvetica" size="-1">&nbsp;<a class="navibar" href="/SiteNavigation">SiteNavigation</a>&nbsp;</font></td>
+<td class="navibar" valign=top align=center bgcolor="#E8E8E8"><font class="navibar" face="Arial,Helvetica" size="-1">&nbsp;<a target="_blank" class="navibar" href="/HelpContents">HelpContents</a>&nbsp;</font></td>
+<td class="navibar" valign=top align=center bgcolor="#E8E8E8"><font class="navibar" face="Arial,Helvetica" size="-1">&nbsp;<a target="_blank" class="navibar" href="/ComoTerConta">ComoTerConta</a>&nbsp;</font></td>
+</tr></table>
+<hr><p><a name="head-f5cbdf6bfb51439be085b5c6b7460a7c91eabc3c"></a><H2>&nbsp;1. Contents</H2>
+<ol><li><a href="#head-f5cbdf6bfb51439be085b5c6b7460a7c91eabc3c">Contents</a></li><li><a href="#head-6b21fb791ac05170893860c248401cd24a59b732">About</a></li><li><a href="#head-fc338f87a058158eb824b53705961801516a9460">Features</a></li><li><a href="#head-45e5f3f72e961cb70134ba35f7a27a9620e515f7">Commands</a></li><li><a href="#head-c88dd8050886ac1c53e4e72556d66c5942cd680f">Autoloading modules</a></li><li><a href="#head-57fe0413b6d786ac8e7ea0ade6c8b3880385ad09">Module development</a></li><li><a href="#head-885fc6b24629a5d6ee197c3169eb7b61a4860260">Context theory</a></li><li><a href="#head-7b502c3a1f48c8609ae212cdfb639dee39673f5e">Hello world</a></li><li><a href="#head-c9eb2926d5c52377ee85284df5f81bca4cda0e73">xchat module</a></li><ol><li><a href="#head-37f5365cdbef14515226dcd384583192170cc525">Generic functions</a></li><ol><li><a href="#head-ab6b5b6081a2917ffcd69530d972095d097351b9">xchat.prnt(string)</a></li><li><a href="#head-6c519b8ae1bed761a843de1847eb4b18249e5482">xchat.command(string)</a></li><li><a href="#head-d87d4ed8c10f69663fc463f5c1ae875546b66e74">xchat.nickcmp(s1, s2)</a></li></ol><li><a href="#head-3c50965c6565f7fb6d22332254b60ceafef00eb7">Information retreiving functions</a></li><ol><li><a href="#head-fa646bf1cf040456daa512a9c98167b759539502">xchat.get_info(type)</a></li><li><a href="#head-043525fe5e0a786a95a5bdb1d942207fb81fad36">xchat.get_list(type)</a></li><ol><li><a href="#head-3536f72ac0ec1d785e357fed37a3e83c4bc651e2">channels</a></li><li><a href="#head-5b7dcd14a4faa2cdd54cf6eb8d4bc35da31914a1">users</a></li><li><a href="#head-3eef7cd9a494deeb321a1006b5771b5be683536e">dcc</a></li></ol></ol><li><a href="#head-b1b617927db5a7f0c88257fd3ce0f952e3ccec3e">Hook functions</a></li><ol><li><a href="#head-8c0ad90bec3127568428d4c04d5d1ea52f6ba12f">Priorities</a></li><li><a href="#head-a4c0acebfbae5f91fb73dec69d80698d4942f717">Parameters word and word_eol</a></li><li><a href="#head-af96aca920385a34bc6f36e408bf2e07585e1b33">Parameter userdata</a></li><li><a href="#head-98819837c9b44bac0480be4d28d6d72b1b3e4c4c">Callback return constants (EAT_*)</a></li><li><a href="#head-a166ba4b8b35bdf92640931bddef1f5454dd4778">xchat.hook_command(name, callback, userdata=None, priority=PRI_NORM, help=None)</a></li><li><a href="#head-318bdcd8ba6845939ec6cfd495d045ba118b5c3a">xchat.hook_print(name, callback, userdata=None, priority=PRI_NORM)</a></li><li><a href="#head-de92ffc46df2db1f9d39d881649aa24ecf9a13f5">xchat.hook_server(name, callback, userdata=None, priority=PRI_NORM)</a></li><li><a href="#head-32705d8f12d6348cf7589c75a0833caba90090d4">xchat.hook_timer(timeout, callback, userdata=None)</a></li><li><a href="#head-d05766ad320f5617747d673d3b9bb17a70335e9f">xchat.hook_unload(timeout, callback, userdata=None)</a></li><li><a href="#head-c3204f314a26f7885fb2a940696006a72273d56a">xchat.unhook(handler)</a></li></ol><li><a href="#head-98c51886d05d404c0d0b44c1276869488c318530">Context handling</a></li><ol><li><a href="#head-ceae12cc6e8c7c7643844dd37f2fc0d81072e5fa">Context objects</a></li><li><a href="#head-86e368aecc41145a807cd7d8658e94c8a812aaf8">xchat.get_context()</a></li><li><a href="#head-b2277828e3eaac4340b682799c32b462b8f83783">xchat.find_context(server=None, channel=None)</a></li></ol></ol><li><a href="#head-a479c9c34e878d07b4d67a73a48f432ad7dc53c8">Download</a></li><li><a href="#head-5fda23d62015b99fb2a9f86b38bcdf2bdf7609c8">Author</a></li></ol> <p><a name="head-6b21fb791ac05170893860c248401cd24a59b732"></a><H2>&nbsp;2. About</H2>
+That's the XChat 2.0 Python plugin interface page. This interface allows one to use the <a class="external" href="http://www.python.org"><img src="/img/moin-www.gif" width="11" border="0" alt="[WWW]" title="[WWW]" hspace="4" height="11">Python</a> language to develop extension scripts for the <a class="external" href="http://www.xchat.org"><img src="/img/moin-www.gif" width="11" border="0" alt="[WWW]" title="[WWW]" hspace="4" height="11">XChat</a> IRC client. <p><a name="head-fc338f87a058158eb824b53705961801516a9460"></a><H2>&nbsp;3. Features</H2>
+Here are some of the features of the XChat 2.0 Python plugin interface: <ul><li> Comprehensive, consistent and straightforward API; </li><li> Load, unload, reload, and autoload support; </li><li> Per plugin independend interpreter state; </li><li> Python interactive console; </li><li> Python interactive command execution; </li><li> Full thread support; </li><li> Stdout and stderr redirected to XChat console; </li><li> Dynamic list management; </li><li> Nice context treatment;  </li></ul><p><a name="head-45e5f3f72e961cb70134ba35f7a27a9620e515f7"></a><H2>&nbsp;4. Commands</H2>
+The following commands will be intercepted by the Python Plugin interface module, when it is loaded. <dl><p><dt><b>  /py load &lt;filename&gt;</b></dt><dd>Load module with given filename. <p></dd><dt><b>  /py unload &lt;filename|module name&gt;</b></dt><dd>Unload module with given filename, or module name. <p></dd><dt><b>  /py reload &lt;filename|module name&gt;</b></dt><dd>Reload module with given filename, or module name. <p></dd><dt><b>  /load &lt;filename&gt;</b></dt><dd>Does the same as /py load, but works only if filename has a .py extension (which is advised). <p></dd><dt><b>  /unload &lt;filename&gt;</b></dt><dd>Does the same as /py unload, but works only with filenames and it must have a .py extension <p></dd><dt><b>  /py list</b></dt><dd>List Python modules loaded. <p></dd><dt><b>  /py exec &lt;command&gt;</b></dt><dd>Execute given Python command interactively. For example, </dd><ul><p>    <tt class="wiki">/py&#160;exec&#160;import&#160;xchat</tt><br>     <tt class="wiki">/py&#160;exec&#160;print&#160;xchat.get_info('channel')</tt> </ul><p><dt><b>  /py console</b></dt><dd>Open the Python interactive console. This "console" is   indeed a query with a special name (&gt;&gt;python&lt;&lt;). Every message you   send to this query will be intercepted by the Python plugin interface,   and interpreted interactively. Notice that the console and /py exec   commands live in the same interpreter state. <p></dd><dt><b>  /py about</b></dt><dd>Show some information about the Python plugin interface.  </dd></dl><p><a name="head-c88dd8050886ac1c53e4e72556d66c5942cd680f"></a><H2>&nbsp;5. Autoloading modules</H2>
+If you want some module to be autoloaded together with the Python plugin interface (which usually loads at startup time), just make sure it has a <tt class="wiki">.py</tt> extension and put it in your xchat directory (probably something like <tt class="wiki">~/.xchat2</tt>). <p><a name="head-57fe0413b6d786ac8e7ea0ade6c8b3880385ad09"></a><H2>&nbsp;6. Module development</H2>
+<p><a name="head-885fc6b24629a5d6ee197c3169eb7b61a4860260"></a><H2>&nbsp;7. Context theory</H2>
+Before starting to explain what the API offers, I'll do a short introduction to the XChat context concept. Not because it's something hard to understand, but because you'll understand better the API explanations if you know what I'm talking about. <p>You can think about a context as an XChat channel, server, or query tab. Each of these tabs, has its own context, and is related to a given server and channel (queries are a special kind of channel). <p>The current context is the one where XChat passes control to the module. For example, when XChat receives a command in a specific channel, and you have asked XChat to tell you about this event, the current context will be set to this channel before your module is called. <p><a name="head-7b502c3a1f48c8609ae212cdfb639dee39673f5e"></a><H2>&nbsp;8. Hello world</H2>
+Here is the traditional Hello world example. <pre class="code">
+__module_name__ = "helloworld" 
+__module_version__ = "1.0" 
+__module_description__ = "Python module example" 
+ 
+print "Hello world!" 
+</pre><p>This module will print "Hello world!" in the XChat console, and sleep forever until it's unloaded. It's a simple module, but already introduces some concepts. Notice how the module information is set. This information is obligatory, and will be shown when listing the loaded XChat modules. <p><a name="head-c9eb2926d5c52377ee85284df5f81bca4cda0e73"></a><H2>&nbsp;9. xchat module</H2>
+The xchat module is your passport to every XChat functionality offered by the Python plugin interface. Here's a simple example: <pre class="code">
+import xchat 
+xchat.prnt("Hi everyone!") 
+</pre><p>The following functions are available in the xchat module. <p><a name="head-37f5365cdbef14515226dcd384583192170cc525"></a><H3>&nbsp;9.1. Generic functions</H3>
+<p><a name="head-ab6b5b6081a2917ffcd69530d972095d097351b9"></a><H4>&nbsp;9.1.1. xchat.prnt(string)</H4>
+This function will print string in the current context. It's mainly useful as a parameter to pass to some other function, since the usual print statement will have the same results. You have a usage example above. <p><img src="/img/icon-info.gif" width="16" hspace="6" alt="{i}" border="0" height="16"> This function is badly named because <tt class="wiki">"print"</tt> is a reserved keyword of the Python language. <p><a name="head-6c519b8ae1bed761a843de1847eb4b18249e5482"></a><H4>&nbsp;9.1.2. xchat.command(string)</H4>
+Execute the given command in the current context. This has the same results as executing a command in the xchat window, but notice that the <tt class="wiki">/</tt> prefix is not used. Here is an example: <pre class="code">
+xchat.command("server irc.openprojects.net") 
+</pre><p><a name="head-d87d4ed8c10f69663fc463f5c1ae875546b66e74"></a><H4>&nbsp;9.1.3. xchat.nickcmp(s1, s2)</H4>
+This function will do an RFC1459 compliant string comparing between <tt class="wiki">s1</tt> and <tt class="wiki">s2</tt>, and is useful to compare channels and nicknames. It returns an integer less than, equal to, or greater than zero if <tt class="wiki">s1</tt> is found, respectively, to be less than, to match, or be greater than <tt class="wiki">s2</tt>. For example: <pre class="code">
+if xchat.nickcmp(nick, "mynick") == 0: 
+    print "They are the same!" 
+</pre><p><a name="head-3c50965c6565f7fb6d22332254b60ceafef00eb7"></a><H3>&nbsp;9.2. Information retreiving functions</H3>
+<p><a name="head-fa646bf1cf040456daa512a9c98167b759539502"></a><H4>&nbsp;9.2.1. xchat.get_info(type)</H4>
+Retrieve the information specified by the <tt class="wiki">type</tt> string in the current context. At the moment of this writing, the following information types are available to be queried: <dl><p><dt><b>  host</b></dt><dd>Real hostname of the server you connected to. <p></dd><dt><b>  server</b></dt><dd>Current server name (what the server claims to be), or None   if you are not connected. <p></dd><dt><b>  channel</b></dt><dd>Channel of the current context. <p></dd><dt><b>  topic</b></dt><dd>Current channel topic. <p></dd><dt><b>  nick</b></dt><dd>Your current nick name. <p></dd><dt><b>  away</b></dt><dd>Away reason or None if you are not away. <p></dd><dt><b>  xchatdir</b></dt><dd>XChat config directory, e.g.: "/home/user/.xchat2". <p></dd><dt><b>  version</b></dt><dd>XChat version number.  </dd></dl><p><img src="/img/icon-info.gif" width="16" hspace="6" alt="{i}" border="0" height="16"> This information was taken from XChat's plugin documentation. You may find any types not listed here, if they exist at all, in an updated XChat documentation. Any info types accepted by XChat should be dynamically accepted by the Python plugin interface. <p>Example: <pre class="code">
+if xchat.get_info("server") is None: 
+    print "Not connected!" 
+</pre><p><a name="head-043525fe5e0a786a95a5bdb1d942207fb81fad36"></a><H4>&nbsp;9.2.2. xchat.get_list(type)</H4>
+With this function you may retrieve a list containing the selected information from the current context, like a DCC list, a channel list, a user list, etc. Each list item will have its attributes set dynamically depending on the information provided by the list type. <p>The example below is a rewrite of the example provided with XChat's plugin API documentation. It prints a list of every DCC transfer happening at the moment. Notice how similar the interface is to the C API provided by XChat. <pre class="code">
+list = xchat.get_list("dcc") 
+if list: 
+    print "--- DCC LIST ------------------" 
+    print "File  To/From   KB/s   Position" 
+    for i in list: 
+        print "%6s %10s %.2f  %d" % (i.file, i.nick, i.cps/1024, i.pos) 
+</pre><p>Below you will find what each list type has to offer. <p><img src="/img/icon-info.gif" width="16" hspace="6" alt="{i}" border="0" height="16"> This information was taken from XChat's plugin documentation. You may find any types not listed here, if they exist at all, in an updated XChat documentation. Any list types accepted by XChat should be dynamically accepted by the Python plugin interface. <p><a name="head-3536f72ac0ec1d785e357fed37a3e83c4bc651e2"></a><H5>&nbsp;9.2.2.1. channels</H5>
+The channels list type gives you access to the channels, queries and their servers. The folloing attributes are available in each list item: <dl><p><dt><b>  channel</b></dt><dd>Channel or query name. <p></dd><dt><b>  server</b></dt><dd>Server name to which this channel belongs. <p></dd><dt><b>  context</b></dt><dd>A context object, giving access to that channel/server.  </dd></dl><p><a name="head-5b7dcd14a4faa2cdd54cf6eb8d4bc35da31914a1"></a><H5>&nbsp;9.2.2.2. users</H5>
+The users list type gives you access to a list of users in the current channel. The following attributes are available in each list item: <dl><p><dt><b>  nick</b></dt><dd>Nick name. <p></dd><dt><b>  host</b></dt><dd>Host name in the form user@host (or None, if not known). <p></dd><dt><b>  prefix</b></dt><dd>Prefix character, .e.g: @ or +. Points to a single char.  </dd></dl><p><a name="head-3eef7cd9a494deeb321a1006b5771b5be683536e"></a><H5>&nbsp;9.2.2.3. dcc</H5>
+The dcc list type gives you access to a list of DCC file transfers. The following attributes are available in each list item: <dl><p><dt><b>  cps</b></dt><dd>Bytes per second (speed). <p></dd><dt><b>  destfile</b></dt><dd>Destination full pathname. <p></dd><dt><b>  file</b></dt><dd>Filename. <p></dd><dt><b>  nick</b></dt><dd>Nickname of person who the file is from/to. <p></dd><dt><b>  pos</b></dt><dd>Bytes sent/received. <p></dd><dt><b>  resume</b></dt><dd>Point at which this file was resumed (or zero if it was not   resumed). <p></dd><dt><b>  size</b></dt><dd>File size in bytes. <p></dd><dt><b>  status</b></dt><dd>DCC status (queued=0, active=1, failed=2, done=3,   connecting=4 aborted=5). <p></dd><dt><b>  type</b></dt><dd>DCC type (send=0, receive=1, chatrecv=2, chatsend=3).  </dd></dl><p><a name="head-b1b617927db5a7f0c88257fd3ce0f952e3ccec3e"></a><H3>&nbsp;9.3. Hook functions</H3>
+These functions allow one to hook into XChat events. <p><a name="head-8c0ad90bec3127568428d4c04d5d1ea52f6ba12f"></a><H4>&nbsp;9.3.1. Priorities</H4>
+When a priority keyword parameter is accepted, it means that this callback may be hooked with five different priorities: PRI_HIGHEST, PRI_HIGH, PRI_NORM, PRI_LOW, and PRI_LOWEST. The usage of these constants, which are available in the xchat module, will define the order in which your plugin will be called. Most of the time, you won't want to change its default value (PRI_NORM). <p><a name="head-a4c0acebfbae5f91fb73dec69d80698d4942f717"></a><H4>&nbsp;9.3.2. Parameters word and word_eol</H4>
+These parameters, when available in a callback, are lists of strings which contain the parameters the user entered for the particular command. For example, if you executed: <p><pre class="code">
+/command NICK Hi there! 
+</pre><ul><li> <b>word[0]</b> is <tt class="wiki">command</tt> </li><li> <b>word[1]</b> is <tt class="wiki">NICK</tt> </li><li> <b>word[2]</b> is <tt class="wiki">Hi</tt> </li><li> <b>word[3]</b> is <tt class="wiki">there!</tt> </li><li class="gap"> <b>word_eol[0]</b> is <tt class="wiki">command&#160;NICK&#160;Hi&#160;there!</tt> </li><li> <b>word_eol[1]</b> is <tt class="wiki">NICK&#160;Hi&#160;there!</tt> </li><li> <b>word_eol[2]</b> is <tt class="wiki">Hi&#160;there!</tt> </li><li> <b>word_eol[3]</b> is <tt class="wiki">there!</tt> </li></ul><p><a name="head-af96aca920385a34bc6f36e408bf2e07585e1b33"></a><H4>&nbsp;9.3.3. Parameter userdata</H4>
+The parameter userdata, if given, allows you to pass a custom object to your callback. <p><a name="head-98819837c9b44bac0480be4d28d6d72b1b3e4c4c"></a><H4>&nbsp;9.3.4. Callback return constants (EAT_*)</H4>
+When a callback is supposed to return one of the EAT_* macros, it is able control how XChat will proceed after the callback returns. These are the available constants, and their meanings: <dl><p><dt><b>  EAT_PLUGIN</b></dt><dd>Don't let any other plugin receive this event. <p></dd><dt><b>  EAT_XCHAT</b></dt><dd>Don't let XChat treat this event as usual. <p></dd><dt><b>  EAT_ALL</b></dt><dd>Eat the event completely. <p></dd><dt><b>  EAT_NONE</b></dt><dd>Let everything happen as usual.  </dd></dl><p>Returning <tt class="wiki">None</tt> is the same as returning <tt class="wiki">EAT_NONE</tt>. <p><a name="head-a166ba4b8b35bdf92640931bddef1f5454dd4778"></a><H4>&nbsp;9.3.5. xchat.hook_command(name, callback, userdata=None, priority=PRI_NORM, help=None)</H4>
+This function allows you to hook into the name XChat command. It means that everytime you type <tt class="wiki">/name&#160;...</tt>, <tt class="wiki">callback</tt> will be called. Parameters <tt class="wiki">userdata</tt> and <tt class="wiki">priority</tt> have their meanings explained above, and the parameter help, if given, allows you to pass a help text which will be shown when <tt class="wiki">/help&#160;name</tt> is executed. This function returns a hook handler which may be used in the <tt class="wiki">xchat.unhook()</tt> function. For example: <pre class="code">
+def onotice_cb(word, word_eol, userdata): 
+    if len(word) &lt; 2: 
+        print "Second arg must be the message!" 
+    else: 
+        xchat.command("NOTICE @%s %s", xchat.get_info("channel"), word_eol[1]) 
+    return xchat.EAT_ALL 
+ 
+xchat.hook_command("ONOTICE", onotice_cb, help="/ONOTICE &lt;message&gt; Sends a notice to all ops") 
+</pre><p>You may return one of <tt class="wiki">EAT_*</tt> constants in the callback, to control XChat's behavior, as explained above. <p><a name="head-318bdcd8ba6845939ec6cfd495d045ba118b5c3a"></a><H4>&nbsp;9.3.6. xchat.hook_print(name, callback, userdata=None, priority=PRI_NORM)</H4>
+This function allows you to register a callback to trap any print events. The event names are available in the <em>Edit Event Texts</em> window. Parameters <tt class="wiki">userdata</tt> and <tt class="wiki">priority</tt> have their meanings explained above. This function returns a hook handler which may be used in the <tt class="wiki">xchat.unhook()</tt> function. For example: <pre class="code">
+def youpart_cb(word, word_eol, userdata): 
+    print "You have left channel", word[2] 
+    return xchat.EAT_XCHAT # Don't let xchat do its normal printing 
+ 
+xchat.hook_print("You Part", youpart_cb) 
+</pre><p>You may return one of <tt class="wiki">EAT_*</tt> constants in the callback, to control XChat's behavior, as explained above. <p><a name="head-de92ffc46df2db1f9d39d881649aa24ecf9a13f5"></a><H4>&nbsp;9.3.7. xchat.hook_server(name, callback, userdata=None, priority=PRI_NORM)</H4>
+This function allows you to register a callback to be called when a certain server event occurs. You can use this to trap <tt class="wiki">PRIVMSG</tt>, <tt class="wiki">NOTICE</tt>, <tt class="wiki">PART</tt>, a server numeric, etc. Parameters <tt class="wiki">userdata</tt> and <tt class="wiki">priority</tt> have their meanings explained above. This function returns a hook handler which may be used in the <tt class="wiki">xchat.unhook()</tt> function. For example: <pre class="code">
+def kick_cb(word, word_eol, userdata): 
+    print "%s was kicked from %s (%s)" % (word[3], word[2], word_eol[4]) 
+    # Don't eat this event, let other plugins and xchat see it too 
+    return xchat.EAT_NONE 
+ 
+xchat.hook_server("KICK", kick_cb) 
+</pre><p>You may return one of <tt class="wiki">EAT_*</tt> constants in the callback, to control XChat's behavior, as explained above. <p><a name="head-32705d8f12d6348cf7589c75a0833caba90090d4"></a><H4>&nbsp;9.3.8. xchat.hook_timer(timeout, callback, userdata=None)</H4>
+This function allows you to register a callback to be called every timeout milliseconds. Parameters userdata and priority have their meanings explained above. This function returns a hook handler which may be used in the <tt class="wiki">xchat.unhook()</tt> function. For example: <pre class="code">
+myhook = None 
+ 
+def stop_cb(word, word_eol, userdata): 
+    global myhook 
+    if myhook is not None: 
+        xchat.unhook(myhook) 
+        myhook = None 
+        print "Timeout removed!" 
+ 
+def timeout_cb(userdata): 
+    print "Annoying message every 5 seconds! Type /STOP to stop it." 
+    return 1 # Keep the timeout going 
+ 
+myhook = xchat.hook_timer(5000, timeout_cb) 
+xchat.hook_command("STOP", stop_cb) 
+</pre><p>If you return a true value from the callback, the timer will be keeped, otherwise it is removed. <p><a name="head-d05766ad320f5617747d673d3b9bb17a70335e9f"></a><H4>&nbsp;9.3.9. xchat.hook_unload(timeout, callback, userdata=None)</H4>
+This function allows you to register a callback to be called when the plugin is going to be unloaded. Parameters <tt class="wiki">userdata</tt> and <tt class="wiki">priority</tt> have their meanings explained above. This function returns a hook handler which may be used in the <tt class="wiki">xchat.unhook()</tt> function. For example: <pre class="code">
+def unload_cb(userdata): 
+    print "We're being unloaded!" 
+ 
+xchat.hook_unload(unload_cb) 
+</pre><p><a name="head-c3204f314a26f7885fb2a940696006a72273d56a"></a><H4>&nbsp;9.3.10. xchat.unhook(handler)</H4>
+Unhooks any hook registered with the hook functions above. <p><a name="head-98c51886d05d404c0d0b44c1276869488c318530"></a><H3>&nbsp;9.4. Context handling</H3>
+Below you will find information about how to work with contexts. <p><a name="head-ceae12cc6e8c7c7643844dd37f2fc0d81072e5fa"></a><H4>&nbsp;9.4.1. Context objects</H4>
+As explained in the Context theory session above, contexts give access to a specific channel/query/server tab of XChat. Every function available in the xchat module will be evaluated in the current context, which will be specified by XChat itself before passing control to the module. Sometimes you may want to work in a specific context, and that's where context objects come into play. <p>You may create a context object using the <tt class="wiki">xchat.get_context()</tt> or <tt class="wiki">xchat.find_context()</tt>, functions as explained below, or trough the <tt class="wiki">xchat.get_list()</tt> function, as explained in its respective session. <p>Each context object offers the following methods: <dl><p><dt><b>  context.set()</b></dt><dd>Changes the current context to be the one represented   by this context object. <p></dd><dt><b>  context.prnt(string)</b></dt><dd>Does the same as the xchat.prnt() function, but   in the given context. <p></dd><dt><b>  context.command(string)</b></dt><dd>Does the same as the xchat.command()   function, but in the given context. <p></dd><dt><b>  context.get_info(type)</b></dt><dd>Does the same as the xchat.get_info()   function, but in the given context. <p></dd><dt><b>  context.get_list(type)</b></dt><dd>Does the same as the xchat.get_list()   function, but in the given context.  </dd></dl><p><a name="head-86e368aecc41145a807cd7d8658e94c8a812aaf8"></a><H4>&nbsp;9.4.2. xchat.get_context()</H4>
+Returns a context object corresponding the the current context. <p><a name="head-b2277828e3eaac4340b682799c32b462b8f83783"></a><H4>&nbsp;9.4.3. xchat.find_context(server=None, channel=None)</H4>
+Finds a context based on a channel and servername. If <tt class="wiki">server</tt> is <tt class="wiki">None</tt>, it finds any channel (or query) by the given name. If <tt class="wiki">channel</tt> is <tt class="wiki">None</tt>, it finds the front-most tab/window of the given server. For example: <pre class="code">
+cnc = xchat.find_context(channel='#conectiva') 
+cnc.command('whois niemeyer') 
+</pre><p><a name="head-a479c9c34e878d07b4d67a73a48f432ad7dc53c8"></a><H2>&nbsp;10. Download</H2>
+You can find this plugin with <a class="external" href="http://www.xchat.org"><img src="/img/moin-www.gif" width="11" border="0" alt="[WWW]" title="[WWW]" hspace="4" height="11">XChat</a> 2.0+. <p><a name="head-5fda23d62015b99fb2a9f86b38bcdf2bdf7609c8"></a><H2>&nbsp;11. Author</H2>
+<a href="/GustavoNiemeyer">GustavoNiemeyer</a> &lt;<a href="mailto:niemeyer@conectiva.com">niemeyer@conectiva.com</a>&gt; <a name="bottom"></a>
+<br><br>
+<a href="http://www.python.org/"><img align="right" vspace="10" hspace="3"
+src="/img/PythonPowered.gif" width="55" height="22" border="0"
+alt="PythonPowered"></a>
+<table lang="en" dir="ltr" border="0" cellspacing="0" cellpadding="0" class="footer" width="100%">
+<form method="POST" action="/XchatPython">
+<tr><td>
+<input type="hidden" name="action" value="inlinesearch">
+<input type="hidden" name="context" value="40">
+
+Immutable page&nbsp;&nbsp; [current page size <b>15570</b> bytes]&nbsp;&nbsp; (last edited 2003-09-12 13:41:54 by <span title="ibook.distro.conectiva"><a href="/GustavoNiemeyer">GustavoNiemeyer</a></span>)<br><a href="/FindPage?value=XchatPython">FindPage</a>
+ by browsing, title search <input style="font-family:Verdana; font-size:9pt;" type="text" name="text_title" value="" size="15" maxlength="50"><input type="image" src="/img/moin-search.gif" name="button_title"  alt="[?]" hspace="3" width="12" height="12" border="0">, text search <input style="font-family:Verdana; font-size:9pt;" type="text" name="text_full" value="" size="15" maxlength="50"><input type="image" src="/img/moin-search.gif" name="button_full"  alt="[?]" hspace="3" width="12" height="12" border="0"> or an index<br>
+Or try one of these actions: 
+<a href="/XchatPython?action=AttachFile">AttachFile</a>, 
+<a href="/XchatPython?action=DeletePage">DeletePage</a>, 
+<a href="/XchatPython?action=LikePages">LikePages</a>, 
+<a href="/XchatPython?action=LocalSiteMap">LocalSiteMap</a>, 
+<a href="/XchatPython?action=SpellCheck">SpellCheck</a><br>
+
+</td></tr>
+</form>
+</table>
+
+<!-- MoinMoin 1.173 on distro2.conectiva.com.br served this page in 0.680 secs -->
+</body></html>

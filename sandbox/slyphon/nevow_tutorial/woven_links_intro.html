@@ -1,0 +1,116 @@
+<html>
+<head>
+    <title>Woven Links: The Program of your Tutorial</title>
+</head>
+<body bgcolor="white">
+<h1>Woven Links: <i>The Program of your Tutorial</i></h1>
+<h2>Motivation</h2>
+
+<p>
+I wrote this program because Mozilla kept losing my bookmarks, and i got tired
+of coding the html in my ~/public_html/index.html by hand every time I wanted
+to add a link to something. I'd been programming in Python for about two
+years, and hanging out in #python on freenode.net, and when someone suggested
+using Woven, it seemed like a natural and easy way of creating dynamic web
+content.
+</p>
+
+<p>
+The program we'll be looking at is a bookmark organizer. It organizes the
+bookmarks into categories, each category with a descriptive heading, and
+presents them in a table. The program makes use of a two panel design, with a
+consistent, left-hand-side menu for site navigation.
+</p> 
+
+<p>
+I turned it into this tutorial both to give something back to the developers,
+and because Woven's users seem to be having similar problems to those that I
+had while writing this application. One thing that struck me was that the
+HowTos are all very well written and informative, but sometimes I found it
+difficult to fit all of the pieces together. I hope to be able to weave (no pun
+intended) a narrative context around the relevant documentation that exists
+already in the <a href="http://www.twistedmatrix.com/documents/howto/">Twisted
+HowTos</a>. I'll do my best to link to appropriate topics throughout this document. 
+</p>
+<p>
+I hope, Dear Reader, that you'll find this tutorial useful.
+</p>
+<p>
+And now, on with the show...
+</p>
+
+<h2>Running the tutorial</h2>
+<p>
+In order to run this tutorial, make sure you have met the 
+<a href="intro.xhtml#prerequisites">prerequisites</a>. 
+</p>
+<p>
+go to xx-- insert file path here --xx and
+type on the command line: 
+</p>
+
+<pre class="shell">
+    $ twistd -noy RunHome2.py
+</pre>
+
+<p>
+This will start the server, but won't daemonize so you can see the debugging/logging 
+information. Then point your web browser to 
+<a href="http://localhost:7000/home">http://localhost:7000/home</a>. 
+This will put you on the main links page called '/home'. </p>
+
+<h2>Overview and Structure</h2>
+<p>
+You'll notice on the left there's a menu with choices to allow the user to go to
+the main page, edit the links, or during development and debugging, reload the
+application. If you click on the <q>edit</q> link, you'll see the menu remains
+on the left, and in the center now is a list of all the links on the main page,
+with options to edit or delete any particular link, or to add a new link. If you
+click on the <q>rebuild modules</q> link, you'll see a ton of debugging info fly
+by in the terminal, and you'll wind up back on the main page. What the program
+has just done is reload all the modules that comprise this application so that
+changes made in the source code will take effect in the <q>live</q> application
+being served by twistd (more on this later).
+</p>
+<!--
+<p>
+The application has been designed with the model View Controller (which from now on
+I'll call MVC) model in mind. The model-specific modules are stored in
+'storage/' and are responsible for all communication that happens with the
+back-end of the project.  Middle-tier modules that encapsulate the data
+returned from the database, are in the 'woven_links/' root folder, as are all
+of the Pages. All Page templates, when stored in a separate file are in
+'templates/'. 
+</p>
+-->
+<p>
+This classes in this application fall into three categories. There are the classes
+that handle the back-end data directly, there are classes that wrap that data and
+are used as Woven models, and there is the Woven code itself.  
+</p>
+<p>
+First, we're going to take a look at the application code, the part that runs the 
+TCPService and answers requests. Then we'll take a look at the page responsible for 
+handling the control of program flow. Then we'll look at how the backend supplies the
+front end with data. And lastly, we'll explore how to do form submittal, and some of
+the common idioms of Woven.
+</p>
+
+<!-- Navigation Links ------------------------ -->
+<p>
+<table cellpadding="" cellspacing="5" border="0">
+    <tr>
+        <td>
+           <a href="application.xhtml">next</a>  
+        </td>
+        <td>
+            <a href="intro.xhtml">prev</a>  
+        </td>
+        <td>
+            <a href="toc.xhtml">toc</a>
+        </td>
+    </tr>  
+</table>
+</p>
+    </body>
+</html>

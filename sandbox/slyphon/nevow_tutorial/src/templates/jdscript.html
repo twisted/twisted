@@ -1,0 +1,21 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Script-Type" content="text/javascript"> 
+    <script>
+        function alert_the_user(text) {
+          document.google.tx_search.value=text;
+        }
+    </script>
+  </head>
+  <body>
+    <form name="google">
+      <table> 
+        <tr> 
+          <td>
+            <input type="text" name="tx_search" value="thesearch">
+            <input type="button" name="submitbutton" value="submit" onclick="alert_the_user('user clicked a button')">
+          </td>
+        </tr>
+      </table>
+    </body>
+</html>

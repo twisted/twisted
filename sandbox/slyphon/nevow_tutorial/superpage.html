@@ -1,0 +1,98 @@
+<html>
+    <head>
+        <title>The SuperPage</title>
+    </head>
+    <body bgcolor="white">
+<h1>The Superpage!</h1>
+<h2>SuperPage.py</h2>
+<h3>Why write a Page superclass?</h3>
+<p>After working on this application and learning woven for a few days, I
+noticed that most of the Pages I was writing had some similar characteristics.
+One of the more difficult issues I've faced when designing web sites is
+page-to-page consistency. Since all of the viewable pages in this application
+subclass SuperPage, it's easier to make site-wide changes in one place.
+</p>
+<p> Now, mind you, that all of this is going on behind the scenes in the /home
+page (because it subclasses SuperPage), so if you were trying to figure out
+why there was no rendering code in WovenHome, here's your answer.
+</p>
+
+<h4>Code Listing - SuperPage.py</h4>
+<a href="src/SuperPage.py" class="py-listing"></a>
+
+<h4>Code Listing - templates/superpage.html</h4>
+
+<!-- TODO! CHANGE THIS TO superpage.html!!! -->
+<a href="src/templates/tw_docs.html" class="py-listing"></a>
+
+
+<h2>Models and Views</h2>
+<h3>Customize your Models</h3>
+<p>
+Well, one thing to notice right off the bat is that all of the wmfactory_*'s
+on the page are incredibly simple, just one or two lines. One of the real
+strengths of woven is that you can use <em>any</em> object as your model, As
+long as you write your view to understand it. For this program, I wrote
+several page-specific models, and several general models so that code that
+renders the view would be more sensible in the Page. (more on that later)
+</p>
+
+<h3>The Bookmark Object</h3>
+<p>
+As we're building a site that reads bookmark data from a source and renders it
+into links on web page, the most basic data model would have to be a single
+instance of a bookmark.
+</p>
+
+<a href="src/Bookmark.py" class="py-listing"></a>
+
+<p>
+This class is one of the new-style classes that works with Python 2.2 and
+later, because it subclasses <q>object</q>. The main reason we do this is to
+give us the ability to use Properties, which are something like Java's beans.
+Properties allow you to define special getter and setter methods for class
+attributes. This allows better performance than when overriding __setattr__,
+and without the potential implementation difficulties frequently encountered
+when trying to override __getattr__ in a class definition. If you haven't ever
+seen this before you may want to review 
+<a href="http://www.python.org/2.2.1/descrintro.html">Unifying types and classes in Python 2.2</a> 
+by the BDFL (Guido van Rossum), and especially the section 
+<a href="http://www.python.org/2.2.1/descrintro.html#property">Properties: attributes defined by get/set methods</a>.  
+</p>
+
+<p>
+We use this capability in the method _get_csv_row(), which is used by the 
+CSVStorage class to get a representation of a particular Bookmark instance so
+it can be saved to disk in a flat file. Implementation of a property is very easy,
+you define a getter method, a setter method, and/or a deleter method (usually
+marking them as private by following the <q>prepend a '_' to the method name</q>
+convention), and then binding the property(getter, setter, deleter, docstring="") to
+attribute name you want. 
+</p>
+
+<p><em>Important Note:</em> You don't supply a <q>self.</q> in front of the
+functions inside property(). This is because you're defining this property for
+the class, and <em>at the time property() is called</em>, the getter, setter,
+and deleter are <em>function objects</em>, and are not <em>class methods</em>.
+</p>
+
+
+
+        <!-- Navigation Links ------------------------ -->
+        <p>
+        <table cellpadding="" cellspacing="5" border="0">
+            <tr>
+                <td>
+                    <a href="editpage.xhtml">next</a>  
+                </td>
+                <td>
+                   <a href="homepage.xhtml">prev</a>  
+                </td>
+                <td>
+                    <a href="toc.xhtml">toc</a>
+                </td>
+            </tr>  
+        </table>
+        </p>
+    </body>
+</html>
