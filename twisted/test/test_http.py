@@ -404,6 +404,8 @@ class QueryArgumentsTestCase(unittest.TestCase):
         # unquoted text, followed by some quoted chars, ends in a trailing %
         self.failUnlessEqual(urllib.unquote("blah%21%40%23blah%"), 
             _c_urlarg.unquote("blah%21%40%23blah%"))
+        # Empty string
+        self.failUnlessEqual(urllib.unquote(""), _c_urlarg.unquote(""))
 
     def testParseqs(self):
         self.failUnlessEqual(cgi.parse_qs("a=b&d=c;+=f"),
