@@ -43,8 +43,8 @@ class Port(abstract.FileDescriptor):
         """Initialize with a numeric port to listen on.
         """
         self.port = port
-	self.factory = factory
-	self.maxPacketSize = maxPacketSize
+        self.factory = factory
+        self.maxPacketSize = maxPacketSize
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)
