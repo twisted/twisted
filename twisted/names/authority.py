@@ -159,7 +159,7 @@ class BindAuthority(FileAuthority):
             r.ttl = ttl
             self.records.setdefault(domain.lower(), []).append(r)
             
-            print 'Adding IN Record ', r
+            print 'Adding IN Record', domain, ttl, r
             if type == 'SOA':
                 self.soa = (domain, r)
         else:

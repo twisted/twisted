@@ -558,6 +558,12 @@ class Record_SRV:                # EXPERIMENTAL
                     self.port == other.port and
                     str(self.target) == str(other.target))
         return 0
+    
+    
+    def __str__(self):
+        return '<SRV prio=%d weight=%d %s:%d>' % (
+            self.priority, self.weight, self.target, self.port
+        )
 
 
 class Record_HINFO:
