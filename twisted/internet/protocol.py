@@ -50,7 +50,10 @@ class Factory:
     noisy = "sure, why not"
 
     def doStart(self):
-        """Make sure startFactory is called."""
+        """Make sure startFactory is called.
+
+        Users should not call this function themselves!
+        """
         if not self.numPorts:
             if self.noisy:
                 log.msg("Starting factory %s" % self)
@@ -58,8 +61,14 @@ class Factory:
         self.numPorts = self.numPorts + 1
 
     def doStop(self):
-        """Make sure stopFactory is called."""
-        assert self.numPorts > 0
+        """Make sure stopFactory is called.
+
+        Users should not call this function themselves!
+        """
+        if self.numPorts == 0:
+            # this shouldn't happen, but does sometimes and this is better
+            # than blowing up in assert as we did previously.
+            return
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
