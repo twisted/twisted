@@ -45,6 +45,11 @@ the shell is desired, the common idiom is to use
 removeProcess takes just the name argument. If the process is started, it
 kills it, and will never restart it.
 
+The "restartAll" method restarts all processes. This is useful for 3rd
+parties management services to allow a user to restart servers because
+of an outside circumstances change -- for example, a new version of a library
+which is installed.
+
 The following attributes on the monitor can be set to configure behaviour
 - threshold -- how long a process has to live before the death is considered
                instant (default 1, measured in seconds)
@@ -191,6 +196,12 @@ class ProcessMonitor(app.ApplicationService):
         self.murder[name] = reactor.callLater(self.killTime, os.kill, pid, 9)
         
 
+    def restartAll(self):
+        for name in self.processes.keys():
+            self.stopProcess(name)
+            self.startProcess(name)
+           
+
 
 def main():
     application = app.Application('monitor')
@@ -202,6 +213,7 @@ def main():
                    'echo welcome;while :;do echo blah;sleep 5;done'])
     reactor.callLater(30, lambda mon=mon:
                           os.kill(mon.protocols['baz'].transport.pid, 15))
+    reactor.callLater(60, mon.restartAll)
     application.run(save=0)
 
 if __name__ == '__main__':
