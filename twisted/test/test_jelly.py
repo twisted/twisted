@@ -22,7 +22,7 @@ from twisted.spread import jelly
 
 from twisted.test import test_newjelly
 
-class OldJellyTestCase(test_newjelly.JellyTestCase):
+class JellyTestCase(test_newjelly.JellyTestCase):
     jc = jelly
 
     def testPersistentStorage(self):
@@ -53,8 +53,8 @@ class OldJellyTestCase(test_newjelly.JellyTestCase):
         self.failUnless(perst[0], "persistentStore was not called.")
         self.assertIdentical(x.b, a.b, "Persistent storage identity failure.")
 
-class OldCircularReferenceTestCase(test_newjelly.CircularReferenceTestCase):
+class CircularReferenceTestCase(test_newjelly.CircularReferenceTestCase):
     jc = jelly
 
 
-testCases = [OldJellyTestCase, OldCircularReferenceTestCase]
+testCases = [JellyTestCase, CircularReferenceTestCase]
