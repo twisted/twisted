@@ -189,7 +189,7 @@ def iterate(timeout=0.):
     doSelect(timeout)
 
 
-def run():
+def run(installSignalHandlers=1):
     """Run input/output and dispatched/delayed code.
 
     This call never returns.  It is the main loop which runs
@@ -199,15 +199,16 @@ def run():
     global running
     running = 1
     threadable.registerAsIOThread()
-    signal.signal(signal.SIGINT, shutDown)
-    signal.signal(signal.SIGTERM, shutDown)
-
-    # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
-    if hasattr(signal, "SIGBREAK"):
-        signal.signal(signal.SIGBREAK, shutDown)
-
-    if platform.getType() == 'posix':
-        signal.signal(signal.SIGCHLD, process.reapProcess)
+    if installSignalHandlers:
+        signal.signal(signal.SIGINT, shutDown)
+        signal.signal(signal.SIGTERM, shutDown)
+    
+        # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
+        if hasattr(signal, "SIGBREAK"):
+            signal.signal(signal.SIGBREAK, shutDown)
+    
+        if platform.getType() == 'posix':
+            signal.signal(signal.SIGCHLD, process.reapProcess)
 
     try:
         try:

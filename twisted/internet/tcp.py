@@ -212,8 +212,6 @@ class Client(Connection):
         self.connected = 1
         self.startReading()
         self.protocol.makeConnection(self)
-        if self.connector:
-            self.connector.makeConnection(self)
 
     def connectionLost(self):
         Connection.connectionLost(self)
@@ -239,13 +237,18 @@ class Client(Connection):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
 
+
 class Connector:
-    def __init__(self, host, factory, portno, timeout=30):
+    """Connect a protocol to a server using TCP and if it fails make a new one."""
+    
+    transportFactory = Client
+    
+    def __init__(self, host, portno, protocolFactory, timeout=30):
         self.host = host
         self.portno = portno
-        self.factory = factory
-        self.portno = portno
-
+        self.factory = protocolFactory
+        self.timeout = timeout
+    
     def connectionFailed(self):
         self.startConnecting()
 
@@ -254,7 +257,7 @@ class Connector:
 
     def startConnecting(self):
         proto = self.factory.buildProtocol((self.host, self.portno))
-        Client(self.host, self.portno, proto, 30, self)
+        self.transportFactory(self.host, self.portno, proto, self.timeout, self)
         
 
 

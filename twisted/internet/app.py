@@ -125,6 +125,8 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         self.name = name
         # a list of (tcp, ssl, udp) Ports
         self.ports = []
+        # a list of (tcp, ssl, udp) Connectors
+        self.connectors = []
         # a list of twisted.python.delay.Delayeds
         self.delayeds = []
         # a list of twisted.internet.passport.Services
@@ -152,8 +154,13 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         self.lock()
         
 
-    persistenceVersion = 3
-
+    persistenceVersion = 4
+    
+    def upgradeToVersion4(self):
+        """Version 4 Persistence Upgrade
+        """
+        self.connectors = []
+    
     def upgradeToVersion3(self):
         """Version 3 Persistence Upgrade
         """
@@ -235,6 +242,25 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         if self.running:
             port.startListening()
 
+    def connectTCP(self, host, port, factory):
+        """Connect a given client protocol factory to a specific TCP server."""
+        from twisted.internet import tcp
+        self.addConnector(tcp.Connector(host, port, factory))
+    
+    def connectSSL(self, host, port, factory, ctxFactory=None):
+        """Connect a given client protocol factory to a specific SSL server."""
+        from twisted.internet import ssl
+        c = ssl.Connector(host, port, factory)
+        if ctxFactory:
+            c.contextFactory = ctxFactory
+        self.addConnector(c)
+    
+    def addConnector(self, connector):
+        """Add a connector to this Application."""
+        self.connectors.append(connector)
+        if self.running:
+            connector.startConnecting()
+    
     def addDelayed(self, delayed):
         """
         Adds a twisted.python.delay.Delayed object for execution in my event loop.
@@ -310,7 +336,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         """
         return self.name+" application"
 
-    def run(self, save=1):
+    def run(self, save=1, installSignalHandlers=1):
         """Run this application, running the main loop if necessary.
         """
         global resolver
@@ -326,6 +352,8 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
                 except socket.error:
                     print 'port %s already bound' % port.port
                     return
+            for connector in self.connectors:
+                connector.startConnecting()
             for port in self.ports:
                 port.factory.startFactory()
             resolver = self.resolver
@@ -336,7 +364,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
             self.setUID()
             global theApplication
             theApplication = self
-            main.run()
+            main.run(installSignalHandlers=installSignalHandlers)
             log.logOwner.disown(self)
 
 # sibling import

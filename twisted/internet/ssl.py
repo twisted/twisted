@@ -88,9 +88,9 @@ class Client(Connection, tcp.Client):
     """I am an SSL client.
     """
     
-    def __init__(self, host, port, protocol, ctxFactory, timeout=None):
+    def __init__(self, host, port, protocol, ctxFactory, timeout=None, connector=None):
         self.ctxFactory = ctxFactory
-        apply(tcp.Client.__init__, (self, host, port, protocol), {'timeout': timeout})
+        apply(tcp.Client.__init__, (self, host, port, protocol), {'timeout': timeout, 'connector': connector})
     
     def createInternetSocket(self):
         """(internal) create an SSL socket
@@ -146,3 +146,14 @@ class Port(tcp.Port):
             protocol.makeConnection(transport, self)
         except:
             traceback.print_exc(file=log.logfile)
+
+
+class Connector(tcp.Connector):
+    """Connect a protocol to a server using SSL and if it fails make a new one."""
+    
+    transportFactory = Client
+    contextFactory = ClientContextFactory
+    
+    def startConnecting(self):
+        proto = self.factory.buildProtocol((self.host, self.portno))
+        self.transportFactory(self.host, self.portno, proto, self.contextFactory, self.timeout, self)
