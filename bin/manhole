@@ -28,46 +28,6 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
-from twisted.internet import gtkreactor
-gtkreactor.install()
-from twisted.internet import reactor
-from twisted.python import usage
-from twisted.spread.ui import gtkutil
-from twisted.spread import pb
 
-class MyOptions(usage.Options):
-    optParameters=[("user", "u", "guest", "username"),
-                   ("password", "w", "guest"),
-                   ("service", "s", "twisted.manhole", "PB Service"),
-                   ("host", "h", "localhost"),
-                   ("port", "p", str(pb.portno)),
-                   ("perspective", "P", "",
-                    "PB Perspective to ask for "
-                    "(if different than username)")]
-
-config = MyOptions()
-try:
-    config.parseOptions()
-except usage.UsageError, e:
-    print str(e)
-    print str(config)
-    sys.exit(1)
-
-# Put this off until after we parse options, or else gnome eats them.
-sys.argv[:] = ['manhole']
-from twisted.manhole.ui import gtkmanhole
-
-i = gtkmanhole.Interaction()
-lw = gtkutil.Login(i.connected,
-                   i.client,
-                   initialUser=config.opts['user'],
-                   initialPassword=config.opts['password'],
-                   initialService=config.opts['service'],
-                   initialHostname=config.opts['host'],
-                   initialPortno=config.opts['port'],
-                   initialPerspective=config.opts['perspective'])
-
-i.loginWindow = lw
-
-lw.show_all()
-reactor.run()
+from twisted.scripts import manhole
+manhole.run()
