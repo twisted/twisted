@@ -78,7 +78,7 @@ ftp_reply = {
     'goodbye':   '221 Goodbye.',
     'getok':     '226 Transfer Complete.',
     'epsv':      '229 Entering Extended Passive Mode (|||%s|).',
-   'cwdok':     '250 CWD command successful.',
+    'cwdok':     '250 CWD command successful.',
     'pwd':       '257 "%s" is current directory.',
     'user':      '331 Password required for %s.',
     'guest':     '331 Guest login ok, type your name as password.',
@@ -105,8 +105,8 @@ class FileTransfer:
 class sendFileTransfer(FileTransfer):
     "Producer, server to client"
     def __init__(self, *args, **kw):
-        args[2].registerProducer(self, 0) # TODO: Dirty
         apply(FileTransfer.__init__,((self,)+args),kw)
+        args[2].registerProducer(self, 0) # TODO: Dirty
     
     def resumeProducing(self):
         if (self.request is None) or (self.file.closed):
@@ -114,7 +114,9 @@ class sendFileTransfer(FileTransfer):
         self.request.write(self.file.read(abstract.FileDescriptor.bufferSize))
 
         if self.file.tell() == self.filesize:
+            print "very finished"
             self.request.finish()
+#            self.request.loseConnection()
             self.request = None
 
     def pauseProducing(self):
@@ -144,6 +146,7 @@ class DTP(protocol.Protocol):
 
     def loseConnection(self):
         "Disconnect, and clean up"
+        print "disconcert and die"
         if self.file is not None:
             if self.file.tell() == self.filesize:
                 self.pi.reply('getok')
@@ -155,15 +158,17 @@ class DTP(protocol.Protocol):
         self.transport.loseConnection()
 
     def finish(self):
-        self.transport.loseConnection()
+        self.loseConnection()
 
     def makeTransport(self):
+        print "makeTransport"
         transport = self.transport
         transport.finish = self.finish
         return transport
         
     def connectionMade(self):
         "Will start an transfer, if one is queued up, when the client connects"
+        print "connectionMade"
         if self.pi.action is not None:
             self.executeAction()
 
@@ -175,6 +180,7 @@ class DTP(protocol.Protocol):
         The property 'pi' is the telnetconnection and its property 'action'
         can either be 'GET', 'PUT', or 'LIST'. Pretty lame, eh? :)
         """
+        print "executeaction"
         if self.pi.action == 'GET':
            self.fileget(self.pi.queuedfile)
         if self.pi.action == 'PUT':
@@ -214,7 +220,7 @@ class DTP(protocol.Protocol):
         self.pi.queuedfile = None
         self.transport.loseConnection()
 
-class Ftp(protocol.Protocol, protocol.Factory):
+class FTP(protocol.Protocol):
     user   = None
     passwd = None
     root   = None
@@ -355,6 +361,7 @@ class Ftp(protocol.Protocol, protocol.Factory):
     def buildProtocol(self, addr):
         self.dtp = DTP()
         self.dtp.pi = self
+        self.dtp.factory = self
         return self.dtp
 
     def ftp_Port(self, params):
@@ -463,15 +470,11 @@ class Ftp(protocol.Protocol, protocol.Factory):
         if self.dtp.transport.connected:
             self.dtp.loseConnection()
         self.reply('abort')
-                  
-class ShellFactory(Ftp):
-    command = ''
-    done = None
-    parent = None
 
     def processLine(self, line):
         "Process the input from the client"
         line = line.strip()
+        print line
         command = line.split()
         if command == []:
             self.reply('unknown')
@@ -501,4 +504,14 @@ class ShellFactory(Ftp):
     def dataReceived(self, line):
         self.processLine(line)
         return 0
+        
+                  
+class ShellFactory(protocol.Factory):
+    command = ''
+    done = None
+    parent = None
 
+    def buildProtocol(self, addr):
+        p=FTP()
+        p.factory = self
+        return p
