@@ -1,3 +1,11 @@
+2003-04-11  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/gtk2reactor.py (Gtk2Reactor.doIteration): use
+	timers to match the behavior of select()-based reactors.
+	reactor.iterate(delay) is thus defined to return after 'delay'
+	seconds, or earlier if something woke it up (like IO, or timers
+	expiring).
+
 2003-04-11  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/defer.py: Added new, experimental function,

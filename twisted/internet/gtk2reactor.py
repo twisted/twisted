@@ -115,16 +115,30 @@ class Gtk2Reactor(default.PosixReactorBase):
             gtk.input_remove(writes[writer])
             del writes[writer]
 
-    def doIteration(self, delay=0.0):
-        if delay != 0:
-            # attempt to emulate the "don't chew 100% cpu" behavior implied
-            # by delay != 0
-            time.sleep(delay)
-        gtk.main_iteration(0) # 0=don't block
-        # could also try this, might be more appropriate to handle *all*
-        # events, particularly if we have gtk handle our timers too
-        #while gtk.events_pending():
-        #    gtk.main_iteration(0)
+    doIterationTimer = None
+
+    def doIterationTimeout(self, *args):
+        self.doIterationTimer = None
+        return 0 # auto-remove
+    def doIteration(self, delay):
+        # flush all pending events, return if there was something to do
+        if gtk.events_pending():
+            while gtk.events_pending():
+                gtk.main_iteration(0)
+            return
+        # nothing to do, must delay
+        if delay == 0:
+            return # shouldn't delay, so just return
+        self.doIterationTimer = gtk.timeout_add(delay * 1000,
+                                                self.doIterationTimeout)
+        # This will either wake up from IO or from a timeout.
+        gtk.main_iteration(1) # block
+        # note: with the .simulate timer below, delays > 0.1 will always be
+        # woken up by the .simulate timer
+        if self.doIterationTimer:
+            # if woken by IO, need to cancel the timer
+            gtk.timeout_remove(self.doIterationTimer)
+            self.doIterationTimer = None
 
     def crash(self):
         gtk.main_quit()
