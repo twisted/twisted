@@ -21,6 +21,7 @@
 # Twisted Imports
 from twisted.protocols import protocol
 from twisted.persisted import styles
+from twisted.python import timeoutqueue
 
 # Java Imports
 from java.net import Socket, ServerSocket
@@ -149,13 +150,8 @@ class JMultiplexor:
     def __init__(self):
         self.readers = []
         self.writers = []
-        self.q = Queue.Queue()
+        self.q = timeoutqueue.TimeoutQueue()
 
-    def timeout(self, seconds):
-        time.sleep(seconds)
-        if self.q.empty():
-            self.q.put((doNothing, None))
-    
     def run(self):
         while 1:
             # run the delayeds
@@ -167,12 +163,18 @@ class JMultiplexor:
                     ((timeout is None) or
                      (newTimeout < timeout))):
                     timeout = newTimeout
-            threading.Thread(target=self.timeout, args=(timeout,)).start()
             
-            # print 'blocking'
-            meth, arg = self.q.get()
-            # print 'running',repr(meth),'with',repr(arg)
-            meth(arg)
+            # wait at most `timeout` seconds for action to be added to queue
+            try:
+                self.q.wait(timeout)
+            except timeoutqueue.TimedOut:
+                pass
+            
+            # run actions in queue
+            for i in range(self.q.qsize()):
+                meth, arg = self.q.get()
+                meth(arg)
+
 
 theMultiplexor = JMultiplexor()
 
@@ -189,15 +191,16 @@ def portStartListening(tcpPort):
 
 def portGotSocket(tcpPort, skt):
     # make this into an address...
-    # print 'Got Socket!'
     protocol = tcpPort.factory.buildProtocol(None)
     transport = JConnection(skt, protocol)
+        
     # make read and write blockers
     wb = WriteBlocker(transport, theMultiplexor.q)
     wb.start()
     transport.writeBlocker = wb
     ReadBlocker(transport, theMultiplexor.q).start()
     protocol.makeConnection(transport, tcpPort)
+
 
 # change port around
 import tcp
