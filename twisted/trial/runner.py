@@ -79,6 +79,8 @@ class TestClassRunner:
         for prefix in self.methodPrefixes:
             self.methodNames.extend([ "%s%s" % (prefix, name) for name in
                                       reflect.prefixedMethodNames(testClass, prefix)])
+        # N.B.: --random will shuffle testClasses but not our methodNames[]
+        self.methodNames.sort()
 
     def __str__(self):
         return "%s.%s" % (self.testClass.__module__, self.testClass.__name__)

@@ -1,3 +1,7 @@
+2003-05-13  Brian Warner  <warner@lothar.com>
+
+	* twisted/trial/runner.py: sort tests by name within a TestCase
+
 2003-05-13  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/internet/{default,internet}.py: Add an `active' method to
