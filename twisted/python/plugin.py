@@ -243,8 +243,13 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
         pname = os.path.split(os.path.abspath(tmlFile))[-2]
         dropin = DropIn(pname)
         ns = {'register': dropin.register}
-        execfile(tmlFile, ns)
-
+        try:
+            execfile(tmlFile, ns)
+        except (IOError, OSError), e:
+            # guess we don't have permissions for that
+            debugInspection("Error loading: %s" % e)
+            continue
+        
         ldp = len(dropin.plugins) or 1.0
         incr = increments * (1.0 / ldp)
         for plugin in dropin.plugins:
