@@ -148,6 +148,8 @@ def footnotes(document):
         href = microdom.parseString('<a href="#footnote-%d">'
                                     '<super>*</super></a>'
                                     % id).documentElement
+        text = ' '.join(domhelpers.getNodeText(footnote).split())
+        href.setAttribute('title', text)
         target = microdom.Element('a', attributes={'name': 'footnote-%d' % id})
         target.childNodes = [footnote]
         footnoteContent = microdom.Element('li')
