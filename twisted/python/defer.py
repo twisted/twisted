@@ -97,3 +97,6 @@ class Deferred:
                 self.runCallbacks(self.cbResult, self.called - 1)
         else:
             log.msg("WARNING: double-arming deferred.")
+
+
+__all__ = ["Deferred"]

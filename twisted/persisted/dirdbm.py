@@ -123,3 +123,6 @@ def open(file, flag = None, mode = None):
     """open(file); This is for 'anydbm' compatibility
     """
     return DirDBM(file)
+
+
+__all__ = ["open", "DirDBM"]
