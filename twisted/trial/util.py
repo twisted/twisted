@@ -113,8 +113,9 @@ def emacs_format_exception(eType, eValue, tb, limit=None):
     """
 
     # TODO: hide trial frames like plain_format_exception
-    l = traceback.extract_tb(tb, limit)
-    return ['%s:%s:%s\n' % x[:-1] for x in l]
+    l = extract_tb(tb, limit)
+    return ['%s:%s:%s\n' % (filename, lineno, method)
+                     for filename, lineno, method, _ in l]
 
 def plain_format_exception(eType, eValue, tb, limit=None):
     """Emit a formatted traceback and exception, but hide trial's framework.
