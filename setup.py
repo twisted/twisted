@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.25 2002/03/21 01:06:24 glyph Exp $
+$Id: setup.py,v 1.26 2002/03/21 13:35:56 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -232,15 +232,11 @@ setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.gl
                             ('twisted', [os.path.join('twisted', 'plugins.tml')])]
 
 
-#'"
 # for building C banana...
 
 def extpath(path):
     return os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), path)
     
-
-# cBanana is currently broken
-
 setup_args['ext_modules'] = [
     Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
     ]
