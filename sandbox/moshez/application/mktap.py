@@ -51,15 +51,15 @@ def loadPlugins(debug = None, progress = None):
     return tapLookup
 
 
-class GeneralOptions:
+class FirstPassOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options] """
 
-    uid = gid = None
-    if hasattr(os, 'getgid'):
-        uid, gid = os.getuid(), os.getgid()
+    recursing = 0
+    params = ()
+    
     optParameters = [
-        ['uid', 'u', uid, "The uid to run as."],
-        ['gid', 'g', gid, "The gid to run as."],
+        ['uid', 'u', None, "The uid to run as."],
+        ['gid', 'g', None, "The gid to run as."],
         ['append', 'a', None,
          "An existing .tap file to append the plugin to, rather than "
          "creating a new one."],
@@ -68,7 +68,8 @@ class GeneralOptions:
          "or 'source'."],
         ['appname', 'n', None, "The process name to use for this application."]
     ]
-    del uid, gid
+    if hasattr(os, 'getgid'):
+        optParameters[0][2], optParameters[1][2] = os.getuid(), os.getgid()
 
     optFlags = [
         ['encrypted', 'e', "Encrypt file before writing "
@@ -94,25 +95,9 @@ class GeneralOptions:
         """Display this message"""
         self['help'] = 1
     opt_h = opt_help
-
-    def parseArgs(self, *args):
-        self.args = args
-
-
-class FirstPassOptions(usage.Options, GeneralOptions):
-    def __init__(self):
-        usage.Options.__init__(self)
-        self['help'] = 0
-        self.params = []
-        self.recursing = 0
-    
-    def opt_help(self):
-        """Display this message"""
-        self['help'] = 1
-    opt_h = opt_help
     
     def parseArgs(self, *rest):
-        self.params.extend(rest)
+        self.params = self.params+rest
 
     def _reportDebug(self, info):
         print 'Debug: ', info
@@ -145,7 +130,6 @@ class FirstPassOptions(usage.Options, GeneralOptions):
             raise usage.UsageError("Please select one of: "+
                               ' '.join(self.tapLookup.keys()))
        
-
         
 def makeService(mod, s, options):
     if hasattr(mod, 'updateApplication'):
@@ -164,7 +148,7 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    mod = options.tapLookup[options.subCommand]
+    mod = options.tapLookup[options.subCommand].load()
     a = app.loadOrCreate(options.subCommand, options['append'],
                          options['appname'],
                          *getid(options['uid'], options['gid']))
