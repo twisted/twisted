@@ -818,12 +818,7 @@ class Port(base.BasePort):
 
         This indicates the server's address.
         """
-        socket = getattr(self, 'socket', None)
-        if socket is not None:
-            sockname = socket.getsockname()
-        else:
-            sockname = ('no socket',)
-        return address.IPv4Address('TCP', *(sockname + ('INET',)))
+        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
 
 class Connector(base.BaseConnector):
