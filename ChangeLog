@@ -1,3 +1,8 @@
+2002-12-06  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/enterprise/util.py: add some postgres types. boolean
+	types need to be quoted. remove unused selectSQL variable.
+
 2002-12-05  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/enterprise/sqlreflector.py: fix some sql escaping

@@ -21,10 +21,13 @@ NOQUOTE = 1
 USEQUOTE = 2
 
 dbTypeMap = {
-    "bool": NOQUOTE,
-    "boolean": NOQUOTE,
+    "bigint": NOQUOTE,
+    "bool": USEQUOTE,
+    "boolean": USEQUOTE,
+    "date": USEQUOTE,
     "int2": NOQUOTE,
     "int4": NOQUOTE,
+    "int8": NOQUOTE,
     "int": NOQUOTE,
     "integer": NOQUOTE,
     "float4": NOQUOTE,
@@ -33,6 +36,7 @@ dbTypeMap = {
     "smallint": NOQUOTE,
     "char": USEQUOTE,
     "text": USEQUOTE,
+    "time": USEQUOTE,
     "timestamp": USEQUOTE,
     "varchar": USEQUOTE
     }
@@ -58,6 +62,11 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
     if q == NOQUOTE:
         return value
     elif q == USEQUOTE:
+        if typeCode.startswith('bool'):
+            if value:
+                value = '1'
+            else:
+                value = '0'
         return "'%s'" % string_escaper(value)
 
 def makeKW(rowClass, args):
@@ -107,7 +116,6 @@ class _TableInfo:
         else:
             self.rowFactoryMethod = [defaultFactoryMethod]
 
-        self.selectSQL = None
         self.updateSQL = None
         self.deleteSQL = None
         self.insertSQL = None
