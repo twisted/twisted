@@ -16,6 +16,7 @@
 
 from twisted.enterprise import adbapi
 from twisted.news import news, database
+from twisted.application import internet
 from twisted.python import usage, log
 
 import sys, getpass
@@ -124,7 +125,7 @@ class Options(usage.Options):
         self.servers.append(server)
 
 
-def updateApplication(app, config):
+def makeService(config):
     if not len(config.groups):
         raise usage.UsageError("No newsgroups specified")
     
@@ -139,7 +140,7 @@ def updateApplication(app, config):
         print s
         db.addSubscription(s)
 
-    app.listenTCP(
+    return internet.TCPServer(
         int(config['port']),
         news.UsenetServerFactory(db, config.servers),
         interface = config['interface']
