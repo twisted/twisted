@@ -152,17 +152,17 @@ class Later:
 
 class IDelayed:
     """Interface implemented by Delayed objects - delayed event queues."""
-    
+
     def timeout(self):
         """Return maximum number of seconds between calls of runUntilCurrent.
-        
+
         The returned value should either be a float, or None if we don't want
         to affect the event loop.
         """
-    
+
     def runUntilCurrent(self):
         """This will be called on every iteration of the event loop.
-        
+
         This is where the delayed work should be done.
         """
 
@@ -216,8 +216,8 @@ class Time:
             except:
                 log.deferr()
 
-        
-        
+
+
 
 
 class LockstepSimulation(rebuild.Sensitive):
@@ -233,9 +233,9 @@ class LockstepSimulation(rebuild.Sensitive):
     steps will be stopped in the middle, and a single method call will not be
     made.
     """
-    
+
     __implements__ = (IDelayed,)
-    
+
     fudgefactor = 0.01
 
     def __init__(self):
