@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -112,21 +112,21 @@ class Application(log.Logger, styles.Versioned):
 
     def addDelayed(self, delayed):
         """
-        Adds a twisted.python.delay.Delayed object for execution in my event
-        loop.
+        Adds a twisted.python.delay.Delayed object for execution in my event loop.
 
-        The timeout for select() will be calculated based on the sum of all
-        Delayed instances attached to me, using their 'ticktime' attribute.  In
-        this manner, delayed instances should have their various callbacks
-        called approximately when they're supposed to be (based on when they
-        were registered).
+        The timeout for select() will be calculated based on the sum of
+        all Delayed instances attached to me, using their 'ticktime'
+        attribute.  In this manner, delayed instances should have their
+        various callbacks called approximately when they're supposed to
+        be (based on when they were registered).
 
-        This is not hard realtime by any means; depending on server load, the
-        callbacks may be called in more or less time.  However, 'simulation
-        time' for each Delayed instance will be monotonically increased on a
-        regular basis.
+        This is not hard realtime by any means; depending on server
+        load, the callbacks may be called in more or less time.
+        However, 'simulation time' for each Delayed instance will be
+        monotonically increased on a regular basis.
 
-        See the documentation for twisted.python.delay.Delayed for details.
+        See the documentation for twisted.python.delay.Delayed for
+        details.
         """
         self.delayeds.append(delayed)
         if running and self.running:
@@ -204,7 +204,8 @@ theTimeouts.ticktime = 1
 def addTimeout(method, seconds):
     """Add a method which will time out after a given interval.
 
-    The given method will always time out before a server shuts down, and will never persist.
+    The given method will always time out before a server shuts down,
+    and will never persist.
     """
     theTimeouts.later(method, seconds)
 
@@ -238,8 +239,9 @@ resolver = DummyResolver()
 def shutDown(a=None, b=None):
     """Run all shutdown callbacks (save all running Applications) and exit.
 
-    This is called by various signal handlers which should cause the process to
-    exit.  It can also be called directly in order to trigger a clean shutdown.
+    This is called by various signal handlers which should cause
+    the process to exit.  It can also be called directly in order
+    to trigger a clean shutdown.
     """
     global running
     if running:
@@ -268,9 +270,9 @@ def runUntilCurrent():
 
 
 def doSelect(timeout,
-             # Since this loop should really be as fast as possible, I'm
-             # caching these global attributes so the interpreter will hit them
-             # in the local namespace.
+             # Since this loop should really be as fast as possible,
+             # I'm caching these global attributes so the interpreter
+             # will hit them in the local namespace.
              reads=reads,
              writes=writes,
              rhk=reads.has_key,
@@ -279,8 +281,8 @@ def doSelect(timeout,
              disown=threadable.dispatcher.disown):
     """Run one iteration of the I/O monitor loop.
 
-    This will run all selectables who had input or output readiness waiting
-    for them.
+    This will run all selectables who had input or output readiness
+    waiting for them.
     """
     while 1:
         try:
@@ -343,9 +345,10 @@ def iterate(timeout=0.):
 def run():
     """Run input/output and dispatched/delayed code.
 
-    This call never returns.  It is the main loop which runs threadable workers
-    (see twisted.threadable), delayed timers (see twisted.python.delay and
-    addDelayed), and the I/O monitor (doSelect).
+    This call never returns.  It is the main loop which runs
+    threadable workers (see twisted.threadable), delayed timers
+    (see twisted.python.delay and addDelayed), and the I/O monitor
+    (doSelect).
     """
     global running
     running = 1
@@ -453,7 +456,7 @@ if platform.getType() == 'win32':
 
 class _Win32Waker(styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
-    
+
     I am a pair of connected sockets which can wake up the main loop
     from another thread.
     """
@@ -474,12 +477,12 @@ class _Win32Waker(styles.Ephemeral):
         self.r = reader
         self.w = client
         self.fileno = self.r.fileno
-        
+
     def wakeUp(self):
         """Send a byte to my connection.
         """
         self.w.send('x')
-        
+
     def doRead(self):
         """Read some data from my connection.
         """
@@ -487,7 +490,7 @@ class _Win32Waker(styles.Ephemeral):
 
 class _UnixWaker(styles.Ephemeral):
     """This class provides a simple interface to wake up the select() loop.
-    
+
     This is necessary only in multi-threaded programs.
     """
     def __init__(self):
@@ -497,12 +500,12 @@ class _UnixWaker(styles.Ephemeral):
         self.i = os.fdopen(i,'r')
         self.o = os.fdopen(o,'w')
         self.fileno = self.i.fileno
-        
+
     def doRead(self):
         """Read one byte from the pipe.
         """
         self.i.read(1)
-        
+
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
         """
@@ -512,7 +515,7 @@ class _UnixWaker(styles.Ephemeral):
         except ValueError:
             # o has been closed
             pass
-        
+
     def connectionLost(self):
         """Close both ends of my pipe.
         """
@@ -532,7 +535,7 @@ def wakeUp():
 wakerInstalled = 0
 
 def installWaker():
-    global addReader, addWriter, waker, wakerInstalled 
+    global addReader, addWriter, waker, wakerInstalled
     if not wakerInstalled:
         wakerInstalled = 1
         waker = _Waker()
