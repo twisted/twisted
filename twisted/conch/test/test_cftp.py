@@ -112,8 +112,12 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         cmds = test_conch._makeArgs((cmds % port).split(), mod='cftp')
         log.msg('running %s %s' % (sys.executable, cmds))
         self.processProtocol = SFTPTestProcess()
+        
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(self.processProtocol, sys.executable, cmds,
-                             env=os.environ)
+                             env=env)
+
         timeout = time.time() + 10
         while (not self.processProtocol.buffer) and (time.time() < timeout):
             reactor.iterate(0.1)

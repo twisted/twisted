@@ -143,7 +143,9 @@ if Crypto:
         
         def serviceStarted(self):
             if self.spawn:
-                reactor.callLater(0,reactor.spawnProcess, env=os.environ, *self.spawn)
+                env = os.environ.copy()
+                env['PYTHONPATH'] = os.pathsep.join(sys.path)
+                reactor.callLater(0,reactor.spawnProcess, env=env, *self.spawn)
             self.connected = 1
 
         def requestRemoteForwarding(self, remotePort, hostport):
@@ -327,7 +329,11 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                ' localhost ' + args
         cmds = _makeArgs(cmd.split())
         log.msg(str(cmds))
-        reactor.spawnProcess(p, sys.executable, cmds, env=os.environ)
+        
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        reactor.spawnProcess(p, sys.executable, cmds, env=env)
+
         # wait for process to finish
         util.spinWhile(lambda: not p.done, timeout=30)
         
