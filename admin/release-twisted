@@ -94,6 +94,11 @@ class Options(usage.Options):
         Reqs: Tarballs."""
         self['commands'].append('rel')
 
+    def opt_deb(self):
+        """Creates a debian mini-repository in ~/Releases/debian-ver/.
+        Reqs: release."""
+        self['commands'].append('debian')
+
     def opt_debug(self):
         global debug
         debug = 1
@@ -122,7 +127,8 @@ def main():
          'balls': makeBalls,
 		 'tag': tag,
          'upver': updateVersions,
-         'checkout': checkout}
+         'checkout': checkout,
+         'debian': makeDebs}
 
     
     sys.path.insert(0, os.path.abspath('Twisted'))
@@ -313,6 +319,23 @@ def release(opts):
              '%s.zip'])
     else:
         print "release: Not copying Twisted."
+
+
+def makeDebs(opts):
+    rel = opts['release']
+    ver = opts['version']
+    tgz = os.path.join(rel, 'Twisted-%s.tar.gz' % ver)
+    unique = '%s.%s' % (time.time(), os.getpid())
+    os.mkdir('/sid-chroot/tmp/%s' % unique)
+    os.chdir('/sid-chroot/tmp/%s' % unique)
+    os.system('tar xzf %s' % tgz)
+    os.system("ssh -p 9022 localhost "
+              "'cd /tmp/%(unique)s;./Twisted-%(ver)s/admin/make-deb -a'"%vars())
+    os.mkdir(os.path.join(rel, 'debian-%s' % ver))
+    for file in glob.glob('/tmp/%s/*' % unique):
+        os.system('mv $(file)s $(rel)s' % vars())
+    os.system('rm -rf /sid-chroot/tmp/%s' % unique)
+    
 
 if __name__=='__main__':
     main()
