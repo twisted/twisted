@@ -1,2 +1,5 @@
-non-core packages are broken; they try to build cBanana. Need to
-separate knowledge of Extension modules!
+* non-core packages are broken.
+They try to build cBanana. Need to separate knowledge of Extension modules!
+
+* Try to minimize knowledge or transfer of state between
+release-twisted transactions.
