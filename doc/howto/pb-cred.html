@@ -98,7 +98,7 @@ class User(pb.Referenceable):
 </pre>
 
 <p>This improves matters because, as long as Alice only has a reference to
-<b>this</b> object and nobody else's, she can't cause a different
+<em>this</em> object and nobody else's, she can't cause a different
 <code>self.name</code> to get used. Of course, you have to make sure that you
 don't give her a reference to the wrong object. <a name="F1"><a href="#f1"
 >[1]</a></a> </p>
@@ -180,7 +180,7 @@ to a different class. That class is a pb.Perspective.</p>
 Service) is a layer on top of the basic PB system that handles
 username/password checking. The basic idea is that there is a separate
 Perspective object (probably a subclass you've created) for each user <a
-name="F3"><a href="#f3" >[3]</a></a>, and <b>only</b> the authorized user
+name="F3"><a href="#f3" >[3]</a></a>, and <em>only</em> the authorized user
 gets a remote reference to that Perspective object. You can store whatever
 permissions or capabilities the user possesses in that object, and then use
 them when the user invokes a remote method. You give the user access to the

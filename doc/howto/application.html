@@ -25,7 +25,7 @@ ask for more from it. Twisted provides this for you.</p>
 
 <ul>
   <li>
-  <b>configuration arguments</b>:
+  <em>configuration arguments</em>:
 
   <p>suppose your QOTD server behaves a bit more like the normal port 17
   server and pulls a random line from <code>/usr/share/fortunes</code>. Your
@@ -39,7 +39,7 @@ ask for more from it. Twisted provides this for you.</p>
   </li>
 
   <li>
-  <b>starting/stopping and persistence</b>:
+  <em>starting/stopping and persistence</em>:
 
   <p>If your protocol demands that you keep some state from one invocation
   of the server to the next, you'll need to save some information before the
@@ -223,7 +223,7 @@ a <code>.tap</code> file (by creating an Application, doing various .listenTCPs
 on it, then calling .save), you will write a subroutine called
 updateApplication(). This subroutine should take a bunch of config arguments
 (using the usage.Options class described in the plugins document) and use
-them to create Factories and feed them to .listenTCP on an <b>existing</b>
+them to create Factories and feed them to .listenTCP on an <em>existing</em>
 Application instance.</p>
 
 <p>With that in place, and a few files to register this new server you've
@@ -258,7 +258,7 @@ following steps:</p>
 
 <p>Pretty easy. At least your users will think so.</p>
 
-<p><b>And</b>, once your application is defined by the <code>.tap</code> file,
+<p><em>And</em>, once your application is defined by the <code>.tap</code> file,
 there are other tools that can be used to configure it. <code>coil</code> is one
 that provides a nice web-based UI to change the various parameters.
 <code>tap2deb</code> is a tool that creates installable Debian <code>.deb</code>

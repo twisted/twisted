@@ -208,7 +208,7 @@ value returned from the errback). If the errback does returns a <code
 class="python">Failure</code> or raise an exception, then that is passed to the
 next errback, and so on.</p>
 
-<p><b>Note:</b> If an errback doesn't return anything, then it effectively
+<p><em>Note:</em> If an errback doesn't return anything, then it effectively
 returns <code class="python">None</code>, meaning that callbacks will continue
 to be executed after this errback.  This may not be what you expect to happen,
 so be careful. Make sure your errbacks return a <code
@@ -241,7 +241,7 @@ d.addErrback(errorHandler)
 match the error encapsulated in that <code class="python">Failure</code>, then
 it re-raises the error.</p>
 
-<p><b>Note:</b> There's another potential "gotcha" here.  There's a convenience
+<p><em>Note:</em> There's another potential "gotcha" here.  There's a convenience
 method <code class="API">twisted.internet.defer.Deferred.addCallbacks</code>
 which is similar to, but not exactly the same as, <code
 class="python">addCallback</code> followed by <code

@@ -102,13 +102,13 @@ sandwich-related puns) is based upon a few central concepts:</p>
 
 <ul>
 
-  <li> <b>serialization</b>: taking fairly arbitrary objects and types,
+  <li> <em>serialization</em>: taking fairly arbitrary objects and types,
   turning them into a chunk of bytes, sending them over a wire, then
   reconstituting them on the other end. By keeping careful track of object
   ids, the serialized objects can contain references to other objects and
   the remote copy will still be useful. </li>
   
-  <li><b>remote method calls</b>: doing something to a local object and
+  <li><em>remote method calls</em>: doing something to a local object and
   causing a method to get run on a distant one. The local object is called a
   RemoteReference, and you "do something" by running its .callRemote method.
   </li>
@@ -136,27 +136,27 @@ time.</p>
 
 <ul>
 
-  <li><b><code class="API" base="twisted.internet.app">Application</code></b>
+  <li><em><code class="API" base="twisted.internet.app">Application</code></em>
   : <code>internet/app.py</code></li>
 
-  <li><b><code class="API" base="twisted.spread.pb">Service</code></b>
+  <li><em><code class="API" base="twisted.spread.pb">Service</code></em>
   : <code>spread/pb.py</code>, subclassed from
   <code class="API" base="twisted.cred.service">Service</code>
   in <code>cred/service.py</code></li>
 
-  <li><b><code class="API" base="twisted.internet.app">MultiService</code></b>
+  <li><em><code class="API" base="twisted.internet.app">MultiService</code></em>
   : <code>internet/app.py</code></li>
 
-  <li><b><code class="API" base="twisted.internet.protocol">Factory</code></b>
+  <li><em><code class="API" base="twisted.internet.protocol">Factory</code></em>
   : <code>internet/protocol.py</code></li>
 
-  <li><b><code class="API" base="twisted.spread.pb">BrokerFactory</code></b>
+  <li><em><code class="API" base="twisted.spread.pb">BrokerFactory</code></em>
   : <code>spread/pb.py</code></li>
 
-  <li><b><code class="API" base="twisted.spread.pb">Broker</code></b>
+  <li><em><code class="API" base="twisted.spread.pb">Broker</code></em>
   : <code>spread/pb.py</code></li>
 
-  <li><b><code class="API" base="twisted.spread.pb">AuthRoot</code></b>
+  <li><em><code class="API" base="twisted.spread.pb">AuthRoot</code></em>
   : <code>spread/pb.py</code></li>
 
 </ul>
@@ -165,15 +165,15 @@ time.</p>
 
 <ul>
 
-  <li> <b><code class="API" base="twisted.spread.pb">RemoteReference</code></b>
+  <li> <em><code class="API" base="twisted.spread.pb">RemoteReference</code></em>
   : <code>spread/pb.py</code> </li>
 
-  <li> <b><code class="API" base="twisted.spread">pb.Root</code></b>
+  <li> <em><code class="API" base="twisted.spread">pb.Root</code></em>
   : <code>spread/pb.py</code>, actually defined as
   <code class="API" base="twisted.spread.flavors">Root</code>
   in <code>spread/flavors.py</code> </li>
 
-  <li> <b><code class="API" base="twisted.spread">pb.Referenceable</code></b>
+  <li> <em><code class="API" base="twisted.spread">pb.Referenceable</code></em>
   : <code>spread/pb.py</code>, actually defined as
   <code class="API" base="twisted.spread.flavors">Referenceable</code>
   in <code>spread/flavors.py</code> </li>
@@ -184,13 +184,13 @@ time.</p>
 security:</p>
 
 <ul>
-  <li><b><code class="API" base="twisted.cred.authorizer">Authorizer</code></b>
+  <li><em><code class="API" base="twisted.cred.authorizer">Authorizer</code></em>
   : <code>cred/authorizer.py</code></li>
   
-  <li><b><code class="API" base="twisted.cred.identity">Identity</code></b>
+  <li><em><code class="API" base="twisted.cred.identity">Identity</code></em>
   : <code>cred/identity.py</code></li>
 
-  <li><b><code class="API" base="twisted.spread.pb">Perspective</code></b>
+  <li><em><code class="API" base="twisted.spread.pb">Perspective</code></em>
   : <code>spread/pb.py</code>, subclassed from
   <code class="API" base="twisted.cred.perspective">Perspective</code>
   in <code>cred/perspective.py</code></li>
@@ -321,7 +321,7 @@ invoke an unknown method), the callback attached to that Deferred will be
 invoked with any objects that were returned by the remote method call.</p>
 
 <p>In this example, the server's Echoer object has a method invoked,
-<b>exactly</b> as if some code on the server side had done:</p>
+<em>exactly</em> as if some code on the server side had done:</p>
 
 <pre class="python">
 echoer_object.remote_echo("hello network")
@@ -331,7 +331,7 @@ echoer_object.remote_echo("hello network")
 the same string it was given: "hello network".</p>
 
 <p>From the client's point of view, the remote call gets another Deferred
-object instead of that string. callRemote() <b>always</b> returns a
+object instead of that string. callRemote() <em>always</em> returns a
 Deferred. This is why PB is described as a system for "translucent" remote
 method calls instead of "transparent" ones: you cannot pretend that the
 remote object is really local. Trying to do so (as some other RPC mechanisms
@@ -352,14 +352,14 @@ Referenceable class that makes the object eligible to be available for
 remote method calls <a name="F1"><a href="#f1" >[1]</a></a>. If you have an
 object that is Referenceable, then any client that manages to get a
 reference to it can invoke any <code>remote_*</code> methods they please. Note: the
-<b>only</b> thing they can do is invoke those methods. In particular, they
+<em>only</em> thing they can do is invoke those methods. In particular, they
 cannot access attributes. From a security point of view, you control what
 they can do by limiting what the <code>remote_*</code> methods can do. Also note: the
 other classes like Referenceable allow access to other methods, in
 particular <code>perspective_*</code> and <code>view_*</code> may be accessed. Don't write
 local-only methods with these names, because then remote callers will be
 able to do more than you intended. Also also note: the other classes like
-pb.Copyable <b>do</b> allow access to attributes, but you control which ones
+pb.Copyable <em>do</em> allow access to attributes, but you control which ones
 they can see.</p>
 
 <p>You don't have to be a pb.Root to be remotely callable, but you do have
@@ -427,7 +427,7 @@ the next can simply be saved as an attribute of the object.</p>
 <p>Remember that the client can give you back any remote reference you've
 given them. Don't base your zillion-dollar stock-trading clearinghouse
 server on the idea that you trust the client to give you back the right
-reference. The security model inherent in PB means that they can <b>only</b>
+reference. The security model inherent in PB means that they can <em>only</em>
 give you back a reference that you've given them for the current connection
 (not one you've given to someone else instead, nor one you gave them last
 time before the TCP session went down, nor one you haven't yet given to the
@@ -437,8 +437,8 @@ they give you is entirely under their control.</p>
 
 <a name="pb/twoway_refs"><h3>References to client-side objects</h3></a>
 
-<p>Anything that's Referenceable can get passed across the wire, <b>in
-either direction</b>. The "client" can give a reference to the "server", and
+<p>Anything that's Referenceable can get passed across the wire, <em>in
+either direction</em>. The "client" can give a reference to the "server", and
 then the server can use .callRemote() to invoke methods on the client end.
 This fuzzes the distinction between "client" and "server": the only real
 difference is who initiates the original TCP connection; after that it's all
@@ -457,7 +457,7 @@ name</h3></a>
 
 <p>(This section looks into the code in a way that might help you solidify
 your understanding of what's going on under the hood, or it might just serve
-to confuse you horribly. The example described is certainly <b>not</b> the
+to confuse you horribly. The example described is certainly <em>not</em> the
 recommended way to accomplish its goal: it depends upon internal interfaces
 that aren't likely to remain stable, and there are far better ways of doing
 the same thing. No one will think badly of you if you <a
@@ -558,8 +558,8 @@ executed. Welcome to the network.</p>
 and siblings</h3></a>
 
 <p>This is explained better in the other <a href="pb.html">Perspective
-Broker</a> document, in the section entitled <b>Things you can Call
-Remotely</b></p>
+Broker</a> document, in the section entitled <em>Things you can Call
+Remotely</em></p>
 
 <p>twisted/spread/flavors.py defines an abstract base class called
 Serializable. There are four subclasses of Serializeable defined there:
@@ -576,13 +576,13 @@ references to the objects get transferred over the wire.</p>
 
 <ul>
 
-  <li> <b>pb.Referenceable</b> is the most straightforward. It does not
+  <li> <em>pb.Referenceable</em> is the most straightforward. It does not
   provide any access to the data attributes of the object, but allows
   .callRemote() to be used to invoke any <code>remote_*</code> methods that exist. When
   one of these is sent over the wire, it is simply serialized with an
   identifier that can be returned in the .callRemote() request. </li>
 
-  <li> <b>pb.Viewable</b> much like Referenceable, but instead of exporting
+  <li> <em>pb.Viewable</em> much like Referenceable, but instead of exporting
   <code>remote_*</code> methods, objects derived from this class export <code>view_*</code>
   methods. These methods are invoked with an extra first argument that
   contains the Perspective which provided the reference to the original
@@ -603,7 +603,7 @@ spread.flavors.ViewPoint for details. ]]]]</p>
   method. This will make more sense after you've read through the pb.cred
   section below.</p>
 
-  <li> <b>pb.Copyable</b>: references to pb.Copyable-derived objects are
+  <li> <em>pb.Copyable</em>: references to pb.Copyable-derived objects are
   transferred over the wire by copying them wholesale. The default behavior
   (which can of course be overridden) is to send the name of the object's
   class as a string, and a dict with all the attribute. The receiving end
@@ -613,7 +613,7 @@ spread.flavors.ViewPoint for details. ]]]]</p>
   used in creating those objects, and you must make sure the server cannot
   trick the client into doing something naughty with that data.</li>
 
-  <li> <b>pb.Cacheable</b>: this is derived from pb.Copyable, and attempts
+  <li> <em>pb.Cacheable</em>: this is derived from pb.Copyable, and attempts
   to make sure the data is only copied once. There is also code in place to
   notify the client when the state of the object changes. flavors.py says
   this is the most complex and least-documented part of PB. Good luck.</li>
@@ -643,7 +643,7 @@ subclasses have no way to find out who is invoking their methods, but
 pb.Viewable derivatives can.</p>
 
 <p>Again, Perspectives will make much more sense after the next chapter. My
-advice is to pronouce Perspective as <b>u-s-e-r</b> until you've read that
+advice is to pronouce Perspective as <em>u-s-e-r</em> until you've read that
 part.</p>
 
 
@@ -656,7 +656,7 @@ sort. The Twisted Way is the same.</p>
 <p>The only special thing you do is to define your Exception subclass by
 deriving it from <code class="API" base="twisted.spread">pb.Error</code>.
 (You do define Exception subclasses, right? String exceptions are, like,
-<b>so</b> 5 minutes ago. Get with the new century, ok?). When any
+<em>so</em> 5 minutes ago. Get with the new century, ok?). When any
 remotely-invokable method (like <code>remote_*</code> or <code>perspective_*</code>)
 raises a <code>pb.Error</code>-derived exception, a serialized form of that
 Exception object will be sent back over the wire <a name="F5"><a href="#f5"
@@ -705,9 +705,9 @@ Main loop terminated.
 </pre>
 
 <p>Oh, and what happens if you raise some other kind of exception? Something
-that <b>isn't</b> subclassed from <code>pb.Error</code>? Well, those are called
+that <em>isn't</em> subclassed from <code>pb.Error</code>? Well, those are called
 "unexpected exceptions", which make Twisted think that something has
-<b>really</b> gone wrong. These will raise an exception on the <b>server</b>
+<em>really</em> gone wrong. These will raise an exception on the <em>server</em>
 side. This won't break the connection (XXX: verify this), but it will print
 out an unsightly stack trace on the server's stderr (XXX: if logging is
 turned on, does it go into the log instead?), just as if the exception had
@@ -724,8 +724,8 @@ still send a <code>Failure</code> object back over, but the side that did
 <code>callRemote</code> will emit a message about an "<code>Unhandled error in
 Deferred</code>", along with an ugly stack trace. It can't raise an exception
 (after all, the <code>callRemote</code> that triggered the problem is long
-gone), but it will emit a traceback. So be a good programmer and <b>always
-add <code>errback</code> handlers</b>.</p>
+gone), but it will emit a traceback. So be a good programmer and <em>always
+add <code>errback</code> handlers</em>.</p>
 
 
 <a name="pb/LAST_SF_EXIT"><h2>Wrapup before touching twisted.cred</h2></a>
@@ -756,7 +756,7 @@ based upon that name.</p>
 section: one: it will solidify your understanding of basic PB remote method
 calls without adding in the confusion of authentication yet, and two: you
 will probably encounter some common problems that will help you understand
-<b>why</b> twisted.cred provides the facilities that it does.</p>
+<em>why</em> twisted.cred provides the facilities that it does.</p>
 
 <p>Implementing a chat server is a doubly useful exercise, because
 twisted.words provides a very similar service. When you've finished with the
@@ -830,7 +830,7 @@ described in detail in the section on pb.cred.</p>
 
 <a  name="f5"><a href="#F5">[5]</a></a>
 
-<p>To be precise, the <code>Failure</code> will be sent if <b>any</b> exception
+<p>To be precise, the <code>Failure</code> will be sent if <em>any</em> exception
 is raised, not just <code>pb.Error</code>-derived ones. But the server will
 print ugly error messages if you raise ones that aren't derived from
 <code>pb.Error</code>.</p>

@@ -12,15 +12,15 @@ connections on this port. Try connecting with your favorite
 telnet utility to 127.0.0.1 port 4040.</p>
 
 <pre class="shell">
-$ <b>telnet localhost 4040</b>
+$ <em>telnet localhost 4040</em>
 Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
 
 twisted.protocols.telnet.ShellFactory
 Twisted 0.15.5
-username: <b>admin</b>
-password: <b>******</b>
+username: <em>admin</em>
+password: <em>******</em>
 &gt;&gt;&gt;
 </pre>
 
@@ -29,23 +29,23 @@ password: <b>******</b>
 here. Let's try looking around.</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; <b>dir()</b>
+&gt;&gt;&gt; <em>dir()</em>
 ['__builtins__']
 </pre>
 
 <p>Ok, not much. let's play a little more:</p>
 <pre class="python-interpreter">
-&gt;&gt;&gt; <b>import __main__</b>
-&gt;&gt;&gt; <b>dir(__main__)</b>
+&gt;&gt;&gt; <em>import __main__</em>
+&gt;&gt;&gt; <em>dir(__main__)</em>
 ['EverythingEphemeral', 'ServerOptions', '__builtins__', '__doc__', '__name__',
  'application', 'config', 'copyright', 'imp', 'initRun', 'load', 'log', 
 'logFile', 'logPath', 'logfile', 'main', 'mainMod', 'oldstderr', 'oldstdin', 
 'oldstdout', 'os', 'platformType', 'rotateLog', 'runtime', 'signal', 'string',
  'styles', 'sys', 'traceback', 'usage', 'util']
 
-&gt;&gt;&gt; <b>__main__.application</b>
+&gt;&gt;&gt; <em>__main__.application</em>
 &lt;telnet app&gt;
-&gt;&gt;&gt; <b>dir(__main__.application)</b>
+&gt;&gt;&gt; <em>dir(__main__.application)</em>
 ['authorizer', 'connectors', 'delayeds', 'gid', 'name', 'persistenceVersion',
  'ports', 'resolver', 'running', 'services', 'uid', 'written']
 </pre>
@@ -79,8 +79,8 @@ path.</p>
 Python 1.5.2 (#0, Dec 27 2000, 13:59:38)  [GCC 2.95.2 20000220 (Debian
 GNU/Linux)] on linux2
 Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
-&gt;&gt;&gt; <b>import sys</b>
-&gt;&gt;&gt; <b>sys.path.append('/twisted/Twisted')</b>
+&gt;&gt;&gt; <em>import sys</em>
+&gt;&gt;&gt; <em>sys.path.append('/twisted/Twisted')</em>
 </pre>
 
 <p>I installed Twisted in /twisted, so the place where my
@@ -90,11 +90,11 @@ it must have the directory *containing* the package in sys.path
 -- which is why I added /twisted/Twisted.</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; <b>from twisted.internet import app, tcp</b>
-&gt;&gt;&gt; <b>from twisted.protocols import telnet</b>
-&gt;&gt;&gt; <b>application = app.Application('telnet')</b>
-&gt;&gt;&gt; <b>ts = telnet.ShellFactory()</b>
-&gt;&gt;&gt; <b>application.listenTCP(4040, ts)</b>
+&gt;&gt;&gt; <em>from twisted.internet import app, tcp</em>
+&gt;&gt;&gt; <em>from twisted.protocols import telnet</em>
+&gt;&gt;&gt; <em>application = app.Application('telnet')</em>
+&gt;&gt;&gt; <em>ts = telnet.ShellFactory()</em>
+&gt;&gt;&gt; <em>application.listenTCP(4040, ts)</em>
 </pre>
 
 <p>The above is basically what <code class="shell">mktap
@@ -108,7 +108,7 @@ the application to start listening for incoming connections.
 This step is basically what the 'twistd' utility does.</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; <b>application.run()</b>
+&gt;&gt;&gt; <em>application.run()</em>
 twisted.protocols.telnet.ShellFactory starting on 4040
 </pre>
 
