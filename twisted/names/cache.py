@@ -53,6 +53,8 @@ class CacheResolver(common.ResolverBase):
 
 
     def __getstate__(self):
+        for c in self.cancel.values():
+            c.cancel()
         self.cancel.clear()
         return self.__dict__
 
