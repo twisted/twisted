@@ -90,6 +90,35 @@ def getProcessValue(executable, args=(), env={}, path='.', reactor=reactor):
                                     reactor)
 
 
+class _EverythingGetter(protocol.ProcessProtocol):
+
+    def __init__(self, deferred):
+        self.deferred = deferred
+        self.outBuf = StringIO.StringIO()
+        self.errBuf = StringIO.StringIO()
+        self.outReceived = self.outBuf.write
+        self.errReceived = self.errBuf.write
+    
+    def processEnded(self, reason):
+        out = self.outBuf.getvalue()
+        err = self.errBuf.getvalue()
+        e = reason.value
+        code = e.exitCode
+        if e.signal:
+            self.deferred.errback((out, err, e.signal))
+        else:
+            self.deferred.callback((out, err, code))
+
+def getProcessOutputAndValue(executable, args=(), env={}, path='.', 
+                             reactor=reactor):
+    """Spawn a process and returns a Deferred that will be called back with
+    its output (from stdout and stderr) and it's exit code as (out, err, code)
+    If a signal is raised, the Deferred will errback with the stdout and
+    stderr up to that point, along with the signal, as (out, err, signalNum)
+    """
+    return _callProtocolWithDeferred(_EverythingGetter, executable, args, env, path,
+                                    reactor)
+
 import random
 from twisted.internet import error, interfaces
 

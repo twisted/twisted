@@ -9,7 +9,7 @@ Test running processes.
 
 from twisted.trial import unittest, util
 
-import gzip, os, popen2, time, sys
+import gzip, os, popen2, time, sys, signal
 
 # Twisted Imports
 from twisted.internet import reactor, utils, interfaces
@@ -64,6 +64,30 @@ class UtilsTestCase(unittest.TestCase):
     def saveOutput(self, o):
         self.output = o
 
+    def testOutputAndValue(self):
+        exe = sys.executable
+        sx = r'import sys; sys.stdout.write("hello world!\n"); ' \
+             r'sys.stderr.write("goodbye world!\n"); sys.exit(1)'
+        result = []
+        d = utils.getProcessOutputAndValue(exe, ['-c', sx])
+        d.addCallback(result.append)
+        while len(result) == 0:
+            reactor.iterate()
+        actual = result[0]
+        expected = ('hello world!\n', 'goodbye world!\n', 1)
+        self.assertEquals(actual, expected)
+
+    def testOutputSignal(self):
+        exe = sys.executable
+        sx = r'import os, signal;os.kill(os.getpid(), signal.SIGHUP)'
+        result = []
+        d = utils.getProcessOutputAndValue(exe, ['-c', sx])
+        d.addErrback(result.append)
+        while len(result) == 0:
+            reactor.iterate()
+        actual = result[0].value
+        expected = ('', '', signal.SIGHUP)
+        self.assertEquals(actual, expected)
 
 if not interfaces.IReactorProcess(reactor, None):
     UtilsTestCase.skip = "reactor doesn't implement IReactorProcess"
