@@ -21,11 +21,11 @@
     POST        GROUP        ARTICLE       STAT         HEAD
     BODY        NEXT         MODE STREAM   MODE READER  SLAVE
     LAST        QUIT         HELP          IHAVE        XPATH
-    XINDEX      XROVER
+    XINDEX      XROVER       TAKETHIS      CHECK
     
   The following protocol commands require implementation:
-                             NEWNEWS                CHECK
-                TAKETHIS     XGTITLE                XPAT
+                             NEWNEWS
+                             XGTITLE                XPAT
                              XTHREAD       AUTHINFO NEWGROUPS
 
 
@@ -298,10 +298,10 @@ class NNTPClient(basic.LineReceiver):
 
 class NNTPServer(NNTPClient):
     COMMANDS = [
-        'LIST', 'GROUP', 'ARTICLE', 'STAT', 'NEWSGROUPS',
-        'MODE', 'LISTGROUP', 'XOVER', 'XHDR', 'HEAD', 'BODY',
-        'NEXT', 'LAST', 'POST', 'QUIT', 'IHAVE', 'HELP',
-        'SLAVE', 'XPATH', 'XINDEX', 'XROVER'
+        'LIST', 'GROUP', 'ARTICLE', 'STAT', 'NEWSGROUPS', 'MODE',
+        'LISTGROUP', 'XOVER', 'XHDR', 'HEAD', 'BODY', 'NEXT', 'LAST',
+        'POST', 'QUIT', 'IHAVE', 'HELP', 'SLAVE', 'XPATH', 'XINDEX',
+        'XROVER', 'TAKETHIS', 'CHECK'
     ]
 
     def __init__(self):
@@ -331,6 +331,7 @@ class NNTPServer(NNTPClient):
                     apply(func, (parts,))
                 else:
                     self.sendLine('500 command not recognized')
+
 
     def do_LIST(self, parts):
         if parts:
@@ -506,11 +507,12 @@ class NNTPServer(NNTPClient):
         self.message = ''
         self.sendLine('340 send article to be posted.  End with <CR-LF>.<CR-LF>')
 
+
     def _doingPost(self, line):
         if line == '.':
             self.inputHandler = None
             group, article = self.currentGroup, self.message
-            del self.message
+            self.message = ''
 
             defer = self.factory.backend.postRequest(article)
             defer.addCallbacks(self._gotPost, self._errPost)
@@ -526,6 +528,62 @@ class NNTPServer(NNTPClient):
     
     def _errPost(self, failure):
         self.sendLine('441 posting failed')
+
+
+    def do_CHECK(self, parts):
+        if len(parts) != 1:
+            self.sendLine('501 command syntax error')
+        else:
+            id = parts[0]
+            d = self.factory.backend.articleExistsRequest(id)
+            d.addCallbacks(self._gotCheck, self._errCheck)
+    
+    
+    def _gotCheck(self, result):
+        if result:
+            self.sendLine("438 already have it, please don't send it to me")
+        else:
+            self.sendLine('238 no such article found, please send it to me')
+    
+    
+    def _errCheck(self, failure):
+        self.sendLine('431 try sending it again later')
+
+
+    def do_TAKETHIS(self, parts):
+        self.inputHandler = self._doingTakeThis
+        self.message = ''
+        if len(parts) != 1:
+            # Heh.  Yes.  We know this now, but we must take the article
+            # anyway.
+            self.takeThisResponse = 501
+        else:
+            self.takeThisResponse = 239
+    
+    
+    def _doingTakeThis(self, line):
+        if line == '.':
+            self.inputHandler = None
+            if self.takeThisResponse == 501:
+                self.message = ''
+                self.sendLine('501 command syntax error')
+            else:
+                article = self.message
+                self.message = ''
+                d = self.factory.backend.postRequest(self.message)
+                d.addCallbacks(self._didTakeThis, self._errTakeThis)
+        else:
+            if line and line[0] == '.':
+                line = '.' + line
+            self.message = self.message + line + '\r\n'
+
+
+    def _didTakeThis(self, result):
+        self.sendLine('239 article transferred ok')
+    
+    
+    def _errTakeThis(self, result):
+        self.sendLine('439 article transfer failed')
 
 
     def do_GROUP(self, parts):
