@@ -4,13 +4,27 @@ from twisted.python import log
 
 import insults
 
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+COLORS = {
+    BLACK: 'BLACK',
+    RED: 'RED',
+    GREEN: 'GREEN',
+    YELLOW: 'YELLOW',
+    BLUE: 'BLUE',
+    MAGENTA: 'MAGENTA',
+    CYAN: 'CYAN',
+    WHITE: 'WHITE'}
+
 class CharacterAttribute:
-    def __init__(self, charset, bold, underline, blink, reverseVideo):
+    def __init__(self, charset, bold, underline, blink, reverseVideo,
+                 foreground, background):
         self.charset = charset
         self.bold = bold
         self.underline = underline
         self.blink = blink
         self.reverseVideo = reverseVideo
+        self.foreground = foreground
+        self.background = background
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
@@ -163,7 +177,17 @@ class TerminalBuffer(protocol.Protocol):
             elif a == insults.REVERSE_VIDEO:
                 self.graphicRendition['reverseVideo'] = True
             else:
-                log.msg("Unknown graphic rendition attribute: " + repr(a))
+                try:
+                    v = int(a)
+                except ValueError:
+                    log.msg("Unknown graphic rendition attribute: " + repr(a))
+                else:
+                    if 30 <= v <= 37:
+                        self.graphicRendition['foreground'] = COLORS[v - 30]
+                    elif 40 <= v <= 47:
+                        self.graphicRendition['backgrond'] = COLORS[v - 40]
+                    else:
+                        log.msg("Unknown graphic rendition attribute: " + repr(a))
 
     def eraseLine(self):
         self.lines[self.y] = self._emptyLine(self.width)
@@ -212,7 +236,9 @@ class TerminalBuffer(protocol.Protocol):
             'bold': False,
             'underline': False,
             'blink': False,
-            'reverseVideo': False}
+            'reverseVideo': False,
+            'foreground': 'WHITE',
+            'background': 'BLACK'}
         self.charsets = {
             insults.G0: insults.CS_US,
             insults.G1: insults.CS_US,
@@ -222,3 +248,4 @@ class TerminalBuffer(protocol.Protocol):
 
     def __str__(self):
         return '\n'.join([''.join([ch for (ch, attr) in L]).rstrip() for L in self.lines])
+

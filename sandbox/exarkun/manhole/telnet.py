@@ -749,14 +749,19 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
 from twisted.cred import credentials
 
 class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
-    state = "User"
-    protocol = None
+    """A protocol which prompts for credentials and attempts to authenticate them.
 
-    def __init__(self, portal, protocolFactory, *args, **kw):
+    Username and password prompts are given (the password is obscured).  When the
+    information is collected, it is passed to a portal and an avatar implementing
+    ITelnetProtocol is requested.  If an avatar is returned, it connected to this
+    protocol's transport, and this protocol's transport is connected to it.
+    Otherwise, the user is re-prompted for credentials.
+    """
+
+    state = "User"
+
+    def __init__(self, portal):
         self.portal = portal
-        self.protocolFactory = protocolFactory
-        self.protocolArgs = args
-        self.protocolKwArgs = kw
 
     def connectionMade(self):
         self.transport.write("Username: ")
@@ -779,15 +784,14 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         return 'Discard'
 
     def _cbLogin(self, ial):
-        interface, avatar, logout = ial
+        interface, protocol, logout = ial
         assert interface is ITelnetProtocol
-        self.avatar = avatar
+        self.protocol = protocol
         self.logout = logout
         self.state = 'Command'
 
-        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-        self.protocol.makeConnection(self.transport)
-        self.transport.protocol = self.protocol
+        protocol.makeConnection(self.transport)
+        self.transport.protocol = protocol
 
     def _ebLogin(self, failure):
         self.transport.write("Authentication failed\n")

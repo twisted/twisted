@@ -22,23 +22,27 @@ class ConstructedSession(ssh.TerminalSession):
 
 components.registerAdapter(ConstructedSession, ssh.TerminalUser, session.ISession)
 
-def makeTelnetProtocol(portal, namespace):
+def makeTelnetProtocol(portal):
     def protocol():
         auth = telnet.AuthenticatingTelnetProtocol
-        args = (portal,
-                telnet.TelnetBootstrapProtocol,
-                TerminalForwardingProtocol,
-                manhole.ColoredManhole,
-                namespace)
+        args = (portal,)
         return telnet.TelnetTransport(auth, *args)
     return protocol
 
 class _StupidRealm:
     implements(portal.IRealm)
 
+    def __init__(self, proto, *a, **kw):
+        self.protocolFactory = proto
+        self.protocolArgs = a
+        self.protocolKwArgs = kw
+
     def requestAvatar(self, avatarId, *interfaces):
         if telnet.ITelnetProtocol in interfaces:
-            return telnet.ITelnetProtocol, None, lambda: None
+            return (telnet.ITelnetProtocol,
+                    self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs),
+                    lambda: None)
+        raise NotImplementedError()
 
 def makeService(options):
     """Create a manhole server service.
@@ -68,18 +72,22 @@ def makeService(options):
 
     svc = service.MultiService()
 
-    realm = _StupidRealm()
-    p = portal.Portal(realm)
-    for c in options['checkers']:
-        p.registerChecker(c)
-
     namespace = options['namespace']
     if namespace is None:
         namespace = {}
 
+    realm = _StupidRealm(telnet.TelnetBootstrapProtocol,
+                         TerminalForwardingProtocol,
+                         manhole.ColoredManhole,
+                         namespace)
+
+    p = portal.Portal(realm)
+    for c in options['checkers']:
+        p.registerChecker(c)
+
     if options['telnetPort']:
         telnetFactory = protocol.ServerFactory()
-        telnetFactory.protocol = makeTelnetProtocol(p, namespace)
+        telnetFactory.protocol = makeTelnetProtocol(p)
         telnetService = strports.service(options['telnetPort'],
                                          telnetFactory)
         telnetService.setServiceParent(svc)
