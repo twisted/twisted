@@ -19,10 +19,19 @@ Application belongs to this gid, and should run with its permissions.
 \fB\--append\fR, \fB\-a\fR \fI<file>\fR
 Append given servers to given file, instead of creating a new one.
 File should be be a tap file.
+.TP 
+\fB\--manholeUser\fR
+Username for manhole service.
+.TP 
+\fB\--manholePass\fR
+Password for manhole service. If none is given manhole will not be setup.
+.TP
+\fB\--manholePort\fR
+Port for manhole service [default:8787].
 .PP
-\fIapptype\fR can be 'stupid', 'web', 'irc', 'reality', 'toc', 'mail' and 
-'telnet'.
-Each of those support different options.
+\fIapptype\fR can be 'stupid', 'web', 'irc', 'reality', 'toc', 'mail', \
+'telnet', 'socks', 'ftp', 'manhole' and 'words'. Each of those support \
+different options.
 .PP
 .SH \fBstupid\fR options
 .TP
@@ -115,8 +124,54 @@ Run the telnet server on <port>
 \fB\-u\fR, \fB\--username\fR \fI<name>\fR
 set the username to <name>
 .TP
-\fB\-p\fR, \fB\--password\fR \fI<password>\fR
+\fB\-w\fR, \fB\--password\fR \fI<password>\fR
 set the password to <password>
+.SH \fBsocks\fR options
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Run the SOCKSv4 server on <port>
+.TP
+\fB\-l\fR, \fB\--log\fR \fI<filename>\fR
+log connection data to <filename>
+.SH \fBftp\fR options
+.TP
+\fB\-a\fR, \fB\--anonymous\fR
+Allow anonymous logins
+.TP
+\fB\-3\fR, \fB\--thirdparty\fR
+Allow third party connections
+.TP
+\fB\--otp\fR
+Use one time passwords (OTP)
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Run the FTP server on <port>
+.TP
+\fB\-r\fR, \fB\--root\fR \fI<path>\fR
+Define the local root of the FTP server
+.TP
+\fB\--anonymoususer\fR \fI<username>\fR
+Define the the name of the anonymous user
+.SH \fBmanhole\fR options
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Run the manhole server on <port>
+.TP
+\fB\-u\fR, \fB\--user\fR \fI<name>\fR
+set the username to <name>
+.TP
+\fB\-w\fR, \fB\--password\fR \fI<password>\fR
+set the password to <password>
+.SH \fBwords\fR options
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Run the Words server on <port>
+.TP
+\fB\-i\fR, \fB\--irc\fR \fI<port>\fR
+Run IRC server on port <port>
+.TP
+\fB\-w\fR, \fB\--web\fR \fI<port>\fR
+Run web server on port <port>
 .SH AUTHOR
 Written by Moshe Zadka, based on mktap's help messages
 .SH "REPORTING BUGS"
