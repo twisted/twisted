@@ -20,6 +20,7 @@ import StringIO
 
 from pyunit import unittest
 from twisted.internet import reactor, protocol
+from twisted.python import reflect
 
 from twisted.protocols.gps import nmea
 
@@ -51,8 +52,8 @@ class NMEATester(nmea.NMEAReceiver):
 
     def connectionMade(self):
         self.resultHarvester = ResultHarvester()
-        for fn in filter(lambda n: callable(getattr(self,n)) and n.startswith('decode_'), dir(self)):
-            setattr(self, fn.replace('decode','handle'), self.resultHarvester)
+        for fn in reflect.prefixedMethodNames(self.__class__, 'decode_'):
+            setattr(self, 'handle_' + fn, self.resultHarvester)
         
 class NMEAReceiverTestCase(unittest.TestCase):
     messages = (
