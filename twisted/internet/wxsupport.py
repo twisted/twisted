@@ -25,16 +25,22 @@ To use::
 Use Twisted's APIs for running and stopping the event loop, don't use
 wxPython's methods.
 
+On Windows the Twisted event loop might block when dialogs are open
+or menus are selected.
+
 API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
+
+import warnings
 
 # wxPython imports
 from wxPython.wx import wxApp
 
 # twisted imports
 from twisted.internet import reactor
+from twisted.python.runtime import platformType
 
 
 class wxRunner:
@@ -59,6 +65,8 @@ class wxRunner:
 
 def install(app):
     """Install the wxPython support, given a wxApp instance"""
+    if platformType == "win32":
+        warnings.warn("Be advised wxsupport is not fully functional on Windows.")
     runner = wxRunner(app)
     reactor.callLater(0.02, runner.run)
 
