@@ -1,3 +1,8 @@
+2003-04-09  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/process.py: fix typo,
+	s/registerReapProccessHandler/registerReapProcessHandler)/
+
 2003-04-09  Jp Calderone <exarkun@twistedmatrix.com>
 	* twisted/internet/base.py: Change the sort order of DelayedCalls
 	and remove them from the end of the list instead of the beginning.

@@ -67,7 +67,7 @@ def reapAllProcesses():
     for process in reapProcessHandlers.values():
         process.reapProcess()
 
-def registerReapProccessHandler(pid, process):
+def registerReapProcessHandler(pid, process):
     if reapProcessHandlers.has_key(pid):
         raise RuntimeError
     try:
@@ -81,7 +81,7 @@ def registerReapProccessHandler(pid, process):
         reapProcessHandlers[pid] = process
 
 
-def unregisterReapProccessHandler(pid, process):
+def unregisterReapProcessHandler(pid, process):
     if not (reapProcessHandlers.has_key(pid)
             and reapProcessHandlers[pid] == process):
         raise RuntimeError
@@ -281,7 +281,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             self.proto.makeConnection(self)
         except:
             log.deferr()
-        registerReapProccessHandler(self.pid, self)
+        registerReapProcessHandler(self.pid, self)
 
     def reapProcess(self):
         """Try to reap a process (without blocking) via waitpid.
@@ -518,7 +518,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             self.proto.makeConnection(self)
         except:
             log.deferr()
-        registerReapProccessHandler(self.pid, self)
+        registerReapProcessHandler(self.pid, self)
 
     def reapProcess(self):
         """Try to reap a process (without blocking) via waitpid.
