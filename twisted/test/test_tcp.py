@@ -512,6 +512,11 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
             reactor.connectTCP('localhost', p, f))
 
         self.totalConnections = 0
+        try:
+            import resource
+        except ImportError:
+            return
+        self.numberRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
     
     def testProperlyCloseFiles(self):
         self.connector()
