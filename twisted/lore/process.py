@@ -96,7 +96,7 @@ def fooAddingGenerator(originalFileName, outputExtension):
 def outputdirGenerator(originalFileName, outputExtension, inputdir, outputdir):
     originalFileName = os.path.abspath(originalFileName)
     if originalFileName[:len(inputdir)] != inputdir:
-        raise ("Original file name '" + originalFileName +
+        raise ValueError("Original file name '" + originalFileName +
               "' not under input directory '" + inputdir + "'")
 
     adjustedPath = outputdir + originalFileName[len(inputdir):]

@@ -289,7 +289,7 @@ def makeSureDirectoryExists(filename):
     filename = os.path.abspath(filename)
     dirname = os.path.dirname(filename)
     if (not os.path.exists(dirname)):
-        os.mkdir(dirname)
+        os.makedirs(dirname)
 
 def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getOutputFileName):
     doc = parseFileAndReport(filename)

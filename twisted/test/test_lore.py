@@ -90,30 +90,22 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles('good_simple.xhtml', 'simple4foo.xhtml')
 
     def test_outputdirGenerator(self):
-        inputdir  = '/home/joe/'
-        outputdir = '/away/joseph/'
-        actual = process.outputdirGenerator('/home/joe/myfile.html', '.xhtml',
+        inputdir  = os.path.join("/", 'home', 'joe')
+        outputdir = os.path.join("/", 'away', 'joseph')
+        actual = process.outputdirGenerator(os.path.join("/", 'home', 'joe', "myfile.html"), '.xhtml',
                                             inputdir, outputdir)
-        self.assertEquals('/away/joseph/myfile.xhtml', actual)
+        self.assertEquals(os.path.join("/", 'away', 'joseph', 'myfile.xhtml'), actual)
         
-    def XXXtest_outputdirGeneratorBadInput(self):
+    def test_outputdirGeneratorBadInput(self):
         options = {'outputdir': '/away/joseph/', 'inputdir': '/home/joe/' }
-        try:
-            actual = process.outputdirGenerator('.html', '.xhtml',
-                                                options)
-            raised = False;
-        except(e): #todo: how do these exception thingies work in Python?
-            raised = True;
-            print e
-        self.failUnless(raised, 'should throw exception if filename is not under inputdir')
-
+        self.assertRaises(ValueError, process.outputdirGenerator, '.html', '.xhtml', **options)
+    
     def test_makeSureDirectoryExists(self):
-        dirname = '/tmp/nonexistentdir'
+        dirname = os.path.join("tmp", 'nonexistentdir')
         if os.path.exists(dirname):
-            print "REMOVING"
             os.rmdir(dirname)
         self.failIf(os.path.exists(dirname), "Hey: someone already created the dir")
-        filename = dirname + '/newfile'
+        filename = os.path.join(dirname, 'newfile')
         tree.makeSureDirectoryExists(filename)
         self.failUnless(os.path.exists(dirname), 'should have created dir')
         os.rmdir(dirname)
