@@ -2,6 +2,7 @@
 set -e
 cp admin/book.tex doc/howto
 ./bin/html2latex -s doc/howto/*.html
+cd doc/howto
 latex book.tex
 latex book.tex
 dvips -o book.ps book.dvi
