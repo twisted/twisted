@@ -1,3 +1,30 @@
+2002-01-23  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
+
+	* Incompatible change to PB: all remote methods now return
+	Deferreds.  This doesn't break code in as many places as possible,
+	but the connection methods now work differently and have different
+	signatures.
+
+	* Incompatible change to Banana: Banana now really supports floats
+	and long integers.  This involved removing some nasty hackery that
+	was previously part of the protocol spec, so you'll need to
+	upgrade.
+
+	* Added a feature to Jelly: Jelly now supports unicode strings.
+
+	* Improved Twisted.Forums considerably: still needs work, but it's
+	growing into an example of what you can do with a Twisted.Web
+	application.
+
+	* Added Twisted.Web.Webpassport -- generic mechanism for web-based
+	login to arbitrary services.  This in conjunction with some code
+	in Forum that uses it.
+
+	* Incompatible change in Enterprise: all query methods now return
+	Deferreds, as well as take arguments in an order which makes it
+	possible to pass arbitrary argument lists for using the database's
+	formatting characters rather than python's.
+
 2002-01-15  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
 
 	* twisted/internet/passport.py: (and friends) Retrieval of
@@ -27,3 +54,5 @@
 	  quoting.
 
 	* First go at database for twisted.bugs. I hate RDBMS. I hate web.
+
+--- 0.13.0 Release ---
