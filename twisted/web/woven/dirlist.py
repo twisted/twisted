@@ -1,13 +1,34 @@
+# Twisted, the Framework of Your Internet Copyright (C) 2003 Matthew
+# W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Directory listing."""
+
+# system imports
 from os.path import join as joinpath
+import urllib, os
 
+# sibling imports
 import page, model, widgets, view
 
+# twisted imports
 from twisted.web.microdom import lmx
 from twisted.web.domhelpers import RawText
-
 from twisted.python.filepath import FilePath
-from twisted.web.static import File
+from twisted.web.static import File, getTypeAndEncoding
+
 
 class DirectoryLister(page.Page):
     template = '''
@@ -45,12 +66,12 @@ class DirectoryLister(page.Page):
         <tr class="even" pattern="listItem">
             <td><a model="link" view="Link" /></td>
             <td model="type" view="Text"></td>
-            <td model="content" view="Text"></td>
+            <td model="encoding" view="Text"></td>
         </tr>
         <tr class="even" pattern="listItem">
             <td><a model="link" view="Link" /></td>
             <td model="type" view="Text"></td>
-            <td model="content" view="Text"></td>
+            <td model="encoding" view="Text"></td>
         </tr>
     </table>
     
@@ -77,22 +98,24 @@ class DirectoryLister(page.Page):
         else:
             directory = self.dirs
 
-        model = {}
+        files = []; dirs = []
 
         for path in directory:
             url = urllib.quote(path, "/:")
             if os.path.isdir(os.path.join(self.path, path)):
                 url = url + '/'
-                model.append({'link':url,'type':'[Directory]','encoding':''})
+                dirs.append({'link':{"text": path + "/", "href":url},
+                             'type': '[Directory]', 'encoding': ''})
+            else:
+                mimetype, encoding = getTypeAndEncoding(path, self.contentTypes,
+                                                        self.contentEncodings,
+                                                        self.defaultType)
+                files.append({
+                    'link': {"text": path, "href": url},
+                    'type': '[%s]' % mimetype,
+                    'encoding': (encoding and '[%s]' % encoding or '')})
 
-        for path in directory:
-            url = urllib.quote(path, "/:")
-            if not os.path.isdir(os.path.join(self.path, path)):
-                model.append({
-                         'link': path,
-                         'type': '[%s]'%mimetype,
-                         'encoding': (encoding and '[%s]' % encoding or '')})
-
+        return files + dirs
 
     def wmfactory_header(self, request):
         return "Directory listing for %s" % request.uri
@@ -101,6 +124,3 @@ class DirectoryLister(page.Page):
         return '<DirectoryLister of %r>' % self.path
         
     __str__ = __repr__
-
-File._directoryLister = DirectoryLister
-
