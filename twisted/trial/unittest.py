@@ -90,7 +90,7 @@ class TestCase:
 # they are the final frame.
 _failureConditionals = [
     'fail', 'failIf', 'failUnless', 'failUnlessRaises', 'failUnlessEqual',
-    'failIfEqual', 'assertApproximates']
+    'failUnlessIdentical', 'failIfEqual', 'assertApproximates']
 
 def isTestClass(testClass):
     return issubclass(testClass, TestCase)
@@ -559,7 +559,7 @@ class TreeReporter(TextReporter):
         self.endLine('[SKIPPED]', self.BLUE)
         Reporter.reportSkip(self, testClass, method, exc_info)
 
-    
+
 
 def _getDeferredResult(d, timeout=None):
     from twisted.internet import reactor
