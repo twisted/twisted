@@ -16,13 +16,17 @@ platform is supposed to work.  A side effect of this is that it's hard to get
 started with a project using Twisted, because it's hard to find out where to
 start.</p>
 
-<p>This guide is to help you understand the <q>right way</q> to get started
-working on a Twisted application.  It probably won't answer your specific
-questions about how to do things like <a href="time.xhtml" >schedule functions
-to call in the future</a> or <a href="servers.xhtml" >listen on a socket</a>;
-there are other documents that address these concerns and you can read them
-later.  <strong>Although there are other ways for Twisted to call your code,
-all Twisted projects should start as a plug-in of some kind.</strong></p>
+<p>This guide is to help you understand one of the main ways to get
+started working on a Twisted server application.  It probably won't
+answer your specific questions about how to do things like <a
+href="time.xhtml" >schedule functions to call in the future</a> or <a
+href="servers.xhtml" >listen on a socket</a>; there are other
+documents that address these concerns and you can read them
+later. Client applications are not likely to use the infrastructure
+described in this document, and a simpler alternative exists for
+servers, covered in the <a href="application.xhtml">Application
+howto</a>.</p>
+
 
 <h2>Twisted and You: Where Does Your Code Fit In?</h2>
 
@@ -79,7 +83,8 @@ create the <code base="twisted.application.service" class="API">Application</cod
 instance and this script can be run directly using 
 <code class="shell">twistd -y script.py</code>, as long as the file <code>script.py</code>
 has a <code base="twisted.application.service" class="API">Application</code>
-object called <code>application</code> on the module level.</p>
+object called <code>application</code> on the module level. Applications are
+covered in more depth in the <a href="application.xhtml">Application howto</a>.</p>
 
 <p>There are many ways in which your code will be called by various parts of
 the Twisted framework by the time you're done.  The initial one we're going to
