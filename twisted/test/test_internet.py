@@ -100,6 +100,32 @@ class InterfaceTestCase(unittest.TestCase):
         del self._called
         del self._calledTime
 
+    def _resetcallback(self):
+        self._resetcallbackTime = time.time()
+    
+    def _delaycallback(self):
+        self._delaycallbackTime = time.time()
+        
+    def testCallLaterDelayAndReset(self):
+        self._resetcallbackTime = None
+        self._delaycallbackTime = None
+        ireset = reactor.callLater(0.5, self._resetcallback)
+        idelay = reactor.callLater(0.5, self._delaycallback)
+        start = time.time()
+        # chug a little before delaying
+        while time.time() - start < 0.2:
+            reactor.iterate(0.01)
+        ireset.reset(0.3)
+        idelay.delay(0.3)
+        # both should be called sometime during this
+        while time.time() - start < 0.9:
+            reactor.iterate(0.01)
+        self.assert_(0 < self._resetcallbackTime - start - 0.5 < 0.2)
+        self.assert_(0 < self._delaycallbackTime - start - 0.8 < 0.2)
+
+        del self._resetcallbackTime
+        del self._delaycallbackTime
+
     def testWakeUp(self):
         def wake(reactor=reactor):
             time.sleep(0.5)

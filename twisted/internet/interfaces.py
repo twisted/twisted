@@ -332,6 +332,8 @@ class IReactorTime(Interface):
 
         @returns: An L{IDelayedCall} object that can be used to cancel
                   the scheduled call, by calling its C{cancel()} method.
+                  It also may be rescheduled by calling its C{delay()}
+                  or C{reset()} methods.
         """
 
     def cancelCallLater(self, callID):
@@ -362,6 +364,27 @@ class IDelayedCall(Interface):
             been cancelled.
         """
 
+    def delay(self, secondsLater):
+        """Delay the scheduled call.
+        @param secondsLater: how many seconds from its current firing time to delay
+
+        @raises twisted.internet.error.AlreadyCalled: if the call has already
+            happened.
+        @raises twisted.internet.error.AlreadyCancelled: if the call has already
+            been cancelled.
+        """
+
+    def reset(self, secondsFromNow):
+        """Reset the scheduled call's timer.
+        @param secondsLater: how many seconds from now it should fire, equivalent
+                             to C{self.cancel()} and then doing another 
+                             C{reactor.callLater(secondsLater, ...)}
+
+        @raises twisted.internet.error.AlreadyCalled: if the call has already
+            happened.
+        @raises twisted.internet.error.AlreadyCancelled: if the call has already
+            been cancelled.
+        """
 
 class IReactorThreads(Interface):
     """Dispatch methods to be run in threads.

@@ -45,8 +45,9 @@ def _nmin(a, b):
 
 
 class DelayedCall:
-    def __init__(self, time, func, args, kw, cancel):
+    def __init__(self, time, func, args, kw, cancel, reset):
         self.time, self.func, self.args, self.kw = time, func, args, kw
+        self.resetter = reset
         self.canceller = cancel
         self.cancelled = self.called = 0
 
@@ -59,6 +60,23 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
 
+    def reset(self, secondsFromNow):
+        if self.cancelled:
+            raise error.AlreadyCancelled
+        elif self.called:
+            raise error.AlreadyCalled
+        else:
+            self.time = time() + secondsFromNow
+            self.resetter(self)
+
+    def delay(self, secondsLater):
+        if self.cancelled:
+            raise error.AlreadyCancelled
+        elif self.called:
+            raise error.AlreadyCalled
+        else:
+            self.time += secondsLater
+            self.resetter(self)
 
     def __cmp__(self, other):
         if isinstance(other, DelayedCall):
@@ -263,7 +281,13 @@ class ReactorBase:
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(f)
-        tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove)
+        tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove, self._resetCallLater)
+        insort(self._pendingTimedCalls, tple)
+        return tple
+
+    def _resetCallLater(self, tple):
+        assert tple in self._pendingTimedCalls
+        self._pendingTimedCalls.remove(tple)
         insort(self._pendingTimedCalls, tple)
         return tple
 
