@@ -112,6 +112,8 @@ def install():
                                     "hlint", "manhole", "t-im", "tapconvert",
                                     "html2latex", "conch",
                                     ])
+        pathdict={'scripts_dir': scripts_dir,
+                  'twisted_scripts': twisted_scripts}
         batch_script="""@echo off
 set PATHEXT=%%PATHEXT%%;.py
 set PATH=%(scripts_dir)s;%%PATH%%
@@ -119,7 +121,7 @@ set PATH
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
 echo Commands available in twisted: %(twisted_scripts)s
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
-""" % locals()
+""" % pathdict
         bat_location=getBatFilename()
         bat_file=open(bat_location, 'w')
         bat_file.write(batch_script)
@@ -142,8 +144,8 @@ If you want icons to appear in the Start menu, you must:
 1) Download & install win32all from the URL above
 2) Run the Twisted installer (this program) again.
 """
-            url="http://starship.python.net/crew/mhammond/win32/Downloads.html"
-            print warntext % locals()
+            warn_dict={'url': "http://starship.python.net/crew/mhammond/win32/Downloads.html"}
+            print warntext % warn_dict
         else:
             print 'Installing Icons for Twisted...',
             sys.stdout.flush()
@@ -174,6 +176,15 @@ If you want icons to appear in the Start menu, you must:
             shortcut.save(mktap_shortcut_path)
             file_created(mktap_shortcut_path)
             files_created.append(mktap_shortcut_path)
+# FIXME - tktwistd doesn't actually work on Windows. No icon until fixed.
+#            # tktwistd
+#            shortcut=Shortcut(os.path.join(exec_dir, "pythonw.exe"),
+#                              os.path.join(scripts_dir, "tktwistd.py"),
+#                              workingdir="C:\\")
+#            twistd_shortcut_path=os.path.join(menu_path, "Application Runner.lnk")
+#            shortcut.save(twistd_shortcut_path)
+#            file_created(twistd_shortcut_path)
+#            files_created.append(twistd_shortcut_path)
 
             # uninstall
             remove_exe=os.path.join(python_dir, "RemoveTwisted.exe")
