@@ -18,12 +18,14 @@
 """Basic protocols, such as line-oriented, netstring, and 32-bit-int prefixed strings.
 """
 
-
+# System imports
 import string
 import re
 import struct
 
+# Twisted imports
 from twisted.protocols import protocol
+from twisted.python import log
 
 
 LENGTH, DATA, COMMA = range(3)
@@ -31,15 +33,25 @@ NUMBER = re.compile('(\d*)(:?)')
 DEBUG = 0
 
 class NetstringParseError(ValueError):
-    '''The incoming data is not in valid Netstring format'''
+    """The incoming data is not in valid Netstring format."""
     pass
+
 
 class NetstringReceiver(protocol.Protocol):
     """This uses djb's Netstrings protocol to break up the input into strings.
 
     Each string makes a callback to stringReceived, with a single
     argument of that string.
+    
+    Security features:
+    1) Messages are limited in size, useful if you don't want someone
+       sending you a 500MB netstring (change MAX_LENGTH to the maximum
+       length you wish to accept).
+    2) The connection is lost if an illegal message is received.
     """
+
+    MAX_LENGTH = 99999
+    brokenPeer = 0
     mode = LENGTH
     length = 0
 
@@ -77,52 +89,40 @@ class NetstringReceiver(protocol.Protocol):
                 raise NetstringParseError
         self.__data = self.__data[m.end():]
         if m.group(1):
-            self.length = self.length * (10**len(m.group(1))) + long(m.group(1))
+            try:
+                self.length = self.length * (10**len(m.group(1))) + long(m.group(1))
+            except OverflowError:
+                raise NetstringParseError, "netstring too long"
+            if self.length > self.MAX_LENGTH:
+                raise NetstringParseError, "netstring too long"
         if m.group(2):
             self.__buffer = ''
             self.mode = DATA
 
     def dataReceived(self, data):
         self.__data = data
-        while self.__data:
-            if self.mode == DATA:
-                self.doData()
-            elif self.mode == COMMA:
-                self.doComma()
-            elif self.mode == LENGTH:
-                self.doLength()
-            else:
-                raise RuntimeError, "mode is not DATA, COMMA or LENGTH"
-
+        try:
+            while self.__data:
+                if self.mode == DATA:
+                    self.doData()
+                elif self.mode == COMMA:
+                    self.doComma()
+                elif self.mode == LENGTH:
+                    self.doLength()
+                else:
+                    raise RuntimeError, "mode is not DATA, COMMA or LENGTH"
+        except NetstringParseError:
+            self.transport.loseConnection()
+            self.brokenPeer = 1
+    
     def sendString(self, data):
         self.transport.write('%d:%s,' % (len(data), data))
 
 
 class SafeNetstringReceiver(NetstringReceiver):
-    """A NetstringReceiver that behaves in a safe manner:
-
-    1) Messages are limited in size, useful if you don't want someone
-       sending you a 500MB netstring.
-    2) The connection is lost if an illegal message is received.
+    """This class is deprecated, use NetstringReceiver instead.
     """
 
-    MAX_LENGTH = 99999
-    brokenPeer = 0
-
-    def doLength(self):
-        try:
-            NetstringReceiver.doLength(self)
-        except OverflowError:
-            raise NetstringParseError("netstring was too long")
-        if self.length > self.MAX_LENGTH:
-            raise NetstringParseError("netstring was too long")
-
-    def dataReceived(self, data):
-        try:
-            NetstringReceiver.dataReceived(self, data)
-        except NetstringParseError:
-            self.transport.loseConnection()
-            self.brokenPeer = 1
 
 
 class LineReceiver(protocol.Protocol):
@@ -208,10 +208,14 @@ class Int32StringReceiver(protocol.Protocol):
 
     recvd = ""
 
+    def stringReceived(self, msg):
+        """Override this.
+        """
+        raise NotImplementedError
+
     def dataReceived(self, recd):
         """Convert int32 prefixed strings into calls to stringReceived.
         """
-        packetList = []
         self.recvd = self.recvd + recd
         while len(self.recvd) > 3:
             length ,= struct.unpack("!i",self.recvd[:4])
@@ -220,7 +224,6 @@ class Int32StringReceiver(protocol.Protocol):
             packet = self.recvd[4:length+4]
             self.recvd = self.recvd[length+4:]
             self.stringReceived(packet)
-
 
     def sendString(self, data):
         """Send an int32-prefixed string to the other end of the connection.
@@ -236,6 +239,7 @@ class StatefulStringProtocol:
     (prefixed with 'proto_') depending on state."""
 
     state = 'init'
+    
     def stringReceived(self,string):
         """Choose a protocol phase function and call it.
 
