@@ -54,20 +54,31 @@ internalProtocols = {
 # Protocol map
 protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
-def forkPassingFD(exe, args, env, user, group, fdesc):
+def forkPassingFD(exe, args, env, user, group, fdesc, childStderr=None):
     """Run exe as a child process, passing fdesc as fd 0.
     
     This will also make sure that fdesc is removed from the parent's reactor.
+
+    If you have no stderr (e.g. you are running daemonised), pass a log file or
+    some other valid file descriptor to childStderr, for errors to go to.
     """
     # This is half-cannibalised from twisted.internet.process.Process
     pid = os.fork()
     if pid == 0:    # Child
         try:
+            if childStderr is not None:
+                # Dup this first, in case has a low fileno (0 or 1) that would
+                # get clobbered
+                stderrfd = os.dup(childStderr.fileno())
+
             # Make the socket be fd 0 
             # (and fd 1, although I'm not sure if that matters)
             # (we keep stderr from the parent to report errors with)
             os.dup2(fdesc.fileno(), 0)
             os.dup2(fdesc.fileno(), 1)
+            
+            if childStderr is not None:
+                os.dup2(stderrfd, 2)
 
             # Close unused file descriptors
             for fd in range(3, 256):
@@ -104,11 +115,13 @@ class InetdProtocol(Protocol):
     def connectionMade(self):
         service = self.factory.service
         forkPassingFD(service.program, service.programArgs, os.environ,
-                      service.user, service.group, self.transport)
+                      service.user, service.group, self.transport, 
+                      self.factory.stderrFile)
 
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
+    stderrFile = None
     
     def __init__(self, service):
         self.service = service
