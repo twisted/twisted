@@ -15,12 +15,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+from cStringIO import StringIO
+import os
+from twisted.python import text
 import latex
+
 
 def texiEscape(text):
     return text.replace('\n', ' ')
 
-entities = latex.copy()
+entities = latex.entities.copy()
 entities['copy'] = '@copyright{}'
 
 class TexiSpitter(latex.BaseLatexSpitter):
@@ -49,10 +53,7 @@ class TexiSpitter(latex.BaseLatexSpitter):
     def visitNode_code(self, node):
         fout = StringIO()
         latex.getLatexText(node, fout.write, texiEscape, entities)
-        self.writer('@code{'+data+'}')
-
-    def convert_png(self, src, target):
-        os.system("pngtopnm %s | pnmtops > %s" % (src, target))
+        self.writer('@code{'+fout.getvalue()+'}')
 
     def visitNodeHeader(self, node):
         level = (int(node.tagName[1])-2)+self.baseLevel

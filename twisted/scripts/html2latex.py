@@ -16,12 +16,13 @@
 # 
 
 import os
-from twisted.lore import latex
+from twisted.lore import latex, texi
 from twisted.python import usage
 
 class Options(usage.Options):
 
-    optFlags = [['section', 's', 'Generate a section, not an article']]
+    optFlags = [['section', 's', 'Generate a section, not an article'],
+                ['texi', 'i', 'Generate a Texinfo section']]
 
     optParameters = [['dir', 'd', None, 'Directory relative to which references'
                                         ' will be taken']]
@@ -32,12 +33,16 @@ class Options(usage.Options):
 def run():
     opt = Options()
     opt.parseOptions()
+    ext = ".tex"
     if opt['section']:
         klass = latex.SectionLatexSpitter
+    elif opt['texi']:
+        klass = texi.TexiSpitter
+        ext = '.texinfo'
     else:
         klass = latex.LatexSpitter
     for file in opt['files']:
-        fout = open(os.path.splitext(file)[0]+'.tex', 'w')
+        fout = open(os.path.splitext(file)[0]+ext, 'w')
         dir = opt['dir'] or os.path.dirname(file)
         spitter = klass(fout.write, dir, os.path.basename(file))
         latex.processFile(spitter, open(file))
