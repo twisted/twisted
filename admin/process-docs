@@ -2,17 +2,20 @@
 set -e
 url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
+if sh -c 'which python2.2 > /dev/null'; then PYTHON=2.2; fi
+if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
+LORE="python$PYTHON ./bin/lore"
 echo "Man-->Lore"
-./bin/lore -p --input man --output lore --config ext=-man.xhtml doc/man/*.1
+$LORE -p --input man --output lore --config ext=-man.xhtml doc/man/*.1
 for doc in doc doc/man doc/howto doc/specifications doc/vision; do
 	echo "Lore-->Lint"
-	./bin/lore -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
+	$LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
 	echo "Lore-->HTML"
-	./bin/lore -p --config template=$templ --config baseurl=$url \
+	$LORE -p --config template=$templ --config baseurl=$url \
 	           --config ext=.html --config version=$1 -l ../howto/ \
 	           $doc/*.xhtml
 	echo "Lore-->LaTeX"
-	./bin/lore -p --output latex --config section $doc/*.xhtml
+	$LORE -p --output latex --config section $doc/*.xhtml
 done
 cp admin/book.tex doc/howto
 cd doc/howto
