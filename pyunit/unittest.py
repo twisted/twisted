@@ -348,7 +348,8 @@ class DeferredTestCase(TestCase):
         try:
             d = self.setUp()
             if d is not None and isinstance(d, defer.Deferred):
-                d.addCallbacks(callback=self._runTest, errback=self.deferredError)
+                d.addCallbacks(callback=self._runTest,
+                               errback=self.deferredError)
                 d.addBoth(self.cleanup)
                 testDeferred = 1
         except:
@@ -385,7 +386,7 @@ class DeferredTestCase(TestCase):
                 d.addBoth(self.cleanup)
                 cleanupDeferred = 1
         except:
-            testResult.addError(self, self._exc_info())
+            self.testResult.addError(self, self._exc_info())
         for e in twisted.python.log.flushErrors():
             self.testResult.addError(self, e)
         if not cleanupDeferred:

@@ -1,5 +1,8 @@
 2002-12-08  Dave Peticolas  <dave@krondo.com>
 
+	* pyunit/unittest.py: add missing 'self.' prefix to data member
+	reference
+
 	* twisted/enterprise/util.py: make sure quoted values are strings
 	(fixes bug storing boolean types)
 
