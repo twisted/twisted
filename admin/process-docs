@@ -9,7 +9,7 @@ for doc in doc doc/man doc/howto doc/specifications doc/vision; do
 	./bin/lore -n --output lint $doc/*.html |sed 's/^/WARNING: /'
 	echo "Lore-->HTML"
 	./bin/lore -p --config template=$templ --config baseurl=$url \
-	           -l ../howto/ $doc/*.html
+	           --config version=$1 -l ../howto/ $doc/*.html
 	echo "Lore-->LaTeX"
 	./bin/lore -p --output latex --config section $doc/*.html
 done

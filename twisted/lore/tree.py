@@ -216,6 +216,12 @@ def setAuthors(template, authors):
                for name, href in authors]
     head.childNodes.extend(authors)
 
+def setVersion(template, version):
+    for node in domhelpers.findElementsWithAttribute(template, "class",
+                                                               "version"):
+        node.appendChild(microdom.Text(version))
+      
+
 def munge(document, template, linkrel, d, fullpath, ext, url, config):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
@@ -228,6 +234,7 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
+    setVersion(template, config.get('version', ''))
 
     # Insert the document into the template
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
