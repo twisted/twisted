@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.6 $"[11:-2]
+__version__ = "$Revision: 1.7 $"[11:-2]
 
 import random
 import time
@@ -33,6 +33,7 @@ class GuardSession(components.Componentized):
         self.guard = guard
         self.uid = uid
         self.expireCallbacks = []
+        self.checkExpiredID = None
         self.setLifetime(60)
         self.services = {}
         self.touch()
@@ -90,6 +91,8 @@ class GuardSession(components.Componentized):
             except:
                 log.err()
         self.expireCallbacks = []
+        if self.checkExpiredID:
+            self.checkExpiredID.cancel()
 
     def touch(self):
         self.lastModified = time.time()
@@ -103,7 +106,8 @@ class GuardSession(components.Componentized):
                 log.msg("no session to expire: %s" % self.uid)
         else:
             log.msg("session given the will to live for %s more seconds" % self.lifetime)
-            reactor.callLater(self.lifetime, self.checkExpired)
+            self.checkExpiredID = reactor.callLater(self.lifetime,
+                                                    self.checkExpired)
 
 INIT_SESSION = 'session-init'
 
