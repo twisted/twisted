@@ -15,29 +15,114 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 # USA
 
-"""I am state machine driven data consumer"""
+"""
+   State-machine driven data consumer
+"""
 
+from types import TupleType
 #from __future__ import generators
 
 # support iterators for 2.1
 try:
    StopIteration = StopIteration
+   iter = iter
 except:
    class StopIteration(Exception): pass
+   class _ListIterator:
+       def __init__(self,lst):
+           self.lst = list(lst)
+       def next():
+           if self.lst: return self.lst.pop(0)
+           else: raise StopIteration
+   def iter(lst): 
+       from types import ListType, TupleType
+       if type(lst) == type([]) or type(lst) == type(tuple()):
+           return _ListIterator(lst) 
+       else:
+           return lst.__iter__()
+
+class YieldIteration(Exception):
+   '''
+      This exception can be used as a signal from an
+      iterator returned from an IFlowFunction; the Flow
+      object could then reschedule itself in the event
+      queue so that other operations can proceed.   In
+      this case, the iterator's next() will just be 
+      called at a later time.
+   '''
+
 
 initialState = "__initial__"
 failureState = "__failure__"
 
-(_FUNC_CONSUME,_FUNC_START,_FUNC_FINISH) = range(3)
+class IFlowFunction:
+    ''' 
+       This is an interface for a function (with attributes) 
+       which participates in a given Flow.  It is typical to 
+       implement this using a function given attributes.  Every
+       attribute may be missing to provide minimal behavior.
+
+       isIterable   This is true if the function returns an 
+                    iterable object; in 2.1 this is either a
+                    list or array or something with a next()
+                    function.  In short, this means that for
+                    each application of the function, 0..M
+                    subordinate calls will be made.  
+
+       nextState    If the next state of the function is fixed,
+                    then this attribute can be set.  In this 
+                    case, the return value from the function 
+                    call can just be the value, rather than 
+                    a (state, value) tuple.
+
+                    If nextState is not provided and if isIterable
+                    is true, then each call to next() in the 
+                    iteration must be a (state,value) tuple.
+
+       stopValue    This is a value which will stop recursion,
+                    it defaults to None when not provided.
+
+       Note: if none of these attributes are provided, then the
+       function is expected to return a tuple with two items,
+       a (state, value) or None to stop the flow.
+    '''
+    def __call__(self, data):
+        '''
+            When the function is invoked, it is passed a single 
+            argument, the data for the call.  To stop further
+            interaction within the Flow, this function should just
+            return None.  Otherwise, the return value depends upon
+            the various attributes of the function.
+        '''
+        pass
+    def onFinish(self):
+        '''
+            This function attribute, if present, will be called after
+            all subordinate flows have finished.  It can be used for
+            an 'end-list' indicator, etc.
+        '''
+        pass
+    def onFailure(self, state, data, failure):
+        '''
+            This function attribute, if present, will be called when
+            ever an error occurs in processing any of the children, 
+            This callable is applied with the state, and data of 
+            the failing call.  Either None, or a (state, value) 
+            tuple should be returned from this function; if a tuple 
+            is returned, then processing continues from where it left 
+            off; perhaps visiting more children in the iteration (if any).
+        '''
+        pass
+
 class Flow:
     '''
        This is a state machine driven data consumer.
 
-       Flow objects are used to dispatch data from a producer, 
+       Flow objects are used to run data from a producer, 
        such as a database query, through various filter functions 
-       until the data is eventually dispatchd. 
+       until the data is eventually consumed and None is returned.
 
-       As data is introduced into the Flow using the 'dispatch' 
+       As data is introduced into the Flow using the 'run' 
        method, the Flow looks up the appropriate handler, and 
        calls it with the data provided.  If the callee wishes
        processing to continue, it responds with a (state,data)
@@ -54,65 +139,95 @@ class Flow:
         '''
            Initializes a Flow object, optionally using
            one or more subordinate flow objects for 
-           default behavior.  
+           default behavior.  The stack is used when the
+           currently executing object wants to be notified
+           that all children have finished processing. 
         '''
         self.states       = {}
         self.bases        = bases or []
         self.stack        = []
+        self.waitInterval = 0
     #     
-    def register(self, dispatchHandler, state = initialState,
-                 startHandler = None, finishHandler = None ):
+    def register(self, func, state = initialState,
+                 nextState = None, isIterable = 0, 
+                 onFinish = None, onFailure = None,
+                 stopValue = None):
         '''
             This allows the registration of callback functions
             which are applied whenever an appropriate event of
-            a given state is encountered.
+            a given state is encountered.  Each callback item,
+            run, start, and finish can either be a function
+            or it can be a tuple with function first, and the
+            default final state second.   If a final state is
+            provided, then the function can just return a value.
+            Otherwise, if the final state is None or not provided,
+            then the function must return a tuple.
         '''
-        self.states[state] = (dispatchHandler, startHandler, finishHandler)
+        tpl = (func, nextState, isIterable, onFinish, onFailure, stopValue)
+        self.states[state] = tpl
     #
-    def _lookup(self,state,fnc=_FUNC_CONSUME):
-        fncs = self.states.get(state,None)
-        if not fncs:
+    def __setitem__(self,key,val): 
+        self.register(key,val)
+    #
+    def _lookup(self,state):
+        '''
+           Searches for the appropriate handler in the
+           current flow, scouring through 'base' flows
+           if they are provided.
+        '''
+        func = self.states.get(state,None)
+        if not func:
             for base in self.bases:
-                fncs  = base.states.get(state,None)
-                if fncs: break
-        if fncs: return fncs[fnc]
+                func  = base.states.get(state,None)
+                if func: break
+        if func: return func
         errmsg = "\nstate '%s' not found for:%s"
         raise KeyError(errmsg % (state, str(self)))
     #
-    def start(self,state=initialState):
+    def run(self, data = None, state=initialState):
         '''
-           In some cases, hierarchical behavior is useful to 
-           model; if the data flow is hierarchical, this is 
-           used to mark the start of a branch.
+           This executes the current flow, given empty
+           starting data and the default initial state.
         '''
-        self.stack.append(state)
-        fnc = self._lookup(state,_FUNC_START)
-        if fnc: fnc()
-    #
-    def finish(self,state=None):
-        val = self.stack.pop()
-        if state: assert(state == val)
-        fnc = self._lookup(val,_FUNC_FINISH)
-        if fnc: fnc()
-    #
-    def dispatch(self,data,state=initialState):
-        '''
-           This is the primary dispatch loop which
-           processes the data until the given handlers
-           return Null
-        '''
-        while 1:
-            nextConsumer = self._lookup(state)
-            tpl = nextConsumer(data)
-            if not(tpl): return
-            state = tpl[0]
-            data  = tpl[1]
-            if len(tpl) > 2:  # fork
-                arr = list(tpl[1:])
-                self.start(state)
-                while arr: self.dispatch(arr.pop(0),state)
-                self.finish(state)
-                return
+        stack = self.stack
+        if not(stack): 
+            stack.append((state, data, None, None, None))
+        while stack:
+            (state, data, finish, itr, stop) = stack[-1]
+            if finish:
+                finish()
+                stack.pop()
+                continue
+            elif itr:
+                try:
+                    data = itr.next()
+                    if data is stop: continue
+                    if not state:
+                        (state, data) = data
+                        if data is stop: continue
+                except StopIteration:
+                    stack.pop()
+                    continue
+                except YieldIteration:
+                    from twisted.internet import reactor
+                    reactor.callLater(self.waitInterval, self.run)
+                    return
+            else:
+                stack.pop()
+            tpl = self._lookup(state)
+            (func, state, isIterable, finish, failure, stop) = tpl
+            if finish: stack.append((state, None, finish, None, stop))
+            data = func(data)
+            if isIterable or getattr(func,'isIterable',0):
+                if data:
+                    data = iter(data)
+                    self.stack.append((state, None, None,data, stop))
+            else:
+                if data is stop: continue
+                if not state:
+                    (state, data) = data
+                    if data is stop: continue
+                stack.append((state, data, None, None, stop))
     #
     def __str__(self,indlvl=0):
         indent = "\n" + "    " * indlvl
@@ -121,71 +236,142 @@ class Flow:
                   indent,repr(self),indent2, 
                   indent2.join(self.states.keys()),indent,
                   "".join(map(lambda a: a.__str__(indlvl+1), self.bases)))
+
+class _TunnelIterator:
+    '''
+       This is an iterator which tunnels output from an iterator
+       executed in a thread to the main thread.   Note, unlike
+       regular iterators, this one throws a YieldIteration exception
+       which must be handled by calling reactor.callLater so that
+       the producer threads can have a chance to send events to 
+       the main thread.
+    '''
+    def __init__(self, source):
+        '''
+            This is the setup, the source argument is the iterator
+            being wrapped, which exists in another thread.
+        '''
+        self.source     = source
+        self.isFinished = 0
+        self.failure    = None
+        self.buff       = list()
+        self.append     = self.buff.append
     #
-    def __setitem__(self,key,val): self.register(val,key)
+    def __iter__(self):
+        '''
+            This is the place where the pump starts...
+        '''
+        from twisted.internet.reactor import callInThread
+        callInThread(self.process)
+        return self
+    #
+    def process(self):
+        '''
+            This is called in the 'source' thread, and 
+            just basically sucks the iterator, appending
+            items back to the main thread.
+        '''
+        from twisted.internet.reactor import callFromThread
+        try:
+            while 1:
+                val = self.source.next()
+                callFromThread(self.append,val)
+        except StopIteration:
+            callFromThread(self.stop)
+        except Exception, e:
+            print str(e)
+            #failure = failure.Failure()
+            #print "failing", failure
+            #callFromThread(self.setFailure,failure)
+    #
+    def setFailure(self, failure):
+        self.failure = failure
+    #
+    def stop(self):
+        self.isFinished = 1
+    #
+    def next(self):
+        if self.isFinished:  
+            raise StopIteration
+        if self.failure:
+            raise self.failure
+        if not self.buff:
+            raise YieldIteration
+        return self.buff.pop(0)  
 
-
-def _putIterationInFlow(flow, f, args, kwargs):
-    """Send the results of an iteration to a flow object.
-       The function called should return an object
-       with a next() operator.
-    """
-    from twisted.internet.reactor import callFromThread
-    try:
-        itr = apply(f, args, kwargs)
-        callFromThread(flow.start)
-        while 1: callFromThread(flow.dispatch, itr.next())
-    except StopIteration:
-        callFromThread(flow.finish)
-    except:
-        callFromThread(flow.dispatch, failure.Failure(), failureState)
-
-def runIterationInThread( f, *args, **kwargs):
-    """Run the results of an iterator in a thread.
-
-       The function passed, when arguments applied, should
-       return an object with a next() method raising
-       StopIteration when there isn't any more content.
-       Thus a 2.2 generator works perfectly, as is any
-       iterator object.  Although this will work in 2.1 
-       as well.
-
-       Returns a Flow who's events are the result of
-       the iterator.
-    """
-    from twisted.internet.reactor import callInThread
-    flow = Flow()
-    callInThread(_putIterationInFlow, flow, f, args, kwargs)
-    return flow
+class FlowIterator:
+    '''
+       This is an iterator base class which can be used to build
+       iterators which are constructed and run within a Flow
+    '''
+    def __init__(self, data):
+        '''
+           This method (the initializer) is called by the flow object;
+           this should initialize the iterator.
+        '''
+        self._tunnel    = _TunnelIterator(self)
+        self.data       = data
+        self.__class__.isIterable = 1
+    #    
+    def __iter__(self):
+        return self._tunnel.__iter__() 
+    #
+    def next(self):
+        ''' 
+            The method used to fetch the next value
+        '''
+        raise StopIteration
 
 from twisted.enterprise.adbapi import ConnectionPool
-class FlowConnectionPool(ConnectionPool):
-    def _runQueryChunked(self, args, kw):
+class _FlowQueryIterator(FlowIterator):
+    def __init__(self, pool, sql, data):
+        FlowIterator.__init__(self)
+        self._tunnel.append = self._tunnel.buff.extend
         conn = self.connect()
         curs = conn.cursor()
-        apply(curs.execute, args, kw)
-        class chunkIterator:
-            def __init__(self,curs):
-                self.curs = curs
-                self.curr = None
-            def __iter__(self): 
-                return self
-            def next(self):
-                if not self.curr:
-                    self.curr = self.curs.fetchmany()
-                if not self.curr:
-                    self.curs.close()
-                    raise StopIteration
-                return self.curr.pop(0)
-        return chunkIterator(curs)
-    def queryChunked(self, *args, **kw):
-        """ Sets up a deferred execution query that returns
-            one or more result chunks.
-      
-            This method returns a MultiDeferred, which is notified when
-            the query has finished via its FinishCallback.
-        """
-        return runIterationInThread(self._runQueryChunked, args, kw)
+        if data: curs.execute(sql % data) 
+        else: curs.execute(sql)
+    def next(self):
+        def next(self):
+            res = self.curs.fetchmany()
+            if not(res): raise StopIteration
+            return res
+
+class FlowQueryBuilder:
+    def __init__(self, pool, sql):
+        self.pool = pool
+        self.sql  = sql
+    def __call__(self, data):
+        return _FlowQueryIterator(self.pool, self.sql, data)
+ 
+def testFlowConnect():
+    pool = FlowConnectionPool("mx.ODBC.EasySoft","SomeDSN")
+    def printResult(x): print x
+    def printDone(): print "done"
+    f = Flow()
+    f.register(FlowQueryBuilder(pool,"SELECT "),nextState='print')
+    f.register(printResult,'print')
+
+
+def testFlowIterator():
+    class CountIterator(FlowIterator):
+        def next(self): # this is run in a separate thread
+            print "next"
+            from time import sleep
+            sleep(.5)
+            val = self.data
+            if not(val):
+                print "done counting"
+                raise StopIteration
+            self.data -= 1
+            return val
+    def printDone(): print "done"
+    def printResult(x): print x
+    f = Flow()
+    f.register(CountIterator,nextState='print',onFinish=printDone)
+    f.register(printResult,'print')
+    f.waitInterval = 1
+    f.run(5)
 
 def testFlow():
     '''
@@ -208,82 +394,44 @@ def testFlow():
     f.register(multiplyTwo, "multiplyTwo")
     f.register(printResult,"printResult")
     
-    f.dispatch(1)
-    f.dispatch(5)
-    f.dispatch(11)
+    f.run(1)
+    f.run(5)
+    f.run(11)
     
+    def forkBegin(data):
+        return [("printResult", data+1), ("printResult",data+2)]
+    fFork = Flow(f)
+    fFork.register(forkBegin, isIterable=1)
+    
+    fFork.run(1)
+    fFork.run(5)
+    fFork.run(11)
     
     def printHTML(data):
         print "<li>%s</li>" % data
-    def startList():  print "<ul>"
+    def startList(data):  
+        print "<ul>"
+        return ['1','2','3']
     def finishList(): print "</ul>"
     
     fHTML = Flow(f)
-    fHTML.register(printHTML,"printResult", startList, finishList)
-    
-    fHTML.start("printResult")
-    fHTML.dispatch(1)
-    fHTML.dispatch(5)
-    fHTML.dispatch(11)
-    fHTML.finish("printResult")
-    
-    def forkBegin(data):
-        return "printResult", data+1, data+2
-    fFork = Flow(f)
-    fFork.register(forkBegin)
-    
-    fFork.dispatch(1)
-    fFork.dispatch(5)
-    fFork.dispatch(11)
-    
+    fHTML.register(printHTML, "printResult")
+    fHTML.register(startList,isIterable=1,
+                   nextState="printResult", onFinish=finishList)
+    fHTML.run()
+
     def foo(data):
         return "flarbis", data / 99
-    
     
     bad = Flow(fFork)
     bad.register(addOne)
     bad.register(foo,"multiplyTwo")
     
-    bad.dispatch(5)
-
-def testFlowThread():
-    class producer:
-        def __init__(self):
-            self.val = 9
-        def next(self):
-            val = self.val
-            if val < 1: raise StopIteration
-            self.val -= 1
-            return val
-    def bldr(): return producer()
-    def printResult(x): print x
-    def printDone(): print "done"
-    d = runIterationInThread(bldr)
-    d.register(printResult, finishHandler = printDone)
-
-#def testFlowThreadUsingGenerator():
-#    def gene(start=99):
-#        while(start > 90):
-#            yield start
-#            start -= 1
-#    def printResult(x): print x
-#    def printDone(): print "done"
-#    d = runIterationInThread(gene)
-#    d.register(printResult, finishHandler = printDone)
-#import mx.ODBC.EasySoft
-#mx.ODBC.EasySoft.threadsaftey = 1
-#print mx.ODBC.EasySoft.threadsaftey
-
-def testFlowConnect():
-    pool = FlowConnectionPool("mx.ODBC.EasySoft","SomeDSN")
-    def printResult(x): print x
-    def printDone(): print "done"
-    d = pool.queryChunked("SELECT some-query")
-    d.register(printResult, finishHandler = printDone)
+    bad.run(5)
 
 if '__main__' == __name__:
     from twisted.internet import reactor
-    testFlowThread()
+    testFlowIterator()
 #    testFlowConnect()
 #    testFlowThreadUsingGenerator()
     reactor.run()
