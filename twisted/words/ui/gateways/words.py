@@ -62,7 +62,7 @@ class makeConnection:
         self.ref.b=self.b
         self.attached=1
         
-class WordsGateway(gateway.Gateway,pb.Referenceable):
+class WordsGateway(gateway.Gateway,pb.Referenced):
     """This is the interface between IM and a twisted.words service
     """
     protocol=shortName
