@@ -17,6 +17,7 @@
 
 from twisted.protocols import dns, protocol
 from twisted.internet import tcp, udp, main
+from twisted.python import defer
 import random, string, struct
 
 DNS, TCP = range(2)
@@ -212,10 +213,13 @@ class Resolver:
         self.boss = boss or DNSBoss()
         self.next = 0
 
-    def resolve(self, deferred, name, type=1, timeout=10):
+    def resolve(self, name, type=1, timeout=10):
+        """Run a DNS query, returning a Deferred for the result."""
+        deferred = defer.Deferred()
         query = SentQuery(name, type, deferred.callback, deferred.errback, 
                           self.boss, self.nameservers)
         main.addTimeout(query.timeOut, timeout)
+        return deferred
 
 
 class ResolveConfResolver(Resolver):
