@@ -26,6 +26,74 @@ First, a simple example so that we have something to talk about:
 
 <a href="deferred_ex.py" class="py-listing"></a>
 
+<p>And the output:</p>
+
+<pre>
+callback 1
+        got result: success
+
+-------------------------------------------------
+
+callback 1
+        got result: success
+</pre>
+
+<p>Here we have the simplest case. A deferred with a single callback and a single
+errback. Normally, a function would create a deferred and hand it back to you
+when you request an operation that needs to wait for an event for completion.
+The object you called then does <code>d.callback(result)</code> when the results
+are in.</p>
+
+<p>The thing to notice is that there is only one result that is passed 
+from method to method, and that the result returned from a method is the 
+argument to the next method in the chain. In case of an exception, result
+is set to an instance of <code class="API" base="twisted.python.failure">Failure</code>
+that describes the exception.</p>
+
+<h2>Errbacks</h2>
+<h3>Failure in requested operation</h3>
+
+
+<h3>Exceptions raised in callbacks</h3>
+<p>Now let's see what happens when our callback raises an exception</p>
+
+<a href="deferred_ex1.py" class="py-listing"></a>
+
+<p>And the output: (note, tracebacks will be edited slightly to conserve space)</p>
+
+<pre>
+callback 1
+        got result: success
+callback 2
+        got result: yay! handleResult was successful!
+        about to raise exception
+errback
+we got an exception: Traceback (most recent call last):
+--- <exception caught here> ---
+  File "./deferred_ex1.py", line 49, in nonDeferredExample
+    result = failAtHandlingResult(result)
+  File "./deferred_ex1.py", line 32, in failAtHandlingResult
+    raise RuntimeError, "whoops! we encountered an error"
+exceptions.RuntimeError: whoops! we encountered an error
+
+
+-------------------------------------------------
+
+callback 1
+        got result: success
+callback 2
+        got result: yay! handleResult was successful!
+        about to raise exception
+errback
+we got an exception: Traceback (most recent call last):
+--- <exception caught here> ---
+  File "/home/slyphon/Projects/Twisted/trunk/twisted/internet/defer.py", line 326, in _runCallbacks
+    self.result = callback(self.result, *args, **kw)
+  File "./deferred_ex1.py", line 32, in failAtHandlingResult
+    raise RuntimeError, "whoops! we encountered an error"
+exceptions.RuntimeError: whoops! we encountered an error
+</pre>
+
 
 
 <address></address>

@@ -9,7 +9,9 @@ result. the first callback returns a value, the second callback, however
 raises an exception, which is handled by the errback.
 """
 
-num = 0
+
+class Counter(object):
+    num = 0
 
 def handleFailure(f):
     print "errback"
@@ -17,22 +19,20 @@ def handleFailure(f):
     f.trap(RuntimeError)
 
 def handleResult(result):
-    global num; num += 1
-    print "callback %s" % (num,)
+    Counter.num += 1
+    print "callback %s" % (Counter.num,)
     print "\tgot result: %s" % (result,)
     return "yay! handleResult was successful!"
 
 def failAtHandlingResult(result):
-    global num; num += 1
-    print "callback %s" % (num,)
+    Counter.num += 1
+    print "callback %s" % (Counter.num,)
     print "\tgot result: %s" % (result,)
     print "\tabout to raise exception"
     raise RuntimeError, "whoops! we encountered an error"
 
 
 def nonDeferredExample(result):
-    # equivalent to d.callback(result)
-
     if not isinstance(result, failure.Failure): 
         try:
             result = handleResult(result)
@@ -72,5 +72,5 @@ def deferredExample():
 if __name__ == '__main__':
     nonDeferredExample("success")
     print "\n-------------------------------------------------\n"
-    global num; num = 0
+    Counter.num = 0
     deferredExample()

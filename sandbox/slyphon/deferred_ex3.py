@@ -26,7 +26,6 @@ def handleResult(result):
     print "\tgot result: %s" % (result,)
     return "yay! handleResult was successful!"
 
-
 def failAtHandlingResult(result):
     Counter.num += 1
     print "callback %s" % (Counter.num,)
