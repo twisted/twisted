@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import string
+import types
 import adbapi
 
 NOQUOTE = 1
@@ -67,6 +68,8 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
                 value = '1'
             else:
                 value = '0'
+        if type(value) is not types.StringType:
+            value = str(value)
         return "'%s'" % string_escaper(value)
 
 def makeKW(rowClass, args):
