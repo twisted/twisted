@@ -24,7 +24,6 @@ class TestInternet(unittest.TestCase):
 
     def testUNIX(self):
         s = service.MultiService()
-        s.startService()
         c = compat.IOldApplication(s)
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
@@ -40,6 +39,8 @@ class TestInternet(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         c.connectUNIX('./hello.skt', factory)
+        s.privilegedStartService()
+        s.startService()
         while factory.line is None:
             reactor.iterate(0.1)
         s.stopService()
@@ -47,11 +48,12 @@ class TestInternet(unittest.TestCase):
 
     def testTCP(self):
         s = service.MultiService()
-        s.startService()
         c = compat.IOldApplication(s)
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         c.listenTCP(0, factory)
+        s.privilegedStartService()
+        s.startService()
         num = list(s)[0]._port.getHost()[2]
         class Foo(basic.LineReceiver):
             def connectionMade(self):
@@ -74,6 +76,8 @@ class TestInternet(unittest.TestCase):
         c.listenSSL(None, None, None)
         c.listenUDP(None, None)
         c.listenUNIX(None, None)
+        for ch in s:
+            self.assert_(ch.privileged)
         c.connectTCP(None, None, None)
         c.connectSSL(None, None, None, None)
         c.connectUDP(None, None, None)
