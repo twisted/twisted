@@ -110,12 +110,14 @@ class Port(log.Logger, styles.Ephemeral, object):
         self.performWrite(data, addr)
 
     def performWrite(self, data, addr = None):
+#        print "performing write on", data, addr
         self.writing = True
         try:
             write_op = self.write_op_class(self)
             if not addr:
                 addr = self._connectedAddr
             write_op.initiateOp(self.socket.fileno(), data, addr)
+#            print "initiating write_op to", addr
         except WindowsError, we:
             log.msg("initiating write failed with args %s" % (we,))
 
