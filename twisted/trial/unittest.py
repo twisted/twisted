@@ -335,6 +335,15 @@ class VerboseTextReporter(TextReporter):
 
 class TreeReporter(TextReporter):
     columns = 79
+
+    BLACK = 30
+    RED = 31
+    GREEN = 32
+    YELLOW = 33
+    BLUE = 34
+    MAGENTA = 35
+    CYAN = 36
+    WHITE = 37
     
     def __init__(self, stream=sys.stdout):
         TextReporter.__init__(self, stream)
@@ -351,24 +360,30 @@ class TreeReporter(TextReporter):
         self.currentLine = '    %s ... ' % method.__name__
         self.write(self.currentLine)
 
-    def endLine(self, message):
+    def color(self, text, color):
+        return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')
+
+    def endLine(self, message, color):
         import string
-        self.writeln(string.rjust(message, self.columns - len(self.currentLine)))
+        spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
+        self.write(spaces)
+        self.writeln(self.color(message, color))
+        #self.writeln(string.rjust(str(message), self.columns - len(self.currentLine)))
 
     def reportSuccess(self, testCase, method):
-        self.endLine('[OK]')
+        self.endLine('[OK]', self.GREEN)
         Reporter.reportSuccess(self, testCase, method)
 
     def reportFailure(self, testCase, method, exc_info):
-        self.endLine('[FAIL]')
+        self.endLine('[FAIL]', self.RED)
         Reporter.reportFailure(self, testCase, method, exc_info)
 
     def reportError(self, testCase, method, exc_info):
-        self.endLine('[ERROR]')
+        self.endLine('[ERROR]', self.YELLOW)
         Reporter.reportError(self, testCase, method, exc_info)
 
     def reportSkip(self, testCase, method, exc_info):
-        self.endLine('[SKIPPED]')
+        self.endLine('[SKIPPED]', self.BLUE)
         Reporter.reportSkip(self, testCase, method, exc_info)
 
 def deferredResult(d, timeout=None):
