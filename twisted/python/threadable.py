@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -35,7 +35,7 @@ class _Waiter:
         self.callbacks = {}
         self.results = {}
         self.conditions = {}
-    
+
     def registerCallback(self, key, callback=None, errback=None):
         self.callbacks[key] = errback, callback
 
@@ -47,7 +47,7 @@ class _Waiter:
 
     def block(self):
         pass
-    
+
     def wait(self, key):
         self.conditions[key] = 1
         while not self.results.has_key(key):
@@ -60,8 +60,8 @@ class _Waiter:
             return r
         else:
             raise r
-        
-    
+
+
     def runCallback(self, key, value, ok):
         call_or_err = self.callbacks.get(key)
         if not call_or_err:
@@ -70,7 +70,7 @@ class _Waiter:
         if callback is None:
             del self.callbacks[key]
             return 1
-        
+
         try:
             callback(value)
             del self.callbacks[key]
@@ -85,11 +85,11 @@ class _Waiter:
             self.results[key] = (value, ok)
             if self.conditions.has_key(key):
                 del self.conditions[key]
-    
+
     def unwait_all(self):
         for k in self.conditions.keys():
             self.unwait(k, ThreadableError("Shut Down."), 0)
-    
+
 
 class _ThreadedWaiter(_Waiter):
     synchronized = ['registerCallback',
@@ -106,7 +106,7 @@ class _ThreadedWaiter(_Waiter):
             return _Waiter.preWait(self, key)
         cond = self.conditions[key] = threadingmodule.Condition()
         cond.acquire()
-        
+
     def wait(self, key):
         global ioThread
         if threadmodule.get_ident() == ioThread:
@@ -118,7 +118,7 @@ class _ThreadedWaiter(_Waiter):
         del self.conditions[key]
         del self.results[key]
         cond.release()
-        
+
         if is_ok:
             return r
         else:
@@ -147,14 +147,14 @@ class _XLock:
     def __init__(self):
         assert threaded,\
                "Locks may not be allocated in an unthreaded environment!"
-        
+
         self.block = threadmodule.allocate_lock()
         self.count = 0
         self.owner = 0
-        
+
     def __setstate__(self, state):
         self.__init__()
-        
+
     def __getstate__(self):
         return None
 
@@ -178,13 +178,13 @@ class _XLock:
         current = threadmodule.get_ident()
         if self.owner != current:
             raise "Release of unacquired lock."
-        
+
         self.count = self.count - 1
-        
+
         if self.count == 0:
             self.owner = None
             self.block.release()
-        
+
 ##def _synch_init(self, *a, **b):
 ##    self.lock = XLock()
 
@@ -200,7 +200,7 @@ _to_be_synched = []
 
 def synchronize(*klasses):
     """Make all methods listed in each class' synchronized attribute synchronized.
-    
+
     The synchronized attribute should be a list of strings, consisting of the
     names of methods that must be synchronized. If we are running in threaded
     mode these methods will be wrapped with a lock.
@@ -216,7 +216,7 @@ def synchronize(*klasses):
             for methodName in klass.synchronized:
                 hook.addPre(klass, methodName, _synchPre)
                 hook.addPost(klass, methodName, _synchPost)
-            
+
 threaded = None
 ioThread = None
 threadCallbacks = []

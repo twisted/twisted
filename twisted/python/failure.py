@@ -63,7 +63,7 @@ class Failure:
                 "Don't pass strings (like %r) to failure.Failure (replacing with a DefaultException)." %
                 exc_value, DeprecationWarning, stacklevel=2)
             exc_value = DefaultException(exc_value)
-        
+
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
         elif exc_type is None:

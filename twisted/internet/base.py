@@ -46,7 +46,7 @@ class DelayedCall:
         self.time, self.func, self.args, self.kw = time, func, args, kw
         self.canceller = cancel
         self.cancelled = self.called = 0
-    
+
     def cancel(self):
         if self.cancelled:
             raise error.AlreadyCancelled
@@ -77,7 +77,7 @@ class ReactorBase:
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
         threadable.whenThreaded(self.initThreads)
-    
+
     # override in subclasses
 
     wakerInstalled = 0
@@ -358,7 +358,7 @@ class ReactorBase:
                       category=DeprecationWarning, stacklevel=2)
         f = BCFactory(protocol)
         self.connectSSL(host, port, f, contextFactory, timeout)
-    
+
 
 
 

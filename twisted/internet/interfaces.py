@@ -36,7 +36,7 @@ class IConnector(Interface):
         If we are connected, disconnect, if we are trying to connect,
         stop trying.
         """
-    
+
     def connect(self):
         """Try to connect to remote address."""
 
@@ -44,7 +44,7 @@ class IConnector(Interface):
         """Return destination this will try to connect to.
 
         This can be one of:
-        
+
           TCP -- ('INET', host, port)
           UNIX -- ('UNIX', address)
           SSL -- ('SSL', host, port)
@@ -52,7 +52,7 @@ class IConnector(Interface):
 
 
 class IReactorTCP(Interface):
-    
+
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """Connects a given protocol factory to the given numeric TCP/IP port.
 
@@ -97,7 +97,7 @@ class IReactorSSL(Interface):
 
         Returns a IConnector.
         """
-    
+
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -108,13 +108,13 @@ class IReactorSSL(Interface):
 
 class IReactorUNIX(Interface):
     """UNIX socket methods."""
-    
+
     def connectUNIX(self, address, factory, timeout=30):
         """Connect a client protocol to a UNIX socket.
 
         Returns a IConnector.
         """
-    
+
     def listenUNIX(address, factory, backlog=5):
         """Listen on a UNIX socket.
         """
@@ -198,7 +198,7 @@ class IReactorTime(Interface):
 
           * callID: this is an opaque identifier returned from callLater that
             wil be used to cancel a specific call.
-	
+
         Will raise ValueError if the callID is not recognized.
 
         This method is deprecated.
@@ -473,10 +473,10 @@ class IProtocolFactory(Interface):
 
         This method will be called when a connection has been established
         to addr.
-        
+
         If None is returned, the connection is assumed to have been refused,
         and the Port will close the connection.
-        
+
         TODO:
          * Document 'addr' argument -- what format is it in?
          * Is the phrase \"incoming server connection\" correct when Factory

@@ -18,7 +18,7 @@
 
 """UNIX Process management.
 
-Do NOT use this module directly - use reactor.spawnProcess() instead. 
+Do NOT use this module directly - use reactor.spawnProcess() instead.
 """
 
 # System Imports
@@ -261,7 +261,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         self.closeStdin()
         self.closeStderr()
         self.closeStdout()
-    
+
     def doError(self):
         """Called when my standard error stream is ready for reading.
         """
@@ -303,7 +303,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             except:
                 log.deferr()
             reapProcess()
-    
+
     def inConnectionLost(self):
         try:
             self.proto.inConnectionLost()
@@ -333,5 +333,3 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         except:
             log.deferr()
         self.maybeCallProcessEnded()
-
-

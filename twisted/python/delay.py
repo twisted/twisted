@@ -64,6 +64,7 @@ class Looping:
         This initializer is only called internally.
         """
         self.ticks = ticks
+
         self.func = func
         self.delayed = delayed
 

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_defer -*-
-# 
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -65,7 +65,7 @@ def execute(callable, *args, **kw):
         return fail()
     else:
         return succeed(result)
-        
+
 
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
@@ -142,7 +142,7 @@ class Deferred:
 
     def chainDeferred(self, d):
         """Chain another Deferred to this Deferred.
-        
+
         This method adds callbacks to this Deferred to call d's callback or
         errback, as appropriate."""
         return self.addCallbacks(d.callback, d.errback)
@@ -171,13 +171,13 @@ class Deferred:
         If the argument that's passed to me is not a failure.Failure instance,
         it will be embedded in one. If no argument is passed, a failure.Failure
         instance will be created based on the current traceback stack.
-        
+
         Passing a string as `fail' is deprecated, and will be punished with
         a warning message.
         """
         if not isinstance(fail, failure.Failure):
             fail = failure.Failure(fail)
-            
+
         self._startRunCallbacks(fail, 1)
 
 
@@ -224,7 +224,7 @@ class Deferred:
                                         (self.result,)+tuple(args), kw)
                     if isinstance(self.result, Deferred):
                         self.callbacks = cb
-                        
+
                         # note: this will cause _runCallbacks to be called
                         # "recursively" sometimes... this shouldn't cause any
                         # problems, since all the state has been set back to
@@ -254,13 +254,13 @@ class Deferred:
     def setTimeout(self, seconds, timeoutFunc=timeout):
         """Set a timeout function to be triggered if I am not called.
 
-        timeoutFunc will receive the Deferred as its only argument.  The 
+        timeoutFunc will receive the Deferred as its only argument.  The
         default timeoutFunc will call the errback with a TimeoutError.
 
         The timeout counts down from when this method is called.
         """
         from twisted.internet import reactor
-        reactor.callLater(seconds, 
+        reactor.callLater(seconds,
                           lambda s=self, f=timeoutFunc: s.called or f(s))
 
     armAndErrback = errback
@@ -269,7 +269,7 @@ class Deferred:
 
     def __del__(self):
         """Print tracebacks and die.
-        
+
         If the *last* (and I do mean *last*) callback leaves me in an error
         state, print a traceback (if said errback is a Failure).
         """
@@ -311,7 +311,7 @@ class DeferredList(Deferred):
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
             index = index + 1
-        
+
         self.fireOnOneCallback = fireOnOneCallback
         self.fireOnOneErrback = fireOnOneErrback
 
@@ -329,7 +329,7 @@ class DeferredList(Deferred):
             elif None not in self.resultList:
                 self.callback(self.resultList)
 
-            
+
 
 
 # Constants for use with DeferredList
@@ -338,4 +338,3 @@ SUCCESS = 1
 FAILURE = 0
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS"]
-

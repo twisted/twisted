@@ -93,7 +93,7 @@ def startKeepingErrors():
     """
     global _keepErrors
     _keepErrors = 1
-    
+
 
 def flushErrors(*errorTypes):
     """Support function for testing frameworks.
@@ -122,7 +122,7 @@ def ignoreErrors(*types):
 def clearIgnores():
     global _ignoreErrors
     _ignoreErrors = []
-    
+
 def err(stuff):
     """Write a failure to the log.
     """

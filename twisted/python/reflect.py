@@ -316,7 +316,7 @@ def safe_repr(obj):
 
 def allYourBase(classObj, baseClass=None):
     """allYourBase(classObj, baseClass=None) -> list of all base
-    classes that are subclasses of baseClass, unless it is None, 
+    classes that are subclasses of baseClass, unless it is None,
     in which case all bases will be added.
     """
     l = []

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.30 2002/08/25 10:20:53 tv Exp $
+# $Id: usage.py,v 1.31 2002/09/01 10:40:50 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -18,9 +18,9 @@
 
 """
 twisted.python.usage is a module for parsing/handling the
-command line of your program. 
+command line of your program.
 
-For information on how to use it, see 
+For information on how to use it, see
 http://twistedmatrix.com/documents/howto/options, or doc/howto/options.html
 in your Twisted directory.
 """
@@ -48,13 +48,13 @@ error = UsageError
 class Options(UserDict.UserDict):
     """
     An option list parser class
-    
+
     optFlags and optParameters are lists of available parameters
     which your program can handle. The difference between the two
     is the 'flags' have an on(1) or off(0) state (off by default)
     whereas 'parameters' have an assigned value, with an optional
     default. (Compare '--verbose' and '--verbosity=2')
-    
+
     optFlags is assigned a list of lists. Each list represents
     a flag parameter, as so:
 
@@ -66,11 +66,11 @@ class Options(UserDict.UserDict):
     short option name (prefixed with '-'), and the description.
     The description is used for the in-built handling of the
     --help switch, which prints a usage summary.
-    
+
     optParameters is much the same, except the list also contains
     a default value:
     | optParameters = [['outfile', 'O', 'outfile.log, 'Description...']]
-     
+
     subCommands is a list of 4-tuples of (command name, command shortcut,
     parser class, documentation).  If the first non-option argument found is
     one of the given command names, an instance of the given parser class is
@@ -87,7 +87,7 @@ class Options(UserDict.UserDict):
     ['--horseback', '--for-grail'].  Currently, only the first sub-command
     is parsed, and all options following it are passed to its parser.  If a
     subcommand is found, the subCommand attribute is set to its name and the
-    subOptions attribute is set to the Option instance that parsers the 
+    subOptions attribute is set to the Option instance that parsers the
     remaining options.
 
     If you want to handle your own options, define a method named
@@ -166,8 +166,8 @@ class Options(UserDict.UserDict):
                                        self.shortOpt, self.longOpt)
         except getopt.error, e:
             raise UsageError, e
-        
-        
+
+
         for opt, arg in opts:
             if opt[1] == '-':
                 opt = opt[2:]
@@ -182,7 +182,7 @@ class Options(UserDict.UserDict):
 
             optMangled = self.synonyms[optMangled]
             self.__dispatch[optMangled](optMangled, arg)
-        
+
         if len(args) and getattr(self, 'subCommands', None):
             sub, rest = args[0], args[1:]
             for (cmd, short, parser, doc) in self.subCommands:
@@ -384,7 +384,7 @@ class Options(UserDict.UserDict):
         #parsing its options.
         if hasattr(self, 'subOptions'):
             return str(self.subOptions)
-        
+
         if not width:
             width = int(os.environ.get('COLUMNS', '80'))
 

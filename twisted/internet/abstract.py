@@ -48,7 +48,7 @@ class FileDescriptor(log.Logger):
         if not reactor:
             from twisted.internet import reactor
         self.reactor = reactor
-    
+
     def connectionLost(self, reason):
         """The connection was lost.
 

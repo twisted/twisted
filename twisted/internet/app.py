@@ -431,7 +431,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
 
 
     persistStyle = "pickle"
-    
+
     def save(self, tag=None, filename=None):
         """Save a pickle of this application to a file in the current directory.
         """
@@ -442,7 +442,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
         elif self.persistStyle == "aot":
             from twisted.persisted.aot import jellyToSource
             dumpFunc = jellyToSource
-            ext = "tas"            
+            ext = "tas"
         else:
             from cPickle import dump
             def dumpFunc(obj, file, _dump=dump):
@@ -529,7 +529,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
                 service.startService()
             self.running = 1
             log.logOwner.disown(self)
-    
+
     def run(self, save=1, installSignalHandlers=1):
         """run(save=1, installSignalHandlers=1)
         Run this application, running the main loop if necessary.

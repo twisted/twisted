@@ -90,7 +90,7 @@ def getConnectError(e):
         number, string = e
     except ValueError:
         return ConnectError(string=e)
-    
+
     number, string = e
     if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
         # only works in 2.2
@@ -102,7 +102,7 @@ def getConnectError(e):
 
 class ConnectionLost(Exception):
     """Connection to the other side was lost in a non-clean fashion."""
-    
+
 
 class ConnectionDone(Exception):
     """Connection was closed cleanly."""

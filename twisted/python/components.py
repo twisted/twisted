@@ -175,7 +175,7 @@ def getAdapter(obj, interfaceClass, default,
         return default
     else:
         return adapterClass(obj)
-    
+
 class _Nothing:
     pass
 

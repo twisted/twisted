@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.35 2002/09/01 08:46:40 spiv Exp $
+# $Id: default.py,v 1.36 2002/09/01 10:41:06 acapnotic Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -70,7 +70,7 @@ class BaseConnector:
     __implements__ = interfaces.IConnector
 
     timeoutID = None
-    
+
     def __init__(self, reactor, factory, timeout):
         self.state = "disconnected"
         self.reactor = reactor
@@ -83,12 +83,12 @@ class BaseConnector:
             self.stopConnecting()
         elif self.state == 'connected':
             self.transport.loseConnection()
-    
+
     def connect(self):
         """Start connection to remote server."""
         if self.state != "disconnected":
             raise RuntimeError, "can't connect in this state"
-        
+
         self.state = "connecting"
         self.factory.doStart()
         self.transport = transport = self._makeTransport()
@@ -104,7 +104,7 @@ class BaseConnector:
         self.state = "disconnected"
         self.transport.failIfNotConnected(error.UserError())
         del self.transport
-    
+
     def cancelTimeout(self):
         if self.timeoutID:
             try:
@@ -112,7 +112,7 @@ class BaseConnector:
             except ValueError:
                 pass
             del self.timeoutID
-    
+
     def buildProtocol(self, addr):
         self.state = "connected"
         self.cancelTimeout()
@@ -245,7 +245,7 @@ class PosixReactorBase(ReactorBase):
 
 
     # IReactorProcess
-    
+
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
                      uid=None, gid=None):
         p = platform.getType()
@@ -279,7 +279,7 @@ class PosixReactorBase(ReactorBase):
         c = UNIXConnector(self, address, factory, timeout)
         c.connect()
         return c
-    
+
     def listenUNIX(self, address, factory, backlog=5):
         """Listen on a UNIX socket.
         """
@@ -301,7 +301,7 @@ class PosixReactorBase(ReactorBase):
         c = TCPConnector(self, host, port, factory, timeout, bindAddress)
         c.connect()
         return c
-    
+
     # IReactorSSL (sometimes, not implemented)
 
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
@@ -310,7 +310,7 @@ class PosixReactorBase(ReactorBase):
         c = SSLConnector(self, host, port, factory, contextFactory, timeout, bindAddress)
         c.connect()
         return c
-    
+
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         p = ssl.Port(port, factory, contextFactory, backlog, interface)
         p.startListening()
@@ -326,7 +326,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     """
 
     disconnected = 0
-    
+
     def __init__(self):
         """Initialize.
         """
@@ -345,7 +345,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         self.r = reader
         self.w = client
         self.fileno = self.r.fileno
-        
+
     def wakeUp(self):
         """Send a byte to my connection.
         """
@@ -368,7 +368,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
     """
 
     disconnected = 0
-    
+
     def __init__(self):
         """Initialize.
         """
@@ -516,7 +516,7 @@ class SelectReactor(PosixReactorBase):
                 log.logOwner.disown(selectable)
 
     doIteration = doSelect
-    
+
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
@@ -559,4 +559,3 @@ def install():
     """
     reactor = SelectReactor(1)
     main.installReactor(reactor)
-

@@ -102,7 +102,7 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
                                 result.append(plugin)
                         if debugInspection:
                             log.msg("Successfully loaded %s!" % plugindir)
-        
+
         else:
             if debugInspection:
                 log.msg('sys.path entry not a directory %s' % d)
@@ -115,4 +115,3 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
         log.logfile.write(' ]\n')
         log.logfile.flush()
     return result
- 
