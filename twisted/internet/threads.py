@@ -27,7 +27,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 from twisted.python import log, failure
 
 # sibling imports
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 
 
 def _putResultInDeferred(deferred, f, args, kwargs):
@@ -44,6 +44,7 @@ def _putResultInDeferred(deferred, f, args, kwargs):
 def deferToThread(f, *args, **kwargs):
     """Run function in thread and return result as Deferred."""
     d = defer.Deferred()
+    from twisted.internet import reactor
     reactor.callInThread(_putResultInDeferred, d, f, args, kwargs)
     return d
 
@@ -58,6 +59,7 @@ def callMultipleInThread(tupleList):
 
     tupleList should be a list of (function, argsList, kwargsDict) tuples.
     """
+    from twisted.internet import reactor
     reactor.callInThread(_runMultiple, tupleList)
 
 
