@@ -14,13 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import string
-
-from twisted.enterprise import adbapi
+from twisted.enterprise import adbapi, reflector
 from twisted.enterprise.util import DBError, getKeyColumn, quote, _TableInfo, _TableRelationship
 from twisted.enterprise.row import RowObject
 
-from twisted.enterprise import reflector
 from twisted.python import reflect
 
 class SQLReflector(reflector.Reflector, adbapi.Augmentation):
@@ -37,7 +34,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         reflector.GREATERTHAN : ">",
         reflector.LIKE        : "like"
         }
-    
+
     def __init__(self, dbpool, rowClasses):
         """
         Initialize me against a database.
@@ -124,10 +121,11 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             pass
         else:
             whereClause = []
-        return self.runInteraction(self._rowLoader, tableName, parentRow, data, whereClause, forceChildren)
+        return self.runInteraction(self._rowLoader, tableName, parentRow,
+                                   data, whereClause, forceChildren)
 
-
-    def _rowLoader(self, transaction, tableName, parentRow, data, whereClause, forceChildren):
+    def _rowLoader(self, transaction, tableName, parentRow, data,
+                   whereClause, forceChildren):
         """immediate loading of rowobjects from the table with the whereClause.
         """
         tableInfo = self.schema[tableName]
@@ -152,7 +150,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 (columnName, cond, value) = wItem
                 t = self.findTypeFor(tableName, columnName)
                 quotedValue = self.quote_value(value, t)
-                sql += "%s %s %s" % (columnName, self.conditionalLabels[cond], quotedValue)
+                sql += "%s %s %s" % (columnName, self.conditionalLabels[cond],
+                                     quotedValue)
 
         # execute the query
         transaction.execute(sql)
@@ -164,9 +163,9 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         for args in rows:
             kw = {}
             for i in range(0,len(args)):
-                columnName = tableInfo.rowColumns[i][0]
+                ColumnName = tableInfo.rowColumns[i][0].lower()
                 for attr, type in tableInfo.rowClass.rowColumns:
-                    if string.lower(attr) == string.lower(columnName):
+                    if attr.lower() == ColumnName:
                         kw[attr] = args[i]
                         break
             # find the row in the cache or add it
@@ -198,8 +197,9 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
     def findTypeFor(self, tableName, columnName):
         tableInfo = self.schema[tableName]
+        columnName = columnName.lower()
         for column, type in tableInfo.rowColumns:
-            if column.upper() == columnName.upper():
+            if column.lower() == columnName:
                 return type
 
     def buildUpdateSQL(self, tableInfo):
@@ -270,7 +270,6 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             first = 0
         return sql
 
-
     def updateRowSQL(self, rowObject):
         """build SQL to update my current state.
         """
@@ -279,13 +278,14 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         # build update attributes
         for column, type in tableInfo.rowColumns:
             if not getKeyColumn(rowObject.__class__, column):
-                args.append(self.quote_value(rowObject.findAttribute(column), type))
+                args.append(self.quote_value(rowObject.findAttribute(column),
+                                             type))
         # build where clause
         for keyColumn, type in tableInfo.rowKeyColumns:
-            args.append(self.quote_value(rowObject.findAttribute(keyColumn), type))
+            args.append(self.quote_value(rowObject.findAttribute(keyColumn),
+                                         type))
 
         return self.getTableInfo(rowObject).updateSQL % tuple(args)
-
 
     def updateRow(self, rowObject):
         """update my contents to the database.
@@ -318,7 +318,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         tableInfo = self.schema[rowObject.rowTableName]        
         # build where clause
         for keyColumn, type in tableInfo.rowKeyColumns:
-            args.append(self.quote_value(rowObject.findAttribute(keyColumn), type))
+            args.append(self.quote_value(rowObject.findAttribute(keyColumn),
+                                         type))
 
         return self.getTableInfo(rowObject).deleteSQL % tuple(args)
 

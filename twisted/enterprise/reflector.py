@@ -14,16 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import string
 import weakref
 
-from twisted.enterprise import adbapi
-from twisted.enterprise.util import DBError, getKeyColumn, quote, _TableInfo, _TableRelationship
-from twisted.enterprise.row import RowObject
-from twisted.internet import defer
+from twisted.enterprise.util import DBError
 
 class Reflector:
-    """Base class for enterprise reflectors. This implements rowCacheing.
+    """Base class for enterprise reflectors. This implements row caching.
     """
     populated = 0
 
@@ -35,7 +31,7 @@ class Reflector:
             database schema.
         """
 
-        self.rowCache = weakref.WeakValueDictionary() # doesnt hold references to cached rows.
+        self.rowCache = weakref.WeakValueDictionary() # does not hold references to cached rows.
         self.rowClasses = rowClasses
         self.schema = {}
         self._populate()

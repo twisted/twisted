@@ -20,18 +20,8 @@ A (R)elational (O)bject (W)rapper.
 This is an extremely thin wrapper.
 """
 
-# System Imports
-
 import string
-import time
 
-# Twisted Imports
-
-from twisted.python import log
-
-# Sibling Imports
-
-import adbapi
 from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn, dbTypeMap
 
 class RowObject:
@@ -50,7 +40,7 @@ class RowObject:
     Once created, the "key column" attributes cannot be changed.
 
 
-    Class Attributes that users must supply::
+    Class Attributes that users must supply:
 
        rowKeyColumns     # list of key columns in form: [(columnName, typeName)]
        rowTableName      # name of database table
@@ -63,7 +53,7 @@ class RowObject:
     """
 
     populated = 0    # set on the class when the class is "populated" with SQL
-    dirty = 0        # set on an instance then the instance is out-of-sync with the database
+    dirty = 0        # set on an instance when the instance is out-of-sync with the database
 
     def assignKeyAttr(self, attrName, value):
         """Assign to a key attribute.
