@@ -177,14 +177,13 @@ class Resource:
         child.server = self.server
 
     def render(self, request):
-        """Render a given resource.
+        """Render a given resource. See L{IResource}'s render method.
 
-        This must be implemented in all subclasses of Resource.
-
-        The return value of this method will be the rendered page, unless the
-        return value is twisted.web.server.NOT_DONE_YET, in which case it is
-        this class's responsibility to write the results to
-        request.write(data), then call request.finish().
+        I delegate to methods of self with the form 'render_METHOD'
+        where METHOD is the HTTP that was used to make the
+        request. Examples: render_GET, render_HEAD, render_POST, and
+        so on. Generally you should implement those methods instead of
+        overriding this one.
         """
 
         m = getattr(self, 'render_' + request.method, None)
@@ -195,6 +194,13 @@ class Resource:
         return m(request)
 
     def render_HEAD(self, request):
+        """
+        I just return self.render_GET(request). When method is HEAD,
+        the framework will handle this correctly, assuming render_GET
+        returns a string as opposed to using
+        NOT_DONE_YET/write/finish. The length of the string will be
+        used to set the content-length, but no body will be written.
+        """
         return self.render_GET(request)
         
 
