@@ -281,7 +281,12 @@ class HTTPClient(basic.LineReceiver):
     def lineReceived(self, line):
         if self.firstLine:
             self.firstLine = 0
-            version, status, message = line.split(None, 2)
+            try:
+                version, status, message = line.split(None, 2)
+            except ValueError:
+                # sometimes there is no message
+                version, status = line.split(None, 1)
+                message = ""
             self.handleStatus(version, status, message)
             return
         if line:
@@ -586,8 +591,6 @@ class Request:
                 self.transport.write(toChunk(data))
             else:
                 self.transport.write(data)
-        else:
-            log.msg("(harmless warning): discarding zero-length data for request %s" % self)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         """Set an outgoing HTTP cookie.
