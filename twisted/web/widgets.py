@@ -1043,4 +1043,27 @@ class Sidebar(StreamWidget):
                        % (sectionColor, sectionColor, request.sibLink(link), sectionTextColor, name))
         write("</table>")
 
+# moved from template.py
+from twisted.web.woven import template
+from twisted.python import components
+
+class WebWidgetNodeMutator(template.NodeMutator):
+    """A WebWidgetNodeMutator replaces the node that is passed in to generate
+    with the result of generating the twisted.web.widget instance it adapts.
+    """
+    def generate(self, request, node):
+        widget = self.data
+        displayed = widget.display(request)
+        try:
+            html = string.join(displayed)
+        except:
+            pr = Presentation()
+            pr.tmpl = displayed
+            #strList = pr.display(request)
+            html = string.join(displayed)
+        stringMutator = template.StringNodeMutator(html)
+        return stringMutator.generate(request, node)
+
+components.registerAdapter(WebWidgetNodeMutator, Widget, template.INodeMutator)
+
 import static

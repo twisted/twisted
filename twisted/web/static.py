@@ -455,68 +455,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return f
 
 
-import widgets
-
-class DirectoryListing(widgets.StreamWidget, styles.Versioned):
-    """DEPRECATED."""
-    
-    persistenceVersion = 1
-
-    def upgradeToVersion1(self):
-        self.contentTypes = File.contentTypes
-        self.contentEncodings = File.contentEncodings
-        self.defaultType = 'text/html'
-    
-    def __init__(self, pathname, dirs=None,
-                 contentTypes=File.contentTypes,
-                 contentEncodings=File.contentEncodings,
-                 defaultType='text/html'):
-        import warnings
-        warnings.warn("Please use twisted.web.woven.dirlist", DeprecationWarning)
-        self.contentTypes = contentTypes
-        self.contentEncodings = contentEncodings
-        self.defaultType = defaultType
-        # dirs allows usage of the File to specify what gets listed
-        self.dirs = dirs
-        self.path = pathname
-
-    def getTitle(self, request):
-        return "Directory Listing For %s" % request.path
-
-    def stream(self, write, request):
-        if self.dirs is None:
-            directory = os.listdir(self.path)
-            directory.sort()
-        else:
-            directory = self.dirs
-
-        write("<table><tr><th>Filename</th><th>Content type</th><th>Content encoding</th></tr>\n")
-
-        for path in directory:
-            url = urllib.quote(path, "/:")
-            if os.path.isdir(os.path.join(self.path, path)):
-                url = url + '/'
-                write('<tr><td><a href="%s">%s/</a></td><td>[Directory]</td><td></td></tr>'
-                      % (url, path))
-
-        for path in directory:
-            url = urllib.quote(path, "/:")
-            if not os.path.isdir(os.path.join(self.path, path)):
-                mimetype, encoding = getTypeAndEncoding(path, self.contentTypes, self.contentEncodings, self.defaultType)
-                write('<tr><td><a href="%(url)s">%(name)s</a></td><td>[%(type)s]</td><td>%(encoding)s</tr>'
-                      % {'url': url,
-                         'name': path,
-                         'type': mimetype,
-                         'encoding': (encoding and '[%s]' % encoding or '')})
-        write("</table>\n")
-
-    def __repr__(self):
-        return '<DirectoryListing of %r>' % self.path
-
-    def __str__(self):
-        return repr(self)
-
-
 class FileTransfer(pb.Viewable):
     """
     A class to represent the transfer of a file over the network.

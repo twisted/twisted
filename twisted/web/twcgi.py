@@ -54,7 +54,7 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         return error.NoResource()
 
     def render(self, request):
-        return static.File.childNotFound.render(request)
+        return error.NoResource("CGI directories do not support directory listing.").render(request)
 
 class CGIScript(resource.Resource):
     """I represent a CGI script.

@@ -79,7 +79,6 @@ from twisted.web import microdom
 from twisted.python import components
 from twisted.web import resource, html
 from twisted.web.resource import Resource
-from twisted.web import widgets # import Widget, Presentation
 from twisted.web.woven import controller, utils, interfaces
 
 from twisted.internet import defer
@@ -152,28 +151,9 @@ class StringNodeMutator(NodeMutator):
         return nodeMutator.generate(request, node)
 
 
-class WebWidgetNodeMutator(NodeMutator):
-    """A WebWidgetNodeMutator replaces the node that is passed in to generate
-    with the result of generating the twisted.web.widget instance it adapts.
-    """
-    def generate(self, request, node):
-        widget = self.data
-        displayed = widget.display(request)
-        try:
-            html = string.join(displayed)
-        except:
-            pr = widgets.Presentation()
-            pr.tmpl = displayed
-            #strList = pr.display(request)
-            html = string.join(displayed)
-        stringMutator = StringNodeMutator(html)
-        return stringMutator.generate(request, node)
-
-
 components.registerAdapter(NodeNodeMutator, microdom.Node, INodeMutator)
 components.registerAdapter(NoneNodeMutator, type(None), INodeMutator)
 components.registerAdapter(StringNodeMutator, type(""), INodeMutator)
-components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)
 
 
 class DOMTemplate(Resource):
