@@ -20,14 +20,19 @@ from twisted.protocols import basic
 class LineSendingProtocol(basic.LineReceiver):
     lostConn = False
 
-    def __init__(self, lines):
+    def __init__(self, lines, start = True):
         self.lines = lines[:]
         self.response = []
+        self.start = start
     
     def connectionMade(self):
-        map(self.sendLine, self.lines)
+        if self.start:
+            map(self.sendLine, self.lines)
     
     def lineReceived(self, line):
+        if not self.start:
+            map(self.sendLine, self.lines)
+            self.lines = []
         self.response.append(line)
     
     def connectionLost(self, reason):
