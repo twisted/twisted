@@ -40,19 +40,19 @@ class Scheduler:
         dict = copy.copy(self.__dict__)
         dict['threadTasks'] = {}
         return dict
-    
+
     def addTask(self, function, args=[], kwargs={}):
         hadNoTasks = (self.threadTasks == {})
         thread = reflect.currentThread()
         if not self.threadTasks.has_key(thread):
             self.threadTasks[thread] = []
         self.threadTasks[thread].append((function, args, kwargs))
-        
+
         if hadNoTasks:
             # import here to prevent circular import
             import main
             main.wakeUp()
-    
+
     def timeout(self):
         """Either I have work to do immediately, or no work to do at all.
         """
@@ -60,7 +60,7 @@ class Scheduler:
             return 0.
         else:
             return None
-    
+
     def runUntilCurrent(self):
         for thread, tasks in self.threadTasks.items():
             func, args, kwargs = tasks.pop(0)

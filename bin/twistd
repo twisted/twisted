@@ -55,7 +55,6 @@ import traceback
 # Twisted Imports
 from twisted.python import usage, threadable, log
 from twisted.persisted import styles
-from twisted.internet import main
 
 # Load the servers.
 # This will fix up accidental function definitions in evaluation spaces
@@ -132,6 +131,7 @@ sys.stdout.flush()
 if not config.python:
     print "Loading %s..." % config.file
     application = load(open(config.file,'rb'))
+    from twisted.internet import main
     main.theApplication = application
     styles.doUpgrade()
 else:

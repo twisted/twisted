@@ -25,12 +25,12 @@ from twisted.internet import threadtask
 # This is just about the simplest possible protocol
 
 class Echo(Protocol):
-    
+
     def connectionMade(self):
         self.messagequeue = Queue.Queue()
         self.handler = Handler(self)
         self.handler.start()
-            
+
     def dataReceived(self, data):
         "As soon as any data is received, add it to queue."
         self.messagequeue.put(data)
@@ -38,7 +38,7 @@ class Echo(Protocol):
     def send(self, data):
         """Schedule data to be written in a thread-safe manner"""
         threadtask.schedule(self.transport.write, (data,))
-    
+
     def connectionLost(self):
         # tell thread to shutdown
         self.messagequeue.put(None)
@@ -47,11 +47,11 @@ class Echo(Protocol):
 
 class Handler(threading.Thread):
     """Thread that does processing on data received from Echo protocol"""
-    
+
     def __init__(self, protocol):
         threading.Thread.__init__(self)
         self.protocol = protocol
-    
+
     def run(self):
         while 1:
             # read data from queue
