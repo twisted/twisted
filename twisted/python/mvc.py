@@ -131,21 +131,13 @@ class Model:
         for view in self.views:
             view.modelChanged(changed)
 
-    def __eq__(self, other):
+    def __cmp__(self, other):
         for elem in self.__dict__.keys():
             if elem is "views": continue
             if getattr(self, elem) != getattr(other, elem):
-                return 0
+                return cmp(getattr(self, elem), getattr(other, elem))
         else:
-            return 1
-    
-    def __ne__(self, other):
-        for elem in self.__dict__.keys():
-            if elem is "views": continue
-            if getattr(self, elem) == getattr(other, elem):
-                return 0
-        else:
-            return 1
+            return 0
 
 
 class View:
