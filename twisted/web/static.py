@@ -285,6 +285,9 @@ class File(resource.Resource, styles.Versioned):
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
         """
+        if path == '':
+            return self
+
         if path == '..':
             return error.NoResource("Invalid request URL.")
 
