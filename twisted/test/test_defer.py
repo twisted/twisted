@@ -89,6 +89,12 @@ class DeferredTestCase(unittest.TestCase):
         dl.addCallbacks(cb, cb)
         defr1.callback("1")
         defr2.addErrback(catch)
+        # "catch" is added to eat the GenericError that will be passed on by
+        # the DeferredList's callback on defr2. If left unhandled, the
+        # Failure object would cause a log.err() warning about "Unhandled
+        # error in Deferred". Twisted's pyunit watches for log.err calls and
+        # treats them as failures. So "catch" must eat the error to prevent
+        # it from flunking the test.
         defr2.errback(GenericError("2"))
         defr3.callback("3")
         self.failUnlessEqual([result[0],
