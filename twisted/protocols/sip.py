@@ -19,11 +19,29 @@
 """Session Initialization Protocol."""
 
 # twisted imports
-from twisted.python import log
+from twisted.python import log, util
 from twisted.internet import protocol
 
 # sibling imports
 import basic
+
+
+# SIP headers have short forms
+shortHeaders = {"call-id": "i",
+                "contact": "m",
+                "content-encoding": "e",
+                "content-length": "l",
+                "content-type": "c",
+                "from": "f",
+                "subject": "s",
+                "to": "t",
+                "via": "v",
+                }
+
+longHeaders = {}
+for k, v in shortHeaders.items():
+    longHeaders[v] = k
+del k, v
 
 
 class Message:
@@ -32,15 +50,16 @@ class Message:
     length = None
     
     def __init__(self):
-        self.headers = []
+        self.headers = util.OrderedDict() # map name to list of values
         self.body = ""
         self.finished = 0
     
     def addHeader(self, name, value):
         name = name.lower()
+        name = longHeaders.get(name, name)
         if name == "content-length":
             self.length = int(value)
-        self.headers.append((name, value))
+        self.headers.setdefault(name,[]).append(value)
 
     def bodyDataReceived(self, data):
         self.body += data
@@ -52,8 +71,9 @@ class Message:
 
     def toString(self):
         s = "%s\r\n" % self._getHeaderLine()
-        for n, v in self.headers:
-            s += "%s: %s\r\n" % (n, v)
+        for n, vs in self.headers.items():
+            for v in vs:
+                s += "%s: %s\r\n" % (n, v)
         s += "\r\n"
         s += self.body
         return s
@@ -148,9 +168,8 @@ class MessagesParser(basic.LineReceiver):
     
     def lineReceived(self, line):
         if self.state == "firstline":
-            while line[-1:] == "\n" or line[-1:] == "\r":
-                line = line[:-1]
-            #line = line.rstrip("\n\r")
+            while line.startswith("\n") or line.startswith("\r"):
+                line = line[1:]
             if not line:
                 return
             try:

@@ -20,8 +20,8 @@ from twisted.trial import unittest
 from twisted.protocols import sip
 
 
-# request, prefixed by CRLF
-request1 = """
+# request, prefixed by random CRLFs
+request1 = "\n\r\n\n\r" + """\
 INVITE sip:foo SIP/2.0
 From: mo
 To: joe
@@ -72,6 +72,15 @@ Content-Length: 0
 
 """.replace("\n", "\r\n")
 
+# short header version
+request_short = """\
+INVITE sip:foo SIP/2.0
+f: mo
+t: joe
+l: 4
+
+abcd""".replace("\n", "\r\n")
+
 
 class MessageParsingTestCase(unittest.TestCase):
 
@@ -96,7 +105,7 @@ class MessageParsingTestCase(unittest.TestCase):
         self.feedMessage(request1)
         self.assertEquals(len(l), 1)
         self.validateMessage(l[0], "INVITE", "sip:foo",
-                             [("from", "mo"), ("to", "joe"), ("content-length", "4")],
+                             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
                              "abcd")
 
     def testTwoMessages(self):
@@ -105,10 +114,10 @@ class MessageParsingTestCase(unittest.TestCase):
         self.feedMessage(request2)
         self.assertEquals(len(l), 2)
         self.validateMessage(l[0], "INVITE", "sip:foo",
-                             [("from", "mo"), ("to", "joe"), ("content-length", "4")],
+                             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
                              "abcd")
         self.validateMessage(l[1], "INVITE", "sip:foo",
-                             [("from", "mo"), ("to", "joe")],
+                             {"from": ["mo"], "to": ["joe"]},
                              "1234")
 
     def testGarbage(self):
@@ -116,7 +125,7 @@ class MessageParsingTestCase(unittest.TestCase):
         self.feedMessage(request3)
         self.assertEquals(len(l), 1)
         self.validateMessage(l[0], "INVITE", "sip:foo",
-                             [("from", "mo"), ("to", "joe"), ("content-length", "4")],
+                             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
                              "1234")
 
     def testThreeInOne(self):
@@ -124,15 +133,23 @@ class MessageParsingTestCase(unittest.TestCase):
         self.feedMessage(request4)
         self.assertEquals(len(l), 3)
         self.validateMessage(l[0], "INVITE", "sip:foo",
-                             [("from", "mo"), ("to", "joe"), ("content-length", "0")],
+                             {"from": ["mo"], "to": ["joe"], "content-length": ["0"]},
                              "")
         self.validateMessage(l[1], "INVITE", "sip:loop",
-                             [("from", "foo"), ("to", "bar"), ("content-length", "4")],
+                             {"from": ["foo"], "to": ["bar"], "content-length": ["4"]},
                              "abcd")
         self.validateMessage(l[2], "INVITE", "sip:loop",
-                             [("from", "foo"), ("to", "bar"), ("content-length", "4")],
+                             {"from": ["foo"], "to": ["bar"], "content-length": ["4"]},
                              "1234")
 
+    def testShort(self):
+        l = self.l
+        self.feedMessage(request_short)
+        self.assertEquals(len(l), 1)
+        self.validateMessage(l[0], "INVITE", "sip:foo",
+                             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
+                             "abcd")
+        
     def testSimpleResponse(self):
         l = self.l
         self.feedMessage(response1)
@@ -140,7 +157,7 @@ class MessageParsingTestCase(unittest.TestCase):
         m = l[0]
         self.assertEquals(m.code, 200)
         self.assertEquals(m.phrase, "OK")
-        self.assertEquals(m.headers, [("from", "foo"), ("to", "bar"), ("content-length", "0")])
+        self.assertEquals(m.headers, {"from": ["foo"], "to": ["bar"], "content-length": ["0"]})
         self.assertEquals(m.body, "")
         self.assertEquals(m.finished, 1)
 
