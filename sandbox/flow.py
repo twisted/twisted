@@ -461,73 +461,6 @@ class FlowQueryIterator(FlowIterator):
             raise StopIteration
         return res
 
-def testFlow():
-    '''
-       primary tests of the Flow construct
-    '''
-    def printResult(data): print data
-    def addOne(data): return  data+1
-    def finished(): print "finished"
-    def dataSource(data):  return [1, 1+data, 1+data*2]
-    a = Flow()
-    a.execute()
-    a.addBranch(dataSource, finished)
-    a.addFunction(addOne)
-    a.addFunction(printResult)
-    a.execute(2)
-    
-    class simpleIterator:
-        def __init__(self, data): 
-            self.data = data
-        def __iter__(self): 
-            return self
-        def next(self): 
-            if self.data < 0: raise StopIteration
-            ret = self.data
-            self.data -= 1
-            return ret
-    import operator
-    b = Flow()
-    b.addBranch(simpleIterator)
-    b.addAccumulator(operator.add, 0, printResult)
-    b.addFunction(printResult)
-  
-    c = Flow()
-    c.addChain(a,b)
-    c.execute(3)
-
-def testFlowIterator():
-    class CountIterator(FlowIterator):
-        def next(self): # this is run in a separate thread
-            print "."
-            from time import sleep
-            sleep(.5)
-            val = self.data
-            if not(val):
-                print "done counting"
-                raise StopIteration
-            self.data -= 1
-            return val
-    def printResult(data): print data
-    def finished(): print "finished"
-    f = Flow()
-    f.addBranch(CountIterator, onFinish=finished)
-    f.addFunction(printResult)
-    f.waitInterval = 1
-    f.execute(5)
-
-def testFlowConnect():
-    from twisted.enterprise.adbapi import ConnectionPool
-    pool = ConnectionPool("mx.ODBC.EasySoft","<some dsn>")
-    def printResult(x): print x
-    def printDone(): print "done"
-    sql = "<some query>"
-    f = Flow()
-    f.waitInterval = 1
-    f.addBranch(FlowQueryIterator(pool,sql),onFinish=printDone)
-    f.addFunction(printResult)
-    f.execute()
-
 # support iterators for 2.1
 try:
    StopIteration = StopIteration
@@ -549,10 +482,3 @@ except:
        else:
            return _ListIterator(lst)
 
-if '__main__' == __name__:
-    from twisted.internet import reactor
-    testFlow()
-    testFlowIterator()
-    #testFlowConnect()
-    reactor.callLater(5,reactor.stop)
-    reactor.run()
