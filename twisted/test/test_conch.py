@@ -341,13 +341,12 @@ class SSHTestEchoChannel(connection.SSHChannel):
         self.buf += data
 
     def request_exit_status(self, status):
+        global theTest
         status = struct.unpack('>L', status)[0]
         if status != 0:
-            global theTest
             theTest.fail('echo exit status was not 0: %i' % status)
             reactor.crash()
         if self.buf != 'hello\r\n':
-            global theTest
             theTest.fail('echo did not return hello: %s' % repr(self.buf))
             reactor.crash()
 
@@ -405,11 +404,16 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         self.buf += data
         theTest.fac.proto.expectedLoseConnection = 1
 
+    def errReceived(self, data):
+        log.msg('\n'.join(['ssh: '+line for line in data.split('\r\n')]))
+
     def processEnded(self, reason):
+        log.msg('process ended')
         global theTest
         self.done = True
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
         theTest.assertEquals(self.buf, 'hello\r\n')
+        log.msg('we are done here')
 
 class SSHTransportTestCase(unittest.TestCase):
 
@@ -440,13 +444,27 @@ class SSHTransportTestCase(unittest.TestCase):
         theTest.fac = fac
         host = reactor.listenTCP(0, fac).getHost()
         port = host[2]
-        reactor.connectTCP('localhost', port, SSHTestClientFactory())
+        cfac = SSHTestClientFactory()
+        def _failTest():
+            fac.proto.transport.loseConnection()
+            cfac.client.transport.loseConnection()
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            reactor.crash()
+            self.fail('test took too long')
+        call = reactor.callLater(10, _failTest)
+        reactor.connectTCP('localhost', port, cfac)
         reactor.run()
+        try:
+            call.cancel()
+        except:
+            pass
 
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        cmdline = 'ssh -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
+        cmdline = 'ssh -v -l testuser -p %i -n -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
@@ -465,10 +483,25 @@ class SSHTransportTestCase(unittest.TestCase):
                 break
         if not ssh_path:
             log.msg('skipping test, cannot find ssh')
+            return
         cmds = (cmdline % port).split()
         p = SSHTestOpenSSHProcess()
+        def _failTest():
+            os.kill(p.transport.pid, 9)
+            fac.proto.transport.loseConnection()
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            reactor.crash()
+            p.done = 1
+            self.fail('test took too long')
+        call = reactor.callLater(10, _failTest)
         reactor.spawnProcess(p, ssh_path, cmds)
         reactor.run()
         # wait for process to finish
         while not p.done:
             reactor.iterate()
+        try:
+            call.cancel()
+        except:
+            pass
