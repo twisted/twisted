@@ -450,12 +450,14 @@ class IReactorCore(Interface):
 
 
     def run(self):
-        """Run the main loop until stop() is called.
+        """Fire 'startup' System Events, move the reactor to the 'running'
+        state, then run the main loop until it is stopped with stop() or
+        crash().
         """
 
     def stop(self):
-        """Stop the main loop by firing a 'shutdown' System Event.
-        """
+        """Fire 'shutdown' System Events, which will move the reactor to the
+        'stopped' state and cause reactor.run() to exit. """
 
     def crash(self):
         """Stop the main loop *immediately*, without firing any system events.
@@ -464,17 +466,14 @@ class IReactorCore(Interface):
         it is possible to lose data and put your system in an inconsistent
         state by calling this.  However, it is necessary, as sometimes a system
         can become wedged in a pre-shutdown call.
-
-        It's also useful since you can still run() the event loop again after
-        this has been called, unlike stop(), so it's useful for test code
-        that uses the reactor.
         """
 
     def iterate(self, delay=0):
         """Run the main loop's I/O polling function for a period of time.
 
         This is most useful in applications where the UI is being drawn "as
-        fast as possible", such as games.
+        fast as possible", such as games. All pending L{IDelayedCall}s will
+        be called.
         """
 
     def fireSystemEvent(self, eventType):
