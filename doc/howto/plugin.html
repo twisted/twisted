@@ -62,12 +62,12 @@ system and they are used in very different contexts.  You can even use it to
 load third-party plug-ins for your own applications. </p>
 
 <p>Twisted finds its plug-ins by using pre-existing Python concepts; the load
-path, and packages.  Every top-level Python package (= directory whose parent
-is on sys.path which contains an <code class="shell">__init__.py</code>) can
-potentially contain some number of plug-ins.  Packages which contain plug-ins
-are called "drop-ins", because you "drop" them into your sys.path. The only
-difference between a package and a drop-in is the existence of a file named
-<code class="shell">plugins.tml</code> (TML for Twisted Module List) that
+path, and packages.  Every top-level Python package (that is, a directory whose
+parent is on sys.path which contains an <code class="shell">__init__.py</code>)
+can potentially contain some number of plug-ins.  Packages which contain
+plug-ins are called "drop-ins", because you "drop" them into your sys.path. The
+only difference between a package and a drop-in is the existence of a file
+named <code class="shell">plugins.tml</code> (TML for Twisted Module List) that
 contains some special Python expressions to identify the location of
 sub-packages or modules which can be loaded.</p>
 
@@ -308,5 +308,5 @@ in to!</p>
 
 <hr />
 <address><a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a></address>
-<!-- hhmts start --> Last modified: Thu Jun 20 11:06:30 CDT 2002 <!-- hhmts end -->
+<!-- hhmts start --> Last modified: Thu Jun 20 23:17:31 CDT 2002 <!-- hhmts end -->
 </body> </html>
