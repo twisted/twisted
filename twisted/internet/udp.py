@@ -140,6 +140,7 @@ class Port(abstract.FileDescriptor):
     def __init__(self, port, factory, interface='', maxPacketSize=8192):
         """Initialize with a numeric port to listen on.
         """
+        abstract.FileDescriptor.__init__(self)
         self.port = port
         self.factory = factory
         self.maxPacketSize = maxPacketSize

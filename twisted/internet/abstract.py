@@ -43,6 +43,11 @@ class FileDescriptor(log.Logger):
 
     __implements__ = (interfaces.IProducer, interfaces.IReadWriteDescriptor, interfaces.IConsumer)
 
+    def __init__(self, reactor=None):
+        if not reactor:
+            from twisted.internet import reactor
+        self.reactor = reactor
+    
     def connectionLost(self):
         """The connection was lost.
 
@@ -160,8 +165,7 @@ class FileDescriptor(log.Logger):
         Call this to remove this selectable from being notified when it is
         ready for reading.
         """
-
-        main.removeReader(self)
+        self.reactor.removeReader(self)
 
     def stopWriting(self):
         """Stop waiting for write availability.
@@ -169,8 +173,7 @@ class FileDescriptor(log.Logger):
         Call this to remove this selectable from being notified when it is ready
         for writing.
         """
-
-        main.removeWriter(self)
+        self.reactor.removeWriter(self)
 
     def startReading(self):
         """Start waiting for read availability.
@@ -178,8 +181,7 @@ class FileDescriptor(log.Logger):
         Call this to remove this selectable notified whenever it is ready for
         reading.
         """
-
-        main.addReader(self)
+        self.reactor.addReader(self)
 
     def startWriting(self):
         """Start waiting for write availability.
@@ -187,7 +189,7 @@ class FileDescriptor(log.Logger):
         Call this to have this FileDescriptor be notified whenever it is ready for
         writing.
         """
-        main.addWriter(self)
+        self.reactor.addWriter(self)
 
     # Producer/consumer implementation
 

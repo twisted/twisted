@@ -37,6 +37,7 @@ class StandardIO(abstract.FileDescriptor, protocol.Transport):
 
         This will fail if a StandardIO has already been instantiated.
         """
+        abstract.FileDescriptor.__init__(self)
         global _stdio_in_use
         if _stdio_in_use:
             raise RuntimeError, "Standard IO already in use."

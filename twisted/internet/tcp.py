@@ -67,7 +67,8 @@ class Connection(abstract.FileDescriptor,
     This is an abstract superclass of all objects which represent a TCP/IP
     connection based socket.
     """
-    def __init__(self, skt, protocol):
+    def __init__(self, skt, protocol, reactor=None):
+        abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
         self.socket.setblocking(0)
         self.fileno = skt.fileno
@@ -171,7 +172,7 @@ class Client(Connection):
             self.host = host
             self.port = port
             self.connector = connector
-            Connection.__init__(self, skt, protocol)
+            Connection.__init__(self, skt, protocol, self.reactor)
             self.doWrite = self.doConnect
             self.doRead = self.doConnect
             self.logstr = self.protocol.__class__.__name__+",client"
@@ -386,13 +387,11 @@ class Port(abstract.FileDescriptor):
     def __init__(self, port, factory, backlog=5, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
         """
+        abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.port = port
         self.factory = factory
         self.backlog = backlog
         self.interface = interface
-        if reactor is None:
-            from twisted.internet import reactor
-        self.reactor = reactor
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)

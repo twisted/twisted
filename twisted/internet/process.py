@@ -58,6 +58,7 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
     def __init__(self, proc):
         """Initialize, specifying a Process instance to connect to.
         """
+        abstract.FileDescriptor.__init__(self)
         self.proc = proc
 
     # Copy relevant parts of the protocol
@@ -111,6 +112,7 @@ class ProcessError(abstract.FileDescriptor):
     def __init__(self, proc):
         """Initialize, specifying a process to connect to.
         """
+        abstract.FileDescriptor.__init__(self)
         self.proc = proc
 
     def fileno(self):
@@ -157,6 +159,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
+        abstract.FileDescriptor.__init__(self)
         settingUID = (uid is not None) or (gid is not None)
         if settingUID:
             curegid = os.getegid()
