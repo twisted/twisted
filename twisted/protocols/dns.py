@@ -495,6 +495,10 @@ class Record_A:
         return 0
 
 
+    def __hash__(self):
+        return hash(self.address)
+
+
     def __str__(self):
         return '<A %s>' % (socket.inet_ntoa(self.address),)
 
@@ -540,6 +544,13 @@ class Record_SOA:
                     self.expire == other.expire and
                     self.retry == other.retry)
         return 0
+
+    
+    def __hash__(self):
+        return hash((
+            self.serial, self.mname, self.rname,
+            self.refresh, self.expire, self.retry
+        ))
 
 
     def __str__(self):
@@ -594,6 +605,10 @@ class Record_WKS:                    # OBSOLETE
         return 0
 
 
+    def __hash__(self):
+        return hash((self.address, self.protocol, self.map))
+
+
     def __str__(self):
         return '<WKS addr=%s proto=%d>' % (
             socket.inet_ntoa(self.address), self.protocol
@@ -620,6 +635,10 @@ class Record_AAAA:               # OBSOLETE (or headed there)
         if isinstance(other, Record_AAAA):
             return other.address == self.address
         return 0
+
+
+    def __hash__(self):
+        return hash(self.address)
 
 
     def __str__(self):
@@ -663,6 +682,10 @@ class Record_A6:
         return 0
 
 
+    def __hash__(self):
+        return hash((self.prefixLen, self.suffix[-self.bytes:], self.prefix))
+
+
     def __str__(self):
         return '<A6 %s %s (%d)>' % (
             self.prefix,
@@ -702,8 +725,12 @@ class Record_SRV:                # EXPERIMENTAL
                     self.port == other.port and
                     self.target == other.target)
         return 0
-    
-    
+
+
+    def __hash__(self):
+        return hash((self.priority, self.weight, self.port, self.target))
+
+
     def __str__(self):
         return '<SRV prio=%d weight=%d %s:%d>' % (
             self.priority, self.weight, str(self.target), self.port
@@ -735,6 +762,10 @@ class Record_AFSDB:
             return (self.subtype == other.subtype and
                     self.hostname == other.hostname)
         return 0
+
+
+    def __hash__(self):
+        return hash((self.subtype, self.hostname))
     
     
     def __str__(self):
@@ -769,6 +800,10 @@ class Record_RP:
         return 0
     
     
+    def __hash__(self):
+        return hash((self.mbox, self.txt))
+    
+    
     def __str__(self):
         return '<RP mbox=%s txt=%s>' % (self.mbox, self.txt)
     
@@ -798,6 +833,10 @@ class Record_HINFO:
             return (self.os.lower() == other.os.lower() and
                     self.cpu.lower() == other.cpu.lower())
         return 0
+    
+    
+    def __hash__(self):
+        return hash((self.os.lower(), self.cpu.lower())
 
 
     def __str__(self):
@@ -831,6 +870,10 @@ class Record_MINFO:                 # EXPERIMENTAL
             return (self.rmailbx == other.rmailbx and
                     self.emailbx == other.emailbx)
         return 0
+    
+    
+    def __hash__(self):
+        return hash((self.rmailbx, self.emailbx))
 
 
     def __str__(self):
@@ -861,6 +904,10 @@ class Record_MX:
             return (self.preference == other.preference and
                     self.exchange == other.exchange)
         return 0
+
+
+    def __hash__(self):
+        return hash((self.preference, self.exchange))
 
 
     def __str__(self):
@@ -900,6 +947,10 @@ class Record_TXT:
         if isinstance(other, Record_TXT):
             return self.data == other.data
         return 0
+    
+    
+    def __hash__(self):
+        return hash(self.data)
     
     
     def __str__(self):
