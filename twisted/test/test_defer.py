@@ -22,6 +22,8 @@ Test cases for defer module.
 
 from pyunit import unittest
 from twisted.python import defer
+from twisted.internet import main
+
 
 class DeferredTestCase(unittest.TestCase):
 
@@ -80,5 +82,22 @@ class DeferredTestCase(unittest.TestCase):
                              (('hello',), {}))
         self.failUnlessEqual(self.callback2_results, 
                              (('hello',), {}))
+
+    def testImmediateSuccess(self):
+        l = []
+        d = defer.succeed("success")
+        d.addCallback(l.append)
+        self.assertEquals(l, [])
+        main.iterate()
+        self.assertEquals(l, ["success"])
+    
+    def testImmediateFailure(self):
+        l = []
+        d = defer.fail("fail")
+        d.addErrback(l.append)
+        self.assertEquals(l, [])
+        main.iterate()
+        self.assertEquals(l, ["fail"])
+
 
 testCases = [DeferredTestCase]
