@@ -33,6 +33,54 @@ def blockOn(d):
     d.addBoth(cb)
     return greenlet.main.switch()
 
+class GreenletWrapper(object):
+    """Wrap an object which presents an asynchronous interface (via Deferreds).
+    
+    The wrapped object will present the same interface, but all methods will
+    return results, rather than Deferreds.
+    
+    When a Deferred would otherwise be returned, a greenlet is created and then
+    control is switched back to the main greenlet.  When the Deferred fires,
+    control is switched back to the created greenlet and execution resumes with
+    the result.
+    """
+    def __init__(self, wrappee):
+        self.wrappee = wrappee
+
+    def __getattribute__(self, name):
+        wrappee = super(GreenletWrapper, self).__getattribute__('wrappee')
+        original = getattr(wrappee, name)
+        if callable(original):
+            def wrapper(*__a, **__kw):
+                result = original(*__a, **__kw)
+                if isinstance(result, defer.Deferred):
+                    return blockOn(result)
+                return result
+            return wrapper
+        return original
+
+class Asynchronous(object):
+    def syncResult(self, v):
+        return v
+
+    def asyncResult(self, n, v):
+        from twisted.internet import reactor
+        d = defer.Deferred()
+        reactor.callLater(n, d.callback, v)
+        return d
+    
+    def syncException(self):
+        1/0
+    
+    def asyncException(self, n):
+        def fail():
+            try:
+                1/0
+            except:
+                d.errback()
+        d = defer.Deferred()
+        reactor.callLater(n, fail)
+        return d
 
 def TEST():
     """
@@ -71,8 +119,32 @@ def TEST():
 
     d.addCallback(_cbJunk)
     print "kicking it off!"
+    
+    # And here is some code that doesn't want to be bothered with stupid
+    # trivialities like calling blockOn.
+    def magic():
+        o = GreenletWrapper(Asynchronous())
+        assert o.syncResult(3) == 3
+        assert o.asyncResult(0.1, 4) == 4
+        try:
+            o.syncException()
+        except ZeroDivisionError:
+            pass
+        else:
+            assert False
+        
+        try:
+            o.asyncException(0.1)
+        except ZeroDivisionError:
+            pass
+        else:
+            assert False
+        print '4 magic tests passed'
+    magic()
+    
     reactor.run()
     
 
 if __name__ == '__main__':
     TEST()
+    TEST2()
