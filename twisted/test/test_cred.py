@@ -22,7 +22,7 @@ Tests for twisted.cred.
 from pyunit import unittest
 from types import *
 from twisted.internet import app
-from twisted.cred import authorizer, identity, perspective, service
+from twisted.cred import authorizer, identity, perspective, service, util
 
 
 class ForeignObject:
@@ -225,7 +225,14 @@ class PerspectiveTestCase(unittest.TestCase):
 
     def testmakeIdentity(self):
         self.ident = ident = self.perspective.makeIdentity("password")
+        # simple password verification
         self.assert_(ident.verifyPlainPassword("password"))
+        
+        # complex password verification
+        challenge = ident.challenge()
+        hashedPassword = util.respond(challenge, "password")
+        self.assert_(ident.verifyPassword(challenge, hashedPassword))
+        
         d = self.perspective.getIdentityRequest()
         d.addCallback(self._gotIdentity)
         d.arm()
@@ -242,21 +249,6 @@ class PerspectiveTestCase(unittest.TestCase):
         s = self.perspective.getService()
         self.assert_(s is self.service)
 
-    def testattached(self):
-        raise NotImplementedError, \
-              "Kevin doesn't know enough to write this test."
-
-    def testdetached(self):
-        raise NotImplementedError, \
-              "Kevin doesn't know enough to write this test."
-
-
-class FunctionsTestCase(unittest.TestCase):
-    def test_challenge(self):
-        self.assert_(identity.challenge())
-
-    def test_response(self):
-        raise NotImplementedError
 
 # Identity
 
@@ -337,21 +329,13 @@ class IdentityTestCase(unittest.TestCase):
         self.assertRaises(KeyError, self.ident.removeKey,
                           "never","was")
 
-    def test_setPassword(self):
-        self.ident.setPassword("passphrase")
-
     def test_setPassword_invalid(self):
         self.assertRaises(TypeError, self.ident.setPassword,
                           ForeignObject("not a valid passphrase"))
 
-    def test_challenge(self):
-        self.assert_(self.ident.challenge())
-        # XXX - test result?
-
     def test_verifyPassword(self):
         self.ident.setPassword("passphrase")
         self.assert_(not self.ident.verifyPassword("wr", "ong"))
-        raise NotImplementedError, "Blerg, eat kitty."
 
     def test_verifyPlainPassword(self):
         self.ident.setPassword("passphrase")
@@ -360,8 +344,47 @@ class IdentityTestCase(unittest.TestCase):
 
 
 class AuthorizerTestCase(unittest.TestCase):
-    """XXX - TestCase for authorizer.DefaultAuthorizer not yet written."""
-    pass
+    """TestCase for authorizer.DefaultAuthorizer."""
+    
+    def setUp(self):
+        self.auth = authorizer.DefaultAuthorizer()
+    
+    def _error(self, e):
+        raise RuntimeError, e
+    
+    def _gotIdentity(self, i):
+        self.assertEquals(self.ident, i)
+        del self.ident
+    
+    def test_addIdent(self):
+        a = app.Application("test")
+        i = identity.Identity("user", a)
+        
+        # add the identity
+        self.auth.addIdentity(i)
+        self.assertRaises(KeyError, self.auth.addIdentity, i)
+        self.assert_(self.auth.identities.has_key("user"))
+        
+        # get request for identity
+        self.ident = i
+        d = self.auth.getIdentityRequest("user")
+        d.addCallback(self._gotIdentity).addErrback(self._error)
+        d.arm()
+        
+        # remove identity
+        self.auth.removeIdentity("user")
+        self.assert_(not self.auth.identities.has_key("user"))
+        self.assertRaises(KeyError, self.auth.removeIdentity, "user")
+        self.assertRaises(KeyError, self.auth.removeIdentity, "otheruser")
+    
+    def _gotNoUser(self, err):
+        pass
+    
+    def test_nonExistentIdent(self):
+        d = self.auth.getIdentityRequest("nosuchuser")
+        d.addCallback(self._error).addErrback(self._gotNoUser)
+        d.arm()
+
 
 if __name__ == "__main__":
     unittest.main()
