@@ -20,7 +20,7 @@
 """
 
 # System imports
-import Tkinter, tkMessageBox, StringIO, os, sys, inspect
+import Tkinter, tkMessageBox, tkFileDialog, StringIO, os, sys, inspect
 
 # Twisted imports
 from twisted.internet import tksupport, reactor, app
@@ -54,7 +54,7 @@ class TkMkAppFrame(Tkinter.Frame):
 
         f = Tkinter.Frame(appFrame)
         listLabel = Tkinter.Label(f, text='TAp Type')
-        self.typeList = Tkinter.Listbox(f)
+        self.typeList = Tkinter.Listbox(f, background='white')
         self.typeList['height'] = 3
         for t in ('pickle', 'xml', 'source'):
             self.typeList.insert(Tkinter.END, t)
@@ -65,8 +65,18 @@ class TkMkAppFrame(Tkinter.Frame):
         f.pack(side=Tkinter.LEFT, anchor=Tkinter.N)
 
         f = Tkinter.Frame(appFrame)
+        tapLabel = Tkinter.Label(f, text='TAp filename')
+        tapButton = Tkinter.Button(f, text="Choose", command=self.pickTapFile)
+        self.tapfile = Tkinter.Entry(f, background='white')
+
+        tapLabel.pack(side=Tkinter.LEFT)
+        self.tapfile.pack(side=Tkinter.LEFT)
+        tapButton.pack(side=Tkinter.LEFT)
+        f.pack(side=Tkinter.TOP, anchor=Tkinter.E)
+
+        f = Tkinter.Frame(appFrame)
         encLabel = Tkinter.Label(f, text='Passphrase')
-        self.passphrase = Tkinter.Entry(f)
+        self.passphrase = Tkinter.Entry(f, background='white')
 
         encLabel.pack(side=Tkinter.LEFT)
         self.passphrase.pack(side=Tkinter.LEFT)
@@ -82,18 +92,10 @@ class TkMkAppFrame(Tkinter.Frame):
         f.pack(side=Tkinter.LEFT, anchor=Tkinter.E)
 
         f = Tkinter.Frame(appFrame)
-        tapLabel = Tkinter.Label(f, text='TAp filename')
-        self.tapfile = Tkinter.Entry(f)
-
-        tapLabel.pack(side=Tkinter.LEFT)
-        self.tapfile.pack(side=Tkinter.LEFT)
-        f.pack(side=Tkinter.TOP, anchor=Tkinter.E)
-
-        f = Tkinter.Frame(appFrame)
         s = Tkinter.StringVar()
         s.set(str(os.getuid()))
         uidLabel = Tkinter.Label(f, text='UID')
-        self.uid = Tkinter.Entry(f, text=s)
+        self.uid = Tkinter.Entry(f, text=s, background='white')
 
         uidLabel.pack(side=Tkinter.LEFT)
         self.uid.pack(side=Tkinter.LEFT)
@@ -103,13 +105,20 @@ class TkMkAppFrame(Tkinter.Frame):
         s = Tkinter.StringVar()
         s.set(str(os.getgid()))
         gidLabel = Tkinter.Label(f, text='GID')
-        self.gid = Tkinter.Entry(f, text=s)
+        self.gid = Tkinter.Entry(f, text=s, background='white')
 
         gidLabel.pack(side=Tkinter.LEFT)
         self.gid.pack(side=Tkinter.LEFT)
         f.pack(side=Tkinter.BOTTOM)
 
         appFrame.grid(row=0, column=0, columnspan=3, sticky=Tkinter.N + Tkinter.S)
+
+
+    def pickTapFile(self):
+        r = tkFileDialog.askopenfilename()
+        if r:
+            self.tapfile.delete(0, Tkinter.END)
+            self.tapfile.insert(Tkinter.END, r)
 
 
     def reset(self, coil):
@@ -139,11 +148,11 @@ class TkMkAppFrame(Tkinter.Frame):
         self.optFrame = TkConfigFrame(self, self.options)
         self.optFrame.grid(row=1, column=0)
 
-        self.tapfile.delete(0, Tkinter.END)
-        try:
-            self.tapfile.insert(Tkinter.END, self.coil.tapname)
-        except AttributeError:
-            self.tapfile.insert(Tkinter.END, self.coil.name)
+#        self.tapfile.delete(0, Tkinter.END)
+#        try:
+#            self.tapfile.insert(Tkinter.END, self.coil.tapname)
+#        except AttributeError:
+#            self.tapfile.insert(Tkinter.END, self.coil.name)
     
     
     def copyOptions(self):
@@ -271,7 +280,7 @@ class TkConfigFrame(Tkinter.Frame):
                 if default:
                     s.set(default)
                 l = Tkinter.Label(f, text=desc, wraplen=200)
-                t = Tkinter.Entry(f, text=s)
+                t = Tkinter.Entry(f, text=s, background='white')
                 l.grid(row=i, column=0)
                 t.grid(row=i, column=1)
                 self.optParameters.append((flag, t))
