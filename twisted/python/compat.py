@@ -146,7 +146,7 @@ except:
             self.sentinel = sentinel
 
         def next(self):
-            res = self.iterable()
+            res = self.callable()
             if res == self.sentinel:
                 raise StopIteration
             return res

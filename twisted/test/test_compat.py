@@ -34,7 +34,7 @@ class IterableCounter:
             raise compat.StopIteration
         return self.i
         
-class CopmatTestCase(unittest.TestCase):
+class CompatTestCase(unittest.TestCase):
     def testDict(self):
         dict = compat.dict
         d1 = {'a': 'b'}
