@@ -84,7 +84,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
 
     def getGroupConversation(self, name,hide=0):
         name=string.lower(name)
-        return self.chat.getGroupConversation(self.chat.getGroup(name,self,IRCGroup),hide)
+        return self.chat.getGroupConversation(self.chat.getGroup(name,self,IRCGroup),stayHidden=hide)
 
     def getPerson(self,name):
         return self.chat.getPerson(name,self,IRCPerson)

@@ -138,7 +138,7 @@ class GroupConversation:
         Changes the oldnick in the list of members to newnick and displays this
         change to the user"""
         if oldnick in self.members:
-            self.members.remove(member)
+            self.members.remove(oldnick)
             self.members.append(newnick)
             #self.chatui.contactChangedNick(oldnick, newnick)
 
