@@ -405,6 +405,15 @@ class TestCall(unittest.TestCase, TargetMixin):
         self.failUnless(f.check(Violation))
         self.failUnless("unknown argument 'c'" in f.value.args[0])
 
+    def testFailLocalArgConstraint2(self):
+        # we violate the interface, and the sender should catch it
+        rr, target = self.setupTarget2(Target())
+        d = rr.callRemote("add", a=1, b="two")
+        self.failIf(target.calls)
+        f = unittest.deferredError(d, 2)
+        self.failUnless(f.check(Violation))
+        self.failUnless("not a number" in f.value.args[0])
+
     def testFailRemoteArgConstraint(self):
         # the brokers disagree about the Interfaces, so the sender thinks
         # they're ok but the recipient catches the violation

@@ -69,11 +69,6 @@ URL.callRemote(methodname, args)
 
 * implement/test CopiedFailureConstraint
 
-* add constraints to Slicers (outbound constraints)
-
-This is much easier than the inbound side. Each constraint just gets a single
-checkObject() call with the candidate object before it is sent.
-
 * constrain ReferenceUnslicer properly
 
 The schema can use a ReferenceConstraint to indicate that the object must be

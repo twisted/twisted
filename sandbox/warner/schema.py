@@ -197,9 +197,9 @@ class StringConstraint(Constraint):
                        VOCAB: None}
     def checkObject(self, obj):
         if not isinstance(obj, types.StringTypes):
-            raise Violation
+            raise Violation("not a String")
         if self.maxLength != None and len(obj) > self.maxLength:
-            raise Violation
+            raise Violation("string too long")
     def maxSize(self, seen=None):
         if self.maxLength == None:
             raise UnboundedSchema
@@ -224,13 +224,13 @@ class IntegerConstraint(Constraint):
 
     def checkObject(self, obj):
         if not isinstance(obj, (types.IntType, types.LongType)):
-            raise Violation
+            raise Violation("not a number")
         if self.maxBytes == -1:
             if obj >= 2**31 or obj < -2**31:
-                raise Violation
+                raise Violation("number too large")
         elif self.maxBytes != None:
             if abs(obj) >= 2**(8*self.maxBytes):
-                raise Violation
+                raise Violation("number too large")
 
     def maxSize(self, seen=None):
         if self.maxBytes == None:
@@ -297,10 +297,10 @@ class BooleanConstraint(Constraint):
 
     def checkObject(self, obj):
         if type(obj) != types.BooleanType:
-            raise Violation
+            raise Violation("not a bool")
         if self.value != None:
             if obj != self.value:
-                raise Violation
+                raise Violation("not %s" % self.value)
 
     def maxSize(self, seen=None):
         if not seen: seen = []
@@ -327,7 +327,7 @@ class InterfaceConstraint(Constraint):
     def checkObject(self, obj):
         # TODO: maybe try to get an adapter instead?
         if not self.interface.providedBy(obj):
-            raise Violation
+            raise Violation("does not provide interface %s" % self.interface)
 
 class ClassConstraint(Constraint):
     taster = openTaster
@@ -338,7 +338,7 @@ class ClassConstraint(Constraint):
         self.klass = klass
     def checkObject(self, obj):
         if not isinstance(obj, self.klass):
-            raise Violation
+            raise Violation("is not an instance of %s" % self.klass)
 
 class PolyConstraint(Constraint):
     name = "PolyConstraint"
@@ -347,6 +347,7 @@ class PolyConstraint(Constraint):
         self.alternatives = [makeConstraint(a) for a in alternatives]
         self.alternatives = tuple(self.alternatives)
         # TODO: taster/opentypes should be a union of the alternatives'
+
     def checkObject(self, obj):
         ok = False
         for c in self.alternatives:
@@ -356,7 +357,8 @@ class PolyConstraint(Constraint):
             except Violation:
                 pass
         if not ok:
-            raise Violation
+            raise Violation("does not satisfy any of %s" % self.alternatives)
+
     def maxSize(self, seen=None):
         if not seen: seen = []
         if self in seen:
@@ -367,6 +369,7 @@ class PolyConstraint(Constraint):
         seen.append(self)
         return reduce(max, [c.maxSize(seen[:])
                             for c in self.alternatives])
+
     def maxDepth(self, seen=None):
         if not seen: seen = []
         if self in seen:
@@ -385,9 +388,9 @@ class TupleConstraint(Constraint):
         self.constraints = [makeConstraint(e) for e in elemConstraints]
     def checkObject(self, obj):
         if type(obj) != types.TupleType:
-            raise Violation
+            raise Violation("not a tuple")
         if len(obj) != len(self.constraints):
-            raise Violation
+            raise Violation("wrong size tuple")
         for i in range(len(self.constraints)):
             self.constraints[i].checkObject(obj[i])
     def maxSize(self, seen=None):
@@ -422,9 +425,9 @@ class ListConstraint(Constraint):
         self.maxLength = maxLength
     def checkObject(self, obj):
         if type(obj) != types.ListType:
-            raise Violation
+            raise Violation("not a list")
         if len(obj) > self.maxLength:
-            raise Violation
+            raise Violation("list too long")
         for o in obj:
             self.constraint.checkObject(o)
     def maxSize(self, seen=None):
