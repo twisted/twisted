@@ -20,6 +20,7 @@
 import sys, time, pdb, string, types, inspect
 
 from twisted.python import reflect, failure
+from twisted.python.compat import True, False
 
 # test results, passed as resultType to Reporter.reportResults()
 SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS = \
