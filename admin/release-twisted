@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+      os.path.dirname(os.path.abspath(sys.argv[0]))))
+sys.path.append('.')
+### end of preamble
+
+#
+# The Twisted release script. This is terribly unix-centric.
+#
+
+from twisted.python import usage
+
+import string, os, shutil
+
+class Options(usage.Options):
+    optParameters = [['source', 's', 'Twisted', "The directory of the Twisted source to build a release from"],
+                     ['version', 'v', None, "The version of this release"],
+                     ['release', 'r', os.path.expanduser('~/Releases'), "The directory where your Twisted release archive is"]]
+
+try:
+    opts = Options()
+    opts.parseOptions()
+except usage.UsageError, ue:
+    print "%s: %s" % (sys.argv[0], ue)
+    sys.exit(2)
+
+if not opts.opts['version']:
+    print "Please specify a version."
+    sys.exit(2)
+
+destDir = "Twisted-%s" % opts.opts['version']
+
+if os.path.exists(destDir):
+    print destDir,"exists already!"
+    sys.exit(2)
+
+print "Copying %s to %s..." % (opts.opts['source'], destDir)
+shutil.copytree(opts.opts['source'], destDir)
+#os.chdir(destDir)
+
+print "Stripping *~, *.pyc, *.rpl, *.tap..."
+for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
+    os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
+
+print "Stripping 'CVS' directories..."
+os.system('find %s -name CVS | xargs rm -rf' % destDir)
+#os.chdir('..')
+
+print "Making dist tarball..."
+os.system('tar czf Twisted-%s.tar.gz %s' % (opts.opts['version'], destDir))
+
+print "Making the dist bz2ball"
+os.system('tar cjf Twisted-%s.tar.bz2 %s' % (opts.opts['version'], destDir))
+
+print "Making dist zipfile..."
+os.system('zip -r Twisted-%s.zip %s' % (opts.opts['version'], destDir))
+
+
+print "Putting it in %s..." % opts.opts['release']
+if not os.path.exists(opts.opts['release']):
+    print "Creating", opts.opts['release']
+    os.mkdir(opts.opts['release'])
+
+if not os.path.exists("%s/old" % opts.opts['release']):
+    print "creating %s/old" % opts.opts['release']
+    os.mkdir("%s/old" % opts.opts['release'])
+    
+os.system('mv %s/*.tar.gz %s/*.zip %s/old' % ((opts.opts['release'],)*3))
+shutil.copy('Twisted-%s.tar.gz' % opts.opts['version'], opts.opts['release'])
+shutil.copy('Twisted-%s.zip' % opts.opts['version'], opts.opts['release'])
