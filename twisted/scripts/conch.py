@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.56 2003/05/10 14:03:40 spiv Exp $
+# $Id: conch.py,v 1.57 2003/06/25 05:54:28 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -139,8 +139,8 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError, u:
-        print 'ERROR: %s' % u
         options.opt_help()
+        print 'ERROR: %s' % u
         sys.exit(1)
     if options['log']:
         realout = sys.stdout
@@ -148,25 +148,7 @@ def run():
         sys.stdout = realout
     else:
         log.discardLogs()
-    log.deferr = handleError # HACK
-    if '@' in options['host']:
-        options['user'], options['host'] = options['host'].split('@',1)
-    if not options.identitys:
-        options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
-    host = options['host']
-    if not options['user']:
-        options['user'] = getpass.getuser()
-    if not options['port']:
-        options['port'] = 22
-    else:
-        options['port'] = int(options['port'])
-    log.msg((options['host'],options['port']))
-    filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
-    log.msg(filename)
-    if not options['nocache'] and os.path.exists(filename):
-        reactor.connectUNIX(filename, SSHUnixClientFactory(), timeout=2)
-    else:
-        reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
+    doConnect()
     fd = sys.stdin.fileno()
     try:
         old = tty.tcgetattr(fd)
@@ -188,6 +170,25 @@ def handleError():
     reactor.stop()
     log.err(failure.Failure())
     raise
+
+def doConnect():
+    log.deferr = handleError # HACK
+    if '@' in options['host']:
+        options['user'], options['host'] = options['host'].split('@',1)
+    if not options.identitys:
+        options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
+    host = options['host']
+    if not options['user']:
+        options['user'] = getpass.getuser() 
+    if not options['port']:
+        options['port'] = 22
+    else:
+        options['port'] = int(options['port'])
+    filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
+    if not options['nocache'] and os.path.exists(filename):
+        reactor.connectUNIX(filename, SSHUnixClientFactory(), timeout=2)
+    else:
+        reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
 
 def onConnect():
     if not options['noshell']:
@@ -765,7 +766,7 @@ class SSHSession(channel.SSHChannel):
 
     def eofReceived(self):
         log.msg('got eof')
-        sys.stdin.close()
+        self.stdio.closeStdin()
 
     def closed(self):
         log.msg('closed %s' % self)

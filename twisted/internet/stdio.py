@@ -98,6 +98,11 @@ class StandardIO(abstract.FileDescriptor):
         """
         return fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
 
+    def closeStdin(self):
+        """Close standard input.
+        """
+        self.writer.loseConnection()
+
     def connectionLost(self, reason):
         """The connection was lost.
         """
