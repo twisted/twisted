@@ -150,8 +150,7 @@ class InetdConf(SimpleConfFile):
 class ServicesConf(SimpleConfFile):
     """/etc/services parser
     
-    Instance variables:
-        * self.services: dict mapping service names to (port, protocol) tuples.
+    @ivar self.services: dict mapping service names to (port, protocol) tuples.
     """
     
     defaultFilename = '/etc/services'
@@ -175,8 +174,7 @@ class ServicesConf(SimpleConfFile):
 class RPCServicesConf(SimpleConfFile):
     """/etc/rpc parser
 
-    Instance variables:
-        * self.services: dict mapping rpc service names to rpc ports.
+    @ivar self.services: dict mapping rpc service names to rpc ports.
     """
 
     defaultFilename = '/etc/rpc'
