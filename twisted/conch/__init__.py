@@ -5,7 +5,9 @@
 #
 
 
-"""Twisted.Conch: The Twisted Shell.  Currently this contains the SSHv2 implementation, but it may work over other protocols in the future. (i.e. Telnet)
+"""Twisted.Conch: The Twisted Shell. Terminal emulation, SSHv2 and telnet.
+
+Currently this contains the SSHv2 implementation, but it may work over other protocols in the future. (i.e. Telnet)
 
 This module is unstable.
 
