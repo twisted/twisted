@@ -33,6 +33,7 @@ from twisted.protocols import smtp
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
+from twisted.python import components
 
 import getpass, pickle, time, socket, md5
 import os
@@ -106,7 +107,7 @@ class NewsServerError(Exception):
     pass
 
 
-class NewsStorage:
+class INewsStorage(components.Interface):
     """
     An interface for storing and requesting news articles
     """
@@ -116,7 +117,6 @@ class NewsStorage:
         Returns a deferred whose callback will be passed a list of 4-tuples
         containing (name, max index, min index, flags) for each news group
         """
-        raise NotImplementedError
 
 
     def subscriptionRequest(self):
@@ -124,7 +124,6 @@ class NewsStorage:
         Returns a deferred whose callback will be passed the list of
         recommended subscription groups for new server users
         """
-        raise NotImplementedError
     
     
     def postRequest(self, message):
@@ -133,7 +132,6 @@ class NewsStorage:
         is successfully posted to one or more specified groups and
         whose errback will be invoked otherwise.
         """
-        raise NotImplementedError
     
     
     def overviewRequest(self):
@@ -141,7 +139,6 @@ class NewsStorage:
         Returns a deferred whose callback will be passed the a list of
         headers describing this server's overview format.
         """
-        return defer.succeed(OVERVIEW_FMT)
 
 
     def xoverRequest(self, group, low, high):
@@ -151,7 +148,6 @@ class NewsStorage:
         the range starts at the first article.  If high is None, the range
         ends at the last article.
         """
-        raise NotImplementedError
 
 
     def xhdrRequest(self, group, low, high, header):
@@ -161,7 +157,6 @@ class NewsStorage:
         the range starts at the first article.  If high is None, the range
         ends at the last article.
         """
-        raise NotImplementedError
 
     
     def listGroupRequest(self, group):
@@ -169,7 +164,6 @@ class NewsStorage:
         Returns a deferred whose callback will be passed a two-tuple of
         (group name, [article indices])
         """
-        raise NotImplementedError
     
     
     def groupRequest(self, group):
@@ -177,7 +171,6 @@ class NewsStorage:
         Returns a deferred whose callback will be passed a five-tuple of
         (group name, article count, highest index, lowest index, group flags)
         """
-        raise NotImplementedError
 
     
     def articleExistsRequest(self, id):
@@ -186,7 +179,6 @@ class NewsStorage:
         if a message with the specified Message-ID exists in the database
         and with a false value otherwise.
         """
-        raise NotImplementedError
 
 
     def articleRequest(self, group, index, id = None):
@@ -199,7 +191,6 @@ class NewsStorage:
         will be returned instead, along with its index in the specified
         group.
         """
-        raise NotImplementedError
 
     
     def headRequest(self, group, index):
@@ -209,7 +200,6 @@ class NewsStorage:
         whose errback will be invoked if the article or group does not
         exist.
         """
-        raise NotImplementedError
 
     
     def bodyRequest(self, group, index):
@@ -219,15 +209,16 @@ class NewsStorage:
         whose errback will be invoked if the article or group does not
         exist.
         """
-        raise NotImplementedError
 
 
-class PickleStorage(NewsStorage):
+class PickleStorage:
     """A trivial NewsStorage implementation using pickles
     
     Contains numerous flaws and is generally unsuitable for any
     real applications.  Consider yourself warned!
     """
+
+    __implements__ = (INewsStorage,)
 
     sharedDBs = {}
 
@@ -309,6 +300,10 @@ class PickleStorage(NewsStorage):
 
         self.flush()
         return defer.succeed(None)
+
+
+    def overviewRequest(self):
+        return defer.succeed(OVERVIEW_FMT)
 
 
     def xoverRequest(self, group, low, high):
@@ -433,10 +428,12 @@ class Group:
         self.articles = {}
 
 
-class NewsShelf(NewsStorage):
+class NewsShelf:
     """
     A NewStorage implementation using Twisted's dirdbm persistence module.
     """
+    
+    __implements__ = (INewsStorage,)    
     
     def __init__(self, mailhost, path):
         self.path = path
@@ -544,6 +541,10 @@ class NewsShelf(NewsStorage):
         article.putHeader('Xref', '%s %s' % (socket.gethostname().split()[0], ' '.join(map(lambda x: ':'.join(x), xref))))
         self.dbm['Message-IDs'][article.getHeader('Message-ID')] = xref
         return defer.succeed(None)
+
+
+    def overviewRequest(self):
+        return defer.succeed(OVERVIEW_FMT)
 
 
     def xoverRequest(self, group, low, high):
@@ -657,10 +658,12 @@ class NewsShelf(NewsStorage):
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
 
-class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
+class NewsStorageAugmentation(adbapi.Augmentation):
     """
     A NewsStorage implementation using Twisted's asynchronous DB-API
     """
+
+    __implements__ = (INewsStorage,)
 
     schema = """
 
