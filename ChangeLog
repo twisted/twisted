@@ -1,3 +1,8 @@
+2003-01-02  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_internet.py (DelayedTestCase): add test
+	coverage for IReactorTime.getDelayedCalls
+	
 2002-12-30  Brian Warner  <warner@lothar.com>
 
 	* pyunit/unittest.py (TestCase.__call__): clean the reactor between
@@ -1635,3 +1640,7 @@
 	* First go at database for twisted.bugs. I hate RDBMS. I hate web.
 
 --- 0.13.0 Release ---
+
+# Local Variables:
+# add-log-time-format: add-log-iso8601-time-string
+# End:
