@@ -43,7 +43,9 @@ class ProcessingFunctionFactory:
 
     latexSpitters = {None: latex.LatexSpitter,
                      'section': latex.SectionLatexSpitter,
-                     'chapter': latex.ChapterLatexSpitter}
+                     'chapter': latex.ChapterLatexSpitter,
+                     'book': latex.BookLatexSpitter,
+                     }
 
     def generate_latex(self, d):
         spitter = self.latexSpitters[None]

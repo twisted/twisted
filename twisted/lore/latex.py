@@ -309,6 +309,62 @@ class FootnoteLatexSpitter(LatexSpitter):
         self.visitNodeDefault(node)
         self.start_p = LatexSpitter.start_p
 
+class BookLatexSpitter(LatexSpitter):
+    def visitNode_link(self, node):
+        if not node.hasAttribute('rel'):
+            return self.visitNodeDefault(node)
+        node.tagName += '_'+node.getAttribute('rel')
+        self.visitNode(node)
+       
+    def visitNode_link_author(self, node):
+        self.writer('\\author{%s}\n' % node.getAttribute('text'))
+
+    def visitNode_link_stylesheet(self, node):
+        if node.hasAttribute('type') and node.hasAttribute('href'):
+            if node.getAttribute('type')=='application/x-latex':
+                packagename=node.getAttribute('href')
+                packagebase,ext=os.path.splitext(packagename)
+                self.writer('\\usepackage{%s}\n' % packagebase)
+
+    start_html = r'''\documentclass[oneside]{book}
+\usepackage{graphicx}
+\usepackage{times,mathptmx}
+'''
+    
+    start_body = r'''\begin{document}
+\maketitle
+\tableofcontents
+'''
+
+    start_li=''
+    end_li=''
+    start_ul=''
+    end_ul=''
+
+
+    def visitNode_a(self, node):
+        if node.hasAttribute('class'):
+            a_class=node.getAttribute('class')
+            if a_class.endswith('listing'):
+                return self.visitNode_a_listing(node)
+            else:
+                return getattr(self, 'visitNode_a_%s' % a_class)(node)
+        if node.hasAttribute('href'):
+            return self.visitNode_a_href(node)
+        if node.hasAttribute('name'):
+            return self.visitNode_a_name(node)
+        self.visitNodeDefault(node)
+
+    def visitNode_a_chapter(self, node):
+        self.writer('\\chapter{')
+        self.visitNodeDefault(node)
+        self.writer('}\n')
+        
+    def visitNode_a_sect(self, node):
+        base,ext=os.path.splitext(node.getAttribute('href'))
+        self.writer('\\input{%s}\n' % base)
+        
+        
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement

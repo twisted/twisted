@@ -1,3 +1,8 @@
+2003-02-16  Cory Dodt  <corydodt@yahoo.com>
+    
+    * twisted/lore/{latex,default}.py: provide a --config book option 
+    to Lore, for producing book-level documents from an index page.
+
 2003-02-15  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/scripts/mktap.py, twisted/scripts/twistd.py: Added the
