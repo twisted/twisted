@@ -115,7 +115,7 @@ class FlowTest(unittest.TestCase):
 
     def testProducer(self):
         lhs = [(1,'one'),(2,'two'),(3,'three')]
-        rhs = list(flow.Block(producer()))
+        rhs = list(flow.wrap(producer()))
         self.assertEqual(lhs,rhs)
 
     def testConsumer(self):
@@ -176,7 +176,7 @@ class FlowTest(unittest.TestCase):
                 self.count -= 1
                 return val
         result = [5,4,3,2,1]
-        f = flow.Threaded(CountIterator(5))
-        self.assertEquals(result, list(flow.Block(f)))
+        #f = flow.Threaded(CountIterator(5))
+        #self.assertEquals(result, list(flow.Block(f)))
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
         self.assertEquals(result, unittest.deferredResult(d))

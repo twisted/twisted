@@ -131,6 +131,9 @@ class Stage(Instruction):
         self.stop   = 0
         self.result = None
     def __iter__(self):
+        """ if yield has not been called on the iterator, then block """
+        if not self._ready:
+            return Block(self)
         return self
     def isFailure(self):
         """ return a boolean value if the result is a Failure """ 
@@ -265,9 +268,9 @@ class Block(Stage):
         does not emit cooperate events.
     """
     def __init__(self, stage):
+        Stage.__init__(self)
         self._stage = wrap(stage)
     def __iter__(self):
-        self._stage = iter(self._stage)
         return self
     def next(self):
         """ fetch the next value from the Stage flow """
@@ -314,7 +317,7 @@ class Threaded(Stage):
     def _process(self):
         """ pull values from the iterable and add them to the buffer """
         try:
-            self._iterable = self._iterable.__iter__()
+            self._iterable = iter(self._iterable)
         except: 
             self._append(Failure())
         else:
@@ -356,7 +359,6 @@ class Deferred(defer.Deferred):
     def __init__(self, stage, failureAsResult = 0):
         """initialize a DeferredFlow
         @param stage:           a flow stage, iterator or generator
-        @param delay:           delay when scheduling reactor.callLater
         @param failureAsResult  if true, then failures will be added to 
                                 the result list provided to the callback,
                                 otherwise the first failure results in 
@@ -365,7 +367,7 @@ class Deferred(defer.Deferred):
         defer.Deferred.__init__(self)
         self.failureAsResult = failureAsResult
         self._results = []
-        self._stage = iter(wrap(stage))
+        self._stage = wrap(stage)
         from twisted.internet import reactor
         reactor.callLater(0, self._execute)
     def _execute(self):
