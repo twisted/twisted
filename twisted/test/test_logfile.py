@@ -146,6 +146,16 @@ class LogFileTestCase(unittest.TestCase):
         # change permissions so rotation would fail
         os.chmod(self.dir, 444)
 
+        # if this succeeds, chmod doesn't restrict us, so we can't
+        # do the test
+        try:
+            f = open(os.path.join(self.dir,"xxx"), "w")
+        except (OSError, IOError):
+            pass
+        else:
+            f.close()
+            return
+        
         log.rotate() # this should not fail
 
         log.write("def")
