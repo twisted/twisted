@@ -50,16 +50,14 @@ eventually arrives.  Looking at how this is usually implemented using Python's t
 
 <pre class="python">
 def someAsyncCall(callback,x):
-    # using threads, a blocking call can be changed into
-    # a non-blocking call, using a callback
+    # Using threads, a blocking call can be changed into
+    # a non-blocking call, using a callback.  Rather than
+    # dupliate this code, use twisted.threads.deferToThread
     from threading import Thread
     class BlockingThread(Thread):
-        def __init__(self, callback):
-            Thread.__init__(self)
-            self.callback = callback
-        def run(self,x):
-            self.callback(someBlockingCall(x))
-    BlockingThread(callback).run(x)
+        def run(self,callback,x):
+            callback(someBlockingCall(x))
+    BlockingThread().run(callback,x)
 
 class Getter:
     def getData(self, x, callback):
