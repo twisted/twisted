@@ -27,7 +27,7 @@ zone = [
     ),
 
     A('example-domain.com', '127.0.0.1'),
-    NS('ns1.example-domain.com', 'example-domain.com'),
+    NS('example-domain.com', 'ns1.example-domain.com'),
 
     CNAME('www.example-domain.com', 'example-domain.com'),
     CNAME('ftp.example-domain.com', 'example-domain.com'),
