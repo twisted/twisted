@@ -59,7 +59,7 @@ def getSession(request):
             return request.site.getSession(sessionCookie)
         except KeyError:
             pass
-    session = Session(request.site, request.site.mkuid()
+    session = Session(request.site, request.site.mkuid())
     site.setSession(session)
     request.addCookie(cookiename, session.uid, path='/')
     request.setComponent(ISession, session) # is this needed?
