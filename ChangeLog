@@ -1,5 +1,8 @@
 2002-12-06  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_internet.py: flush error to prevent failure
+	with non-destructive DeferredLists.
+
 	* twisted/test/test_ftp.py: flush FTPErrors to prevent failures
 	with non-destructive DeferredLists.
 
