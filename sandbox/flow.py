@@ -137,11 +137,22 @@ class Flow:
         the process is continued.  Communication from the producer 
         back to the consumer is done by yield of a non FlowItem
     """
-    def __init__(self, iterable):
+    def __init__(self, iterable, failureAsResult = 0 ):
+        """initialize a Flow
+        @param iterable:        top level iterator / generator
+        @param failureAsResult  if true, then failures will be added to 
+                                the result list provided to the callback,
+                                otherwise the first failure results in 
+                                the errback being called with the failure.
+        """
         self.results = []
         self._stack  = [Generator(iterable)]
+        self.failureAsResult = failureAsResult
     def _addResult(self, result):
         """ private called as top-level results are added"""
+        if not self.failureAsResult:
+            if isinstance(result, failure.Failure):
+                result.trap()
         self.results.append(result)
     def _execute(self):
         """ private execute, execute flow till a Cooperate is found """
@@ -166,17 +177,14 @@ class Flow:
                     else:
                         if self._addResult(result):
                             return
-    def execute(self, raiseFailure = 1):
+    def execute(self):
         """ continually execute, using sleep for Cooperate """
         from time import sleep
         while 1:
             timeout = self._execute()
             if timeout is None: break
             sleep(timeout)
-        if raiseFailure:
-            for result in self.results:
-                if isinstance(result, failure.Failure):
-                    result.trap()
+        return self.results
 
 from twisted.internet import defer
 class DeferredFlow(Flow, defer.Deferred):
@@ -189,7 +197,7 @@ class DeferredFlow(Flow, defer.Deferred):
         Since more than one (possibly failing) result could be returned,
         this uses the same semantics as DeferredList
     """
-    def __init__(self, iterable, delay = 0, failureAsResult = 0 ):
+    def __init__(self, iterable, failureAsResult = 0, delay = 0 ):
         """initialize a DeferredFlow
         @param iterable:        top level iterator / generator
         @param delay:           delay when scheduling reactor.callLater
@@ -200,8 +208,7 @@ class DeferredFlow(Flow, defer.Deferred):
         """
         from twisted.internet import reactor
         defer.Deferred.__init__(self)
-        Flow.__init__(self,iterable)
-        self.failureAsResult = failureAsResult
+        Flow.__init__(self,iterable,failureAsResult)
         reactor.callLater(delay, self._execute)
     def execute(self): 
         raise TypeError("Deferred Flow is auto-executing") 

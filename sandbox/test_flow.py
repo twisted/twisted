@@ -109,24 +109,24 @@ class badgen:
 
 class FlowTest(unittest.TestCase):
     def testBasic(self):
-        f = flow.Flow([1,2,3])
-        f.execute()
-        self.assertEqual([1,2,3],f.results)
+        lhs = [1,2,3]
+        rhs = flow.Flow([1,2,3]).execute()
+        self.assertEqual(lhs,rhs)
 
     def testProducer(self):
-        f = flow.Flow(producer())
-        f.execute() 
-        self.assertEqual([(1,'one'),(2,'two'),(3,'three')],f.results)
+        lhs = [(1,'one'),(2,'two'),(3,'three')]
+        rhs = flow.Flow(producer()).execute() 
+        self.assertEqual(lhs,rhs)
 
     def testConsumer(self):
-        f = flow.Flow(consumer())
-        f.execute() 
-        self.assertEqual(['Title',(1,'one'),(2,'two'),(3,'three')],f.results)
+        lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
+        rhs = flow.Flow(consumer()).execute() 
+        self.assertEqual(lhs,rhs)
 
     def testDeferred(self):
-        res = ['Title', (1,'one'),(2,'two'),(3,'three')]
+        lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
         d = flow.DeferredFlow(consumer())
-        self.assertEquals(unittest.deferredResult(d),res)
+        self.assertEquals(lhs, unittest.deferredResult(d))
 
     def testFailure(self):
         #
