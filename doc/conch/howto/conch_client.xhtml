@@ -230,9 +230,9 @@ localhost, port 22 (the standard port for ssh), and pass it an instance
 of <code class="API">twisted.internet.protocol.ClientFactory</code>.
 This instance has the attribute <code class="python">protocol</code>
 set to our earlier <code class="python">ClientTransport</code>
-class. Note that the protocol is set to the class <code
-class="python">ClientFactory</code>, not an instance of
-<code class="python">ClientFactory</code>! When the <code
+class. Note that the protocol attribute is set to the class <code
+class="python">ClientTransport</code>, not an instance of
+<code class="python">ClientTransport</code>! When the <code
 class="python">connectTCP</code> call completes, the protocol will be
 called to create a <code class="python">ClientTransport()</code> object
 - this then invokes all our previous work.</P>
