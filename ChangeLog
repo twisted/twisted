@@ -2,6 +2,8 @@
 
 	* .: Releasing Twisted 1.0.8alpha1.
 
+	* .: Releasing Twisted 1.0.8alpha2 (Fixed Debian packages).
+
 2003-09-13  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.7 (no code changes since 1.0.7rc1).
