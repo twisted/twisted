@@ -15,3 +15,14 @@ Troubleshooting:
   more than a small number of active connections.  Please do not report this as
   a bug in Twisted -- there is nothing we can do about it.  Feel free to report
   this as a bug to Microsoft.
+
+  Due to issues with the way Python and Twisted handle running processes on
+  Unix, the os.popen and related functions (e.g. the commands module) will
+  not run correctly. A workaround, which will break twisted.internet.process,
+  is to run:
+  
+      import signal
+      signal.signal(signal.SIGCHLD, signal.SIG_DFL )
+
+  This is fine as long as you are not using twisted.internet.process, which
+  is currently used in Twisted itself only for CGI support.
