@@ -466,6 +466,12 @@ class DelayedTestCase(unittest.TestCase):
             reactor.iterate(0.01)
         self.checkTimers()
 
+    def testActive(self):
+        dcall = reactor.callLater(0, lambda: None)
+        self.assertEquals(dcall.active(), True)
+        reactor.iterate()
+        self.assertEquals(dcall.active(), False)
+
 
 class Counter:
     index = 0
