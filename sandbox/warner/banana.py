@@ -5,7 +5,7 @@ from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, \
 from twisted.internet import protocol
 from twisted.python.failure import Failure
 
-import types
+import types, struct
 
 
 class BananaError(Exception):
@@ -21,27 +21,24 @@ def int2b128(integer, stream):
         integer = integer >> 7
 
 def b1282int(st):
-    oneHundredAndTwentyEight = 128l
+    oneHundredAndTwentyEight = 128
     i = 0
     place = 0
     for char in st:
         num = ord(char)
         i = i + (num * (oneHundredAndTwentyEight ** place))
         place = place + 1
-    if i <= 2147483647:
-        return int(i)
-    else:
-        return i
+    return i
 
 # delimiter characters.
-LIST     = chr(0x80)
+LIST     = chr(0x80) # old
 INT      = chr(0x81)
 STRING   = chr(0x82)
 NEG      = chr(0x83)
 FLOAT    = chr(0x84)
 # "optional" -- these might be refused by a low-level implementation.
-LONGINT  = chr(0x85)
-LONGNEG  = chr(0x86)
+LONGINT  = chr(0x85) # old
+LONGNEG  = chr(0x86) # old
 # really optional; this is is part of the 'pb' vocabulary
 VOCAB    = chr(0x87)
 # newbanana tokens
@@ -140,20 +137,13 @@ class Banana(protocol.Protocol):
 
     def sendToken(self, obj):
         write = self.transport.write
-        if isinstance(obj, types.IntType):
+        if isinstance(obj, types.IntType) or isinstance(obj, types.LongType):
             if obj >= 0:
                 int2b128(obj, write)
                 write(INT)
             else:
                 int2b128(-obj, write)
                 write(NEG)
-        elif isinstance(obj, types.LongType):
-            if obj >= 0l:
-                int2b128(obj, write)
-                write(LONGINT)
-            else:
-                int2b128(-obj, write)
-                write(LONGNEG)
         elif isinstance(obj, types.FloatType):
             write(FLOAT)
             write(struct.pack("!d", obj))
@@ -377,10 +367,12 @@ class Banana(protocol.Protocol):
                 header = b1282int(header)
                 gotItem(int(header))
             elif typebyte == LONGINT:
+                # OLD: remove this code
                 buffer = rest
                 header = b1282int(header)
                 gotItem(long(header))
             elif typebyte == LONGNEG:
+                # OLD: remove this code
                 buffer = rest
                 header = b1282int(header)
                 gotItem(-long(header))
