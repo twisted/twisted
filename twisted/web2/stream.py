@@ -406,6 +406,16 @@ def readAndDiscard(stream):
     """
     return readStream(stream, lambda _: None)
 
+def readIntoFile(stream, outFile):
+    """Read a stream and write it into a file.
+
+    Returns Deferred which will be triggered on finish.
+    """
+    def done(_):
+        outFile.close()
+        return _
+    return readStream(stream, outFile.write).addBoth(done)
+
 
 def fallbackSplit(stream, point):
     after = PostTruncaterStream(stream, point)
@@ -527,7 +537,7 @@ class PostTruncaterStream:
             truncater.close()
         elif self.sentInitialSegment:
             # We are trying to read, read up first half
-            readAndDiscard(self, truncater)
+            readAndDiscard(truncater)
         else:
             # Idle, store closed info.
             self.truncaterClosed = truncater
@@ -857,5 +867,5 @@ class BufferedStream(object):
 
 __all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream',
            'readAndDiscard', 'fallbackSplit', 'ProducerStream', 'StreamProducer',
-           'BufferedStream', 'readStream', 'ProcessStreamer']
+           'BufferedStream', 'readStream', 'ProcessStreamer', 'readIntoFile']
 
