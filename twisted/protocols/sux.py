@@ -539,7 +539,7 @@ class XMLParser(Protocol):
                     return "tagstart"
                 else:
                     self.erefextra += byte
-                    return 'bodydata'
+                    return 'spacebodydata'
             self._parseError("Bad entity reference")
         elif byte != ';':
             self.erefbuf += byte
@@ -548,9 +548,15 @@ class XMLParser(Protocol):
 
     def end_entityref(self):
         self.gotEntityReference(self.erefbuf)
-        if self.beExtremelyLenient and self.erefextra:
-            self.gotText(self.erefextra)
-            self.erefextra = None
+
+    # hacky support for space after & in entityref in beExtremelyLenient
+    # state should only happen in that case
+    def begin_spacebodydata(self, byte):
+        self.bodydata = self.erefextra
+        self.erefextra = None
+    do_spacebodydata = do_bodydata
+    end_spacebodydata = end_bodydata
+    
     # Sorta SAX-ish API
     
     def gotTagStart(self, name, attributes):

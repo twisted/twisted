@@ -359,6 +359,13 @@ alert("I hate you");
         self.failIf(d6.documentElement.hasAttribute('a'))
         self.assertEquals(d4.documentElement.toxml(), '<foo A="b">x</foo>')
         self.assertEquals(d5.documentElement.toxml(), '<foo a="b">x</foo>')
+    def testEatingWhitespace(self):
+        s = """<hello>
+        </hello>"""
+        d = microdom.parseString(s)
+        self.failUnless(not d.documentElement.hasChildNodes(),
+                        d.documentElement.childNodes)
+        self.failUnless(d.isEqualToDocument(microdom.parseString('<hello></hello>')))
 
     def testLenientAmpersand(self):
         prefix = "<?xml version='1.0'?>"
@@ -383,6 +390,8 @@ alert("I hate you");
         s = "<?xml version='1.0'?><p><q>smart</q> <code>HairDryer</code></p>"
         d = microdom.parseString(s, beExtremelyLenient=1)
         self.assertEquals(d.documentElement.toxml(), "<p><q>smart</q> <code>HairDryer</code></p>")
+
+    testSpacing.todo = "AAARGH white space swallowing screws this up"
     
     def testUnicodeTolerance(self):
         import struct

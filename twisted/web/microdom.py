@@ -695,9 +695,7 @@ class MicroDOMParser(XMLParser):
             self.documents.append(te)
 
     def gotText(self, data):
-        if not data.strip() and len(data) >= 1:
-            self._gotStandalone(Text, " ")
-        elif data.strip() or self.shouldPreserveSpace():
+        if data.strip() or self.shouldPreserveSpace():
             self._gotStandalone(Text, data)
 
     def gotComment(self, data):
