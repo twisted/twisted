@@ -1,0 +1,112 @@
+#compdef mktap
+
+local curcontext="$curcontext" state line ret=1 context subcmds ropt copt sfiles finalpath
+typeset -A opt_args
+#local context state subcmds ropt copt sfiles finalpath
+
+_third_party_tap_builders=()
+
+subcmds=(
+  "conch:A Conch SSH service" "cvsweb:CVS commit news on RSS and HTML"
+  "cvswords:CVS commit notification over chat services"
+  "dns:A Domain Name Server" "freshcvs:CVS commit tracking and notification"
+  "ftp:An FTP server" "inetd:An inetd(8) replacement" "mail:An email service"
+  "manhole:An interactive remote debugger service" "news:News Server"
+  "portforward:A simple port-forwarder" "socks:A SOCKSv4 proxy service"
+  "telnet:A simple, telnet-based remote debugging service"
+  "toc:An AIM TOC service" "web:A general-purpose web server"
+  "words:A chat service" $_third_party_tap_builders
+  )
+
+service=sccs
+
+if [[ $service = sccs ]]; then
+  _arguments -C -S -A "-*" \
+    '(--encrypted)-e[Encrypt file before writing]' \
+    '(-e)--encrypted[Encrypt file before writing]' \
+    '(--debug)-d[Show debug information for plugin loading]' \
+    '(-d)--debug[Show debug information for plugin loading]' \
+    '(--help)-h[Display verbose mktap help and exit]' \
+    '(-h)--help[Display verbose mktap help and exit]' \
+    '(--uid)-u[The uid to run as (default 1000)]:uid to run as: ' \
+    '(-u)--uid=[The uid to run as (default 1000)]:uid to run as: ' \
+    '(--gid)-g[The gid to run as (default 1000)]:gid to run as: ' \
+    '(-g)--gid=[The gid to run as (default 1000)]:gid to run as: ' \
+    '(--append)-a[An existing .tap file to append the plugin to]:.tap file to append to:_files -g "*.tap"' \
+    '(-a)--append=[An existing .tap file to append the plugin to]:.tap file to append to:_files -g "*.tap"' \
+    '(--type)-t[The output format to use (default pickle)]:output format:(pickle xml source)' \
+    '(-t)--type=[The output format to use (default pickle)]:output format:(pickle xml source)' \
+    '(--appname)-n[The process name to use for this application]:process name: ' \
+    '(-n)--appname=[The process name to use for this application]:process name: ' \
+    '--version[Print version information and exit]' \
+    '*::sub command:->subcmd' \
+    && return 0
+
+  if (( CURRENT == 1 )); then
+#    _wanted commands expl 'tap to build' compadd -a subcmds && ret=0
+    _describe "tap to build" subcmds && ret=0
+  fi
+  (( ret )) || return 0
+
+  service="$words[1]"
+  curcontext="${curcontext%:*}-$service:"
+fi
+
+case $service in
+  conch)
+    _arguments \
+      '(--interface)-i[Local interface to which we listen]:net interface:_net_interfaces' \
+      '(-i)--interface=[Local interface to which we listen]:net interface:_net_interfaces' \
+      '(--port)-p[Port on which to listen (default 5822)]:port: ' \
+      '(-p)--port=[Port on which to listen (default 5822)]:port: ' \
+      '(--data)-d[Directory to look for host keys in (default /etc)]:directory host keys are in:_directories' \
+      '(-d)--data=[Directory to look for host keys in (default /etc)]:directory host keys are in:_directories' \
+      '--moduli=[Directory to look for moduli in (if different from --data)]:moduli directory:_directories' \
+      '--help[Display command help and exit]'
+  ;;
+  cvsweb)
+    _arguments \
+      '--chost=[(default localhost)]:host: ' \
+      '--cport=[(default 7878)]:port: ' \
+      '--cuser=[(default web)]:username: ' \
+      '--cpass=[(default notifiee)]:password: ' \
+      '--cservice=[(default cvstoys.notify)]:service: ' \
+      '--webport=[(default 8241)]:port: ' \
+      '(--title)-t[(default Recent CVS Activity)]:title: ' \
+      '(-t)--title=[(default Recent CVS Activity)]:title: ' \
+      '(--description)-d[(no default)]:descr: ' \
+      '(-d)--description=[(no default)]:descr: ' \
+      '(--link)-l[(default http://twistedmatrix.com/)]:link: ' \
+      '(-l)--link=[(default http://twistedmatrix.com/)]:link: ' \
+      '--help[Display command help and exit]:: '
+  ;;
+  cvswords)
+    _arguments \
+      '(--config)-f[Configuration file]:config file:_files]' \
+      '(-f)--config=[Configuration file]:config file:_files]' \
+      '(--cvs-host)-H[FreshCVS host (default localhost)]:host: ' \
+      '(-H)--cvs-host=[FreshCVS host (default localhost)]:host: ' \
+      '(--cvs-port)-P[FreshCVS PB port (default 7878)]:port: ' \
+      '(-P)--cvs-port=[FreshCVS PB port (default 7878)]:port: ' \
+      '(--cvs-user)-U[FreshCVS username (default words)]:username: ' \
+      '(-U)--cvs-user=[FreshCVS username (default words)]:username: ' \
+      '(--cvs-pass)-W[FreshCVS password (default notifiee)]:password: ' \
+      '(-W)--cvs-pass=[FreshCVS password (default notifiee)]:password: ' \
+      '(--cvs-service)-S[FreshCVS service (default cvstoys.notify)]:service: ' \
+      '(-S)--cvs-service=[FreshCVS service (default cvstoys.notify)]:service: ' \
+      '--help[Display command help and exit]:: '
+  ;;
+  dns)
+    _arguments \
+      '(--cache)-c[Enable record caching]' \
+      '(-c)--cache[Enable record caching]' \
+      '(--recursive)-r[Perform recursive lookups]' \
+      '(-r)--recursive[Perform recursive lookups]' \
+      '(--iterative)-I[Perform lookups using the root servers]' \
+      '(-I)--iterative[Perform lookups using the root servers]' \
+      '(--verbose)-v[Increment verbosity level]' \
+      '(-v)--verbose[Increment verbosity level]' \
+  ;;
+  *) _message "don't know how to complete $service";;
+esac
+
