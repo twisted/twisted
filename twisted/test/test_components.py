@@ -1,0 +1,143 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""Test cases for Twisted component architecture."""
+
+from pyunit import unittest
+
+from twisted.python import components
+
+
+class IAdder(components.Interface):
+    """A sample interface that adds stuff."""
+    
+    def add(self, a, b):
+        """Returns the sub of a and b."""
+        raise NotImplementedError
+
+class ISub(IAdder):
+    """Sub-interface."""
+
+class IMultiply(components.Interface):
+    """Interface that multiplies stuff."""
+    
+    def multiply(self, a, b):
+        """Multiply two items."""
+        raise NotImplementedError
+
+
+class IntAdder:
+    """Class that implements IAdder interface."""
+    
+    __implements__ = [IAdder]
+    
+    def add(self, a, b):
+        return a + b
+
+class Sub:
+    """Class that implements ISub."""
+    
+    __implements__ = [ISub]
+    
+    def add(self, a, b):
+        return 3
+
+
+class IntMultiplyWithAdder:
+    """Multiply, using Adder object."""
+    
+    __implements__ = [IMultiply]
+    
+    def __init__(self, adder):
+        self.adder = adder
+    
+    def multiply(self, a, b):
+        result = 0
+        for i in range(a):
+            result = self.adder.add(result, b)
+        return result
+
+components.registerAdapter(IntMultiplyWithAdder, IntAdder, IMultiply)
+
+class MultiplyAndAdd:
+    """Multiply and add."""
+    
+    __implements__ = [IAdder, IMultiply]
+    
+    def add(self, a, b):
+        return a + b
+    
+    def multiply(self, a, b):
+        return a * b
+
+
+class InterfacesTestCase(unittest.TestCase):
+    """Test interfaces."""
+    
+    def testClasses(self):
+        self.assert_( components.classImplements(MultiplyAndAdd, IMultiply) )
+        self.assert_( components.classImplements(MultiplyAndAdd, IAdder) )
+        self.assert_( components.classImplements(Sub, IAdder) )
+        self.assert_( components.classImplements(Sub, ISub) )
+    
+    def testInstances(self):
+        o = MultiplyAndAdd()
+        self.assert_( components.implements(o, IMultiply) )
+        self.assert_( components.implements(o, IMultiply) )
+        
+        o = Sub()
+        self.assert_( components.implements(o, IAdder) )
+        self.assert_( components.implements(o, ISub) )
+    
+    def testOther(self):
+        self.assert_( not components.implements(3, ISub) )
+        self.assert_( not components.implements("foo", ISub) )
+
+
+class AdapterTestCase(unittest.TestCase):
+    """Test adapters."""
+    
+    def testNoAdapter(self):
+        o = Sub()
+        multiplier = components.getAdapter(o, IMultiply, None)
+        self.assertEquals(multiplier, None)
+    
+    def testSelfIsAdapter(self):
+        o = IntAdder()
+        adder = components.getAdapter(o, IAdder, None)
+        self.assert_( o is adder )
+    
+    def testGetAdapter(self):
+        o = IntAdder()
+        self.assertEquals(o.add(3, 4), 7)
+        
+        # get an object implementing IMultiply
+        multiplier = components.getAdapter(o, IMultiply, None)
+        
+        # check that it complies with the IMultiply interface
+        self.assertEquals(multiplier.multiply(3, 4), 12)
+
+    def testParentInterface(self):
+        o = Sub()
+        adder = components.getAdapter(o, IAdder, None)
+        self.assert_( o is adder )
+    
+    def testBadRegister(self):
+        # should fail because Sub doesn't implement IMultiply
+        self.assertRaises(ValueError, components.registerAdapter, Sub, MultiplyAndAdd, IMultiply)
+        
+        # should fail because we already registered an IMultiply adapter for IntAdder
+        self.assertRaises(ValueError, components.registerAdapter, IntMultiplyWithAdder, IntAdder, IMultiply)
