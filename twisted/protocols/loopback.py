@@ -18,6 +18,8 @@
 # These class's names should have been based on Onanism, but were
 # censored by the PSU
 
+"""Testing support for protocols -- loopback between client and server."""
+
 # system imports
 import tempfile
 
