@@ -29,6 +29,13 @@ def setNonBlocking(fd):
     fcntl.fcntl(fd, FCNTL.F_SETFL, flags)
 
 
+def setBlocking(fd):
+    """Make a fd blocking."""
+    flags = fcntl.fcntl(fd, FCNTL.F_GETFL)
+    flags = flags & ~os.O_NONBLOCK
+    fcntl.fcntl(fd, FCNTL.F_SETFL, flags)
+
+
 def readFromFD(fd, callback):
     """Read from fd, calling callback with resulting data.
 

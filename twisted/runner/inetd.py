@@ -15,7 +15,7 @@ correctly yet.
 
 import os
 
-from twisted.internet import process, reactor
+from twisted.internet import process, reactor, fdesc
 from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.protocols import wire
 
@@ -38,15 +38,23 @@ class InetdProtocol(Protocol):
         if self.factory.stderrFile:
             childFDs[2] = self.factory.stderrFile.fileno()
 
+        # processes run by inetd expect blocking sockets
+        # FIXME: maybe this should be done in process.py?  are other uses of
+        #        Process possibly affected by this?
+        fdesc.setBlocking(sockFD)
+        fdesc.setBlocking(childFDs[2])
+
         service = self.factory.service
         uid = service.user
         gid = service.group
+
         # don't tell Process to change our UID/GID if it's what we
         # already are
         if uid == os.getuid():
             uid = None
         if gid == os.getgid():
             gid = None
+
         process.Process(None, service.program, service.programArgs, os.environ,
                         None, None, uid, gid, childFDs)
 
