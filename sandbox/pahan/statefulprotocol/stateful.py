@@ -31,35 +31,37 @@ class StatefulProtocol(protocol.Protocol):
     state or None to keep same state. Initial state is returned by
     getInitialState (override it).
     """
+    _sful_data = None, None, 0
     _sful_state = None
     _sful_buffer = None
     _sful_offset = 0
 
     def makeConnection(self, transport):
         protocol.Protocol.makeConnection(self, transport)
-        self._sful_buffer = StringIO()
-        self._sful_state = self.getInitialState()
+        self._sful_data = self.getInitialState(), StringIO(), 0
 
     def getInitialState(self):
         raise NotImplementedError
 
     def dataReceived(self, data):
-        self._sful_buffer.seek(0, 2)
-        self._sful_buffer.write(data)
-        blen = self._sful_buffer.tell() # how many bytes total is in the buffer
-        self._sful_buffer.seek(self._sful_offset)
-        while blen - self._sful_offset >= self._sful_state[1]:
-            d = self._sful_buffer.read(self._sful_state[1])
-            self._sful_offset += self._sful_state[1]
-            next = self._sful_state[0](d)
+        state, buffer, offset = self._sful_data
+        buffer.seek(0, 2)
+        buffer.write(data)
+        blen = buffer.tell() # how many bytes total is in the buffer
+        buffer.seek(offset)
+        while blen - offset >= state[1]:
+            d = buffer.read(state[1])
+            offset += state[1]
+            next = state[0](d)
             if self.transport.disconnecting: # XXX: argh stupid hack borrowed right from LineReceiver
                 return # dataReceived won't be called again, so who cares about consistent state
             if next:
-                self._sful_state = next
-        if self._sful_offset != 0:
-            b = self._sful_buffer.read()
-            self._sful_buffer.reset()
-            self._sful_buffer.truncate()
-            self._sful_buffer.write(b)
-            self._sful_offset = 0
+                state = next
+        if offset != 0:
+            b = buffer.read()
+            buffer.reset()
+            buffer.truncate()
+            buffer.write(b)
+            offset = 0
+        self._sful_data = state, buffer, offset
 
