@@ -1018,7 +1018,7 @@ class SMTPClient(basic.LineReceiver):
         self.toAddressesResult = []
         self._from = None
         self.sendLine('RSET')
-        self._exected = SUCCESS
+        self._expected = SUCCESS
         self._okresponse = self.smtpState_from
      
     ##   
