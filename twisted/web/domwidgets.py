@@ -45,11 +45,20 @@ def _getModel(self):
     if not isinstance(self.model, mvc.Model): # see __class__.doc
          return self.model
 
+    if self.submodel is None:
+        if hasattr(self.node, 'toxml'):
+            nodeText = self.node.toxml()
+        else:
+            widgetDict = self.__dict__
+        return ""
+        raise NotImplementedError, "No model attribute was specified on the node."
     submodelList = self.submodel.split('/')
     currentModel = self.model
     for element in submodelList:
+        print "getModel", element, submodelList
         parentModel = currentModel
         currentModel = currentModel.getSubmodel(element)
+        print "got submodel", currentModel
         if currentModel is None:
             return None
         adapted = components.getAdapter(currentModel, mvc.IModel, None)
@@ -214,7 +223,8 @@ class Widget(mvc.View):
         pass
 
 class Text(Widget):
-    def __init__(self, text):
+    def __init__(self, text, raw=0):
+        self.raw = raw
         if isinstance(text, mvc.Model):
             Widget.__init__(self, text)
         else:
@@ -223,13 +233,19 @@ class Text(Widget):
     
     def generateDOM(self, request, node):
         if isinstance(self.text, mvc.Model):
-            textNode = document.createTextNode(str(self.getData()))
+            if self.raw:
+                textNode = domhelpers.RawText(str(self.getData()))
+            else:
+                textNode = document.createTextNode(str(self.getData()))
             if node is None:
                 return textNode
             node.appendChild(textNode)
             return node
-        else:            
-            return document.createTextNode(self.text)
+        else:
+            if self.raw:
+                return domhelpers.RawText(self.text)
+            else:
+                return document.createTextNode(self.text)
 
 
 class Image(Text):
@@ -319,7 +335,11 @@ class Anchor(Widget):
     def initialize(self):
         self.baseHREF = ''
         self.parameters = {}
+        self.raw = 0
     
+    def setRaw(self, raw):
+        self.raw = raw
+
     def setLink(self, href):
         self.baseHREF= href
     
@@ -332,9 +352,11 @@ class Anchor(Widget):
         if params:
             href = href + '?' + params
         self['href'] = href or self.getData() + '/'
-        node = Widget.generateDOM(self, request, node)
-        node.appendChild(document.createTextNode(str(self.getData())))
-        return node
+        data = self.getData()
+        if data is None:
+            data = ""
+        self.add(Text(data, self.raw))
+        return Widget.generateDOM(self, request, node)
 
 class List(Widget):
     """
@@ -363,19 +385,26 @@ class List(Widget):
         node = Widget.generateDOM(self, request, node)
         listHeader = domhelpers.getIfExists(node, 'listHeader')
         # xxx with this implementation all elements of the list must use the same view widget
-        listItem = domhelpers.get(node, 'listItem')
+        listItems = domhelpers.locateNodes(node, 'itemOf', self.submodel.split('/')[-1])
+        if not listItems:
+            listItems = [domhelpers.get(node, 'listItem')]
         domhelpers.clearNode(node)
         if not listHeader is None:
             node.appendChild(listHeader)
         submodel = self.submodel
         data = self.getData()
+        currentListItem = 0
         for itemNum in range(len(data)):
             # theory: by appending copies of the li node
             # each node will be handled once we exit from
             # here because handleNode will then recurse into
             # the newly appended nodes
             
-            newNode = listItem.cloneNode(1)
+            newNode = listItems[currentListItem].cloneNode(1)
+            if currentListItem >= len(listItems) - 1:
+                currentListItem = 0
+            else:
+                currentListItem += 1
             
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix', self.submodel)
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix', str(itemNum))
