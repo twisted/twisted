@@ -48,7 +48,7 @@ class SSHConnection(service.SSHService):
 
     def serviceStopped(self):
         for channel in self.channels.values():
-            self.channel.closed()
+            channel.closed()
 
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):

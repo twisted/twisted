@@ -37,7 +37,7 @@ from Crypto import Util
 from twisted.python import log
 
 # sibling imports
-import asn1, common
+import asn1, common, sexpy
 
 
 class BadKeyError(Exception):
@@ -49,8 +49,8 @@ class BadKeyError(Exception):
 
 def getPublicKeyString(filename = None, line = 0, data = ''):
     """
-    Return a public key string given a filename or data of an OpenSSH-style
-    public key.
+    Return a public key string given a filename or data of a public key.
+    Currently handles OpenSSH and LSH keys.
 
     @type filename: C{str}
     @type line:     C{int}
@@ -60,6 +60,29 @@ def getPublicKeyString(filename = None, line = 0, data = ''):
     if filename:
         lines = open(filename).readlines()
         data = lines[line]
+    if data[0] == '{': # lsh key
+        return getPublicKeyString_lsh(data)
+    elif data.startswith('ssh-'): # openssh key
+        return getPublicKeyString_openssh(data)
+    else:
+        raise BadKeyError('unknown type of key')
+
+def getPublicKeyString_lsh(data):
+    sexp = sexpy.parse(base64.decodestring(data[1:-1]))
+    assert sexp[0] == 'public-key'
+    kd = {}
+    for name, data in sexp[1][1:]:
+        kd[name] = common.NS(data)
+    if sexp[1][0] == 'dsa':
+        assert len(kd) == 4, len(kd)
+        return '\x00\x00\x00\x07ssh-dss' + kd['p'] + kd['q'] + kd['g'] + kd['y']
+    elif sexp[1][0] == 'rsa-pkcs1-sha1':
+        assert len(kd) == 2, len(kd)
+        return '\x00\x00\x00\x07ssh-rsa' + kd['e'] + kd['n']
+    else:
+        raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
+
+def getPublicKeyString_openssh(data):
     if data.count(' ') == 2:
         fileKind, fileData, desc = data.split()
     else:
@@ -68,15 +91,42 @@ def getPublicKeyString(filename = None, line = 0, data = ''):
     #        raise BadKeyError, 'key should be %s but instead is %s' % (kind, fileKind)
     return base64.decodestring(fileData)
 
-def makePublicKeyString(obj, comment = ''):
+def makePublicKeyString(obj, comment = '', kind = 'openssh'):
     """
-    Return an OpenSSH-style public key given a C{Crypto.PublicKey.pubkey.pubkey}
+    Return an public key given a C{Crypto.PublicKey.pubkey.pubkey}
     object.
+    kind is one of ('openssh', 'lsh')
 
     @type obj:      C{Crypto.PublicKey.pubkey.pubkey}
     @type comment:  C{str}
+    @type kind:     C{str}
     @rtype:         C{str}
     """
+
+    if kind == 'lsh':
+        return makePublicKeyString_lsh(obj) # no comment
+    elif kind == 'openssh':
+        return makePublicKeyString_openssh(obj, comment)
+    else:
+        raise BadKeyError('bad kind %s' % kind)
+
+def makePublicKeyString_lsh(obj):
+    keyType = objectType(obj)
+    if keyType == 'ssh-rsa':
+        keyData = sexpy.pack([['public-key', ['rsa-pkcs1-sha1',
+                            ['n', common.MP(obj.n)[4:]],
+                            ['e', common.MP(obj.e)[4:]]]]])
+    elif keyType == 'ssh-dss':
+        keyData = sexpy.pack([['public-key', ['dsa',
+                            ['p', common.MP(obj.p)[4:]],
+                            ['q', common.MP(obj.q)[4:]],
+                            ['g', common.MP(obj.g)[4:]],
+                            ['y', common.MP(obj.y)[4:]]]]])
+    else:
+        raise BadKeyError('bad keyType %s' % keyType)
+    return '{' + base64.encodestring(keyData).replace('\n','') + '}'
+
+def makePublicKeyString_openssh(obj, comment):
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
         keyData = common.MP(obj.e) + common.MP(obj.n)
@@ -89,25 +139,15 @@ def makePublicKeyString(obj, comment = ''):
     return '%s %s %s' % (keyType, b64Data, comment)
         
 
-def getPublicKeyObject(filename = None, line = 0, data = '', b64data = ''):
+def getPublicKeyObject(data):
     """
-    Return a C{Crypto.PublicKey.pubkey.pubkey} object corresponding to the
-    filename/public key data/OpenSSH public key data.
+    Return a C{Crypto.PublicKey.pubkey.pubkey) corresponding to the SSHv2
+    public key data.  data is in the over-the-wire public key format.
 
-    @type filename: C{str}
-    @type line:     C{int}
     @type data:     C{str}
-    @type b64data:  C{str}
     @rtype:         C{Crypto.PublicKey.pubkey.pubkey}  
     """
-    # b64data is the kind of data we'd get from reading a key file
-    if data:
-        publicKey = data
-    elif b64data:
-        publicKey = getPublicKeyString(data = b64data)
-    else:
-        publicKey = getPublicKeyString(filename, line)
-    keyKind, rest = common.getNS(publicKey)
+    keyKind, rest = common.getNS(data)
     if keyKind == 'ssh-rsa':
         e, rest = common.getMP(rest)
         n, rest = common.getMP(rest)
@@ -118,6 +158,8 @@ def getPublicKeyObject(filename = None, line = 0, data = '', b64data = ''):
         g, rest = common.getMP(rest)
         y, rest = common.getMP(rest)
         return DSA.construct((y, g, p, q))
+    else:
+        raise BadKeyError('unknown key type %s' % keyKind)
 
 def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
     """
@@ -134,6 +176,31 @@ def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
         data = open(filename).readlines()
     else:
         data = [x+'\n' for x in data.split('\n')]
+    if data[0][0] == '(': # lsh key
+        return getPrivateKeyObject_lsh(data, passphrase)
+    elif data[0].startswith('-----'): # openssh key
+        return getPrivateKeyObject_openssh(data, passphrase)
+    else:
+        raise BadKeyError('unknown private key type')
+
+def getPrivateKeyObject_lsh(data, passphrase):
+    #assert passphrase == ''
+    data = ''.join(data)
+    sexp = sexpy.parse(data)
+    assert sexp[0] == 'private-key'
+    kd = {}
+    for name, data in sexp[1][1:]:
+        kd[name] = common.getMP(common.NS(data))[0]
+    if sexp[1][0] == 'dsa':
+        assert len(kd) == 5, len(kd)
+        return DSA.construct((kd['y'], kd['g'], kd['p'], kd['q'], kd['x']))
+    elif sexp[1][0] == 'rsa-pkcs1':
+        assert len(kd) == 8, len(kd)
+        return RSA.construct((kd['n'], kd['e'], kd['d'], kd['p'], kd['q']))
+    else:
+        raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
+
+def getPrivateKeyObject_openssh(data, passphrase):
     kind = data[0][11: 14]
     if data[1].startswith('Proc-Type: 4,ENCRYPTED'): # encrypted key
         ivdata = data[2].split(',')[1][:-1]
@@ -161,16 +228,49 @@ def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
         p, q, g, y, x = decodedKey[1: 6]
         return DSA.construct((y, g, p, q, x))
 
-def makePrivateKeyString(obj, passphrase = None):
+def makePrivateKeyString(obj, passphrase = None, kind = 'openssh'):
     """
     Return an OpenSSH-style private key for a
     C{Crypto.PublicKey.pubkey.pubkey} object.  If passphrase is given, encrypt
     the private key with it.
+    kind is one of ('openssh', 'lsh')
 
     @type obj:          C{Crypto.PublicKey.pubkey.pubkey}
     @type passphrase:   C{str}/C{None}
+    @type kind:         C{str}
     @rtype:             C{str}
     """
+    if kind == 'lsh':
+        return makePrivateKeyString_lsh(obj, passphrase)
+    elif kind == 'openssh':
+        return makePrivateKeyString_openssh(obj, passphrase)
+    else:
+        raise BadKeyError('bad kind %s' % kind)
+
+def makePrivateKeyString_lsh(obj, passphrase):
+    #assert not passphrase
+    keyType = objectType(obj)
+    if keyType == 'ssh-rsa':
+        return sexpy.pack([['private-key', ['rsa-pkcs1',
+                        ['n', common.MP(obj.n)[4:]],
+                        ['e', common.MP(obj.e)[4:]],
+                        ['d', common.MP(obj.d)[4:]],
+                        ['p', common.MP(obj.p)[4:]],
+                        ['q', common.MP(obj.q)[4:]],
+                        ['a', common.MP(obj.d%(obj.p-1))[4:]],
+                        ['b', common.MP(obj.d%(obj.q-1))[4:]],
+                        ['c', common.MP(Util.number.inverse(obj.q, obj.p))[4:]]]]])
+    elif keyType == 'ssh-dss':
+        return sexpy.pack([['private-key', ['dsa',
+                        ['p', common.MP(obj.p)[4:]],
+                        ['q', common.MP(obj.q)[4:]],
+                        ['g', common.MP(obj.g)[4:]],
+                        ['y', common.MP(obj.y)[4:]],
+                        ['x', common.MP(obj.x)[4:]]]]])
+    else:
+        raise BadKeyError('bad keyType %s' % keyType)
+
+def makePrivateKeyString_openssh(obj, passphrase):
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
         keyData = '-----BEGIN RSA PRIVATE KEY-----\n'
