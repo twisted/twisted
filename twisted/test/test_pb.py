@@ -557,16 +557,16 @@ class DisconnectionTestCase(unittest.TestCase):
         c.dontNotifyOnDisconnect(self.error)
         self.assert_(not (self.error in c.disconnects))
         
-        r.local_notifyOnDisconnect(self.error)
+        r.notifyOnDisconnect(self.error)
         self.assert_(r._disconnected in c.disconnects)
         self.assert_(self.error in r.disconnectCallbacks)
-        r.local_dontNotifyOnDisconnect(self.error)
+        r.dontNotifyOnDisconnect(self.error)
         self.assert_(not (r._disconnected in c.disconnects))
         self.assert_(not (self.error in r.disconnectCallbacks))
         
         # register disconnect callbacks
         c.notifyOnDisconnect(self.gotDisconnected)
-        r.local_notifyOnDisconnect(self.objectDisconnected)
+        r.notifyOnDisconnect(self.objectDisconnected)
         self.remoteObject = r
         
         # disconnect

@@ -230,12 +230,10 @@ class RemoteReference(Serializable, styles.Ephemeral):
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
 
-    All attributes besides '__double_underscored__' attributes and
-    attributes beginning with 'local_' are RemoteMethod instances;
-    these act like methods which return Deferreds.
-
-    Methods beginning with 'local_' are methods that run locally on
-    the instance.
+    All attributes besides '__double_underscored__' are RemoteMethod
+    instances; these act like methods which return Deferreds. However,
+    this method of calling remote methods is deprecated - use callRemote
+    instead.
 
     See also twisted.python.defer.
     """
@@ -252,7 +250,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
         self.perspective = perspective
         self.disconnectCallbacks = []
 
-    def local_notifyOnDisconnect(self, callback):
+    def notifyOnDisconnect(self, callback):
         """Register a callback to be called if our broker gets disconnected.
 
         This callback will be called with one method, this instance.
@@ -262,7 +260,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
         if len(self.disconnectCallbacks):
             self.broker.notifyOnDisconnect(self._disconnected)
 
-    def local_dontNotifyOnDisconnect(self, callback):
+    def dontNotifyOnDisconnect(self, callback):
         """Register a callback to be called if our broker gets disconnected."""
         self.disconnectCallbacks.remove(callback)
         if not self.disconnectCallbacks:
@@ -288,7 +286,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def __getattr__(self, key):
         """(Deprecated) Return a RemoteMethod.
         """
-        if (key[:2]=='__' and key[-2:]=='__') or key[:6] == 'local_':
+        if (key[:2]=='__' and key[-2:]=='__'):
             raise AttributeError(key)
         file, lineno, func, nne = traceback.extract_stack()[-2] # caller
         log.msg("%s:%s %s calls obsolete 'transparent' RemoteMethod %s" % (file, lineno, func, key))
