@@ -263,7 +263,7 @@ class CheckOut(Transaction):
             sh('mv Twisted %s' % tmp) #hrm...
 
         
-        sh('cvs -d %s co Twisted' % (cvsroot))
+        sh('cvs -z6 -d %s co Twisted' % (cvsroot))
         sh('mv Twisted %s' % target)
         
         if tmp:
