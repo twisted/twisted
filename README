@@ -131,6 +131,10 @@ Basic Servers
 
     % im
 
+  There is also a GTK+ based client::
+  
+    % t-im
+
   A AOL Instant Messenger TOC Server is also available::
 
     % mktap toc -p 5190
@@ -172,11 +176,6 @@ Running Servers
   multiple resources running with different permissions on the same machine, on
   different local machines, or even over the internet to a remote site.
 
-Additional Servers & Services
-
-  If you are interested in twisted.reality, please see
-  http://twistedmatrix.com/reality.epy.  You'll need a map.
-
 Documentation and Support
 
   Although this is far from enough, some examples on how to use basic Twisted
@@ -185,9 +184,11 @@ Documentation and Support
 
   As of this release, I realize that Twisted's documentation is rather sparse.
   I encourage you to read the source code and docstrings, but if you're curious
-  as to what Twisted can do, please feel free to drop me an email at
-  glyph@twistedmatrix.com, or to join #python on irc.openprojects.net for some
-  live help.
+  as to what Twisted can do, please feel free to join the mailing list:
+
+    http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
+  
+  or to join #python on irc.openprojects.net for some live help.
 
   Part of the problem with documentation on a project like this is that
   everything seems obvious to me :-).  If you have trouble with a particular
