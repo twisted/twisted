@@ -16,7 +16,7 @@
 # 
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error
+from twisted.internet import protocol, reactor, error, defer
 from twisted.python import failure
 
 
@@ -69,15 +69,17 @@ class UDPTestCase(unittest.TestCase):
         self.assertEquals(server.stopped, 0)
         self.assertEquals(client.stopped, 0)
 
-        port1.stopListening()
-        port2.stopListening()
+        l = []
+        defer.maybeDeferred(port1.stopListening).addCallback(l.append)
+        defer.maybeDeferred(port2.stopListening).addCallback(l.append)
 
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(server.stopped, 1)
         self.assertEquals(client.stopped, 1)
-
+        self.assertEquals(len(l), 2)
+    
     def testDNSFailure(self):
         client = Client()
         # if this domain exists, shoot your sysadmin
