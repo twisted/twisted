@@ -130,7 +130,7 @@ def generateToC(document):
 
 def putInToC(document, toc):
     tocOrig = domhelpers.findElementsWithAttribute(document, 'class', 'toc')
-    if toc:
+    if tocOrig:
         tocOrig= tocOrig[0]
         tocOrig.childNodes = [toc]
 
