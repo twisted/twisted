@@ -478,7 +478,7 @@ class _StdioMixin(_BaseMixin, SignalMixin):
         exe = sys.executable
         module = stdio.__file__
         args = ["python2.3", module, reflect.qual(self.serverProtocol)]
-        env = {"PYTHONPATH": os.pathsep.join(("..", os.environ.get("PYTHONPATH", "")))}
+        env = {"PYTHONPATH": os.pathsep.join(sys.path)}
 
         from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
