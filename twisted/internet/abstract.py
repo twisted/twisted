@@ -35,6 +35,8 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     disconnecting = 0
     dataBuffer = ""
     offset = 0
+    
+    MAX_OFFSET = 1024 * 16
 
     implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
                interfaces.IConsumer, interfaces.ITransport)
@@ -83,7 +85,11 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         there; a result of 0 implies no write was done, and a result of None
         indicates that a write was done.
         """
-        self.dataBuffer += "".join(self._tempDataBuffer)
+        if self.offset > self.MAX_OFFSET:
+            self.dataBuffer = buffer(self.dataBuffer, self.offset) + "".join(self._tempDataBuffer)
+            self.offset = 0
+        else:
+            self.dataBuffer += "".join(self._tempDataBuffer)
         self._tempDataBuffer = []
         self._tempDataLen = 0
         # Send as much data as you can.
