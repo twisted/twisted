@@ -661,6 +661,7 @@ class MSNNotificationClient(MSNEventBase):
         elif syn and (params[1] == 'RL' and params[3] == params[4]): # end of SYN reply
             newList = self._createListFromPending(self._pendingLists[id])
             newList.groups = self._pendingGroups
+            newList.version = int(params[2])
             state = self._pendingState
             self._pendingState = {}
             self._pendingGroups = {}
