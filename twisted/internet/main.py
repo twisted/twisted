@@ -43,11 +43,11 @@ class Application(log.Logger):
             del dict['running']
         return dict
 
-    def listenOn(self, port, factory):
+    def listenOn(self, port, factory, backlog=5):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         """
-        self.addPort(tcp.Port(port, factory))
+        self.addPort(tcp.Port(port, factory, backlog))
 
     def addPort(self, port):
         """
@@ -109,13 +109,14 @@ class Application(log.Logger):
     def logPrefix(self):
         return self.name+" application"
 
-    def run(self):
+    def run(self, save=1):
         """Run this application, running the main loop if necessary.
         """
         if not self.running:
             threadable.dispatcher.own(self)
             delayeds.extend(self.delayeds)
-            shutdowns.append(self.shutDownSave)
+            if save:
+                shutdowns.append(self.shutDownSave)
             for port in self.ports:
                 try:
                     port.startListening()
@@ -441,3 +442,16 @@ if threadable.threaded:
 
 # Sibling Import
 import process
+
+def daemonize(logFile):
+    if os.fork():
+        os._exit(0)
+    os.setsid()
+    os.close(0)
+    os.close(1)
+    os.close(2)
+    if os.fork():
+        os._exit(0)
+    os.umask(0)
+    logFile = open(logFile, 'ab+')
+    log.startLogging(logFile)
