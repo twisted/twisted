@@ -134,12 +134,15 @@ def handleToSocket(handle, addressFamily, socketType):
 READ = 1
 WRITE = 2
 def socketInMyPocket(skt, instance, attribute, mode):
+    print 'Socketing', instance
     setattr(instance, attribute, skt)
     instance.fileno = skt.fileno
     if mode & READ:
+        print 'Reading', instance
         instance.startReading()
     if mode & WRITE:
         instance.startWriting()
+        print 'Writing', instance
 
 class _DummyClass:
     pass
@@ -162,7 +165,7 @@ class FileDescriptorUnjellier:
         addressFamily = getattr(klass, 'addressFamily', socket.AF_INET)
         socketType = getattr(klass, 'socketType', socket.SOCK_STREAM)
 
-        handleToSocket(fdproto.fds.pop(0), addressFamily, socketType,
+        handleToSocket(fdproto.fds.pop(), addressFamily, socketType,
             ).addCallback(socketInMyPocket, inst, 'socket', self.mode
             ).addErrback(log.err
             )
