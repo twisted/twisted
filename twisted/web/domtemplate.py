@@ -72,6 +72,8 @@ from cStringIO import StringIO
 import string, os, stat, types
 from xml.dom import minidom
 
+from twisted.python import components
+from twisted.web import resource
 from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
 from twisted.web import domwidgets
@@ -79,6 +81,7 @@ from twisted.python.defer import Deferred
 from twisted.python import failure
 from twisted.internet import reactor
 from twisted.python.mvc import View, IView, Controller
+from twisted.python import mvc
 from twisted.python import log
 
 from server import NOT_DONE_YET
@@ -142,6 +145,7 @@ class DOMTemplate(Resource, View):
     templateFile = ''
     template = ''
     _cachedTemplate = None
+    __implements__ = (Resource.__implements__, View.__implements__)
 
     def __init__(self, model = None):
         Resource.__init__(self)
@@ -313,7 +317,8 @@ class DOMTemplate(Resource, View):
         return newnode
     
     def handleNode(self, request, node):
-        if not hasattr(node, 'getAttribute'): return node
+        if not hasattr(node, 'getAttribute'): # text node?
+            return node
         if node.nodeName and node.nodeName[0] == '#': return node
         
         controllerName = node.getAttribute('controller')
@@ -354,8 +359,9 @@ class DOMTemplate(Resource, View):
         # the view may be a deferred; this is why this check is required
         if hasattr(view, 'setController'):
             view.setController(controller)
-            view.setId(id)
             view.setNode(node)
+            if id:
+                view.setId(id)
         
         success, data = controller.handle(request)
         if success is not None:
@@ -407,3 +413,20 @@ class DOMTemplate(Resource, View):
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
+
+class DOMController(mvc.Controller, Resource):
+    """
+    A simple controller that automatically passes responsibility on to the view
+    class registered for the model. You can override render to perform
+    more advanced template lookup logic.
+    """
+    __implements__ = (mvc.Controller.__implements__, resource.IResource)
+    
+    def __init__(self, *args, **kwargs):
+        mvc.Controller.__init__(self, *args, **kwargs)
+        Resource.__init__(self)
+    
+    def render(self, request):
+        self.view = components.getAdapter(self.model, mvc.IView, None)
+        self.view.setController(self)
+        return self.view.render(request)

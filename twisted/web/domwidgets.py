@@ -11,7 +11,7 @@ DOMWidgets are views which can be composed into bigger views.
 """
 
 class Widget(View):
-    tagName = 'span'
+    tagName = None
     def __init__(self, model):
         self.attributes = {}
         View.__init__(self, model)
@@ -119,6 +119,19 @@ class Text(Widget):
         else:            
             return document.createTextNode(self.text)
 
+
+class Image(Text):
+    tagName = 'img'
+    def generateDOM(self, request, node):
+        if isinstance(self.text, Model):
+            data = self.getData()
+        else:
+            data = self.text
+        node = Widget.generateDOM(self, request, node)
+        node.setAttribute('src', data)
+        return node
+
+
 class Error(Widget):
     def __init__(self, model, message=""):
         Widget.__init__(self, model)
@@ -131,6 +144,9 @@ class Error(Widget):
 
 class Div(Widget):
     tagName = 'div'
+
+class Span(Widget):
+    tagName = 'span'
 
 class Input(Widget):
     tagName = 'input'    
