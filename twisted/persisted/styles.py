@@ -206,7 +206,7 @@ class Versioned:
         bases.append(self.__class__) # don't forget me!!
         for base in bases:
             if base.__dict__.has_key('persistenceVersion'):
-                dct['%s.persistenceVersion' % str(base)] = base.persistenceVersion
+                dct['%s.persistenceVersion' % reflect.qual(base)] = base.persistenceVersion
         return dct
 
     def versionUpgrade(self):
@@ -239,14 +239,14 @@ class Versioned:
                     highestBase = base
                     highestVersion = base.persistenceVersion
             if highestBase:
-                self.__dict__['%s.persistenceVersion' % str(highestBase)] = pver
+                self.__dict__['%s.persistenceVersion' % reflect.qual(highestBase)] = pver
         for base in bases:
             # ugly hack, but it's what the user expects, really
             if (Versioned not in base.__bases__ and
                 not base.__dict__.has_key('persistenceVersion')):
                 continue
             currentVers = base.persistenceVersion
-            pverName = '%s.persistenceVersion' % str(base)
+            pverName = '%s.persistenceVersion' % reflect.qual(base)
             persistVers = (self.__dict__.get(pverName) or 0)
             if persistVers:
                 del self.__dict__[pverName]

@@ -17,7 +17,7 @@
 
 # Twisted Imports
 from twisted.internet import defer
-from twisted.python.reflect import Accessor
+from twisted.python.reflect import Accessor, qual
 
 # Sibling Imports
 from twisted.cred import identity, error
@@ -74,7 +74,7 @@ class Authorizer(Accessor):
         Note that this is asynchronous specifically to provide support
         for authenticating users from a database.
         """
-        raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
+        raise NotImplementedError("%s.getIdentityRequest"%qual(self.__class__))
 
     def getServiceNamed(self, name):
         return self.serviceCollection.getServiceNamed(name)

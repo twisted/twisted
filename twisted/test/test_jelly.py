@@ -57,6 +57,15 @@ class SimpleJellyTest:
     def isTheSameAs(self, other):
         return self.__dict__ == other.__dict__
 
+try:
+    object
+    haveObject = 0 # 1 # more work to be done before this really works
+except:
+    haveObject = 0
+else:
+    class NewStyle(object):
+        pass
+
 
 class JellyTestCase(unittest.TestCase):
     """
@@ -71,6 +80,17 @@ class JellyTestCase(unittest.TestCase):
         im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
         self.assertEquals(im_.im_class, im_.im_self.__class__)
 
+    if haveObject:
+        def testNewStyle(self):
+            n = NewStyle()
+            n.x = 1
+            n2 = NewStyle()
+            n.n2 = n2
+            n.n3 = n2
+            c = jelly.jelly(n)
+            m = jelly.unjelly(c)
+            assert isinstance(m, NewStyle)
+            assert m.n2 is m.n3
 
     def testSimple(self):
         """

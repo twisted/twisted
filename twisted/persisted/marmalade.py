@@ -25,7 +25,7 @@ identical.
 
 """
 
-from twisted.python.reflect import namedModule, namedClass, namedObject, fullFuncName
+from twisted.python.reflect import namedModule, namedClass, namedObject, fullFuncName, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference, _Defer
 
 try:
@@ -123,6 +123,10 @@ class DOMUnjellier:
         if node.tagName.lower() == "none":
             retval = None
         elif node.tagName == "string":
+            # XXX FIXME this is obviously insecure
+            # if you doubt:
+            # >>> unjellyFromXML('''<string value="h&quot;+str(__import__(&quot;sys&quot;))+&quot;i" />''')
+            # "h<module 'sys' (built-in)>i"
             retval = str(eval('"%s"' % node.getAttribute("value")))
         elif node.tagName == "int":
             retval = int(node.getAttribute("value"))
@@ -273,7 +277,7 @@ class DOMJellier:
         elif objType is types.MethodType:
             node = self.document.createElement("method")
             node.setAttribute("name", obj.im_func.__name__)
-            node.setAttribute("class", str(obj.im_class))
+            node.setAttribute("class", qual(obj.im_class))
             # TODO: make methods 'prefer' not to jelly the object internally,
             # so that the object will show up where it's referenced first NOT
             # by a method.
@@ -283,7 +287,7 @@ class DOMJellier:
             node.setAttribute("name", obj.__name__)
         elif objType is types.ClassType:
             node = self.document.createElement("class")
-            node.setAttribute("name", str(obj))
+            node.setAttribute("name", qual(obj))
         elif objType is types.UnicodeType:
             node = self.document.createElement("unicode")
             obj = obj.encode('raw_unicode_escape')
@@ -329,7 +333,7 @@ class DOMJellier:
                     node.appendChild(n)
                     node.appendChild(n2)
             elif objType is types.InstanceType:
-                className = str(obj.__class__)
+                className = qual(obj.__class__)
                 node.tagName = "instance"
                 node.setAttribute("class", className)
                 if isinstance(obj, DOMJellyable):

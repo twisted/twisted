@@ -73,7 +73,7 @@ class Request(pb.RemoteCopy, server.Request):
         log.msg(str(failure))
 
 
-pb.setCopierForClass(str(server.Request), Request)
+pb.setCopierForClass(server.Request, Request)
 
 class Issue:
     def __init__(self, request):

@@ -19,7 +19,7 @@
 
 # System imports
 import types
-
+from twisted.python import reflect
 
 class NotSupportedError(NotImplementedError):
     """
@@ -41,12 +41,12 @@ class Request:
     def write(self, data):
         """Add some data to the response to this request.
         """
-        raise NotImplementedError("%s.write" % str(self.__class__))
+        raise NotImplementedError("%s.write" % reflect.qual(self.__class__))
 
     def finish(self):
         """The response to this request is finished; flush all data to the network stream.
         """
-        raise NotImplementedError("%s.finish" % str(self.__class__))
+        raise NotImplementedError("%s.finish" % reflect.qual(self.__class__))
 
 
 class Entity:
@@ -64,7 +64,7 @@ class Entity:
         I produce a stream of bytes for the request, by calling request.write()
         and request.finish().
         """
-        raise NotImplementedError("%s.render" % str(self.__class__))
+        raise NotImplementedError("%s.render" % reflect.qual(self.__class__))
 
 
 class Collection:
@@ -128,12 +128,12 @@ class Collection:
     def storeEntity(self, name, request):
         """Store an entity for 'name', based on the content of 'request'.
         """
-        raise NotSupportedError("%s.storeEntity" % str(self.__class__))
+        raise NotSupportedError("%s.storeEntity" % reflect.qual(self.__class__))
 
     def removeEntity(self, name, request):
         """Remove an entity for 'name', based on the content of 'request'.
         """
-        raise NotSupportedError("%s.removeEntity" % str(self.__class__))
+        raise NotSupportedError("%s.removeEntity" % reflect.qual(self.__class__))
 
     def listStaticEntities(self):
         """Retrieve a list of all name, entity pairs that I store references to.

@@ -412,7 +412,7 @@ class CopiedFailure(RemoteCopy, failure.Failure):
     printBriefTraceback = printTraceback
     printDetailedTraceback = printTraceback
 
-setUnjellyableForClass(str(CopyableFailure), CopiedFailure)
+setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 def failure2Copyable(fail):
     f = CopyableFailure()

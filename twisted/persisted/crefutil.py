@@ -79,7 +79,7 @@ class _InstanceMethod(NotKnown):
 
     def __call__(self, *args, **kw):
         import traceback
-        log.msg('instance method %s.%s' % (str(self.my_class), self.name))
+        log.msg('instance method %s.%s' % (qual(self.my_class), self.name))
         log.msg('being called with %r %r' % (args, kw))
         traceback.print_stack(file=log.logfile)
         assert 0

@@ -490,7 +490,7 @@ class AOTJellier:
             retval = Module(obj.__name__)
             
         elif objType is types.ClassType:
-            retval = Class(str(obj))
+            retval = Class(reflect.qual(obj))
             
         elif objType is types.FunctionType:
             retval = Function(reflect.fullFuncName(obj))
@@ -538,7 +538,7 @@ class AOTJellier:
                     state = self.jellyToAO(obj.__getstate__())
                 else:
                     state = self.jellyToAO(obj.__dict__)
-                retval.setObj(Instance(str(obj.__class__), state))
+                retval.setObj(Instance(reflect.qual(obj.__class__), state))
 
             elif copy_reg.dispatch_table.has_key(objType):
                 unpickleFunc, state = copy_reg.dispatch_table[objType](obj)

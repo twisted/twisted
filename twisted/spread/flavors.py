@@ -33,7 +33,7 @@ hopefully encompass all forms of remote access which can emulate subsets of PB
 import types
 
 # twisted imports
-from twisted.python import log
+from twisted.python import log, reflect
 
 # sibling imports
 from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
@@ -264,7 +264,7 @@ class Copyable(Serializable):
         you may override this to change it.
         """
 
-        return str(self.__class__)
+        return reflect.qual(self.__class__)
 
     def getTypeToCopyFor(self, perspective):
         """Determine what type tag to send for me.

@@ -193,12 +193,12 @@ class Augmentation:
     def operationDone(self, done):
         """Default callback for database operation success.
         """
-        log.msg("%s Operation Done: %s" % (str(self.__class__), done))
+        log.msg("%s Operation Done: %s" % (reflect.qual(self.__class__), done))
 
     def operationError(self, error):
         """Default callback for database operation failure.
         """
-        log.msg("%s Operation Failed: %s" % (str(self.__class__), error))
+        log.msg("%s Operation Failed: %s" % (reflect.qual(self.__class__), error))
         log.err(error)
 
     schema = ''' Insert your SQL database schema here. '''
@@ -207,10 +207,10 @@ class Augmentation:
         return self.runOperation(self.schema).addCallbacks(self.schemaCreated, self.schemaNotCreated)
 
     def schemaCreated(self, result):
-        log.msg("Successfully created schema for %s." % str(self.__class__))
+        log.msg("Successfully created schema for %s." % reflect.qual(self.__class__))
 
     def schemaNotCreated(self, error):
-        log.msg("Schema already exists for %s." % str(self.__class__))
+        log.msg("Schema already exists for %s." % reflect.qual(self.__class__))
 
     def runQuery(self, *args, **kw):
         d = defer.Deferred()

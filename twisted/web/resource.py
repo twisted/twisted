@@ -20,7 +20,7 @@
 
 # System Imports
 from twisted.spread.refpath import PathReferenceAcquisitionContext
-from twisted.python import roots, components
+from twisted.python import roots, components, reflect
 from twisted.coil import coil
 
 from copy import copy
@@ -152,7 +152,7 @@ class Resource(coil.ConfigCollection):
         this class's responsability to write the results to
         request.write(data), then call request.finish().
         """
-        raise NotImplementedError("%s called" % str(self.__class__.__name__))
+        raise NotImplementedError("%s.render called" % reflect.qual(self.__class__.__name__))
 
 
 #t.w imports

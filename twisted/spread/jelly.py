@@ -84,7 +84,7 @@ from new import instancemethod
 
 
 # Twisted Imports
-from twisted.python.reflect import namedObject, namedModule
+from twisted.python.reflect import namedObject, namedModule, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
 from twisted.python import runtime
 
@@ -121,6 +121,17 @@ unpersistable_atom = "unpersistable"# u
 unjellyableRegistry = {}
 unjellyableFactoryRegistry = {}
 
+def _maybeClass(classnamep):
+    try:
+        object
+    except NameError:
+        isObject = 0
+    else:
+        isObject = isinstance(classnamep, type)
+    if isinstance(classnamep, ClassType) or isObject:
+        return qual(classnamep)
+    return classnamep
+
 def setUnjellyableForClass(classname, unjellyable):
     """Set which local class will represent a remote type.
 
@@ -140,6 +151,7 @@ def setUnjellyableForClass(classname, unjellyable):
     """
 
     global unjellyableRegistry
+    classname = _maybeClass(classname)
     unjellyableRegistry[classname] = unjellyable
     globalSecurity.allowTypes(classname)
 
@@ -156,6 +168,7 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
     """
 
     global unjellyableFactoryRegistry
+    classname = _maybeClass(classname)
     unjellyableFactoryRegistry[classname] = copyFactory
     globalSecurity.allowTypes(classname)
         
@@ -201,7 +214,7 @@ def getInstanceState(inst, jellier):
     else:
         state = inst.__dict__
     sxp = jellier.prepare(inst)
-    sxp.extend([str(inst.__class__), jellier.jelly(state)])
+    sxp.extend([qual(inst.__class__), jellier.jelly(state)])
     return jellier.preserve(inst, sxp)
 
 def setInstanceState(inst, unjellier, jellyList):
@@ -237,7 +250,7 @@ class Jellyable:
     def jellyFor(self, jellier):
         sxp = jellier.prepare(self)
         sxp.extend([
-            str(self.__class__),
+            qual(self.__class__),
             jellier.jelly(self.getStateFor(jellier))])
         return jellier.preserve(self, sxp)
 
@@ -372,7 +385,7 @@ class _Jellier:
             elif objType is ModuleType:
                 return ['module', obj.__name__]
             elif objType is ClassType:
-                return ['class', str(obj)]
+                return ['class', qual(obj)]
             else:
                 objId = id(obj)
                 if self.cooked.has_key(objId):
@@ -395,7 +408,7 @@ class _Jellier:
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
                 elif objType is InstanceType:
-                    className = str(obj.__class__)
+                    className = qual(obj.__class__)
                     persistent = None
                     if self.persistentStore:
                         persistent = self.persistentStore(obj, self)
@@ -412,7 +425,7 @@ class _Jellier:
                     else:
                         self.unpersistable(
                             "instance of class %s deemed insecure" %
-                            str(obj.__class__), sxp)
+                            qual(obj.__class__), sxp)
                 else:
                     raise NotImplementedError("Don't know the type: %s" % objType)
                 return self.preserve(obj, sxp)
@@ -579,7 +592,7 @@ class _Unjellier:
         if type(klaus) is not types.ClassType:
             raise InsecureJelly("class %s unjellied to something that isn't a class: %s" % (repr(name), repr(klaus)))
         if not self.taster.isClassAllowed(klaus):
-            raise InsecureJelly("class not allowed: %s" % str(klaus))
+            raise InsecureJelly("class not allowed: %s" % qual(klaus))
         return klaus
 
     def _unjelly_function(self, rest):
@@ -727,7 +740,7 @@ class SecurityOptions:
         self.allowBasicTypes()
         self.allowTypes("instance", "class", "module")
         for klass in classes:
-            self.allowTypes(str(klass))
+            self.allowTypes(qual(klass))
             self.allowModules(klass.__module__)
             self.allowedClasses[klass] = 1
 

@@ -20,7 +20,7 @@ Twisted Cred Service
 """
 
 # Twisted Imports
-from twisted.python import log, components
+from twisted.python import log, components, reflect
 from twisted.internet import defer, app
 
 # Sibling Imports
@@ -154,4 +154,4 @@ class Service(app.ApplicationService):
     def getServiceType(self):
         """Get a string describing the type of this service.
         """
-        return self.serviceType or str(self.__class__)
+        return self.serviceType or reflect.qual(self.__class__)

@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.python import log
+from twisted.python import log, reflect
 from twisted.cred import identity
 import types
 
@@ -114,7 +114,7 @@ class Perspective:
         whatever this method returns, _not_ on me.  Therefore,
         by default I return 'self'.
         """
-        log.msg('attached [%s]' % str(self.__class__))
+        log.msg('attached [%s]' % reflect.qual(self.__class__))
         self._attachedCount = self._attachedCount + 1
         if self._attachedCount == 1:
             self.service.cachePerspective(self)
@@ -132,7 +132,7 @@ class Perspective:
         reference associated with that peer is no longer attached to
         this perspective.
         """
-        log.msg('detached [%s]' % str(self.__class__))
+        log.msg('detached [%s]' % reflect.qual(self.__class__))
         self._attachedCount = self._attachedCount - 1
         if self._attachedCount <= 0:
             self.service.uncachePerspective(self)

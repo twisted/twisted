@@ -56,7 +56,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         """
         for rc in self.rowClasses:
             if not issubclass(rc, RowObject):
-                raise DBError("Stub class (%s) is not derived from RowObject" % str(rc.rowClass))
+                raise DBError("Stub class (%s) is not derived from RowObject" % reflect.qual(rc.rowClass))
 
             self._populateSchemaFor(transaction, rc)
         self.populated = 1

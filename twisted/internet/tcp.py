@@ -54,7 +54,7 @@ elif os.name != 'java':
 # Twisted Imports
 from twisted.internet import protocol
 from twisted.persisted import styles
-from twisted.python import log, failure
+from twisted.python import log, failure, reflect
 from twisted.python.runtime import platform
 from twisted.internet.error import CannotListenError
 from twisted.internet.interfaces import IConnector
@@ -503,7 +503,7 @@ class Port(abstract.FileDescriptor):
     def doWrite(self):
         """Raises an AssertionError.
         """
-        raise RuntimeError, "doWrite called on a %s" % str(self.__class__)
+        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
 
     def loseConnection(self):
         """Stop accepting connections on this port.
@@ -534,7 +534,7 @@ class Port(abstract.FileDescriptor):
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
         """
-        return str(self.factory.__class__)
+        return reflect.qual(self.factory.__class__)
 
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).

@@ -32,6 +32,7 @@ sample of XML.
 """
 
 from twisted.protocols.sux import XMLParser
+from twisted.python import reflect
 
 import copy
 
@@ -39,7 +40,7 @@ class Node:
     def __init__(self, parentNode=None):
         self.parentNode = parentNode
         self.childNodes = []
-        self.nodeName = str(self.__class__)
+        self.nodeName = reflect.qual(self.__class__)
 
     def writexml(self, stream, indent='', addindent='', newl=''):
         raise NotImplementedError()
@@ -202,9 +203,13 @@ class Element(Node):
         
 
 class MicroDOMParser(XMLParser):
-    def __init__(self):
+    def __init__(self, autoClosedTags=[]):
+        # to parse output from e.g. Mozilla Composer, try
+        # autoClosedTags=["meta", "br", "hr", "img"]
         self.elementstack = []
         self.documents = []
+        self.autoClosedTags = autoClosedTags
+        self._shouldAutoClose = ''
 
     # parser options:
     caseInsensitive = 1
@@ -216,38 +221,53 @@ class MicroDOMParser(XMLParser):
             parent = None
         return parent
 
+    def _autoclose(self):
+        if self._shouldAutoClose:
+            self.gotTagEnd(self._shouldAutoClose)
+
     def gotTagStart(self, name, attributes):
+        self._autoclose()
         parent = self._getparent()
         if self.caseInsensitive:
             name = name.lower()
+        if name in self.autoClosedTags:
+            self._shouldAutoClose = name
         el = Element(name, attributes, parent)
+        el._filename = self.filename
         el._markpos = self.saveMark()
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
 
     def gotText(self, data):
+        self._autoclose()
         parent = self._getparent()
         te = Text(data, parent)
         if parent:
             parent.appendChild(te)
 
     def gotEntityReference(self, entityRef):
+        self._autoclose()
         parent = self._getparent()
         er = EntityReference(entityRef, parent)
         if parent:
             parent.appendChild(er)
 
     def gotCData(self, cdata):
+        self._autoclose()
         parent = self._getparent()
         cd = CDATASection(cdata, parent)
         if parent:
             parent.appendChild(cd)
 
     def gotTagEnd(self, name):
-        el = self.elementstack.pop()
         if self.caseInsensitive:
             name = name.lower()
+        if self._shouldAutoClose == name:
+            self._shouldAutoClose = ''
+        else:
+            self._autoclose()
+        el = self.elementstack.pop()
         if el.tagName != name:
             raise Exception("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" %
                             ((el.tagName, name)+self.saveMark()+el._markpos) )

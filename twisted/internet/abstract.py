@@ -23,7 +23,7 @@ This module is stable.
 import types, string
 
 # Twisted Imports
-from twisted.python import log
+from twisted.python import log, reflect
 
 # Sibling Imports
 import interfaces
@@ -79,7 +79,7 @@ class FileDescriptor(log.Logger):
         """
 
         raise NotImplementedError("%s does not implement writeSomeData" %
-                                  str(self.__class__))
+                                  reflect.qual(self.__class__))
 
     def doWrite(self):
         """Called when data is available for writing.
@@ -255,7 +255,7 @@ class FileDescriptor(log.Logger):
         This method must be overridden or assigned in subclasses to
         indicate a valid file descriptor for the operating system.
         """
-        raise NotImplementedError(str(self.__class__)+' has no fileno method')
+        raise NotImplementedError(reflect.qual(self.__class__)+' has no fileno method')
 
 
 

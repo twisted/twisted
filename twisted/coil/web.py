@@ -177,8 +177,8 @@ class AppConfiguratorPage(widgets.Presentation):
         if 1:
             for realClass in coil.getImplementors(interface):
                 cfgClass = coil.getConfiguratorClass(realClass)
-                nm = getattr(cfgClass, 'configName', None) or str(realClass)
-                l.append(['new '+str(realClass), 'new '+nm])
+                nm = getattr(cfgClass, 'configName', None) or reflect.qual(realClass)
+                l.append(['new '+reflect.qual(realClass), 'new '+nm])
         for t in self.dispensers.getDispensers(interface):
             obj, methodName, desc = t
             l.append(['dis %d' % hash(t), desc])

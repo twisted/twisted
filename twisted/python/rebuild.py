@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_rebuild -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -27,6 +27,7 @@ import linecache
 
 # Sibling Imports
 import log
+import reflect
 
 lastRebuild = time.time()
 
@@ -48,29 +49,29 @@ class Sensitive:
     def rebuildUpToDate(self):
         self.lastRebuild = time.time()
 
-    def latestVersionOf(self, object):
+    def latestVersionOf(self, anObject):
         """Get the latest version of an object.
 
         This can handle just about anything callable; instances, functions,
         methods, and classes.
         """
-        t = type(object)
+        t = type(anObject)
         if t == types.FunctionType:
-            return latestFunction(object)
+            return latestFunction(anObject)
         elif t == types.MethodType:
-            if object.im_self is None:
-                return getattr(object.im_class, object.__name__)
+            if anObject.im_self is None:
+                return getattr(anObject.im_class, anObject.__name__)
             else:
-                return getattr(object.im_self, object.__name__)
+                return getattr(anObject.im_self, anObject.__name__)
         elif t == types.InstanceType:
             # Kick it, if it's out of date.
-            getattr(object, 'nothing', None)
-            return object
+            getattr(anObject, 'nothing', None)
+            return anObject
         elif t == types.ClassType:
-            return latestClass(object)
+            return latestClass(anObject)
         else:
-            log.msg('warning returning object!')
-            return object
+            log.msg('warning returning anObject!')
+            return anObject
 
 _modDictIDMap = {}
 
@@ -91,7 +92,7 @@ if sys.version_info >= (2, 2, 0):
     def latestClass(oldClass):
         """Get the latest version of a class.
         """
-        module = __import__(oldClass.__module__, {}, {}, 'nothing')
+        module = reflect.namedModule(oldClass.__module__)
         newClass = getattr(module, oldClass.__name__)
         newBases = []
         for base in newClass.__bases__:
@@ -105,6 +106,8 @@ if sys.version_info >= (2, 2, 0):
             ctor = getattr(newClass, '__metaclass__', type)
             return ctor(newClass.__name__, tuple(newBases), dict(newClass.__dict__))
 else:
+    object = 0
+
     def latestClass(oldClass):
         """Get the latest version of a class.
         """
@@ -126,7 +129,7 @@ def __getattr__(self, name):
     """A getattr method to cause a class to be refreshed.
     """
     updateInstance(self)
-    log.msg("(rebuilding stale %s instance (%s))" % (str(self.__class__), name))
+    log.msg("(rebuilding stale %s instance (%s))" % (reflect.qual(self.__class__), name))
     result = getattr(self, name)
     return result
 
@@ -143,6 +146,7 @@ def rebuild(module, doLog=1):
         log.msg( 'Rebuilding %s...' % str(module.__name__))
     d = module.__dict__
     _modDictIDMap[id(d)] = module
+    newclasses = {}
     classes = {}
     functions = {}
     values = {}
@@ -163,10 +167,17 @@ def rebuild(module, doLog=1):
                 if doLog:
                     log.logfile.write("f")
                     log.logfile.flush()
+        elif object and isinstance(v, type):
+            if v.__module__ == module.__name__:
+                newclasses[v] = 1
+                if doLog:
+                    log.logfile.write("o")
+                    log.logfile.flush()
 
     values.update(classes)
     values.update(functions)
     fromOldModule = values.has_key
+    newclasses = newclasses.keys()
     classes = classes.keys()
     functions = functions.keys()
 
@@ -184,7 +195,7 @@ def rebuild(module, doLog=1):
 
     for clazz in classes:
         if getattr(module, clazz.__name__) is clazz:
-            log.msg("WARNING: class %s not replaced by reload!" % str(clazz))
+            log.msg("WARNING: class %s not replaced by reload!" % reflect.qual(clazz))
         else:
             if doLog:
                 log.logfile.write("x")
@@ -193,6 +204,15 @@ def rebuild(module, doLog=1):
             clazz.__dict__.clear()
             clazz.__getattr__ = __getattr__
             clazz.__module__ = module.__name__
+    for nclass in newclasses:
+        ga = getattr(module, nclass.__name__)
+        if ga is nclass:
+            log.msg("WARNING: new-class %s not replaced by reload!" % reflect.qual(nclass))
+        else:
+            import gc
+            for r in gc.get_referrers(nclass):
+                if isinstance(r, nclass):
+                    r.__class__ = ga
     if doLog:
         log.msg('')
         log.msg('  (fixing   %s): ' % str(module.__name__))

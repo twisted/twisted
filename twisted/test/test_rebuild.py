@@ -35,6 +35,47 @@ if sys.version_info >= (2, 2, 0):
 class RebuildTestCase(unittest.TestCase):
     """Simple testcase for rebuilding, to at least exercise the code.
     """
+    def testFileRebuild(self):
+        from twisted.python.rebuild import rebuild
+        from twisted.python.util import sibpath
+        import shutil, time
+        shutil.copyfile(sibpath(__file__, "myrebuilder1.py"),
+                        sibpath(__file__, "myrebuilder.py"))
+        from twisted.test import myrebuilder
+        a = myrebuilder.A()
+        try:
+            object
+        except NameError:
+            pass
+        else:
+            from twisted.test import test_rebuild
+            b = myrebuilder.B()
+            class C(myrebuilder.B):
+                pass
+            test_rebuild.C = C
+            c = C()
+        i = myrebuilder.Inherit()
+        assert a.a() == 'a'
+        # necessary because the file has not "changed" if a second has not gone
+        # by in unix.  This sucks, but it's not often that you'll be doing more
+        # than one reload per second.
+        time.sleep(1)
+        shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
+                        sibpath(__file__, "myrebuilder.py"))
+        rebuild(myrebuilder)
+        try:
+            object
+        except NameError:
+            pass
+        else:
+            b2 = myrebuilder.B()
+            assert b2.b() == 'c'
+            assert b.b() == 'c'
+        assert i.a() == 'd'
+        assert a.a() == 'b'
+        # more work to be done on new-style classes
+        # assert c.b() == 'c'
+
     def testRebuild(self):
         x = crash_test_dummy.X('a')
         x = [x]
@@ -43,13 +84,13 @@ class RebuildTestCase(unittest.TestCase):
         d.run()
         d.run()
         d.run()
-        
+
         d.later(x[0].do, 1)
         rebuild.rebuild(crash_test_dummy,0)
         d.run()
         d.run()
         d.run()
-        
+
         rebuild.rebuild(server,0)
         assert f is crash_test_dummy.foo, 'huh?'
         #x[0].do()

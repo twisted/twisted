@@ -144,7 +144,7 @@ class Widget:
     """
     title = None
     def getTitle(self, request):
-        return self.title or str(self.__class__)
+        return self.title or reflect.qual(self.__class__)
 
     def display(self, request):
         """Implement me to represent your widget.
@@ -152,7 +152,7 @@ class Widget:
         I must return a list of strings and twisted.internet.defer.Deferred
         instances.
         """
-        raise NotImplementedError("%s.display" % str(self.__class__))
+        raise NotImplementedError("%s.display" % reflect.qual(self.__class__))
 
 class StreamWidget(Widget):
     """A 'streamable' component of a webpage.
@@ -161,7 +161,7 @@ class StreamWidget(Widget):
     def stream(self, write, request):
         """Call 'write' multiple times with a string argument to represent this widget.
         """
-        raise NotImplementedError("%s.stream" % self.__class__)
+        raise NotImplementedError("%s.stream" % reflect.qual(self.__class__))
 
     def display(self, request):
         """Produce a list containing a single string.
@@ -499,7 +499,7 @@ class Form(Widget):
             write('<INPUT TYPE="submit" NAME="submit" VALUE="%s" />\n' % submitName)
         write('</td></tr>\n</table>\n'
               '<INPUT TYPE="hidden" NAME="__formtype__" VALUE="%s" />\n'
-              % (str(self.__class__)))
+              % (reflect.qual(self.__class__)))
         fid = self.getFormID()
         if fid:
             write('<INPUT TYPE="hidden" NAME="__formid__" VALUE="%s" />\n' % fid)
@@ -596,7 +596,7 @@ class Form(Widget):
         fid = self.getFormID()
         return (args and # there are arguments to the request
                 args.has_key('__formtype__') and # this is a widgets.Form request
-                args['__formtype__'][0] == str(self.__class__) and # it is for a form of my type
+                args['__formtype__'][0] == reflect.qual(self.__class__) and # it is for a form of my type
                 ((not fid) or # I am only allowed one form per page
                  (args.has_key('__formid__') and # if I distinguish myself from others, the request must too
                   args['__formid__'][0] == fid))) # I am in fact the same

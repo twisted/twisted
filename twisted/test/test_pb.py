@@ -149,7 +149,7 @@ class SimpleLocalCopy(pb.RemoteCopy):
         assert self.z[0] == 'test'
         return 1
 
-pb.setCopierForClass(str(SimpleCopy), SimpleLocalCopy)
+pb.setCopierForClass(SimpleCopy, SimpleLocalCopy)
 
 class SimpleFactoryCopy(pb.Copyable):
     allIDs = {}
@@ -168,7 +168,7 @@ def createFactoryCopy(state):
         raise "factory method found no object with id"
     return inst
 
-pb.setFactoryForClass(str(SimpleFactoryCopy), createFactoryCopy)
+pb.setFactoryForClass(SimpleFactoryCopy, createFactoryCopy)
 
 class NestedCopy(pb.Referenceable):
     def remote_getCopy(self):
@@ -230,7 +230,7 @@ class RatherBaroqueCache(pb.RemoteCache):
         assert self.foo == 3
         return 1
 
-pb.setCopierForClass(str(VeryVeryComplicatedCacheable), RatherBaroqueCache)
+pb.setCopierForClass(VeryVeryComplicatedCacheable, RatherBaroqueCache)
 
 class SimpleLocalCache(pb.RemoteCache):
     def setCopyableState(self, state):
@@ -249,7 +249,7 @@ class SimpleLocalCache(pb.RemoteCache):
         assert self.z[0] == 'test'
         return 1
 
-pb.setCopierForClass(str(SimpleCache), SimpleLocalCache)
+pb.setCopierForClass(SimpleCache, SimpleLocalCache)
 
 class NestedCache(pb.Referenceable):
     def __init__(self):
@@ -484,9 +484,6 @@ class BrokerTestCase(unittest.TestCase):
         cp = coll[0][0]
         assert cp.checkMethod().im_self is cp, "potential refcounting issue"
         assert cp.checkSelf() is cp, "other potential refcounting issue"
-        # No longer need to do this...
-        # assert cp.__class__ is pb.RemoteCacheProxy, "class was %s" % str(cp.__class__)
-        # assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
         col2 = []
         o2.callRemote('putCache',cp).addCallback(col2.append)
         pump.flush()
@@ -644,7 +641,7 @@ class GetPublisher(pb.Referenceable):
         return self.pub
 
 
-pb.setCopierForClass(str(DumbPublishable), DumbPub)
+pb.setCopierForClass(DumbPublishable, DumbPub)
 
 class DisconnectionTestCase(unittest.TestCase):
     """Test disconnection callbacks."""

@@ -79,7 +79,7 @@ class Accessor:
         kstring='get_%s'%k
         if hasattr(self.__class__,kstring):
             return getattr(self,kstring)()
-        raise AttributeError("%s instance has no accessor for: %s" % (str(self.__class__),k))
+        raise AttributeError("%s instance has no accessor for: %s" % (qual(self.__class__),k))
 
     def __delattr__(self, k):
         kstring='del_%s'%k
@@ -230,7 +230,7 @@ def fullFuncName(func):
     return qualName
 
 def qual(clazz):
-    return str(clazz)
+    return clazz.__module__ + '.' + clazz.__name__
 
 def getcurrent(clazz):
     assert type(clazz) == types.ClassType, 'must be a class...'

@@ -20,7 +20,7 @@ from twisted.web import server, resource, widgets, guard
 from twisted.internet import app, defer
 from twisted.cred import service, identity, perspective, authorizer
 from twisted.protocols import http, loopback
-
+from twisted.python import reflect
 
 class DummyRequest:
     uri='http://dummy/'
@@ -135,7 +135,7 @@ class GuardTest(unittest.TestCase):
         d.addArg('username', 'bob')
         d.addArg('password', 'joe')
         d.addArg('perspective', 'jethro')
-        d.addArg('__formtype__', str(guard.AuthForm))
+        d.addArg('__formtype__', reflect.qual(guard.AuthForm))
         g.render(d)
         assert d.finished, "didn't finish"
         assert d.written == ['correct'], "incorrect result: %s" % d.written

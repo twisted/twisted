@@ -20,7 +20,7 @@ A thread pool that is integrated with the Twisted event loop.
 """
 
 # Twisted Import
-from twisted.python import threadpool, threadable, log, failure
+from twisted.python import threadpool, threadable, log, failure, reflect
 from twisted.internet import reactor, main
 threadable.init(1)
 
@@ -70,6 +70,6 @@ class ThreadDispatcher(threadpool.ThreadPool):
         self.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
 
     def stop(self):
-        log.msg("stopping thread dispatcher " +str(self))
+        log.msg("stopping thread dispatcher " +reflect.qual(self))
         threadpool.ThreadPool.stop(self)
 

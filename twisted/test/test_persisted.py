@@ -121,8 +121,9 @@ class Marmaladeable(marmalade.DOMJellyable):
         self.name = name
 
     def jellyToDOM_1(self, jellier, element):
+        from twisted.python.reflect import qual
         element.setAttribute("integer", str(self.integer))
-        element.setAttribute("instance", str(self.instance.__class__)) # not l33t enough
+        element.setAttribute("instance", qual(self.instance.__class__)) # not l33t enough
         element.setAttribute("name", str(self.name))
         # oops forgot self.sequence
 
@@ -137,7 +138,6 @@ class Marmaladeable(marmalade.DOMJellyable):
     def jellyToDOM_2(self, jellier, element):
         element.setAttribute("integer", str(self.integer))
         element.setAttribute("name", str(self.name))
-        # element.setAttribute("instance", str(self.instance.__class__)) # not l33t enough
         instanceNode = jellier.jellyToNode(self.instance) # l33ter!
         instanceNode.setAttribute("parent:role", "instance")
         element.appendChild(instanceNode)
