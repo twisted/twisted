@@ -16,9 +16,7 @@ done
 cp admin/book.tex doc/howto
 ./bin/html2latex -s doc/howto/*.html doc/man/*.html doc/specifications/*.html
 cd doc/howto
-latex book.tex
-latex book.tex
-latex book.tex
+for i in 1 2 3;do latex book.tex;done
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
