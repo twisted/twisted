@@ -1,4 +1,10 @@
-2002-02-28  Chris Armstrong  <carmstro@twistedmatrix.com
+2002-03-01  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/protocols/dns.py: Can now correctly serialize answers
+
+	* twisted/internet/stupid.py: Removed spurious debugging print
+
+2002-02-28  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing 0.15.3.
 
