@@ -349,9 +349,9 @@ class TestUtilityFunctions(unittest.TestCase):
         evilPaths = [r"..\/*/foobar/ding//dong/\\**", 
         r"../../\\**/*/fhet/*/..///\\//..///#$#221./*"]
         exorcisedPaths = ["..\/foobar/ding/dong","../../../#$#221."]
-        for x, ep in enumerate(evilPaths):
-            cp = ftp.cleanPath(ep)
-            self.failUnlessEqual(cp, exorcisedPaths[x])
+        for i in range(len(evilPaths)):
+            cp = ftp.cleanPath(evilPaths[i])
+            self.failUnlessEqual(cp, exorcisedPaths[i])
             log.msg(cp)
 
     testCleanPath.todo = 'this test needs more work'

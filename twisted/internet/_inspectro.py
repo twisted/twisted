@@ -14,7 +14,7 @@ from twisted.protocols import policies
 
 # the glade file uses stock icons, which requires gnome to be installed
 import gnome
-version = "$Revision: 1.4 $"[11:-2]
+version = "$Revision: 1.5 $"[11:-2]
 gnome.init("gladereactor Inspector", version)
 
 class ConsoleOutput(gtk2manhole.ConsoleOutput):
@@ -191,10 +191,11 @@ class Inspectro:
     def __init__(self, o=None):
         self.xml = x = gtk.glade.XML(sibpath(__file__, "inspectro.glade"))
         self.tree_view = x.get_widget("treeview")
-        for index, colname in enumerate(["Name", "Value"]):
+        colnames = ["Name", "Value"]
+        for i in range(len(colnames)):
             self.tree_view.append_column(
                 gtk.TreeViewColumn(
-                colname, gtk.CellRendererText(), text=index))
+                colnames[i], gtk.CellRendererText(), text=i))
         d = {}
         for m in reflect.prefixedMethods(self, "on_"):
             d[m.im_func.__name__] = m
