@@ -64,6 +64,7 @@ class StandardIOWriter(abstract.FileDescriptor):
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fileno())
 
+
 class StandardIO(abstract.FileDescriptor):
     """I can connect Standard IO to a twisted.protocol
     I act as a selectable for sys.stdin, and provide a write method that writes
@@ -83,10 +84,10 @@ class StandardIO(abstract.FileDescriptor):
         self.fileno = sys.__stdin__.fileno
         fdesc.setNonBlocking(self.fileno())
         self.protocol = protocol
-        self.protocol.makeConnection(self)
         self.startReading()
         self.writer = StandardIOWriter()
-
+        self.protocol.makeConnection(self)
+    
     def write(self, data):
         """Write some data to standard output.
         """
