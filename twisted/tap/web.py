@@ -162,8 +162,8 @@ def makeService(config):
         root = test.Test()
 
     if isinstance(root, static.File):
-        root.registry.setComponent(interfaces.IServiceCollection, app)
-    
+        root.registry.setComponent(interfaces.IServiceCollection, s)
+   
     if config['logfile']:
         site = server.Site(root, logPath=config['logfile'])
     else:
