@@ -22,7 +22,12 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import md5, os, resource
+import md5, os
+
+try:
+    import resource
+except ImportError:
+    resource = None
 
 try:
     import PAM
@@ -45,7 +50,10 @@ class SSHFactory(protocol.Factory):
     }
     def startFactory(self):
         # disable coredumps
-        resource.setrlimit(resource.RLIMIT_CORE, (0,0))
+        if resource:
+            resource.setrlimit(resource.RLIMIT_CORE, (0,0))
+        else:
+            log.msg('INSECURE: unable to disable core dumps.')
         if not hasattr(self,'publicKeys'):
             self.publicKeys = self.getPublicKeys()
         if not hasattr(self,'privateKeys'):
