@@ -1,6 +1,7 @@
+"""Run this with twistd -y."""
 
 import os
-from twisted.internet import app 
+from twisted.application import service, internet
 from twisted.web.woven import page
 from twisted.web import server, static
 
@@ -54,11 +55,5 @@ class ImageDisplay(page.Page):
         return static.File(self.image)
         
 site = server.Site(DirectoryListing(directory=rootDirectory))
-application = app.Application("ImagePool") 
-application.listenTCP(8088, site)
-
-if __name__ == '__main__': 
-    import sys               
-    from twisted.python import log 
-    log.startLogging(sys.stdout, 0) 
-    application.run() 
+application = service.Application("ImagePool") 
+service.IService(application).addService(internet.TCPServer(8088, site))
