@@ -49,7 +49,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.realname=realname
         self._ingroups={}
         self._groups={}
-    
+
     def connectionMade(self):
 	irc.IRCClient.connectionMade(self)
 	if self.password: self.sendLine("PASS :%s"%self.password)
@@ -155,17 +155,11 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
             self.memberLeft(nickname,g)
         self._ingroups[nickname]=[]
 
-    def irc_PRIVMSG(self,prefix,params):
-	nickname=string.split(prefix,"!")[0]
-	message=params[1]
-	if params[0][0]=="#": # channel
-            group=self._groups[string.lower(params[0][1:])]
+    def privmsg(self,user,channel,message):
+        nickname=string.split(user,"!")[0]
+	if channel[0]=="#": # channel
+            group=self._groups[string.lower(channel[1:])]
 	    self.receiveGroupMessage(nickname,group,message)
 	else:
-	    if message[0]=="\001":
-		if message[1:5]=="PING":
-		    self.directMessage(nickname,"\001PONG %s"%message[6:])
-		    return
 	    self.receiveDirectMessage(nickname,message)
 
-    irc_NOTICE=irc_PRIVMSG

@@ -114,6 +114,9 @@ class IRCClient(basic.LineReceiver):
     def msg(self, user, message):
         self.sendLine("PRIVMSG %s :%s" % (user, message))
 
+    def notice(self, user, message):
+        self.sendLine("NOTICE %s :%s" % (user, message))
+
     def setNick(self, nickname):
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)
@@ -131,7 +134,13 @@ class IRCClient(basic.LineReceiver):
         user = prefix
         channel = params[0]
         message = params[-1]
+        if message[0]=="\001":
+            if message[1:5]=="PING":
+                self.notice(string.split(user,"!")[0],"\001PING "+message[6:])
+                return
         self.privmsg(user, channel, message)
+
+    irc_NOTICE = irc_PRIVMSG
 
     def privmsg(self, user, channel, message):
         pass
@@ -141,7 +150,6 @@ class IRCClient(basic.LineReceiver):
 
     def lineReceived(self, line):
         prefix, command, params = parsemsg(line)
-        print command, prefix, params
         method = getattr(self, "irc_%s" % command, None)
         if method is not None:
             method(prefix, params)

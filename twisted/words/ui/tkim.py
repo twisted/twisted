@@ -112,7 +112,7 @@ class JoinGroup(Toplevel):
 class GroupSession(Toplevel):
     def __init__(self,im,name,gateway,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
-        self.title("%s - Instance Messenger"%name)
+        self.title("%s - %s - Instance Messenger"%(name,gateway.name))
         self.name=name
         self.im=im
         self.gateway=gateway
@@ -243,7 +243,7 @@ class Conversation(Toplevel):
         self.contact=contact
         self.im=im
         self.gateway=gateway
-        self.title("%s - Instance Messenger"%contact)
+        self.title("%s - %s - Instance Messenger"%(contact,gateway.name))
         self.output=Text(self,height=3,width=10,wrap=WORD,bg="white")
         self.input=Text(self,height=1,width=10,wrap=WORD,bg="white") 
         self.bar=Scrollbar(self)
@@ -272,7 +272,7 @@ class Conversation(Toplevel):
     
     def messageReceived(self,message,sender=None):
         y,mon,d,h,min,sec,ig,no,re=time.localtime(time.time())
-        text="%s:%s:%s %s: %s\n"%(h,min,sec,sender or self.contact,message)
+        text="%02i:%02i:%02i %s: %s\n"%(h,min,sec,sender or self.contact,message)
         self._addtext(text)
         self.output.see(END)
 
