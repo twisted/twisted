@@ -106,6 +106,7 @@ class Model:
     
     def __init__(self, *args, **kwargs):
         self.views = []
+        self.subviews = {}
         self.initialize(*args, **kwargs)
     
     def initialize(self, *args, **kwargs):
@@ -119,8 +120,12 @@ class Model:
         """
         Add a view for the model to keep track of.
         """
-        self.views.append(view)
+        if view not in self.views:
+            self.views.append(view)
     
+    def addSubview(self, name, subview):
+        self.subviews[name] = subview
+
     def removeView(self, view):
         """
         Remove a view that the model no longer should keep track of.
@@ -138,7 +143,10 @@ class Model:
         """
         if changed is None: changed = {}
         for view in self.views:
+            print self.views
             view.modelChanged(changed)
+        for key, value in self.subviews.items():
+            value.modelChanged(changed)
 
     def __eq__(self, other):
         if other is None: return 0
@@ -170,8 +178,6 @@ class View:
         A view must be told what it's model is, and may be told what it's
         controller is, but can also look up it's controller if none specified.
         """
-        if hasattr(model, 'addView'):
-            model.addView(self)
         self.model = model
         self.controller = self.controllerFactory(model)
 
