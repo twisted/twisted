@@ -1,3 +1,17 @@
+2003-04-04  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/protocols/htb.py: Egress traffic shaping for Consumers
+	and Transports, using Heirarchial Token Buckets, patterened after
+	Martin Devera's Hierarchical Token Bucket traffic shaper for the
+	Linux kernel.
+
+	* doc/examples/shaper.py: Demonstration of shaping traffic on a
+	web server.
+
+	* twisted/protocols/pcp.py: Producer/Consumer proxy, for when you
+	wish to install yourself between a Producer and a Consumer and
+	subvert the flow of data.
+
 2003-04-04  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/web/microdom.py: parseXML and parseXMLString functions
