@@ -91,8 +91,8 @@ class ManholeClientInterface:
                      (traceback.format_exception_only output)
         """
 
-    def receiveBrowserObject(self, objectLink):
-        """Receives a ObjectLink from a watch or browse command.
+    def receiveExplorer(self, xplorer):
+        """Receives an explorer.Explorer
         """
 
 def runInConsole(command, console, globalNS=None, localNS=None,
@@ -179,9 +179,6 @@ class Perspective(pb.Perspective):
         self.localNamespace = {
             "_": None,
             }
-        self.browser = explorer.ObjectBrowser(None, self.localNamespace)
-        self.localNamespace["_browser"] = self.browser
-
         self.clients = {}
 
     def __getstate__(self):
@@ -200,7 +197,7 @@ class Perspective(pb.Perspective):
 
     def setService(self, service):
         pb.Perspective.setService(self, service)
-        self.browser.globalNamespace = service.namespace
+        # self.browser.globalNamespace = service.namespace
 
     def attached(self, client, identity):
         """A client has attached -- welcome them and add them to the list.
@@ -210,7 +207,8 @@ class Perspective(pb.Perspective):
         msg = self.service.welcomeMessage % {
             'you': getattr(identity, 'name', str(identity)),
             'serviceName': self.service.getServiceName(),
-            'app': self.service.application.name,
+            'app': getattr(self.service.application, 'name',
+                           "some application"),
             'host': 'some computer somewhere',
             'longversion': copyright.longversion,
             }
@@ -252,13 +250,13 @@ class Perspective(pb.Perspective):
                 # Stale broker.
                 self.detached(client, None)
 
-    def receiveBrowserObject(self, objectLink):
-        """Pass a ObjectLink on to my clients.
+    def receiveExplorer(self, objectLink):
+        """Pass an Explorer on to my clients.
         """
         clients = self.clients.keys()
         for client in clients:
             try:
-                client.receiveBrowserObject(objectLink)
+                client.receiveExplorer(objectLink)
             except pb.ProtocolError:
                 # Stale broker.
                 self.detached(client, None)
@@ -279,7 +277,7 @@ class Perspective(pb.Perspective):
             self.console([("result", repr(val) + '\n')])
         log.msg("<<<")
 
-    def perspective_browse(self, identifier):
+    def perspective_explore(self, identifier):
         """Browse the object obtained by evaluating the identifier.
 
         The resulting ObjectLink is passed back through the client's
@@ -287,9 +285,8 @@ class Perspective(pb.Perspective):
         """
         object = self.runInConsole(identifier)
         if object:
-            oLink = self.runInConsole(self.browser.browseObject,
-                                      object, identifier)
-            self.receiveBrowserObject(oLink)
+            expl = explorer.explorerPool.getExplorer(object, identifier)
+            self.receiveExplorer(expl)
 
     def perspective_watch(self, identifier):
         """Watch the object obtained by evaluating the identifier.
@@ -298,16 +295,17 @@ class Perspective(pb.Perspective):
         an ObjectLink of it back to the client's receiveBrowserObject
         method.
         """
+        raise NotImplementedError
         object = self.runInConsole(identifier)
         if object:
             # Return an ObjectLink of this right away, before the watch.
             oLink = self.runInConsole(self.browser.browseObject,
                                       object, identifier)
-            self.receiveBrowserObject(oLink)
+            self.receiveExplorer(oLink)
 
             self.runInConsole(self.browser.watchObject,
                               object, identifier,
-                              self.receiveBrowserObject)
+                              self.receiveExplorer)
 
 
 class Service(pb.Service):
@@ -325,7 +323,7 @@ class Service(pb.Service):
         self.namespace = {
             # I'd specify __name__ so we don't get it from __builtins__,
             # but that seems to have the potential for breaking imports.
-            #'__name__': "PAK CHOOIE UNF",
+            '__name__': '__manhole%x__' % (id(self),),
             # sys, so sys.modules will be readily available
             'sys': sys
             }
@@ -344,5 +342,6 @@ class Service(pb.Service):
 
     def __str__(self):
         s = "<%s in application \'%s\'>" % (self.getServiceName(),
-                                            self.application.name)
+                                            getattr(self.application,
+                                                    'name', "???"))
         return s

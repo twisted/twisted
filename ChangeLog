@@ -1,5 +1,8 @@
 2002-01-14  Kevin Turner  <acapnotic@twistedmatrix.com>
 
+	* twisted/python/explorer.py: reimplementated.  So it's better.
+	And yes, I broke the API.
+
 	* twisted/manhole/ui/spelunk_gnome.py: Less duplication of visages,
 	and they're draggable now too.
 

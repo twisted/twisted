@@ -31,7 +31,6 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 
 from twisted.python import usage
 from twisted.spread.ui import gtkutil
-from twisted.manhole.ui import gtkmanhole
 
 from twisted.spread import pb
 
@@ -52,6 +51,10 @@ except usage.UsageError, e:
     print str(e)
     print str(config)
     sys.exit(1)
+
+# Put this off until after we parse options, or else gnome eats them.
+sys.argv[:] = ['manhole']
+from twisted.manhole.ui import gtkmanhole
 
 i = gtkmanhole.Interaction()
 lw = gtkutil.Login(i.connected,

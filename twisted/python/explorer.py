@@ -1,4 +1,5 @@
-
+# -*- Python -*-
+# $Id: explorer.py,v 1.9 2002/01/14 10:18:12 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -15,202 +16,506 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Support for python object introspection and exploration.
+
+Note that Explorers, what with their list of attributes, are much like
+manhole.coil.Configurables.  Someone should investigate this further. (TODO)
+"""
+
 # System Imports
-import new, string, sys, types, copy
+import new, string, sys, types
+import UserDict
 
 # Twisted Imports
-from twisted.spread import pb, jelly
+from twisted.spread import pb
 
 # Sibling Imports
 import reflect, text
 
+True=(1==1)
+False=not True
 
-def typeString(type):
-    """Given a Type, returns a string."""
-    return jelly.typeNames.get(type, type.__name__)
+class Pool(UserDict.UserDict):
+    def getExplorer(self, object, identifier):
+        oid = id(object)
+        if self.data.has_key(oid):
+            # XXX: This potentially returns something with
+            # 'identifier' set to a different value.
+            return self.data[oid]
+        else:
+            klass = typeTable.get(type(object), ExplorerGeneric)
+            e = new.instance(klass, None)
+            self.data[oid] = e
+            klass.__init__(e, object, identifier)
+            return e
 
-class ObjectLink(pb.Copyable):
-    """A representation of object with a particular identifier.
+explorerPool = Pool()
 
-    This object:
+class Explorer(pb.Cacheable):
+    properties = ["id", "identifier"]
+    attributeGroups = []
+    accessors = ["get_refcount"]
 
-        * has an 'identifier' member.  Feeding this identifier to
-          ObjectBrowser.browseIdentifier should return information
-          on the object I represent.
-
-        * Has a 'value' member.  For simple objects, this contains
-          the value of the object, where applicable.  For more complex
-          objects, this is a sequence containing documentation and
-          ObjectLinks of the object's properties.  See the documentation
-          for ObjectBrowser.browse_* methods for details.
-
-        * Has a 'type' member, with a string describing the type of
-          object I represent.  If this type differs from the type of
-          my 'value' attribute, that's an indication that the value
-          attribute carries information *about* the object I represent,
-          rather than being a direct representation.  Convert a TypeType
-          to this string with the explorer.typeString function.
-
-        * Has an 'id' number with the id() of the object I represent.
-
-        * represents an object from *my* view.  That is, if
-          it's a Perspective object with the methods bar() and
-          perspective_foo(), I want to see that it has the methods bar()
-          and perspective_foo(); not foo(), as it would appear remotely.
-
-        * is jelly safe and pb.Copyable.
-    """
-    value = None
-    type = None
+    id = None
     identifier = None
 
-    def __init__(self, value, identifier=None, type=None, id_=None):
-        """See ObjectLink class documentation for details on attributes.
-        """
-        self.value = value
+    def __init__(self, object, identifier):
+        self.object = object
         self.identifier = identifier
-        self.id = id_
+        self.id = id(object)
 
-        # Shucks, TypeType isn't jelliable yet.
-        if type:
-            self.setType(type)
+        self.properties = []
+        reflect.accumulateClassList(self.__class__, 'properties',
+                                    self.properties)
+
+        self.attributeGroups = []
+        reflect.accumulateClassList(self.__class__, 'attributeGroups',
+                                    self.attributeGroups)
+
+        self.accessors = []
+        reflect.accumulateClassList(self.__class__, 'accessors',
+                                    self.accessors)
+
+    def getStateToCopyFor(self, perspective):
+        all = ["properties", "attributeGroups", "accessors"]
+        all.extend(self.properties)
+        all.extend(self.attributeGroups)
+
+        state = {}
+        for key in all:
+            state[key] = getattr(self, key)
+
+        state['view'] = pb.ViewPoint(perspective, self)
+        state['explorerClass'] = self.__class__.__name__
+        return state
+
+    def view_get_refcount(self, perspective):
+        return sys.getrefcount(self)
+
+class ExplorerGeneric(Explorer):
+    properties = ["str", "repr", "typename"]
+
+    def __init__(self, object, identifier):
+        Explorer.__init__(self, object, identifier)
+        self.str = str(object)
+        self.repr = repr(object)
+        self.typename = type(object).__name__
+
+
+class ExplorerImmutable(Explorer):
+    properties = ["value"]
+
+    def __init__(self, object, identifier):
+        Explorer.__init__(self, object, identifier)
+        self.value = object
+
+
+class ExplorerSequence(Explorer):
+    properties = ["len"]
+    attributeGroups = ["elements"]
+    accessors = ["get_elements"]
+
+    def __init__(self, seq, identifier):
+        Explorer.__init__(self, seq, identifier)
+        self.seq = seq
+        self.len = len(seq)
+
+        # Use accessor method to fill me in.
+        self.elements = []
+
+    def get_elements(self):
+        self.len = len(self.seq)
+        l = []
+        for i in xrange(self.len):
+            identifier = "%s[%s]" % (self.identifier, i)
+
+            # GLOBAL: using global explorerPool
+            l.append(explorerPool.getExplorer(self.seq[i], identifier))
+
+        return l
+
+    def view_get_elements(self, perspective):
+        # XXX: set the .elements member of all my remoteCaches
+        return self.get_elements()
+
+
+class ExplorerMapping(Explorer):
+    properties = ["len"]
+    attributeGroups = ["keys"]
+    accessors = ["get_keys", "get_item"]
+
+    def __init__(self, dct, identifier):
+        Explorer.__init__(self, dct, identifier)
+
+        self.dct = dct
+        self.len = len(dct)
+
+        # Use accessor method to fill me in.
+        self.keys = []
+
+    def get_keys(self):
+        keys = self.dct.keys()
+        self.len = len(keys)
+        l = []
+        for i in xrange(self.len):
+            identifier = "%s.keys()[%s]" % (self.identifier, i)
+
+            # GLOBAL: using global explorerPool
+            l.append(explorerPool.getExplorer(keys[i], identifier))
+
+        return l
+
+    def view_get_keys(self, perspective):
+        # XXX: set the .keys member of all my remoteCaches
+        return self.get_keys()
+
+    def view_get_item(self, perspective, key):
+        if type(key) is types.InstanceType:
+            key = key.object
+
+        item = self.dct[key]
+
+        identifier = "%s[%s]" % (self.identifier, repr(key))
+        # GLOBAL: using global explorerPool
+        item = explorerPool.getExplorer(item, identifier)
+        return item
+
+
+class ExplorerBuiltin(Explorer):
+    """
+    Properties:
+        name -- the name the function was defined as
+        doc -- function's docstring, or None if unavailable
+        self -- if not None, the function is a method of this object.
+    """
+    properties = ["doc", "name", "self"]
+    def __init__(self, function, identifier):
+        Explorer.__init__(self, function, identifier)
+        self.doc = function.__doc__
+        self.name = function.__name__
+        self.self = function.__self__
+
+
+class ExplorerInstance(Explorer):
+    """
+    Properties:
+        klass -- the class this is an instance of
+
+    Attribute groups:
+        methods -- dictionary of methods
+        data -- dictionary of data members
+
+    Note these are only the *instance* methods and members --
+    if you want the class methods, you'll have to look up the class.
+
+    TODO: Detail levels (me, me & class, me & class ancestory)
+    """
+    properties = ["klass"]
+    attributeGroups = ["methods", "data"]
+
+    def __init__(self, instance, identifier):
+        Explorer.__init__(self, instance, identifier)
+        members = {}
+        methods = {}
+        for i in dir(instance):
+            # TODO: Make screening of private attributes configurable.
+            if i[0] == '_':
+                continue
+            mIdentifier = string.join([identifier, i], ".")
+            member = getattr(instance, i)
+            mType = type(member)
+
+            if mType is types.MethodType:
+                methods[i] = explorerPool.getExplorer(member, mIdentifier)
+            else:
+                members[i] = explorerPool.getExplorer(member, mIdentifier)
+
+        self.klass = explorerPool.getExplorer(instance.__class__,
+                                              self.identifier +
+                                              '.__class__')
+        self.data = members
+        self.methods = methods
+
+
+class ExplorerClass(Explorer):
+    """
+    Properties:
+        name -- the name the class was defined with
+        doc -- the class's docstring
+        bases -- a list of this class's base classes.
+        module -- the module the class is defined in
+
+    Attribute groups:
+        methods -- class methods
+        data -- other members of the class
+    """
+    properties = ["name", "doc", "bases", "module"]
+    attributeGroups = ["methods", "data"]
+    def __init__(self, theClass, identifier):
+        Explorer.__init__(self, theClass, identifier)
+        if not identifier:
+            identifier = theClass.__name__
+        members = {}
+        methods = {}
+        for i in dir(theClass):
+            if (i[0] == '_') and (i != '__init__'):
+                continue
+
+            mIdentifier = string.join([identifier, i], ".")
+            member = getattr(theClass, i)
+            mType = type(member)
+
+            if mType is types.MethodType:
+                methods[i] = explorerPool.getExplorer(member, mIdentifier)
+            else:
+                members[i] = explorerPool.getExplorer(member, mIdentifier)
+
+        self.name = theClass.__name__
+        self.doc = text.docstringLStrip(theClass.__doc__)
+        self.data = members
+        self.methods = methods
+        self.bases = explorerPool.getExplorer(theClass.__bases__,
+                                              identifier + ".__bases__")
+        self.module = getattr(theClass, '__module__', None)
+
+
+class ExplorerFunction(Explorer):
+    properties = ["name", "doc", "file", "line","signature"]
+    """
+        name -- the name the function was defined as
+        signature -- the function's calling signature (Signature instance)
+        doc -- the function's docstring
+        file -- the file the function is defined in
+        line -- the line in the file the function begins on
+    """
+    def __init__(self, function, identifier):
+        Explorer.__init__(self, function, identifier)
+        code = function.func_code
+        argcount = code.co_argcount
+        takesList = (code.co_flags & 0x04) and 1
+        takesKeywords = (code.co_flags & 0x08) and 1
+
+        n = (argcount + takesList + takesKeywords)
+        signature = Signature(code.co_varnames[:n])
+
+        if function.func_defaults:
+            i_d = 0
+            for i in xrange(argcount - len(function.func_defaults),
+                            argcount):
+                default = function.func_defaults[i_d]
+                default = explorerPool.getExplorer(
+                    default, '%s.func_defaults[%d]' % (identifier, i_d))
+                signature.set_default(i, default)
+
+                i_d = i_d + 1
+
+        if takesKeywords:
+            signature.set_keyword(n - 1)
+
+        if takesList:
+            signature.set_varlist(n - 1 - takesKeywords)
+
+        # maybe also: function.func_globals,
+        # or at least func_globals.__name__?
+        # maybe the bytecode, for disassembly-view?
+
+        self.name = function.__name__
+        self.signature = signature
+        self.doc = text.docstringLStrip(function.__doc__)
+        self.file = code.co_filename
+        self.line = code.co_firstlineno
+
+
+class ExplorerMethod(ExplorerFunction):
+    properties = ["self", "klass"]
+    """
+    In addition to ExplorerFunction properties:
+        self -- the object I am bound to, or None if unbound
+        klass -- the class I am a method of
+    """
+    def __init__(self, method, identifier):
+
+        function = method.im_func
+        if type(function) is types.InstanceType:
+            function = function.__call__.im_func
+
+        ExplorerFunction.__init__(self, function, identifier)
+        self.id = id(method)
+        self.klass = explorerPool.getExplorer(method.im_class,
+                                              identifier + '.im_class')
+        self.self = explorerPool.getExplorer(method.im_self,
+                                             identifier + '.im_self')
+
+        if method.im_self:
+            # I'm a bound method -- eat the 'self' arg.
+            self.signature.discardSelf()
+
+
+class ExplorerModule(Explorer):
+    """
+    Properties:
+        name -- the name the module was defined as
+        doc -- documentation string for the module
+        file -- the file the module is defined in
+
+    Attribute groups:
+        classes -- the public classes provided by the module
+        functions -- the public functions provided by the module
+        data -- the public data members provided by the module
+
+    (\"Public\" is taken to be \"anything that doesn't start with _\")
+    """
+    properties = ["name","doc","file"]
+    attributeGroups = ["classes", "functions", "data"]
+
+    def __init__(self, module, identifier):
+        Explorer.__init__(self, module, identifier)
+        functions = {}
+        classes = {}
+        data = {}
+        for key, value in module.__dict__.items():
+            if key[0] == '_':
+                continue
+
+            mIdentifier = "%s.%s" % (identifier, key)
+
+            if type(value) is types.ClassType:
+                classes[key] = explorerPool.getExplorer(value,
+                                                        mIdentifier)
+            elif type(value) is types.FunctionType:
+                functions[key] = explorerPool.getExplorer(value,
+                                                          mIdentifier)
+            elif type(value) is types.ModuleType:
+                pass # pass on imported modules
+            else:
+                data[key] = explorerPool.getExplorer(value, mIdentifier)
+
+        self.name = module.__name__
+        self.doc = text.docstringLStrip(module.__doc__)
+        self.file = getattr(module, '__file__', None)
+        self.classes = classes
+        self.functions = functions
+        self.data = data
+
+typeTable = {types.InstanceType: ExplorerInstance,
+             types.ClassType: ExplorerClass,
+             types.MethodType: ExplorerMethod,
+             types.FunctionType: ExplorerFunction,
+             types.ModuleType: ExplorerModule,
+             types.BuiltinFunctionType: ExplorerBuiltin,
+             types.ListType: ExplorerSequence,
+             types.TupleType: ExplorerSequence,
+             types.DictType: ExplorerMapping,
+             types.StringType: ExplorerImmutable,
+             types.NoneType: ExplorerImmutable,
+             types.IntType: ExplorerImmutable,
+             types.FloatType: ExplorerImmutable,
+             types.LongType: ExplorerImmutable,
+             types.ComplexType: ExplorerImmutable,
+             }
+
+class Signature(pb.Copyable):
+    """I represent the signature of a callable.
+
+    Signatures are immutable, so don't expect my contents to change once
+    they've been set.
+    """
+    _FLAVOURLESS = None
+    _HAS_DEFAULT = 2
+    _VAR_LIST = 4
+    _KEYWORD_DICT = 8
+
+    def __init__(self, argNames):
+        self.name = argNames
+        self.default = [None] * len(argNames)
+        self.flavour = [None] * len(argNames)
+
+    def get_name(self, arg):
+        return self.name[arg]
+
+    def get_default(self, arg):
+        if arg is types.StringType:
+            arg = self.name.index(arg)
+
+        # Wouldn't it be nice if we just returned "None" when there
+        # wasn't a default?  Well, yes, but often times "None" *is*
+        # the default, so return a tuple instead.
+        if self.flavour[arg] == self._HAS_DEFAULT:
+            return (True, self.default[arg])
+        else:
+            return (False, None)
+
+    def set_default(self, arg, value):
+        if arg is types.StringType:
+            arg = self.name.index(arg)
+
+        self.flavour[arg] = self._HAS_DEFAULT
+        self.default[arg] = value
+
+    def set_varlist(self, arg):
+        if arg is types.StringType:
+            arg = self.name.index(arg)
+
+        self.flavour[arg] = self._VAR_LIST
+
+    def set_keyword(self, arg):
+        if arg is types.StringType:
+            arg = self.name.index(arg)
+
+        self.flavour[arg] = self._KEYWORD_DICT
+
+    def is_varlist(self, arg):
+        if arg is types.StringType:
+            arg = self.name.index(arg)
+
+        return (self.flavour[arg] == self._VAR_LIST)
+
+    def is_keyword(self, arg):
+        if arg is types.StringType:
+            arg = self.name.index(arg)
+
+        return (self.flavour[arg] == self._KEYWORD_DICT)
+
+    def discardSelf(self):
+        """Invoke me to discard the first argument if this is a bound method.
+        """
+        ## if self.name[0] != 'self':
+        ##    log.msg("Warning: Told to discard self, but name is %s" %
+        ##            self.name[0])
+        self.name.pop(0)
+        self.default.pop(0)
+        self.flavour.pop(0)
 
     def getStateToCopy(self):
-        return {'value': self.value,
-                'identifier': self.identifier,
-                'type': self.type}
+        return {'name': tuple(self.name),
+                'flavour': tuple(self.flavour),
+                'default': tuple(self.default)}
 
-    def setType(self, type):
-        """Given a TypeType, sets my 'type' attribute.
-        """
-        self._type = type
-        self.type = typeString(type)
-
-    def __repr__(self):
-        ofString = typeString = ''
-        if self.identifier:
-            ofString = " of %s" % (self.identifier,)
-        if self.type:
-            typeString = " type %s" % (self.type,)
-
-        s = "<%s at %x%s%s>" % (self.__class__, id(self),
-                                ofString, typeString)
-        return s
+    def __len__(self):
+        return len(self.name)
 
     def __str__(self):
-        """Provides a readable, if not beautiful, view of my object tree.
-        """
-        if type(self.value) in (types.StringType, types.NoneType,
-                                types.IntType, types.LongType,
-                                types.FloatType, types.ComplexType):
-            s = repr(self.value)
-        else:
-            if self.identifier:
-                ofString = " of %s" % (self.identifier,)
-            if self.type:
-                typeString = " type %s" % (self.type,)
-
-            r = "<%s%s%s>" % (self.__class__.__name__,
-                               ofString, typeString)
-
-            valueString = text.stringyString(self.value, '  ')
-            if text.isMultiline(valueString):
-                s = "%s:\n%s" % (r, valueString)
+        arglist = []
+        for arg in xrange(len(self)):
+            name = self.get_name(arg)
+            hasDefault, default = self.get_default(arg)
+            if hasDefault:
+                a = "%s=%s" % (name, default)
+            elif self.is_varlist(arg):
+                a = "*%s" % (name,)
+            elif self.is_keyword(arg):
+                a = "**%s" % (name,)
             else:
-                s = "%s: %s" % (r, valueString)
-        return s
+                a = name
+            arglist.append(a)
 
-class ObjectBrowser:
-    """Return ObjectLinks for an identifier.
+        return string.join(arglist,", ")
 
-    There are three methods for browsing:
 
-        * browseIdentifier takes an expression and browses the object
-          obtained by evaluating it.
 
-        * browseObject takes an object (and an identifier) and works from
-          that.
 
-        * browseStrictlyIdentifier takes an object name.  This object
-          must be directly in the local or global namespace; no
-          evaluating, getattr, or getitem of the identifier will be done.
-    """
-    globalNamespace = sys.modules['__main__'].__dict__
-    localNamespace = None
 
-    def __init__(self, globalNamespace=None, localNamespace=None):
-        """Create a new ObjectBrowser.
-
-        The global and local namespaces are used to evaluate
-        identifiying exprsessions in by the browseIdentifier and
-        watchIdentifier methods.
-        """
-        if globalNamespace is not None:
-            self.globalNamespace = globalNamespace
-
-        if localNamespace is not None:
-            self.localNamespace = localNamespace
-        else:
-            self.localNamespace = {}
-
-        self.watchUninstallers = {}
-
-    def __setstate__(self, state):
-        if state['globalNamespace'] is None:
-            state['globalNamespace'] = ObjectBrowser.globalNamespace
-        self.__dict__ = state
-
-    def __getstate__(self):
-        c = copy.copy(self.__dict__)
-        for n in 'globalNamespace', 'localNamespace':
-            if c[n] is getattr(ObjectBrowser, n):
-                c[n] = None
-            elif c.has_key(n):
-                if c[n].has_key('__builtins__'):
-                    del c[n]['__builtins__']
-        return c
-
-    def browseStrictlyIdentifier(self, identifier):
-        """Browse an object in the local namespace by its name.
-
-        This checks for the identifier in the local and global
-        namespaces.  If it's not there, raise a NameError.  Doesn't
-        do any getattr for dots or getitem for brackets or evaluate
-        nothin.
-        """
-        # XXX: Actually, splitting on dots and doing getattr() would
-        # probably be okay, wouldn't it?
-
-        if self.localNamespace.has_key(identifier):
-            object = self.localNamespace[identifier]
-        elif self.globalNamespace.has_key(identifier):
-            object = self.globalNamespace[identifier]
-        else:
-            raise NameError(identifier)
-
-        return self.browseObject(object, identifier)
-
-    def browseIdentifier(self, identifier):
-        """Browse the object obtained by evaluating the identifier.
-
-        WARNING: This calls eval() on its argument!
-        """
-        object = eval(identifier,
-                      self.globalNamespace,
-                      self.localNamespace)
-        return self.browseObject(object, identifier)
-
-    def browseObject(self, object, identifier=None):
-        """Browse the given object.
-
-        The identifier argument is used to generate identifiers for
-        objects which are members of this one.
-        """
-        method = self.typeTable.get(type(object),
-                                    self.__class__.browse_other)
-
-        return method(self, object, identifier)
-
+class CRUFT_WatchyThingie:
     # TODO:
     #
     #  * an exclude mechanism for the watcher's browser, to avoid
@@ -290,322 +595,6 @@ class ObjectBrowser:
         # zero refcount.  Leak, Leak!
         ## self.watchUninstallers[object] = uninstallers
 
-
-    ### browse_ methods generate ObjectLinks for specific types of objects
-
-    # It's questionable whether these should really be defined as methods
-    # of this class, as they don't make use of any stored state in the
-    # ObjectBrowser instance.  I can think of one good argument for these
-    # to be methods, though: you can override them in a sub-class this
-    # way.  e.g. if you want an ObjectBrowser which doesn't return
-    # data methods when browsing modules, you could subclass this and
-    # override the browse_module method.
-
-    def browse_other(self, thing, identifier, _seenThings=None):
-        """Returns an ObjectLink of any old thing.
-
-        If the object is recognized as a sequence, I walk through it
-        and the resulting ObjectLink holds a sequence of ObjectLinks.
-        Otherwise, the ObjectLink contains a string representation of
-        the object.
-
-        _seenThings -- a set of id()s of the things already seen, to
-            avoid circular references when descending trees.
-        """
-        if _seenThings is None:
-            _seenThings = {}
-
-        thingId = id(thing)
-        _seenThings[thingId] = 'Set'
-
-        thingType = type(thing)
-        if thingType in (types.StringType, types.NoneType,
-                         types.IntType, types.LongType,
-                         types.FloatType, types.ComplexType,
-                         types.CodeType):
-            # XXX: types.XRangeType needs to be made jelly-safe!
-            thing = thing
-
-        elif thingType in (types.ListType, types.TupleType):
-            lst = [None] * len(thing)
-            for i in xrange(len(thing)):
-                iIdentifier = "%s[%d]" % (identifier, i)
-
-                if _seenThings.has_key(id(thing[i])):
-                    lst[i] = ObjectLink(str(thing[i]), iIdentifier,
-                                        type(thing[i]), id(thing[i]))
-                else:
-                    _seenThings[id(thing[i])] = 'Set'
-                    lst[i] = self.browse_other(thing[i], iIdentifier,
-                                               _seenThings)
-
-            if thingType is types.TupleType:
-                thing = tuple(lst)
-            else:
-                thing = lst
-
-        elif thingType is types.DictType:
-            dct = {}
-            keys = thing.keys()
-            for i in xrange(len(keys)):
-                key = keys[i]
-                value = thing[key]
-                keyIdentifier = "%s.keys()[%d]" % (identifier, i)
-
-                valueIdentifier = "%s[%s]" % (identifier, key)
-
-                if _seenThings.has_key(id(key)):
-                    key = ObjectLink(str(key), keyIdentifier, type(key),
-                                     id(key))
-                else:
-                    _seenThings[id(key)] = 'Set'
-                    key = self.browse_other(key, keyIdentifier,
-                                            _seenThings)
-                if _seenThings.has_key(id(value)):
-                    value = ObjectLink(str(value), valueIdentifier,
-                                       type(value), id(value))
-                else:
-                    _seenThings[id(value)] = 'Set'
-                    value = self.browse_other(value, valueIdentifier,
-                                              _seenThings)
-
-                dct[key] = value
-
-            thing = dct
-        else:
-            thing = str(thing)
-
-        return ObjectLink(thing, identifier, thingType, thingId)
-
-    def browse_builtin(self, function, identifier):
-        """Returns an ObjectLink with a builtin's name and docstring.
-
-        Returns a dictionary in an ObjectLink with type BulitinFunctionType.
-        The dictionary contains the members:
-            name -- the name the function was defined as
-            doc -- function's docstring, or None if unavailable
-            self -- if not None, the function is a method of this object.
-        """
-        rval = {'doc': function.__doc__,
-                'name': function.__name__,
-                'self': function.__self__}
-
-        return ObjectLink(rval, identifier, types.BuiltinFunctionType,
-                          id(function))
-
-    def browse_instance(self, instance, identifier):
-        """Returns an ObjectLink with the instance's attributes.
-
-        Returns a dictionary in an ObjectLink with type InstanceType.
-
-        The dictionary contains the members:
-            class -- an ObjectLink to the class this is an instance of
-            methods -- a list of ObjectLinks of methods
-            members -- a list of ObjectLinks of data members
-
-        Note these are only the *instance* methods and members --
-        if you want the class methods, you'll have to look up the class.
-
-        TODO: Make something which provides an ObjectLink of me with
-        all the attributes that I appear to have.  That is, all the
-        attributes on me, my class, and my base class which don't
-        overlap.
-        """
-        members = {}
-        methods = {}
-        for i in dir(instance):
-            if i[0] == '_':
-                continue
-            mIdentifier = string.join([identifier, i], ".")
-            member = getattr(instance, i)
-            mType = type(member)
-
-            if mType is types.MethodType:
-                methods[i] = self.browse_method(member, mIdentifier)
-            else:
-                members[i] = self.browse_other(member, mIdentifier)
-
-        rval = {"class": ObjectLink(str(instance.__class__),
-                                    str(instance.__class__),
-                                    type(instance.__class__),
-                                    id(instance.__class__)),
-                "members": members,
-                "methods": methods,
-                }
-
-        return ObjectLink(rval, identifier, types.InstanceType,
-                          id(instance))
-
-    def browse_class(self, theClass, identifier):
-        """Returns an ObjectLink with the class's attributes.
-
-        Returns a dictionary in an ObjectLink with type ClassType.
-
-        The dictionary contains the members:
-            name -- the name the class was defined with
-            doc -- the class's docstring
-            methods -- class methods
-            members -- other members of the class
-            module -- the module the class is defined in
-        """
-        if not identifier:
-            identifier = theClass.__name__
-        members = {}
-        methods = {}
-        for i in dir(theClass):
-            if (i[0] == '_') and (i != '__init__'):
-                continue
-
-            mIdentifier = string.join([identifier, i], ".")
-            member = getattr(theClass, i)
-            mType = type(member)
-
-            if mType is types.MethodType:
-                methods[i] = self.browse_method(member, mIdentifier)
-            else:
-                members[i] = self.browse_other(member, mIdentifier)
-
-        rval = {"name": theClass.__name__,
-                "doc": text.docstringLStrip(theClass.__doc__),
-                "members": members,
-                "methods": methods,
-                "bases": self.browse_other(theClass.__bases__,
-                                        identifier + ".__bases__"),
-                "module": getattr(theClass, '__module__', None),
-                }
-
-        return ObjectLink(rval, identifier, types.ClassType)
-
-    def browse_method(self, method, identifier):
-        """Returns an ObjectLink with the method's signature and class.
-
-        Returns a dictionary in an ObjectLink with type MethodType.
-
-        In addition to the elements in the browse_function dictionary,
-        this also includes 'self' and 'class' elements.
-        """
-
-        function = method.im_func
-        if type(function) is types.InstanceType:
-            function = function.__call__.im_func
-        link = self.browse_function(function, identifier)
-        link.id = id(method)
-        link.value['class'] = self.browse_other(method.im_class,
-                                                identifier + '.im_class')
-        link.value['self'] = self.browse_other(method.im_self,
-                                               identifier + '.im_self')
-        link.setType(types.MethodType)
-        if method.im_self:
-            # I'm a bound method -- eat the 'self' arg.
-            del link.value['signature'][0]
-        return link
-
-    def browse_function(self, function, identifier):
-        """Returns an ObjectLink with the function's signature.
-
-        Returns a dictionary in an ObjectLink with type FunctionType.
-
-        The dictionary contains the elements:
-            name -- the name the function was defined as
-            signature -- the function's calling signature
-            doc -- the function's docstring
-            file -- the file the function is defined in
-            line -- the line in the file the function begins on
-
-        The signature element is a list of dictionaries, each of which
-        includes a 'name' element.  If that argument has a default, it
-        is provided in the 'default' element.  If the argument is a
-        variable argument list, its dictionary will have a 'list' key
-        set.  If the argument accepts arbitrary keyword arguments, its
-        dictionary will have a 'keywords' element set.
-        """
-        code = function.func_code
-        argcount = code.co_argcount
-        takesList = (code.co_flags & 0x04) and 1
-        takesKeywords = (code.co_flags & 0x08) and 1
-
-        args = [None] * (argcount + takesList + takesKeywords)
-        for i in xrange(len(args)):
-            args[i] = {'name': code.co_varnames[i]}
-
-        if function.func_defaults:
-            i_d = 0
-            for i in xrange(argcount - len(function.func_defaults),
-                            argcount):
-                args[i]['default'] = self.browse_other(
-                    function.func_defaults[i_d],
-                    '%s.func_defaults[%d]' % (identifier, i_d))
-
-                i_d = i_d + 1
-
-        if takesKeywords:
-            args[-1]['keywords'] = 1
-
-        if takesList:
-            args[-(1 + takesKeywords)]['list'] = 1
-
-        # maybe also: function.func_globals
-
-        rval = {'name': function.__name__,
-                'signature': args,
-                'doc': text.docstringLStrip(function.__doc__),
-                'file': code.co_filename,
-                'line': code.co_firstlineno,
-                }
-
-        return ObjectLink(rval, identifier, types.FunctionType,
-                          id(function))
-
-    def browse_module(self, module, identifier):
-        """Returns an ObjectString with the module's properties and members.
-
-        Returns a dictionary in an ObjectLink with type ModuleType.
-
-        The dictionary contains the elements:
-            name -- the name the module was defined as
-            doc -- documentation string for the module
-            file -- the file the module is defined in
-            classes -- the public classes provided by the module
-            functions -- the public functions provided by the module
-            data -- the public data members provided by the module
-
-        (\"Public\" is taken to be \"anything that doesn't start with _\")
-        """
-        functions = {}
-        classes = {}
-        data = {}
-        for key, value in module.__dict__.items():
-            if key[0] == '_':
-                continue
-
-            mIdentifier = "%s.%s" % (identifier, key)
-
-            if type(value) is types.ClassType:
-                classes[key] = self.browse_class(value, mIdentifier)
-            elif type(value) is types.FunctionType:
-                functions[key] = self.browse_function(value, mIdentifier)
-            elif type(value) is types.ModuleType:
-                pass # pass on imported modules
-            else:
-                data[key] = self.browse_other(value, mIdentifier)
-
-        rval = {'name': module.__name__,
-                'doc': text.docstringLStrip(module.__doc__),
-                'file': getattr(module, '__file__', None),
-                'classes': classes,
-                'functions': functions,
-                'data': data,
-                }
-
-        return ObjectLink(rval, identifier, types.ModuleType, id(module))
-
-    typeTable = {types.InstanceType: browse_instance,
-                 types.ClassType: browse_class,
-                 types.MethodType: browse_method,
-                 types.FunctionType: browse_function,
-                 types.ModuleType: browse_module,
-                 types.BuiltinFunctionType: browse_builtin,
-                 }
 
 class _WatchMonkey:
     """I hang on a method and tell you what I see.

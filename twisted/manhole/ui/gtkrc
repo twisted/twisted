@@ -55,8 +55,8 @@ style "AttributeValue" = "Compressed" {
     fg[NORMAL] = { 0.0, 0.4, 0.6 }
 }
 
-widget "*.attribute_category" style "Bold"
-widget "*.attribute_name" style "AttributeName"
-widget "*.attribute_value" style "AttributeValue"
-
-
+widget "*.Visage.*.AttributeGroupTitle*" style "Bold"
+widget "*.Visage.*.PropertyName*" style "AttributeName"
+widget "*.Visage.*.AttributeName*" style "AttributeName"
+widget "*.Visage.*.PropertyValue*" style "AttributeValue"
+widget "*.Visage.*.AttributeValue*" style "AttributeValue"

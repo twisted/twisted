@@ -1,5 +1,6 @@
-
+# -*- Python -*-
 # Twisted, the Framework of Your Internet
+# $Id: gtkmanhole.py,v 1.31 2002/01/14 10:18:12 acapnotic Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -17,13 +18,14 @@
 
 # TODO:
 #  * send script
+#  * replace method
 #  * save readline history
 #  * save-history-as-python
 #  * save transcript
+#  * identifier completion
 
 import code, string, sys, traceback, types
 import gtk
-# import time
 
 from twisted.python import explorer, rebuild, util
 from twisted.spread.ui import gtkutil
@@ -34,7 +36,7 @@ True = gtk.TRUE
 False = gtk.FALSE
 
 try:
-    import gnomehole
+    import spelunk_gnome
 except ImportError:
     _GNOME_POWER = False
 else:
@@ -73,8 +75,8 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
     def __init__(self):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Manhole Interaction")
-        self.set_usize(300,300)
-        self['name'] = "Manhole"
+        self.set_default_size(300, 300)
+        self.set_name("Manhole")
 
         vbox = gtk.GtkVBox()
         pane = gtk.GtkVPaned()
@@ -95,12 +97,19 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
             dWindow = gtk.GtkWindow(title="Spelunking")
             dWindow.add(self.display)
             dWindow.show_all()
+            self.display.makeDefaultCanvas()
         else:
             self.display = BrowserDisplay(self)
         # The referencable attached to the Perspective
         self.client = self
-        self.remote_receiveBrowserObject=self.display.receiveBrowserObject
+
         self.remote_console = self.output.console
+
+    def remote_receiveExplorer(self, xplorer):
+        if _GNOME_POWER:
+            self.display.receiveExplorer(xplorer)
+        else:
+            XXX # text display?
 
     def connected(self, perspective):
         self.loginWindow.hide()
@@ -165,7 +174,7 @@ class LineOrientedBrowserDisplay:
 
 
 if _GNOME_POWER:
-    BrowserDisplay = gnomehole.SpelunkDisplay
+    BrowserDisplay = spelunk_gnome.SpelunkDisplay
 else:
     BrowserDisplay = LineOrientedBrowserDisplay
 
@@ -341,8 +350,8 @@ class InputText(gtk.GtkText):
             statement = split[0]
             if len(split) == 2:
                 remainder = split[1]
-            if statement == 'browse':
-                method = self.toplevel.perspective.browse
+            if statement in ('browse', 'explore'):
+                method = self.toplevel.perspective.explore
                 text = remainder
             elif statement == 'watch':
                 method = self.toplevel.perspective.watch
@@ -350,7 +359,7 @@ class InputText(gtk.GtkText):
             elif statement == 'self_rebuild':
                 rebuild.rebuild(explorer)
                 if _GNOME_POWER:
-                    rebuild.rebuild(gnomehole)
+                    rebuild.rebuild(spelunk_gnome)
                 rebuild.rebuild(sys.modules[__name__])
                 return
         try:
@@ -366,11 +375,27 @@ class InputText(gtk.GtkText):
             traceback.print_exc()
             gtk.mainquit()
 
-class ObjectLink(pb.RemoteCopy, explorer.ObjectLink):
-    """RemoteCopy of explorer.ObjectLink"""
+    def readHistoryFile(self, filename=None):
+        if filename is None:
+            filename = self.historyfile
+
+        f = open(filename, 'r', 1)
+        self.history.extend(f.readlines())
+        f.close()
+        self.histpos = len(self.history)
+
+    def writeHistoryFile(self, filename=None):
+        if filename is None:
+            filename = self.historyfile
+
+        f = open(filename, 'a', 1)
+        f.writelines(self.history)
+        f.close()
+
+class Signature(pb.RemoteCopy, explorer.Signature):
     def __init__(self):
         pass
 
-    __str__ = explorer.ObjectLink.__str__
+    __str__ = explorer.Signature.__str__
 
-pb.setCopierForClass('twisted.python.explorer.ObjectLink', ObjectLink)
+pb.setCopierForClass('twisted.python.explorer.Signature', Signature)
