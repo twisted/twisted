@@ -579,13 +579,16 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
     numberRounds = 2048
     timeLimit = 200
 
-    def setUp(self):
+    def _setUp(self):
+        # This method is used by test_ssl
         PortCleanerUpper.setUp(self)
+        self.serverConns = []
 
+    def setUp(self):
+        self._setUp()
         f = protocol.ServerFactory()
         f.protocol = NoopProtocol
         f.protocol.master = self
-        self.serverConns = []
 
         self.listener = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.ports.append(self.listener)
