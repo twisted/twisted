@@ -135,6 +135,8 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
                 raise
 
     def startReading(self):
+        if self.state != "connected":
+            return
         self.reading = True
         while self.producerBuffer:
             item = self.producerBuffer.pop(0)
