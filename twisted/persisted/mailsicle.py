@@ -89,7 +89,7 @@ def writeHeader(f, k, v):
     f.write(v.replace("\n", "\n\t"))
     f.write("\n")
 
-poidl = re.compile(r'"((?:\\"|.)*?)"(?: (<.*?>))?')
+poidl = re.compile(r'(?:"((?:\"|.)*?)" |)<([^>]*)>')
 
 def parseOIDList(s):
     return poidl.findall(s)
@@ -252,17 +252,24 @@ class Mailsicle(popsicle.DirectoryRepository):
     def loadOIDList(self, s):
         l = []
         for descript, oidx in parseOIDList(s):
-            oid = oidx[1:-1]
             l.append(self.loadNow(oid))
         return l
 
     def makeOIDList(self,l):
         return ', '.join(map(self.addressOID, l))
 
-    def addressOID(self,t):
-        if t is not None:
-            return ('%s <%s>' % (quotify(getSaver(t,self).descriptiveName()),
-                                 popsicle.ref(t,self).acquireOID()))
+    def addressOID(self, obj, desc=None):
+        if obj is not None:
+            oid = popsicle.ref(obj, self).acquireOID()
+            if desc is not None:
+                return '%s <%s>' % (quotify(desc), oid)
+            else:
+                if desc=='':
+                    return '<%s>' % oid
+                else:
+                    return ('%s <%s>' %
+                            (quotify(getSaver(obj,self).descriptiveName()),
+                             oid))
         else:
             return '<>'
 
