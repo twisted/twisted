@@ -131,7 +131,7 @@ class SimpleActionTestCase(unittest.TestCase):
             ":server 352 user pattern 15j7VkjDbD hostmask1 servername2 user2 H :2 fullname3",
             ":server 352 user pattern 4X7zQjVK7h hostmask2 servername3 user3 H :3 fullname1",
             ":server 315 user pattern :End of /WHO list.",
-        ])
+        ], False)
         client = AdvancedTestClient()
         who = []
         client.onC.addCallback(lambda p: p.who("pattern")
@@ -145,3 +145,41 @@ class SimpleActionTestCase(unittest.TestCase):
             ("15j7VkjDbD", "hostmask1", "servername2", "user2", "H", 2, "fullname3"),
             ("4X7zQjVK7h", "hostmask2", "servername3", "user3", "H", 3, "fullname1"),
         ])
+
+    def testWhois(self):
+        server = LineSendingProtocol([
+            ":server 311 user targetUser 4X7zQjVK7h hostmask * :Fullname",
+            ":server 312 user targetUser irc.server.tld :http://server.tld/",
+            ":server 320 user targetUser :is an identified user",
+            ":server 317 user targetUser 227 1064473941 :seconds idle, signon time",
+            ":server 318 user targetUser :End of /WHOIS list.",
+        ], False)
+        client = AdvancedTestClient()
+        whois = {}
+        client.onC.addCallback(lambda p: p.whois("targetUser")
+            ).addCallback(whois.update
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.assertEquals(whois, {
+            'user': ('4X7zQjVK7h', 'hostmask', 'Fullname'),
+            'server': ('irc.server.tld', 'http://server.tld/'),
+            'idle': 227,
+            320: [['user', 'targetUser', 'is an identified user']],
+        })
+
+    def testIllegalWhois(self):
+        server = LineSendingProtocol([
+            ":server 401 user targetUser :No such nick/channel",
+        ], False)
+        client = AdvancedTestClient()
+        whois = {}
+        client.onC.addCallback(lambda p: p.whois("targetUser")
+            ).addCallback(whois.update
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.failIf(whois)
+        self.failure.trap(NoSuchChannel)

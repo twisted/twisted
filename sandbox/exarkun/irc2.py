@@ -20,12 +20,20 @@ class AdvancedClient(irc.IRCClient):
         self._pendingParts = {}
         self._pendingNames = []
         self._pendingWho = []
+        self._pendingWhois = []
+        self._unknownHandlers = []
     
     def connectionLost(self, reason):
         if self._pendingQuit:
             d = self._pendingQuit
             self._pendingQuit = None
             d.callback(self)
+
+    def irc_unknown(self, prefix, command, params):
+        if self._unknownHandlers:
+            self._unknownHandlers[0](prefix, command, params)
+        else:
+            irc.IRCClient.irc_unknown(self, prefix, command, params)
 
     def quit(self, message=''):
         """Quit the network
@@ -166,3 +174,61 @@ class AdvancedClient(irc.IRCClient):
     def irc_RPL_ENDOFWHO(self, prefix, params):
         who, d = self._pendingWho.pop(0)
         d.callback(who)
+
+    def whois(self, user):
+        """Retrieve information about the specified user.
+        
+        @type user: C{str}
+        @param user: The user about whom to retrieve information.
+        
+        @rtype: C{Deferred} of C{dict} mapping information tags to
+        received information.  The items of this dict are as follows:
+        
+            'user':      (ident, hostmask, real name)
+            'server':    (server, server info)
+            'operator':  True
+            'idle':      idle time, in seconds, as an integer
+            'channels':  list of strings indicating the channels to which
+                            the user belongs
+        
+        Other keys may exist if the server responds with non-standard
+        information.
+        """
+        d = defer.Deferred()
+        self._pendingWhois.append(({}, d))
+        self._unknownHandlers.append(self._whoisHandler)
+        self.sendLine("WHOIS " + user)
+        return d
+
+    def _whoisHandler(self, prefix, command, params):
+        try:
+            command = int(command)
+        except ValueError:
+            pass
+        self._pendingWhois[0][0].setdefault(command, []).append(params)
+    
+    def irc_RPL_WHOISUSER(self, prefix, params):
+        self._pendingWhois[0][0]['user'] = params[2], params[3], params[5]
+    
+    def irc_RPL_WHOISSERVER(self, prefix, params):
+        self._pendingWhois[0][0]['server'] = params[2], params[3]
+    
+    def irc_RPL_WHOISOPERATOR(self, prefix, params):
+        self._pendingWhois[0][0]['operator'] = True
+    
+    def irc_RPL_WHOISIDLE(self, prefix, params):
+        self._pendingWhois[0][0]['idle'] = int(params[2])
+    
+    def irc_RPL_WHOISCHANNELS(self, prefix, params):
+        self._pendingWhois[0][0].setdefault('channels', []).append(params[1])
+    
+    def irc_RPL_ENDOFWHOIS(self, prefix, params):
+        whois, d = self._pendingWhois.pop(0)
+        del self._unknownHandlers[0]
+        d.callback(whois)
+
+    def irc_ERR_NOSUCHNICK(self, prefix, params):
+        # See irc_ERR_NOSUCHCHANNEL
+        whois, d = self._pendingWhois.pop(0)
+        del self._unknownHandlers[0]
+        d.errback(NoSuchChannel())
