@@ -1,0 +1,11 @@
+
+span.footnote:before
+{
+  content: "[Footnote: ";
+}
+
+span.footnote:after
+{
+  content: "]";
+}
+
