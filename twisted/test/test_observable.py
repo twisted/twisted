@@ -43,6 +43,7 @@ class SubscriberTestCase(unittest.TestCase):
         class WhenTest(observable.Subscriber):
             def when_foo_baz(self, foo, bazChannel, data):
                 data.called = 1
+        observable.registerWhenMethods(WhenTest)
         d = DummyEvent()
         d.called = 0
         w = WhenTest()

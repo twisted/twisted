@@ -202,83 +202,51 @@ class WhenMethodSubscription:
             return method(publisher, channel, message)
 
 
+def registerWhenMethods(Class):
+    sa = Class._subscriberAttributes = {}
+    for base in Class.__bases__:
+        if issubclass(base, Subscriber):
+            sa.update(base._subscriberAttributes)
+    # The structure of this dictionary is
+    # {attributeName: {eventName: [listOfHandlers]}}
+    # The handler 'None' is treated specially, and the instance-method
+    # is subscribed when it is encountered.
+    for name,method in Class.__dict__.items():
+        # I want to turn method names like when_place_enter into a
+        # dictionary like {'place': {'enter': None}}.
+        if type(method) == types.FunctionType:
+            specname = string.split(name,'_')
+            # Okay.  We've got some special naming stuff here.
+            if not len(specname) > 2:
+                continue
+            if not specname[0] == 'when':
+                continue
+            evtname = specname[1]
+            attrname = string.join(specname[2:],'_')
+            evtdict = sa.get(evtname,{})
+            evtdict[attrname] = [None]
+            sa[evtname] = evtdict
+
 class Subscriber(reflect.Accessor):
-
-    def initSubscriber(self,klass):
-        if klass is None:
-            klass = self.__class__
-        if klass.__dict__.has_key("_Subscriber__inited"):
-            return
-        klass.__inited = 1
-        sa = klass.__attributes = {}
-        for base in klass.__bases__:
-            if issubclass(base, Subscriber):
-                self.whichInit(base)
-                sa.update(base.__attributes)
-        # The structure of this dictionary is
-        # {attributeName: {eventName: [listOfHandlers]}}
-        # The handler 'None' is treated specially, and the instance-method
-        # is subscribed when it is encountered.
-        for name,method in klass.__dict__.items():
-            # I want to turn method names like when_place_enter into a
-            # dictionary like {'place': {'enter': None}}.
-            if type(method) == types.FunctionType:
-                specname = string.split(name,'_')
-                # Okay.  We've got some special naming stuff here.
-                if not len(specname) > 2:
-                    continue
-                if not specname[0] == 'when':
-                    continue
-                evtname = specname[1]
-                attrname = string.join(specname[2:],'_')
-                evtdict = sa.get(evtname,{})
-                evtdict[attrname] = [None]
-                sa[evtname] = evtdict
-        klass.__inited = 1
-
-    def unthreadedInit(self,klass):
-        self.initSubscriber(klass)
-
-    def threadedInit(self,klass):
-        if klass is None:
-            klass = self.__class__
-        if not issubclass(klass, Subscriber):
-            return
-        klass.classLock.withThisLocked(self.initSubscriber,klass)
-
-    if threadable.threaded:
-        classLock = threadable.XLock()
-        whichInit = threadedInit
-    else:
-        whichInit = unthreadedInit
-
-    def __init__(self):
-        self.whichInit(self.__class__)
-
-    def __setstate__(self,state):
-        "this does nothing with the state argument -- it is safe to chain to"
-        # initialize class-level attributes if they need it
-        self.whichInit(self.__class__)
-
+    _subscriberAttributes = {}
     def subscribeToAttribute(self, attribute, channel, callback):
         assert callable(callback), "Callback must be a callable type."
-        if self.__attributes is self.__class__.__attributes:
-            self.__attributes = copy.deepcopy(
-                self.__attributes)
-        channels = self.__attributes.get(attribute,{})
+        if self._subscriberAttributes is self.__class__._subscriberAttributes:
+            self._subscriberAttributes = copy.deepcopy(self._subscriberAttributes)
+        channels = self._subscriberAttributes.get(attribute,{})
         handlers = channels.get(channel,[])
         handlers.append(callback)
         channels[channel] = handlers
-        self.__attributes[attribute] = channels
+        self._subscriberAttributes[attribute] = channels
         currentPublisher = getattr(self, attribute, None)
         if reflect.isinst(currentPublisher, Publisher):
             currentPublisher.subscribe(channel, callback)
 
     def unsubscribeFromAttribute(self, attribute, channel, callback):
-        assert not (self.__attributes is
-                    self.__class__.__attributes),\
+        assert not (self._subscriberAttributes is
+                    self.__class__._subscriberAttributes),\
                     "No attribute channels have been subscribed."
-        channels = self.__attributes[attribute]
+        channels = self._subscriberAttributes[attribute]
         handlers = channels[channel]
         handlers.remove(callback)
         currentPublisher = getattr(self, attribute, None)
@@ -294,13 +262,7 @@ class Subscriber(reflect.Accessor):
         reflect.Accessor.reallySet(self,key,val)
 
     def _doSub(self, key, val):
-        try:
-            attributeInfo = self.__attributes.get(key,{}).items()
-        except:
-            import traceback
-            traceback.print_stack(file=log.logfile)
-            log.msg(repr(self.__class__))
-            raise
+        attributeInfo = self._subscriberAttributes.get(key,{}).items()
         previousAttribute = getattr(self,key,None)
         if reflect.isinst(previousAttribute, Publisher):
             for event, handlers in attributeInfo:

@@ -64,8 +64,7 @@ class DarkRoom(Room):
         if lit != self.lit:
             self.reallySet('lit', lit)
             for thing in self.things:
-                if hasattr(thing, 'focus'):
-                    thing.reFocus()
+                thing.reFocus()
             
     def set_surface(self, surface):
         assert 0, "Dark places may not be surfaces."

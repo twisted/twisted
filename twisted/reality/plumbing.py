@@ -30,21 +30,24 @@ class Hose(telnet.Telnet):
         """A login prompt that asks for your character name.
         """
         return "character: "
-        
+
 
     def authenticate(self, username, password):
         """Checks authentication against the reality; returns a boolean indicating success.
         """
         try:
             self.factory.reality.check(username, password)
-        except authenticator.Unauthorized:
-            self.transport.write("NEIN!\r\n")
+            p = self.factory.reality.getPerspectiveNamed(self.username)
+            p.attached( self )
+        except authenticator.Unauthorized, u:
+            self.transport.write("Login Refused: %s\r\n" % str(u))
             return 0
         else:
-            self.player = self.factory.reality.getPerspectiveNamed(self.username)
-            self.transport.write("Hello "+self.player.name+", welcome to Reality!\r\n"+telnet.IAC+telnet.WONT+telnet.ECHO)
-            self.player.intelligence = self
+            self.player = p
+            self.transport.write("Hello "+self.player.name+", welcome to Reality!\r\n"+
+                                 telnet.IAC+telnet.WONT+telnet.ECHO)
             return 1
+
 
     def processCommand(self, cmd):
         """Execute a command as a player.
@@ -60,51 +63,61 @@ class Hose(telnet.Telnet):
         """
         telnet.Telnet.connectionLost(self)
         if hasattr(self, 'player'):
-            player = self.player
-            if hasattr(player, 'intelligence'):
-                del player.intelligence
-            del self.player
-            player.logout()
-        
+            if hasattr(self.player, 'intelligence'):
+                self.player.detached(self)
+
+
     def seeName(self, name):
         """Display a focused name bracketed, in bold.
         """
         self.transport.write(telnet.BOLD_MODE_ON+"[ "+name+" ]"+telnet.BOLD_MODE_OFF+
-                   "\r\n")
-    def seeItem(self, thing,name):
+                             "\r\n")
+
+
+    def seeItem(self, key, parent, value):
         """Display an item that's present.
         """
-        self.transport.write(" "+name+"\r\n")
-    def dontSeeItem(self, thing):
+        self.transport.write(" "+value+"\r\n")
+
+    def dontSeeItem(self, key, parent):
         """no-op; would be nonsensical over telnet.
         """
+
     def seeNoItems(self):
         """no-op; would be nonsensical over telnet.
         """
-    def seeExit(self, direction, exit):
+
+    def seeExit(self, direction):
         """Display a single exit.
         """
         self.transport.write("You can go "+direction+"\r\n")
+
     def dontSeeExit(self, direction):
         """no-op; would be nonsensical over telnet.
         """
+
     def seeNoExits(self):
         """no-op; would be nonsensical over telnet.
         """
+
     def seeDescription(self, key, description):
         """Displays a description.
         """
         self.transport.write(description+"\r\n")
+
     def dontSeeDescription(self, key):
         """no-op; would be nonsensical over telnet.
         """
+
     def seeNoDescriptions(self):
         """no-op; would be nonsensical over telnet.
         """
+
     def seeEvent(self, string):
         """Displays an event to the player.
         """
         self.transport.write(string+'\r\n')
+
     def request(self, question,default,ok,cancel):
         """Requests are not supported by this interface; calls cancel() immediately.
         """

@@ -129,8 +129,6 @@ class Thing(observable.Publisher,
 
         Initialize a Thing.
         """
-        # Superclass constructors.
-        observable.Subscriber.__init__(self)
         # State setup.
         self.__index = Ambiguous()
         self.__version = self.__version
@@ -452,14 +450,16 @@ class Thing(observable.Publisher,
 
 
     def broadcastToOne(self, to_subject, to_other):
-        """Thing.broadcastToPair(to_subject, to_other) -> None
+        """Thing.broadcastToOne(to_subject, to_other) -> None
 
         Broadcast some event text to all who can see this subject (in the style
         of oneHears).  Prefer this form, as it will deal with the actor and
-        target having multiple and/or separate locations."""
+        target having multiple and/or separate locations.
+        """
         
         self.broadcastToPair(target=None,
-                             to_subject=to_subject, to_target=(),
+                             to_subject=to_subject,
+                             to_target=(),
                              to_other=to_other)
                        
 
@@ -655,7 +655,7 @@ class Thing(observable.Publisher,
         except AttributeError: pass
         self.reallySet('intelligence',intelligence)
         self.intelligence.thing = self
-        self.focus = getattr(self, 'focus', self.place)
+        self.reFocus()
 
     ### Client Interaction
 
@@ -711,19 +711,12 @@ class Thing(observable.Publisher,
 
     def login(self):
         """Thing.login() -> self
+        
         This returns the object that the user will actually log in to; override
         this to implement a 'factory' login object, to produce guests and
         suchlike.
         """
         return self
-
-    def logout(self):
-        """Thing.logout() -> None: called on logout
-        
-        This is called when a player should exit the world / go to sleep /
-        whatever, after their network connection has been nuked.
-        """
-
 
     ambient_ = None
 
@@ -1343,7 +1336,6 @@ class Thing(observable.Publisher,
         """
         assert self.__version <= Thing.__version
         self.__dict__.update(dict)
-        observable.Subscriber.__setstate__(self, dict)
         while self.__version != Thing.__version:
             getattr(self,'_Thing__upgrade_%s' % self.__version)()
             self.__version = self.__version + 1
@@ -1521,3 +1513,4 @@ class Thing(observable.Publisher,
 # End of Thing
 
 threadable.synchronize(Thing)
+observable.registerWhenMethods(Thing)

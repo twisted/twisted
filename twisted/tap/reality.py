@@ -29,6 +29,7 @@ def getPorts(app, config):
     sys.stdout.flush()
     rdf = reality._default = load(open(config.map,'rb'))
     print 'Loaded.'
+    app.addDelayed(rdf)
 
     spigot = plumbing.Spigot(rdf)
     site = server.Site(plumbing.Web(rdf))

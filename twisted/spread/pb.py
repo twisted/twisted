@@ -881,27 +881,29 @@ class Broker(banana.Banana):
         """
         assert self.username is not None, "login directive must appear *BEFORE* password directive"
         try:
-            self.loginService.authenticate(self.username, self.challenge, password)
-            perspective = self.loginService.getPerspectiveNamed(self.username)
-            if self.loginObjID == -1:
-                loginObj = None
-            else:
-                loginObj = Reference(perspective, self, self.loginObjID, 1)
-            perspective.attached(loginObj)
-            self.perspectives[self.loginTag] = (perspective, loginObj)
-            self.setNameForLocal(self.loginTag, perspective)
-            self.sendCall("perspective", self.loginTag)
+            try:
+                self.loginService.authenticate(self.username, self.challenge, password)
+                perspective = self.loginService.getPerspectiveNamed(self.username)
+                if self.loginObjID == -1:
+                    loginObj = None
+                else:
+                    loginObj = Reference(perspective, self, self.loginObjID, 1)
+                perspective.attached(loginObj)
+                self.perspectives[self.loginTag] = (perspective, loginObj)
+                self.setNameForLocal(self.loginTag, perspective)
+                self.sendCall("perspective", self.loginTag)
+            except authenticator.Unauthorized:
+                log.msg("Unauthorized Login Attempt: %s" % self.username)
+                self.sendCall("inperspective", self.loginTag)
+                # TODO; this should do some more heuristics rather than just
+                # closing the connection immediately.
+                self.transport.loseConnection()
+        finally:
             del self.username
             del self.challenge
             del self.loginTag
             del self.loginService
             del self.loginObjID
-        except authenticator.Unauthorized:
-            log.msg("Unauthorized Login Attempt: %s" % self.username)
-            self.sendCall("inperspective", self.loginTag)
-            # TODO; this should do some more heuristics rather than just
-            # closing the connection immediately.
-            self.transport.loseConnection()
 
     def connectionMade(self):
         """Initialize.

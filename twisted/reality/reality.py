@@ -22,11 +22,6 @@ class Reality(delay.Delayed,
         self.__ids = {}
         self.__names = {}
 
-    def reload(self, module):
-        reload(module)
-        for thing in self.__ids.values():
-            reflect.refrump(thing)
-
     def getThingById(self, thingid):
         return self.__ids[thingid]
 

@@ -171,7 +171,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
 
     def errorVerb(self, error):
         self.seeEvent(error, boldFont)
-        self.verbDone('')
+        self.finishVerb('')
 
     def finishVerb(self, result):
         self.cmdarea.set_sensitive(gtk.TRUE)
@@ -274,8 +274,8 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         
     remote_seeEvent = seeEvent
     
-    def remote_seeName(self,*args):
-        self.namelabel.set_text(string.join(args,' - '))
+    def remote_seeName(self,name):
+        self.namelabel.set_text(name)
 
     def remote_dontSeeItem(self,key,parent):
         try: del self.items[key]

@@ -49,11 +49,11 @@ class Resource:
 
     def render(self, request):
         """Render a given resource.
-        The return value of this method will be the rendered page,
-        unless the return value is None, in which case it is this
-        class's responsability to write the results to
-        request.write(data), then call
-        request.finish().
+        
+        The return value of this method will be the rendered page, unless the
+        return value is twisted.web.server.NOT_DONE_YET, in which case it is
+        this class's responsability to write the results to
+        request.write(data), then call request.finish().
         """
         raise "%s called" % str(self.__class__.__name__)
 

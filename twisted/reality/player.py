@@ -6,7 +6,7 @@ import os
 import traceback
 
 # Twisted Imports
-from twisted.python import threadable, reflect
+from twisted.python import threadable, reflect, log, authenticator, rebuild
 from twisted.spread import pb
 
 # Sibling Imports
@@ -45,11 +45,21 @@ class Player(thing.Thing, pb.Perspective):
         self.execute(st)
 
     def attached(self, i):
+        if hasattr(self, 'intelligence'):
+            log.msg("player duplicate: [%s]" % self.name)
+            raise authenticator.Unauthorized("Already logged in from another location.")
+        log.msg("player login: [%s]" % self.name)
+        if hasattr(self, 'oldlocation'):
+            self.location = self.oldlocation
+            del self.oldlocation
         self.intelligence = LocalIntelligence(i)
 
     def detached(self, i):
+        log.msg("player logout: [%s]" % self.name)
         del self.intelligence
-        
+        self.oldlocation = self.location
+        self.location = None
+
     ### Basic Abilities
 
     def ability_go(self, sentence):
@@ -119,13 +129,11 @@ class Player(thing.Thing, pb.Perspective):
     def ability_say(self, sentence):
         """Say a text string.
         """
-        self.location.oneHears(subject=self,
-                            to_subject=('You say, "%s".' %
-                                        sentence.directString()),
-                            to_other=(self,' says, "%s"' %
-                                      sentence.directString())
-                            )
-
+        self.broadcastToOne(to_subject = ('You say, "%s".' %
+                                          sentence.directString()),
+                            to_other   = (self,' says, "%s"' %
+                                          sentence.directString()))
+        
     def ability_emote(self, sentence):
         """`emote' a text string (perform an arbitrary action with no effect on the world).
         """
@@ -433,27 +441,26 @@ underscores.) """
             self.code_space[ds]=dt
             self.hears("You remember %s as %s."%(dt.nounPhrase(self),repr(ds)))
 
-    def ability_reload(self, sentence):
-        """reload (name|.python.name)
+    def ability_rebuild(self, sentence):
+        """rebuild (name|.python.name)
 
-This will reload either a Thing (reloading its toplevel module (the one that
-its class is in) and changing its class as appropriate. this won't always be
-adequate, but works for most simple cases), an object in your namespace, or a
-qualified python module name (prefixed with a dot).  """
+This will rebuild either a Thing (reloading its toplevel module (the one that
+its class is in) and changing its class as appropriate.), an object in your
+namespace, or a qualified python module name (prefixed with a dot).  """
 
         ds=sentence.directString()
 
         if ds[0]=='.':
             module=string.replace(ds[1:],' ','')
-            self.reality.reload(reflect.named_module(module))
+            rebuild.rebuild(reflect.named_module(module))
         else:
             try:    object=self.code_space[ds]
             except:    object=sentence.directObject()
 
             if reflect.isinst(object,thing.Thing):
-                reflect.refrump(object)
+                rebuild.rebuild(reflect.named_module(object.__class__.__module__))
             else:
-                reload(object)
+                rebuild.rebuild(object)
 
     def ability_help(self, sentence):
         """help {commandname}

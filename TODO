@@ -67,3 +67,11 @@ this file directly.
 010 Profiling, and possibly C optimization of, twisted.internet.main loop and
     select calls.  There also needs to be some serious load-testing of Twisted
     in this area to discover its limitations.
+
+011 WEBDAV protocol implementation for twisted.web.  A pluggable infrastructure
+    would be best, so you could browse different heirarchies (twisted reality
+    objects, etc) and edit them.
+
+012 Twisted.Internet for wxwindows.  This might be a better cross-platform
+    toolkit solution than tkinter, especially given how poorly tkinter works on
+    MacOS.  (At least wxwindows *plans* to support the mac...)
