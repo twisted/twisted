@@ -90,6 +90,58 @@
     knowledge for the reader. Linking to documents in the Twisted repository
     is preferred but not essential.</p>
 
+    <h2>Example code</h2>
+
+    <p>Whereever possible, example code should be provided to illustrate a
+    certain technique or piece of functionality.</p>
+
+    <p>Example code should try and meet as many of the following requirements
+    as possible:</p>
+
+    <ul>
+    <li>example code should be a complete working example suitable for copying
+    and pasting and running by the reader (where possible, provide a link to a
+    file to download);</li>
+    <li>example code should be short;</li>
+    <li>example code should be commented very extensively, with the assumption
+    that this code may be read by a Twisted newcomer;</li>
+    <li>example code should conform to the <a
+    href="coding-standard.xhtml">coding standard</a>; and</li>
+    <li>example code should exhibit 'best practice', not only for dealing with
+    the target functionality, but also for use of the application framework
+    and so on.</li>
+    </ul>
+
+    <p>The requirement to have a complete working example will occasionally
+    impose upon authors the need to have a few dummy functions: in Twisted
+    documentation the most common example is where a function is needed to
+    generate a Deferred and fire it after some time has passed. An example
+    might be this, where <code class="API"
+    base="twisted.internet.reactor">callLater</code> is used to simulate the
+    delayed firing of a Deferred:</p>
+
+    <pre class="python">
+    from twisted.internet import defer, reactor
+    
+    def getDummyDeferred():
+        """
+        Dummy method which generates a Deferred and simulates it being fired
+        some time later
+        """
+        deferred = defer.Deferred()
+        # simulate the deferred firing 5 seconds from now using callLater
+        reactor.callLater(5, deferred.callback, "RESULT")
+        return deferred
+    </pre>
+
+    <p>As in the above example, it is imperative to clearly mark that the
+    function is a dummy in as many ways as you can: using <tt>Dummy</tt> in
+    the function name, explaining that it is a dummy in the docstring, and
+    marking particular lines as being required to create an effect for the
+    purposes of demonstration. In most cases, this will save the reader from
+    mistaking this dummy method for an idiom they should use in their Twisted
+    code.</p>
+    
     <h2>Conclusions</h2>
 
     <p>The conclusion of a howto should follow the very last section heading
