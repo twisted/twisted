@@ -46,17 +46,14 @@ class Test(DOMTemplate):
     template = '''
 <html><head><title>Foo</title></head><body>
 
-<div class="Test">
+<div view="Test">
 This test node will be replaced
 </div>
 
 </body></html>
 '''
-    
-    def getTemplateMethods(self):
-        return [{'class': 'Test', 'method': self.test}]
-    
-    def test(self, request, node):
+        
+    def factory_test(self, request, node):
         '''
         The test method will be called with the request and the
         DOM node that the test method was associated with.
@@ -461,6 +458,7 @@ class DOMTemplate(Resource, View):
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
 
+# DOMController is now renamed woven.controller.WController
 class DOMController(mvc.Controller, Resource):
     """
     A simple controller that automatically passes responsibility on to the view
@@ -470,6 +468,7 @@ class DOMController(mvc.Controller, Resource):
     __implements__ = (mvc.Controller.__implements__, resource.IResource)
     
     def __init__(self, *args, **kwargs):
+        log.msg("DOMController is deprecated; it has been renamed twisted.web.woven.controller.WController")
         mvc.Controller.__init__(self, *args, **kwargs)
         Resource.__init__(self)
     

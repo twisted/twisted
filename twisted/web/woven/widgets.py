@@ -21,6 +21,7 @@ import traceback
 import urllib
 from twisted.web.microdom import parseString
 from twisted.web import widgets
+from twisted.web.woven import model
 
 from twisted.python import components, mvc
 from twisted.python import domhelpers, log
@@ -61,7 +62,7 @@ def _getModel(self):
             return None
         adapted = components.getAdapter(currentModel, mvc.IModel, None)
         if adapted is None:
-            adapted = mvc.Wrapper(currentModel)
+            adapted = model.Wrapper(currentModel)
         #assert adapted is not None, "No IModel adapter registered for %s" % currentModel
         adapted.parent = parentModel
         adapted.name = element
