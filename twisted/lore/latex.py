@@ -30,11 +30,10 @@ entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '\\copyright'}
 
 def getLatexText(node, writer, filter=lambda x:x):
-    if isinstance(node, microdom.EntityReference):
-        writer(entities.get(node.data[1:-1], ''))
-        return
+    if hasattr(node, 'eref'):
+        return writer(entities.get(node.eref, ''))
     if hasattr(node, 'data'):
-        writer(filter(node.data))
+        return writer(filter(node.data))
     for child in node.childNodes :
         getLatexText(child, writer, filter)
 
