@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.conch.test.test_conch -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -44,6 +45,8 @@ class SSHSession(channel.SSHChannel):
 
     def request_shell(self, data):
         log.msg('getting shell')
+        if not self.session:
+            self.session = ISession(self.avatar)
         try:
             pp = SSHSessionProcessProtocol(self)
             self.session.openShell(pp)
@@ -55,6 +58,8 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def request_exec(self, data):
+        if not self.session:
+            self.session = ISession(self.avatar)
         f,data = common.getNS(data)
         log.msg('executing command "%s"' % f)
         try:
@@ -68,7 +73,8 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def request_pty_req(self, data):
-        self.session = ISession(self.avatar)
+        if not self.session:
+            self.session = ISession(self.avatar)
         term, windowSize, modes = parseRequest_pty_req(data)
         log.msg('pty request: %s %s' % (term, windowSize))
         try:
@@ -80,6 +86,8 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def request_window_change(self, data):
+        if not self.session:
+            self.session = ISession(self.avatar)
         import fcntl, tty
         winSize = parseRequest_window_change(data)
         try:
