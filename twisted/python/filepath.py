@@ -78,6 +78,18 @@ class FilePath:
             raise InsecurePath()
         return self.clonePath(newpath)
 
+    def preauthChild(self, path):
+        """
+        Use me if `path' might have slashes in it, but you know they're safe.
+
+        (NOT slashes at the beginning. It still needs to be a _child_).
+        """
+        newpath = abspath(joinpath(self.path, normpath(path)))
+        if not newpath.startswith(self.path):
+            raise InsecurePath("%s is not a child of %s" % (newpath, self.path))
+        return self.clonePath(newpath)
+        
+
     def childSearchPreauth(self, *paths):
         """Return my first existing child with a name in 'paths'.
 
@@ -102,8 +114,8 @@ class FilePath:
         in exts, then if the file referred to by this path exists, 'self' will
         be returned.
 
-        The extension '*' has a magic meaning, which means 'any path that
-        begins with self.path+'.' is acceptable.
+        The extension '*' has a magic meaning, which means "any path that
+        begins with self.path+'.' is acceptable".
         """
         p = self.path
         for ext in exts:
@@ -219,5 +231,18 @@ class FilePath:
 
     def remove(self):
         remove(self.path)
+
+    def makedirs(self):
+        return os.makedirs(self.path)
+
+    def glob(self, pattern):
+        """
+        Assuming I am representing a directory, glob my contents.
+        """
+        import glob
+        return map(self.clonePath, glob.glob(slash.join(self.path, pattern)))
+
+    def basename(self):
+        return basename(self.path)
 
 FilePath.clonePath = FilePath
