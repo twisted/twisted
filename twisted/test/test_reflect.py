@@ -73,50 +73,6 @@ class AccessorTest(unittest.TestCase):
         self.failUnlessEqual(hasattr(self.tester, "x"), 0)
 
 
-class PromiseTest(unittest.TestCase):
-    def setUp(self):
-        class SlowObject:
-            def __init__(self):
-                self.results = []
-            def a(self, arg):
-                self.results.append(("a", arg))
-            def b(self, arg):
-                self.results.append(("b", arg))
-        self.slowObj = SlowObject()
-        self.obj = reflect.Promise()
-
-    def testSingle(self):
-        """Promise: single"""
-        self.obj.a(0)
-        self.obj.__become__(self.slowObj)
-        self.failUnlessEqual(self.obj.results, [("a", 0)])
-
-    def testDouble(self):
-        """Promise: double"""
-        meth = self.obj.a
-        meth("alpha")
-        meth("beta")
-        self.obj.__become__(self.slowObj)
-        self.failUnlessEqual(self.obj.results,
-                             [("a", "alpha"), ("a", "beta")])
-
-    def testMixed(self):
-        """Promise: mixed"""
-        a = self.obj.a
-        b = self.obj.b
-        b(1)
-        a(2)
-        b(3)
-        self.obj.a(4)
-        self.obj.__become__(self.slowObj)
-        self.failUnlessEqual(self.obj.results,
-                             [("b", 1), ("a", 2), ("b", 3), ("a", 4)])
-
-    def tearDown(self):
-        del self.obj
-        del self.slowObj
-
-
 class LookupsTestCase(unittest.TestCase):
     """Test lookup methods."""
 

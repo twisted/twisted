@@ -302,7 +302,7 @@ class Tag(Transaction):
         ver = opts['release-version']
         svntag = opts['svnurl'] + ('/tags/release-%s' % ver.replace('.', '_'))
         sh('cd %s &&  svn cp . %s -m "Tagging %s"' % (opts['root'],
-                                      svntag, ver),
+                                                      svntag, ver),
            sensitive=1)
 
     #tagging is atomic, afaict, so no undoIt
