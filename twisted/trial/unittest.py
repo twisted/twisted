@@ -70,25 +70,25 @@ changes in trial v2.0:
       framework inherit from object, so support is built-in. Whereas before
       the C{TestCase} finding machinery used a test for inheritance from
       L{twisted.trial.unittest.TestCase}, the new mechanism tests that
-      L{twisted.trial.interfaces.ITestCaseFactory} is supplied by your class
+      L{twisted.trial.itrial.ITestCaseFactory} is supplied by your class
       B{type}. You can write a custom C{TestCase}, and trial will detect it and
       use it as a class to test, if you do:
 
           >>> import zope.interface as zi 
-          >>> from twisted.trial.interfaces import ITestCaseFactory, ITestCase
+          >>> from twisted.trial.itrial import ITestCaseFactory, ITestCase
           >>> class MyTestCase(object):
           ...     zi.classProvides(ITestCaseFactory)
           ...     zi.implements(ITestCase)
           >>>
 
       Naturally, the class should actually provide an implementation of
-      L{twisted.trial.interfaces.ITestCase}.
+      L{twisted.trial.itrial.ITestCase}.
     - To avoid any possible conflicts (and to provide component
       de-registration), trial uses it's own private adapter registry, see
       L{twisted.trial.__init__} for details.
     - Trial makes use of zope.interface.Interfaces to allow flexibility and
       adaptation. All objects implement interfaces, and those interfaces are
-      centralized and documented in L{twisted.trial.interfaces}.
+      centralized and documented in L{twisted.trial.itrial}.
       
 
   B{All assert* and fail* methods are now top-level functions of the assertions module}
@@ -160,7 +160,7 @@ changes in trial v2.0:
       trial process remotely, and gain access to the output, or if you would
       just like to have your reporting formatted differently, you can supply
       the fully-qualified class name (of a class that implements
-      L{twisted.trial.interfaces.IReporter}) to --reporter, and trial will
+      L{twisted.trial.itrial.IReporter}) to --reporter, and trial will
       report results to your class.
     - The Reporter is now (almost) totally stateless. All stats on the test
       run are held in the TestSuite and are reported as necessary using the
@@ -351,7 +351,7 @@ Other Notes
 ===========
 
 The documentation for most of the classes can be found in
-L{twisted.trial.interfaces}.
+L{twisted.trial.itrial}.
 
 """
 

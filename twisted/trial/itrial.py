@@ -160,17 +160,17 @@ class ITestSuite(ITimed):
 
     def addTestClass(klass):
         """add a test class to this suite,
-        @param klass: any class that implements twisted.trial.interfaces.ITestCase
+        @param klass: any class that implements twisted.trial.itrial.ITestCase
         """
 
     def addModule(module):
         """add all ITestCase classes from module to this test suite
-        @param module: a module containing classes which implement twisted.trial.interfaces.ITestCase
+        @param module: a module containing classes which implement twisted.trial.itrial.ITestCase
         """
         
     def addPackage(package):
         """add all ITestCase classes from package to this test suite
-        @param package: a package containing classes which implement twisted.trial.interfaces.ITestCase
+        @param package: a package containing classes which implement twisted.trial.itrial.ITestCase
         """
 
     def addPackageRecursive(package):
@@ -292,9 +292,9 @@ class IReporter(zi.Interface):
     debugger = zi.Attribute("""@ivar debugger: Run the debugger when encountering a failing test.
                                @type debugger: bool""")
 
-    stream = zi.Attribute("@ivar stream: L{twisted.trial.interfaces.IReporterFactory}'s stream parameter")
-    tbformat = zi.Attribute("@ivar tbformat: L{twisted.trial.interfaces.IReporterFactory}'s tbformat parameter")
-    args = zi.Attribute("@ivar args: L{twisted.trial.interfaces.IReporterFactory}'s args parameter")
+    stream = zi.Attribute("@ivar stream: L{twisted.trial.itrial.IReporterFactory}'s stream parameter")
+    tbformat = zi.Attribute("@ivar tbformat: L{twisted.trial.itrial.IReporterFactory}'s tbformat parameter")
+    args = zi.Attribute("@ivar args: L{twisted.trial.itrial.IReporterFactory}'s args parameter")
 
     def setUpReporter():
         """performs reporter setup, for example, connecting to a remote service
@@ -365,7 +365,7 @@ class IReporter(zi.Interface):
 class IRemoteReporter(IReporter):
     def connectToSlave(self):
         """connect to a BuildBot buildslave using pb. makes use of the value set in
-        L{twisted.trial.interfaces.IReporter.args}
+        L{twisted.trial.itrial.IReporter.args}
         """
 
 class ITestStats(zi.Interface):
