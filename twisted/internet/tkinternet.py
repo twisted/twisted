@@ -45,7 +45,7 @@ class Simulator:
         timeout = main.runUntilCurrent()
         if timeout is not None:
             _sim = Simulator()
-            _root.after(timeout * 1010, _sim.simulate)
+            _root.after(int(timeout * 1010), _sim.simulate)
 
     def cancel(self):
         self.cancelled = 1

@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Twisted Plugins</title>
+  </head>
+
+  <body>
+    <h1>Twisted Plugins</h1>
+
+    <h3>Rationale</h3>
+
+    <p>
+      In order to simplify distribution of servers which use Twisted, and to
+      allow them to be used with each other, there is a convention for
+      distributing a set of functionality.  This convention may grow over time
+      (most likely to include more metadata), as it is currently extremely
+      simple.
+    </p>
+    
+    <h3>Definition</h3>
+    <p>
+      A plugin is simply a directory.  A plugin must be a valid Python package,
+      that is, it must contain an <code>__init__.py</code>.  A plugin may
+      contain subpackages, or non-package resource directories.
+    </p>
+    <p>
+      A plugin should also contain a file named <code>config.tac</code>.  This
+      file is a Twisted Application Configuration.  It must be a valid Python
+      file.  It must bind a variable called 'application' to an instance of a
+      twisted.internet.main.Application.  This is for use with the
+      <code>-g</code> option to <code>twistd</code>.
+    </p>
+    <p>
+      From the user's perspective, a plugin named <code>MyPlugin</code> with a
+      <code>config.tac</code> may be dropped in their
+      <code>~/TwistedPlugins</code> or <code>Twisted-x.x.x/plugins</code>
+      directory, and then run with <code>twistd -g MyPlugin</code>.  From a
+      developer's perspective, code from that plugin may simply be used by
+      calling <code>import MyPlugin</code>.  Plugins that do not include a
+      <code>config.tac</code> for some reason should be referred to as
+      "code-only" plugins or "non-runnable" plugins.
+    </p>
+
+    <h3>Conventions</h3>
+    <p>
+      The function <code>twisted.python.util.sibPath</code> can be used in
+      <code>config.tac</code> or anywhere else a plugin needs to load a
+      resource file.  Canonical usage is something like this:
+    <blockquote><pre>
+from twisted.python.util import sibPath
+myResourceData = open(sibPath(__file__,"myres.rsrc")).read()
+      </pre></blockquote>
+    which will load the file 'myres.rsrc' in the same directory as the referring file.
+    </p>
+    <p>
+      Plugins are distributed as archives using the .zip, .tar.gz, or .tar.bz2 file format.
+    </p>
+  </body>
+</html>

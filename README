@@ -1,39 +1,26 @@
-Twisted 0.10.1
+Twisted 0.10.2
 
 Quote of the Release:
 
-  <moshez> glyph: yes, TCP connection forwarder is good.
-  <illume> why not twisted.internet.tcp_forwarder then?
-  <moshez> illume: because I wanted to use the word "stupid" in code.
+  <dash> web in my head get it out get it out
 
-What's new in 0.10.1?
+What's new in 0.10.2?
 
-  twisted.web.proxy, an HTTP proxy, HTTP reverse proxy, and HTTP reverse proxy
-  implemented as a Resource, allowing proxying to be nested within a website.
+  twisted.web.guard, password protection for portions of a website.
 
-  twisted.internet.stupidproxy, a TCP connection forwarder.
+  twisted.protocols.ftp works, and now has MD5 hashed passwords using OTP.
 
-  Renaming of many classes in twisted.spread.pb for improved readability.
-
-  New convention for dealing with Twisted plugins; --plugin option for twistd.
-
-  twisted.web.widgets, an integrated presentation framework for use with
-  Twisted Web.
-
-  twisted.protocols.ldap, an LDAP client implementation
-
-  Added finger implementation in twisted.protocols.finger, and some less useful
-  protocols (such as echo) in twisted.protocols.wire.
-
-  Enhancements to twisted.enterprise.
-
-  More documentation available on the website.
+  Many fixes were made to twisted.internet to cope with obscure failure modes
+  in various versions of Windows.
 
 What is this?
 
   Twisted is an event-based framework for internet applications.  It includes a
   web server, a telnet server, a multiplayer RPG engine, a generic client and
-  server for remote object access, and APIs for creating new protocols.
+  server for remote object access, and APIs for creating new protocols and
+  services.
+
+  For more information, visit http://www.twistedmatrix.com.
 
 What can I do with it?
 
@@ -184,4 +171,18 @@ Copyright
 
   Twisted is made available under version 2.1 of the GNU Lesser General Public
   License.  The included LICENSE file describes this in detail.
+
+Warranty
+
+  THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+  EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE ENTIRE RISK AS
+  TO THE USE OF THIS SOFTWARE IS WITH YOU.
+
+  IN NO EVENT WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY
+  AND/OR REDISTRIBUTE THE LIBRARY, BE LIABLE TO YOU FOR ANY DAMAGES, EVEN IF
+  SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+  DAMAGES.
+
+  Again, see the included LICENSE file for specific legal details.
 

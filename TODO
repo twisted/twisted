@@ -1,6 +1,7 @@
-I attempted to categorize these roughly in order of importance, with easier
-things towards the top.  Items with names in [[brackets]] before them are being
-actively attacked.  Numbering is sequential.
+These are categorized chronologically, but their order also roughly corresponds
+to importance in most cases.  Items with names in [[brackets]] before them are
+being actively attacked.  Items with names in *{braces}* are finished.
+Numbering is sequential.
 
 If you want to add an item, or register to be responsable for or help with one
 of these items, please discuss it on the mailing list
@@ -82,9 +83,13 @@ this file directly.
 
 013 [[Allen Short]] Destroy the sun.
 
-014 Web authentication widget which combines Passport with Web so that
-    asynchronous authentication won't bother web pages.
+014 *{Glyph Lefkowitz}* Web authentication widget which combines Passport with
+    Web so that asynchronous authentication won't bother web pages.
 
 015 Twisted Names, a full replacement for BIND.
 
-016 Web Session Expiry. (30 minutes seems like a reasonable default...
+016 [[Glyph Lefkowitz]] Web Session Expiry. (30 minutes seems like a reasonable
+    default...
+
+017 mod_pb, an apache module which allows communication with Twisted servers --
+    hopefully compatible with the current twisted.web spread model.

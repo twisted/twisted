@@ -31,7 +31,6 @@ import test_dirdbm
 import test_jelly
 import test_import
 import test_pb
-import test_todo
 import test_explorer
 import test_banana
 import test_rebuild
@@ -58,12 +57,11 @@ def testSuite():
              test_reflect.testCases    + test_delay.testCases      +
              test_hook.testCases       + test_protocols.testCases  +
              test_dirdbm.testCases     + test_jelly.testCases      +
-             test_pb.testCases         + test_todo.testCases       +
-             test_explorer.testCases   + test_banana.testCases     +
-             test_rebuild.testCases    + test_toc.testCases        +
-             test_smtp.testCases       + test_pop3.testCases       +
-             test_words.testCases      + test_persisted.testCases  +
-             test_pureber.testCases    + test_web.testCases        + 
-             # Leave this one at the end.
-             test_import.testCases)
+             test_pb.testCases         + test_explorer.testCases   +
+             test_banana.testCases     + test_rebuild.testCases    +
+             test_toc.testCases        + test_smtp.testCases       +
+             test_pop3.testCases       + test_words.testCases      +
+             test_persisted.testCases  + test_pureber.testCases    +
+             test_web.testCases        + 
+             test_import.testCases) # Leave this one at the end.
     return makeBigSuite(cases)

@@ -25,20 +25,34 @@ from twisted.spread import pb
 from twisted.internet import tkinternet, main, tcp
 
 class MainWindow(Toplevel, pb.Referenceable):
+
+    shortcuts = {"n":"go north",
+                 "s":"go south",
+                 "e":"go east",
+                 "w":"go west",
+                 "l":"look",
+                 "ne":"go northeast",
+                 "nw":"go northwest",
+                 "sw":"go southwest",
+                 "se":"go southeast",
+                 "u":"go up",
+                 "d":"go down"}
+    
     def __init__(self, *args,**kw):
         self.descriptions = {}
         self.items = {}
         self.exits = []
         apply(Toplevel.__init__,(self,)+args,kw)
         self.title("Reality Faucet")
-        self.happenings = ScrolledText(self, height=5, width=5)
+        self.happenings = ScrolledText(self, height=6, width=72, wrap='word')
         
         midf = Frame(self)
         ddf = Frame(midf)
         idf = Frame(midf)
         
-        a = self.descriptionField = ScrolledText(ddf, height=5, width=5)
-        b = self.itemsField = ScrolledText(idf, height=5, width=30)
+        a = self.descriptionField = ScrolledText(ddf, height=12, width=72, wrap='word')
+        b = self.itemsField = ScrolledText(idf, height=12, width=36, wrap='word')
+
         a.pack(fill=BOTH, expand=YES)
         b.pack(fill=BOTH, expand=YES)
         ddf.pack(side=LEFT, fill=BOTH, expand=YES)

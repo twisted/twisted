@@ -5,3 +5,9 @@ Troubleshooting:
   application pickle to a previous python version.  The pickle format is not
   backwards compatible, and this has accounted for at least two three-hour
   debugging sessions on the Twisted team.
+
+  If you are using a Workstation version of Windows 2000, XP, or NT, you will
+  not be able to listen on more than a fixed number of sockets at once, or open
+  more than a small number of active connections.  Please do not report this as
+  a bug in Twisted -- there is nothing we can do about it.  Feel free to report
+  this as a bug to Microsoft.

@@ -279,6 +279,18 @@ class Delayed(rebuild.Sensitive):
                 log.msg( 'Exception in delayed function.' )
                 traceback.print_exc(file=log.logfile)
 
+    def runEverything(self):
+        """Run all currently-pending callbacks.
+        """
+        q = self.queue[:]
+        self.queue = []
+        for ticks, func, args in q:
+            try:
+                apply(func,args)
+            except:
+                log.msg('Exception in delayed function [all].')
+                traceback.print_exc(file=log.logfile)
+
     def runloop(self):
         """Runs until the is_running flag is false.
         """

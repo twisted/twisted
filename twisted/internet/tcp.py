@@ -119,7 +119,7 @@ class Connection(abstract.FileDescriptor,
 class Client(Connection):
     """A client for TCP (and similiar) sockets.
     """
-    def __init__(self, host, port, protocol):
+    def __init__(self, host, port, protocol, timeout=None):
         """Initialize the client, setting up its socket, and request to connect.
         """
         if host == 'unix':
@@ -147,6 +147,13 @@ class Client(Connection):
         self.doWrite = self.doConnect
         self.doConnect()
         self.logstr = self.protocol.__class__.__name__+",client"
+	if timeout is not None:
+	    main.addTimeout(self.failIfNotConnected, timeout)
+
+    def failIfNotConnected(self):
+        if not self.connected:
+	    self.protocol.connectionFailed()
+	    self.loseConnection()
 
     def createInternetSocket(self):
         """(internal) Create an AF_INET socket.

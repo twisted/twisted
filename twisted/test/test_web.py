@@ -96,12 +96,15 @@ class GuardTest(unittest.TestCase):
         ident.addKeyForPerspective(self.psp)
 
     def testSuccess(self):
-        g = guard.ResourceGuard(SimpleResource(), self.app, "simple")
+        g = guard.ResourceGuard(SimpleResource(), "simple")
         d = DummyRequest([])
+        # It will look for the 'app' attribute...
+        d.site = self
         g.render(d)
         assert d.written != ['correct']
         assert d.finished
         d = DummyRequest([])
+        d.site = self
         d.addArg('username', 'bob')
         d.addArg('password', 'joe')
         d.addArg('perspective', 'jethro')

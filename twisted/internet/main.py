@@ -27,7 +27,7 @@ theApplication = None
 
 # Twisted Imports
 
-from twisted.python import threadable, log
+from twisted.python import threadable, log, delay
 from twisted.persisted import styles
 threadable.requireInit()
 
@@ -182,13 +182,23 @@ class Application(log.Logger, styles.Versioned):
             run()
             threadable.dispatcher.disown(self)
 
+theTimeouts = delay.Delayed() # A delay for non-peristent delayed actions
+theTimeouts.ticks = 1
+
+def addTimeout(method, seconds):
+    """Add a method which will time out after a given interval.
+
+    The given method will always time out before a server shuts down, and will never persist.
+    """
+    theTimeouts.later(method, seconds)
+
 reads = {}
 writes = {}
 running = None
-delayeds = [task.theScheduler]
+delayeds = [theTimeouts, task.theScheduler]
 if threadable.threaded:
     delayeds.append(threadtask.theScheduler)
-shutdowns = []
+shutdowns = [theTimeouts.runEverything]
 
 def shutDown(a=None, b=None):
     """Run all shutdown callbacks (save all running Applications) and exit.

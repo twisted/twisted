@@ -73,7 +73,19 @@ class DelayedTestCase(unittest.TestCase):
         for i in xrange(10):
             self.delayed.run()
         assert l.state == 5
+
+    def bignum(self):
+        self.setFlag(1111)
+
+    def other(self):
+        self.blah = 5
         
+    def testEverything(self):
+        self.delayed.loop(Looper())
+        self.delayed.later(self.bignum, 5000)
+        self.delayed.later(self.other, 1857)
+        self.delayed.runEverything()
+        assert self.flag == 1111, "number's wrong"
 
 
 testCases = [DelayedTestCase]
