@@ -18,7 +18,7 @@ from twisted.trial import unittest
 from twisted.web import server, resource, microdom, domhelpers
 from twisted.protocols import http
 from twisted.test import test_web
-from twisted.internet import reactor, defer
+from twisted.internet import reactor, defer, address
 
 from twisted.web.woven import template, model, view, controller, widgets, input, page, guard
 
@@ -420,9 +420,9 @@ class FakeHTTPChannel:
 
     # 'transport' attribute needs this
     def getPeer(self):
-        return "fake", "fake", "fake"
+        return address.IPv4Address("TCP", "fake", "fake")
     def getHost(self):
-        return "fake", "fake", 80
+        return address.IPv4Address("TCP", "fake", 80)
 
     def write(self, data):
         # print data
