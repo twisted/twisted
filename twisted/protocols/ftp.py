@@ -305,6 +305,7 @@ class FTP(basic.LineReceiver, DTPFactory):
     peerhost = None
     peerport = None
     queuedfile = None
+    debug = 0           # Are all the print statements necessary anymore?
 
     def setAction(self, action):
         """Alias for DTP.setAction
@@ -316,10 +317,12 @@ class FTP(basic.LineReceiver, DTPFactory):
 
     def reply(self, key, s = ''):
         if string.find(ftp_reply[key], '%s') > -1:
-            print ftp_reply[key] % s + '\r\n'
+            if self.debug:
+                print ftp_reply[key] % s + '\r\n'
             self.transport.write(ftp_reply[key] % s + '\r\n')
         else:
-            print ftp_reply[key] + '\r\n'
+            if self.debug:
+                print ftp_reply[key] + '\r\n'
             self.transport.write(ftp_reply[key] + '\r\n')
             
     # This command is IMPORTANT! Must also get rid of it :)
@@ -604,7 +607,8 @@ class FTP(basic.LineReceiver, DTPFactory):
     def lineReceived(self, line):
         "Process the input from the client"
         line = string.strip(line)
-        print repr(line)
+        if self.debug:
+            print repr(line)
         command = string.split(line)
         if command == []:
             self.reply('unknown')
@@ -614,7 +618,8 @@ class FTP(basic.LineReceiver, DTPFactory):
             if ord(c) < 128:
                 command = command + c
         command = string.capitalize(command)
-        print "-"+command+"-"
+        if self.debug:
+            print "-"+command+"-"
         if command == '':
             return 0
         if string.count(line, ' ') > 0:
@@ -1011,9 +1016,26 @@ class FTPClient(basic.LineReceiver):
         
 
 class FTPFileListProtocol(basic.LineReceiver):
-    # This is the evil required to match
-    # "-rw-r--r--   1 root     other        531 Jan 29 03:26 README"
-    # If you need different evil for a wacky FTP server, you can override this.
+    """Parser for standard FTP file listings
+    
+    This is the evil required to match
+    '-rw-r--r--   1 root     other        531 Jan 29 03:26 README'
+    If you need different evil for a wacky FTP server, you can override this.
+
+    It populates the instance attribute self.files, which is a list containing
+    dicts with the following keys (examples from the above line):
+        - filetype: e.g. 'd' for directories, or '-' for an ordinary file
+        - perms:    e.g. 'rw-r--r--'
+        - owner:    e.g. 'root'
+        - group:    e.g. 'other'
+        - size:     e.g. 531
+        - date:     e.g. 'Jan 29 03:26'
+        - filename: e.g. 'README'
+
+    Note that the 'date' value will be formatted differently depending on the
+    date.  Check http://cr.yp.to/ftp.html if you really want to try to parse
+    it.
+    """
     fileLinePattern = re.compile(
         r'^(?P<filetype>.)(?P<perms>.{9})\s+\d*\s*'
         r'(?P<owner>\S+)\s+(?P<group>\S+)\s+(?P<size>\d+)\s+'
