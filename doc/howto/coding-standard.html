@@ -1,0 +1,324 @@
+  <html>
+    <head>
+      <title>Twisted Coding Standard</title>
+    </head>
+    
+    <body>
+      <h1>Twisted Coding Standard</h1>
+      <h3>Naming</h3>
+      <p>
+        Try to choose names which are both easy to remember and meaningful.
+        Some silliness is OK at the module naming level (see twisted.spread...)
+        but when choosing class names, be as precise as possible.  Write code
+        with a dictionary and thesaurus open on the table next to you.
+      </p>
+      <p>
+        Try to avoid overloaded terms.  This rule is often broken, since it is
+        incredibly difficult, as most normal words have already been taken by
+        some other software.  More importantly, try to avoid meaningless words.
+        In particular, words like "handler", "processor", "engine", "manager",
+        and "component" don't really indicate what something does, only that it
+        does <b>something</b>.
+      </p>
+      <h3>Testing</h3>
+      <p>
+        Unit tests are written using the PyUnit framework.  Many examples are
+        in the twisted.test package, and all tests should be integrated through
+        the main test suite builder in twisted.test.test_all.
+      </p>
+      <p>
+        Acceptance tests are all automated by the bin/accepttests script
+        currently.  (TODO: real acceptance tests strategy!)
+      </p>
+      <h3>Whitespace</h3>
+      <p>
+        Indentation is 4 spaces per indent.  Tabs are not allowed.  It is
+        preferred that every block appear on a new line, so that control
+        structure indentation is always visible.
+      </p>
+      <h3>Modules</h3>
+      <p>
+        Modules must be named in all lower-case, preferably short, single
+        words.  If a module name contains multiple words, they may be separated
+        by underscores or not separated at all.
+      </p>
+      <p>
+        In most cases, modules should contain more than one class, function, or
+        method; if a module contains only one object, consider refactoring to
+        include more related functionality in that module.
+      </p>
+      <p>
+        <em>Note that this rule is a change from previous versions of Twisted,
+        so a lot of code does not yet adhere to it.</em>
+      </p>
+      <p>
+        By default, objects from modules in Twisted ought to be imported
+        directly into the namespace of the module that uses them, like this:
+        <code>from twisted.python.defer import Deferred</code>
+      </p>
+      <p>
+        In some cases, however, Twisted takes advantage of the dynamic binding
+        of Python in order to provide an interface through a module that may be
+        imported -- we call these "volatile" modules, because their internals
+        are subject to change without warning.  In these cases, it is
+        desireable to import the module itself into the user's namespace, so
+        that things bound to it will be looked up on each call.  For obvious
+        reasons, classes in volatile modules should never be subclassed.
+      </p>
+      <p>
+        Volatile modules will have a __volatile__ attribute set to 1, and
+        should always have a docstring snippet like the one that follows:
+        
+        <blockquote>
+          <pre>
+"""
+NOTE: this is a __volatile__ module.  This means that if you are using it
+externally, you should know that its contents may change at any time.  In
+general, all this means is that you must not use it like this::
+
+    from twisted.package.module import Class
+    Class()
+
+but instead like this::
+
+    from twisted.package import module
+    module.Class()
+"""
+          </pre>
+        </blockquote>
+      </p>
+      <h3>Packages</h3>
+      <p>
+        Package names should follow the same conventions as module names.  All
+        modules must be encapsulated in some package.  Nested packages may be
+        used to further organize related modules.
+      </p>
+      <p>
+        __init__.py must never contain anything other than a docstring and
+        (optionally) an __all__ attribute.  Packages are not modules and should
+        be treated differently.  This rule may be broken to preserve backwards
+        compatibility if a module is made into a nested package as part of a
+        refactoring.
+      </p>
+      <p>
+        If you wish to promote code from a module to a package, for
+        example, to break a large module out into several smaller
+        files, the accepted way to do this is to promote from within
+        the module.  For example,
+<pre>
+# parent/
+# --- __init__.py ---
+import child
+
+# --- child.py ---
+import parent
+class Foo:
+    pass
+parent.Foo = Foo
+</pre>
+      </p>
+      
+      <h3>Docstrings</h3>
+      <p>
+        Wherever possible, docstrings should be used to describe the purpose of
+        methods, functions, classes, and modules.  In cases where it's
+        desirable to avoid documenting thoroughly -- for example, and evolving
+        interface -- insert a placeholder docstring ("UNDOCUMENTED" is
+        preferred), so that the auto-generated API documentation will not pick
+        up an extraneous comment as the documentation for that
+        module/class/function.
+      </p>
+      <p>
+        Docstrings are <em>never</em> to be used to provide semantic
+        information about an object; this rule may be violated if the code in
+        question is to be used in a system where this is a requirement (such as
+        Zope).
+      </p>
+      <p>
+        Docstrings should be indented to the level of the code they are
+        documenting.
+      </p>
+      <p>
+        Docstrings should be triple-quoted.
+      </p>
+      <p>
+        Docstrings should be written in StructuredText format; more
+        documentation is available on the <a
+        href="http://happydoc.sourceforge.net">HappyDoc website</a>.
+      </p>
+      <p>
+        Additionally, to accommodate emacs users:
+        
+        <ul>
+          <li>
+            Single quotes of the type of the docstring's triple-quote should be
+            escaped.  This will prevent font-lock from accidentally fontifying
+            large portions of the file as a string.
+          </li>
+          <li>
+            Code examples in docstrings should be prefixed by the | character.
+            This will prevent IM-Python from regarding sample code as real
+            functions, methods, and classes.
+          </li>
+        </ul>
+      </p>
+      <p>
+        For example,
+        <pre>
+def foo2bar(f):
+    """I am a function to convert foos to bars.
+
+    I should be used when you have a foo but you want a bar; note that this is a
+    non-destructive operation.  If I can\'t convert the foo to a bar I will raise a
+    FooException().
+
+    For example::
+
+      |  import wombat
+      |  def sample(something):
+      |      f = something.getFoo()
+      |      f.doFooThing()
+      |      b = wombat.foo2bar(f)
+      |      b.doBarThing()
+      |      return b
+
+    """
+    # Optionally, actual code can go here.
+        </pre>
+      </p>
+      
+      <h3>Classes</h3>
+      <p>
+        Classes are to be named in mixed case, with the first letter
+        capitalized; each word separated by having its first letter
+        capitalized.  Acronyms should be capitalized in their entirety.  Class
+        names should not include the name of the module they are a part of.
+        Examples:
+        <ul>
+          <li> twisted.reality.thing.Thing </li>
+          <li> twisted.web.Handler </li>
+          <li> twisted.spread.pb.ViewPoint </li>
+          <li> twisted.parser.patterns.Pattern </li>
+        </ul>
+        An effort should be made to prevent class names from clashing with each
+        other between modules, to reduce the need for qualification when
+        importing.  For example, a Service subclass for Forums might be named
+        twisted.forum.service.ForumService, and a Service subclass for Words
+        might be twisted.words.service.WordsService.  Since neither of these
+        modules are volatile <i>(see above)</i> the classes may be imported
+        directly into the user's namespace and not cause confusion.
+      </p>
+
+      <h3>Methods</h3>
+      <p>
+        Methods should be in mixed case, with the first letter lower case, each
+        word separated by having its first letter capitalized.  For example,
+        "someMethodName", "method".
+      </p>
+      <p>
+        Sometimes, a class will dispatch to a specialized sort of method using
+        its name; for example, twisted.reflect.Accessor.  In those cases, the
+        type of method should be a prefix in all lower-case with a trailing
+        underscore, so method names will have an underscore in them.  For
+        example, "get_someAttribute".  Underscores in method names in twisted
+        code are therefore expected to have some semantic associated with them.
+      </p>
+      
+      <h3>Functions</h3>
+      <p>
+        Functions should be named similiarly to methods.
+      </p>
+      <h3>Attributes</h3>
+      <p>
+        Attributes should be named similarly to functions and methods.
+        Attributes should be named descriptively; attribute names like
+        <code>mode</code>, <code>type</code>, and <code>buf</code> are
+        generally discouraged.  Instead, use <code>displayMode</code>,
+        <code>playerType</code>, or <code>inputBuffer</code>.
+      </p>
+      <p>
+        Do not use Python's "private" attribute syntax; prefix non-public
+        attributes with a single leading underscore.  Since several classes
+        have the same name in Twisted, and they are distinguished by which
+        package they come from, Python's double-underscore name mangling will
+        not work reliably in some cases.  Also, name-mangled private variables
+        are more difficult to address when unit testing or persisting a class.
+      </p>
+      <p>
+        An attribute (or function, method or class) should be considered private
+        when one or more of the following conditions are true:
+        <ul>
+          <li>The attribute represents intermediate state which is not always
+          kept up-to-date.</li>
+
+          <li>Referring to the contents of the attribute or otherwise
+          maintaining a reference to it may cause resources to leak.</li>
+
+          <li>Assigning to the attribute will break internal assumptions.</li>
+          
+          <li>The attribute is part of a known-to-be-sub-optimal interface and
+          will certainly be removed in a future release.</li>
+        </ul>
+      </p>
+      <h3>Database</h3>
+      <p>
+        Database tables will be named with plural nouns.
+      </p>
+      <p>
+        Database columns will be named with underscores between words, all
+        lower case, since most databases do not distinguish between case.
+      </p>
+      <p>
+        Any attribute, method argument, or method name that corresponds
+        <em>directly</em> to a column in the database will be named exactly the
+        same as that column, regardless of other coding conventions surrounding
+        that circumstance.
+      </p>
+      <p>
+        All SQL keywords should be in upper case.
+      </p>
+      <h3>C Code</h3>
+      <p>
+        Wherever possible, C code should be optional, and the default python
+        implementation should be maintained in tandem with it.  C code should
+        be strict ANSI C, and <strong>must</strong> build using GCC as well as
+        Visual Studio for Windows, and really shouldn't have any problems with
+        other compilers either.  Don't do anything tricky.
+      </p>
+      <p>
+        C code should only be used for efficiency, not for binding to external
+        libraries.  If your particular code is not frequently run, write it in
+        Python.  If you require the use of an external library, develop a
+        separate, external bindings package and make your twisted code depend
+        on it.
+      </p>
+      <h3>Recommendations</h3>
+      <p>
+        These things aren't necessarily standardizeable (in that code can't be
+        easily checked for compliance) but are a good idea to keep in mind
+        while working on Twisted.
+      </p>
+      <p>
+        If you're going to work on a fragment of the Twisted codebase, please
+        consider finding a way that you would *use* such a fragment in daily
+        life.  I use the Twisted Web server on the main TML website, and aside
+        from being good PR, this encourages you to actively maintain and
+        improve your code, as the little everyday issues with using it become
+        apparent.
+      </p>
+      <p>
+        Twisted is a <strong>big</strong> codebase!  If you're refactoring
+        something, please make sure to recursively grep for the names of
+        functions you're changing.  You may be surprised to learn where
+        something is called.  Especially if you are moving or renaming a
+        function, class, method, or module, make sure that it won't instantly
+        break other code.
+      </p>
+    <hr>
+    <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
+<!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
+<!-- hhmts start -->
+Last modified: Fri Jan 25 18:04:28 CST 2002
+<!-- hhmts end -->
+  </body>
+</html>

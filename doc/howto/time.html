@@ -1,0 +1,91 @@
+<html>
+<head><title>Spreading tasks over time</title>
+</head>
+<body>
+<h2>Spreading tasks over time</h2>
+
+<p>
+
+Sometimes we want to schedule tasks to be run at intervals, e.g. a
+long calculation that might block twisted if the whole thing were to
+be run at once. We do this using objects that conform to the Delayed
+interface (see <code>twisted.python.delay</code>).
+</p>
+
+<p>
+A delayed must define two functions:
+<ul>
+  <li><code>timeout(self)</code> -- return maximum number of seconds until we should next run, or None if we have nothing to run.
+  <li><code>runUntilCurrent(self)</code> -- this command will be run at the very latest, but possibly before, the number of seconds returned by <code>timeout</code> has passed.
+</ul>
+
+For example:
+<pre>
+class LongCalculation:
+    """Runs at least 100 multipications a minute."""
+    
+    value = 1L
+    
+    def timeout(self):
+        return 0.01
+    
+    def runUntilCurrent(self):
+       self.value = self.value * 2L
+
+# register the Delayed object with the Twisted event loop:
+o = LongCalculation()
+from twisted.internet import main
+main.addDelayed(o)
+
+</pre>
+
+</p>
+
+<h2>Running tasks at fixed intervals</h2>
+
+<p>We sometimes want tasks to be run at intervals, but without them
+being called before that interval has passed.  For example, we may
+want to run some task once a minute, no more and no less. Specifying
+60.0 as <code>timeout</code>'s result is no good, since it is very
+likely the task will be called long before 60 seconds have passed.
+This how we can do so:
+   
+   <pre>
+from twisted.python import delay
+
+def OnceAMinute:
+    """Should be run once a minute."""
+    print "a minute has passed"
+
+# create a delayed object
+d = delay.Delayed()
+
+# set the number of seconds each tick is
+d.ticktime = 10
+
+# run OnceAMinute every 6 ticks, and since we set each tick to be 10 seconds,
+# OnceAMinute will be called every 60 seconds
+d.loop(OnceAMinute, 6)
+
+# register the Delayed object with the Twisted event loop:
+from twisted.internet import main
+main.addDelayed(d)
+
+</pre>
+</p>
+
+<h2>Scheduling a task to be run in the future</h2>
+
+<p>Let's say you want to run a task X seconds in the future. The way to do that is:
+
+<pre>
+from twisted.internet import main
+
+def f():
+    print "this will run in 3.5 seconds"
+
+main.addTimeout(f, 3.5)
+
+</pre>
+</p>
+</body></html>

@@ -1,0 +1,231 @@
+<HTML><HEAD><TITLE>Using usage.Options</TITLE></HEAD><BODY>
+<H1>Using usage.Options</H1>
+
+<H2>Introduction</H2>
+
+<P>There is frequently a need for programs to parse a UNIX-like command line
+program: options perceded by <CODE>-</CODE> or <CODE>--</CODE>, sometimes
+followed by a parameter, followed by a list of arguments.
+The <CODE>twisted.python.usage</CODE> provides a class, 
+<CODE>Options</CODE>, to facilitate such parsing.</P>
+
+<P>While Python has the <CODE>getopt</CODE> module for doing
+this, it provides a very
+low level of abstraction for options. Twisted has a higher level of
+abstraction, in the class <CODE>twisted.python.usage.Options</CODE>.
+It uses Python's reflection facilities to provide an easy to use
+yet flexible interface to the command line. While most command line processors
+either force the application writer to write her own loops, or have arbitrary
+limitations on the command line (the most common one being not being able
+to have more then one instance of a specific option, thus rendering the
+idiom "<CODE>program -v -v -v</CODE>" impossible), Twisted allows the
+programmer to decide how much control she wants.</P>
+
+<P>The <CODE>Options</CODE> class is used by subclassing. Since a lot of
+time it will be used in the <CODE>twisted.tap</CODE> package, where the
+local conventions require the specific options parsing class to also
+be called <CODE>Options</CODE>, it is usually imported with
+
+<PRE>
+from twisted.python import usage
+</PRE>
+</P>
+
+<H2>Boolean Options</H2>
+
+<P>For simple boolean options, define the attribute <CODE>optFlags</CODE>
+like this:
+
+<PRE>
+class Options(usage.Options):
+
+    optFlags = [["fast", "f"], ["safe", "s"]]
+</PRE>
+
+<CODE>optFlags</CODE> should be a list of 2-lists. The first element is
+the long name, and will be used on the command line as <CODE>--fast</CODE>.
+The second one is the short name, and will be used on the command line
+as <CODE>-f</CODE>.  The long name also determines the name of the 
+attribute that will be set on the instance. Its value will be 1 if the
+option was seen, 0 otherwise. Here is an example for usage:
+
+<PRE>
+class Options(usage.Options):
+
+    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+
+command_line = ["-g", "--fast"]
+
+options = Options()
+options.parseOptions(command_line)
+if options.fast:
+    print "fast",
+if options.good:
+    print "good",
+if options.cheap:
+    print "cheap",
+print
+</PRE>
+
+The above will print <CODE>fast good</CODE>.</P>
+
+<H3>Inheritance, Or: How I Learned to Stop Worrying and Love the Superclass</H3>
+
+<P>Sometimes there is a need for several option processors with a unifying
+core. Perhaps you want all your commands to understand 
+<CODE>-q</CODE>/<CODE>--quiet</CODE> means to be quiet, or something similar.
+On the face of it, this looks impossible: in Python, the subclass's
+<CODE>optFlags</CODE> would shadow the superclass's. However, 
+<CODE>usage.Options</CODE> uses special reflection code to get all of
+the <CODE>optFlag</CODE>s defined in the hierarchy. So the following:
+
+<PRE>
+class BaseOptions(usage.Options):
+
+    optFlags = [["quiet", "q"]]
+
+class SpecificOptions(BaseOptions):
+
+    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+</PRE>
+
+Is the same as:
+
+<PRE>
+class SpecificOptions(BaseOptions):
+
+    optFlags = [["quiet", "q"], ["fast", "f"], ["good", "g"], ["cheap", "c"]]
+</PRE>
+
+<H2>String Options</H2>
+
+<P>String options are specified using the attribute <CODE>optParameters</CODE>.
+They <EM>must</EM> be given a default. If you want to make sure you got
+the parameter from the command line, give a non-string default. Since the
+command line only has strings, this is completely reliable.</P>
+
+<P>Here is an example:</P>
+
+<PRE>
+from twisted.python import usage
+
+class Options(usage.Options):
+
+    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+    optParameters = [["user", "u", None]]
+
+config.parseOptions() # When given no argument, parses sys.argv[1:]
+if config.user is not None:
+    print "Hello," config.user
+print "So, you want it:"
+
+if options.fast:
+    print "fast",
+if options.good:
+    print "good",
+if options.cheap:
+    print "cheap",
+print
+</PRE>
+
+<P>Like <CODE>optFlags</CODE>, <CODE>optParameters</CODE> works smoothly
+with inheritance.</P>
+
+<H2>Generic Code For Options</H2>
+
+<P>Sometimes, just setting an attribute on the basis of the options is
+not flexible enough. In those cases, Twisted does not even attempt to
+provide abstractions such as "counts" or "lists", but rathers lets you
+call your own method, which will be called whenever the option is
+encountered.</P>
+
+<P>Here is an example of counting verbosity</P>
+
+<PRE>
+from twisted.python import usage
+
+class Options(usage.Options):
+
+    verbosity = 0 # default
+
+    def opt_verbose(self):
+        self.verbosity = self.verbosity+1
+
+    def opt_quiet(self):
+        self.verbosity = self.verbosity-1
+
+    opt_v = opt_verbose
+    opt_q = opt_quiet
+</PRE>
+
+<P>Command lines that like like "command -v -v -v -v" will increase verbosity
+to 4, while "command -q -q -q" will decrease verbosity to -3</P>
+
+<P>The <CODE>usage.Options</CODE> class knows that these are parameter-less
+options, since the methods do not receive an argument. Here is an example
+for a method with a parameter:</P>
+
+<PRE>
+from twisted.python import usage
+
+class Options(usage.Options):
+
+    def __init__(self):
+        usage.Options.__init__(self)
+        self.symbols = []
+
+    def opt_define(self, symbol):
+        self.symbols.append(symbol)
+
+    opt_D = opt_define
+</PRE>
+
+<P>This example is useful for the common idiom of having 
+<CODE>command -DFOO -DBAR</CODE> to define symbols.</P>
+
+<H2>Parsing Arguments</H2>
+
+<P><CODE>usage.Options</CODE> does not stop helping when the last
+parameter is gone. All the other arguments are sent into a function
+which should deal with them. Here is an example for a <CODE>cmp</CODE>
+like command.</P>
+
+<PRE>
+from twisted.python import usage
+
+class Options(usage.Options):
+
+    optParameters = [["max_differences", "d", 1]]
+
+    def parseArgs(self, origin, changed):
+        self.origin = origin
+        self.changed = changed
+</PRE>
+
+<P>The command should look like <CODE>command origin changed</CODE>.</P>
+
+<P>If you want to have a variable number of left-over arguments, just
+use <CODE>def parseArgs(self, *args):</CODE>. This is useful for commands
+like the UNIX <CODE>cat(1)</CODE>.
+
+<H2>Post Processing</H2>
+
+<P>Sometimes, you want to perform post processing of options to patch
+up inconsistencies, and the like. Here is an example:</P>
+
+<PRE>
+from twisted.python import usage
+
+class Options(usage.Options):
+
+    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+
+    def postOptions(self):
+        if self.fast and self.good and self.cheap:
+            raise usage.UsageError, "can't have it all, brother"
+</PRE>
+
+<H2>Writing <CODE>twisted.tap</CODE> Modules</H2>
+
+TBD
+</BODY></HTML>

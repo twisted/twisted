@@ -1,0 +1,166 @@
+<html>
+<head>
+<title>Introducing Twisted Web Widgets</title>
+</head>
+<body>
+
+<h1>Introducing Twisted Web Widgets</h1>
+
+<h2>Abstract</h2>
+<p>
+This is more of a simple description of all the classes, plus the common pitfalls of coding in Web Widgets. Oh well.
+</p>
+
+<h2>Example Code</h2>
+<p>
+Chris Armstrong has made some example (contrived) Widgets code available, at 
+<a href="http://twistedmatrix.com/users/carmstro.twistd/files/Example.tar.gz">http://twistedmatrix.com/users/carmstro.twistd/files/Example.tar.gz</a>.
+Unpack it into your ~/TwistedPlugins / directory and run 'twistd -g Example' somewhere
+to start the server on localhost:8080. Please read the code (comments) before getting confused
+ about the odd behavior of the example server -- note that you are _supposed_ to get a "No Resource" error on the root URL
+(http://localhost:8080/) when you first load it up; the code explains this.
+</p>
+
+<h2>The Diagram</h2>
+<p>
+<img src="../img/web-widgets.png">
+</p>
+
+<h2>The Classes</h2> 
+<h3>Gadget</h3> 
+
+<p>
+A collection of widgets, like a "directory" of HTML files. You add widgets
+to it with <code>self.putWidget("name", WidgetInstance())</code>. This widget will be
+rendered inside the Gadget-local page. Also, if you make a Gadget that is also
+a subclass of "Widget", then whenever the "index" (http://foo.com/foo/, "foo"
+being the Gadget/Widget resource) is requested, the object will be rendered as
+a Widget inside of the Gadget-local page factory. The Gadget-local page factory
+is the '<code>pageFactory</code>' attribute of the gadget, which should be a class that
+takes a widget in it's constructor, and displays that Widget in some form. So
+in your __init__ method for your Gadget subclass, do 
+<code>self.pageFactory = SomeWidgetPageSubclass</code> (see "WidgetPage" below) (note that it is _not_ an
+instance, but the actual class object).  
+</p>
+
+<h3>Widget</h3>
+<p>
+
+A Widget is simply something that is renderable, through its <code>display()</code>
+method. This method is expected to return a list of HTML strings. (it can also
+contain instances of defer.Deferred -- but this is another story).
+</p>
+
+<h3>Presentation</h3>
+<p>
+
+This is a special Widget that already has a display() method, which renders
+some objects through a template. You override the special 'template' variable,
+which is a string with interpolated python expressions. It should look
+something like:
+</p>
+
+<p>
+<code>template = ''' &lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.title%%%%&lt;/title&gt;&lt;/head&gt; &lt;body&gt;%%%%self.getContent(request)%%%%&lt;/body&gt;&lt;/html&gt; '''</code>
+</p>
+
+<p>
+As you can see, Python expressions are denoted with surrounding sets of 4
+<code>%</code>s. The expressions are evaluated in a special namespace with only 'self' and
+'request' in it.
+</p>
+
+<h3>WidgetPage</h3>
+<p>
+
+A WidgetPage is a special Page/Presentation combination that allows you to pass
+a Widget object to its constructor. The most common use of this class is for
+subclassing; you should have a subclass that defines a custom '<code>template</code>'
+attribute. WidgetPage stores the widget you pass to it in it's '<code>widget</code>'
+attribute, so remember that whenever you're making a customized template, use
+<code>%%%%self.widget%%%%</code> to access it (see "Common Pitfalls: WidgetPage" below).
+
+</p>
+
+<h1>Common Pitfalls</h1>
+
+<h2>WidgetPage</h2>
+
+<p>
+If you have a subclass of <code>widgets.WidgetPage</code> , make sure your template accesses
+the widget it's displaying with the '<code>self.widget</code>' object. For example, if you
+want to get the title from the current widget you're displaying:
+</p>
+
+<p>
+<code>template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.widget.title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code>
+</p>
+
+<p>
+instead of:
+</p>
+
+<p>
+<code>template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code>
+</p>
+
+<h2>Adding Widgets to a Gadget</h2>
+
+<p>
+
+I had some code like this in one of my Gadgets: 
+<code>self.putWidget("Foo", widgets.TitleBox(MyWidget()))</code>. Later whenever trying to access this widget I
+got this traceback:
+</p>
+
+<p>
+<pre>
+Traceback evaluating code in twisted.words.webwords.Page:Traceback (most recent call last): 
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 86, in display 
+    x = eval(elem, namespace, namespace) 
+  File "&lt;string&gt;", line 0, in ? 
+AttributeError: TitleBox instance has no attribute 'getHeader' 
+</pre>
+</p>
+
+<p>
+
+Now remember, widgets that you add to a gadget with putWidget are rendered
+with self.pageFactory like so: <code>self.pageFactory(theChildWidget)</code>. The problem is,
+theChildWidget in this case was actually TitleBox! and of course, TitleBox
+doesn't follow our template's protocol of having a '<code>getHeader</code>' method. So, the
+lesson is: do not wrap your real widgets with other widgets when adding to a
+Gadget: do formatting either in a) the template or b) the widget's <code>display()</code>
+method.
+</p>
+
+<h2>Return values of display()</h2>
+
+<p>
+If you ever get this traceback:
+</p>
+
+<p>
+<pre>
+web.Server Traceback 
+ 
+Traceback (most recent call last): 
+  File "/home/punck/cvs/Twisted/twisted/web/server.py", line 215, in process 
+    body = resrc.render(self) 
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 408, in render 
+    displayed = self.display(request) 
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 97, in display 
+    tm.extend(val) 
+AttributeError: TitleBox instance has no attribute '__len__' 
+</pre>
+</p>
+
+
+<p>
+It's because you tried to put a widget in the list that display() returns! For
+now, just tack on '.display(request)' to all the widgets you want to return in
+that list.
+</p>
+
+</body>
+</html>
