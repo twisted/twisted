@@ -89,16 +89,6 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         else:
             raise AttributeError, "%s not found." % name
 
-    def getObject(self):
-        # fix for t.w.distrib, where the first path segment doesn't point to a file on disk
-        if self.path:
-            testOb = PathReferenceContext([self.path[0]], self.root).getObject()
-            if testOb.__module__ == 'twisted.web.error':
-                self.path.pop(0)
-        # Use the loop in site.getRequestFor
-        # It may implement caching in the future
-        return self.request.site.getResourceFor(self)
-
     def getIndex(self):
         """
         Dereference this path reference object, then look for an object
