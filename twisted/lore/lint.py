@@ -16,7 +16,7 @@
 # 
 
 from twisted.lore import tree, process
-from twisted.web import domhelpers
+from twisted.web import domhelpers, microdom
 from twisted.python import reflect
 
 import parser, urlparse, os.path
@@ -67,8 +67,9 @@ class DefaultTagChecker(TagChecker):
     def check_quote(self, dom, filename):
         def matcher(node):
             return ('"' in getattr(node, 'data', '') and
-                    [1 for n in domhelpers.getParents(node)[1:-1]
-                           if n.tagName in ('pre', 'code')] == [])
+                    not isinstance(node, microdom.Comment) and
+                    not  [1 for n in domhelpers.getParents(node)[1:-1]
+                           if n.tagName in ('pre', 'code')])
         for node in domhelpers.findNodes(dom, matcher):
             self._reportError(filename, node.parentNode, 'contains quote')
 
