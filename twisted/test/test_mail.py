@@ -27,6 +27,7 @@ from twisted.trial import unittest
 from twisted.protocols import smtp
 from twisted.protocols import pop3
 from twisted.protocols import dns
+from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.python import components
@@ -748,6 +749,16 @@ class MXTestCase(unittest.TestCase):
         againMX = unittest.deferredResult(self.mx.getMX('test.domain'))
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
 
+class LineSendingProtocol(basic.LineReceiver):
+    def __init__(self, lines):
+        self.lines = lines[:]
+    
+    def connectionMade(self):
+        map(self.sendLine, self.lines)
+    
+    def lineReceived(self, line):
+        pass
+
 class LiveFireExercise(unittest.TestCase):
     def setUp(self):
         setUpDNS(self)
@@ -780,20 +791,22 @@ class LiveFireExercise(unittest.TestCase):
         from twisted.internet import reactor
         self.smtpServer = reactor.listenTCP(0, f, interface='127.0.0.1')
 
-        def clientThread():
-            smtp = smtplib.SMTP('127.0.0.1', self.smtpServer.getHost()[2])
-            smtp.helo()
-            smtp.mail('user@hostname')
-            smtp.rcpt('user@test.domain')
-            smtp.data('This is the message')
-            smtp.close()
-
-        done = []
-        from twisted.internet import threads
-        threads.deferToThread(clientThread
-        ).addBoth(done.append
-        ).setTimeout(5)
+        client = LineSendingProtocol([
+            'HELO meson',
+            'MAIL FROM: <user@hostname>',
+            'RCPT TO: <user@test.domain>',
+            'DATA',
+            'This is the message',
+            '.',
+            'QUIT'
+        ])
         
+        done = []
+        f = protocol.ClientFactory()
+        f.protocol = lambda: client
+        f.clientConnectionLost = lambda *args: done.append(None)
+        reactor.connectTCP('127.0.0.1', self.smtpServer.getHost()[2], f)
+
         i = 0
         while len(done) == 0 and i < 1000:
             reactor.iterate(0.01)
@@ -844,20 +857,21 @@ class LiveFireExercise(unittest.TestCase):
         # port 25
         manager.PORT = self.destServer.getHost()[2]
 
-        def clientThread():
-            smtp = smtplib.SMTP('127.0.0.1', self.insServer.getHost()[2])
-            smtp.helo()
-            smtp.mail('user@wherever')
-            smtp.rcpt('user@destination.domain')
-            smtp.data('This is the message')
-            smtp.close()
+        client = LineSendingProtocol([
+            'HELO meson',
+            'MAIL FROM: <user@wherever>',
+            'RCPT TO: <user@destination.domain>',
+            'DATA',
+            'This is the message',
+            '.',
+            'QUIT'
+        ])
 
-        
         done = []
-        from twisted.internet import threads
-        threads.deferToThread(clientThread
-        ).addCallbacks(done.append
-        ).setTimeout(5)
+        f = protocol.ClientFactory()
+        f.protocol = lambda: client
+        f.clientConnectionLost = lambda *args: done.append(None)
+        reactor.connectTCP('127.0.0.1', self.insServer.getHost()[2], f)
         
         i = 0
         while len(done) == 0 and i < 1000:
