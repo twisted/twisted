@@ -513,6 +513,24 @@ class Text(Widget):
                 return document.createTextNode(self.text)
 
 
+class ParagraphText(W.Widget):
+    """
+    Like a normal text widget, but it takes line breaks in the text and
+    formats them as HTML paragraphs.
+    """
+    def setUp(self, request, node, data):
+        nSplit = data.split('\n')
+        para = request.d.createElement('p')
+        for line in nSplit:
+            if line.strip():
+                para.appendChild(request.d.createTextNode(line))
+            else:
+                self.add(para)
+                para = request.d.createElement('p')
+        if para.hasChildNodes():
+            self.add(para)
+
+
 class Image(Text):
     """
     A simple Widget that creates an `img' tag.
