@@ -191,6 +191,12 @@ register("Math-Lore",
          type="lore",
          tapname="mlore")
 
+register("Lore Slides",
+         "twisted.lore.slides",
+         description="Lore for slides",
+         type="lore",
+         tapname="lore-slides")
+
 register("Man",
          "twisted.lore.man2lore",
          description="UNIX Man pages",
