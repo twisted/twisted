@@ -50,15 +50,18 @@ being used, and the body is empty.</p>
   <code>0x81: INT: [value-INT-empty]</code>
 
   <p>This token defines a single positive integer. The protocol defines its
-  range as <q>[0, 2**31-1]</q> (but in fact a python implementation can
-  accept anything in [0, 2**448-1], limited by the 64-byte maximum header
-  size). The recipient is responsible for choosing an appropriate local type
-  to hold the number. For Python, if the value represented by the incoming
-  base-128 digits grows larger than a regular Python IntType can accomodate,
-  the receiving system will use a LongType or a BigNum as necessary.</p>
+  range as [0, 2**31), so the largest legal value is 2*31-1. The
+  recipient is responsible for choosing an appropriate local type to hold the
+  number. For Python, if the value represented by the incoming base-128
+  digits grows larger than a regular Python IntType can accomodate, the
+  receiving system will use a LongType or a BigNum as necessary.</p>
 
   <p>Anything larger than this range must be sent with a LONGINT token
   instead.</p>
+
+  <p>(oldbanana compatibility note: a python implementation can accept
+  anything in the range [0, 2**448), limited by the 64-byte maximum header
+  size).</p>
   
   <p>The range was chosen to allow INT values to always fit in C's s_int32_t
   type, so an implementation that doesn't have a useful bignum type can
@@ -81,9 +84,16 @@ being used, and the body is empty.</p>
 
   <p>This token defines a negative integer. It is identical to the
   <code>INT</code> tag except that the results are negated before storage.
-  The range is defined as <q>[-2**31, -1], again to make an implementation
-  using s_int32_t easier. Any numbers smaller (more negative) than this range
-  must be sent with a LONGNEG token.</p>
+  The range is defined as [-2**31, 0), again to make an implementation using
+  s_int32_t easier. Any numbers smaller (more negative) than this range must
+  be sent with a LONGNEG token.</p>
+
+  <p>Implementations should be tolerant when receiving a <q>negative zero</q>
+  and turn it into a 0, even though they should not send such things.</p>
+
+  <p>Note that NEG can represent a number (-2**31) whose absolute value
+  (2**31) is one larger than the greatest number that INT can represent
+  (2**31-1).</p>
   </li>
 
   <li>
@@ -100,7 +110,7 @@ being used, and the body is empty.</p>
 
   <p>These were used by oldbanana to represent large numbers. Their size was
   limited by the number of bytes in the header (max 64), so they can
-  represent [0, 2**448-1].</p>
+  represent [0, 2**448).</p>
   </li>
 
   <li>
