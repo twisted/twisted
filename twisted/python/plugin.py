@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 # System Imports
 import sys
 import os
@@ -149,3 +151,18 @@ def loadPlugins(plugInType, fileList, debugInspection=0, showProgress=0):
 def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     tmlFiles = getPluginFileList(debugInspection, showProgress)
     return loadPlugins(plugInType, tmlFiles, debugInspection, showProgress)
+
+
+def deferredGetPlugIns(plugInType, debugInspection=0, showProgress=0):
+    """Asynchronous version of getPlugIns
+    
+    @rtype: C{Deferred}
+    """
+    from twisted.internet import threads
+    return threads.deferToThread(
+        getPluginFileList, debugInspection, showProgress
+    ).addCallback(
+        lambda result: threads.deferToThread(
+            loadPlugins, plugInType, result, debugInspection, showProgress
+        )
+    )
