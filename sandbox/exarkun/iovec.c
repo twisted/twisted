@@ -5,15 +5,17 @@
 /* System includes */
 #include <sys/uio.h>
 
-
 /* Python wrapper around an array of iovec structs */
 typedef struct {
     PyObject_HEAD
     
-    size_t size;
-    size_t bytes;
+    size_t size;      /* The number of iovec structs contained */
+    size_t bytes;     /* The total number of bytes in all the iovec structs */
     struct iovec* vectors;
 } PyIOVector;
+
+/* Deallocates the dynamic memory held by iovec */
+void iovec_dealloc_vectors(PyIOVector* iovec);
 
 static PyTypeObject PyIOVector_Type;
 
@@ -30,19 +32,30 @@ PyIOVector_new(PyObject* args) {
     self->bytes = 0;
     self->size = 0;
     self->vectors = NULL;
+    
     return self;
 }
 
 static void
 PyIOVector_dealloc(PyIOVector* self) {
-    if (self->vectors) {
-        int i;
-        for (i = 0; i < self->size; ++i)
-            PyMem_Del(self->vectors[i].iov_base);
-
-        PyMem_Del(self->vectors);
-    }
+    iovec_dealloc_vectors(self);
     PyObject_Del(self);
+}
+
+void iovec_dealloc_vectors(PyIOVector* iovec) {
+    if (iovec->vectors) {
+        int i;
+        for (i = 0; i < iovec->size; ++i) {
+            printf("Deallocate (iovec->vectors[%d].iov_base) %p\n", i, iovec->vectors[i].iov_base);
+            PyMem_Del(iovec->vectors[i].iov_base);
+        }
+
+        printf("Deallocate (iovec->vectors) %p\n", iovec->vectors);
+        PyMem_Del(iovec->vectors);
+    }
+    iovec->vectors = NULL;
+    iovec->bytes = 0;
+    iovec->size = 0;
 }
 
 static char PyIOVector_add_doc[] = 
@@ -50,32 +63,124 @@ static char PyIOVector_add_doc[] =
 
 static PyObject*
 PyIOVector_add(PyIOVector* self, PyObject* args) {
-    char* tmp;
-    struct iovec vec;
+    int len;
+    char* buf;
     struct iovec* vectors;
 
-    if (!PyArg_ParseTuple(args, "s#:add", &vec.iov_base, &vec.iov_len))
+    if (!PyArg_ParseTuple(args, "s#:add", &buf, &len))
         return NULL;
-    
+
     vectors = PyMem_New(struct iovec, self->size + 1);
     if (vectors == NULL)
         return PyErr_NoMemory();
     
+    printf("Allocated (vectors) %p\n", vectors);
+
     memcpy(vectors, self->vectors, sizeof(struct iovec) * self->size);
 
-    tmp = PyMem_New(char, vec.iov_len);
-    memcpy(tmp, vec.iov_base, vec.iov_len);
-    vec.iov_base = tmp;
+    vectors[self->size].iov_base = PyMem_New(char, len);
+    if (vectors[self->size].iov_base == NULL) {
+        printf("Deallocate (vectors) %p\n", vectors);
+        PyMem_Del(vectors);
+        return PyErr_NoMemory();
+    }
+    
+    printf("Allocated (vectors[%d].iov_base) %p\n", self->size, vectors[self->size].iov_base);
 
-    vectors[self->size] = vec;
-    ++self->size;
-    self->bytes += vec.iov_len;
+    memcpy(vectors[self->size].iov_base, buf, len);
+    vectors[self->size].iov_len = len;
 
+    self->size += 1;
+    self->bytes += len;
+
+    printf("Deallocate (self->vectors) %p\n", self->vectors);
     PyMem_Del(self->vectors);
     self->vectors = vectors;
-    
+
     Py_INCREF(Py_None);
     return Py_None;
+}
+
+static PyObject*
+iovec_delete(PyIOVector* iovec, int bytes) {
+    int i, j;
+    int origBytes = bytes;
+
+    if (bytes == iovec->bytes) {
+        iovec_dealloc_vectors(iovec);
+        return;
+    }
+    
+    for (i = 0; i < iovec->size; ++i) {
+        if (bytes == 0) {
+            /* Chop! */
+            struct iovec* vtmp;
+            
+            printf("Deletion at i=%d\n", i);
+            
+            vtmp = PyMem_New(struct iovec, iovec->size - i);
+            if (iovec == NULL)
+                return PyErr_NoMemory();
+
+            printf("Allocated (vtmp (1)) %p\n", vtmp);
+            
+            memcpy(vtmp, iovec->vectors + i, iovec->size - i);
+            printf("Deallocate (iovec->vectors) %p\n", iovec->vectors);
+            PyMem_Del(iovec->vectors);
+            iovec->vectors = vtmp;
+            
+            iovec->size -= i;
+            iovec->bytes -= origBytes;
+            return;
+        } else if (bytes < iovec->vectors[i].iov_len) {
+            /* Partial deletion */
+            struct iovec* vtmp = iovec->vectors;
+            int L = iovec->vectors[i].iov_len - bytes;
+            char* tmp = iovec->vectors[i].iov_base;
+
+            printf("Partial deletion at i=%d\n", i);
+            
+            iovec->vectors[i].iov_len = L;
+            iovec->vectors[i].iov_base = PyMem_New(char, L);
+            if (iovec->vectors[i].iov_base == NULL)
+                return PyErr_NoMemory();
+            
+            printf("Allocated (iovec->vectors[%d].iov_base) %p\n", i, iovec->vectors[i].iov_base);
+            
+            strncpy(iovec->vectors[i].iov_base, tmp + bytes, L);
+            printf("Deallocate (previous iovec->vectors[%d].iov_base) %p\n", i, tmp);
+            PyMem_Del(tmp);
+            tmp = NULL;
+
+            /* Now clean up everything before this element */
+            iovec->bytes -= origBytes;
+            iovec->size -= i;
+
+            if (i == 0) /* We're actually done cleaning up already */
+                return;
+
+            printf("New iovec %d elements\n", iovec->size);
+            iovec->vectors = PyMem_New(struct iovec, iovec->size);
+            if (iovec->vectors == NULL) {
+                printf("Deallocate (tmp) %p\n", tmp);
+                PyMem_Del(tmp);
+                return PyErr_NoMemory();
+            }
+
+            for (j = 0; j < i - 1; ++j) {
+                printf("Deallocate (previous iovec->vectors[%d].iov_base) %p\n", j, vtmp[j].iov_base);
+                PyMem_Del(vtmp[j].iov_base);
+            }
+            printf("Allocated (iovec->vectors) %p\n", iovec->vectors);
+            memcpy(iovec->vectors, vtmp + i, iovec->size);
+            
+            printf("Deallocate (previous iovec->vectors) %p\n", vtmp);
+            PyMem_Del(vtmp);
+
+            return;
+        }
+        bytes -= iovec->vectors[i].iov_len;
+    }
 }
 
 static char PyIOVector_write_doc[] =
@@ -115,8 +220,10 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
         Py_DECREF(res);
     }
     
+    /* I really don't know if threads can be allowed here. */
     result = writev(fileno, self->vectors, self->size);
     
+    iovec_delete(self, result);
     return PyInt_FromLong(result);
 }
 
@@ -130,7 +237,7 @@ static PyTypeObject PyIOVector_Type = {
     PyObject_HEAD_INIT(NULL)
     
     0,                  /* ob_size */
-    "iovec.IOVector",   /* tp_name */
+    "iovec.iovec",      /* tp_name */
     sizeof(PyIOVector), /* tp_basicsize */
     0,                  /* tp_itemsize */
     
@@ -194,7 +301,7 @@ initiovec(void) {
         return;
     
     Py_INCREF(&PyIOVector_Type);
-    if (PyDict_SetItemString(dict, "IOVectorType", (PyObject*)&PyIOVector_Type) < 0)
+    if (PyDict_SetItemString(dict, "iovec", (PyObject*)&PyIOVector_Type) < 0)
         return;
     
     iovec_error = PyErr_NewException("iovec.error", NULL, NULL);
@@ -203,4 +310,6 @@ initiovec(void) {
     
     if (PyDict_SetItemString(dict, "error", iovec_error) < 0)
         return;
+
+    /* __asm__("int $3"); */
 }
