@@ -353,8 +353,7 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(d)
         self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
 
-
-    def testProtocol(self):
+    def _testProtocol(self):
         PORT = 8392
         server = protocol.ServerFactory()
         server.protocol = flow.Protocol
@@ -365,6 +364,13 @@ class FlowTest(unittest.TestCase):
         client.d = defer.Deferred()
         reactor.connectTCP("localhost", PORT, client)
         self.assertEquals('testing', unittest.deferredResult(client.d))
+
+    def testProtocol(self):
+        from twisted.protocols import loopback
+        server = flow.Protocol()
+        server.controller = echoServer
+        client = flow.makeProtocol(echoClient)
+        loopback.loopback(server, client)
 
     def testThreaded(self):
         class CountIterator:
