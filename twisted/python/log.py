@@ -68,7 +68,7 @@ def callWithLogger(logger, func, *args, **kw):
 
 def write(stuff):
     """Write some data to the log."""
-    warnings.warn("What the hell is wrong with you?", DeprecationWarning)
+    warnings.warn("What the hell is wrong with you?", DeprecationWarning, stacklevel=2)
     msg(str(stuff))
 
 def debug(*stuff,**otherstuff):
