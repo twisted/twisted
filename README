@@ -28,6 +28,7 @@ What is this?
     - LDAP (client only)
     - finger
     - Echo, discard, chargen and friends
+    - Perspective Broker
   
   For more information, visit http://www.twistedmatrix.com.
 
