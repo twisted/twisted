@@ -780,7 +780,11 @@ class FTPClient(basic.LineReceiver):
         for command in ('USER ' + self.username, 
                         'PASS ' + self.password,
                         'TYPE I',):
-            self.queueStringCommand(command, public=0).addErrback(self.fail)
+            d = self.queueStringCommand(command, public=0)
+            # If something goes wrong, call fail
+            d.addErrback(self.fail)
+            # But also swallow the error, so we don't cause spurious errors
+            d.addErrback(lambda x: None)
         
     def queueCommand(self, ftpCommand):
         """Add an FTPCommand object to the queue.
