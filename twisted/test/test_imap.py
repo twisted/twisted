@@ -215,7 +215,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         ]
         
         for (input, expected) in zip(inputs, outputs):
-            self.assertEquals(imap4.parseIdList(input), expected)
+            self.assertEquals(imap4.parseIdList(input, None), expected)
+        self.assertEquals(imap4.parseIdList('1:*', 50), range(1, 50))
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
@@ -230,8 +231,11 @@ class SimpleMailbox:
     def getFlags(self):
         return self.flags
     
-    def getUID(self):
+    def getUIDValidity(self):
         return 42
+    
+    def getUIDNext(self):
+        return len(self.messages) + 1
     
     def getMessageCount(self):
         return 9
@@ -752,8 +756,8 @@ class AuthenticatorTestCase(unittest.TestCase):
     def testAuthenticate(self):
         # raise unittest.SkipTest, "No authentication schemes implemented to test"
         
-        self.client.registerAuthenticator('CRAM-MD5', imap4.CramMD5ClientAuthenticator('testuser'))
-        self.server.registerChallenger('CRAM-MD5', imap4.CramMD5ServerAuthenticator('test-domain.com', {'testuser': 'secret'}))
+        self.client.registerAuthenticator(imap4.CramMD5ClientAuthenticator('testuser'))
+        self.server.registerChallenger(imap4.CramMD5ServerAuthenticator('test-domain.com', {'testuser': 'secret'}))
         self.authenticated = 0
 
         def auth():
