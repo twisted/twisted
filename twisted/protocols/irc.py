@@ -27,6 +27,7 @@ References:
 """
 
 from twisted.internet import tcp
+from twisted.persisted import styles
 from twisted.protocols import basic, protocol
 from twisted.python import log, reflect
 import errno
@@ -150,7 +151,8 @@ class IRCClient(basic.LineReceiver, log.Logger):
     TODO: Add flood protection/rate limiting for my CTCP replies.
     """
 
-    nickname = None
+    nickname = 'irc'
+    realname = None
     ### Responses to various CTCP queries.
 
     userinfo = None
@@ -185,6 +187,11 @@ class IRCClient(basic.LineReceiver, log.Logger):
         """
         pass
 
+    def signedOn(self):
+        """Called after sucessfully signing on to the server.
+        """
+        pass
+
     ### user input commands, client->server
     ### Your client will want to invoke these.
 
@@ -215,7 +222,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
     def me(self, channel, action):
         """Strike a pose.
         """
-        self.ctcpMakeQuery(channel, [('ACTION', action)])
+        self.ctcpMakeQuery('#' + channel, [('ACTION', action)])
 
     _pings = None
     _MAX_PINGRING = 12
@@ -273,8 +280,11 @@ class IRCClient(basic.LineReceiver, log.Logger):
     ### You might want to fiddle with these,
     ### but it is safe to leave them alone.
 
-    def irc_443(self, prefix, params):
+    def irc_ERR_USERONCHANNEL(self, prefix, params):
         self.setNick(self.nickname+'_')
+
+    def irc_RPL_WELCOME(self, prefix, params):
+        self.signedOn()
 
     def irc_JOIN(self, prefix, params):
         pass
@@ -597,10 +607,17 @@ class IRCClient(basic.LineReceiver, log.Logger):
 
     ### Protocool methods
 
+    def connectionMade(self):
+        self.sendLine("NICK %s" % (self.nickname,))
+        self.sendLine("USER %s %s * :%s" % (self.nickname,
+                                            '0', self.realname))
+
     def lineReceived(self, line):
         line = lowDequote(line)
         try:
             prefix, command, params = parsemsg(line)
+            if numeric_to_symbolic.has_key(command):
+                command = numeric_to_symbolic[command]
             method = getattr(self, "irc_%s" % command, None)
             if method is not None:
                 method(prefix, params)
@@ -612,8 +629,14 @@ class IRCClient(basic.LineReceiver, log.Logger):
     def sendLine(self, line):
         basic.LineReceiver.sendLine(self, lowQuote(line))
 
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        dct['dcc_sessions'] = None
+        dct['_pings'] = None
+        return dct
 
-class DccFileReceiveBasic(protocol.Protocol):
+
+class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
     """Bare protocol to receive a Direct Client Connection SEND stream.
 
     This does enough to keep the other guy talking, but you'll want to
@@ -636,7 +659,7 @@ class DccFileReceiveBasic(protocol.Protocol):
         self.bytesReceived = self.bytesReceived + len(data)
 
 
-class DccSendProtocol(protocol.Protocol):
+class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     """Protocol for an outgoing Direct Client Connection SEND.
     """
 
@@ -732,7 +755,7 @@ def fileSize(file):
     return size
 
 
-class DccChat(basic.LineReceiver):
+class DccChat(basic.LineReceiver, styles.Ephemeral):
     """Direct Client Connection protocol type CHAT.
 
     DCC CHAT is really just your run o' the mill basic.LineReceiver
@@ -1346,142 +1369,6 @@ symbolic_to_numeric = {
     "ERR_USERSDONTMATCH": '502',
 }
 
-integer_to_symbolic = {
-    1: "RPL_WELCOME",
-    2: "RPL_YOURHOST",
-    3: "RPL_CREATED",
-    4: "RPL_MYINFO",
-    5: "RPL_BOUNCE",
-    302: "RPL_USERHOST",
-    303: "RPL_ISON",
-    301: "RPL_AWAY",
-    305: "RPL_UNAWAY",
-    306: "RPL_NOWAWAY",
-    311: "RPL_WHOISUSER",
-    312: "RPL_WHOISSERVER",
-    313: "RPL_WHOISOPERATOR",
-    317: "RPL_WHOISIDLE",
-    318: "RPL_ENDOFWHOIS",
-    319: "RPL_WHOISCHANNELS",
-    314: "RPL_WHOWASUSER",
-    369: "RPL_ENDOFWHOWAS",
-    321: "RPL_LISTSTART",
-    322: "RPL_LIST",
-    323: "RPL_LISTEND",
-    325: "RPL_UNIQOPIS",
-    324: "RPL_CHANNELMODEIS",
-    331: "RPL_NOTOPIC",
-    332: "RPL_TOPIC",
-    341: "RPL_INVITING",
-    342: "RPL_SUMMONING",
-    346: "RPL_INVITELIST",
-    347: "RPL_ENDOFINVITELIST",
-    348: "RPL_EXCEPTLIST",
-    349: "RPL_ENDOFEXCEPTLIST",
-    351: "RPL_VERSION",
-    352: "RPL_WHOREPLY",
-    315: "RPL_ENDOFWHO",
-    353: "RPL_NAMREPLY",
-    366: "RPL_ENDOFNAMES",
-    364: "RPL_LINKS",
-    365: "RPL_ENDOFLINKS",
-    367: "RPL_BANLIST",
-    368: "RPL_ENDOFBANLIST",
-    371: "RPL_INFO",
-    374: "RPL_ENDOFINFO",
-    375: "RPL_MOTDSTART",
-    372: "RPL_MOTD",
-    376: "RPL_ENDOFMOTD",
-    381: "RPL_YOUREOPER",
-    382: "RPL_REHASHING",
-    383: "RPL_YOURESERVICE",
-    391: "RPL_TIME",
-    392: "RPL_USERSSTART",
-    393: "RPL_USERS",
-    394: "RPL_ENDOFUSERS",
-    395: "RPL_NOUSERS",
-    200: "RPL_TRACELINK",
-    201: "RPL_TRACECONNECTING",
-    202: "RPL_TRACEHANDSHAKE",
-    203: "RPL_TRACEUNKNOWN",
-    204: "RPL_TRACEOPERATOR",
-    205: "RPL_TRACEUSER",
-    206: "RPL_TRACESERVER",
-    207: "RPL_TRACESERVICE",
-    208: "RPL_TRACENEWTYPE",
-    209: "RPL_TRACECLASS",
-    210: "RPL_TRACERECONNECT",
-    261: "RPL_TRACELOG",
-    262: "RPL_TRACEEND",
-    211: "RPL_STATSLINKINFO",
-    212: "RPL_STATSCOMMANDS",
-    219: "RPL_ENDOFSTATS",
-    242: "RPL_STATSUPTIME",
-    243: "RPL_STATSOLINE",
-    221: "RPL_UMODEIS",
-    234: "RPL_SERVLIST",
-    235: "RPL_SERVLISTEND",
-    251: "RPL_LUSERCLIENT",
-    252: "RPL_LUSEROP",
-    253: "RPL_LUSERUNKNOWN",
-    254: "RPL_LUSERCHANNELS",
-    255: "RPL_LUSERME",
-    256: "RPL_ADMINME",
-    257: "RPL_ADMINLOC",
-    258: "RPL_ADMINLOC",
-    259: "RPL_ADMINEMAIL",
-    263: "RPL_TRYAGAIN",
-    401: "ERR_NOSUCHNICK",
-    402: "ERR_NOSUCHSERVER",
-    403: "ERR_NOSUCHCHANNEL",
-    404: "ERR_CANNOTSENDTOCHAN",
-    405: "ERR_TOOMANYCHANNELS",
-    406: "ERR_WASNOSUCHNICK",
-    407: "ERR_TOOMANYTARGETS",
-    408: "ERR_NOSUCHSERVICE",
-    409: "ERR_NOORIGIN",
-    411: "ERR_NORECIPIENT",
-    412: "ERR_NOTEXTTOSEND",
-    413: "ERR_NOTOPLEVEL",
-    414: "ERR_WILDTOPLEVEL",
-    415: "ERR_BADMASK",
-    421: "ERR_UNKNOWNCOMMAND",
-    422: "ERR_NOMOTD",
-    423: "ERR_NOADMININFO",
-    424: "ERR_FILEERROR",
-    431: "ERR_NONICKNAMEGIVEN",
-    432: "ERR_ERRONEUSNICKNAME",
-    433: "ERR_NICKNAMEINUSE",
-    436: "ERR_NICKCOLLISION",
-    437: "ERR_UNAVAILRESOURCE",
-    441: "ERR_USERNOTINCHANNEL",
-    442: "ERR_NOTONCHANNEL",
-    443: "ERR_USERONCHANNEL",
-    444: "ERR_NOLOGIN",
-    445: "ERR_SUMMONDISABLED",
-    446: "ERR_USERSDISABLED",
-    451: "ERR_NOTREGISTERED",
-    461: "ERR_NEEDMOREPARAMS",
-    462: "ERR_ALREADYREGISTRED",
-    463: "ERR_NOPERMFORHOST",
-    464: "ERR_PASSWDMISMATCH",
-    465: "ERR_YOUREBANNEDCREEP",
-    466: "ERR_YOUWILLBEBANNED",
-    467: "ERR_KEYSET",
-    471: "ERR_CHANNELISFULL",
-    472: "ERR_UNKNOWNMODE",
-    473: "ERR_INVITEONLYCHAN",
-    474: "ERR_BANNEDFROMCHAN",
-    475: "ERR_BADCHANNELKEY",
-    476: "ERR_BADCHANMASK",
-    477: "ERR_NOCHANMODES",
-    478: "ERR_BANLISTFULL",
-    481: "ERR_NOPRIVILEGES",
-    482: "ERR_CHANOPRIVSNEEDED",
-    483: "ERR_CANTKILLSERVER",
-    484: "ERR_RESTRICTED",
-    485: "ERR_UNIQOPPRIVSNEEDED",
-    491: "ERR_NOOPERHOST",
-    501: "ERR_UMODEUNKNOWNFLAG",
-    502: "ERR_USERSDONTMATCH",
-}
+numeric_to_symbolic = {}
+for k, v in symbolic_to_numeric.items():
+    numeric_to_symbolic[v] = k

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -37,6 +37,48 @@ statuses = {
     1: "Online",
     2: "Away"
     }
+
+
+class WordsClientInterface:
+    """A client to a perspective on the twisted.words service.
+
+    I attach to that participant with Participant.attached(),
+    and detatch with Participant.detached().
+    """
+
+    def receiveContactList(self, contactList):
+        """Receive a list of contacts and their status.
+
+        The list is composed of 2-tuples, of the form
+        (contactName, contactStatus)
+        """
+
+    def notifyStatusChanged(self, name, status):
+        """Notify me of a change in status of one of my contacts.
+        """
+
+    def receiveGroupMembers(self, names, group):
+        """Receive a list of members in a group.
+
+        'names' is a list of participant names in the group named 'group'.
+        """
+
+    def receiveDirectMessage(self, sender, message):
+        """Receive a message from someone named 'sender'.
+        """
+
+    def receiveGroupMessage(self, sender, group, message):
+        """Receive a message from 'sender' directed to a group.
+        """
+
+    def memberJoined(self, member, group):
+        """Tells me a member has joined a group.
+        """
+
+    def memberLeft(self, member, group):
+        """Tells me a member has left a group.
+        """
+
 
 class Participant(pb.Perspective, styles.Versioned):
     def __init__(self, name, service):
@@ -68,13 +110,16 @@ class Participant(pb.Perspective, styles.Versioned):
             print 'unable to add words identity for %s'% self.name
 
     def attached(self, client, identity):
+        """Attach a client which implements WordsClientInterface to me.
+        """
         if ((self.client is not None)
             and self.client.__class__ != styles.Ephemeral):
             print self.client
             raise passport.Unauthorized("duplicate login not permitted.")
         log.msg("attached: %s" % self.name)
         self.client = client
-        client.receiveContactList(map(lambda contact: (contact.name, contact.status),
+        client.receiveContactList(map(lambda contact: (contact.name,
+                                                       contact.status),
                                       self.contacts))
         self.changeStatus(ONLINE)
         return self
@@ -107,12 +152,12 @@ class Participant(pb.Perspective, styles.Versioned):
                 self.contacts.remove(contact)
                 contact.reverseContacts.remove(self)
                 return
-        raise pb.Error("No such contact.")
+        raise pb.Error("No such contact '%s'." % (contactName,))
 
     def joinGroup(self, name):
         group = self.service.getGroup(name)
         if group in self.groups:
-            raise pb.Error("you're already in that group")
+            raise pb.Error("You're already in group '%s'." % (name,))
         group.addMember(self)
         self.groups.append(group)
 
@@ -122,19 +167,21 @@ class Participant(pb.Perspective, styles.Versioned):
                 self.groups.remove(group)
                 group.removeMember(self)
                 return
-        raise pb.Error("You're not in that group.")
+        raise pb.Error("You're not in group '%s'." % (name,))
 
     def getGroupMembers(self, groupName):
         for group in self.groups:
             if group.name == groupName:
-                self.client.receiveGroupMembers(map(lambda m:m.name,group.members),group.name)
-        raise pb.Error("You're not in that group.")
+                self.client.receiveGroupMembers(map(lambda m: m.name,
+                                                    group.members),
+                                                group.name)
+        raise pb.Error("You're not in group '%s'." % (groupName,))
 
     def receiveDirectMessage(self, sender, message):
         if self.client:
             self.client.receiveDirectMessage(sender.name, message)
         else:
-            raise pb.Error("%s not logged in" % self.name)
+            raise pb.Error("%s not logged in." % self.name)
 
     def receiveGroupMessage(self, sender, group, message):
         if sender is not self and self.client:
@@ -147,7 +194,10 @@ class Participant(pb.Perspective, styles.Versioned):
         self.client.memberLeft(member.name, group.name)
 
     def directMessage(self, recipientName, message):
-        recipient = self.service.getPerspectiveNamed(recipientName)
+        try:
+            recipient = self.service.getPerspectiveNamed(recipientName)
+        except KeyError:
+            raise pb.Error("No such user '%s'." % (recipientName,))
         recipient.receiveDirectMessage(self, message)
 
     def groupMessage(self, groupName, message):
@@ -155,7 +205,7 @@ class Participant(pb.Perspective, styles.Versioned):
             if group.name == groupName:
                 group.sendMessage(self, message)
                 return
-        raise pb.Error("You're not in that group.")
+        raise pb.Error("You're not in group '%s'." % (groupName,))
 
     # Establish client protocol for PB.
     perspective_changeStatus = changeStatus
@@ -200,6 +250,9 @@ class Group(pb.Cacheable):
         for member in self.members:
             member.receiveGroupMessage(sender, self, message)
 
+    def __repr__(self):
+        s = "<%s '%s' at %x>" % (self.__class__, self.name, id(self))
+        return s
 
 class Service(pb.Service, styles.Versioned):
     """I am a chat service.
@@ -233,4 +286,8 @@ class Service(pb.Service, styles.Versioned):
     def getPerspectiveNamed(self, name):
         return self.participants[name]
 
-
+    def __str__(self):
+        s = "<%s in app '%s' at %x>" % (self.serviceName,
+                                        self.application.name,
+                                        id(self))
+        return s
