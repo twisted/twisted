@@ -111,7 +111,10 @@ def registerAdapter(adapterClass, origClass, interfaceClass):
     if not issubclass(interfaceClass, Interface):
         raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
     
-    adapterRegistry[(origClass, interfaceClass)] = adapterClass
+    for i in superInterfaces(interfaceClass):
+        # don't override already registered adapters for super-interfaces
+        if not adapterRegistry.has_key((origClass, i)):
+            adapterRegistry[(origClass, i)] = adapterClass
 
 
 def getAdapter(obj, interfaceClass, default):

@@ -83,6 +83,22 @@ class MultiplyAndAdd:
     def multiply(self, a, b):
         return a * b
 
+class IFoo(ISub):
+    pass
+
+class FooAdapterForMAA:
+    
+    __implements__ = [IFoo]
+    
+    def __init__(self, instance):
+        self.instance = instance
+    
+    def add(self, a, b):
+        return self.instance.add(a, b)
+
+components.registerAdapter(FooAdapterForMAA, MultiplyAndAdd, IFoo)
+
+
 
 class InterfacesTestCase(unittest.TestCase):
     """Test interfaces."""
@@ -153,6 +169,12 @@ class AdapterTestCase(unittest.TestCase):
     def testGetAdapterClass(self):
         mklass = components.getAdapterClass(IntAdder, IMultiply, None)
         self.assertEquals(mklass, IntMultiplyWithAdder)
+    
+    def testGetSubAdapter(self):
+        o = MultiplyAndAdd()
+        self.assert_( not components.implements(o, IFoo) )
+        foo = components.getAdapter(o, IFoo, None)
+        self.assert_( isinstance(foo, FooAdapterForMAA) )
     
     def testParentInterface(self):
         o = Sub()
