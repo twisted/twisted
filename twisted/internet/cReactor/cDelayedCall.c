@@ -69,6 +69,31 @@ cDelayedCall_dealloc(PyObject *self)
 }
 
 static PyObject *
+cDelayedCall_getTime(PyObject *self, PyObject *args)
+{
+    cDelayedCall *call = (cDelayedCall *)self;
+    double call_time;
+
+    if (!PyArg_ParseTuple(args, ":getTime"))
+        return NULL;
+
+    if (!call->reactor) {
+        /* not scheduled */
+        if (call->called) {
+            PyErr_SetString(AlreadyCalledException, "");
+            return NULL;
+        } else {
+            PyErr_SetString(AlreadyCancelledException, "");
+            return NULL;
+        }
+    }
+
+    call_time = call->call_time.tv_sec + call->call_time.tv_usec / 1000000;
+
+    return PyFloat_FromDouble(call_time);
+}
+
+static PyObject *
 cDelayedCall_cancel(PyObject *self, PyObject *args)
 {
     int rc;
@@ -182,15 +207,28 @@ cDelayedCall_reset(PyObject *self, PyObject *args)
     return Py_None;
 }
 
+static PyObject *
+cDelayedCall_active(PyObject *self, PyObject *args)
+{
+    cDelayedCall *call = (cDelayedCall *)self;
+
+    if (!PyArg_ParseTuple(args, ":active"))
+        return NULL;
+
+    if (call->called)
+        return PyInt_FromLong(0);
+    else
+        return PyInt_FromLong(1);
+}
+
 static PyMethodDef cDelayedCall_methods[] = 
 {
     /* IDelayedCall */
-    { "cancel",                     cDelayedCall_cancel,
-      METH_VARARGS, "cancel" },
-    { "delay",                      cDelayedCall_delay,
-      METH_VARARGS, "delay" },
-    { "reset",                      cDelayedCall_reset,
-      METH_VARARGS, "reset" },
+    { "getTime", cDelayedCall_getTime, METH_VARARGS, "getTime" },
+    { "cancel",  cDelayedCall_cancel,  METH_VARARGS, "cancel" },
+    { "delay",   cDelayedCall_delay,   METH_VARARGS, "delay" },
+    { "reset",   cDelayedCall_reset,   METH_VARARGS, "reset" },
+    { "active",  cDelayedCall_active,  METH_VARARGS, "active" },
 
     { NULL, NULL, METH_VARARGS, NULL },
 };
