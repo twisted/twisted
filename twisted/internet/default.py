@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.17 2002/07/07 03:58:07 krz Exp $
+# $Id: default.py,v 1.18 2002/07/07 15:47:42 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -31,7 +31,7 @@ from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
 from twisted.internet import main
 
-from twisted.internet import main, tcp, udp, task, process
+from twisted.internet import main, tcp, udp, task
 from twisted.python import log, threadable
 from twisted.persisted import styles
 from twisted.python.runtime import platform
@@ -49,6 +49,10 @@ from main import CONNECTION_LOST, CONNECTION_DONE
 if platform.getType() != 'java':
     import select
     from errno import EINTR, EBADF
+
+if platform.getType() == 'posix':
+    import process
+
 
 class PosixReactorBase(ReactorBase):
     """A basis for reactors that use file descriptors.

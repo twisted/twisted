@@ -26,7 +26,7 @@ from twisted.persisted import styles
 from twisted.python import log
 
 # Sibling Imports
-import abstract, main
+import abstract, main, fdesc
 from main import CONNECTION_LOST, CONNECTION_DONE
 
 def reapProcess(*args):
@@ -157,7 +157,6 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
-        import fdesc
         settingUID = (uid is not None) or (gid is not None)
         if settingUID:
             curegid = os.getegid()
@@ -245,13 +244,11 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def doError(self):
         """Called when my standard error stream is ready for reading.
         """
-        import fdesc
         return fdesc.readFromFD(self.stderr, self.proto.errReceived)
 
     def doRead(self):
         """Called when my standard output stream is ready for reading.
         """
-        import fdesc
         return fdesc.readFromFD(self.stdout, self.proto.dataReceived)
 
     def doWrite(self):
