@@ -1,3 +1,10 @@
+2003-07-03  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/news/database.py: NewsShelf.articleRequest() and
+	NewsShelf.bodyRequest() now expected to return a file-like object
+	in the last position of its returned three-tuple.  The old API
+	is still supported, but deprecated.
+
 2003-07-03  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: add gadfly test
