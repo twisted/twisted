@@ -29,7 +29,7 @@
     <p>You can execute the command <code
     class="shell">manhole</code> to start the GTK+ manhole client.
     This will give you a window asking for your username, password,
-    hostname, service, perspective, and port #. Type in the
+    hostname, service, perspective, and port number. Type in the
     username and password you selected above, the hostname that the
     twisted.manhole service was started on (localhost is the
     default), leave the Service the same ('twisted.manhole'), leave
@@ -38,6 +38,24 @@
     message in a window with an output area and an input area. You
     can type arbitrary python code into the input area and get the
     results in the output area.</p>
+
+    <p>At this point, you can get access to the main <code class="API"
+    base="twisted.internet.app">Application</code> object. You can use that
+    to obtain the <code class="API" base="twisted.spread.pb">Service</code>
+    objects inside it, or references to the <code class="API"
+    base="twisted.internet.protocol">Factory</code> objects that are
+    listening on TCP or UDP ports, by doing:</p>
+
+<pre class="python-interpreter">
+from twisted.internet import app
+a = app.theApplication
+service = a.getServiceNamed("manhole")
+(port, factory, backlog, interface) = a.tcpPorts[0]
+</pre>
+
+    <p>After that, you can do anything you want with those objects. A more
+    detailed example is at the bottom of this document.</p>
+
 
     <h2>Special Commands</h2>
 
@@ -128,16 +146,85 @@ x.foo()
     nice GUI display for this in the future). The
     <code>/browse</code> and <code>/watch</code> functionality is
     brought to you by the <code
-    class="API">twisted.python.explorer</code> module, which was
+    class="API">twisted.manhole.explorer</code> module, which was
     written largely by Kevin Turner.</p>
+
+    <h2>Example</h2>
+
+    <p>Here's an example of using the manhole service to examine and modify
+    a running server. The sample code starts a Quote Of The Day (<code
+    class="API" base="twisted.protocols.wire">QOTD</code>) server on port
+    8123, as well as a manhole service on the usual port 8787.</p>
+
+    <pre class="shell"># FIXME: there is no qotd plug-in for mktap.
+% mktap qotd -p 8123
+% mktap -a qotd.tap manhole -u username -w sekrit
+</pre>
+
+    <p>Start this running, and test it out with <code class="shell">nc
+    localhost 8123</code> (or <code class="shell">telnet localhost
+    8123</code> if you don't have netcat installed).</p>
+
+<pre class="shell">
+% nc localhost 8123
+An apple a day keeps the doctor away.
+</pre>
+
+    <p>Then start the <tt>manhole</tt> client and point it at the
+    application: username is <tt>username</tt>, password is <tt>sekrit</tt>.
+    The following is a transcript of the manhole session, and looks just
+    like the normal python interpreter, with lines you type prefixed with
+    <tt>&gt;&gt;&gt;</tt>.</p>
+
+<pre class="python-interpreter">
+Hello username, welcome to twisted.manhole in manhole-demo on some computer somewhere.
+Twisted 0.99.2rc2.
+
+&gt;&gt;&gt; from twisted.internet import app
+&gt;&gt;&gt; a = app.theApplication
+&gt;&gt;&gt; a
+&lt;'manhole-demo' app&gt;
+&gt;&gt;&gt; a.getServiceNamed("twisted.manhole")
+&lt;twisted.manhole.service.Service instance at 0x82d63dc&gt;
+&gt;&gt;&gt; a.tcpPorts
+[(8123, &lt;twisted.internet.protocol.Factory instance at 0x82da454&gt;, 5, ''), (8787, &lt;twisted.spread.pb.BrokerFactory instance at 0x82dac7c&gt;, 5, '')]
+&gt;&gt;&gt; f = a.tcpPorts[0][1]
+&gt;&gt;&gt; f
+&lt;twisted.internet.protocol.Factory instance at 0x82da454&gt;
+&gt;&gt;&gt; dir(f)
+['__doc__', '__implements__', '__module__', 'buildProtocol', 'doStart', 'doStop', 'noisy', 'numPorts', 'protocol', 'startFactory', 'stopFactory']
+&gt;&gt;&gt; from twisted.protocols.wire import Daytime
+&gt;&gt;&gt; a.tcpPorts[0][1].protocol = Daytime
+</pre>
+
+    <p>Congratulations, you've just changed the Factory to use the <code
+    class="API" base="twisted.protocols.wire">Daytime</code> protocol
+    instead of the <code class="API"
+    base="twisted.protocols.wire">QOTD</code> protocol. Connect to port 8123
+    now and see the difference: you get a timestamp instead of a quote:</p>
+
+<pre class="shell">
+% nc localhost 8123
+Wed Sep 25 11:14:58 2002
+</pre>
+
+    <p>From here, you can do anything you want to your application. It is a
+    good idea to check the source for the <code class="API"
+    base="twisted.internet.app">Application</code> and <code class="API"
+    base="twisted.cred.service">Service</code> classes to see what else you
+    can extract from them.</p>
+
+    <p>TODO: Add an example using <code class="API">twisted.python.rebuild.rebuild</code>.</p>
+
+    <p>Have fun!</p>
+
     <hr />
 
     <address>
       <a href="mailto:carmstro@twistedmatrix.com">Chris
       Armstrong</a>
     </address>
-    <!-- hhmts start -->
-    Last modified: Tue Mar 12 22:32:48 EST 2002 <!-- hhmts end -->
+    <!-- hhmts start -->Last modified: Wed Sep 25 13:40:14 PDT 2002 <!-- hhmts end -->
   </body>
 </html>
 
