@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.69 $"[11:-2]
+__version__ = "$Revision: 1.70 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -237,6 +237,7 @@ class View:
             # called prematurely within dispatchResultCallback
             # resulting in much gnashing of teeth.
             self.outstandingNodes = document.childNodes[:] + [1]
+            self.outstandingNodes.reverse()
 
             self.outstandingCallbacks += 1
             self.handleOutstanding(request)
@@ -248,7 +249,7 @@ class View:
 
     def handleOutstanding(self, request):
         while self.outstandingNodes:
-            node = self.outstandingNodes.pop(0)
+            node = self.outstandingNodes.pop()
             if node is 1:
                 self.modelStack = self.modelStack[1]
                 self.viewStack = self.viewStack[1]
@@ -256,18 +257,20 @@ class View:
                     self.controllerStack = self.controllerStack[1]
             if (hasattr(node, 'getAttribute') and 
             (node.getAttribute('model') or node.getAttribute('view') or node.getAttribute('controller'))):
-                self.outstandingNodes.insert(0, 1)
+                self.outstandingNodes.append(1)
                 self.handleNode(request, node)
             else:
                 if hasattr(node, 'getAttribute') and (node.getAttribute('view') or node.getAttribute('controller')):
-                    self.outstandingNodes = [node] + self.outstandingNodes
+                    self.outstandingNodes.append(node)
                 if hasattr(node, 'childNodes') and node.childNodes:
                     self.recurseChildren(request, node)
         
     def recurseChildren(self, request, node):
         """If this node has children, handle them.
         """
-        self.outstandingNodes = node.childNodes + self.outstandingNodes
+        new = node.childNodes[:]
+        new.reverse()
+        self.outstandingNodes.extend(new)
 
     def dispatchResult(self, request, node, result):
         """Check a given result from handling a node and look up a NodeMutator
