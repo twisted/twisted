@@ -25,7 +25,7 @@ This is code and support for
 import os
 
 # Twisted Imports
-from twisted.python import defer
+from twisted.internet import defer
 
 # Sibling Imports
 from twisted.popsicle.repos import DirectoryRepository
