@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.39 $"[11:-2]
+__version__ = "$Revision: 1.40 $"[11:-2]
 
 import types
 import weakref
@@ -45,6 +45,10 @@ class Model:
     __implements__ = interfaces.IModel
 
     def __init__(self, *args, **kwargs):
+        if len(args):
+            self.original = args[0]
+        else:
+            self.original = self
         self.name = ''
         self.parent = None
         self.views = []
@@ -246,11 +250,11 @@ class Model:
             self.cachedValid = 1
             self.dataWillChange()
             if len(args) == num:
-                self.orig = self._getter(request)
+                self.orig = self.original = self._getter(request)
             else:
-                self.orig = self._getter()
-            return self.orig
-        return self
+                self.orig = self.original = self._getter()
+            return self.original
+        return self.original
 
     def setData(self, request=None, data=None):
         if data is None:
@@ -271,8 +275,8 @@ class Model:
         else:
             if hasattr(self, 'parent') and self.parent:
                 self.parent.setSubmodel(None, self.name, data)
-            if hasattr(self, 'orig'):
-                self.orig = data
+            self.orig = self.original = data
+
 
 class MethodModel(Model):
     """Look up submodels with wmfactory_* methods.
@@ -328,7 +332,7 @@ class Wrapper(Model):
     name = None
     def __init__(self, orig):
         Model.__init__(self)
-        self.orig = orig
+        self.orig = self.original = orig
 
     def dataWillChange(self):
         pass
@@ -344,12 +348,12 @@ class Wrapper(Model):
             self.cachedValid = 1
             self.dataWillChange()
             if len(args) == num:
-                self.orig = self._getter(request)
+                self.orig = self.original = self._getter(request)
             else:
-                self.orig = self._getter()
-            return self.orig
+                self.orig = self.original = self._getter()
+            return self.original
 
-        return self.orig
+        return self.original
 
     def setData(self, request=None, data=None):
         if self._setter is not None:
@@ -369,12 +373,12 @@ class Wrapper(Model):
             request = None
         if self.parent:
             self.parent.setSubmodel(None, self.name, data)
-        self.orig = data
+        self.orig = self.original = data
 
     def __repr__(self):
         myLongName = reflect.qual(self.__class__)
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
-                                                            id(self), self.orig)
+                                                            id(self), self.original)
 
 
 class ListModel(Wrapper):
@@ -392,7 +396,7 @@ class ListModel(Wrapper):
             request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
-        orig = self.orig
+        orig = self.original
         try:
             int(name)
         except:
@@ -407,10 +411,10 @@ class ListModel(Wrapper):
             value = name
             name = request
             request = None
-        self.orig[int(name)] = value
+        self.original[int(name)] = value
 
     def __len__(self):
-        return len(self.orig)
+        return len(self.original)
 
     def __getitem__(self, name):
         return self.getSubmodel(None, str(name))
@@ -421,7 +425,7 @@ class ListModel(Wrapper):
     def __repr__(self):
         myLongName = reflect.qual(self.__class__)
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
-                                                            id(self), self.orig)
+                                                            id(self), self.original)
 
 
 class StringModel(ListModel):
@@ -456,7 +460,7 @@ class DictionaryModel(Wrapper):
             request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
-        orig = self.orig
+        orig = self.original
         sm = adaptToIModel(orig[name], self, name)
         self.submodels[name] = sm
         return sm
@@ -467,7 +471,7 @@ class DictionaryModel(Wrapper):
             value = name
             name = request
             request = None
-        self.orig[name] = value
+        self.original[name] = value
 
 
 class AttributeWrapper(Wrapper):
@@ -475,7 +479,7 @@ class AttributeWrapper(Wrapper):
     I wrap an attribute named "name" of the given parent object.
     """
     def __init__(self, parent, name):
-        self.orig = None
+        self.original = None
         parent = ObjectWrapper(parent)
         Wrapper.__init__(self, parent.getSubmodel(None, name))
         self.parent = parent
@@ -494,7 +498,7 @@ class ObjectWrapper(Wrapper):
             request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
-        sm = adaptToIModel(getattr(self.orig, name), self, name)
+        sm = adaptToIModel(getattr(self.original, name), self, name)
         self.submodels[name] = sm
         return sm
 
@@ -504,7 +508,7 @@ class ObjectWrapper(Wrapper):
             value = name
             name = request
             request = None
-        setattr(self.orig, name, value)
+        setattr(self.original, name, value)
 
 class UnsafeObjectWrapper(ObjectWrapper):
     """
@@ -520,7 +524,7 @@ class UnsafeObjectWrapper(ObjectWrapper):
             request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
-        value = getattr(self.orig, name)
+        value = getattr(self.original, name)
         if callable(value):
             return value()
         sm = adaptToIModel(value, self, name)
@@ -535,7 +539,7 @@ class DeferredWrapper(Wrapper):
             data = request
             request = None
         if isinstance(data, defer.Deferred):
-            self.orig = data
+            self.original = data
         else:
             views, subviews = self.views, self.subviews
             new = adaptToIModel(data, self.parent, self.name)
