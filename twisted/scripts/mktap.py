@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.3 2002/03/19 20:46:57 jh Exp $
+# $Id: mktap.py,v 1.4 2002/03/21 16:10:33 itamarst Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -104,8 +104,8 @@ def run():
         options.gid = os.getgid()
     try:
         options.parseOptions(sys.argv[1:])
-    except Exception, e:
-        print str(e)
+    except:
+        print str(sys.exc_value)
         print str(options)
         sys.exit(2)
 

@@ -27,6 +27,7 @@ import threading
 import threadable
 import traceback
 import copy
+import sys
 
 # Twisted Imports
 from twisted.python import log
@@ -108,8 +109,8 @@ class ThreadPool:
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
             result = apply(func, args, kwargs)
-        except Exception, e:
-            errback(e)
+        except:
+            errback(sys.exc_value)
         else:
             callback(result)
     
