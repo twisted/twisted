@@ -136,7 +136,7 @@ class InetdConf(SimpleConfFile):
 
         # Find the port for a service
         port = self.knownServices.services.get((serviceName, protocol), None)
-        if not port and protocol.startswith('rpc/'):
+        if not port and not protocol.startswith('rpc/'):
             # FIXME: Should this be discarded/ignored, rather than throwing
             #        an exception?
             raise UnknownService, "Unknown service: %s (%s)" \
