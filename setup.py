@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.100 2003/02/18 14:07:29 acapnotic Exp $
+$Id: setup.py,v 1.101 2003/03/04 17:21:30 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -180,18 +180,11 @@ setup_args = {
     'maintainer_email': "glyph@twistedmatrix.com",
     'url': "http://twistedmatrix.com/",
     'licence': "GNU LGPL",
-    'long_description': """
-Twisted is a framework to build frameworks. It is expected that one day
-the project will expanded to the point that the framework will seamlessly
-integrate with mail, web, DNS, netnews, IRC, RDBMSs, desktop environments,
-and your toaster.
-
-!!! NOTE !!!
-If you are not using ActiveState Python, please download and install
-win32all before continuing with the Twisted installation. You can get it
-from:
-
-http://starship.python.net/crew/mhammond/win32/Downloads.html
+    'long_description': """\
+Twisted is a framework to build frameworks. It is expected that one
+day the project will expanded to the point that the framework will
+seamlessly integrate with mail, web, DNS, netnews, IRC, RDBMSs,
+desktop environments, and your toaster.
 """,
     'packages': [
         "twisted",
