@@ -96,10 +96,8 @@ class ServerOptions(usage.Options):
         sys.exit()
 
     def opt_spew(self):
-        """Print an insanely verbose log of everything that happens.
-
-        Useful when debugging freezes or locks in complex code.
-        """
+        """Print an insanely verbose log of everything that happens.  Useful
+        when debugging freezes or locks in complex code."""
         def spewer(frame, s, ignored):
             from twisted.python import reflect
             if frame.f_locals.has_key('self'):
