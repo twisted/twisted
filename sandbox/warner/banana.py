@@ -31,6 +31,19 @@ def b1282int(st):
         place = place + 1
     return i
 
+def emitLongint(token, num, stream):
+    # TODO: this is a placeholder format, here until I can figure out an
+    # efficient way to convert LongInts to base-256
+
+    s = str(num)
+    # first the length
+    int2b128(len(s), stream)
+    stream(token)
+    stream(s)
+
+def consumeLongint(st):
+    return int(st)
+
 HIGH_BIT_SET = chr(0x80)
 
 class Banana(protocol.Protocol):
@@ -125,13 +138,13 @@ class Banana(protocol.Protocol):
     def sendToken(self, obj):
         write = self.transport.write
         if isinstance(obj, types.IntType) or isinstance(obj, types.LongType):
-            if obj >= 2**(64*7):
-                raise ValueError("need to write new LONGINT support")
+            if obj >= 2**31:
+                emitLongint(LONGINT, obj, write)
             elif obj >= 0:
                 int2b128(obj, write)
                 write(INT)
-            elif -obj >= 2**(64*7):
-                raise ValueError("need to write new LONGNEG support")
+            elif -obj > 2**31: # NEG is [-2**31, 0)
+                emitLongint(LONGNEG, -obj, write)
             else:
                 int2b128(-obj, write)
                 write(NEG)
@@ -364,14 +377,32 @@ class Banana(protocol.Protocol):
                 buffer = rest
                 header = b1282int(header)
                 obj = -int(header)
-            elif typebyte == LONGINT:
-                buffer = rest
-                header = b1282int(header)
-                obj = long(header)
-            elif typebyte == LONGNEG:
-                buffer = rest
-                header = b1282int(header)
-                obj = -long(header)
+            elif typebyte == LONGINT or typebyte == LONGNEG:
+                strlen = b1282int(header)
+                if not rejected and sizelimit != None and strlen > sizelimit:
+                    if self.hangupOnLengthViolation:
+                        raise BananaError("Longint too long.")
+                    else:
+                        # need to skip 'strlen' bytes and feed a
+                        # BananaFailure to the current unslicer
+                        rejected = True
+                        e = BananaError("Longint too long.")
+                        gotItem(UnbananaFailure(self.describe(), e))
+                if len(rest) >= strlen:
+                    # the whole number is available
+                    buffer = rest[strlen:]
+                    obj = long(consumeLongint(rest[:strlen]))
+                    if typebyte == LONGNEG:
+                        obj = -obj
+                    # although it might be rejected
+                else:
+                    # there is more to come
+                    if rejected:
+                        # drop all we have and note how much more should be
+                        # dropped
+                        self.skipBytes = strlen - len(rest)
+                        self.buffer = ""
+                    return
 
             elif typebyte == VOCAB:
                 buffer = rest

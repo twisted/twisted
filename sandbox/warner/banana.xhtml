@@ -20,7 +20,8 @@ tokens have bodies, some do not, and the length of all bodies are determined
 by data in the header. The bodies are composed of arbitrary bytes. For most
 tokens, the header is a base-128 number, but for some it may be a UTF-7
 encoded string. (?? maybe just strict ASCII. the high bit of all bytes in
-the header must be zero).</p>
+the header must be zero). The maximum legal header length is 64 bytes, so
+tokens which treat it as a number have a maximum value of 2**(64*7)-1.</p>
 
 <p>Tokens are described below as [header-TOKEN-body], where either
 <q>header</q> or <q>body</q> may be empty. For example, [len-LIST-empty]
@@ -50,7 +51,7 @@ being used, and the body is empty.</p>
   <code>0x81: INT: [value-INT-empty]</code>
 
   <p>This token defines a single positive integer. The protocol defines its
-  range as [0, 2**31), so the largest legal value is 2*31-1. The
+  range as [0, 2**31), so the largest legal value is 2**31-1. The
   recipient is responsible for choosing an appropriate local type to hold the
   number. For Python, if the value represented by the incoming base-128
   digits grows larger than a regular Python IntType can accomodate, the
@@ -169,9 +170,12 @@ being used, and the body is empty.</p>
   <p><code>0x8C: LONGNEG: [len-LONGNEG-bytes]</code></p>
 
   <p>These are processed like STRING tokens, but the bytes form a base-256
-  encoded number, most-significant-byte first. The protocol does not impose
-  any particular size limit, so the nominal range is [0, infinity), but the
-  receiver can impose whatever length limit they wish.</p>
+  encoded number, most-significant-byte first (TODO: encoding big-endian is
+  a nuisance unless you have access to the internal format, while encoding
+  little-endian involves a lot of math. What is the most efficient way to do
+  the serialization?). The size is (barely) limited by the length field, so
+  the nominal range is [0, 2**(2**(64*7)-1)-1), but the receiver can impose
+  whatever length limit they wish.</p>
 
   <p>LONGNEG is handled exactly like LONGINT but the number is negated
   first.</p>

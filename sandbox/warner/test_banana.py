@@ -952,11 +952,23 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
 
     def test_int(self):
         self.looptest(42)
+        self.looptest(-47)
+    def test_bigint(self):
+        # some of these are small enough to fit in an INT
+        self.looptest(int(2**31-1))
+        self.looptest(long(2**31+0))
+        self.looptest(long(2**31+1))
+        self.looptest(long(-2**31-1))
+        self.looptest(long(-2**31+0))
+        self.looptest(int(-2**31+1))
+        self.looptest(long(2**100))
+        self.looptest(long(-2**100))
+        self.looptest(long(2**1000))
+        self.looptest(long(-2**1000))
     def test_string(self):
         self.looptest("biggles")
     def test_unicode(self):
-        self.looptest(u"biggles")
-        # TODO: put actual non-ascii characters in it
+        self.looptest(u"biggles\u1234")
     def test_list(self):
         self.looptest([1,2])
     def test_tuple(self):
@@ -1106,3 +1118,13 @@ def decode(tokens, debug=0):
     b.debug = debug
     obj = b.processTokens(tokens)
     return obj
+
+def encode2(obj):
+    b = TestBanana()
+    b.transport = cStringIO.StringIO()
+    b.send(obj)
+    return b.transport.getvalue()
+def decode2(string):
+    b = TestBanana()
+    b.dataReceived(string)
+    return b.object
