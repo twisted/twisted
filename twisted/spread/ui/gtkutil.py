@@ -5,8 +5,10 @@ from twisted.internet import tcp
 from twisted import copyright
 
 
-
-
+def cbutton(name, callback):
+    b = gtk.GtkButton(name)
+    b.connect('clicked', callback)
+    return b
 
 def scrollify(widget):
     #widget.set_word_wrap(gtk.TRUE)
@@ -50,7 +52,7 @@ class Login(gtk.GtkWindow):
         portlbl=gtk.GtkLabel("Port #:")
         
         self.logstat  = gtk.GtkLabel("Protocol PB-%s" % pb.Broker.version)
-        self.okbutton = gtk.GtkButton("Log In")
+        self.okbutton = cbutton("Log In", self.login)
 
         okbtnbx = gtk.GtkHButtonBox()
         okbtnbx.add(self.okbutton)
@@ -73,7 +75,6 @@ class Login(gtk.GtkWindow):
         vbox.add(okbtnbx)
         self.add(vbox)
 
-        self.okbutton.signal_connect('clicked',self.login)
         self.signal_connect('destroy',gtk.mainquit,None)
 
     def loginReset(self):
