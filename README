@@ -8,10 +8,12 @@ What's new in 0.10.2?
 
   twisted.web.guard, password protection for portions of a website.
 
-  twisted.protocols.ftp works, and now has MD5 hashed passwords using OTP.
+  twisted.protocols.ftp works!
 
-  Many fixes were made to twisted.internet to cope with obscure failure modes
-  in various versions of Windows.
+  twisted.protocols.ftp now has MD5 hashed passwords using OTP.
+
+  Many fixes were made to twisted.internet to cope with obscure socket failure
+  modes in various versions of Windows.
 
 What is this?
 
