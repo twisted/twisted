@@ -293,18 +293,12 @@ if unixEnabled:
     classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram, IReactorProcess)
 components.backwardsCompatImplements(PosixReactorBase)
 
-
-class _IReactorWaker(Interface):
-    """I am a waker for the select reactor"""
-
-
 class _Win32Waker(log.Logger, styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
 
     I am a pair of connected sockets which can wake up the main loop
     from another thread.
     """
-    implements(_IReactorWaker)
     disconnected = 0
 
     def __init__(self, reactor):
@@ -350,7 +344,6 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
 
     This is used by threads or signals to wake up the event loop.
     """
-    implements(_IReactorWaker)
     disconnected = 0
 
     def __init__(self, reactor):
@@ -550,21 +543,20 @@ class SelectReactor(PosixReactorBase):
 
     def removeAll(self):
         """Remove all readers and writers, and return list of Selectables."""
-        readers = reads.keys()
+        readers = [reader for reader in reads.iterkeys() if 
+                reader is not self.waker]
         for reader in readers:
             if reads.has_key(reader):
                 del reads[reader]
             if writes.has_key(reader):
                 del writes[reader]
-        self.waker = None
         return readers
 
     def cleanup(self):
         """Remove all readers and writers, and return a list of Selectables that
         represent dirty reactor state
         """
-        return [reader for reader in self.removeAll() if not
-                _IReactorWaker.providedBy(reader)]
+        return self.removeAll()
 
 
 components.backwardsCompatImplements(SelectReactor)
