@@ -75,18 +75,18 @@ class DOMTemplateTest(WovenTC):
         titleNode = self.d.getElementById("title")
         helloNode = self.d.getElementById("hello")
         
-        assert domhelpers.gatherTextNodes(titleNode) == 'Title'
-        assert domhelpers.gatherTextNodes(helloNode) == 'Hello'
+        self.assert_(domhelpers.gatherTextNodes(titleNode) == 'Title')
+        self.assert_(domhelpers.gatherTextNodes(helloNode) == 'Hello')
 
 
 # Test 2
 # Test just like the first, but with Text widgets
 
 class TemplateWithWidgets(SimpleTemplate):
-    def factory_getTitle(self, request, node):
+    def wcfactory_getTitle(self, request, node):
         return widgets.Text("Title")
 
-    def factory_getHello(self, request, node):
+    def wcfactory_getHello(self, request, node):
         return widgets.Text("Hello")
 
 
@@ -141,7 +141,7 @@ class CDemo(controller.Controller):
         session = request.getSession()
         self.model.color = getattr(session, 'color', self.model.color)
 
-    def factory_change(self, request, node, model):
+    def wcfactory_change(self, request, node, model):
         return ChangeColor(model)
 
 
@@ -318,7 +318,7 @@ class NotifyTest(WovenTC):
         self.assert_(listNode, "Test %s failed" % outputNum)
         liNodes = domhelpers.getElementsByTagName(listNode, 'li')
         self.assert_(liNodes,
-          "DOM was not updated by notifying Widgets. Test %s" % outputNum)
+         "DOM was not updated by notifying Widgets. Test %s" % outputNum)
         text = domhelpers.gatherTextNodes(liNodes[0])
         self.assert_(text.strip() == "test",
                "Wrong output: %s. Test %s" % (text, outputNum))
