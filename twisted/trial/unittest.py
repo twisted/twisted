@@ -50,11 +50,11 @@ class TestCase:
 
     def failUnlessEqual(self, first, second, msg=None):
         if not first == second:
-            raise AssertionError, (msg or '%s != %s' % (first, second))
+            raise AssertionError, (msg or '%r != %r' % (first, second))
 
     def failIfEqual(self, first, second, msg=None):
         if not first != second:
-            raise AssertionError, (msg or '%s == %s' % (first, second))
+            raise AssertionError, (msg or '%r == %r' % (first, second))
 
     assertEqual = assertEquals = failUnlessEqual
     assertNotEqual = assertNotEquals = failIfEqual
