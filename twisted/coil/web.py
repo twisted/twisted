@@ -152,8 +152,8 @@ class AppConfiguratorPage(widgets.Presentation):
                 if issubclass(claz, coil.Configurator):
                     realClass = coil.getConfigurableClass(claz)
                     if coil.hasFactory(realClass):
-                        nm = getattr(claz, 'configName', None) or str(claz.configurableClass)
-                        l.append(['new '+str(claz.configurableClass), 'new '+nm])
+                        nm = getattr(claz, 'configName', None) or str(realClass)
+                        l.append(['new '+str(realClass), 'new '+nm])
         for methId, desc in self.dispensers.get(configuratorType, []):
             l.append(['dis '+str(methId), desc])
         return l
