@@ -86,10 +86,19 @@ import epydoc
 assert epydoc.__version__[0] == '2', "You need epydoc 2.x!"
 from epydoc.cli import cli
 from epydoc.html import HTMLFormatter
+from epydoc import uid
 import epydoc.html
 
+def is_private(self):
+    return False
+def is_public(self):
+    return True
+
+uid.UID.is_private = is_private
+uid.UID.is_public = is_public
+
 class TwistedHTMLFormatter(HTMLFormatter):
-    def _uid_to_filename(self, uid):   
+    def _uid_to_filename(self, uid):
         # Enforce same restrictions as HTMLFormatter._uid_to_filename for sanity
         # checking
         assert uid.is_module() or uid.is_class(), 'Bad UID type: %r' % (uid,)
@@ -158,6 +167,7 @@ __builtins__.__import__ = myimport
 os.path.walk('./twisted', addMod, None)
 __builtins__.__import__ = im
 sys.argv = osrv
+sys.argv.extend(['-n', 'Twisted', '-u', 'http://twistedmatrix.com/', '--no-private'])
 sys.argv.extend(modnames)              # list of modules
 # Make it easy to profile epyrun
 if 0:
