@@ -40,8 +40,8 @@ class MyConfig(coil.Configurator):
     
     configurableClass = MyConfigurable
     configTypes = {
-        "foo": types.IntType,
-        "bar": types.StringType
+        "foo": [types.IntType, "Foo", "Put your face in the foo."],
+        "bar": [types.StringType, "Bar", "A bar of stuff."]
         }
 
 class CustomConfigurable:
@@ -58,7 +58,7 @@ class CustomConfig(coil.Configurator):
     configurableClass = CustomConfigurable
     
     configTypes = {
-        "foo": types.StringType,
+        "foo": [types.StringType, "Foo", "Foo is good for you."]
     }
     
     def config_foo(self, foo):
