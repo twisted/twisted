@@ -235,6 +235,14 @@ class MX(dns.RR):
                                 self.ttl, len(s.getvalue())))
         strio.write(s.getvalue())
 
+class NS(dns.RR):
+    def encode(self, strio, compDict=None):
+        self.name.encode(strio, compDict)
+        s = StringIO()       
+        dns.Name(self.data).encode(s, compDict)
+        strio.write(struct.pack(self.fmt, self.type, self.cls,
+                                self.ttl, len(s.getvalue())))
+        strio.write(s.getvalue())
 
 class SimpleDomain:
 
@@ -251,6 +259,11 @@ class SimpleDomain:
         if type == dns.A:
             message.answers.append(dns.RR(name, type=dns.A, cls=dns.IN, 
                                           data=self.ip))
+        message.ns.append(NS('ns.'+self.name, type=dns.NS, cls=dns.IN, 
+                                      data=self.name))
+        message.add.append(dns.RR('ns.'+self.name, type=dns.A, cls=dns.IN, 
+                                  data=self.ip))
+         
 
 
 class DNSServerBoss(DNSBoss):
