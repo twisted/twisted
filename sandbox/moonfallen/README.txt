@@ -4,6 +4,28 @@ To run this you need
 - win32all
 - unzip modulegraph.zip into sys.path
 
+IMPORTANT: for py2exe 0.5.4, a patch is needed.  After the next official
+release of py2exe this will no longer be required.  Here is the patch:
+_______________________________________________________________________
+--- boot_service.py     2004-11-03 11:02:31.147398500 -0800
++++ boot_service.py.new 2004-11-03 11:02:19.522844900 -0800
+@@ -9,7 +9,11 @@
+ service_klasses = []
+ try:
+     for name in service_module_names:
+-        mod = __import__(name)
++        # Use the documented fact that when a fromlist is present,
++        # __import__ returns the innermost module in "name".
++        # This makes it possible to have a dotted name work the
++        # way you"d expect.
++        mod = __import__(name, globals(), locals(), ["DUMMY"])
+         for ob in mod.__dict__.values():
+             if hasattr(ob, "_svc_name_"):
+                 service_klasses.append(ob)
+_______________________________________________________________________
+
+
+
 Use: Create a setup.py file that does basically this:
 
 -=-=-=-=-=-=-=-=-=-=-
