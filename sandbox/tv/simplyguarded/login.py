@@ -161,25 +161,20 @@ class MainPage(page.Page):
 </html>
 '''
 
-    checkers = [checkers.InMemoryUsernamePasswordDatabaseDontUse(test="test")]
-
-    foo=simpleguard.guardResource(
-        Authenticated(),
-        checkers,
-        nonauthenticated=InfiniChild(LoginPage()),
-        callback=callback, errback=LoginPage)
-
     def wchild_secret(self, request):
-        return self.foo
-
-    bar=simpleguard.guardResource(
-        Another(),
-        checkers,
-        nonauthenticated=InfiniChild(LoginPage()),
-        callback=callback, errback=LoginPage)
+        a=request.getComponent(simpleguard.Authenticated)
+        if not request.getComponent(simpleguard.Authenticated):
+            return InfiniChild(LoginPage())
+        return Authenticated()
 
     def wchild_another(self, request):
-        return self.bar
+        a=request.getComponent(simpleguard.Authenticated)
+        if not request.getComponent(simpleguard.Authenticated):
+            return InfiniChild(LoginPage())
+        return Another()
 
 def createResource():
-    return MainPage()
+    return simpleguard.guardResource(
+        MainPage(),
+        [checkers.InMemoryUsernamePasswordDatabaseDontUse(test="test")],
+        callback=callback)
