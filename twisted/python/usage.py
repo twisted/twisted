@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.36 2002/11/10 10:45:36 moshez Exp $
+# $Id: usage.py,v 1.37 2003/01/01 13:12:47 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -242,7 +242,7 @@ class Options(UserDict.UserDict):
         self.opts[flagName] = 1
 
     def _generic_parameter(self, parameterName, value):
-        if value in ('', None):
+        if value is None:
             raise UsageError, ("Parameter '%s' requires an argument."
                                % (parameterName,))
 
