@@ -81,6 +81,14 @@ class MultiplyAndAdd:
     def multiply(self, a, b):
         return a * b
 
+class Empty:
+    # no interfaces
+    pass
+
+class MoreEmpty:
+    __implements__ = ()
+    pass
+
 class IFoo(ISub):
     pass
 
@@ -148,6 +156,12 @@ class InterfacesTestCase(unittest.TestCase):
         l2 = [IAdder, IMultiply]
         l2.sort()
         self.assertEquals(l, l2)
+
+        l = components.getInterfaces(Empty)
+        self.assertEquals(l, [])
+
+        l = components.getInterfaces(MoreEmpty)
+        self.assertEquals(l, [])
 
     def testSuperInterfaces(self):
         l = components.superInterfaces(ISub)
