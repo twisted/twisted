@@ -60,16 +60,16 @@ are:</p>
 
 <pre class="python">
 class RoomRow(row.RowObject):
-    rowColumns       = [(&quot;roomId&quot;,  &quot;int&quot;), 
-                        (&quot;town_id&quot;, &quot;int&quot;),
-                        (&quot;name&quot;,    &quot;varchar&quot;),
-                        (&quot;owner&quot;,   &quot;varchar&quot;),
-                        (&quot;posx&quot;,    &quot;int&quot;),
-                        (&quot;posy&quot;,    &quot;int&quot;),
-                        (&quot;width&quot;,   &quot;int&quot;),
-                        (&quot;height&quot;,  &quot;int&quot;)]
-    rowKeyColumns    = [(&quot;id&quot;, &quot;int4&quot;)]
-    rowTableName     = &quot;testrooms&quot;
+    rowColumns       = [("roomId",  "int"), 
+                        ("town_id", "int"),
+                        ("name",    "varchar"),
+                        ("owner",   "varchar"),
+                        ("posx",    "int"),
+                        ("posy",    "int"),
+                        ("width",   "int"),
+                        ("height",  "int")]
+    rowKeyColumns    = [("id", "int4")]
+    rowTableName     = "testrooms"
     rowFactoryMethod = [myRowFactory]
 </pre>
 
@@ -88,9 +88,9 @@ are passed to the DBReflector when it is created.</p>
 
 <pre class="python">
 def runTests(result):
-    print &quot;Done initializing&quot;
+    print "Done initializing"
 
-dbpool = adbapi.ConnectionPool(&quot;pyPgSQL.PgSQL&quot;)
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
 reflector = row.DBReflector( dbpool, [RoomRow], runTests )
 </pre>
 
@@ -109,9 +109,9 @@ example:</p>
 <pre class="python">
 def gotRooms(rooms):
     for room in rooms:
-        print &quot;Got room:&quot;, room.id
+        print "Got room:", room.id
 
-refector.loadObjectsFrom(&quot;testrooms&quot;, whereClause=[(&quot;id&quot;, reflector.EQUAL, 5)]).addCallback(gotRooms)
+reflector.loadObjectsFrom("testrooms", whereClause=[("id", reflector.EQUAL, 5)]).addCallback(gotRooms)
 </pre>
 
 <p>For more advanced RowObject construction, loadObjectsFrom may
@@ -137,7 +137,7 @@ method of the DBReflector. For example:</p>
 
 <pre class="python">
     newRoom = RoomRow()
-    newRoom.assignKeyAttr(&quot;roomId&quot;, 11)
+    newRoom.assignKeyAttr("roomI", 11)
     newRoom.town_id = 20
     newRoom.name = 'newRoom1'
     newRoom.owner = 'fred'
