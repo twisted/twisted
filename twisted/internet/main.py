@@ -147,8 +147,9 @@ class Application(log.Logger, styles.Versioned):
         dump(self, f, 1)
         f.flush()
         f.close()
-        #if os.name == "nt":
-        #    os.remove(finalname)
+        if os.name == "nt":
+            if os.path.isfile(finalname):
+                os.remove(finalname)
         os.rename(filename, finalname)
         log.msg("Saved.")
 
