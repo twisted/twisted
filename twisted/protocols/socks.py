@@ -96,6 +96,10 @@ class SOCKSv4(protocol.Protocol):
                 raise RuntimeError, "Bad Connect Code: %s" % code
             assert self.buf=="","hmm, still stuff in buffer... %s" % repr(self.buf)
 
+    def connectionLost(self, reason):
+        if self.otherConn:
+            self.otherConn.transport.loseConnection()
+
     def authorize(self,code,server,port,user):
         log.msg("code %s connection to %s:%s (user %s) authorized" % (code,server,port,user))
         return 1
