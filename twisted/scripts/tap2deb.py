@@ -76,7 +76,7 @@ def run():
 /etc/init.d/%(deb_file)s
 /etc/default/%(deb_file)s
 /etc/%(tap_file)s
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'default'), 
     '''\
@@ -84,7 +84,7 @@ pidfile=/var/run/%(deb_file)s.pid \
 rundir=/var/lib/%(deb_file)s/ \
 file=/etc/%(tap_file)s \
 logfile=/var/log/%(deb_file)s.log
-     ''' % vars())
+ ''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'init.d'),
     '''\
@@ -139,7 +139,7 @@ case "$1" in
 esac
 
 exit 0
-    ''' % vars())
+''' % vars())
 
     os.chmod(os.path.join('.build', directory, 'debian', 'init.d'), 0755)
 
@@ -148,13 +148,13 @@ exit 0
 #!/bin/sh
 update-rc.d %(deb_file)s defaults >/dev/null
 invoke-rc.d %(deb_file)s start
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'prerm'),
     '''\
 #!/bin/sh
 invoke-rc.d %(deb_file)s stop
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'postrm'),
     '''\
@@ -162,7 +162,7 @@ invoke-rc.d %(deb_file)s stop
 if [ "$1" = purge ]; then
         update-rc.d %(deb_file)s remove >/dev/null
 fi
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'changelog'),
     '''\
@@ -206,7 +206,7 @@ tap2deb is released under the GNU Lesser General Public License,
 and this package contains bits of code from tap2deb, and hence is
 a derived work of tap2deb, and is under the GNU Lesser General
 Public License
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'dirs'),
     '''\
@@ -215,7 +215,7 @@ etc/default
 var/lib/%(deb_file)s
 usr/share/doc/%(deb_file)s
 usr/share/%(deb_file)s
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'rules'),
     '''\
@@ -270,7 +270,7 @@ source diff:
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install
-    ''' % vars())
+''' % vars())
 
     os.chmod(os.path.join('.build', directory, 'debian', 'rules'), 0755)
 
