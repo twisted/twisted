@@ -403,3 +403,37 @@ with people I don't like
 <glyph> moshez: outside of python
 <moshez> glyph: I meant, "what specific types"
 <moshez> I'd appreciate a blog on that
+
+* investigate decref/Referenceable race
+
+Any object that includes some state when it is first sent across the wire
+needs more thought. The far end could drop the last reference (at time t=1)
+while a method is still pending that wants to send back the same object. If
+the method finishes at time t=2 but the decref isn't received until t=3, the
+object will be sent across the wire without the state, and the far end will
+receive it for the "first" time without that associated state.
+
+This kind of conserve-bandwidth optimization may be a bad idea. Or there
+might be a reasonable way to deal with it (maybe request the state if it
+wasn't sent and the recipient needs it, and delay delivery of the object
+until the state arrives).
+
+* serialize remotely-callable methods?
+
+It might be useful be able to do something like:
+
+ class Watcher(pb.Referenceable):
+     def remote_foo(self, args): blah
+
+ w = Watcher()
+ ref.callRemote("subscribe", w.remote_foo)
+
+That would involve looking up the method and its parent object, reversing
+the remote_*->* transformation, then sending a sequence which contained both
+the object's RemoteReference and the appropriate method name.
+
+It might also be useful to generalize this: passing a lambda expression to
+the remote end could stash the callable in a local table and send a Callable
+Reference to the other side. I can smell a good general-purpose object
+classification framework here, but I haven't quite been able to nail it down
+exactly.

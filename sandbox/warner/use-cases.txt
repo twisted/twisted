@@ -81,3 +81,31 @@ a case where it might make sense to split pb.Referenceable into two pieces,
 one that talks about referenceability and the other that talks about
 callablilty (pb.Callable?).
 
+* both Callable and Copyable
+
+buildbot: remote version of BuildStatus. When a build starts, the
+buildmaster sends the current build to all status clients. It would be handy
+for them to get some static data (name, number, reason, changes) about the
+build at that time, plus a reference that can be used to query it again
+later (through callRemote). This can be done manually, but requires knowing
+all the places where a BuildStatus might be sent over the wire and wrapping
+them. I suppose it could be done with a Slicer/Unslicer pair:
+
+class CCSlicer:
+ def slice(self, obj):
+   yield obj
+   yield obj.getName()
+   yield obj.getNumber()
+   yield obj.getReason()
+   yield obj.getChanges()
+
+class CCUnslicer:
+ def receiveChild(self, obj):
+   if state == 0: self.obj = makeRemoteReference(obj); state += 1; return
+   if state == 1: self.obj.name = obj; state += 1; return
+   if state == 2: self.obj.reason = obj; state += 1; return
+   if state == 3: self.obj.changes = obj; state += 1; return
+
+plus some glue to make sure the object gets added to the per-Broker
+references list: this makes sure the object is not sent (in full) twice, and
+that the receiving side keeps a reference to the slaved version.
