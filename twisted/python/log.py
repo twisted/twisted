@@ -252,7 +252,14 @@ class FileLogObserver:
             if eventDict['isError'] and eventDict.has_key('failure'):
                 text = eventDict['failure'].getTraceback()
             elif eventDict.has_key('format'):
-                text = eventDict['format'] % eventDict
+                try:
+                    text = eventDict['format'] % eventDict
+                except:
+                    try:
+                        text = ('Invalid format string in log message: %s'
+                                % eventDict)
+                    except:
+                        text = 'UNFORMATTABLE OBJECT WRITTEN TO LOG, MESSAGE LOST'
             else:
                 # we don't know how to log this
                 return
