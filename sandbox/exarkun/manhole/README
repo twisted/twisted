@@ -19,6 +19,6 @@ characters.
 
   All demos listen on two ports, 6022 for ssh and 6023 for telnet.  The
 telnet server requires no login.  The credentials for the ssh server are
-username / password.  No terminal cleanup is performed, so you will probably
-need to reset after you disconnect.
- 
+username / password.  No terminal cleanup can be performed in the event of
+abnormal disconnection, so, except in the case of issuing "quit" to
+demo_recvline.py, you will probably need to reset after you disconnect.

@@ -283,7 +283,9 @@ class ServerProtocol(protocol.Protocol):
     handlerFactory = TerminalListener
 
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN'):
+                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
+                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
+                  'F10', 'F11', 'F12'):
         exec '%s = %r' % (keyID, keyID)
 
     _databuf = ''
@@ -419,7 +421,6 @@ class ServerProtocol(protocol.Protocol):
                         handler.unhandledControlSequence(buf + '~')
             else:
                 handler.unhandledControlSequence(buf + '~')
-
 
     controlSequenceParser = ControlSequenceParser()
 

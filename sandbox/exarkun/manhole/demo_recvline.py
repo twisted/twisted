@@ -20,6 +20,7 @@ class DemoRecvLineHandler(recvline.HistoricRecvLineHandler):
             self.proto.eraseLine()
             self.proto.write(line)
         self.proto.cursorPosition(x, y)
+        self.proto.write(self.ps[self.pn])
 
 from demolib import makeService
 makeService({'handler': DemoRecvLineHandler,

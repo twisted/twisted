@@ -7,6 +7,9 @@ class RecvLineHandler:
     width = 80
     height = 24
 
+    ps = ('>>> ', '... ')
+    pn = 0
+
     def __init__(self, proto):
         self.proto = proto
 
@@ -35,6 +38,7 @@ class RecvLineHandler:
         # For now we will just take over the whole terminal.
         self.proto.eraseDisplay()
         self.proto.cursorPosition(*self.promptLocation())
+        self.proto.write(self.ps[self.pn])
         self.setInsertMode()
 
     def promptLocation(self):
@@ -50,9 +54,11 @@ class RecvLineHandler:
 
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new cursor position
+        self.proto.eraseLine()
         self.width = width
         self.height = height
         self.proto.cursorPosition(*self.promptLocation())
+        self.proto.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def unhandledControlSequence(self, seq):
         print "Don't know about", repr(seq)
@@ -144,7 +150,7 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.lineBuffer = list(self.historyLines[self.historyPosition])
             self.proto.eraseLine()
             self.proto.cursorPosition(*self.promptLocation())
-            self.proto.write(''.join(self.lineBuffer))
+            self.proto.write(self.ps[self.pn] + ''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
 
     def handle_DOWN(self):
@@ -153,7 +159,7 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.lineBuffer = list(self.historyLines[self.historyPosition])
             self.proto.eraseLine()
             self.proto.cursorPosition(*self.promptLocation())
-            self.proto.write(''.join(self.lineBuffer))
+            self.proto.write(self.ps[self.pn] + ''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
         else:
             self.historyPosition = len(self.historyLines)
