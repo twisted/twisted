@@ -123,6 +123,10 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
                                      passphrase = 'test').__getstate__(),
             privKey.__getstate__())
 
+# note that theTest.fail() will not cause the reactor to stop. If it is
+# called inside a DelayedCall, a Deferred callback, or a reactor doRead, then
+# it will be turned into a logged error and trial will report it as an ERROR
+# instead of a FAILURE.
 theTest = None
 
 class ConchTestRealm:
@@ -166,9 +170,12 @@ class ConchTestSSHChecker(checkers.SSHProtocolChecker):
 
 class SSHTestBase:
 
+    done = 0
     allowedToError = 0
 
     def connectionLost(self, reason):
+        if self.done:
+            return
         global theTest
         if not hasattr(self,'expectedLoseConnection'):
             theTest.fail('unexpectedly lost connection %s\n%s' % (self, reason))
@@ -460,11 +467,13 @@ class SSHTransportTestCase(unittest.TestCase):
     def tearDown(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub', 'kh_test']:
             os.remove(f)
+        self.server.stopListening()
 
     def testOurServerOurClient(self):
         """test the SSH server against the SSH client
         """
-        if os.name != 'posix': return
+        if os.name != 'posix':
+            raise unittest.SkipTest("cannot run on non-posix") # why?
         global theTest
         theTest = self
         realm = ConchTestRealm()
@@ -476,29 +485,36 @@ class SSHTransportTestCase(unittest.TestCase):
         fac = SSHTestFactory()
         fac.portal = p
         theTest.fac = fac
-        host = reactor.listenTCP(0, fac, interface="127.0.0.1").getHost()
-        port = host[2]
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        port = self.server.getHost()[2]
         cfac = SSHTestClientFactory()
         def _failTest():
-            fac.proto.transport.loseConnection()
-            cfac.client.transport.loseConnection()
-            reactor.iterate(0.1)
-            reactor.iterate(0.1)
-            reactor.iterate(0.1)
             reactor.crash()
-            self.fail('test took too long')
-        call = reactor.callLater(10, _failTest)
+            self.fail('test took too long') # logged but caught by reactor
+        timeout = reactor.callLater(10, _failTest)
         reactor.connectTCP('localhost', port, cfac)
+
         reactor.run()
+
+        # test finished.. might have passed, might have failed. Must cleanup.
+        fac.proto.done = 1
+        cfac.client.done = 1
+        fac.proto.transport.loseConnection()
+        cfac.client.transport.loseConnection()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+
         try:
-            call.cancel()
-        except:
+            timeout.cancel()
+        except: # really just (error.AlreadyCancelled, error.AlreadyCalled)
             pass
 
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        if os.name != 'posix': return
+        if os.name != 'posix':
+            raise unittest.SkipTest("cannot run on non-posix")
         cmdline = ('ssh -2 -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
                    '-oPasswordAuthentication=no '
@@ -515,8 +531,8 @@ class SSHTransportTestCase(unittest.TestCase):
         fac = SSHTestFactory()
         fac.portal = p
         theTest.fac = fac
-        host = reactor.listenTCP(0, fac, interface="127.0.0.1").getHost()
-        port = host[2]
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        port = self.server.getHost()[2]
         ssh_path = None
         for p in ['/usr', '', '/usr/local']:
             if os.path.exists(p+'/bin/ssh'):
@@ -541,12 +557,18 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
             p.done = 1
             self.fail('test took too long')
-        call = reactor.callLater(10, _failTest)
+        timeout = reactor.callLater(10, _failTest)
         reactor.spawnProcess(p, ssh_path, cmds)
         # wait for process to finish
         while not p.done:
             reactor.iterate(0.1)
+
+        # cleanup
+        fac.proto.done = 1
+        fac.proto.transport.loseConnection()
+        reactor.iterate()
+
         try:
-            call.cancel()
+            timeout.cancel()
         except:
             pass

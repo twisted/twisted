@@ -1,5 +1,8 @@
 2003-10-24  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_conch.py: improve post-test cleanup. Addresses
+	problems seen in issue343.
+
 	* twisted/internet/base.py (ReactorBase.callLater): prefix
 	"internal" parameter names with an underscore, to avoid colliding
 	with named parameters in the user's callback invocation. Closes
