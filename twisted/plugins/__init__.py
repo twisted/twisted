@@ -8,7 +8,7 @@ this is the only place where an __init__.py is necessary, thanks to
 the __path__ variable.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>
-@author: U{Glyph Lefkowitz<mailto:exarkun@twistedmatrix.com>
+@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>
 """
 
 import os, sys
