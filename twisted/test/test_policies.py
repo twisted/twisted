@@ -77,11 +77,12 @@ class ThrottlingTestCase(unittest.TestCase):
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
         tServer = policies.ThrottlingFactory(server, 2)
-        p = reactor.listenTCP(62345, tServer)
+        p = reactor.listenTCP(0, tServer)
+        n = p.getHost()[2]
         reactor.iterate(); reactor.iterate()
 
         for c in c1, c2, c3:
-            reactor.connectTCP("127.0.0.1", 62345, SillyFactory(c))
+            reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
             reactor.iterate(); reactor.iterate()
 
         self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
@@ -92,7 +93,7 @@ class ThrottlingTestCase(unittest.TestCase):
         c1.transport.loseConnection()
         reactor.iterate(); reactor.iterate()
         reactor.iterate(); reactor.iterate()
-        reactor.connectTCP("127.0.0.1", 62345, SillyFactory(c4))
+        reactor.connectTCP("127.0.0.1", n, SillyFactory(c4))
         reactor.iterate(); reactor.iterate()
 
         self.assertEquals(c4.connected, 1)
@@ -111,10 +112,11 @@ class ThrottlingTestCase(unittest.TestCase):
         now = time.time()
 
         tServer = policies.ThrottlingFactory(server, writeLimit=10)
-        port = reactor.listenTCP(62346, tServer)
+        port = reactor.listenTCP(0, tServer)
+        n = port.getHost()[2]
         reactor.iterate(); reactor.iterate()
         for c in c1, c2:
-            reactor.connectTCP("127.0.0.1", 62346, SillyFactory(c))
+            reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
             reactor.iterate(); reactor.iterate()
 
         for p in tServer.protocols.keys():
@@ -169,10 +171,11 @@ class ThrottlingTestCase(unittest.TestCase):
         c1, c2 = SimpleProtocol(), SimpleProtocol()
         now = time.time()
         tServer = policies.ThrottlingFactory(server, readLimit=10)
-        port = reactor.listenTCP(62347, tServer)
+        port = reactor.listenTCP(0, tServer)
+        n = port.getHost()[2]
         reactor.iterate(); reactor.iterate()
         for c in c1, c2:
-            reactor.connectTCP("127.0.0.1", 62347, SillyFactory(c))
+            reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
             reactor.iterate(); reactor.iterate()
 
         c1.transport.write("0123456789")
