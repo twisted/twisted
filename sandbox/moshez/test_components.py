@@ -26,6 +26,9 @@ class IAdder(components.Interface):
         """Returns the sub of a and b."""
         raise NotImplementedError
 
+class IUltraAdder(IAdder):
+    pass
+
 class ISub(IAdder):
     """Sub-interface."""
 
@@ -41,6 +44,13 @@ class IntAdder:
     """Class that implements IAdder interface."""
 
     __implements__ = IAdder
+
+    def add(self, a, b):
+        return a + b
+
+class IntUltraAdder:
+
+    __implements__ = IUltraAdder
 
     def add(self, a, b):
         return a + b
@@ -129,6 +139,10 @@ class InterfacesTestCase(unittest.TestCase):
         self.assert_( components.implements(o, IAdder) )
         self.assert_( components.implements(o, ISub) )
 
+    def testInterfaceInheritance(self):
+        o = IntUltraAdder()
+        self.assertEqual(IAdder(o), o)
+
     def testExplicitRegistrationOfImplementation(self):
         r = components.AdapterRegistry()
         r.registerImplements(Sub, IMultiply)
@@ -139,11 +153,6 @@ class InterfacesTestCase(unittest.TestCase):
         o = IntAdder()
         self.assert_(r.implements(o, IMultiply))
 
-    def testImplicitAdapters(self):
-        o = UltraSub()
-        p = IMultiply(o)
-        self.assertEqual(p.multiply(9,9), 10)
-        
     def testOther(self):
         self.assert_( not components.implements(3, ISub) )
         self.assert_( not components.implements("foo", ISub) )
