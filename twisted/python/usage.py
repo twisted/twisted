@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.52 2003/09/05 08:40:37 exarkun Exp $
+# $Id: usage.py,v 1.53 2003/09/05 18:53:04 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -195,7 +195,7 @@ class Options(UserDict.UserDict):
                 if sub == cmd or sub == short:
                     self.subCommand = cmd
                     self.subOptions = parser()
-                    parser.parent = self
+                    self.subOptions.parent = self
                     self.subOptions.parseOptions(rest)
                     break
             else:

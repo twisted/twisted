@@ -171,6 +171,27 @@ class SubCommandTest(unittest.TestCase):
         self.failUnless(hasattr(o.subOptions, 'sawParent'))
         self.failUnlessEqual(o.subOptions.sawParent , o)
 
+    def test_subCommandInTwoPlaces(self):
+        """The .parent pointer is correct even when the same Options class is used twice."""
+        class SubOpt(usage.Options):
+            pass
+        class OptFoo(usage.Options):
+            subCommands = [
+                ('foo', 'f', SubOpt, 'quux'),
+                ]
+        class OptBar(usage.Options):
+            subCommands = [
+                ('bar', 'b', SubOpt, 'quux'),
+                ]
+        oFoo=OptFoo()
+        oFoo.parseOptions(['foo'])
+        oBar=OptBar()
+        oBar.parseOptions(['bar'])
+        self.failUnless(hasattr(oFoo.subOptions, 'parent'))
+        self.failUnless(hasattr(oBar.subOptions, 'parent'))
+        self.failUnlessIdentical(oFoo.subOptions.parent, oFoo)
+        self.failUnlessIdentical(oBar.subOptions.parent, oBar)
+
 class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """Instantiate a well-behaved Options class.
