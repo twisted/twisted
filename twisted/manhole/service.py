@@ -29,16 +29,45 @@ import sys
 import traceback
 
 class FakeStdIO:
-    def __init__(self, type, list):
-        self.type = type
+    def __init__(self, type_, list):
+        self.type = type_
         self.list = list
 
     def write(self, text):
         log.msg("%s: %s" % (self.type, string.strip(str(text))))
-        self.list.append([self.type, text])
+        self.list.append((self.type, text))
 
     def flush(self):
         pass
+
+    def consolidate(self):
+        """Concatenate adjacent messages of same type into one.
+
+        Greatly cuts down on the number of elements, increasing
+        network transport friendliness considerably.
+        """
+        if not self.list:
+            return
+
+        inlist = self.list
+        outlist = []
+        last_type = inlist[0]
+        block_begin = 0
+        for i in xrange(1, len(self.list)):
+            (mtype, message) = inlist[i]
+            if mtype == last_type:
+                continue
+            else:
+                if (i - block_begin) == 1:
+                    outlist.append(inlist[block_begin])
+                else:
+                    messages = map(lambda l: l[1],
+                                   inlist[block_begin:i])
+                    message = string.join(messages, '')
+                    outlist.append((last_type, message))
+                last_type = mtype
+                block_begin = i
+
 
 class ManholeClientInterface:
     def console(self, list_of_messages):
@@ -138,6 +167,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
                        'exception': ex_list})
 
     if console:
+        fakeout.consolidate()
         console(output)
 
     return val
@@ -160,6 +190,13 @@ class Perspective(pb.Perspective):
         if state['localNamespace'].has_key("__builtins__"):
             del state['localNamespace']['__builtins__']
         return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        ### Aw shucks.  This don't work 'cuz I get unpickled before
+        ### my service does.
+        ## self.browser.globalNamespace = self.service.namespace
+        self.browser.locaalNamespace = self.localNamespace
 
     def setService(self, service):
         pb.Perspective.setService(self, service)
