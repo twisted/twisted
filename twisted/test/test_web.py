@@ -78,9 +78,12 @@ class TestHTTPClient(http.HTTPClient):
         pass
     
     def handleResponse(self, data):
-        open('out.html', 'w').write(data)
         if data != self.expected_result:
-            raise ValueError("data != %s" % self.expected_result)
+            print "-- EXPECTED --"
+            print self.expected_result
+            print "-- RECEIVED --"
+            print data
+            raise ValueError("data != %s. see STDOUT." % self.expected_result)
 
     def handleHeader(self, key, value):
         pass
