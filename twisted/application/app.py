@@ -23,6 +23,7 @@ reactorTypes = {
     'cf' : 'twisted.internet.cfreactor',
     'kqueue': 'twisted.internet.kqreactor',
     'iocp': 'twisted.internet.iocpreactor',
+    'cfreactor': 'twisted.internet.cfreactor',
     }
 
 def installReactor(reactor):
