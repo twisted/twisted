@@ -20,7 +20,7 @@ def _get(node, nodeId):
             length = node.childNodes.length
         else:
             length = len(node.childNodes)
-        for childNum in length:
+        for childNum in range(length):
             result = _get(node.childNodes[childNum], nodeId)
             if result: return result
 
