@@ -1,17 +1,38 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 from twisted.im.locals import OFFLINE, ONLINE, AWAY
 
 class ContactsList:
     """A GUI object that displays a contacts list"""
     def __init__(self, chatui):
-        """ContactsList(ChatUI:chatui)"""
+        """
+        @param chatui: ???
+        @type chatui: L{ChatUI}
+        """
         self.chatui = chatui
         self.contacts = {}
         self.onlineContacts = {}
         self.clients = []
-        
+
     def setContactStatus(self, person):
-        """setContactStatus(basesupport.AbstractPerson:person) : None
-        Inform the user when a person's status has changed."""
+        """Inform the user that a person's status has changed.
+
+        @type person: L{Person<interfaces.IPerson>}
+        """
         if not self.contacts.has_key(person.name):
             self.contacts[person.name] = person
         if not self.onlineContacts.has_key(person.name) and \
@@ -22,16 +43,19 @@ class ContactsList:
             del self.onlineContacts[person.name]
 
     def registerAccountClient(self, client):
-        """registerAccountClient(basesupport.AbstractClientMixin:client) : None
-        Notifies user that an account client has been signed on to."""
+        """Notify the user that an account client has been signed on to.
+
+        @type client: L{Client<interfaces.IClient>}
+        """
         if not client in self.clients:
             self.clients.append(client)
 
     def unregisterAccountClient(self, client):
-        """unregisterAccountClient(basesupport.AbstractClientMixin:client) :
-                   None
-        Notifies user that an account client has been signed off or 
-        disconnected from"""
+        """Notify the user that an account client has been signed off
+        or disconnected from.
+
+        @type client: L{Client<interfaces.IClient>}
+        """
         if client in self.clients:
             self.clients.remove(client)
 
@@ -49,103 +73,121 @@ class ContactsList:
 class Conversation:
     """A GUI window of a conversation with a specific person"""
     def __init__(self, person, chatui):
-        """ConversationWindow(basesupport.AbstractPerson:person,
-                              ChatUI:chatui)
+        """
+        @type person: L{Person<interfaces.IPerson>}
+        @type chatui: L{ChatUI}
         """
         self.chatui = chatui
         self.person = person
-    
+
     def show(self):
-        """show() : None
-        Displays the ConversationWindow"""
+        """Displays the ConversationWindow"""
         raise NotImplementedError("Subclasses must implement this method")
 
     def hide(self):
-        """hide() : None
-        Hides the ConversationWindow"""
+        """Hides the ConversationWindow"""
         raise NotImplementedError("Subclasses must implement this method")
 
     def sendText(self, text):
-        """sendText(string:text) : None|twisted.internet.defer.Deferred
-        Sends text to the person with whom the user is conversing"""
+        """Sends text to the person with whom the user is conversing.
+
+        @returntype: L{Deferred<twisted.internet.defer.Deferred>}
+        """
         self.person.sendMessage(text, None)
 
     def showMessage(self, text, metadata=None):
-        """showMessage(string:text, [dict:metadata]) : None
-        Displays to the user a message sent from the person with whom the
-        user is conversing"""
+        """Display a message sent from the person with whom she is conversing
+
+        @type text: string
+        @type metadata: dict
+        """
         raise NotImplementedError("Subclasses must implement this method")
 
     def contactChangedNick(self, person, newnick):
-        """contactChangedNick(basesupport.AbstractPerson:person,
-                              string:newnick) : None
-        For the given person, changes the person's name to newnick, and
-        tells the user that the nick has changed"""
+        """Change a person's name.
+
+        @type person: L{Person<interfaces.IPerson>}
+        @type newnick: string
+        """
         self.person.name = newnick
 
 
 class GroupConversation:
-    """A GUI window of a conversation with a group of people"""
+    """A conversation with a group of people."""
     def __init__(self, group, chatui):
-        """GroupConversationWindow(basesupport.AbstractGroup:group,
-                                   ChatUI:chatui)
+        """
+        @type group: L{Group<interfaces.IGroup>}
+        @param chatui: ???
+        @type chatui: L{ChatUI}
         """
         self.chatui = chatui
         self.group = group
         self.members = []
 
     def show(self):
-        """show() : None
-        Displays the GroupConversationWindow"""
+        """Displays the GroupConversationWindow."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def hide(self):
-        """hide() : None
-        Hides the GroupConversationWindow"""
+        """Hides the GroupConversationWindow."""
         raise NotImplementedError("Subclasses must implement this method")
-    
+
     def sendText(self, text):
-        """sendText(string:text) : None|twisted.internet.defer.Deferred
-        Sends text to the group"""
+        """Sends text to the group.
+
+        @type text: string
+        @returntype: L{Deferred<twisted.internet.defer.Deferred>}
+        """
         self.group.sendGroupMessage(text, None)
-    
+
     def showGroupMessage(self, sender, text, metadata=None):
-        """showGroupMessage(string:sender, string:text, [dict:metadata]) : None
-        Displays to the user a message sent to this group from the given sender
+        """Displays to the user a message sent to this group from the given sender
+        @type sender: string (XXX: Not Person?)
+        @type text: string
+        @type metadata: dict
         """
         raise NotImplementedError("Subclasses must implement this method")
-    
+
     def setGroupMembers(self, members):
-        """setGroupMembers(list{string}:members) : None
-        Sets the list of members in the group and displays it to the user"""
+        """Sets the list of members in the group and displays it to the user
+        """
         self.members = members
 
     def setTopic(self, topic, author):
-        """setTopic(string:topic, string:author) : None
-        Displays the topic (from the server) for the group conversation window
+        """Displays the topic (from the server) for the group conversation window
+
+        @type topic: string
+        @type author: string (XXX: Not Person?)
         """
         raise NotImplementedError("Subclasses must implement this method")
 
     def memberJoined(self, member):
-        """memberJoined(string:member) : None
-        Adds the given member to the list of members in the group conversation
-        and displays this to the user"""
+        """Adds the given member to the list of members in the group conversation
+        and displays this to the user
+
+        @type member: string (XXX: Not Person?)
+        """
         if not member in self.members:
             self.members.append(member)
 
     def memberChangedNick(self, oldnick, newnick):
-        """memberChangedNick(string:oldnick, string:newnick) : None
-        Changes the oldnick in the list of members to newnick and displays this
-        change to the user"""
+        """Changes the oldnick in the list of members to newnick and displays this
+        change to the user
+
+        @type oldnick: string
+        @type newnick: string
+        """
         if oldnick in self.members:
             self.members.remove(oldnick)
             self.members.append(newnick)
             #self.chatui.contactChangedNick(oldnick, newnick)
 
     def memberLeft(self, member):
-        """memberLeft(string:member) : None
-        Deletes the given member from the list of members in the group
-        conversation and displays the change to the user"""
+        """Deletes the given member from the list of members in the group
+        conversation and displays the change to the user
+
+        @type member: string
+        """
         if member in self.members:
             self.members.remove(member)
 
@@ -159,32 +201,41 @@ class ChatUI:
         self.groups = {}             # cache of all groups
         self.onlineClients = []      # list of message sources currently online
         self.contactsList = ContactsList(self)
-    
+
     def registerAccountClient(self, client):
-        """registerAccountClient(basesupport.AbstractClientMixin:client) : None
-        Notifies user that an account has been signed on to."""
+        """Notifies user that an account has been signed on to.
+
+        @type client: L{Client<interfaces.IClient>}
+        """
         print "signing onto", client.accountName
         self.onlineClients.append(client)
         self.contactsList.registerAccountClient(client)
 
     def unregisterAccountClient(self, client):
-        """unregisterAccountClient(basesupport.AbstractClientMixin:client) : None
-        Notifies user that an account has been signed off or disconnected
-        from"""
+        """Notifies user that an account has been signed off or disconnected
+
+        @type client: L{Client<interfaces.IClient>}
+        """
         print "signing off from", client.accountName
         self.onlineClients.remove(client)
         self.contactsList.unregisterAccountClient(client)
 
     def getContactsList(self):
-        """getContactsList() : ContactsList"""
+        """
+        @returntype: L{ContactsList}
+        """
         return self.contactsList
 
     def getConversation(self, person, Class=Conversation, stayHidden=0):
-        """getConversation(basesupport.AbstractPerson:person,
-                           [{Conversation subclass}Class], 
-                           [boolean:stayHidden]) : Class
-        For the given person object, returns the conversation window or creates
-        and returns a new conversation window if one does not exist."""
+        """For the given person object, returns the conversation window or creates
+        and returns a new conversation window if one does not exist.
+
+        @type person: L{Person<interfaces.IPerson>}
+        @type Class: L{Conversation<interfaces.IConversation>} class
+        @type stayHidden: boolean
+
+        @returntype: L{Conversation<interfaces.IConversation>}
+        """
         conv = self.conversations.get(person)
         if not conv:
             conv = Class(person, self)
@@ -196,11 +247,14 @@ class ChatUI:
         return conv
 
     def getGroupConversation(self,group,Class=GroupConversation,stayHidden=0):
-        """getGroupConversation(basesupport.AbstractGroup:group,
-                                [{GroupConversation subclass}Class],
-                                [boolean:stayHidden]) : Class
-        For the given group object, returns the group conversation window or
+        """For the given group object, returns the group conversation window or
         creates and returns a new group conversation window if it doesn't exist
+
+        @type group: L{Group<interfaces.IGroup>}
+        @type Class: L{Conversation<interfaces.IConversation>} class
+        @type stayHidden: boolean
+
+        @returntype: L{GroupConversation<interfaces.IGroupConversation>}
         """
         conv = self.groupConversations.get(group)
         if not conv:
@@ -213,12 +267,16 @@ class ChatUI:
         return conv
 
     def getPerson(self, name, client, Class):
-        """getPerson(string:name, basesupport.AbstractClientMixin:client,
-                     {basesupport.AbstractPerson subclass}:Class)
-             : basesupport.AbstractPerson
-        For the given name and account client, returns the instance of the
+        """For the given name and account client, returns the instance of the
         AbstractPerson subclass, or creates and returns a new AbstractPerson
-        subclass of the type Class"""
+        subclass of the type Class
+
+        @type name: string
+        @type client: L{Client<interfaces.IClient>}
+        @type Class: L{Person<interfaces.IPerson>} class
+
+        @returntype: L{Person<interfaces.IPerson>}
+        """
         p = self.persons.get((name, client))
         if not p:
             p = Class(name, client, self)
@@ -226,12 +284,16 @@ class ChatUI:
         return p
 
     def getGroup(self, name, client, Class):
-        """getGroup(string:name, basesupport.AbstractClientMixin:client,
-                    {basesupport.AbstractGroup subclass}:Class)
-             : basesupport.AbstractGroup
-        For the given name and account client, returns the instance of the
+        """For the given name and account client, returns the instance of the
         AbstractGroup subclass, or creates and returns a new AbstractGroup
-        subclass of the type Class"""
+        subclass of the type Class
+
+        @type name: string
+        @type client: L{Client<interfaces.IClient>}
+        @type Class: L{Group<interfaces.IGroup>} class
+
+        @returntype: L{Group<interfaces.IGroup>}
+        """
         g = self.groups.get((name, client))
         if not g:
             g = Class(name, client, self)
@@ -239,17 +301,20 @@ class ChatUI:
         return g
 
     def contactChangedNick(self, oldnick, newnick):
-        """contactChangedNick(string:oldnick, string:newnick) : None
-        For the given person, changes the person's name to newnick, and
+        """For the given person, changes the person's name to newnick, and
         tells the contact list and any conversation windows with that person
-        to change as well."""
+        to change as well.
+
+        @type oldnick: string
+        @type newnick: string
+        """
         if self.persons.has_key((person.name, person.client)):
             conv = self.conversations.get(person)
             if conv:
                 conv.contactChangedNick(person, newnick)
 
             self.contactsList.contactChangedNick(person, newnick)
-                
+
             del self.persons[person.name, person.client]
             person.name = newnick
             self.persons[person.name, person.client] = person
