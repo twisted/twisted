@@ -84,7 +84,8 @@ if os.name == 'nt':
 # a 3-digit number identifies the meaning
 # used by Ftp.reply(key)
 ftp_reply = {
-    'get':       '150 File status okay; about to open data connection.',
+    'file':      '150 File status okay; about to open data connection.',
+
     'type':      '200 Type set to %s.',
     'ok':        '200 %s command successful.',
     'size':      '213 %s',
@@ -92,14 +93,16 @@ ftp_reply = {
     'abort':     '226 Abort successful',
     'welcome':   '220 Welcome, twisted.ftp at your service.',
     'goodbye':   '221 Goodbye.',
-    'getok':     '226 Transfer Complete.',
+    'fileok':    '226 Transfer Complete.',
     'epsv':      '229 Entering Extended Passive Mode (|||%s|).',
     'cwdok':     '250 CWD command successful.',
     'pwd':       '257 "%s" is current directory.',
+
     'user':      '331 Password required for %s.',
     'guest':     '331 Guest login ok, type your name as password.',
     'userok':    '230 User %s logged in.',
     'guestok':   '230 Guest login ok, access restrictions apply.',
+
     'getabort':  '426 Transfer aborted.  Data connection closed.',
     'unknown':   "500 '%s': command not understood.",
     'nouser':    '503 Login with USER first.',
@@ -131,14 +134,14 @@ class sendFileTransfer(FileTransfer):
         self.request.write(self.file.read(abstract.FileDescriptor.bufferSize))
         
         if self.file.tell() == self.filesize:
-            self.request.stopConsuming()
-            self.request.finish()
-            self.request = None
-
+            self.stopProducing()
+            
     def pauseProducing(self):
         pass
 
     def stopProducing(self):
+        self.request.stopConsuming()
+        self.request.finish()
         self.request = None
 
     synchronized = ['resumeProducing', 'stopProducing']
@@ -157,30 +160,27 @@ class DTP(protocol.Protocol):
     file = None
     filesize = None
 
-   # def __init__(self):
-   #     pass
-
-    def loseConnection(self):
+    #
+    #   "GET"
+    #
+    def finishGet(self):
         "Disconnect, and clean up"
         # Has _two_ checks if it is run when it is not connected; this logic
         # should be somewhere else.
         if self.file is not None:
             if self.file.tell() == self.filesize:
-                self.pi.reply('getok')
+                self.pi.reply('fileok')
             else:
-                self.pi.reply('getok')
+                self.pi.reply('fileok')
                 #self.pi.reply('getabort')
             self.file.close()
             self.file = None
         self.pi.queuedfile = None # just incase
         self.transport.loseConnection()
 
-    def finish(self):
-        self.loseConnection()
-
-    def makeTransport(self):
+    def makeGetTransport(self):
         transport = self.transport
-        transport.finish = self.finish
+        transport.finish = self.finishGet
         return transport
         
     def connectionMade(self):
@@ -188,31 +188,55 @@ class DTP(protocol.Protocol):
         if self.pi.action is not None:
             self.executeAction()
 
+    def fileget(self, queuedfile):
+        "Send the given file to the peer"
+        self.file = open(queuedfile, "rb")
+        self.filesize = os.path.getsize(queuedfile)
+        dtp = sendFileTransfer(self.file, self.filesize, self.makeGetTransport())
+        dtp.resumeProducing()
+
+    #
+    #   "PUT"
+    #
+
+    def connectionLost(self):
+        if (self.action == 'STOR') and (self.file):
+            self.file.close()
+            self.file = None
+            self.pi.reply('fileok')
+            self.pi.queuedfile = None
+        self.action = None
+
+    def dataReceived(self, data):
+        if (self.action == 'STOR') and (self.file):
+            self.file.write(data)
+            self.filesize = self.filesize + len(data)
+
+    def makePutTransport(self):
+        transport = self.transport
+        return transport
+        
+    def fileput(self, queuedfile):
+        self.file = open(queuedfile, "wb")
+        self.filesize = 0
+        transport = self.makePutTransport()
+
     def executeAction(self):
         """Initiates the transfer.
         This is a two-case implementation for starting the transfer.
         It is either started by the telnet-interface when the connection
         is already open, or it is called by connectionMade.
         The property 'pi' is the telnetconnection and its property 'action'
-        can either be 'GET', 'PUT', or 'LIST'. Pretty lame, eh? :)
+        can either be 'GET', 'RETR', or 'LIST'. Pretty lame, eh? :)
         """
-        if self.pi.action == 'GET':
+        if self.pi.action == 'RETR':
            self.fileget(self.pi.queuedfile)
-        if self.pi.action == 'PUT':
+        if self.pi.action == 'STOR':
            self.fileput(self.pi.queuedfile) 
         if self.pi.action == 'LIST':
            self.listdir(self.pi.queuedfile) # queuedfile now acts as a path :)
+        self.action = self.pi.action
         self.pi.action = None
-
-    def fileget(self, queuedfile):
-        "Send the given file to the peer"
-        self.file = open(queuedfile, "rb")
-        self.filesize = os.path.getsize(queuedfile)
-        dtp = sendFileTransfer(self.file, self.filesize, self.makeTransport())
-        dtp.resumeProducing()
-
-    def fileput(self, queuedfile):
-        raise NotImplementedError
 
     def listdir(self, dir):
         """Prints outs the files in the given directory
@@ -231,7 +255,7 @@ class DTP(protocol.Protocol):
                 diracc = '-'    
             self.transport.write(diracc+"r-xr-xr-x    1 twisted twisted %11d"
                                  % fsize+' '+mtime+' '+s+'\r\n')
-        self.pi.reply('getok')
+        self.pi.reply('fileok')
         self.pi.queuedfile = None
         self.transport.loseConnection()
 
@@ -334,14 +358,16 @@ class FTP(protocol.Protocol, protocol.Factory):
         wd = os.path.normpath(params)
         if not os.path.isabs(wd):
             wd = os.path.normpath(self.wd + '/' + wd)
-
+        wd = wd.replace('\\','/')
+        while wd.find('//') > -1:
+            wd = wd.replace('//','/')
         # '..', '\\', and '//' is there just to prevent stop hacking :P
-        if (not os.path.isdir(self.root + wd)) or (wd.find('..') > 0)
-            or (wd.find('\\') > 0) or (wd.find('//') > 0): 
+        if (not os.path.isdir(self.root + wd)) or (wd.find('..') > 0) or \
+            (wd.find('\\') > 0) or (wd.find('//') > 0): 
             self.reply('nodir', params)
             return
         else:
-            wd.replace('\\','/')
+            wd = wd.replace('\\','/')
             self.wd = wd
             self.reply('cwdok')
 
@@ -361,7 +387,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         # a bit silly code
         if self.dtp is not None:
             if self.dtp.transport is not None:
-                self.dtp.loseConnection()
+                self.dtp.transport.loseConnection()
             self.dtp = None
         # giving 0 will generate a free port
         self.dtpPort = tcp.Port(0, self)
@@ -371,7 +397,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         # silly code repeating
         if self.dtp is not None:
             if self.dtp.transport is not None:
-                self.dtp.loseConnection()
+                self.dtp.transport.loseConnection()
             self.dtp = None
         self.dtp = self.buildProtocol(self.peerport)
         self.dtpPort = tcp.Client(self.peerhost, self.peerport, self.dtp)
@@ -442,11 +468,10 @@ class FTP(protocol.Protocol, protocol.Factory):
         exploited by building clever paths
         """
         npath = os.path.normpath(rpath)
-        if npath == '':
-            npath = '/'
+#        if npath == '':
+#            npath = '/'
         if not os.path.isabs(npath):
             npath = os.path.normpath(self.wd + '/' + npath)
-        print self.root + ' ' + npath
         npath = self.root + npath
         return os.path.normpath(npath) # finalize path appending 
 
@@ -458,6 +483,39 @@ class FTP(protocol.Protocol, protocol.Factory):
             self.reply('nodir', params)
             return
         self.reply('size', os.path.getsize(npath))
+
+    def ftp_Dele(self, params):
+        if self.checkauth():
+            return
+        npath = self.buildFullpath(params)
+        if not os.path.isfile(npath):
+            self.reply('nodir', params)
+            return
+        os.remove(npath)
+        self.reply('fileok')
+
+    def ftp_Mkd(self, params):
+        if self.checkauth():
+            return
+        npath = self.buildFullpath(params)
+        try:
+            os.mkdir(npath)
+            self.reply('fileok')
+        except IOError:
+            self.reply('nodir')
+
+    def ftp_Rmd(self, params):
+        if self.checkauth():
+            return
+        npath = self.buildFullpath(params)
+        if not os.path.isdir(npath):
+            self.reply('nodir', params)
+            return
+        try:
+            os.rmdir(npath)
+            self.reply('fileok')
+        except IOError:
+            self.reply('nodir')
  
     def ftp_List(self, params):
         if self.checkauth():
@@ -470,7 +528,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         if not os.path.isdir(npath):
             self.reply('nodir', params)
             return
-        self.reply('get')
+        self.reply('file')
         self.queuedfile = npath 
         self.action = 'LIST'
         if self.dtp is not None:
@@ -480,14 +538,29 @@ class FTP(protocol.Protocol, protocol.Factory):
     def ftp_Retr(self, params):
         if self.checkauth():
             return
-        # The reason for this long join, is to exclude access below the root
         npath = self.buildFullpath(params)
         if not os.path.isfile(npath):
             self.reply('nodir', params)
             return
-        self.reply('get')
+        self.reply('file')
         self.queuedfile = npath 
-        self.action = 'GET'
+        self.action = 'RETR'
+        if self.dtp is not None:
+            if self.dtp.transport is not None:
+                self.dtp.executeAction()
+
+    def ftp_Stor(self, params):
+        if self.checkauth():
+            return
+        # The reason for this long join, is to exclude access below the root
+        npath = self.buildFullpath(params)
+        if os.path.isfile(npath):
+            # Insert access for overwrite here :)
+            #self.reply('nodir', params)
+            pass
+        self.reply('file')
+        self.queuedfile = npath 
+        self.action = 'STOR'
         if self.dtp is not None:
             if self.dtp.transport is not None:
                 self.dtp.executeAction()
