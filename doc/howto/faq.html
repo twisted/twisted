@@ -1,0 +1,56 @@
+<html><head>
+<h1>The Twisted FAQ</h1>
+
+<h2>What is "Twisted"?</h2>
+
+<p>Please see
+<a href="http://twistedmatrix.com/products/twisted">Twisted</a>
+</p>
+
+<h2>Why should I use Twisted?</h2>
+
+<p>See <a href="http://twistedmatrix.com/services/twisted-advantage">The
+Twisted Advantage</a></p>
+
+<h2>3 Why is Twisted so big?</h2>
+
+<p>Twisted is a lot of things, rolled into one big package. We're not sure if 
+it'll stay this way, yet, but for now, if you have only specific needs, we
+recommend grabbing the big Twisted tarball, and if you want, you can run the
+'setup.py' script with a modified config file to generate a package with only
+certain Twisted sub-packages. Twisted as a whole makes it into many operating 
+system distributions (FreeBSD, Debian and Gentoo, at least) so size shouldn't
+be an issue for the end developer or user. In addition, packaging Twisted
+as a whole makes sure the end users do not have to worry about versioning
+parts of Twisted and inter-version compatibility.</p>
+
+<p>If you are distributing Twisted to end-users, you can base your distribution
+on the "Nodocs" packages, which are signficantly smaller.</p>
+
+<h2>4 But won't Twisted bloat my program, since it's so big?</h2>
+
+<p>No. You only need to import the sub-packages which you want to use, meaning
+only those will be loaded into memory. So if you write a low-level network
+protocol, you'd only import twisted.internet, leaving out extraneous things
+like twisted.web, etc. Twisted itself is very careful with internal
+dependancies, so importing one subpackage is not likely to import the whole
+twisted package.</p>
+
+<h2>5 Is the Twisted web server a toy?</h2>
+
+<p>No. It is a production grade server. It is running continously on several
+sites and has been proven quite stable. The server can take loads of up to 3000
+users at a time and still keep churning several million requests a day, even on
+low end hardware. It can serve static files or dynamically rendered pages.</p>
+
+<h2>Where can I find out how to write Twisted servers?</h2>
+
+<p>Try <a href="http://www.twistedmatrix.com/documents/howto/servers">Writing
+Servers</a>. 
+
+<h2>Twisted is cool, but I need to add more functionality.</h2>
+
+<p>Great! Read our the docs, and if you're feeling generous, contribute
+patches.</p>
+
+</body></html>
