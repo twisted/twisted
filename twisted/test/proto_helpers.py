@@ -18,7 +18,7 @@
 from twisted.protocols import basic
 
 class LineSendingProtocol(basic.LineReceiver):
-    lostConn = True
+    lostConn = False
 
     def __init__(self, lines):
         self.lines = lines[:]
