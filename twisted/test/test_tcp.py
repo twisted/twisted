@@ -18,6 +18,7 @@ from __future__ import nested_scopes
 
 """Generic TCP tests."""
 
+import socket
 from pyunit import unittest
 
 from twisted.internet import protocol, reactor
@@ -47,7 +48,10 @@ class MyProtocol(protocol.Protocol):
 
 class MyServerFactory(protocol.ServerFactory):
 
+    called = 0
+
     def buildProtocol(self, addr):
+        self.called += 1
         p = MyProtocol()
         self.protocol = p
         return p
@@ -129,6 +133,27 @@ class LoopbackTestCase(unittest.TestCase):
             reactor.iterate()
 
         clientF.reason.trap(error.ConnectionRefusedError)
+    
+    
+    def testConnectByService(self):
+        serv = socket.getservbyname
+        socket.getservbyname = lambda s, p: s == 'http' and p == 'tcp' and 54345 or 10
+        s = MyServerFactory()
+        port = reactor.listenTCP(54345, s)
+        try:
+            reactor.connectTCP('localhost', 'http', MyClientFactory())
+        except:
+            port.stopListening()
+            socket.getservbyname = serv
+            raise
+        
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        
+        port.stopListening()
+        socket.getservbyname = serv
+        assert s.called
 
 
 class StartStopFactory(protocol.Factory):
