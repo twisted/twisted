@@ -63,7 +63,7 @@ def parse(jidstring):
 
 __internJIDs = {}
 
-def intern(str):
+def internJID(str):
     # XXX: Ensure that stringprep'd jids map to same JID
     if str in __internJIDs:
         return __internJIDs[str]
@@ -94,7 +94,7 @@ class JID:
     def userhostJID(self):
         if self.resource:
             if "_uhjid" not in self.__dict__:
-                self._uhjid = jid.intern(self.userhost())
+                self._uhjid = internJID(self.userhost())
             return self._uhjid
         else:
             return self

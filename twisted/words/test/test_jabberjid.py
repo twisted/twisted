@@ -59,13 +59,13 @@ class JIDParsingTest(unittest.TestCase):
 
 class JIDClassTest(unittest.TestCase):
     def testBasic(self):
-        j = jid.intern("user@host")
+        j = jid.internJID("user@host")
         self.assertEquals(j.userhost(), "user@host")
         self.assertEquals(j.user, "user")
         self.assertEquals(j.host, "host")
         self.assertEquals(j.resource, None)
 
-        j2 = jid.intern("user@host")
+        j2 = jid.internJID("user@host")
         self.assertEquals(id(j), id(j2))
 
         j_uhj = j.userhostJID()
