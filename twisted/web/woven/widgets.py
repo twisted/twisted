@@ -907,10 +907,10 @@ class Link(Widget):
             node.attributes["href"] = data
         else:
             data = self.model
-            txt = data.getSubmodel("text").getData(request)
+            txt = data.getSubmodel(request, "text").getData(request)
             if not isinstance(txt, Node):
                 txt = document.createTextNode(txt)
-            lnk = data.getSubmodel("href").getData(request)
+            lnk = data.getSubmodel(request, "href").getData(request)
             self['href'] = lnk
             node.tagName = self.tagName
             domhelpers.clearNode(node)
