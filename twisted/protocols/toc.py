@@ -41,6 +41,8 @@ import StringIO
 SIGNON,DATA,ERROR,SIGNOFF,KEEP_ALIVE=range(1,6)
 PERMITALL,DENYALL,PERMITSOME,DENYSOME=range(1,5)
 
+DUMMY_CHECKSUM = -559038737 # 0xdeadbeef
+
 def quote(s):
     rep=['\\','$','{','}','[',']','(',')','"']
     for r in rep:
@@ -95,7 +97,7 @@ def roast(pw):
     return string.lower(ro)
 
 def checksum(b):
-    return 0xdeadbeef # do it like gaim does, since the checksum
+    return DUMMY_CHECKSUM # do it like gaim does, since the checksum
                       # formula doesn't work
 ##    # used in file transfers
 ##    check0 = check1 = 0x00ff
@@ -126,7 +128,7 @@ def checksum(b):
 ##    return checksum
 
 def checksum_file(f):
-    return 0xdeadbeef # do it like gaim does, since the checksum
+    return DUMMY_CHECKSUM # do it like gaim does, since the checksum
                       # formula doesn't work
 ##    check0=check1=0x00ff
 ##    i=0
@@ -1438,7 +1440,7 @@ class SendFileTransfer(protocol.Protocol):
             self.hdr[2]=0x204
             self.hdr[7]=self.hdr[7]-1
             self.hdr[9]=self.hdr[9]-1
-            self.hdr[19]=0xdeadbeef # XXX really calculate this
+            self.hdr[19]=DUMMY_CHECKSUM # XXX really calculate this
             self.hdr[18]=self.hdr[18]+1
             self.hdr[21]="\000"
             self.transport.write(apply(struct.pack,[self.header_fmt]+self.hdr))
