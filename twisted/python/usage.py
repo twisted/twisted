@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.50 2003/09/05 07:25:50 tv Exp $
+# $Id: usage.py,v 1.51 2003/09/05 07:34:16 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -460,7 +460,8 @@ class Options(UserDict.UserDict):
 
         if longdesc:
             longdesc = ('\n' +
-                        string.join(text.wordWrap(longdesc, width), '\n'))
+                        string.join(text.wordWrap(longdesc, width), '\n').strip()
+                        + '\n')
 
         if optDicts:
             chunks = docMakeChunks(optDicts, width)
