@@ -81,7 +81,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
         #>> :glyph_!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
         #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
 
-        if metadata is not None:
+        if metadata is not None and metadata.has_key('style'):
             message = irc.ctcpStringify([(wordsToCtcp(metadata['style']),
                                           message)])
 
@@ -92,7 +92,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
 
     def receiveGroupMessage(self, sender, group, message, metadata=None):
-        if metadata is not None:
+        if metadata is not None and metadata.has_key('style'):
             message = irc.ctcpStringify([(wordsToCtcp(metadata['style']),
                                           message)])
 
