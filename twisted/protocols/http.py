@@ -888,6 +888,8 @@ class Request:
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """A receiver for HTTP requests."""
 
+    maxHeaders = 500 # max number of headers allowed per request
+    
     length = 0
     persistent = 1
     __header = ''
@@ -960,8 +962,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         data = data.strip()
         if header == 'content-length':
             self.length = int(data)
-        self.requests[-1].received_headers[header] = data
-
+        reqHeaders = self.requests[-1].received_headers
+        reqHeaders[header] = data
+        if len(reqHeaders) > self.maxHeaders:
+            self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
+            self.transport.loseConnection()
+            
     def allContentReceived(self):
         command = self._command
         path = self._path

@@ -273,7 +273,7 @@ class ChunkingTestCase(unittest.TestCase):
 
 class ParsingTestCase(unittest.TestCase):
 
-    def runRequest(self, httpRequest, requestClass):
+    def runRequest(self, httpRequest, requestClass, success=1):
         httpRequest = httpRequest.replace("\n", "\r\n")
         b = StringIOWithoutClosing()
         a = http.HTTPChannel()
@@ -281,11 +281,26 @@ class ParsingTestCase(unittest.TestCase):
         a.makeConnection(protocol.FileWrapper(b))
         # one byte at a time, to stress it.
         for byte in httpRequest:
+            if a.transport.closed:
+                break
             a.dataReceived(byte)
         a.connectionLost(IOError("all done"))
-        self.assertEquals(self.didRequest, 1)
-        del self.didRequest
+        if success:
+            self.assertEquals(self.didRequest, 1)
+            del self.didRequest
+        else:
+            self.assert_(not hasattr(self, "didRequest"))
 
+    def testTooManyHeaders(self):
+        httpRequest = "GET / HTTP/1.0\n"
+        for i in range(502):
+            httpRequest += "%s: foo\n" % i
+        httpRequest += "\n"
+        class MyRequest(http.Request):
+            def process(self):
+                raise RuntimeError, "should not get called"
+        self.runRequest(httpRequest, MyRequest, 0)
+        
     def testHeaders(self):
         httpRequest = """\
 GET / HTTP/1.0
