@@ -29,13 +29,13 @@ void main(int argc, char** argv) {
 	char* pszUser = argv[3];
 	char* pszRealm = argv[4];
 	char* pszPass = argv[5];
-	char* pszAlg = argv[5];
-	char* szNonceCount = argv[6];
-	char* pszMethod = argv[7];
-	char* pszQop = argv[8];
-	char* pszURI = argv[9];
+	char* pszAlg = argv[6];
+	char* szNonceCount = argv[7];
+	char* pszMethod = argv[8];
+	char* pszQop = argv[9];
+	char* pszURI = argv[10];
 
-	if (argc < 10)
+	if (argc < 11)
 		printf("Usage: %s nonce cnonce user realm password algorithm nonce-count method qop uri\n", argv[0]);
 	else
 		go(pszNonce, pszCNonce, pszUser, pszRealm, pszPass, pszAlg, szNonceCount, pszMethod, pszQop, pszURI);

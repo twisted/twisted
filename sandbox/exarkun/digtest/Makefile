@@ -1,8 +1,14 @@
-CC=gcc -I.
+CFLAGS=-g3 -I.
+CC=gcc $(CFLAGS)
+
 
 default: all
 
 all:	mdriver digcalc
+
+clean:
+	rm mdriver digcalc
+	rm *.o
 
 mdriver: md5.o mdriver.o
 	$(CC) -o mdriver md5.o mdriver.o

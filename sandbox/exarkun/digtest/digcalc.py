@@ -1,5 +1,7 @@
 # -*- coding: Latin-1 -*-
 
+import md5
+
 def DigestCalcHA1(
     pszAlg,
     pszUserName,
@@ -49,7 +51,7 @@ def DigestCalcResponse(
     m.update(":")
     m.update(pszNonce)
     m.update(":")
-    if pszQop:
+    if pszNonceCount and pszCNonce: # pszQop:
         m.update(pszNonceCount)
         m.update(":")
         m.update(pszCNonce)
