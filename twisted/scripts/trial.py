@@ -189,7 +189,7 @@ def run():
     for testmethod in config['methods']:
         suite.addMethod(testmethod)
 
-    testdir = "_trial_temp"
+    testdir = os.path.abspath("_trial_temp")
     if os.path.exists(testdir):
        import shutil
        shutil.rmtree(testdir)
