@@ -75,6 +75,12 @@ class Options(usage.Options):
         "Method to test"
         self['methods'].append(method)
 
+    def opt_spew(self):
+        """Print an insanely verbose log of everything that happens.  Useful
+        when debugging freezes or locks in complex code."""
+        from twisted.python.util import spewer
+        sys.settrace(spewer)
+
     opt_m = opt_module
     opt_p = opt_package
     opt_c = opt_testcase

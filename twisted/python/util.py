@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.26 $'[11:-2]
+__version__ = '$Revision: 1.27 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -233,9 +233,17 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
 """ % (doneChar * 3, currentChar, undoneChar * 3, width, maxPosition, currentChar)
     return statBar
 
+def spewer(frame, s, ignored):
+    from twisted.python import reflect
+    if frame.f_locals.has_key('self'):
+        se = frame.f_locals['self']
+        print 'method %s of %s at %s' % (
+            frame.f_code.co_name, reflect.qual(se.__class__), id(se)
+            )
+
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict",
+    "OrderedDict", "spewer"
 ]
