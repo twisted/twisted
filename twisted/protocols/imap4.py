@@ -46,25 +46,32 @@ except:
 class MessageSet:
     def __init__(self, *ranges):
         assert len(ranges) % 2 == 0, "Arguments must be low-high pairs"
-        self.ranges = zip(*[iter(ranges)] * 2)
+        self.ranges = ranges
+    
+    def _rangePairs(self):
+        return zip(*[iter(self.ranges)] * 2)
 
     def __add__(self, other):
         if isinstance(other, MessageSet):
             ranges = self.ranges + other.ranges
         else:
-            ranges = []
-            map(ranges.extend, self.ranges)
-            ranges.extend(other)
+            ranges = list(self.ranges) + list(other)
         return MessageSet(*ranges)
     
     def __contains__(self, value):
-        for (low, high) in self.ranges:
+        for (low, high) in self._rangePairs():
             if (low is None or value >= low) and (high is None or value < high):
                 return True
         return False
     
-    def map(self, callable):
-        return MessageSet(*map(callable, self.ranges))
+    def transform(self, callable):
+        new = []
+        for e in self.ranges:
+            if e is None:
+                new.append(None)
+            else:
+                new.append(callable(e))
+        return MessageSet(*new)
     
     def __eq__(self, other):
         if isinstance(other, MessageSet):
@@ -73,17 +80,17 @@ class MessageSet:
     
     def __len__(self):
         if self.ranges:
-            if self.ranges[-1][1] is None:
+            if self.ranges[-1] is None:
                 return sys.maxint
             L = 0
-            for (low, high) in self.ranges:
+            for (low, high) in self._rangePairs():
                 L = L + high - low
             return L
         return 0
     
     def __iter__(self):
         def i():
-            for (low, high) in iter(self.ranges):
+            for (low, high) in self._rangePairs():
                 while high is None or low < high:
                     yield low
                     low += 1
@@ -91,7 +98,7 @@ class MessageSet:
     
     def __repr__(self):
         p = []
-        for (low, high) in self.ranges:
+        for (low, high) in self._rangePairs():
             if low + 1 == high:
                 p.append(str(low))
             elif high is None:
@@ -168,7 +175,7 @@ class IMailboxListener(components.Interface):
 
         @type recent: C{int}
         @param recent: The number of messages now flagged \\Recent.
-        If the total number of messages has not changed, this should be
+        If the number of recent messages has not changed, this should be
         C{None}.
         """
 
@@ -757,15 +764,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
-        maybeDeferred(None, self.mbox.search, query).addCallbacks(
+        maybeDeferred(None, self.mbox.search, query, uid=uid).addCallbacks(
             self.__cbSearch, self.__ebSearch,
-            (tag, uid), None, (tag,), None
+            (tag,), None, (tag,), None
         )
 
-    def __cbSearch(self, result, tag, uid):
-        if uid:
-            topPart = self.mbox.getUIDValidity() << 16
-            result = map(topPart.__or__, result)
+    def __cbSearch(self, result, tag):
         ids = ' '.join([str(i) for i in result])
         self.sendUntaggedResponse('SEARCH ' + ids)
         self.sendPositiveResponse(tag, 'SEARCH completed')
@@ -782,24 +786,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         query = parseNestedParens(args)
         while len(query) == 1 and isinstance(query[0], types.ListType):
             query = query[0]
-        if uid:
-            topPart = ~(self.mbox.getUIDValidity() << 16)
-            messages = messages.map(topPart.__and__)
-        maybeDeferred(None, self.mbox.fetch, messages, query).addCallbacks(
+        maybeDeferred(None, self.mbox.fetch, messages, query, uid=uid).addCallbacks(
             self.__cbFetch, self.__ebFetch,
-            (tag, uid), None, (tag,), None
+            (tag,), None, (tag,), None
         )
 
-    def __cbFetch(self, results, tag, uid):
+    def __cbFetch(self, results, tag):
         for (mId, parts) in results.items():
-            if uid:
-                topPart = self.mbox.getUIDValidity() << 16
-                try:
-                    index = parts.index('UID') + 1
-                except ValueError:
-                    parts[:0] = ['UID', str(mId | topPart)]
-                else:
-                    parts[index] = str(mId | topPart)
             self.sendUntaggedResponse(
                 '%d FETCH %s' % (mId, collapseNestedLists([parts]))
             )
@@ -820,10 +813,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             raise IllegalClientResponse, ('Wrong number of arguments', args)
 
-        if uid:
-            topPart = ~(self.mbox.getUIDValidity() << 16)
-            messages = messages.map(topPart.__and__)
-
         silent = mode.endswith('SILENT')
         if mode.startswith('+'):
             mode = 1
@@ -832,7 +821,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             mode = 0
 
-        maybeDeferred(None, self.mbox.store, messages, flags, mode).addCallbacks(
+        maybeDeferred(None, self.mbox.store, messages, flags, mode, uid=uid).addCallbacks(
             self.__cbStore, self.__ebStore, (tag, silent), None, (tag,), None
         )
 
@@ -856,12 +845,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
         else:
-            if uid:
-                topPart = self.mbox.getUIDValidity() << 16
-                messages = messages.map(topPart.__or__)
             maybeDeferred(None,
                 self.mbox.fetch, messages,
-                ['BODY', [], 'INTERNALDATE', 'FLAGS']
+                ['BODY', [], 'INTERNALDATE', 'FLAGS'],
+                uid=uid
             ).addCallbacks(
                 self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag, mbox), None
             )
@@ -906,7 +893,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         command = parts[0].upper()
         args = parts[1]
 
-        if command not in ('COPY', 'FETCH', 'STORE'):
+        if command not in ('COPY', 'FETCH', 'STORE', SEARCH):
             raise IllegalClientResponse, args
 
         f = getattr(self, 'select_' + command)
@@ -1754,7 +1741,6 @@ class IMAP4Client(basic.LineReceiver):
 
         Any non-zero number of queries are accepted by this method, as
         returned by the C{Query}, C{Or}, and C{Not} functions.
-
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a list of all
         the message sequence numbers return by the search, or whose errback
@@ -3099,7 +3085,7 @@ class IMailbox(components.Interface):
         
         @rtype: C{int}
         """
-
+    
     def getFlags(self):
         """Return the flags defined in this mailbox
 
@@ -3213,19 +3199,23 @@ class IMailbox(components.Interface):
         read-write.
         """
 
-    def search(self, query):
+    def search(self, query, uid):
         """Search for messages that meet the given query criteria.
 
         @type query: C{list}
         @param query: The search criteria
 
+        @type uid: C{bool}
+        @param uid: If true, the IDs specified in the query are UIDs;
+        otherwise they are message sequence IDs.
+
         @rtype: C{list} or C{Deferred}
-        @return: A list of message sequence numbers which match the search
-        criteria or a C{Deferred} whose callback will be invoked with such a
-        list.
+        @return: A list of message sequence numbers or message UIDs which
+        match the search criteria or a C{Deferred} whose callback will be
+        invoked with such a list.
         """
 
-    def fetch(self, messages, parts):
+    def fetch(self, messages, parts, uid):
         """Retrieve one or more portions of one or more messages.
 
         @type messages: iterable of C{int}
@@ -3235,13 +3225,17 @@ class IMailbox(components.Interface):
         @type parts: C{list}
         @param parts: The message portions to retrieve.
 
+        @type uid: C{bool}
+        @param uid: If true, the IDs specified in the query are UIDs;
+        otherwise they are message sequence IDs.
+
         @rtype: C{dict} or C{Deferred}
         @return: A C{dict} mapping message identifiers to C{dicts} mapping
         portion identifiers to strings representing that portion of that message, or a
         C{Deferred} whose callback will be invoked with such a C{dict}.
         """
 
-    def store(self, messages, flags, mode):
+    def store(self, messages, flags, mode, uid):
         """Set the flags of one or more messages.
 
         @type messages: sequence of C{int}
@@ -3255,6 +3249,10 @@ class IMailbox(components.Interface):
         specified messages.  If mode is 1, these flags should be added to
         the specified messages.  If mode is 0, all existing flags should be
         cleared and these flags should be added.
+
+        @type uid: C{bool}
+        @param uid: If true, the IDs specified in the query are UIDs;
+        otherwise they are message sequence IDs.
 
         @rtype: C{dict} or C{Deferred}
         @return: A C{dict} mapping message identifiers to sequences of C{str}
