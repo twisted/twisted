@@ -506,8 +506,13 @@ class Session:
         """
         self.site = site
         self.uid = uid
+        self.expireCallbacks = []
         self.touch()
 
+    def notifyOnExpire(self, callback):
+        """Call this callback when the session expires or logs out."""
+        self.expireCallbacks.append(callback)
+    
     def touch(self):
         self.lastModified = time.time()
 
@@ -517,6 +522,9 @@ class Session:
             if self.site.sessions.has_key(self.uid):
                 log.msg("expired session %s" % self.uid)
                 del self.site.sessions[self.uid]
+                for c in self.expireCallbacks:
+                    c()
+                self.expireCallbacks = []
             else:
                 log.msg("no session to expire: %s" % self.uid)
         else:
