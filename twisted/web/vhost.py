@@ -34,14 +34,21 @@ class VirtualHostCollection(roots.Homogenous):
     This exists for configuration purposes.
     """
     entityType = resource.Resource
+
     def __init__(self, nvh):
         self.nvh = nvh
+    
     def listStaticEntities(self):
         return self.nvh.hosts.items()
+    
     def getStaticEntity(self, name):
         return self.nvh.hosts.get(self)
+    
     def reallyPutEntity(self, name, entity):
         self.nvh.addHost(name, entity)
+
+    def delEntity(self, name):
+        self.nvh.removeHost(name)
 
 
 class NameVirtualHost(resource.Resource):
@@ -78,6 +85,10 @@ class NameVirtualHost(resource.Resource):
         """
         self.hosts[name] = resrc
 
+    def removeHost(self, name):
+        """Remove a host."""
+        del self.hosts[name]
+    
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host.
         """
