@@ -260,3 +260,5 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
             self._failUnlessIn("[OK]")
             self._failUnlessIn("PASSED")
         return self.spawnChild(args).addCallback(_cb)
+
+FunctionallyTestTrial.timeout = 30.0
