@@ -1,6 +1,7 @@
 
 from helper import TerminalBuffer
 from insults import ServerProtocol, ClientProtocol
+from insults import G0, G1, G2, G3
 
 from twisted.trial import unittest
 
@@ -127,8 +128,26 @@ class BufferTestCase(unittest.TestCase):
 
     def testSingleShifts(self):
         self.term.singleShift2()
-        self.term.write('Hello')
+        self.term.write('Hi')
 
+        ch = self.term.getCharacter(0, 0)
+        self.assertEquals(ch[0], 'H')
+        self.assertEquals(ch[1].charset, G2)
+
+        ch = self.term.getCharacter(1, 0)
+        self.assertEquals(ch[0], 'i')
+        self.assertEquals(ch[1].charset, G0)
+
+        self.term.singleShift3()
+        self.term.write('!!')
+
+        ch = self.term.getCharacter(2, 0)
+        self.assertEquals(ch[0], '!')
+        self.assertEquals(ch[1].charset, G3)
+
+        ch = self.term.getCharacter(3, 0)
+        self.assertEquals(ch[0], '!')
+        self.assertEquals(ch[1].charset, G0)
 
 class Loopback(unittest.TestCase):
     def setUp(self):

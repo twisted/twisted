@@ -4,7 +4,8 @@ from twisted.internet import protocol
 import insults
 
 class CharacterAttribute:
-    pass
+    def __init__(self, charset):
+        self.charset = charset
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
@@ -12,6 +13,9 @@ class TerminalBuffer(protocol.Protocol):
     height = 24
 
     fill = ' '
+
+    def getCharacter(self, x, y):
+        return self.lines[y][x]
 
     def connectionMade(self):
         self.reset()
@@ -21,7 +25,7 @@ class TerminalBuffer(protocol.Protocol):
             self.insertAtCursor(b)
 
     def _currentCharacterAttributes(self):
-        return CharacterAttribute()
+        return CharacterAttribute(self.activeCharset)
 
     def insertAtCursor(self, b):
         if b == '\r':
@@ -34,7 +38,7 @@ class TerminalBuffer(protocol.Protocol):
             self.x += 1
 
     def _emptyLine(self, width):
-        return [(self.fill, CharacterAttribute()) for i in xrange(width)]
+        return [(self.fill, self._currentCharacterAttributes()) for i in xrange(width)]
 
     def _scrollDown(self):
         self.y += 1
@@ -177,12 +181,12 @@ class TerminalBuffer(protocol.Protocol):
         return (self.x, self.y)
 
     def reset(self):
-        self.eraseDisplay()
         self.home = insults.Vector(0, 0)
+        self.x = self.y = 0
         self.modes = {}
         self.numericKeypad = 'app'
         self.activeCharset = insults.G0
-        self.x = self.y = 0
+        self.eraseDisplay()
         self.charsets = {
             insults.G0: insults.CS_US,
             insults.G1: insults.CS_US,
