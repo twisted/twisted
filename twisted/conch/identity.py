@@ -122,7 +122,7 @@ class OpenSSHConchIdentity(ConchIdentity):
                 return defer.succeed('')
             return defer.fail(error.ConchError('bad password'))
 
-    return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
+        return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
 
     def getUserGroupID(self):
         if pwd:

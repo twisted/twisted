@@ -1,3 +1,7 @@
+2002-12-09  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/conch/identity.py: fix indentation
+
 2002-12-09  Paul Swartz  <z3p@twistedmatrix.com>
 
     * twisted/conch/ssh/transport.py: don't accept host keys by default
