@@ -27,10 +27,10 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import sys, os, select, errno
 
 # Twisted Imports
-from twisted.internet import protocol
+from twisted.python import log
 
 # Sibling Imports
-import abstract, fdesc
+import abstract, fdesc, protocol
 from main import CONNECTION_LOST
 
 
@@ -48,9 +48,7 @@ class StandardIOWriter(abstract.FileDescriptor):
     
     def writeSomeData(self, data):
         try:
-            rv = os.write(self.fileno(), data)
-            if rv == len(data):
-                self.startReading()
+            return os.write(self.fileno(), data)
             return rv
         except IOError, io:
             if io.args[0] == errno.EAGAIN:
@@ -64,16 +62,6 @@ class StandardIOWriter(abstract.FileDescriptor):
             if ose.errno == errno.EAGAIN:
                 return 0
             raise
-
-    def write(self, data):
-        self.stopReading()
-        abstract.FileDescriptor.write(self, data)
-
-    def doRead(self):
-        fd = self.fileno()
-        r, w, x = select.select([fd], [fd], [], 0)
-        if r and w:
-            return CONNECTION_LOST
 
     def connectionLost(self, reason):
         abstract.FileDescriptor.connectionLost(self, reason)
@@ -101,17 +89,11 @@ class StandardIO(abstract.FileDescriptor):
         self.protocol.makeConnection(self)
         self.startReading()
         self.writer = StandardIOWriter()
-        self.writer.startReading()
 
     def write(self, data):
         """Write some data to standard output.
         """
         self.writer.write(data)
-        return
-        sys.__stdout__.write(data)
-        # This is an asynchronous framework, but stdout *really* ought to be
-        # flushable in a reasonable amount of time.
-        sys.__stdout__.flush()
         
     def doRead(self):
         """Some data's readable from standard input.
