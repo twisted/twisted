@@ -22,8 +22,6 @@ This is an extremely thin wrapper.
 Maintainer: U{Dave Peticolas<mailto:davep@twistedmatrix.com>}
 """
 
-import string
-
 from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn, dbTypeMap
 
 class RowObject:
@@ -75,7 +73,7 @@ class RowObject:
         """Find an attribute by caseless name.
         """
         for attr, type in self.rowColumns:
-            if string.lower(attr) == string.lower(attrName):
+            if attr.lower() == attrName.lower():
                 return getattr(self, attr)
         raise DBError("Unable to find attribute %s" % attrName)
 
@@ -102,7 +100,7 @@ class RowObject:
             if getKeyColumn(self.__class__, attr):
                 continue
             for column, ctype, typeid in self.dbColumns:
-                if string.lower(column) == string.lower(attr):
+                if column.lower(column) == attr.lower():
                     q = dbTypeMap.get(ctype, None)
                     if q == NOQUOTE:
                         setattr(self, attr, 0)
@@ -123,3 +121,6 @@ class RowObject:
         for keyName, keyType in self.rowKeyColumns:
             keys.append( getattr(self, keyName) )
         return tuple(keys)
+
+
+__all__ = ['RowObject']

@@ -15,7 +15,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import types
-import adbapi
 
 NOQUOTE = 1
 USEQUOTE = 2
@@ -55,9 +54,14 @@ def getKeyColumn(rowClass, name):
             return name
     return None
 
-def quote(value, typeCode, string_escaper=adbapi.safe):
+def safe(text):
+    """Make a string safe to include in an SQL statement
+    """
+    return text.replace("'", "''").replace("\\", "\\\\")
+
+def quote(value, typeCode, string_escaper=safe):
     """Add quotes for text types and no quotes for integer types.
-    NOTE: uses Postgresql type codes..
+    NOTE: uses Postgresql type codes.
     """
     q = dbTypeMap.get(typeCode, None)
     if q is None:
@@ -173,3 +177,7 @@ class _TableRelationship:
         self.childRowClass = childRowClass
         self.containerMethod = containerMethod
         self.autoLoad = autoLoad
+
+
+__all__ = ['NOQUOTE', 'USEQUOTE', 'dbTypeMap', 'DBError', 'getKeyColumn',
+           'safe', 'quote']

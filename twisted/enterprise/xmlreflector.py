@@ -18,7 +18,7 @@ import os
 
 from twisted.internet import defer
 from twisted.enterprise import reflector
-from twisted.enterprise.util import _TableInfo
+from twisted.enterprise.util import DBError, _TableInfo
 
 from twisted.persisted import marmalade
 
@@ -163,3 +163,6 @@ class XMLReflector(reflector.Reflector):
         filename = self.makeFilenameFor(rowObject)        
         os.remove(filename)
         return defer.succeed(1)
+
+
+__all__ = ['XMLReflector']

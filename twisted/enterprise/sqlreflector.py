@@ -16,7 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.enterprise import adbapi, reflector
-from twisted.enterprise.util import DBError, getKeyColumn, quote, _TableInfo, _TableRelationship
+from twisted.enterprise.util import DBError, getKeyColumn, quote, safe
+from twisted.enterprise.util import _TableInfo, _TableRelationship
 from twisted.enterprise.row import RowObject
 
 from twisted.python import reflect
@@ -76,7 +77,7 @@ class SQLReflector(reflector.Reflector):
         function in a subclass if your database server uses different
         escaping rules.
         """
-        return adbapi.safe(text)
+        return safe(text)
 
     def quote_value(self, value, type):
         """Format a value for use in an SQL statement.
@@ -330,3 +331,6 @@ class SQLReflector(reflector.Reflector):
         sql = self.deleteRowSQL(rowObject)
         self.removeFromCache(rowObject)
         return self.dbpool.runOperation(sql)
+
+
+__all__ = ['SQLReflector']

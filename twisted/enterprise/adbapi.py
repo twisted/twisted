@@ -19,9 +19,9 @@
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
-from twisted.internet import defer
-from twisted.internet import threads
-from twisted.python import reflect, log, failure
+from twisted.internet import defer, threads
+from twisted.python import reflect, log
+from twisted.enterprise.util import safe # backwards compat
 
 
 class Transaction:
@@ -183,8 +183,8 @@ class ConnectionPool:
         of DB-API being used, but the first argument in *args will be an SQL
         statement. This method will not attempt to fetch any results from the
         query and is thus suitable for INSERT, DELETE, and other SQL statements
-        which do not return values. If the 'execute' method raises an exception,
-        the transaction will be rolled back and a Failure returned.
+        which do not return values. If the 'execute' method raises an
+        exception, the transaction will be rolled back and a Failure returned.
 
         The args and kw arguments will be passed to the DB-API cursor's
         'execute' method.
@@ -215,8 +215,8 @@ class ConnectionPool:
     def connect(self):
         """Return a database connection when one becomes available.
 
-        This method blocks and should be run in a thread from the internal threadpool.
-        Don't call this method directly from non-threaded twisted code.
+        This method blocks and should be run in a thread from the internal
+        threadpool. Don't call this method directly from non-threaded code.
 
         @return: a database connection from the pool.
         """
@@ -313,7 +313,5 @@ class ConnectionPool:
                                      d, f, args, kwargs)
         return d
 
-def safe(text):
-    """Make a string safe to include in an SQL statement
-    """
-    return text.replace("'", "''").replace("\\", "\\\\")
+
+__all__ = ['Transaction', 'ConnectionPool']

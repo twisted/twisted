@@ -170,3 +170,6 @@ EQUAL       = 0
 LESSTHAN    = 1
 GREATERTHAN = 2
 LIKE        = 3
+
+
+__all__ = ['Reflector', 'EQUAL', 'LESSTHAN', 'GREATERTHAN', 'LIKE']
