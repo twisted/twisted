@@ -14,7 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import runtime, log
-import sys, os, pdb, profile, getpass, md5
+from twisted.persisted import styles
+import sys, os, pdb, profile, getpass, md5, traceback
 
 def decrypt(passphrase, data):
     from Crypto.Cipher import AES
