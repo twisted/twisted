@@ -2,12 +2,11 @@ Twisted 1.1.1
 
 Quote of the Release:
 
-<jml> It is like wandering through the desert, for weeks, without a
-drop of water, but knowing that there is an oasis ahead. And all the
-time, I am being stabbed in the face with a blunt spoon by a flatulent
-person.
- -- jml describes PHP, after using nevow
-
+<hypatia> Why does dirdbm exist, exactly?
+<spiv> hypatia: Because glyph is trigger-happy when it comes to writing persistence systems.
+<spiv> "Hey Rocky, watch me pull a persistence system out of my hat!"
+<spiv> "But that trick never works!"
+<spiv> "This time for *sure*!"
 
 For information on what's new in Twisted 1.1.1, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
