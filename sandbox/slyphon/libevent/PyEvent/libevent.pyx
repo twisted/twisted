@@ -15,9 +15,9 @@ cdef extern from "stdio.h":
 cdef extern from "event.h":
     struct event:
         int event_fd
-    void event_init()
+    void _c_event_init "event_init"()
     int event_dispatch()
-    int event_loop(int flags)
+    int _c_event_loop "event_loop" (int flags)
     void event_set(event *ev, int fd, short event, void (*fn)(int, short, void *) except *, void *arg)
     int event_add(event *ev, timeval *tv)
     int event_del(event *ev)
@@ -56,6 +56,14 @@ EV_SIGNAL = 0x08
 EV_PERSIST = 0x10
 EVLOOP_ONCE = 0x01
 EVLOOP_NONBLOCK = 0x02
+
+_init_called = False
+
+def event_init():
+    _c_event_init()
+
+def event_loop(flags=EVLOOP_ONCE|EVLOOP_NONBLOCK):
+    _c_event_loop(flags)
 
 cdef class _Event:
     cdef event *ev

@@ -1,7 +1,15 @@
+from twisted.internet import base
 import warnings
-try:
-    from event_libevent import *
-except ImportError:
-    from event_compat import *
-    warnings.warn("using event_compat instead of suggested event_libevent (will impact performance)")
+from event_libevent import EventManager, Event, Timer
 
+
+class EventReactor(base.ReactorBase):
+    def __init__(self):
+        base.ReactorBase.__init__(self)
+        event.event_init()
+
+    def doIteration(self, delay=0):
+        EventManager.loop()
+
+    def addReader(self, reader):
+        pass

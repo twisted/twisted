@@ -10,8 +10,7 @@ EV_PERSIST = 0x10
 EVLOOP_ONCE = 0x01
 EVLOOP_NONBLOCK = 0x02
 
-loop = libevent.loop
-dispatch = libevent.dispatch
+dispatch = libevent.dispatch # only returns on error
 
 class Event(libevent._Event):
     def __init__(self, file, event, callback, argument=None, timeout=0.0):
@@ -35,28 +34,57 @@ class Timer(Event):
     def __init__(self, callback, argument=None, timeout=0.0):
         Event.__init__(0, TIMEOUT, callback, argument, timeout)
 
-_signals = {}
-def signal(signal, callback, argument=None):
-    if get_signal(signal):
-        remove_signal(signal)
-        signal(signal, callback, argument)
-    else:
-        _signals[signal] = Event(signal, SIGNAL|PERSIST, callback, argument)
+class EventAlreadyInittedError(Exception):
+    pass
 
-def get_signal(signal):
-    if _signals.has_key(signal):
-        return _signals[signal]
-    else:
-        return None
+class EventNotInittedError(Exception):
+    pass
 
-def remove_signal(signal):
-    if get_signal(signal) != None: 
-        return
-    else:
-        print get_signal(signal)
-        _signals[signal].abort()
-        del _signals[signal]
-        _signals[signal] = None
+class EventManager(object):
+    _init_called = False
+    _signals = {}
 
+    def event_init(cls):
+        if cls._init_called:
+            raise EventAlreadyInittedError, 'you already initted the event loop!'
+        libevent.event_init()
+    event_init = classmethod(event_init)
+
+    def signal(cls, signal, callback, argument=None):
+        if get_signal(signal):
+            cls.remove_signal(signal)
+            cls.signal(signal, callback, argument)
+        else:
+            cls._signals[signal] = Event(signal, SIGNAL|PERSIST, callback, argument)
+    signal = classmethod(signal)
+
+    def get_signal(cls, signal):
+        if cls._signals.has_key(signal):
+            return cls._signals[signal]
+        else:
+            return None
+    get_signal = classmethod(get_signal)
+
+    def remove_signal(cls, signal):
+        if cls.get_signal(signal) != None: 
+            return
+        else:
+            print cls.get_signal(signal)
+            cls._signals[signal].abort()
+            del cls._signals[signal]
+            cls._signals[signal] = None
+    remove_signal = classmethod(remove_signal)
+
+    def event_loop(cls, flags):
+        if not _init_called:
+            raise EventLoopNotInittedError, "you must init the event API before calling event_loop"
+        libevent.event_loop(flags)
+    event_loop = classmethod(event_loop)
+
+signal = EventManager.signal
+get_signal = EventManager.get_signal
+remove_signal = EventManager.remove_signal
+event_init = EventManager.event_init
+event_loop = EventManager.event_loop
 
 
