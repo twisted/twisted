@@ -9,7 +9,7 @@ from twisted.internet import task, threadtask
 from twisted.python import reflect, log, defer, failure
 
 # sibling imports
-import entity
+import row
 
 class Transaction:
     def __init__(self, pool, connection):
@@ -177,65 +177,61 @@ class Augmentation:
         d = defer.Deferred()
         apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
-        
-    def loadObjectsFrom(self, tableName, keyColumns, entityClass = entity.Entity, whereClause = "1 = 1"):
-        """Create a set of python objects of <entityClass> from the contents of a table
-        populated with appropriate data members. The constructor for <entityClass> must take
+
+    def loadObjectsFrom(self, tableName, keyColumns, rowClass = row.RowObject, whereClause = "1 = 1"):
+        """Create a set of python objects of <rowClass> from the contents of a table
+        populated with appropriate data members. The constructor for <rowClass> must take
         no args. Example to use this:
 
-        class EmployeeEntity(entity.EntityObject):
+        class EmployeeRow(row.rowClass):
             pass
             
         def gotEmployees(employees):
             for emp in employees:
                 emp.manager = "fred smith"
-                emp.updateEntity()
+                emp.updateRow()
 
         manager.loadObjectsFrom("employee",
                                 ["employee_name", "varchar"],
                                 "employee_name like 'm%%'",
-                                EmployeeEntity).addCallback(gotEmployees)
+                                EmployeeRow).addCallback(gotEmployees)
 
         NOTE: this functionality is experimental. be careful.
         """
-        return self.runInteraction(self._objectLoader, tableName, keyColumns, entityClass, whereClause)
+        return self.runInteraction(self._objectLoader, tableName, keyColumns, rowClass, whereClause)
 
-    def _objectLoader(self, transaction, tableName, keyColumns, entityClass, whereClause):
+    def _objectLoader(self, transaction, tableName, keyColumns, rowClass, whereClause):
         """worker method to load objects from a table.
-        NOTE: works with Postgresql for now...
-        NOTE: 26 - 29 are system column types that you shouldn't use...
         """
-
-        sql = """SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
-        FROM pg_class, pg_attribute, pg_type
-        WHERE pg_class.oid = pg_attribute.attrelid
-        AND pg_attribute.atttypid = pg_type.oid
-        AND pg_class.relname = '%s'
-        AND pg_attribute.atttypid not in (26,27,28,29)""" % tableName
-
-        # get the columns for the table
-        transaction.execute(sql)
-        columns = transaction.fetchall()
+        if not rowClass.populated:
+            row._populateRowClass(transaction, self, rowClass, tableName, keyColumns)
 
         # get the data from the table
         sql = """SELECT * FROM %s WHERE %s""" % (tableName, whereClause)
         transaction.execute(sql)
         rows = transaction.fetchall()
 
-        # populate entityClass data
-        entity.buildEntityClass(self, entityClass, tableName, columns, keyColumns)
-
         # construct the objects
         results = []        
-        for row in rows:
-            resultObject = apply(entityClass)
-            for i in range(0, len(columns)):
-                #print columns[i], row[i]
-                resultObject.__dict__[columns[i][0]] = row[i]
+        for r in rows:
+
+            # find the key values
+            keys = {}
+            i = 0
+            for name, type, typeid in rowClass.columns:
+                if row.getKeyColumn(rowClass, name):
+                    keys[name] = r[i]
+                i = i + 1
+            
+            resultObject = apply(rowClass, (), keys)
+            for i in range(0, len(rowClass.columns)):
+                if not row.getKeyColumn(rowClass, rowClass.columns[i][0] ):
+                    setattr(resultObject, rowClass.columns[i][0], r[i] )
+            resultObject.setSync()
             results.append(resultObject)
 
         #print "RESULTS", results
         return results
 
 
-safe = entity.safe
+safe = row.safe
