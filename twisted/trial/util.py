@@ -1,5 +1,4 @@
 # -*- test-case-name: twisted.test.test_trial -*-
-#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2003 Matthew W. Lefkowitz
 #
@@ -16,6 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+# -*- test-case-name: twisted.test.test_trial -*-
 
 import traceback
 from twisted.python import components, failure
@@ -86,7 +86,7 @@ def deferredError(d, timeout=None):
 
 
 def extract_tb(tb, limit=None):
-    """Extract a list of frames from a traceback, hiding unittest internals.
+    """Extract a list of frames from a traceback, without unittest internals.
 
     Functionally identical to L{traceback.extract_tb}, but cropped to just
     the test case itself, excluding frames that are part of the Trial
@@ -108,22 +108,21 @@ def extract_tb(tb, limit=None):
         del l[-1]
     return l
 
-def emacs_format_exception(eType, eValue, tb, limit=None):
-    """Compact traceback formatting, parseable by emacs compile-mode.
-    """
-
-    # TODO: hide trial frames like plain_format_exception
-    l = extract_tb(tb, limit)
-    return ['%s:%s:%s\n' % (filename, lineno, method)
-                     for filename, lineno, method, _ in l]
-
-def plain_format_exception(eType, eValue, tb, limit=None):
-    """Emit a formatted traceback and exception, but hide trial's framework.
+def format_exception(eType, eValue, tb, limit=None):
+    """A formatted traceback and exception, without exposing the framework.
 
     I am identical in function to L{traceback.format_exception},
     but I screen out frames from the traceback that are part of
     the testing framework itself, leaving only the code being tested.
     """
+    result = [x.strip()+'\n' for x in
+              failure.Failure(eValue,eType,tb).getBriefTraceback().split('\n')]
+    return result
+    # Only mess with tracebacks if they are from an explicitly failed
+    # test.
+    if eType != unittest.FailTest:
+        return traceback.format_exception(eType, eValue, tb, limit)
+
     tb_list = extract_tb(tb, limit)
 
     l = ["Traceback (most recent call last):\n"]
