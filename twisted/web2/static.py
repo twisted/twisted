@@ -17,7 +17,7 @@ import time
 
 # Sibling Imports
 from twisted.web2 import error, http_headers
-from twisted.web2 import http, iweb, stream, responsecode
+from twisted.web2 import http, iweb, stream, responsecode, server
 
 # Twisted Imports
 from twisted.python import threadable, components, filepath
@@ -59,12 +59,11 @@ class Data:
         self.type = type
 
     def renderHTTP(self, ctx):
-        request = iweb.IRequest(ctx)
-        request.out_headers.setRawHeaders("content-type", (self.type, ))
-        request.out_headers.setHeader("content-length", len(self.data))
-        if request.method == "HEAD":
-            return ''
-        return self.data
+        response = server.SimpleResponse()
+        response.headers.setRawHeaders("content-type", (self.type, ))
+        response.headers.setHeader("content-length", len(self.data))
+        response.data = self.data
+        return response
 
 components.backwardsCompatImplements(Data)
 

@@ -31,9 +31,27 @@ from twisted import copyright
 from twisted.web2 import resource, http, iweb, responsecode
 from twisted.web2 import http_headers, context, error
 
+from twisted.web2 import version as web2_version
+
+
 _errorMarker = object()
 
-server_version = "TwistedWeb/2.0a2"
+class SimpleResponse(object):
+    implements(iweb.IResponse)
+    
+    code = responsecode.OK
+    data = ""
+    headers = None
+    
+    def __init__(self):
+        self.headers = http_headers.Headers()
+        self.headers.setHeader('server', web2_version)
+        self.headers.setHeader('date', time.time())
+
+    def beginProducing(self, consumer):
+        consumer.write(self.data)
+        return defer.succeed(None)
+        
 class Request(http.Request):
     implements(iweb.IRequest)
     
@@ -51,11 +69,6 @@ class Request(http.Request):
         
         http.Request.__init__(self, *args, **kw)
         
-    def defaultHeaders(self):
-        self.out_headers.setHeader('server', server_version)
-        self.out_headers.setHeader('date', time.time())
-        self.out_headers.setHeader('content-type', http_headers.MimeType('text','html', (('charset', 'UTF-8'),)))
-
     def parseURL(self):
         (self.scheme, self.host, self.path,
          self.params, argstring, fragment) = urlparse.urlparse(self.uri)
@@ -84,7 +97,7 @@ class Request(http.Request):
     def getHost(self):
         if self.host:
             return self.host
-        host = self.in_headers.getHeader('host')
+        host = self.headers.getHeader('host')
         if not host:
             if self.clientproto >= (1,1):
                 raise error.Error(responsecode.BAD_REQUEST)
@@ -101,7 +114,8 @@ class Request(http.Request):
         
         try:
             self.checkExpect()
-            self.defaultHeaders()
+            #self.defaultHeaders()
+            #response.headers.setHeader('content-type', http_headers.MimeType('text','html', charset='UTF-8'))
             self.parseURL()
             self.host = self.getHost()
         except error.Error:
@@ -192,8 +206,6 @@ class Request(http.Request):
         # Give a ICanHandleException implementer a chance to render the page.
         
         def _processingFailed_inner(ctx, reason):
-            if self.startedWriting:
-                raise Exception("Cannot output error page: already started writing.")
             handler = iweb.ICanHandleException(ctx)
             return handler.renderHTTP_exception(ctx, reason)
         
@@ -208,39 +220,30 @@ class Request(http.Request):
         log.err(reason)
         log.msg("Original exception:", isErr=1)
         log.err(origReason)
-        if self.startedWriting:
-            # If we've already started writing, there's nothing to be done
-            # but give up and rudely close the connection.
-            # Anything else runs the risk of e.g. corrupting caches or
-            # spitting out html in the middle of an image.
-            self.chanRequest.abortConnection()
-            return
         
-        self.code = responsecode.INTERNAL_SERVER_ERROR
         body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         
-        # reset headers
-        self.out_headers = http_headers.Headers()
-        self.defaultHeaders()
-        self.out_headers.setHeader('content-length', len(body))
-        
-        self.write(body)
-        self.finish()
-        return
+        response = SimpleResponse()
+        response.code = responsecode.INTERNAL_SERVER_ERROR
+        response.headers.setHeader('content-type', http_headers.MimeType('text','html'))
+        response.headers.setHeader('content-length', len(body))
+        response.data = body
+        return response
 
-    def _cbFinishRender(self, html, ctx):
-        resource = iweb.IResource(html, None)
+    def _cbFinishRender(self, response, ctx):
+        resource = iweb.IResource(response, None)
         if resource:
             pageContext = context.PageContext(tag=resource, parent=ctx)
             d = defer.maybeDeferred(resource.renderHTTP, pageContext)
             d.addCallback(self._cbFinishRender, pageContext)
             return d
-        elif isinstance(html, str):
-            self.write(html)
-            self.finish()
         else:
-            raise TypeError("html is not a string")
+            result = iweb.IResponse(response)
+            if result:
+                self.writeResponse(result)
+            else:
+                raise TypeError("html is not a resource or a response")
         return
     
     def notifyFinish(self):

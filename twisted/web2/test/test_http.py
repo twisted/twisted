@@ -3,7 +3,7 @@ from __future__ import nested_scopes
 import time, sys
 from twisted.trial import unittest
 from twisted.trial.util import wait, spinUntil
-from twisted.web2 import http, http_headers, responsecode, error
+from twisted.web2 import http, http_headers, responsecode, error, iweb
 
 from twisted.internet import reactor, protocol, address, interfaces, utils
 from twisted.internet import defer
@@ -13,14 +13,15 @@ from zope.interface import implements
 
 
 class PreconditionTestCase(unittest.TestCase):
-    def checkPreconditions(self, request, expectedResult, expectedCode,
+    def checkPreconditions(self, request, headers, expectedResult, expectedCode,
                            initCode=responsecode.OK, entityExists=True):
-        code=initCode
-        request.code = code
+        response = TestResponse()
+        code=response.code=initCode
         preconditionsPass = True
+        response.headers = headers
         
         try:
-            request.checkPreconditions(entityExists=entityExists)
+            http.checkPreconditions(request, response, entityExists=entityExists)
         except error.Error, e:
             preconditionsPass = False
             code = e.code
@@ -29,80 +30,83 @@ class PreconditionTestCase(unittest.TestCase):
 
     def testWithoutHeaders(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
-        self.checkPreconditions(request, True, responsecode.OK)
-        
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        self.checkPreconditions(request, True, responsecode.OK)
-        
-        request.out_headers.removeHeader("ETag")
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
-        self.checkPreconditions(request, True, responsecode.OK)
+        out_headers = http_headers.Headers()
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        self.checkPreconditions(request, True, responsecode.OK)
+        out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        
+        out_headers.removeHeader("ETag")
+        out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+
+        out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
         
     def testIfMatch(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        out_headers = http_headers.Headers()
 
         # Behavior with no ETag set, should be same as with an ETag
-        request.in_headers.setRawHeaders("If-Match", ('*',))
-        self.checkPreconditions(request, True, responsecode.OK)
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED, entityExists=False)
+        request.headers.setRawHeaders("If-Match", ('*',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED, entityExists=False)
         
         # Ask for tag, but no etag set.
-        request.in_headers.setRawHeaders("If-Match", ('"frob"',))
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        request.headers.setRawHeaders("If-Match", ('"frob"',))
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
 
         ## Actually set the ETag header
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
 
         # behavior of entityExists
-        request.in_headers.setRawHeaders("If-Match", ('*',))
-        self.checkPreconditions(request, True, responsecode.OK)
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED, entityExists=False)
+        request.headers.setRawHeaders("If-Match", ('*',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED, entityExists=False)
 
         # tag matches
-        request.in_headers.setRawHeaders("If-Match", ('"frob", "foo"',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Match", ('"frob", "foo"',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
         # none match
-        request.in_headers.setRawHeaders("If-Match", ('"baz", "bob"',))
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        request.headers.setRawHeaders("If-Match", ('"baz", "bob"',))
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, True, responsecode.INTERNAL_SERVER_ERROR,
+        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
                                 initCode=responsecode.INTERNAL_SERVER_ERROR)
         
         # Must only compare strong tags
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
-        request.in_headers.setRawHeaders("If-Match", ('W/"foo"',))
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
+        request.headers.setRawHeaders("If-Match", ('W/"foo"',))
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
 
     def testIfUnmodifiedSince(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
-
+        out_headers = http_headers.Headers()
+        
         # No Last-Modified => always fail.
-        request.in_headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        request.headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
 
         # Set output headers
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
 
-        request.in_headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
         
-        request.in_headers.setRawHeaders("If-Unmodified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        request.headers.setRawHeaders("If-Unmodified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, True, responsecode.INTERNAL_SERVER_ERROR,
+        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
                                 initCode=responsecode.INTERNAL_SERVER_ERROR)
 
         # invalid date => header ignored
-        request.in_headers.setRawHeaders("If-Unmodified-Since", ('alalalalalalalalalala',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Unmodified-Since", ('alalalalalalalalalala',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
 
     def testIfModifiedSince(self):
@@ -110,141 +114,144 @@ class PreconditionTestCase(unittest.TestCase):
             raise "Your computer's clock is way wrong, this test will be invalid."
 
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
-
+        out_headers = http_headers.Headers()
+        
         # No Last-Modified => always succeed
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
         # Set output headers
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
         
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, False, responsecode.NOT_MODIFIED)
+        request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
         
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, True, responsecode.INTERNAL_SERVER_ERROR,
+        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
                                 initCode=responsecode.INTERNAL_SERVER_ERROR)
 
         # invalid date => header ignored
-        request.in_headers.setRawHeaders("If-Modified-Since", ('alalalalalalalalalala',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Modified-Since", ('alalalalalalalalalala',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
         # date in the future => assume modified
-        request.in_headers.setHeader("If-Modified-Since", time.time() + 500)
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setHeader("If-Modified-Since", time.time() + 500)
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
     def testIfNoneMatch(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
-
-        request.in_headers.setRawHeaders("If-None-Match", ('"foo"',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        out_headers = http_headers.Headers()
         
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        request.headers.setRawHeaders("If-None-Match", ('"foo"',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        
+        out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
         
         # behavior of entityExists
-        request.in_headers.setRawHeaders("If-None-Match", ('*',))
+        request.headers.setRawHeaders("If-None-Match", ('*',))
         request.method="PUT"
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
         request.method="GET"
-        self.checkPreconditions(request, False, responsecode.NOT_MODIFIED)
-        self.checkPreconditions(request, True, responsecode.OK, entityExists=False)
+        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, out_headers, True, responsecode.OK, entityExists=False)
 
         # tag matches
-        request.in_headers.setRawHeaders("If-None-Match", ('"frob", "foo"',))
+        request.headers.setRawHeaders("If-None-Match", ('"frob", "foo"',))
         request.method="PUT"
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
         request.method="GET"
-        self.checkPreconditions(request, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
 
         # now with IMS, also:
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
         request.method="PUT"
-        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
         request.method="GET"
-        self.checkPreconditions(request, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
         
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
-        request.in_headers.removeHeader("If-Modified-Since")
+        request.headers.removeHeader("If-Modified-Since")
         
         
         # none match
-        request.in_headers.setRawHeaders("If-None-Match", ('"baz", "bob"',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-None-Match", ('"baz", "bob"',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
         # now with IMS, also:
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
         
-        request.in_headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        request.headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
-        request.in_headers.removeHeader("If-Modified-Since")
+        request.headers.removeHeader("If-Modified-Since")
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, True, responsecode.INTERNAL_SERVER_ERROR,
+        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
                                 initCode=responsecode.INTERNAL_SERVER_ERROR)
         
         # Weak tags okay for GET
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
-        request.in_headers.setRawHeaders("If-None-Match", ('W/"foo"',))
-        self.checkPreconditions(request, False, responsecode.NOT_MODIFIED)
+        out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
+        request.headers.setRawHeaders("If-None-Match", ('W/"foo"',))
+        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
 
         # Weak tags not okay for other methods
         request.method="PUT"
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
-        request.in_headers.setRawHeaders("If-None-Match", ('W/"foo"',))
-        self.checkPreconditions(request, True, responsecode.OK)
+        out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
+        request.headers.setRawHeaders("If-None-Match", ('W/"foo"',))
+        self.checkPreconditions(request, out_headers, True, responsecode.OK)
 
 
 class IfRangeTestCase(unittest.TestCase):
     def testIfRange(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
-
-        self.assertEquals(request.checkIfRange(), False)
-
-        request.in_headers.setRawHeaders("If-Range", ('"foo"',))
-        self.assertEquals(request.checkIfRange(), False)
+        response = TestResponse()
         
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        self.assertEquals(request.checkIfRange(), True)
+        self.assertEquals(http.checkIfRange(request, response), False)
 
-        request.in_headers.setRawHeaders("If-Range", ('"bar"',))
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        self.assertEquals(request.checkIfRange(), False)
-
-        request.in_headers.setRawHeaders("If-Range", ('W/"foo"',))
-        request.out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
-        self.assertEquals(request.checkIfRange(), False)
-
-        request.in_headers.setRawHeaders("If-Range", ('"foo"',))
-        request.out_headers.removeHeader("ETag")
-        self.assertEquals(request.checkIfRange(), False)
-
-        request.in_headers.setRawHeaders("If-Range", ('Sun, 02 Jan 2000 00:00:00 GMT',))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
-        self.assertEquals(request.checkIfRange(), True)
-
-        request.in_headers.setRawHeaders("If-Range", ('Sun, 02 Jan 2000 00:00:01 GMT',))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
-        self.assertEquals(request.checkIfRange(), False)
-
-        request.in_headers.setRawHeaders("If-Range", ('Sun, 01 Jan 2000 23:59:59 GMT',))
-        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
-        self.assertEquals(request.checkIfRange(), False)
-
-        request.in_headers.setRawHeaders("If-Range", ('Sun, 01 Jan 2000 23:59:59 GMT',))
-        request.out_headers.removeHeader("Last-Modified")
-        self.assertEquals(request.checkIfRange(), False)
+        request.headers.setRawHeaders("If-Range", ('"foo"',))
+        self.assertEquals(http.checkIfRange(request, response), False)
         
-        request.in_headers.setRawHeaders("If-Range", ('jwerlqjL#$Y*KJAN',))
-        self.assertEquals(request.checkIfRange(), False)
+        response.headers.setHeader("ETag", http_headers.ETag('foo'))
+        self.assertEquals(http.checkIfRange(request, response), True)
+
+        request.headers.setRawHeaders("If-Range", ('"bar"',))
+        response.headers.setHeader("ETag", http_headers.ETag('foo'))
+        self.assertEquals(http.checkIfRange(request, response), False)
+
+        request.headers.setRawHeaders("If-Range", ('W/"foo"',))
+        response.headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
+        self.assertEquals(http.checkIfRange(request, response), False)
+
+        request.headers.setRawHeaders("If-Range", ('"foo"',))
+        response.headers.removeHeader("ETag")
+        self.assertEquals(http.checkIfRange(request, response), False)
+
+        request.headers.setRawHeaders("If-Range", ('Sun, 02 Jan 2000 00:00:00 GMT',))
+        response.headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.assertEquals(http.checkIfRange(request, response), True)
+
+        request.headers.setRawHeaders("If-Range", ('Sun, 02 Jan 2000 00:00:01 GMT',))
+        response.headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.assertEquals(http.checkIfRange(request, response), False)
+
+        request.headers.setRawHeaders("If-Range", ('Sun, 01 Jan 2000 23:59:59 GMT',))
+        response.headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.assertEquals(http.checkIfRange(request, response), False)
+
+        request.headers.setRawHeaders("If-Range", ('Sun, 01 Jan 2000 23:59:59 GMT',))
+        response.headers.removeHeader("Last-Modified")
+        self.assertEquals(http.checkIfRange(request, response), False)
+        
+        request.headers.setRawHeaders("If-Range", ('jwerlqjL#$Y*KJAN',))
+        self.assertEquals(http.checkIfRange(request, response), False)
     
 
 
@@ -268,7 +275,7 @@ class LoopbackRelay(loopback.LoopbackRelay):
 class TestRequest(http.Request):
     def process(self):
         self.cmds = []
-        self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(self.in_headers.getAllRawHeaders())))
+        self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(self.headers.getAllRawHeaders())))
         
     def handleContentChunk(self, data):
         self.cmds.append(('contentChunk', data))
@@ -278,6 +285,33 @@ class TestRequest(http.Request):
         
     def connectionLost(self, reason):
         self.cmds.append(('connectionLost', reason))
+
+class TestResponse(object):
+    implements(iweb.IResponse)
+    
+    code = responsecode.OK
+    data = ""
+    headers = None
+    consumer = None
+    
+    def __init__(self, initialData=None):
+        self.headers = http_headers.Headers()
+        self.callback = defer.Deferred()
+        
+    def beginProducing(self, consumer):
+        self.consumer = consumer
+        if self.data:
+            self.consumer.write(self.data)
+        return self.callback
+
+    def write(self, data):
+        if self.consumer:
+            self.consumer.write(data)
+        else:
+            self.data += data
+
+    def finish(self):
+        self.callback.callback(None)
         
 class TestClient(protocol.Protocol):
     data = ""
@@ -363,18 +397,20 @@ class CoreHTTPTestCase(HTTPTests):
         
         cmds[0] += [('init', 'GET', '/', (0,9), ()), ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
-        
-        cxn.requests[0].out_headers.setRawHeaders("Yo", ("One", "Two"))
+
         cxn.requests[0].acceptData()
-        cxn.requests[0].write("")
+        response = TestResponse()
+        response.headers.setRawHeaders("Yo", ("One", "Two"))
+        cxn.requests[0].writeResponse(response)
+        response.write("")
         
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].write("Output")
+        response.write("Output")
         data += "Output"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].finish()
+        response.finish()
         self.compareResult(cxn, cmds, data)
         
         self.assertDone(cxn)
@@ -396,19 +432,21 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentChunk', 'Input'),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
-        
-        cxn.requests[0].out_headers.setRawHeaders("Yo", ("One", "Two"))
+
         cxn.requests[0].acceptData()
-        cxn.requests[0].write("")
+        response = TestResponse()
+        response.headers.setRawHeaders("Yo", ("One", "Two"))
+        cxn.requests[0].writeResponse(response)
+        response.write("")
         
         data += "HTTP/1.1 200 OK\r\nYo: One\r\nYo: Two\r\nConnection: close\r\n\r\n"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].write("Output")
+        response.write("Output")
         data += "Output"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].finish()
+        response.finish()
         self.compareResult(cxn, cmds, data)
         
         self.assertDone(cxn)
@@ -428,20 +466,22 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentChunk', 'Input'),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
-        
-        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("6", ))
-        cxn.requests[0].out_headers.setRawHeaders("Yo", ("One", "Two"))
+
         cxn.requests[0].acceptData()
-        cxn.requests[0].write("")
+        response0 = TestResponse()
+        response0.headers.setRawHeaders("Content-Length", ("6", ))
+        response0.headers.setRawHeaders("Yo", ("One", "Two"))
+        cxn.requests[0].writeResponse(response0)
+        response0.write("")
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 6\r\nYo: One\r\nYo: Two\r\nConnection: Keep-Alive\r\n\r\n"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].write("Output")
+        response0.write("Output")
         data += "Output"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].finish()
+        response0.finish()
         
         # Now for second request:
         cmds.append([])
@@ -449,13 +489,16 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[1].out_headers.setRawHeaders("Content-Length", ("0", ))
+        
         cxn.requests[1].acceptData()
-        cxn.requests[1].write("")
+        response1 = TestResponse()
+        response1.headers.setRawHeaders("Content-Length", ("0", ))
+        cxn.requests[1].writeResponse(response1)
+        response1.write("")
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
         self.compareResult(cxn, cmds, data)
-        cxn.requests[1].finish()
+        response1.finish()
         
         self.assertDone(cxn)
 
@@ -483,19 +526,21 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentComplete',)]
         
         self.compareResult(cxn, cmds, data)
-        
-        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("6", ))
+
         cxn.requests[0].acceptData()
-        cxn.requests[0].write("")
+        response0 = TestResponse()
+        response0.headers.setRawHeaders("Content-Length", ("6", ))
+        cxn.requests[0].writeResponse(response0)
+        response0.write("")
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\n"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].write("Output")
+        response0.write("Output")
         data += "Output"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[0].finish()
+        response0.finish()
         
         # Now the third request gets read:
         cmds.append([])
@@ -506,21 +551,26 @@ class CoreHTTPTestCase(HTTPTests):
 
         # Let's write out the third request before the second.
         # This should not cause anything to be written to the client.
-        cxn.requests[2].out_headers.setRawHeaders("Content-Length", ("5", ))
         cxn.requests[2].acceptData()
-        cxn.requests[2].write("Three")
-        cxn.requests[2].finish()
+        response2 = TestResponse()
+        response2.headers.setRawHeaders("Content-Length", ("5", ))
+        cxn.requests[2].writeResponse(response2)
+        
+        response2.write("Three")
+        response2.finish()
         
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[1].out_headers.setRawHeaders("Content-Length", ("3", ))
         cxn.requests[1].acceptData()
-        cxn.requests[1].write("Two")
+        response1 = TestResponse()
+        response1.headers.setRawHeaders("Content-Length", ("3", ))
+        cxn.requests[1].writeResponse(response1)
+        response1.write("Two")
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nTwo"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[1].finish()
+        response1.finish()
         
         # Fourth request shows up
         cmds.append([])
@@ -530,9 +580,11 @@ class CoreHTTPTestCase(HTTPTests):
         data += "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nThree"
         self.compareResult(cxn, cmds, data)
         
-        cxn.requests[3].out_headers.setRawHeaders("Content-Length", ("0",))
         cxn.requests[3].acceptData()
-        cxn.requests[3].finish()
+        response3 = TestResponse()
+        response3.headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[3].writeResponse(response3)
+        response3.finish()
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
         self.compareResult(cxn, cmds, data)
@@ -562,15 +614,17 @@ class CoreHTTPTestCase(HTTPTests):
         self.compareResult(cxn, cmds, data)
 
         cxn.requests[0].acceptData()
-        cxn.requests[0].write("Output")
+        response = TestResponse()
+        cxn.requests[0].writeResponse(response)
+        response.write("Output")
         data += "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nOutput\r\n"
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].write("blahblahblah")
+        response.write("blahblahblah")
         data += "C\r\nblahblahblah\r\n"
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].finish()
+        response.finish()
         data += "0\r\n\r\n"
         self.compareResult(cxn, cmds, data)
 
@@ -595,9 +649,11 @@ class CoreHTTPTestCase(HTTPTests):
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
-        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("6",))
-        cxn.requests[0].write("Output")
-        cxn.requests[0].finish()
+        response = TestResponse()
+        response.headers.setRawHeaders("Content-Length", ("6",))
+        cxn.requests[0].writeResponse(response)
+        response.write("Output")
+        response.finish()
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nOutput"
         self.compareResult(cxn, cmds, data)
@@ -644,8 +700,10 @@ class CoreHTTPTestCase(HTTPTests):
         self.compareResult(cxn, cmds, data)
 
         cxn.requests[0].acceptData()
-        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("0",))
-        cxn.requests[0].finish()
+        response = TestResponse()
+        response.headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[0].writeResponse(response)
+        response.finish()
         
         data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
 
@@ -793,9 +851,11 @@ class PipelinedErrorTestCase(ErrorTestCase):
         self.iterate(cxn)
         self.assertEquals(cxn.client.data, '')
         
-        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("0",))
         cxn.requests[0].acceptData()
-        cxn.requests[0].write('')
+        response = TestResponse()
+        response.headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[0].writeResponse(response)
+        response.write('')
         
         data = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
         self.iterate(cxn)
@@ -804,7 +864,7 @@ class PipelinedErrorTestCase(ErrorTestCase):
         # Reset the data so the checkError's startswith test can work right.
         cxn.client.data = ""
         
-        cxn.requests[0].finish()
+        response.finish()
         ErrorTestCase.checkError(self, cxn, code)
 
 
@@ -823,8 +883,14 @@ class SimpleFactory(http.HTTPFactory):
 
 class SimpleRequest(http.Request):
     def process(self):
-        self.code = 404
-        self.finish()
+        response = TestResponse()
+        if self.uri == "/error":
+            response.code=402
+        else:
+            response.code=404
+            response.write("URI %s unrecognized." % self.uri)
+        response.finish()
+        self.writeResponse(response)
         
     def handleContentChunk(self, data):
         pass
@@ -832,10 +898,11 @@ class SimpleRequest(http.Request):
     def handleContentComplete(self):
         pass
         
-class RealServerTest(unittest.TestCase):
+class TCPServerTest(unittest.TestCase):
     def setUp(self):
         factory=SimpleFactory()
         factory.requestFactory = SimpleRequest
+
         factory.testcase = self
         self.factory = factory
         self.connlost = False
@@ -853,17 +920,58 @@ class RealServerTest(unittest.TestCase):
         
     def testBasicWorkingness(self):
         out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port))))
+            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port), "tcp")))
         if code != 0:
             print "Error output: \n", err
         self.assertEquals(code, 0)
-        self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
 
     def testLingeringClose(self):
         out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port))))
+            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port), "tcp")))
         if code != 0:
             print "Error output: \n", err
         self.assertEquals(code, 0)
-        self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
+
+
+certPath = util.sibpath(__file__, "server.pem")
+from twisted.internet.ssl import DefaultOpenSSLContextFactory
+sCTX = DefaultOpenSSLContextFactory(certPath, certPath)
+
+class SSLServerTest(unittest.TestCase):
+    def setUp(self):
+        factory=SimpleFactory()
+        factory.requestFactory = SimpleRequest
+
+        factory.testcase = self
+        self.factory = factory
+        self.connlost = False
+        
+        self.socket = reactor.listenSSL(0, factory, sCTX)
+        self.port = self.socket.getHost().port
+
+    def tearDown(self):
+        # Make sure the listening port is closed
+        wait(defer.maybeDeferred(self.socket.stopListening))
+
+        # And make sure the established connection is, too
+        self.factory.conn.transport.loseConnection()
+        spinUntil(lambda: self.connlost)
+        
+    def testBasicWorkingness(self):
+        out,err,code = wait(
+            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port), "ssl")))
+        if code != 0:
+            print "Error output: \n", err
+        self.assertEquals(code, 0)
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
+
+    def testLingeringClose(self):
+        out,err,code = wait(
+            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port), "ssl")))
+        if code != 0:
+            print "Error output: \n", err
+        self.assertEquals(code, 0)
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
 

@@ -22,12 +22,12 @@ class Resource(object):
     """
 
     implements(iweb.IResource)
-    
-    server = None
 
+    addSlash = False
+    
     # Concrete HTTP interface
 
-    def locateChild(self, request, segments):
+    def locateChild(self, ctx, segments):
         """Return a tuple of (child, segments) representing the Resource
         below this after consuming the segments which are not returned.
         """
@@ -37,19 +37,22 @@ class Resource(object):
             r = iweb.IResource(w, None)
             if r:
                 return r, segments[1:]
-            return w(request), segments[1:]
+            return w(ctx), segments[1:]
 
         factory = getattr(self, 'childFactory', None)
         if factory is not None:
-            r = factory(request, segments[0])
+            r = factory(ctx, segments[0])
             if r:
                 return r, segments[1:]
      
         return None, []
-
-    def child_(self, request):
+    
+    def child_(self, ctx):
         """I'm how requests for '' (urls ending in /) get handled :)
         """
+        if self.addSlash and iweb.ICurrentSegments(ctx)[-1] != '':
+            request.redirect(request.URLPath().child(''))
+            return ''
         return self
         
     def putChild(self, path, child):
@@ -61,37 +64,50 @@ class Resource(object):
         """
         setattr(self, 'child_%s' % (path, ), child)
 
-    def render(self, request):
+    
+    def renderHTTP(self, context):
         """Render a given resource. See L{IResource}'s render method.
 
-        I delegate to methods of self with the form 'render_METHOD'
+        I delegate to methods of self with the form 'http_METHOD'
         where METHOD is the HTTP that was used to make the
-        request. Examples: render_GET, render_HEAD, render_POST, and
+        request. Examples: http_GET, http_HEAD, http_POST, and
         so on. Generally you should implement those methods instead of
         overriding this one.
 
-        render_METHOD methods are expected to return a string which
-        will be the rendered page, unless the return value is
-        twisted.web.server.NOT_DONE_YET, in which case it is this
-        class's responsibility to write the results to
-        request.write(data), then call request.finish().
-
-        Old code that overrides render() directly is likewise expected
-        to return a string or NOT_DONE_YET.
+        http_METHOD methods are expected to return a byte string which
+        will be the rendered page, or else a deferred that results
+        in a byte string.
         """
-        m = getattr(self, 'render_' + request.method, None)
+        m = getattr(self, 'http_' + iweb.IRequest(ctx).method, None)
         if not m:
-            from twisted.web.server import UnsupportedMethod
-            raise UnsupportedMethod(getattr(self, 'allowedMethods', ()))
-        return m(request)
+            raise error.MethodNotAllowed(getattr(self, 'allowedMethods', ()))
+        return m(ctx)
 
-    render_HEAD = property(lambda self: getattr(self, 'render_GET', None), doc="""\
-By default render_HEAD just renders the whole body (by calling render_GET),
-calculates the body size, and eats the body (does not send it to the client).
+    def http_HEAD(self, ctx):
+        """By default render_HEAD just renders the whole body (by calling render),
+        calculates the body size, and eats the body (does not send it to the client).
+        
+        Override this if you want to handle it differently.
+        """
+        self.rejectData()
+        self.render(ctx)
+        
+    def http_GET(self, ctx):
+        self.rejectData()
+        self.render(self, ctx)
 
-Override this if you want to handle it differently.
-""")
- 
+    def render(self, ctx):
+        """Your class should implement this method to do default page rendering.
+        """
+        raise NotImplementedError("Subclass must implement render method.")
+    
+class PostableResource(Resource):
+    def http_POST(self, ctx):
+        request = iweb.IRequest(ctx)
+        request.acceptData()
+        # do stuff with post content
+        self.render(self, ctx)
+    
 components.backwardsCompatImplements(Resource)
 
 class LeafResource(Resource):

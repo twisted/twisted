@@ -72,6 +72,102 @@ class StringTransport:
 # response codes that must have empty bodies
 NO_BODY_CODES = (204, 304)
 
+
+def checkPreconditions(request, response, entityExists=True):
+    """Check to see if this request passes the conditional checks specified
+    by the client. As a side-effect, may modify my response code to
+    L{NOT_MODIFIED} or L{PRECONDITION_FAILED}.
+
+    Call this function after setting the ETag and Last-Modified
+    output headers, but before actually proceeding with request
+    processing.
+
+    This examines the appropriate request headers for conditionals,
+    (If-Modified-Since, If-Unmodified-Since, If-Match, If-None-Match,
+    or If-Range), compares with the existing response headers and
+    and then sets the response code as necessary.
+
+    @param entityExists: Set to False if the entity in question doesn't
+             yet exist. Necessary for PUT support with 'If-None-Match: *'.
+    @raise: HTTPError: Raised when the preconditions fail, in order to
+             abort processing and emit an error page.
+
+    """
+    # if the code is some sort of error code, don't do anything
+    if not ((response.code >= 200 and response.code <= 299)
+            or response.code == responsecode.PRECONDITION_FAILED):
+        return
+
+    etag = response.headers.getHeader("etag")
+    lastModified = response.headers.getHeader("last-modified")
+
+    def matchETag(tags, allowWeak):
+        if entityExists and '*' in tags:
+            return True
+        if etag is None:
+            return False
+        return ((allowWeak or not etag.weak) and
+                ([etagmatch for etagmatch in tags if etag.match(etagmatch, strongCompare=not allowWeak)]))
+
+    # First check if-match/if-unmodified-since
+    # If either one fails, we return PRECONDITION_FAILED
+    match = request.headers.getHeader("if-match")
+    if match:
+        if not matchETag(match, False):
+            raise error.Error(responsecode.PRECONDITION_FAILED)
+
+    unmod_since = request.headers.getHeader("if-unmodified-since")
+    if unmod_since:
+        if not lastModified or lastModified > unmod_since:
+            raise error.Error(responsecode.PRECONDITION_FAILED)
+
+    # Now check if-none-match/if-modified-since.
+    # This bit is tricky, because of the requirements when both IMS and INM
+    # are present. In that case, you can't return a failure code
+    # unless *both* checks think it failed.
+    # Also, if the INM check succeeds, ignore IMS, because INM is treated
+    # as more reliable.
+
+    # I hope I got the logic right here...the RFC is quite poorly written
+    # in this area. Someone might want to verify the testcase against
+    # RFC wording.
+
+    # If IMS header is later than current time, ignore it.
+    notModified = None
+    ims = request.headers.getHeader('if-modified-since')
+    if ims:
+        notModified = (ims < time.time() and lastModified and lastModified <= ims)
+
+
+    inm = request.headers.getHeader("if-none-match")
+    if inm:
+        if request.method in ("HEAD", "GET"):
+            # If it's a range request, don't allow a weak ETag, as that
+            # would break. 
+            canBeWeak = not request.headers.hasHeader('Range')
+            if notModified != False and matchETag(inm, canBeWeak):
+                raise error.Error(responsecode.NOT_MODIFIED)
+        else:
+            if notModified != False and matchETag(inm, False):
+                raise error.Error(responsecode.PRECONDITION_FAILED)
+    else:
+        if notModified == True:
+            raise error.Error(responsecode.NOT_MODIFIED)
+
+def checkIfRange(request, response):
+    """Checks for the If-Range header, and if it exists, checks if the
+    test passes. Returns true if the server should return partial data."""
+
+    ifrange = request.headers.getHeader("if-range")
+
+    if ifrange is None:
+        return False
+    if isinstance(ifrange, http_headers.ETag):
+        return ifrange.match(response.headers.getHeader("etag"), strongCompare=True)
+    else:
+        return ifrange == response.headers.getHeader("last-modified")
+
+
 class Request(object):
     """A HTTP request.
 
@@ -91,30 +187,13 @@ class Request(object):
     implements(iweb.IRequest, interfaces.IConsumer)
 
     known_expects = ('100-continue',)
-    _code = responsecode.OK
     startedWriting = False
-    sentLength = 0 # content bytes sent to client
     
     _acceptedData = False
     
     _forceSSL = False
     
-    def _setCode(self, code):
-        if self.startedWriting:
-            raise AttributeError("The response code is immutable as it has already been sent.")
-        self._code = code
-    def _getCode(self):
-        return self._code
-
-    code = property(_getCode, _setCode)
-    
-    def createFromRequest(cls, other):
-        result = cls(other.chanRequest, other.command, other.path, other.clientproto, other.in_headers)
-        other.nextRequest = result
-        result.prevRequest = other
-    createFromRequest = classmethod(createFromRequest)
-    
-    def __init__(self, chanRequest, command, path, version, in_headers):
+    def __init__(self, chanRequest, command, path, version, headers):
         """
         @param chanRequest: the channel request we're associated with.
         """
@@ -123,13 +202,12 @@ class Request(object):
         self.uri = path
         self.clientproto = version
         
-        self.out_headers = http_headers.Headers()
-        self.in_headers = in_headers
+        self.headers = headers
 
         self.process()
     
     def process(self):
-        """Called by __init__ to let you process the request.
+        """called by __init__ to let you process the request.
         
         Can be overridden by a subclass to do something useful."""
         pass
@@ -157,7 +235,7 @@ class Request(object):
     # writing to.
 
     def checkExpect(self):
-        expects = self.in_headers.getHeader('Expect', ())
+        expects = self.headers.getHeader('Expect', ())
         for expect in expects:
             if expect not in self.known_expects:
                 raise error.Error(responsecode.EXPECTATION_FAILED)
@@ -173,179 +251,42 @@ class Request(object):
         
         """
         self._acceptedData = True
-        if not self.startedWriting and '100-continue' in self.in_headers.getHeader('Expect', ()):
+        if not self.startedWriting and '100-continue' in self.headers.getHeader('Expect', ()):
             self.chanRequest.writeIntermediateResponse(responsecode.CONTINUE)
             
-    def finish(self):
+    def _finish(self, x):
         """We are finished writing data."""
-        if not self.startedWriting:
-            # write headers
-            self.write('')
-        
         # log request
         log.msg(type=iweb.IRequest, object=self)
-        
         self.chanRequest.finish()
 
-    def write(self, data):
+    def _error(self, reason):
+        log.err(reason)
+        self.chanRequest.abortConnection()
+        
+    def writeResponse(self, response):
         """
-        Write some data as a result of an HTTP request.  The first
-        time this is called, it writes out response headers.
+        Write a response.
         """
         if not self.startedWriting:
             if not self._acceptedData:
                 self.chanRequest.persistent = False
-                if self._code < 300:
+                if response.code < 300:
                     warnings.warn("Warning! Didn't call acceptData, but responded with success code.", stacklevel=2)
             
             self.startedWriting = True
-            self.out_headers.makeImmutable()
-            self.chanRequest.writeHeaders(self._code, self.out_headers)
+            self.chanRequest.writeHeaders(response.code, response.headers)
         
         # if this is a "HEAD" request, we shouldn't return any data
         if self.method == "HEAD":
-            self.write = lambda data: None
             return
-
+        
         # for certain result codes, we should never return any data
-        if self._code in NO_BODY_CODES:
-            self.write = lambda data: None
+        if response.code in NO_BODY_CODES:
             return
-        
-        self.sentLength = self.sentLength + len(data)
-        if data:
-            self.chanRequest.writeData(data)
 
-    def registerProducer(self, producer, streaming):
-        self.chanRequest.registerProducer(producer, streaming)
-
-    def unregisterProducer(self):
-        self.chanRequest.unregisterProducer()
-    
-    def checkPreconditions(self, entityExists=True):
-        """Check to see if this request passes the conditional checks specified
-        by the client. As a side-effect, may modify my response code to
-        L{NOT_MODIFIED} or L{PRECONDITION_FAILED}.
-        
-        Call this function after setting the ETag and Last-Modified
-        output headers, but before actually proceeding with request
-        processing.
-        
-        This examines the appropriate request headers for conditionals,
-        (If-Modified-Since, If-Unmodified-Since, If-Match, If-None-Match,
-        or If-Range), compares with the existing response headers and
-        and then sets the response code as necessary.
-
-        @param entityExists: Set to False if the entity in question doesn't
-                 yet exist. Necessary for PUT support with 'If-None-Match: *'.
-        @raise: HTTPError: Raised when the preconditions fail, in order to
-                 abort processing and emit an error page.
-                 
-        """
-        # if the code is some sort of error code, don't do anything
-        if not ((self._code >= 200 and self._code <= 299)
-                or self._code == responsecode.PRECONDITION_FAILED):
-            return
-        
-        etag = self.out_headers.getHeader("etag")
-        lastModified = self.out_headers.getHeader("last-modified")
-        
-        def matchETag(tags, allowWeak):
-            if entityExists and '*' in tags:
-                return True
-            if etag is None:
-                return False
-            return ((allowWeak or not etag.weak) and
-                    ([etagmatch for etagmatch in tags if etag.match(etagmatch, strongCompare=not allowWeak)]))
-        
-        # First check if-match/if-unmodified-since
-        # If either one fails, we return PRECONDITION_FAILED
-        match = self.in_headers.getHeader("if-match")
-        if match:
-            if not matchETag(match, False):
-                raise error.Error(responsecode.PRECONDITION_FAILED)
-
-        unmod_since = self.in_headers.getHeader("if-unmodified-since")
-        if unmod_since:
-            if not lastModified or lastModified > unmod_since:
-                raise error.Error(responsecode.PRECONDITION_FAILED)
-
-        # Now check if-none-match/if-modified-since.
-        # This bit is tricky, because of the requirements when both IMS and INM
-        # are present. In that case, you can't return a failure code
-        # unless *both* checks think it failed.
-        # Also, if the INM check succeeds, ignore IMS, because INM is treated
-        # as more reliable.
-        
-        # I hope I got the logic right here...the RFC is quite poorly written
-        # in this area. Someone might want to verify the testcase against
-        # RFC wording.
-        
-        # If IMS header is later than current time, ignore it.
-        notModified = None
-        ims = self.in_headers.getHeader('if-modified-since')
-        if ims:
-            notModified = (ims < time.time() and lastModified and lastModified <= ims)
-        
-        
-        inm = self.in_headers.getHeader("if-none-match")
-        if inm:
-            if self.method in ("HEAD", "GET"):
-                # If it's a range request, don't allow a weak ETag, as that
-                # would break. 
-                canBeWeak = not self.in_headers.hasHeader('Range')
-                if notModified != False and matchETag(inm, canBeWeak):
-                    raise error.Error(responsecode.NOT_MODIFIED)
-            else:
-                if notModified != False and matchETag(inm, False):
-                    raise error.Error(responsecode.PRECONDITION_FAILED)
-        else:
-            if notModified == True:
-                raise error.Error(responsecode.NOT_MODIFIED)
-
-    def checkIfRange(self):
-        """Checks for the If-Range header, and if it exists, checks if the
-        test passes. Returns true if the server should return partial data."""
-        
-        ifrange = self.in_headers.getHeader("if-range")
-        
-        if ifrange is None:
-            return False
-        if isinstance(ifrange, http_headers.ETag):
-            return ifrange.match(self.out_headers.getHeader("etag"), strongCompare=True)
-        else:
-            return ifrange == self.out_headers.getHeader("last-modified")
-
-# FIXME: these last 3 methods don't belong here.
-
-    def setHost(self, host, port, ssl=0):
-        """Change the host and port the request thinks it's using.
-
-        This method is useful for working with reverse HTTP proxies (e.g.
-        both Squid and Apache's mod_proxy can do this), when the address
-        the HTTP client is using is different than the one we're listening on.
-
-        For example, Apache may be listening on https://www.example.com, and then
-        forwarding requests to http://localhost:8080, but we don't want HTML produced
-        by Twisted to say 'http://localhost:8080', they should say 'https://www.example.com',
-        so we do::
-
-           request.setHost('www.example.com', 443, ssl=1)
-
-        This method is experimental.
-        """
-        self._forceSSL = ssl
-        self.in_headers.setHeader("host", host)
-        self.host = address.IPv4Address("TCP", host, port)
-
-    def getClientIP(self):
-        if isinstance(self.client, address.IPv4Address):
-            return self.client.host
-        else:
-            return None
-
-    def isSecure(self):
-        return self._forceSSL or components.implements(self.chanRequest.transport, interfaces.ISSLTransport)
+        d = response.beginProducing(self.chanRequest)
+        d.addCallback(self._finish).addErrback(self._error)
 
 components.backwardsCompatImplements(Request)
 
@@ -670,7 +611,7 @@ class HTTPChannelRequest:
         self.transport.writeSequence(l)
         
     
-    def writeData(self, data):
+    def write(self, data):
         if self.chunkedOut:
             self.transport.writeSequence(toChunk(data))
         else:
@@ -730,7 +671,7 @@ class HTTPChannelRequest:
         
         self.abortConnection(closeWrite=False)
         self.writeHeaders(errorcode, headers)
-        self.writeData(text)
+        self.write(text)
         self.finish()
         raise AbortedException
     
@@ -917,6 +858,8 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
         
     def _startNextRequest(self):
         # notify next request, if present, it can start writing
+        del self.requests[0]
+        
         if self.requests:
             self.requests[0].noLongerQueued()
             
@@ -936,8 +879,10 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
     def requestWriteFinished(self, request, persistent):
         """Called by first request in queue when it is done."""
         if request != self.requests[0]: raise TypeError
-        
-        del self.requests[0]
+
+        # Don't del because we haven't finished cleanup, so,
+        # don't want queue len to be 0 yet.
+        self.requests[0] = None
         
         if persistent:
             # Do this in the next reactor loop so as to
@@ -1008,7 +953,8 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(None)
         # Tell all requests to abort.
         for request in self.requests:
-            request.connectionLost(reason)
+            if request is not None:
+                request.connectionLost(reason)
 
 
 class HTTPFactory(protocol.ServerFactory):
@@ -1198,3 +1144,38 @@ class HTTPFactory(protocol.ServerFactory):
 #         lastModified = self.out_headers.getHeader('Last-Modified')
 #         if not lastModified or (lastModified < when):
 #             self.out_headers.setHeader('Last-Modified', when)
+
+
+
+
+
+# # FIXME: these last 3 methods don't belong here.
+
+#     def setHost(self, host, port, ssl=0):
+#         """Change the host and port the request thinks it's using.
+
+#         This method is useful for working with reverse HTTP proxies (e.g.
+#         both Squid and Apache's mod_proxy can do this), when the address
+#         the HTTP client is using is different than the one we're listening on.
+
+#         For example, Apache may be listening on https://www.example.com, and then
+#         forwarding requests to http://localhost:8080, but we don't want HTML produced
+#         by Twisted to say 'http://localhost:8080', they should say 'https://www.example.com',
+#         so we do::
+
+#            request.setHost('www.example.com', 443, ssl=1)
+
+#         This method is experimental.
+#         """
+#         self._forceSSL = ssl
+#         self.in_headers.setHeader("host", host)
+#         self.host = address.IPv4Address("TCP", host, port)
+
+#     def getClientIP(self):
+#         if isinstance(self.client, address.IPv4Address):
+#             return self.client.host
+#         else:
+#             return None
+
+#     def isSecure(self):
+#         return self._forceSSL or components.implements(self.chanRequest.transport, interfaces.ISSLTransport)

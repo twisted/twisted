@@ -54,6 +54,11 @@ class ICurrentSegments(components.Interface):
 
 
 # http.py interfaces
+class IResponse(components.Interface):
+    code = Attribute("The HTTP response code")
+    headers = Attribute("A http_headers.Headers instance of headers to send")
+    data = Attribute("A stream.IStream")
+
 class IRequest(components.Interface):
     """I'm a request for a web resource
     First draft of public interface.
@@ -85,7 +90,6 @@ class IRequest(components.Interface):
     startedWriting = Attribute("")
     out_headers = Attribute("")
     sentLength = Attribute("")
-    code = Attribute("")
 
 class IOldRequest(components.Interface):
     """I'm an old request, completely unspecified. :("""
@@ -136,7 +140,7 @@ class IChanRequest(components.Interface):
         """
         pass
         
-    def writeData(data):
+    def write(data):
         """Write some data.
 
         @param data: the data bytes
