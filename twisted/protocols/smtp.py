@@ -430,7 +430,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
 
     def greeting(self):
-        return '%s Spammers beware, your ass is on fire' % (self.host,)
+        return '%s NO UCE NO UBE NO RELAY PROBES ESMTP' % (self.host,)
 
     def connectionMade(self):
         self.sendCode(220, self.greeting())
