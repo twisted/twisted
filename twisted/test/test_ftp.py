@@ -705,6 +705,19 @@ class FTPFileListingTests(unittest.TestCase):
         self.failUnless(file['date'] == 'Jan 29 03:26', 'misparsed fileitem')
         self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
 
+    def testYear(self):
+        # This example derived from bug description in issue 514.
+        fileList = ftp.FTPFileListProtocol()
+        class PrintLine(protocol.Protocol):
+            def connectionMade(self):
+                self.transport.write('-rw-r--r--   1 root     other        531 Jan 29 2003 README\n')
+                self.transport.loseConnection()
+        loopback.loopback(PrintLine(), fileList)
+        file = fileList.files[0]
+        self.failUnless(file['size'] == 531, 'misparsed fileitem')
+        self.failUnless(file['date'] == 'Jan 29 2003', 'misparsed fileitem')
+        self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
+
 class FTPClientTests(unittest.TestCase):
     def testFailedRETR(self):
         try:
