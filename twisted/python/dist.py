@@ -2,16 +2,30 @@
 Distutils convenience functionality.
 """
 
-import sys, os
+import sys, os, types
 from distutils import sysconfig
-from distutils.command import build_scripts, install_data, build_ext
+from distutils.command import build_scripts, install_data, build_ext, build_py
 from distutils.errors import CompileError
+from distutils import core
+
+
+def setup(**kw):
+    if 'ext_modules' not in kw:
+        kw['ext_modules'] = [True] # distutils is so lame
+    if 'detectExtensions' in kw:
+        dE = kw.pop('detectExtensions')
+        def my_build_ext(d):
+            bet = build_ext_twisted(d)
+            bet.detectExtensions = types.MethodType(dE, bet, build_ext_twisted)
+            return bet
+        kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
+    return core.setup(**kw)
 
 
 # Names that are exluded from globbing results:
 EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
                  "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~"]
+EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
 
 import glob, fnmatch
 
@@ -27,13 +41,18 @@ def _filterNames(names):
                  if (not fnmatch.fnmatch(n, pattern)) and (not n.endswith('.py'))]
     return names
 
-def getDataFiles(dname):
+def getDataFiles(dname, ignore=None):
+    ignore = ignore or []
     result = []
     for directory, subdirectories, filenames in os.walk(dname):
         resultfiles = []
         for exname in EXCLUDE_NAMES:
             if exname in subdirectories:
                 subdirectories.remove(exname)
+        for ig in ignore:
+            if ig in subdirectories:
+                print "skipping", ig
+                subdirectories.remove(ig)
         for filename in _filterNames(filenames):
             resultfiles.append(filename)
         if resultfiles:
@@ -41,8 +60,11 @@ def getDataFiles(dname):
                                        for filename in resultfiles]))
     return result
 
-def getPackages(dname, pkgname=None, results=None):
+def getPackages(dname, pkgname=None, results=None, ignore=None):
     bname = os.path.basename(dname)
+    ignore = ignore or []
+    if bname in ignore:
+        return []
     if results is None:
         results = []
     if pkgname is None:
@@ -52,7 +74,8 @@ def getPackages(dname, pkgname=None, results=None):
     if '__init__.py' in subfiles:
         results.append(pkgname + [bname])
         for subdir in filter(os.path.isdir, abssubfiles):
-            getPackages(subdir, pkgname + [bname], results)
+            getPackages(subdir, pkgname=pkgname + [bname],
+                        results=results, ignore=ignore)
     res = ['.'.join(result) for result in results]
     return res
 
@@ -103,7 +126,6 @@ class install_data_twisted(install_data.install_data):
         )
         install_data.install_data.finalize_options(self)
 
-
 class build_ext_twisted(build_ext.build_ext):
     """
     Allow subclasses to easily detect and customize Extensions to
@@ -120,7 +142,7 @@ class build_ext_twisted(build_ext.build_ext):
         else:
             self.define_macros = []
 
-        self.extensions = self.detectModules() or []
+        self.extensions = self.detectExtensions() or []
         build_ext.build_ext.build_extensions(self)
 
     def _remove_conftest(self):
