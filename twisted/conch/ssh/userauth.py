@@ -34,6 +34,7 @@ class SSHUserAuthServer(service.SSHService):
     name = 'ssh-userauth'
     loginTimeout = 10 * 60 * 60 # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20 # number of attempts to allow before a disconnect
+    passwordDelay = 1 # number of seconds to delay on a failed password
     protocolMessages = None # set later
     interfaceToMethod = {
         credentials.ISSHPrivateKey : 'publickey',
@@ -153,7 +154,12 @@ class SSHUserAuthServer(service.SSHService):
     def auth_password(self, packet):
         password = getNS(packet[1:])[0]
         c = credentials.UsernamePassword(self.user, password)
-        return self.portal.login(c, None, None)
+        return self.portal.login(c, None, None).addErrback(self._ebPassword)
+
+    def _ebPassword(self, f):
+        d = defer.Deferred()
+        reactor.callLater(self.passwordDelay, lambda d,f:d.callback(f), d, f)
+        return d
 
     def auth_keyboard_interactive(self, packet):
         if hasattr(self, '_pamDeferred'):
@@ -334,7 +340,10 @@ class SSHUserAuthClient(service.SSHService):
         However, this is factored out so that it can use alternate methods,
         such as a key agent.
         """
-        return self.getPrivateKey().addCallback(self._cbSignData, signData)
+        key = self.getPrivateKey()
+        if not key:
+            return
+        return key.addCallback(self._cbSignData, signData)
 
     def _cbSignData(self, privateKey, signData):
         return keys.signData(privateKey, signData)
