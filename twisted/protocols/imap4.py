@@ -132,21 +132,18 @@ class IMAP4Server(basic.LineReceiver):
         self.challengers = {}
         self.CAPABILITIES = self.CAPABILITIES.copy()
 
-    def registerChallenger(self, name, chal):
+    def registerChallenger(self, chal):
         """Register a new form of authentication
 
         Challengers registered here will be listed as available to the client
         in the CAPABILITY response.
 
-        @type name: C{str}
-        @param name: The authentication type to associate
-
         @type chal: Implementor of C{IServerAuthentication}
         @param chal: The object to use to perform the client
         side of this authentication scheme.
         """
-        self.challengers[name.upper()] = chal
-        self.CAPABILITIES.setdefault('AUTH', []).append(name.upper())
+        self.challengers[chal.getName()] = chal
+        self.CAPABILITIES.setdefault('AUTH', []).append(chal.getName())
 
     def connectionMade(self):
         self.tags = {}
@@ -171,7 +168,7 @@ class IMAP4Server(basic.LineReceiver):
                 self.setLineMode(passon)
 
     def lineReceived(self, line):
-        # print 'S: ' + line
+        print 'S: ' + line
         args = line.split(None, 2)
         rest = None
         if self._pendingLiteral:
@@ -210,7 +207,8 @@ class IMAP4Server(basic.LineReceiver):
         return getattr(self, '_'.join((self.state, cmd.upper())), None)
 
     def sendServerGreeting(self):
-        self.sendPositiveResponse(message=self.IDENT)
+        msg = '[CAPABILITY %s] %s' % (' '.join(self.listCapabilities()), self.IDENT)
+        self.sendPositiveResponse(message=msg)
 
     def sendBadResponse(self, tag = None, message = ''):
         self._respond('BAD', tag, message)
@@ -243,14 +241,17 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendLine(' '.join((tag, state, message)))
 
-    def unauth_CAPABILITY(self, tag, args):
-        caps = 'IMAP4rev1'
+    def listCapabilities(self):
+        caps = ['IMAP4rev1']
         for c, v in self.CAPABILITIES.items():
             if v:
-                caps = ' '.join([caps] + [('%s=%s' % (c, cap)) for cap in v])
+                caps.extend([('%s=%s' % (c, cap)) for cap in v])
             else:
-                caps = ' '.join((caps, c))
-        self.sendUntaggedResponse('CAPABILITY ' + caps)
+                caps.append(c)
+        return caps
+
+    def unauth_CAPABILITY(self, tag, args):
+        self.sendUntaggedResponse('CAPABILITY ' + ' '.join(self.listCapabilities()))
         self.sendPositiveResponse(tag, 'CAPABILITY completed')
 
     auth_CAPABILITY = unauth_CAPABILITY
@@ -2180,6 +2181,12 @@ def collapseNestedLists(items):
 class AuthenticationError(IMAP4Exception): pass
 
 class IServerAuthentication(components.Interface):
+    def getName(self):
+        """Return an identifier associated with this Authentication scheme.
+        
+        @rtype: C{str}
+        """
+
     def generateChallenge(self):
         """Create a challenge string
 
@@ -2204,6 +2211,12 @@ class IServerAuthentication(components.Interface):
         """
 
 class IClientAuthentication(components.Interface):
+    def getName(self):
+        """Return an identifier associated with this authentication scheme.
+        
+        @rtype: C{str}
+        """
+
     def challengeResponse(self, secret, challenge):
         """Generate a challenge response string"""
 
@@ -2217,6 +2230,9 @@ class CramMD5ServerAuthenticator:
         if users is None:
             users = {}
         self.users = users
+
+    def getName(self):
+        return "CRAM-MD5"
 
     def generateChallenge(self):
         # The data encoded in the first ready response contains an
@@ -2252,6 +2268,9 @@ class CramMD5ClientAuthenticator:
 
     def __init__(self, user):
         self.user = user
+
+    def getName(self):
+        return "CRAM-MD5"
 
     def challengeResponse(self, secret, challenge):
         chal = base64.decodestring(challenge)
