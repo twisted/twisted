@@ -12,7 +12,7 @@ fi
 templ=doc/howto/template.tpl
 if sh -c 'which python2.2 > /dev/null'; then PYTHON=2.2; fi
 if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
-LORE="python$PYTHON ./bin/lore"
+LORE="python$PYTHON ./bin/lore/lore"
 echo "Man-->Lore"
 $LORE -p --input man --output lore --config ext=-man.xhtml doc/man/*.1
 for doc in doc doc/man doc/howto doc/howto/tutorial doc/howto/policy doc/specifications doc/vision; do
