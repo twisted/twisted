@@ -543,9 +543,14 @@ class FTP(basic.LineReceiver):
 
     def ftp_CWD(self, params):
         try:
+            # cleanup backslashes and multiple foreslashes
+            params = re.sub(r'[\\]{2,}?', '/', params)
+            params = re.sub(r'[/]{2,}?','/', params)
             self.shell.cwd(params)
         except FileNotFoundException, e:
             self.reply(FILE_NOT_FOUND, e)
+        except PathBelowTLDException, e:
+            self.reply(PERMISSION_DENIED, e)
         else:
             self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
@@ -682,10 +687,10 @@ class IFTPShell(components.Interface):
 class FTPAnonymousShell(object):
     __implements__ = (IFTPShell,)
 
-    user = None         # user name
-    clientwdList = []   # list of elements in the client working directory
-    tldList = []        # list of elements in the client top level directory
-    debug = True
+    user     = None         # user name
+    clientwd = None
+    tld      = None
+    debug    = True
 
     # basically, i'm thinking of the paths as a list of path elements
     #
@@ -694,87 +699,35 @@ class FTPAnonymousShell(object):
     # server absolute path = a full absolute path on the filesystem
     # client relative path = a path relative to the client's working directory
 
-    def _pathToElementList(self, path):
-        # cleanup backslashes and multiple foreslashes
-        path = re.sub(r'[\\]{2,}?', '/', path)
-        path = re.sub(r'[/]{2,}?','/', path)
-
-        # since '/'.split('/') will return ['','']
-        # we want to make sure that leading and trailing slashes
-        
-        # list of items in the requested path
-        alist = path.split('/')          
-        import pdb;pdb.set_trace() 
-        return alist
-
-    def _getclientwd(self):
-        return '/' + os.sep.join(self.clientwdList)
-
-    def _setclientwd(self, path):
-        self.clientwdList = self._pathToElementList(path)
-        if self.debug:
-            log.msg("clientwd elements: %s" % self.clientwdList)
-
-    clientwd = property(_getclientwd, _setclientwd)
-
-    def _getTld(self):
-        return os.sep.join(self.tldList)
-
-    def _setTld(self, path):
-        self.tldList = self._pathToElementList(path)
-        if self.debug:
-            log.msg("tld elements: %s" % self.tldList)
-
-    tld = property(_getTld, _setTld)
-
-    def _getClientNormAbsPathList(self, path):
-        '''converts a client path into a 
-        normalized client-absolute list of path elements'''
-        reqpathlist = self._pathToElementList(path)
-
-        # TODO: this has to check for the leading '/'
-        if reqpathlist[0] != '':                        # if this is a client absolute path
-            reqpathlist = self.clientwdList + reqpathlist    # put clientwd path items in front of the requested path list
-        else:                                           # if this is a client relative path
-            del reqpathlist[0]                          # remove the ''
- 
-        rqCliAbsPath = []                           # the requested client-absolute path 
-        while len(reqpathlist) != 0:                # while there are still elements to pop
-            elem = reqpathlist.pop()
-            if elem == '..':
-                if len(rqCliAbsPath) == 0:          # if we're already at the tld
-                    raise RequestBelowTLDException()
-                else:
-                    rqCliAbsPath.pop()              # pop the last element off the rqCliAbsPath list
-            elif elem == '.':                       # ignore current directory '.'
-                continue
-            else:
-                rqCliAbsPath.append(elem)           # add element to the list
-
-        return rqCliAbsPath
-
-    def _getClientNormAbsPath(self, path):
-        '''converts a clent path into a normalized client-absolute path string'''
-        pass
-
     def pwd(self):
         return self.clientwd
 
+    def myjoin(self, lpath, rpath):
+        if lpath[-1] == os.sep:
+            lpath = lpath[:-1]
+        if rpath[0] == os.sep:
+            rpath = rpath[1:]
+        return "%s/%s" % (lpath, rpath)
+
+
+    def mapCPathToSPath(self, rpath):
+        if rpath[0] != '/':      # if this is not an absolute path
+            # add the clients working directory to the requested path
+            mappedClientPath = self.myjoin(self.clientwd, rpath) 
+        # next add the client's top level directory to the requested path
+        mappedServerPath = self.myjoin(self.tld, mappedClientPath)
+        return (os.path.normpath(mappedClientPath), os.path.normpath(mappedServerPath))
+ 
     def cwd(self, path):
-        # that's requested-server-absolute-path-list of elements
-        rqCPList = self._getClientNormAbsPathList(path)
-        rqSrvAbsPathList = self.tldList + rqCPList
-        import pdb;pdb.set_trace() 
-
-        # convert rqSrvAbsPathList into a path we can hand to os.path.isdir 
-        # and test to see that it exists
-        rqSrvAbsPath = os.sep.join(rqSrvAbsPathList)
-        if os.path.isdir(rqSrvAbsPath):
-            # it it exists, update the client's working directory
-            self.clientwdList = rqCliAbsPathList
+        cpath, spath = self.mapCPathToSPath(path)
+        common = os.path.commonprefix([self.tld, spath])
+        if common != self.tld:
+            raise PathBelowTLDException('Cannot access below / directory')
+        if os.path.exists(spath) and os.path.isdir(spath):
+            self.clientwd = cpath
         else:
-            raise FileNotFoundException("%s doesn't exist" % rqSrvAbsPath)
-
+            raise FileNotFoundException(cpath)
+       
     def cdup(self):
         self.cwd('..')
 
@@ -845,7 +798,7 @@ class FTPRealm:
             if avatarId == checkers.ANONYMOUS:
                 avatar = FTPAnonymousShell()
                 avatar.tld = self.ANONYMOUS_DIR
-                avatar.clientwdList = ['']
+                avatar.clientwd = '/'
                 avatar.user = 'anonymous'
                 avatar.logout = None
             return IFTPShell, avatar, avatar.logout
