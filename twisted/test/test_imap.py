@@ -688,7 +688,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addErrback(self._ebGeneral)
         self.loopback()
         
-        self.assertEquals(self.namespaceArgs, (('', '/'), (), ()))
+        self.assertEquals(self.namespaceArgs, [[['', '/']], [], []])
 
     def testSelect(self):
         SimpleServer.theAccount.addMailbox('test-mailbox')

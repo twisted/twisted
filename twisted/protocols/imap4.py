@@ -1954,9 +1954,13 @@ class IMAP4Client(basic.LineReceiver):
         This command is allowed in the Authenticated and Selected states.
         
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a three-tuple of
-        lists containing two-tuples of strings representing namespace names
-        and namespace hierarchical delimiters.
+        @return: A deferred whose callback is invoked with namespace 
+        information.  An example of this information is:
+        
+            [[['', '/']], [], []]
+        
+        which indicates a single personal namespace called '' with '/'
+        as its hierarchical delimiter, and no shared or user namespaces.
         """
         cmd = 'NAMESPACE'
         resp = ('NAMESPACE',)
@@ -1971,9 +1975,9 @@ class IMAP4Client(basic.LineReceiver):
                 if parts[0] == 'NAMESPACE':
                     # XXX UGGG parsing hack :(
                     r = parseNestedParens('(' + parts[1] + ')')[0]
-                    return tuple([e and tuple(e) or () for e in r])
+                    return [e or [] for e in r]
         log.err("No NAMESPACE response to NAMESPACE command")
-        return ((),) * 3
+        return [[], [], []]
 
     def select(self, mailbox):
         """Select a mailbox
@@ -3741,7 +3745,7 @@ class MemoryAccount(perspective.Perspective):
     ## INamespacePresenter
     ##
     def getPersonalNamespaces(self):
-        return ["", "/"]
+        return [["", "/"]]
     
     def getSharedNamespaces(self):
         return None
