@@ -67,9 +67,10 @@ class BaseTestResource(resource.Resource):
     addSlash = True
 
     def __init__(self, children=[]):
-        """ children is a list of ('path', resrc) tuples
         """
-
+        @type children: C{list} of C{tuple}
+        @param children: a list of ('path', resource) tuples
+        """
         for i in children:
             self.putChild(i[0], i[1])
 
@@ -81,6 +82,11 @@ class BaseTestResource(resource.Resource):
 
 
 class BaseCase(unittest.TestCase):
+    """
+    Base class for test cases that involve testing the result
+    of arbitrary HTTP(S) queries.
+    """
+    
     method = 'GET'
     version = (1, 1)
     
@@ -102,6 +108,16 @@ class BaseCase(unittest.TestCase):
         return cr.deferredFinish
 
     def assertResponse(self, request_data, expected_response):
+        """
+        @type request_data: C{tuple}
+        @type expected_response: C{tuple}
+        @param request_data: A tuple of arguments to pass to L{getResponseFor}:
+                             (root, uri, headers, method, version, prepath).
+                             Root resource and requested URI are required,
+                             and everything else is optional.
+        @param expected_response: A 3-tuple of the expected response:
+                                  (responseCode, headers, htmlData)
+        """
         d = self.getResponseFor(*request_data)
         def _gotResponse((code, headers, data)):
             expected_code, expected_headers, expected_data = expected_response
@@ -154,11 +170,15 @@ class TestDeferredRendering(BaseCase):
         def render(self, ctx):
             from twisted.internet import reactor
             d = defer.Deferred()
-            reactor.callLater(0, d.callback, BaseTestResource.render(self, ctx))
+            reactor.callLater(
+                0, d.callback, BaseTestResource.render(self, ctx))
             return d
 
         def child_deferred(self, ctx):
-            return self
+            from twisted.internet import reactor
+            d = defer.Deferred()
+            reactor.callLater(0, d.callback, BaseTestResource())
+            return d
         
     def test_deferredRootResource(self):
         self.assertResponse(
@@ -168,4 +188,4 @@ class TestDeferredRendering(BaseCase):
     def test_deferredChild(self):
         self.assertResponse(
             (self.ResourceWithDeferreds(), 'http://host/deferred'),
-            (200, {}, 'I should be wrapped in a Deferred.'))
+            (200, {}, 'This is a fake resource.'))
