@@ -241,7 +241,9 @@ except NameError:
 
 def initThreads():
     global logOwner
+    oldLogOwner = logOwner
     logOwner = ThreadedLogOwner()
+    logOwner.ownersPerThread[logOwner.threadId()] = oldLogOwner.owners
 
 threadable.whenThreaded(initThreads)
 

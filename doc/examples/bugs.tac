@@ -1,3 +1,5 @@
+#!python
+
 from twisted.internet import main
 from twisted.spread import pb
 from twisted.enterprise import adbapi, dbpassport
