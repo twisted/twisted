@@ -329,9 +329,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _ebMailbox(self, failure):
         failure = failure.trap(cred.error.LoginDenied, cred.error.LoginFailed)
-        if failure is cred.error.LoginDenied:
+        if issubclass(failure, cred.error.LoginDenied):
             self.failResponse("Access denied: " + str(failure))
-        elif failure is cred.error.LoginFailed:
+        elif issubclass(failure, cred.error.LoginFailed):
             self.failResponse('Authentication failed')
         log.msg("Denied login attempt from " + str(self.transport.getPeer()))
 
