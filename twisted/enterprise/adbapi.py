@@ -89,7 +89,7 @@ class ConnectionPool(pb.Referenceable):
         Arguments:
 
           * interaction: a callable object whose first argument is an adbapi.Transaction.
-          
+
           * *args and **kw: additional arguments to be passed to 'interaction'
 
         The callable object presented here will be executed in a pooled thread.
@@ -117,7 +117,7 @@ class ConnectionPool(pb.Referenceable):
         for connection in self.connections.values():
             print "closing: ", connection
             connection.close()
-            
+
 class Augmentation:
     '''A class which augments a database connector with some functionality.
 
@@ -125,7 +125,7 @@ class Augmentation:
 
       |  def getSomeData(self, critereon):
       |      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon).addCallback(self.processResult)
-    
+
     '''
 
     def __init__(self, dbpool):
