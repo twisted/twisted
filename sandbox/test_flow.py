@@ -14,6 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
 import flow
 import unittest
 
@@ -43,7 +44,7 @@ class producer:
     def yield_results(self):
         self.state = self.yield_lst
         if self.lst.stop or self.nam.stop:
-            raise StopIteration
+            raise flow.StopIteration
         return (self.lst.result, self.nam.result)
     def next(self):
         return self.state()
@@ -117,7 +118,7 @@ class FlowTest(unittest.TestCase):
                 sleep(.1)
                 val = self.count
                 if not(val):
-                    raise StopIteration
+                    raise flow.StopIteration
                 self.count -= 1
                 return [val]
         def res(x): self.assertEqual([5,4,3,2,1], x)
