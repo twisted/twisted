@@ -50,11 +50,15 @@ class SimpleRealm:
             raise NotImplementedError("no interface")
 
 
-from twisted.cred.portal import Portal
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-portal = Portal(SimpleRealm())
-checker = InMemoryUsernamePasswordDatabaseDontUse()
-checker.addUser("benchmark", "benchmark")
-portal.registerChecker(checker)
-reactor.listenTCP(8787, pb.PBServerFactory(portal))
-reactor.run()
+def main():
+    from twisted.cred.portal import Portal
+    from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    portal = Portal(SimpleRealm())
+    checker = InMemoryUsernamePasswordDatabaseDontUse()
+    checker.addUser("benchmark", "benchmark")
+    portal.registerChecker(checker)
+    reactor.listenTCP(8787, pb.PBServerFactory(portal))
+    reactor.run()
+
+if __name__ == '__main__':
+    main()

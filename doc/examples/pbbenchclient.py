@@ -33,6 +33,10 @@ class PBBenchClient:
         factory.login(UsernamePassword("benchmark", "benchmark")).addCallback(self._cbPerspective)
 
 
-PBBenchClient().runTest()
-from twisted.internet import reactor
-reactor.run()
+def main():
+    PBBenchClient().runTest()
+    from twisted.internet import reactor
+    reactor.run()
+
+if __name__ == '__main__':
+    main()
