@@ -22,14 +22,14 @@
 # System Imports
 from twisted.internet import defer
 from twisted.python import roots, components, reflect
-
+from zope.interface import Attribute
 
 class IResource(components.Interface):
     """A web resource."""
 
-    ## Signal if this IResource implementor is a "leaf node" or not.
-    ## If True, getChildWithDefault will not be called on this Resource.
-    isLeaf = 0
+    isLeaf = Attribute(\
+"""Signal if this IResource implementor is a "leaf node" or not. If True,
+getChildWithDefault will not be called on this Resource.""")
 
     def getChildWithDefault(self, name, request):
         """Return a child with the given name for the given request.
