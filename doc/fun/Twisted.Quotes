@@ -4465,3 +4465,9 @@ person.
 %
 <shawn> the highest calling of technical book writers is to destroy the sun
 %
+<hypatia> Why does dirdbm exist, exactly?
+<spiv> hypatia: Because glyph is trigger-happy when it comes to writing persistence systems.
+<spiv> "Hey Rocky, watch me pull a persistence system out of my hat!"
+<spiv> "But that trick never works!"
+<spiv> "This time for *sure*!"
+%
