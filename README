@@ -60,7 +60,7 @@ Basic Servers
   The normal type of server to create is a webserver.  You can run this
   command::
 
-    % mkwebserver --static static
+    % mkserver web --static static
 
   which will make a "static" webserver (one that reads from the filesystem) and
   run it from the provided 'static' directory.  This creates a file named
@@ -69,15 +69,22 @@ Basic Servers
 
   You can also create a telnet server::
 
-    % mktelnetserver 8023 username password
+    % mkserver telnet -p 8023 -u username -p password
 
   which will create a python-console telnet server listening on port 8023,
   which you can log into with the username "username" and the password
   "password".  This creates a file called 'telnet.spl'
 
+  A AOL Instant Messanger TOC Server is also available::
+    
+    % mkserver toc -p 5190
+
+  which creates the TOC server, running on port 5190.  To create a user, simply   log in with the username and password you want.  If the name is not already
+  taken on the server, it is created.  This creates a file called 'toc.spl'
+  
   Finally, a rudimentary IRC server::
 
-    % mkircserver
+    % mkserver irc -p 6667
 
   This creates an IRC server application, listening on port 6667.  (I apologize
   in advance if this doesn't work with your IRC client; let me know if it
@@ -104,8 +111,8 @@ Running Servers
   package for "spreadable" computing.  In two different directories, run the
   commands::
 
-    % mkwebserver --user
-    % mkwebserver --personal [other options, if you desire]
+    % mkserver web --user
+    % mkserver web --personal [other options, if you desire]
 
   Both of these create a 'web.spl'; you need to run both at the same time.
   Once you have, go to http://localhost:8080/your_username.twistd/ -- you will
