@@ -62,8 +62,9 @@ class LoaderCommon:
 
     def decrypt(self):
         try:
+            import md5
             from Crypto.Cipher import AES
-            self.data = AES.new(self.passphrase).decrypt(self.data)
+            self.data = AES.new(md5.new(self.passphrase).digest()[:16]).decrypt(self.data)
         except ImportError:
             print "The --decrypt flag requires the PyCrypto module, no file written."
             

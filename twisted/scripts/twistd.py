@@ -94,8 +94,9 @@ class ServerOptions(usage.Options):
 
 
 def decrypt(passphrase, data):
+    import md5
     from Crypto.Cipher import AES
-    return AES.new(passphrase).decrypt(data)
+    return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
 
 
 def createApplicationDecoder(config):
@@ -163,7 +164,7 @@ def createApplicationDecoder(config):
     return filename, decode, mode
 
 
-def loadApplication(config):
+def loadApplication(config, passphrase):
     filename, decode, mode = createApplicationDecoder(config)
     if config.opts['encrypted']:
         data = open(filename, 'rb').read()
@@ -207,14 +208,15 @@ def run():
     if config.opts['encrypted']:
         import getpass
         passphrase = getpass.getpass('Passphrase: ')
-
+    else:
+        passphrase = None
     
     # Load the servers.
     # This will fix up accidental function definitions in evaluation spaces
     # and the like.
     initRun = 0
     try:
-        application = loadApplication(config)
+        application = loadApplication(config, passphrase)
     except Exception, e:
         sys.exit("Failed to load application: %s" % (e,))
 
