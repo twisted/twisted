@@ -15,11 +15,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.34 $"[11:-2]
+__version__ = "$Revision: 1.35 $"[11:-2]
 
 import types
 import weakref
 import warnings
+import inspect
 
 from twisted.python import components, reflect
 from twisted.internet import defer
@@ -125,7 +126,7 @@ class Model:
     protected_names = ['initialize', 'addView', 'addSubview', 'removeView', 'notify', 'getSubmodel', 'setSubmodel', 'getData', 'setData']
     allowed_names = []
 
-    def lookupSubmodel(self, submodelName):
+    def lookupSubmodel(self, request, submodelName):
         """
         Look up a full submodel name. I will split on `/' and call
         L{getSubmodel} on each element in the 'path'.
@@ -159,26 +160,16 @@ class Model:
             elif element == '..':
                 currentModel = currentModel.parent
             else:
-                currentModel = currentModel.getSubmodel(element)
+                currentModel = currentModel.getSubmodel(request, element)
                 if currentModel is None:
                     return None
                 if isinstance(currentModel, defer.Deferred):
-                    currentModel.addCallback(self._getModelWrapper,
+                    currentModel.addCallback(adaptToIModel,
                                              element, parentModel)
                     return currentModel
         return currentModel
 
-
-    def _getModelWrapper(self, currentModel, element, parentModel):
-        adapted = components.getAdapter(currentModel, interfaces.IModel, None)
-        if adapted is None:
-            adapted = Wrapper(currentModel)
-        adapted.parent = parentModel
-        adapted.name = element
-        return adapted
-
-
-    def submodelCheck(self, name):
+    def submodelCheck(self, request, name):
         """Check if a submodel name is allowed.  Subclass me to implement a
         name security policy.
         """
@@ -188,7 +179,7 @@ class Model:
             return (name and name[0] != '_' and name not in self.protected_names)
 
 
-    def submodelFactory(self, name):
+    def submodelFactory(self, request, name):
         warnings.warn("Warning: default Model lookup strategy is changing:"
                       "use either AttributeModel or MethodModel for now.",
                       DeprecationWarning)
@@ -197,42 +188,60 @@ class Model:
         else:
             return None
 
-
-    def getSubmodel(self, name):
+    def getSubmodel(self, request=None, name=None):
         """
         Get the submodel `name' of this model. If I ever return a
         Deferred, then I ought to check for cached values (created by
         L{setSubmodel}) before doing a regular Deferred lookup.
         """
+        if name is None and type(request) is type(""):
+            warnings.warn("Warning, getSubmodel methods should now take the request as the first argument")
+            name = request
+            request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
-        if not self.submodelCheck(name):
+        if not self.submodelCheck(request, name):
             return None
-        m = self.submodelFactory(name)
+        args, varargs, varkw, defaults = inspect.getargspec(self.submodelFactory.im_func)
+        if len(args) == 2:
+            warnings.warn("Warning, submodelFactory methods now should take the request as the first argument")
+            m = self.submodelFactory(name)
+        else:
+            m = self.submodelFactory(request, name)
         if m is None:
             return None
         sm = adaptToIModel(m, self, name)
         self.submodels[name] = sm
         return sm
 
-    def setSubmodel(self, name, value):
+    def setSubmodel(self, request=None, name=None, value=None):
         """
         Set a submodel on this model. If getSubmodel or lookupSubmodel
         ever return a Deferred, I ought to set this in a place that
         lookupSubmodel/getSubmodel know about, so they can use it as a
         cache.
         """
-        if self.submodelCheck(name):
+        if value is None:
+            warnings.warn("Warning!")
+            value = name
+            name = request
+            request = None
+
+        if self.submodelCheck(request, name):
             if self.submodels.has_key(name):
                 del self.submodels[name]
             setattr(self, name, value)
 
-    def getData(self):
+    def getData(self, request=None):
         return self
 
-    def setData(self, data):
+    def setData(self, request=None, data=None):
+        if data is None:
+            warnings.warn("Warning!")
+            data = request
+            request = None
         if hasattr(self, 'parent') and self.parent:
-            self.parent.setSubmodel(self.name, data)
+            self.parent.setSubmodel(None, self.name, data)
         if hasattr(self, 'orig'):
             self.orig = data
 
@@ -240,20 +249,26 @@ class MethodModel(Model):
     """Look up submodels with wmfactory_* methods.
     """
 
-    def submodelCheck(self, name):
+    def submodelCheck(self, request, name):
         """Allow any submodel for which I have a submodel.
         """
         return hasattr(self, "wmfactory_"+name)
 
-    def submodelFactory(self, name):
+    def submodelFactory(self, request, name):
         """Call a wmfactory_name method on this model.
         """
-        return getattr(self, "wmfactory_"+name)()
+        meth = getattr(self, "wmfactory_"+name)
+        args, varargs, varkw, defaults = inspect.getargspec(meth.im_func)
+        if len(args) == 1:
+            warnings.warn("Warning, wmfactory methods now should take the request as the first argument")
+            return meth()
+        return meth(request)
+
 
 class AttributeModel(Model):
     """Look up submodels as attributes with hosts.allow/deny-style security.
     """
-    def submodelFactory(self, name):
+    def submodelFactory(self, request, name):
         if hasattr(self, name):
             return getattr(self, name)
         else:
@@ -275,12 +290,16 @@ class Wrapper(Model):
         Model.__init__(self)
         self.orig = orig
 
-    def getData(self):
+    def getData(self, request=None):
         return self.orig
 
-    def setData(self, data):
+    def setData(self, request=None, data=None):
+        if data is None:
+            warnings.warn("Warning!")
+            data = request
+            request = None
         if self.parent:
-            self.parent.setSubmodel(self.name, data)
+            self.parent.setSubmodel(None, self.name, data)
         self.orig = data
 
     def __repr__(self):
@@ -294,22 +313,35 @@ class ListModel(Wrapper):
     I wrap a Python list and allow it to interact with the Woven
     models and submodels.
     """
-    def getSubmodel(self, name):
+    def getSubmodel(self, request=None, name=None):
+        if name is None and type(request) is type(""):
+            warnings.warn("Warning!")
+            name = request
+            request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
         orig = self.orig
+        try:
+            int(name)
+        except:
+            return None
         sm = adaptToIModel(orig[int(name)], self, name)
         self.submodels[name] = sm
         return sm
 
-    def setSubmodel(self, name, value):
+    def setSubmodel(self, request=None, name=None, value=None):
+        if value is None:
+            warnings.warn("Warning!")
+            value = name
+            name = request
+            request = None
         self.orig[int(name)] = value
 
     def __getitem__(self, name):
-        return self.getSubmodel(name)
+        return self.getSubmodel(None, name)
 
     def __setitem__(self, name, value):
-        self.setSubmodel(name, value)
+        self.setSubmodel(None, name, value)
 
     def __repr__(self):
         myLongName = reflect.qual(self.__class__)
@@ -322,7 +354,7 @@ class StringModel(ListModel):
     """ I wrap a Python string and allow it to interact with the Woven models
     and submodels.  """
 
-    def setSubmodel(self, name, value):
+    def setSubmodel(self, request=None, name=None, value=None):
         raise ValueError("Strings are immutable.")
 
 
@@ -339,7 +371,11 @@ class DictionaryModel(Wrapper):
     I wrap a Python dictionary and allow it to interact with the Woven
     models and submodels.
     """
-    def getSubmodel(self, name):
+    def getSubmodel(self, request=None, name=None):
+        if name is None and type(request) is type(""):
+            warnings.warn("Warning!")
+            name = request
+            request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
         orig = self.orig
@@ -347,10 +383,15 @@ class DictionaryModel(Wrapper):
         self.submodels[name] = sm
         return sm
 
-    def setSubmodel(self, name, value):
+    def setSubmodel(self, request=None, name=None, value=None):
+        if value is None:
+            warnings.warn("Warning!")
+            value = name
+            name = request
+            request = None
         self.orig[name] = value
 
-    def getData(self):
+    def getData(self, request=None):
         return self.orig
 
 
@@ -361,7 +402,7 @@ class AttributeWrapper(Wrapper):
     def __init__(self, parent, name):
         self.orig = None
         parent = ObjectWrapper(parent)
-        Wrapper.__init__(self, parent.getSubmodel(name))
+        Wrapper.__init__(self, parent.getSubmodel(None, name))
         self.parent = parent
         self.name = name
 
@@ -371,14 +412,23 @@ class ObjectWrapper(Wrapper):
     I may wrap an object and allow it to interact with the Woven models
     and submodels.  By default, I am not registered for use with anything.
     """
-    def getSubmodel(self, name):
+    def getSubmodel(self, request=None, name=None):
+        if name is None and type(request) is type(""):
+            warnings.warn("Warning!")
+            name = request
+            request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
         sm = adaptToIModel(getattr(self.orig, name), self, name)
         self.submodels[name] = sm
         return sm
 
-    def setSubmodel(self, name, value):
+    def setSubmodel(self, request=None, name=None, value=None):
+        if value is None:
+            warnings.warn("Warning!")
+            value = name
+            name = request
+            request = None
         setattr(self.orig, name, value)
 
 class UnsafeObjectWrapper(ObjectWrapper):
@@ -388,7 +438,11 @@ class UnsafeObjectWrapper(ObjectWrapper):
     I am unsafe because I allow methods to be called. In fact, I am
     dangerously unsafe.  Be wary or I will kill your security model!
     """
-    def getSubmodel(self, name):
+    def getSubmodel(self, request=None, name=None):
+        if name is None and type(request) is type(""):
+            warnings.warn("Warning!")
+            name = request
+            request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
         value = getattr(self.orig, name)
@@ -400,7 +454,11 @@ class UnsafeObjectWrapper(ObjectWrapper):
 
 
 class DeferredWrapper(Wrapper):
-    def setData(self, data):
+    def setData(self, request=None, data=None):
+        if data is None:
+            warnings.warn("Warning!")
+            data = request
+            request = None
         if isinstance(data, defer.Deferred):
             self.orig = data
         else:
