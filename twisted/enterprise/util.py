@@ -48,7 +48,7 @@ def getKeyColumn(rowClass, name):
             return name
     return None
 
-def quote(value, typeCode):
+def quote(value, typeCode, string_escaper=adbapi.safe):
     """Add quotes for text types and no quotes for integer types.
     NOTE: uses Postgresql type codes..
     """
@@ -58,7 +58,7 @@ def quote(value, typeCode):
     if q == NOQUOTE:
         return value
     elif q == USEQUOTE:
-        return "'%s'" % adbapi.safe(value)
+        return "'%s'" % string_escaper(value)
 
 def makeKW(rowClass, args):
     """Utility method to construct a dictionary for the attributes
