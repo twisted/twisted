@@ -216,7 +216,7 @@ def runApp(config):
     # Install a reactor immediately.  The application will not load properly
     # unless this is done FIRST; otherwise the first 'reactor' import would
     # trigger an automatic installation of the default reactor.
-    
+
     # To make this callable from within a running Twisted app, allow as the
     # reactor None to bypass this and use whatever reactor is currently in use.
 
@@ -237,7 +237,7 @@ def runApp(config):
         passphrase = getpass.getpass('Passphrase: ')
     else:
         passphrase = None
-    
+
     # Load the servers.
     # This will fix up accidental function definitions in evaluation spaces
     # and the like.
@@ -260,7 +260,12 @@ def runApp(config):
             else:
                 sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config['pidfile'], why[1]))
         else:
-            sys.exit('A server is already running, PID %s' %  pid)
+            sys.exit("""\
+Another twistd server is running, PID %s\n
+This could either be a previously started instance of your application or a
+different application entirely. To start a new one, either run it in some other
+directory, or use my --pidfile and --logfile parameters to avoid clashes.
+""" %  pid)
 
     if config['logfile'] == '-':
         if not config['nodaemon']:
@@ -317,7 +322,7 @@ def runApp(config):
     # If we're asked to chroot and os.chroot does not exist,
     # just fail.
     if config['chroot'] is not None:
-        os.chroot(config['chroot']) 
+        os.chroot(config['chroot'])
 
     if platformType != 'java':
         # java can't chdir
