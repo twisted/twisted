@@ -107,31 +107,6 @@ def getSavePassphrase(needed):
     else:
         return None
 
-def getApplication(config, passphrase):
-    s = [(config[t], t)
-           for t in ['python', 'xml', 'source', 'file'] if config[t]][0]
-    filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
-    try:
-        log.msg("Loading %s..." % filename)
-        application = service.loadApplication(filename, style, passphrase)
-        log.msg("Loaded.")
-    except Exception, e:
-        s = "Failed to load application: %s" % e
-        if isinstance(e, KeyError) and e.args[0] == "application":
-            s += """
-Could not find 'application' in the file. To use 'twistd -y', your .tac
-file must create a suitable object (e.g., by calling service.Application())
-and store it in a variable named 'application'. twistd loads your .tac file
-and scans the global variables for one of this name.
-
-Please read the 'Using Application' HOWTO for details.
-"""
-        traceback.print_exc(file=log.logfile)
-        log.msg(s)
-        log.deferr()
-        sys.exit('\n' + s + '\n')
-    return application
-
 def reportProfile(report_profile, name):
     if not report_profile:
         return
