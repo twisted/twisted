@@ -102,22 +102,25 @@ class Unzipness:
 
     """
     
-    def __init__(self, filename, frame):
+    def __init__(self, filename, bar):
         self.unzipper=unzipiter(filename)
         zf=zipfile.ZipFile(filename)
-        frame.updateProgress(0, len(zf.namelist()))
-        self.frame=frame
+        bar.updateProgress(0, len(zf.namelist()))
+        self.bar=bar
+        self.stopping=0
 
     def unzipAll(self):
         for remaining in self.unzipper:
-            self.updateBar(remaining)
-        return
+            if self.stopping:
+                return
+            reactor.callFromThread(self.updateBar, remaining)
 
     def updateBar(self, remaining):
-        f=self.frame
-        def update():
-            f.updateProgress(f.max - remaining)
-        reactor.callFromThread(update)
+        b=self.bar
+        try:
+            b.updateProgress(b.max - remaining)
+        except TclError:
+            self.stopping=1
     
 
 def run(argv=sys.argv):
@@ -125,15 +128,18 @@ def run(argv=sys.argv):
         log.err("Need a filename")
         return
     root=Tkinter.Tk()
+    root.title('Unzipping...')
+    root.withdraw()
     tksupport.install(root)
-    frame=ProgressBar(root, value=0, labelColor="black",
-                      labelText="Unzipping...", width=200)
-    frame.pack(side=Tkinter.LEFT)
+    
+    prog=ProgressBar(root, value=0, labelColor="black", width=200)    
+    prog.pack()
 
-    uz=Unzipness(argv[1], frame)
+    uz=Unzipness(argv[1], prog)
 
+    reactor.callLater(0, root.deiconify)
     d=threads.deferToThread(uz.unzipAll)
-    d.addCallback(reactor.stop).addErrback(failure.Failure())
+    d.addBoth(lambda _: reactor.stop())
     
     reactor.run()
 
