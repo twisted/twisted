@@ -43,6 +43,8 @@ from twisted.python import threadable, log, components, failure, filepath
 from twisted.internet import abstract, interfaces, defer
 from twisted.spread import pb
 from twisted.persisted import styles
+from twisted.python.util import InsensitiveDict
+from twisted.python.runtime import platformType
 
 dangerousPathError = error.NoResource("Invalid request URL.")
 
@@ -308,7 +310,12 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             if fpath is None:
                 return self.childNotFound
 
-        processor = self.processors.get(fpath.splitext()[1])
+        if platformType == "win32":
+            # don't want .RPY to be different than .rpy, since that would allow
+            # source disclosure.
+            processor = InsensitiveDict(self.processors).get(fpath.splitext()[1])
+        else:
+            processor = self.processors.get(fpath.splitext()[1])
         if processor:
             return resource.IResource(processor(fpath.path, self.registry))
         return self.createSimilarFile(fpath.path)
