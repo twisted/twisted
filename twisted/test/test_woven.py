@@ -289,8 +289,8 @@ class VNotifyTest(view.View):
 
 class InventoryUpdater(input.Anything):    
     def commit(self, request, node, data):
-        invmodel = self.model.getSubmodel("inventory")
-        log = self.model.getSubmodel("log")
+        invmodel = self.model.getSubmodel(request,  "inventory")
+        log = self.model.getSubmodel(request, "log")
         inv = invmodel.getData()
         inv.append(data) # just add a string to the list
         log.setData(request, log.getData() + ("%s added to servers\n" % data))
@@ -315,11 +315,13 @@ class NotifyTest(WovenTC):
 
     def testComplexNotification(self):
         listNode = self.d.getElementById("theList")
-        assert listNode, "Test %s failed" % outputNum
+        self.assert_(listNode, "Test %s failed" % outputNum)
         liNodes = domhelpers.getElementsByTagName(listNode, 'li')
-        assert liNodes, "DOM was not updated by notifying Widgets. Test %s" % outputNum
+        self.assert_(liNodes,
+          "DOM was not updated by notifying Widgets. Test %s" % outputNum)
         text = domhelpers.gatherTextNodes(liNodes[0])
-        assert text.strip() == "test", "Wrong output: %s. Test %s" % (text, outputNum)
+        self.assert_(text.strip() == "test",
+               "Wrong output: %s. Test %s" % (text, outputNum))
 
 view.registerViewForModel(LLView, LLModel)
 
