@@ -263,12 +263,15 @@ class Zip(Stage):
                 if isinstance(result, Cooperate):
                     return result
                 raise TypeError("Unsupported flow instruction")
-            self._result.append(curr.result)
+            if curr.isFailure() and not self.result:
+                self.result = curr.result
             if curr.stop:
                 self.stop = 1
+            self._result.append(curr.result)
             self._index += 1
-        if not self.stop:
+        if not self.stop and not self.result:
             self.result = tuple(self._result)
+        self._fail   = 0
         self._index = 0
         self._result = []
 
@@ -368,8 +371,8 @@ class DeferredWrapper(Stage):
     def __init__(self, deferred, *trap):
         Stage.__init__(self, *trap)
         deferred.addBoth(self._callback)
-        self._cooperate = CooperateDeferred(deferred)
-        self._result    = None
+        self._cooperate  = CooperateDeferred(deferred)
+        self._result     = None
         self._stop_next = 0
 
     def _callback(self, res):

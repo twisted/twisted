@@ -152,6 +152,15 @@ class FlowTest(unittest.TestCase):
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, ZeroDivisionError))
 
+
+    def testZipFailure(self):
+        lhs = [(1,'a'),(2,'b'),(3,'c')]
+        mrg = flow.Zip([1,2,flow.Cooperate(),3],badgen())
+        d = flow.Deferred(mrg)
+        r = unittest.deferredError(d) 
+        self.failUnless(isinstance(r, failure.Failure))
+        self.failUnless(isinstance(r.value, ZeroDivisionError))
+
     def testFailureAsResult(self):
         #
         # If failures are to be expected, then they can be
