@@ -14,13 +14,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.32 2003/01/03 04:53:31 z3p Exp $
+# $Id: conch.py,v 1.33 2003/02/12 18:05:58 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
 
 from twisted.conch.ssh import transport, userauth, connection, common, keys
-from twisted.conch.ssh import session, forwarding
+from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
 
@@ -341,7 +341,7 @@ class SSHConnection(connection.SSHConnection):
                 d = self.sendGlobalRequest('tcpip-forward', data)
                 self.remoteForwards[remotePort] = hostport
 
-class SSHSession(connection.SSHChannel):
+class SSHSession(channel.SSHChannel):
 
     name = 'session'
     
