@@ -154,27 +154,20 @@ class IReactorUNIX(Interface):
 class IReactorUDP(Interface):
     """UDP socket methods.
 
-    IMPORTANT: This interface is not stable! It will very likely change
-    in the future. Suggestions on how to support UDP in a nice way
-    will be much appreciated.
+    IMPORTANT: This is an experimental new interface. It may change
+    without backwards compatability. Suggestions are welcome.
     """
     
-    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
-        """Connects a given protocol Factory to the given numeric UDP port.
+    def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
+        """Connects a given DatagramProtocol to the given numeric UDP port.
 
-        @returns: something conforming to IListeningPort.
+        @return object conforming to IListeningPort.
         """
 
-##     I can't remember what I was thinking when I did this.  On the off chance
-##     that someone else remembers, I'll leave it here, but I think it's going
-##     away.
-##
-##     def clientUDP(self, remotehost, remoteport, localport, protocol,
-##                   interface='', maxPacketSize=8192):
-##         """Connects a Protocol instance to a UDP client port.
-##         """
-
-## XXX TODO: expose udp.Port.createConnection more formally
+    def connectUDP(self, remotehost, remoteport, protocol, localport=0,
+                  interface='', maxPacketSize=8192):
+        """Connects a ConnectedDatagramProtocol instance to a UDP port.
+        """
 
 
 class IReactorProcess(Interface):

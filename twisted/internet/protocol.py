@@ -359,6 +359,75 @@ class ProcessProtocol(BaseProtocol):
         """
 
 
+class DatagramProtocol:
+    """Protocol for datagram-oriented transport, e.g. UDP."""
+
+    transport = None
+    numPorts = 0
+    noisy = "sure, why not"
+
+    def doStart(self):
+        """Make sure startFactory is called."""
+        if not self.numPorts:
+            if self.noisy:
+                log.msg("Starting protocol %s" % self)
+            self.startProtocol()
+        self.numPorts = self.numPorts + 1
+
+    def doStop(self):
+        """Make sure stopFactory is called."""
+        assert self.numPorts > 0
+        self.numPorts = self.numPorts - 1
+        if not self.numPorts:
+            if self.noisy:
+                log.msg("Stopping protocol %s" % self)
+            self.stopProtocol()
+
+    def startProtocol(self):
+        """Called when a transport is connected to this protocol.
+
+        Will only be called once, even if multiple ports are connected.
+        """
+
+    def stopProtocol(self):
+        """Called when the transport is disconnected.
+
+        Will only be called once, after all ports are disconnected.
+        """
+
+    def makeConnection(self, transport):
+        """Make a connection to a transport and a server.
+
+        This sets the 'transport' attribute of this DatagramProtocol, and calls the
+        doStart() callback.
+        """
+        self.transport = transport
+        self.doStart()
+
+    def datagramReceived(self, datagram, addr):
+        """Called when a datagram is received.
+
+        @param datagram the string received from the transport.
+        @param addr tuple of source of datagram.
+        """
+
+
+class ConnectedDatagramProtocol(DatagramProtocol):
+    """Protocol for connected datagram-oriented transport, e.g. UDP."""
+
+    def datagramReceived(self, datagram):
+        """Called when a datagram is received.
+
+        @param datagram the string received from the transport.
+        """
+
+    def connectionFailed(self, failure):
+        """Called if connecting failed.
+
+        Usually this will be due to a DNS lookup failure.
+        """
+
+
 class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
     """

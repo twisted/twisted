@@ -33,6 +33,15 @@ class CannotListenError(BindError):
     pass
 
 
+class MessageLengthError(Exception):
+    """Message is too long to send."""
+    pass
+
+
+class DNSLookupError(IOError):
+    """DNS lookup failed."""
+    pass
+
 
 # connection errors
 

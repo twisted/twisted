@@ -29,135 +29,38 @@ import socket
 if os.name == 'nt':
     EWOULDBLOCK = 10035
 elif os.name != 'java':
-    from errno import EWOULDBLOCK
+    from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED
 
 # Twisted Imports
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log, reflect
-from twisted.internet import defer
 
 # Sibling Imports
-import abstract, main
-
-
-class Connection(abstract.FileDescriptor,
-                 styles.Ephemeral):
-    """This is a UDP virtual connection
-
-    This transport connects to a given host/port over UDP. By nature
-    of UDP, only outgoing communications are allowed.  If a connection
-    is initiated by a packet arriving at a UDP port, it is up to the
-    port to call dataReceived with that packet.  By default, once data
-    is written once to the connection, it is lost.
-    """
-
-    keepConnection = 0
-
-    def __init__(self, skt, protocol, remote, local, sessionno, reactor=None):
-        self.socket = skt
-        self.fileno = skt.fileno
-        self.remote = remote
-        self.protocol = protocol
-        self.local = local
-        self.sessionno = sessionno
-        self.connected = 1
-        self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__,
-                                          sessionno, self.remote[0])
-        if reactor is None:
-            from twisted.internet import reactor
-        self.reactor = reactor
-        if abstract.isIPAddress(self.remote[0]):
-            self.realAddress = self.remote[0]
-        else:
-            self.realAddress = None
-            deferred = self.reactor.resolve(self.remote[0]
-                                       ).addCallbacks(
-                self.setRealAddress, self.connectionLost
-                )
-
-    def setRealAddress(self, address):
-        self.realAddress = address
-        self.startWriting()
-
-    def write(self,data):
-        res = abstract.FileDescriptor.write(self,data)
-        if not self.keepConnection:
-            self.loseConnection()
-        if self.realAddress is None:
-            self.stopWriting()
-        return res
-
-    def writeSomeData(self, data):
-        """Connection.writeSomeData(data) -> #of bytes written | CONNECTION_LOST
-        This writes as much data as possible to the socket and returns either
-        the number of bytes read (which is positive) or a connection error code
-        (which is negative)
-        """
-        if len(data) > 0:
-            try:
-                return self.socket.sendto(data, self.remote)
-            except socket.error, se:
-                if se.args[0] == EWOULDBLOCK:
-                    return 0
-                return main.CONNECTION_LOST
-        else:
-            return 0
-
-    def connectionLost(self, reason):
-        """See abstract.FileDescriptor.connectionLost().
-        """
-        protocol = self.protocol
-        del self.protocol
-        abstract.FileDescriptor.connectionLost(self, reason)
-        self.socket.close()
-        del self.socket
-        del self.fileno
-        protocol.connectionLost()
-
-    def logPrefix(self):
-        """Return the prefix to log with when I own the logging thread.
-        """
-        return self.logstr
-
-    def getPeer(self):
-        """
-        Returns a tuple of ('INET_UDP', hostname, port), indicating
-        the connected client's address
-        """
-        return ('INET_UDP',)+self.remote
-
-    def getHost(self):
-        """
-        Returns a tuple of ('INET_UDP', hostname, port), indicating
-        the servers address
-        """
-        return ('INET_UDP',)+self.socket.getsockname()
+import abstract, main, error
 
 
 class Port(abstract.FileDescriptor):
-    """I am a UDP server port, listening for packets."""
+    """UDP port, listening for packets."""
 
-    sessionno = 0
-
-    def __init__(self, port, factory, interface='', maxPacketSize=8192):
+    def __init__(self, reactor, port, protocol, interface='', maxPacketSize=8192):
         """Initialize with a numeric port to listen on.
         """
-        abstract.FileDescriptor.__init__(self)
+        abstract.FileDescriptor.__init__(self, reactor)
         self.port = port
-        self.factory = factory
+        self.protocol = protocol
         self.maxPacketSize = maxPacketSize
         self.interface = interface
         self.setLogStr()
 
     def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, self.port)
+        return "<%s on %s>" % (self.protocol.__class__, self.port)
 
     def createInternetSocket(self):
         """(internal) create an AF_INET/SOCK_DGRAM socket.
         """
-        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setblocking(0)
         return s
 
     def __getstate__(self):
@@ -177,41 +80,54 @@ class Port(abstract.FileDescriptor):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        log.msg("%s starting on %s"%(self.factory.__class__, self.port))
-        self.factory.doStart()
+        self._bindSocket()
+        self._connectToProtocol()
+    
+    def _bindSocket(self):
+        log.msg("%s starting on %s"%(self.protocol.__class__, self.port))
         skt = self.createInternetSocket()
-        skt.bind( (self.interface ,self.port) )
+        try:
+            skt.bind((self.interface, self.port))
+        except socket.error, le:
+            raise error.CannotListenError, (self.interface, self.port, le)
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
+    
+    def _connectToProtocol(self):
+        self.protocol.makeConnection(self)
         self.startReading()
-
-    def createConnection(self, addr):
-        """Creates a virtual connection over UDP"""
-        protocol = self.factory.buildProtocol(addr)
-        s = self.sessionno
-        self.sessionno = s+1
-        transport = Connection(self.socket.dup(), protocol, addr, self, s)
-        protocol.makeConnection(transport)
-        return transport
 
     def doRead(self):
         """Called when my socket is ready for reading."""
         try:
             data, addr = self.socket.recvfrom(self.maxPacketSize)
-            transport = self.createConnection(addr)
-            # Ugly patch needed because logically control passes here
-            # from the port to the transport.
-            self.logstr = transport.logPrefix()
-            transport.protocol.dataReceived(data)
-            self.setLogStr()
+            self.protocol.datagramReceived(data, addr)
         except:
             log.deferr()
 
     def doWrite(self):
         """Raises an AssertionError.
         """
-        assert 0, "doWrite called on a %s" % reflect.qual(self.__class__)
+        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
+
+    def write(self, datagram, (host, port)):
+        """Write a datagram."""
+        try:
+            return self.socket.sendto(datagram, (host, port))
+        except socket.error, se:
+            no = se.args[0]
+            if no == EINTR:
+                return self.write(datagram, (host, port))
+            elif no == EMSGSIZE:
+                raise error.MessageLengthError, "message too long"
+            elif no == ECONNREFUSED:
+                raise error.ConnectionRefusedError
+            else:
+                raise
+
+    def writeSequence(self, seq, addr):
+        self.write("".join(seq), addr)
 
     def loseConnection(self):
         """Stop accepting connections on this port.
@@ -223,19 +139,24 @@ class Port(abstract.FileDescriptor):
             from twisted.internet import reactor
             reactor.callLater(0, self.connectionLost)
 
+    stopListening = loseConnection
+    
     def connectionLost(self, reason=None):
         """Cleans up my socket.
         """
         log.msg('(Port %s Closed)' % self.port)
         abstract.FileDescriptor.connectionLost(self, reason)
-        self.factory.doStop()
+        if hasattr(self, "protocol"):
+            # we won't have attribute in ConnectedPort, in cases
+            # where there was an error in connection process
+            self.protocol.doStop()
         self.connected = 0
         self.socket.close()
         del self.socket
         del self.fileno
 
     def setLogStr(self):
-        self.logstr = reflect.qual(self.factory.__class__) + " (UDP)"
+        self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
@@ -248,3 +169,62 @@ class Port(abstract.FileDescriptor):
         the servers address
         """
         return ('INET_UDP',)+self.socket.getsockname()
+
+
+class ConnectedPort(Port):
+    """A connected UDP socket."""
+
+    def __init__(self, reactor, (remotehost, remoteport), port, protocol, interface='', maxPacketSize=8192):
+        Port.__init__(self, reactor, port, protocol, interface, maxPacketSize)
+        self.remotehost = remotehost
+        self.remoteport = remoteport
+    
+    def startListening(self):
+        self._bindSocket()
+        if abstract.isIPAddress(self.remotehost):
+            self.setRealAddress(self.remotehost)
+        else:
+            self.realAddress = None
+            d = self.reactor.resolve(self.remotehost)
+            d.addCallback(self.setRealAddress).addErrback(self.connectionFailed)
+
+    def setRealAddress(self, addr):
+        self.realAddress = addr
+        self.socket.connect((addr, self.remoteport))
+        self._connectToProtocol()
+    
+    def connectionFailed(self, reason):
+        self.loseConnection()
+        self.protocol.connectionFailed(reason)
+        del self.protocol
+    
+    def doRead(self):
+        """Called when my socket is ready for reading."""
+        try:
+            data, addr = self.socket.recvfrom(self.maxPacketSize)
+            self.protocol.datagramReceived(data)
+        except:
+            log.deferr()
+
+    def write(self, data):
+        """Write a datagram."""
+        try:
+            return self.socket.send(data)
+        except socket.error, se:
+            no = se.args[0]
+            if no == EINTR:
+                return self.write(data)
+            elif no == EMSGSIZE:
+                raise error.MessageLengthError, "message too long"
+            elif no == ECONNREFUSED:
+                raise error.ConnectionRefusedError
+            else:
+                raise
+
+    def getPeer(self):
+        """
+        Returns a tuple of ('INET_UDP', hostname, port), indicating
+        the remote address.
+        """
+        return ('INET_UDP', self.remotehost, self.remoteport)
+

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.46 2002/10/13 09:08:50 moshez Exp $
+# $Id: default.py,v 1.47 2002/10/30 05:56:34 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -272,12 +272,27 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorUDP
 
-    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
-        """See twisted.internet.interfaces.IReactorUDP.listenUDP
+    def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
+        """Connects a given DatagramProtocol to the given numeric UDP port.
+
+        @return object conforming to IListeningPort.
+
+        EXPERIMENTAL.
         """
-        p = udp.Port(port, factory, interface, maxPacketSize)
+        p = udp.Port(self, port, protocol, interface, maxPacketSize)
         p.startListening()
         return p
+
+    def connectUDP(self, remotehost, remoteport, protocol, localport=0,
+                  interface='', maxPacketSize=8192):
+        """Connects a ConnectedDatagramProtocol instance to a UDP port.
+
+        EXPERIMENTAL.
+        """
+        p = udp.ConnectedPort(self, (remotehost, remoteport), localport, protocol, interface, maxPacketSize)
+        p.startListening()
+        return p
+
 
     # IReactorUNIX
 
