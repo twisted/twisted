@@ -14,7 +14,7 @@
 2002-12-11  Donovan Preston <dp@twistedmatrix.com>
 
 	* Added new woven example, Hello World.
- 
+
 	* Updated woven howto to talk about Hello World. TODO: Finish refactoring
 	woven quotes example, then write more advanced woven howtos on writing
 	Widgets and InputHandlers.
@@ -97,7 +97,7 @@
 
 	* twisted/python/plugin.py: fixed a bug that got the wrong plugins.tml
 	if the package was installed in two different places
- 
+
 	* twisted/inetd/*, twisted/runner/*: moved inetd to runner, to live in
 	harmony with procmon
 
