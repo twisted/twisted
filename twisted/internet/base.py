@@ -71,6 +71,8 @@ class ReactorBase:
     __implements__ = IReactorCore, IReactorTime, IReactorThreads
     installed = 0
 
+    __name__ = "twisted.internet.reactor"
+
     def __init__(self):
         self._eventTriggers = {}
         self._pendingTimedCalls = []

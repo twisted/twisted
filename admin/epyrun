@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+# system
+import os, sys
+
+# ***** RISE FROM YOUR GRAVE! *****
+import twisted.web.microdom
+sys.modules['xml'] = twisted
+twisted.dom = twisted.web
+sys.modules['xml.dom'] = twisted.web
+twisted.web.minidom = twisted.web.microdom
+sys.modules['xml.dom.minidom'] = twisted.web.microdom
+
+# initial twisted
+from twisted.python import reflect
+from twisted.internet import gtkreactor
+from twisted.internet import reactor
+# epydoc
+from epydoc.cli import cli
+
+modnames = []
+def addMod(arg, path, files):
+    for fn in files:
+        file = os.path.join(path, fn)
+        if file[-3:] == '.py' and not file.count("__init__") and not file.count('/test/'):
+            try:
+                modName = file[2:-3].replace('/','.')
+                print 'pre-loading', modName
+                reflect.namedModule(modName)
+            except ImportError:
+                print 'Whoops!'
+            except:
+                print 'traceback occurred'
+            else:
+                modnames.append(modName)
+
+os.path.walk('./twisted', addMod, None)
+sys.argv.extend(['-v'])              # cmdline options
+sys.argv.extend(modnames)              # list of modules
+cli()

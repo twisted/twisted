@@ -58,7 +58,10 @@ class Node:
             return copy.copy(self)
 
     def hasChildNodes(self):
-        return 1
+        if self.childNodes:
+            return 1
+        else:
+            return 0
     
     def appendChild(self, child):
         self.childNodes.append(child)
@@ -67,6 +70,7 @@ class Node:
         if child in self.childNodes:
             self.childNodes.remove(child)
             child.parentNode = None
+        return child
     def replaceChild(self, newChild, oldChild):
         if newChild.parentNode:
             newChild.parentNode.removeChild(newChild)
