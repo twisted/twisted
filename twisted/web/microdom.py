@@ -35,7 +35,13 @@ from twisted.protocols.sux import XMLParser
 from twisted.python import reflect
 
 class ParseError(Exception):
-    pass
+
+    def __init__(self, expect, got, endLine, endCol, begLine, begCol):
+       (self.expect, self.got, self.begLine, self.begCol, self.endLine,
+        self.endCol) = expect, got, begLine, begCol, endLine, endCol
+
+    def __str__(self):
+        return "expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" % (self.expect, self.got, self.endLine, self.endCol, self.begLine, self.begCol)
 
 import copy
 
@@ -292,8 +298,7 @@ class MicroDOMParser(XMLParser):
             self._autoclose()
         el = self.elementstack.pop()
         if el.tagName != name:
-            raise ParseError("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" %
-                            ((el.tagName, name)+self.saveMark()+el._markpos) )
+            raise ParseError(*((el.tagName, name)+self.saveMark()+el._markpos))
         if not self.elementstack:
             self.documents.append(el)
 
