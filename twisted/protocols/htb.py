@@ -32,14 +32,16 @@ from __future__ import nested_scopes
 
 __version__ = '$Revision: 1.5 $'[11:-2]
 
-from twisted.python.components import Interface
+from twisted.python.components import Interface, backwardsCompatImplements
 
 # TODO: Investigate whether we should be using os.times()[-1] instead of
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
 # the same true of os.times?
 from time import time
+from zope.interface import implements
 
-import pcp
+from twisted.protocols import pcp
+
 
 class Bucket:
     """Token bucket, or something like it.
@@ -123,7 +125,7 @@ class HierarchicalBucketFilter:
     @type sweepInterval: int
     """
 
-    __implements__ = (IBucketFilter,)
+    implements(IBucketFilter)
 
     bucketFactory = Bucket
     sweepInterval = None
@@ -173,6 +175,8 @@ class HierarchicalBucketFilter:
                 del self.buckets[key]
 
         self.lastSweep = time()
+
+backwardsCompatImplements(HierarchicalBucketFilter)
 
 
 class FilterByHost(HierarchicalBucketFilter):
