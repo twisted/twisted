@@ -132,8 +132,11 @@ register("Twisted Web Automated TAP builder",
 
 <p>
 <code class="shell">plugins.tml</code> will be a list of calls to one function:
-<ul><li> <code class="py-prototype">register(name, module, type=plugin_type,
-  description=user_description [, **plugin_specific_data])</code>.
+<pre>
+register(name, module, type=plugin_type,
+         description=user_description
+         [, **plugin_specific_data])
+</pre>.
   <ul>
     
     <li><code class="py-src-parameter">name</code> is a free-form string, to be
@@ -154,8 +157,7 @@ register("Twisted Web Automated TAP builder",
     class="py-src-parameter">type</code> of plug-in it is. Note that some plug-in
     types may require a specific bit of data in order to work.</li>
     
-  </ul></li>
-</ul>
+  </ul>
   </p>
 
 <p>Note the <code class="py-src-parameter">tapname</code> parameter given in
