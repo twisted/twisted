@@ -24,15 +24,8 @@ if a class implements interfaces that means its *instances* provide them).
 However, some methods (e.g. implements()) are confusing because they actually
 check if object *provides* an interface. Using the Zope3 API directly is thus
 strongly recommended.
-
 TODO: make zope.interface run in 2.2
-
-
-
-NOTE TO ITAMR ->
-TO MAKE persist=1 work:
-do the persistence code in __call__ rather than the registry!
-
+PROBLEMS: getAdapter and IFoo() used to mean same thing? now they don't? CHECK!
 """
 
 # twisted imports
@@ -203,11 +196,10 @@ class AdapterRegistry(ZopeAdapterRegistry):
         """
         if not issubclass(fromInterface, Interface):
             fromInterface = declarations.implementedBy(fromInterface)
-        # XXX maybe this should just use lookup1 - check!
-        try:
-            return self.get(fromInterface).adapters[False, (), '', toInterface]
-        except KeyError:
-            return default
+        factory = self.lookup1(fromInterface, toInterface)
+        if factory == None:
+            factory = default
+        return factory
 
     getAdapterClass = getAdapterFactory
 
@@ -240,15 +232,18 @@ class AdapterRegistry(ZopeAdapterRegistry):
         the parameter itself if it already implements the interface. If no
         adapter can be found, the 'default' parameter will be returned.
         """
+        if interfaceClass.providedBy(obj):
+            return obj
+        
         if persist != False:
             pkey = (id(obj), interfaceClass)
             if _adapterPersistence.has_key(pkey):
                 return _adapterPersistence[pkey]
 
-        for iface in declarations.providedBy(obj):
-            factory = self.lookup1(interfaceClass, iface)
-            if factory != None:
-                return factory(obj)
+        factory = self.lookup1(declarations.providedBy(obj), interfaceClass)
+        if factory != None:
+            return factory(obj)
+
         if default == _Nothing:
             raise NotImplementedError
         else:
