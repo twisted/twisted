@@ -27,11 +27,11 @@ can be solved by creating an extension.</p>
 <p>Lore works by reading the HTML source of your document, and producing
 whatever output the user specifies on the command line.  If the HTML document
 is well-formed XML that meets a certain minimum standard, Lore will be able to
-to produce some output.  Most Lore extensions will be written to redefine the
-<em>input</em>, not the output.  The default input is <q>lore</q>, and it is the
-only one Lore comes with.  When you write your extension, you will come up
-with a new name for your input, telling Lore what rules to use to process the
-file.</p>
+to produce some output.  All Lore extensions will be written to redefine the
+<em>input</em>, and most will redefine the output in some way.  The name of
+the default input is <q>lore</q>.  When you write your extension, you will
+come up with a new name for your input, telling Lore what rules to use to
+process the file.</p>
 
 <p>Lore can produce XHTML, LaTeX, and DocBook document formats, which can be
 displayed directly if you have a user agent capable of viewing them, or
@@ -39,8 +39,9 @@ processed into a third form such as PostScript or PDF.  Another output is
 called <q>lint</q>, after the static-checking utility for C, and is used for
 the same reason: to statically check input files for problems.  The
 <q>lint</q> output is just a stream of error messages, not a formatted
-document.  For the first example, the only output we will be concerned with is
-LaTeX.</p>
+document, but is important because it gives users the ability to validate
+their input before trying to process it.  For the first example, the only
+output we will be concerned with is LaTeX.</p>
 
 <h3>Creating New Inputs</h3>
 <p>Create a new input to tell Lore that your document is marked up differently
@@ -53,8 +54,8 @@ mollusc counter, bar none.&lt;/p&gt;
 </pre>
 
 <p>The above HTML is an instance of a new input to Lore, which we will call
-MyHTML, to differentiate it from the subset of XHTML Lore recognizes by
-default.  We want it to have the following markup:</p>
+MyHTML, to differentiate it from the <q>lore</q> input.  We want it to have
+the following markup:</p> 
 <ul>
   <li>A <code>productname</code> class for the &lt;span&gt; tag, which
   produces underlined text</li>
@@ -71,22 +72,26 @@ classes.  To make LaTeX and lint work, we start by creating a plugin.</p>
 <a href="listings/lore/plugins.tml" class="py-listing">
   Listing 1: The Plugin File</a>
 
-<p>Name this file <code class="py-filename">plugins.tml</code>, and put it in a
-new package directory named <code class="py-filename">myhtml</code>.
-Also create an <code class="py-filename">__init__.py</code> file in
-  your new package.  Note that <em>the __init__ file can be empty, but it must
-    exist.</em> The combination of plugin file and __init__ file
-causes the new package to be treated like a Twisted plugin, one that Lore
-knows how to make use of.  The first three arguments to <code>register()</code>
-are the human-readable name, module name, and description of your plugin.  The
-<code>type</code> parameter makes this plugin visible to the Lore system
-(rather than some other part of Twisted).  The <code>tapname</code> parameter
-is an arbitrary filename with
-no extension; by convention you should use the lowercase version of your first
-argument (the human-readable name).  Users of your extension will pass this
-argument to lore with the <code class="shell">--input</code> parameter on the
-command line.  (For more details on plugins, read <a
-  href="plugin.html">Writing a New Plug-In for Twisted</a>.)</p>
+<p>Name this file <code class="py-filename">plugins.tml</code>, and put it in
+a new package directory named <code class="py-filename">myhtml</code>.  Also
+create an <code class="py-filename">__init__.py</code> file in your new
+package.  Note that <em>the __init__ file can contain nothing but a doc
+  string, but it must exist.</em>  If <code
+  class="py-filename">__init__.py</code> is empty, you will have problems with
+certain unzip programs that don't extract empty files.</p>
+
+  <p>The combination of plugin file and __init__ file causes the new package
+  to be treated like a Twisted plugin, one that Lore knows how to make use of.
+  The first three arguments to <code>register()</code> are the human-readable
+  name, module name, and description of your plugin.  The <code>type</code>
+  parameter makes this plugin visible to the Lore system (rather than some
+  other part of Twisted).  The <code>tapname</code> parameter is an arbitrary
+  filename with no extension; by convention you should use the lowercase
+  version of your first argument (the human-readable name).  Users of your
+  extension will pass this argument to lore with the <code
+    class="shell">--input</code> parameter on the command line.  (For more
+  details on plugins, read <a href="plugin.html">Writing a New Plug-In for
+    Twisted</a>.)</p>
 
 <p>Let's look at that module name more closely: <code
   class="python">myhtml.factory</code>.  We will be creating this file next,
@@ -130,7 +135,19 @@ input file:</p>
 <a href="listings/lore/1st_example.html" class="html-listing">Listing 4:
   1st_example.html</a>
 
-<p>Run lore and pdflatex on the input:</p>
+<p>First, verify that your package is laid out correctly.  Your directory
+structure should look like this:</p>
+
+<pre>
+1st_example.html
+myhtml/
+       plugins.tml
+       factory.py
+       spitters.py
+</pre>
+
+<p>In the parent directory of myhtml (that is, <code>myhtml/..</code>), run
+lore and pdflatex on the input:</p>
 
 <pre class="shell">
 $ lore --input myhtml --output latex 1st_example.html 
