@@ -2,6 +2,8 @@
 import sha
 import md5
 import hmac
+import time
+import struct
 
 def P_hash(hash, secret, seed, bytes):
     """Data expansion function.
@@ -218,7 +220,8 @@ class ClientHello(Handshake):
     def encode(self):
         return struct.pack('>BI', self.handshakeType, self.gmt_unix_time) + self.bytes
 
-
+import sys
+sys.path.append('../../pahan')
 from implicitstate import ImplicitStateProtocol
 class TLSClient(ImplicitStateProtocol):
     currentReadState = None
@@ -231,12 +234,52 @@ class TLSClient(ImplicitStateProtocol):
 
     buffer = ''
 
+    CONTENT_TYPE_MAP = {chr(20): ('ChangeCipherSpec', 1),
+                        chr(21): ('Alert', ),
+                        chr(22): ('Handshake', ),
+                        chr(23): ('ApplicationData', )}
+
     def send(self, record):
         self.transport.write(record.encode())
 
     def connectionMade(self):
-        self.send(Handshake(Handshake.CLIENT_HELLO))
-        self.implicit_state = (self.state_waitingHello, 1)
+        self.send(ClientHello('x' * 28))
+        self.implicit_state = (self.state_RecordType, 1)
+
+    def state_RecordType(self, data):
+        method, length = self.CONTENT_TYPE_MAP[data]
+        return getattr('rt_' + method), length
+    state_RecordType.byteCount = 1
+
+    def rt_ChangeCipherSpec(self, data):
+        self.changeCipherSpec()
+        return self.state_RecordType, self.state_RecordType.byteCount
+
+    def rt_Alert(self, data):
+        print 'Alert'
+
+    def rt_Handshake(self, data):
+        print 'Handshake'
+
+    def rt_ApplicationData(self, data):
+        print 'ApplicationData'
+
+if __name__ == '__main__':
+    from twisted.internet import ssl
+    from twisted.internet import reactor
+    from twisted.internet import protocol
+    sf = protocol.ServerFactory()
+    cf = protocol.ClientFactory()
+
+    sf.protocol = protocol.Protocol
+    cf.protocol = TLSClient
+
+    pem = '/home/exarkun/projects/python/Twisted/twisted/test/server.pem'
+    port = reactor.listenSSL(0, sf, ssl.DefaultOpenSSLContextFactory(pem, pem), interface='127.0.0.1')
+    conn = reactor.connectTCP('127.0.0.1', port.getHost()[2], cf)
+
+    reactor.callLater(1, reactor.stop)
+    reactor.run()
     
-    def state_waitingHello(self, data):
-        return self.state_waitingChangeCipherSpec, 
+
+    
