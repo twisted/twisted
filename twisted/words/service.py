@@ -89,8 +89,8 @@ class Participant(pb.Perspective):
     def getGroupMembers(self, groupName):
         for group in self.groups:
             if group.name == groupName:
-                return group.members
-        eaise pb.Error("You're not in that group.")
+                return map(lambda m:m.name,group.members)
+        raise pb.Error("You're not in that group.")
 
     def receiveDirectMessage(self, sender, message):
         if self.client:
@@ -120,6 +120,7 @@ class Participant(pb.Perspective):
         raise pb.Error("You're not in that group.")
 
     # Establish client protocol for PB.
+    perspective_changeStatus = changeStatus
     perspective_joinGroup = joinGroup
     perspective_directMessage = directMessage
     perspective_addContact = addContact

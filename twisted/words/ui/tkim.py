@@ -3,6 +3,7 @@ import tkSimpleDialog
 from twisted.spread import pb
 from twisted.spread.ui import tkutil
 from twisted.internet import tkinternet
+from twisted.words import service
 from twisted.words.ui import im
 import time
 import string
@@ -46,9 +47,11 @@ class GroupSession(Toplevel):
         Button(f,text="Leave",command=self.close).grid(column=1,row=0,sticky=N+E+S+W)
         f.grid(column=0,row=2,columnspan=4)
         tkutil.grid_setexpand(self)
+        self.rowconfigure(0,weight=3)
         self.columnconfigure(1,weight=0)
         self.columnconfigure(3,weight=0)
         self.rowconfigure(2,weight=0)
+        self.im.remote.getGroupMembers(self.name,pbcallback=self.gotGroupMembers)
     def close(self):
         self.im.remote.leaveGroup(self.name)
         self.destroy()
@@ -58,12 +61,19 @@ class GroupSession(Toplevel):
         self.output.insert(END,text)
         self.output.see(END)
         self.output.config(state=DISABLED)
+    def gotGroupMembers(self,list):
+        for m in list:
+            self.list.insert(END,m)    
     def displayMessage(self,user,message):
         self._out("<%s> %s\n"%(user,message))
     def memberJoined(self,user):
         self._out("%s joined!\n"%user)
+        self.list.insert(END,user)
     def memberLeft(self,user):
         self._out("%s left!\n"%user)
+        users=list(self.list.get(0,END))
+        i=users.index(user)
+        self.list.delete(i)
     def say(self,*args):
         text=self.input.get("1.0",END)[:-1]
         if not text: return
@@ -99,6 +109,7 @@ class Conversation(Toplevel):
         #self.pack()
         self.protocol("WM_DELETE_WINDOW",self.close)
         tkutil.grid_setexpand(self)
+        self.rowconfigure(0,weight=3)
         self.columnconfigure(1,weight=0)
     def close(self):
         del self.im.conversations[self.contact]
@@ -126,6 +137,14 @@ class ContactList(Toplevel):
     def __init__(self,im,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
         self.im=im
+        menu=Menu(self)
+        self.config(menu=menu)
+        myim=Menu(menu)
+        menu.add_cascade(label="My IM",menu=myim)
+        statuschange=Menu(myim)
+        myim.add_cascade(label="Change Status",menu=statuschange)
+        for k in service.statuses.keys():
+            statuschange.add_command(label=service.statuses[k],command=lambda im=self.im,status=k:im.remote.changeStatus(status))
         self.list=Listbox(self,height=2)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
         bar=Scrollbar(self)
@@ -158,7 +177,7 @@ class ContactList(Toplevel):
             if u[:len(contact)]==contact:
                 row=users.index(u)
                 self.list.delete(row)
-        self.list.insert(END,"%s : %s"%(contact,status))
+        self.list.insert(END,"%s : %s"%(contact,service.statuses[status]))
     def sendMessage(self):
         user=string.split(self.list.get(ACTIVE)," : ")[0]
         self.im.conversationWith(user)
