@@ -25,8 +25,8 @@ import time
 from twisted.python.runtime import platform
 
 if platform.getType() != 'java':
-    import select, signal
-    from errno import EINTR, EBADF
+    import signal
+
 
 import sys
 import socket
@@ -134,90 +134,6 @@ def runUntilCurrent():
             timeout = newTimeout
     return timeout
 
-def _preenDescriptors():
-    log.msg("Malformed file descriptor found.  Preening lists.")
-    readers = reads.keys()
-    writers = writes.keys()
-    reads.clear()
-    writes.clear()
-    for selDict, selList in ((reads, readers), (writes, writers)):
-        for selectable in selList:
-            try:
-                select.select([selectable], [selectable], [selectable], 0)
-            except:
-                log.msg("bad descriptor %s" % selectable)
-            else:
-                selDict[selectable] = 1
-
-
-def doSelect(timeout,
-             # Since this loop should really be as fast as possible,
-             # I'm caching these global attributes so the interpreter
-             # will hit them in the local namespace.
-             reads=reads,
-             writes=writes,
-             rhk=reads.has_key,
-             whk=writes.has_key):
-    """Run one iteration of the I/O monitor loop.
-
-    This will run all selectables who had input or output readiness
-    waiting for them.
-    """
-    while 1:
-        try:
-            r, w, ignored = select.select(reads.keys(),
-                                          writes.keys(),
-                                          [], timeout)
-            break
-        except ValueError, ve:
-            # Possibly a file descriptor has gone negative?
-            _preenDescriptors()
-        except TypeError, te:
-            # Something *totally* invalid (object w/o fileno, non-integral result)
-            # was passed
-            _preenDescriptors()
-        except select.error,se:
-            # select(2) encountered an error
-            if se.args[0] in (0, 2):
-                # windows does this if it got an empty list
-                if (not reads) and (not writes):
-                    return
-                else:
-                    raise
-            elif se.args[0] == EINTR:
-                return
-            elif se.args[0] == EBADF:
-                _preenDescriptors()
-            else:
-                # OK, I really don't know what's going on.  Blow up.
-                raise
-    for selectables, method, dict in ((r, "doRead", reads),
-                                      (w,"doWrite", writes)):
-        hkm = dict.has_key
-        for selectable in selectables:
-            # if this was disconnected in another thread, kill it.
-            if not hkm(selectable):
-                continue
-            # This for pausing input when we're not ready for more.
-            log.logOwner.own(selectable)
-            try:
-                why = getattr(selectable, method)()
-                handfn = getattr(selectable, 'fileno', None)
-                if not handfn or handfn() == -1:
-                    why = CONNECTION_LOST
-            except:
-                log.deferr()
-                why = CONNECTION_LOST
-            if why:
-                removeReader(selectable)
-                removeWriter(selectable)
-                try:
-                    selectable.connectionLost()
-                except:
-                    log.deferr()
-            log.logOwner.disown(selectable)
-
-
 def iterate(timeout=0.):
     """Do one iteration of the main loop.
 
@@ -250,6 +166,13 @@ def run(installSignalHandlers=1):
     (see twisted.python.delay and addDelayed), and the I/O monitor (doSelect).
 
     """
+    # now this is an ugly hack - make sure that we have a reactor installed
+    import twisted.internet
+    if not twisted.internet.reactor:
+        import default
+        reactor = default.DefaultSelectReactor()
+        reactor.install()
+    
     global running
     running = 1
     threadable.registerAsIOThread()
@@ -364,135 +287,7 @@ def removeDelayed(delayed):
     """
     delayeds.remove(delayed)
 
-def addReader(reader):
-    """Add a FileDescriptor for notification of data available to read.
-    """
-    reads[reader] = 1
 
-def addWriter(writer):
-    """Add a FileDescriptor for notification of data available to write.
-    """
-    writes[writer] = 1
-
-def removeReader(reader):
-    """Remove a Selectable for notification of data available to read.
-    """
-    if reads.has_key(reader):
-        del reads[reader]
-
-def removeWriter(writer):
-    """Remove a Selectable for notification of data available to write.
-    """
-    if writes.has_key(writer):
-        del writes[writer]
-
-def removeAll():
-    """Remove all readers and writers, and return list of Selectables."""
-    readers = reads.keys()
-    for reader in readers:
-        if reads.has_key(reader):
-            del reads[reader]
-        if writes.has_key(reader):
-            del writes[reader]
-    return readers
-
-
-class _Win32Waker(styles.Ephemeral):
-    """I am a workaround for the lack of pipes on win32.
-
-    I am a pair of connected sockets which can wake up the main loop
-    from another thread.
-    """
-    def __init__(self):
-        """Initialize.
-        """
-        # Following select_trigger (from asyncore)'s example;
-        address = ("127.0.0.1",19939)
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.setsockopt(socket.IPPROTO_TCP, 1, 1)
-        server.bind(address)
-        server.listen(1)
-        client.connect(address)
-        reader, clientaddr = server.accept()
-        client.setblocking(1)
-        reader.setblocking(0)
-        self.r = reader
-        self.w = client
-        self.fileno = self.r.fileno
-
-    def wakeUp(self):
-        """Send a byte to my connection.
-        """
-        self.w.send('x')
-
-    def doRead(self):
-        """Read some data from my connection.
-        """
-        self.r.recv(8192)
-
-class _UnixWaker(styles.Ephemeral):
-    """This class provides a simple interface to wake up the select() loop.
-
-    This is necessary only in multi-threaded programs.
-    """
-    def __init__(self):
-        """Initialize.
-        """
-        i, o = os.pipe()
-        self.i = os.fdopen(i,'r')
-        self.o = os.fdopen(o,'w')
-        self.fileno = self.i.fileno
-
-    def doRead(self):
-        """Read one byte from the pipe.
-        """
-        self.i.read(1)
-
-    def wakeUp(self):
-        """Write one byte to the pipe, and flush it.
-        """
-        try:
-            self.o.write('x')
-            self.o.flush()
-        except ValueError:
-            # o has been closed
-            pass
-
-    def connectionLost(self):
-        """Close both ends of my pipe.
-        """
-        self.i.close()
-        self.o.close()
-
-if platform.getType() == 'posix':
-    _Waker = _UnixWaker
-elif platform.getType() == 'win32':
-    _Waker = _Win32Waker
-
-def wakeUp():
-    if not threadable.isInIOThread():
-        waker.wakeUp()
-
-
-wakerInstalled = 0
-
-def installWaker():
-    """Install a `waker' to allow other threads to wake up the IO thread.
-    """
-    global waker, wakerInstalled
-    if not wakerInstalled:
-        wakerInstalled = 1
-        waker = _Waker()
-        addReader(waker)
-
-def initThreads():
-    """Perform initialization required for threading.
-    """
-    if platform.getType() != 'java':
-        installWaker()
-
-threadable.whenThreaded(initThreads)
 # Sibling Import
 import process
 
@@ -503,3 +298,4 @@ if platform.getType() == 'java':
 # backward compatibility stuff
 import app
 Application = app.Application
+

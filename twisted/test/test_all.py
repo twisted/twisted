@@ -98,11 +98,15 @@ class TestLoader(unittest.TestLoader):
         return string.join(lines, '')
 
 from twisted.python import log, runtime
+from twisted.internet import default
 log.msg("opening test.log")
 log.logfile = open("test.log", 'a')
-if runtime.platform.getType() == 'win32':
-    from twisted.internet import win32
-    win32.install()
+
+# install event loop
+reactor = default.DefaultSelectReactor()
+reactor.install()
+
+
         
 def testSuite():
     """unittestgui wants a callable to return a suite."""
