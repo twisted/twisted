@@ -192,14 +192,6 @@ class Database:
 
     _superchatty = False
 
-    def register(self, obj):
-        warnings.warn("'register' is now 'insert'", DeprecationWarning)
-        return self.insert(obj)
-
-    def load(self, uid):
-        warnings.warn("'load' is now 'retrieve'", DeprecationWarning)
-        return self.retrieve(uid)
-
     def insert(self, obj):
         
         """Insert an object into the database, returning the OID it can be

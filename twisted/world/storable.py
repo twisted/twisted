@@ -17,12 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+import sys
+from struct import pack
+
 from twisted.python import reflect
 
 from twisted.world import hashless
 from twisted.world.util import Backwards
-
-import sys
 
 class ref(object):
     """A forward reference to a class, for __schema__"""
@@ -225,10 +226,6 @@ class Storable:
         return stor
 
     fromDB = classmethod(fromDB)
-
-    def storedURLPath(self):
-        warnings.warn("We don't call things URL anymore, they're called OIDs.", DeprecationWarning)
-        return self.storedUIDPath()
 
     def storedUIDPath(self):
         if self._inmem_oid is None and self._inmem_genhash is None:
