@@ -13,39 +13,60 @@
     <h1>Developing Componentized Web Applications using Woven, the Web Object Visualization Environment</h1>
 
 <p>
-DOMTemplate solves the problem of separating logic from presentation, and allows the templating logic to be expressed in Python code form using the DOM API. However, the DOM API is too low level and it quickly becomes tedious to use to build complicated HTML structures.
+DOMTemplate solves the problem of separating logic from
+presentation, and allows the templating logic to be expressed in
+Python code form using the DOM API. However, the DOM API is too low
+level and it quickly becomes tedious to use to build complicated HTML
+structures.
 </p>
 
 
     <h2>Twisted's Solution</h2>
 
 <p>
-Twisted's solution is to provide a Model-View-Controller based component framework, which allows you to construct complex HTML "Views" out of many small interacting components, or "woven.widgets".
+Twisted's solution is to provide a Model-View-Controller based
+component framework, which allows you to construct complex HTML
+"Views" out of many small interacting components, or "woven.widgets".
 </p>
 
 <p>
-Instead of manipulating DOM objects which represent low-level HTML Nodes, you construct and compose views using widgets defined in twisted.web.woven.widgets,
-and higher-level widgets that you define yourself for an application-specific purpose.
+Instead of manipulating DOM objects which represent low-level HTML
+Nodes, you construct and compose views using widgets defined in
+twisted.web.woven.widgets, and higher-level widgets that you define
+yourself for an application-specific purpose.
 </p>
 
     <h3>Model-View-Controller</h3>
 
 <p>
-Model View Controller is simply a development strategy which involves breaking up your program logic into three separate domains: Model objects, whose job it is to contain data; View objects, whose job it is to present this data to the user; and Controller objects, whose job it is to interpret the input the user provides and update the model and view with the user's desired changes.
+Model View Controller is simply a development strategy which
+involves breaking up your program logic into three separate domains:
+Model objects, whose job it is to contain data; View objects, whose
+job it is to present this data to the user; and Controller objects,
+whose job it is to handle events such as "user input from a form" and
+"fetch URL" and update the model and view with the user's desired changes.
 </p>
 
 <p>
-Woven's implementation of MVC takes advantage of twisted.python.components, the interface and component registry, in order to loosely couple the interacting objects.
+Woven's implementation of MVC takes advantage of
+twisted.python.components, the interface and component registry, in
+order to loosely couple the interacting objects.
 </p>
 
     <h3>View and Controller</h3>
 
 <p>
-twisted.web defines IResource, the interface that Resource objects must implement in order to support publishing themselves on the web. View and Controller both support this interface, giving you an easy and powerful way to handle incoming web requests and generate template-driven web pages.
+twisted.web defines IResource, the interface that Resource objects
+must implement in order to support publishing themselves on the
+web. View and Controller both support this interface, giving you an
+easy and powerful way to handle incoming web requests and generate
+template-driven web pages.
 </p>
 
 <p>
-View is a subclass of DOMTemplate, and much of Woven is based upon the semantics DOMTemplate uses to transform an input XHTML template into the final page which the user sees.
+View is a subclass of DOMTemplate, and much of Woven is based upon
+the semantics DOMTemplate uses to transform an input XHTML template
+into the final page which the user sees.
 </p>
 
 <p>
@@ -71,25 +92,52 @@ controller.registerControllerForModel(CExample, MExample)
 </pre>
 
 <p>
-Although it is not always necessary to define a complete MVC triad, I recommend doing so initially even if your class bodies are simply 'pass'. This will get you used to thinking about MVC objects as a complete triad of cooperating objects, and make it easy to add functionality to your triad later.
+Although it is not always necessary to define a complete MVC
+triad, I recommend doing so initially even if your class bodies are
+simply 'pass'. This will get you used to thinking about MVC objects as
+a complete triad of cooperating objects, and make it easy to add
+functionality to your triad later.
 </p>
 
 <p>
-While using Twisted's Woven you will be using all this boilerplate code for every page on your web site. It may seem excessive at first, but it has several advantages. By defining a complete MVC triad to represent a web page, you give your page three separate namespaces for your web page's components; by following the MVC division of labor properly you make it easier to locate and isolate a piece of code based on what it does; and by componentizing your logic your code becomes far easier to reuse in other parts of your application, speeding development time.
+While using Twisted's Woven you will be using all this boilerplate
+code for every page on your web site. It may seem excessive at first,
+but it has several advantages. By defining a complete MVC triad to
+represent a web page, you give your page three separate namespaces for
+your web page's components; by following the MVC division of labor
+properly you make it easier to locate and isolate a piece of code
+based on what it does; and by componentizing your logic your code
+becomes far easier to reuse in other parts of your application,
+speeding development time.
 </p>
 
 <p>
-Now, let's take a look at an actual application written in Woven. Here is a template that a designer has provided for the quote page on our site:
+Now, let's take a look at an actual application written in
+Woven. Here is a template that a designer has provided for the quote
+page on our site:
 </p>
 
 <a href="listings/TwistedQuotes/WovenQuotes.xhtml" class="html-listing">Listing 1: WovenQuotes.html: Twisted Quotes Web Template</a>
 
 <p>
-Notice that we have placed "model", "view" and "controller" attributes on those elements that we are interested in operating on. When DOMTemplate is iterating the template looking for nodes to operate on, any node with these attributes will be looked for in both the view and controller. If a node has view attribute of "foo" the method factory_foo will be looked for in the view, and if a node has a controller attribute of "bar" the method factory_bar will be looked for in the controller.
+Notice that we have placed "model", "view" and "controller"
+attributes on those elements that we are interested in operating
+on. When DOMTemplate is iterating the template looking for nodes to
+operate on, any node with these attributes will be looked for in both
+the view and controller. If a node has view attribute of "foo" the
+method factory_foo will be looked for in the view, and if a node has a
+controller attribute of "bar" the method factory_bar will be looked
+for in the controller.
 </p>
 
 <p>
-These factory methods will be called with the request object and current node object as parameters. In the WView subclass, a view factory is expected to return a Widget subclass; there are many widgets in twisted.web.woven.widgets that can be composed into larger widgets which are specific to your application. A controller factory, usually only relevant on an INPUT node, is expected to return an InputHandler subclass; these are defined in twisted.web.woven.input.
+These factory methods will be called with the request object and
+current node object as parameters. In the WView subclass, a view
+factory is expected to return a Widget subclass; there are many
+widgets in twisted.web.woven.widgets that can be composed into larger
+widgets which are specific to your application. A controller factory,
+usually only relevant on an INPUT node, is expected to return an
+InputHandler subclass; these are defined in twisted.web.woven.input.
 </p>
 
 <p>
@@ -97,15 +145,35 @@ These factory methods will be called with the request object and current node ob
 </p>
 
 <p>
-So, to bring our template to life, we first override setUp to prepare the view for rendering. We then add factory_quote and factory_title methods on our view subclass. In the case of title we can simply return a domwidgets.Text instance. Since this factory was called in response to a node with the model attribute set to "title", when the node is rendered it will use the "title" attribute of the model as it's data. For our quote factory, we have implemented a custom widget. This makes our logic componentized and reusable. The same QuoteWidget could potentially be used to render multiple different pieces of data.
+So, to bring our template to life, we first override setUp to
+prepare the view for rendering. We then add factory_quote and
+factory_title methods on our view subclass. In the case of title we
+can simply return a domwidgets.Text instance. Since this factory was
+called in response to a node with the model attribute set to "title",
+when the node is rendered it will use the "title" attribute of the
+model as it's data. For our quote factory, we have implemented a
+custom widget. This makes our logic componentized and reusable. The
+same QuoteWidget could potentially be used to render multiple
+different pieces of data.
 </p>
 
 <p>
-A DOMWidget's main responsibility is implementing setUp, which should set up the widget in preperation for conversion to DOM and insertion into the tree. In this case, we take advantage of the higher level Widgets API and simply add a Text widget to ourself. When the widget is turned into DOM, the text widget will know how to create a DOM text node, and insert it into the tree.
+A DOMWidget's main responsibility is implementing setUp, which
+should set up the widget in preperation for conversion to DOM and
+insertion into the tree. In this case, we take advantage of the higher
+level Widgets API and simply add a Text widget to ourself. When the
+widget is turned into DOM, the text widget will know how to create a
+DOM text node, and insert it into the tree.
 </p>
 
 <p>
-Finally, we provide a factory_newQuote method on the controller which returns a custom InputHandler subclass. There are a few methods handlers may override to deal with data, but in this case we override "check", which decides if the input the user entered was valid, and "commit", which applies the user's input. For check, we simply see if the user entered anything at all; for commit, we append the newly entered quote to the end of the quotefile.
+Finally, we provide a factory_newQuote method on the controller
+which returns a custom InputHandler subclass. There are a few methods
+handlers may override to deal with data, but in this case we override
+"check", which decides if the input the user entered was valid, and
+"commit", which applies the user's input. For check, we simply see if
+the user entered anything at all; for commit, we append the newly
+entered quote to the end of the quotefile.
 </p>
 
 <p>
