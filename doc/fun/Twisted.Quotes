@@ -2930,3 +2930,9 @@ dollars, instead of being dead, i am now an oil magnate in my native country."
 %
 <bram> I just got a call from a mechanical voice which said 'I'm sorry, I dialed your number in error'
 %
+<liiwi> _pattern = re.compile('^(?P<client>[^ ]+) (?P<ident>[^ ]+) (?P<authuser>[^\[\n]+) \[(?P<mday>[0-9]+)\/(?P<mon_name>\w+)\/(?P<ye\
+<liiwi> ar>[0-9]+):(?P<hour>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+) (?P<timediff>[^ ]+)\] "(?P<method>(GET|HEAD|PUT|POST|TRACE|DELETE|O\
+<liiwi> PTIONS|-))( (?P<url>.*) (?P<proto>[^ ].*))" (?P<status>.*) (?P<bytes>.*) "(?P<refer>.*)" "(?P<agent>[^"]+)"(($)|( (?P<stime>[^ \
+<liiwi> ]+) (?P<vhost>[^ ]+).*$))')
+<radix> BURN IN HELL
+%
