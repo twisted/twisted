@@ -46,6 +46,11 @@ class Options(usage.Options):
 
 def getPorts(app, config):
     t = ftp.ShellFactory()
+    # setting the config
+    t.anonymous = config.anonymous
+    t.thirdparty = config.thirdparty
+    t.root = config.root
+    t.useranonymous = config.useranonymous
     # adding a default user
     t.userdict = {}
     t.userdict["twisted"] = "twisted"
