@@ -23,6 +23,7 @@ to format methods.  Currently this is only used by woven.
 """
 
 import calendar
+from compat import *
 
 
 class FormException(Exception):

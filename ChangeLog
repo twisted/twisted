@@ -1,5 +1,7 @@
 2003-05-29  Brian Warner  <warner@lothar.com>
 
+	* twisted/python/formmethod.py: this module needs False from compat
+
 	* twisted/internet/process.py (ProcessWriter.writeSomeData):
 	Accomodate Mac OS-X, which sometimes raises OSError(EAGAIN)
 	instead of IOError(EAGAIN) when the pipe is full.
