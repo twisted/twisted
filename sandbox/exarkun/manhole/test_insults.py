@@ -225,3 +225,10 @@ class ClientControlSequences(unittest.TestCase):
         self.proto.expects(pmock.once()).insertLine(pmock.eq(3)).after("a")
 
         self.parser.dataReceived("\x1b[L\x1b[3L")
+
+    def testCursorPosition(self):
+        self.proto.expects(pmock.once()).reportCursorPosition().will(pmock.return_value((6, 7)))
+
+        self.parser.dataReceived("\x1b[6n")
+        self.assertEquals(self.transport.value(), "\x1b[6;7R")
+

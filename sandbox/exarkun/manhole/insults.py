@@ -858,6 +858,13 @@ class ClientProtocol(protocol.Protocol):
                 else:
                     handler.deleteLine(n)
 
+        def n(self, proto, handler, buf):
+            if buf == '6':
+                pos = handler.reportCursorPosition()
+                proto.transport.write('\x1b[%d;%dR' % (pos))
+            else:
+                handler.unhandledControlSequence('\x1b[' + buf + 'n')
+
     controlSequenceParser = ControlSequenceParser()
 
     def _handleHeightWidth(self, b):
