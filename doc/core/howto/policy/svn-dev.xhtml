@@ -130,8 +130,8 @@ release.</p>
 <h2>Building docs</h2>
 
 <p>Twisted documentation (not including the automatically-generated API
-docs) is in <a href="../lore.xhtml">Lore Format</a>. These <code>.html</code>
-files are translated into <code>.xhtml</code> files by the <q>bin/lore</q>
+docs) is in <a href="http://twistedmatrix.com/projects/lore">Lore Format</a>. These <code>.xhtml</code>
+files are translated into <code>.html</code> files by the <q>bin/lore</q>
 script, which can check the files for syntax problems (hlint), process
 multiple files at once, insert the files into a template before processing,
 and can also translate the files into LaTeX or PostScript instead.</p>
@@ -147,27 +147,27 @@ twistedmatrix.com build machine.</p>
 
 <p>To build just the HTML form of the howto/ docs, do a subset of the work
 done in <code>admin/process-docs</code>, such as the following. Note that
-the index file will be placed in <code>doc/howto/index.xhtml</code>.</p>
+the index file will be placed in <code>doc/howto/index.html</code>.</p>
 
-<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.html</pre>
+<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml</pre>
 
 <p>To run hlint over a single Lore document, such as
-<code>doc/howto/cvs-dev.html</code>, do the following. This is useful
+<code>doc/howto/cvs-dev.xhtml</code>, do the following. This is useful
 because the HTML conversion may bail without a useful explanation if it sees
 mismatched tags.</p>
 
-<pre class="shell">./bin/lore -n --output lint doc/howto/cvs-dev.html</pre>
+<pre class="shell">./bin/lore -n --output lint doc/howto/cvs-dev.xhtml</pre>
 
 <p>To convert it to HTML (including markup, interpolation of examples,
 footnote processing, etc), do the following. The results will be placed in
-<code>doc/howto/cvs-dev.xhtml</code>:</p>
+<code>doc/howto/cvs-dev.html</code>:</p>
 
-<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/cvs-dev.html</pre>
+<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/cvs-dev.xhtml</pre>
 
 <p>Note that hyperlinks to other documents may not be quite right unless you
-include a <q>-l</q> argument to <code>bin/lore</code>. Links in the .html
-file are to .html targets: when the .html is turned into .xhtml, the link
-targets are supposed to be turned into .xhtml also. In addition to this,
+include a <q>-l</q> argument to <code>bin/lore</code>. Links in the .xhtml
+file are to .xhtml targets: when the .xhtml is turned into .html, the link
+targets are supposed to be turned into .html also. In addition to this,
 Lore markup of the form &lt;code class=&quot;API&quot;&gt; is supposed to
 turn into a link to the corresponding API reference page. These links will
 probably be wrong unless the correct base URL is provided to Lore.</p>
