@@ -375,6 +375,23 @@ class ModelPathTest(WovenTC):
 
 </html>"""
 
+#### Test 8
+# Test a large number of widgets
+
+class HugeTest(WovenTC):
+    modelFactory = lambda self: ['hello' for x in range(100)]
+    resourceFactory = page.Page
+
+    def prerender(self):
+        self.t.template = """<html>
+    <div model="." view="List">
+        <div pattern="listItem" view="Text" />
+    </div>
+</html>"""
+
+    def testHugeTest(self):
+        pass
+
 class FakeHTTPChannel:
     # TODO: this should be an interface in twisted.protocols.http... lots of
     # things want to fake out HTTP
