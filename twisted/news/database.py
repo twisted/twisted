@@ -688,7 +688,7 @@ class NewsShelf:
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
 
-class NewsStorageAugmentation(adbapi.Augmentation):
+class NewsStorageAugmentation:
     """
     A NewsStorage implementation using Twisted's asynchronous DB-API
     """
@@ -736,8 +736,8 @@ class NewsStorageAugmentation(adbapi.Augmentation):
     """
     
     def __init__(self, info):
-        adbapi.Augmentation.__init__(self, None)
         self.info = info
+        self.dbpool = adbapi.ConnectionPool(**self.info)
         
 
     def __setstate__(self, state):
@@ -761,21 +761,21 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             GROUP BY groups.name, groups.flags
             ORDER BY groups.name
         """
-        return self.runQuery(sql)
+        return self.dbpool.runQuery(sql)
 
 
     def subscriptionRequest(self):
         sql = """
             SELECT groups.name FROM groups,subscriptions WHERE groups.group_id = subscriptions.group_id
         """
-        return self.runQuery(sql)
+        return self.dbpool.runQuery(sql)
 
 
     def postRequest(self, message):
         cleave = message.find('\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
         article = Article(headers, article)
-        return self.runInteraction(self._doPost, article)
+        return self.dbpool.runInteraction(self._doPost, article)
 
 
     def _doPost(self, transaction, article):
@@ -851,7 +851,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
         sql = """
             SELECT header FROM overview
         """
-        return self.runQuery(sql).addCallback(lambda result: [header[0] for header in result])
+        return self.dbpool.runQuery(sql).addCallback(lambda result: [header[0] for header in result])
 
 
     def xoverRequest(self, group, low, high):
@@ -869,7 +869,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             high is not None and "AND postings.article_index <= %d" % (high,) or ""
         )
 
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda results: [
                 [id] + Article(header, None).overview() for (id, header) in results
             ]
@@ -885,7 +885,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             AND postings.article_index <= %d
         """ % (adbapi.safe(group), low, high)
 
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda results: [
                 (i, Article(h, None).getHeader(h)) for (i, h) in results
             ]
@@ -899,7 +899,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             AND groups.name = '%s'
         """ % (adbapi.safe(group),)
         
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda results, group = group: (group, [res[0] for res in results])
         )
 
@@ -917,7 +917,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             GROUP BY groups.name, groups.flags
         """ % (adbapi.safe(group),)
         
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda results: tuple(results[0])
         )
 
@@ -928,7 +928,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             WHERE message_id = '%s'
         """ % (adbapi.safe(id),)
         
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda result: bool(result[0][0])
         )
 
@@ -952,7 +952,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
                 AND groups.name = '%s'
             """ % (index, adbapi.safe(group))
 
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda result: (
                 result[0][0],
                 result[0][1],
@@ -971,7 +971,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             AND groups.name = '%s'
         """ % (index, adbapi.safe(group))
         
-        return self.runQuery(sql).addCallback(lambda result: result[0])
+        return self.dbpool.runQuery(sql).addCallback(lambda result: result[0])
 
 
     def bodyRequest(self, group, index):
@@ -984,7 +984,7 @@ class NewsStorageAugmentation(adbapi.Augmentation):
             AND groups.name = '%s'
         """ % (index, adbapi.safe(group))
         
-        return self.runQuery(sql).addCallback(
+        return self.dbpool.runQuery(sql).addCallback(
             lambda result: result[0]
         ).addCallback(
             lambda (index, id, body): (index, id, StringIO.StringIO(body))
