@@ -41,6 +41,7 @@ class IReactorTCP(Interface):
             has failed.
         """
 
+
 class IReactorSSL(Interface):
     def clientSSL(self, host, port, protocol, contextFactory, timeout=30,):
         """Connect a client Protocol to a remote SSL socket.
@@ -86,6 +87,7 @@ class IReactorUDP(Interface):
 
 ## XXX TODO: expose udp.Port.createConnection more formally
 
+
 class IReactorProcess(Interface):
     
     def spawnProcess(self, processProtocol, executable, args=(), env={}):
@@ -107,6 +109,7 @@ class IReactorProcess(Interface):
 
           twisted.protocols.protocol.ProcessProtocol
         """
+
 
 class IReactorTime(Interface):
     """Time methods that a Reactor should implement.
@@ -137,6 +140,27 @@ class IReactorTime(Interface):
           * callID: this is an opaque identifier returned from callLater that
             wil be used to cancel a specific call.
         """
+
+
+class IThreadDispatcher(Interface):
+    """Dispatch methods to be run in threads.
+
+    Internally, this should use a thread pool and dispatch methods to them.
+    """
+
+    def callInThread(self, callable, *args, **kwargs):
+        """Run the callable object in a separate thread."""
+
+    def callMultipleInThread(self, callableList):
+        """Run a list of methods in order, in a single thread.
+
+        callableList should be a sequence of (callable, argsTuple, kwargsDict)
+        tuples.
+        """
+
+    def deferToThread(self, callable, *args, **kwargs):
+        """Run callable in a thread, returning a Deferred result."""
+
 
 class IReactorCore(Interface):
     """Core methods that a Reactor must implement.
@@ -236,6 +260,7 @@ class IReactorCore(Interface):
           * triggerID: a value returned from addSystemEventTrigger.
         """
 
+
 class IReactorFDSet(Interface):
     """Implement me to be able to use FileDescriptor type resources.
 
@@ -282,6 +307,7 @@ class IListeningPort(Interface):
           information about the port.
         """
 
+
 class IFileDescriptor(Interface):
     """A file descriptor.
     """
@@ -294,18 +320,23 @@ class IFileDescriptor(Interface):
         """
 
 class IReadDescriptor(IFileDescriptor):
+
     def doRead(self):
         """Some data is available for reading on your descriptor.
         """
 
+
 class IWriteDescriptor(IFileDescriptor):
+
     def doWrite(self):
         """Some data is available for reading on your descriptor.
         """
 
+
 class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
     """I am a FileDescriptor that can both read and write.
     """
+
 
 class IConsumer(Interface):
     """A consumer consumes data from a producer."""
@@ -318,16 +349,13 @@ class IConsumer(Interface):
         to resumeProducing(). A producer should implement the IProducer
         interface.
         """
-        raise NotImplementedError
 
     def unregisterProducer(self):
         """Stop consuming data from a producer, without disconnecting.
         """
-        raise NotImplementedError
 
     def write(self, data):
         """The producer will write data by calling this method."""
-        raise NotImplementedError
 
 
 class IProducer(Interface):
@@ -354,7 +382,6 @@ class IProducer(Interface):
         This tells a producer to re-add itself to the main loop and produce
         more data for its consumer.
         """
-        raise NotImplementedError
 
     def pauseProducing(self):
         """Pause producing data.
@@ -362,7 +389,6 @@ class IProducer(Interface):
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
-        raise NotImplementedError
 
     def stopProducing(self):
         """Stop producing data.
@@ -370,76 +396,11 @@ class IProducer(Interface):
         This tells a producer that its consumer has died, so it must stop
         producing data for good.
         """
-        raise NotImplementedError
 
 
 class IConnector:
     """Connect this to that and make it stick."""
 
-    transportFactory = None
-    protocol = None
-    factory = None
-
-    def __init__(self, host, portno, protocolFactory, timeout=30):
-        raise NotImplementedError
-
-    def connectionFailed(self):
-        raise NotImplementedError
-
-    def connectionLost(self):
-        raise NotImplementedError
-
-    def startConnecting(self):
-        raise NotImplementedError
-
     def getProtocol(self):
         """Get the current protocol instance."""
-        raise NotImplementedError
 
-
-
-class ISelectable(Interface):
-    """An object that can be registered with the networking event loop.
-    
-    Selectables more or less correspond to object that can be passed to select().
-    This is platform dependant, and not totally accurate, since the main event loop
-    may not be using select().
-    
-    Selectables may be registered as readable by passing them to t.i.main.addReader(),
-    and they may be registered as writable by passing them to t.i.main.addWriter().
-    
-    In general, selectables are expected to inherit from twisted.python.log.Logger.
-    """
-    
-    def doWrite(self):
-        """Called when data is available for writing.
-        
-        This will only be called if this object has been registered as a writer in
-        the event loop.
-        """
-        raise NotImplementedError
-    
-    def doRead(self):
-        """Called when data is available for reading.
-        
-        This will only be called if this object has been registered as a reader in
-        the event loop.
-        """
-        raise NotImplementedError
-    
-    def fileno(self):
-        """Return a file descriptor number for select().
-
-        This method must return an integer, the object's file descriptor.
-        """
-        raise NotImplementedError
-    
-    def connectionLost(self):
-        """Called if an error has occured or the object's connection was closed.
-        
-        This may be called even if the connection was never opened in the first place.
-        """
-        raise NotImplementedError
-
-
-__all__ = ["IProducer", "ISelectable", "IConsumer"]
