@@ -54,21 +54,22 @@ from __future__ import nested_scopes
        CallLater
           Cooperate
        Stage
+              # private stages (use flow.wrap)
           _String
           _List
           _Iterable
+          _Deferred
+              # public stages
           Zip
           Concurrent
              Merge
           Block
           Callback*
-             _Protocol
-          _Deferred*
           Threaded*
     Controller
         Deferred 
         Block
-        _Protocol
+        Protocol
 """
 
 import time, types
@@ -77,41 +78,9 @@ from twisted.python.compat import StopIteration, iter, isinstance, True, False
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.error import ConnectionLost
 
-def wrap(obj, *trap):
-    """ Wraps various objects for use within a flow """
-    if isinstance(obj, Stage):
-        if trap:
-            # merge trap list
-            trap = list(trap)
-            for ex in obj._trap:
-                if ex not in trap:
-                    trap.append(ex)
-            obj._trap = tuple(trap)
-        return obj
-
-    if callable(obj):
-        obj = obj()
-
-    typ = type(obj)
-    if typ is type([]) or typ is type(tuple()):
-        return _List(obj)
-    if typ is type(''):
-        return _String(obj)
-     
-    if isinstance(obj, defer.Deferred):
-        return _Deferred(obj, *trap)
-
-    try:
-        return _Iterable(obj, *trap)
-    except TypeError: 
-        pass
-
-    raise ValueError, "A wrapper is not available for %r" % (obj,)
-
-class Instruction:
-    """ Has special meaning when yielded in a flow """
-    pass
- 
+#
+# Exceptions used within flow
+# 
 class Unsupported(TypeError):
     """ Indicates that the given stage does not know what to do 
         with the flow instruction that was returned.
@@ -120,6 +89,21 @@ class Unsupported(TypeError):
         msg = "Unsupported flow instruction: %s " % repr(inst)
         TypeError.__init__(self,msg)
 
+class NotReadyError(RuntimeError):
+    """ Used for the default stage value indicating that 'yield' was
+        not used on the stage prior to calling it's next() method
+        or accessing its 'result' variable.
+    """
+    pass
+
+#
+# Abstract/Base Classes
+#
+
+class Instruction:
+    """ Has special meaning when yielded in a flow """
+    pass
+ 
 class Controller:
     """ Flow controller
 
@@ -129,13 +113,6 @@ class Controller:
         denote which classes consume Instruction events.  If a
         controller cannot handle a particular instruction, it
         raises the Unsupported exception.
-    """
-    pass
-
-class NotReadyError(RuntimeError):
-    """ Used for the default stage value indicating that 'yield' was
-        not used on the stage prior to calling it's next() method
-        or accessing its 'result' variable.
     """
     pass
 
@@ -241,8 +218,8 @@ class Stage(Instruction):
                  if iterable.stop:
                      break
                  if iterable.failure:
-                     // handle iterable.failure
                      iterable.stop = True
+                     // handle iterable.failure
                      break
     """      
     def __init__(self, *trap):
@@ -288,6 +265,10 @@ class Stage(Instruction):
             if a problem occurred.
         """
         raise NotImplementedError
+
+#
+# Concrete Private Stages
+#
 
 class _String(Stage):
     """ Wrapper for a string object; don't create directly use flow.wrap
@@ -370,6 +351,79 @@ class _Iterable(Stage):
             except:
                 self.failure = Failure()
             return
+
+class _Deferred(Stage):
+    """ Wraps a Deferred object into a stage; create with flow.wrap
+
+        This stage provides a callback 'catch' for errback and
+        callbacks.  If not called, then this returns an Instruction
+        which will let the reactor execute other operations, such
+        as the producer for this deferred.
+    """
+    class Instruction(CallLater):
+        def __init__(self, deferred):
+            self.deferred = deferred
+        def callLater(self, callable):
+            self.deferred.addBoth(callable)
+    def __init__(self, deferred, *trap):
+        Stage.__init__(self, *trap)
+        deferred.addCallbacks(self._callback)
+        self._cooperate  = _Deferred.Instruction(deferred)
+        self._called     = False
+        self._fetched    = False
+
+    def _callback(self, res):
+        self._called = True
+        self.results = [res]
+
+    def _errback(self, fail):
+        self._called = True
+        self.failure = fail
+
+    def _yield(self):
+        if self.results or self.stop or self.failure:
+            return
+        if not self._called:
+            return self._cooperate
+        if self._fetched:
+           self.stop = True
+           return
+        self._fetched = True
+
+def wrap(obj, *trap):
+    """ Wraps various objects for use within a flow """
+    if isinstance(obj, Stage):
+        if trap:
+            # merge trap list
+            trap = list(trap)
+            for ex in obj._trap:
+                if ex not in trap:
+                    trap.append(ex)
+            obj._trap = tuple(trap)
+        return obj
+
+    if callable(obj):
+        obj = obj()
+
+    typ = type(obj)
+    if typ is type([]) or typ is type(tuple()):
+        return _List(obj)
+    if typ is type(''):
+        return _String(obj)
+     
+    if isinstance(obj, defer.Deferred):
+        return _Deferred(obj, *trap)
+
+    try:
+        return _Iterable(obj, *trap)
+    except TypeError: 
+        pass
+
+    raise ValueError, "A wrapper is not available for %r" % (obj,)
+
+#
+# Public Stages
+# 
 
 class Zip(Stage):
     """ Zips two or more stages into a stream of N tuples
@@ -502,37 +556,6 @@ class Merge(Stage):
             self.stop = True
         self.failure =  self.concurrent.failure
 
-class Block(Controller,Stage):
-    """ A stage which Blocks on Cooperate events
-
-        This converts a Stage into an iterable which can be used 
-        directly in python for loops and other iteratable constructs.
-        It does this by eating any Cooperate values and sleeping.
-        This is largely helpful for testing or within a threaded
-        environment.  It converts other stages into one which 
-        does not emit cooperate events.
-
-        [1,2, Cooperate(), 3] => [1,2,3]
-
-    """
-    def __init__(self, stage, *trap):
-        Stage.__init__(self)
-        self._stage = wrap(stage,*trap)
-        self.block = time.sleep
-
-    def next(self):
-        """ fetch the next value from the Stage flow """
-        stage = self._stage
-        while True:
-            result = stage._yield()
-            if result:
-                if isinstance(result, Cooperate):
-                    if result.__class__ == Cooperate:
-                        self.block(result.timeout)
-                        continue
-                raise Unsupported(result)
-            return stage.next()
-
 class Callback(Stage):
     """ Converts a single-thread push interface into a pull interface.
    
@@ -572,44 +595,6 @@ class Callback(Stage):
                 return
             return self._cooperate
     __call__ = result
-
-class _Deferred(Stage):
-    """ Wraps a Deferred object into a stage; create with flow.wrap
-
-        This stage provides a callback 'catch' for errback and
-        callbacks.  If not called, then this returns an Instruction
-        which will let the reactor execute other operations, such
-        as the producer for this deferred.
-    """
-    class Instruction(CallLater):
-        def __init__(self, deferred):
-            self.deferred = deferred
-        def callLater(self, callable):
-            self.deferred.addBoth(callable)
-    def __init__(self, deferred, *trap):
-        Stage.__init__(self, *trap)
-        deferred.addCallbacks(self._callback)
-        self._cooperate  = _Deferred.Instruction(deferred)
-        self._called     = False
-        self._fetched    = False
-
-    def _callback(self, res):
-        self._called = True
-        self.results = [res]
-
-    def _errback(self, fail):
-        self._called = True
-        self.failure = fail
-
-    def _yield(self):
-        if self.results or self.stop or self.failure:
-            return
-        if not self._called:
-            return self._cooperate
-        if self._fetched:
-           self.stop = True
-           return
-        self._fetched = True
 
 class Threaded(Stage):
     """ A stage which runs a blocking iterable in a separate thread
@@ -674,6 +659,41 @@ class Threaded(Stage):
         if self.results or self.stop or self.failure:
             return
         return self._cooperate
+
+#
+# Public Controllers
+#
+
+class Block(Controller,Stage):
+    """ A controller which blocks on Cooperate events
+
+        This converts a Stage into an iterable which can be used 
+        directly in python for loops and other iteratable constructs.
+        It does this by eating any Cooperate values and sleeping.
+        This is largely helpful for testing or within a threaded
+        environment.  It converts other stages into one which 
+        does not emit cooperate events.
+
+        [1,2, Cooperate(), 3] => [1,2,3]
+
+    """
+    def __init__(self, stage, *trap):
+        Stage.__init__(self)
+        self._stage = wrap(stage,*trap)
+        self.block = time.sleep
+
+    def next(self):
+        """ fetch the next value from the Stage flow """
+        stage = self._stage
+        while True:
+            result = stage._yield()
+            if result:
+                if isinstance(result, Cooperate):
+                    if result.__class__ == Cooperate:
+                        self.block(result.timeout)
+                        continue
+                raise Unsupported(result)
+            return stage.next()
 
 class Deferred(Controller, defer.Deferred):
     """ wraps up a Stage with a Deferred interface
@@ -758,7 +778,7 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
     """
     if not callbacks:
         callbacks = ('dataReceived',)
-    class _Protocol(Callback, baseClass):
+    class _Protocol(Controller, Callback, baseClass):
         def __init__(self):
             Callback.__init__(self)
             setattr(self, callbacks[0], self)  # only one callback support
@@ -804,6 +824,10 @@ def _NotImplController(protocol):
     raise NotImplementedError
 Protocol = makeProtocol(_NotImplController) 
 Protocol.__doc__ = """ A concrete flow.Protocol for inheritance """
+
+#
+# Other (indirectly related) stuff
+#
 
 class QueryIterator:
     """ Converts a database query into a result iterator """
