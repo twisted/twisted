@@ -33,11 +33,11 @@
 		<widget class="GtkMenu" id="menuitem4_menu">
 
 		  <child>
-		    <widget class="GtkImageMenuItem" id="open1">
+		    <widget class="GtkImageMenuItem" id="openMenuItem">
 		      <property name="visible">True</property>
 		      <property name="label">gtk-open</property>
 		      <property name="use_stock">True</property>
-		      <signal name="activate" handler="on_open1_activate" last_modification_time="Mon, 27 Jan 2003 04:50:50 GMT"/>
+		      <signal name="activate" handler="_on_openMenuItem_activate" last_modification_time="Sun, 02 Feb 2003 18:44:51 GMT"/>
 		    </widget>
 		  </child>
 
@@ -48,11 +48,11 @@
 		  </child>
 
 		  <child>
-		    <widget class="GtkImageMenuItem" id="quit1">
+		    <widget class="GtkImageMenuItem" id="quitMenuItem">
 		      <property name="visible">True</property>
 		      <property name="label">gtk-quit</property>
 		      <property name="use_stock">True</property>
-		      <signal name="activate" handler="on_quit1_activate" last_modification_time="Mon, 27 Jan 2003 04:50:50 GMT"/>
+		      <signal name="activate" handler="_on_quitMenuItem_activate" last_modification_time="Sun, 02 Feb 2003 18:48:12 GMT"/>
 		    </widget>
 		  </child>
 		</widget>
@@ -119,11 +119,11 @@
 		<widget class="GtkMenu" id="menuitem7_menu">
 
 		  <child>
-		    <widget class="GtkMenuItem" id="about1">
+		    <widget class="GtkMenuItem" id="aboutMenuItem">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_About</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="on_about1_activate" last_modification_time="Mon, 27 Jan 2003 04:50:50 GMT"/>
+		      <signal name="activate" handler="_on_aboutMenuItem_activate" last_modification_time="Thu, 06 Feb 2003 19:49:53 GMT"/>
 		    </widget>
 		  </child>
 		</widget>
@@ -172,7 +172,7 @@
 	    </widget>
 	    <packing>
 	      <property name="shrink">True</property>
-	      <property name="resize">False</property>
+	      <property name="resize">True</property>
 	    </packing>
 	  </child>
 
@@ -205,7 +205,7 @@
 	    </widget>
 	    <packing>
 	      <property name="shrink">True</property>
-	      <property name="resize">True</property>
+	      <property name="resize">False</property>
 	    </packing>
 	  </child>
 	</widget>
