@@ -67,6 +67,19 @@ class Repository:
         self._revCache = weakref.WeakKeyDictionary()
         self._pRefs = weakref.WeakValueDictionary()
 
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        del dct['_cache']
+        del dct['_revCache']
+        del dct['_pRefs']
+        return dct
+
+    def __setstate__(self, dct):
+        self.__dict__ = dct
+        self._cache = weakref.WeakValueDictionary()
+        self._revCache = weakref.WeakKeyDictionary()
+        self._pRefs = weakref.WeakValueDictionary()
+
     def load(self, oid):
         """Load an object from cache or by OID. Return a Deferred.
 

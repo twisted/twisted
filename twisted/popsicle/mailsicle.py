@@ -473,6 +473,7 @@ class MailsicleService(service.Service):
     def __getstate__(self):
         dct = self.__dict__.copy()
         del dct['perspectives']
+        return dct
 
     def __setstate__(self, dct):
         self.__dict__ = dct
