@@ -375,15 +375,14 @@ class FlowTest(unittest.TestCase):
 
     def testProtocolLocalhost(self):
         # this fails if parallel tests are run on the same box
-        PORT = 8392
         server = protocol.ServerFactory()
         server.protocol = flow.Protocol
         server.protocol.controller = echoServer
-        reactor.listenTCP(PORT,server)
+        port = reactor.listenTCP(0, server)
         client = protocol.ClientFactory()
         client.protocol = flow.makeProtocol(echoClient)
         client.d = defer.Deferred()
-        reactor.connectTCP("localhost", PORT, client)
+        reactor.connectTCP("127.0.0.1", port.getHost()[2], client)
         self.assertEquals('testing', unittest.deferredResult(client.d))
 
     def testProtocol(self):
