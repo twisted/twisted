@@ -1,3 +1,10 @@
+twisted (0.15.3-1) unstable; urgency=low
+
+  * New upstream release
+  * Fixed stupidproxy bug, where connections weren't closed 
+
+ -- Moshe Zadka <moshez@debian.org>  Thu, 28 Feb 2002 21:07:28 +0200
+
 twisted (0.15.1-1) unstable; urgency=low
 
   * New upstream release
