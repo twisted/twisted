@@ -143,6 +143,16 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessEqual(o.subCommand, None)
         self.failIf(hasattr(o, 'subOptions'))
 
+    def test_defaultSubcommand(self):
+        o=SubCommandOptions()
+        o.defaultSubCommand = 'inquest'
+        o.parseOptions(['--europian-swallow'])
+        self.failUnlessEqual(o['europian-swallow'], True)
+        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.failUnlessEqual(o.subOptions['expect'], False)
+        self.failUnlessEqual(o.subOptions['torture-device'], 'comfy-chair')
+
 class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """Instantiate a well-behaved Options class.

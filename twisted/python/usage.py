@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.43 2003/07/19 10:39:16 tv Exp $
+# $Id: usage.py,v 1.44 2003/07/19 10:43:30 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -103,6 +103,7 @@ class Options(UserDict.UserDict):
     """
 
     subCommand = None
+    defaultSubCommand = None
     parent = None
     def __init__(self):
         UserDict.UserDict.__init__(self)
@@ -192,7 +193,10 @@ class Options(UserDict.UserDict):
             optMangled = self.synonyms[optMangled]
             self.__dispatch[optMangled](optMangled, arg)
 
-        if len(args) and getattr(self, 'subCommands', None):
+        if (getattr(self, 'subCommands', None)
+            and (args or self.defaultSubCommand is not None)):
+            if not args:
+                args = [self.defaultSubCommand]
             sub, rest = args[0], args[1:]
             for (cmd, short, parser, doc) in self.subCommands:
                 if sub == cmd or sub == short:
