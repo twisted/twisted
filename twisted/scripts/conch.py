@@ -27,7 +27,7 @@ from twisted.internet.error import CannotListenError
 from twisted.python import usage, log, util
 from twisted.spread import banana
 
-import os, sys, getpass, struct, tty, fcntl, base64, signal, stat
+import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
 
 try:
     import cPickle as pickle
@@ -190,10 +190,28 @@ def doConnect():
     else:
         options['port'] = int(options['port'])
     filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
-    if not options['nocache'] and os.path.exists(filename):
-        reactor.connectUNIX(filename, SSHUnixClientFactory(), timeout=2)
-    else:
-        reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
+    pidfile = filename + '.pid'
+    if not options['nocache'] and os.path.exists(filename) and os.path.exists(pidfile):
+        try:
+            pid = int(open(pidfile).read())
+        except ValueError:
+            log.msg('pid file %s contains non-numeric' % pidfile)
+        else:
+            try:
+                os.kill(pid, 0)
+            except OSError, why:
+                if why[0] == errno.ESRCH:
+                    # pid doesn't exist
+                    log.msg('removing stale pidfile %s' % pidfile)
+                    os.remove(pidfile)
+                    os.unlink(filename)
+                else:
+                    log.msg("can't check PID %i from file %s: %s" %
+                            (pid, pidfile, why[1]))
+            else:
+                reactor.connectUNIX(filename, SSHUnixClientFactory(), timeout=2)
+                return
+    reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
 
 def onConnect():
 #    if keyAgent and options['agent']:
@@ -230,19 +248,26 @@ def onConnect():
             reactor.listenUNIX(filename, SSHUnixServerFactory(), mode = 0600)
         except CannotListenError:
             pass # we'll just not listen, not a big deal
+        else:
+            pid = os.getpid()
+            open(filename+'.pid','w').write(str(pid))
 
 def stopConnection():
     if options.remoteForwards:
         for remotePort, hostport in options.remoteForwards:
             log.msg('cancelling %s:%s' % (remotePort, hostport))
             conn.cancelRemoteForwarding(remotePort)
+    if isinstance(conn, SSHConnection) and not options['nocache']:
+        filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s.pid" % options)
+        if os.path.exists(filename):
+            os.remove(filename)
     reactor.stop()
 
 class SSHUnixClientFactory(protocol.ClientFactory):
     noisy = 1
 
     def clientConnectionLost(self, connector, reason):
-        reactor.stop()
+        stopConnection()
 
     def clientConnectionFailed(self, connector, reason):
         os.unlink(connector.transport.addr)
@@ -548,7 +573,10 @@ class SSHClientTransport(transport.SSHClientTransport):
         global exitStatus
         exitStatus = 'conch:\tSending disconnect with error code %i\nconch:\treason: %s' % (code, reason)
         transport.SSHClientTransport.sendDisconnect(self, code, reason)
-        reactor.stop()
+        if conn:
+            stopConnection()
+        else:
+            reactor.stop()
 
     def receiveDebug(self, alwaysDisplay, message, lang):
         global options
