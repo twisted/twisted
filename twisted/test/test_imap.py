@@ -2164,8 +2164,8 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
                           imap4.parseIdList(self.server_received_messages))
 
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
-    serverCTX = ServerTLSContext()
-    clientCTX = ClientTLSContext()
+    serverCTX = ServerTLSContext and ServerTLSContext()
+    clientCTX = ClientTLSContext and ClientTLSContext()
 
     def loopback(self):
         loopback.loopbackTCP(self.server, self.client)
