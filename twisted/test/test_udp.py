@@ -78,10 +78,9 @@ class UDPTestCase(unittest.TestCase):
     def testDNSFailure(self):
         client = Client()
         # if this domain exists, shoot your sysadmin
-        reactor.connectUDP("xxxxxxxxx.zzzzzzzzz.yyyyy", 8888, client)
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+        reactor.connectUDP("xxxxxxxxx.zzzzzzzzz.yyyyy.", 8888, client)
+        while not hasattr(client, 'failure'):
+            reactor.iterate(0.05)
         self.assert_(client.failure.trap(error.DNSLookupError))
         self.assertEquals(client.stopped, 0)
         self.assertEquals(client.started, 0)
