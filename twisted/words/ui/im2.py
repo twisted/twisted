@@ -351,7 +351,7 @@ class InstanceMessenger:
         """
         if self.sendEvent(gateway,"receiveGroupMessage",member,group,message):
             try:
-                self.groups[str(gateway)+group].displayMessage(member,message)
+                self.groups[str(gateway)+group].receiveGroupMessage(member,message)
             except KeyError:
                 pass
             self._log(gateway,group+".chat","<%s> %s"%(member,message))

@@ -1,38 +1,12 @@
-
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-# 
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of version 2.1 of the GNU Lesser General Public
-# License as published by the Free Software Foundation.
-# 
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-# 
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 from Tkinter import *
-from twisted.spread.ui import tkutil
 from twisted.internet import tkinternet
-from twisted.words.ui import im2
-from twisted.words.ui import gateways
-import time
-import string
-import copy
-import os
+from twisted.spread.ui import tkutil
+from twisted.words.ui import im2, gateways
+import time, os, string
 
-class ErrorWindow(Toplevel):
-    def __init__(self,error,message,*args,**kw):
-        apply(Toplevel.__init__,(self,)+args,kw)
-        self.title(error)
-        f=Frame(self)
-        Label(f,text=message).grid()
-        f.pack()
-        self.protocol("WM_DELETE_WINDOW",self.destroy)
+def timeheader():
+    y,mon,d,h,min,sec,ig,no,re=time.localtime(time.time())
+    return "%02i:%02i:%02i"%(h,min,sec)
 
 class AddContact(Toplevel):
     def __init__(self,im,*args,**kw):
@@ -109,187 +83,51 @@ class JoinGroup(Toplevel):
             self.im.joinGroup(self.im.gateways[gatewayname],group)
             self.destroy()
 
-class GroupSession(Toplevel):
-    def __init__(self,im,name,gateway,*args,**kw):
-        apply(Toplevel.__init__,(self,)+args,kw)
-        self.title("%s - %s - Instance Messenger"%(name,gateway.name))
-        self.name=name
-        self.im=im
-        self.gateway=gateway
-        self.output=Text(self,height=3,wrap=WORD,state=DISABLED,bg="white")
-        self.output.grid(column=0,row=0,sticky=N+E+S+W)
-        sb=Scrollbar(self)
-        self.output.config(yscrollcommand=sb.set)
-        sb.config(command=self.output.yview)
-        sb.grid(column=1,row=0,sticky=N+S)
-        self.list=Listbox(self,height=2,bg="white")
-        sb=Scrollbar(self,command=self.list.yview)
-        self.list.config(yscrollcommand=sb.set)
-        self.list.grid(column=2,row=0,sticky=N+E+S+W)
-        sb.grid(column=3,row=0,sticky=N+S)
-        self.input=Text(self,height=1,wrap=WORD,bg="white")
-        self.input.grid(column=0,row=1,columnspan=4,sticky=N+E+S+W)
-        self.input.bind('<Return>',self.say)
-        self.input.bind('<Tab>',self.autoComplete)
-        self.protocol('WM_DELETE_WINDOW',self.close)
-        f=Frame(self)
-        Button(f,text="Send",command=self.say).grid(column=0,row=0,sticky=N+E+S+W)
-        Button(f,text="Leave",command=self.close).grid(column=1,row=0,sticky=N+E+S+W)
-        b=Button(f,text="%s Extras"%gateway.protocol)
-        b.grid(column=2,row=0,sticky=N+E+S+W)
-        b.bind('<ButtonRelease-1>',self.showExtrasMenu)
-        f.grid(column=0,row=2,columnspan=4)
-        tkutil.grid_setexpand(self)
-        self.rowconfigure(0,weight=3)
-        self.columnconfigure(1,weight=0)
-        self.columnconfigure(3,weight=0)
-        self.rowconfigure(2,weight=0)
-        self.im.getGroupMembers(gateway,self.name)
-        self._out("You have just entered group %s."%name)
-
-    def close(self):
-        self.destroy()
-        self.im.leaveGroup(self.gateway,self.name)
-
-    def _sortlist(self):
-        l=list(self.list.get(0,END))
-        l.sort(lambda x,y:cmp(string.lower(x),string.lower(y)))
-        self.list.delete(0,END)
-        for u in l:
-            self.list.insert(END,u)
-    
-    def _out(self,text):
-        self.output.config(state=NORMAL)
-        #self.outputhtml.feed(text)
-        self.output.insert(END,text)
-        self.output.see(END)
-        self.output.config(state=DISABLED)
-
-    def showExtrasMenu(self,e):
-        m=Menu()
-        extras=gateways.__gateways__[self.gateway.protocol].groupExtras
-        for name,func in extras:
-            m.add_command(label=name,command=lambda s=self,f=func:s.runExtra(f))
-        m.post(e.x_root,e.y_root)
-
-    def runExtra(self,f):
-        i=self.input.get("1.0",END)[:-1]
-        s=f(self.im,self.gateway,self.name,i,list(self.list.get(0,END)))
-        self.input.delete("1.0",END)
-        self.input.insert(END,s)
-    
-    def receiveGroupMembers(self,list):
-        for m in list:
-            self.list.insert(END,m)
-        self._sortlist()
-    
-    def displayMessage(self,user,message):
-        self._out("\n<%s> %s"%(user,message))
-    
-    def memberJoined(self,user):
-        self._out("\n%s joined!"%user)
-        self.list.insert(END,user)
-        self._sortlist()
-    
-    def memberLeft(self,user):
-        users=list(self.list.get(0,END))
-        if user in users:
-            self._out("\n%s left!"%user)
-            i=users.index(user)
-            self.list.delete(i)
-
-    def changeMemberName(self,user,newName):
-        users=list(self.list.get(0,END))
-        try:
-            i=users.index(user)
-        except ValueError:
-            pass
-        else:
-            self._out("\n%s changed nick to %s."%(user,newName))
-            self.list.delete(i)
-            self.list.insert(i,newName)
-            self._sortlist()
-    
-    def say(self,*args):
-        text=self.input.get("1.0",END)[:-1]
-        if not text: return
-        self.input.delete("1.0",END)
-        self.im.groupMessage(self.gateway,self.name,text)
-        self._out("\n<<%s>> %s"%(self.gateway.username,text))
-        return "break"
-
-    def autoComplete(self,*args):
-        start=self.input.get("1.0",END)[:-1]
-        lstart=string.lower(start)
-        l=list(self.list.get(0,END))
-        ll=map(string.lower,l)
-        if lstart in ll:
-            i=ll.index(lstart)
-            self.input.delete("1.0",END)
-            self.input.insert(END,l[i]+": ")
-            return "break"
-        matches=[]
-        for u in ll:
-            if len(u)>len(lstart) and u[:len(lstart)]==lstart:
-                matches.append(u)
-        if len(matches)==1:
-            i=ll.index(matches[0])
-            self.input.delete("1.0",END)
-            self.input.insert(END,l[i]+": ")
-            return "break"
-        elif matches==[]:
-            return "break"
-        longestmatch=matches[0]
-        for u in matches:
-            if len(u)>len(longestmatch):
-                u=u[:len(longestmatch)]
-            c=0
-            while c<len(longestmatch) and longestmatch[c]==u[c]:
-                c=c+1
-            longestmatch=longestmatch[:c]
-        self.input.delete("1.0",END)
-        self.input.insert(END,longestmatch)
-        for u in matches:
-            i=ll.index(u)
-            self._out("[%s] "%l[i])
-        self._out("\n")
-        return "break"
 
 class Conversation(Toplevel):
-    def __init__(self,im,gateway,contact,*args,**kw):
-        apply(Toplevel.__init__,(self,)+args,kw)
-        self.contact=contact
+    def __init__(self, im, gateway, target, **params):
+        apply(Toplevel.__init__, (self,), params)
+
+        self.title("%s - %s - Instance Messenger" % (target, gateway.name))
         self.im=im
         self.gateway=gateway
-        self.title("%s - %s - Instance Messenger"%(contact,gateway.name))
-        self.output=Text(self,height=3,width=10,wrap=WORD,bg="white")
-        self.input=Text(self,height=1,width=10,wrap=WORD,bg="white") 
-        self.bar=Scrollbar(self)
-        self.output.grid(column=0,row=0,sticky=N+E+S+W)
-        self.bar.grid(column=1,row=0,sticky=N+S)
-        self.output["state"]=DISABLED
-        self.output["yscrollcommand"]=self.bar.set
-        self.bar["command"]=self.output.yview
-        self.input.grid(column=0,row=1,columnspan=2,sticky=N+E+S+W)
-        self.input.bind('<Return>',self.say)
-        f=Frame(self)
-        b=Button(f,text="%s Extras"%gateway.protocol)
-        b.grid(column=0,row=0,sticky=N+E+S+W)
-        b.bind('<ButtonRelease-1>',self.showExtrasMenu)
-        Button(f,text="Send",command=self.say).grid(column=1,row=0,sticky=N+E+S+W)
-        Button(f,text="Close",command=self.close).grid(column=2,row=0,sticky=N+E+S+W)
-        f.grid(column=0,row=2)
-        self.protocol("WM_DELETE_WINDOW",self.close)
-        tkutil.grid_setexpand(self)
-        self.rowconfigure(0,weight=3)
-        self.rowconfigure(2,weight=0)
-        self.columnconfigure(1,weight=0)
-    
-    def close(self):
-        self.destroy()
-        self.im.endConversation(self.gateway,self.contact)
-    
-    def showExtrasMenu(self,e):
+        self.target=target
+
+        self.out = Text(self, height=1, width=1, wrap='word')
+        self.out.grid(column=0, row=0, sticky='nesw')
+        sb = Scrollbar(self,  command=self.out.yview, orient='v')
+        self.out.config(yscrollcommand = sb.set)
+        self.out.bind("<Key>",lambda x:"break")
+        sb.grid(column=1, row=0, sticky='ns')
+
+        self.input = Text(self, height=1, width=1)
+        self.input.grid(column=0, columnspan=2, row=1, sticky='nesw')
+        self.input.bind("<Return>",lambda e,s=self:s.sendMessage())
+        self.input.focus()
+
+        frame = Frame(self)
+        frame.grid(column=0, columnspan=2, row=2)
+        extras = Button(frame, text='%s Extras' % gateway.protocol)
+        extras.grid(column=1, row=1)
+        extras.bind("<ButtonRelease-1>", self.showExtrasMenu)
+        send = Button(frame, command=self.sendMessage, text='Send')
+        send.grid(column=2, row=1)
+        leave = Button(frame, command=self.endConversation, text='Leave')
+        leave.grid(column=3, row=1)
+
+        self.grid_rowconfigure(0, weight=1, minsize=112)
+        #self.grid_rowconfigure(1, weight=0, minsize=49)
+        #self.grid_rowconfigure(2, weight=0, minsize=30)
+        self.grid_columnconfigure(0, weight=1, minsize=286)
+        #self.grid_columnconfigure(1, weight=0, minsize=2)
+        #frame.grid_rowconfigure(0, weight=0, minsize=30)
+        frame.grid_columnconfigure(0, weight=1, minsize=5)
+        frame.grid_columnconfigure(1, weight=1, minsize=30)
+        frame.grid_columnconfigure(2, weight=1, minsize=30)
+
+        self.protocol('WM_DELETE_WINDOW', self.endConversation)
+
+    def showExtrasMenu(self, e):
         m=Menu()
         extras=gateways.__gateways__[self.gateway.protocol].conversationExtras
         for name,func in extras:
@@ -298,42 +136,42 @@ class Conversation(Toplevel):
 
     def runExtra(self,f):
         i=self.input.get("1.0",END)[:-1]
-        s=f(self.im,self.gateway,self.contact,i)
+        s=f(self.im,self.gateway,self.target,i)
         self.input.delete("1.0",END)
         self.input.insert(END,s)
 
-    def _addtext(self,text):
-        self.output["state"]=NORMAL
-        #self.outputhtml.feed(text)
-        self.output.insert(END,text)
-        self.output["state"]=DISABLED
-    
-    def messageReceived(self,message,sender=None):
-        y,mon,d,h,min,sec,ig,no,re=time.localtime(time.time())
-        text="\n%02i:%02i:%02i %s: %s"%(h,min,sec,sender or self.contact,message)
-        self._addtext(text)
-        self.output.see(END)
-
-    def changeName(self,newName):
-        self.title("%s - Instance Messenger"%newName)
-        self._addtext("\n%s changed nick to %s."%(self.contact,newName))
-        self.contact=newName
-
-    def changeStatus(self,newState):
-        self._addtext("\n%s is now %s."%(self.contact,newState))
-    
-    def say(self,event=None):
-        message=self.input.get('1.0',END)[:-1]
-        self.input.delete('1.0',END)
+    def sendMessage(self):
+        message=self.input.get("1.0",END)[:-1]
         if message:
-            self.messageReceived(message,self.gateway.username)
-            self.im.directMessage(self.gateway,self.contact,message)
-        return "break" # don't put the newline in
+            self.out.insert(END,"\n%s <%s> %s" % (timeheader(), self.gateway.username, message))
+            self.out.see(END)
+            self.im.directMessage(self.gateway, self.target, message)
+            self.input.delete("1.0",END)
+        return "break"
+
+    def endConversation(self):
+        self.destroy()
+        self.im.endConversation(self.gateway, self.target)
+
+    def messageReceived(self, message):
+        self.out.insert(END,"\n%s <%s> %s" % (timeheader(), self.target, message))
+        self.out.see(END)
+
+    def changeName(self, newName):
+        self.out.insert(END,"\n%s %s changed name to %s." % (timeheader(), self.target, newName))
+        self.out.see(END)
+        self.target=newName
+
+    def changeStatus(self, newStatus):
+        self.out.insert(END,"\n%s %s is now %s." % (timeheader(), self.target, newStatus))
+        self.out.see(END)
 
 class ContactList(Toplevel):
     def __init__(self,im,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
+
         self.im=im
+
         menu=Menu(self)
         self.config(menu=menu)
         myim=Menu(menu)
@@ -344,11 +182,13 @@ class ContactList(Toplevel):
             statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))    
         myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
-        bar=Scrollbar(self)
-        self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=bar.set)
+
+        sb=Scrollbar()
+        self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=sb.set)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
-        bar.grid(column=4,row=0,sticky=N+S)
-        bar.config(command=self.list.yview)
+        sb.grid(column=4,row=0,sticky=N+S)
+        sb.config(command=self.list.yview)
+        
         f=Frame(self)
         Button(f,text="Add Contact",command=self.addContact).grid(column=0,row=1)
         Button(f,text="Remove Contact",command=self.removeContact).grid(column=1,row=1)
@@ -358,10 +198,11 @@ class ContactList(Toplevel):
         b.grid(column=4,row=1,sticky=N+E+S+W)
         b.bind('<ButtonRelease-1>',self.showExtrasMenu)
         f.grid(column=0,row=1,columnspan=2,sticky=E+S+W)
+        
         self.title("Instance Messenger")
         self.protocol("WM_DELETE_WINDOW",self.close)
         tkutil.grid_setexpand(self)
-        #self.columnconfigure(0,weight=1)
+        self.columnconfigure(0,weight=1)
         self.rowconfigure(1,weight=0)
     
     def close(self):
@@ -430,8 +271,162 @@ class ContactList(Toplevel):
             user=None
             state=None
         func(self.im,gateway,user,state)
+    
+class GroupSession(Toplevel):
+    def __init__(self, im, name, gateway, **params):
+        apply(Toplevel.__init__, (self,), params)
 
-        
+        self.im=im
+        self.name=name
+        self.gateway=gateway
+
+        self.title("%s - %s - Instance Messenger" % (self.name, self.gateway.name))
+
+        self.out = Text(self, height=1)
+        self.out.grid(column=0, row=0, sticky='nesw')
+        self.out.bind("<Key>",lambda x:"break")
+        out_scroll=Scrollbar(self, command=self.out.yview, orient='v')
+        out_scroll.grid(column=1, row=0, sticky='ns')
+        self.out.config(yscrollcommand=out_scroll.set)
+
+        self.userlist = Listbox(self)
+        self.userlist.grid(column=2, row=0, sticky='nesw')
+        user_scroll = Scrollbar(self, command=self.userlist.yview, orient='v')
+        user_scroll.grid(column=3, row=0, sticky='ns')
+        self.userlist.config(yscrollcommand=user_scroll.set)
+
+        self.input = Text(self, height=1, width=1)
+        self.input.grid(column=0, row=1, sticky='nesw', columnspan=4)
+        self.input.bind("<Return>", self.sendMessage)
+        self.input.bind("<Tab>", self.nickComplete)
+        self.input.focus()
+
+        frame = Frame(self)
+        frame.grid(column=0, columnspan=4, row=2)
+        send=Button(frame, command=self.sendMessage, text='Send')
+        send.grid(column=0, row=0, sticky='nesw')
+        leave = Button(frame, command=self.leaveGroup, text='Leave')
+        leave.grid(column=1, row=0, sticky='nesw')
+        extras = Button(frame, text='%s Extras' % self.gateway.protocol)
+        extras.grid(column=2, row=0, sticky='nesw')
+        extras.bind("<ButtonRelease-1>", self.showExtrasMenu)
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.protocol('WM_DELETE_WINDOW',self.leaveGroup)
+
+        self.im.getGroupMembers(self.gateway, self.name)
+
+    def _sortlist(self):
+        l=list(self.userlist.get(0,END))
+        l.sort(lambda x,y:cmp(string.lower(x),string.lower(y)))
+        self.userlist.delete(0,END)
+        for u in l:
+            self.userlist.insert(END,u)
+
+    def sendMessage(self,event=None):
+        message=self.input.get("1.0",END)[:-1]
+        if message:
+            self.out.insert(END,"\n<<%s>> %s" % (self.gateway.username, message))
+            self.out.see(END)
+            self.im.groupMessage(self.gateway, self.name, message)
+            self.input.delete("1.0",END)
+        return "break"
+
+    def leaveGroup(self):
+        self.destroy()
+        self.im.leaveGroup(self.gateway,self.name)
+
+    def showExtrasMenu(self,e):
+        m=Menu()
+        extras=gateways.__gateways__[self.gateway.protocol].groupExtras
+        for name,func in extras:
+            m.add_command(label=name,command=lambda s=self,f=func:s.runExtra(f))
+        m.post(e.x_root,e.y_root)
+
+    def runExtra(self,f):
+        i=self.input.get("1.0",END)[:-1]
+        s=f(self.im,self.gateway,self.name,i,list(self.userlist.get(0,END)))
+        self.input.delete("1.0",END)
+        self.input.insert(END,s)        
+
+    def receiveGroupMembers(self, members):
+        members.sort()
+        for m in members:
+            self.userlist.insert(END,m)
+
+    def receiveGroupMessage(self, member, message):
+        self.out.insert(END, "\n<%s> %s" % (member, message))
+        self.out.see(END)
+
+    def memberJoined(self, member):
+        self.out.insert(END, "\n%s joined!" % member)
+        self.out.see(END)
+        self._sortlist()
+
+    def memberLeft(self, member):
+        self.out.insert(END, "\n%s left!" % member)
+        self.out.see(END)
+
+    def changeMemberName(self, member, newName):
+        users=list(self.userlist.get(0,END))
+        if member in users:
+            self.out.insert(END,"\n%s changed name to %s." % (member, NewName))
+            self.out.see(END)
+            i=users.index(member)
+            self.userlist.delete(i)
+            self.userlist.insert(END,newName)
+            self._sortlist()
+        else:
+            print "user %s not in group %s!" % (member, self.name)
+
+    def nickComplete(self, e):
+        start=self.input.get("1.0",END)[:-1]
+        lstart=string.lower(start)
+        l=list(self.userlist.get(0,END))
+        ll=map(string.lower,l)
+        if lstart in ll:
+            i=ll.index(lstart)
+            self.input.delete("1.0",END)
+            self.input.insert(END,l[i]+": ")
+            return "break"
+        matches=[]
+        for u in ll:
+            if len(u)>len(lstart) and u[:len(lstart)]==lstart:
+                matches.append(u)
+        if len(matches)==1:
+            i=ll.index(matches[0])
+            self.input.delete("1.0",END)
+            self.input.insert(END,l[i]+": ")
+            return "break"
+        elif matches==[]:
+            return "break"
+        longestmatch=matches[0]
+        for u in matches:
+            if len(u)>len(longestmatch):
+                u=u[:len(longestmatch)]
+            c=0
+            while c<len(longestmatch) and longestmatch[c]==u[c]:
+                c=c+1
+            longestmatch=longestmatch[:c]
+        self.input.delete("1.0",END)
+        self.input.insert(END,longestmatch)
+        self.out.insert(END,"\n")
+        for u in matches:
+            i=ll.index(u)
+            self.out.insert(END,"[%s] "%l[i])
+        return "break"        
+
+class ErrorWindow(Toplevel):
+    def __init__(self,error,message,*args,**kw):
+        apply(Toplevel.__init__,(self,)+args,kw)
+        self.title(error)
+        f=Frame(self)
+        Label(f,text=message).grid()
+        f.pack()
+        self.protocol("WM_DELETE_WINDOW",self.destroy)
+
 class ChooseGateway(Toplevel):
     def __init__(self,callback,**kw):
         apply(Toplevel.__init__,(self,),kw)
@@ -562,7 +557,6 @@ class AccountManager(Toplevel):
 
         self.im.addCallback(None,"attached",self.handleAttached)
         self.im.addCallback(None,"detached",self.handleDetached)
-        self.im.addCallback(None,"error",self.handleError)
 
     def close(self):
         self.withdraw()
@@ -649,30 +643,24 @@ class AccountManager(Toplevel):
             if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"False")
 
-    def handleError(self,im,gateway,event,code,message):
-        if code==im2.CONNECTIONFAILED:
-            for account in self.accounts:
-                if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
-                    self._modifyaccount(account,"False")
-
 def main():
-    global im
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
-    root.withdraw()
     im=im2.InstanceMessenger(Conversation, ContactList, GroupSession, ErrorWindow)
     im.am=AccountManager(im)
+    path=os.path.expanduser("~"+os.sep+".imsaved")
     try:
-        f=open(os.path.expanduser("~"+os.sep+".imsaved"),"r")
+        f=open(path,"r")
         im.am.loadState(im2.getState(f))
-    except:
-        pass        
+        f.close()
+    except IOError:
+        pass
     mainloop()
     for g in im.gateways.values():
         g.loseConnection()
     tkinternet.stop()
-    f=open(os.path.expanduser("~"+os.sep+".imsaved"),"w")
+    f=open(path,"w")
     im2.saveState(f,im.am.getState())
 
-if __name__=="__main__":main()
+if __name__=="__main__": main()
