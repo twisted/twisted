@@ -86,7 +86,7 @@ class SSHConnection(service.SSHService):
         channel.conn = self
         self.localToRemoteChannel[localChannel] = remoteChannel
         self.channelsToRemoteChannel[channel] = remoteChannel
-        channel.remoteWindowSize = windowSize
+        channel.remoteWindowLeft = windowSize
         channel.remoteMaxPacket = maxPacket
         channel.channelOpen(specificData)
 

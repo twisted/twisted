@@ -15,12 +15,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.12 2002/11/28 14:46:13 z3p Exp $
+# $Id: conch.py,v 1.13 2002/11/29 01:39:59 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
 
-from twisted.conch.ssh import transport, userauth, connection, common, keys, session
+from twisted.conch.ssh import transport, userauth, connection, common, keys
+from twisted.conch.ssh import session, forwarding
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
 
@@ -31,11 +32,13 @@ class GeneralOptions(usage.Options):
  """
 
     optParameters = [['user', 'l', None, 'Log in using this user name.'],
-                  ['identity', 'i', '~/.ssh/identity', 'Identity for public key authentication'],
-                  ['cipher', 'c', None, 'Select encryption algorithm.'],
-                  ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
-                  ['port', 'p', None, 'Connect to this port.  Server must be on the same port.']]
-                  
+                    ['identity', 'i', '~/.ssh/identity', 'Identity for public key authentication'],
+                    ['cipher', 'c', None, 'Select encryption algorithm.'],
+                    ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
+                    ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
+                    ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
+                    #['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
+                    ]
     
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
                 ['tty', 't', 'Tty; allocate a tty even if command is given.'],
@@ -47,9 +50,16 @@ class GeneralOptions(usage.Options):
                 ['log', '', 'Log to stderr']]
 
     identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
+    localForwards = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
+
+    def opt_localforward(self, f):
+        localPort, remoteHost, remotePort = f.split(':') # doesn't do v6 yet
+        localPort = int(localPort)
+        remotePort = int(remotePort)
+        self.localForwards.append((localPort, (remoteHost, remotePort)))
 
     def parseArgs(self, host, *command):
         self['host'] = host
@@ -226,9 +236,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
-        # port forwarding will go here
         if not options['notty']:
             self.openChannel(SSHSession())
+        if options.localForwards:
+            for localPort, hostport in options.localForwards:
+                reactor.listenTCP(localPort,
+                            forwarding.SSHLocalForwardingFactory(self, hostport))
 
 class SSHSession(session.SSHChannel):
 
