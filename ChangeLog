@@ -1,3 +1,8 @@
+2002-02-13  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted.lumberjack: a log rotation and viewing service.
+        Currently only log rotation is supported.
+
 2002-02-12  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/words/ircservice.py (IRCChatter.irc_AWAY): Fix bug
