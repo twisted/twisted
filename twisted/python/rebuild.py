@@ -9,6 +9,7 @@ import time
 
 # Sibling Imports
 import reflect
+import log
 
 lastRebuild = time.time()
 
@@ -86,11 +87,11 @@ def __getattr__(self, name):
     """A getattr method to cause a class to be refreshed.
     """
     updateInstance(self)
-    print "(rebuilding stale %s instance (%s))" % (str(self.__class__), name)
+    log.msg("(rebuilding stale %s instance (%s))" % (str(self.__class__), name))
     result = getattr(self, name)
     return result
 
-def rebuild(module, log=1):
+def rebuild(module, doLog=1):
     """Reload a module and do as much as possible to replace its references.
     """
     global lastRebuild
@@ -99,14 +100,14 @@ def rebuild(module, log=1):
         # Is this module allowed to be rebuilt?
         if not module.ALLOW_TWISTED_REBUILD:
             assert 0, "I am not allowed to be rebuilt."
-    if log:
-        print 'Rebuilding %s...' % str(module.__name__)
+    if doLog:
+        log.msg( 'Rebuilding %s...' % str(module.__name__))
     d = module.__dict__
     _modDictIDMap[id(d)] = module
     classes = {}
     functions = {}
     values = {}
-    if log:
+    if doLog:
         print '  (scanning %s): ' % str(module.__name__),
     for k, v in d.items():
         if type(v) == types.ClassType:
@@ -114,12 +115,12 @@ def rebuild(module, log=1):
             # __hash__/__cmp__ methods referenced at the module level...
             if v.__module__ == module.__name__:
                 classes[v] = 1
-                if log:
+                if doLog:
                     sys.stdout.write("c")
                     sys.stdout.flush()
         elif type(v) == types.FunctionType:
             functions[v] = 1
-            if log:
+            if doLog:
                 sys.stdout.write("f")
                 sys.stdout.flush()
 
@@ -130,24 +131,24 @@ def rebuild(module, log=1):
     functions = functions.keys()
     
     # Boom.
-    if log:
+    if doLog:
         print
         print '  (reload   %s)' % str(module.__name__)
     reload(module)
-    if log:
+    if doLog:
         print '  (cleaning %s): ' % str(module.__name__),
 
     for clazz in classes:
         if getattr(module, clazz.__name__) is clazz:
             print "WARNING: class %s not replaced by reload!" % str(clazz)
         else:
-            if log:
+            if doLog:
                 sys.stdout.write("x")
                 sys.stdout.flush()
             clazz.__dict__.clear()
             clazz.__getattr__ = __getattr__
             clazz.__module__ = module.__name__
-    if log:
+    if doLog:
         print
         print '  (fixing   %s): ' % str(module.__name__),
     modcount = 0
@@ -169,12 +170,12 @@ def rebuild(module, log=1):
             if fromOldModule(v):
                 # print "Found a match! (%s.%s)" % (mod.__name__, k)
                 if type(v) == types.ClassType:
-                    if log:
+                    if doLog:
                         sys.stdout.write("c")
                         sys.stdout.flush()
                     nv = latestClass(v)
                 else:
-                    if log:
+                    if doLog:
                         sys.stdout.write("f")
                         sys.stdout.flush()
                     nv = latestFunction(v)
@@ -184,10 +185,10 @@ def rebuild(module, log=1):
                 # Replace bases of non-module classes just to be sure.
                 if type(v) == types.ClassType:
                     latestClass(v)
-        if log and not changed and ((modcount % 10) ==0) :
+        if doLog and not changed and ((modcount % 10) ==0) :
             sys.stdout.write(".")
             sys.stdout.flush()
-    if log:
+    if doLog:
         print
         print '   Rebuilt %s.' % str(module.__name__)
     return module

@@ -278,8 +278,8 @@ class Shell(Telnet):
                 code = compile(cmd, fn, 'single')
             except:
                 io = StringIO()
-                traceback.print_exc(file=io)
-                self.transport.write(io.getvalue()+'\r\n')
+                traceback.print_exc(file=self)
+                self.write('\r\n')
                 return "Command"
         try:
             out = sys.stdout
@@ -294,8 +294,8 @@ class Shell(Telnet):
             self.transport.write('\r\n')
         except:
             io = StringIO()
-            traceback.print_exc(file=io)
-            self.transport.write(io.getvalue()+'\r\n')
+            traceback.print_exc(file=self)
+            self.transport.write('\r\n')
 
         return "Command"
 

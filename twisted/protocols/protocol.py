@@ -4,6 +4,7 @@ Start here if you are looking to write a new protocol implementation for
 Twisted Python.  The Protocol class contains some introductory material.
 """
 
+from twisted.python import log
 
 class Factory:
     """This is a factory which produces protocols.
@@ -87,7 +88,7 @@ class Protocol:
         This will only be called on client protocols; this message tells the
         protocol that the expected connection can not be made.
         """
-        print 'Connection Failed!'
+        log.msg( 'Connection Failed!' )
 
 
 class Transport:

@@ -170,7 +170,7 @@ class CGIProcess(process.Process, pb.Proxied):
                 for header in headers:
                     br = string.find(header,': ')
                     if br == -1:
-                        print 'ignoring malformed CGI header: %s' % header
+                        log.msg( 'ignoring malformed CGI header: %s' % header )
                     else:
                         headerName = string.lower(header[:br])
                         headerText = header[br+2:]
@@ -180,7 +180,7 @@ class CGIProcess(process.Process, pb.Proxied):
                             try:
                                 statusNum = int(headerText)
                             except:
-                                print "malformed status header"
+                                log.msg( "malformed status header" )
                             else:
                                 self.request.setResponseCode(statusNum)
                         else:

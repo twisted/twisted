@@ -2,6 +2,7 @@
 """
 
 from twisted.protocols import basic, protocol
+from twisted.python import log
 import string
 
 class IRCParseError(ValueError):
@@ -42,7 +43,7 @@ class IRC(protocol.Protocol):
     buffer = ""
     
     def connectionMade(self):
-        print "connection made"
+        log.msg("irc connection made")
         self.channels = []
 
     def sendLine(self, line):
@@ -53,7 +54,7 @@ class IRC(protocol.Protocol):
         RFC says CRLF.  (Also, the flexibility of LineReceiver to turn "line
         mode" on and off was not required.)
         """
-        print "data: %s" % repr(data)
+        log.msg( "data: %s" % repr(data) )
         self.buffer = self.buffer + data
         lines = string.split(self.buffer, "\n") # get the lines
         self.buffer = lines.pop() # pop the last element (we're not sure it's a line)
@@ -63,7 +64,7 @@ class IRC(protocol.Protocol):
             self.lineReceived(line)
 
     def connectionLost(self):
-        print self.nickname, "lost connection"
+        log.msg( "%s lost connection" % self.nickname )
         if self.nickname != '*':
             del self.factory.chatters[self.nickname]
             for channel in self.channels:
@@ -105,7 +106,8 @@ class IRC(protocol.Protocol):
         name = params[0]
         text = params[-1]
         if name[0] == '#':
-            print 'talking to channel', self.nickname, prefix, params
+            log.msg( 'talking to channel %s %s %s '%
+                     (self.nickname, prefix, params ))
             channame = name[1:]
             channel = self.factory.channels[channame]
             if channel in self.channels:
@@ -125,13 +127,13 @@ class IRC(protocol.Protocol):
 
     def irc_MODE(self, prefix, params):
         name = params[0]
-        print 'mode?', prefix, params
+        log.msg( 'mode? %s %s' % (prefix, params))
         if name[0] == '#':
             # get the channel, maybe?
             self.sendLine(":ircservice 324 %s +" % self.nickname)
 
     def irc_unknown(self, prefix, command, params):
-        print 'unknown!'
+        log.msg( 'unknown irc proto msg!' )
 
     def irc_WHO(self, prefix, params):
         #<< who #python
@@ -170,7 +172,7 @@ class IRC(protocol.Protocol):
         ### and
         #<< TOPIC #divunal :foo
         #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #divunal :foo
-        print 'topic',prefix,params
+        log.msg('topic %s %s' % (prefix, params))
         if len(params) == 1:
             channame = params[0][1:]
             channel = self.factory.channels[channame]
@@ -189,7 +191,7 @@ class IRC(protocol.Protocol):
         prefix, command, params = parsemsg(line)
         # MIRC is a big pile of doo-doo
         command = string.upper(command)
-        print prefix, command, params
+        log.msg( "%s %s %s" % (prefix, command, params ))
         method = getattr(self, "irc_%s" % command, None)
         if method is not None:
             method(prefix, params)

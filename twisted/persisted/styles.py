@@ -45,13 +45,13 @@ def unpickleMethod(im_name,
                                  im_class)
         return bound
     except AttributeError:
-        print "Method",im_name,"not on class",im_class
+        log.msg("Method",im_name,"not on class",im_class)
         assert im_self is not None,"No recourse: no instance to guess from."
         # Attempt a common fix before bailing -- if classes have
         # changed around since we pickled this method, we may still be
         # able to get it by looking on the instance's current class.
         unbound = getattr(im_self.__class__,im_name)
-        print "Attempting fixup with",unbound
+        log.msg("Attempting fixup with",unbound)
         if im_self is None:
             return unbound
         bound=instancemethod(unbound.im_func,
@@ -111,9 +111,9 @@ class Ephemeral:
     are eliminated.
     """
     def __getstate__(self):
-        print "WARNING: serializing ephemeral", self
+        log.msg("WARNING: serializing ephemeral", self)
         return None
 
     def __setstate__(self, state):
-        print "WARNING: unserializing ephemeral", self.__class__
+        log.msg("WARNING: unserializing ephemeral", self.__class__)
         self.__class__ = Ephemeral

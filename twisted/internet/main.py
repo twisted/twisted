@@ -83,7 +83,7 @@ class Application(log.Logger):
             if not os.getgid():
                 os.setgid(self.gid)
                 os.setuid(self.uid)
-                print 'set uid/gid %s/%s'% (self.uid, self.gid)
+                log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
     def shutDownSave(self):
         self.save("shutdown")
@@ -96,13 +96,13 @@ class Application(log.Logger):
         else:
             filename = self.name+"-2.spl"
             finalname = self.name+".spl"
-        print "Saving "+self.name+" application to "+finalname+"...",
+        log.msg("Saving "+self.name+" application to "+finalname+"...")
         f = open(filename, 'wb')
         dump(self, f, 1)
         f.flush()
         f.close()
         os.rename(filename, finalname)
-        print "Saved."
+        log.msg("Saved.")
 
     def logPrefix(self):
         return self.name+" application"
@@ -138,7 +138,7 @@ def shutDown(a=None, b=None):
     """
     global running
     running = 0
-    print 'Starting Shutdown Sequence.'
+    log.msg('Starting Shutdown Sequence.')
     threadable.dispatcher.stop()
     for callback in shutdowns:
         callback()
@@ -193,7 +193,7 @@ def doSelect(timeout,
                 if not handfn or handfn() == -1:
                     why = CONNECTION_LOST
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
                 why = CONNECTION_LOST
             if why:
                 removeReader(selectable)
@@ -201,7 +201,7 @@ def doSelect(timeout,
                 try:
                     selectable.connectionLost()
                 except:
-                    traceback.print_exc(file=sys.stdout)
+                    traceback.print_exc(file=log.logfile)
             disown(selectable)
 
 
@@ -251,21 +251,21 @@ def run():
                 threadable.dispatcher.work()
                 doSelect(timeout)
         except select.error:
-            print 'shutting down after select() loop interruption'
+            log.msg('shutting down after select() loop interruption')
             if running:
-                print 'Warning!  Shutdown not called properly!'
-                traceback.print_exc(file=sys.stdout)
+                log.msg('Warning!  Shutdown not called properly!')
+                traceback.print_exc(file=log.logfile)
                 shutDown()
             if os.name =='nt':
-                print "(Logging traceback for WinXX exception info)"
-                traceback.print_exc(file=sys.stdout)
+                log.msg("(Logging traceback for WinXX exception info)")
+                traceback.print_exc(file=log.logfile)
         except:
-            print "Unexpected error in Selector.run."
-            traceback.print_exc(file=sys.stdout)
+            log.msg("Unexpected error in Selector.run.")
+            traceback.print_exc(file=log.logfile)
             shutDown()
             raise
         else:
-            print 'Select loop terminated.'
+            log.msg('Select loop terminated.')
 
     finally:
         for reader in reads.keys():
@@ -277,7 +277,7 @@ def run():
             try:
                 reader.connectionLost()
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
             threadable.dispatcher.disown(reader)
 
 def addReader(reader):

@@ -22,8 +22,8 @@ class Task:
             try:
                 apply(func, args, kw)
             except:
-                print 'Exception in Task'
-                traceback.print_exc(file=sys.stdout)
+                log.msg( 'Exception in Task' )
+                traceback.print_exc(file=log.logfile)
                 return 0
             else:
                 self.progress = self.progress + 1

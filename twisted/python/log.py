@@ -45,25 +45,26 @@ file_protocol = ['close', 'closed', 'fileno',
                  'softspace', 'tell', 'truncate',
                  'write', 'writelines']
 
-_log = None
+logfile = sys.stdout
 
-def log(stuff):
-    global _log
-    if _log:
-        _log.write(stuff+"\n")
-    else:
-        print stuff
+def write(stuff):
+    logfile.write(stuff)
+    logfile.flush()
+
+def msg(stuff):
+    logfile.write(stuff+"\n")
+    logfile.flush()
 
 
 def startLogging(file):
-    global _log
+    global logfile
     import threadable
     import sys
-    _log = Log(file, threadable.dispatcher)
+    logfile = Log(file, threadable.dispatcher)
     lgr = Logger()
     threadable.dispatcher.defaultOwner = lgr
-    sys.stdout = sys.stderr = _log
-    print "Log opened."
+    sys.stdout = sys.stderr = logfile
+    msg( "Log opened." )
 
 class Logger:
     """
@@ -87,9 +88,9 @@ class Logger:
         return bytes
 
     def __prefix(self):
-        return ("%s [%s]: " %
-                (time.strftime('%d/%b/%Y %R %Z',time.localtime(time.time()))
-                 , self.logPrefix()))
+        y,mon,d,h,min, i,g,no,re = time.localtime(time.time())
+        return ("%s/%s/%s %s:%s [%s]: " %
+                 (d,mon,y,h,min , self.logPrefix()))
 
     def logPrefix(self):
         """

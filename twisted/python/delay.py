@@ -23,6 +23,7 @@ from bisect import insort
 
 # Sibling Imports
 import rebuild
+import log
 
 TICKS = 0
 FUNC  = 1
@@ -242,13 +243,13 @@ class Delayed(rebuild.Sensitive):
         simplicity of implementation reasons. -glyph)
         """
         if self.needRebuildUpdate():
-            print "Rebuilding Delayed Event Queue..."
+            log.msg( "Rebuilding Delayed Event Queue..." )
             for ticks, func, args in self.queue:
                 # it's going to be an instance of one of the above, so just
                 # pull on its instance.
                 func.im_self.rebuildUpdate(self.latestVersionOf)
             self.rebuildUpToDate()
-            print "Rebuilt."
+            log.msg( "Rebuilt." )
             
         self.last_tick = time()
         sticks = self.ticks - 1
@@ -258,8 +259,8 @@ class Delayed(rebuild.Sensitive):
             try:
                 apply(pop[FUNC], pop[ARGS])
             except:
-                print 'Exception in delayed function.'
-                traceback.print_exc(file=sys.stdout)
+                log.msg( 'Exception in delayed function.' )
+                traceback.print_exc(file=log.logfile)
 
     def runloop(self):
         """Runs until the is_running flag is false.
@@ -271,7 +272,7 @@ class Delayed(rebuild.Sensitive):
         except IOError, x:
             # the 'errno' module won't be available in jython, but that should be OK.
             if x.errno == errno.EINTR:
-                print "(delay loop interrupted)"
+                log.msg( "(delay loop interrupted)" )
             else:
                 raise
 

@@ -6,6 +6,7 @@ import types, os, copy, string, cStringIO
 from twisted.spread import pb
 from twisted.protocols import http
 from twisted.internet import tcp
+from twisted.python import log
 
 # Sibling Imports
 import resource
@@ -76,7 +77,7 @@ class ResourceSubscription(resource.Resource):
     def connected(self, publisher):
         """I've connected to a publisher; I'll now send all my requests.
         """
-        print 'connected to publisher'
+        log.msg('connected to publisher')
         self.publisher = publisher
         self.waiting = 0
         for request in self.pending:
@@ -86,7 +87,7 @@ class ResourceSubscription(resource.Resource):
     def notConnected(self):
         """I can't connect to a publisher; I'll now reply to all pending requests.
         """
-        print "could not connect to distributed web service."
+        log.msg( "could not connect to distributed web service." )
         self.waiting = 0
         self.publisher = None
         for request in self.pending:
@@ -95,7 +96,7 @@ class ResourceSubscription(resource.Resource):
         self.pending = []
 
     def booted(self):
-        print 'lost pb connection'
+        log.msg( 'lost pb connection' )
         self.waiting = 0
         self.publisher = None
 
@@ -136,7 +137,7 @@ class ResourcePublisher(pb.Service, pb.Perspective):
 
     def perspective_request(self, request):
         res = self.site.getResourceFor(request)
-        print request
+        log.msg( request )
         return res.render(request)
 
 

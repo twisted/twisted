@@ -117,7 +117,7 @@ class Request(pb.Copied, http.HTTP):
             self.path = urllib.unquote(self.uri)
         else:
             if len(x) != 2:
-                print "May ignore parts of this invalid URI:",repr(self.uri)
+                log.msg("May ignore parts of this invalid URI:",repr(self.uri))
             self.path, argstring = urllib.unquote(x[0]), x[1]
             self._parse_argstring(argstring)
 
@@ -131,7 +131,7 @@ class Request(pb.Copied, http.HTTP):
     def process(self):
         "Process a request."
         # Log the request to a file.
-        print self
+        log.msg( self )
         
         # cache the client information, we'll need this later to be pickled and
         # sent with the request so CGIs will work remotely
@@ -184,8 +184,8 @@ class Request(pb.Copied, http.HTTP):
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
             body = "<HTML><BODY><br>web.Server Traceback \n\n" + html.PRE(io.getvalue()) + "\n\n</body></html>\n"
-            print "Traceback Follows:"
-            print io.getvalue()
+            log.msg( "Traceback Follows:" )
+            log.msg(io.getvalue())
             self.setResponseCode(http.INTERNAL_SERVER_ERROR)
             self.setHeader('content-type',"text/html")
 
@@ -464,7 +464,7 @@ class HTTPClient(tcp.Client):
                 for header in headers:
                     splitAt = string.find(header, ': ')
                     if splitAt == -1:
-                        print "Invalid HTTP response header: %s" % repr(header)
+                        log.msg( "Invalid HTTP response header: %s" % repr(header) )
                     else:
                         hkey = header[:splitAt]
                         hval = header[splitAt+2:]
@@ -480,7 +480,7 @@ class HTTPClient(tcp.Client):
     def handleContent(self, data):
         """Override this function to handle chunks of data from the client.
         """
-        print 'handling content: %s' % repr(data)
+        log.msg( 'handling content: %s' % repr(data) )
 
 
 class HTTPCallback(HTTPClient):

@@ -22,12 +22,6 @@ class Reference:
         self.__name = name
 
     def addCall(self, method, args, kw):
-        global callList
-        try:
-            callList
-        except:
-            print 'wha??'
-            callList = []
         callList.append((self.__name, method, args, kw))
 
     def __cmp__(self, other):

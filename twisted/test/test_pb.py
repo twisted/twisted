@@ -365,7 +365,7 @@ class BrokerTestCase(unittest.TestCase):
         cp = coll[0][0]
         assert cp.checkMethod().im_self is cp, "potential refcounting issue"
         assert cp.checkSelf() is cp, "other potential refcounting issue"
-        print "CacheProxy?",cp.__class__
+        assert cp.__class__ is pb.CacheProxy, "class was %s" % str(cp.__class__)
         assert cp._CacheProxy__instance is coll[1][0]._CacheProxy__instance
         col2 = []
         o2.putCache(cp, pbcallback = col2.append)

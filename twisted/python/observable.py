@@ -1,15 +1,17 @@
 """ A group of classes which implement the observer/observable and
 publisher/subscriber pattern.  """
 
-# Python System Imports
+# System Imports
 import types
 import sys
 import traceback
 import string
 import copy
-# Twisted Python Imports
+
+# Sibling Imports
 import threadable
 import reflect
+import log
 
 class _DontTell:
     def __cmp__(self,other):
@@ -42,8 +44,8 @@ class Dynamic:
             self.evaluate=caller
 
     def evaluate(self,observer,hash=None,key=None):
-        print 'observe.py: Dynamic.evaluate called directly --> override this'
-        print 'observer %s\nhash %s\nkey %s'%(observer,hash,key)
+        log.msg('observe.py: Dynamic.evaluate called directly --> override this')
+        log.msg('observer %s\nhash %s\nkey %s'%(observer,hash,key))
         return DontTell
 
     def __call__(self,observer,hash=None,key=None):
@@ -147,16 +149,16 @@ class Publisher:
             try:
                 defaultSubscriber(data)
             except:
-                print "Exception in default subscriber"
-                traceback.print_exc(file=sys.stdout)
+                log.msg("Exception in default subscriber")
+                traceback.print_exc(file=log.logfile)
         # Now call all the regular subscribers.
         if not self.subscribers: return
         for subscriber in self.subscribers.get(channel,()):
             try:
                 subscriber(self, channel, data)
             except:
-                print "Exception in 'publish'"
-                traceback.print_exc(file=sys.stdout)
+                log.msg( "Exception in 'publish'" )
+                traceback.print_exc(file=log.logfile)
 
 class WhenMethodSubscription:
     """
@@ -190,8 +192,10 @@ class WhenMethodSubscription:
         method = getattr(self.subscriber,
                          "when_"+self.attribute+"_"+self.channel, None)
         if method is None:
-            print "Unsubscribe due to Persistent Inconsistency:"
-            print self.publisher, self.subscriber, self.attribute, self.channel
+            log.msg("Unsubscribe due to Persistent Inconsistency:")
+            log.msg(string.join(map(
+                str,(self.publisher, self.subscriber,
+                     self.attribute, self.channel))))
             self.publisher.unsubscribe(self, publisher, subscriber, attribute)
             return None
         else:
@@ -294,8 +298,8 @@ class Subscriber(reflect.Accessor):
             attributeInfo = self.__attributes.get(key,{}).items()
         except:
             import traceback
-            traceback.print_stack()
-            print repr(self.__class__)
+            traceback.print_stack(file=log.logfile)
+            log.msg(repr(self.__class__))
             raise
         previousAttribute = getattr(self,key,None)
         if reflect.isinst(previousAttribute, Publisher):

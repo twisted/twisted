@@ -29,7 +29,7 @@ import types
 import new
 
 # Twisted Imports
-from twisted.python import authenticator
+from twisted.python import authenticator, log
 from twisted.protocols import protocol
 
 # Sibling Imports
@@ -84,10 +84,8 @@ def noOperation(*args, **kw):
 PB_CONNECTION_LOST = 'Connection Lost'
 
 def printTraceback(tb):
-    print 'Perspective Broker Traceback:'
-    print tb
-
-
+    log.msg('Perspective Broker Traceback:' )
+    log.msg(tb)
 
 class Perspective:
     """A perspective on a service.
@@ -184,9 +182,7 @@ class Proxy(Referenced):
         kw = broker.unserialize(kw, self.perspective)
         method = getattr(self.object, "proxy_%s" % message)
         state = apply(method, (self.perspective,)+args, kw)
-        #print "serializing", state, self.perspective, method, args, kw
         rv = broker.serialize(state, self.perspective, method, args, kw)
-        #print 'serialized'
         return rv
 
 
@@ -334,7 +330,6 @@ class Reference(Serializable):
         self.luid = luid
         self.broker = broker
         self.doRefCount = doRefCount
-        # print 'creating reference:',perspective
         self.perspective = perspective
 
     def remoteSerialize(self, broker):
@@ -407,7 +402,6 @@ class CacheProxy(Serializable):
 
     def __getattr__(self, name):
         assert name != '_CacheProxy__instance', "Infinite recursion."
-        #print "CProxy:",self.__dict__.keys()
         inst = self.__instance
         maybeMethod = getattr(inst, name)
         if isinstance(maybeMethod, types.MethodType):
@@ -444,7 +438,7 @@ class CacheProxy(Serializable):
         try:
             self.__broker.decCacheRef(self.__luid)
         except:
-            traceback.print_exc()
+            traceback.print_exc(file=log.logfile)
 
 
 class Local:
@@ -629,7 +623,7 @@ class Broker(banana.Banana):
         probably be changed to close the connection or raise an exception in
         the future.)
         """
-        print "Didn't understand command:", repr(command)
+        log.msg( "Didn't understand command:", repr(command) )
 
     def addService(self, name, service):
         self.myServices[name] = service
@@ -719,7 +713,7 @@ class Broker(banana.Banana):
             try:
                 errback()
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
 
     def connectionLost(self):
         """The connection was lost.
@@ -729,8 +723,8 @@ class Broker(banana.Banana):
             try:
                 perspective.detached(self)
             except:
-                print "Exception in perspective detach ignored:"
-                traceback.print_exc(file=sys.stdout)
+                log.msg( "Exception in perspective detach ignored:")
+                traceback.print_exc(file=log.logfile)
         self.perspectives = None
         self.localObjects = None
         self.luids = None
@@ -738,12 +732,12 @@ class Broker(banana.Banana):
             try:
                 errback(PB_CONNECTION_LOST)
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
         for notifier in self.disconnects:
             try:
                 notifier()
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
         self.disconnects = None
         self.waitingForAnswers = None
         self.localSecurity = None
@@ -944,7 +938,7 @@ class Broker(banana.Banana):
             try:
                 errback(PB_CONNECTION_LOST)
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
         else:
             self.waitingForAnswers[requestID] = callback, errback
             self.sendCall("message", requestID, objectID, message, netArgs, netKw)
@@ -959,7 +953,7 @@ class Broker(banana.Banana):
             try:
                 errback(PB_CONNECTION_LOST)
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=log.logfile)
         else:
             self.waitingForAnswers[requestID] = callback, errback
             self.sendCall("cachemessage", requestID, cacheID, message, netArgs, netKw)

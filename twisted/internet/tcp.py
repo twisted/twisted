@@ -248,7 +248,7 @@ class Port(abstract.FileDescriptor):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        print "%s starting on %s"%(self.factory.__class__, self.port)
+        log.msg("%s starting on %s"%(self.factory.__class__, self.port))
         if type(self.port) == types.StringType:
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -277,7 +277,7 @@ class Port(abstract.FileDescriptor):
             transport = self.transport(skt, protocol, addr, self, s)
             protocol.makeConnection(transport, self)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=log.logfile)
 
     def doWrite(self):
         """Raises an AssertionError.
@@ -298,8 +298,8 @@ class Port(abstract.FileDescriptor):
     def connectionLost(self):
         """Cleans up my socket.
         """
+        log.msg('(Port %s Closed)' % self.port)
         abstract.FileDescriptor.connectionLost(self)
-        print '(Connection Lost)'
         self.connected = 0
         self.socket.close()
         if self.unixsocket:

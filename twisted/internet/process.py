@@ -158,7 +158,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 # If there are errors, bail and try to write something
                 # descriptive to stderr.
                 stderr = os.fdopen(2,'w')
-                traceback.print_exc(file=stderr)
+                traceback.print_exc(file=log.logfile)
                 stderr.flush()
                 for fd in range(3):
                     os.close(fd)

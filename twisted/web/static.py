@@ -190,7 +190,7 @@ class File(resource.Resource):
             else:
                 request.setHeader('content-length',size)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=log.logfile)
 
         # return data
         FileTransfer(f, size, request)

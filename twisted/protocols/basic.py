@@ -187,7 +187,7 @@ class StatefulStringProtocol:
             pto = 'proto_'+self.state
             statehandler = getattr(self,pto)
         except AttributeError:
-            print 'callback',self.state,'not found'
+            log.msg('callback',self.state,'not found')
         else:
             self.state = statehandler(string)
             if self.state == 'done':
