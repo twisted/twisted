@@ -608,18 +608,19 @@ class ServerProtocol(protocol.Protocol):
 
     # ITransport
     def write(self, bytes):
+        file('omg', 'a').write(repr(bytes) + '\n')
         self.lastWrite = bytes
         lines = bytes.splitlines()
-        if len(bytes) == 1:
-            self.transport.write(bytes)
+        if len(lines) == 1:
+            self.transport.write(lines[0])
         else:
             lastLine = lines.pop()
             for L in lines:
                 self.transport.write(L)
                 self.nextLine()
             self.transport.write(lastLine)
-            if bytes.endswith('\n'):
-                self.nextLine()
+        if bytes.endswith('\n'):
+            self.nextLine()
 
     def writeSequence(self, bytes):
         self.write(''.join(bytes))

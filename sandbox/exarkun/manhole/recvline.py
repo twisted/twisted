@@ -11,8 +11,6 @@ class RecvLine(insults.TerminalProtocol):
 
     TABSTOP = 4
 
-    lineDelimiter = '\n'
-
     ps = ('>>> ', '... ')
     pn = 0
 
@@ -29,9 +27,14 @@ class RecvLine(insults.TerminalProtocol):
         self.keyHandlers = {
             t.LEFT_ARROW: self.handle_LEFT,
             t.RIGHT_ARROW: self.handle_RIGHT,
-            self.lineDelimiter: self.handle_RETURN,
-            '\x7f': self.handle_BACKSPACE,
             '\t': self.handle_TAB,
+
+            # Both of these should not be necessary, but figuring out
+            # which is necessary is a huge hassle.
+            '\r': self.handle_RETURN,
+            '\n': self.handle_RETURN,
+
+            '\x7f': self.handle_BACKSPACE,
             t.DELETE: self.handle_DELETE,
             t.INSERT: self.handle_INSERT,
             t.HOME: self.handle_HOME,
