@@ -280,8 +280,9 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
         factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
         if (factory and not ALLOW_DUPLICATES):
             raise ValueError("an adapter (%s) was already registered." % (factory, ))
+    for interfaceClass in interfaceClasses:
+        self.register([origInterface], interfaceClass, '', adapterFactory)
 
-    self.register([origInterface], interfaceClasses[0], '', adapterFactory)
 
 def getAdapterFactory(fromInterface, toInterface, default):
     """Return registered adapter for a given class and interface.

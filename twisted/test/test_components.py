@@ -310,6 +310,19 @@ class AdapterTestCase(unittest.TestCase):
         self.assertRaises(components.CannotAdapt, IAdder, a)
         self.assertEquals(IAdder(a, default=None), None)
 
+    def testMultipleInterfaceRegistration(self):
+        class IMIFoo(components.Interface):
+            pass
+        class IMIBar(components.Interface):
+            pass
+        class MIFooer(components.Adapter):
+            __implements__ = IMIFoo, IMIBar
+        class Blegh:
+            pass
+        components.registerAdapter(MIFooer, Blegh, IMIFoo, IMIBar)
+        self.assert_(isinstance(IMIFoo(Blegh()), MIFooer))
+        self.assert_(isinstance(IMIBar(Blegh()), MIFooer))
+
 class IMeta(components.Interface):
     def __adapt__(o, dflt):
         if hasattr(o, 'add'):
