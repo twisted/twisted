@@ -126,11 +126,10 @@ this file directly.
     single defined API for connecting protocols to their transports.
     (listenTCP, listenSSL, connectTCP, connectSSL, etc)
 
-025 Jelly needs to handle floats and longs correctly, and banana needs to use
-    the appropriate types for struct.pack. Add INTERN support to banana. Add
-    Sopwith's C encoder for banana. Add unicode support to Jelly.
+025 Add INTERN support to banana. Fix C encoder for banana. Unicode, longs
+    and floats have been added by Glyph.
 
-026 More ircd-style names for virtual nicks in words; LoginServ (or maybe
+026 *{Someone}* More ircd-style names for virtual nicks in words; LoginServ (or maybe
     NickServ) instead of *login*.  The asterisks break some clients.
 
 027 Unit testing of I/O code.  There are two possible approaches, both of which
@@ -167,3 +166,4 @@ this file directly.
 
 038 Integrate mbac's client FTP protocol.
 
+039 Log management, rollover and viewing PB service.
