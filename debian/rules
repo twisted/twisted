@@ -146,7 +146,7 @@ install-indep-stamp: install-base-stamp
 	install -m 644 doc/img/*.png doc/img/*.bmp $(docdir)/img/
 	install -m 644  doc/examples/*.* $(docdir)/examples/
 	set -e;for maint in postinst prerm;\
-		do sed 's/@CONTROL/twisted-book/' debian/twisted-doc.$$maint > \
+		do sed 's/@CONTROL@/twisted-book/' debian/twisted-doc.$$maint > \
 		           debian/twisted-doc/DEBIAN/$$maint;\
 		chmod 755 debian/twisted-doc/DEBIAN/$$maint;\
 	done
@@ -157,7 +157,7 @@ install-indep-stamp: install-base-stamp
 	install -m 644 debian/twisted-api \
 	               debian/twisted-doc-api/usr/share/doc-base/
 	set -e;for maint in postinst prerm;\
-		do sed 's/@CONTROL/twisted-api/' debian/twisted-doc.$$maint > \
+		do sed 's/@CONTROL@/twisted-api/' debian/twisted-doc.$$maint > \
 		           debian/twisted-doc-api/DEBIAN/$$maint;\
 		chmod 755 debian/twisted-doc-api/DEBIAN/$$maint;\
 	done
