@@ -41,13 +41,7 @@ def getLatexText(node, writer, filter=lambda x:x):
 
 class LatexSpitter:
 
-
-    ignoring = 0
-    normalizing = 1
-    escaping = 1
     baseLevel = 0
-    raw = 0
-    hyphenateCode = 0
 
     def __init__(self, writer, currDir='.', filename=''):
         self.writer = writer
