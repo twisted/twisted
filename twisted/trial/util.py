@@ -46,7 +46,7 @@ def _append(result, lst):
     lst.append(result)
 
 def deferredResult(d, timeout=None):
-    """This function is DEPRECATED
+    """DEPRECATED: use L{twisted.trial.util.wait} instead
     
     Waits for a Deferred to arrive, then returns or throws an exception,
     based on the result.
@@ -58,14 +58,14 @@ def deferredResult(d, timeout=None):
                    "deferred fires."), DeprecationWarning,
                   stacklevel=2)
 
-    result = _wait(d, timeout)
+    result = _Wait.wait(d, timeout)
     if isinstance(result, failure.Failure):
         raise result
     else:
         return result
 
 def deferredError(d, timeout=None):
-    """This function is DEPRECATED
+    """DEPRECATED: use L{twisted.trial.util.wait} instead
     Waits for deferred to fail, and it returns the Failure.
 
     If the deferred succeeds, raises FailTest.
@@ -77,7 +77,7 @@ def deferredError(d, timeout=None):
                    "deferred fires."), DeprecationWarning,
                   stacklevel=2)
 
-    result = _wait(d, timeout)
+    result = _Wait.wait(d, timeout)
     if isinstance(result, failure.Failure):
         return result
     else:
@@ -105,7 +105,7 @@ class LoggedErrors(MultiError):
     """raised when there have been errors logged using log.err"""
     
 class WaitError(MultiError):
-    """raised when there have been errors during a call to wait2"""
+    """raised when there have been errors during a call to wait"""
 
 class JanitorError(MultiError):
     """raised when an error is encountered during a *Cleanup"""
@@ -215,8 +215,8 @@ class Janitor(object):
 
 
 def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
-    """spin the reactor while condition returned by f() == False or timeout seconds have elapsed
-    i.e. spin until f() is True
+    """spin the reactor while condition returned by f() == False or timeout
+    seconds have elapsed i.e. spin until f() is True
     """
     assert callable(f)
     from twisted.internet import reactor
@@ -228,8 +228,8 @@ def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
         reactor.iterate(0.1)
 
 def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
-    """spin the reactor while condition returned by f() == True or until timeout seconds have elapsed
-    i.e. spin until f() is False
+    """spin the reactor while condition returned by f() == True or until
+    timeout seconds have elapsed i.e. spin until f() is False
     """
     assert callable(f)
     from twisted.internet import reactor
@@ -290,9 +290,6 @@ class _Wait(object):
     wait = classmethod(wait)
 
 
-# XXX: Fix this
-_wait = _Wait.wait
-
 
 DEFAULT_TIMEOUT = 4.0 # sec
 
@@ -301,21 +298,38 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     throws an exception, based on the result. The difference between this and
     deferredResult is that it actually throws the original exception, not the
     Failure, so synchronous exception handling is much more sane.  
-    @note: if you are relying on the original traceback for some reason, do
-    useWaitError=True. Due to the way that Deferreds and Failures work, the
-    presence of the original traceback stack cannot be guaranteed without
-    passing this flag (see below).  
+
+    There are some caveats to follow when using this method:
+    
+      - There is an important restriction on the use of this method which may
+        be difficult to predict at the time you're writing the test.The issue
+        is that the reactor's L{twisted.internet.base.runUntilCurrent} is not
+        reentrant, therefore wait is B{I{not reentrant!}} This means that you
+        cannot call wait from within a callback of a deferred you are waiting
+        on. Also, you may or may not be able to call wait on deferreds which
+        you have not created, as the originating API may violate this rule
+        without your knowledge. For an illustrative example, see 
+        L{twisted.test.test_trial.WaitReentrancyTest} 
+
+      - If you are relying on the original traceback for some reason, do
+        useWaitError=True. Due to the way that Deferreds and Failures work, the
+        presence of the original traceback stack cannot be guaranteed without
+        passing this flag (see below).  
+
     @param timeout: None indicates that we will wait indefinately, the default
     is to wait 4.0 seconds.  
     @type timeout: types.FloatType 
-    @param useWaitError: The exception thrown is a WaitError, which saves the
-    original failure object or objects in a list .failures, to aid in the
-    retrieval of the original stack traces.  The tradeoff is between wait()
-    raising the original exception *type* or being able to retrieve the
-    original traceback reliably. (see issue 769) 
+
+    @param useWaitError: The exception thrown is a
+    L{twisted.trial.util.WaitError}, which saves the original failure object or
+    objects in a list .failures, to aid in the retrieval of the original stack
+    traces.  The tradeoff is between wait() raising the original exception
+    *type* or being able to retrieve the original traceback reliably. (see
+    issue 769) 
+    @type useWaitError: boolean
     """
     try:
-        r = _wait(d, timeout)
+        r = _Wait.wait(d, timeout)
     except:
         #  it would be nice if i didn't have to armor this call like
         # this (with a blank except:, but we *are* calling user code 
@@ -339,8 +353,6 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
             raise WaitError(flist)
 
     return r
-
-
 
 def extract_tb(tb, limit=None):
     """Extract a list of frames from a traceback, without unittest internals.
@@ -390,6 +402,10 @@ def format_exception(eType, eValue, tb, limit=None):
     return l
 
 def suppressWarnings(f, *warningz):
+    """this method is not supported for the moment and is 
+    awaiting a fix (see U{issue627 
+    <http://www.twistedmatrix.com/users/roundup.twistd/twisted/issue627>})
+    """
     def enclosingScope(warnings, warningz):
         exec """def %s(*args, **kwargs):
     for warning in warningz:
@@ -492,3 +508,7 @@ except ImportError:
             for element in it:
                 yield element
 
+__all__ = ["MultiError", "LoggedErrors", 'WaitError', 'JanitorError', 'DirtyReactorWarning',
+           'DirtyReactorError', 'PendingTimedCallsError', 'WaitIsNotReentrantError',
+           'deferredResult', 'deferredError', 'wait', 'extract_tb', 'format_exception',
+           'suppressWarnings']

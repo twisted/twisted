@@ -20,14 +20,14 @@ changes in trial v2.0:
 ======================
   B{Trial now understands deferreds!}
   -----------------------------------
-    - There is no reason to use L{twisted.trial.util.wait} or
-      L{twisted.trial.util.deferredResult}. Write your deferred handling code
-      as you normally would, make your assertions in your callbacks and
-      errbacks, then I{return the deferred from your test method}. Trial will
-      spin the reactor (correctly) and will wait for the results before
-      running the next test. This will allow developers to write more
-      natural-looking tests for their asynchronous code.
-    - there is a new attribute that has been introduced, C{.timeout}. Trial
+    - Write your deferred handling code as you normally would, make your
+      assertions in your callbacks and errbacks, then I{return the deferred
+      from your test method}. Trial will spin the reactor (correctly) and will
+      wait for the results before running the next test. This will allow
+      developers to write more natural-looking tests for their asynchronous
+      code.
+
+    - There is a new attribute that has been introduced, C{.timeout}. Trial
       will wait a default 4 seconds for a result from a deferred that is
       returned from a test method. If you wish to make this value smaller or
       larger:
@@ -43,6 +43,25 @@ changes in trial v2.0:
 
       This would cause trial to wait up to 2.8 seconds (quite needlessly in
       this case) for the deferred to either callback or errback
+
+    There are some B{important caveats} to this new functionality:
+
+    - When returning a Deferred from a setUp, tearDown, or test
+      method to trial, it is important to note that there may be some
+      restrictions placed on the callbacks which may appear on this Deferred.
+      Specifically, depending on the implementation of API which created them,
+      they may not be allowed to invoke deferredResult, deferredError, or wait.
+      Whether they can or cannot is unknowable from only the interface and, as
+      mentioned above, depends solely on the implementation which is
+      responsible for firing the Deferred.  If the methods are restricted, a
+      L{twisted.trial.util.WaitIsNotReentrantError} exception will be called
+      upon their invocation.
+
+    - Since even when the methods do work, changes to their implementation which do
+      not otherwise effect their interface could break unit tests which rely on
+      deferredResult, deferredError, and wait, it is recommended that none of these
+      methods be used in _any_ callback on a Deferred which is returned to trial.
+
 
   B{Trial is now 100% compatible with new-style classes and zope interfaces}
   --------------------------------------------------------------------------

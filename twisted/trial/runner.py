@@ -114,7 +114,7 @@ class TestSuite(Timed):
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
         self.janitor = itrial.IJanitor(janitor)
-        util._wait(self.reporter.setUpReporter())
+        util.wait(self.reporter.setUpReporter())
         self.benchmark = benchmark
         self.startTime, self.endTime = None, None
         self.numTests = 0
@@ -258,7 +258,7 @@ class TestSuite(Timed):
         # from the test run
         self.reporter.endSuite(self)
         try:
-            util._wait(self.reporter.tearDownReporter())
+            util.wait(self.reporter.tearDownReporter())
         except:
             t, v, tb = sys.exc_info()
             raise RuntimeError, "your reporter is broken %r" % \
