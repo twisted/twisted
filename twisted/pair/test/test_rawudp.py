@@ -18,7 +18,7 @@ from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor, error
 from twisted.python import failure, components
-from twisted.protocols import rawudp
+from twisted.pair import rawudp
 
 class MyProtocol(protocol.DatagramProtocol):
     def __init__(self, expecting):

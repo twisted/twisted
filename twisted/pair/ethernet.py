@@ -22,7 +22,7 @@ import struct
 
 
 from twisted.internet import protocol
-from twisted.protocols import raw
+from twisted.pair import raw
 from twisted.python import components
 
 class IEthernetProtocol(components.Interface):

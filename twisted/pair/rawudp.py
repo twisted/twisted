@@ -21,7 +21,7 @@
 import struct
 
 from twisted.internet import protocol
-from twisted.protocols import raw
+from twisted.pair import raw
 
 class UDPHeader:
     def __init__(self, data):
