@@ -197,6 +197,17 @@ class Connection(abstract.FileDescriptor):
 
         def startTLS(self, ctx):
             assert not self.TLS
+            if self.dataBuffer:
+                written = self.writeSomeData(buffer(self.dataBuffer, self.offset))
+                offset = self.offset
+                dataLen = len(self.dataBuffer)
+                self.offset = 0
+                self.dataBuffer = ""
+                if isinstance(written, Exception) or (offset + written != dataLen):
+                    warnings.warn("startTLS with unwritten buffered data currently doesn't work right. See issue #686. Closing connection.", category=RuntimeWarning, stacklevel=2)
+                    self.loseConnection()
+
+
             self.stopReading()
             self.stopWriting()
             self._startTLS()
