@@ -42,7 +42,7 @@ class makeConnection:
             username, password,
             service, username, # need to fix this, maybe?
             self.ref, 60
-            ).addCallback(self.pbCallback, self.connectionFailed)
+            ).addCallbacks(self.pbCallback, self.connectionFailed)
         self.connected=1
 
     def connectionFailed(self,tb):
@@ -53,6 +53,7 @@ class makeConnection:
         self.connected=0
 
     def connectionLost(self):
+        print "foo"
         if self.connected:
             self.im.send(self,"error",message="Connection Lost.")
             if self.attached:

@@ -68,7 +68,7 @@ def waiter():
     waiterthread = thread.get_ident()
     while 1:
         # Do the select, see if there's any input waiting...
-        select.select(main.reads.keys(), main.writes.keys(), [])
+        select.select(main.reads.keys(), main.writes.keys(), [], 0)
         if stopped:
             return
         # Wait for the main thread to be done before select()ing again
