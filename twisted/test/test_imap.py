@@ -313,7 +313,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, False)
         self.failUnless(isinstance(p.result[0].mime, p.MIME))
-        self.assertEquals(p.result[0].mime.part, (0,))
+        self.assertEquals(p.result[0].part, (0,))
         self.assertEquals(p.result[0].partialBegin, 10)
         self.assertEquals(p.result[0].partialLength, 50)
 
@@ -323,7 +323,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, True)
         self.failUnless(isinstance(p.result[0].header, p.Header))
-        self.assertEquals(p.result[0].header.part, (0, 2, 8, 10))
+        self.assertEquals(p.result[0].part, (0, 2, 8, 10))
         self.assertEquals(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
         self.assertEquals(p.result[0].partialBegin, 103)
         self.assertEquals(p.result[0].partialLength, 69)
@@ -1310,6 +1310,11 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.connected = defer.Deferred()
         self.client = SimpleClient(self.connected)
 
+    def addListener(self, x):
+        pass
+    def removeListener(self, x):
+        pass
+
     def fetch(self, messages, uid):
         self.received_messages = messages
         self.received_uid = uid
@@ -1379,6 +1384,24 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     
     def testFetchEnvelopeUID(self):
         self.testFetchEnvelope(1)
+
+    def testFetchBodyStructure(self, uid=0):
+        raise unittest.SkipTest("I don't understand BodyStructure")
+    
+    def testFetchBodyStructureUID(self):
+        self.testFetchBodyStructure(1)
+    
+    def testFetchSimplifiedBody(self, uid=0):
+        def fetch():
+            return self.client.fetchSimplifiedBody(self.messages, uid=uid)
+        
+        self.messages = '21'
+        self.msgObj = FakeyMessage({}, (), '', 'This is body text, roar', 91825, None)
+        self.expected = {91825: {'BODY': '\r\nThis is body text, roar'}}
+        self._fetchWork(fetch, uid)
+    
+    def testFetchSimplifiedBodyUID(self):
+        self.testFetchSimplifiedBody(1)
 
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):

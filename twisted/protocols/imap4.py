@@ -1316,8 +1316,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'rfc822':
                 hdrs = msg.getHeaders((), True)
                 hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                hdrs.append('')
                 hdrs = '\r\n'.join(hdrs)
-                response.extend(('RFC822', hdrs + '\r\n\r\n', msg.getBodyFile()))
+                response.extend(('RFC822', hdrs + '\r\n' + msg.getBodyFile().read()))
             elif part.type == 'uid':
                 seenUID = True
                 if uid:
@@ -1352,6 +1353,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n\r\n'))
+                else:
+                    # Simplified body request
+                    hdrs = msg.getHeaders((), True)
+                    hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                    hdrs.append('')
+                    hdrs = '\r\n'.join(hdrs)
+                    response.extend((str(part), hdrs + '\r\n' + subMsg.getBodyFile().read()))
         if uid and not seenUID:
             response[:0] = ['UID', str(msgId)]
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
@@ -3962,6 +3970,7 @@ class _FetchParser:
         header = None
         mime = None
         text = None
+        part = None
         partialBegin = None
         partialLength = None
         def __str__(self):
@@ -3986,7 +3995,6 @@ class _FetchParser:
     class Header:
         negate = False
         fields = None
-        part = None
         def __str__(self):
             base = 'HEADER'
             if self.fields:
@@ -3999,10 +4007,10 @@ class _FetchParser:
             return base
 
     class Text:
-        part = None
+        pass
 
     class MIME:
-        part = None
+        pass
 
     parts = None
 
@@ -4164,7 +4172,7 @@ class _FetchParser:
             
             self.pending_body.header = h
             self.state.extend(('finish_section', 'header_list', 'whitespace'))
-        o.part = tuple(self.parts)
+        self.pending_body.part = tuple(self.parts)
         self.parts = None
         return used
     
