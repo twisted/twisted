@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: ckeygen.py,v 1.3 2002/12/27 01:07:04 z3p Exp $
+# $Id: ckeygen.py,v 1.4 2002/12/27 01:10:26 z3p Exp $
 
 #""" Implementation module for the `ckeygen` command.
 #"""
@@ -169,7 +169,7 @@ def _saveKey(key, options):
                 break
             print 'Passphrases do not match.  Try again.'
         options['pass'] = p1
-    comment = '%s@%s' % (os.getlogin(), socket.gethostname())
+    comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
     open(options['filename'], 'w').write(
             keys.makePrivateKeyString(key, passphrase=options['pass']))
     os.chmod(options['filename'], 33152)
