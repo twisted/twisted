@@ -70,10 +70,8 @@ class IResolverSimple(Interface):
             A6 records will be returned in preference to AAAA records, which
             will be returned in preference to A records.  If there are multiple
             records of the type to be returned, one will be selected at random.
-
-        @raise L{TimeoutError<twisted.internet.defer.TimeoutError>}: Raised
-            (asynchronously) if the name cannot be resolved within the
-            specified timeout period.
+        @raise twisted.internet.defer.TimeoutError: Raised (asynchronously)
+            if the name cannot be resolved within the specified timeout period.
         """
 
 class IResolver(IResolverSimple):
