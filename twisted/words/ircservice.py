@@ -407,12 +407,27 @@ class IRCChatter(irc.IRC, service.WordsClient):
         channame = params[-1][1:]
         group = self.service.groups.get(channame)
         if group:
-            # XXX - need to make sure this doesn't exceed the 512
-            # character limit.  If so, send it in multiple lines.
-            self.sendMessage(irc.RPL_NAMREPLY, "=", "#" + channame,
-                          ":" +
-                          string.join(map(lambda member: member.name,
-                                          group.members)))
+            # :servicename XYZ theirNick = #channel :names\r\n
+            prefixLength = len(self.servicename) + len(self.nickname) + 11
+            namesLength = 512 - prefixLength
+            names = [member.name for member in group.members]
+            lastName = 0
+            curLength = 0
+            for i, L in zip(range(len(names)), map(len, names)):
+                if curLength + L > namesLength:
+                    self.sendMessage(
+                        irc.RPL_NAMREPLY, "=", "#" + channame,
+                        ":" + ' '.join(names[lastName:i])
+                    )
+                    lastName = i
+                    curLength = 0
+                else:
+                    curLength = curLength + L
+            if curLength:
+                self.sendMessage(
+                    irc.RPL_NAMREPLY, "=", "#" + channame,
+                    ":" + ' '.join(names[lastName:])
+                )
         self.sendMessage(irc.RPL_ENDOFNAMES,
                          "#" + channame, ":End of /NAMES list.")
 
