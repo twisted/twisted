@@ -74,7 +74,7 @@ reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
     within a thread, we can do:</p>
 
 <pre class="python">
-from twisted.internet import reactor
+from twisted.internet import threads
 
 def aSillyBlockingMethodOne(x):
     import time
@@ -87,13 +87,13 @@ def aSillyBlockingMethodTwo(x):
 # run both methods sequentially in a thread
 commands = [(aSillyBlockingMethodOne, ["Calling First"], {})]
 commands = commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
-reactor.callMultipleInThread(commands)
+threads.callMultipleInThread(commands)
 </pre>
 
     <p>For functions whose results we wish to get, we can have the
     result returned as a Deferred:</p>
 <pre class="python">
-from twisted.internet import reactor
+from twisted.internet import threads
 
 def doLongCalculation():
     # .... do long calculation here ...
@@ -103,7 +103,7 @@ def printResult(x):
     print x
 
 # run method in thread and get result as defer.Deferred
-d = reactor.deferToThread(doLongCalculation)
+d = threads.deferToThread(doLongCalculation)
 d.addCallback(printResult)
 </pre>
 
