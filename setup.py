@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.105 2003/03/21 03:47:16 itamarst Exp $
+$Id: setup.py,v 1.106 2003/03/21 22:11:51 etrepum Exp $
 """
 
 import distutils, os, sys, string
@@ -253,9 +253,7 @@ if sys.platform == 'darwin' and sys.version == BROKEN_CONFIG:
     x = distutils.sysconfig._config_vars['LDSHARED']
     y = x.replace(BROKEN_ARCH, '')
     if not FLAT_NAMESPACE:
-        e = sys.executable
-        while os.path.islink(e):
-            e = os.readlink(e)
+        e = os.path.realpath(sys.executable)
         y = y.replace(BROKEN_NAMESPACE, '-bundle_loader ' + e)
     if y != x:
         print "Fixing some of Apple's compiler flag mistakes..."
