@@ -28,4 +28,4 @@ auth.addIdentity(i1)
 
 # start the application
 app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
-app.run()
+app.run(save=0)

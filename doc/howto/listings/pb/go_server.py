@@ -105,7 +105,7 @@ def main():
 
     # start the application
     app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
-    app.run()
+    app.run(save=0)
 
 if __name__ == '__main__':
     main()

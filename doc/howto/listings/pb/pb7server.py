@@ -55,4 +55,4 @@ auth2.addIdentity(i3)
 # start the application. auth1 listens on 8800, auth2 on 8801
 app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth1)))
 app.listenTCP(8801, pb.BrokerFactory(pb.AuthRoot(auth2)))
-app.run()
+app.run(save=0)

@@ -32,4 +32,4 @@ objects = {
     "three": EchoN(3),
     }
 app.listenTCP(8800, MyBrokerFactory(rootobject, objects))
-app.run()
+app.run(save=0)

@@ -11,4 +11,4 @@ class One(pb.Root):
 
 app = twisted.internet.app.Application("pb3server")
 app.listenTCP(8800, pb.BrokerFactory(One()))
-app.run()
+app.run(save=0)

@@ -24,7 +24,7 @@ class One(pb.Root):
 def main():
     app = twisted.internet.app.Application("exc_server")
     app.listenTCP(8800, pb.BrokerFactory(One()))
-    app.run()
+    app.run(save=0)
 
 if __name__ == '__main__':
     main()
