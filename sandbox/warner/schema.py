@@ -255,13 +255,23 @@ def OPENBYTES(dummy):
 
 
 class BooleanConstraint(Constraint):
-    taster = {INT: 2**32}
-    opentypes = []
+    taster = openTaster
+    opentypes = ["boolean"]
     _myint = IntegerConstraint()
+
+    def __init__(self, value=None):
+        # self.value is a joke. This allows you to use a schema of
+        # BooleanConstraint(True) which only accepts 'True'. I cannot
+        # imagine a possible use for this, but it made me laugh.
+        self.value = value
 
     def checkObject(self, obj):
         if type(obj) != types.BooleanType:
             raise Violation
+        if self.value != None:
+            if obj != self.value:
+                raise Violation
+
     def maxSize(self, seen=None):
         if not seen: seen = []
         return OPENBYTES("boolean") + self._myint.maxSize(seen)

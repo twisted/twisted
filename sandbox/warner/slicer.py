@@ -1174,6 +1174,11 @@ class NoneUnslicer(LeafUnslicer):
 
 class BooleanUnslicer(LeafUnslicer):
     value = None
+    constraint = None
+
+    def setConstraint(self, constraint):
+        self.constraint = constraint
+
     def checkToken(self, typebyte):
         if typebyte != tokens.INT:
             raise BananaError("BooleanUnslicer only accepts an INT token",
@@ -1186,10 +1191,17 @@ class BooleanUnslicer(LeafUnslicer):
         if self.value != None:
             raise BananaError("BooleanUnslicer only accepts one token",
                               self.where())
-        self.value = obj
-    def receiveClose(self):
-        return bool(self.value)
+        if self.constraint:
+            if self.constraint.value != None:
+                if bool(obj) != self.constraint.value:
+                    raise Violation
+        self.value = bool(obj)
 
+    def receiveClose(self):
+        return self.value
+
+    def describeSelf(self):
+        return "<bool>"
         
 UnslicerRegistry = {
     'unicode': UnicodeUnslicer,

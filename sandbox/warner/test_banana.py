@@ -706,6 +706,9 @@ class InboundByteStream(unittest.TestCase):
         self.check("fluuber", self.STRING("fluuber"))
 
     def decode2(self, string, constraint, childConstraint=None):
+        constraint = schema.makeConstraint(constraint)
+        if childConstraint:
+            childConstraint = schema.makeConstraint(childConstraint)
         banana = TestBanana()
         banana.receiveStack[-1].constraint = constraint
         banana.receiveStack[-1].childConstraint = childConstraint
@@ -893,6 +896,35 @@ class InboundByteStream(unittest.TestCase):
                       "root.{}",
                       schema.DictOf(int, str, maxKeys=2))
 
+    def TRUE(self):
+        return join(self.OPEN("boolean",2), self.INT(1), self.CLOSE(2))
+    def FALSE(self):
+        return join(self.OPEN("boolean",2), self.INT(0), self.CLOSE(2))
+
+    def testBool(self):
+        self.check(True, self.TRUE())
+    def testConstrainedBool(self):
+        self.conform2(self.TRUE(),
+                      True,
+                      bool)
+        self.conform2(self.TRUE(),
+                      True,
+                      schema.BooleanConstraint())
+        self.conform2(self.FALSE(),
+                      False,
+                      schema.BooleanConstraint())
+        self.assertRaises(BananaError, self.decode2,
+                          join(self.OPEN("boolean",1), self.STRING("vrai"),
+                               self.CLOSE(1)),
+                          schema.BooleanConstraint())
+        self.violate2(self.TRUE(),
+                      "root.<bool>",
+                      schema.BooleanConstraint(False))
+        self.violate2(self.FALSE(),
+                      "root.<bool>",
+                      schema.BooleanConstraint(True))
+
+
 class ConstrainedRootUnslicer(RootUnslicer):
     openRegistry = slicer.UnslicerRegistry2
 
@@ -930,8 +962,8 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
     def test_tuple(self):
         self.looptest((1,2))
     def test_bool(self):
-        self.looptest(bool(1))
-        self.looptest(not bool(1))
+        self.looptest(True)
+        self.looptest(False)
     def test_float(self):
         self.looptest(20.3)
     def test_none(self):
