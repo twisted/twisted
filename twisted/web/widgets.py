@@ -80,7 +80,7 @@ def htmlInst(i):
         s = i.__html__()
     else:
         s = '<code>'+html.escape(repr(i))+'</code>'
-    return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance @ 0x%s</td></tr>
+    return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance @ 0x%x</td></tr>
               <tr bgcolor="#ff9999"><td>%s</td></tr>
               </table>
               ''' % (i.__class__, id(i), s)
