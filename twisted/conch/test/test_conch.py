@@ -1004,7 +1004,7 @@ class SSHTransportTestCase(unittest.TestCase):
         import twisted
         exe = sys.executable
         twisted_path = os.path.dirname(twisted.__file__)
-        conch_path = os.path.abspath('%s/../bin/conch' % twisted_path)
+        conch_path = os.path.abspath('%s/../bin/conch/conch' % twisted_path)
         log.msg((exe, twisted_path, conch_path))
         cmds = (cmd % (exe, conch_path, port)).split()
         p = SSHTestOpenSSHProcess()
@@ -1074,10 +1074,10 @@ class SSHTransportTestCase(unittest.TestCase):
         theTest.fac = fac
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
         port = self.server.getHost().port
-        import twisted
+        import twisted 
         exe = sys.executable
         twisted_path = os.path.dirname(twisted.__file__)
-        conch_path = os.path.abspath('%s/../bin/conch' % twisted_path)
+        conch_path = os.path.abspath('%s/../bin/conch/conch' % twisted_path)
         cmds1 = (cmd1 % port).split()
         cmds2 = (cmd2 % (exe, conch_path, port)).split()
         p = SSHTestOpenSSHProcess()
