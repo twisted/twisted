@@ -18,7 +18,7 @@ import re, os, cStringIO, time, cgi, string
 from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
-import process
+import process, latex
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -69,7 +69,8 @@ def fontifyPython(document):
 
 def fontifyPythonNode(node):
     oldio = cStringIO.StringIO()
-    domhelpers.writeNodeData(node, oldio)
+    latex.getLatexText(node, oldio.write,
+                       entities={'lt': '<', 'gt': '>', 'amp': '&'})
     oldio = cStringIO.StringIO(oldio.getvalue().strip()+'\n')
     newio = cStringIO.StringIO()
     htmlizer.filter(oldio, newio)
