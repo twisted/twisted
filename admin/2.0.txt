@@ -1,0 +1,2 @@
+non-core packages are broken; they try to build cBanana. Need to
+separate knowledge of Extension modules!
