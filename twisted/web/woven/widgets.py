@@ -63,10 +63,9 @@ class Widget(view.View):
           model.getData(). Otherwise the original object itself.
     """
 
-    wantsAllNotifications = 0
 
     tagName = None
-    def __init__(self, model, submodel = None):
+    def __init__(self, model = None, submodel = None, setup = None):
         self.errorFactory = Error
         self.attributes = {}
         view.View.__init__(self, model)
@@ -77,7 +76,11 @@ class Widget(view.View):
         if submodel:
             self.submodel = submodel
         else:
-            self.submodel=""
+            self.submodel = ""
+        if setup:
+            self.setupMethods = [setup]
+        else:
+            self.setupMethods = []
         self.initialize()
 
     def initialize(self):
@@ -112,13 +115,15 @@ class Widget(view.View):
         The return value of this may be a Deferred; if it is, then
         L{setData} will be called once the result is available.
         """
-        currentModel = self._getMyModel()
-        if currentModel is None:
-            return None
-        if hasattr(currentModel, 'getData'):
-            return currentModel.getData()
-        # Must have been set to a simple type, or a Deferred...
-        return currentModel
+        return self.model.getData()
+#         currentModel = self._getMyModel()
+#         print "widget.getData currentModel submodel", currentModel, self.submodel
+#         if currentModel is None:
+#             return None
+#         if hasattr(currentModel, 'getData'):
+#             return currentModel.getData()
+#         # Must have been set to a simple type, or a Deferred...
+#         return currentModel
 
     def setData(self, data):
         """
@@ -178,6 +183,8 @@ class Widget(view.View):
             data.addErrback(utils.renderFailure, request)
             return data
         self.setUp(request, node, data)
+        for setupMethod in self.setupMethods:
+            setupMethod(request, self, data)
         # generateDOM should always get a reference to the
         # templateNode from the original HTML
         result = self.generateDOM(request, self.templateNode)
@@ -482,6 +489,16 @@ class Anchor(Widget):
         self.add(Text(self.text or data, self.raw))
         return Widget.generateDOM(self, request, node)
 
+
+def appendModel(newNode, modelName):
+    curModel = newNode.getAttribute('model')
+    if curModel is None:
+        newModel = str(modelName)
+    else:
+        newModel = curModel + '/' + str(modelName)
+    newNode.setAttribute('model', newModel)
+
+
 class List(Widget):
     """
     I am a widget which knows how to generateDOM for a python list.
@@ -534,7 +551,10 @@ class List(Widget):
         return node
 
     def _has_data(self, data):
-        return len(data)
+        try:
+            return len(data)
+        except (TypeError, AttributeError):
+            return 0
 
     def _iterateData(self, parentNode, listItems, submodel, data):
         currentListItem = 0
@@ -549,11 +569,9 @@ class List(Widget):
                 currentListItem = 0
             else:
                 currentListItem += 1
-            modelName = submodel.split('/')[-1]
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            modelName)
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            str(itemNum))
+
+            appendModel(newNode, itemNum)
+
             parentNode.appendChild(newNode)
 
 class KeyedList(List):
@@ -586,11 +604,8 @@ class KeyedList(List):
             else:
                 currentListItem += 1
             
-            modelName = submodel.split('/')[-1]
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            modelName)
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            str(key))
+            appendModel(newNode, key)
+
             parentNode.appendChild(newNode)
 
 class ColumnList(List):
@@ -627,10 +642,9 @@ class ColumnList(List):
                 row = listRow.cloneNode(1)
                 node.appendChild(row)
             newNode = listItem.cloneNode(1)
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            self.submodel)
-            domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            str(itemNum + self.start))
+
+            appendModel(newNode, itemNum + self.start)
+
             row.appendChild(newNode)
         return node
         

@@ -22,6 +22,15 @@ from twisted.python import components, reflect
 from twisted.web.woven import interfaces
 
 
+def adaptToIModel(m, parent, submodel):
+    adapted = components.getAdapter(m, interfaces.IModel, None)
+    if adapted is None:
+        adapted = Wrapper(m)
+    adapted.parent = parent
+    adapted.name = submodel
+    return adapted
+
+
 class Model:
     """
     A Model which keeps track of views which are looking at it in order
@@ -122,9 +131,12 @@ class Model:
 
         XXX: Move bits of this docstring to interfaces.py
         """
-        submodelList = submodelName.split('/')
-        
-        currentModel = self
+        if not submodelName:
+            return self.getData()
+
+        submodelList = submodelName.split('/')[:-1]
+#         print "submodelList", submodelList
+        currentModel = adapted = self
         for element in submodelList:
             parentModel = currentModel
             currentModel = currentModel.getSubmodel(element)
@@ -150,8 +162,9 @@ class Model:
         """
         if name and name[0] != '_' and name not in self.protected_names:
             if hasattr(self, name):
-                return getattr(self, name)
-            raise AttributeError, "The submodel %s was requested from the model %s, but does not exist" % (name, self)
+                m = getattr(self, name)
+                return adaptToIModel(m, self, name)
+            return None
 
     def setSubmodel(self, name, value):
         """
@@ -167,12 +180,17 @@ class Model:
         return self
     
     def setData(self, data):
-        raise NotImplementedError, "How to implement this?"
+        if hasattr(self, 'parent'):
+            self.parent.setSubmodel(self.name, data)
+        if hasattr(self, 'orig'):
+            self.orig = data
+        
+#            raise NotImplementedError, "How to implement this?"
 
 #backwards compatibility
 WModel = Model
 
-class ListModel:
+class ListModel(Model):
     """
     I wrap a Python list and allow it to interact with the Woven
     models and submodels.
@@ -186,7 +204,7 @@ class ListModel:
 
     def getSubmodel(self, name):
         orig = self.orig
-        return orig[int(name)]
+        return adaptToIModel(orig[int(name)], self, name)
     
     def setSubmodel(self, name, value):
         self.orig[int(name)] = value
@@ -216,7 +234,7 @@ try:
 except:
     pass
 
-class DictionaryModel:
+class DictionaryModel(Model):
     """
     I wrap a Python dictionary and allow it to interact with the Woven
     models and submodels.
@@ -230,7 +248,7 @@ class DictionaryModel:
 
     def getSubmodel(self, name):
         orig = self.orig
-        return orig[name]
+        return adaptToIModel(orig[name], self, name)
 
     def setSubmodel(self, name, value):
         self.orig[name] = value
@@ -246,7 +264,7 @@ class DictionaryModel:
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
                                                             id(self), self.orig)
 
-class Wrapper:
+class Wrapper(Model):
     """
     I'm a generic wrapper to provide limited interaction with the
     Woven models and submodels.
@@ -256,24 +274,33 @@ class Wrapper:
     parent = None
     name = None
     def __init__(self, orig):
+        Model.__init__(self)
         self.orig = orig
-
-    def getSubmodel(self, name):
-        raise NotImplementedError
-    
-    def setSubmodel(self, name, value):
-        raise NotImplementedError
 
     def getData(self):
         return self.orig
     
     def setData(self, data):
-        self.parent.setSubmodel(self.name, data)
+        if self.parent:
+            self.parent.setSubmodel(self.name, data)
+        self.orig = data
 
     def __repr__(self):
         myLongName = reflect.qual(self.__class__)
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
                                                             id(self), self.orig)
+
+class AttributeWrapper(Wrapper):
+    """
+    I wrap an attribute named "name" of the given parent object.
+    """
+    def __init__(self, parent, name):
+        self.orig = None
+        parent = ObjectWrapper(parent)
+        Wrapper.__init__(self, parent.getSubmodel(name))
+        self.parent = parent
+        self.name = name
+
 
 class ObjectWrapper(Wrapper):
     """
@@ -285,7 +312,7 @@ class ObjectWrapper(Wrapper):
     parent = None
     name = None
     def getSubmodel(self, name):
-        return getattr(self.orig, name)
+        return adaptToIModel(getattr(self.orig, name), self, name)
 
     def setSubmodel(self, name, value):
         setattr(self.orig, name, value)
@@ -305,7 +332,7 @@ class UnsafeObjectWrapper(ObjectWrapper):
         value = getattr(self.orig, name)
         if callable(value):
             return value()
-        return value
+        return adaptToIModel(value, self, name)
 
 from twisted.internet import defer
 

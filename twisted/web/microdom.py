@@ -150,6 +150,15 @@ class Document(Node, Accessor):
                 gathered.append(node)
         return gathered
 
+    def getElementById(self, id):
+        childNodes = self.childNodes[:]
+        while childNodes:
+            node = childNodes.pop(0)
+            if node.childNodes:
+                childNodes.extend(node.childNodes)
+            if hasattr(node, 'getAttribute') and node.getAttribute("id") == id:
+                return node
+
 
 class EntityReference(Node):
 

@@ -45,7 +45,7 @@ class Controller(resource.Resource):
         """
         pass
 
-    def render(self, request):
+    def render(self, request, block=0):
         """
         This passes responsibility on to the view class registered for
         the model. You can override me to perform more advanced
@@ -55,10 +55,13 @@ class Controller(resource.Resource):
         self.setUp(request)
         self.view = components.getAdapter(self.model, interfaces.IView, None)
         self.view.setController(self)
-        return self.view.render(request)
+        return self.view.render(request, block=block)
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
+
+    def setSubmodel(self, submodel):
+        self.submodel = submodel
 
 WController = Controller
 

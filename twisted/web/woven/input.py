@@ -42,13 +42,7 @@ class InputHandler(controller.Controller):
        the page is rendered, but these values could be used to determine what
        page to display next, etc
     """
-    invalidErrorText = "Error!"
-    def setId(self, id):
-        log.msg("setId is deprecated; please use setSubmodel.")
-        self.submodel = id
-        
-    def setSubmodel(self, submodel):
-        self.submodel = submodel
+    invalidErrorText = "Error!"        
 
     def getInput(self, request):
         """

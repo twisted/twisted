@@ -177,13 +177,14 @@ class DOMTemplate(Resource):
     _cachedTemplate = None
     __implements__ = (Resource.__implements__)
 
-    def __init__(self, model = None):
+    def __init__(self, model = None, templateFile = None):
         Resource.__init__(self)
-        self.model = model
+        if templateFile:
+            self.templateFile = templateFile
         
         self.outstandingCallbacks = 0
         
-    def render(self, request):
+    def render(self, request, block=0):
         self.handlerResults = {1: [], 0: []}
         template = self.getTemplate(request)
         if template:
@@ -192,10 +193,11 @@ class DOMTemplate(Resource):
             if not self.templateFile:
                 raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
             self.d = self.lookupTemplate(request)
-        # Schedule processing of the document for later...
-        reactor.callLater(0, self.handleDocument, request, self.d)
-        #self.handleNode(request, self.d)
-        #return str(self.d.toxml())
+        if block:
+            self.handleDocument(request, self.d)
+        else:
+            # Schedule processing of the document for later...
+            reactor.callLater(0, self.handleDocument, request, self.d)
         
         # So we can return NOT_DONE_YET
         return NOT_DONE_YET
@@ -270,7 +272,7 @@ class DOMTemplate(Resource):
             if not self.outstandingCallbacks:
                 return self.sendPage(request)
         except:
-            utils.renderFailure(None, request)
+            self.renderFailure(None, request)
     
     def dispatchResult(self, request, node, result):
         """
@@ -291,7 +293,7 @@ class DOMTemplate(Resource):
         if isinstance(result, defer.Deferred):
             self.outstandingCallbacks += 1
             result.addCallback(self.dispatchResultCallback, request, node)
-            result.addErrback(utils.renderFailure, request)
+            result.addErrback(self.renderFailure, request)
             # Got to wait until the callback comes in
         return result
 
@@ -347,6 +349,14 @@ class DOMTemplate(Resource):
         request.write(page)
         request.finish()
         return page
+
+    def renderFailure(self, failure, request):
+        try:
+            print request.d.toxml()
+        except:
+            pass
+        utils.renderFailure(failure, request)
+        return failure
 
 
 ##########################################

@@ -19,7 +19,7 @@ def _get(node, nodeId):
     (internal) Get a node with the specified C{nodeId} as any of the C{class},
     C{id} or C{model} attributes.
     """
-    if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId)):
+    if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId) or (str(node.getAttribute("slot")) == nodeId)):
         return node
     if node.hasChildNodes():
         if hasattr(node.childNodes, 'length'):
@@ -90,7 +90,7 @@ def superPrependAttribute(node, key, value):
     if not hasattr(node, 'setAttribute'): return
     old = node.getAttribute(key)
     if old:
-        node.setAttribute(key, value+'.'+old)
+        node.setAttribute(key, value+'/'+old)
     else:
         node.setAttribute(key, value)
     if node.hasChildNodes():
@@ -117,7 +117,6 @@ def getElementsByTagName(iNode, name):
             childNodes.extend(node.childNodes)
         if node.nodeName == name:
             gathered.append(node)
-    print "gathered", gathered
     return gathered
 
 def gatherTextNodes(iNode):
@@ -129,7 +128,6 @@ def gatherTextNodes(iNode):
             childNodes.extend(node.childNodes)
         if hasattr(node, 'nodeValue'):
             gathered.append(node.nodeValue)
-    print "text", gathered
     return ''.join(gathered)
 
 
