@@ -235,7 +235,11 @@ threadable.whenThreaded(initThreads)
 
 
 class FileLogObserver:
-    """Log observer that writes to a file-like object."""
+    """Log observer that writes to a file-like object.
+    
+    @ivar timeFormat: Format string passed to strftime()
+    """
+    timeFormat = "%Y/%m/%d %H:%M %Z"
 
     def __init__(self, f):
         self.write = f.write
@@ -253,10 +257,11 @@ class FileLogObserver:
                 return
         else:
             text = ' '.join(map(str, edm))
-        y,mon,d,h,min, iigg,nnoo,rree,daylight = time.localtime(eventDict['time'])
-        self.write("%0.4d/%0.2d/%0.2d %0.2d:%0.2d %s [%s] %s\n" %
-                   (y, mon, d, h, min, time.tzname[daylight],
-                    eventDict['system'], text.replace("\n","\n\t")))
+        
+        timeStr = time.strftime(self.timeFormat, time.localtime(eventDict['time']))
+        fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
+        msgStr = " [%(system)s] %(text)s\n" % fmtDict
+        self.write(timeStr + msgStr)
         self.flush()                    # hoorj!
 
     def start(self):
