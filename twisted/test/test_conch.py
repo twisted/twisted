@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from __future__ import nested_scopes
-import os, struct, sys, tty
+import os, struct, sys
 from twisted.conch import identity, error
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session
 from twisted.cred import authorizer
