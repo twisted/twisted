@@ -564,7 +564,7 @@ class Request:
     def registerProducer(self, producer, streaming):
         """Register a producer."""
         if self.producer:
-            raise ValueError, "registering producer before previous one was unregistered"
+            raise ValueError, "registering producer %s before previous one (%s) was unregistered" % (producer, self.producer)
         
         self.streamingProducer = streaming
         self.producer = producer
