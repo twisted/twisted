@@ -221,6 +221,9 @@ class StorableList(Allocation):
         for o in seq:
             self.append(o)
 
+    def insert(self, idx, o):
+        self[idx:idx] = [o]
+
     def sort(self):
         l = list(self)
         l.sort()
