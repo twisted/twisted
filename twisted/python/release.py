@@ -5,6 +5,8 @@ A release-automation toolkit.
 import sys, os, re
 
 from twisted.python import failure, log, usage
+from twisted.internet import protocol
+from twisted.protocols import basic
 
 debug = False
 
@@ -101,17 +103,20 @@ def sh(command):#, sensitive=0):
         raise CommandFailed(command)
 
 
-def replaceInFile(filename, oldstr, newstr, escape=True):
+def replaceInFile(filename, oldstr, newstr):
     """
     I replace the text `oldstr' with `newstr' in `filename' using sed
     and mv.
     """
     sh('cp %s %s.bak' % (filename, filename))
-    if escape:
-        oldstr = re.escape(oldstr)
-    sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr,
-                                            newstr, filename, filename))
-    sh('cp %s.new %s' % (filename,  filename))
+    f = open(filename)
+    d = f.read()
+    f.close()
+    d = d.replace(oldstr, newstr)
+    f = open(filename + '.new', 'w')
+    f.write(d)
+    f.close()
+    sh('mv %s.new %s' % (filename, filename))
 
 
 def runChdirSafe(f, *args, **kw):
@@ -120,3 +125,31 @@ def runChdirSafe(f, *args, **kw):
         return f(*args, **kw)
     finally:
         os.chdir(origdir)
+
+
+class ProcessToLog(protocol.ProcessProtocol):
+    """
+    A process protocol that converts process output to log
+    messages. The log messages have 'process' and 'data' keys, and, if
+    the output was received on stderr, an 'isError' key.
+    """
+    def __init__(self):
+        self.outLiner = basic.LineReceiver()
+        self.outLiner.lineReceived = self.outLineReceived
+        self.outLiner.delimiter = '\n'
+
+        self.errLiner = basic.LineReceiver()
+        self.errLiner.lineReceived = self.errLineReceived
+        self.errLiner.delimiter = '\n'
+    
+    def outReceived(self, data):
+        self.outLiner.dataReceived(data)
+
+    def errReceived(self, data):
+        self.errLiner.dataReceived(data)
+
+    def outLineReceived(self, line):
+        log.msg(process=self, data=line)
+
+    def errLineReceived(self, line):
+        log.msg(process=self, data=line, isError=1)
