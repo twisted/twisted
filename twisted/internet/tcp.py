@@ -338,10 +338,7 @@ class Server(Connection):
     """Serverside socket-stream connection class.
 
     I am a serverside network connection transport; a socket which came from an
-    accept() on a server.  Programmers for the twisted.net framework should not
-    have to use me directly, since I am automatically instantiated in
-    TCPServer's doRead method.  For documentation on what I do, refer to the
-    documentation for twisted.protocols.protocol.Transport.
+    accept() on a server.
     """
 
     def __init__(self, sock, protocol, client, server, sessionno):
@@ -381,7 +378,12 @@ class Server(Connection):
         Returns a tuple of ('INET', hostname, port), indicating the connected
         client's address.
         """
-        return ('INET',)+self.client
+        # ick someone clean this up someday
+        if isinstance(self.client, types.TupleType):
+            return ('INET',)+self.client
+        else:
+            return ("INET", self.client)
+
 
 class Port(abstract.FileDescriptor):
     """I am a TCP server port, listening for connections.
