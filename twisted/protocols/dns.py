@@ -274,6 +274,17 @@ class Query:
         self.type, self.cls = struct.unpack("!HH", buff)
     
     
+    def __hash__(self):
+        return hash((str(self.name).lower(), self.type, self.cls))
+    
+    
+    def __cmp__(self, other):
+        return cmp(
+            (str(self.name).lower(), self.type, self.cls),
+            (str(other.name).lower(), other.type, other.cls)
+        )
+
+
     def __str__(self):
         t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
@@ -633,7 +644,8 @@ class Record_SRV:                # EXPERIMENTAL
     
     def encode(self, strio, compDict = None):
         strio.write(struct.pack('!HHH', self.priority, self.weight, self.port))
-        self.target.encode(strio, compDict)
+        # This can't be compressed
+        self.target.encode(strio, None)
     
     
     def decode(self, strio, length = None):
