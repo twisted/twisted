@@ -30,6 +30,7 @@ import os
 import socket
 import sys
 import warnings
+from zope.interface import implements, classImplements
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
@@ -37,7 +38,7 @@ from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactor
 from twisted.internet import main, error, protocol, interfaces
 from twisted.internet import tcp, udp, defer
 
-from twisted.python import log, threadable, failure
+from twisted.python import log, threadable, failure, components
 from twisted.persisted import styles
 from twisted.python.runtime import platformType, platform
 
@@ -74,13 +75,7 @@ if platformType == "win32":
 class PosixReactorBase(ReactorBase):
     """A basis for reactors that use file descriptors.
     """
-    __implements__ = (ReactorBase.__implements__, IReactorArbitrary,
-                      IReactorTCP, IReactorUDP, IReactorMulticast)
-
-    if sslEnabled:
-        __implements__ = __implements__ + (IReactorSSL,)
-    if unixEnabled:
-        __implements__ = __implements__ + (IReactorUNIX, IReactorUNIXDatagram, IReactorProcess)
+    implements(IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
 
     def __init__(self):
         ReactorBase.__init__(self)
@@ -321,6 +316,12 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
 
+if sslEnabled:
+    classImplements(PosixReactorBase, IReactorSSL)
+if unixEnabled:
+    classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram, IReactorProcess)
+components.backwardsCompatImplements(PosixReactorBase)
+
 
 class _Win32Waker(log.Logger, styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
@@ -454,7 +455,7 @@ class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
 
-    __implements__ = (PosixReactorBase.__implements__, IReactorFDSet)
+    implements(IReactorFDSet)
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
@@ -582,6 +583,8 @@ class SelectReactor(PosixReactorBase):
                 del writes[reader]
         self.waker = None
         return readers
+
+components.backwardsCompatImplements(SelectReactor)
 
 
 def install():

@@ -39,6 +39,7 @@ __all__ = ['install']
 # System Imports
 import sys
 import gobject
+from zope.interface import implements
 try:
     if not hasattr(sys, 'frozen'):
         # Don't want to check this for py2exe
@@ -48,7 +49,7 @@ except (ImportError, AttributeError):
     pass # maybe we're using pygtk before this hack existed.
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure
+from twisted.python import log, threadable, runtime, failure, components
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
@@ -74,7 +75,7 @@ class Gtk2Reactor(default.PosixReactorBase):
     """GTK+-2 event loop reactor.
     """
 
-    __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
+    implements(IReactorFDSet)
 
     def __init__(self, useGtk=True):
         self.context = gobject.main_context_default()
@@ -224,6 +225,8 @@ class Gtk2Reactor(default.PosixReactorBase):
             timeout = 0.1
         # grumble
         _simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
+
+components.backwardsCompatImplements(Gtk2Reactor)
 
 
 class PortableGtkReactor(default.SelectReactor):
