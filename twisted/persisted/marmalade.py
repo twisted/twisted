@@ -120,7 +120,7 @@ class DOMUnjellier:
         self.unjellyInto(instance.__dict__, attrName, valueNode)
 
     def unjellyNode(self, node):
-        if node.tagName == "None":
+        if node.tagName.lower() == "none":
             retval = None
         elif node.tagName == "string":
             retval = str(eval('"%s"' % node.getAttribute("value")))
