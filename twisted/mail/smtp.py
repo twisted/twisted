@@ -933,7 +933,7 @@ class SMTPClient(basic.LineReceiver):
         self.transport.loseConnection()
 
     def smtpState_to(self, code, resp):
-        self.toAddresses = self.getMailTo()
+        self.toAddresses = iter(self.getMailTo())
         self.toAddressesResult = []
         self.successAddresses = []
         self._okresponse = self.smtpState_toOrData
@@ -946,7 +946,9 @@ class SMTPClient(basic.LineReceiver):
             self.toAddressesResult.append((self.lastAddress, code, resp))
             if code in SUCCESS:
                 self.successAddresses.append(self.lastAddress)
-        if not self.toAddresses:
+        try:
+            self.lastAddress = self.toAddresses.next()
+        except StopIteration:
             if self.successAddresses:
                 self.sendLine('DATA')
                 self._expected = [ 354 ]
@@ -954,7 +956,6 @@ class SMTPClient(basic.LineReceiver):
             else:
                 return self.smtpState_msgSent(-1,'No recipients accepted')
         else:
-            self.lastAddress = self.toAddresses.pop()
             self.sendLine('RCPT TO:%s' % quoteaddr(self.lastAddress))
 
     def smtpState_data(self, code, resp):
@@ -1339,7 +1340,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         if isinstance(toEmail, types.StringTypes):
             toEmail = [toEmail]
         self.fromEmail = Address(fromEmail)
-        self.toEmail = toEmail
+        self.toEmail = iter(toEmail)
         self.file = file
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
