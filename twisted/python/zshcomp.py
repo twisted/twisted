@@ -10,7 +10,18 @@ API Stability: API? what API?
 
 Maintainer: U{Eric Mangold<mailto:teratorn@twistedmatrix.com>}
 
-SPECIAL CLASS VARIABLES
+To build completion functions for your own commands, and not
+twisted commands, then just do something like this:
+    o = mymodule.MyOptions
+    f = file('_mycommand', 'w')
+    Builder("mycommand", o, f).write()
+
+Then all you have to do is place the generated file somewhere in your $fpath,
+and restart zsh. Note the "site-functions" directory in your $fpath where you
+may install 3rd-party completion functions (like the one you're building). Use
+the siteFunctionsPath function below to locate this directory programmatically.
+
+SPECIAL CLASS VARIABLES. You may set these on your usage.Options subclass.
 
     zsh_altArgDescr
     zsh_multiUse
@@ -40,6 +51,7 @@ Here is what they mean (with examples):
             "colors":"_values -s , 'colors to use' red green blue"}
         A dict mapping long option names to Zsh "actions". These actions
         define what will be completed as the argument to the given option.
+        By default, all files/dirs will be completed if no action is given.
 
         As you can see in the example above. The "foo" option will have
         files that end in .foo completed when the user presses Tab. The
