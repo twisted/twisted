@@ -258,6 +258,6 @@ def func_list(*exp):
         lispList = newLispList
     return head
 
-def func_subtract(exp, env):
-    return reduce(operator.add, exp)
+def func_subtract(*exp):
+    return reduce(operator.sub, exp)
 
