@@ -301,7 +301,8 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
-    fixAPI(document, url)
+    if not config.get('noapi', False):
+        fixAPI(document, url)
     fontifyPython(document)
     fixLinks(document, ext)
     addPyListings(document, dir)

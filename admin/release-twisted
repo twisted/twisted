@@ -117,7 +117,8 @@ def main():
 ##
 def lore(ver, docdir):
     sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
-       "--config ext=.html --config version=%(ver)s -l ../howto/ "
+       "--config ext=.html --config version=%(ver)s "
+       "--config noapi=please -l ../howto/ "
        "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir})
 
 def tar(tdir):
