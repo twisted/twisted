@@ -76,6 +76,16 @@ class ConchIdentity(identity.Identity):
         """
         self.clients[serviceName] = clientClass
 
+    def getUserGroupID(self):
+        """return a tuple of (uid, gid)
+        """
+        raise NotImplementedError
+
+    def getHomeDir(self):
+        """return the users home directory
+        """
+        raise NotImplementedError
+
 class OpenSSHConchIdentity(ConchIdentity):
 
     # XXX fail slower for security reasons
@@ -130,3 +140,13 @@ class OpenSSHConchIdentity(ConchIdentity):
             return defer.fail(error.ConchError('bad password'))
 
         return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
+
+    def getUserGroupID(self):
+        if pwd:
+            return pwd.getpwnam(self.name)[2:4]
+        raise NotImplementedError
+
+    def getHomeDir(self):
+        if pwd:
+            return pwd.getpwnam(self.name)[5]
+        raise NotImplementedError

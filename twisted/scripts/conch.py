@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.25 2002/12/10 23:48:58 z3p Exp $
+# $Id: conch.py,v 1.26 2002/12/11 15:48:20 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -329,7 +329,7 @@ class SSHConnection(connection.SSHConnection):
                 d = self.sendGlobalRequest('tcpip-forward', data)
                 self.remoteForwards[remotePort] = hostport
 
-class SSHSession(session.SSHChannel):
+class SSHSession(connection.SSHChannel):
 
     name = 'session'
     

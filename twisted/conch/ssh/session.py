@@ -28,13 +28,15 @@ import struct, fcntl, tty, os
 from twisted.internet import protocol, reactor
 from twisted.python import log
 
-import common, ttymodes
-from connection import SSHChannel # weird circular import
+import common, connection, ttymodes
 
-class SSHSession(SSHChannel):
+class SSHSession(connection.SSHChannel):
 
     name = 'session'
-    environ = {}
+    def __init__(self, *args, **kw):
+        connection.SSHChannel.__init__(self, *args, **kw)
+        self. environ = {}
+        self.buf = '' 
 
     def request_subsystem(self, data):
         subsystem = common.getNS(data)[0]
@@ -67,16 +69,9 @@ class SSHSession(SSHChannel):
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
         try:
             self.client = SSHSessionClient()
-            try:
-                pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
+            pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
                   'login', ['login','-p', '-f', user.name], self.environ,  
                    usePTY = 1)
-            except Exception, e:
-                log.msg('failed to get pty first')
-                log.msg('reason:')
-                log.deferr()
-                return 0
-            log.msg( 'fileno: %i' % pty.fileno())
             fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
             if 0:#self.modes:
@@ -102,14 +97,39 @@ class SSHSession(SSHChannel):
                 tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
         except OSError, e:
             log.msg('failed to get pty')
-            log.msg('reason: %s' % e)
+            log.msg('reason:')
+            log.deferr()
             return 0
         else:
             self.pty = pty
             return 1
 
     def request_exec(self, data):
-        log.msg('disabled exec')
+        command = common.getNS(data)[0].split()
+        user = self.conn.transport.authenticatedUser
+        uid, gid = user.getUserGroupID()
+        homeDir = user.getHomeDir()
+        try:
+            self.client = SSHSessionClient()
+            pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
+                    command[0], command, self.environ, homeDir,
+                    uid, gid, usePTY = 1)
+        except OSError, e:
+            log.msg('failed to exec %s' % command)
+            log.msg('reason:')
+            log.deferr()
+            return 0
+        else:
+            if self.buf:
+                self.client.dataReceived(self.buf)
+                self.buf = ''
+            self.pty = pty
+            attrs = tty.tcgetattr(pty.fileno())
+            attrs[3] = attrs[3] & ~tty.ICANON & ~tty.ECHO
+            attrs[6][tty.VMIN] = 1
+            attrs[6][tty.VTIME] = 0
+            tty.tcsetattr(pty.fileno(), tty.TCSANOW, attrs)
+            return 1
         return 0
 
     def request_pty_req(self, data):
@@ -149,13 +169,13 @@ class SSHSession(SSHChannel):
 
     def dataReceived(self, data):
         if not hasattr(self, 'client'):
-            log.msg("hmm, got data, but we don't have a client: %s"%repr(data))
             #self.conn.sendClose(self)
+            self.buf += data
             return
         self.client.dataReceived(data)
 
     def extReceived(self, dataType, data):
-        if dataType == EXTENDED_DATA_STDERR:
+        if dataType == connection.EXTENDED_DATA_STDERR:
             if hasattr(self.client, 'errReceieved'):
                 self.client.errReceived(data)
         else:
@@ -185,7 +205,7 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
     outReceived = dataReceived
 
     def errReceived(self, err):
-        self.session.conn.sendExtendedData(self.session, EXTENDED_DATA_STDERR, err)
+        self.session.conn.sendExtendedData(self.session, connection.EXTENDED_DATA_STDERR, err)
 
     def connectionLost(self, reason = None):
         self.session.loseConnection()

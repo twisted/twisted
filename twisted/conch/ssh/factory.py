@@ -22,7 +22,7 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import md5, os
+import md5, os, resource
 
 from twisted.internet import protocol
 from twisted.python import log
@@ -36,6 +36,8 @@ class SSHFactory(protocol.Factory):
         'ssh-connection':connection.SSHConnection
     }
     def startFactory(self):
+        # disable coredumps
+        resource.setrlimit(resource.RLIMIT_CORE, (0,0))
         if not hasattr(self,'publicKeys'):
             self.publicKeys = self.getPublicKeys()
         if not hasattr(self,'privateKeys'):

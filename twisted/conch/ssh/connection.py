@@ -234,8 +234,8 @@ class SSHConnection(service.SSHService):
         if channel not in self.channelsToRemoteChannel.keys():
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>2L', 
-                                    self.channelsToRemoteChannel[channel]), 
-                                    dataType+common.NS(data))
+                            self.channelsToRemoteChannel[channel],dataType) \
+                            + common.NS(data))
 
     def sendEOF(self, channel):
         if channel not in self.channelsToRemoteChannel.keys():
