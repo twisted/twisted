@@ -62,7 +62,7 @@ def htmlDict(d):
     for k, v in d.items():
         if k == '__builtins__':
             v = 'builtin dictionary'
-        w('\n<tr bgcolor="#ffff99"><td valign="top"><b>%s<b></td>\n<td>%s</td></tr>\n' % (htmlrepr(k), htmlrepr(v)))
+        w('\n<tr bgcolor="#ffff99"><td valign="top"><b>%s</b></td>\n<td>%s</td></tr>\n' % (htmlrepr(k), htmlrepr(v)))
     w('</table>')
     return io.getvalue()
 
