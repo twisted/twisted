@@ -27,7 +27,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.26 $"[11:-2]
+__version__ = "$Revision: 1.27 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -70,7 +70,7 @@ class InputHandler(controller.Controller):
         if submodel is not None:
             self.submodel = submodel
         if name is not None:
-            self.submodel = name
+            self.inputName = name
 
     def initialize(self):
         pass
@@ -82,7 +82,8 @@ class InputHandler(controller.Controller):
         """
         Return the data associated with this handler from the request, if any.
         """
-        input = request.args.get(self.submodel, None)
+        name = getattr(self, 'inputName', self.submodel)
+        input = request.args.get(name, None)
         if input:
             return input
 
@@ -159,7 +160,14 @@ class InputHandler(controller.Controller):
                 self.model.setData(data)
                 self.model.notify({'request': request, self.submodel: data})
         else:
-            self._commit(data)
+            func = self._commit
+            if hasattr(func, 'im_func'):
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(func)
+            if args[1] == 'request':
+                self._commit(request, data)
+            else:
+                self._commit(data)
 
 
 class DefaultHandler(InputHandler):
@@ -172,7 +180,8 @@ class DefaultHandler(InputHandler):
 
 class SingleValue(InputHandler):
     def getInput(self, request):
-        input = request.args.get(self.submodel, None)
+        name = getattr(self, 'inputName', self.submodel)
+        input = request.args.get(name, None)
         if input:
             return input[0]
 
