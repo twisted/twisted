@@ -122,8 +122,8 @@ class DNSServerFactory(protocol.ServerFactory):
                     len(answers), len(answers) != 1 and "s" or ""
                 )
             )
-            
-    
+
+
     def recursiveLookupFailed(self, failure, message, protocol, address):
         message.rCode = dns.ESERVER
         self.sendReply(protocol, message, protocol, address)
@@ -131,33 +131,51 @@ class DNSServerFactory(protocol.ServerFactory):
             log.msg("Recursive lookup failed")
 
 
-    def handleQuery(self, message, protocol, address):
+    def performLookups(self, queries):
+        extra = []
         answers = []
-        for q in message.queries:
+        for q in queries:
             for a in self.authorities:
-                for r in a.records.get(str(q.name).lower(), ()):
-                    if q.type == r.TYPE or q.type == dns.ALL_RECORDS:
-                        answers.append(dns.RRHeader(str(q.name), r.TYPE, q.cls, 10))
-                        answers[-1].payload = r
-        if len(answers):
-            message.answers = answers
-            message.auth = 1
-            self.sendReply(protocol, message, address)
-        elif self.resolver:
-            # Try a recursive lookup!  Hoot!
-            if address:
-                self.resolver.queryUDP(message.queries).addCallback(
+                n = str(q.name).lower()
+                if n.endswith(a.soa[0].lower()):
+                    for r in a.records.get(n, ()):
+                        if q.type == r.TYPE or q.type == dns.ALL_RECORDS or r.TYPE == dns.CNAME:
+                            res = dns.RRHeader(str(q.name), r.TYPE, q.cls, 10)
+                            res.payload = r
+                            answers.append(res)
+                            
+                            if r.TYPE == dns.CNAME:
+                                # XXX - sigh - wtf
+                                extra.extend([
+                                    dns.Query(str(r.name), dns.A, dns.IN),
+                                    dns.Query(str(r.name), dns.CNAME, dns.IN)
+                                ])
+                    return answers, extra
+        return None
+
+
+    def handleQuery(self, message, protocol, address):
+        local = self.performLookups(message.queries)
+        if local is None:
+            if self.resolver and message.recDes:
+                f = address and self.resolver.queryUDP or self.resolver.queryTCP
+                f(message.queries).addCallback(
                     self.gotRecursiveResponse, message, protocol, address
-                )
-            else:
-                self.resolver.queryTCP(message.queries).addCallback(
-                    self.gotRecursiveResponse, protocol, None
                 ).addErrback(
                     self.recursiveLookupFailed, message, protocol, address
                 )
-            log.msg("Handling query recursively")
+            else:
+                message.rCode = dns.ENAME
         else:
-            mesage.answers = []
+            message.answers, extra = local
+            if extra:
+                # XXX - Hardcoded single level of re-resolution
+                #       This might be better as a paremeter someplace
+                reres = self.performLookups(extra)
+                if reres:
+                    message.answers.extend(reres[0])
+            message.auth = 1
+            message.rCode = dns.OK
             self.sendReply(protocol, message, address)
 
 
