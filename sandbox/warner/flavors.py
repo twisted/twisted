@@ -182,8 +182,10 @@ class IRemoteCopy(Interface):
         prevents this from happening, but that may go away in the future]
 
         Some of the objects referenced by the attribute values may have
-        Deferreds in them (e.g. containers which reference recursive
-        tuples). Therefore you must be careful about how much state
+        Deferreds in them (e.g. containers which reference recursive tuples).
+        Such containers are responsible for updating their own state when
+        those Deferreds fire, but until that point their state is still
+        subject to change. Therefore you must be careful about how much state
         inspection you perform within this method."""
         
     def getStateSchema(self):
@@ -199,7 +201,7 @@ class RemoteCopy(object):
     nonCyclic = False
 
     def __init__(self):
-        # the constructor will not be called with any args
+        # the constructor will always be called without arguments
         pass
 
     def setCopyableState(self, state):
