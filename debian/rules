@@ -39,8 +39,7 @@ install2.1:
 	cp debian/copyright debian/python2.1-twisted/usr/share/doc/python2.1-twisted/
 	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/python2.1-twisted/usr/bin/
 	for file in debian/python2.1-twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file''2.1;rm $$file $$file.$$$$;done
-	cp doc/man/*.1 debian/python2.1-twisted/usr/share/man/man1/
-	for file in doc/man/*.1;do mv $$file debian/python2.1-twisted/usr/share/man/man1/`basename $$file .1`2.1.1;done
+	for file in doc/man/*.1;do cp $$file debian/python2.1-twisted/usr/share/man/man1/`basename $$file .1`2.1.1;done
 	gzip -9 debian/python2.1-twisted/usr/share/man/man1/*
 
 install2.2:
@@ -54,8 +53,7 @@ install2.2:
 	cp debian/copyright debian/python2.2-twisted/usr/share/doc/python2.2-twisted/
 	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/python2.2-twisted/usr/bin/
 	for file in debian/python2.2-twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.2|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file''2.2;rm $$file $$file.$$$$;done
-	cp doc/man/*.1 debian/python2.2-twisted/usr/share/man/man1/
-	for file in doc/man/*.1;do mv $$file debian/python2.2-twisted/usr/share/man/man1/`basename $$file .1`2.2.1;done
+	for file in doc/man/*.1;do cp $$file debian/python2.2-twisted/usr/share/man/man1/`basename $$file .1`2.2.1;done
 	gzip -9 debian/python2.2-twisted/usr/share/man/man1/*
 
 install: install-stamp
@@ -63,8 +61,8 @@ install-stamp: build-stamp install2.1 install2.2
 	dh_testdir
 	dh_testroot
 
-	DEFAULT_PYTHON=${DEFAULT_PYTHON};for file in debian/python$${DEFAULT_PYTHON}-twisted/usr/bin/*;do ln -s `basename $$file` debian/python$${DEFAULT_PYTHON}-twisted/usr/bin/`echo $$file|sed 's/...$$//'`; done
-	DEFAULT_PYTHON=${DEFAULT_PYTHON};for file in debian/python$${DEFAULT_PYTHON}-twisted/usr/share/man/man1/*;do ln -s `basename $$file` debian/python$${DEFAULT_PYTHON}-twisted/usr/bin/`echo $$file|sed 's/'$$DEFAULT_PYTHON'//'`; done
+	DEFAULT_PYTHON=${DEFAULT_PYTHON};for file in debian/python$${DEFAULT_PYTHON}-twisted/usr/bin/*;do ln -s `basename $$file` debian/python$${DEFAULT_PYTHON}-twisted/usr/bin/`basename $$file|sed 's/...$$//'`; done
+	DEFAULT_PYTHON=${DEFAULT_PYTHON};for file in debian/python$${DEFAULT_PYTHON}-twisted/usr/share/man/man1/*;do ln -s `basename $$file` debian/python$${DEFAULT_PYTHON}-twisted/usr/share/man/man1/`basename $$file|sed 's/'$$DEFAULT_PYTHON'//'`; done
 
 	dh_installdirs -p twisted-doc
 	cp debian/copyright debian/twisted-doc/usr/share/doc/twisted-doc/
@@ -76,7 +74,7 @@ install-stamp: build-stamp install2.1 install2.2
 
 	dh_installdirs -p python-twisted
 	cp debian/copyright debian/python-twisted/usr/share/doc/python-twisted/
-	cp debian/python2.1.README.Debian debian/python-twisted/usr/share/doc/python-twisted/README.Debian
+	cp debian/python-twisted.README.Debian debian/python-twisted/usr/share/doc/python-twisted/README.Debian
 
 	touch install-stamp
 

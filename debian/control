@@ -19,7 +19,7 @@ Description: Event-based framework for internet applications. (dummy package)
 
 Package: python2.1-twisted
 Architecture: any
-Depends: ${shlibdes:Depends}, python2.1
+Depends: ${shlibs:Depends}, python2.1
 Recommends: python2.1-tk
 Suggests: python2.1-pyopenssl, twisted-doc
 Description: Event-based framework for internet applications.
@@ -31,7 +31,7 @@ Description: Event-based framework for internet applications.
 
 Package: python2.2-twisted
 Architecture: any
-Depends: ${shlibdes:Depends}, python2.2
+Depends: ${shlibs:Depends}, python2.2
 Recommends: python2.2-tk
 Suggests: python2.2-pyopenssl, twisted-doc
 Description: Event-based framework for internet applications.
