@@ -110,10 +110,10 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
         self.t = protocol.FileWrapper(self.f)
         self.p = irc.IRC()
         self.p.makeConnection(self.t)
-    
+
     def check(self, s):
         self.assertEquals(self.f.getvalue(), s)
-    
+
     def testPrivmsg(self):
         self.p.privmsg("this-is-sender", "this-is-recip", "this is message")
         self.check(":this-is-sender PRIVMSG this-is-recip :this is message\r\n")
@@ -121,28 +121,15 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
     def testNotice(self):
         self.p.notice("this-is-sender", "this-is-recip", "this is notice")
         self.check(":this-is-sender NOTICE this-is-recip :this is notice\r\n")
-    
+
     def testAction(self):
         self.p.action("this-is-sender", "this-is-recip", "this is action")
         self.check(":this-is-sender ACTION this-is-recip :this is action\r\n")
-    
+
     def testJoin(self):
         self.p.join("this-person", "#this-channel")
         self.check(":this-person JOIN #this-channel\r\n")
-    
+
     def testPart(self):
         self.p.part("this-person", "#that-channel")
         self.check(":this-person PART #that-channel\r\n")
-
-
-# class DCCtest(unittest.TestCase):
-#     def setUp(self):
-#         self.transport = StringIOWithoutClosing()
-#         self.client = irc.IRCClient()
-#         self.client.makeConnection(protocol.FileWrapper(transport))
-
-#     def test_connect(self):
-#         pass
-
-#     def test_file(self):
-#         pass
