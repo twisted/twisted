@@ -85,6 +85,57 @@ static int Buffer_length(DeallocBuffer* self)
 }
 
 
+/* XXX This function is copied almost verbatim from Python, and is the
+   under Python's icky license. Possibly replace later on with
+   reimplementation or something. */
+static PyObject* Buffer_concat(DeallocBuffer *self, PyObject *other)
+{
+	PyBufferProcs *pb = other->ob_type->tp_as_buffer;
+	void *ptr1, *ptr2;
+	char *p;
+	PyObject *ob;
+	int size, count;
+
+	if ( pb == NULL ||
+	     pb->bf_getreadbuffer == NULL ||
+	     pb->bf_getsegcount == NULL )
+	{
+		PyErr_BadArgument();
+		return NULL;
+	}
+	if ( (*pb->bf_getsegcount)(other, NULL) != 1 )
+	{
+		/* ### use a different exception type/message? */
+		PyErr_SetString(PyExc_TypeError,
+				"single-segment buffer object expected");
+		return NULL;
+	}
+
+	ptr1 = self->b_ptr;
+	size = self->b_size;
+
+	/* optimize special case */
+	if ( size == 0 )
+	{
+	    Py_INCREF(other);
+	    return other;
+	}
+
+	if ( (count = (*pb->bf_getreadbuffer)(other, 0, &ptr2)) < 0 )
+		return NULL;
+
+ 	ob = PyString_FromStringAndSize(NULL, size + count);
+ 	p = PyString_AS_STRING(ob);
+ 	memcpy(p, ptr1, size);
+ 	memcpy(p + size, ptr2, count);
+
+	/* there is an extra byte in the string object, so this is safe */
+	p[size + count] = '\0';
+
+	return ob;
+}
+
+
 static PyObject* Buffer_str(DeallocBuffer* self)
 {
         return PyString_FromStringAndSize(reinterpret_cast<char*>(self->b_ptr),
@@ -100,6 +151,7 @@ static void Buffer_dealloc(DeallocBuffer* self)
 
 static PySequenceMethods buffer_as_sequence = {
     (inquiry)Buffer_length, /*sq_length*/
+    (binaryfunc)Buffer_concat, /*sq_concat*/
 };
 
 static PyBufferProcs buffer_as_buffer = {
