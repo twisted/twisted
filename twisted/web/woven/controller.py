@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.65 $"[11:-2]
+__version__ = "$Revision: 1.66 $"[11:-2]
 
 import os
 import cgi
@@ -257,7 +257,7 @@ class Controller(resource.Resource):
     def exit(self, request):
         """We are done handling the node to which this controller was attached.
         """
-        print "EXIT", self
+        pass
 
     def domChanged(self, request, widget, node):
         parent = getattr(self, '_parent', None)
