@@ -59,3 +59,28 @@ class LogTest(unittest.TestCase):
             i = self.catcher.pop()
             self.assertEquals(i['isError'], 1)
             log.flushErrors(ig)
+
+    def testErroneousErrors(self):
+        L1 = []
+        L2 = []
+        log.addObserver(lambda events: events['isError'] or L1.append(events))
+        log.addObserver(lambda events: 1/0)
+        log.addObserver(lambda events: events['isError'] or L2.append(events))
+        log.msg("Howdy, y'all.")
+
+        excs = [f.type for f in log.flushErrors(ZeroDivisionError)]
+        self.assertEquals([ZeroDivisionError], excs)
+
+        self.assertEquals(len(L1), 2)
+        self.assertEquals(len(L2), 2)
+
+        self.assertEquals(L1[1]['message'], ("Howdy, y'all.",))
+        self.assertEquals(L2[0]['message'], ("Howdy, y'all.",))
+
+        # The observer has been removed, there should be no exception
+        log.msg("Howdy, y'all.")
+
+        self.assertEquals(len(L1), 3)
+        self.assertEquals(len(L2), 3)
+        self.assertEquals(L1[2]['message'], ("Howdy, y'all.",))
+        self.assertEquals(L2[2]['message'], ("Howdy, y'all.",))

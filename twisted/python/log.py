@@ -182,7 +182,7 @@ logOwner = EscapeFromTheMeaninglessConfinesOfCapital()
 
 class LogPublisher:
     """Class for singleton log message publishing."""
-    
+
     synchronized = ['msg']
 
     def __init__(self):
@@ -207,9 +207,13 @@ class LogPublisher:
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        for o in self.observers:
-            o(actualEventDict)
-
+        for i in xrange(len(self.observers) - 1, -1, -1):
+            try:
+                self.observers[i](actualEventDict)
+            except:
+                o = self.observers.pop(i)
+                msg("Log observer %s failed, removing from observer list." % (o,))
+                err()
 
 try:
     theLogPublisher
@@ -232,7 +236,7 @@ threadable.whenThreaded(initThreads)
 
 class FileLogObserver:
     """Log observer that writes to a file-like object."""
-    
+
     def __init__(self, f):
         self.write = f.write
         self.flush = f.flush
@@ -266,7 +270,7 @@ class FileLogObserver:
 
 class StdioOnnaStick:
     """Class that pretends to be stout/err."""
-    
+
     closed = 0
     softspace = 0
     mode = 'wb'
@@ -318,8 +322,8 @@ def startLogging(file, *a, **kw):
     startLoggingWithObserver(flo.emit, *a, **kw)
 
 def startLoggingWithObserver(observer, setStdout=1):
-    """Initialize logging to a specified observer. If setStdout is true 
-       (defaults to yes), also redirect sys.stdout and sys.stderr 
+    """Initialize logging to a specified observer. If setStdout is true
+       (defaults to yes), also redirect sys.stdout and sys.stderr
        to the specified file.
     """
     global defaultObserver, _oldshowwarning
@@ -374,7 +378,7 @@ class DefaultObserver:
                 text = " ".join([str(m) for m in eventDict["message"]]) + "\n"
             sys.stderr.write(text)
             sys.stderr.flush()
-    
+
     def start(self):
         addObserver(self._emit)
 
