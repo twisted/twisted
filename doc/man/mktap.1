@@ -10,13 +10,13 @@ mktap \- create twisted.servers
 .SH DESCRIPTION
 .PP
 The \fB\--help\fR prints out a usage message to standard output.
-.TP 
+.TP
 \fB\--uid\fR, \fB\-u\fR \fI<uid>\fR
 Application belongs to this uid, and should run with its permissions.
-.TP 
+.TP
 \fB\--gid\fR, \fB\-d\fR \fI<gid>\fR
 Application belongs to this gid, and should run with its permissions.
-.TP 
+.TP
 \fB\--append\fR, \fB\-a\fR \fI<file>\fR
 Append given servers to given file, instead of creating a new one.
 File should be be a tap file.
@@ -25,16 +25,16 @@ File should be be a tap file.
 Use the specified name as the process name when the application is run with
 \fItwistd(1)\fR.  This option also causes some initialization code to be
 duplicated when \fItwistd(1)\fR is run.
-.TP 
+.TP
 \fB\--xml\fR, \fB\-x\fR
 Output as a .tax XML file rather than a pickle.
-.TP 
+.TP
 \fB\--source\fR, \fB\-s\fR
 Output as a .tas (AOT Python source) file rather than a pickle.
-.TP 
+.TP
 \fIapptype\fR
 Can be 'web', 'portforward', 'toc', 'coil', 'words', \
-'manhole', 'im', 'news', 'socks', 'telnet', 'parent', 'sister', \
+'manhole', 'im', 'news', 'socks', 'telnet', 'parent', 'sibling', \
 'ftp', and 'mail'. Each of those support different options.
 .PP
 .SH \fBportforward\fR options
@@ -116,7 +116,7 @@ Relay mail to all unknown domains through given IP and port,
 using queue directory as temporary place to place files.
 .TP
 \fB\-d\fR, \fB\--domain\fR \fI<domain>\fR=\fI<path>\fR
-generate an SMTP/POP3 virtual maildir domain named "domain" which saves to 
+generate an SMTP/POP3 virtual maildir domain named "domain" which saves to
 "path"
 .TP
 \fB\-u\fR, \fB\--username\fR \fI<name>\fR=\fI<password>\fR

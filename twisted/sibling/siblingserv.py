@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_sister -*-
+# -*- test-case-name: twisted.test.test_sibling -*-
 
 from twisted.spread.pb import Service, Perspective, Error
 from twisted.spread.sturdy import PerspectiveConnector
@@ -30,62 +30,62 @@ True = 1
 False = 0
 
 
-class SisterMotherClient(Referenceable):
-    def __init__(self, sistersrv):
-        self.sistersrv = sistersrv
+class SiblingMotherClient(Referenceable):
+    def __init__(self, siblingsrv):
+        self.siblingsrv = siblingsrv
 
     def remote_loadResource(self, resourceType, resourceName, *args):
-        return self.sistersrv.loadResource(resourceType, resourceName, args)
+        return self.siblingsrv.loadResource(resourceType, resourceName, args)
 
     def remote_callDistributed(self, srcResourceType, srcResourceName, destResourceType, destResourceName, methodName, args, kw):
         """invoked to call a method on a distributed object.
         """
-        resource = self.sistersrv.ownedResources.get( (destResourceType, destResourceName), None)
+        resource = self.siblingsrv.ownedResources.get( (destResourceType, destResourceName), None)
         if not resource:
-            return defer.fail("Sister does not own this resource")
-        method = getattr(resource, "sister_%s" % methodName)
+            return defer.fail("Sibling does not own this resource")
+        method = getattr(resource, "sibling_%s" % methodName)
         fullArgs = (srcResourceType, srcResourceName) + args
         return method(*fullArgs, **kw)
 
-class SisterService(Service, Perspective):
-    """A 'sister' object, managed by a mother server
+class SiblingService(Service, Perspective):
+    """A 'sibling' object, managed by a mother server
 
-    I am one of a set of sisters managed by a mother server. I use the mother server as
-    a central manager of distributed objects, and as a mechanism for communicating to other
-    sister servers.
+    I am one of a set of siblings managed by a mother server.  I use the
+    mother server as a central manager of distributed objects, and as a
+    mechanism for communicating to other sibling servers.
 
-    Distributed login into me is handled by passing identity resources - which I have a special
-    loader and authorizer for.
+    Distributed login into me is handled by passing identity resources - which
+    I have a special loader and authorizer for.
     """
 
     def __init__(self, motherHost, motherPort, motherService, publishHost, localPort,
-                 serviceName="twisted.sister", sharedSecret="shhh!", application=None):
+                 serviceName="twisted.sibling", sharedSecret="shhh!", application=None):
         """Initialize me.
 
         (Application's authorizer must be a TicketAuthorizer, otherwise
         login won't work.)
         """
         Service.__init__(self, serviceName, application)
-        Perspective.__init__(self, "sister")
+        Perspective.__init__(self, "sibling")
         self.addPerspective(self)
         self.ownedResources = {}
         self.remoteResources = {}
         self.resourceLoaders = {}
         self.localPort = localPort
-        self.sisterMother = SisterMotherClient(self)
+        self.siblingMother = SiblingMotherClient(self)
         self.motherRef = PerspectiveConnector(
             motherHost, motherPort, "mother", sharedSecret,
-            motherService, client = self.sisterMother)
+            motherService, client = self.siblingMother)
         self.makeIdentity(sharedSecret)
-        self.application.authorizer.sisterService = self
+        self.application.authorizer.siblingService = self
         ## identities are a special kind of resource
         self.registerResourceLoader("identity", self.application.authorizer.loadIdentity)
 
         # this will be the first method called on the mother connection once it is setup
-        self.motherRef.callRemote('publishIP', publishHost, self.localPort, self.sisterMother)
+        self.motherRef.callRemote('publishIP', publishHost, self.localPort, self.siblingMother)
 
     def startService(self):
-        log.msg( 'starting sister, woo')
+        log.msg( 'starting sibling, woo')
 
     def __getstate__(self):
         d = Service.__getstate__(self)
@@ -110,16 +110,15 @@ class SisterService(Service, Perspective):
     # OK now on to the real code
 
     def ownResource(self, resourceObject, resourceType, resourceName):
-        log.msg('sister: owning resource %s/%s' % (resourceType, resourceName))
+        log.msg('sibling: owning resource %s/%s' % (resourceType, resourceName))
         self.ownedResources[resourceType, resourceName] = resourceObject
         return resourceObject
 
     def loadResource(self, resourceType, resourceName, args):
-        """Returns a Deferred when the resource is loaded. This deferred may
-        yield some data that is returned to the caller.
-
+        """Returns a Deferred when the resource is loaded.
+        This deferred may yield some data that is returned to the caller.
         """
-        log.msg( 'sister: loading resource %s/%s' %(resourceType, resourceName))
+        log.msg( 'sibling: loading resource %s/%s' %(resourceType, resourceName))
         value = self.resourceLoaders[resourceType](resourceName, *args)
         if isinstance(value, defer.Deferred):
             dvalue = value
@@ -133,11 +132,11 @@ class SisterService(Service, Perspective):
 
         The callable object may return Deferreds or synchronous values.
         """
-        log.msg( 'sister: registering resource loader %s:%s' % (resourceType, repr(resourceLoader)))
+        log.msg( 'sibling: registering resource loader %s:%s' % (resourceType, repr(resourceLoader)))
         self.resourceLoaders[resourceType] = resourceLoader
 
     def unloadResource(self, resourceType, resourceName):
-        print "sister: unloading (%s:%s)" %(resourceType, resourceName)
+        print "sibling: unloading (%s:%s)" %(resourceType, resourceName)
         del self.ownedResources[ (resourceType, resourceName) ]
         return self.motherRef.callRemote("unloadResource", resourceType, resourceName).addCallback(self._cbUnload)
 
@@ -145,12 +144,12 @@ class SisterService(Service, Perspective):
         log.msg( "Unloaded resource: %s" % data)
 
     def callDistributed(self, caller, destResourceType, destResourceName, methodName, *args, **kw):
-        """Call a distributed method on a resource managed by the
-        sister network. This will call the method 'getResourceInfo' on
-        the calling object which must return its resourceType and
-        resourceName to be identified by.  The final method being called will
-        have 'sister_' prepended to its name and have the calling objects
-        resourceType and resourceName as the first arguments.
+        """Call a distributed method on a resource managed by the sibling
+        network. This will call the method 'getResourceInfo' on the calling
+        object which must return its resourceType and resourceName to be
+        identified by.  The final method being called will have 'sibling_'
+        prepended to its name and have the calling objects resourceType and
+        resourceName as the first arguments.
 
         NOTE: this method of identifying the calling object is temporary..
         need to establish a better way which includes allowing the calling
@@ -158,7 +157,7 @@ class SisterService(Service, Perspective):
         """
         (srcResourceType, srcResourceName) = caller.getResourceInfo()
         if not self.ownedResources.has_key((srcResourceType,srcResourceName)):
-            raise "sister does not own this resource!"
+            raise "sibling does not own this resource!"
         fullArgs = ('callDistributed', srcResourceType, srcResourceName,
                     destResourceType, destResourceName, methodName) + args
         return self.motherRef.callRemote(*fullArgs, **kw)

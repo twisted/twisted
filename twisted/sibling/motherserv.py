@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_sister -*-
+# -*- test-case-name: twisted.test.test_sibling -*-
 
 # Sibling Server
 
@@ -9,13 +9,13 @@ from twisted.internet import defer
 from twisted.python import log
 
 from random import choice
-        
-class MotherService(Service, Perspective):
-    """A `mother' object, managing many sister-servers.
 
-    I maintain a list of all "sister" servers who are connected, so that all
+class MotherService(Service, Perspective):
+    """A `mother' object, managing many sibling-servers.
+
+    I maintain a list of all "sibling" servers who are connected, so that all
     servers can connect to each other.  I also negotiate which distributed
-    objects are owned by which sister servers, so that if any sister-server
+    objects are owned by which sibling servers, so that if any sibling-server
     needs to locate an object it can be made available.
     """
 
@@ -27,61 +27,61 @@ class MotherService(Service, Perspective):
         self.pendingResources = {}      # path: deferred, host, port
         self.toLoadOnConnect = []       # [deferred, deferred, ...]
         self.lockedResources = {}       # path: host, port
-        self.sisters = []             # [(host, port, reference)]
+        self.siblings = []             # [(host, port, reference)]
         self.makeIdentity(sharedSecret)
-        
-    def _cbLoadedResource(self, result, resourceType, resourceName, host, port, sisterPerspective):
+
+    def _cbLoadedResource(self, result, resourceType, resourceName, host, port, siblingPerspective):
         log.msg( 'mother: loaded resource')
-        self.lockedResources[(resourceType, resourceName)] = (host, port, sisterPerspective)
-        return (result, host, port, sisterPerspective)
+        self.lockedResources[(resourceType, resourceName)] = (host, port, siblingPerspective)
+        return (result, host, port, siblingPerspective)
 
     def loadRemoteResource(self, resourceType, resourceName, *args):
-        """Request a sister-server to load a resource.
+        """Request a sibling-server to load a resource.
 
-        Return a Deferred which will fire with (data, host, port, sister), that will
+        Return a Deferred which will fire with (data, host, port, sibling), that will
         describe where and how a resource can be located.
         """
 
         if self.lockedResources.has_key( (resourceType, resourceName) ):
-            (host,port, sisterPerspective)= self.lockedResources[(resourceType, resourceName)]
-            return defer.succeed( (None, host, port, sisterPerspective) )
-                                  
-        log.msg( 'mother: loading resource (%s)'  % self.sisters)
-        if not self.sisters:
+            (host,port, siblingPerspective)= self.lockedResources[(resourceType, resourceName)]
+            return defer.succeed( (None, host, port, siblingPerspective) )
+
+        log.msg( 'mother: loading resource (%s)'  % self.siblings)
+        if not self.siblings:
             defr = defer.Deferred()
             self.toLoadOnConnect.append((resourceType, resourceName, args, defr))
             return defr
 
-        #TODO: better selection mechanism for sister server
-        (host, port, sisterPerspective) = choice(self.sisters)
-        
-        d = sisterPerspective.callRemote("loadResource", resourceType, resourceName, *args)
-        d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, sisterPerspective)
+        #TODO: better selection mechanism for sibling server
+        (host, port, siblingPerspective) = choice(self.siblings)
+
+        d = siblingPerspective.callRemote("loadResource", resourceType, resourceName, *args)
+        d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, siblingPerspective)
         return d
 
-    def loadRemoteResourceFor(self, sisterPerspective, resourceType, resourceName, *args):
-        """Use to load a remote resource on a specified sister
-        service. Dont load it if already loaded on a sister.
+    def loadRemoteResourceFor(self, siblingPerspective, resourceType, resourceName, *args):
+        """Use to load a remote resource on a specified sibling
+        service. Dont load it if already loaded on a sibling.
         """
-        # lookup sister info in sisters
+        # lookup sibling info in siblings
         found = 0
-        for host, port, sister in self.sisters:
-            if sister == sisterPerspective:
+        for host, port, sibling in self.siblings:
+            if sibling == siblingPerspective:
                 found = 1
                 break
 
         if not found:
-            raise ("Attempt to load resource <%s:%s> for no-nexistent sister" % (resourceType, resourceName) )
+            raise ("Attempt to load resource <%s:%s> for no-nexistent sibling" % (resourceType, resourceName) )
 
         if self.lockedResources.has_key( (resourceType, resourceName) ):
-            raise ("resource %s:%s already loaded on a sister" % (resourceName, resourceType) )
-        
-        d = sisterPerspective.callRemote("loadResource", resourceType, resourceName, *args)
-        d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, sisterPerspective)
+            raise ("resource %s:%s already loaded on a sibling" % (resourceName, resourceType) )
+
+        d = siblingPerspective.callRemote("loadResource", resourceType, resourceName, *args)
+        d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, siblingPerspective)
         return d
-    
+
     def perspective_unloadResource(self, resourceType, resourceName):
-        """This is called by sister services to unload a resource
+        """This is called by sibling services to unload a resource
         """
         log.msg( "mother: unloading %s/%s" %( resourceType, resourceName ) )
         data = self.lockedResources.get( (resourceType, resourceName) )
@@ -91,10 +91,10 @@ class MotherService(Service, Perspective):
         del self.lockedResources[ (resourceType, resourceName) ]
 
     def perspective_publishIP(self, host, port, clientRef):
-        """called by sister to set the host and port to publish for clients.
+        """called by sibling to set the host and port to publish for clients.
         """
-        log.msg( "sister attached: %s:%s" % (host, port ) )
-        self.sisters.append((host, port,clientRef) )
+        log.msg( "sibling attached: %s:%s" % (host, port ) )
+        self.siblings.append((host, port,clientRef) )
         for resourceType, resourceName, args, deferred in self.toLoadOnConnect:
             self.loadRemoteResource(resourceType, resourceName, *args).chainDeferred(deferred)
         self.toLoadOnConnect = []
@@ -108,11 +108,10 @@ class MotherService(Service, Perspective):
         (host, port, perspective) = data
         log.msg( "Calling distributed method <%s> for %s:%s" % (methodName, destResourceType, destResourceName))
         return perspective.callRemote('callDistributed', srcResourceType, srcResourceName, destResourceType, destResourceName, methodName, args, kw)
-        
+
     def detached(self, client, identity):
         for path, (host, port, clientRef) in self.lockedResources.items():
             if client == clientRef:
                 del self.lockedResources[path]
-        log.msg( "sister detached: %s" % client)
+        log.msg( "sibling detached: %s" % client)
         return Perspective.detached(self, client, identity)
-
