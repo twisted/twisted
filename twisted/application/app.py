@@ -31,7 +31,7 @@ def installReactor(reactor):
 
 def runWithProfiler(reactor, config):
     """Run reactor under standard profiler."""
-    p = profile.Profile(lineevents=1) # lineevents=1 for hotshot2kcachegrind compatability
+    p = profile.Profile()
     p.runcall(reactor.run)
     if config['savestats']:
         p.dump_stats(config['profile'])

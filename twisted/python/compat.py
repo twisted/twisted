@@ -90,19 +90,6 @@ if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
 
 import types, socket, struct
 
-# dict(key=value) compatibility hack
-if sys.version_info[:2] == (2,2):
-    def adict(mapping=None, **kw):
-        d = {}
-        if mapping is not None:
-            d.update(dict(mapping))
-        if kw:
-            for k, v in kw.iteritems():
-                d[k] = v
-        return d
-else:
-    adict = dict
-
 # Compatibility with compatibility
 # We want to get rid of these as quickly as we can
 # Unfortunately some code imports them by name
