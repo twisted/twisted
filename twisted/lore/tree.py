@@ -19,30 +19,6 @@ from twisted import copyright
 from twisted.python import usage, htmlizer
 from twisted.web import microdom, domhelpers
 
-class Cache:
-    def __init__(self, basePath, baseURL):
-        self.stuff = {}
-        self.basePath = basePath
-        self.baseURL = baseURL
-        for file in glob.glob(os.path.join(basePath, "*.html")):
-            file = os.path.basename(file)
-            module = file[:-len('.html')].split('.')
-            for i in range(len(module)-1):
-                self.stuff['.'.join(module[i:])] = self.baseURL+file
-
-
-    def match(self, name):
-        """
-        I take a fully-qualified *or* relative module or class-name, and return
-        an URL to the Twisted API documentation for that name.
-        """
-        ret = self.stuff.get(name)
-        if ret:
-            return ret
-        parts = name.split('.')
-        if len(parts)>1:
-            return self.stuff.get('.'.join(parts[:-1]))
-
 
 def fontifyFiles(infile, outfile):
     htmlizer.filter(infile, outfile)
@@ -62,20 +38,17 @@ def addMtime(document, fullpath):
     for node in domhelpers.findElementsWithAttribute(document, "class","mtime"):
         node.appendChild(microdom.Text(time.asctime(time.localtime(mtime))))
 
-def fixAPI(document, cache):
+def fixAPI(document, url):
     # API references
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
-        if len(node.childNodes) > 1:
-            print 'There are too many child nodes of this API link.'
         base = ""
         if node.hasAttribute("base"):
             base = node.getAttribute("base") + "."
-        newref = cache.match(base + node.childNodes[0].nodeValue)
-        if newref:
-            node2 = document.createElement("a")
-            node2.setAttribute("href", newref)
-            node2.childNodes = node.childNodes
-            node.childNodes = [node2]
+        newref = url % (base+node.childNodes[0].nodeValue)
+        node2 = document.createElement("a")
+        node2.setAttribute("href", newref)
+        node2.childNodes = node.childNodes
+        node.childNodes = [node2]
 
 
 def fontifyPython(document):
@@ -192,9 +165,9 @@ def notes(document):
         note.childNodes.insert(0, notePrefix)
 
 
-def munge(document, template, linkrel, d, fullpath, ext, cache):
+def munge(document, template, linkrel, d, fullpath, ext, url):
     addMtime(template, fullpath)
-    fixAPI(document, cache)
+    fixAPI(document, url)
     fontifyPython(document)
     addPyListings(document, d)
     addHTMLListings(document, d)
@@ -213,7 +186,7 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     tmplbody.setAttribute("class", "content")
 
 
-def doFile(fn, docsdir, ext, c, templ):
+def doFile(fn, docsdir, ext, url, templ):
     try:
         doc = microdom.parse(open(fn))
     except microdom.MismatchedTags, e:
@@ -226,5 +199,5 @@ def doFile(fn, docsdir, ext, c, templ):
         print e
         return
     cn = templ.cloneNode(1)
-    munge(doc, cn, '', docsdir, fn, ext, c)
+    munge(doc, cn, '', docsdir, fn, ext, url)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
