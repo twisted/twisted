@@ -78,18 +78,44 @@ class _AbstractClient(_VolatileDataService):
                                                        **self.kwargs)
 
 
+
+_doc={
+'Client':
+"""Connect to %(tran)s
+
+Call connect%(method)s when the service starts, with the
+arguments given to the constructor.
+""",
+'Server':
+"""Serve %(tran)s clients
+
+Call listen%(method)s when the service starts, with the
+arguments given to the constructor. When the service stops,
+stop listening.
+""",
+}
+
 import new
 for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         base = globals()['_Abstract'+side]
         method = {'Generic': 'With'}.get(tran, tran)
-        klass = new.classobj(tran+side, (base,), {'method': method})
+        doc = _doc[side]%vars()
+        klass = new.classobj(tran+side, (base,),
+                             {'method': method, '__doc__': doc})
         globals()[tran+side] = klass
 
 
 class TimerService(_VolatileDataService):
 
     volatile = ['_call']
+
+    """Service to periodically call a function
+
+    Every C{step} call the given function with the given arguments.
+    The service starts the calls when it starts, and cancels them
+    when it stops.
+    """
 
     def __init__(self, step, callable, *args, **kwargs):
         self.step = step
