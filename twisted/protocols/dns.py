@@ -28,6 +28,8 @@ def readPrecisely( file, l ):
         raise EOFError
     return buff
 
+class NotConnectedError(Exception)
+    pass
 
 class Name:
     def __init__( self, name=''):
@@ -224,7 +226,7 @@ class DNS(protocol.Protocol):
 
     def writeMessage(self, message):
         if not self.connected:
-            raise "Not connected"
+            raise NotConnectedError
         self.transport.write(message.toStr())
 
     def query(self, name, callback, type=1, cls=1, recursive=1):
@@ -261,6 +263,6 @@ class DNSOnTCP(DNS):
 
     def writeMessage(self, message):
         if not self.connected:
-            raise "Not connected"
+            raise NotConnectedError
         str = message.toStr()
         self.transport.write(struct.pack("!H", len(str)) + str)
