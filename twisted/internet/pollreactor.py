@@ -109,7 +109,6 @@ class PollReactor(default.PosixReactorBase):
                selectables=selectables,
                select=select,
                log=log,
-               POLL_DISCONNECTED=POLL_DISCONNECTED,
                POLLIN=select.POLLIN,
                POLLOUT=select.POLLOUT):
         """Poll the poller for new events."""
@@ -131,7 +130,7 @@ class PollReactor(default.PosixReactorBase):
             selectable = selectables[fd]
             log.logOwner.own(selectable)
 
-            if event & POLL_DISCONNECTED and not (event & POLLIN):
+            if event & select.POLLHUP and not (event & POLLIN):
                 why = main.CONNECTION_LOST
             else:
                 try:
