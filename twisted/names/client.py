@@ -32,7 +32,7 @@ import socket
 
 # Twisted imports
 from twisted.python.runtime import platform
-from twisted.internet import defer, protocol, interfaces
+from twisted.internet import defer, protocol, interfaces, threads
 from twisted.python import log
 from twisted.protocols import dns
 
@@ -204,7 +204,7 @@ class ThreadedResolver:
 
     def getHostByName(self, name, timeout = 10):
         # XXX - Make this respect timeout
-        return defer.deferToThread(socket.gethostbyname, name).chainDeferred(d)
+        return threads.deferToThread(socket.gethostbyname, name)
 
 
 class DNSClientFactory(protocol.ClientFactory):
