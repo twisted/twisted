@@ -49,7 +49,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         
         L = []
         def connector():
-            p = self.listener.getHost()[2]
+            p = self.listener.getHost().port
             ctx = ssl.ClientContextFactory()
             return reactor.connectSSL('127.0.0.1', p, f, ctx)
         self.connector = connector
@@ -127,7 +127,7 @@ class TLSTestCase(unittest.TestCase):
         sf.server = 1
 
         port = reactor.listenTCP(0, sf, interface="127.0.0.1")
-        portNo = port.getHost()[2]
+        portNo = port.getHost().port
         
         reactor.connectTCP('127.0.0.1', portNo, cf)
         
@@ -153,7 +153,7 @@ class TLSTestCase(unittest.TestCase):
         sf.server = 1
 
         port = reactor.listenTCP(0, sf, interface="127.0.0.1")
-        portNo = port.getHost()[2]
+        portNo = port.getHost().port
         
         reactor.connectTCP('127.0.0.1', portNo, cf)
         
@@ -180,7 +180,7 @@ class TLSTestCase(unittest.TestCase):
         sf.client = 0
 
         port = reactor.listenTCP(0, sf, interface="127.0.0.1")
-        portNo = port.getHost()[2]
+        portNo = port.getHost().port
         
         reactor.connectTCP('127.0.0.1', portNo, cf)
         
@@ -226,7 +226,7 @@ class BufferingTestCase(unittest.TestCase):
         cCTX = ClientContextFactory()
         
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
-        reactor.connectSSL('127.0.0.1', port.getHost()[2], client, cCTX)
+        reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
 
         i = 0
         while i < 5000 and not client.buffer:
