@@ -121,10 +121,12 @@ class Gtk2Reactor(default.PosixReactorBase):
         self.doIterationTimer = None
         return 0 # auto-remove
     def doIteration(self, delay):
-        # flush all pending events, return if there was something to do
+        # flush some pending events, return if there was something to do
+        # don't use the usual "while gtk.events_pending(): mainiteration()"
+        # idiom because lots of IO (in particular test_tcp's
+        # ProperlyCloseFilesTestCase) can keep us from ever exiting.
         if gtk.events_pending():
-            while gtk.events_pending():
-                gtk.main_iteration(0)
+            gtk.main_iteration(0)
             return
         # nothing to do, must delay
         if delay == 0:

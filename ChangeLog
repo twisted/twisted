@@ -1,3 +1,12 @@
+2003-04-12  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/gtk2reactor.py (Gtk2Reactor.doIteration): don't
+	process *all* events before exiting: lots of IO (like test cases which
+	do connect()s from inside connectionMade) will keep us from surfacing
+	from reactor.iterate(), causing a lockup.
+	* twisted/internet/gtkreactor.py (GtkReactor.doIteration): same. Use
+	the same code as gtk2reactor with minor gtk1-vs-gtk2 variations.
+
 2003-04-11  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/gtk2reactor.py (Gtk2Reactor.doIteration): use
