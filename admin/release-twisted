@@ -112,17 +112,16 @@ def exportCVS(opts):
 
 def copyDist(opts):
     ver = opts['version']
-    source = opts['source']
 
     tdir = "Twisted-%s" % ver
     
-    print "copyDist: Copying %s to %s." % (source, tdir)
+    print "copyDist: Copying %s to %s." % ('Twisted', tdir)
     
     if os.path.exists(tdir):
         print "copyDist: %s exists already." % tdir
         sys.exit(2)
 
-    shutil.copytree(source, tdir)
+    shutil.copytree('Twisted', tdir)
 
     #shwack the crap
     print "copyDist: Stripping *.pyc, .cvsignore"
