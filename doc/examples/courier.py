@@ -55,7 +55,7 @@ class MailProcessor(basic.LineReceiver):
     delimiter = '\n'
     
     def connectionMade(self):
-	log.msg('Connection from %r' % self.transport)
+    log.msg('Connection from %r' % self.transport)
         self.state = 'connected'
         self.metaInfo = []
 

@@ -1078,9 +1078,9 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         self.resends = {}
         self.transport = None
 
-	def startProtocol(self):
-		self.liveMessages = {}
-		self.resends = {}
+    def startProtocol(self):
+        self.liveMessages = {}
+        self.resends = {}
 
     def writeMessage(self, message, address):
         if not self.transport:

@@ -188,9 +188,9 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
                     self._ingroups[nickname]=[group]
 
     def irc_RPL_ENDOFNAMES(self,prefix,params):
-	group=params[1][1:]
-	self.getGroupConversation(group).setGroupMembers(self._namreplies[string.lower(group)])
-	del self._namreplies[string.lower(group)]
+        group=params[1][1:]
+        self.getGroupConversation(group).setGroupMembers(self._namreplies[string.lower(group)])
+        del self._namreplies[string.lower(group)]
 
     def irc_RPL_TOPIC(self,prefix,params):
         self._topics[params[1][1:]]=params[2]

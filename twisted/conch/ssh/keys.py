@@ -222,7 +222,7 @@ def getPrivateKeyObject_openssh(data, passphrase):
     if type(decodedKey[0]) == type([]):
         decodedKey = decodedKey[0] # this happens with encrypted keys
     if kind == 'RSA':
-    	n,e,d,p,q=decodedKey[1:6]
+        n,e,d,p,q=decodedKey[1:6]
         return RSA.construct((n,e,d,p,q))
     elif kind == 'DSA':
         p, q, g, y, x = decodedKey[1: 6]
@@ -280,7 +280,7 @@ def makePrivateKeyString_openssh(obj, passphrase):
         p,q=obj.p,obj.q
         if p > q:
             (p,q) = (q,p)
-	# p is less than q
+        # p is less than q
         objData = [0, obj.n, obj.e, obj.d, q, p, obj.d%(q-1), obj.d%(p-1),Util.number.inverse(p, q)]
     elif keyType == 'ssh-dss':
         keyData = '-----BEGIN DSA PRIVATE KEY-----\n'

@@ -12,7 +12,7 @@ from twisted.python import log
 
 # the glade file uses stock icons, which requires gnome to be installed
 import gnome
-version = "$Revision: 1.2 $"[11:-2]
+version = "$Revision: 1.3 $"[11:-2]
 gnome.init("gladereactor Inspector", version)
 
 class ConsoleOutput(gtk2manhole.ConsoleOutput):
@@ -135,21 +135,21 @@ for x in int, str:
 
 class InspectorTreeModel(gtk.GenericTreeModel):
     def __init__(self, root):
-	gtk.GenericTreeModel.__init__(self)
+        gtk.GenericTreeModel.__init__(self)
         self.root = INode(root, persist=False)
         self.root.postInit(0, None, 'root')
 
     def on_get_flags(self):
-	return 0
+        return 0
 
     def on_get_n_columns(self):
-	return 1
+        return 1
 
     def on_get_column_type(self, index):
-	return gobject.TYPE_STRING
+        return gobject.TYPE_STRING
 
     def on_get_path(self, node):
-	return node.getPath()
+        return node.getPath()
 
     def on_get_iter(self, path):
         x = self.root
@@ -158,7 +158,7 @@ class InspectorTreeModel(gtk.GenericTreeModel):
         return x
 
     def on_get_value(self, node, column):
-	return node.format()[column]
+        return node.format()[column]
 
     def on_iter_next(self, node):
         try:
@@ -170,7 +170,7 @@ class InspectorTreeModel(gtk.GenericTreeModel):
         return node[0]
 
     def on_iter_has_child(self, node):
-	return len(node)
+        return len(node)
 
     def on_iter_n_children(self, node):
         return len(node)
