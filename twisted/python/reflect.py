@@ -31,6 +31,7 @@ import types
 import cStringIO
 import string
 import pickle
+import new
 
 # Sibling Imports
 import reference
@@ -390,6 +391,8 @@ def _reclass(clazz):
     return clazz
 
 
+
+
 def macro(name, filename, source, **identifiers):
     """macro(name, source, **identifiers)
 
@@ -401,7 +404,30 @@ def macro(name, filename, source, **identifiers):
     source = source % identifiers
     codeplace = "<%s (macro)>" % filename
     code = compile(source, codeplace, 'exec')
-    dict = {}
+
+    # shield your eyes!
+    sm = sys.modules
+    tprm = "twisted.python.reflect.macros"
+    if not sm.has_key(tprm):
+        macros = new.module(tprm)
+        sm[tprm] = macros
+        macros.count = 0
+    macros = sm[tprm]
+    macros.count += 1
+    macroname = 'macro_' + str(macros.count)
+    tprmm = tprm + '.' + macroname
+    mymod = new.module(tprmm)
+    sys.modules[tprmm] = mymod
+    setattr(macros, macroname, mymod)
+    dict = mymod.__dict__
+
+    # Before we go on, I guess I should explain why I just did that.  Basically
+    # it's a gross hack to get epydoc to work right, but the general idea is
+    # that it will be a useful aid in debugging in _any_ app which expects
+    # sys.modules to have the same globals as some function.  For example, it
+    # would be useful if you were foolishly trying to pickle a wrapped function
+    # directly from a class that had been hooked.
+
     exec code in dict, dict
     return dict[name]
 
