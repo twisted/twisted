@@ -1088,14 +1088,27 @@ class Broker(banana.Banana):
         self.locallyCachedObjects = None
 
     def notifyOnDisconnect(self, notifier):
+        """Call the given callback when the Broker disconnects."""
+        assert callable(notifier)
         self.disconnects.append(notifier)
 
     def notifyOnFail(self, notifier):
+        """Call the given callback if the Broker fails to connect."""
+        assert callable(notifier)
         self.failures.append(notifier)
 
     def notifyOnConnect(self, notifier):
+        """Call the given callback when the Broker connects."""
+        assert callable(notifier)
         self.connects.append(notifier)
 
+    def dontNotifyOnDisconnect(self, notifier):
+        """Remove a callback from list of disconnect callbacks."""
+        try:
+            self.disconnects.remove(notifier)
+        except ValueError:
+            pass
+    
     def localObjectForID(self, luid):
         """Get a local object for a locally unique ID.
 
