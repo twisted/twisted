@@ -3548,3 +3548,5 @@ private message from dash: wuh oh, drewp is on to us
 <warner> now *that* would be entertaining..
 <Nafai> ...for various definitions of entertaining
 %
+<zooko> I don't know if I'll have much time, but my goals are: 1. test_ent.py, 2. ent.py, 3. make znff.py use ent.py, 4. rule the universe
+%
