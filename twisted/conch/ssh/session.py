@@ -34,7 +34,7 @@ class SSHSession(channel.SSHChannel):
 
     name = 'session'
     def __init__(self, *args, **kw):
-        connection.SSHChannel.__init__(self, *args, **kw)
+        channel.SSHChannel.__init__(self, *args, **kw)
         self. environ = {'PATH':'/bin:/usr/bin:/usr/local/bin'}
         self.buf = ''
         self.pty = None
@@ -219,7 +219,7 @@ class SSHSession(channel.SSHChannel):
 
     def loseConnection(self):
         self.pty = None
-        connection.SSHChannel.loseConnection(self)
+        channel.SSHChannel.loseConnection(self)
 
     def closed(self):
         import os
@@ -233,7 +233,7 @@ class SSHSession(channel.SSHChannel):
             del self.client
         except AttributeError:
             pass # we didn't have a client
-        connection.SSHChannel.closed(self)
+        channel.SSHChannel.closed(self)
 
 class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
     def __init__(self, session, client):
@@ -299,3 +299,5 @@ def packRequest_window_change((rows, cols, xpixel, ypixel)):
     """Pack a window-change request so that it is suitable for sending.
     """
     return struct.pack('>4L', cols, rows, xpixel, ypixel)
+
+import connection
