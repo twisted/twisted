@@ -219,7 +219,7 @@ class FileDescriptor(log.Logger):
         """
         raise NotImplementedError(str(self.__class__)+' has no fileno method')
 
-    synchronized = ['doWrite', 'write', 'connectionLost']
+    synchronized = ['doWrite', 'write', 'connectionLost', 'loseConnection']
 
 threadable.synchronize(FileDescriptor)
 

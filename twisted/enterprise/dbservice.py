@@ -7,7 +7,7 @@ import dbserver
 class DbService(pb.Service):
     """
     This service manages users that request to interact with the database.
-    
+
     The actual user names that users supply are not database level user names, but names that
     exist in the "accounts" table in the database. For now, the accounts table is:
 
@@ -36,8 +36,8 @@ class DbUser(pb.Perspective):
     """
     def perspective_request(self, sql, clientCollector):
         print "Got SQL request:" , sql
-	newRequest = GenericRequest(sql, clientCollector.gotData) 
-	self.service.manager.addRequest(newRequest)
+        newRequest = GenericRequest(sql, clientCollector.gotData)
+        self.service.manager.addRequest(newRequest)
 
 
 class GenericRequest(dbserver.DbRequest):
@@ -51,7 +51,7 @@ class GenericRequest(dbserver.DbRequest):
         c = connection.cursor()
         c.execute(self.sql)
         self.results = c.fetchall()
-	self.status = 1
+        self.status = 1
 
 class AddUserRequest(dbserver.DbRequest):
     """DbRequest to add a user to the accounts table
@@ -62,7 +62,7 @@ class AddUserRequest(dbserver.DbRequest):
         self.password = password
 
     def execute(self, connection):
-         c = connection.cursor()                
+         c = connection.cursor()
          c.execute("insert into accounts (name, password, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
          c.fetchall()
          c.execute("commit")
@@ -86,4 +86,4 @@ class PasswordRequest(dbserver.DbRequest):
             return None
         self.results = row[0]
         self.status = 1
-        
+

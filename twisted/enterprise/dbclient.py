@@ -25,7 +25,7 @@ class DbClient:
     def doLogin(self):
         self.client = pb.Broker()
         tcp.Client(self.host, 27777, self.client)
-        
+
         self.client.requestIdentity("twisted",  # username
                                     "matrix",  # password
                                     callback = self.preConnected,
@@ -40,7 +40,7 @@ class DbClient:
     def gotConnection(self, player):
         print 'connected:', player
         self.player = player
-	self.collector = clientCollector(player)
+        self.collector = clientCollector(player)
         self.player.request("select * from accounts", self.collector)
 
 
@@ -50,7 +50,6 @@ def run():
     c.doLogin()
     main.run()
 
-    
 
 if __name__ == '__main__':
     run()

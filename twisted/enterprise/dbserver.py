@@ -19,7 +19,7 @@ class DbManager:
     called 'twisted', and a user 'twisted' with a password 'matrix'.
 
     The DbManager knows nothing of application level usernames or passwords.
-    
+
     requests processing sequence is:
         main thread - request is added to the requests queue
         connection thread gets the request
@@ -27,7 +27,7 @@ class DbManager:
         connection thread adds the request to the results queue
         main thread - in update, the callback for the request is run
         main thread - the request is deleted.
-    
+
     """
     def __init__(self, service, server, database, username, password, numConnections = 1):
         self.server = server
@@ -47,8 +47,8 @@ class DbManager:
             import Sybase
             self.driver = Sybase
         elif service == "postgres":
-	    import PoPy
-	    self.driver = PoPy
+            import PoPy
+            self.driver = PoPy
         else:
             print "ERROR: Uknown database service"
    
@@ -57,9 +57,9 @@ class DbManager:
         NOTE: auto_commit is false by default for sybase...
         """
         count = 0
-	print "Connection %d times:" % self.numConnections
+        print "Connection %d times:" % self.numConnections
         for i in range(0,self.numConnections):
-	    print "trying..."
+            print "trying..."
             newConnection = DbConnection(self)
             if newConnection.connect():
                 newConnection.start()
@@ -116,36 +116,36 @@ class DbConnection(threading.Thread):
 
     def connect(self):
         """Connection details vary by the database driver being used.
-	"""
-	if self.manager.service == "sybase":
-	    return self.connectSybase()
+        """
+        if self.manager.service == "sybase":
+            return self.connectSybase()
         elif self.manager.service == "postgres":
             return self.connectPostgres()
         else:
-	    return 0
+            return 0
 
     def connectSybase(self):
         try:
             self.connection = self.manager.driver.connect(
-		self.manager.server, 
-		self.manager.username, 
-		self.manager.password, 
-		database=self.manager.database
-		)
+                self.manager.server, 
+                self.manager.username, 
+                self.manager.password, 
+                database=self.manager.database
+                )
         except self.manager.driver.InternalError, e:
             print "unable to connect to database: %s" % repr(e)
             return 0
-	self.running = 1
-	return 1
+        self.running = 1
+        return 1
 
     def connectPostgres(self):
         try:
             self.connection = self.manager.driver.connect( 'user=twisted dbname=twisted' )
-	except self.manager.driver.DatabaseError, e:
+        except self.manager.driver.DatabaseError, e:
             print "unable to connect to database: %s" % repr(e)
-	    return 0
+            return 0
         self.running = 1
-	print "Connected to postgres!!!"
+        print "Connected to postgres!!!"
         return 1
         
     def run(self):
@@ -168,15 +168,15 @@ class DbConnection(threading.Thread):
                     text = text +  "    %s: %s\n" % (k, self.error[k])
                 request.status = 0
                 print text
-	    except self.manager.driver.DatabaseError, e:
+            except self.manager.driver.DatabaseError, e:
                 print "SQL ERROR: %s" % e
-		self.error = e
-		request.status = 0
+                self.error = e
+                request.status = 0
 
             newTask = task.Task()
-	    newTask.addWork(request.callback, request.results)
+            newTask.addWork(request.callback, request.results)
 
-	    task.schedule(newTask)
+            task.schedule(newTask)
 
     def close(self):
         #print "Thread (%d): Closing" % ( self.id)
@@ -194,7 +194,7 @@ class DbRequestQueue:
         self.queue = []
 
     def __getstate__(self):
-    	return None
+        return None
 
     def __setstate__(self, state):
         self.__init__()
@@ -248,31 +248,31 @@ class DbRequestQueue:
         """
         self.lock.acquire()
         s = len(self.queue)
-        self.lock.release()        
+        self.lock.release()
         if s == size:
             return
 
         while s != size:
             self.lock.acquire()
             s = len(self.queue)
-            self.lock.release()        
+            self.lock.release()
             time.sleep(0.11)
-            
+
 class DbRequest:
     """base class for database requests to be executed in dbconnection threads.
     the method 'execute' will be run. 'self.callback' will be executed after the request
     has been processed (in the main thread) with the data in 'self.results'
     """
     lastId = 0
-    
+
     def __init__(self, callback):
         self.status = 0
         self.error = None
         self.results = None
-        self.callback = callback        
+        self.callback = callback
         self.id = DbRequest.lastId
         DbRequest.lastId = DbRequest.lastId + 1
-        
+
     def execute(self, connection):
         """Method to be implemented by derived classes. this is run when the
         request is processed. This will be run within a try/except block that
@@ -281,3 +281,4 @@ class DbRequest:
         """
         print "WARNING: empty DBRequest being run"
         self.status = 1
+
