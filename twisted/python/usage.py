@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.40 2003/04/11 16:56:17 exarkun Exp $
+# $Id: usage.py,v 1.41 2003/05/18 05:36:34 moshez Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -30,7 +30,6 @@ import string
 import os
 import sys
 import new
-import getpass
 import getopt
 from os import path
 import UserDict
