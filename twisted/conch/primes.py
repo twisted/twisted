@@ -18,7 +18,7 @@ def parseModuliFile(filename):
 
 def getDHPrimeOfBits(primes, bits):
     keys = primes.keys()
-    keys.sort(lambda x,y:cmp(abs(x-bits),abs(y-bits)))
+    keys.sort(lambda x,y,b=bits:cmp(abs(x-b),abs(y-b)))
     realBits = keys[0]
     return random.choice(primes[realBits])
 

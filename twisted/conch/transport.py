@@ -2,11 +2,11 @@
 import struct
 import md5
 import sha
-import hmac
 import zlib
 
 # external library imports
 from Crypto import Util
+from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 
 # twisted imports
@@ -323,19 +323,20 @@ class SSHServerTransport(SSHTransportBase):
     def _keySetup(self, sharedSecret, exchangeHash):
         if not self.sessionID:
             self.sessionID = exchangeHash
-        def _getKey(c):
-            k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
-            k2 = sha.new(sharedSecret+exchangeHash+k1).digest()
-            return k1+k2
-        initIVCS = _getKey('A')
-        initIVSC = _getKey('B')
-        encKeyCS = _getKey('C')
-        encKeySC = _getKey('D') 
-        integKeyCS = _getKey('E')
-        integKeySC = _getKey('F')
+        initIVCS = self._getKey('A', sharedSecret, exchangeHash)
+        initIVSC = self._getKey('B', sharedSecret, exchangeHash)
+        encKeyCS = self._getKey('C', sharedSecret, exchangeHash)
+        encKeySC = self._getKey('D', sharedSecret, exchangeHash) 
+        integKeyCS = self._getKey('E', sharedSecret, exchangeHash)
+        integKeySC = self._getKey('F', sharedSecret, exchangeHash)
         self.nextEncryptions.setKeys(initIVSC, encKeySC, initIVCS, encKeyCS, integKeySC, integKeyCS)
         self.sendPacket(MSG_NEWKEYS, '')
         print 'set ciphers'
+
+    def _getKey(self, c, sharedSecret, exchangeHash):
+        k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
+        k2 = sha.new(sharedSecret+exchangeHash+k1).digest()
+        return k1+k2
 
 class SSHClientTransport(SSHTransportBase):
     def ssh_KEXINIT(self, packet):
@@ -440,19 +441,20 @@ class SSHClientTransport(SSHTransportBase):
     def _keySetup(self, sharedSecret, exchangeHash):
         if not self.sessionID:
             self.sessionID = exchangeHash
-        def _getKey(c):
-            k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
-            k2 = sha.new(sharedSecret+exchangeHash+k1).digest()
-            return k1+k2
-        initIVCS = _getKey('A')
-        initIVSC = _getKey('B')
-        encKeyCS = _getKey('C')
-        encKeySC = _getKey('D') 
-        integKeyCS = _getKey('E')
-        integKeySC = _getKey('F')
+        initIVCS = self._getKey('A', sharedSecret, exchangeHash)
+        initIVSC = self._getKey('B', sharedSecret, exchangeHash)
+        encKeyCS = self._getKey('C', sharedSecret, exchangeHash)
+        encKeySC = self._getKey('D', sharedSecret, exchangeHash)
+        integKeyCS = self._getKey('E', sharedSecret, exchangeHash)
+        integKeySC = self._getKey('F', sharedSecret, exchangeHash)
         self.nextEncryptions.setKeys(initIVCS, encKeyCS, initIVSC, encKeySC, integKeyCS, integKeySC)
         self.sendPacket(MSG_NEWKEYS, '')
         #print 'set ciphers'
+
+    def _getKey(self, c, sharedSecret, exchangeHash):
+        k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
+        k2 = sha.new(sharedSecret+exchangeHash+k1).digest()
+        return k1+k2
 
     def ssh_NEWKEYS(self, packet):
         self.currentEncryptions = self.nextEncryptions
@@ -522,7 +524,11 @@ class SSHCiphers:
         modName = self.macMap[mac]
         if not modName: return
         mod = __import__(modName, {}, {}, '')
-        return hmac.new(key[:mod.digest_size], digestmod=mod)
+        if not hasattr(mod, 'digest_size'):
+            ds=len(mod.new().digest())
+        else:
+            ds=mod.digest_size
+        return HMAC.new(key[:ds], digestmod=mod)
 
     def encrypt(self, blocks):
         return self.outCip.encrypt(blocks)
