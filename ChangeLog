@@ -1,3 +1,11 @@
+2003-02-15  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/scripts/mktap.py, twisted/scripts/twistd.py: Added the
+	--appname and --originalname parameters, respectively.
+
+	* twisted/doc/man/mktap.py, twisted/doc/man/twistd.py: Documented
+	the above two new parameters.
+
 2003-02-12  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/python/text.py (docstringLStrip): 1.6 This will be going
