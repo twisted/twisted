@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_persisted -*-
+# -*- test-case-name: twisted.test.test_xml -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -69,18 +69,22 @@ class Node:
     def writexml(self, stream, indent='', addindent='', newl=''):
         raise NotImplementedError()
 
-    def toxml(self, indent='', newl=''):
+    def toxml(self, indent='', addindent='', newl='', strip=0):
         s = StringIO()
-        self.writexml(s, '', indent, newl)
+        self.writexml(s, indent, addindent, newl, strip)
         rv = s.getvalue()
         return rv
 
-    def toprettyxml(self, indent='\t', newl='\n'):
-        return self.toxml(indent, newl)
+    def toprettyxml(self, indent='', addindent=' ', newl='\n', strip=1):
+        return self.toxml(indent, addindent, newl, strip)
 
     def cloneNode(self, deep=0):
         if deep:
-            return copy.deepcopy(self)
+            pn = self.parentNode
+            self.parentNode = None
+            cp = copy.deepcopy(self)
+            self.parentNode = pn
+            return cp
         else:
             return copy.copy(self)
 
@@ -141,11 +145,11 @@ class Document(Node, Accessor):
         assert not self.childNodes, "Only one element per document."
         Node.appendChild(self, c)
 
-    def writexml(self, stream, indent='', addindent='', newl=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write('<?xml version="1.0"?>' + newl)
         if self.doctype:
             stream.write("<!DOCTYPE "+self.doctype+">" + newl)
-        self.documentElement.writexml(stream, indent, addindent, newl)
+        self.documentElement.writexml(stream, indent, addindent, newl, strip)
 
     # of dubious utility (?)
     def createElement(self, name):
@@ -182,7 +186,7 @@ class EntityReference(Node):
         self.eref = eref
         self.nodeValue = self.data = "&" + eref + ";"
 
-    def writexml(self, stream, indent='', addindent='', newl=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write(self.nodeValue)
 
 
@@ -199,16 +203,19 @@ class Text(CharacterData):
         CharacterData.__init__(self, data, parentNode)
         self.raw = raw
 
-    def writexml(self, stream, indent='', addindent='', newl=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         if self.raw:
             val = str(self.nodeValue)
         else:
-            val = html.escape(str(self.nodeValue))
+            v = str(self.nodeValue)
+            if strip:
+                v = ' '.join(v.split())
+            val = html.escape(v)
         stream.write(val)
 
 
 class CDATASection(CharacterData):
-    def writexml(self, stream, indent='', addindent='', newl=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write("<![CDATA[")
         stream.write(self.nodeValue)
         stream.write("]]>")
@@ -254,26 +261,27 @@ class Element(Node):
     def hasAttribute(self, name):
         return self.attributes.has_key(name)
 
-    def writexml(self, stream, indent='', addindent='', newl=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
-        stream.write("<")
-        stream.write(self.tagName)
+        w = stream.write
+        w(newl+indent+"<")
+        w(self.tagName)
         for attr, val in self.attributes.items():
-            stream.write(" ")
-            stream.write(attr)
-            stream.write("=")
-            stream.write('"')
-            stream.write(html.escape(val))
-            stream.write('"')
+            w(" ")
+            w(attr)
+            w("=")
+            w('"')
+            w(html.escape(val))
+            w('"')
         if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span'):
-            stream.write(">"+newl+addindent)
+            w(">")
             for child in self.childNodes:
-                child.writexml(stream, indent+addindent, addindent, newl)
-            stream.write("</")
-            stream.write(self.tagName)
-            stream.write(">")
+                child.writexml(stream, indent+addindent, addindent, newl, strip)
+            w(newl+indent+"</")
+            w(self.tagName)
+            w(">")
         else:
-            stream.write(" />")
+            w(" />")
 
     def __repr__(self):
         rep = "Element(%s" % repr(self.nodeName)
@@ -328,7 +336,8 @@ class MicroDOMParser(XMLParser):
                     'tr': ['tr'],
                     'td': ['td'],
                     'th': ['th'],
-                    'head': ['body']
+                    'head': ['body'],
+                    'title': ['head', 'body']
                     }
 
 
@@ -399,8 +408,11 @@ class MicroDOMParser(XMLParser):
             name = name.lower()
         # print ' '*self.indentlevel, 'end tag',name
         # self.indentlevel -= 1
-        if not self.elementstack and self.beExtremelyLenient:
-            return
+        if not self.elementstack:
+            if self.beExtremelyLenient:
+                return
+            raise MismatchedTags(*((self.filename, "NOTHING", name)
+                                   +self.saveMark()+(0,0)))
         el = self.elementstack.pop()
         if el.tagName != name:
             if self.beExtremelyLenient:
@@ -416,6 +428,7 @@ class MicroDOMParser(XMLParser):
                     del self.elementstack[-(idx+1):]
                     if not self.elementstack:
                         self.documents.append(lastEl)
+                        return
             else:
                 raise MismatchedTags(*((self.filename, el.tagName, name)
                                        +self.saveMark()+el._markpos))
