@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.47 $"[11:-2]
+__version__ = "$Revision: 1.48 $"[11:-2]
 
 import os
 import cgi
@@ -151,7 +151,11 @@ class Controller(resource.Resource):
         if f:
             return f(request)
         else:
-            return self.getDynamicChild(name, request)
+            child = self.getDynamicChild(name, request)
+            if child is None:
+                return resource.Resource.getChild(self, name, request)
+            else:
+                return child
 
     def getDynamicChild(self, name, request):
         """
@@ -164,7 +168,7 @@ class Controller(resource.Resource):
         @param request: The HTTP request being handled.
         @type request: L{twisted.web.server.Request}
         """
-        resource.Resource.getChild(self, name, request)
+        pass
 
     def wchild_index(self, request):
         """By default, we return ourself as the index.
