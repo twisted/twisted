@@ -93,7 +93,7 @@ class ClientFactory(Factory):
     """A Protocol factory for clients.
 
     This can be used together with the various connectXXX methods in
-    twisted.internet.app.Application.
+    reactors and Applications.
     """
 
     def startedConnecting(self, connector):
@@ -178,14 +178,6 @@ class Protocol:
         Clear any circular references here, and any external references
         to this Protocol.  The connection has been closed.
         """
-
-    def connectionFailed(self):
-        """Called when a connection cannot be made.
-
-        This will only be called on client protocols; this message tells
-        the protocol that the expected connection can not be made.
-        """
-        log.msg( 'Connection Failed!' )
 
 
 class ProcessProtocol(Protocol):
