@@ -41,6 +41,7 @@ except:
     md5_crypt = None
 
 from twisted.cred import identity
+from twisted.cred.error import Unauthorized
 from twisted.internet import defer
 
 import error
@@ -92,7 +93,7 @@ class OpenSSHConchIdentity(ConchIdentity):
     def validatePublicKey(self, pubKeyString):
         home = os.path.expanduser('~%s/.ssh/' % self.name)
         if home[0] == '~': # couldn't expand
-            return defer.fail(error.ConchError('not valid user'))
+            return defer.fail(Unauthorized('not valid user'))
         for file in ['authorized_keys', 'authorized_keys2']:
             if os.path.exists(home+file):
                 lines = open(home+file).readlines()
@@ -109,7 +110,7 @@ class OpenSSHConchIdentity(ConchIdentity):
             try:
                 cryptedPass = pwd.getpwnam(self.name)[1] # password
             except KeyError: # no such user
-                return defer.fail(error.ConchError('no such user'))
+                return defer.fail(Unauthorized('no such user'))
             else:
                 if cryptedPass not in ['*', 'x']:
                     if verifyCryptedPassword(cryptedPass, password):
@@ -126,7 +127,7 @@ class OpenSSHConchIdentity(ConchIdentity):
             except KeyError:
                 os.setegid(gid)
                 os.seteuid(uid)
-                return defer.fail(error.ConchError('no such user'))
+                return defer.fail(Unauthorized('no such user'))
             os.setegid(gid)
             os.seteuid(uid)
             if verifyCryptedPassword(shadowPass, password):

@@ -25,6 +25,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 import pwd
 from twisted.cred import authorizer
+from twisted.cred.error import Unauthorized
 from twisted.internet import defer
 from twisted.python import log
 import identity, error
@@ -33,14 +34,9 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
     identityClass = identity.OpenSSHConchIdentity
 
     def getIdentityRequest(self, name):
-        try:
-            pwd.getpwnam(name)
-        except KeyError:
-            return defer.fail(error.ConchError('not a valid username'))
-        else:
-            if not self.identities.has_key(name):
-                log.msg('adding %s for %s' % (self.identityClass, name))
-                self.addIdentity(self.identityClass(name, self))
-            return defer.succeed(self.identities[name])
+        if not self.identities.has_key(name):
+            log.msg('adding %s for %s' % (self.identityClass, name))
+            self.addIdentity(self.identityClass(name, self))
+        return defer.succeed(self.identities[name])
 
 

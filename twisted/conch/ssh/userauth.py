@@ -22,8 +22,7 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-
-import os.path, base64
+import os.path, base64, struct
 from twisted import cred
 from twisted.conch import error
 from twisted.internet import app, defer, reactor
@@ -36,16 +35,20 @@ class SSHUserAuthServer(service.SSHService):
     loginTimeout = 10 * 60 * 60 # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20 # number of attempts to allow before a disconnect
     protocolMessages = None # set later
+    supportedMethods = ['publickey', 'password']
 
     def serviceStarted(self):
-        self.supportedAuthentications = ['publickey','password']
+        self.supportedAuthentications = self.supportedMethods[:] 
         self.authenticatedWith = []
         self.loginAttempts = 0
         self.user = None
         self.nextService = None
+        self.identity = None
 
         if not self.transport.isEncrypted('out'):
             self.supportedAuthentications.remove('password')
+            if 'keyboard-interactive' in self.supportedAuthentications:
+                self.supportedAuthentications.remove('keyboard-interactive')
             # don't let us transport password in plaintext
         self.cancelLoginTimeout = reactor.callLater(self.loginTimeout,
                                                     self.transport.sendDisconnect,
@@ -62,8 +65,8 @@ class SSHUserAuthServer(service.SSHService):
         return d
 
     def _cbTryAuth(self, identity, kind, data):
-        log.msg('%s trying auth %s with identity' % (identity.name, kind))
         self.identity = identity
+        kind = kind.replace('-', '_')
         f = getattr(self,'auth_%s'%kind, None)
         if f:
             return f(identity, data)
@@ -85,7 +88,6 @@ class SSHUserAuthServer(service.SSHService):
             return
         log.msg('%s authenticated with %s' % (self.user, self.method))
         self.authenticatedWith.append(self.method)
-        self.supportedAuthentications.remove(self.method)
         if self.areDone():
             self.cancelLoginTimeout.cancel()
             self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
@@ -95,13 +97,6 @@ class SSHUserAuthServer(service.SSHService):
             self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
 
     def _ebBadAuth(self, reason):
-        reason.trap(error.ConchError, cred.error.Unauthorized)
-        #if isinstance(reason, failure.Failure):
-        #    reason.trap(error.ConchError)
-        #elif foo == "unauthorized":
-        #    pass
-        #else:
-        #    raise reason
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
             log.msg('potential reason: %s' % reason)
@@ -109,8 +104,9 @@ class SSHUserAuthServer(service.SSHService):
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
                                               'too many bad auths')
-                return
+                return -1
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
+        return -1
 
     def auth_publickey(self, ident, packet):
         if not getattr(ident, 'validatePublicKey'):
@@ -145,6 +141,51 @@ class SSHUserAuthServer(service.SSHService):
     def auth_password(self, ident, packet):
         password = getNS(packet[1:])[0]
         return ident.verifyPlainPassword(password)
+
+    def auth_keyboard_interactive(self, ident, packet):
+        if hasattr(self, '_pamDeferred'):
+            return defer.fail(error.ConchError('cannot run kbd-int twice at once'))
+        d = pamauth.pamAuthenticate('ssh', ident.name, self._pamConv)
+        return d
+
+    def _pamConv(self, items):
+        resp = []
+        for message, kind in items:
+            if kind == 1: # password
+                resp.append((message, 0))
+            elif kind == 2: # text
+                resp.append((message, 1))
+            elif kind in (3, 4):
+                return defer.fail(error.ConchError('cannot handle PAM 3 or 4 messages'))
+            else:
+                return defer.fail(error.ConchError('bad PAM auth kind %i' % kind))
+        packet = NS('')+NS('')+NS('')
+        packet += struct.pack('>L', len(resp))
+        for prompt, echo in resp:
+            packet += NS(prompt)
+            packet += chr(echo)
+        self.transport.sendPacket(MSG_USERAUTH_INFO_REQUEST, packet)
+        self._pamDeferred = defer.Deferred()
+        return self._pamDeferred
+
+    def ssh_USERAUTH_INFO_RESPONSE(self, packet):
+        if not self.identity:
+            return defer.fail(error.ConchError('bad username'))
+        d = self._pamDeferred
+        del self._pamDeferred
+        try:
+            resp = []
+            numResps = struct.unpack('>L', packet[:4])[0]
+            packet = packet[4:]
+            while packet:
+                response, packet = getNS(packet)
+                resp.append((response, 0))
+            assert len(resp) == numResps
+        except:
+            d.errback(failure.Failure())
+        else:
+            d.callback(resp)
+            
 
     # overwrite on the client side            
     def areDone(self):
@@ -206,6 +247,8 @@ class SSHUserAuthClient(service.SSHService):
             self._oldPass = self._newPass = None
             op = self.getPassword('Old Password: ').addCallback(self._setOldPass)
             np = self.getPassword(prompt).addCallback(self._setNewPass)
+        elif self.lastAuth == 'keyboard-interactive':
+            return self.ssh_USERAUTH_INFO_RESPONSE(packet)
 
     def _setOldPass(self, op):
         if self._newPass:
@@ -273,6 +316,8 @@ MSG_USERAUTH_FAILURE          = 51
 MSG_USERAUTH_SUCCESS          = 52
 MSG_USERAUTH_BANNER           = 53
 MSG_USERAUTH_PASSWD_CHANGEREQ = 60
+MSG_USERAUTH_INFO_REQUEST     = 60
+MSG_USERAUTH_INFO_RESPONSE    = 61
 MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
@@ -284,3 +329,9 @@ for v in dir(userauth):
 SSHUserAuthServer.protocolMessages = messages
 SSHUserAuthClient.protocolMessages = messages
 
+try:
+    import pamauth
+except:
+    pass
+else:
+    SSHUserAuthServer.supportedMethods.append('keyboard-interactive')

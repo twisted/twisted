@@ -24,10 +24,18 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 import md5, os, resource
 
+try:
+    import PAM
+except:
+    pass
+else: # PAM requires threading
+    from twisted.python import threadable
+    threadable.init(1)
+
 from twisted.internet import protocol
 from twisted.python import log
 
-import common, userauth, keys, transport, primes, connection
+import common, keys, transport, primes, connection, userauth
 from twisted.conch import error
 
 class SSHFactory(protocol.Factory):
