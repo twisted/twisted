@@ -21,7 +21,7 @@ import cPickle
 import cStringIO
 
 # Twisted Imports
-from twisted.persisted import styles
+from twisted.persisted import styles, marmalade
 
 
 class VersionTestCase(unittest.TestCase):
@@ -95,6 +95,29 @@ class Pickleable:
     def getX(self):
         return self.x
 
+
+def funktion():
+    pass
+
+class MarmaladeTestCase(unittest.TestCase):
+    def testBasicIdentity(self):
+        # Anyone wanting to make this datastructure more complex, and thus this
+        # test more comprehensive, is welcome to do so.
+        dj = marmalade.DOMJellier().jellyToNode
+        d = {'hello': 'world', "method": dj}
+        l = [1, 2, 3,
+             "he\tllo\n\n\"x world!",
+             u"goodbye \n\t\u1010 world!",
+             1, 1.0, 100 ** 100l, unittest, marmalade.DOMJellier, d,
+             funktion
+             ]
+        t = tuple(l)
+        l.append(l)
+        l.append(t)
+        l.append(t)
+        uj = marmalade.unjellyFromXML(marmalade.jellyToXML([l, l]))
+        assert uj[0] is uj[1]
+        assert uj[1][0:5] == l[0:5]
 
 class PicklingTestCase(unittest.TestCase):
     """Test pickling of extra object types."""
