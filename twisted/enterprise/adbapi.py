@@ -119,13 +119,19 @@ class ConnectionPool(pb.Referenceable):
     def runInteraction(self, interaction, *args, **kw):
         """Interact with the database and return the result.
 
-        The 'interaction' is a callable object which will be executed in a
-        thread using a pooled connection. It will be passed an L{Transaction}
-        object as an argument (whose interface is identical to that of the
-        database cursor for your DB-API module of choice), and its results
-        will be returned as a Deferred. If running the method raises an
-        exception, the transaction will be rolled back. If the method returns
-        a value, the transaction will be committed.
+        The 'interaction' is a callable object which will be executed
+        in a thread using a pooled connection. It will be passed an
+        L{Transaction} object as an argument (whose interface is
+        identical to that of the database cursor for your DB-API
+        module of choice), and its results will be returned as a
+        Deferred. If running the method raises an exception, the
+        transaction will be rolled back. If the method returns a
+        value, the transaction will be committed.
+
+        NOTE that the function you pass is *not* run in the main
+        thread: you may have to worry about thread-safety in the
+        function you pass to this if it tries to use non-local
+        objects.
 
         @param interaction: a callable object whose first argument is
             L{adbapi.Transaction}.
