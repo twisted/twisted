@@ -434,8 +434,10 @@ class SMTPHelperTestCase(unittest.TestCase):
             self.assertEquals(case.encode('xtext'), expected)
             self.assertEquals(expected.decode('xtext'), case)
 
+
 class NoticeTLSClient(MyESMTPClient):
     tls = False
+    
     def esmtpState_starttls(self, code, resp):
         MyESMTPClient.esmtpState_starttls(self, code, resp)
         self.tls = True
@@ -452,7 +454,7 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
         
         self.assertEquals(client.tls, True)
         self.assertEquals(server.startedTLS, True)
-    testTLS.skip = "SSL wrongly buffers, hanging this test"
+
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):

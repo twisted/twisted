@@ -1130,6 +1130,7 @@ class ESMTPClient(SMTPClient):
             self._expected = [220]
             self._okresponse = self.esmtpState_starttls
             self._carryon = items
+            self.sendLine('STARTTLS')
         elif self.requireTransportSecurity:
             log.msg("TLS required but not available: closing connection")
             self.sendLine('QUIT')
