@@ -1,4 +1,4 @@
-Twisted 0.12.3
+Twisted 0.13.0
 
 Quote of the Release:
 
@@ -10,9 +10,9 @@ What is this?
   Twisted is an event-based framework for internet applications.  It includes a
   web server, a telnet server, a multiplayer RPG engine, a generic client and
   server for remote object access, and APIs for creating new protocols and
-  services. Twisted supports integration of the Tk or GTK event loop with it's
-  main event loop. It also has basic support for running servers on top of
-  jython.
+  services. Twisted supports integration of the Tk, GTK  or wxPython event loop
+  with its main event loop. It also has basic support for running servers on top
+  of Jython.
 
   Twisted currently supports the following protocols, all implemented in pure
   python, most of them as both servers and clients:
@@ -32,22 +32,15 @@ What is this?
   
   For more information, visit http://www.twistedmatrix.com.
 
-What's new in 0.12.3?
+What's new in 0.13.0?
 
-  This is mainly a maintenance release; there are a bunch of bugfixes, but some
-  really cool new things.
-
-  A Configuration System. This is going to be the Next Big Thing in Twisted - 
-  right now, it's not used anywhere visibly, but the idea is a unified
-  interface for Twisted that will replace things like 'mktap'. We have a basic
-  dependancy system down, and a simple Web UI.
-
-  A few bugfixes for TK InstanceMessenger.
-
-  Docs for Delayeds: Itamar wrote up a small HTML document on how to use
-  Delayeds. Look in the 'doc/' subdirectory.
-
-  Other general bugfixes.
+  Updates to the config interface, and twisted.enterprise database support.
+  
+  twisted.forum, an experimantal database-based web forum.
+  
+  twisted.metrics, a database-backed performance and stats system.
+  
+  experimental wxPython event loop support.
 
 What can I do with it?
 
@@ -134,7 +127,7 @@ Basic Servers
 
     % im
 
-  A AOL Instant Messanger TOC Server is also available::
+  A AOL Instant Messenger TOC Server is also available::
 
     % mktap toc -p 5190
 
