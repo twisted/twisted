@@ -221,6 +221,8 @@ def parseFileAndReport(fn):
                (e.endLine, e.endCol, e.got, e.expect))
     except microdom.ParseError, e:
         raise process.ProcessingFailure("%s:%s:%s" % (e.line, e.col, e.message))
+    except IOError, e:
+        raise process.ProcessingFailure(e.strerror)
 
 def doFile(fn, linkrel, ext, url, templ):
     doc = parseFileAndReport(fn)
