@@ -71,7 +71,7 @@ reactor.run()
 
     <h2>Deferreds</h2>
 
-    <p>A <code class="API">twisted.python.defer.Deferred</code> is
+    <p>A <code class="API">twisted.internet.defer.Deferred</code> is
     a promise that a function will at some point have a result. We
     can attach callback functions to a Deferred, and once it gets a
     result these callbacks will be called. In addition Deferreds
@@ -99,7 +99,7 @@ reactor.run()
     arm the Deferred automatically for you.</p>
 <pre class="python">
 import sys
-from twisted.python import defer
+from twisted.internet import defer
 
 class Getter:
 
@@ -219,7 +219,7 @@ d.addErrback(errorHandler)
 
     <p><b>Note:</b> There's another potential "gotcha" here.
     There's a convenience method <code
-    class="API">twisted.python.defer.Deferred.addCallbacks</code>
+    class="API">twisted.internet.defer.Deferred.addCallbacks</code>
     which is similar to, but not exactly the same as, <code
     class="python">addCallback</code> followed by <code
     class="python">addErrback</code>. In particular, consider these
