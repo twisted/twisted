@@ -51,6 +51,7 @@ Future Work:
 # system imports
 import os
 import re
+import weakref
 
 from cStringIO import StringIO
 
@@ -73,6 +74,10 @@ class IHeaderSaver(Interface):
 
     def getItems(self):
         """Get a list of tuples  of strings, [(key, value), ...].
+        """
+
+    def getIndexes(self):
+        """Return a list of tuples of strings, [(index_name, index_value), ...]
         """
 
     def getContinuations(self):
@@ -168,7 +173,7 @@ class Mailsicle(repos.DirectoryRepository):
         cl = self.createOID(oid, namedClass(items[1][1]))
         # TODO: make instance(...) support new-style classes...
         saver = getSaver(cl,self)
-        saver.loadItems(items)
+        saver.loadItems(items, cl)
         saver.loadContinuations(ll)
         return cl
 
@@ -279,4 +284,185 @@ class Mailsicle(repos.DirectoryRepository):
                              oid))
         else:
             return '<>'
+
+
+from twisted.cred import service, authorizer, identity, perspective
+
+def hexlify(s):
+    # note: when we drop 2.1 support, we can just
+    #  s.encode('hex') and s.decode('hex')
+    return ''.join(['%02x' % ord(c) for c in s])
+
+def unhexlify(s):
+    return ''.join([chr(int(s[i:i+2],16)) for i in range(0,len(s),2)])
+
+class DefaultSaver(Adapter):
+    __implements__ = IHeaderSaver
+
+    def descriptiveName(self):
+        """Return a pretty-printed (non-unique) name describing me.
+        """
+        if hasattr(self.original, "name"):
+            return self.original.name
+
+    def getItems(self):
+        """Get a list of tuples  of strings, [(key, value), ...].
+        """
+        return []
+
+    def getContinuations(self):
+        """Get a list of 'continuation' sections. This is a list of lists of tuples.
+        """
+        return []
+
+    def getIndexes(self):
+        """
+        """
+        return []
+
+    def loaditem_oid(self, kv, vv):
+        pass
+
+    def loaditem_class(self, kv, vv):
+        pass
+
+    def preLoad(self):
+        pass
+
+    def postLoad(self):
+        pass
+
+    def loadItems(self, items, toplevel):
+        """Take the result of a getItems() call and populate self.original.
+        
+        'toplevel' is the top-level object if this is a continuation, otherwise
+        it is self.original
+        """
+        self.preLoad()
+        for k,v in items:
+            ksplit = k.split("+", 1)
+            kk = ksplit[0]
+            if len(ksplit) > 1:
+                kv = ksplit[1]
+            else:
+                kv = None
+            getattr(self,"loaditem_"+kk.lower())(kv,v)
+        self.postLoad()
+
+    def loadContinuations(self, cont):
+        """Take the result of a getContinuations() call and populate self.original.
+        """
+
+class IdentitySaver(DefaultSaver):
+    '''Persistor for cred Identities.
+    '''
+    def getItems(self):
+        itm = [("Name", self.original.name),
+               ("Password", hexlify(self.original.hashedPassword))]
+        for svcnam, pspnam in self.original.keyring.keys():
+            itm.append(("Key+"+svcnam, pspnam))
+        return itm
+
+    def preLoad(self):
+        # XXX currently I want authorizers to be in a weird halfway-in
+        # relationship with the database, so this is necessary to keep
+        # identities in sync
+        self.original.authorizer = self.repo._authorizer
+        self.original.keyring = {}
+
+    def loaditem_key(self, kv, vv):
+        self.original.keyring[(kv,vv)] = 1
+
+    def loaditem_password(self, kv, vv):
+        self.original.hashedPassword = unhexlify(vv)
+
+    def loaditem_name(self, kv, vv):
+        self.original.name = vv
+
+    def getIndexes(self):
+        return [("identity-name", self.original.name)]
+
+registerAdapter(IdentitySaver, identity.Identity, IHeaderSaver)
+
+class PerspectiveSaver(DefaultSaver):
+    def getItems(self):
+        return [('Service', self.original.getService().serviceName),
+                ('Name', self.original.perspectiveName)]
+
+    def getIndexes(self):
+        return [("perspective-name-"+self.original.service.serviceName,
+                 self.original.perspectiveName)]
+
+    def loaditem_service(self, kv, vv):
+        self.original.service = self.repo._services[vv]
+
+    def loaditem_name(self, kv, vv):
+        self.original.perspectiveName = vv
+
+registerAdapter(PerspectiveSaver, perspective.Perspective, IHeaderSaver)
+
+class MailsicleAuthorizer(authorizer.Authorizer):
+    """A twisted.cred authorizer that's persistent in a Mailsicle database.
+    
+    NOTE: only one MailsicleAuthorizer may be present in a given Mailsicle
+    database.
+    """
+    def __init__(self, msicle, serviceCollection=None):
+        if hasattr(msicle, "_authorizer"):
+            raise NotImplementedError("Only one authorizer "
+                                      "per mailsicle allowed.")
+        authorizer.Authorizer.__init__(self, serviceCollection)
+        self.msicle = msicle
+        self.msicle._authorizer = self
+
+    def addIdentity(self, identity):
+        freezer.register(identity, self.msicle)
+
+    ## XXX TODO: removeIdentity
+
+    def getIdentityRequest(self, name):
+        return self.msicle.queryIndex("identity-name",
+                                      name).fetch(0,1).addCallback(lambda x: x[0])
+
+
+
+class MailsicleService(service.Service):
+    """A twisted.cred service that's persistent in a Mailsicle database.
+
+    NOTE: such services must have a unique serviceName for the mailsicle they
+    are persistent in.  There is currently no checking.
+
+    TODO: this should be generalized to load Perspectives from any data-source
+    that implements a certain Repository interface.
+    """
+
+    def __init__(self, msicle, serviceName, serviceParent=None, authorizer=None):
+        service.Service.__init__(self, serviceName, serviceParent, authorizer)
+        self.msicle = msicle
+        # XXX FIXME: same as in IdentitySaver.loadItems
+        if not hasattr(self.msicle, '_services'):
+            self.msicle._services = {}
+        self.msicle._services[serviceName] = self
+        self.perspectives = weakref.WeakValueDictionary()
+
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        del dct['perspectives']
+
+    def __setstate__(self, dct):
+        self.__dict__ = dct
+        self.perspectives = weakref.WeakValueDictionary()
+
+    def createPerspective(self, name):
+        p = self.perspectiveClass(name)
+        p.setService(self)
+        freezer.register(p, self.msicle)
+        self.perspectives[name] = p
+        return p
+
+    def getPerspectiveNamed(self, name):
+        if self.perspectives.has_key(name):
+            return self.perspectives[name]
+        return self.msicle.queryIndex("perspective-name-"+self.serviceName,
+                                      name).fetchNow(0,1)[0]
 

@@ -19,6 +19,7 @@ from pyunit import unittest
 from twisted.popsicle import mailsicle, freezer
 
 class Dummy:
+    name = 'UNNAMED!!!'
     __implements__ = mailsicle.IHeaderSaver
 
     def __init__(self,name):
@@ -43,7 +44,7 @@ class Dummy:
     def getIndexes(self):
         return [('person-name',self.name)]
 
-    def loadItems(self,items):
+    def loadItems(self, items, toplevel):
         self.name = items[2][1]
 
     def loadContinuations(self, cont):
@@ -120,10 +121,43 @@ class PicklesicleTest(unittest.TestCase):
 
 
 class MailsicleTest(unittest.TestCase):
+    def makeMailsicle(self, msn):
+        if os.path.exists(msn):
+            shutil.rmtree(msn)
+        return mailsicle.Mailsicle(msn)
+
+    def testPersistentStuff(self):
+        try:
+            ''.encode('hex')
+        except:
+            return
+        ms = self.makeMailsicle("MAILSICLE_AUTH")
+        from twisted.internet.app import Application
+        msa = mailsicle.MailsicleAuthorizer(ms)
+        a = Application("bobbo", authorizer=msa)
+        mss = mailsicle.MailsicleService(ms, "twisted.stuff", a, msa)
+        bob = mss.createPerspective("bob")
+        bobd = mss.getPerspectiveRequest("bob")
+        l = []
+        bobd.addCallback(l.append)
+        self.assertEquals(l[0],bob)
+        idn = l[0].makeIdentity("asdf")
+        import operator
+        self.assertEquals(operator.truth(idn.verifyPlainPassword('asdf').result),
+                          1)
+        freezer.clean()
+        l = []
+        idn.dl = gcall(l.append, 'yes')
+        del idn
+        del bobd
+        self.assertEquals(l[0], 'yes')
+        idn = bob.getIdentityRequest().result
+        self.assertEquals(operator.truth(idn.verifyPlainPassword('asdf').result),
+                          1)
+        
+
     def testIndexing(self):
-        if os.path.exists("BOBJANE_TEST"):
-            shutil.rmtree("BOBJANE_TEST")
-        ms = mailsicle.Mailsicle("BOBJANE_TEST")
+        ms = self.makeMailsicle("BOBJANE_TEST")
         d1 = Dummy("bob")
         d2 = Dummy("jane")
         freezer.register(d1, ms)
