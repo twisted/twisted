@@ -7,7 +7,7 @@
 #
 from __future__ import generators
 
-import traceback, warnings, new, inspect, types, time, signal
+import sys, traceback, warnings, new, inspect, types, time, signal
 from twisted.python import components, failure, util, log, reflect
 from twisted.internet import defer, interfaces
 from twisted.trial import itrial
@@ -497,6 +497,44 @@ class _TrialLogObserver(object):
         if self in log.theLogPublisher.observers:
             log.removeObserver(self)
 
+
+def _selectAttr(attr, *args):
+    """do getattr(arg, attr, None) and return the first non-None value found, 
+    else return None if no non-None value is found
+    """
+    for a in args:
+        v = getattr(a, attr, None)
+        if v is None:
+            continue
+        else:
+            return v
+    else:
+        return None
+
+
+def suppress(action='ignore', **kwarg):
+    """sets up the .suppress tuple properly, pass options to this method
+    as you would the stdlib warnings.filterwarnings()
+    
+    so to use this with a .suppress magic attribute you would do the 
+    following:
+
+      >>> from twisted.trial import unittest, util
+      >>> import warnings
+      >>>
+      >>> class TestFoo(unittest.TestCase):
+      ...     def testFooBar(self):
+      ...         warnings.warn("i am deprecated", DeprecationWarning)
+      ...     testFooBar.suppress = [util.suppress(message='i am deprecated')]
+      ...
+      >>>
+
+    note that as with the todo and timeout attributes: the module level
+    attribute acts as a default for the class attribute which acts as a default
+    for the method attribute. The suppress attribute can be overridden at any 
+    level by specifying .suppress = []
+    """
+    return ((action,), kwarg)
 
 # -- backwards compatibility code for 2.2 ---
 

@@ -186,23 +186,37 @@ changes in trial v2.0:
       feature work with this code revision. With his permisison, this feature
       has been removed.
 
-  
+  B{intelligent and sane warnings suppression}
+  --------------------------------------------
+    - warnings suppression now takes the form of a .suppress attribute or a 
+      module-level variable named 'suppress'. The suppress attribute is a list
+      that contains tuples returned from the L{twisted.trial.util.suppress}
+      method. For example usage, see the suppress() docstring.
+      
 
 Trial's 'special' attributes:
 =============================
+  1. 'Special' attributes exist on three levels: module, class, and method.
+     Setting a special attribute at the module level makes that value act as the
+     default value for that attribute of classes and methods contained within that
+     module. The same applies to a class' attribute acting as a default for it's
+     contained methods.  So when running project.test.test_foo.MyTest.testMethod
+     the search would look like::
 
-  1. C{.todo} attributes can either be set on the C{TestCase} or on an
-     individual test* method, and indicate that the test is expected to
-     fail. New tests (for which the underlying functionality has not yet
-     been added) should set this flag while the code is being written. Once
-     the feature is added and the test starts to pass, the flag should be
-     removed.
+       getattr(testMethod, 'todo', 
+           getattr(MyTest, 'todo', 
+               getattr(test_foo, 'todo', None))) 
 
-  2. Tests of highly-unstable in-development code should consider using
+  2. C{.todo} attributes indicate that the test is expected to fail. New tests
+     (for which the underlying functionality has not yet been added) should set
+     this flag while the code is being written. Once the feature is added and the
+     test starts to pass, the flag should be removed.
+
+  3. Tests of highly-unstable in-development code should consider using
      C{.skip} to turn off the tests until the code has reached a point where
      the success rate is expected to be monotonically increasing.
 
-  3. Tests that return deferreds may alter the default timeout period of 4.0
+  4. Tests that return deferreds may alter the default timeout period of 4.0
      seconds by adding a method attribute C{.timeout} which is the number of
      seconds as a float that trial should wait for a result. To turn off the
      timeout for a given test (which is not recommended), set timeout = None.

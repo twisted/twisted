@@ -59,7 +59,7 @@
 from __future__ import generators
 
 
-import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal
+import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal, inspect
 import os.path as osp, fnmatch, random
 from os.path import join as opj
 
@@ -77,7 +77,7 @@ from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
 import zope.interface as zi
 
 
-MAGIC_ATTRS = ('skip', 'todo', 'timeout')
+MAGIC_ATTRS = ('skip', 'todo', 'timeout', 'suppress')
 
 # --- Exceptions and Warnings ------------------------ 
 
@@ -294,13 +294,14 @@ class UserMethodError(Exception):
 
 class UserMethodWrapper(MethodInfoBase):
     zi.implements(itrial.IUserMethod, itrial.IMethodInfo)
-    def __init__(self, original, janitor, raiseOnErr=True, timeout=None):
+    def __init__(self, original, janitor, raiseOnErr=True, timeout=None, suppress=None):
         super(UserMethodWrapper, self).__init__(original)
         self.janitor = janitor
         self.original = original
         self.timeout = timeout
         self.errors = []
         self.raiseOnErr = raiseOnErr
+        self.suppress = suppress
 
     def __call__(self, *a, **kw):
         timeout = getattr(self, 'timeout', None)
@@ -308,8 +309,11 @@ class UserMethodWrapper(MethodInfoBase):
             timeout = getattr(self.original, 'timeout', None)
         
         self.startTime = time.time()
+            
         try:
-            util.wait(defer.maybeDeferred(self.original, *a, **kw), timeout, useWaitError=True)
+            _runWithWarningFilters(self.suppress,
+                    lambda :util.wait(defer.maybeDeferred(self.original, *a, **kw),
+                           timeout, useWaitError=True))
         except util.MultiError, e:
             for f in e.failures:
                 self.errors.append(f)
@@ -361,6 +365,22 @@ class TestRunnerBase(Timed, ParentAttributeMixin):
         """
         return self.getJanitor().postCaseCleanup()
 
+def _runWithWarningFilters(filterlist, f, *a, **kw):
+    """calls warnings.filterwarnings(*item[0], **item[1]) 
+    for each item in alist, then runs func f(*a, **kw) and 
+    resets warnings.filters to original state at end
+    """
+    filters = warnings.filters[:]
+    try:
+        if filterlist is not None:
+            for args, kwargs in filterlist:
+                assert (isinstance(args, types.TupleType) or 
+                        isinstance(args, types.ListType)), "first element must be a sequence"
+                assert isinstance(kwargs, types.DictType), "second element must be a dict"
+                warnings.filterwarnings(*args, **kwargs)
+        return f(*a, **kw)
+    finally:
+        warnings.filters = filters[:]
 
 def _bogusCallable(ignore=None):
     pass
@@ -437,6 +457,11 @@ class TestModuleRunner(TestRunnerBase):
 
 
 class TestClassAndMethodBase(TestRunnerBase):
+    """provides the basic functionality for running test methods
+    this includes providing the testCaseInstance, finding the appropriate
+    setUpModule, tearDownModule classes, and running the appropriate 
+    prefixed-methods as tests
+    """
     _module = _tcInstance = None
     
     def testCaseInstance(self):
@@ -448,7 +473,7 @@ class TestClassAndMethodBase(TestRunnerBase):
 
     def module(self):
         if self._module is None:
-            self._module = reflect.namedAny(self.testCases[0].__module__)
+            self._module = reflect.namedAny(self._testCase.__module__)
         return self._module
     module = property(module)
 
@@ -485,11 +510,12 @@ class TestClassAndMethodBase(TestRunnerBase):
 
             # --- setUpClass -----------------------------------------------
 
-            um = UserMethodWrapper(self.setUpClass, janitor)
+            setUpClass = UserMethodWrapper(self.setUpClass, janitor,
+                                           suppress=self.suppress)
             try:
-                um()
+                setUpClass()
             except UserMethodError:
-                for error in um.errors:
+                for error in setUpClass.errors:
                     if error.check(unittest.SkipTest):
                         self.skip = error.value[0]
                         def _setUpSkipTests(tm):
@@ -499,9 +525,9 @@ class TestClassAndMethodBase(TestRunnerBase):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
                         error.raiseException()
                 else:
-                    reporter.upDownError(um)
+                    reporter.upDownError(setUpClass)
                     def _setUpClassError(tm):
-                        tm.errors.extend(um.errors)
+                        tm.errors.extend(setUpClass.errors)
                         reporter.startTest(tm)
                         self.methodsWithStatus.setdefault(tm.status,
                                                           []).append(tm)
@@ -519,6 +545,7 @@ class TestClassAndMethodBase(TestRunnerBase):
                                               testMethod.klass.__name__,
                                               testMethod.name))
 
+                # suppression is handled by each testMethod
                 testMethod.run(tci)
                 self.methodsWithStatus.setdefault(testMethod.status,
                                                   []).append(testMethod)
@@ -527,16 +554,17 @@ class TestClassAndMethodBase(TestRunnerBase):
 
             # --- tearDownClass ---------------------------------------------
 
-            um = UserMethodWrapper(self.tearDownClass, janitor)
+            tearDownClass = UserMethodWrapper(self.tearDownClass, janitor,
+                                   suppress=self.suppress)
             try:
-                um()
+                tearDownClass()
             except UserMethodError:
-                for error in um.errors:
+                for error in tearDownClass.errors:
                     if error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
                         error.raiseException()
                 else:
-                    reporter.upDownError(um)
+                    reporter.upDownError(tearDownClass)
 
         finally:
             try:
@@ -549,7 +577,12 @@ class TestClassAndMethodBase(TestRunnerBase):
         
 
 class TestCaseRunner(TestClassAndMethodBase):
-    """I run L{twisted.trial.unittest.TestCase} instances"""
+    """I run L{twisted.trial.unittest.TestCase} instances and provide
+    the correct setUp/tearDownClass methods, method names, and values for
+    'magic attributes'. If this TestCase defines an attribute, it is taken
+    as the value, if not, we search the parent for the appropriate attribute
+    and if we still find nothing, we set our attribute to None
+    """
     methodPrefix = 'test'
     def __init__(self, original):
         super(TestCaseRunner, self).__init__(original)
@@ -563,8 +596,10 @@ class TestCaseRunner(TestClassAndMethodBase):
 
         self.methodNames = [name for name in dir(self.testCaseInstance)
                             if name.startswith(self.methodPrefix)]
+
         for attr in MAGIC_ATTRS:
-            setattr(self, attr, getattr(self.original, attr, None))
+            objs = self.original, self.module
+            setattr(self, attr, util._selectAttr(attr, *objs))
 
 
 class TestCaseMethodRunner(TestClassAndMethodBase):
@@ -579,10 +614,9 @@ class TestCaseMethodRunner(TestClassAndMethodBase):
         self.tearDownClass = self.testCaseInstance.tearDownClass
 
         for attr in MAGIC_ATTRS:
-            v = getattr(self.original, attr, None)
-            if v is None:
-                v = getattr(self._testCase, attr, None)
-            setattr(self, attr, v)
+            objs = [self.original, self._testCase, inspect.getmodule(self._testCase)]
+            setattr(self, attr, util._selectAttr(attr, *objs))
+        
 
     # TODO: for 2.1
     # this needs a custom runTests to handle setUpModule/tearDownModule
@@ -673,10 +707,13 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
     skip = property(_getSkip, _setSkip)
 
     def todo(self):
-        return getattr(self.original, 'todo',
-                       getattr(self.parent, 'todo', None))
+        return util._selectAttr('todo', self.original, self.parent)
     todo = property(todo)
-   
+    
+    def suppress(self):
+        return util._selectAttr('suppress', self.original, self.parent)
+    suppress = property(suppress)
+
     def timeout(self):
         if hasattr(self.original, 'timeout'):
             return getattr(self.original, 'timeout')
@@ -731,7 +768,8 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                 observer = util._TrialLogObserver().install()
 
                 # Run the setUp method
-                setUp = UserMethodWrapper(self.setUp, janitor)
+                setUp = UserMethodWrapper(self.setUp, janitor,
+                                          suppress=self.suppress)
                 try:
                     setUp(tci)
                 except UserMethodError:
@@ -743,7 +781,8 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                         # give the reporter the illusion that the test has run normally
                         # but don't actually run the test if setUp is broken
                         reporter.startTest(self)
-                        reporter.upDownError(setUp, warn=False, printStatus=False)
+                        reporter.upDownError(setUp, warn=False,
+                                             printStatus=False)
                         return
                  
                 # Run the test method
@@ -754,7 +793,8 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                         sys.stderr = util._StdioProxy(sys.stderr)
                     orig = UserMethodWrapper(self.original, janitor,
                                              raiseOnErr=False,
-                                             timeout=self.timeout)
+                                             timeout=self.timeout,
+                                             suppress=self.suppress)
                     orig.errorHook = self._eb
                     orig(tci)
 
@@ -768,7 +808,8 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                         sys.stderr = sys.stderr.original
 
                     # Run the tearDown method
-                    um = UserMethodWrapper(self.tearDown, janitor)
+                    um = UserMethodWrapper(self.tearDown, janitor,
+                                           suppress=self.suppress)
                     try:
                         um(tci)
                     except UserMethodError:

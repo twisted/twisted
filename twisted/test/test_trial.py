@@ -16,7 +16,7 @@ from twisted.protocols import loopback
 from twisted.spread import banana, jelly
 from twisted.trial import unittest, reporter, util, runner, itrial, remote
 from twisted.test import trialtest1, trialtest2
-from StringIO import StringIO
+from cStringIO import StringIO
 
 # this is ok, the module has been designed for this usage
 from twisted.trial.assertions import *
@@ -24,9 +24,8 @@ from twisted.trial.assertions import *
 import zope.interface as zi
 
 from pprint import pprint
-import sys, os, os.path as osp
+import sys, os, os.path as osp, time, warnings
 from os.path import join as opj
-import time
 import cPickle as pickle
 
     
@@ -157,6 +156,23 @@ class TestWait2(unittest.TestCase):
                 assert_(f.check(RuntimeError))
 
 
+class Attrib(object):
+    foo = None
+
+class AttributeSelection(unittest.TestCase):
+    def testSelectFirstFound(self):
+        a, b, c, d = Attrib(), Attrib(), Attrib(), Attrib()
+        assertEqual(util._selectAttr('foo', a, b, c, d), None)
+        d.foo = 'd_foo'
+        assertEqual(util._selectAttr('foo', a, b, c, d), 'd_foo')
+        c.foo = 'c_foo'
+        assertEqual(util._selectAttr('foo', a, b, c, d), 'c_foo')
+        b.foo = 'b_foo'
+        assertEqual(util._selectAttr('foo', a, b, c, d), 'b_foo')
+        a.foo = 'a_foo'
+        assertEqual(util._selectAttr('foo', a, b, c, d), 'a_foo')
+
+
 class BogusReporter(reporter.Reporter):
     def __init__(self):
         pass
@@ -247,7 +263,7 @@ class FunctionalTest(unittest.TestCase, SpawningMixin):
     def _failIfIn(self, astring):
         out = ''.join(self.cpp.out)
         failIfSubstring(astring, out,
-                     "%r not found in child process output:\n\n%s" % (astring,
+                     "%r found in child process output:\n\n%s" % (astring,
                         '\n'.join(['\tOUT: %s' % line for line in out.split('\n')])))
 
     def _failUnlessIn(self, astring):
@@ -346,6 +362,43 @@ class FunctionalTest(unittest.TestCase, SpawningMixin):
         def _cb(cpp):
             self._failUnlessIn("Ran 1 tests in")
         return self.spawnChild(args).addCallback(_cb)
+
+    def testSuppressMethod(self):
+        args = self.args + ['twisted.test.trialtest3.TestSuppression.testSuppressMethod']
+        def _cb(cpp):
+            from twisted.test import trialtest3
+            self._failIfIn(trialtest3.METHOD_WARNING_MSG)
+            self._failIfIn("IMPORT ERROR")
+            self._failUnlessIn("[OK]")
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testSuppressClass(self):
+        args = self.args + ['twisted.test.trialtest3.TestSuppression.testSuppressClass']
+        def _cb(cpp):
+            from twisted.test import trialtest3
+            self._failIfIn("IMPORT ERROR")
+            self._failIfIn(trialtest3.CLASS_WARNING_MSG)
+            self._failUnlessIn("[OK]")
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testSuppressModule(self):
+        args = self.args + ['twisted.test.trialtest3.TestSuppression2.testSuppressModule']
+        def _cb(cpp):
+            from twisted.test import trialtest3
+            self._failIfIn("IMPORT ERROR")
+            self._failIfIn(trialtest3.MODULE_WARNING_MSG)
+            self._failUnlessIn("[OK]")
+        return self.spawnChild(args).addCallback(_cb)
+    
+    def testOverrideSuppressClass(self):
+        args = self.args + ['twisted.test.trialtest3.TestSuppression.testOverrideSuppressClass']
+        def _cb(cpp):
+            from twisted.test import trialtest3
+            self._failIfIn("IMPORT ERROR")
+            self._failUnlessIn("[OK]")
+            self._failUnlessIn(trialtest3.CLASS_WARNING_MSG)
+            self._failUnlessIn(trialtest3.MODULE_WARNING_MSG)
+            self._failUnlessIn(trialtest3.METHOD_WARNING_MSG)
+        return self.spawnChild(args).addCallback(_cb)
         
 FunctionalTest.timeout = 30.0
-
