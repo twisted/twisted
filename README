@@ -5,6 +5,9 @@ topfiles/twisted/README or our web site at http://twistedmatrix.com/.
 Twisted Sumo contains all of Twisted and its subprojects. A setup.py
 is provided which will install Twisted and each subproject for
 you. Run the command "python setup.py --help" for more information.
+Twisted Sumo also includes Zope Interface, a dependency of Twisted and
+most of its subprojects, in a file named ZopeInterface-*.tgz in the
+root directory.
 
 For information about the Twisted split that happened before 2.0, see
 http://twistedmatrix.com/products/splitfaq

@@ -9,7 +9,7 @@ from __future__ import nested_scopes
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string, time, glob
+import sys, os, string
 if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
 sys.path.insert(0, os.curdir)
@@ -18,7 +18,7 @@ sys.path.insert(0, os.curdir)
 from twisted.python import usage, util, failure, dist
 from twisted.python.release import replaceInFile, runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
 
-import shutil, re, time
+import time, glob
 
 repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 #repourl = 'file:///home/radix/Twisted.repo'
@@ -47,7 +47,8 @@ class Options(usage.Options):
                                                  self['core-version'])
         self['tagurl'] = '%s/tags/release-%s' % (repourl,
                                                  self['core-version'])
-        self['temptagurl'] = '%s/tags/temp-%s' % (repourl, self['core-version'])
+        self['temptagurl'] = '%s/tags/temp-%s' % (repourl,
+                                                  self['core-version'])
 
         commands = []
         if self['commands'] is not None:
@@ -60,14 +61,14 @@ class Options(usage.Options):
 
             # This code expresses the high-level workflow of the
             # release procedure.
-            # BRANCH, CHECKOUT, MUNGE (cough), COMMIT, TAG, EXPORT,
-            # TARBALL, RELEASE, FINALIZE
+            # PRETAG, EXPORT, DOC, BALL, RELEASE, FINALTAG
 
             commands += [
-                copyTrunkToWIP,
-                checkoutWIP,
                 tagTemp,
                 exportTemp,
+                makeDocAll,
+                makeBallAll,
+                makeBallSumo,
                 ]
 
             if not self['nopermanent']:
@@ -92,59 +93,37 @@ def main():
         print
         print command.__name__
         print "="*len(command.__name__)
-        f = runChdirSafe(command, opts)
+        runChdirSafe(command, opts)
 
+##
+# Utilities
+##
+def lore(ver, docdir):
+    sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
+       "--config ext=.html --config version=%(ver)s -l ../howto/ "
+       "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir})
+
+def tar(tdir):
+    sh('find %s -name "*.pyc" | xargs rm -f' % (tdir,))
+    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
+
+        
 
 ##
 # The MEAT.
 ##
 
-def copyTrunkToWIP(opts):
-    try:
-        sh('svn ls %s' % opts['wipurl'])
-    except CommandFailed:
-        pass
-    else:
-        sh('svn rm -m "Removing wip-%s in order to re-copy from trunk" %s'
-           % (opts['core-version'], opts['wipurl']))
-
-    sh('svn cp -m "Copying trunk to wip-%s branch." %s %s'
-       % (opts['core-version'], trunkurl, opts['wipurl']))
-
-
-checkoutdir = 'Twisted.exp'
-
-def checkoutWIP(opts):
-    if os.path.exists(checkoutdir):
-        raise DirectoryExists("CheckoutWIP: %s (--root) already exists"
-                              % checkoutdir)
-
-    sh('svn co %s %s' % (opts['wipurl'], checkoutdir))
-
-    
-
-
 def tagTemp(opts):
-    sh('cd %s &&  svn cp %s %s -m "Tagging preliminary %s"'
-       % (checkoutdir, opts['wipurl'],
-          opts['temptagurl'], opts['core-version']),
-       )
-
+    sh('svn cp %s %s -m "Tagging preliminary %s"'
+       % (opts['wipurl'], opts['temptagurl'], opts['core-version']))
 
 def exportTemp(opts):
     if os.path.exists('Twisted.exp'):
         raise DirectoryExists("ExportTemp: 'Twisted.exp' already exists")
     sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
 
-
-def lore(ver, docdir):
-    sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
-       "--config ext=.html --config version=%(ver)s -l ../howto/ "
-       "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir})
-
-
-
-def makeDocsCore(opts):
+    
+def makeDocCore(opts):
     ver = opts['core-version']
     os.chdir('Twisted.exp')
 
@@ -162,7 +141,7 @@ def makeMakeDoc(projname):
             sub = os.path.join(base, sub)
             if os.path.exists(sub):
                 lore(opts['%s-version' % projname], sub)
-    return makeMakeDoc
+    return makeDoc
 
 makeDocConch = makeMakeDoc('conch')
 makeDocFlow = makeMakeDoc('flow')
@@ -178,18 +157,17 @@ makeDocWords = makeMakeDoc('words')
 makeDocXish = makeMakeDoc('xish')
 
 
-def tar(tdir):
-    sh('find %s -name "*.pyc" | xargs rm -f' % (tdir,))
-    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
-
-
 def makeDocAll(opts):
+    runChdirSafe(makeDocCore, opts)
     for sub in dist.twisted_subprojects:
-        globals('makeDoc%s' % sub.capitalize())(opts)
+        runChdirSafe(globals()['makeDoc%s' % sub.capitalize()],
+                     opts)
 
 def makeBallAll(opts):
+    runChdirSafe(makeBallCore, opts)
     for sub in dist.twisted_subprojects:
-        globals('makeBall%s' % sub.capitalize())(opts)
+        runChdirSafe(globals()['makeBall%s' % sub.capitalize()],
+                     opts)
 
 
 def makeBallCore(opts):
@@ -215,13 +193,13 @@ def makeBallCore(opts):
 
     # we want copies so we can replace versions
     rm %(tdir)s/README %(tdir)s/setup.py
-    cp `pwd`/Twisted.exp/twisted/topfiles/setup.py %(sdir)s/
-    cp `pwd`/Twisted.exp/twisted/topfiles/README %(sdir)s/
+    cp `pwd`/Twisted.exp/twisted/topfiles/setup.py %(tdir)s/
+    cp `pwd`/Twisted.exp/twisted/topfiles/README %(tdir)s/
     rm %(tdir)s/twisted/__init__.py %(tdir)s/twisted/copyright.py
     cp `pwd`/Twisted.exp/twisted/__init__.py %(tdir)s/twisted/
     cp `pwd`/Twisted.exp/twisted/copyright.py %(tdir)s/twisted/
     ''' % locals())
-    replaceMe = {'SVN-Trunk': version}
+    replaceMe = {'SVN-Trunk': ver}
     replaceInFile(os.path.join(tdir, 'setup.py'), replaceMe)
     replaceInFile(os.path.join(tdir, 'README'), replaceMe)
     replaceInFile(os.path.join(tdir, 'twisted', '__init__.py'),
@@ -306,8 +284,6 @@ def createSubprojectDirectory(proj, version):
 
 def makeMakeBall(proj):
     def makeBall(opts):
-        ver = opts['core-version']
-        tdir = "Twisted-%s" % (ver,)
         projver = opts[proj+'-version']
         if not projver:
             raise "NEED --%s-version!" % (proj,)
