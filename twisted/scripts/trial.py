@@ -180,6 +180,12 @@ def run():
 
     if config['logfile']:
        from twisted.python import log
+       # we should SEE deprecation warnings
+       def seeWarnings(x):
+           if x.has_key('warning'):
+               print
+               print x['format'] % x
+       log.addObserver(seeWarnings)
        log.startLogging(open(config['logfile'], 'a'), 0)
 
     if config['verbose']:
