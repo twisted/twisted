@@ -37,6 +37,19 @@ def _generateMaildirName():
     return '%s.%s_%s.%s' % (t, p, n, s)
 
 
+def initializeMaildir(dir):
+    if not os.path.isdir(dir):
+        os.mkdir(dir)
+        for subdir in ['new', 'cur', 'tmp', '.Trash']:
+            print 'Making ', os.path.join(dir, subdir)
+            os.mkdir(os.path.join(dir, subdir))
+        for subdir in ['new', 'cur', 'tmp']:
+            print 'Making ', os.path.join(dir, '.Trash', subdir)
+            os.mkdir(os.path.join(dir, '.Trash', subdir))
+        # touch
+        open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
+
+
 class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
     """
@@ -86,6 +99,7 @@ class MaildirMailbox(pop3.Mailbox):
         self.path = path
         self.list = []
         self.deleted = {}
+        initializeMaildir(path)
         for name in ('cur', 'new'):
             for file in os.listdir(os.path.join(path, name)):
                 self.list.append(os.path.join(path, name, file))
@@ -185,14 +199,6 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
                 return None
             name = 'postmaster'
         dir = os.path.join(self.root, name)
-        if not os.path.isdir(dir):
-            os.mkdir(dir)
-            for subdir in ['new', 'cur', 'tmp', '.Trash']:
-                os.mkdir(os.path.join(dir, subdir))
-            for subdir in ['new', 'cur', 'tmp']:
-                os.mkdir(os.path.join(dir, '.Trash', subdir))
-            fp=open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w')
-            fp.close()
         return dir
 
     def authenticateUserAPOP(self, user, magic, digest, domain):
