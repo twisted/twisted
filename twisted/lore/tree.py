@@ -20,9 +20,6 @@ from twisted.python import htmlizer
 from twisted.web import microdom, domhelpers
 
 
-def fontifyFiles(infile, outfile):
-    htmlizer.filter(infile, outfile)
-    
 # relative links to html files
 def fixLinks(document, ext):
     for node in domhelpers.findElementsWithAttribute(document, 'href'):
@@ -79,7 +76,7 @@ def fontifyPython(document):
         oldio = cStringIO.StringIO()
         oldio.write(oivs)
         oldio.seek(0)
-        fontifyFiles(oldio, newio)
+        htmlizer.filter(oldio, newio)
         newio.seek(0)
         newdom = microdom.parse(newio)
         newel = newdom.documentElement
@@ -92,7 +89,7 @@ def addPyListings(document, d):
                                                      "py-listing"):
         fn = node.getAttribute("href")
         outfile = cStringIO.StringIO()
-        fontifyFiles(open(os.path.join(d, fn)), outfile)
+        htmlizer.filter(open(os.path.join(d, fn)), outfile)
         val = outfile.getvalue()
 
         text = ('<div class="py-listing">'
