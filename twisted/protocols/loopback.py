@@ -53,3 +53,5 @@ def loopback(server, client):
         clientToServer.clearBuffer()
         if serverToClient.shouldLose or clientToServer.shouldLose:
             break
+    client.connectionLost()
+    server.connectionLost()
