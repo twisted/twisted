@@ -261,7 +261,7 @@ makeBallRunner = makeMakeBall('runner')
 makeBallWeb = makeMakeBall('web')
 makeBallWeb2 = makeMakeBall('web2')
 makeBallWords = makeMakeBall('words')
-
+makeBallXish = makeMakeBall('xish')
 
 def finalizeTag(opts):
     sh('svn mv -m "Finalizing release of %s" %s %s'
