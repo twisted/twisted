@@ -278,7 +278,7 @@ if runtime.platform.getType() != 'posix':
     del PosixProcessTestCase
 else:
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
-    # make sure SIGCHILD handler is installed, as it should be on reactor.run().
+    # make sure SIGCHLD handler is installed, as it should be on reactor.run().
     # problem is reactor may not have been run when this test runs.
     import signal
     from twisted.internet import process
