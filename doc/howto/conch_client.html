@@ -4,7 +4,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>Using Twisted.Conch</title>
+    <title>Writing a client with Twisted.Conch</title>
   </head>
 
   <body>
@@ -114,7 +114,8 @@ class CatChannel(channel.SSHChannel):
     name = 'session'
 
     def channelOpen(self, data):
-        d = self.conn.sendRequest(self, 'exec', commons.NS('cat'), wantReply = 1)
+        d = self.conn.sendRequest(self, 'exec', commons.NS('cat'),
+                                  wantReply = 1)
         d.addCallback(self._cbSendRequest)
         self.catData = ''
 
@@ -127,7 +128,7 @@ class CatChannel(channel.SSHChannel):
         self.catData += data
 
     def closed(self):
-        print 'We got this from "cat":",self.catData
+        print 'We got this from "cat":', self.catData
 </pre>
 
 <p>Now that we've spent all this time getting the server and client connected, here is 
