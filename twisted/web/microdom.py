@@ -268,7 +268,10 @@ class Element(Node):
     def cloneNode(self, deep=0, parent=None):
         clone = Element(self.tagName, parentNode=parent)
         clone.attributes.update(self.attributes)
-        clone.childNodes = [child.cloneNode(1, clone) for child in self.childNodes]
+        if deep:
+            clone.childNodes = [child.cloneNode(1, clone) for child in self.childNodes]
+        else:
+            clone.childNodes = []
         return clone
 
     def getElementsByTagName(self, name):
