@@ -33,10 +33,7 @@ class ThreadedScheduler:
     This lets threads execute non-thread safe code by adding it to the
     scheduler. This module should not be used by non-threaded modules,
     instead they should use twisted.internet.task.
-    
-    We make sure that tasks are executed in the order a thread added them,
-    although different threads may have their actions interleaved.
-    
+
     Tasks added to this scheduler will *not* be stored persistently.
 
     This is an implementation of the Active Object pattern, and can be used
@@ -50,11 +47,11 @@ class ThreadedScheduler:
       3) Async/Half-Async - http://www.cs.wustl.edu/~schmidt/PDF/PLoP-95.pdf
     """
     def __init__(self):
-        self.tasks = []
+        self.threadTasks = {}
 
     def __getstate__(self):
         dict = copy.copy(self.__dict__)
-        dict['tasks'] = []
+        dict['threadTasks'] = {}
         return dict
 
     def addTask(self, function, *args, **kwargs):
@@ -62,24 +59,31 @@ class ThreadedScheduler:
         
         The result of the function will not be returned.
         """
-        hadNoTasks = len(self.tasks) == 0
-        self.tasks.append((function, args, kwargs))
+        threadTasks = self.threadTasks
+        hadNoTasks = (threadTasks == {})
+        id = thread.get_ident()
+        
+        if not threadTasks.has_key(id):
+            threadTasks[id] = [(function, args, kwargs)]
+        else:
+            threadTasks[id].append((function, args, kwargs))
         if hadNoTasks:
             main.wakeUp()
     
     def timeout(self):
         """Either I have work to do immediately, or no work to do at all.
         """
-        if self.tasks:
+        if self.threadTasks:
             return 0.
         else:
             return None
 
     def runUntilCurrent(self):
-        tasks = self.tasks
-        self.tasks = []
-        for function, args, kwargs in tasks:
-            apply(function, args, kwargs)
+        threadTasks = self.threadTasks
+        for thread, tasks in threadTasks.items():
+            func, args, kwargs = tasks.pop(0)
+            apply(func, args, kwargs)
+            if len(tasks) == 0: del threadTasks[thread]
 
     synchronized = ["addTask", "runUntilCurrent"]
 
