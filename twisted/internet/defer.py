@@ -171,6 +171,9 @@ class Deferred:
         If the argument that's passed to me is not a failure.Failure instance,
         it will be embedded in one. If no argument is passed, a failure.Failure
         instance will be created based on the current traceback stack.
+        
+        Passing a string as `fail' is deprecated, and will be punished with
+        a warning message.
         """
         if not isinstance(fail, failure.Failure):
             fail = failure.Failure(fail)
