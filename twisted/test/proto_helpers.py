@@ -37,3 +37,12 @@ class LineSendingProtocol(basic.LineReceiver):
     
     def connectionLost(self, reason):
         self.lostConn = True
+
+class FakeDatagramTransport:
+    noAddr = object()
+
+    def __init__(self):
+        self.written = []
+
+    def write(self, packet, addr=noAddr):
+        self.written.append((packet, addr))
