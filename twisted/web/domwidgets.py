@@ -1,7 +1,8 @@
 # DOMWidgets
 
 from xml.dom.minidom import parseString
-from twisted.python.mvc import View
+from twisted.python.mvc import View, Model
+from twisted.web import domhelpers
 
 document = parseString("<xml />")
 
@@ -17,7 +18,35 @@ class Widget(View):
         self.error = None
         self.children = []
         self.node = None
+        self.id=""
         self.initialize()
+
+    def setId(self, id):
+        """
+        I use the ID to know which attribute in self.model I am responsible for
+        """
+        self.id = id
+
+    def getData(self):
+        """
+        I have a model; however since I am a widget I am only responsible
+        for a portion of that model. This method returns the portion I am
+        responsible for.
+        """
+        # this should be spelled
+        # eval ("self.model" + "." + self.id)
+        #return getattr(self.model, self.id)
+
+        # This is safe because id is only specified in the TEMPLATE, never
+        # in the request submitted by the user.
+        # if a hacker hacks your templates, they could make this do bad
+        # stuff possibly. So secure your filesystem.
+        # of course by the time they hack your filesystem they could just
+        # edit the python source to do anything they want.
+        
+        # we should at least check for and prevent the use of a semicolon
+        assert ';' not in self.id, "Semicolon is not legal in widget ids."
+        return eval ("self.model." + self.id)
 
     def add(self, item):
         self.children.append(item)
@@ -33,9 +62,15 @@ class Widget(View):
         node = self.node.cloneNode(1)
         # Do your part:
         # Prevent infinite recursion
-        node.removeAttribute('id')
-        node.removeAttribute('controller')
-        node.removeAttribute('view')
+        try:
+            node.removeAttribute('model')
+        except KeyError: pass
+        try:
+            node.removeAttribute('controller')
+        except KeyError: pass
+        try:
+            node.removeAttribute('view')
+        except KeyError: pass
         return node
 
     def render(self, request):
@@ -69,10 +104,18 @@ class Widget(View):
 
 class Text(Widget):
     def __init__(self, text):
+        if isinstance(text, Model):
+            Widget.__init__(self, text)
+        else:
+            Widget.__init__(self, Model())
         self.text = text
     
     def render(self, request):
-        return document.createTextNode(self.text)
+        if isinstance(self.text, Model):
+            self.node.appendChild(document.createTextNode(str(self.getData())))
+            return self.node
+        else:            
+            return document.createTextNode(self.text)
 
 class Error(Widget):
     def __init__(self, model, message=""):
@@ -94,7 +137,7 @@ class Input(Widget):
         self['name'] = id
 
     def render(self, request):
-        mVal = getattr(self.model, self.id, None)
+        mVal = self.getData()
         if mVal:
             self['value'] = mVal
         return Widget.render(self, request)
@@ -134,4 +177,33 @@ class Anchor(Widget):
     def render(self, request):
         node = Widget.render(self, request)
         node.appendChild(d.createTextNode(self.text))
+        return node
+
+class List(Widget):
+    """
+    I am a widget which knows how to render a python list.
+    
+    A List should be specified in the template HTML as so:
+    
+    <ul id="blah" view="List">
+        <li id="listItem" view="Text">Foo</li>
+    </ul>
+    """
+    tagName = 'ul'
+    def render(self, request):
+        node = Widget.render(self, request)
+        # xxx with this implementation all elements of the list must use the same view widget
+        listItem = domhelpers.get(node, 'listItem').cloneNode(1)
+        domhelpers.clearNode(node)
+        for itemNum in range(len(self.getData())):
+            # theory: by appending copies of the li node
+            # each node will be handled once we exit from
+            # here because handleNode will then recurse into
+            # the newly appended nodes
+            
+            # Issue; how to spell each subnode's id?
+            # This is the real question that needs to be solved.
+            newNode = listItem.cloneNode(1)
+            domhelpers.superSetAttribute(newNode, 'model', self.id + '[' + str(itemNum) + ']')
+            node.appendChild(newNode)
         return node

@@ -339,6 +339,7 @@ class DefaultHandler(Controller):
         By default, we don't do anything, and we return the default view.
         """
         # support deferreds
+        # refactor to check if implements IWidget
         if hasattr(self.view, 'render'):
             return self.view.render(request)
         else:
@@ -365,7 +366,7 @@ class DOMView(DOMTemplate, View):
         
         controllerName = node.getAttribute('controller')
         viewName = node.getAttribute('view')
-        id = node.getAttribute('id')
+        id = node.getAttribute('model')
         
         defaultHandlerFactory = lambda x: DefaultHandler(x)
         defaultWidgetFactory = lambda x: DefaultWidget(x)

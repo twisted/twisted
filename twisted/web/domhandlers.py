@@ -29,12 +29,14 @@ class InputHandler(Controller):
 
     def handle(self, request):
         data = self.getInput(request)
-        if self.check(data):
-            # success
-            self.handleValid(data)
-        else:
-            # fail
-            self.handleInvalid(data)
+        result = self.check(data)
+        if result is not None:
+            if result:
+                # success
+                self.handleValid(data, request)
+            else:
+                # fail
+                self.handleInvalid(data, request)
         return self.view.render(request)
     
     def check(self, data):
@@ -44,27 +46,40 @@ class InputHandler(Controller):
         """
         raise NotImplementedError
     
-    def handleValid(self, data):
+    def handleValid(self, data, request):
         """
         Take a request and do something with it
         
         -- set the model?
         """
         data = str(data)
-        setattr(self.model, self.id, data)
-        self.model.notify({self.id: data})
+        assert ';' not in self.id, "Semicolon is not legal in handler ids."
+        if data != self.view.getData():
+            exec "self.model." + self.id + " = " + `data`
+#        setattr(self.model, self.id, data)
+            self.model.notify({self.id: data})
 
-    def handleInvalid(self, data):
+    def handleInvalid(self, data, request):
         """
         Do something if the input was invalid?
         """
         self.view.setError("Error!")
+
 
 class SingleValueInputHandler(InputHandler):
     def getInput(self, request):
         input = request.args.get(self.id, None)
         if input:
             return input[0]
+
+class AnythingInputHandler(SingleValueInputHandler):
+    """
+    Handle anything except for None
+    """
+    def check(self, data):
+        if data is not None:
+            return 1
+        return None
 
 class IntHandler(SingleValueInputHandler):
     """
@@ -77,9 +92,21 @@ class IntHandler(SingleValueInputHandler):
         except (TypeError, ValueError):
             return 0
 
-    def handleValid(self, data):
-        InputHandler.handleValid(self, data)
-
-    def handleInvalid(self, data):
+    def handleInvalid(self, data, request):
         if data is not None:
             self.view.setError("%s is not an integer. Please enter an integer." % data)
+
+class FloatHandler(SingleValueInputHandler):
+    """
+    Only allow a single float
+    """
+    def check(self, data):
+        try:
+            float(data)
+            return 1
+        except (TypeError, ValueError):
+            return 0
+
+    def handleInvalid(self, data, request):
+        if data is not None:
+            self.view.setError("%s is not an float. Please enter a float." % data)

@@ -170,7 +170,8 @@ class View:
         A view must be told what it's model is, and may be told what it's
         controller is, but can also look up it's controller if none specified.
         """
-        model.addView(self)
+        if hasattr(model, 'addView'):
+            model.addView(self)
         self.model = model
         self.controller = self.controllerFactory(model)
 
