@@ -156,7 +156,7 @@ make_addr(struct sockaddr_in *addr)
 {
     uint32_t ipaddr;
     PyObject *addrobj, *ret;
-    char buf[3*20+3+1+100]; // for good measure
+    char buf[3*20+3+1+100]; /* for good measure */
 
     ipaddr = ntohl(addr->sin_addr.s_addr);
     /* PyString_FromFormat is not available on python-2.1 */

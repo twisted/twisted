@@ -123,7 +123,7 @@ cDelayedCall_delay(PyObject *self, PyObject *args)
         }
     }
 
-    // self.time += secondsLater
+    /* self.time += secondsLater */
     call->call_time.tv_usec   += (delay_ms * 1000);
     call->call_time.tv_sec    += call->call_time.tv_usec / 1000000;
     call->call_time.tv_usec   = call->call_time.tv_usec % 1000000;
@@ -167,7 +167,7 @@ cDelayedCall_reset(PyObject *self, PyObject *args)
         }
     }
 
-    // self.time = time() + secondsFromNow
+    /* self.time = time() + secondsFromNow */
     gettimeofday(&call->call_time, NULL);
 
     call->call_time.tv_usec   += (delay_ms * 1000);

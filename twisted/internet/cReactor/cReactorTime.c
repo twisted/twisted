@@ -90,7 +90,7 @@ cReactorTime_getDelayedCalls(PyObject *self, PyObject *args)
 
     calls = PyList_New(0);
     if (!calls) {
-        return NULL; // TODO: set exception?
+        return NULL; /* TODO: set exception? */
     }
 
     reactor = (cReactor *)self;
@@ -122,7 +122,7 @@ cReactorTime_cancelCallLater(PyObject *self, PyObject *args)
 
     /* todo: verify that 'self' is really a cReactor object */
     /* todo: verify that 'call' is really a cDelayedCall object */
-    //return cDelayedCall_cancel(call, NULL);
+    /* return cDelayedCall_cancel(call, NULL); */
 
     if (cReactorUtil_RemoveDelayedCall(reactor, call) < 0)
     {
