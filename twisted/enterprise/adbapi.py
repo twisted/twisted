@@ -98,14 +98,15 @@ class ConnectionPool(pb.Referenceable):
             apply(curs.execute, args, kw)
             result = curs.fetchall()
             curs.close()
-        finally:
+            conn.commit()
+        except:
             conn.rollback()
         return result
 
     def _runOperation(self, args, kw):
         """This is used for non-query operations that don't want "fetch*" to be called
         """
-        
+
         conn = self.connect()
         curs = conn.cursor()
 
