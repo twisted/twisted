@@ -300,6 +300,15 @@ class Application(log.Logger, styles.Versioned,
         self.extraConnectors = []
         self.unixPorts = []
         self.udpConnectors = []
+        
+        toRemove = []
+        for t in self.tcpPorts:
+            port, factory, backlog, interface = t
+            if isinstance(port, types.StringTypes):
+                self.unixPorts.append((port, factory, backlog))
+                toRemove.append(t)
+        for t in toRemove:
+            self.tcpPorts.remove(t)
 
     def upgradeToVersion10(self):
         # persistenceVersion was 10, but this method did not exist
