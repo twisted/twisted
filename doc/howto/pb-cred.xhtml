@@ -26,7 +26,7 @@ set of people or programs.</p>
 where those users should not be allowed to interfere with each other, you
 need to think about authentication. Many services use the idea of an
 <q>account</q>, and rely upon fact that each user has access to only one
-account. Twisted uses a system called <a href="newcred.xhtml">cred</a> to
+account. Twisted uses a system called <a href="cred.xhtml">cred</a> to
 handle authentication issues, and Perspective Broker has code to make it
 easy to implement the most common use cases.</p>
 
@@ -366,7 +366,7 @@ href="#viewable">below</a>.</p>
 
 <h2>Avatars and Perspectives</h2>
 
-<p>In Twisted's <a href="newcred.xhtml">cred</a> system, an <q>Avatar</q> is
+<p>In Twisted's <a href="cred.xhtml">cred</a> system, an <q>Avatar</q> is
 an object that lives on the <q>server</q> side (defined here as the side
 farthest from the human who is trying to get something done) which lets the
 remote user get something done. The avatar isn't really a particular class,
@@ -402,7 +402,7 @@ provides and controls (i.e. <q>brokers</q>) access to Perspectives.</p>
 
 <p>Once upon a time, these local-representative objects were actually called
 <code>pb.Perspective</code>. But this has changed with the advent of
-newcred, and now the more generic term for a local representative object is
+the rewritten cred system, and now the more generic term for a local representative object is
 an Avatar. But you will still see reference to <q>Perspective</q> in the
 code, the docs, and the module names<span class="footnote">We could just go
 ahead and rename Perspective Broker to be Avatar Broker, but 1) that would
@@ -414,7 +414,7 @@ would then have to be renamed twisted.alphabetsoup, and then the whole
 food-pun thing would start all over again.</span>. Just remember that
 perspectives and avatars are basically the same thing. </p>
 
-<p>Despite all we've been <a href="newcred.xhtml">telling you</a> about how
+<p>Despite all we've been <a href="cred.xhtml">telling you</a> about how
 Avatars are more of a concept than an actual class, the base class from
 which you can create your server-side avatar-ish objects is, in fact, named
 <code>pb.Avatar</code><span class="footnote">The avatar-ish class is named
@@ -445,7 +445,7 @@ them, or returning objects which can be asked (remotely) to provide
 them.</p>
 
 <p>The second half is how the user gets a <code>pb.RemoteReference</code> to
-your Avatar. As explained <a href="newcred.xhtml">elsewhere</a>, Avatars are
+your Avatar. As explained <a href="cred.xhtml">elsewhere</a>, Avatars are
 obtained from a Realm. The Realm doesn't deal with authentication at all
 (usernames, passwords, public keys, challenge-response systems, retinal
 scanners, real-time DNA sequencers, etc). It simply takes an <q>avatarID</q>
