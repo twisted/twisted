@@ -46,7 +46,7 @@ class FlowTests(unittest.TestCase):
         import operator
         b = Flow()
         b.addBranch(simpleIterator)
-        b.addAccumulator(operator.add, 0, printResult)
+        b.addMerge(operator.add, 0)
         b.addFunction(printResult)
       
         c = Flow()
@@ -84,3 +84,7 @@ class FlowTests(unittest.TestCase):
         f.addBranch(FlowQueryIterator(pool,sql),onFinish=printDone)
         f.addFunction(printResult)
         f.execute()
+
+if '__main__' == __name__:
+    test = FlowTests()
+    test.skip_testFlow() 

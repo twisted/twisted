@@ -62,6 +62,15 @@ class Flow:
             self.stageTail = link
         return self
 
+    def execute(self, data = None):
+        '''
+           This executes the current flow, given empty
+           starting data and the default initial state.
+        '''
+        if self.stageHead:
+            stack = FlowStack(self.stageHead, data, self.waitInterval)
+            stack.execute()
+
     def addFunction(self, callable, stop=None):
         return self.append(FlowFunction(callable, stop))
 
@@ -71,28 +80,19 @@ class Flow:
     def addContext(self, onFlush = None):
         return self.append(FlowContext(onFlush))
 
-    def addMerge(self, accum, start = None, bucket = None):
-        stage = FlowMerge(accum, start, bucket)
+    def addMerge(self, func, start = None, bucket = None, reduce = 1):
+        stage = FlowMerge(func, start, bucket, reduce)
         return self.append(stage)
 
     def addMergeToList(self, bucket=None):
-        return self.addMerge(
-                   accum=lambda lst, val: lst.append(val) or lst,
-                   start=list(), bucket=bucket)
+        return self.append(FlowMerge(self.addMerge(bucket=bucket)))
+
     def addChain(self, *args):
         return self.append(FlowChain(args))
     
     def addDiscard(self):
         return self.append(FlowStage())
     
-    def execute(self, data = None):
-        '''
-           This executes the current flow, given empty
-           starting data and the default initial state.
-        '''
-        if self.stageHead:
-            stack = FlowStack(self.stageHead, data, self.waitInterval)
-            stack.execute()
 
 class FlowStack:
     '''
@@ -329,34 +329,66 @@ class FlowBranch(FlowStage):
 
 class FlowMerge(FlowStage):
     '''
-        the opposite of a FlowBranch, this takes multiple calls
-        and converges them into a single call; this implements
-        many-to-one behavior;  for the accumulator to work, it
-        requires a FlowContext be higher up the call stack
+        takes multiple calls and aggregates them; the constructor for
+        this merge takes several arguments:
+
+            start      the starting value, if this is callable, it 
+                       will be executed to produce a starting value
+
+            func       the function or operator which will merge the 
+                       output; the function has two paramater, first
+                       is the current accumulated value, and second is
+                       the value passed via the stream; the output 
+                       depends on the following parameter
+
+            reduce     If this boolean value is true, then the result
+                       of the function will be the new aggregate value;
+                       in this way most operators can be used.  Clearly,
+                       then, if reduce is true, the merge will pass one
+                       and only one value to the next stage
+
+                       Otherwise, the argument is expected to be a tuple;
+                       first is the new accumulated value and the second 
+                       is a value to be passed on to the next stage.  
+                       To handle mutable reductions, if the result is None
+                       then the accumulated value won't be replaced and
+                       a result won't be passed on; this works if the 
+                       function is mutating the accumulated value
+
+            bucket     This is the name of the bucket to store the
+                       accumulated value in.  If you leave this blank,
+                       then a unique bucket name will be used.
+
+        Since reducing to a single list is often useful, the default
+        parameters of this function do exactly that.
+
+        Note that both of these use the outer-most Context for
+        their merging; thus it could encompass nested iterators, 
+        etc.  Introducing an intermediate Context can be used to
+        limit the merging to one Branch.
     '''
-    def __init__(self, accum, start = None, bucket = None):
+    def __init__(self, func = list.append, start = lambda: [], 
+                       bucket = None, reduce = 0):
         if not bucket: bucket = id(self)
-        self.bucket   = str(bucket)
-        self.start    = start
-        self.accum    = accum
+        self.bucket    = str(bucket)
+        self.start     = start
+        self.func      = func
+        self.reduce    = reduce
     #
     def __call__(self, flow, data):
-        '''
-            executes the accum function
-        '''
         cntx = flow.context
-        if self.bucket in cntx:
-             acc = cntx[self.bucket]
-        else: 
+        if not self.bucket in cntx:
+             start = self.start
+             if callable(start): start = start()
+             cntx[self.bucket] = start
              cntx.addFlush(flow.nextLinkItem(), self.bucket)
-             acc = self.start
-             if callable(acc): acc = acc()
-        acc = self.accum(acc, data)
-        cntx[self.bucket] = acc
-
-    def onFinish(self, flow, data): 
-        pass
-
+        curr = self.func(cntx[self.bucket], data)
+        if self.reduce:
+            cntx[self.bucket] = curr
+        else:
+            if curr:
+                 cntx[self.bucket] = curr[0]
+                 flow.push(curr[1])
 
 class FlowLinkItem:
     '''
