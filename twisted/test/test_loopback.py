@@ -25,6 +25,8 @@ from twisted.protocols import basic, loopback
 from twisted.internet import defer
 
 class SimpleProtocol(basic.LineReceiver):
+    connLost = None
+
     def __init__(self):
         self.conn = defer.Deferred()
         self.lines = []
@@ -34,6 +36,9 @@ class SimpleProtocol(basic.LineReceiver):
     
     def lineReceived(self, line):
         self.lines.append(line)
+    
+    def connectionLost(self, reason):
+        self.connLost = 1
 
 class DoomProtocol(SimpleProtocol):
     i = 0
@@ -57,6 +62,8 @@ class LoopbackTestCase(unittest.TestCase):
 
         self.loopbackFunc.im_func(s, c)
         self.assertEquals(c.lines, ["THIS IS LINE ONE!"])
+        self.assertEquals(s.connLost, 1)
+        self.assertEquals(c.connLost, 1)
     
     def testSneakyHiddenDoom(self):
         s = DoomProtocol()
@@ -69,6 +76,8 @@ class LoopbackTestCase(unittest.TestCase):
         self.loopbackFunc.im_func(s, c)
         self.assertEquals(s.lines, ['Hello 1', 'Hello 2', 'Hello 3'])
         self.assertEquals(c.lines, ['DOOM LINE', 'Hello 1', 'Hello 2', 'Hello 3'])
+        self.assertEquals(s.connLost, 1)
+        self.assertEquals(c.connLost, 1)
 
 class LoopbackTCPTestCase(LoopbackTestCase):
     loopbackFunc = loopback.loopbackTCP
