@@ -102,7 +102,7 @@ class Connection(tcp.Connection):
             self.readBlockedOnWrite = 1
             self.startWriting()
             return
-        except (SSL.ZeroReturnError, SSL.SysCallError):
+        except SSL.Error:
             return main.CONNECTION_LOST
 
     def doWrite(self):
@@ -122,7 +122,7 @@ class Connection(tcp.Connection):
         except SSL.WantReadError:
             self.writeBlockedOnRead = 1
             return 0
-        except (SSL.ZeroReturnError, SSL.SysCallError):
+        except SSL.Error:
             return main.CONNECTION_LOST
 
     def _closeSocket(self):
