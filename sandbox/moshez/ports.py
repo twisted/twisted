@@ -146,7 +146,7 @@ def parse(description, factory, default=None):
     backlog (how many clients to keep in the backlog).
     """
     args, kw = _parse(description)
-    if len(args)==1 and not kw:
+    if not args or (len(args)==1 and not kw):
         args[0:0] = [default or 'tcp']
     return (args[0].upper(),)+_funcs[args[0]](factory, *args[1:], **kw)
 
@@ -199,6 +199,7 @@ def _test():
     print parse("ssl:443:privateKey=mykey.pem:certKey=cert.pem", f)
     print parse(r"unix:foo\:bar\=baz\:qux\\", f)
     print parse(r"unix:address=foo=bar", f)
+    print parse(r"port=80", f)
     listen("unix:lala", f)
     s = service("unix:lolo", f)
     s.startService()
