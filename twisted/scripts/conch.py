@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.6 2002/11/10 02:58:04 z3p Exp $
+# $Id: conch.py,v 1.7 2002/11/10 03:03:51 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -91,10 +91,7 @@ def run():
     except:
         old = None
     try:
-        import hotshot
-        p = hotshot.Profile('hotshot.log')
-        p.runcall(reactor.run)
-        p.close()
+        reactor.run()
     finally:
         if old:
             tty.tcsetattr(fd, tty.TCSADRAIN, old)
