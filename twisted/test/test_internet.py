@@ -135,6 +135,91 @@ class InterfaceTestCase(unittest.TestCase):
         reactor.iterate(5)
         self.assert_( abs(time.time() - start - 0.5) < 0.5 )
 
+class DelayedTestCase(unittest.TestCase):
+    def setUp(self):
+        self.finished = 0
+        self.counter = 0
+        self.timers = {}
+        # ick. Sometimes there are magic timers already running:
+        # popsicle.Freezer.tick . Kill off all such timers now so they won't
+        # interfere with the test. Of course, this kind of requires that
+        # getDelayedCalls already works, so certain failure modes won't be
+        # noticed.
+        if not hasattr(reactor, "getDelayedCalls"):
+            return
+        for t in reactor.getDelayedCalls():
+            t.cancel()
+        reactor.iterate() # flush timers
+    def tearDown(self):
+        for t in self.timers.values():
+            t.cancel()
+
+    def checkTimers(self):
+        l1 = self.timers.values()
+        l1.sort()
+        l2 = list(reactor.getDelayedCalls())
+        l2.sort()
+
+        # getDelayedCalls makes no promises about the order of the
+        # delayedCalls it returns, but they should be the same objects as
+        # we've recorded in self.timers. We sort both lists to make them
+        # easier to compare.
+
+        if l1 != l2:
+            print "\nself.timers:"
+            for i in l1: print " %s" % i
+            print "getDelayedCalls():"
+            for i in l2: print " %s" % i
+            self.finished = 1
+            self.fail("self.timers != reactor.getDelayedCalls()")
+
+    def callback(self, tag):
+        del self.timers[tag]
+        self.checkTimers()
+
+    def addCallback(self, tag):
+        self.callback(tag)
+        self.addTimer(15, self.callback)
+
+    def done(self, tag):
+        self.finished = 1
+        self.callback(tag)
+
+    def failsafe(self, tag):
+        self.finished = 1
+        self.fail("timeout")
+        
+    def addTimer(self, when, callback):
+        self.timers[self.counter] = reactor.callLater(when * 0.01, callback,
+                                                      self.counter)
+        self.counter += 1
+        self.checkTimers()
+        
+    def testGetDelayedCalls(self):
+        if not hasattr(reactor, "getDelayedCalls"):
+            return
+        # This is not a race because we don't do anything which might call
+        # the reactor until we have all the timers set up. If we did, this
+        # test might fail on slow systems.
+        self.checkTimers()
+        self.addTimer(35, self.done)
+        self.addTimer(20, self.callback)
+        self.addTimer(30, self.callback)
+        which = self.counter
+        self.addTimer(30, self.callback)
+        self.addTimer(25, self.addCallback)
+        self.addTimer(25, self.callback)
+
+        self.addTimer(50, self.failsafe)
+        
+        self.timers[which].cancel()
+        del self.timers[which]
+        self.checkTimers()
+
+        while not self.finished:
+            reactor.iterate(0.01)
+        self.checkTimers()
+        
 
 class Counter:
     index = 0
@@ -282,3 +367,6 @@ class MultiServiceTestCase(unittest.TestCase):
     def tearDown(self):
         log.flushErrors (StopError)
         self.failUnless(self.callbackRan, "Callback was never run.")
+
+if __name__ == '__main__':
+    unittest.main()
