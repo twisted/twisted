@@ -497,7 +497,7 @@ class ConnectionLosingProtocol(protocol.Protocol):
 
 class ProperlyCloseFilesTestCase(unittest.TestCase):
 
-    numberRounds = 2048
+    numberRounds = 512
     
     def setUp(self):
         f = protocol.ServerFactory()
@@ -507,8 +507,10 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
         f = protocol.ClientFactory()
         f.protocol = ConnectionLosingProtocol
         f.protocol.master = self
-        self.connector = (lambda p=self.listener.getHost()[2]:
-            reactor.connectTCP('localhost', p, f))
+        
+        def connector():
+            p = self.listener.getHost()[2]
+            return reactor.connectTCP('0.0.0.0', p, f)
 
         self.totalConnections = 0
         try:

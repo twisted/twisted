@@ -26,7 +26,7 @@ import os
 import test_tcp
 
 
-class ProperlyCloseFilesTestCase(test_tcp.ProperlyCloseFilesTestCase):
+class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
     
     def setUp(self):
         certPath = os.path.join(os.path.split(test_tcp.__file__)[0], "server.pem")
@@ -39,9 +39,14 @@ class ProperlyCloseFilesTestCase(test_tcp.ProperlyCloseFilesTestCase):
         f = protocol.ClientFactory()
         f.protocol = test_tcp.ConnectionLosingProtocol
         f.protocol.master = self
-        self.connector = (lambda p=self.listener.getHost()[2]:
-            reactor.connectSSL('localhost', p, f, ssl.ClientContextFactory()))
         
+        L = []
+        def connector():
+            p = self.listener.getHost()[2]
+            ctx = ssl.ClientContextFactory()
+            return reactor.connectSSL('0.0.0.0', p, f, ctx)
+        self.connector = connector
+
         self.totalConnections = 0
 
 if not OpenSSL:
