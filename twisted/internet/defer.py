@@ -447,16 +447,19 @@ class DeferredList(Deferred):
         if len(deferredList) == 0 and not fireOnOneCallback:
             self.callback(self.resultList)
 
+        # These flags need to be set *before* attaching callbacks to the
+        # deferreds, because the callbacks use these flags, and will run
+        # synchronously if any of the deferreds are already fired.
+        self.fireOnOneCallback = fireOnOneCallback
+        self.fireOnOneErrback = fireOnOneErrback
+        self.consumeErrors = consumeErrors
+
         index = 0
         for deferred in deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
             index = index + 1
-
-        self.fireOnOneCallback = fireOnOneCallback
-        self.fireOnOneErrback = fireOnOneErrback
-        self.consumeErrors = consumeErrors
 
     def addDeferred(self, deferred):
         """DEPRECATED"""

@@ -188,6 +188,37 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(1, len(result))
         self.failUnlessEqual('Bang', result[0][0][1].value.args[0])
 
+    def testDeferredListFireOnOneErrorWithAlreadyFiredDeferreds(self):
+        # Create some deferreds, and errback one
+        d1 = defer.Deferred()
+        d2 = defer.Deferred()
+        d1.errback(GenericError('Bang'))
+        
+        # *Then* build the DeferredList, with fireOnOneErrback=True
+        dl = defer.DeferredList([d1, d2], fireOnOneErrback=True)
+        result = []
+        dl.addErrback(result.append)
+        self.failUnlessEqual(1, len(result))
+
+        d1.addErrback(lambda e: None)  # Swallow error
+
+    def testDeferredListWithAlreadyFiredDeferreds(self):
+        # Create some deferreds, and err one, call the other
+        d1 = defer.Deferred()
+        d2 = defer.Deferred()
+        d1.errback(GenericError('Bang'))
+        d2.callback(2)
+        
+        # *Then* build the DeferredList
+        dl = defer.DeferredList([d1, d2])
+
+        result = []
+        dl.addCallback(result.append)
+
+        self.failUnlessEqual(1, len(result))
+
+        d1.addErrback(lambda e: None)  # Swallow error
+
     def testTimeOut(self):
         d = defer.Deferred()
         d.setTimeout(1.0)
