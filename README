@@ -16,35 +16,11 @@ bin/conch/conch.
 Documentation resides in the doc/ directory, with a similar layout to
 bin/.
 
-== dist/ ==
-The dist/ directory contains support for the package mechanism.
-
-== twisted/ ==
-twisted/, of course, contains the code. Each package that represents a
-single project (e.g., the toplevel 'twisted', and 'twisted.web', etc,
-but not 'twisted.python', since that's a part of core) probably has
-zpkgtools support files in it.  These are as follows.
-
-DEPENDENCIES.cfg 
-  - a simple list of the dependencies of the package by resource-name.
-PUBLICATION.cfg
-  - Project meta-data
-PACKAGE.cfg
-  - Specifies what to include in this package.
-
-See http://zope.org/Members/fdrake/zpkgtools/ for more information
-about these files, specifically the section on metadata.
-
-Notice that there is another .cfg file strewn about the repository:
-EXTENSIONS.cfg. This is a Twisted-specific extension to zpkgtools that
-facilates very flexible conditional compilation of extension
-modules. See dist/twistedzpkg/README for details.
-
+== twisted/ == twisted/, of course, contains the code. Each package
+that represents a single project (e.g., the toplevel 'twisted', and
+'twisted.web', etc, but not 'twisted.python', since that's a part of
+core) has a 'topfiles' directory inside of it.
 
 == info ==
-zpkgtools is what we're using to create upstream packages now;
-Information on it can be found at
-http://zope.org/Members/fdrake/zpkgtools/
-
 Information about the Twisted split can be found at
 http://twistedmatrix.com/products/splitfaq
