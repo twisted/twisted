@@ -91,30 +91,5 @@ reactor.connectUDP("www.example.com", 9999, Echo())
 reactor.run()
     </pre>
 
-    <h2>Multicast UDP</h2>
-
-    <p> In order to communicate over multicast-udp, very little is required.
-    We don't use connectUDP, because that restricts the communication to only
-    go to and from one client.</p>
-
-    <p> Instead what we do, is listen on both ends. On one side we use a known
-    port and on the other side, we just use port '0', 
-    which means to allocate a port for the purposes of communication.</p>
-
-    <p> This is a simple example that will communicate with every Echo server
-    running on port 9999 (such as the one in the example above).</p>
-
-    <pre class="python">
-from twisted.internet.protocol import DatagramProtocol
-from twisted.internet import reactor
-
-class Client(DatagramProtocol):
-    def datagramReceived(self, data, host):
-        print 'Response Recieved:', data.strip()
-        print 'From Host:', host
-
-reactor.listenUDP(0, Client()).write('broadcast\n', ('224.0.0.1', 9999))
-reactor.run()
-    </pre>
   </body>
 </html>
