@@ -78,6 +78,7 @@ class DirTestCase(unittest.TestCase):
         v = i.next()
         for _ in range(100):
             d.seek(l)
+            l = d.tell()
             self.assertEquals(i.next(), v)
         self.failIfEquals(v, i.next())
 
