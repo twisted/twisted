@@ -264,6 +264,18 @@ class DeferredTestCase(unittest.TestCase):
         r = unittest.deferredError(defer.maybeDeferred(lambda: d))
         r.trap(RuntimeError)
 
+    def testAlreadyCalled(self):
+        d = defer.Deferred()
+        d.addCallback(self._callback)
+        d.callback("hello")
+        self.failUnlessRaises(defer.AlreadyCalledError, d.callback, "twice")
+
+        d = defer.Deferred()
+        d.addCallback(self._callback)
+        d.callback("hello")
+        self.failUnlessRaises(defer.AlreadyCalledError,
+                              d.errback, failure.Failure(RuntimeError()))
+
 
 class LogTestCase(unittest.TestCase):
 
