@@ -36,7 +36,7 @@ class WController(mvc.Controller, resource.Resource):
     
     def setUp(self, request):
         """
-        @param request: A L{twisted.web.server.Request}.
+        @type request: L{twisted.web.server.Request}
         """
         pass
 

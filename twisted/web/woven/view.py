@@ -243,5 +243,8 @@ class WView(template.DOMTemplate):
 
 
 def registerViewForModel(view, model):
+    """
+    Registers `view' as an adapter of `model' for L{mvc.IView}.
+    """
     components.registerAdapter(view, model, mvc.IView)
 

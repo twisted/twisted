@@ -52,7 +52,7 @@ class InputHandler(Controller):
 
     def getInput(self, request):
         """
-        Return the data associated with this handler from the request, if any
+        Return the data associated with this handler from the request, if any.
         """
         input = request.args.get(self.submodel, None)
         if input:
