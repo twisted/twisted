@@ -315,9 +315,8 @@ class SFTPServerForUnixConchUser:
         }
 
     def _absPath(self, path):
-        uid, gid = self.avatar.getUserGroupId()
-        home = pwd.getpwuid(uid)[5]
-        return os.path.realpath(os.path.abspath(os.path.join(home, path)))
+        home = self.avatar.getHomeDir()
+        return os.path.abspath(os.path.join(home, path))
 
     def gotVersion(self, otherVersion, extData):
         return {}
@@ -359,7 +358,7 @@ class SFTPServerForUnixConchUser:
         self.avatar._runAsUser(self._setAttrs, path, attrs)
 
     def readLink(self, path):
-        #path = self._absPath(path)
+        path = self._absPath(path)
         return self.avatar._runAsUser(os.readlink, path)
 
     def makeLink(self, linkPath, targetPath):
@@ -368,7 +367,7 @@ class SFTPServerForUnixConchUser:
         return self.avatar._runAsUser(os.symlink, targetPath, linkPath)
 
     def realPath(self, path):
-        return self._absPath(path)
+        return os.path.realpath(self._absPath(path))
 
     def extendedRequest(self, extName, extData):
         raise NotImplementedError

@@ -27,13 +27,13 @@ class FileTransferTestAvatar(avatar.ConchUser):
             r = func(*args, **kw)
         return r
 
+    def getHomeDir(self):
+        return os.path.join(os.getcwd(), 'sftp_test')
+
 class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
     def gotVersion(self, version, otherExt):
         return {'conchTest' : 'ext data'}
-
-    def _absPath(self, path):
-        return os.path.realpath(os.path.abspath(os.path.join(os.getcwd(), path)))
 
     def extendedRequest(self, extName, extData):
         if extName == 'testExtendedRequest':
@@ -65,17 +65,20 @@ class TestOurServerOurClient(unittest.TestCase):
 
         self._emptyBuffers()
 
-        file('testfile1','w').write('a'*10+'b'*10)
-        file('testRemoveFile', 'w').write('a')
-        file('testRenameFile', 'w').write('a')
+        os.mkdir('sftp_test')
+
+        file('sftp_test/testfile1','w').write('a'*10+'b'*10)
+        file('sftp_test/testRemoveFile', 'w').write('a')
+        file('sftp_test/testRenameFile', 'w').write('a')
 
     def tearDown(self):
         for f in ['testfile1', 'testRemoveFile', 'testRenameFile', 
                   'testRenamedFile', 'testLink']:
             try:
-                os.remove(f)
+                os.remove('sftp_test/' + f)
             except OSError:
                 pass
+        os.rmdir('sftp_test')
     
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
@@ -153,8 +156,8 @@ class TestOurServerOurClient(unittest.TestCase):
                     break
             files.append(f[0])
         files.sort()
-        self.failUnlessEqual(files, ['test.log', 'testRemoveFile', 
-                                    'testRenameFile', 'testfile1']) 
+        self.failUnlessEqual(files, ['testRemoveFile', 'testRenameFile', 
+                'testfile1']) 
         d = openDir.close()
         result = self._waitWithBuffer(d)
 
@@ -166,9 +169,9 @@ class TestOurServerOurClient(unittest.TestCase):
         attrs2 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
         self.failUnlessEqual(attrs, attrs2)
         link = self._waitWithBuffer(self.client.readLink('testLink'))
-        self.failUnlessEqual(link, os.path.join(os.getcwd(), 'testfile1'))
+        self.failUnlessEqual(link, os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
         realPath = self._waitWithBuffer(self.client.realPath('testLink'))
-        self.failUnlessEqual(realPath, os.path.join(os.getcwd(), 'testfile1'))
+        self.failUnlessEqual(realPath, os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
 
     def testExtendedRequest(self):
         d = self.client.extendedRequest('testExtendedRequest', 'foo')
