@@ -25,11 +25,12 @@ identical.
 
 """
 
+import new
+
 from twisted.python.reflect import namedModule, namedClass, namedObject, fullFuncName, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference, _Defer
 
 try:
-    from new import instance
     from new import instancemethod
 except:
     from org.python.core import PyMethod
@@ -41,6 +42,17 @@ import copy_reg
 #for some reason, __builtins__ == __builtin__.__dict__ in the context where this is used.
 #Can someone tell me why?
 import __builtin__ 
+
+
+def instance(klass, d):
+    if isinstance(klass, types.ClassType):
+        return new.instance(klass, d)
+    elif isinstance(klass, type):
+        o = object.__new__(klass)
+        o.__dict__ = d
+        return o
+    else:
+        raise TypeError, "%s is not a class" % klass
 
 
 def getValueElement(node):
@@ -332,6 +344,12 @@ class DOMJellier:
                     n2 = self.jellyToNode(v)
                     node.appendChild(n)
                     node.appendChild(n2)
+            elif copy_reg.dispatch_table.has_key(objType):
+                unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
+                node = self.document.createElement("copyreg")
+                # node.setAttribute("type", objType.__name__)
+                node.setAttribute("loadfunc", fullFuncName(unpickleFunc))
+                node.appendChild(self.jellyToNode(state))
             elif objType is types.InstanceType or hasattr(objType, "__module__"):
                 className = qual(obj.__class__)
                 node.tagName = "instance"
@@ -345,12 +363,6 @@ class DOMJellier:
                         state = obj.__dict__
                     n = self.jellyToNode(state)
                     node.appendChild(n)
-            elif copy_reg.dispatch_table.has_key(objType):
-                unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
-                node = self.document.createElement("copyreg")
-                # node.setAttribute("type", objType.__name__)
-                node.setAttribute("loadfunc", fullFuncName(unpickleFunc))
-                node.appendChild(self.jellyToNode(state))
             else:
                 raise "Unsupported type: %s" % objType.__name__
         return node
