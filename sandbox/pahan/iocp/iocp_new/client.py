@@ -7,6 +7,7 @@ from twisted.python import failure
 
 from abstract import ConnectedSocket
 from ops import ConnectExOp
+import address
 
 class ClientSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf):
@@ -96,7 +97,7 @@ class SocketConnector(BaseConnector):
             del self.sock_transport
 
     def getDestination(self):
-        address.getFull(self.addr, self.af, self.type, self.proto)
+        return address.getFull(self.addr, self.af, self.type, self.proto)
 
     def loseConnection(self):
         self.sock_transport.loseConnection()

@@ -14,4 +14,3 @@ def getHost(addr, family, type, protocol = 0):
     """return something to pose as hostname"""
     if family == AF_INET:
         return addr[0]
-
