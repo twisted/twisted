@@ -135,7 +135,12 @@ class OSCARUser:
             elif k == 5: # unknown
                 pass
             elif k == 6: # icq online status
-                self.icqStatus = int(v)
+                if v[2] == '\x00':
+                    self.icqStatus = 'online'
+                elif v[2] == '\x01':
+                    self.icqStatus = 'away'
+                else:
+                    self.icqStatus = 'unknown'
             elif k == 10: # icq ip address
                 self.icqIPaddy = socket.inet_ntoa(v)
             elif k == 12: # icq random stuff
@@ -703,6 +708,8 @@ class BOSConnection(SNACBased):
             elif itemType == 3: # deny
                 deny.append(name)
             elif itemType == 4: # permit deny info
+                if not tlvs.has_key(0xcb):
+                    continue # this happens with ICQ
                 permitMode = {1:'permitall',2:'denyall',3:'permitsome',4:'denysome',5:'permitbuddies'}[ord(tlvs[0xca])]
                 visibility = {'\xff\xff\xff\xff':'all','\x00\x00\x00\x04':'notaim'}[tlvs[0xcb]]
             elif itemType == 5: # unknown (perhaps idle data)?
@@ -1109,7 +1116,7 @@ class OscarAuthenticator(OscarConnection):
         self.username=username
         self.password=password
         self.deferred=deferred
-        self.icq=0 # icq mode is disabled
+        self.icq=icq # icq mode is disabled
         #if icq and self.BOSClass==BOSConnection:
         #    self.BOSClass=ICQConnection
 
@@ -1125,7 +1132,7 @@ class OscarAuthenticator(OscarConnection):
             self.sendFLAP('\000\000\000\001'+
                           TLV(0x01,self.username)+
                           TLV(0x02,encpass)+
-                          TLV(0x03,'ICQ Inc. - Product of ICQ (TM).2001b.5.15.1.3638.85')+
+                          TLV(0x03,'ICQ Inc. - Product of ICQ (TM).2001b.5.18.1.3659.85')+
                           TLV(0x16,"\x01\x0a")+
                           TLV(0x17,"\x00\x05")+
                           TLV(0x18,"\x00\x12")+
@@ -1168,7 +1175,8 @@ class OscarAuthenticator(OscarConnection):
             c = protocol.ClientCreator(reactor, self.BOSClass, self.username, self.cookie)
             d = c.connectTCP(server, int(port))
             d.addErrback(lambda x: log.msg("Connection Failed! Reason: %s" % x))
-            d.chainDeferred(self.deferred)
+            if self.deferred:
+                d.chainDeferred(self.deferred)
             self.disconnect()
         elif tlvs.has_key(8):
             errorcode=tlvs[8]
