@@ -691,6 +691,10 @@ class InboundByteStream(unittest.TestCase):
         self.check(-1, self.INT(-1))
         self.check(-127, self.INT(-127))
 
+    def testLong(self):
+        self.check(258L, "\x02\x85\x01\x02") # TODO: 0x85 for LONGINT??
+        self.check(-258L, "\x02\x86\x01\x02") # TODO: 0x85 for LONGINT??
+
     def testString(self):
         self.check("", "\x82")
         self.check("", "\x00\x82")

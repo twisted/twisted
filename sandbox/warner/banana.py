@@ -31,18 +31,54 @@ def b1282int(st):
         place = place + 1
     return i
 
-def emitLongint(token, num, stream):
-    # TODO: this is a placeholder format, here until I can figure out an
-    # efficient way to convert LongInts to base-256
+# long_to_bytes and bytes_to_long taken from PyCrypto: Crypto/Util/number.py
 
-    s = str(num)
-    # first the length
-    int2b128(len(s), stream)
-    stream(token)
-    stream(s)
+def long_to_bytes(n, blocksize=0):
+    """long_to_bytes(n:long, blocksize:int) : string
+    Convert a long integer to a byte string.
 
-def consumeLongint(st):
-    return int(st)
+    If optional blocksize is given and greater than zero, pad the front of
+    the byte string with binary zeros so that the length is a multiple of
+    blocksize.
+    """
+    # after much testing, this algorithm was deemed to be the fastest
+    s = ''
+    n = long(n)
+    pack = struct.pack
+    while n > 0:
+        s = pack('>I', n & 0xffffffffL) + s
+        n = n >> 32
+    # strip off leading zeros
+    for i in range(len(s)):
+        if s[i] != '\000':
+            break
+    else:
+        # only happens when n == 0
+        s = '\000'
+        i = 0
+    s = s[i:]
+    # add back some pad bytes. this could be done more efficiently w.r.t. the
+    # de-padding being done above, but sigh...
+    if blocksize > 0 and len(s) % blocksize:
+        s = (blocksize - len(s) % blocksize) * '\000' + s
+    return s
+
+def bytes_to_long(s):
+    """bytes_to_long(string) : long
+    Convert a byte string to a long integer.
+
+    This is (essentially) the inverse of long_to_bytes().
+    """
+    acc = 0L
+    unpack = struct.unpack
+    length = len(s)
+    if length % 4:
+        extra = (4 - length % 4)
+        s = '\000' * extra + s
+        length = length + extra
+    for i in range(0, length, 4):
+        acc = (acc << 32) + unpack('>I', s[i:i+4])[0]
+    return acc
 
 HIGH_BIT_SET = chr(0x80)
 
@@ -139,12 +175,18 @@ class Banana(protocol.Protocol):
         write = self.transport.write
         if isinstance(obj, types.IntType) or isinstance(obj, types.LongType):
             if obj >= 2**31:
-                emitLongint(LONGINT, obj, write)
+                s = long_to_bytes(obj)
+                int2b128(len(s), write)
+                write(LONGINT)
+                write(s)
             elif obj >= 0:
                 int2b128(obj, write)
                 write(INT)
             elif -obj > 2**31: # NEG is [-2**31, 0)
-                emitLongint(LONGNEG, -obj, write)
+                s = long_to_bytes(-obj)
+                int2b128(len(s), write)
+                write(LONGNEG)
+                write(s)
             else:
                 int2b128(-obj, write)
                 write(NEG)
@@ -310,6 +352,8 @@ class Banana(protocol.Protocol):
                     except BananaError:
                         raise
                     except:
+                        # TODO: I think BananaError2 can go away, since we
+                        # can modify a Failure and then re-raise it
                         e = BananaError2(Failure(),
                                          self.describe() + "<checkToken>")
                         raise e
@@ -391,7 +435,7 @@ class Banana(protocol.Protocol):
                 if len(rest) >= strlen:
                     # the whole number is available
                     buffer = rest[strlen:]
-                    obj = long(consumeLongint(rest[:strlen]))
+                    obj = bytes_to_long(rest[:strlen])
                     if typebyte == LONGNEG:
                         obj = -obj
                     # although it might be rejected

@@ -170,12 +170,10 @@ being used, and the body is empty.</p>
   <p><code>0x8C: LONGNEG: [len-LONGNEG-bytes]</code></p>
 
   <p>These are processed like STRING tokens, but the bytes form a base-256
-  encoded number, most-significant-byte first (TODO: encoding big-endian is
-  a nuisance unless you have access to the internal format, while encoding
-  little-endian involves a lot of math. What is the most efficient way to do
-  the serialization?). The size is (barely) limited by the length field, so
-  the nominal range is [0, 2**(2**(64*7)-1)-1), but the receiver can impose
-  whatever length limit they wish.</p>
+  encoded number, most-significant-byte first (note that this may require
+  several passes and some intermediate storage). The size is (barely) limited
+  by the length field, so the theoretical range is [0, 2**(2**(64*7)-1)-1),
+  but the receiver can impose whatever length limit they wish.</p>
 
   <p>LONGNEG is handled exactly like LONGINT but the number is negated
   first.</p>
