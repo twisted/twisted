@@ -53,8 +53,7 @@
 
     <h2>General Purpose Reactors</h2>
 
-    <a name="select" />
-    <h3>Select()-based Reactor</h3>
+    <h3><a name="select">Select()-based Reactor</a></h3>
 
     <p>The SelectReactor is the default reactor.</p>
 
@@ -69,8 +68,8 @@ from twisted.internet import default
 default.install()
 </pre>
 
-    <a name="poll" />
-    <h3>Poll()-based Reactor</h3>
+    
+    <h3><a name="poll">Poll()-based Reactor</a></h3>
 
     <p>The PollReactor will work on any platform that provides
     <code class="python">poll()</code>.  With larger numbers of
@@ -83,8 +82,7 @@ pollreactor.install()
 
     <h2>Platform-Specific Reactors</h2>
 
-    <a name="creactor" />
-    <h3>cReactor for Unix</h3>
+    <h3><a name="creactor">cReactor for Unix</a></h3>
 
     <p>The cReactor is a high-performance C implementation of the
     Reactor interfaces.  It is currently experimental and under
@@ -96,8 +94,7 @@ from twisted.internet import cReactor
 cReactor.install()
 </pre>
 
-    <a name="kqueue" />
-    <h3>KQueue</h3>
+    <h3><a name="kqueue">KQueue</a></h3>
 
     <p>The KQueue Reactor allows Twisted to use FreeBSD's kqueue mechanism for
        event scheduling. See instructions in the twisted.internet.kqreactor's
@@ -108,8 +105,7 @@ from twisted.internet import kqreactor
 kqreactor.install()
 </pre>
 
-    <a name="java" />
-    <h3>Java</h3>
+    <h3><a name="java">Java</a></h3>
 
     <p>The Java Reactor allows Twisted to run under
     <a href="http://www.jython.org/">Jython</a>.  It does not
@@ -120,8 +116,7 @@ from twisted.internet import javareactor
 javareactor.install()
 </pre>
 
-    <a name="win32" />
-    <h3>Win32</h3>
+   <h3><a name="win32">Win32</a></h3>
 
     <p>The Win32 reactor is not yet complete and has various limitations
     and issues that need to be addressed.  One of the limitations is
@@ -136,8 +131,7 @@ win32eventreactor.install()
 
     <h2>GUI Integration Reactors</h2>
 
-    <a name="gtk" />
-    <h3>GTK+</h3>
+    <h3><a name="gtk">GTK+</a></h3>
 
     <p>Twisted integrates with <a href="http://www.daa.com.au/~james/pygtk/"
     >PyGTK</a>.  Sample applications using GTK+ and Twisted are available
@@ -150,8 +144,7 @@ gtkreactor.install()
 
     <h2>Non-Reactor GUI Integration</h2>
 
-    <a name="qt" />
-    <h3>Qt</h3>
+    <h3><a name="qt">Qt</a></h3>
 
     <p>An example Twisted application that uses Qt can be found in
     <span class="py-filename">doc/examples/qtdemo.py</span>.</p>
@@ -172,8 +165,7 @@ qtsupport.install(app)
 reactor.run()
 </pre>
 
-    <a name="tkinter" />
-    <h3>Tkinter</h3>
+    <h3><a name="tkinter">Tkinter</a></h3>
 
     <p>The support for <a href="http://www.python.org/topics/tkinter/"
     >Tkinter</a> doesn't use a specialized reactor.  Instead, there is
@@ -198,8 +190,7 @@ mainloop()
     <p>An example Twisted application that uses Tk can be found in
     <span class="py-filename">twisted/words/ui/tkim.py</span>.</p>
 
-    <a name="wxpython" />
-    <h3>WxPython</h3>
+    <h3><a name="wxpython">WxPython</a></h3>
 
     <p>As with <a href="#tkinter">Tkinter</a>, the support for integrating
     Twisted with a <a href="http://www.wxpython.org">WxPython</a>
