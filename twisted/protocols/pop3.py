@@ -88,6 +88,7 @@ class POP3(basic.LineReceiver):
         self.sendLine('-ERR ' + str(message))
 
     def lineReceived(self, line):
+        # print 'S:', repr(line)
         try:
             return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
@@ -309,23 +310,63 @@ class POP3(basic.LineReceiver):
         raise cred.error.UnauthorizedLogin()
 
 class IMailbox(components.Interface):
-    def listMessages(self, i=None):
-        """"""
+    def listMessages(self, index=None):
+        """Retrieve the size of one or more messages.
+        
+        @type index: C{int} or C{None}
+        @param inedx: The number of the message for which to retrieve the size,
+        or None to retrieve the size of all messages.
+        
+        @rtype: C{int} or C{list} of C{int}
+        @return: The number of octets in the specified message, or a
+        list of integers representing the number of octets in all the
+        messages.
+        """
 
     def getMessage(self, index):
-        """"""
+        """Retrieve a file-like object for a particular message.
+        
+        @type index: C{int}
+        @param index: The number of the message to retrieve
+        
+        @rtype: A file-like object
+        """
     
     def getUidl(self, index):
-        """"""
+        """Get a unique identifier for a particular message.
+        
+        @type index: C{int}
+        @param index: The number of the message for which to retrieve a UIDL
+        
+        @rtype: C{int}
+        @return: An string of printable characters uniquely identifying for
+        all time the specified message.
+        """
     
     def deleteMessage(self, index):
-        """"""
+        """Delete a particular message.
+        
+        This must not change the number of messages in this mailbox.  Further
+        requests for the size of deleted messages should return 0.  Further
+        requests for the message itself may raise an exception.
+        
+        @type index: C{int}
+        @param index: The number of the message to delete.
+        """
     
     def undeleteMessages(self):
-        """"""
-    
+        """Undelete any messages possible.
+        
+        If a message can be deleted it, it should return it its original
+        position in the message list and retain the same UIDL.
+        """
+
     def sync(self):
-        """"""
+        """Perform checkpointing.
+        
+        This method will be called to indicate the mailbox should attempt to
+        clean up any remaining deleted messages.
+        """
 
 class Mailbox:
     __implements__ = (IMailbox,)
@@ -390,6 +431,7 @@ class POP3Client(basic.LineReceiver):
             log.err()
 
     def lineReceived(self, line):
+        # print 'C:', repr(line)
         if self.mode == SHORT or self.mode == FIRST_LONG:
             self.mode = NEXT[self.mode]
             self._dispatch(self.command, self.handle_default, line)
