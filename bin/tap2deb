@@ -1,6 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """tap2deb"""
 import sys, os, string, pwd, shutil
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0]))))
+sys.path.append('.')
+### end of preamble
+
 from twisted.python import usage
 
 class MyOptions(usage.Options):
