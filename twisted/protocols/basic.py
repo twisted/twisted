@@ -190,7 +190,7 @@ class LineReceiver(protocol.Protocol):
                      '\\r\\n'.
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
                       sent line is longer than this, the connection is dropped).
-                      Default is 16834.
+                      Default is 16384.
     """
     line_mode = 1
     __buffer = ''
