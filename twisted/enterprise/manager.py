@@ -36,12 +36,14 @@ class ManagerSingle:
     Knows nothing of application level usernames or passwords.    
 
     """
-    def __init__(self, service, server, database, username, password):
+    def __init__(self, service, server, database, username, password, host, port):
         self.service = service
         self.server = server
         self.database = database
         self.username = username
         self.password = password
+        self.host = host
+        self.port = port
         self.driver = None
         self.connected = 0
         self.total = 0
@@ -54,7 +56,7 @@ class ManagerSingle:
         makes a single database connection.
         """
         self.total = 0
-        self.connection = self.driver.connect(self.server, self.database, self.username, self.password)
+        self.connection = self.driver.connect(self.server, self.database, self.username, self.password, self.host, self.port)
         if self.connection:
             self.connected = 1
             return 1
@@ -93,14 +95,14 @@ class ManagerThreadPool(ManagerSingle):
         main thread - the schedules callback for the request is run
 
     """
-    def __init__(self, service, server, database, username, password, numConnections = 1):
-        ManagerSingle.__init__(self, service, server, database, username, password)
+    def __init__(self, service, server, database, username, password, host, port, numConnections = 1):
+        ManagerSingle.__init__(self, service, server, database, username, password, host, port)
         self.numConnections = numConnections
         self.connections = []
         self.requests = RequestQueue()
         self.connected = 0
         self.total = 0
-   
+
     def connect(self):
         """Connect all the correct number of connections to the database/server specified.
         NOTE: auto_commit is false by default for sybase...

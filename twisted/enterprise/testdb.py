@@ -26,14 +26,18 @@ from twisted.enterprise import requests
 def getDebug():
     return 0
 
+def mgr():
+    return manager.ManagerSingle( service =  "postgres",
+                                  server = 'nothing',
+                                  database = "glyph",
+                                  username = "glyph",
+                                  host = 'localhost',
+                                  port = '5433',
+                                  password = "matrix")
+
 class ManagerTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = manager.ManagerSingle(
-            service =  "sybase",
-            server =   "max",
-            database = "twisted",
-            username = "twisted",
-            password = "matrix")
+        self.manager = mgr()
 
     def tearDown(self):
         self.manager.disconnect()
@@ -47,12 +51,7 @@ class ManagerTestCase(unittest.TestCase):
 
 class ServiceTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = manager.ManagerSingle(
-            service =  "sybase",
-            server =   "max",
-            database = "twisted",
-            username = "twisted",
-            password = "matrix")
+        self.manager = mgr()
         self.data = "DEFAULT"
         if not self.manager.connect():
             assert 0, 'failed to connect'
@@ -69,7 +68,7 @@ class ServiceTestCase(unittest.TestCase):
         
     def testGeneric(self):
         if getDebug(): print "starting Generic"
-        request = requests.GenericRequest("select * from sysusers", None, self.gotData, self.gotError)
+        request = requests.GenericRequest("select * from accounts", None, self.gotData, self.gotError)
         self.manager.addRequest(request)
         assert self.data != "DEFAULT", 'no response for generic result'
         if getDebug(): print "test Generic  successful"

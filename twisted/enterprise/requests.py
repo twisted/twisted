@@ -31,7 +31,7 @@ class Request:
         print "WARNING: empty Request being run"
         self.status = 0
 
-    
+
 
 class GenericRequest(Request):
     """Generic sql execution request.
@@ -62,7 +62,7 @@ class AddUserRequest(Request):
 
     def execute(self, connection):
         c = connection.cursor()
-        c.execute("insert into accounts (name, passwd, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
+        c.execute("insert into accounts (name, passwd, account_id) values ('%s', '%s', 0)" % (self.name, self.password) )
         c.fetchall()
         c.close()
         connection.commit()
@@ -74,7 +74,7 @@ class PasswordRequest(Request):
     def __init__(self, name, callback, errback):
         Request.__init__(self, callback, errback)
         self.name = name
-        
+
     def execute(self, connection):
         c = connection.cursor()
         c.execute("select passwd from accounts where name = '%s'" % self.name)

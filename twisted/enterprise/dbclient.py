@@ -33,7 +33,7 @@ class DbClient(pb.Referenced):
     def doLogin(self):
         """This begins the login process"""
         self.client = pb.Broker()
-        tcp.Client(self.host, 8787, self.client)
+        tcp.Client(self.host, 8732, self.client)
         self.client.requestIdentity("twisted", "matrix", callback = self.preConnected, errback  = self.couldntConnect)
 
     def couldntConnect(self, err):
@@ -49,7 +49,7 @@ class DbClient(pb.Referenced):
         self.dbUser = dbUser
 
         args = ("select * from accounts where name = ?", ["testuser"])
-        self.dbUser.callRequest("test3", args, self)
+        self.dbUser.callRequest("test", args, self)
 
     def remote_simpleSQLResults(self, *data):
         print "Got some data:" , self.count, data
@@ -69,7 +69,6 @@ class DbClient(pb.Referenced):
 
     def remote_requestError(self, *error):
         print "Got request error:", error
-      
 
 
 def run():

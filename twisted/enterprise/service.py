@@ -14,12 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.spread import pb
-from twisted.python import delay, authenticator
+# System Imports
 import string
 import os
-from twisted.enterprise import manager
-from twisted.enterprise import requests
+import sys
+
+# Twisted Imports
+from twisted.spread import pb
+from twisted.python import delay, authenticator
+
+# Sibling Imports
+import manager
+import requests
 
 class Service(pb.Service):
     """
@@ -58,23 +64,26 @@ class Service(pb.Service):
         """Loads the built-in request classes from the requests.py file. These have the wrapper "__"
         around their names as they are internal built-in classe, not user classes.
         """
-        self.registerRequest("__generic__", requests.GenericRequest)
-        self.registerRequest("__adduser__", requests.AddUserRequest)
-        self.registerRequest("__password__", requests.PasswordRequest)
-        
+        self.registerRequestClass("__generic__", requests.GenericRequest)
+        self.registerRequestClass("__adduser__", requests.AddUserRequest)
+        self.registerRequestClass("__password__", requests.PasswordRequest)
+
     def loadRequests(self):
         """Loads any database Request classes from the list of directories stored in requestDirectories.
         """
         for dir in self.requestDirectories:
-            files = os.listdir(dir)
-            for file in files:
-                prefix = file[0:9]
-                suffix = file[-3:]
-                moduleName = file[0:-3]
-                print "Found file %s  '%s' '%s'" % ( file, prefix, suffix )
-                if prefix == "dbrequest" and suffix == ".py":
-                    mod = __import__(moduleName)
-                    mod.loadRequests(self)
+            if os.path.exists(dir):
+                dir = os.path.abspath(dir)
+                sys.path.append(dir)
+                files = os.listdir(dir)
+                for file in files:
+                    prefix = file[0:9]
+                    suffix = file[-3:]
+                    moduleName = file[0:-3]
+                    print "Found file %s  '%s' '%s'" % ( file, prefix, suffix )
+                    if prefix == "dbrequest" and suffix == ".py":
+                        mod = __import__(moduleName)
+                        mod.loadRequests(self)
 
     def getRequestClass(self, name):
         """Lookup a Request class by name"""

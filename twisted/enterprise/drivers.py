@@ -4,7 +4,7 @@ class Driver:
     (even through there shouldn't be any) that the python DBAPI 2.0 implementations
     expose.
     """
-    def connect(self, server, database, username, password):
+    def connect(self, server, database, username, password, host, port):
         """maps args into the correct connect format. Should return
         a connection object.
         """
@@ -20,16 +20,16 @@ class Driver:
 class DriverSybase:
     """Driver for the Sybase database interface. This driver doesn't seem to scale well
     with multiple threads or connections. Available from:
-    
+
         http://object-craft.com.au/projects/sybase/sybase/sybase.html
-        
+
     """
     def __init__(self):
         print "Creating Sybase database driver"
         import Sybase
         self.driver = Sybase
-        
-    def connect(self, server, database, username, password):
+
+    def connect(self, server, database, username, password, host, port):
         """Connect to a Sybase database server
         """
         connection = None
@@ -76,7 +76,7 @@ class DriverInterbase:
         self.driver = gvib
         self.exceptions = gvibExceptions
         
-    def connect(self, server, database, username, password):
+    def connect(self, server, database, username, password, host, port):
         """Connect to an Interbase database server
         """
 
@@ -108,15 +108,15 @@ class DriverPostgres:
     """
     def __init__(self):
         print "Creating Postgres PoPy Database driver"
-        import Popy
+        import PoPy
         self.driver = PoPy
         
-    def connect(self, server, database, username, password):
+    def connect(self, server, database, username, password, host, port):
         """Connect to a Postgres database server
         """
         connection = None
         try:
-            connection = self.driver.connect( "user=%s dbname=%s" % (username, database) )
+            connection = self.driver.connect("user=%s dbname=%s port=%s host=%s" % (username, database, port, host) )
         except self.driver.DatabaseError, e:
             print "unable to connect to database: %s" % repr(e)
         return connection
@@ -136,7 +136,7 @@ class DriverPostgres:
 databaseDrivers = {
     "sybase":DriverSybase,
     "interbase":DriverInterbase,
-    "postres":DriverPostgres
+    "postgres":DriverPostgres
     }
 
 
