@@ -207,7 +207,7 @@ class TextDeferred(Widget):
 
     def display(self, request):
         d = defer.Deferred()
-        d.callback(self.text)
+        d.callback([self.text])
         return [d]
 
 class Time(Widget):
@@ -232,7 +232,7 @@ class _RequestDeferral:
         self.write = self.io.write
 
     def finish(self):
-        self.deferred.callback(self.io.getvalue())
+        self.deferred.callback([self.io.getvalue()])
 
 def possiblyDeferWidget(widget, request):
     # web in my head get it out get it out
@@ -283,12 +283,17 @@ class RenderSession:
     def callback(self, result, position, decNeedsHeaders):
         if result != FORGET_IT:
             self.needsHeaders = self.needsHeaders - decNeedsHeaders
-        if isinstance(result, defer.Deferred):
-            self._addDeferred(result, position)
-        self.lst[position] = result
+        else:
+            result = [FORGET_IT]
+        for i in xrange(len(result)):
+            if isinstance(result[i], defer.Deferred):
+                self._addDeferred(result[i], position+i)
+        self.lst[position:position+1] = result
+        assert self.position <= position
         self.keepRendering()
-        if isinstance(result, defer.Deferred):
-            result.arm()
+        for r in result:
+            if isinstance(r, defer.Deferred):
+                r.arm()
 
 
     def keepRendering(self):

@@ -49,7 +49,7 @@ class SimpleWidget(widgets.Widget):
 class DeferredWidget(widgets.Widget):
     def display(self, request):
         d = defer.Deferred()
-        d.callback("correct")
+        d.callback(["correct"])
         return [d]
 
 class MultiDeferredWidget(widgets.Widget):
@@ -57,9 +57,9 @@ class MultiDeferredWidget(widgets.Widget):
         d = defer.Deferred()
         d2 = defer.Deferred()
         d3 = defer.Deferred()
-        d.callback(d2)
-        d2.callback(d3)
-        d3.callback("correct")
+        d.callback([d2])
+        d2.callback([d3])
+        d3.callback(["correct"])
         return [d]
 
 class WidgetTest(unittest.TestCase):
