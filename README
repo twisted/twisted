@@ -1,10 +1,14 @@
-Twisted 0.19.0-post
+Twisted 0.99.0rc1
 
 Quote of the Release:
 
-[insert quote here]
+<fariseo> i am completely lost, all i do understand is an OS with a
+          database backend and a scripting language, but i am missing
+          the whole xml/.net/j2ee/twisted...  
+<glyph> I'm both honored and appalled that Twisted shows up in that
+        list :)
 
-For information on what's new in Twisted 0.19.0-post, see the ChangeLog file
+For information on what's new in Twisted 0.99.0rc1, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 What is this?
@@ -43,9 +47,9 @@ What can I do with it?
 
   To install Twisted, just make sure the Twisted-$VERSION/ directory
   is in the "PYTHONPATH" environment variable. For example, if you extracted
-  Twisted-0.19.0.tar.gz to /home/bob/, then you would have something like:
+  Twisted-0.99.0rc1.tar.gz to /home/bob/, then you would have something like:
 
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.19.0/
+    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.99.0rc1/
   
   in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc. If you use Windows NT,
   2k, or XP, then set your environment variables by right-clicking on My

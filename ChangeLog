@@ -1,3 +1,87 @@
+2002-08-14  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted.internet, twisted.cred: Applications and Authorizers are
+	now completely decoupled, save for a tiny backwards-compatibility.
+
+2002-08-10  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted.internet.defer, twisted.python.failure: Changes to
+	Deferred and Failure to make errbacks more consistent. error
+	callbacks are now *guaranteed* to be passed a Failure instance,
+	no matter what was passed to Deferred.errback().
+
+2002-08-07  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted.python.usage: New "subcommands" feature for
+	usage.Options: Now, you can have nested commands
+	(`cvs commit'-style) for your usage.Options programs.
+
+2002-08-04  Bruce Mitchener  <bruce@twistedmatrix.com>
+
+	* twisted.internet: New `writeSequence' method on transport
+	objects: This can increase efficiency as compared to `write`ing
+	concatenated strings, by copying less data in memory.
+	
+2002-08-02  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted.cred.service, twisted.internet.app: Application/Service
+	refactor: These two things should be less dependant on each other,
+	now.
+
+2002-07-31  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted.issues: After weeks of hacking in the secret (Austin,
+	TX) hideout with Allen Short, twisted.issues, the successor to
+	Twisted Bugs, is born. Featuring a paranoia-inducing chat-bot
+	interface!
+	
+2002-07-30  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted.internet.kqueue: Thanks to Matt Campbell, we now have a
+	new FreeBSD KQueue Reactor.
+
+2002-07-27  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* doc/fun/Twisted.Quotes: Added our seekrut Twisted.Quotes file to
+	Twisted proper.
+	
+2002-07-26  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted.spread: "Paging" for PB: this is an abstraction for
+	sending big streams of data across a PB connection.
+
+	
+2002-07-23  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted.internet: Rewrite of client APIs. `reactor.clientXXX'
+	methods are now deprecated. See new reactor.connect*
+	documentation. Also Application-level client methods have been
+	reworked, see the Application documentation.
+
+2002-07-23  Bryce Wilcox-O'Hearn  <zooko@twistedmatrix.com>
+
+	* twisted.zoot: Application-level implementation of Gnutella.
+
+2002-07-21  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted.im, bin/im: GUI improvements to t-im, and renamed
+	bin/t-im to bin/im (and get rid of old twisted.words client).
+
+2002-07-15  Bryce Wilcox-O'Hearn  <zooko@twistedmatrix.com>
+
+	* twisted.protocols.gnutella: Twisted now has an implementation of
+	the Gnutella protocol.
+	
+2002-07-15  Sean Riley  <sean@twistedmatrix.com>
+
+	* twisted.sister: Now featuring distributed login.
+
+2002-07-15  Paul Shwartz  <z3p@twistedmatrix.com>
+
+	* twisted.conch: A new implementation of ssh2, bringing Twisted
+	one step closer to being a complete replacement of all unix
+	services ;-)
+
 2002-07-14  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.19.0! It's exactly the same as rc4.
@@ -8,7 +92,7 @@
 	been fixed. This will hopefully be the last release candidate for
 	0.19.0.
 
-2002-07-07  Christopher Armstrong  <radix@twistxdmatrix.com>
+2002-07-07  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.19.0rc3.
 
