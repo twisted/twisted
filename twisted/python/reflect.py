@@ -373,8 +373,15 @@ def namedAny(name):
             # this is a failure that should be handed to our caller.
             # count stack frames to tell the difference.
             import traceback
-            if len(traceback.extract_tb(sys.exc_info()[2])) > 1:
-                raise
+            exc_info = sys.exc_info()
+            if len(traceback.extract_tb(exc_info[2])) > 1:
+                try:
+                    # Clean up garbage left in sys.modules.
+                    del sys.modules[trialname]
+                except KeyError:
+                    # Python 2.4 has fixed this.  Yay!
+                    pass
+                raise exc_info[0], exc_info[1], exc_info[2]
             moduleNames.pop()
     
     obj = topLevelPackage
