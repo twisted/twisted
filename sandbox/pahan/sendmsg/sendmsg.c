@@ -4,11 +4,11 @@
 #include<signal.h>
 
 static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywds);
-static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args);
+static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywds);
 
 static PyMethodDef sendmsgMethods[] = {
     {"sendmsg", sendmsg_sendmsg, METH_VARARGS|METH_KEYWORDS, NULL},
-//    {"recvmsg", sendmsg_recvmsg, METH_VARARGS|METH_KEYWORDS, NULL},
+    {"recvmsg", sendmsg_recvmsg, METH_VARARGS|METH_KEYWORDS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
@@ -95,23 +95,26 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
     return Py_BuildValue("i", ret);
 }
 
-/*
-#define CMSG_BUFSIZE (4*1024) // har har arbitrary
+#define CMSG_BUFSIZE (4*1024) // har har arbitrary and hopefully unused
 static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywds) {
     int fd;
     int flags=0;
     size_t maxsize=8192;
+    size_t cmsg_size=4*1024; // enough to store all file descriptors
     int ret;
     struct msghdr msg;
-    char cmsgbuf[CMSG_SPACE(CMSG_BUFSIZE)];
+    struct iovec iov[1];
+//    char cmsgbuf[CMSG_SPACE(CMSG_BUFSIZE)];
+    char *cmsgbuf;
     PyObject *ancillary;
 
-    static char *kwlist[] = {"fd", "flags", "maxsize", NULL};
+    static char *kwlist[] = {"fd", "flags", "maxsize", "cmsg_size", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|ii", kwlist,
-            &fd, &flags, &maxsize)) {
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|iii", kwlist,
+            &fd, &flags, &maxsize, &cmsg_size)) {
         return NULL;
     }
+    cmsg_size = CMSG_SPACE(cmsg_size);
 
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
@@ -125,77 +128,64 @@ static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywd
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
 
-    memset(cmsgbuf, 0, sizeof(cmsgbuf));
+    cmsgbuf = malloc(cmsg_size);
+    if (!cmsgbuf) {
+        PyErr_SetFromErrno(PyExc_OSError);
+        return NULL;
+    }
+    memset(cmsgbuf, 0, cmsg_size);
     msg.msg_control = cmsgbuf;
-    msg.msg_controllen = sizeof(cmsgbuf);
+    msg.msg_controllen = cmsg_size;
 
     ret = recvmsg(fd, &msg, flags);
     if (ret < 0) {
         PyErr_SetFromErrno(PyExc_OSError);
         free(iov[0].iov_base);
+        free(cmsgbuf);
         return NULL;
     }
 
     ancillary = PyList_New(0);
     if (!ancillary) {
         free(iov[0].iov_base);
+        free(cmsgbuf);
         return NULL;
     }
 
-  {
-    struct cmsghdr *cur;
+    {
+        struct cmsghdr *cur;
 
-    for (cur=CMSG_FIRSTHDR(&msg); cur; cur=CMSG_NXTHDR(&msg, cur)) {
-      PyObject *entry;
+        for (cur=CMSG_FIRSTHDR(&msg); cur; cur=CMSG_NXTHDR(&msg, cur)) {
+            PyObject *entry;
 
-      assert(cur->cmsg_len >= sizeof(struct cmsghdr));
+            assert(cur->cmsg_len >= sizeof(struct cmsghdr)); // no null ancillary data messages?
 
-      if (cur->cmsg_level == SOL_IP
-      && cur->cmsg_type == IP_PKTINFO) {
-    struct in_pktinfo *info = (void*)CMSG_DATA(cur);
-    PyObject *spec_dst;
-    PyObject *addr;
-
-    assert( cur->cmsg_len == sizeof(struct cmsghdr) + sizeof(struct in_pktinfo));
-
-    spec_dst = Py_BuildValue("s", inet_ntoa(info->ipi_spec_dst));
-    addr = Py_BuildValue("s", inet_ntoa(info->ipi_addr));
-    entry = Py_BuildValue("(ii(iNN))",
-                  cur->cmsg_level,
-                  cur->cmsg_type,
-                  info->ipi_ifindex,
-                  spec_dst,
-                  addr);
-      } else {
-    entry = Py_BuildValue("(iis#)",
-                  cur->cmsg_level,
-                  cur->cmsg_type,
-                  CMSG_DATA(cur),
-                  cur->cmsg_len - sizeof(struct cmsghdr)
-                  );
-      }
-      if (PyList_Append(ancillary, entry) < 0) {
-    Py_DECREF(ancillary);
-    Py_DECREF(entry);
-    free(iov[0].iov_base);
-    return NULL;
-      }
+            entry = Py_BuildValue("(iis#)",
+                        cur->cmsg_level,
+                        cur->cmsg_type,
+                        CMSG_DATA(cur),
+                        cur->cmsg_len - sizeof(struct cmsghdr));
+            if (PyList_Append(ancillary, entry) < 0) {
+                Py_DECREF(ancillary);
+                Py_DECREF(entry);
+                free(iov[0].iov_base);
+                free(cmsgbuf);
+                return NULL;
+            }
+        }
     }
-  }
 
-  {
-    PyObject *r;
-    r = Py_BuildValue("s#(si)iO",
-              iov[0].iov_base, ret,
-              inet_ntoa(sa.sin_addr), ntohs(sa.sin_port),
-              msg.msg_flags,
-              ancillary
-              );
-    free(iov[0].iov_base);
-    return r;
-  }
+    {
+        PyObject *r;
+        r = Py_BuildValue("s#iO",
+                iov[0].iov_base, ret,
+                msg.msg_flags,
+                ancillary);
+        free(iov[0].iov_base);
+        free(cmsgbuf);
+        return r;
+    }
 }
-*/
 
 // Useful code for sendmsg, multiple ancillary data case
 /*
