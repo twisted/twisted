@@ -30,6 +30,7 @@ import zlib
 
 # external library imports
 from Crypto import Util
+from Crypto.Cipher import XOR
 from Crypto.PublicKey import RSA
 from Crypto.Util import randpool
 
@@ -645,25 +646,16 @@ class SSHCiphers:
     def makeMAC(self, seqid, data):
         data = struct.pack('>L', seqid)+data
         mod, key, ds = self.outMAC
-        ipad = '\x36'*64
-        opad = '\x5c'*64
-        inner = mod.new(strxor(key, ipad)+data)
-        outer = mod.new(strxor(key, opad)+inner.digest())
+        inner = mod.new(XOR.new('\x36').encrypt(key)+data)
+        outer = mod.new(XOR.new('\x5c').encrypt(key)+inner.digest())
         return outer.digest()
 
     def verify(self, seqid, data, mac):
         data = struct.pack('>L', seqid)+data
         mod, key, ds = self.inMAC
-        ipad = '\x36'*64
-        opad = '\x5c'*64
-        inner = mod.new(strxor(key, ipad)+data)
-        outer = mod.new(strxor(key, opad)+inner.digest())
+        inner = mod.new(XOR.new('\x36').encrypt(key)+data)
+        outer = mod.new(XOR.new('\x5c').encrypt(key)+inner.digest())
         return mac == outer.digest()
-        return mac == c.digest()
-
-def strxor(x, y):
-    return "".join(map(lambda a, b: chr(a^b), map(ord, x), map(ord, y)))
-    # for hmac
 
 def buffer_dump(b, title = None):
     r = title or ''
