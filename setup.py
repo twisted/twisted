@@ -327,7 +327,6 @@ wovenFiles = ['FlashConduitGlue.html', 'WebConduitGlue.html',
 internetPath = os.path.join("twisted", "internet")
 
 setup_args['data_files']=[
-    (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
     (pbuiPath, [os.path.join(pbuiPath, 'login2.glade')]),
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
     (lorePath, [os.path.join(lorePath, "template.mgp")]),
