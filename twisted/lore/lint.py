@@ -123,6 +123,5 @@ def getDefaultChecker():
 
 def doFile(file, checker):
     dom = tree.parseFileAndReport(file)
-    if not dom:
-        return
-    checker.check(dom, file)
+    if dom:
+        checker.check(dom, file)
