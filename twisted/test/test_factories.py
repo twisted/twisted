@@ -66,6 +66,7 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         f.allMessages = []
 
         c = ReconnectingClientFactory()
+        c.initialDelay = c.delay = 0.2
         c.protocol = Out
         c.howManyTimes = 2
 
@@ -74,7 +75,7 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         reactor.connectTCP('localhost', PORT, c)
 
         now = time.time()
-        while len(f.allMessages) != 2 and (time.time() < now + 5):
+        while len(f.allMessages) != 2 and (time.time() < now + 10):
             reactor.iterate(0.1)
         
         self.assertEquals(len(f.allMessages), 2,
