@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.79 2003/05/10 12:52:37 glyph Exp $
+# $Id: default.py,v 1.80 2003/06/06 03:24:18 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -75,12 +75,12 @@ class PosixReactorBase(ReactorBase):
     """A basis for reactors that use file descriptors.
     """
     __implements__ = (ReactorBase.__implements__, IReactorArbitrary,
-                      IReactorTCP, IReactorUDP, IReactorMulticast) # IReactorProcess
+                      IReactorTCP, IReactorUDP, IReactorMulticast)
 
     if sslEnabled:
         __implements__ = __implements__ + (IReactorSSL,)
     if unixEnabled:
-        __implements__ = __implements__ + (IReactorUNIX,)
+        __implements__ = __implements__ + (IReactorUNIX, IReactorProcess)
 
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
