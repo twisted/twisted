@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: ckeygen.py,v 1.4 2002/12/27 01:10:26 z3p Exp $
+# $Id: ckeygen.py,v 1.5 2002/12/27 01:12:50 z3p Exp $
 
 #""" Implementation module for the `ckeygen` command.
 #"""
@@ -178,6 +178,6 @@ def _saveKey(key, options):
     pubKey = keys.getPublicKeyString(data=keys.makePublicKeyString(key, comment=comment))
     print 'Your identification has been saved in %s' % options['filename']
     print 'Your public key has been saved in %s.pub' % options['filename']
-    print 'They key fingerprint is:'
+    print 'The key fingerprint is:'
     print ':'.join(['%02x' % ord(x) for x in md5.new(pubKey).digest()])
 
