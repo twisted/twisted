@@ -20,7 +20,7 @@ import string, re
 # Twisted Imports
 from twisted.protocols import toc
 from twisted.im.locals import ONLINE, OFFLINE, AWAY
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.internet.defer import succeed
 
 # Sibling Imports
@@ -184,7 +184,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         group=self.roomIDreverse[roomid]
         self.getGroupConversation(group).showGroupMessage(username, dehtml(message))
     def chatHearWhisper(self, roomid, username, message):
-        print '*** user whispered *** ', roomimd, username, message
+        print '*** user whispered *** ', roomid, username, message
     def chatInvited(self, roomid, roomname, username, message):
         print '*** user invited us to chat *** ',roomid, roomname, username, message
     def chatLeft(self, roomid):
@@ -212,5 +212,5 @@ class TOCAccount(basesupport.AbstractAccount):
         self.port = port
 
     def startLogOn(self, chatui):
-        reactor.clientTCP(self.host, self.port, TOCProto(self, chatui))
+        protocol.ClientCreator(reactor, TOCProto, self, chatui).connectTCP(self.host, self.port)
 

@@ -17,7 +17,7 @@ import string
 
 from twisted.protocols import irc
 from twisted.im.locals import ONLINE
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.internet.defer import succeed
 
 import basesupport
@@ -244,5 +244,5 @@ class IRCAccount(basesupport.AbstractAccount):
         self._isOnline = 0
 
     def startLogOn(self, chatui):
-        reactor.clientTCP(self.host, self.port, IRCProto(self, chatui))
+        protocol.ClientCreator(reactor, IRCProto, self, chatui).connectTCP(self.host, self.port)
 
