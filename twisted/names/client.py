@@ -80,7 +80,7 @@ class Resolver:
         self.factory = DNSClientFactory(self, timeout)
         
         from twisted.internet import reactor
-        self.protocol = dns.DNSClientProtocol(self.factory)
+        self.protocol = dns.DNSClientProtocol(self)
         reactor.listenUDP(0, self.protocol, maxPacketSize=512)
         
         self.connections = []
@@ -113,6 +113,10 @@ class Resolver:
         for (d, q, t) in self.pending:
             protocol.query(q).chainDeferred(d)
         del self.pending[:]
+    
+    
+    def messageReceived(self, protocol, message, address = None):
+        log.msg("Unexpected message (%r) received from %r" % (message, address))
 
 
     def queryUDP(self, queries, timeout = None):
