@@ -121,12 +121,14 @@ reactor.run()
     <h3>Overview of ircLogBot</h3>
 
     <p>The clients so far have been fairly simple.  A more complicated
-    example comes with Twisted in the doc/examples directory.  <a
-    href="../examples/ircLogBot.py">ircLogBot.py</a> connects to an
-    IRC server, joins a channel, and logs all traffic on it to a file.
-    It demonstrates some of the connection-level logic of reconnecting
-    on a lost connection, as well as storing persistent data in the
-    Factory.</p>
+    example comes with Twisted in the doc/examples directory.</p>
+    
+    <a href="../examples/ircLogBot.py" class="py-listing">ircLogBot.py</a>
+    
+    <p>ircLogBot.py connects to an IRC server, joins a channel, and logs all
+    traffic on it to a file.  It demonstrates some of the connection-level logic
+    of reconnecting on a lost connection, as well as storing persistent data in
+    the Factory.</p>
     
     <h3>Reconnection</h3>
     <p>Many times, the connection of a client will be lost unintentionally due
@@ -162,9 +164,9 @@ class LogBot(irc.IRCClient):
     
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
-        self.file = open(self.factory.filename, "a")
-        self.file.write("[connected at %s]" %
-                 time.asctime(time.localtime(time.time())))
+        self.logger = MessageLogger(open(self.factory.filename, "a"))
+        self.logger.log("[connected at %s]" %
+                        time.asctime(time.localtime(time.time())))
     
     def signedOn(self):
         self.join(self.factory.channel)
