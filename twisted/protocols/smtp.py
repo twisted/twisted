@@ -1168,7 +1168,7 @@ class ESMTP(SMTP):
         return '\n'.join(r)
 
     def do_EHLO(self, rest):
-        peer = self.transport.getPeer()[1]
+        peer = self.transport.getPeer().host
         self._helo = (rest, peer)
         self._from = None
         self._to = []
