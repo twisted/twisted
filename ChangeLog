@@ -1,5 +1,11 @@
 2003-10-15  Brian Warner  <warner@lothar.com>
 
+	* twisted/internet/base.py: add optional debug code, enabled with
+	base.DelayedCall.debug=True . If active, the call stack which
+	invoked reactor.callLater will be recorded in each DelayedCall. If
+	an exception happens when the timer function is run, the creator
+	stack will be logged in addition to the usual log.deferr().
+
 	* twisted/internet/defer.py: add some optional debug code, enabled
 	with defer.Deferred.debug=True . If active, it will record a stack
 	trace when the Deferred is created, and another when it is first

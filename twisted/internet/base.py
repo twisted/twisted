@@ -31,6 +31,7 @@ try:
     import fcntl
 except ImportError:
     fcntl = None
+import traceback
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
@@ -45,12 +46,17 @@ from twisted.persisted import styles
 class DelayedCall(styles.Ephemeral):
 
     __implements__ = IDelayedCall
+    # enable .debug to record creator call stack, and it will be logged if
+    # an exception occurs while the function is being run
+    debug = False
 
     def __init__(self, time, func, args, kw, cancel, reset):
         self.time, self.func, self.args, self.kw = time, func, args, kw
         self.resetter = reset
         self.canceller = cancel
         self.cancelled = self.called = 0
+        if self.debug:
+            self.creator = traceback.format_stack()[:-2]
 
     def getTime(self):
         """Return the time at which this call will fire
@@ -405,6 +411,14 @@ class ReactorBase:
                 call.func(*call.args, **call.kw)
             except:
                 log.deferr()
+                if hasattr(call, "creator"):
+                    e = "\n"
+                    e += " C: previous exception occurred in " + \
+                         "a DelayedCall created here:\n"
+                    e += " C:"
+                    e += "".join(call.creator).rstrip().replace("\n","\n C:")
+                    e += "\n"
+                    log.msg(e)
 
 
 
