@@ -301,6 +301,8 @@ class MulticastTestCase(unittest.TestCase):
 
 if not components.implements(reactor, interfaces.IReactorUDP):
     UDPTestCase.skip = "This reactor does not support UDP"
+if not hasattr(reactor, "connectUDP"):
+    OldConnectedUDPTestCase.skip = "This reactor does not support connectUDP"
 if not components.implements(reactor, interfaces.IReactorMulticast):
     MulticastTestCase.skip = "This reactor does not support multicast"
 
