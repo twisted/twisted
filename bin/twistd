@@ -44,6 +44,7 @@ reactorTypes = {
     'poll': 'twisted.internet.pollreactor',
     'qt': 'twisted.internet.qtreactor',
     'c' : 'twisted.internet.cReactor',
+    'kqueue': 'twisted.internet.kqreactor'
     }
 
 
@@ -200,6 +201,16 @@ if register.LICENSE_KEY:
 if register.LICENSE_ORG:
     log.msg("organization: %s" % register.LICENSE_ORG)
 
+if not config.opts['nodaemon']:
+    # Turn into a daemon.
+    if os.fork():   # launch child and...
+        os._exit(0) # kill off parent
+    os.setsid()
+    os.umask(077)
+    oldstdin.close()
+    oldstdout.close()
+    oldstderr.close()
+
 if platformType == 'java':
     from twisted.internet import javareactor
     javareactor.install()
@@ -267,15 +278,6 @@ for plug in plugins:
 print "Loaded."
 initRun = 1
 
-if not config.opts['nodaemon']:
-    # Turn into a daemon.
-    if os.fork():   # launch child and...
-        os._exit(0) # kill off parent
-    os.setsid()
-    os.umask(077)
-    oldstdin.close()
-    oldstdout.close()
-    oldstderr.close()
 # java doesn't have getpid, and Windows' getpid is near-useless
 usepid = ((os.name != 'java') and (os.name != 'nt'))
 if usepid:

@@ -114,7 +114,8 @@ class TestProgram:
                 'win': 'twisted.internet.win32eventreactor',
                 'poll': 'twisted.internet.pollreactor',
                 'qt': 'twisted.internet.qtreactor',
-                'c': 'twisted.internet.cReactor'
+                'c': 'twisted.internet.cReactor',
+                'kqueue': 'twisted.internet.kqreactor'
                 }
             from twisted.python.reflect import namedModule
             namedModule(reactorTypes[reactor]).install()
