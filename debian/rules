@@ -4,7 +4,7 @@
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
 
-versions=$(shell grep '^Build-Depends:' debian/control | sed -e 's/^Build-Depends: //' -e 's/,//g' -e  's/-dev//g' -e 's/python//g' )
+versions=$(shell grep '^Build-Depends:' debian/control | sed -e 's/^Build-Depends: //' -e 's/,//g' -e  's/-dev//g' -e 's/python//g' -e 's/fortune-mod//')
 
 build: build-stamp
 build-stamp:
