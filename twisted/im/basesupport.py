@@ -75,11 +75,6 @@ class AbstractClientMixin:
     def connectionMade(self):
         self.account._isOnline = 1
         self._protoBase.connectionMade(self)
-        
-    def connectionFailed(self):
-        self.account._isConnecting = 0
-        self.account._isOnline = 0
-        self._protoBase.connectionFailed(self)
 
     def connectionLost(self, other):
         self.account._isConnecting = 0
