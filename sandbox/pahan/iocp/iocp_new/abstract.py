@@ -6,6 +6,8 @@ class RWHandle(log.logger, styles.Ephemeral):
     offset = 0
     writing = 0
     bufferSize = 2**2**2**2
+    writeBufferedSize = 0 # how much we have in the write buffer
+    bufferhandlers = None
     # XXX: specify read_op/write_op kwargs in a class attribute?
     read_op = ReadFileOp
     write_op = WriteFileOp
@@ -13,9 +15,23 @@ class RWHandle(log.logger, styles.Ephemeral):
     def __init__(self):
         self.writebuf = []
         self.readbuf = AllocateReadBuffer(self.bufferSize)
+        self.bufferhandlers = Set()
+
+    def addBufferCallback(self, handler):
+        self.bufferhandlers.add(handler)
+
+    def removeBufferCallback(self, handler):
+        self.bufferhandlers.remove(handler)
+
+    def callBufferHandlers(self, *a, **kw):
+        for i in self.bufferhandlers:
+            i(*a, **kw)
 
     def write(self, buffer, **kw):
         self.writebuf.append((buffer, kw))
+        self.writeBufferedSize += len(buffer)
+        if self.writeBufferedSize >= self.bufferSize: # what's the proper semantics for this?
+            self.callBufferHandlers(type = "buffer full")
         if not self.writing:
             self.writing = 1
             self.startWriting()
@@ -32,10 +48,12 @@ class RWHandle(log.logger, styles.Ephemeral):
     def writeDone(self, bytes):
         # XXX: bytes == 0 should be checked by OverlappedOp, as it is an error condition
         self.offset += bytes
+        self.writeBufferedSize -= bytes
         if self.offset == len(self.writebuf[0]):
             del self.writebuf[0]
         if self.writebuf == []:
             self.writing = 0
+            self.callBufferHandlers(type = "buffer empty")
         else:
             self.startWriting()
 
