@@ -177,7 +177,7 @@ class ReconnectingClientFactory(ClientFactory):
     connected successfully.
 
     @ivar maxDelay: Maximum number of seconds between connection attempts.
-    @ivar initialDelay: Delay for the first reconnection attempt.
+    @ivar initalDelay: Delay for the first reconnection attempt.
     @ivar factor: a multiplicitive factor by which the delay grows
     @ivar jitter: percentage of randomness to introduce into the delay lengh
         to prevent stampeding.
