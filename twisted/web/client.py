@@ -124,6 +124,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 class HTTPDownloader(HTTPClientFactory):
 
     protocol = HTTPPageDownloader
+    value = None
 
     def __init__(self, host, url, fileName, agent="Twisted client"):
         self.host = host
@@ -142,7 +143,7 @@ class HTTPDownloader(HTTPClientFactory):
     def pageEnd(self):
         if self.file:
             self.file.close()
-        self.deferred.callback(None)
+        self.deferred.callback(self.value)
 
     def pagePart(self, data):
         if self.file:
