@@ -197,7 +197,7 @@ class GuardTest(unittest.TestCase):
         g.render(d)
         assert d.finished, "didn't finish"
         w = string.join(d.written,'%%%%')
-        print w
+        # print w
         assert d.written == ['correct'], "incorrect result: %s"% w
 
 testCases = [DateTimeTest, SiteTest, WidgetTest, GuardTest]

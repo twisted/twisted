@@ -248,7 +248,6 @@ class DeferredRemote(pb.Referenceable):
         return arg + 1
 
     def dontRunMe(self, arg):
-        print arg
         assert 0, "shouldn't have been run!"
 
     def remote_doItLater(self):
@@ -488,9 +487,7 @@ class BrokerTestCase(unittest.TestCase):
         try:
             os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
         except OSError:
-            print "couldn't unlink publishable cache file"
-        else:
-            print "unlinked publishable cache file"
+            pass # Sometimes it's not there.
         c, s, pump = connectedServerAndClient()
         foo = GetPublisher()
         # foo.pub.timestamp = 1.0

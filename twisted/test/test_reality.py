@@ -46,7 +46,6 @@ class ContainmentTestCase(unittest.TestCase):
 
     def testBasicContainment(self):
         self.ball.location = self.room
-        print "CONTAINMENT:", self.room._Thing__index.data
         assert self.room.find('ball') is self.ball
         assert self.ball.location is self.room,\
                "Ball was located " + str(self.ball.location)

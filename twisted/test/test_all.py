@@ -97,6 +97,9 @@ class TestLoader(unittest.TestLoader):
 
         return string.join(lines, '')
 
+from twisted.python import log
+log.msg("opening test.log")
+log.logfile = open("test.log", 'a')
 
 def testSuite():
     """unittestgui wants a callable to return a suite."""

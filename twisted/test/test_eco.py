@@ -9,7 +9,6 @@ class EcoTestCase(unittest.TestCase):
         assert c == [1, [2, [3, [["a", ["b", []]], []]]]]
 
     def testEval(self):
-        print "ECO evaluator test"
         assert eco.eval('[+ 2 3]') == 5
         assert eco.eval('[let [[x 1] [y 2]] [+ x y]]') == 3
         assert eco.eval('''[if [eq [+ 3 3] 0] [foo 1 2 3]

@@ -89,19 +89,14 @@ class JellyTestCase(unittest.TestCase):
 
     def testUnicode(self):
         if hasattr(types, 'UnicodeType'):
-            print 'testing unicode'
             x = 'blah'
             assert jelly.unjelly(jelly.jelly(unicode(x))) == x
-        else:
-            print 'unicode not supported in this python'
-                        
 
     def testStressReferences(self):
         reref = []
         toplevelTuple = ({'list': reref}, reref)
         reref.append(toplevelTuple)
         s = jelly.jelly(toplevelTuple)
-        print s
         z = jelly.unjelly(s)
         assert z[0]['list'] is z[1]
         assert z[0]['list'][0] is z
