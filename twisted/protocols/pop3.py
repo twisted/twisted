@@ -20,10 +20,20 @@
 """
 
 
+import os
+import time
+import string
+import operator
+import stat
+import md5
+import binascii
+
 from twisted.protocols import basic
-import os, time, string, operator, stat, md5, binascii
 from twisted.internet import protocol
-from twisted.python import components, log
+from twisted.internet import defer
+from twisted.python import components
+from twisted.python import log
+from twisted import cred
 
 class POP3Error(Exception):
     pass
@@ -33,7 +43,7 @@ class POP3(basic.LineReceiver):
     magic = None
     _userIs = None
     highest = 0
-
+    
     def connectionMade(self):
         if self.magic is None:
             self.magic = '<%s>' % time.time()
@@ -63,10 +73,20 @@ class POP3(basic.LineReceiver):
         raise POP3Error("Unknown protocol command: " + command)
 
     def do_APOP(self, user, digest):
-        self.mbox = self.authenticateUserAPOP(user, digest)
-        if not self.mbox:
-            raise POP3Error("Invalid APOP response")
+        d = defer.maybeDeferred(None, self.authenticateUserAPOP, user, digest)
+        d.addCallbacks(self._cbMailbox, self._ebMailbox
+        ).addErrback(self._ebUnexpected)
+    
+    def _cbMailbox(self, mbox):
+        self.mbox = mbox
         self.successResponse('Authentication succeeded')
+    
+    def _ebMailbox(self, failure):
+        failure.trap(cred.error.LoginFailed)
+        self.failResponse('Authentication failed')
+    
+    def _ebUnexpected(self, failure):
+        self.failResponse('Server error: ' + str(failure))
 
     def do_USER(self, user):
         self._userIs = user
@@ -75,10 +95,9 @@ class POP3(basic.LineReceiver):
     def do_PASS(self, password):
         user = self._userIs
         self._userIs = None
-        self.mbox = self.authenticateUserPASS(user, password)
-        if not self.mbox:
-            raise POP3Error("Authentication failed")
-        self.successResponse('Authentication succeeded')
+        d = defer.maybeDeferred(None, self.authenticateUserAPOP, user, password)
+        d.addCallbacks(self._cbMailbox, self._ebMailbox
+        ).addErrback(self._ebUnexpected)
 
     def do_STAT(self):
         msg = self.mbox.listMessages()
