@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.60 $"[11:-2]
+__version__ = "$Revision: 1.61 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -122,7 +122,7 @@ class View:
 
     def setupAllStacks(self):
         self.modelStack = (self.model, None)
-        self.controllerStack = (self.controller, None)
+        self.controllerStack = (self.controller, (input, None))
         self.setupViewStack()
         
     def setUp(self, request, d):
