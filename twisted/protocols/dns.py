@@ -201,7 +201,7 @@ class Name:
     __implements__ = (IEncodable,)
 
     def __init__(self, name=''):
-        assert isinstance(name, types.StringTypes)
+        assert isinstance(name, types.StringTypes), "%r is not a string" % (name,)
         self.name = name
 
     def encode(self, strio, compDict=None):
@@ -426,7 +426,7 @@ class RRHeader:
     def __str__(self):
         t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR name=%r type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
+        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
 
 
     __repr__ = __str__

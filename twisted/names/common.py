@@ -105,9 +105,9 @@ class ResolverBase:
 
     def getHostByName(self, name, timeout = None, effort = 10):
         # XXX - respect timeout
-        return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout).addCallback(
-            self._cbRecords, name, effort
-        )
+        return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout
+            ).addCallback(self._cbRecords, name, effort
+            )
 
     def _cbRecords(self, (ans, auth, add), name, effort):
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
@@ -115,40 +115,35 @@ class ResolverBase:
             raise error.DNSLookupError(name)
         return result
 
-
 if hasattr(socket, 'inet_ntop'):
-    def extractRecord(resolver, name, answers, level = 10):
-        if not level:
-            return None
+def extractRecord(resolver, name, answers, level = 10):
+    print 'Extract record', name, answers, level
+    if not level:
+        return None
+    if hasattr(socket, 'inet_ntop'):
         for r in answers:
             if r.name == name and r.type == dns.A6:
                 return socket.inet_ntop(socket.AF_INET6, r.payload.address)
         for r in answers:
             if r.name == name and r.type == dns.AAAA:
                 return socket.inet_ntop(socket.AF_INET6, r.payload.address)
-        for r in answers:
-            if r.name == name and r.type == dns.A:
-                return socket.inet_ntop(socket.AF_INET, r.payload.address)
-        for r in answers:
-            if r.name == name and r.type == dns.CNAME:
-                result = extractRecord(resolver, r.payload.name, answers, level - 1)
-                if not result:
-                    return resolver.getHostByName(str(r.payload.name), effort=level-1)
-                return result
-        
-else:
-    def extractRecord(resolver, name, answers, level = 10):
-        if not level:
-            return None
-        for r in answers:
-            if r.name == name and r.type == dns.A:
-                return socket.inet_ntoa(r.payload.address)
-        for r in answers:
-            if r.name == name and r.type == dns.CNAME:
-                result = extractRecord(resolver, r.payload.name, answers, level - 1)
-                if not result:
-                    return resolver.getHostByName(str(r.payload.name), effort=level-1)
-                return result
+    for r in answers:
+        if r.name == name and r.type == dns.A:
+            return socket.inet_ntop(socket.AF_INET, r.payload.address)
+    for r in answers:
+        if r.name == name and r.type == dns.CNAME:
+            result = extractRecord(resolver, r.payload.name, answers, level - 1)
+            if not result:
+                return resolver.getHostByName(str(r.payload.name), effort=level-1)
+            return result
+    # No answers, but maybe there's a hint at who we should be asking about this
+    for r in answers:
+        if r.type == dns.NS:
+            from twisted.names import client
+            r = client.Resolver(servers=[(str(r.payload.name), dns.PORT)])
+            return r.lookupAddress(str(name)
+                ).addCallback(lambda (ans, auth, add): extractRecord(r, name, ans + auth + add, level - 1)
+                )
 
 typeToMethod = {
     dns.A:     'lookupAddress',
