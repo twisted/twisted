@@ -1,11 +1,10 @@
 """
 A port of Tv's simplyguarded
 """
-
 from twisted.web.woven import simpleguard, page, guard
 from twisted.web import resource, util, microdom
 from twisted.cred import checkers
-from twisted.python import urlpath
+from twisted.python import urlpath, components
 
 class LoginPage(page.Page):
     isLeaf = True
@@ -50,7 +49,6 @@ class Another(page.Page):
     def wchild_more(self, request):
         return self
 
-from twisted.python import components
 
 class IRedirectAfterLogin(components.Interface):
     """The URLPath to which we will redirect after successful login.
@@ -66,8 +64,25 @@ class Here(resource.Resource):
         else:
             return util.redirectTo('.', request)
 
-def callback(model):
-    return Here()
+class ConstantResource:
+
+    def __init__(self, resource):
+        self.resource = resource
+
+    def __call__(self, _):
+        return self.resource
+
+class TemplateDirResource:
+
+    def __init__(self, resource, templateDir):
+        self.resource = resource
+        self.templateDir = templateDir
+
+    def __call__(self, model):
+        r = self.resource(model)
+        r.templateDir = templateDir
+        return r
+
 
 class FullURLRequest:
     def __init__(self, request):
@@ -100,20 +115,32 @@ class MainPage(page.Page):
     appRoot = True
     templateFile = 'main.html'
 
+    def _getSecretChild(self, request):
+        lp = LoginPage()
+        lp.templateDir = self.templateDir       
+        return InfiniChild(lp)
+    whchild_another = wchild_secret = _getSecretChild
+
+class MainPageAuthenticated(MainPage):
+
     def wchild_secret(self, request):
-        a=request.getComponent(simpleguard.Authenticated)
-        if not request.getComponent(simpleguard.Authenticated):
-            return InfiniChild(LoginPage())
-        return Authenticated()
+        c = Authenticated()
+        c.templateDir = self.templateDir
+        return c
 
     def wchild_another(self, request):
-        a=request.getComponent(simpleguard.Authenticated)
-        if not request.getComponent(simpleguard.Authenticated):
-            return InfiniChild(LoginPage())
-        return Another()
+        c = Another()
+        c.templateDir = self.templateDir
+        return c
 
-def createResource():
-    return simpleguard.guardResource(
-        MainPage(),
-        [checkers.InMemoryUsernamePasswordDatabaseDontUse(test="test")],
-        callback=callback)
+
+def createResource(templateDir):
+    mp = MainPage()
+    mp.templateDir = templateDir
+    mpa = MainPageAuthenticated()
+    mpa.templateDir = templateDir
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(test="test")
+    return simpleguard.guardResource(mpa, [checker]
+                                     callback=ConstantResource(Here()),
+                                     errback=TemplateDirResource(LoginPage),
+                                     nonauthenticated=mp)
