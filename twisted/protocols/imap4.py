@@ -1,4 +1,4 @@
-# -*- Test-case-name: twisted.test.test_imap -*-
+# -*- test-case-name: twisted.test.test_imap -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
