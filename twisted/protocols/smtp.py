@@ -580,7 +580,7 @@ class SMTP(basic.LineReceiver):
                 if not self.__messages:
                     self._messageHandled("thrown away")
                     return
-                defer.DeferredList([
+                defer.gatherResults([
                     m.eomReceived() for m in self.__messages
                 ]).addCallback(self._messageHandled
                 ).addErrback(self._messageNotHandled)
