@@ -140,7 +140,7 @@ class SentQuery:
     def processAnswer_15(self, message):
         answers = []
         for answer in message.answers:
-            priority = struct.unpack("!H", answer.data[:2])
+            priority = struct.unpack("!H", answer.data[:2])[0]
             answer.strio.seek(answer.strioOff+2)
             n = dns.Name()
             n.decode(answer.strio)
