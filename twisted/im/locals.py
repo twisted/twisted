@@ -3,6 +3,7 @@ import os
 from twisted.python import reflect
 from twisted.python import util
 
+import string
 import gtk
 from libglade import GladeXML
 

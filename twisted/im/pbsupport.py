@@ -40,9 +40,22 @@ class TwistedWordsGroup:
         self.account = wordsClient
         self.joined = 0
 
-    def sendGroupMessage(self, text):
+    def sendGroupMessage(self, text, metadata=None):
         """Return a deferred.
         """
+        #for backwards compatibility with older twisted.words servers.
+        if metadata:
+            d=self.account.perspective.groupMessage(self.name,
+                                                    text, metadata)
+            d.addCallbacks(lambda x: None, #OK, this is really freaking lame.
+                           self.metadataFailed,
+                           errbackArgs=("* "+text,))
+            return d
+        else:
+            return self.account.perspective.groupMessage(self.name, text)
+
+    def metadataFailed(self, result, text):
+        print "result:",result,"text:",text
         return self.account.perspective.groupMessage(self.name, text)
 
     def joining(self):
@@ -75,9 +88,9 @@ class TwistedWordsClient(pb.Referenceable):
         print 'received group members:', names, group
         self.getGroupConversation(group).setGroupMembers(names)
 
-    def remote_receiveGroupMessage(self, sender, group, message):
-        print 'received a group message', sender, group, message
-        self.getGroupConversation(group).showGroupMessage(sender, message)
+    def remote_receiveGroupMessage(self, sender, group, message, metadata=None):
+        print 'received a group message', sender, group, message, metadata
+        self.getGroupConversation(group).showGroupMessage(sender, message, metadata)
 
     def remote_memberJoined(self, member, group):
         print 'member joined', member, group
@@ -90,8 +103,8 @@ class TwistedWordsClient(pb.Referenceable):
     def remote_notifyStatusChanged(self, name, status):
         getPerson(name, self, TwistedWordsPerson).setStatus(status)
 
-    def remote_receiveDirectMessage(self, name, message):
-        getConversation(getPerson(name, self, TwistedWordsPerson)).showMessage(message)
+    def remote_receiveDirectMessage(self, name, message, metadata=None):
+        getConversation(getPerson(name, self, TwistedWordsPerson)).showMessage(message, metadata)
 
     def remote_receiveContactList(self, clist):
         for name, status in clist:

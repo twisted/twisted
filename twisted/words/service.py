@@ -241,7 +241,7 @@ class Participant(pb.Perspective, styles.Versioned):
                                                      metadata)
                 #If the client doesn't support metadata, call this function
                 #again with no metadata, so none is sent
-                d.addCallbacks(None,
+                d.addCallbacks(lambda x: None, #OK, this is really freaking lame.
                                self.receiveDirectMessage,
                                errbackArgs=(sender.name, message, None))
             else:

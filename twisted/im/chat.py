@@ -95,8 +95,13 @@ class Conversation(InputOutputWindow):
         # parse the text for possible metadata...? /me, etc...
         self.person.sendMessage(text).addCallback(self._cbTextSent, text)
 
-    def showMessage(self, text):
-        self.output.insert_defaults("<%s> %s\n" % (self.person.name, text))
+    def showMessage(self, text, metadata=None):
+        text = string.replace(text, '\n', '\n\t')
+        msg = "<%s> %s\n" % (self.person.name, text)
+        if metadata:
+            if metadata.get("style", None) == "emote":
+                msg = "* %s %s\n" % (self.person.name, text)
+        self.output.insert_defaults(msg)
 
     def _cbTextSent(self, result, text):
         print 'result:',result
@@ -121,10 +126,18 @@ class GroupConversation(InputOutputWindow):
         return "Group Conversation - " + self.group.name
 
     def sendText(self, text):
-        self.group.sendGroupMessage(text).addCallback(self._cbTextSent, text)
+        metadata = None
+        if text[:4] == "/me ":
+            text = text[4:]
+            metadata = {"style": "emote"}
+        self.group.sendGroupMessage(text, metadata).addCallback(self._cbTextSent, text, metadata=metadata)
 
-    def showGroupMessage(self, sender, text):
+    def showGroupMessage(self, sender, text, metadata=None):
+        text = string.replace(text, '\n', '\n\t')
         msg = "<%s> %s\n" % (sender, text)
+        if metadata:
+            if metadata.get("style", None) == "emote":
+                msg = "* %s %s\n" % (sender, text)
         self.output.insert_defaults(msg)
 
     def setGroupMembers(self, members):
@@ -155,8 +168,14 @@ class GroupConversation(InputOutputWindow):
         self.win.destroy()
         self.group.leave()
 
-    def _cbTextSent(self, result, text):
-        self.output.insert_defaults("<%s> %s\n" % (self.group.account.name, text))
+    def _cbTextSent(self, result, text, metadata=None):
+        print text
+        text = string.replace(text, '\n', '\n\t')
+        msg = "<%s> %s\n" % (self.group.account.name, text)
+        if metadata:
+            if metadata.get("style", None) == "emote":
+                msg = "* %s %s\n" % (self.group.account.name, text)
+        self.output.insert_defaults(msg)
 
 # IM-GUI Utility functions
 
