@@ -135,7 +135,7 @@ class SignalMixin:
     def setUpClass(self):
         # make sure SIGCHLD handler is installed, as it should be on reactor.run().
         # problem is reactor may not have been run when this test runs.
-        if hasattr(reactor, "_handleSigchld") and hasatter(signal, "SIGCHLD"):
+        if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
             self.sigchldHandler = signal.signal(signal.SIGCHLD, reactor._handleSigchld)
     
     def tearDownClass(self):
