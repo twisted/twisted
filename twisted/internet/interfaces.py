@@ -174,7 +174,7 @@ class IReactorArbitrary(Interface):
 
 class IReactorTCP(Interface):
 
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         """Connects a given protocol factory to the given numeric TCP/IP port.
 
         @param port: a port number on which to listen

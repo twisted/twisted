@@ -276,7 +276,7 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorTCP
 
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         """@see: twisted.internet.interfaces.IReactorTCP.listenTCP
         """
         p = tcp.Port(port, factory, backlog, interface, self)

@@ -57,7 +57,7 @@ class Proactor(iocpcore, base.ReactorBase):
         if not threadable.isInIOThread():
             self.issuePostQueuedCompletionStatus(ignore, None)
             
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         p = tcp.Port((interface, port), factory, backlog)
         p.startListening()
         return p
