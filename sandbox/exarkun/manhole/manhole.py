@@ -188,6 +188,11 @@ class ColoredManhole(Manhole):
                   '\n' +
                   ''.join(self.lineBuffer))
 
+        if ch == ' ':
+            # Don't bother to try to color whitespace
+            self.transport.write(ch)
+            return
+
         # Try to write some junk
         try:
             coloredLine = lastColorizedLine(source)
