@@ -150,7 +150,7 @@ def run(argv=sys.argv):
     if options['upload']:
         scp('dist/%s dist/%s shell.sf.net:/home/groups/t/tw/twisted/htdocs' %
             (twisteddistnodocs, twisteddist))
-        ssh('shell.sf.net chmod g+rw /home/groups/t/tw/twisted/htdocs/%s' %
+        ssh('shell.sf.net chmod g+rw /home/groups/t/tw/twisted/htdocs/%s /home/groups/t/tw/twisted/htdocs/%s' %
             (twisteddistnodocs, twisteddist))
     
     raw_input('Done building Twisted! (hit enter)\n')
