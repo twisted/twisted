@@ -1,336 +1,319 @@
-<HTML><HEAD><TITLE>Writing Servers in Twisted</TITLE></HEAD></BODY>
+<HTML><HEAD>
+<TITLE>Writing a Server for Twisted</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing Servers</H1>
 
-<H1>Writing Servers in Twisted</H1>
+<H2>Overview</H2>
 
-<H2>Concepts</H2>
+<p>Twisted is a framework designed to be very flexible, and let you write 
+powerful servers. The cost of this flexibility is a few layers in the way to 
+writing your server.</P>
 
-Twisted is an async framework, so remember that none of your code can
-block. You'll get notified about new data coming in, you'll write small
-functions which deal with it and end so something else can do its thing.
-
-A Twisted server consists of several parts:
-
-<DL>
-<DT>twisted.main.Application</DT>
-<DD>This class is Twisted's connection to the world. Usually, most writers
-    do not deal with it (see below, on deployment considerations).</DD>
-
-<DT>twisted.protocols.protocol.Factory</DT>
-<DD>90% of the time, this class will be good enough. This class seats
-    inside an application, listens to a port, and builds a protocol for
-    each new connection. The default buildProtocol calls the attribute
-    "protocol" (which is usually a class), and then initializes the
-    "factory" attribute. Overriding buildProtocol is easy: just return
-    something which follows the protocol interface.</DD>
-
-<DT>twisted.protocols.protocol.Protocol</DT>
-<DD>While there is no need to derive from this class to write a protocol
-    handler, it usually makes your work easier. The next section will deal
-    with writing a new protocol, since this is where most of your code will
-    be.</DD>
-
-</DL>
-
-<H2>Writing protocols</H2>
-
-The protocol interface has several methods:
-
-<DL>
-<DT>def makeConnection(self, transport, server = None)</DT>
-<DD>This method is already implemented inside 
-    twisted.protocols.protocol.Protocol. It will initialize your protocol
-    with the "connected", "transport" and "server" attributes, and call
-    "connectionMade". If you want to do connection-specific initializing,
-    the right way to do it is to implement "connectionMade".</DD>
-
-<DT>def connectionMade(self)</DT>
-<DD>Called when a connection to the server has been established. Here you
-    should set up attributes, send greetings and similar things.
-    <P>
-    Note that for "clientish" connections, you will probably want to send
-    the initial request to the server here, unless the server sends a greeting,
-    in which case you would set up a callback to the greeting.</DD>
-
-<DT>def dataReceived(self, data)</DT>
-<DD>The protocol's raison d'etre: some data was sent by the other side.
-    You will probably want to handle it in some way.
-    <P>
-    There are a couple of Protocol derived classes which override this
-    method to provide a higher level view of the data - netstrings,
-    lines and length-prefixed messages.</DD>
-
-<DT>def connectionLost(self)</DT>
-<DD>The low-level connection is lost. Clean up after yourself.</DD>
-
-<DT>def connectionFailed(self)</DT>
-<DD>The connection cannot be made. This will only be called on client
-    protocols.</DD>
-
-</DL>
-
-<H2>Transports</H2>
-
-<P>
-One of the most important instance variables of the Protocol class is 
-"transport", which must follow the transport interface. This is what
-lets protocol classes talk to the world.
-</P>
-
-<P>
-Transports have the following methods:
-
-<DL>
-<DT>.write(data)</DT>
-<DD>Write the data when next the connection is available for writing.
-    This method will never block, but it might not send the data right
-    away.</DD>
-
-<DT>.loseConnection()</DT>
-<DD>When there is no more pending data to write, close the connection
-    down.</DD>
-
-<DT>.getPeer()</DT>
-<DD>Returns a tuple. The first element of the tuple is a string describing
-    the kind of the transport, with 'INET' being the identifier of good
-    old TCP sockets.</DD>
-</DL>
-
-<H2>Writing New Transport Types</H2>
-
-<P>
-I will concentrate here on server transports.
-<P>
-
-<P>
-Writing a transport type is usually a two-step procedure. First, you
-will need to write the port-like class. The class's constructor should
-take, among other transport-specific administrative data (for example,
-for TCP ports this could be the numeric port and the addresses to listen
-on), a factory. The only thing that should be assumed by the class
-is that the given factory has a .buildProtocol method which creates
-protocol-interface class.
-</P>
-
-<P>
-This class should be pickle-safe, which means any process specific
-information (such as open files) should be thrown out by the __getstate__
-method.
-</P>
-
-<P>
-The class should have a .startListening() method, which should take whatever
-action it needs to open a port for listening. It should also have a 
-.fileno method, which will return a valid file descriptor. When this
-file descriptor is valid for reading, the .doRead method will be called.
-Usually, this method will create a transport, call the factory's
-.buildProtocol and call .makeConnection on the protocol with the transport
-as an argument.
-</P>
-
-<P>
-The transports written for every connection and passed to protocols' 
-.makeConnection must follow the transport interface:
-</P>
-
-<DL>
-<DT>.write(data)</DT>
-<DD>Queue some data to write. Do not block.</DD>
-
-<DT>.loseConnection()</DT>
-<DD>When there will be no more data to write, close down
-the connection.</DD>
-
-<DT>.getPeer()</DT>
-<DD>Return a tuple describing your peer. This should be a tuple -
-(TYPE, ...), where the ... depend on your connection's semantics.
-Use common sense. So far, for files, it is ('file', filename), for
-TCP sockets it is ('INET', address, port) and for UNIX-domain
-sockets it is ('UNIX', path). You can probably count on 'INET6'
-being IPv6 TCP sockets.</DD>
-</DL>
-
-<P>In addition, the select loop will call the following methods:</P>
-
-<DL>
-<DT>.doWrite()</DT>
-<DD>Flush the data you have, in a non-blocking manner.</DD>
-
-<DT>.doRead()</DT>
-<DD>Read data, and call the protocol's .dataReceived method with
-this chunk.</DD>
-
-<DT>.connectionLost()</DT>
-<DD>If either .doRead() or .doWrite() return CONNECTION_LOST,
-this method will be called by the select loop. It should clean
-up any OS-level resources, and call the protocol's .connectionLost()</DD>
-
-</DL>
-
-<P>
+<p>At the base, the place where you actually implement the protocol 
+parsing and handling, is the protocol handler class. This class will usually be 
+decended 
+from <CODE>twisted.protocols.protocol.Protocol</CODE>. 
+Most protocol handlers inherit either 
+from this class or from one of its convenience children. An instance of the 
+protocol class will be instantiated per-connection, on demand, and it will go 
+away when the connection is finished. This means that persistent configuration 
+is not saved in the <CODE>Protocol</CODE>.</P>
 
 
-<H2>Deployment</H2>
+<p>The persistent configuration is kept in a Factory class, which usually 
+inherits from twisted.protocol.protocol.Factory. The default factory class 
+just  instantiate each Protocol, and then sets on it an attribute called 
+<CODE>factory</CODE> which points to itself. This let every 
+<CODE>Protocol</CODE> access, and possibly modify, 
+the persistent configuration. </P>
 
-Most protocols are deployed using the "tap" mechanism, which hides many
-none interesting details. Tap-based deployment works by writing a module
-in the twisted.tap package which is compatible to the tap interface:
+<p>It is frequently needed to serve the same thing on two or more different 
+ports  or network addresses. This is why the Factory does not listen to 
+connections, 
+and in fact does not know anything about the network. This is the job of 
+a Port class. Usually, the class twisted.internet.tcp.Port will be used, 
+but there are several alternatives like twisted.internet.udp.Port and 
+twisted.internet.ssl.Port.</CODE>
 
-<DL>
+<p>Because of this multi-faceted aspect to writing servers, it is useful 
+to have some place where all this things are bound together - using a 
+specific Protocol class, with a specially initialized factory and a 
+specific network interface on a specific port. For that, the twisted.tap 
+package exists, which records "common server deployments". It creates 
+a TAP (Twisted Application Pickle) which keeps the configuration information 
+for a specific server.</P>
 
-<DT>The Options class</DT>
-<DD>This should inherit from twised.python.usage.Options and handle valid 
-    options.
-    It must be called Options. The next section will deal with
-    writing Option classes.</DD>
+<p>So, in conclusion - most often, you will just have to write your Protocol 
+class (which might get complicated, and you may want to write auxiliary classes 
+for it) and then write a twisted.tap submodule which programmatically explains 
+how to use this class.</P>
 
-<DT>The usage_message string</DT>
-<DD>This should be a helpful multiline message which would be displayed
-    when the user asks for help.</DD>
+<p>This document will explain each step of the way.</P>
 
-<DT>The getPorts(app, config) function</DT>
-<DD>The function gets a twisted.main.Application and an instance of
-    the Options class defined, and should return an array of two-tuples
-    (port, Factory). See next section about how to get the command-line
-    options from an Option instance.</DD>
+<H2>Protocols</H2>
 
-</DL>
-
-<H2>Writing Option Class</H2>
-
-<DL>
-
-<DT>optStrings</DT>
-<DD>This is a list of 3-lists, each should be [long_name, flag, default].
-    <P>
-    This will set the "long_name" attribute to the value of that option,
-    or to default, if it was not be given on the command line.</DD>
-
-<DT>optFlags</DT>
-<DD>This is a list of 2-lists, each should be [long_name, flag].
-    <P>
-    This will set the "long_name" attribute to 1 if it was given on the
-    command line, else to 0.</DD>
-
-<DT>opt_* methods</DT>
-<DD>If the method takes no arguments (except from self), it will be
-    called once for every time the part after the "opt_" is given.<P>
-    If it takes one argument, then it will be the value for the option
-    given on the command line.<P>
-    opt_* methods are called in the order the arguments are given on
-    the command line.</DD>
-
-</DL>
-
-<H2>Finishing Touches</H2>
-
-OK.
-<P>
-You have written a protocol, a factory, a twisted.tap submodule which
-parses command line options and returns a valid value from getPorts.
-What now?
-<P>
-<OL>
-<LI>Run "mktap &lt;your twisted.tap submodule> &lt;valid options>". This will
-    create a file named "&lt;your twisted.tap submodule>.tap", which is a
-    pickle containing a twisted.main.Application.</LI>
-<LI>Run "twistd -f &lt;your twisted.tap.submodule>.tap". twistd knows to turn
-    pickled twisted.main.Application into a living, breathing application.
-    Some common arguments are "-l &lt;logfile>" and "-n" (no daemonize).</LI>
-</OL>
-
-<P>
-That is it. You have written a twisted server.
-
-<H2>Post-finishing Touches</H2>
-
-<P>
-So, you are happily running a twisted server via twistd, when suddenly,
-you wish you could add another HTTP server running on port 833. Or maybe
-you want your living HTTP server to become virtual-domains based. What
-are you going to do?
-</P>
-
-<P>
-Well, you have several options.
-</P>
-
-<STRONG>Warning: some of this stuff assumes a 0.9.6 or later version
-of twisted. If you are running an older version, you should upgrade</STRONG>
-
-<P>
-To add another HTTP server to your tap, just use mktap's --append option.
-Note how that does not require support in the twisted.tap.whatever
-module, so it will just work even for your newly written protocol.
-</P>
-
-<P>
-Changing the HTTP is a bit more complicated. What you will certainly
-want to do is add a telnet server to your tap. Just use "mktap --append telnet".
-It is recommended to give the username/password arguments and not use
-the defaults, for obvious reasons.
-</P>
-
-<P>
-Now that you have the telnet server, you can just telnet into your
-application and change things there on the run.
-</P>
-
-<P>
-When you telnet, you are given, after the usual name/password login box,
-absolutely no prompt. Hopefully, this will change. The first thing you
-will want to do is import __main__. In __main__, there is a global
-named "application". This is your application. If you want, you can add
-servers to it on the fly:
+<p>As mentioned above, this is, and auxiliary classes and functions, is where 
+most of the code is. A Twisted protocol handles data in an asynchronous 
+manner. What this means is that the protocol never waits for an event, 
+but rather responds to events as they arrive from the network. 
+<p>Here is a simple example:
 
 <PRE>
-import __main__
-from twisted.web import static, server
-file = static.File("/var/www")
-factory = server.Site(file)
-__main__.application.listenTCP(8443, factory)
+from twisted.protocols.protocol import Protocol 
+class Echo(Protocol):
+
+    def dataReceived(self, data):
+        self.transport.write(data)
 </PRE>
 
-<P>
-That's it! It really is this easy.
-</P>
-
-<P>
-Now, let us say you want to configure the server to serve another
-directory instead.
-</P>
+<p>This is one of the simplest protocols. It simply writes back whatever 
+is written to it. There are many events it does not respond to. Here 
+is an example of a Protocol responding to another event:</P>
 
 <PRE>
-import __main__
-__main__.application.ports
--> [&lt;twisted.protocols.telnet.ShellFactory on 4040>, &lt;twisted.web.server.Site on 8443>]
+from twisted.protocols.protocol import Protocol 
+class QOTD(Protocol):
+
+    def connectionMade(self):
+        self.transport.write("An apple a day keeps the doctor away\r\n") 
+        self.transport.loseConnction()
 </PRE>
 
-<P>
-So it is the second port. Great!
-</P>
+<p>This protocol responds to the initial connection with a well known quote, 
+and then terminates the connection.</P>
+
+<p>The connectionMade event is usually where set up of the connection object 
+happens, as well as any initial greetings (as in the QOTD protocol above, 
+which is actually based on RFC 865). The connectionLost event is where 
+tearing down of any Protocol-specific objects is done. Here is an example:</P>
 
 <PRE>
-__main__.application.ports[1].factory.resource.path = 'static'
+from twisted.protocols.protocol import Protocol 
+class Echo(Protocol):
+
+    def connectionMade(self):
+        self.factory.numProtocols = self.factory.numProtocols+1 
+        if self.factory.numProtocols&gt;100:
+            self.transport.write("Too many connections, try later") 
+            self.transport.loseConnection()
+
+    def connectionLost(self):
+        self.factory.numProtocols = self.factory.numProtocols-1
+
+    def dataReceived(self, data):
+        self.transport.write(data)
 </PRE>
 
-<P>
-In similar ways, you can configure your factory's resource to be 
-a vhost.NamedVirtualHost, configure the name servers, and leave it
-running.
-</P>
+<p>Here <CODE>connectionMade</CODE> and <CODE>connectionLost</CODE>
+co-operate to keep a count of the 
+active protocols in the factory. <CODE>connectionMade</CODE> immediately 
+closes the connection if there are too many active protocols.</P>
 
-<P>
-If you want to save known good configurations, just use
-</P>
+<H3>Helper Protocols</H3>
+
+<P>Many protocols build upon similar lower-level abstraction. The most popular
+in internet protocols is being line-based. Lines are usually terminated with
+a CR-LF combinations.</P>
+
+<P>However, quite a few protocols are mixed - they have line-based sections
+and then raw data sections. Examples include HTTP/1.1 and the Freenet 
+protocol.</P>
+
+<P>For those cases, there is the <CODE>LineReceiver</CODE> protocol.
+This protocol dispatches to two different event handlers - 
+<CODE>lineReceived</CODE> and <CODE>rawDataReceived</CODE>. By default,
+only <CODE>lineReceived</CODE> will be called, once for each line. However,
+if <CODE>setRawMode</CODE> will be called, the protocol will call 
+<CODE>rawDataReceived</CODE> until <CODE>setLineMode</CODE> will be called.</P>
+
+<P>Here is an example for a simple use of the line receiver:</P>
 
 <PRE>
-__main__.application.save("known-good")
+from twisted.protocols.basic import LineReceiver
+
+class Answer(LineReceiver):
+
+    answers = {'How are you?': 'Fine', None : 'I don't know what you mean'}
+
+    def lineReceived(self, line):
+        if self.answers.has_key(line):
+            self.sendLine(self.answers[line])
+        else:
+            self.sendLine(self.answers[None])
 </PRE>
 
-<P>
-Which will save the application to &lt;original tap file>+"known-good.tap"
-On shutdown, it will behave as if __main__.application.save("shutdown")
-has been issued.
-</P>
+<P>Note that the delimiter is not part of the line.</P>
+
+<P>Several other, less popular, helpers exist, such as a netstring based
+protocol and a prefixed-message-length protocol.</P>
+
+<H3>State Machines</H3>
+
+<P>Many Twisted protocol handlers need to write a state machine, to record
+the state they are at. Here are some pieces of advice which help to write
+state machines:<P>
+
+<UL>
+<LI>Don't write big state machines. Prefer to write a state machine which
+    deals with one level of abstraction at a time.
+<LI>Use Python's dynamicity to create open ended state machines. See, for
+    example, the code for the SMTP client.
+<LI>Don't mix application-specific code with Protocol handling code. When
+    the protocol handler has to make an application-specific call, keep it
+    as a method call.
+</UL>
+
+<H2>Factories</H2>
+
+<P>As mentioned before, usually the class 
+<CODE>twisted.internet.protocols.protocol.Protocol</P> works, and there
+is no need to override it. However, sometimes there can be factory-specific
+configuration of the protocols, or other considerations. In those cases,
+there is a need to subclass <CODE>Factory</CODE>.</P>
+
+<P>For a factory which simply instantiates instances of a specific protocol
+class, simply instantiate <CODE>Factory</CODE>, and sets its "protocol"
+attribute:</P>
+
+<PRE>
+from twisted.internet.protocols.protocol import Factory
+from twisted.internet.protocols.wire import Echo
+
+myFactory = Factory()
+myFactory.protocol = Echo
+</PRE>
+
+<P>If there is a need to easily construct factories for a specific 
+configuration, a factory function is often useful:</P>
+
+<PRE>
+from twisted.internet.protocols.protocol import Factory, Protocol
+
+class QOTD(Protocol):
+
+    def connectionMade(self):
+        self.transport.write(self.factory.quote+'\r\n')
+        self.transport.loseConnection()
+
+
+def makeQOTDFactory(quote=None):
+    factory = Factory()
+    factory.protocol = QOTD
+    factory.quote = quote or 'An apple a day keeps the doctor away'
+    return factory
+</PRE>
+
+<P>A Factory has two methods to perform application-specific building
+up and tearing down (since a Factory is frequently persisted, it is often
+not appropriate to do them in __init__ or __del__, and would frequently
+be too early or too late).</P>
+
+<P>Here is an example of a factory which allows its Protocols to write
+to a special log-file:</P>
+
+<PRE>
+from twisted.internet.protocols.protocol import Factory
+from twisted.internet.protocols.basic import LineReceiver
+
+
+class LoggingProtocol(LineReceiver):
+
+    def lineReceived(self, line):
+        self.factory.fp.write(line+'\n')
+
+
+class LogfileFactory(Factory):
+
+    protocol = LoggingProtocol
+
+    def __init__(self, fileName):
+        self.file = fileName
+
+    def startFactory(self):
+        self.fp = open(file, 'a')
+
+    def stopFactory(self):
+        self.fp.close()
+</PRE>
+
+<H2>Ports</H2>
+
+<P>While more ports can be written, it is a less frequent operation
+and so will not be discussed here. If there is a need to write another
+Port, follow the example in <CODE>twisted.internet.tcp.Port.</CODE></P>
+
+<P>Most code uses <CODE>twisted.internet.tcp.Port</CODE>s. These are
+initialized with a factory and a port number:</P>
+
+<PRE>
+from twisted.internet.tcp import Port
+from twisted.internet.protocols.protocol import Factory
+from twisted.internet.protocols.basic import Echo
+
+factory = Factory()
+factory.protocol = Echo
+port = Port(7, factory)
+</PRE>
+
+<P>Usually, code will not need to handle <CODE>Port</CODE>s directly.</P>
+
+<H2><CODE>twisted.tap</CODE></H2>
+
+<P>As seen, many times the interplays between a specific Protocol class
+and a specific Factory class depend on quite a few attributes which all
+need to be set correctly. The <CODE>twisted.tap</CODE> package allows
+a programmer to document it programmatically, while giving a naive user
+an easy way to generate configurations.</P>
+
+<P>Let us assume that a module, <CODE>twisted.quote</CODE>, included
+the following code, which has already been given as example:</P>
+
+<PRE>
+from twisted.internet.protocols.protocol import Factory, Protocol
+
+class QOTD(Protocol):
+
+    def connectionMade(self):
+        self.transport.write(self.factory.quote+'\r\n')
+        self.transport.loseConnection()
+
+
+def makeQOTDFactory(quote=None):
+    factory = Factory()
+    factory.protocol = QOTD
+    factory.quote = quote or 'An apple a day keeps the doctor away'
+    return factory
+</PRE>
+
+<P>We want a user to be easily able to generate a quote server. He
+should be able to give a quote, and optionally a port number. If
+no port number is given, the server should listen on port 17, the one
+mandated by the RFC.</P>
+
+<P>We will have the configuration-creator accept the options <CODE>-q</CODE>
+or <CODE>--quote</CODE> to set the quote, and <CODE>-p</CODE> or
+<CODE>--port</CODE> to set the ports.</CODE></P>
+
+<P>Here is an example (this code should be in twisted/tap/quote.py):</P>
+
+<PRE>
+from twisted.python import usage
+from twisted.quote import makeQOTDFactory
+
+
+class Options(usage.Options):
+
+    synopsis = "Usage: mktap quote [options]"
+
+    optStrings = [["port", "p", 17], ["quote", "q", None]]
+
+    longdesc = "Quote server"
+
+
+def getPorts(app, config):
+    factory = makeQOTDFactory(config.quote)
+    return [(int(config.port), factory]
+</PRE>
 
 </BODY></HTML>
