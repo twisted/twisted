@@ -27,15 +27,12 @@ strongly recommended.
 
 TODO: make zope.interface run in 2.2
 
-CHANGES:
-1. __adapt__ now uses zope3's semantics, which are slighly different.
-2. dunno what happens to persisting adapters. I think it is always on
-in zope3, but need to check. For now no special code to deal with it.
-3. getComponent will only be called if __conform__ is not present
 
-Removed features from old version:
-1. context-based registries.
-2. 
+
+NOTE TO ITAMR ->
+TO MAKE persist=1 work:
+do the persistence code in __call__ rather than the registry!
+
 """
 
 # twisted imports
@@ -68,31 +65,42 @@ class CannotAdapt(NotImplementedError):
     """
 
 
+_adapterPersistence = weakref.WeakValueDictionary()
+_adapterOrigPersistence = weakref.WeakValueDictionary()
+
 class MetaInterface(interface.InterfaceClass):
     def __call__():
         # Copying evil trick I dinna understand
         def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
             if registry != None:
                 raise RuntimeError, "registry argument will be ignored"
-            # possibly should be removed for efficiency reasons
-            if persist != None:
-                warnings.warn("persist argument is deprecated", DeprecationWarning)
-            # XXX does this go away?
+            # getComponents backwards compat
             if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__"):
                 warnings.warn("please use __conform__ instead of getComponent", DeprecationWarning)
                 result = adaptable.getComponent(self)
                 if result != None:
                     return result
+            # check for weakref persisted adapters
+            if persist != False:
+                pkey = (id(adaptable), self)
+                if _adapterPersistence.has_key(pkey):
+                    return _adapterPersistence[pkey]
+
             try:
                 if default == _Nothing:
-                    return interface.InterfaceClass.__call__(self, adaptable)
+                    adapter = interface.InterfaceClass.__call__(self, adaptable)
                 else:
-                    return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
+                    adapter = interface.InterfaceClass.__call__(self, adaptable, alternate=default)
             except (TypeError, NotImplementedError), e:
                 if isinstance(e, CannotAdapt):
                     raise
                 else:
                     raise CannotAdapt(str(e))
+            if persist:
+                _adapterPersistence[(id(adaptable), self)] = adapter
+                # make sure as long as adapter is alive the original object is alive
+                _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
+
         return __call__
     __call__ = __call__()
     
@@ -163,19 +171,6 @@ class _Wrapper(object):
 
 
 class AdapterRegistry(ZopeAdapterRegistry):
-
-    def __init__(self):
-        ZopeAdapterRegistry.__init__(self)
-        # we may need to make marker interfaces for class->iface adapters
-        # so we store them here:
-        self.classInterfaces = {}
-        self.adapterPersistence = weakref.WeakValueDictionary()
-        self.adapterOrigPersistence = weakref.WeakValueDictionary()
-    
-    def persistAdapter(self, original, iface, adapter):
-        self.adapterPersistence[(id(original), iface)] = adapter
-        # make sure as long as adapter is alive the original object is alive
-        self.adapterOrigPersistence[_Wrapper(original)] = adapter
     
     def registerAdapter(self, adapterFactory, origInterface, *interfaceClasses):
         """Register an adapter class.
@@ -187,21 +182,20 @@ class AdapterRegistry(ZopeAdapterRegistry):
         """
         assert interfaceClasses, "You need to pass an Interface"
         global ALLOW_DUPLICATES
+        for interfaceClass in interfaceClasses:
+            # XXX NOT WORKING :(
+            factory = self.getAdapterFactory(origInterface, interfaceClass, False)
+            if (factory and not ALLOW_DUPLICATES):
+                raise ValueError("an adapter (%s) was already registered." % (factory, ))
+
+        # deal with class->interface adapters:
         if not issubclass(origInterface, Interface):
             # fix up __implements__ if it's old style
             if hasattr(origInterface, "__implements__") and isinstance(origInterface.__implements__, (tuple, MetaInterface)):
                 for i in tupleTreeToList(origInterface.__implements__):
                     declarations.classImplements(origInterface, i)
             origInterface = declarations.implementedBy(origInterface)
-        for interfaceClass in interfaceClasses:
-            # XXX NOT WORKING :(
-            if (self.lookup1(origInterface, interfaceClass)
-                and not ALLOW_DUPLICATES):
-                raise ValueError(
-                    "an adapter (%s) was already registered." % (
-                        self.adapterRegistry[(origInterface, interfaceClass)]
-                    )
-                )
+
         self.register([origInterface], interfaceClasses[0], '', adapterFactory)
     
     def getAdapterFactory(self, fromInterface, toInterface, default):
@@ -210,7 +204,10 @@ class AdapterRegistry(ZopeAdapterRegistry):
         if not issubclass(fromInterface, Interface):
             fromInterface = declarations.implementedBy(fromInterface)
         # XXX maybe this should just use lookup1 - check!
-        return self.get(fromInterface).adapters[False, (), '', toInterface]
+        try:
+            return self.get(fromInterface).adapters[False, (), '', toInterface]
+        except KeyError:
+            return default
 
     getAdapterClass = getAdapterFactory
 
@@ -243,18 +240,15 @@ class AdapterRegistry(ZopeAdapterRegistry):
         the parameter itself if it already implements the interface. If no
         adapter can be found, the 'default' parameter will be returned.
         """
-        # always do persistence lookups... might be wrong!
-        pkey = (id(obj), interfaceClass)
-        if self.adapterPersistence.has_key(pkey):
-            return self.adapterPersistence[pkey]
+        if persist != False:
+            pkey = (id(obj), interfaceClass)
+            if _adapterPersistence.has_key(pkey):
+                return _adapterPersistence[pkey]
 
         for iface in declarations.providedBy(obj):
             factory = self.lookup1(interfaceClass, iface)
             if factory != None:
-                result = factory(obj)
-                # XXX WE ALWAYS PERSIST NOT GOOD
-                self.persistAdapter(obj, interfaceClass, result)
-                return result
+                return factory(obj)
         if default == _Nothing:
             raise NotImplementedError
         else:
