@@ -625,7 +625,7 @@ class SubclassableCStringIO(object):
         return self.__csio.close()
 
     def isatty(self):
-        return False
+        return self.__csio.isatty()
 
     def seek(self, pos, mode=0):
         return self.__csio.seek(pos, mode)
