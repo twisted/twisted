@@ -4,9 +4,19 @@
 
 from compiler import ast, parse, pycodegen, misc
 
+from twisted.internet import reactor, defer
+
+def async(o):
+    d = defer.Deferred()
+    reactor.callLater(1, d.callback, o)
+    return d
+
+from defgen import waitForDeferred, deferredGenerator
+
 s = """\
 def g():
-    x = f('g')
+    x = waitForDeferred(async('g'))
+g = deferredGenerator(g)
 """
 
 mod = parse(s)
@@ -26,7 +36,7 @@ co = cg.getCode()
 def f(x):
     print x
     print 'hoop hoop'
+    return 
 
 exec co in globals()
-for i in g():
-    print i
+print g()
