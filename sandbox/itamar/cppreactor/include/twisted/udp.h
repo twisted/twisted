@@ -49,7 +49,7 @@ namespace Twisted
     class DatagramProtocol
     {
     private:
-	object portobj; // so that we have INCREF the port
+	object m_portobj; // so that we have INCREF the port
     public:
 	PyObject* self;
 	UDPPort* transport;
@@ -60,9 +60,12 @@ namespace Twisted
 	    this->self = s;
 	}
 	void makeConnection(object t) {
-	    this->portobj = t;
+	    this->m_portobj = t;
 	    this->transport = extract<UDPPort*>(t);
 	    call_method<void>(self, "startProtocol");
+	}
+	void doStop() {
+	    call_method<void>(self, "stopProtocol");
 	}
 	virtual void startProtocol() {}
 	virtual void stopProtocol() {}
