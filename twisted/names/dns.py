@@ -281,7 +281,10 @@ class NS(dns.RR):
                                 self.ttl, len(s.getvalue())))
         strio.write(s.getvalue())
 
+
 class SimpleDomain:
+
+    ttl = 60*60*24
 
     def __init__(self, name, ip):
         self.name = name
@@ -289,17 +292,17 @@ class SimpleDomain:
 
     def getAnswers(self, message, name, type):
         if type == dns.MX:
-            message.answers.append(MX(name, type=dns.MX, cls=dns.IN, 
-                                      data=(5, self.name)))
-            message.add.append(dns.RR(self.name, type=dns.A, cls=dns.IN, 
-                                      data=self.ip))
+            message.answers.append(MX(name, ttl=self.ttl, type=dns.MX, 
+                                      cls=dns.IN, data=(5, self.name)))
+            message.add.append(dns.RR(self.name, ttl=self.ttl, type=dns.A,
+                                      cls=dns.IN, data=self.ip))
         if type == dns.A:
-            message.answers.append(dns.RR(name, type=dns.A, cls=dns.IN, 
-                                          data=self.ip))
-        message.ns.append(NS(self.name, type=dns.NS, cls=dns.IN, 
+            message.answers.append(dns.RR(name, ttl=self.ttl, type=dns.A, 
+                                          cls=dns.IN, data=self.ip))
+        message.ns.append(NS(self.name, ttl=self.ttl, type=dns.NS, cls=dns.IN, 
                                       data='ns.'+self.name))
-        message.add.append(dns.RR('ns.'+self.name, type=dns.A, cls=dns.IN, 
-                                  data=self.ip))
+        message.add.append(dns.RR('ns.'+self.name, ttl=self.ttl, type=dns.A, 
+                                  cls=dns.IN, data=self.ip))
          
 
 
