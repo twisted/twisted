@@ -43,9 +43,6 @@ class TOCGeneralTestCase(unittest.TestCase):
         flap(2,"toc_init_done\000"),\
         flap(2,"toc_send_im test \"hi\"\000"),\
         flap(2,"toc_send_im test2 \"hello\"\000"),\
-        flap(2,"toc_add_deny test\000"),\
-        flap(2,"toc_send_im test \"hi\"\000"),\
-        flap(2,"toc_add_deny\000"),\
         flap(2,"toc_set_away \"not here\"\000"),\
         flap(2,"toc_set_idle 602\000"),\
         flap(2,"toc_set_idle 0\000"),\
@@ -57,6 +54,7 @@ class TOCGeneralTestCase(unittest.TestCase):
         flap(2,"toc_chat_invite 0 \"come\" ooga\000"),\
         #flap(2,"toc_chat_accept 0\000"),\
         flap(5,"\000"),\
+        flap(2,"toc_chat_whisper 0 ooga \"boo ga\"\000"),\
         flap(2,"toc_chat_leave 0"),\
         flap(5,"\000"))
         data[1]=("FLAPON\r\n\r\n",\
@@ -66,9 +64,9 @@ class TOCGeneralTestCase(unittest.TestCase):
         flap(2,"toc_init_done\000"),\
         flap(5,"\000"),\
         flap(5,"\000"),\
-        flap(5,"\000"),\
-        flap(5,"\000"),\
-        flap(5,"\000"),\
+        #flap(5,"\000"),\
+        #flap(5,"\000"),\
+        #flap(5,"\000"),\
         flap(5,"\000"),\
         flap(5,"\000"),\
         flap(5,"\000"),\
@@ -79,6 +77,7 @@ class TOCGeneralTestCase(unittest.TestCase):
         #flap(5,"\000"),\
         flap(2,"toc_chat_accept 0\000"),\
         flap(2,"toc_chat_send 0 \"hi test\"\000"),\
+        flap(5,"\000"),\
         flap(2,"toc_chat_leave 0\000"))
         strings=range(USERS)
         for i in strings:
@@ -120,7 +119,7 @@ class TOCGeneralTestCase(unittest.TestCase):
         [2,"UPDATE_BUDDY:test:T:0:%s:0: O\000"%ts[0]],\
         [2,"IM_IN:test:F:hi\000"],\
         [2,"ERROR:901:test2\000"],\
-        [2,"UPDATE_BUDDY:test:T:0:%s:0: O\000"%ts[0]],\
+        #[2,"UPDATE_BUDDY:test:T:0:%s:0: O\000"%ts[0]],\
         [2,"UPDATE_BUDDY:test:T:0:%s:0: OU\000"%ts[0]],\
         [2,"UPDATE_BUDDY:test:T:0:%s:10: OU\000"%ts[0]],\
         [2,"UPDATE_BUDDY:test:T:0:%s:0: OU\000"%ts[0]],\
@@ -138,7 +137,7 @@ class TOCGeneralTestCase(unittest.TestCase):
         [2,"SIGN_ON:TOC1.0\000"],\
         [2,"NICK:ooga\000"],\
         [2,"CONFIG:\000"],\
-        [2,"UPDATE_BUDDY:test:T:0:%s:0: O\000"%ts[0]],\
+        #[2,"UPDATE_BUDDY:test:T:0:%s:0: O\000"%ts[0]],\
         [2,"UPDATE_BUDDY:test:T:0:%s:0: OU\000"%ts[0]],\
         [2,"UPDATE_BUDDY:test:T:0:%s:10: OU\000"%ts[0]],\
         [2,"UPDATE_BUDDY:test:T:0:%s:0: OU\000"%ts[0]],\
@@ -148,6 +147,7 @@ class TOCGeneralTestCase(unittest.TestCase):
         [2,"CHAT_JOIN:0:Test Chat\000"],\
         [2,"CHAT_UPDATE_BUDDY:0:T:test:ooga\000"],\
         [2,"CHAT_IN:0:ooga:F:hi test\000"],\
+        [2,"CHAT_IN:0:test:T:boo ga\000"],\
         [2,"CHAT_UPDATE_BUDDY:0:F:test\000"],\
         [2,"CHAT_LEFT:0\000"]]
         if flaps!=shouldequal:
@@ -193,7 +193,6 @@ class TOCMultiPacketTestCase(unittest.TestCase):
             for i in range(len(flaps)):
                 if flaps[i]!=shouldbe[i]:raise AssertionError("MultiPacketTest Failed!\nactual:%s\nshould be:%s"%(flaps[i],shouldbe[i]))
             raise AssertionError("MultiPacketTest Failed with incorrect length!, printing both lists\nactual:%s\nshould be:%s"%(flaps,shouldbe))
-    testTOC=runTest
 class TOCSavedValuesTestCase(unittest.TestCase):
     def testTOC(self):
         self.runTest()
@@ -292,8 +291,46 @@ class TOCSavedValuesTestCase(unittest.TestCase):
                 if flaps[i]!=goodpassexpect[i]:
                     raise AssertionError("SavedValuesTest GoodPass Failed!\nactual:%s\nshould be:%s"%(flaps[i],goodpassexpect[i]))
             raise AssertionError("SavedValuesTest GoodPass Failed with incorrect length!\nactual:%s\nshould be:%s"%(flaps,beforeexpect))
-    testTOC=runTest
-testCasesInstances=[TOCGeneralTestCase(),TOCMultiPacketTestCase(),TOCSavedValuesTestCase()]
-testCases=[TOCGeneralTestCase,TOCMultiPacketTestCase,TOCSavedValuesTestCase]
-def testSuite():return unittest.TestSuite(testCasesInstances)
-    
+class TOCPrivacyTestCase(unittest.TestCase):
+    def runTest(self):
+        sends=["FLAPON\r\n\r\n",\
+         flap(1,"\000\000\000\001\000\001\000\004test"),\
+         flap(2,"toc_signon localhost 9999 test 0x00 english penguin\000"),\
+         flap(2,"toc_init_done\000"),\
+         flap(2,"toc_add_deny\000"),\
+         flap(2,"toc_send_im test 1\000"),\
+         flap(2,"toc_add_deny test\000"),\
+         flap(2,"toc_send_im test 2\000"),\
+         flap(2,"toc_add_permit\000"),\
+         flap(2,"toc_send_im test 3\000"),\
+         flap(2,"toc_add_permit test\000"),\
+         flap(2,"toc_send_im test 4\000")]
+        expect=[[1,"\000\000\000\001"],\
+         [2,"SIGN_ON:TOC1.0\000"],\
+         [2,"NICK:test\000"],\
+         [2,"CONFIG:\000"],\
+         [2,"IM_IN:test:F:1\000"],\
+         [2,"ERROR:901:test\000"],\
+         [2,"ERROR:901:test\000"],\
+         [2,"IM_IN:test:F:4\000"]]
+        d=DummyTOC()
+        d.factory=toc.TOCFactory()
+        s=StringIOWithoutClosing()
+        d.makeConnection(protocol.FileWrapper(s))
+        for i in sends:
+            d.dataReceived(i)
+        d.connectionLost()
+        v=s.getvalue()
+        flaps=[]
+        f,v=readFlap(v)
+        while f:
+            flaps.append(f)
+            f,v=readFlap(v)
+        if flaps!=expect:
+            for i in range(len(flaps)):
+                if flaps[i]!=expect[i]:
+                    raise AssertionError("PrivacyTest Before Failed!\nactual:%s\nshould be:%s"%(flaps[i],expect[i]))
+            raise AssertionError("PrivacyTest Before Failed with incorrect length!\nactual:%s\nshould be:%s"%(flaps,expect))         
+testCases=[TOCGeneralTestCase,TOCMultiPacketTestCase,TOCSavedValuesTestCase,TOCPrivacyTestCase]
+def testSuite():return unittest.TestSuite(map(lambda x:x(),testCases))
+ 
