@@ -2,12 +2,12 @@
 Twisted 2.0 Split
 =================
 
-Twisted 2.0 is a major upgrade and will involve splitting the
-framework up into many packages.  The automated release process must
-be modified to work with all of these minor packages.  At the same
-time, the release is being migrated to zpkgtools, a tool developed by
-Fred Drake for Zope3 which facilitates hierarchical packages such as
-Twisted.
+Twisted 2.0 is a major upgrade and will involve splitting the framework
+up into many packages <http://twistedmatrix.com/bugs/issue567>.  The
+automated release process must be modified to work with all of these
+minor packages.  At the same time, the release is being migrated to
+zpkgtools, a tool developed by Fred Drake for Zope3 which facilitates
+hierarchical packages such as Twisted.
 
 In the most abstract, a tool must be provided which takes various
 release-related parameters, interacts with the Subversion repository,
@@ -24,24 +24,37 @@ interactions with specific systems.
 When Twisted 2.0 is released, packages for Debian, Windows, and
 generic UNIX machines (tarballs) must be available.  Individual
 packages for each of Twisted and its subprojects must be available in
-Debian and Tarball format.  Individual Windows packages are probably
-not a necessity, and are up for discussion.
+Debian and Tarball format.
 
-The tarballs should contain a setup.py (or similar) that can handle
-building and installation of the package.  It should contain
-documentation for the project in HTML form for both the API and
-howtos.  It should install documentation, manual pages, and anything
-else relevant to the project. There should be a tarball for Twisted
-Core and all other Twisted subprojects, as well as a "Sumo" tarball
-that directly includes Twisted and all of its subpackages.
-
-Debian should have a twisted-core package, several twisted-subproject
-packages, and a twisted-sumo which depends on all the other Twisted
+The tarballs should contain a setup.py (or similar) that can handle building
+and installation of the package.  It should contain documentation for the
+project in HTML form for both the API and howtos.  It should install the
+software necessary to import packages in twisted, and relevant executable
+scripts; but not, for example, documentation.  There should be a tarball
+for Twisted Core and all other Twisted subprojects, as well as a "Sumo"
+tarball that directly includes Twisted and officially-branded
 subpackages.
 
+Debian should have a twisted-core package and several twisted-subproject
+packages.  There will not be a twisted-sumo to correspond to the tarball
+distributions; applications will depend on the parts of Twisted that they
+need.  (Providing our own apt repositories will also be an issue: see
+<http://twistedmatrix.com/bugs/issue160>.)
+
 There should be a Windows executable installer for Twisted available
-from the download site. Any packages for other OSes are up to the
-community to provide.
+from the download site.  It will be analogous to the "sumo" package.
+There is little benefit to dividing Twisted up for the benefit of Windows
+developers, since they will undoubtedly be creating their own,
+application-specific installers later and therefore cannot take
+advantage of the release management benefits of the split.
+
+Any packages for other OSes are up to the community to provide.  There will
+be a formal process for contributing packages and the requirements of
+packages, to hopefully discourage the existence of broken Twisted packages
+that generate mailing list traffic.  Obviously we can't prevent someone from
+making and distributing a package, but with standards in place we can
+"bless" packages, making them more desirable to the community than
+non-conforming packages.
 
 Web Sites
 =========
@@ -112,7 +125,8 @@ modules; either a way to generalize extension building should be
 provided upstream to zpkg, or a fix specifically for Twisted should be
 implemented. As well, automating a zpkg build is problematic
 especially with respect to portability of environment. These issues
-are currently being considered and worked on.
+are currently being considered and worked on.  For reference, see 
+<http://twistedmatrix.com/bugs/issue818>.
 
 Subprojects
 ===========
@@ -127,4 +141,7 @@ Each subproject will have its own release manager (though one person
 may be the release manager of multiple projects), and some amount of
 education and support of the release automation should be given to
 them.
+
+We will produce automation tools and documentation of what we're doing
+for the subproject managers to use.
 
