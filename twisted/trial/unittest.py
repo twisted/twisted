@@ -259,7 +259,7 @@ class TextReporter(Reporter):
             
         ret = ("%s\n%s: %s (%s)\n%s\n%s" %
                (self.DOUBLE_SEPARATOR,
-                flavor, method.__name__, testClass.__name__,
+                flavor, method.__name__, reflect.qual(testClass),
                 self.SEPARATOR,
                 tb))
         return ret
