@@ -27,6 +27,8 @@ API Stability: Unstable
 import time
 import string
 import operator
+import base64
+import binascii
 import md5
 
 from twisted.protocols import smtp
@@ -114,8 +116,8 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
     _onLogout = None
     highest = 0
 
-    AUTH_CMDS = ['CAPA', 'USER', 'PASS', 'APOP', 'RPOP', 'QUIT']
-    
+    AUTH_CMDS = ['CAPA', 'USER', 'PASS', 'APOP', 'AUTH', 'RPOP', 'QUIT']
+
     # A reference to the newcred Portal instance we will authenticate
     # through.
     portal = None
@@ -129,6 +131,9 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
     # Set this pretty low -- POP3 clients are expected to log in, download
     # everything, and log out.
     timeOut = 300
+    
+    # Current protocol state
+    state = "COMMAND"
     
     def connectionMade(self):
         if self.magic is None:
@@ -154,6 +159,9 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
         self.resetTimeout()
+        getattr(self, 'state_' + self.state)(line)
+    
+    def state_COMMAND(self, line):
         try:
             return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
@@ -163,12 +171,15 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
     def processCommand(self, command, *args):
         command = string.upper(command)
         authCmd = command in self.AUTH_CMDS
-        if self.mbox is None and not authCmd:
-            raise POP3Error("not authenticated yet: cannot do %s" % command)
+        if not self.mbox and not authCmd:
+            raise POP3Error("not authenticated yet: cannot do " + command)
+        #elif self.mbox and authCmd:
+        #    raise POP3Error("already authenticated: cannot do " + command)
         f = getattr(self, 'do_' + command, None)
         if f:
             return f(*args)
         raise POP3Error("Unknown protocol command: " + command)
+
 
     def listCapabilities(self):
         baseCaps = [
@@ -222,18 +233,47 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
                 baseCaps.append("LOGIN-DELAY " + v)
             
             try:
-                v = self.factory.cap_SASL()
-            except NotImplementedError:
+                v = self.factory.challengers
+            except AttributeError:
                 pass
             except:
                 log.err()
             else:
-                baseCaps.append("SASL " + ' '.join(v))
+                baseCaps.append("SASL " + ' '.join(v.keys()))
         return baseCaps
 
     def do_CAPA(self):
         map(self.sendLine, self.listCapabilities())
         self.sendLine(".")
+
+    def do_AUTH(self, args):
+        auth = self.factory.challengers.get(args.strip().upper())
+        if not self.portal or not auth:
+            self.failResponse("Unsupported SASL selected")
+            return
+        
+        self._auth = auth()
+        chal = self._auth.getChallenge()
+        
+        self.sendLine('+ ' + base64.encodestring(chal).rstrip('\n'))
+        self.state = 'AUTH'
+
+    def state_AUTH(self, line):
+        self.state = "COMMAND"
+        try:
+            parts = base64.decodestring(line).split(None, 1)
+        except binascii.Error:
+            self.failResponse("Invalid BASE64 encoding")
+        else:
+            if len(parts) != 2:
+                self.failResponse("Invalid AUTH response")
+                return
+            self._auth.username = parts[0]
+            self._auth.response = parts[1]
+            d = self.portal.login(self._auth, None, IMailbox)
+            d.addCallback(self._cbMailbox, parts[0])
+            d.addErrback(self._ebMailbox)
+            d.addErrback(self._ebUnexpected)
 
     def do_APOP(self, user, digest):
         d = defer.maybeDeferred(self.authenticateUserAPOP, user, digest)
@@ -453,6 +493,9 @@ class IServerFactory(components.Interface):
     NotImplementedError, perUserExpiration() must be implemented, otherwise
     they are optional.  If cap_LOGIN_DELAY() is implemented,
     perUserLoginDelay() must be implemented, otherwise they are optional.
+    
+    @ivar challengers: A dictionary mapping challenger names to classes
+    implementing C{IUsernameHashedPassword}.
     """
     
     def cap_IMPLEMENTATION(self):
@@ -475,9 +518,6 @@ class IServerFactory(components.Interface):
         
         @return: True if it is, false otherwise.
         """ 
-    
-    def cap_SASL(self):
-        """Return a list describing all supported authentication schemes."""
 
 class IMailbox(components.Interface):
     """
@@ -611,7 +651,6 @@ class POP3Client(basic.LineReceiver):
             log.err()
 
     def lineReceived(self, line):
-        # print 'C:', repr(line)
         if self.mode == SHORT or self.mode == FIRST_LONG:
             self.mode = NEXT[self.mode]
             self._dispatch(self.command, self.handle_default, line)

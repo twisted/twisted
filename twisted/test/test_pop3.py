@@ -19,6 +19,11 @@
 Test cases for twisted.protocols.pop3 module.
 """
 
+import StringIO
+import string
+import hmac
+import base64
+
 from twisted.trial import unittest
 from twisted import mail
 import twisted.mail.protocols
@@ -31,7 +36,11 @@ from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.protocols import loopback
 from twisted.python import failure
-import StringIO, string
+
+from twisted import cred
+import twisted.cred.portal
+import twisted.cred.checkers
+import twisted.cred.credentials
 
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 
@@ -85,7 +94,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         self.apop('hello@baz.com', 'world')
 
     def handle_APOP(self, line):
-        parts = string.split(line)
+        parts = line.split()
         code = parts[0]
         data = (parts[1:] or ['NONE'])[0]
         if code != '+OK':
@@ -98,7 +107,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         self.lines.append(line)
 
     def handle_RETR_end(self):
-        self.message = string.join(self.lines, '\n')+'\n'
+        self.message = '\n'.join(self.lines) + '\n'
         self.quit()
 
     def handle_QUIT(self, line):
@@ -247,9 +256,8 @@ class TestServerFactory:
     def cap_EXPIRE(self):
         return 60
     
-    def cap_SASL(self):
-        return ["SCHEME_1", "SCHEME_2"]
-    
+    challengers = {"SCHEME_1": None, "SCHEME_2": None}
+        
     def cap_LOGIN_DELAY(self):
         return 120
 
@@ -348,3 +356,37 @@ class GlobalCapabilitiesTestCase(unittest.TestCase):
     
     def testLOGIN_DELAY(self):
         self.contained("LOGIN-DELAY 120", self.caps, self.pcaps, self.lpcaps)
+
+class TestRealm:
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if avatarId == 'testuser':
+            return pop3.IMailbox, DummyMailbox(), lambda: None
+        assert False
+
+class SASLTestCase(unittest.TestCase):
+    def testValidLogin(self):
+        p = pop3.POP3()
+        p.factory = TestServerFactory()
+        p.factory.challengers = {'CRAM-MD5': cred.credentials.CramMD5Credentials}
+        p.portal = cred.portal.Portal(TestRealm())
+        ch = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        ch.addUser('testuser', 'testpassword')
+        p.portal.registerChecker(ch)
+        
+        s = StringIO.StringIO()
+        p.transport = internet.protocol.FileWrapper(s)
+        p.connectionMade()
+        
+        p.lineReceived("CAPA")
+        self.assertIn("SASL CRAM-MD5", s.getvalue())
+        
+        p.lineReceived("AUTH CRAM-MD5")
+        chal = s.getvalue().splitlines()[-1][2:]
+        chal = base64.decodestring(chal)
+        response = hmac.HMAC('testpassword', chal).hexdigest()
+        
+        p.lineReceived(base64.encodestring('testuser ' + response).rstrip('\n'))
+        self.failUnless(p.mbox)
+        self.assertIn("+OK", s.getvalue().splitlines()[-1])
+        p.connectionLost(failure.Failure(Exception()))
+        
