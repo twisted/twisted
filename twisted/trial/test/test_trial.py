@@ -14,7 +14,7 @@ from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
 from twisted.trial import unittest, reporter, util, runner, itrial
-from twisted.trial.test import trialtest1, pyunit, timeoutAttr, suppression, trialtest4, common
+from twisted.trial.test import trialtest1, pyunit, timeoutAttr, suppression, numOfTests, common
 
 # this is ok, the module has been designed for this usage
 from twisted.trial.assertions import *
@@ -185,7 +185,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
     def testCorrectNumberTestReporting(self):
         """make sure trial reports the correct number of tests run (issue 770)"""
-        self.suite.addModule(trialtest4)
+        self.suite.addModule(numOfTests)
         self.suite.run()
         assertSubstring("Ran 1 tests in", self.reporter.out)
 
