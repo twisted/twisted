@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.55 2003/01/01 18:38:13 itamarst Exp $
+# $Id: default.py,v 1.56 2003/01/01 19:23:05 tv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -151,7 +151,10 @@ class TCPConnector(BaseConnector):
         if isinstance(port, types.IntType):
             port = port
         else:
-            port = socket.getservbyname(port, 'tcp')
+            try:
+                port = socket.getservbyname(port, 'tcp')
+            except socket.error, e:
+                raise error.ServiceNameUnknownError(string=str(e))
         self.port = port
         self.bindAddress = bindAddress
         BaseConnector.__init__(self, reactor, factory, timeout)

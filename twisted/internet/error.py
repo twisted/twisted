@@ -91,6 +91,10 @@ class BadFileError(ConnectError):
     """File used for UNIX socket is no good."""
 
 
+class ServiceNameUnknownError(ConnectError):
+    """Service name given as port is unknown."""
+
+
 class UserError(ConnectError):
     """User aborted connection."""
 
