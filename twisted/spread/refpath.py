@@ -39,19 +39,24 @@ class PathReferenceContext:
         return o
 
 class PathReferenceAcquisitionContext(PathReferenceContext):
-    def _lookup(self, name, acquire=0):
+    def _lookup(self, name, acquire=0, debug=0):
+        if debug: print "Looking for ", name
         obRef = self
         ob = self.getObject()
         while obRef:
+            if debug: print obRef
             if acquire and hasattr(ob, name):
                 return getattr(ob, name)
-            elif hasattr(ob, 'listNames') and name in ob.listNames():
-                if acquire:
-                    retVal = ob.getChild(name)
-                else:
-                    foundPath = copy(obRef.path)
-                    foundPath.append(name)
-                    return PathReferenceAcquisitionContext(foundPath, obRef.root)
+            elif hasattr(ob, 'listNames'):
+                names = ob.listNames()
+                if debug: print name, names, name in names
+                if name in names:
+                    if acquire:
+                        return ob.getChild(name, self)
+                    else:
+                        foundPath = copy(obRef.path)
+                        foundPath.append(name)
+                        return PathReferenceAcquisitionContext(foundPath, obRef.root)
 
             # When the loop gets to the top of the containment heirarchy,
             # obRef will be set to None.
@@ -136,18 +141,18 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         upPath.extend(relPath)
         return "/".join(upPath)
 
-    def locate(self, name):
+    def locate(self, name, debug=0):
         """
         Get a reference to an object with the given name which is somewhere
         on the path above us.
         """
-        return self._lookup(name)
+        return self._lookup(name, debug=debug)
 
-    def acquire(self, name):
+    def acquire(self, name, debug=0):
         """
         Look for an attribute or element by name in all of our parents
         """
-        return self._lookup(name, acquire=1)
+        return self._lookup(name, acquire=1, debug=debug)
 
 class PathReference:
     def __init__(self):

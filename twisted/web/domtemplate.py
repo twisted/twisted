@@ -444,6 +444,7 @@ class DOMTemplate(Resource, View):
 
     def process(self, request, **kwargs):
         print "Processing results: ", kwargs
+        return RESTART_RENDERING
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate

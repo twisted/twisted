@@ -12,7 +12,7 @@ document = parseString("<xml />")
 DOMWidgets are views which can be composed into bigger views.
 """
 
-DEBUG = 1
+DEBUG = 0
 
 class Widget(View):
     """A Widget wraps an object, its model, for display. The model can be a
