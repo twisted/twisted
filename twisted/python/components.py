@@ -198,7 +198,7 @@ def implements(obj, interfaceClass):
     This method checks if object provides, not if it implements. The confusion
     is due to the change in terminology.
     """
-    warnings.warn("Please use providedBy() or implementedBy()", DeprecationWarning)
+    warnings.warn("Please use providedBy() or implementedBy()", DeprecationWarning, stacklevel=2)
     # try to support both classes and instances, which is HORRIBLE
     if isinstance(obj, (type, types.ClassType)):
         fixClassImplements(obj)
@@ -213,7 +213,7 @@ def getInterfaces(klass):
 
     This is horrible and stupid. Please use zope.interface.providedBy() or implementedBy().
     """
-    warnings.warn("getInterfaces should not be used, use providedBy() or implementedBy()", DeprecationWarning)
+    warnings.warn("getInterfaces should not be used, use providedBy() or implementedBy()", DeprecationWarning, stacklevel=2)
     # try to support both classes and instances, giving different behaviour
     # which is HORRIBLE :(
     if isinstance(klass, (type, types.ClassType)):
@@ -230,7 +230,7 @@ def getInterfaces(klass):
 
 def superInterfaces(interface):
     """DEPRECATED. Given an interface, return list of super-interfaces (including itself)."""
-    warnings.warn("Please use zope.interface APIs", DeprecationWarning)
+    warnings.warn("Please use zope.interface APIs", DeprecationWarning, stacklevel=2)
     result = [interface]
     result.extend(reflect.allYourBase(interface, Interface))
     result = util.uniquify(result)
@@ -254,9 +254,9 @@ def fixClassImplements(klass):
     if _fixedClasses.has_key(klass):
         return
     if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
-            warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning)
-            declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
-            _fixedClasses[klass] = 1
+        warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning, stacklevel=3)
+        declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
+        _fixedClasses[klass] = 1
 
 def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """Register an adapter class.
@@ -396,7 +396,7 @@ class Adapter:
         except AttributeError:
             return default
         else:
-            warnings.warn("please use __conform__ instead of getComponent on %r's class" % self.original, DeprecationWarning)            
+            warnings.warn("please use __conform__ instead of getComponent on %r's class" % self.original, DeprecationWarning, stacklevel=2)
             return f(interface, registry=registry, default=default)
 
     def __conform__(self, interface):
