@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -18,11 +17,13 @@
 """
 Compatability module to provide backwards compatability
 for useful Python features.
+
+This is mainly for use of internal Twisted code. We encourage you to use
+the latest version of Python directly from your code, if possible.
 """
 
-
-
 import socket, struct, __builtin__
+
 
 # Python 2.1 forward-compatibility hacks
 try:
