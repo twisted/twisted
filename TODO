@@ -75,9 +75,10 @@ this file directly.
     would be best, so you could browse different heirarchies (twisted reality
     objects, etc) and edit them.
 
-012 [[Samuel Jordan]] Twisted.Internet for wxwindows.  This might be a better
-    cross-platform toolkit solution than tkinter, especially given how poorly
-    tkinter works on MacOS.  (At least wxwindows *plans* to support the mac...)
+012 *{Itamar Shtull-Trauring}* Twisted.Internet for wxwindows.  This might be a 
+    better cross-platform toolkit solution than tkinter, especially given how
+    poorly tkinter works on MacOS.  (At least wxwindows *plans* to support the
+    mac...)
 
 013 [[Allen Short]] Destroy the sun.
 
@@ -95,7 +96,7 @@ this file directly.
 
 018 Better win32 integration. 
 
-018.1 Support for running twisted servers as WinNT services.
+018.1 Support for running twisted servers as WinNT services, with a GUI.
 
 018.2 twisted.internet support for the win32 event loop as
       provided by win32all.
@@ -104,6 +105,8 @@ this file directly.
 
 018.4 Generating an installer with distutils that actually installs an icon
       into your start menu to start twistd (running webcoil).
+
+018.5 Performance Monitor export for twisted.metrics.
 
 019 IMAP support, possibly based on alpha code written by Michel Pelletier
     (http://www.zope.org/Members/michel/MyWiki/IMAPServer).
