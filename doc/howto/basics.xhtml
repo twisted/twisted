@@ -112,7 +112,9 @@ pid (usually you would do <code class="shell">kill `cat twisted.pid`</code>). Wh
 process is killed in an orderly fashion it will leave behind the <q>shutdown
 Application</q> which is named the same as the original file with a
 <code>-shutdown</code> added to its base name. This contains the new
-configuration information, as changed in the application.</p>
+configuration information, as changed in the application. For example,
+<code>web.tap</code> when shutdown will have an additional file,
+<code>web-shutdown.tap</code>.</p>
 
 <p>As always, the gory details are in the manual page.</p>
 
