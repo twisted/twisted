@@ -1,3 +1,8 @@
+2003-06-22  Jp Calderone  <exarkun@twistedmatrix.com>
+	* twisted/internet/defer.py: Changed maybeDeferred API from
+	maybeDeferred(deferred, f, *args, **kw) to maybeDeferred(f, *args,
+	**kw).
+
 2003-06-19  Paul Swartz  <z3p@twistedmatrix.com>
 	* twisted/conch/{checkers,credentials,realm}.py, 
 	twisted/conch/ssh/userauth.py: Moved the Conch user authentication
