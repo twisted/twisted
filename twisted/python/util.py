@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.43 $'[11:-2]
+__version__ = '$Revision: 1.44 $'[11:-2]
 
 import os
 import sys
@@ -28,7 +28,7 @@ from UserDict import UserDict
 
 class InsensitiveDict:
     """Dictionary, that has case-insensitive keys.
-    
+
     Normally keys are retained in their original form when queried with
     .keys() or .items().  If initialized with preserveCase=0, keys are both
     looked up in lowercase and returned in lowercase by .keys() and .items().
@@ -38,7 +38,7 @@ class InsensitiveDict:
     http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66315 originally
     contributed by Sami Hangaslammi.
     """
-    
+
     def __init__(self, dict=None, preserve=1):
         """Create an empty dictionary, or update from 'dict'."""
         self.data = {}
@@ -74,7 +74,7 @@ class InsensitiveDict:
     __contains__=has_key
 
     def _doPreserve(self, key):
-        if not self.preserve and (isinstance(key, str) 
+        if not self.preserve and (isinstance(key, str)
                                   or isinstance(key, unicode)):
             return key.lower()
         else:
@@ -282,7 +282,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
     @returns: C{str}
     """
     isaTTY = hasattr(sys.stdin, 'isatty') and sys.stdin.isatty()
-    
+
     old = None
     try:
         if not isaTTY:
@@ -378,7 +378,7 @@ def spewer(frame, s, ignored):
         )
 
 def searchupwards(start, files=[], dirs=[]):
-    """Walk upwards from start, looking for a directory containing 
+    """Walk upwards from start, looking for a directory containing
     all files and directories given as arguments::
     >>> searchupwards('.', ['foo.txt'], ['bar', 'bam'])
 
@@ -408,7 +408,7 @@ class LineLog:
     """
     A limited-size line-based log, useful for logging line-based
     protocols such as SMTP.
-    
+
     When the log fills up, old entries drop off the end.
     """
     def __init__(self, size=10):
@@ -450,17 +450,17 @@ class IntervalDifferential:
     """
     Given a list of intervals, generate the amount of time to sleep between
     \"instants\".
-    
+
     For example, given 7, 11 and 13, the three (infinite) sequences
-    
+
         7 14 21 28 35 ...
         11 22 33 44 ...
         13 26 39 52 ...
-    
+
     will be generated, merged, and used to produce:
-    
+
         (7, 0) (4, 1) (2, 2) (1, 0) (7, 0) (1, 1) (4, 2) (2, 0) (5, 1) (2, 0)
-    
+
     New intervals may be added or removed as iteration proceeds using the
     proper methods.
     """
@@ -469,24 +469,24 @@ class IntervalDifferential:
         """
         @type intervals: C{list} of C{int}, C{long}, or C{float} param
         @intervals: The intervals between instants.
-        
+
         @type default: C{int}, C{long}, or C{float}
         @param default: The duration to generate if the intervals list
         becomes empty.
         """
         self.intervals = intervals[:]
         self.default = default
-    
+
     def __iter__(self):
         return _IntervalDifferentialIterator(self.intervals, self.default)
 
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
-        
+
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
-    
+
     def next(self):
         if not self.intervals:
             return (self.default, None)
@@ -496,7 +496,7 @@ class _IntervalDifferentialIterator:
         result = last - self.last
         self.last = last
         return result, index
-    
+
     def addInterval(self, i):
         if self.intervals:
             delay = self.intervals[0][0] - self.intervals[0][1]
@@ -504,7 +504,7 @@ class _IntervalDifferentialIterator:
             self.intervals.sort()
         else:
             self.intervals.append([i, i, 0])
-    
+
     def removeInterval(self, interval):
         for i in range(len(self.intervals)):
             if self.intervals[i][1] == interval:

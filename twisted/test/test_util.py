@@ -159,14 +159,14 @@ class SearchUpwardsTest(unittest.TestCase):
         os.mkdir('searchupwards/bam')
         os.mkdir('searchupwards/a/bar')
         os.mkdir('searchupwards/a/b/bam')
-        actual=util.searchupwards('searchupwards/a/b/c', 
-                                  files=['foo.txt'], 
+        actual=util.searchupwards('searchupwards/a/b/c',
+                                  files=['foo.txt'],
                                   dirs=['bar', 'bam'])
         expected=os.path.abspath('searchupwards') + os.sep
         self.assertEqual(actual, expected)
         shutil.rmtree('searchupwards')
-        actual=util.searchupwards('searchupwards/a/b/c', 
-                                  files=['foo.txt'], 
+        actual=util.searchupwards('searchupwards/a/b/c',
+                                  files=['foo.txt'],
                                   dirs=['bar', 'bam'])
         expected=None
         self.assertEqual(actual, expected)
@@ -176,12 +176,12 @@ class IntervalDifferentialTestCase(unittest.TestCase):
         d = iter(util.IntervalDifferential([], 10))
         for i in range(100):
             self.assertEquals(d.next(), (10, None))
-    
+
     def testSingle(self):
         d = iter(util.IntervalDifferential([5], 10))
         for i in range(100):
             self.assertEquals(d.next(), (5, 0))
-    
+
     def testPair(self):
         d = iter(util.IntervalDifferential([5, 7], 10))
         for i in range(100):
@@ -197,7 +197,7 @@ class IntervalDifferentialTestCase(unittest.TestCase):
             self.assertEquals(d.next(), (2, 0))
             self.assertEquals(d.next(), (5, 0))
             self.assertEquals(d.next(), (0, 1))
-    
+
     def testTriple(self):
         d = iter(util.IntervalDifferential([2, 4, 5], 10))
         for i in range(100):
