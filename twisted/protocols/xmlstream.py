@@ -95,7 +95,7 @@ class Authenticator:
         """
         self.xmlstream = xmlstream
 
-    
+
 class XmlStream(protocol.Protocol, utility.EventDispatcher):
     def __init__(self, authenticator):
         utility.EventDispatcher.__init__(self)
@@ -169,6 +169,12 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
     def onDocumentEnd(self):
         self.transport.loseConnection()
+
+    def setDispatchFn(self, fn):
+        self.stream.ElementEvent = fn
+
+    def resetDispatchFn(self):
+        self.stream.ElementEvent = self.onElement
 
     def send(self, obj):
         if obj.__class__ == domish.Element:

@@ -31,6 +31,12 @@ class DomishTestCase(unittest.TestCase):
         self.assertEquals(e.toXml(), "<foo/>")
         self.assertEquals(e.toXml(closeElement = 0), "<foo>")
 
+    def testUnicodeSerialization(self):
+        e = domish.Element(("testns", "foo"))
+        e["test"] = u"my value\u0221e"
+        e.addContent(u"A degree symbol...\u00B0")
+        self.assertEquals(e.toXml(), u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
+
     def testNamespaceObject(self):
         ns = domish.Namespace("testns")
         self.assertEquals(ns.foo, ("testns", "foo"))

@@ -54,12 +54,12 @@ class _Serializer:
     def serialize(self, elem, closeElement = 1):
         # Shortcut, check to see if elem is actually a string (aka Cdata)
         if _isStr(elem):
-            self.cio.write(escapeToXml(elem))
+            self.cio.write(escapeToXml(elem).encode("utf-8")) 
             return
 
         # Shortcut, check to see if elem is actually a chunk o' serialized XML
         if elem.__class__ == SerializedXML:
-            self.cio.write(elem.data)
+            self.cio.write(elem.data.encode("utf-8"))
             return
         
         # Seralize element name
@@ -79,9 +79,9 @@ class _Serializer:
         for k,v in elem.attributes.items():
             # If the attribute name is a list, it's a qualified attribute
             if k.__class__ == type(()):
-                self.cio.write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)))
+                self.cio.write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)).encode("utf-8"))
             else:
-                self.cio.write(" %s='%s'" % ( k, escapeToXml(v, 1)))
+                self.cio.write((" %s='%s'" % ( k, escapeToXml(v, 1))).encode("utf-8"))
 
         # Shortcut out if this is only going to return
         # the element (i.e. no children)
@@ -205,15 +205,18 @@ class Element:
         self.parent = None
 
     def __getattr__(self, key):
-        if key in self.__dict__:
-            return self.__dict__[key]
-        else:
-            # Check child list for first Element with a name matching the key
-            for n in self.children:
-                if n.__class__ == Element and n.name == key:
-                    return n
-            # Otherwise, raise an AttributeError
+        # Check child list for first Element with a name matching the key
+        for n in self.children:
+            if n.__class__ == Element and n.name == key:
+                return n
+
+        # Only raise attribute errors on special methods
+        if key[0:2] == "__":
             raise AttributeError, key
+
+        # Tweak the behaviour so that it's more friendly about not
+        # finding elements -- we need to document this somewhere :)
+        return None
             
     def __getitem__(self, key):
         return self.attributes[self._dqa(key)]
@@ -238,8 +241,11 @@ class Element:
         else:
             return attr
 
-#    def __eq__(self, n):
-#        pass
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def __ne__(self, other):
+        return id(self) != id(other)
 
     def getAttribute(self, attribname, default = None):
         """Retrieve the value of attribname, if it exists """
@@ -313,7 +319,13 @@ class Element:
         """Serialize this Element and all children to a string """
         s = _Serializer(prefixes)
         s.serialize(self, closeElement)
-        return str(s)
+        return s.cio.getvalue()
+
+    def firstChildElement(self):
+        for c in self.children:
+            if c.__class__ == Element:
+                return c
+        return None
 
 
 class ParserError(Exception):
