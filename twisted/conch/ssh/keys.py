@@ -60,7 +60,10 @@ def getPublicKeyString(filename = None, line = 0, data = ''):
     if filename:
         lines = open(filename).readlines()
         data = lines[line]
-    fileKind, fileData, desc = data.split()
+    if data.count(' ') == 2:
+        fileKind, fileData, desc = data.split()
+    else:
+        fileKind, fileData = data.split()
     #    if fileKind != kind:
     #        raise BadKeyError, 'key should be %s but instead is %s' % (kind, fileKind)
     return base64.decodestring(fileData)
