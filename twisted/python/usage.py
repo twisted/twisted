@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.26 2002/08/09 14:22:49 exarkun Exp $
+# $Id: usage.py,v 1.27 2002/08/10 20:36:57 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -182,10 +182,9 @@ class Options(UserDict.UserDict):
             optMangled = self.synonyms[optMangled]
             self.__dispatch[optMangled](optMangled, arg)
         
-        if len(args):
+        if len(args) and getattr(self, 'subCommands', None):
             sub, rest = args[0], args[1:]
-            subCommands = getattr(self, 'subCommands', [])
-            for (cmd, short, parser, doc) in subCommands:
+            for (cmd, short, parser, doc) in self.subCommands:
                 if sub == cmd or sub == short:
                     self.subCommand = cmd
                     self.subOptions = parser()
