@@ -14,12 +14,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-import struct, array, pwd, os, stat, time, errno
+
+import struct, array, os, stat, time, errno
 
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
 
 from common import NS, getNS
+
 
 class ISFTPServer:
     """
@@ -705,6 +707,7 @@ class FileTransferServer(FileTransferBase):
         }
 
     def _absPath(self, path):
+        import pwd
         uid, gid = self.avatar.getUserGroupId()
         home = pwd.getpwuid(uid)[5]
         return os.path.abspath(os.path.join(home, path))
