@@ -30,7 +30,7 @@ function woven_sendTopEvent() {
 function woven_requestNextEvent() {
     var output = document.getElementById('woven_outputConduit')
 
-    output.src = '?woven_hookupOutputConduitToThisFrame=1&woven_clientSideEventNum=' + woven_clientSideEventNum.toString()
+    if (output) { output.src = '?woven_hookupOutputConduitToThisFrame=1&woven_clientSideEventNum=' + woven_clientSideEventNum.toString()}
 }
 
 function woven_clientToServerEventComplete() {
@@ -61,14 +61,14 @@ function woven_attemptFocus(theNode) {
 }
 
 function woven_replaceElement(theId, htmlStr) {
-    woven_requestNextEvent()
 
     var oldNode = document.getElementById(theId)
-    var container = document.getElementById(theId)
     var newNode = document.createElement('span')
     newNode.innerHTML = htmlStr
     oldNode.parentNode.replaceChild(newNode.firstChild, oldNode)
-    woven_attemptFocus(newNode)
+    //woven_attemptFocus(newNode)
+    //woven_requestNextEvent()
+    //alert('blah')
 }
 
 function woven_appendChild(theId, htmlStr) {
