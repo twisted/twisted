@@ -218,16 +218,17 @@ class TelnetTestCase(unittest.TestCase):
         cmd = telnet.IAC + telnet.WONT + '\x29'
 
         # Jimmy it - after these two lines, the server will be in a state
-        # such that it believes the option to have beenp previously enabled
+        # such that it believes the option to have been previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x29')
-        s.state = 'yes'
+        s.him.state = 'yes'
 
         bytes = "fiddle dee" + cmd
         self.p.dataReceived(bytes)
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x29')
+        self.assertEquals(s.him.state, 'no')
 
     def testAcceptDont(self):
         # Try to disable an option.  The server must allow any option to
@@ -239,13 +240,14 @@ class TelnetTestCase(unittest.TestCase):
         # such that it believes the option to have beenp previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x29')
-        s.state = 'yes'
+        s.us.state = 'yes'
 
         bytes = "fiddle dum " + cmd
         self.p.dataReceived(bytes)
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x29')
+        self.assertEquals(s.us.state, 'no')
 
     def testIgnoreWont(self):
         # Try to disable an option.  The option is already disabled.  The
@@ -277,10 +279,10 @@ class TelnetTestCase(unittest.TestCase):
         cmd = telnet.IAC + telnet.WILL + '\x56'
 
         # Jimmy it - after these two lines, the server will be in a state
-        # such that it believes the option to have beenp previously enabled
+        # such that it believes the option to have been previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x56')
-        s.state = 'yes'
+        s.him.state = 'yes'
 
         bytes = "tra la la" + cmd + "dum de dum"
         self.p.dataReceived(bytes)
@@ -295,10 +297,10 @@ class TelnetTestCase(unittest.TestCase):
         cmd = telnet.IAC + telnet.DO + '\x56'
 
         # Jimmy it - after these two lines, the server will be in a state
-        # such that it believes the option to have beenp previously enabled
+        # such that it believes the option to have been previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x56')
-        s.state = 'yes'
+        s.us.state = 'yes'
 
         bytes = "tra la la" + cmd + "dum de dum"
         self.p.dataReceived(bytes)
@@ -311,7 +313,7 @@ class TelnetTestCase(unittest.TestCase):
         # returns a Deferred that fires when negotiation about the option
         # finishes.  Make sure it fires, make sure state gets updated
         # properly, make sure the result indicates the option was enabled.
-        d = self.p.requestEnable('\x42')
+        d = self.p.do('\x42')
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
 
@@ -326,7 +328,7 @@ class TelnetTestCase(unittest.TestCase):
         # returns a Deferred that fires when negotiation about the option
         # finishes.  Make sure it fires, make sure state gets updated
         # properly, make sure the result indicates the option was enabled.
-        d = self.p.requestEnable('\x42')
+        d = self.p.do('\x42')
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
 
@@ -342,9 +344,9 @@ class TelnetTestCase(unittest.TestCase):
         # finishes.  Make sure it fires, make sure state gets updated
         # properly, make sure the result indicates the option was enabled.
         s = self.p.getOptionState('\x42')
-        s.state = 'yes'
+        s.him.state = 'yes'
 
-        d = self.p.requestDisable('\x42')
+        d = self.p.dont('\x42')
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x42')
 
@@ -358,33 +360,35 @@ class TelnetTestCase(unittest.TestCase):
         # Try to enable an option, then immediately try to enable it, then
         # immediately try to disable it.  Ensure that the 2nd and 3rd calls
         # fail quickly with the right exception.
-        d = self.p.requestEnable('\x24')
+        s = self.p.getOptionState('\x24')
+        s.him.state = 'yes'
 
-        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.requestEnable('\x24'))
-        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.requestDisable('\x24'))
+        d = self.p.dont('\x24')
 
+        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.do('\x24'))
+        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.dont('\x24'))
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x24')
 
-        d = self.p.requestEnable('\x24')
+        d = self.p.do('\x24')
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
         self.assertEquals(util.wait(d), True)
 
     def testSuperfluousDisableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
-        d = self.p.requestDisable('\xab')
+        d = self.p.dont('\xab')
         self.assertRaises(telnet.AlreadyDisabled, util.wait, d)
 
     def testSuperfluousEnableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
         s = self.p.getOptionState('\xab')
-        s.state = 'yes'
-        d = self.p.requestEnable('\xab')
+        s.him.state = 'yes'
+        d = self.p.do('\xab')
         self.assertRaises(telnet.AlreadyEnabled, util.wait, d)
 
     def testLostConnectionFailsDeferreds(self):
-        d1 = self.p.requestEnable('\x12')
-        d2 = self.p.requestEnable('\x23')
-        d3 = self.p.requestEnable('\x34')
+        d1 = self.p.do('\x12')
+        d2 = self.p.do('\x23')
+        d3 = self.p.do('\x34')
 
         class TestException(Exception):
             pass
