@@ -420,6 +420,8 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         return '%s NO UCE NO UBE NO RELAY PROBES ESMTP' % (self.host,)
 
     def connectionMade(self):
+        # Ensure user-code always gets something sane for _helo
+        self._helo = (None, self.transport.getPeer()[1])
         self.sendCode(220, self.greeting())
         self.setTimeout(self.timeout)
 
