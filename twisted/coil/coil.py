@@ -89,6 +89,29 @@ def getImplementors(interface):
     """Return list of registered classes that implement an interface."""
     return interfaceImplementors.get(interface, [])
 
+def getConfiguratorsForTree(root):
+    """Return iterator of Configurators for a config tree.
+    
+    This really ought to be implemented as a generator.
+    """
+    stack = [root]
+    result = []
+    
+    while stack:
+        obj = stack.pop()
+        
+        # add the configurator's dispensers to result
+        cfg = getConfigurator(obj)
+        if cfg is not None: result.append(cfg)
+        
+        # see if obj has children and if so add them to stack
+        collection = getCollection(obj)
+        if collection is not None:
+            for name, entity in collection.listStaticEntities():
+                stack.append(entity)
+    
+    return result
+
 
 # interfaces for coil
 
@@ -284,3 +307,49 @@ class CollectionWrapper:
 
     def __getattr__(self, attr):
         return getattr(self._collection, attr)
+
+
+class DispenserStorage:
+    """A mini-database of dispensers.
+    
+    When first created, traverses the tree of configcollections and
+    configurators and loads all dispensers.
+    """
+    
+    def __init__(self, root):
+        # self.dispensers is a mapping:
+        # <interface> --> <list of (instance, functionName, description) tuples>
+        #
+        # The functionName is a string, the name of a method of the configurator
+        # for the given instance.
+        self.dispensers = {}
+        self.addObject(root)
+    
+    def addObject(self, object):
+        """Add the dispensers for an object and it's config children."""
+        dispensers = self.dispensers
+        
+        for cfg in getConfiguratorsForTree(object):
+            obj = cfg.getInstance()
+            for funcName, interface, desc in cfg.configDispensers():
+                if not dispensers.has_key(interface): dispensers[interface] = []
+                dispensers[interface].append((obj, funcName, desc))
+
+    def removeObject(self, object):
+        """Remove an object and its config children."""
+        dispensers = self.dispensers
+        
+        for cfg in getConfiguratorsForTree(object):
+            obj = cfg.getInstance()
+            for funcName, interface, desc in cfg.configDispensers():
+                if dispensers.has_key(interface):
+                    dispensers[interface].remove((obj, funcName, desc))
+                if not dispensers[interface]:
+                    del dispensers[interface]
+    
+    def getDispensers(self, interface):
+        """Return a list of dispensers for a given interface.
+        
+        List items are in the form (instance, functionName, description).
+        """
+        return self.dispensers.get(interface, [])

@@ -134,6 +134,7 @@ class Application(log.Logger, styles.Versioned):
         self.addPort(tcp.Port(port, factory, backlog, interface))
 
     def dontListenTCP(self, portno):
+        from twisted.internet import tcp
         for p in self.ports[:]:
             if p.port == portno and isinstance(p, tcp.Port):
                 p.loseConnection()

@@ -38,7 +38,6 @@ class ConfigRoot(widgets.Gadget, widgets.Widget):
     def __init__(self, application):
         widgets.Gadget.__init__(self)
         self.putWidget("config", AppConfiguratorPage(application))
-        self.putWidget('plugin', PluginLoader())
         self.addFile("images")
 
     def display(self, request):
@@ -50,6 +49,9 @@ class ConfigRoot(widgets.Gadget, widgets.Widget):
 
 class PluginLoader(widgets.Form):
     """Form for loading plugins."""
+    
+    def __init__(self, appConfig):
+        self.appConfig = appConfig
     
     def getFormFields(self, request):
         plugins = getPlugIns("coil")
@@ -68,6 +70,7 @@ class PluginLoader(widgets.Form):
             if plugin.module == pluginToLoad:
                 write( 'loaded ' + plugin.module + '('+pluginToLoad+')' )
                 plugin.load()
+                self.appConfig.reloadDispensers()
                 break
         else:
             write( 'could not load' + plugin.module )
@@ -78,14 +81,7 @@ class AppConfiguratorPage(widgets.Presentation):
 
     This configures the toplevel application.
     """
-    def __init__(self, application):
-        widgets.Presentation.__init__(self)
-        self.app = app.ApplicationConfig(application)
-        # mapping of config class names to lists of tuples of (callable
-        # object that can create the class, descriptive string)
-        self.dispensers = {}
-        self.dispenseMethods = {}
-
+    
     template = '''
     <center>
     <table width="95%">
@@ -96,10 +92,20 @@ class AppConfiguratorPage(widgets.Presentation):
     </table>
     </center>
     '''
+    
     isLeaf = 1
     
+    
+    def __init__(self, application):
+        widgets.Presentation.__init__(self)
+        self.app = app.ApplicationConfig(application)
+        self.reloadDispensers()
+    
+    def reloadDispensers(self):
+        self.dispensers = coil.DispenserStorage(self.app)
+    
     def pluginLoader(self):
-        return PluginLoader()
+        return PluginLoader(self)
     
     def displayTree(self, write, request):
         self.displayTreeElement(write,
@@ -122,7 +128,7 @@ class AppConfiguratorPage(widgets.Presentation):
         self.configd = self.configWidget(request)
 
     def configWidget(self, request):
-        # displaying the widget
+        """Render the config part of the widget."""
         path = request.postpath
         if path:
             obj = self.app
@@ -165,37 +171,34 @@ class AppConfiguratorPage(widgets.Presentation):
         return ret
 
     def makeConfigMenu(self, interface):
+        """Make a menu for adding a new object to a collection."""
         l = []
         if 1:
             for realClass in coil.getImplementors(interface):
                 cfgClass = coil.getConfiguratorClass(realClass)
                 nm = getattr(cfgClass, 'configName', None) or str(realClass)
                 l.append(['new '+str(realClass), 'new '+nm])
-        for methId, desc in self.dispensers.get(interface, []):
-            l.append(['dis '+str(methId), desc])
+        for t in self.dispensers.getDispensers(interface):
+            obj, methodName, desc = t
+            l.append(['dis %d' % hash(t), desc])
         return l
 
     def makeConfigurable(self, cfgInfo, container, name):
+        """Add a new configurable to a container, based on input from web form."""
         cmd, args = string.split(cfgInfo, ' ', 1)
         if cmd == "new": # create
             obj = coil.createConfigurable(reflect.namedClass(args), container, name)
         elif cmd == "dis": # dispense
-            methodId = int(args)
-            obj = self.dispenseMethods[methodId]()
+            methodHash = int(args)
+            for t in self.dispensers.getDispensers(container.entityType):
+                obj, methodName, desc = t
+                if hash(t) == methodHash:
+                    cfg = coil.getConfigurator(obj)
+                    obj = getattr(cfg, methodName)()
+                    print "created %s from dispenser" % obj
+                    break
         
-        configurator = coil.getConfigurator(obj)
-        
-        if configurator:
-            for methodName, interface, desc in configurator.configDispensers():
-                supclas = components.superInterfaces(interface)
-                for k in supclas:
-                    if not self.dispensers.has_key(k):
-                        self.dispensers[k] = []
-                    meth = getattr(configurator, methodName)
-                    self.dispensers[k].append([id(meth), desc])
-                    self.dispenseMethods[id(meth)] = meth
-            print self.dispensers
-            print self.dispenseMethods
+        self.dispensers.addObject(obj)
         return obj
 
 
@@ -288,6 +291,10 @@ class CollectionForm(widgets.Form):
         if submit == 'Delete':
             try:
                 for item in items:
+                    obj = self.coll.getStaticEntity(item)
+                    if components.implements(obj, coil.IConfigurator):
+                        obj = obj.getInstance()
+                    self.configurator.dispensers.removeObject(obj)
                     self.coll.delEntity(item)
             except:
                 raise widgets.FormInputError(str(sys.exc_info()[1]))
