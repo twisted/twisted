@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.27 2002/08/06 17:12:40 itamarst Exp $
+# $Id: default.py,v 1.28 2002/08/09 22:00:06 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -186,7 +186,7 @@ class BCFactory(protocol.ClientFactory):
         self.connector = None
         return self.protocol
 
-    def connectionFailed(self, connector, reason):
+    def clientConnectionFailed(self, connector, reason):
         self.connector = None
         self.protocol.connectionFailed()
         self.protocol = None

@@ -81,11 +81,11 @@ class AbstractClientMixin:
         self.account._isOnline = 0
         self._protoBase.connectionFailed(self)
 
-    def connectionLost(self):
+    def connectionLost(self, other):
         self.account._isConnecting = 0
         self.account._isOnline = 0
         self.unregisterAsAccountClient()
-        self._protoBase.connectionLost(self)
+        self._protoBase.connectionLost(self, other)
 
     def registerAsAccountClient(self):
         """Register me with the chat UI as `signed on'.
