@@ -351,7 +351,7 @@ class PsycopgConnector(DBTestConnector):
         except: return False
         try:
             conn = psycopg.connect(database=self.DB_NAME, user=self.DB_USER,
-                                   password=self.DB_PASS)
+                                   password=self.DB_PASS, host='127.0.0.1')
             conn.close()
             return True
         except:
