@@ -73,7 +73,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
     from twisted.internet import reactor
     try:
         if config['profile']:
-            if sys.version_info[:2] > (2, 2):
+            if sys.version_info[:2] > (2, 2) and not config['nothotshot']:
                 runWithHotshot(reactor, config)
             else:
                 runWithProfiler(reactor, config)
@@ -154,7 +154,9 @@ class ServerOptions(usage.Options):
                  "(implies nodaemon), sending SIGUSR2 will drop into debugger"],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
-                 "The specified tap/aos/xml file is encrypted."]]
+                 "The specified tap/aos/xml file is encrypted."],
+                ['nothotshot', None,
+                 "Don't use the 'hotshot' profiler even if it's available."]]
 
     optParameters = [['logfile','l', None,
                       "log to a specified file, - for stdout"],
