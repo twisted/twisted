@@ -206,15 +206,27 @@ def rebuild(module, doLog=1):
             clazz.__dict__.clear()
             clazz.__getattr__ = __getattr__
             clazz.__module__ = module.__name__
+    if newclasses:
+        import gc
+        if (2, 2, 0) <= sys.version_info[:3] < (2, 2, 2):
+            hasBrokenRebuild = 1
+            gc_objects = gc.get_objects()
+        else:
+            hasBrokenRebuild = 0
     for nclass in newclasses:
         ga = getattr(module, nclass.__name__)
         if ga is nclass:
             log.msg("WARNING: new-class %s not replaced by reload!" % reflect.qual(nclass))
         else:
-            import gc
-            for r in gc.get_referrers(nclass):
-                if isinstance(r, nclass):
+            if hasBrokenRebuild:
+                for r in gc_objects:
+                    if not getattr(r, '__class__', None) is nclass:
+                        continue
                     r.__class__ = ga
+            else:
+                for r in gc.get_referrers(nclass):
+                    if getattr(r, '__class__', None) is nclass:
+                        r.__class__ = ga
     if doLog:
         log.msg('')
         log.msg('  (fixing   %s): ' % str(module.__name__))
