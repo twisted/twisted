@@ -362,6 +362,13 @@ class GenerateDocs(Transaction):
         sh('cd %s &&  ./admin/generate-domdocs -v %s' % (tdir, ver))
         sh('cd %s &&  ./admin/generate-domdocs -v %s --docsdir doc/specifications' % (tdir, ver))
 
+        print "makeDocs: man pages"
+        for file in glob.glob("%s/doc/man/*.1" % tdir):
+            file = os.path.basename(file)
+            file = os.path.splitext(file)[0]
+            sh("groff -man -Thtml %(tdir)s/doc/man/%(file)s.1 >"
+                                 "%(tdir)s/doc/man/%(file)s.html")
+
         #everything after this is atomic (enough).
         #shwack the crap
         print "copyDist: Stripping *.pyc, .cvsignore"
