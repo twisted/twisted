@@ -22,7 +22,7 @@ from zope.interface import implements, classImplements, Interface
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
-from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast, IReactorCleanup
+from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import main, error, protocol, interfaces
 from twisted.internet import tcp, udp, defer
@@ -310,6 +310,32 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
 
+    def _removeAll(self, readers, writers):
+        """Remove all readers and writers, and return list of Selectables.
+        Meant for calling from subclasses, to implement removeAll, like:
+          def removeAll(self):
+              return self._removeAll(reads, writes)
+        where reads, writes are iterables.
+        """
+        readers = [reader for reader in readers if 
+                   reader is not self.waker]
+
+        readers_dict = {}
+        for reader in readers:
+            readers_dict[reader] = 1
+            
+        for reader in readers:
+            self.removeReader(reader)
+            self.removeWriter(reader)
+
+        writers = [writer for writer in writers if
+                   writer not in readers_dict]
+        for writer in writers:
+            self.removeWriter(writer)
+        
+        return readers+writers
+
+
 if sslEnabled:
     classImplements(PosixReactorBase, IReactorSSL)
 if unixEnabled:
@@ -446,7 +472,7 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
-    implements(IReactorFDSet, IReactorCleanup)
+    implements(IReactorFDSet)
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
@@ -556,23 +582,8 @@ class SelectReactor(PosixReactorBase):
             del writes[writer]
 
     def removeAll(self):
-        """Remove all readers and writers, and return list of Selectables."""
-        readers = [reader for reader in reads.iterkeys() if 
-                reader is not self.waker]
-        for reader in readers:
-            if reads.has_key(reader):
-                del reads[reader]
-            if writes.has_key(reader):
-                del writes[reader]
-        return readers
-
-    def cleanup(self):
-        """Remove all readers and writers, and return a list of Selectables that
-        represent dirty reactor state
-        """
-        return self.removeAll()
-
-
+        return self._removeAll(reads, writes)
+    
 components.backwardsCompatImplements(SelectReactor)
 
 

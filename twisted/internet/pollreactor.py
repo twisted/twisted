@@ -97,6 +97,8 @@ class PollReactor(default.PosixReactorBase):
 
     def removeAll(self, reads=reads, writes=writes, selectables=selectables):
         """Remove all selectables, and return a list of them."""
+        if self.waker is not None:
+            self.removeReader(self.waker)
         result = selectables.values()
         fds = selectables.keys()
         reads.clear()
@@ -104,6 +106,9 @@ class PollReactor(default.PosixReactorBase):
         selectables.clear()
         for fd in fds:
             poller.unregister(fd)
+            
+        if self.waker is not None:
+            self.addReader(self.waker)
         return result
 
     def doPoll(self, timeout,

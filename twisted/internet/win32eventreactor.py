@@ -128,11 +128,7 @@ class Win32Reactor(default.PosixReactorBase):
 
     def removeAll(self):
         """Remove all selectables, and return a list of them."""
-        result = reads.keys() + writes.keys()
-        reads.clear()
-        writes.clear()
-        events.clear()
-        return result
+        return self._removeAll(reads, writes)
 
     def doWaitForMultipleEvents(self, timeout,
                                 reads=reads,

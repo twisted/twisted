@@ -126,6 +126,8 @@ class KQueueReactor(default.PosixReactorBase):
 
     def removeAll(self):
         """Remove all selectables, and return a list of them."""
+        if self.waker is not None:
+            self.removeReader(self.waker)
         result = selectables.values()
         for fd in reads.keys():
             self._updateRegistration(fd, EVFILT_READ, EV_DELETE)
@@ -134,6 +136,8 @@ class KQueueReactor(default.PosixReactorBase):
         reads.clear()
         writes.clear()
         selectables.clear()
+        if self.waker is not None:
+            self.addReader(self.waker)
         return result
 
     def doKEvent(self, timeout,

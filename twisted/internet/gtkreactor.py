@@ -62,10 +62,7 @@ class GtkReactor(default.PosixReactorBase):
             writes[writer] = gtk.input_add(writer, gtk.GDK.INPUT_WRITE, self.callback)
 
     def removeAll(self):
-        v = reads.keys()
-        for reader in v:
-            self.removeReader(reader)
-        return v
+        return self._removeAll(reads, writes)
 
     def removeReader(self, reader):
         if hasReader(reader):

@@ -199,10 +199,9 @@ class _Janitor(object):
     def do_cleanReactor(cls):
         from twisted.internet import reactor
         s = None
-        if interfaces.IReactorCleanup.providedBy(reactor):
-            junk = reactor.cleanup()
-            if junk:
-                s = DIRTY_REACTOR_MSG + repr([repr(obj) for obj in junk])
+        junk = reactor.removeAll()
+        if junk:
+            s = DIRTY_REACTOR_MSG + repr([repr(obj) for obj in junk])
         if s is not None:
             # raise DirtyReactorError, s
             raise JanitorError(failure.Failure(DirtyReactorWarning(s)))

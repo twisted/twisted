@@ -64,7 +64,7 @@ class IJanitor(zi.Interface):
     cleanThreads = zi.Attribute("""@cvar cleanThreads: perform cleanup of the reactor threadpool
                                    @type cleanThreads: Boolean""")
 
-    cleanReactor = zi.Attribute("""@cvar cleanReactor: perform cleanup of reactors which support IReactorCleanup
+    cleanReactor = zi.Attribute("""@cvar cleanReactor: perform cleanup of reactor connections
                                    @type cleanReactor: Boolean""")
 
     postCase = zi.Attribute("""@cvar postCase: perform indicated cleanup after each TestCase has run

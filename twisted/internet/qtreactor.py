@@ -123,10 +123,7 @@ class QTReactor(default.PosixReactorBase):
             del writes[writer]
 
     def removeAll(self):
-        v = reads.keys()
-        for reader in v:
-            self.removeReader(reader)
-        return v
+        return self._removeAll(reads, writes)
 
     def simulate(self):
         global _timer

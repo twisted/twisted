@@ -119,11 +119,8 @@ class Gtk2Reactor(default.PosixReactorBase):
             writes[writer] = self.input_add(writer, OUTFLAGS, self.callback)
 
     def removeAll(self):
-        v = reads.keys()
-        for reader in v:
-            self.removeReader(reader)
-        return v
-
+        return self._removeAll(reads, writes)
+    
     def removeReader(self, reader):
         if hasReader(reader):
             gobject.source_remove(reads[reader])
