@@ -588,26 +588,44 @@ from twisted.spread.util import Pager, StringPager, getAllPages
 
 bigString = "helloworld" * 50
 
+callbackArgs = None
+callbackKeyword = None
+
+def finishedCallback(*args, **kw):
+    global callbackArgs, callbackKeyword
+    callbackArgs = args
+    callbackKeyword = kw
+
 class Pagerizer(pb.Referenceable):
+    def __init__(self, callback, *args, **kw):
+        self.callback, self.args, self.kw = callback, args, kw
+
     def remote_getPages(self, collector):
-        self.finished = 0
-        StringPager(collector, bigString, 100, completed = self.finishedCallback)
-    
-    def finishedCallback(self):
-        self.finished = 1
+        StringPager(collector, bigString, 100, self.callback, *self.args, **self.kw)
+        self.args = self.kw = None
 
 class PagingTestCase(unittest.TestCase):
-    def testPaging(self):
+    def testPagingWithCallback(self):
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal("foo", Pagerizer())
+        s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value = 10))
         x = c.remoteForName("foo")
         l = []
         getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
         assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
-        assert x.finished == 1, "Completed callback not invoked!"
+        assert callbackArgs == ('hello',), "Completed callback not invoked"
+        assert callbackKeyword == {'value': 10}, "Completed callback not invoked"
 
+    def testPagingWithoutCallback(self):
+        c, s, pump = connectedServerAndClient()
+        s.setNameForLocal("foo", Pagerizer(None))
+        x = c.remoteForName("foo")
+        l = []
+        getAllPages(x, "getPages").addCallback(l.append)
+        while not l:
+            pump.pump()
+        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
 
 from twisted.spread import publish
 

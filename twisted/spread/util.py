@@ -90,14 +90,19 @@ class LocalAsyncForwarder:
 class Pager:
     """I am an object which pages out information.
     """
-    def __init__(self, collector, completed = None):
+    def __init__(self, collector, callback=None, *args, **kw):
         """
         Create a pager with a Reference to a remote collector and
         an optional callable to invoke upon completion.
         """
+        if callable(callback):
+            self.callback = callback
+            self.callbackArgs = args
+            self.callbackKeyword = kw
+        else:
+            self.callback = None
         self._stillPaging = 1
         self.collector = collector
-        self.completed = completed
         collector.broker.registerPageProducer(self)
 
     def stillPaging(self):
@@ -105,8 +110,8 @@ class Pager:
         """
         if not self._stillPaging:
             self.collector.callRemote("endedPaging")
-            if callable(self.completed):
-                self.completed()
+            if self.callback is not None:
+                apply(self.callback, self.callbackArgs, self.callbackKeyword)
         return self._stillPaging
 
     def sendNextPage(self):
@@ -127,11 +132,11 @@ class Pager:
 class StringPager(Pager):
     """A simple pager that splits a string into chunks.
     """
-    def __init__(self, collector, st, chunkSize=8192, completed = None):
+    def __init__(self, collector, st, chunkSize=8192, callback=None, *args, **kw):
         self.string = st
         self.pointer = 0
         self.chunkSize = chunkSize
-        Pager.__init__(self, collector, completed)
+        Pager.__init__(self, collector, callback, *args, **kw)
 
     def nextPage(self):
         val = self.string[self.pointer:self.pointer+self.chunkSize]
