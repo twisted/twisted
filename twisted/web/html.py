@@ -35,22 +35,22 @@ def escape(text):
     return text
 
 def PRE(text):
-    "Wrap <PRE> tags around some text and escape it with web.escape."
-    return "<PRE>"+escape(text)+"</PRE>"
+    "Wrap <pre> tags around some text and escape it with web.escape."
+    return "<pre>"+escape(text)+"</pre>"
 
 def UL(lst):
     io = StringIO()
-    io.write("<UL>\n")
+    io.write("<ul>\n")
     for el in lst:
-        io.write("<LI> %s\n" % el)
+        io.write("<li> %s</li>\n" % el)
     io.write("</ul>")
     return io.getvalue()
 
 def linkList(lst):
     io = StringIO()
-    io.write("<UL>\n")
+    io.write("<ul>\n")
     for hr, el in lst:
-        io.write('<LI> <A HREF="%s">%s</a>\n' % (hr, el))
+        io.write('<li> <a href="%s">%s</a></li>\n' % (hr, el))
     io.write("</ul>")
     return io.getvalue()
 
@@ -65,3 +65,4 @@ def output(func, *args, **kw):
     except:
         io = StringIO()
         return PRE(io.getvalue())
+
