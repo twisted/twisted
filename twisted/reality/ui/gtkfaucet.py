@@ -73,8 +73,6 @@ class ResponseWindow(gtk.GtkWindow):
     
 class GameWindow(gtk.GtkWindow, pb.Referenced):
 
-    request = ResponseWindow
-    
     shortcuts = {"n":"go north",
                  "s":"go south",
                  "e":"go east",
@@ -315,7 +313,9 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         self.exits=[]
         self.reexit()
 
-    remote_request = ResponseWindow
+    def remote_request(self,q,d,c):
+        ResponseWindow(q,d,c)
+        return None
         
     def reitem(self):
         txt=self.itembox
