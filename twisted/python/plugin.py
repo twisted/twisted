@@ -213,7 +213,7 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
     If it is any other true value, this progress information is written to
     stdout.  (This behavior is deprecated).
 
-    @rtype C{list}
+    @rtype: C{list}
     @return: A list of the C{PlugIn} objects found.
     """
     if isinstance(debugInspection, types.IntType):

@@ -30,10 +30,10 @@ from runtime import platform
 
 def getProgramsMenuPath():
     """Get the path to the Programs menu.
-    
-    @return the filesystem location of the common Start Menu->Programs.
 
     Probably will break on non-US Windows.
+    
+    @returns: the filesystem location of the common Start Menu->Programs.
     """
     if not platform.isWinNT():
         return "C:\\Windows\\Start Menu\\Programs"
