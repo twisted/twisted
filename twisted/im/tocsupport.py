@@ -107,7 +107,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
             # whoops, don't add again
             return
         self._buddylist['TwistedIM'].append(name)
-        self.set_config(self._mode, self._buddylist, self._permit, self._deny)
+        self.set_config(self._config_mode, self._buddylist, self._permit, self._deny)
 
     def getPerson(self,name):
         return self.chat.getPerson(name,self,TOCPerson)
@@ -118,7 +118,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
 
     def gotConfig(self, mode, buddylist, permit, deny):
         #print 'got toc config', repr(mode), repr(buddylist), repr(permit), repr(deny)
-        self._mode = mode
+        self._config_mode = mode
         self._buddylist = buddylist
         self._permit = permit
         self._deny = deny
