@@ -27,7 +27,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
     implements(interfaces.IListeningPort)
     events = ["startListening", "stopListening", "loseConnection", "acceptDone", "acceptErr"]
     sockinfo = None
-    transport = ServerSocket
+    transport_class = ServerSocket
     sessionno = 0
 
     def __init__(self, addr, factory, backlog):
@@ -63,7 +63,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         else:
             s = self.sessionno
             self.sessionno = s+1
-            transport = self.transport(sock, protocol, self, s)
+            transport = self.transport_class(sock, protocol, self, s)
             protocol.makeConnection(transport)
         if self.state == "listening":
             self.startAccepting()

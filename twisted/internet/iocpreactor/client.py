@@ -73,7 +73,7 @@ class _SubConnector:
 class SocketConnector(styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
     implements(interfaces.IConnector)
-    transport = ClientSocket
+    transport_class = ClientSocket
     events = ["stopConnecting", "disconnect", "connect"]
     sockinfo = None
     factoryStarted = False
@@ -98,7 +98,7 @@ class SocketConnector(styles.Ephemeral, object):
     handle_connecting_disconnect = handle_connecting_stopConnecting
 
     def handle_connected_disconnect(self):
-        self.transport_obj.loseConnection()
+        self.transport.loseConnection()
 
     def handle_disconnected_connect(self):
         self.state = "connecting"
@@ -153,6 +153,6 @@ class SocketConnector(styles.Ephemeral, object):
         self.state = "connected"
         self.cancelTimeout()
         p = self.factory.buildProtocol(self.buildAddress(socket.getpeername()))
-        self.transport_obj = self.transport(socket, p, self)
-        p.makeConnection(self.transport_obj)
+        self.transport = self.transport_class(socket, p, self)
+        p.makeConnection(self.transport)
 

@@ -38,12 +38,12 @@ class TcpMixin:
     def getPeerPort(self):
         return self.socket.getpeername()[1]
 
-class ServerSocket(server.ListeningPort.transport, TcpMixin):
+class ServerSocket(server.ListeningPort.transport_class, TcpMixin):
     implements(interfaces.ITCPTransport)
 
 class Port(server.ListeningPort):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
-    transport = ServerSocket
+    transport_class = ServerSocket
     def __init__(self, (host, port), factory, backlog):
         if iocpdebug.debug:
             print "listening on (%s, %s)" % (host, port)
@@ -63,12 +63,12 @@ class Port(server.ListeningPort):
     def buildAddress(self, addr):
         return address._ServerFactoryIPv4Address('TCP', addr[0], addr[1], 'INET')
 
-class ClientSocket(client.SocketConnector.transport, TcpMixin):
+class ClientSocket(client.SocketConnector.transport_class, TcpMixin):
     implements(interfaces.ITCPTransport)
 
 class Connector(client.SocketConnector):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
-    transport = ClientSocket
+    transport_class = ClientSocket
 
     def _filterRealAddress(self, host):
         return (host, self.addr[1])
