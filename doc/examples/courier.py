@@ -96,7 +96,7 @@ def main():
     reactor.callLater(0, os.close, 3)
 
     # When stdin is closed, it's time to exit.
-    reactor.addReader(stdio.StandardIO(DieWhenLost()))
+    s = stdio.StandardIO(DieWhenLost())
 
     # Go!
     reactor.run()
