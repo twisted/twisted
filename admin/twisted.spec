@@ -47,8 +47,8 @@ python setup.py install --optimize=2 --record=installed-files \
       --root="$RPM_BUILD_ROOT"
 
 #  install man pages
-mkdir -p "$RPM_BUILD_ROOT"/%{_mandir}/man.1/
-cp -a doc/man/*.1 "$RPM_BUILD_ROOT"/%{_mandir}/man.1/
+mkdir -p "$RPM_BUILD_ROOT"/%{_mandir}/man1/
+cp -a doc/man/*.1 "$RPM_BUILD_ROOT"/%{_mandir}/man1/
 
 %clean
 [ -n "$RPM_BUILD_ROOT" -a "$RPM_BUILD_ROOT" != / ] && rm -rf "$RPM_BUILD_ROOT"
@@ -57,7 +57,7 @@ cp -a doc/man/*.1 "$RPM_BUILD_ROOT"/%{_mandir}/man.1/
 %defattr(755,root,root)
 %doc ChangeLog CREDITS LICENSE README
 %{_bindir}/*
-%attr(644,-,-) %{_mandir}/man.1/*
+%attr(644,-,-) %{_mandir}/man1/*
 %{_libdir}/python%{py_libver}/site-packages/twisted/*
 
 %files doc
