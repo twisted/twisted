@@ -30,9 +30,15 @@ fine for the documentation generator, which parses a fairly representative
 sample of XML.
 
 """
+# System Imports
+import copy
 
+# Twisted Imports
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
+from twisted.python.reflect import Accessor
+
+import html
 
 class MismatchedTags(Exception):
 
@@ -42,8 +48,6 @@ class MismatchedTags(Exception):
 
     def __str__(self):
         return "expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" % (self.expect, self.got, self.endLine, self.endCol, self.begLine, self.begCol)
-
-import copy
 
 class Node:
     def __init__(self, parentNode=None):
@@ -97,7 +101,6 @@ class Node:
             return self.childNodes[0]
         return None
 
-from twisted.python.reflect import Accessor
 class Document(Node, Accessor):
     def __init__(self, documentElement=None):
         Node.__init__(self)
@@ -135,12 +138,17 @@ class CharacterData(Node):
         Node.__init__(self, parentNode)
         self.value = self.data = self.nodeValue = data
 
-##     def cloneNode(self, deep):
-##         return self.__class__(self.data)
-
 class Text(CharacterData):
+    def __init__(self, data, parentNode=None, raw=0):
+        CharacterData.__init__(self, data, parentNode)
+        self.raw = raw
+
     def writexml(self, stream, indent='', addindent='', newl=''):
-        stream.write(str(self.nodeValue))
+        if self.raw:
+            val = str(self.nodeValue)
+        else:
+            val = html.escape(str(self.nodeValue))
+        stream.write(val)
 
 class CDATASection(CharacterData):
     def writexml(self, stream, indent='', addindent='', newl=''):

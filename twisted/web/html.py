@@ -31,7 +31,7 @@ def escape(text):
                  ('<', '&lt;'),
                  ('>', '&gt;'),
                  ('"', '&quot;')]:
-        text = string.replace(text, s,h)
+        text = text.replace(s,h)
     return text
 
 def PRE(text):
