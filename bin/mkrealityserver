@@ -35,14 +35,7 @@ site = server.Site(plumbing.Web(reality._default))
 app = main.Application("reality")
 app.addPort(tcp.Port(8080, site))
 app.addPort(tcp.Port(4040, spigot))
-
-from cPickle import dump
-print "Saving %s..."%setName,
-sys.stdout.flush()
-f = open(setName,'wb')
-dump(app, f, 1)
-f.flush()
-f.close()
+app.save("start")
 print "Done."
 
 

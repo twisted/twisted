@@ -8,16 +8,16 @@ import copy
 import signal
 from errno import EINTR
 
-# Twisted Imports
-from twisted.python import threadable
-threadable.requireInit()
-# Sibling Imports
-import task
-
 CONNECTION_LOST = -1
 CONNECTION_DONE = -2
 
 theApplication = None
+
+# Twisted Imports
+from twisted.python import threadable
+threadable.requireInit()
+# Sibling Imports
+import task, tcp
 
 class Application:
     running = 0
@@ -34,6 +34,12 @@ class Application:
         if dict.has_key("running"):
             del dict['running']
         return dict
+
+    def listenOn(self, port, factory):
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port.
+        """
+        self.addPort(tcp.Port(port, factory))
 
     def addPort(self, port):
         """
@@ -73,14 +79,23 @@ class Application:
                 os.setuid(self.uid)
                 print 'set uid/gid %s/%s'% (self.uid, self.gid)
 
-    def shutDownCallback(self):
+    def shutDownSave(self):
+        self.save("shutdown")
+
+    def save(self, tag=None):
         from cPickle import dump
-        print "Saving State...",
-        f = open(self.name+'-shutdown-2.spl', 'wb')
+        if tag:
+            filename = self.name+'-'+tag+'-2.spl'
+            finalname = self.name+'-'+tag+'.spl'
+        else:
+            filename = self.name+"-2.spl"
+            finalname = self.name+".spl"
+        print "Saving "+self.name+" application to "+finalname+"...",
+        f = open(filename, 'wb')
         dump(self, f, 1)
         f.flush()
         f.close()
-        os.rename(self.name+'-shutdown-2.spl', self.name+'-shutdown.spl')
+        os.rename(filename, finalname)
         print "Saved."
 
     def run(self):
@@ -88,7 +103,7 @@ class Application:
         """
         if not self.running:
             delayeds.extend(self.delayeds)
-            shutdowns.append(self.shutDownCallback)
+            shutdowns.append(self.shutDownSave)
             for port in self.ports:
                 port.startListening()
             self.running = 1

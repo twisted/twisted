@@ -136,7 +136,4 @@ else:
     
 app.addPort(port)
 
-from cPickle import dump
-dump(app,
-     open('web.spl','wb'),1)
-
+app.save()

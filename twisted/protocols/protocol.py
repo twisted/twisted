@@ -8,11 +8,14 @@ Twisted Python.  The Protocol class contains some introductory material.
 class Factory:
     """This is a factory which produces protocols.
 
-    This interface is very simple; it requires a 
+    This interface only requires that you implement one method; buildProtocol.
+    By default, this will create a protocol of the class given in
+    self.protocol.
+    
     """
-
+    protocol = None
     def buildProtocol(self, connection):
-        raise NotImplementedError("buildProtocol")
+        return self.protocol()
 
 
 class Protocol:

@@ -19,7 +19,6 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 
 from twisted.protocols import telnet
 from twisted.internet import main,tcp
-from cPickle import dump
 import sys
 
 portno,username,password = sys.argv[1:]
@@ -34,4 +33,4 @@ t = telnet.ShellFactory()
 t.username = username
 t.password = password
 a.addPort(tcp.Port(portno, t))
-dump(a, open("telnet.spl",'wb'))
+a.save("start")

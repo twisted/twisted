@@ -18,7 +18,6 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 
 from twisted.protocols import irc
 from twisted.internet import main, tcp
-from cPickle import dump
 import sys
 
 portno = 6667
@@ -26,4 +25,4 @@ portno = 6667
 a = main.Application("irc")
 t = irc.IRCFactory()
 a.addPort(tcp.Port(portno, t))
-dump(a, open("irc.spl",'wb'))
+a.save("start")
