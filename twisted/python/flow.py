@@ -144,6 +144,7 @@ class FlowStack:
                 self.push(data, stage, next)
                 pause = 1
             if pause:
+                from twisted.internet import reactor
                 reactor.callLater(self._waitInterval,self.execute)
                 return 1
 
