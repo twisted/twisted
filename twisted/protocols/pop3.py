@@ -35,7 +35,6 @@ from twisted.internet import defer
 from twisted.internet import interfaces
 from twisted.python import components
 from twisted.python import log
-from twisted.python import tpfile
 
 from twisted import cred
 import twisted.cred.error
@@ -178,7 +177,7 @@ class POP3(basic.LineReceiver):
             return
         size = max(int(size), resp)
         self.successResponse(size)
-        s = tpfile.FileSender()
+        s = basic.FileSender()
         s.beginFileTransfer(fp, self.transport, self.transformChunk
         ).addCallback(self.finishedFileTransfer)
     

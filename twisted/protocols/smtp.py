@@ -26,7 +26,6 @@ from twisted.python import log
 from twisted.python import components
 from twisted.python import util
 from twisted.python import reflect
-from twisted.python import tpfile
 
 # System imports
 import time, string, re, base64, types, socket, os, random
@@ -792,7 +791,7 @@ class SMTPClient(basic.LineReceiver):
             self.sendLine('RCPT TO:%s' % quoteaddr(self.lastAddress))
 
     def smtpState_data(self, code, resp):
-        s = tpfile.FileSender()
+        s = basic.FileSender()
         s.beginFileTransfer(
             self.getMailData(), self.transport, self.transformChunk
         ).addCallback(self.finishedFileTransfer)
