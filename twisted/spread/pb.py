@@ -64,7 +64,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.146 $"[11:-2]
+__version__ = "$Revision: 1.147 $"[11:-2]
 
 
 # System Imports
@@ -1636,6 +1636,26 @@ class IPerspective(Interface):
     def perspectiveMessageReceived(self, broker, message, args, kwargs):
         """
         This method is called when a network message is received.
+
+        @arg broker: The Perspective Broker.
+
+        @type message: str
+        @arg message: The name of the method called by the other end.
+
+        @type args: list in jelly format
+        @arg args: The arguments that were passed by the other end. It
+                   is recommend that you use the `unserialize' method of the
+                   broker to decode this.
+
+        @type kwargs: dict in jelly format
+        @arg kwargs: The keyword arguments that were passed by the
+                     other end.  It is recommended that you use the
+                     `unserialize' method of the broker to decode this.
+
+        @rtype: A jelly list.
+        @return: It is recommended that you use the `serialize' method
+                 of the broker on whatever object you need to return to
+                 generate the return value.
         """
 
 

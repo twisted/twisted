@@ -987,8 +987,10 @@ class NonSubclassingPerspective:
     __implements__ = pb.IPerspective,
 
     # IPerspective implementation
-    def perspectiveMessageReceived(self, *args):
-        self.args = args
+    def perspectiveMessageReceived(self, broker, message, args, kwargs):
+        args = broker.unserialize(args, self)
+        kwargs = broker.unserialize(kwargs, self)
+        return broker.serialize((message, args, kwargs))
 
     # Methods required by MyRealm
     def logout(self):
@@ -1017,8 +1019,7 @@ class NSPTestCase(unittest.TestCase):
         d = factory.login(credentials.UsernamePassword('user', 'pass'), "BRAINS!")
         reactor.connectTCP('127.0.0.1', self.portno, factory)
         p = dR(d)
-        dR(p.callRemote('ANYTHING', 'here', bar='baz'))
-        self.assertEquals(p.args, ('ANYTHING', 'here', {'bar': 'baz'}))
+        self.assertEquals(dR(p.callRemote('ANYTHING', 'here', bar='baz')),
+                          ('ANYTHING', ('here',), {'bar': 'baz'}))
         factory.disconnect()
 
-NSPTestCase.testNSP.im_func.todo = 'dunno!'
