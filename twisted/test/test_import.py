@@ -76,7 +76,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.enterprise import adbapi
         from twisted.enterprise import reflector
         from twisted.enterprise import sqlreflector
-        from twisted.enterprise import xmlreflector
         from twisted.enterprise import row
 
     def test_test(self):

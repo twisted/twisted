@@ -3,6 +3,11 @@
 # See LICENSE for details.
 
 
+"""This module is deprecated."""
+
+import warnings
+warnings.warn("twisted.enterprise.xmlreflector is deprecated", DeprecationWarning)
+
 import os
 
 from twisted.internet import defer

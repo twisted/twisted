@@ -13,6 +13,9 @@ identical.
 
 """
 
+import warnings
+warnings.warn("twisted.persisted.marmalade is deprecated", DeprecationWarning)
+
 import new
 
 from twisted.python.reflect import namedModule, namedClass, namedObject, fullFuncName, qual
