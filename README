@@ -1,11 +1,22 @@
-This is the README for the Twisted SVN repository; it is not included
-in releases.
+This is the README for the Twisted Sumo package (as well as the SVN
+repository). For general information about Twisted, see
+topfiles/twisted/README or our web site at http://twistedmatrix.com/.
 
-== **/topfiles ==
+Twisted Sumo contains all of Twisted and its subprojects. A setup.py
+is provided which will install Twisted and each subproject for
+you. Run the command "python setup.py --help" for more information.
 
-Project-specific READMEs (and other files, like setup.py, ChangeLogs 
-and NEWS files) are located in **/topfiles/, where ** is twisted or 
-any of its separated subprojects.
+For information about the Twisted split that happened before 2.0, see
+http://twistedmatrix.com/products/splitfaq
+
+Below is an explanation of the layout of this tarball (as well as the
+SVN repository).
+
+== twisted/ == 
+This directory contains the code. Each package that represents a
+single project (e.g., the toplevel 'twisted', and 'twisted.web', etc,
+but not 'twisted.python', since that's a part of core) has a
+'topfiles' directory inside of it.
 
 == bin/ ==
 The executable scripts that come with Twisted core are in
@@ -16,12 +27,7 @@ bin/conch/conch.
 Documentation resides in the doc/ directory, with a similar layout to
 bin/.
 
-== twisted/ == 
-twisted/, of course, contains the code. Each package
-that represents a single project (e.g., the toplevel 'twisted', and
-'twisted.web', etc, but not 'twisted.python', since that's a part of
-core) has a 'topfiles' directory inside of it.
-
-== info ==
-Information about the Twisted split can be found at
-http://twistedmatrix.com/products/splitfaq
+== **/topfiles ==
+Project-specific READMEs (and other files, like setup.py, ChangeLogs
+and NEWS files) are located in **/topfiles/, where ** is twisted or
+any of its separated subprojects.
