@@ -564,8 +564,41 @@ def dsu(list, key):
 
 try:
     import pwd, grp
-    from os import setgroups, getgroups
+    from os import setgroups
+    
+    def _setgroups_until_success(l):
+        while(1):
+            # NASTY NASTY HACK (but glibc does it so it must be okay):
+            # In case sysconfig didn't give the right answer, find the limit
+            # on max groups by just looping, trying to set fewer and fewer
+            # groups each time until it succeeds.
+            try:
+                setgroups(l)
+            except ValueError:
+                # This exception comes from python itself restricting
+                # number of groups allowed.
+                if len(l) > 1:
+                    del l[-1]
+                else:
+                    raise
+            except OSError, e:
+                if e.errno == errno.EINVAL and len(l) > 1:
+                    # This comes from the OS saying too many groups
+                    del l[-1]
+                else:
+                    raise
+            else:
+                # Success, yay!
+                return
+            
     def initgroups(uid, primaryGid):
+        try:
+            # Try to get the maximum number of groups
+            max_groups = os.sysconf("SC_NGROUPS_MAX")
+        except:
+            # No predefined limit
+            max_groups = 0
+        
         username = pwd.getpwuid(uid)[0]
         l = []
         if primaryGid is not None:
@@ -573,9 +606,13 @@ try:
         for groupname, password, gid, userlist in grp.getgrall():
             if username in userlist:
                 l.append(gid)
+                if len(l) == max_groups:
+                    break # No more groups, ignore any more
         try:
-            setgroups(l)
+            _setgroups_until_success(l)
         except OSError, e:
+            # We might be able to remove this code now that we
+            # don't try to setgid/setuid even when not asked to.
             if e.errno == errno.EPERM:
                 groups = getgroups()
                 for g in getgroups():
@@ -583,6 +620,7 @@ try:
                         raise
             else:
                 raise
+                                    
 
 except:
     def initgroups(uid, primaryGid):
