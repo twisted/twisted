@@ -64,7 +64,7 @@ def fontifyPythonNode(node):
                        entities={'lt': '<', 'gt': '>', 'amp': '&'})
     oldio = cStringIO.StringIO(oldio.getvalue().strip()+'\n')
     newio = cStringIO.StringIO()
-    htmlizer.filter(oldio, newio)
+    htmlizer.filter(oldio, newio, writer=htmlizer.SmallerHTMLWriter)
     newio.seek(0)
     newel = microdom.parse(newio).documentElement
     newel.setAttribute("class", "python")
@@ -79,7 +79,7 @@ def addPyListings(document, dir):
         lines = map(string.rstrip, open(os.path.join(dir, filename)).readlines())
         data = '\n'.join(lines[int(node.getAttribute('skipLines', 0)):])
         data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
-        htmlizer.filter(data, outfile)
+        htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         val = outfile.getvalue()
         _replaceWithListing(node, val, filename, "py-listing")
 

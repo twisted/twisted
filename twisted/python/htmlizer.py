@@ -14,6 +14,9 @@ class TokenPrinter:
         self.writer = writer
 
     def printtoken(self, type, token, (srow, scol), (erow, ecol), line):
+        #print "printtoken(%r,%r,%r,(%r,%r),(%r,%r),%r), row=%r,col=%r" % (
+        #    self, type, token, srow,scol, erow,ecol, line,
+        #    self.currentLine, self.currentCol)
         if self.currentLine < srow:
             self.writer('\n'*(srow-self.currentLine))
             self.currentLine, self.currentCol = srow, 0
@@ -34,7 +37,7 @@ class TokenPrinter:
         self.writer(token, type)
         self.currentCol = ecol
         self.currentLine += token.count('\n')
-        if token.count('\n'):
+        if self.currentLine != erow:
             self.currentCol = 0
         self.lastIdentifier = token in ('def', 'class')
         if token == ':':
