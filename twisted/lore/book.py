@@ -22,7 +22,6 @@ def makeBook(dom, d):
     body.appendChild(domhelpers.findNodesNamed(dom, 'h1')[0])
     toc = domhelpers.findElementsWithAttribute(dom, 'class', 'toc')[0]
     toc = domhelpers.findNodesNamed(toc, 'li')
-    print len(toc)
     for node in toc:
         if (node.hasAttribute('class') and
             node.getAttribute('class')=='tocignore'):
@@ -30,7 +29,6 @@ def makeBook(dom, d):
         parents = domhelpers.getParents(node)
         nodeLevel = len([1 for parent in parents if hasattr(parent, 'tagName')
                                            and parent.tagName in ('ol', 'ul')])
-        print nodeLevel, domhelpers.getNodeText(node).replace('\n', ' ')
         data = node.childNodes[0].data != ''
         if not data:
             node = node.childNodes[1]
