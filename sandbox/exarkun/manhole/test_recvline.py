@@ -312,6 +312,10 @@ class TestSession(TerminalSession):
 
 components.registerAdapter(TestSession, TerminalUser, session.ISession)
 
+class LoopbackRelay(loopback.LoopbackRelay):
+    def logPrefix(self):
+        return "LoopbackRelay(%r)" % (self.target.__class__.__name__,)
+
 class _BaseMixin:
     WIDTH = 80
     HEIGHT = 24
@@ -334,12 +338,12 @@ class _SSHMixin(_BaseMixin):
         recvlineServer = self.serverProtocol()
         insultsServer = insults.ServerProtocol(lambda: recvlineServer)
         sshServer = sshFactory.buildProtocol(None)
-        clientTransport = loopback.LoopbackRelay(sshServer)
+        clientTransport = LoopbackRelay(sshServer)
 
         recvlineClient = helper.TerminalBuffer()
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
         sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, self.WIDTH, self.HEIGHT)
-        serverTransport = loopback.LoopbackRelay(sshClient)
+        serverTransport = LoopbackRelay(sshClient)
 
         sshClient.makeConnection(clientTransport)
         sshServer.makeConnection(serverTransport)
@@ -365,12 +369,12 @@ class _TelnetMixin(_BaseMixin):
         recvlineServer = self.serverProtocol()
         insultsServer = insults.ServerProtocol(lambda: recvlineServer)
         telnetServer = telnet.TelnetTransport(lambda: insultsServer)
-        clientTransport = loopback.LoopbackRelay(telnetServer)
+        clientTransport = LoopbackRelay(telnetServer)
 
         recvlineClient = helper.TerminalBuffer()
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
         telnetClient = telnet.TelnetTransport(lambda: insultsClient)
-        serverTransport = loopback.LoopbackRelay(telnetClient)
+        serverTransport = LoopbackRelay(telnetClient)
 
         telnetClient.makeConnection(clientTransport)
         telnetServer.makeConnection(serverTransport)
@@ -424,7 +428,7 @@ class _StdioMixin(_BaseMixin, SignalMixin):
         # Duuh... I dunno
         from twisted.internet import reactor
         for i in range(1000):
-            reactor.iterate(0.01)
+            reactor.iterate()
 
 class RecvlineLoopbackMixin:
     serverProtocol = EchoServer

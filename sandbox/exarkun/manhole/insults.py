@@ -316,23 +316,19 @@ class ServerProtocol(protocol.Protocol):
     scrollRegion = None
 
     def __init__(self, protocolFactory=None, *a, **kw):
-        log("init")
         if protocolFactory is not None:
             self.protocolFactory = protocolFactory
-            self.protocolArgs = a
-            self.protocolKwArgs = kw
+        self.protocolArgs = a
+        self.protocolKwArgs = kw
 
         self._cursorReports = []
 
     def connectionMade(self):
-        log("connMade")
         if self.protocolFactory is not None:
             self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
             self.protocol.makeConnection(self)
 
     def dataReceived(self, data):
-        log("data received")
-        log(repr(data))
         for ch in data:
             if self.state == 'data':
                 if ch == '\x1b':

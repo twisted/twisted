@@ -21,7 +21,6 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         self.onConnection = None
 
     def write(self, bytes):
-        print repr(bytes)
         self.transport.write(bytes)
 
     def outReceived(self, bytes):

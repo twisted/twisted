@@ -3,7 +3,7 @@ import time
 
 from twisted.trial import unittest
 
-from test_recvline import _TelnetMixin, _SSHMixin
+from test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin
 
 import manhole
 
@@ -121,5 +121,8 @@ class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixi
     pass
 
 class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
+    pass
+
+class ManholeLoopbackStdio(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
     pass
 
