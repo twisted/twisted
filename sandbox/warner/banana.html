@@ -470,28 +470,23 @@ push a different root Unslicer. to get more control over the receive
 process.
 
 Currently, Slicers call Banana.sendOpen/sendToken/sendClose/sendAbort, which
-must then somehow creates bytes and do a transport.write .
-
-Unbanana.receiveToken is called repeatedly with all kinds of tokens.
+then creates bytes and does transport.write .
 
 To move this into C, the transport should get to call CUnbanana.receiveToken
 There should be CBananaUnslicers. Probably a parent.addMe(self) instead of
 banana.stack.append(self), maybe addMeC for the C unslicer.
 
-*something* has to be a Protocol. Call that a BananaProtocol. It has a
-dataReceived method. (maybe in some C form, data could move directly from a
-CTransport to a CProtocol). It parses tokens and hands them to its Unbanana
-object, which uses the Unslicer stack to do stuff with them. The Unbanana
-object has a root Unslicer, probably created at connectionEstablished time.
-Subclasses of BananaProtocol could have Unbanana objects with different
-RootUnslicer objects.
+The Banana object is a Protocol, and has a dataReceived method. (maybe in
+some C form, data could move directly from a CTransport to a CProtocol). It
+parses tokens and hands them to its Unslicer stack. The root Unslicer is
+probably created at connectionEstablished time. Subclasses of Banana could
+use different RootUnslicer objects, or the users might be responsible for
+setting up the root unslicer.
 
-The Banana object is created with a RootSlicer. The Banana object needs to
-point at the BananaProtocol so it can do bp.writeToken, which serializes the
-token and does transport.write . This could be collapsed if the serializer
-were moved into the Banana object. (a C form could have CSlicer objects
-which hand tokens to a little CBanana which then hands bytes off to a
-CTransport).
+The Banana object is also created with a RootSlicer. Banana.writeToken
+serializes the token and does transport.write . (a C form could have CSlicer
+objects which hand tokens to a little CBanana which then hands bytes off to
+a CTransport).
 
 Doing the bytestream-to-Token conversion in C loses a lot of utility when
 the conversion is done token at a time. It made more sense when a whole mess
@@ -500,8 +495,6 @@ of s-lists were converted at once.
 All Slicers currently have a Banana pointer.. maybe they should have a
 transport pointer instead? The Banana pointer is needed to get to top of the
 stack.
-
-Probably want to merge Banana and Unbanana into BananaProtocol.
 
 want to be able to unserialize lists/tuples/dicts/strings/ints (<q>basic
 types</q>) without surfacing into python. want to deliver the completed
