@@ -74,7 +74,7 @@ SCP=bash admin/aapscp
         # get rid of twisted from sys.path
         if sys.modules.has_key('twisted'):
             del sys.modules['twisted']
-            import twisted        
+        import twisted        
         from twisted.copyright import version
         return version
 
@@ -160,7 +160,7 @@ doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
     :sys zip -rq ../twisteddoc.zip *
 
 # generate iss files
-py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template
+py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template twisted/copyright.py
     @docs=(_top.DoDocs == 'withdocs')
     # file2string is fucked, don't use
     @tmpl=file('win32/pyx.x-foo.iss.template').read()
