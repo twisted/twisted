@@ -1645,6 +1645,11 @@ class NoSupportedAuthentication(IMAP4Exception):
         IMAP4Exception.__init__(self, 'No supported authentication schemes available')
         self.serverSupports = serverSupports
         self.clientSupports = clientSupports
+    
+    def __str__(self):
+        return (IMAP4Exception.__str__(self) 
+            + ': Server supports %r, client supports %r'
+            % (self.serverSupports, self.clientSupports))
 
 class IllegalServerResponse(IMAP4Exception): pass
 
@@ -1989,7 +1994,8 @@ class IMAP4Client(basic.LineReceiver):
         return d
 
     def __cbAuthenticate(self, caps, secret):
-        for scheme in caps.get('AUTH', ()):
+        auths = caps.get('AUTH', ())
+        for scheme in auths:
             if scheme.upper() in self.authenticators:
                 break
         else:
@@ -2025,11 +2031,12 @@ class IMAP4Client(basic.LineReceiver):
         return None
 
     def __cbAuthTLS(self, caps, secret):
-        for scheme in caps.get('AUTH', ()):
+        auths = caps.get('AUTH', ())
+        for scheme in auths:
             if scheme.upper() in self.authenticators:
                 break
-            else:
-                raise NoSupportedAuthentication(auths, self.authenticators.keys())
+        else:
+            raise NoSupportedAuthentication(auths, self.authenticators.keys())
         
         continuation = defer.Deferred()
         continuation.addCallback(self.__cbContinueAuth, scheme, secret)
