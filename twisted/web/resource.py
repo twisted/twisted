@@ -168,8 +168,11 @@ class Resource:
     
     def putChild(self, path, child):
         """Register a static child.
+
+        You almost certainly don't want '/' in your path. If you
+        intended to have the root of a folder, e.g. /foo/, you want
+        path to be ''.
         """
-        assert "/" not in path, "path must not contain '/'. For root resource pass ''."
         self.children[path] = child
         child.server = self.server
 
