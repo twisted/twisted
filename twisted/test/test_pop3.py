@@ -248,45 +248,103 @@ class TestServerFactory:
         return 60
     
     def cap_SASL(self):
-        return "SCHEME_1 SCHEME_2"
+        return ["SCHEME_1", "SCHEME_2"]
     
     def cap_LOGIN_DELAY(self):
         return 120
 
+    pue = True    
+    def perUserExpiration(self):
+        return self.pue
+    
+    puld = True
+    def perUserLoginDelay(self):
+        return self.puld
+
+class TestMailbox:
+    loginDelay = 100
+    messageExpiration = 25
+
 class CapabilityTestCase(unittest.TestCase):
     def setUp(self):
+        s = StringIO.StringIO()
         p = pop3.POP3()
         p.factory = TestServerFactory()
-        p.transport = StringIO.StringIO()
+        p.transport = internet.protocol.FileWrapper(s)
+        p.connectionMade()
         p.do_CAPA()
-    
+        
         self.caps = p.listCapabilities()
-        self.pcaps = p.transport.getvalue().splitlines()
+        self.pcaps = s.getvalue().splitlines()
+
+        s = StringIO.StringIO()
+        p.mbox = TestMailbox()
+        p.transport = internet.protocol.FileWrapper(s)
+        p.do_CAPA()
+
+        self.lpcaps = s.getvalue().splitlines()
+        p.connectionLost(failure.Failure(Exception()))
+
+    def contained(self, s, *caps):
+        for c in caps:
+            self.assertIn(s, c)
 
     def testUIDL(self):
-        self.assertIn("UIDL", self.caps)
-        self.assertIn("UIDL", self.pcaps)
+        self.contained("UIDL", self.caps, self.pcaps, self.lpcaps)
         
     def testTOP(self):
-        self.assertIn("TOP", self.caps)
-        self.assertIn("TOP", self.pcaps)
+        self.contained("TOP", self.caps, self.pcaps, self.lpcaps)
     
     def testUSER(self):
-        self.assertIn("USER", self.caps)
-        self.assertIn("USER", self.pcaps)
+        self.contained("USER", self.caps, self.pcaps, self.lpcaps)
     
     def testEXPIRE(self):
-        self.assertIn("EXPIRE 60", self.caps)
-        self.assertIn("EXPIRE 60", self.caps)
+        self.contained("EXPIRE 60 USER", self.caps, self.pcaps)
+        self.contained("EXPIRE 25", self.lpcaps)
     
     def testIMPLEMENTATION(self):
-        self.assertIn("IMPLEMENTATION Test Implementation String", self.caps)
-        self.assertIn("IMPLEMENTATION Test Implementation String", self.pcaps)
+        self.contained(
+            "IMPLEMENTATION Test Implementation String",
+            self.caps, self.pcaps, self.lpcaps
+        )
 
     def testSASL(self):
-        self.assertIn("SASL SCHEME_1 SCHEME_2", self.caps)
-        self.assertIn("SASL SCHEME_1 SCHEME_2", self.pcaps)
+        self.contained(
+            "SASL SCHEME_1 SCHEME_2",
+            self.caps, self.pcaps, self.lpcaps
+        )
     
     def testLOGIN_DELAY(self):
-        self.assertIn("LOGIN-DELAY 120", self.caps)
-        self.assertIn("LOGIN-DELAY 120", self.pcaps)
+        self.contained("LOGIN-DELAY 120 USER", self.caps, self.pcaps)
+        self.assertIn("LOGIN-DELAY 100", self.lpcaps)
+
+class GlobalCapabilitiesTestCase(unittest.TestCase):
+    def setUp(self):
+        s = StringIO.StringIO()
+        p = pop3.POP3()
+        p.factory = TestServerFactory()
+        p.factory.pue = p.factory.puld = False
+        p.transport = internet.protocol.FileWrapper(s)
+        p.connectionMade()
+        p.do_CAPA()
+        
+        self.caps = p.listCapabilities()
+        self.pcaps = s.getvalue().splitlines()
+
+        s = StringIO.StringIO()
+        p.mbox = TestMailbox()
+        p.transport = internet.protocol.FileWrapper(s)
+        p.do_CAPA()
+
+        self.lpcaps = s.getvalue().splitlines()
+        p.connectionLost(failure.Failure(Exception()))
+
+    def contained(self, s, *caps):
+        for c in caps:
+            self.assertIn(s, c)
+
+    def testEXPIRE(self):
+        self.contained("EXPIRE 60", self.caps, self.pcaps, self.lpcaps)
+    
+    def testLOGIN_DELAY(self):
+        self.contained("LOGIN-DELAY 120", self.caps, self.pcaps, self.lpcaps)

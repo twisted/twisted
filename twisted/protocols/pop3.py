@@ -154,7 +154,8 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
     
     def processCommand(self, command, *args):
         command = string.upper(command)
-        if self.mbox is None and command not in self.AUTH_CMDS:
+        authCmd = command in self.AUTH_CMDS
+        if self.mbox is None and not authCmd:
             raise POP3Error("not authenticated yet: cannot do %s" % command)
         f = getattr(self, 'do_' + command, None)
         if f:
@@ -168,18 +169,58 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
             "UIDL",
         ]
         
-        extCaps = ('IMPLEMENTATION', 'EXPIRE', 'LOGIN_DELAY', 'SASL') 
-
         if components.implements(self.factory, IServerFactory):
-            for s in extCaps:
-                try:
-                    v = getattr(self.factory, 'cap_%s' % (s,))()
-                except NotImplementedError:
-                    pass
-                except:
-                    log.err()
-                else:
-                    baseCaps.append("%s %s" % (s.replace('_', '-'), v))
+            # Oh my god.  We can't just loop over a list of these because
+            # each has spectacularly different return value semantics!
+            try:
+                v = self.factory.cap_IMPLEMENTATION()
+            except NotImplementedError:
+                pass
+            except:
+                log.err()
+            else:
+                baseCaps.append("IMPLEMENTATION " + str(v))
+            
+            try:
+                v = self.factory.cap_EXPIRE()
+            except NotImplementedError:
+                pass
+            except:
+                log.err()
+            else:
+                if v is None:
+                    v = "NEVER"
+                if self.factory.perUserExpiration():
+                    if self.mbox:
+                        v = str(self.mbox.messageExpiration)
+                    else:
+                        v = str(v) + " USER"
+                v = str(v)
+                baseCaps.append("EXPIRE " + v)
+            
+            try:
+                v = self.factory.cap_LOGIN_DELAY()
+            except NotImplementedError:
+                pass
+            except:
+                log.err()
+            else:
+                if self.factory.perUserLoginDelay():
+                    if self.mbox:
+                        v = str(self.mbox.loginDelay)
+                    else:
+                        v = str(v) + " USER"
+                v = str(v)
+                baseCaps.append("LOGIN-DELAY " + v)
+            
+            try:
+                v = self.factory.cap_SASL()
+            except NotImplementedError:
+                pass
+            except:
+                log.err()
+            else:
+                baseCaps.append("SASL " + ' '.join(v))
         return baseCaps
 
     def do_CAPA(self):
@@ -394,19 +435,50 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
         raise cred.error.UnauthorizedLogin()
 
 class IServerFactory(components.Interface):
+    """Interface for querying additional parameters of this POP3 server.
+    
+    Any cap_* method may raise NotImplementedError if the particular
+    capability is not supported.  If cap_EXPIRE() does not raise
+    NotImplementedError, perUserExpiration() must be implemented, otherwise
+    they are optional.  If cap_LOGIN_DELAY() is implemented,
+    perUserLoginDelay() must be implemented, otherwise they are optional.
+    """
+    
     def cap_IMPLEMENTATION(self):
         """Return a string describing this POP3 server implementation."""
     
     def cap_EXPIRE(self):
-        """Return the minimum number of seconds messages are retained."""
+        """Return the minimum number of days messages are retained."""
+    
+    def perUserExpiration(self):
+        """Indicate whether message expiration is per-user.
+        
+        @return: True if it is, false otherwise.
+        """
     
     def cap_LOGIN_DELAY(self):
         """Return the minimum number of seconds between client logins."""
     
+    def perUserLoginDelay(self):
+        """Indicate whether the login delay period is per-user.
+        
+        @return: True if it is, false otherwise.
+        """ 
+    
     def cap_SASL(self):
-        """Return a string describing supported authentication schemes."""
+        """Return a list describing all supported authentication schemes."""
 
 class IMailbox(components.Interface):
+    """
+    @type loginDelay: C{int}
+    @ivar loginDelay: The number of seconds between allowed logins for the
+    user associated with this mailbox.  None 
+    
+    @type messageExpiration: C{int}
+    @ivar messageExpiration: The number of days messages in this mailbox will
+    remain on the server before being deleted.
+    """
+
     def listMessages(self, index=None):
         """Retrieve the size of one or more messages.
         
