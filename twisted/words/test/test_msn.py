@@ -20,7 +20,8 @@ Test cases for twisted.words.protocols.msn
 """
 
 # Twisted imports
-from twisted.words.protocols import msn, loopback
+from twisted.words.protocols import msn
+from twisted.protocols import loopback
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
 
