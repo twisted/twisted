@@ -239,7 +239,8 @@ class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
     mUID = 0
-    
+    rw = 1
+
     def __init__(self):
         self.listeners = []
         self.addListener = self.listeners.append
@@ -264,7 +265,7 @@ class SimpleMailbox:
         return 4
     
     def isWriteable(self):
-        return 1
+        return self.rw
     
     def destroy(self):
         pass
@@ -303,6 +304,11 @@ class SimpleMailbox:
 class Account(imap4.MemoryAccount):
     def _emptyMailbox(self, name, id):
         return SimpleMailbox()
+    
+    def select(self, name, rw=1):
+        mbox = imap4.MemoryAccount.select(self, name)
+        mbox.rw = rw
+        return mbox
 
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
@@ -452,7 +458,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def examine():
             def examined(args):
                 self.examinedArgs = args
-                self._cbStopClient()
+                self._cbStopClient(None)
             d = self.client.examine('test-mailbox')
             d.addCallback(examined)
             return d
@@ -469,7 +475,6 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 0
         })
-    testExamine.todo = "Test framework's mailbox is always READ-WRITE"
 
     def testCreate(self):
         succeed = ('testbox', 'test/box', 'test/', 'test/box/box', 'INBOX')
