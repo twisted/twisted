@@ -101,13 +101,15 @@ class Constraint:
                        FLOAT: None,
                        }
     def checkOpentype(self, opentype):
-        """Check the OPEN token type. Raise an exception if it is not
-        accepted.
+        """Check the OPEN type (the tuple of Index Tokens). Raise an
+        exception if it is not accepted.
         """
         if self.opentypes == None:
             return
         if opentype not in self.opentypes:
-            raise Violation, "unacceptable OPEN type"
+            print "opentype %s, self.opentypes %s" % (opentype,
+                                                      self.opentypes)
+            raise Violation, "unacceptable OPEN type '%s'" % (opentype,)
 
     def checkObject(self, obj):
         """Validate an existing object. Usually objects are validated as
@@ -258,7 +260,7 @@ def OPENBYTES(dummy):
 
 class BooleanConstraint(Constraint):
     taster = openTaster
-    opentypes = ["boolean"]
+    opentypes = [("boolean",)]
     _myint = IntegerConstraint()
 
     def __init__(self, value=None):
@@ -291,7 +293,7 @@ class InterfaceConstraint(Constraint):
     # TODO: do we need an string-to-Interface map just like we have a
     # classname-to-class/factory map?
     taster = openTaster
-    opentypes = ["instance"]
+    opentypes = [("instance",)]
 
     def __init__(self, interface):
         self.interface = interface
@@ -302,7 +304,7 @@ class InterfaceConstraint(Constraint):
 
 class ClassConstraint(Constraint):
     taster = openTaster
-    opentypes = ["instance"]
+    opentypes = [("instance",)]
 
     def __init__(self, klass):
         self.klass = klass
@@ -346,7 +348,7 @@ ChoiceOf = PolyConstraint
 
 class TupleConstraint(Constraint):
     taster = openTaster
-    opentypes = ["tuple"]
+    opentypes = [("tuple",)]
 
     def __init__(self, *elemConstraints):
         self.constraints = [makeConstraint(e) for e in elemConstraints]
@@ -381,7 +383,7 @@ class ListConstraint(Constraint):
     constraint."""
 
     taster = openTaster
-    opentypes = ["list"]
+    opentypes = [("list",)]
 
     def __init__(self, constraint, maxLength=30):
         self.constraint = makeConstraint(constraint)
@@ -413,7 +415,7 @@ ListOf = ListConstraint
 
 class DictConstraint(Constraint):
     taster = openTaster
-    opentypes = ["dict"]
+    opentypes = [("dict",)]
 
     def __init__(self, keyConstraint, valueConstraint, maxKeys=30):
         self.keyConstraint = makeConstraint(keyConstraint)
@@ -459,7 +461,7 @@ class AttributeDictConstraint(Constraint):
     Some special constraints are legal here: Optional.
     """
     taster = openTaster
-    opentypes = ["attrdict"]
+    opentypes = [("attrdict",)]
 
     def __init__(self, *attrTuples, **kwargs):
         self.ignoreUnknown = kwargs.get('ignoreUnknown', False)

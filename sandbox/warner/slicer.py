@@ -379,12 +379,21 @@ class IBananaUnslicer:
         Violation, but might still raise BananaError).
         """
 
+    def openerCheckToken(self, typebyte):
+        """'typebyte' is the type of an incoming index token. Ask the
+        current opener if this token is acceptable. Usually implemented by
+        calling self.opener.openerCheckToken, thus delegating the question
+        to the RootUnslicer.
+        """
+
     def doOpen(self, opentype):
-        """Opentype is a string. Check to see if this kind of child object
-        conforms to the constraint, raise Violation if not. Create a new
-        Unslicer (usually by calling self.opener, which chains back to the
-        RootUnslicer). Set a constraint on the child unslicer, if any. Set
-        the child's .opener attribute (usually to self.opener).
+        """opentype is a tuple. Return None if more index tokens are
+        required. Check to see if this kind of child object conforms to the
+        constraint, raise Violation if not. Create a new Unslicer (usually
+        by calling self.opener.doOpen, which delegates the
+        opentype-to-Unslicer mapping to the RootUnslicer). Set a constraint
+        on the child unslicer, if any. Set the child's .opener attribute
+        (usually to self.opener).
         """
 
     def receiveChild(self, childobject):
@@ -441,7 +450,7 @@ def setInstanceState(inst, state):
 
 class BaseUnslicer:
     def __init__(self):
-        pass
+        self.opener = None # must be chained by our parent
 
     def describeSelf(self):
         return "??"
@@ -458,19 +467,42 @@ class BaseUnslicer:
     def checkToken(self, typebyte):
         return None # unlimited
 
+    def openerCheckToken(self, typebyte, opentype):
+        return self.opener.openerCheckToken(typebyte, opentype)
+
+    def open(self, opentype):
+        """Return an IBananaUnslicer object based upon the 'opentype' tuple.
+
+        This method does not apply constraints, it only serves to map
+        opentypes into Unslicers. Most subclasses will implement this by
+        delegating the request to their .opener (which usually points to the
+        RootUnslicer), and will set the new child's .opener attribute so
+        that they can do the same. Subclasses that wish to change the way
+        opentypes are mapped to Unslicers can do so by changing this
+        behavior.
+        """
+
+        unslicer = self.opener.open(opentype)
+        if unslicer:
+            unslicer.opener = self.opener
+        return unslicer
+
+        
     def doOpen(self, opentype):
-        """Return an IBananaUnslicer object based upon the 'opentype'
-        string. This object will receive all tokens destined for the
-        subnode.
+        """Return an IBananaUnslicer object based upon the 'opentype' tuple.
+        This object will receive all tokens destined for the subnode.
 
         If you want to enforce a constraint, you must override this method
         and do two things: make sure your constraint accepts the opentype,
         and set a per-item constraint on the new child unslicer.
+
+        This method calls self.open() to obtain the unslicer. That may
+        return None instead of a child unslicer if the opener wants a
+        multi-token opentype tuple, so be sure to check for Noneness before
+        adding a per-item constraint.
         """
 
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        return unslicer
+        return self.open(opentype)
 
     def receiveChild(self, obj):
         pass
@@ -589,10 +621,10 @@ class ListUnslicer(BaseUnslicer):
             raise Violation
         if self.itemConstraint:
             self.itemConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        if self.itemConstraint:
-            unslicer.setConstraint(self.itemConstraint)
-        unslicer.opener = self.opener
+        unslicer = self.open(opentype)
+        if unslicer:
+            if self.itemConstraint:
+                unslicer.setConstraint(self.itemConstraint)
         return unslicer
 
     def update(self, obj, index):
@@ -670,10 +702,10 @@ class TupleUnslicer(BaseUnslicer):
             if where >= len(self.constraints):
                 raise Violation
             self.constraints[where].checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        if self.constraints != None:
-            unslicer.setConstraint(self.constraints[where])
+        unslicer = self.open(opentype)
+        if unslicer:
+            if self.constraints != None:
+                unslicer.setConstraint(self.constraints[where])
         return unslicer
 
     def update(self, obj, index):
@@ -759,14 +791,14 @@ class DictUnslicer(BaseUnslicer):
         else:
             if self.valueConstraint:
                 self.valueConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        if self.gettingKey:
-            if self.keyConstraint:
-                unslicer.setConstraint(self.keyConstraint)
-        else:
-            if self.valueConstraint:
-                unslicer.setConstraint(self.valueConstraint)
+        unslicer = self.open(opentype)
+        if unslicer:
+            if self.gettingKey:
+                if self.keyConstraint:
+                    unslicer.setConstraint(self.keyConstraint)
+            else:
+                if self.valueConstraint:
+                    unslicer.setConstraint(self.valueConstraint)
         return unslicer
 
     def update(self, value, key):
@@ -1088,17 +1120,16 @@ class MethodUnslicer(BaseUnslicer):
     def doOpen(self, opentype):
         # check the opentype
         if self.state == 1:
-            if opentype not in ("instance", "none"):
+            if opentype[0] not in ("instance", "none"):
                 raise BananaError("MethodUnslicer instance must be " +
                                   "instance or None",
                                   self.where())
         elif self.state == 2:
-            if opentype != "class":
+            if opentype[0] != "class":
                 raise BananaError("MethodUnslicer class must be a class",
                                   self.where())
-        unslicer = self.opener(opentype)
+        unslicer = self.open(opentype)
         # TODO: apply constraint
-        unslicer.opener = self.opener
         return unslicer
 
     def receiveChild(self, obj):
@@ -1202,35 +1233,38 @@ class BooleanUnslicer(LeafUnslicer):
         return "<bool>"
         
 UnslicerRegistry = {
-    'unicode': UnicodeUnslicer,
-    'list': ListUnslicer,
-    'tuple': TupleUnslicer,
-    'dict': DictUnslicer,
-    'instance': InstanceUnslicer,
-    'reference': ReferenceUnslicer,
-    'none': NoneUnslicer,
-    'boolean': BooleanUnslicer,
+    ('unicode',): UnicodeUnslicer,
+    ('list',): ListUnslicer,
+    ('tuple',): TupleUnslicer,
+    ('dict',): DictUnslicer,
+    ('instance',): InstanceUnslicer,
+    ('reference',): ReferenceUnslicer,
+    ('none',): NoneUnslicer,
+    ('boolean',): BooleanUnslicer,
     # for testing
-    'dict1': BrokenDictUnslicer,
-    'dict2': ReallyBrokenDictUnslicer,
+    ('dict1',): BrokenDictUnslicer,
+    ('dict2',): ReallyBrokenDictUnslicer,
     }
         
-UnslicerRegistry2 = {}
-UnslicerRegistry2.update(UnslicerRegistry)
+UnslicerRegistry2 = UnslicerRegistry.copy()
 UnslicerRegistry2.update({
-    'module': ModuleUnslicer,
-    'class': ClassUnslicer,
-    'method': MethodUnslicer,
-    'function': FunctionUnslicer,
-    'instance': InstanceUnslicer2,
+    ('module',): ModuleUnslicer,
+    ('class',): ClassUnslicer,
+    ('method',): MethodUnslicer,
+    ('function',): FunctionUnslicer,
+    ('instance',): InstanceUnslicer2,
     })
 
 
 class RootUnslicer(BaseUnslicer):
     openRegistry = UnslicerRegistry
+    topRegistry = UnslicerRegistry
     constraint = None
+
     def __init__(self):
         self.objects = {}
+        maxLength = reduce(max, [len(k[0]) for k in self.openRegistry.keys()])
+        self.maxIndexLength = maxLength
 
     def start(self, count):
         pass
@@ -1245,28 +1279,52 @@ class RootUnslicer(BaseUnslicer):
             return self.constraint.checkToken(typebyte)
         return None
 
-    def open(self, opentype):
+    def openerCheckToken(self, typebyte, opentype):
+        if typebyte == tokens.STRING:
+            return self.maxIndexLength
+        elif typebyte == tokens.VOCAB:
+            return None
+        else:
+            raise BananaError("index token 0x%02x not STRING or VOCAB" % \
+                              ord(typebyte))
+
+    def open(self, opentype, typemap=None):
+        """Accept an opentype tuple and produce a new Unslicer. This
+        function is generally called (by delegation) by the top Unslicer on
+        the stack, regardless of what kind of unslicer it is.
+        """
+
+        if typemap == None:
+            typemap = self.openRegistry
+
         try:
-            child = self.openRegistry[opentype]()
+            opener = typemap[opentype]
+            child = opener()
+            # do not set .opener here, but leave it for the caller. Unslicer
+            # subclasses will set it to their parent in their own .open()
+            # call. The RootUnslicer will set it (to itself) in
+            # RootUnslicer.doOpen() .
         except KeyError:
-            raise BananaError("unknown OPEN type '%s'" % opentype,
-                              self.where() + ".<OPEN(%s)>" % opentype)
+            where = self.where() + ".<OPEN(%s)>" % (opentype,)
+            raise BananaError("unknown OPEN type '%s'" % (opentype,),
+                              where)
         return child
+
+    def openTop(self, opentype):
+        return self.open(opentype, self.topRegistry)
 
     def doOpen(self, opentype):
         if self.constraint:
             self.constraint.checkOpentype(opentype)
-        if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
+        if len(self.protocol.receiveStack) == 1 and opentype[0] == "vocab":
             # only legal at top-level
             child = VocabUnslicer()
         else:
-            child = self.open(opentype)
-        if not child:
-            # TODO: Violation? or should we just drop the connection?
-            raise KeyError, "no such open type '%s'" % opentype
-        child.opener = self.open
-        if self.constraint:
-            child.setConstraint(self.constraint)
+            child = self.openTop(opentype)
+        if child:
+            child.opener = self
+            if self.constraint:
+                child.setConstraint(self.constraint)
         return child
 
     def receiveAbort(self, token):
@@ -1274,7 +1332,7 @@ class RootUnslicer(BaseUnslicer):
 
     def receiveChild(self, obj):
         if self.protocol.debug:
-            print "RootUnslicer.receiveChild(%s)" % obj
+            print "RootUnslicer.receiveChild(%s)" % (obj,)
         self.objects = {}
         if isinstance(obj, NewVocabulary):
             self.protocol.setIncomingVocabulary(obj.nv)

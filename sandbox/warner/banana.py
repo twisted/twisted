@@ -227,7 +227,10 @@ class Banana(protocol.Protocol):
         self.receiveStack = [self.rootUnslicer]
         self.objectCounter = 0
         self.objects = {}
-        self.inOpen = 0
+
+        self.inOpen = False # set during the Index Phase of an OPEN sequence
+        self.opentype = [] # accumulates Index Tokens
+
         self.incomingVocabulary = {}
         self.buffer = ''
         self.skipBytes = 0 # used to discard a single long token
@@ -268,7 +271,10 @@ class Banana(protocol.Protocol):
         # primitive type). This will never be called with ABORT or CLOSE
         # types.
         top = self.receiveStack[-1]
-        limit = top.checkToken(typebyte) # might raise Violation
+        if self.inOpen:
+            limit = top.openerCheckToken(typebyte, self.opentype)
+        else:
+            limit = top.checkToken(typebyte) # might raise Violation
         if self.debug: print "getLimit(0x%x)=%s" % (ord(typebyte), limit)
         return limit
 
@@ -329,13 +335,7 @@ class Banana(protocol.Protocol):
             # determine if this token will be accepted, and if so, how large
             # it is allowed to be (for STRING and LONGINT/LONGNEG)
 
-            if self.inOpen:
-                # we are receiving the first object of an OPEN sequence,
-                # which must be a string (or a vocab number which expands
-                # into a string). The sizelimit is always 1k.
-                if typebyte not in (STRING, VOCAB):
-                    raise BananaError("non-string in OPEN token")
-            elif not rejected:
+            if not rejected:
                 # CLOSE and ABORT are always legal. All others (including
                 # OPEN) can be rejected by the schema: for example, a list
                 # of integers would reject STRING, VOCAB, and OPEN
@@ -349,8 +349,10 @@ class Banana(protocol.Protocol):
                                         where + "<checkToken>")
                         rejected = True
                         gotItem(UnbananaFailure(self.describe(), e))
-                    except BananaError:
-                        raise
+                    except BananaError, e:
+                        where = self.describe()
+                        e.where = where
+                        raise e
                     except:
                         # TODO: I think BananaError2 can go away, since we
                         # can modify a Failure and then re-raise it
@@ -474,6 +476,7 @@ class Banana(protocol.Protocol):
                     if self.inOpen:
                         raise BananaError("OPEN token followed by OPEN")
                     self.inOpen = True
+                    self.opentype = []
                 continue
 
             elif typebyte == CLOSE:
@@ -500,8 +503,10 @@ class Banana(protocol.Protocol):
 
             if not rejected:
                 if self.inOpen:
-                    self.inOpen = False
                     self.handleOpen(self.openCount, obj)
+                    # handleOpen might push a new unslicer and clear
+                    # .inOpen, or leave .inOpen true and append the object
+                    # to .indexOpen
                 else:
                     gotItem(obj)
             else:
@@ -513,25 +518,30 @@ class Banana(protocol.Protocol):
         self.buffer = ''
 
 
-    def handleOpen(self, openCount, opentype):
+    def handleOpen(self, openCount, indexToken):
+        self.opentype.append(indexToken)
+        opentype = tuple(self.opentype)
         if self.debug:
-            print "handleOpen(%d,%s)" % (openCount, opentype)
+            print "handleOpen(%d,%s)" % (openCount, indexToken)
         objectCount = self.objectCounter
-        self.objectCounter += 1
         top = self.receiveStack[-1]
         try:
             # obtain a new Unslicer to handle the object
             child = top.doOpen(opentype)
-            assert child
+            if not child:
+                if self.debug:
+                    print " doOpen wants more index tokens"
+                return # they want more index tokens, leave .inOpen=True
             if self.debug:
-                print "opened[%d] with %s" % (openCount, child)
+                print " opened[%d] with %s" % (openCount, child)
         except Violation:
             # must discard the rest of the child object. There is no new
             # unslicer pushed yet, so we don't use abandonUnslicer
             self.discardCount += 1
+            self.inOpen = False
 
             # and give an UnbananaFailure to the parent who rejected it
-            where = self.describe() + ".<OPEN(%s)>" % opentype
+            where = self.describe() + ".<OPEN(%s)>" % (opentype,)
             failure = UnbananaFailure(where, Failure())
             top.receiveChild(failure)
             return
@@ -539,9 +549,11 @@ class Banana(protocol.Protocol):
             raise
         except:
             # blow up, but make a note of which object caused the problem
-            where = self.describe() + ".<OPEN(%s)>" % opentype
+            where = self.describe() + ".<OPEN(%s)>" % (opentype,)
             raise BananaError2(Failure(), where)
 
+        self.objectCounter += 1
+        self.inOpen = False
         child.protocol = self
         child.openCount = openCount
         self.receiveStack.append(child)
@@ -579,7 +591,7 @@ class Banana(protocol.Protocol):
         except BananaError:
             raise
         except:
-            where = self.describe() + ".<receiveChild(%s)>" % token
+            where = self.describe() + ".<receiveChild(%s)>" % (token,)
             raise BananaError2(Failure(), where)
 
     def handleClose(self, closeCount):
@@ -650,7 +662,7 @@ class Banana(protocol.Protocol):
         except BananaError:
             raise
         except:
-            where = self.describe() + ".<receiveChild(%s)>" % obj
+            where = self.describe() + ".<receiveChild(%s)>" % (obj,)
             raise BananaError2(Failure(), where)
 
     def abandonUnslicer(self, failure, leaf=None):

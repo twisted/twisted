@@ -22,8 +22,9 @@ class TestReferenceUnslicer(unittest.TestCase):
         self.broker = TestBroker()
 
     def newUnslicer(self):
-        unslicer = pb.ReferenceUnslicer(self.broker)
-        unslicer.opener = self.broker.rootUnslicer.open
+        unslicer = pb.ReferenceUnslicer()
+        unslicer.broker = self.broker
+        unslicer.opener = self.broker.rootUnslicer
         return unslicer
 
     def testReject(self):
@@ -70,8 +71,9 @@ class TestAnswer(unittest.TestCase):
         self.broker.answers = []
 
     def newUnslicer(self):
-        unslicer = pb.AnswerUnslicer(self.broker)
-        unslicer.opener = self.broker.rootUnslicer.open
+        unslicer = pb.AnswerUnslicer()
+        unslicer.broker = self.broker
+        unslicer.opener = self.broker.rootUnslicer
         unslicer.protocol = self.broker
         return unslicer
 

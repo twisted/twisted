@@ -351,7 +351,7 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict1(self):
         # dies during open because of bad opentype
-        self.assertRaisesBananaError("root.[1].<OPEN(bad)>",
+        self.assertRaisesBananaError("root.[1].<OPEN(('bad',))>",
                                      self.do,
                                      [OPENlist(0), 1,
                                        ("OPEN", "bad", 1),
@@ -721,6 +721,8 @@ class InboundByteStream(unittest.TestCase):
         return banana.object
     def conform2(self, stream, obj, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
+        if isinstance(obj2, UnbananaFailure):
+            print "failure", obj2, obj2.failure
         self.failUnlessEqual(obj, obj2)
     def violate2(self, stream, where, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
@@ -931,6 +933,7 @@ class InboundByteStream(unittest.TestCase):
 
 class ConstrainedRootUnslicer(RootUnslicer):
     openRegistry = slicer.UnslicerRegistry2
+    topRegistry = slicer.UnslicerRegistry2
 
 class TestBanana(Banana):
     slicerClass = RootSlicer2

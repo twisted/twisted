@@ -7,7 +7,7 @@ from twisted.internet import defer
 
 import slicer, schema, tokens, banana
 from tokens import BananaError, Violation
-from slicer import UnbananaFailure
+from slicer import UnbananaFailure, BaseUnslicer
 
 class PendingRequest(object):
     def __init__(self):
@@ -64,7 +64,7 @@ class RemoteReference(object):
             # are unsliceable
             self.broker.slice2(child, (reqID, self.refID, _name, argsdict))
         except:
-            req.deferred.errback(Failure())
+            req.deferred.errback(failure.Failure())
 
         # the remote end could send back an error response for many reasons:
         #  bad method name
@@ -79,10 +79,6 @@ class RemoteReference(object):
         # if none of those occurred, the callback will be run
 
         return req.deferred
-
-class BaseUnslicer(slicer.BaseUnslicer):
-    def __init__(self, broker):
-        self.broker = broker
 
 class ReferenceUnslicer(BaseUnslicer):
     refID = None
@@ -103,9 +99,9 @@ class ReferenceUnslicer(BaseUnslicer):
     def doOpen(self, opentype):
         # only for the interface list
         self.ilistConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        unslicer.setConstraint(self.ilistConstraint)
+        unslicer = self.open(opentype)
+        if unslicer:
+            unslicer.setConstraint(self.ilistConstraint)
         return unslicer
 
     def receiveChild(self, token):
@@ -188,10 +184,10 @@ class CallUnslicer(BaseUnslicer):
         # we don't have to bother checking self.stage or self.argname
         if self.argConstraint:
             self.argConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        if self.argConstraint:
-            unslicer.setConstraint(self.argConstraint)
+        unslicer = self.open(opentype)
+        if unslicer:
+            if self.argConstraint:
+                unslicer.setConstraint(self.argConstraint)
         return unslicer
 
     def receiveChild(self, token):
@@ -278,10 +274,10 @@ class AnswerUnslicer(BaseUnslicer):
     def doOpen(self, opentype):
         if self.resultConstraint:
             self.resultConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        if self.resultConstraint:
-            unslicer.setConstraint(self.resultConstraint)
+        unslicer = self.open(opentype)
+        if unslicer:
+            if self.resultConstraint:
+                unslicer.setConstraint(self.resultConstraint)
         return unslicer
 
     def receiveChild(self, token):
@@ -318,9 +314,9 @@ class ErrorUnslicer(BaseUnslicer):
 
     def doOpen(self, opentype):
         self.fConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.opener = self.opener
-        unslicer.setConstraint(self.fConstraint)
+        unslicer = self.open(opentype)
+        if unslicer:
+            unslicer.setConstraint(self.fConstraint)
         return unslicer
 
     def receiveChild(self, token):
@@ -345,13 +341,14 @@ class ErrorUnslicer(BaseUnslicer):
 
 
 class PBRootUnslicer(slicer.RootUnslicer):
-    # topRegistry defines what objects are allowed at the top-level
+    # topRegistry defines what objects are allowed at the top-level. All of
+    # these accept a Broker in their __init__ call
     topRegistry = {
-        "remote": ReferenceUnslicer,
-        "decref" : DecRefUnslicer,
-        "call": CallUnslicer,
-        "answer": AnswerUnslicer,
-        "error": ErrorUnslicer,
+        ("remote",): ReferenceUnslicer,
+        ("decref",): DecRefUnslicer,
+        ("call",): CallUnslicer,
+        ("answer",): AnswerUnslicer,
+        ("error",): ErrorUnslicer,
         }
     # openRegistry defines what objects are allowed at the second level and
     # below
@@ -361,21 +358,10 @@ class PBRootUnslicer(slicer.RootUnslicer):
         if typebyte != tokens.OPEN:
             raise BananaError("top-level must be OPEN")
 
-    def doOpen(self, opentype):
-        # TODO: refactor this with RootUnslicer.doOpen
-        if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
-            # only legal at top-level
-            child = VocabUnslicer()
-        else:
-            try:
-                child = self.topRegistry[opentype](self.broker)
-            except KeyError:
-                raise BananaError("unknown OPEN type '%s'" % opentype,
-                                  self.where() + ".<OPEN(%s)>" % opentype)
-        if not child:
-            # TODO: Violation? or should we just drop the connection?
-            raise KeyError, "no such open type '%s'" % opentype
-        child.opener = self.open
+    def openTop(self, opentype):
+        child = self.open(opentype, self.topRegistry)
+        if child:
+            child.broker = self.broker
         return child
 
     def receiveChild(self, obj):
@@ -589,6 +575,7 @@ class Broker(banana.Banana):
             child = DecRefSlicer(self)
             self.slice2(child, refID)
         except:
+            print "failure during freeRemoteReference"
             f = failure.Failure()
-            f.printTraceback()
+            print f.getTraceback()
             raise
