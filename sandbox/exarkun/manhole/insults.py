@@ -240,6 +240,9 @@ class ServerProtocol(protocol.Protocol):
 
     _databuf = ''
 
+    def write(self, bytes):
+        self.transport.write(bytes)
+
     def dataReceived(self, data):
         data = self._databuf + data
         self._databuf = ''
@@ -327,51 +330,51 @@ class ServerProtocol(protocol.Protocol):
 
     # ITerminal
     def cursorDown(self, n=1):
-        self.transport.write('\x1b[%dA' % (n,))
+        self.write('\x1b[%dA' % (n,))
 
     def cursorUp(self, n=1):
-        self.transport.write('\x1b[%dB' % (n,))
+        self.write('\x1b[%dB' % (n,))
 
     def cursorForward(self, n=1):
-        self.transport.write('\x1b[%dC' % (n,))
+        self.write('\x1b[%dC' % (n,))
 
     def cursorBackward(self, n=1):
-        self.transport.write('\x1b[%dD' % (n,))
+        self.write('\x1b[%dD' % (n,))
 
     def cursorPosition(self, row, column):
-        self.transport.write('\x1b[%d;%dH' % (row, columm))
+        self.write('\x1b[%d;%dH' % (row, column))
 
     def cursorHome(self):
-        self.transport.write('\x1b[H')
+        self.write('\x1b[H')
 
     def index(self):
-        self.transport.write('\x1bD')
+        self.write('\x1bD')
 
     def reverseIndex(self):
-        self.transport.write('\x1bM')
+        self.write('\x1bM')
 
     def nextLine(self):
-        self.transport.write('\x1bE')
+        self.write('\x1bE')
 
     def saveCursor(self):
-        self.transport.write('\x1b7')
+        self.write('\x1b7')
 
     def restoreCursor(self):
-        self.transport.write('\x1b8')
+        self.write('\x1b8')
 
     def setMode(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.transport.write('\x1b[%sh' % (';'.join(map(str, modes)),))
+        self.write('\x1b[%sh' % (';'.join(map(str, modes)),))
 
     def resetMode(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.transport.write('\x1b[%sl' % (';'.join(map(str, modes)),))
+        self.write('\x1b[%sl' % (';'.join(map(str, modes)),))
 
     def applicationKeypadMode(self):
-        self.transport.write('\x1b=')
+        self.write('\x1b=')
 
     def numericKeypadMode(self):
-        self.transport.write('\x1b>')
+        self.write('\x1b>')
 
     def selectCharacterSet(self, charSet, which):
         # XXX Rewrite these as dict lookups
@@ -393,13 +396,13 @@ class ServerProtocol(protocol.Protocol):
             charSet = '2'
         else:
             raise ValueError("Invalid `charSet' argument to selectCharacterSet")
-        self.transport.write('\x1b' + which + charSet)
+        self.write('\x1b' + which + charSet)
 
     def singleShift2(self):
-        self.transport.write('\x1bN')
+        self.write('\x1bN')
 
     def singleShift3(self):
-        self.transport.write('\x1bO')
+        self.write('\x1bO')
 
     def selectGraphicRendition(self, *attributes):
         # XXX Rewrite this as a dict lookup
@@ -415,52 +418,52 @@ class ServerProtocol(protocol.Protocol):
                 attrs.append('1')
             elif a == NORMAL:
                 attrs.append('0')
-        self.transport.write('\x1b[%sm' % (';'.join(attrs),))
+        self.write('\x1b[%sm' % (';'.join(attrs),))
 
     def horizontalTabulationSet(self):
-        self.transport.write('\x1bH')
+        self.write('\x1bH')
 
     def tabulationClear(self):
-        self.transport.write('\x1b[q')
+        self.write('\x1b[q')
 
     def tabulationClearAll(self):
-        self.transport.write('\x1b[3q')
+        self.write('\x1b[3q')
 
     def doubleHeightLine(self, top=True):
         if top:
-            self.transport.write('\x1b#3')
+            self.write('\x1b#3')
         else:
-            self.transport.write('\x1b#4')
+            self.write('\x1b#4')
 
     def singleWidthLine(self):
-        self.transport.write('\x1b#5')
+        self.write('\x1b#5')
 
     def doubleWidthLine(self):
-        self.transport.write('\x1b#6')
+        self.write('\x1b#6')
 
     def eraseToLineEnd(self):
-        self.transport.write('\x1b[K')
+        self.write('\x1b[K')
 
     def eraseToLineBeginning(self):
-        self.transport.write('\x1b[1K')
+        self.write('\x1b[1K')
 
     def eraseLine(self):
-        self.transport.write('\x1b[2K')
+        self.write('\x1b[2K')
 
     def eraseToDisplayEnd(self):
-        self.transport.write('\x1b[J')
+        self.write('\x1b[J')
 
     def eraseToDisplayBeginning(self):
-        self.transport.write('\x1b[1J')
+        self.write('\x1b[1J')
 
     def eraseDisplay(self):
-        self.transport.write('\x1b[2J')
+        self.write('\x1b[2J')
 
     def deleteCharacter(self, n=1):
-        self.transport.write('\x1b[%dP' % (n,))
+        self.write('\x1b[%dP' % (n,))
 
     def insertLine(self, n=1):
-        self.transport.write('\x1b[%dL' % (n,))
+        self.write('\x1b[%dL' % (n,))
 
     def deleteLine(self, n=1):
-        self.transport.write('\x1b[%dM' % (n,))
+        self.write('\x1b[%dM' % (n,))
