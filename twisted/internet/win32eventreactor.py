@@ -82,7 +82,7 @@ events = {}
 class Win32Reactor(posixbase.PosixReactorBase):
     """Reactor that uses Win32 event APIs."""
 
-    implements(IReactorFDSet)
+    implements(IReactorFDSet, IReactorProcess)
 
     dummyEvent = CreateEvent(None, 0, 0, None)
 
