@@ -1,0 +1,22 @@
+* Write more tests
+  * Some parts of app.py aren't tested
+  * Some parts of mktap might be able to be tested
+  * twistd/twistw would be nice to test, maybe by explicitly
+    running a new process
+* Doc-strings
+  * service.py
+  * internet.py
+  * compat.py
+  * __init__.py
+  * app.py
+  * mktap.py
+  * tapconvert.py
+  * twistd.py
+  * twistw.py
+* Manual
+  * What is Service and ServiceCollection
+    * Writing new services
+  * What Application is
+  * Running network servers and clients
+  * Writing .tac files
+  * Writing tap plugins
