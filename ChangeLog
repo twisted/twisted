@@ -1,3 +1,9 @@
+2002-10-08  Brian Warner  <warner@twistedmatrix.com>
+
+	* doc/howto: Added PB/cred and Application docs, updated Manhole
+	and Process docs. Moved Manhole from "Administrators" section to
+	"Developers" section.
+
 2002-10-07  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* .: Release 0.99.4rc1
