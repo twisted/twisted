@@ -21,8 +21,9 @@ Twisted: The Framework Of Your Internet.
 
 # Ensure the user is running the version of python we require.
 import sys
-if not hasattr(sys, "version_info") or sys.version_info < (2,2):
-	raise RuntimeError("Twisted requires Python 2.2 or later.")
+if not hasattr(sys, "version_info") or sys.version_info < (2,2,1):
+    # XXX support 2.2.0 by fixing issue with zope.interface
+    raise RuntimeError("Twisted requires Python 2.2.1 or later.")
 del sys
 
 # Ensure compat gets imported
