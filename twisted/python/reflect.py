@@ -227,7 +227,7 @@ def fullFuncName(func):
     return (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
 
 def qual(clazz):
-    return  clazz.__module__+'.'+clazz.__name__
+    return str(clazz)
 
 def getcurrent(clazz):
     assert type(clazz) == types.ClassType, 'must be a class...'
