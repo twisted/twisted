@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.69 2003/03/18 20:52:46 exarkun Exp $
+# $Id: default.py,v 1.70 2003/03/30 22:55:09 acapnotic Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -93,9 +93,21 @@ class PosixReactorBase(ReactorBase):
             signal.signal(signal.SIGBREAK, self.sigBreak)
 
         if platform.getType() == 'posix':
-            signal.signal(signal.SIGCHLD,
-                          lambda signum,frame,reactor=self:
-                          process.reapAllProcesses(signum, frame, reactor))
+            signal.signal(signal.SIGCHLD, self._handleSigchld)
+
+    def _handleSigchld(self, signum, frame):
+        """Reap all processes on SIGCHLD.
+
+        This gets called on SIGCHLD. We do no processing inside a signal
+        handler, as the calls we make here could occur between any two
+        python bytecode instructions. Deferring processing to the next
+        eventloop round prevents us from violating the state constraints
+        of arbitrary classes. Note that a Reactor must be able to accept
+        callLater calls at any time, even interleaved inside it's own
+        methods; it must block SIGCHLD if it is unable to guarantee this.
+        """
+
+        self.callLater(0, process.reapAllProcesses)
 
     def startRunning(self, installSignalHandlers=1):
         threadable.registerAsIOThread()

@@ -61,27 +61,11 @@ from main import CONNECTION_LOST, CONNECTION_DONE
 
 reapProcessHandlers = {}
 
-def _reapAllProcesses():
+def reapAllProcesses():
     """Reap all registered processes.
-
-    This gets after a SIGCHLD, on the next event loop iteration.
     """
     for process in reapProcessHandlers.values():
         process.reapProcess()
-
-def reapAllProcesses(signum, frame, reactor):
-    """Reap all registered processes.
-
-    This gets called on SIGCHLD. We do no processing inside a signal
-    handler, as the calls we make here could occur between any two
-    python bytecode instructions. Deferring processing to the next
-    eventloop round prevents us from violating the state constraints
-    of arbitrary classes. Note that a Reactor must be able to accept
-    callLater calls at any time, even interleaved inside it's own
-    methods; it must block SIGCHLD if it is unable to guarantee this.
-
-    """
-    reactor.callLater(0, _reapAllProcesses)
 
 def registerReapProccessHandler(pid, process):
     if reapProcessHandlers.has_key(pid):
@@ -310,7 +294,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         (Unfortunately, this is a slightly experimental approach, since
         UNIX has no way to be really sure that your process is going to
         go away w/o blocking.  I don't want to block.)
-        """    
+        """
         try:
             pid, status = os.waitpid(self.pid, os.WNOHANG)
         except:
@@ -382,7 +366,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     lostOutConnection = 0
     lostInConnection = 0
     lostProcess = 0
-    
+
     def maybeCallProcessEnded(self):
         if (self.lostErrorConnection and
             self.lostOutConnection and
@@ -413,7 +397,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         self.pid = None
         self.closeStdin()
         self.maybeCallProcessEnded()
-    
+
     def inConnectionLost(self):
         try:
             self.proto.inConnectionLost()
@@ -461,7 +445,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
-        if not pty and type(usePTY) not in (types.ListType, types.TupleType): 
+        if not pty and type(usePTY) not in (types.ListType, types.TupleType):
             # no pty module and we didn't get a pty to use
             raise NotImplementedError, "cannot use PTYProcess on platforms without the pty module."
         abstract.FileDescriptor.__init__(self, reactor)
@@ -637,5 +621,3 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             if io.args[0] == errno.EAGAIN:
                 return 0
             return CONNECTION_LOST
-
-

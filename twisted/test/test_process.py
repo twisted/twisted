@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -18,6 +18,7 @@
 """
 Test running processes.
 """
+from __future__ import nested_scopes
 
 from twisted.trial import unittest
 
@@ -37,7 +38,7 @@ class TrivialProcessProtocol(protocol.ProcessProtocol):
 class TestProcessProtocol(protocol.ProcessProtocol):
 
     finished = 0
-    
+
     def connectionMade(self):
         self.stages = [1]
         self.data = ''
@@ -66,7 +67,7 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 
     def inConnectionLost(self):
         self.stages.append(5)
-    
+
     def processEnded(self, reason):
         self.finished = 1
         self.reason = reason
@@ -75,7 +76,7 @@ class EchoProtocol(protocol.ProcessProtocol):
 
     s = "1234567" * 1001
     finished = 0
-    
+
     def connectionMade(self):
         for i in range(10):
             self.transport.write(self.s)
@@ -85,7 +86,7 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.buffer += data
         if len(self.buffer) == 70070:
             self.transport.loseConnection()
-    
+
     def processEnded(self, reason):
         self.finished = 1
 
@@ -96,17 +97,17 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     def outReceived(self, data):
         self.transport.signalProcess(self.signal)
-    
+
     def processEnded(self, reason):
         self.going = 0
         reason.trap(error.ProcessTerminated)
         assert reason.value.exitCode == None
         assert reason.value.signal == getattr(signal,'SIG'+self.signal)
         assert os.WTERMSIG(reason.value.status) == getattr(signal,'SIG'+self.signal), '%s %s' % (self.signal, os.WTERMSIG(reason.value.status))
-        
+
 class ProcessTestCase(unittest.TestCase):
     """Test running a process."""
-    
+
     def testProcess(self):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
@@ -122,7 +123,7 @@ class ProcessTestCase(unittest.TestCase):
         self.assertEquals(f.value.exitCode, 23)
         # would .signal be available on non-posix?
         #self.assertEquals(f.value.signal, None)
-        
+
         try:
             import process_tester
             os.remove(process_tester.test_file)
@@ -141,9 +142,9 @@ class ProcessTestCase(unittest.TestCase):
 
 class Accumulator(protocol.ProcessProtocol):
     """Accumulate data from a process."""
-    
+
     closed = 0
-    
+
     def connectionMade(self):
         # print "connection made"
         self.outF = cStringIO.StringIO()
@@ -164,7 +165,7 @@ class Accumulator(protocol.ProcessProtocol):
     def errConnectionLost(self):
         # print "err closed"
         pass
-    
+
     def processEnded(self, reason):
         self.closed = 1
 
@@ -185,7 +186,7 @@ class PosixProcessTestCase(unittest.TestCase):
         while not p.closed:
             reactor.iterate(0.01)
         self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
-    
+
     def testProcess(self):
         if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
         elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
@@ -202,18 +203,18 @@ class PosixProcessTestCase(unittest.TestCase):
         f.seek(0, 0)
         gf = gzip.GzipFile(fileobj=f)
         self.assertEquals(gf.read(), s)
-    
+
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
         if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
-        
+
         p = Accumulator()
         reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
 
         while not p.closed:
             reactor.iterate(0.01)
         self.assertEquals(lsOut, p.errF.getvalue())
-    
+
 
     def testNormalTermination(self):
         if os.path.exists('/bin/true'): cmd = '/bin/true'
@@ -234,7 +235,7 @@ class PosixProcessTestCase(unittest.TestCase):
         if os.path.exists('/bin/false'): cmd = '/bin/false'
         elif os.path.exists('/usr/bin/false'): cmd = '/usr/bin/false'
         else: raise RuntimeError("false not found in /bin or /usr/bin")
-        
+
         p = TrivialProcessProtocol()
         reactor.spawnProcess(p, cmd, ['false'])
 
@@ -259,7 +260,7 @@ class PosixProcessTestCase(unittest.TestCase):
 
 class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""
-    
+
     def testStdinReader(self):
         pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_stdinreader.py")
@@ -282,7 +283,7 @@ else:
     # problem is reactor may not have been run when this test runs.
     import signal
     from twisted.internet import process
-    signal.signal(signal.SIGCHLD, process.reapAllProcesses)
+    signal.signal(signal.SIGCHLD, reactor._handleSigchld)
 
 if runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase
