@@ -49,7 +49,7 @@ hasWriter = writes.has_key
 _simtag = None
 
 
-class GtkReactor(default.DefaultSelectReactor):
+class GtkReactor(default.ReactorBase):
     """GTK+ event loop reactor."""
 
     def addReader(self, reader):

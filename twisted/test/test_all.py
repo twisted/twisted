@@ -103,7 +103,7 @@ log.msg("opening test.log")
 log.logfile = open("test.log", 'a')
 
 # install event loop
-reactor = default.DefaultSelectReactor()
+reactor = default.SelectReactor()
 reactor.install()
 
 

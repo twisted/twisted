@@ -170,7 +170,7 @@ def run(installSignalHandlers=1):
     import twisted.internet
     if not twisted.internet.reactor:
         import default
-        reactor = default.DefaultSelectReactor()
+        reactor = default.SelectReactor()
         reactor.install()
     
     global running

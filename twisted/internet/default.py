@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.3 2002/04/29 19:36:02 acapnotic Exp $
+# $Id: default.py,v 1.4 2002/05/01 15:57:09 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -127,7 +127,9 @@ reads = {}
 writes = {}
 
 
-class DefaultSelectReactor:
+class ReactorBase:
+    """Default base class for Reactors."""
+    
     __implements__ = IReactorCore, IReactorTime, IReactorUNIX, \
                      IReactorTCP, IReactorUDP, #\
                      # IReactorProcess
@@ -168,121 +170,26 @@ class DefaultSelectReactor:
         if not threadable.isInIOThread():
             self.waker.wakeUp()
 
-    def _preenDescriptors(self):
-        log.msg("Malformed file descriptor found.  Preening lists.")
-        readers = reads.keys()
-        writers = writes.keys()
-        reads.clear()
-        writes.clear()
-        for selDict, selList in ((reads, readers), (writes, writers)):
-            for selectable in selList:
-                try:
-                    select.select([selectable], [selectable], [selectable], 0)
-                except:
-                    log.msg("bad descriptor %s" % selectable)
-                else:
-                    selDict[selectable] = 1
-
-    def doSelect(self, timeout,
-                 # Since this loop should really be as fast as possible,
-                 # I'm caching these global attributes so the interpreter
-                 # will hit them in the local namespace.
-                 reads=reads,
-                 writes=writes,
-                 rhk=reads.has_key,
-                 whk=writes.has_key):
-        """Run one iteration of the I/O monitor loop.
-
-        This will run all selectables who had input or output readiness
-        waiting for them.
-        """
-        while 1:
-            try:
-                r, w, ignored = select.select(reads.keys(),
-                                              writes.keys(),
-                                              [], timeout)
-                break
-            except ValueError, ve:
-                # Possibly a file descriptor has gone negative?
-                self._preenDescriptors()
-            except TypeError, te:
-                # Something *totally* invalid (object w/o fileno, non-integral result)
-                # was passed
-                self._preenDescriptors()
-            except select.error,se:
-                # select(2) encountered an error
-                if se.args[0] in (0, 2):
-                    # windows does this if it got an empty list
-                    if (not reads) and (not writes):
-                        return
-                    else:
-                        raise
-                elif se.args[0] == EINTR:
-                    return
-                elif se.args[0] == EBADF:
-                    self._preenDescriptors()
-                else:
-                    # OK, I really don't know what's going on.  Blow up.
-                    raise
-        for selectables, method, dict in ((r, "doRead", reads),
-                                          (w,"doWrite", writes)):
-            hkm = dict.has_key
-            for selectable in selectables:
-                # if this was disconnected in another thread, kill it.
-                if not hkm(selectable):
-                    continue
-                # This for pausing input when we're not ready for more.
-                log.logOwner.own(selectable)
-                try:
-                    why = getattr(selectable, method)()
-                    handfn = getattr(selectable, 'fileno', None)
-                    if not handfn or handfn() == -1:
-                        why = CONNECTION_LOST
-                except:
-                    log.deferr()
-                    why = CONNECTION_LOST
-                if why:
-                    self.removeReader(selectable)
-                    self.removeWriter(selectable)
-                    try:
-                        selectable.connectionLost()
-                    except:
-                        log.deferr()
-                log.logOwner.disown(selectable)
+    def doIteration(self):
+        """Do one iteration over the readers and writers we know about."""
+        raise NotImplementedError
 
     def addReader(self, reader):
-        """Add a FileDescriptor for notification of data available to read.
-        """
-        reads[reader] = 1
+        raise NotImplementedError
 
     def addWriter(self, writer):
-        """Add a FileDescriptor for notification of data available to write.
-        """
-        writes[writer] = 1
+        raise NotImplementedError
 
     def removeReader(self, reader):
-        """Remove a Selectable for notification of data available to read.
-        """
-        if reads.has_key(reader):
-            del reads[reader]
+        raise NotImplementedError
 
     def removeWriter(self, writer):
-        """Remove a Selectable for notification of data available to write.
-        """
-        if writes.has_key(writer):
-            del writes[writer]
+        raise NotImplementedError
 
     def removeAll(self):
-        """Remove all readers and writers, and return list of Selectables."""
-        readers = reads.keys()
-        for reader in readers:
-            if reads.has_key(reader):
-                del reads[reader]
-            if writes.has_key(reader):
-                del writes[reader]
-        return readers
-
-
+        raise NotImplementedError
+    
+    
     # Installation.
 
     def install(self):
@@ -303,7 +210,7 @@ class DefaultSelectReactor:
         main.removeWriter = self.removeWriter
         main.removeReader = self.removeReader
         main.removeAll = self.removeAll
-        main.doSelect = self.doSelect
+        main.doSelect = self.doIteration
         if hasattr(self, "waker"):
             main.waker = self.waker
         main.wakeUp = self.wakeUp
@@ -470,3 +377,123 @@ class DefaultSelectReactor:
 
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         return ssl.Port(port, factory, contextFactory, backlog, interface)
+
+
+class SelectReactor(ReactorBase):
+    """A select() based reactor - should run on all POSIX platforms and on Win32."""
+
+    def _preenDescriptors(self):
+        log.msg("Malformed file descriptor found.  Preening lists.")
+        readers = reads.keys()
+        writers = writes.keys()
+        reads.clear()
+        writes.clear()
+        for selDict, selList in ((reads, readers), (writes, writers)):
+            for selectable in selList:
+                try:
+                    select.select([selectable], [selectable], [selectable], 0)
+                except:
+                    log.msg("bad descriptor %s" % selectable)
+                else:
+                    selDict[selectable] = 1
+
+    def doSelect(self, timeout,
+                 # Since this loop should really be as fast as possible,
+                 # I'm caching these global attributes so the interpreter
+                 # will hit them in the local namespace.
+                 reads=reads,
+                 writes=writes,
+                 rhk=reads.has_key,
+                 whk=writes.has_key):
+        """Run one iteration of the I/O monitor loop.
+
+        This will run all selectables who had input or output readiness
+        waiting for them.
+        """
+        while 1:
+            try:
+                r, w, ignored = select.select(reads.keys(),
+                                              writes.keys(),
+                                              [], timeout)
+                break
+            except ValueError, ve:
+                # Possibly a file descriptor has gone negative?
+                self._preenDescriptors()
+            except TypeError, te:
+                # Something *totally* invalid (object w/o fileno, non-integral result)
+                # was passed
+                self._preenDescriptors()
+            except select.error,se:
+                # select(2) encountered an error
+                if se.args[0] in (0, 2):
+                    # windows does this if it got an empty list
+                    if (not reads) and (not writes):
+                        return
+                    else:
+                        raise
+                elif se.args[0] == EINTR:
+                    return
+                elif se.args[0] == EBADF:
+                    self._preenDescriptors()
+                else:
+                    # OK, I really don't know what's going on.  Blow up.
+                    raise
+        for selectables, method, dict in ((r, "doRead", reads),
+                                          (w,"doWrite", writes)):
+            hkm = dict.has_key
+            for selectable in selectables:
+                # if this was disconnected in another thread, kill it.
+                if not hkm(selectable):
+                    continue
+                # This for pausing input when we're not ready for more.
+                log.logOwner.own(selectable)
+                try:
+                    why = getattr(selectable, method)()
+                    handfn = getattr(selectable, 'fileno', None)
+                    if not handfn or handfn() == -1:
+                        why = CONNECTION_LOST
+                except:
+                    log.deferr()
+                    why = CONNECTION_LOST
+                if why:
+                    self.removeReader(selectable)
+                    self.removeWriter(selectable)
+                    try:
+                        selectable.connectionLost()
+                    except:
+                        log.deferr()
+                log.logOwner.disown(selectable)
+
+    doIteration = doSelect
+    
+    def addReader(self, reader):
+        """Add a FileDescriptor for notification of data available to read.
+        """
+        reads[reader] = 1
+
+    def addWriter(self, writer):
+        """Add a FileDescriptor for notification of data available to write.
+        """
+        writes[writer] = 1
+
+    def removeReader(self, reader):
+        """Remove a Selectable for notification of data available to read.
+        """
+        if reads.has_key(reader):
+            del reads[reader]
+
+    def removeWriter(self, writer):
+        """Remove a Selectable for notification of data available to write.
+        """
+        if writes.has_key(writer):
+            del writes[writer]
+
+    def removeAll(self):
+        """Remove all readers and writers, and return list of Selectables."""
+        readers = reads.keys()
+        for reader in readers:
+            if reads.has_key(reader):
+                del reads[reader]
+            if writes.has_key(reader):
+                del writes[reader]
+        return readers

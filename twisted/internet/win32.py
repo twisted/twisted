@@ -73,7 +73,7 @@ writes = {}
 events = {}
 
 
-class Win32Reactor(default.DefaultSelectReactor):
+class Win32Reactor(default.ReactorBase):
     """Reactor that uses Win32 event APIs."""
     
     def _makeSocketEvent(self, fd, action, why, events=events):
@@ -190,11 +190,11 @@ class Win32Reactor(default.DefaultSelectReactor):
 
             log.logOwner.disown(fd)
 
-    doSelect = doWaitForMultipleEvents
+    doIteration = doWaitForMultipleEvents
 
     
     def install(self):
-        default.DefaultSelectReactor.install(self)
+        default.ReactorBase.install(self)
         threadable.init(1)
         # change when we redo process stuff - process is probably
         # borked anyway.

@@ -40,7 +40,7 @@ poller = select.poll()
 POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
 
 
-class PollReactor(default.DefaultSelectReactor):
+class PollReactor(default.ReactorBase):
     """A reactor that uses poll(2)."""
 
     def _updateRegisteration(self, fd):
@@ -155,7 +155,7 @@ class PollReactor(default.DefaultSelectReactor):
 
             log.logOwner.disown(selectable)
 
-    doSelect = doPoll
+    doIteration = doPoll
 
 
 __all__ = ["PollReactor"]

@@ -36,7 +36,7 @@ class InterfaceTestCase(unittest.TestCase):
             l2.append(1)
         ##         d.addCallback(lambda x: sys.stdout.write("firing d\n"))
         ##         d2.addCallback(lambda x: sys.stdout.write("firing d2\n"))
-        r = default.DefaultSelectReactor()
+        r = default.SelectReactor()
         r.addSystemEventTrigger("before", "test", _appendToList)
         r.addSystemEventTrigger("during", "test", _appendToList)
         r.addSystemEventTrigger("after", "test", _appendToList)

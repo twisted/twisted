@@ -29,6 +29,10 @@ class Echo(Protocol):
 
 # this runs the protocol on port 8000
 def main():
+    from twisted.internet import poll
+    reactor = poll.PollReactor()
+    reactor.install()
+    
     from twisted.internet.app import Application
     factory = Factory()
     factory.protocol = Echo
