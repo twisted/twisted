@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.19 2002/04/22 22:57:51 glyph Exp $
+# $Id: usage.py,v 1.20 2002/04/24 05:58:19 carmstro Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -169,12 +169,14 @@ class Options:
             opt = self.synonyms[opt]
             self.__dispatch[opt](opt, arg)
 
-        self.postOptions()
+
 
         try:
             apply(self.parseArgs,args)
         except TypeError:
             raise UsageError("wrong number of arguments.")
+
+        self.postOptions()
 
     def postOptions(self):
         """I am called after the options are parsed.

@@ -60,7 +60,7 @@ def run():
     config = Options()
     try:
         config.parseOptions(sys.argv[1:])
-    except:
+    except usage.error:
         print str(sys.exc_value)
         print
         print str(config)
