@@ -9,41 +9,28 @@ namespace csharpReactor {
 	/// Summary description for Reactor.
 	/// </summary>
 	public class Reactor : IReactor {
-		private SocketConnectorDict readers = new SocketConnectorDict();
-		private SocketConnectorDict writers = new SocketConnectorDict();
-		private ArrayList ignore = new ArrayList();
+		private Hashtable reads = new Hashtable();
+		private Hashtable writes = new Hashtable();
 		private bool running = false;
 		
-		public void ListenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
-			Socket listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-			listener.Bind(endPoint);
-			listener.Listen(backlog);
-			Connector cnx = new Connector(listener, factory, 20, this);
-			readers.Add(cnx.SockHandle, cnx);
+		public Port ListenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
+			Port p = new Port(endPoint, factory, backlog, this);
+			p.StartListening();
+			return p;
+		}
+
+		public void DoSelect(int timeout) {
+			ArrayList readers = new ArrayList(reads.Keys);
+			ArrayList writers = new ArrayList(writes.Keys);
+
+			Socket.Select(readers, writers, null, timeout);
+			if (readers.Count > 0) {
+				Console.WriteLine("we got a connectable socket!");
+			}
 		}
 		
-		public void DoSelect(int timeout){
-			Socket[] reads = new Socket[readers.Keys.Count];
-			readers.Keys.CopyTo(reads, 0);
-			Socket[] writes = new Socket[writers.Keys.Count];
-			writers.Keys.CopyTo(writes, 0);
-
-			while (true) {
-				try {
-					Socket.Select(reads, writes, null, timeout);
-					break;
-				} catch (ArgumentNullException e) {
-					Console.WriteLine("argument null exception: " + e.StackTrace);
-				} catch (SocketException e) {
-					Console.WriteLine("SocketException caught " + e.StackTrace);
-					continue;
-				}
-			}
-			if (reads.Length > 0) {
-				foreach (Socket s in reads) {
-					Console.WriteLine("Socket " + s + " is readable");
-				}
-			}
+		public void AddReader(IFileDescriptor fd) {
+			this.reads.Add(fd.SelectableSocket, fd);
 		}
 			
 		public void Run() {

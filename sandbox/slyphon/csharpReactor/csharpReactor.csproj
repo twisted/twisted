@@ -111,6 +111,11 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "Tcp.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "TestTwistedServer.cs"
                     SubType = "Code"
                     BuildAction = "None"
@@ -124,11 +129,6 @@
                     RelPath = "TwistedServer.cs"
                     SubType = "Code"
                     BuildAction = "None"
-                />
-                <File
-                    RelPath = "Collections\SocketConnectorDict.cs"
-                    SubType = "Code"
-                    BuildAction = "Compile"
                 />
                 <File
                     RelPath = "Collections\SocketList.cs"

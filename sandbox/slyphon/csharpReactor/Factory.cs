@@ -9,9 +9,9 @@ namespace csharpReactor {
 			set { this.protocol = value; }
 		}
 
-		public virtual void doStart() {}
-		public virtual void doStop() {}
-		public virtual IProtocol buildProtocol() {
+		public virtual void DoStart() {}
+		public virtual void DoStop() {}
+		public virtual IProtocol BuildProtocol() {
 			return (IProtocol)System.Activator.CreateInstance(this.protocol);
 		}
 	}
