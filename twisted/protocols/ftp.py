@@ -41,7 +41,7 @@ from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, \
 from twisted import application, internet, python
 from twisted.python import failure, log, components
 
-from twisted.cred import error, portal, checkers, credentials
+from twisted.cred import error as cred_error, portal, checkers, credentials
 
 # constants
 
@@ -823,7 +823,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(USR_LOGGED_IN_PROCEED)
 
     def _ebLogin(self, failure):
-        r = failure.trap(error.UnauthorizedLogin, TLDNotSetInRealmError)
+        r = failure.trap(cred_error.UnauthorizedLogin, TLDNotSetInRealmError)
         if r == TLDNotSetInRealmError:
             log.debug(failure.getErrorMessage())
             self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
