@@ -503,14 +503,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         f = getattr(self, 'parse_' + self.parseState)
         try:
             f(line)
-        except IllegalClientResponse, e:
-            self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
-        except IllegalOperation, e:
-            self.sendNegativeResponse(tag, 'Illegal operation: ' + str(e))
-        except IllegalMailboxEncoding, e:
-            self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
         except Exception, e:
-            self.sendBadResponse(tag, 'Server error: ' + str(e))
+            self.sendUntaggedResponse('BAD Server error: ' + str(e))
             log.err()
 
     def parse_command(self, line):
@@ -529,12 +523,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return None
 
         cmd = cmd.upper()
-        return self.dispatchCommand(tag, cmd, rest)
+        try:
+            return self.dispatchCommand(tag, cmd, rest)
+        except IllegalClientResponse, e:
+            self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
+        except IllegalOperation, e:
+            self.sendNegativeResponse(tag, 'Illegal operation: ' + str(e))
+        except IllegalMailboxEncoding, e:
+            self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
 
     def parse_pending(self, line):
         self._pendingLiteral.callback(line)
         self._pendingLiteral = None
-        self.state = 'command'
+        self.parseState = 'command'
 
     def dispatchCommand(self, tag, cmd, rest, uid=None):
         f = self.lookupCommand(cmd)
@@ -549,8 +550,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, '_'.join((self.state, cmd.upper())), None)
 
     def __doCommand(self, tag, handler, args, parseargs, line, uid):
-#        if line:
-#            import pdb; pdb.Pdb().set_trace()
         for (i, arg) in zip(infrangeobject, parseargs):
             if callable(arg):
                 parseargs = parseargs[i+1:]
@@ -612,7 +611,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Parse an astring from the line, return (arg, rest), possibly
         via a deferred (to handle literals)
         """
-        # line = line.lstrip()
         if not line:
             raise IllegalClientResponse("Missing argument")
         d = None
