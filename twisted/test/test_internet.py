@@ -239,25 +239,32 @@ class InterfaceTestCase(unittest.TestCase):
     def testCallLaterDelayAndReset(self):
         self._resetcallbackTime = None
         self._delaycallbackTime = None
-        ireset = reactor.callLater(0.5, self._resetcallback)
+        ireset = reactor.callLater(0.4, self._resetcallback)
         idelay = reactor.callLater(0.5, self._delaycallback)
         start = time.time()
         # chug a little before delaying
         while time.time() - start < 0.2:
             reactor.iterate(0.01)
-        ireset.reset(0.3) # move expiration from 0.5 to (now)0.2+0.3=0.5
+        ireset.reset(0.4) # move expiration from 0.4 to (now)0.2+0.4=0.6
         idelay.delay(0.3) # move expiration from 0.5 to (orig)0.5+0.3=0.8
         # both should be called sometime during this
         while time.time() - start < 0.9:
             reactor.iterate(0.01)
-        self.assert_(self._resetcallbackTime>start + 0.5)
-        self.assert_(self._delaycallbackTime>start + 0.8)
-        self.assert_(self._delaycallbackTime>self._resetcallbackTime)
+        ireset_elapsed = self._resetcallbackTime - start
+        idelay_elapsed = self._delaycallbackTime - start
+        self.assertApproximates(ireset_elapsed, 0.6, 0.1,
+                                "ireset fired at %f (wanted 0.6)" % \
+                                ireset_elapsed)
+        self.assertApproximates(idelay_elapsed, 0.8, 0.1,
+                                "idelay fired at %f (wanted 0.8)" % \
+                                idelay_elapsed)
+        self.failUnless(idelay_elapsed > ireset_elapsed)
 
         del self._resetcallbackTime
         del self._delaycallbackTime
 
     def testWakeUp(self):
+        """reactor.wakeUp should terminate reactor.iterate(5)"""
         def wake(reactor=reactor):
             time.sleep(0.5)
             reactor.wakeUp()
@@ -265,7 +272,12 @@ class InterfaceTestCase(unittest.TestCase):
         reactor.initThreads() # so wakeUp actually works
         t = threading.Thread(target=wake).start()
         reactor.iterate(5)
-        self.assertApproximates(time.time(), start + 0.5, 0.5)
+        # it may wake up right away. Accept this, but it really depends upon
+        # a more formal specification of how reactor.iterate is supposed to
+        # behave
+        elapsed = time.time() - start
+        self.failUnless(elapsed > 0 and elapsed < 1,
+                        "woke up after %f, wanted 0..1" % elapsed)
 
 
 class ReactorCoreTestCase(unittest.TestCase):
@@ -301,12 +313,27 @@ class ReactorCoreTestCase(unittest.TestCase):
     def stop(self):
         reactor.stop()
 
-    def testIterate(self):
+    def testRun(self):
+        """Test that reactor.stop terminates reactor.run"""
         reactor.callLater(0.1, self.stop)
         reactor.run() # returns once .stop is called
         reactor.callLater(0.1, self.stop)
         reactor.run() # returns once .stop is called
 
+    def testIterate(self):
+        """Test that reactor.iterate(0) doesn't block"""
+        start = time.time()
+        # twisted timers are distinct from the underlying event loop's
+        # timers, so this fail-safe probably won't keep a failure from
+        # hanging the test
+        t = reactor.callLater(10, self.stop)
+        reactor.iterate(0) # shouldn't block
+        stop = time.time()
+        elapsed = stop - start
+        #print "elapsed", elapsed
+        self.failUnless(elapsed < 8)
+        t.cancel()
+        
     def timeout(self):
         print "test timed out"
         self.problem = 1
@@ -315,6 +342,7 @@ class ReactorCoreTestCase(unittest.TestCase):
         self.counter += 1
 
     def testStop(self):
+        """reactor.stop should fire shutdown triggers"""
         # make sure shutdown triggers are run when the reactor is stopped
         self.counter = 0
         self.problem = 0
@@ -328,6 +356,7 @@ class ReactorCoreTestCase(unittest.TestCase):
         self.removeTimer(t)
 
     def testCrash(self):
+        """reactor.crash should NOT fire shutdown triggers"""
         self.counter = 0
         self.problem = 0
         self.addTrigger("before", "shutdown", self.count)
