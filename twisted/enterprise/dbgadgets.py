@@ -14,6 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Web interface for the Twisted db authentication system.
+
 Has pages to:
     - show all the identities
     - show the perspectives for an identity
@@ -24,14 +25,14 @@ Has pages to:
     - change the password on an identity
 
 
-    top page: show identities and actions
-                    - remove
-                    - change password
-                    - create new
+top page: show identities and actions
+    - remove
+    - change password
+    - create new
                     
-    for an identity: show perspectives and actions
-                    - remove
-                    - add
+for an identity: show perspectives and actions
+    - remove
+    - add
 
 """
 
