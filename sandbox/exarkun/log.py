@@ -26,7 +26,6 @@ class LogOwner:
         self.filer = logging.handlers.MemoryHandler(self.preBufferSize)
         self.filer.setFormatter(self.formatter)
         self.filer.addFilter(Unfilter())
-        self.filer.setLevel(1)
         self.logs = []
         self._log = logging.getLogger("Uninitialized")
         self._log.addHandler(self.filer)
@@ -55,8 +54,8 @@ class LogOwner:
     def own(self, owner):
         if owner is not None:
             log = logging.getLogger(owner.logPrefix())
-            log.setLevel(1)
             log.addHandler(self.filer)
+            log.setLevel(1)
             self.logs.append(log)
     
     def disown(self, owner):
