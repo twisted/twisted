@@ -659,25 +659,25 @@ class Thing(observable.Publisher,
 
     ### Client Interaction
 
-    def request(self, question, default,
-                ok, cancel):
-        """Thing.request(question,default,ok,cancel)
+    def request(self, question, default, callback):
+        """Thing.request(question,default,callback)
 
         question: a question you want to ask the player
 
         default: a default response you supply
+        callback: An object with two methods --    
+          ok: a callable object that takes a single string argument.
+              This will be called if the user sends back a response.
 
-        ok: a callable object that takes a single string argument.
-            This will be called if the user sends back a response.
-
-        cancel: this will be called if the user performs an action that
-                indicates they will not be sending a response.  There is
-                no guarantee that this will ever be called in the event
-                of a disconnection.  (It SHOULD be garbage collected for
-                sure, but garbage collection is tricky. ^_^)
-        """
-        self.intelligence.request(question,default,ok,cancel)
-
+          cancel: this will be called if the user performs an action 
+                  that indicates they will not be sending a response.
+                  There is no guarantee that this will ever be called
+                  in the event of a disconnection.  (It SHOULD be
+                  garbage collected for sure, but garbage collection
+                  is tricky. ^_^) """
+        
+        self.intelligence.request(question,default,callback)
+        
     def execute(self, sentencestring):
         """Thing.execute(string)
         Execute a string as if this player typed it at a prompt.

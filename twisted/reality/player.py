@@ -172,7 +172,7 @@ class Intelligence:
     def dontSeeDescription(self, key):               pass
     def seeNoDescriptions(self):                     pass
     def seeEvent(self, string):                      pass
-    def request(self, question,default,ok,cancel):   cancel()
+    def request(self, question,default,c):   cancel()
 
 class RemoteIntelligence:
     """
@@ -192,7 +192,7 @@ class RemoteIntelligence:
     def seeNoDescriptions(self):                  pass
     def seeEvent(self, string):                       pass
     # ain't nothin' you can do about this.
-    def request(self, question,default,ok,cancel): pass
+    def request(self, question,default,c): pass
 
 class LocalIntelligence(Intelligence):
     """
@@ -227,8 +227,8 @@ class LocalIntelligence(Intelligence):
         self.remote.seeNoDescriptions()
     def seeEvent(self, string):
         self.remote.seeEvent(string)
-    def request(self, question,default,ok,cancel):
-        self.remote.request(question,default,ok,cancel)
+    def request(self, question,default,c):
+        self.remote.request(question,default,c)
 
 
 def discover(name,x,y,z,
@@ -343,37 +343,43 @@ this; do not define functions, for example, or they will render your map
 unpickleable.
         """
         snipname = sentence.directString()
-        def cancel(): pass
-        def ok(code, snipname=snipname, self=self):
-            cs = self.code_space
+        def cancel(self): pass
+        def ok(self,code,o=self):
+            cs = o.code_space
             cs[snipname] = code
             try:
-                code = compile(code, '$$'+self.name+'$$', 'exec')
+                code = compile(code, '$$'+o.name+'$$', 'exec')
                 exec code in cs, cs
             except:
                 sio = StringIO.StringIO()
                 traceback.print_exc(file=sio)
-                self.hears(sio.getvalue())
+                o.hears(sio.getvalue())
+                
+        c = Referenced()
+        c.remote_ok = ok
+        c.remote_cancel = cancel
+        
         code = self.code_space.get(snipname, "")
-        self.request("Snippet %s" % snipname,code,ok,cancel)
+        self.request("Snippet %s" % snipname,code,c)
 
 
     def ability_describe(self,sentence):
         """describe object
 this will prompt you for a description.  enter something."""
+
         obj = sentence.directObject()
-        # ha ha, python can do lexical closures good enough for me
-        # (Bah. if these were lexical closures you wouldn't need the
-        # 'obj=obj',  and you could do 'return setdesc' and the
-        # function would still work after escaping. -was) 
-        def setdesc(desc, obj=obj):
+
+        def setdesc(self,desc):
             obj.description=desc
-        def forgetit(obj=obj): pass
+        def forgetit(self): pass
+        c = pb.Referenced()
+        c.obj = obj
+        c.remote_ok=setdesc
+        c.remote_cancel=forgetit
 
         desc=obj.get_description()
         if desc != "<not a string>":
-            self.request("Please describe %s"%obj.nounPhrase(self),desc,
-                         setdesc,forgetit)
+            self.request("Please describe %s"%obj.nounPhrase(self),desc,c)
         else:
             self.hears(
                 "That object's description is a dynamic property -- "
