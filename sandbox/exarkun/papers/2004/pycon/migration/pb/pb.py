@@ -9,6 +9,32 @@ import slicer, schema, tokens, banana
 from tokens import BananaError, Violation
 from slicer import UnbananaFailure, BaseUnslicer
 
+class Local:
+    """(internal) A reference to a local object.
+    """
+
+    def __init__(self, object, perspective=None):
+        """Initialize.
+        """
+        self.object = object
+        self.perspective = perspective
+        self.refcount = 1
+
+    def __repr__(self):
+        return "<pb.Local %r ref:%s>" % (self.object, self.refcount)
+
+    def incref(self):
+        """Increment and return my reference count.
+        """
+        self.refcount = self.refcount + 1
+        return self.refcount
+
+    def decref(self):
+        """Decrement and return my reference count.
+        """
+        self.refcount = self.refcount - 1
+        return self.refcount
+
 class PendingRequest(object):
     def __init__(self):
         self.deferred = defer.Deferred()
@@ -59,7 +85,7 @@ class RemoteReference(object):
                 # get return value constraint
                 req.setConstraint(methodSchema.getResponseConstraint())
             else:
-                assert not args
+                assert not args, "No methodScheme, no positional arguments!"
                 argsdict = kwargs
 
             if _resultConstraint:
@@ -374,10 +400,7 @@ class PBRootUnslicer(slicer.RootUnslicer):
         pass
 
 
-class BaseSlicer(slicer.BaseSlicer):
-    def __init__(self, broker):
-        slicer.BaseSlicer.__init__(self)
-        self.broker = broker
+BaseSlicer = slicer.BaseSlicer
 
 class AnswerSlicer(BaseSlicer):
     opentype = "answer"
@@ -401,8 +424,8 @@ class ReferenceableSlicer(BaseSlicer):
 
     def slice(self, obj):
         puid = obj.processUniqueID()
-        firstTime = self.broker.luids.has_key(puid)
-        luid = self.broker.registerReference(obj)
+        firstTime = self.protocol.luids.has_key(puid)
+        luid = self.protocol.registerReference(obj)
         self.send(luid)
         if not firstTime:
             # this is the first time the Referenceable has crossed this
@@ -416,6 +439,10 @@ class ReferenceableSlicer(BaseSlicer):
 class DecRefSlicer(BaseSlicer):
     opentype = "decref"
 
+    def __init__(self, broker):
+        BaseSlicer.__init__(self)
+        self.protocol = broker
+
     def slice(self, refID):
         self.send(refID)
 
@@ -427,6 +454,10 @@ class CopyableSlicer(BaseSlicer):
 
 class CallSlicer(BaseSlicer):
     opentype = "call"
+
+    def __init__(self, broker):
+        BaseSlicer.__init__(self)
+        self.protocol = broker
 
     def slice(self, (reqID, refID, methodname, args)):
         self.send(refID)
@@ -458,6 +489,7 @@ class PBRootSlicer(slicer.RootSlicer):
             return CopyableSlicer
         return slicer.RootSlicer.slicerFactoryForObject(self, obj)
 
+processUniqueID = id
 
 class Broker(banana.Banana):
     slicerClass = PBRootSlicer
@@ -476,6 +508,7 @@ class Broker(banana.Banana):
         self.localObjects = {} # things which are available to our peer.
                                # These are reference counted and removed
                                # when the last decref message is received.
+        self.luids = {}
 
     def newLocalID(self):
         """Generate a new LUID.
@@ -486,7 +519,9 @@ class Broker(banana.Banana):
     def putObj(self, obj):
         # TODO: give duplicates the same objID
         objID = self.newLocalID()
-        self.localObjects[objID] = obj
+        print 'Putting', obj, 'at', objID
+        self.localObjects[objID] = Local(obj)
+        self.luids[processUniqueID(obj)] = objID
         return objID
 
     def getObj(self, objID):
@@ -494,10 +529,22 @@ class Broker(banana.Banana):
         allowed to invoke methods upon.
         """
         obj = self.localObjects[objID]
+        print 'Getting', obj, 'from', objID
         # obj = tokens.IReferenceable(obj)
         #assert isinstance(obj, pb.Referenceable)
         # obj needs .getMethodSchema, which needs .getArgConstraint
-        return obj
+        return obj.object
+
+    def registerReference(self, object):
+        puid = processUniqueID(object)
+        luid = self.luids.get(puid)
+        if luid is None:
+            luid = self.newLocalID()
+            self.luids[puid] = luid
+            self.localObjects[luid] = Local(object)
+        else:
+            self.localObjects[luid].incref()
+        return luid
 
     # RemoteReference.callRemote, gotAnswer, and gotError are run on the
     # calling side

@@ -205,6 +205,9 @@ class ClassSlicer(BaseSlicer):
     def slice(self, obj):
         self.send(reflect.qual(obj))
 
+class MetaInterfaceSlicer(ClassSlicer):
+    opentype = 'metainterface'
+
 class MethodSlicer(BaseSlicer):
     opentype = 'method'
     trackReferences = 1
@@ -267,6 +270,8 @@ try:
 except ImportError:
     pass
 
+from twisted.python import components
+
 BaseSlicerRegistry2 = {}
 BaseSlicerRegistry2.update(BaseSlicerRegistry)
 BaseSlicerRegistry2.update({
@@ -274,6 +279,7 @@ BaseSlicerRegistry2.update({
     types.ClassType: ClassSlicer,
     types.MethodType: MethodSlicer,
     types.FunctionType: FunctionSlicer,
+    components.MetaInterface: MetaInterfaceSlicer,
     })
 
 class RootSlicer(BaseSlicer):
@@ -309,6 +315,7 @@ class RootSlicer(BaseSlicer):
             else:
                 name = str(type(obj))
             raise KeyError, "I don't know how to slice %s" % (name,)
+        print 'Constructing slicerFactory with', self.protocol
         slicer = slicerFactory()
         return slicer
 
@@ -1090,7 +1097,7 @@ class ClassUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
-            raise BananaError("ClassUnslicer only accepts strings",
+            raise BananaError("%s only accepts strings" % (self.__class__.__name__),
                               self.where())
 
     def receiveChild(self, name):
@@ -1098,7 +1105,7 @@ class ClassUnslicer(LeafUnslicer):
             self.abort(name)
             return
         if self.finished:
-            raise BananaError("ClassUnslicer only accepts one string",
+            raise BananaError("%s only accepts one string" % (self.__class__.__name__),
                               self.where())
         self.finished = True
         # TODO: taste here!
@@ -1106,9 +1113,12 @@ class ClassUnslicer(LeafUnslicer):
 
     def receiveClose(self):
         if not self.finished:
-            raise BananaError("ClassUnslicer requires a string",
+            raise BananaError("%s requires a string"% (self.__class__.__name__),
                               self.where())
         return self.klass
+
+class MetaInterfaceUnslicer(ClassUnslicer):
+    pass
 
 class MethodUnslicer(BaseUnslicer):
     state = 0
@@ -1268,6 +1278,7 @@ UnslicerRegistry2 = UnslicerRegistry.copy()
 UnslicerRegistry2.update({
     ('module',): ModuleUnslicer,
     ('class',): ClassUnslicer,
+    ('metainterface'): MetaInterfaceUnslicer,
     ('method',): MethodUnslicer,
     ('function',): FunctionUnslicer,
     ('instance',): InstanceUnslicer2,
