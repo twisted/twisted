@@ -19,6 +19,7 @@ from twisted.protocols.sux import XMLParser
 import os, re
 
 normalizeRE = re.compile(r'\s{2,}')
+escapingRE = re.compile(r'([#$%&~_^\{}])')
 
 class LatexSpitter(XMLParser):
 
@@ -27,6 +28,7 @@ class LatexSpitter(XMLParser):
 
     ignoring = 0
     normalizing = 1
+    escaping = 1
     baseLevel = 0
 
     def __init__(self, writer, currDir='.'):
@@ -51,7 +53,8 @@ class LatexSpitter(XMLParser):
             data = data.replace('\n', ' ')
             # ...and collapse consecutive spaces to a single space.
             data = normalizeRE.sub(' ', data)
-            data = data.replace('_', '\_')
+        if self.escaping:
+            data = escapingRE.sub(r'\\\1', data)
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
@@ -91,10 +94,16 @@ class LatexSpitter(XMLParser):
         self.ignoring = 0
 
     def start_pre(self, _, _1):
-        self.normalizing = 0
+        self.normalizing = self.escaping = 0
 
     def end_pre(self, _):
-        self.normalizing = 1
+        self.normalizing = self.escaping = 1
+
+    def start_code(self, _, _1):
+        self.escaping = 0
+
+    def end_code(self, _):
+        self.escaping = 1
 
     def start_a(self, _, attrs):
         if attrs.get('class') == "py-listing":
