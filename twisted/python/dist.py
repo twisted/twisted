@@ -53,7 +53,8 @@ def getPackages(dname, pkgname=None, results=None):
         results.append(pkgname + [bname])
         for subdir in filter(os.path.isdir, abssubfiles):
             getPackages(subdir, pkgname + [bname], results)
-    return ['.'.join(result) for result in results]
+    res = ['.'.join(result) for result in results]
+    return res
 
 # Apple distributes a nasty version of Python 2.2 w/ all release builds of
 # OS X 10.2 and OS X Server 10.2
@@ -111,10 +112,15 @@ class build_ext_twisted(build_ext.build_ext):
     def build_extensions(self):
         """
         Override the build_ext build_extensions method to call our
-        module detection function before it trys to build the extensions.
+        module detection function before it tries to build the extensions.
         """
-        self.extensions = []
-        self._detect_modules()
+        # always define WIN32 under Windows
+        if os.name == 'nt':
+            self.define_macros = [("WIN32", 1)]
+        else:
+            self.define_macros = []
+
+        self.extensions = self.detectModules() or []
         build_ext.build_ext.build_extensions(self)
 
     def _remove_conftest(self):

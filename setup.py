@@ -25,45 +25,28 @@ except NameError:
     __file__ = sys.argv[0]
 
 class build_ext_twisted(dist.build_ext_twisted):
-    def _detect_modules(self):
+    def detectModules(self):
         """
         Determine which extension modules we should build on this system.
         """
-        # always define WIN32 under Windows
-        if os.name == 'nt':
-            define_macros = [("WIN32", 1)]
-        else:
-            define_macros = []
-
         print ("Checking if C extensions can be compiled, don't be alarmed if "
                "a few compile errors are printed.")
         
         if not self._compile_helper("#define X 1\n"):
             print "Compiler not found, skipping C extensions."
-            self.extensions = []
-            return
-        
+            return []
+
         # Extension modules to build.
         exts = [
             Extension("twisted.spread.cBanana",
                       ["twisted/spread/cBanana.c"],
-                      define_macros=define_macros),
+                      define_macros=self.define_macros),
             ]
-
-        # The portmap module (for inetd)
-        if self._check_header("rpc/rpc.h"):
-            exts.append( Extension("twisted.runner.portmap",
-                                   ["twisted/runner/portmap.c"],
-                                   define_macros=define_macros) )
-        else:
-            self.announce("Sun-RPC portmap support is unavailable on this "
-                          "system (but that's OK, you probably don't need it "
-                          "anyway).")
 
         # urllib.unquote accelerator
         exts.append( Extension("twisted.protocols._c_urlarg",
                                 ["twisted/protocols/_c_urlarg.c"],
-                                define_macros=define_macros) )
+                                define_macros=self.define_macros) )
 
         if sys.platform == 'darwin':
             exts.append(
@@ -73,15 +56,15 @@ class build_ext_twisted(dist.build_ext_twisted):
                           extra_link_args=['-framework','CoreFoundation',
                                            '-framework','CoreServices',
                                            '-framework','Carbon'],
-                          define_macros=define_macros))
+                          define_macros=self.define_macros))
 
         if sys.platform == 'win32':
             exts.append( Extension("twisted.internet.iocpreactor._iocp",
                                     ["twisted/internet/iocpreactor/_iocp.c"],
                                     libraries=["ws2_32", "mswsock"],
-                                    define_macros=define_macros))
+                                    define_macros=self.define_macros))
 
-        self.extensions = exts
+        return exts
 
 
 
@@ -99,7 +82,7 @@ setup_args = dict(
     maintainer="Glyph Lefkowitz",
     maintainer_email="glyph@twistedmatrix.com",
     url="http://twistedmatrix.com/",
-    license="GNU LGPL",
+    license="MIT",
     long_description="""\
 Twisted is a framework to build frameworks. It is expected that one
 day the project will expanded to the point that the framework will
