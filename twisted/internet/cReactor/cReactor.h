@@ -29,7 +29,6 @@
 /* Named constants */
 enum
 {
-    CREACTOR_NUM_EVENT_TYPES    = 3,
     CREACTOR_NUM_EVENT_PHASES   = 3,
 };
 
@@ -40,14 +39,6 @@ typedef enum _cReactorEventPhase
     CREACTOR_EVENT_PHASE_DURING     = 1,
     CREACTOR_EVENT_PHASE_AFTER      = 2,
 } cReactorEventPhase;
-
-/* System event types. */
-typedef enum _cReactorEventType
-{
-    CREACTOR_EVENT_TYPE_STARTUP     = 0,
-    CREACTOR_EVENT_TYPE_SHUTDOWN    = 1,
-    CREACTOR_EVENT_TYPE_PERSIST     = 2,
-} cReactorEventType;
 
 /* Reactor states. */
 typedef enum _cReactorState
@@ -75,6 +66,7 @@ typedef struct _cReactor cReactor;
 typedef struct _cReactorJob cReactorJob;
 typedef struct _cReactorJobQueue cReactorJobQueue;
 typedef struct _cReactorThread cReactorThread;
+typedef struct _cEventTriggers cEventTriggers;
 
 /* Job types */
 typedef enum _cReactorJobType
@@ -204,6 +196,7 @@ struct _cDelayedCall
     struct _cDelayedCall *      next;
 };
 
+
 /* The cReactor object. */
 struct _cReactor
 {
@@ -221,11 +214,8 @@ struct _cReactor
     /* The main list of timed methods. */
     cDelayedCall *      timed_methods;
 
-    /* A list of method for each event for each phase. */
-    cReactorMethod *    event_triggers[CREACTOR_NUM_EVENT_TYPES][CREACTOR_NUM_EVENT_PHASES];
-
-    /* A list of deferreds we are waiting on before continuing. */
-    PyObject *          defer_list;
+    /* A list of event types and methods for each phase. */
+    cEventTriggers *    event_triggers;
 
     /* A list of Transports. */
     cReactorTransport * transports;
@@ -264,7 +254,8 @@ PyObject * cReactor_iterate(PyObject *self, PyObject *args, PyObject *kw);
 PyObject * cReactor_fireSystemEvent(PyObject *self, PyObject *args);
 PyObject * cReactor_addSystemEventTrigger(PyObject *self, PyObject *args, PyObject *kw);
 PyObject * cReactor_removeSystemEventTrigger(PyObject *self, PyObject *args);
-void fireSystemEvent_internal(cReactor *reactor, cReactorEventType event);
+void fireSystemEvent_internal(cReactor *reactor, const char *event_type);
+void cSystemEvent_FreeTriggers(cEventTriggers *triggers);
 
 /* Create a new Transport. */
 cReactorTransport * cReactorTransport_New(cReactor *reactor,
@@ -354,9 +345,6 @@ void cReactorUtil_ForEachMethod(cReactorMethod *list,
 /* Destroy the given method list. */
 void cReactorUtil_DestroyMethods(cReactorMethod *list);
 void cReactorUtil_DestroyDelayedCalls(cReactor *reactor);
-
-/* Convert event type from string to enum. */
-int cReactorUtil_GetEventType(const char *str, cReactorEventType *out_type);
 
 /* Convert event phase from string to enum. */
 int cReactorUtil_GetEventPhase(const char *str, cReactorEventPhase *out_phase);
