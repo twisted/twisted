@@ -6,17 +6,18 @@ import greenlet
 import socket
 import errno
 import os
+import sys
 from sets import Set
 
 class GreenSocket(socket.socket):
     wraps = Set()
     def logPrefix(self):
-        return "monkey"
+        return "GreenSocket at 0x%x" % (id(self) % (sys.maxint*2+2),)
 
     def connect(self, addr):
         supr = super(GreenSocket, self)
         cur = greenlet.getcurrent()
-        if cur not in self.wraps or self.gettimeout == 0.0:
+        if cur not in self.wraps:
             return supr.connect(addr)
         else:
             self.glet = cur
@@ -41,7 +42,7 @@ class GreenSocket(socket.socket):
     def recv(self, bufsize, flags = 0):
         supr = super(GreenSocket, self)
         cur = greenlet.getcurrent()
-        if cur not in self.wraps or self.gettimeout == 0.0:
+        if cur not in self.wraps:
             return supr.recv(bufsize, flags)
         else:
             self.glet = cur
