@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.82 2003/07/01 05:02:50 pahan Exp $
+# $Id: default.py,v 1.83 2003/07/28 22:09:05 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -343,7 +343,10 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def doRead(self):
         """Read some data from my connection.
         """
-        self.r.recv(8192)
+        try:
+            self.r.recv(8192)
+        except socket.error:
+            pass
 
     def connectionLost(self, reason):
         self.r.close()
