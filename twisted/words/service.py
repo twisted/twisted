@@ -108,6 +108,12 @@ class WordsClientInterface:
         'names' is a list of participant names in the group named 'group'.
         """
 
+    def setGroupMetadata(self, metadata, name):
+        """Some metadata on a group has been set.
+
+        XXX: Should this be receiveGroupMetadata(name, metedata)?
+        """
+
     def receiveDirectMessage(self, sender, message, metadata=None):
         """Receive a message from someone named 'sender'.
         'metadata' is a dict of special flags. So far 'style': 'emote'
