@@ -295,6 +295,7 @@ def run():
         s = "Failed to load application: %s" % (e,)
         traceback.print_exc(file=log.logfile)
         log.msg(s)
+        log.deferr()
         sys.exit('\n' + s + '\n')
 
     # If we're asked to chroot and os.chroot does not exist,

@@ -28,7 +28,6 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import os
 import stat
 import types
-import copy
 import exceptions
 import socket
 import sys
@@ -424,7 +423,7 @@ class Port(abstract.FileDescriptor):
     def __getstate__(self):
         """(internal) get my state for persistence
         """
-        dct = copy.copy(self.__dict__)
+        dct = self.__dict__.copy()
         try: del dct['socket']
         except: pass
         try: del dct['fileno']

@@ -62,7 +62,6 @@ DOCS:
 """
 
 # System Imports
-import copy
 import os
 import time
 import string

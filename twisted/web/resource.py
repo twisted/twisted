@@ -24,8 +24,6 @@ from twisted.internet import defer
 from twisted.python import roots, components, reflect
 from twisted.coil import coil
 
-from copy import copy
-
 class IResource(components.Interface):
     """A web resource."""
 

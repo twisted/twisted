@@ -95,7 +95,7 @@ class Request(pb.Copyable, http.Request):
     __pychecker__ = 'unusednames=issuer'
 
     def getStateToCopyFor(self, issuer):
-        x = copy.copy(self.__dict__)
+        x = self.__dict__.copy()
         del x['transport']
         # XXX refactor this attribute out; it's from protocol
         # del x['server']
@@ -388,7 +388,7 @@ class Site(http.HTTPFactory):
         return logfile.LogFile(os.path.basename(path), os.path.dirname(path))
 
     def __getstate__(self):
-        d = copy.copy(self.__dict__)
+        d = self.__dict__.copy()
         d['sessions'] = {}
         return d
 

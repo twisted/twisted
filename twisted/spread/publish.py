@@ -35,7 +35,6 @@ import flavors
 
 # System Imports
 import time
-import copy
 
 class Publishable(flavors.Cacheable):
     """An object whose cached state persists across sessions.
@@ -105,7 +104,7 @@ class RemotePublished(flavors.RemoteCache):
             self.remote.callRemote('getStateToPublish').addCallbacks(self._cbGotUpdate)
 
     def __getstate__(self):
-        other = copy.copy(self.__dict__)
+        other = self.__dict__.copy()
         # Remove PB-specific attributes
         del other['broker']
         del other['remote']

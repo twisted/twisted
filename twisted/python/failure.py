@@ -185,15 +185,21 @@ class Failure:
             f = tb.tb_frame
             localz = f.f_locals.copy()
             if f.f_locals is f.f_globals:
-                globalz = {}
+                changed_globalz = []
             else:
                 globalz = f.f_globals.copy()
+                changed_globalz = []
+                # Filter out globals which are merely copies of __builtins__
+                for name, value in globalz.items():
+                    if getattr(__builtins__, name, None) != value:
+                        changed_globalz.append((name, value))
+
             frames.append([
                 f.f_code.co_name,
                 f.f_code.co_filename,
                 tb.tb_lineno,
                 localz.items(),
-                globalz.items(),
+                changed_globalz,
                 ])
             tb = tb.tb_next
         if isinstance(self.type, types.ClassType):

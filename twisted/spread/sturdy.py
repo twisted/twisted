@@ -30,7 +30,6 @@ should be very easy to replace when that new functionality is available.
 from twisted.spread import pb
 from twisted.internet import defer
 from twisted.python import log
-import copy
 
 True = 1
 False = 0
@@ -54,7 +53,7 @@ class PerspectiveConnector:
         self.methodsToCall = []
 
     def __getstate__(self):
-        d = copy.copy(self.__dict__)
+        d = self.__dict__.copy()
         d['reference'] = None
         d['connecting'] = False
         d['methodsToCall'] = []

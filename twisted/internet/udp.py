@@ -24,7 +24,6 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System Imports
 import os
-import copy
 import socket
 
 if os.name == 'nt':
@@ -164,7 +163,7 @@ class Port(abstract.FileDescriptor):
     def __getstate__(self):
         """(internal) get my state for persistence
         """
-        dct = copy.copy(self.__dict__)
+        dct = self.__dict__.copy()
         try: del dct['socket']
         except KeyError: pass
         try: del dct['fileno']

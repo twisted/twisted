@@ -26,7 +26,6 @@ import explorer
 # system imports
 from cStringIO import StringIO
 
-import copy
 import operator
 import string
 import sys
@@ -333,7 +332,7 @@ class Service(pb.Service):
         # TODO -- refactor this and twisted.reality.author.Author to
         # use common functionality (perhaps the 'code' module?)
         dict = pb.Service.__getstate__(self)
-        ns = copy.copy(dict['namespace'])
+        ns = dict['namespace'].copy()
         dict['namespace'] = ns
         if ns.has_key('__builtins__'):
             del ns['__builtins__']

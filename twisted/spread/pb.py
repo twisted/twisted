@@ -55,7 +55,6 @@ from __future__ import nested_scopes
 # System Imports
 import traceback
 import cStringIO
-import copy
 import string
 import sys
 import types

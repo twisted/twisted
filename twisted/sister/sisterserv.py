@@ -1,5 +1,4 @@
 # -*- test-case-name: twisted.test.test_sister -*-
-import copy
 
 from twisted.spread.pb import Service, Perspective, Error
 from twisted.spread.sturdy import PerspectiveConnector
@@ -89,7 +88,7 @@ class SisterService(Service, Perspective):
         log.msg( 'starting sister, woo')
 
     def __getstate__(self):
-        d = copy.copy(self.__dict__)
+        d = self.__dict__.copy()
         d['ownedResources'] = {}
         d['remoteResources'] = {}
         return d
