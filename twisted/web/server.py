@@ -89,13 +89,14 @@ class UnsupportedMethod(Exception):
             raise TypeError, s
 
 
-class Request(pb.Copyable, http.Request):
+class Request(pb.Copyable, http.Request, components.Componentized):
 
     site = None
     __pychecker__ = 'unusednames=issuer'
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
+        components.Componentized.__init__(self)
         self.notifications = []
 
     def getStateToCopyFor(self, issuer):
