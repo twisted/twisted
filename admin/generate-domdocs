@@ -23,7 +23,7 @@ import sys, os, string
 pos = string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted')
 if pos != -1:
     sys.path.insert(0, os.path.abspath(sys.argv[0])[:pos+8])
-    sys.path.insert(0, os.curdir)
+sys.path.insert(0, os.curdir)
 ### end of preamble
 
 
