@@ -45,6 +45,56 @@ struct _SysEventInfo
     int                 got_defers;
 };
 
+/* Available methods on the cReactor. */
+static PyMethodDef cReactor_methods[] = 
+{
+    /* IReactorCore */
+    { "resolve",                    (PyCFunction)cReactor_resolve,
+      (METH_VARARGS | METH_KEYWORDS), "resolve" },
+    { "run",                        cReactor_run,
+      METH_VARARGS, "run" },
+    { "stop",                       cReactor_stop,
+      METH_VARARGS, "stop" },
+    { "crash",                      cReactor_crash,
+      METH_VARARGS, "crash" },
+    { "iterate",                    (PyCFunction)cReactor_iterate,
+      (METH_VARARGS | METH_KEYWORDS), "iterate" },
+    { "fireSystemEvent",            cReactor_fireSystemEvent,
+      METH_VARARGS, "fireSystemEvent" },
+    { "addSystemEventTrigger",      (PyCFunction)cReactor_addSystemEventTrigger,
+      (METH_VARARGS | METH_KEYWORDS), "addSystemEventTrigger" },
+    { "removeSystemEventTrigger",   cReactor_removeSystemEventTrigger,
+      METH_VARARGS, "removeSystemEventTrigger" },
+
+    /* IReactorTime */
+    { "callLater",          (PyCFunction)cReactorTime_callLater,
+      (METH_VARARGS | METH_KEYWORDS), "callLater" },
+    { "cancelCallLater",    cReactorTime_cancelCallLater,
+      METH_KEYWORDS,  "cancelCallLater" },
+
+    /* IReactorTCP */
+    { "listenTCP",          (PyCFunction)cReactorTCP_listenTCP,
+      (METH_VARARGS | METH_KEYWORDS), "listenTCP" },
+    { "clientTCP",          cReactorTCP_clientTCP,
+      METH_VARARGS, "clientTCP" },
+
+    /* IReactorThread */
+    { "callFromThread",         (PyCFunction)cReactorThread_callFromThread,
+      (METH_VARARGS | METH_KEYWORDS),   "callFromThread" },
+    { "callInThread",           (PyCFunction)cReactorThread_callInThread,
+      (METH_VARARGS | METH_KEYWORDS),   "callInThread" },
+    { "suggestThreadPoolSize",  cReactorThread_suggestThreadPoolSize,
+      METH_VARARGS,                     "suggestThreadPoolSize" },
+    { "wakeUp",                 cReactorThread_wakeUp,
+      METH_VARARGS,                     "wakeUp" },
+
+    /* Custom addition to IReactorThread */
+    { "initThreading",          cReactorThread_initThreading,
+      METH_VARARGS,             "initThreading" },
+
+    { NULL, NULL, METH_VARARGS, NULL },
+};
+
 
 PyObject *
 cReactor_not_implemented(PyObject *self,
@@ -61,7 +111,7 @@ cReactor_not_implemented(PyObject *self,
 /* TODO: This blocks and I don't have a async resolver library.  However, the
  * implementation in base.py also blocks :)
  */
-static PyObject *
+PyObject *
 cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw)
 {
     cReactor *reactor;
@@ -380,7 +430,7 @@ fireSystemEvent_internal(cReactor *reactor, cReactorEventType event)
 
 }
 
-static PyObject *
+PyObject *
 cReactor_fireSystemEvent(PyObject *self, PyObject *args)
 {
     cReactor *reactor;
@@ -415,7 +465,7 @@ stop_internal(cReactor *reactor)
 }
 
 
-static PyObject *
+PyObject *
 cReactor_stop(PyObject *self, PyObject *args)
 {
     /* No args. */
@@ -807,7 +857,7 @@ iterate_internal(cReactor *reactor, int delay)
 }
 
 
-static PyObject *
+PyObject *
 cReactor_iterate(PyObject *self, PyObject *args, PyObject *kw)
 {
     cReactor *reactor;
@@ -843,7 +893,7 @@ cReactor_iterate(PyObject *self, PyObject *args, PyObject *kw)
 }
 
 
-static PyObject *
+PyObject *
 cReactor_run(PyObject *self, PyObject *args)
 {
     cReactor *reactor;
@@ -870,7 +920,7 @@ cReactor_run(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *
+PyObject *
 cReactor_crash(PyObject *self, PyObject *args)
 {
     cReactor *reactor;
@@ -891,7 +941,7 @@ cReactor_crash(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *
+PyObject *
 cReactor_addSystemEventTrigger(PyObject *self, PyObject *args, PyObject *kw)
 {
     cReactor *reactor;
@@ -955,7 +1005,7 @@ cReactor_addSystemEventTrigger(PyObject *self, PyObject *args, PyObject *kw)
 }
 
 
-static PyObject *
+PyObject *
 cReactor_removeSystemEventTrigger(PyObject *self, PyObject *args)
 {
     return cReactor_not_implemented(self, args, "cReactor_removeSystemEventTrigger");
@@ -978,6 +1028,8 @@ cReactor_AddTransport(cReactor *reactor, cReactorTransport *transport)
 static int
 cReactor_init(cReactor *reactor)
 {
+    PyObject *when_threaded;
+    PyObject *init_threading;
     PyObject *obj;
     static const char * interfaces[] = 
     {
@@ -1010,6 +1062,35 @@ cReactor_init(cReactor *reactor)
 
     /* Set our state. */
     reactor->state = CREACTOR_STATE_INIT;
+
+    /* We need to know when threading has begun. */
+    when_threaded = cReactorUtil_FromImport("twisted.python.threadable",
+                                            "whenThreaded");
+    if (! when_threaded)
+    {
+        return -1;
+    }
+
+    /* Get our initThreading method. */
+    init_threading = Py_FindMethod(cReactor_methods,
+                                   (PyObject *)reactor,
+                                   "initThreading");
+    if (! init_threading)
+    {
+        Py_DECREF(when_threaded);
+        return -1;
+    }
+
+    /* Register a callback. */
+    obj = PyObject_CallFunction(when_threaded, "(O)", init_threading);
+    Py_DECREF(when_threaded);
+    Py_DECREF(init_threading);
+    Py_XDECREF(obj);
+    if (! obj)
+    {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -1106,52 +1187,6 @@ cReactor_dealloc(PyObject *self)
 
     PyObject_Del(self);
 }
-
-/* Available methods on the cReactor. */
-static PyMethodDef cReactor_methods[] = 
-{
-    /* IReactorCore */
-    { "resolve",                    (PyCFunction)cReactor_resolve,
-      (METH_VARARGS | METH_KEYWORDS), "resolve" },
-    { "run",                        cReactor_run,
-      METH_VARARGS, "run" },
-    { "stop",                       cReactor_stop,
-      METH_VARARGS, "stop" },
-    { "crash",                      cReactor_crash,
-      METH_VARARGS, "crash" },
-    { "iterate",                    (PyCFunction)cReactor_iterate,
-      (METH_VARARGS | METH_KEYWORDS), "iterate" },
-    { "fireSystemEvent",            cReactor_fireSystemEvent,
-      METH_VARARGS, "fireSystemEvent" },
-    { "addSystemEventTrigger",      (PyCFunction)cReactor_addSystemEventTrigger,
-      (METH_VARARGS | METH_KEYWORDS), "addSystemEventTrigger" },
-    { "removeSystemEventTrigger",   cReactor_removeSystemEventTrigger,
-      METH_VARARGS, "removeSystemEventTrigger" },
-
-    /* IReactorTime */
-    { "callLater",          (PyCFunction)cReactorTime_callLater,
-      (METH_VARARGS | METH_KEYWORDS), "callLater" },
-    { "cancelCallLater",    cReactorTime_cancelCallLater,
-      METH_KEYWORDS,  "cancelCallLater" },
-
-    /* IReactorTCP */
-    { "listenTCP",          (PyCFunction)cReactorTCP_listenTCP,
-      (METH_VARARGS | METH_KEYWORDS), "listenTCP" },
-    { "clientTCP",          cReactorTCP_clientTCP,
-      METH_VARARGS, "clientTCP" },
-
-    /* IReactorThread */
-    { "callFromThread",         (PyCFunction)cReactorThread_callFromThread,
-      (METH_VARARGS | METH_KEYWORDS),   "callFromThread" },
-    { "callInThread",           (PyCFunction)cReactorThread_callInThread,
-      (METH_VARARGS | METH_KEYWORDS),   "callInThread" },
-    { "suggestThreadPoolSize",  cReactorThread_suggestThreadPoolSize,
-      METH_VARARGS,                     "suggestThreadPoolSize" },
-    { "wakeUp",                 cReactorThread_wakeUp,
-      METH_VARARGS,                     "wakeUp" },
-
-    { NULL, NULL, METH_VARARGS, NULL },
-};
 
 static PyObject *
 cReactor_getattr(PyObject *self, char *attr_name)

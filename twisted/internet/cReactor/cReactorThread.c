@@ -117,13 +117,8 @@ cReactorThread_callInThread(PyObject *self, PyObject *args, PyObject *kw)
     PyObject *req_args;
     PyObject *callable;
     cReactor *reactor;
-    int i;
-    cReactorThread *thread;
-    PyThreadState *thread_state;
     PyObject *callable_args;
     cReactorJob *job;
-    PyObject *init_func;
-    PyObject *result;
 
     reactor = (cReactor *)self;
 
@@ -139,70 +134,17 @@ cReactorThread_callInThread(PyObject *self, PyObject *args, PyObject *kw)
     /* Verify that the object is a callable. */
     if (!PyCallable_Check(callable))
     {
-        PyErr_SetString(PyExc_ValueError, "callInThread arg 1 is not callable!");
+        PyErr_SetString(PyExc_ValueError,
+                        "callInThread arg 1 is not callable!");
         return NULL;
     }
 
-    /* Initialize the reactor's threadness. */
+    /* Threads must be initialized first. */
     if (! reactor->multithreaded)
     {
-        /* Initialize python threads. */
-        PyEval_InitThreads();
-
-        /* Initialize twisted threading. */
-        init_func = cReactorUtil_FromImport("twisted.python.threadable",
-                                            "init");
-
-        if (! init_func)
-        {
-            return NULL;
-        }
-
-        result = PyObject_CallFunction(init_func, "(i)", 1);
-        Py_DECREF(init_func);
-        Py_XDECREF(result);
-        if (! result)
-        {
-            return NULL;
-        }
-
-        /* We are now using threads. */
-        reactor->multithreaded = 1;
-
-        /* Make a thread safe job queue for the reactor. */
-        reactor->main_queue = cReactorJobQueue_New();
-
-        /* Make a worker queue. */
-        reactor->worker_queue = cReactorJobQueue_New();
-
-        /* Clamp the minimum thread pool size to 1. */
-        if (reactor->req_thread_pool_size < 1)
-        {
-            reactor->req_thread_pool_size = 1;
-        }
-
-        /* Get the main thread's thread state. */
-        thread_state = PyThreadState_Get();
-
-        /* Create the threads. */
-        for (i = 0; i < reactor->req_thread_pool_size; ++i)
-        {
-            thread = (cReactorThread *)malloc(sizeof(cReactorThread));
-            memset(thread, 0x00, sizeof(cReactorThread));
-
-            /* Reactor link. */
-            thread->reactor = reactor;
-
-            /* The Interpreter state from the main thread. */
-            thread->interp = thread_state->interp;
-
-            /* Add it to the list. */
-            thread->next            = reactor->thread_pool;
-            reactor->thread_pool    = thread;
-
-            /* Fire it up! */
-            pthread_create(&thread->thread_id, NULL, worker_thread_main, thread);
-        }
+        PyErr_SetString(PyExc_RuntimeError,
+                        "callInThread called before initThreading!");
+        return NULL;
     }
 
     /* Slice off the callable args. */
@@ -250,7 +192,8 @@ cReactorThread_callFromThread(PyObject *self, PyObject *args, PyObject *kw)
     /* The main thread (reactor) needs thread init to happen first. */
     if (! reactor->multithreaded)
     {
-        PyErr_SetString(PyExc_RuntimeError, "callFromThread received before callInThread!");
+        PyErr_SetString(PyExc_RuntimeError,
+                        "callFromThread received before initThreading!");
         return NULL;
     }
 
@@ -314,6 +257,76 @@ cReactorThread_suggestThreadPoolSize(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
 }
+
+
+PyObject *
+cReactorThread_initThreading(PyObject *self, PyObject *args)
+{
+    cReactor *reactor;
+    PyThreadState *thread_state;
+    int i;
+    cReactorThread *thread;
+
+    reactor = (cReactor *)self;
+
+    /* Args */
+    if (!PyArg_ParseTuple(args, ":initThreading"))
+    {
+        return NULL;
+    }
+
+    /* Initialize the reactor's threadness. */
+    if (! reactor->multithreaded)
+    {
+        /* Initialize python threads. */
+        PyEval_InitThreads();
+
+        /* We are now using threads. */
+        reactor->multithreaded = 1;
+
+        /* Make a thread safe job queue for the reactor. */
+        reactor->main_queue = cReactorJobQueue_New();
+
+        /* Make a worker queue. */
+        reactor->worker_queue = cReactorJobQueue_New();
+
+        /* Clamp the minimum thread pool size to 1. */
+        if (reactor->req_thread_pool_size < 1)
+        {
+            reactor->req_thread_pool_size = 1;
+        }
+
+        /* Get the main thread's thread state. */
+        thread_state = PyThreadState_Get();
+
+        /* Create the threads. */
+        for (i = 0; i < reactor->req_thread_pool_size; ++i)
+        {
+            thread = (cReactorThread *)malloc(sizeof(cReactorThread));
+            memset(thread, 0x00, sizeof(cReactorThread));
+
+            /* Reactor link. */
+            thread->reactor = reactor;
+
+            /* The Interpreter state from the main thread. */
+            thread->interp = thread_state->interp;
+
+            /* Add it to the list. */
+            thread->next            = reactor->thread_pool;
+            reactor->thread_pool    = thread;
+
+            /* Fire it up! */
+            pthread_create(&thread->thread_id,
+                           NULL,
+                           worker_thread_main,
+                           thread);
+        }
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
 
 cReactorJob *
 cReactorJob_NewApply(PyObject *callable, PyObject *args, PyObject *kw)
@@ -479,5 +492,6 @@ cReactorJobQueue_PopWait(cReactorJobQueue *queue)
 
     return job;
 }
+
 
 /* vim: set sts=4 sw=4: */

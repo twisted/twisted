@@ -234,6 +234,15 @@ struct _cReactor
 /* Create a new cReactor. */
 PyObject * cReactor_New(void);
 
+PyObject * cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw);
+PyObject * cReactor_run(PyObject *self, PyObject *args);
+PyObject * cReactor_stop(PyObject *self, PyObject *args);
+PyObject * cReactor_crash(PyObject *self, PyObject *args);
+PyObject * cReactor_iterate(PyObject *self, PyObject *args, PyObject *kw);
+PyObject * cReactor_fireSystemEvent(PyObject *self, PyObject *args);
+PyObject * cReactor_addSystemEventTrigger(PyObject *self, PyObject *args, PyObject *kw);
+PyObject * cReactor_removeSystemEventTrigger(PyObject *self, PyObject *args);
+
 /* Create a new Transport. */
 cReactorTransport * cReactorTransport_New(cReactor *reactor,
                                           int fd,
@@ -354,6 +363,8 @@ PyObject * cReactorThread_suggestThreadPoolSize(PyObject *self, PyObject *args);
 
 /* Break the reactor out of poll. */
 PyObject * cReactorThread_wakeUp(PyObject *self, PyObject *args);
+
+PyObject * cReactorThread_initThreading(PyObject *self, PyObject *args);
 
 /* Create a new APPLY job. */
 cReactorJob * cReactorJob_NewApply(PyObject *callable, PyObject *args, PyObject *kw);
