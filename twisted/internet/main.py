@@ -17,11 +17,6 @@
 
 
 # System Imports
-import types
-import os
-import time
-
-import sys
 import socket
 CONNECTION_LOST = -1
 CONNECTION_DONE = -2
@@ -33,7 +28,6 @@ theApplication = None
 from twisted.python import threadable, log
 from twisted.python.runtime import platform
 from twisted.persisted import styles
-from twisted.python.defer import Deferred, DeferredList
 
 
 class DummyResolver:
