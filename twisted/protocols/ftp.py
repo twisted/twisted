@@ -71,7 +71,7 @@ from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.internet.protocol import ServerFactory, Protocol
 from twisted import internet
-from twisted.python.defer import Deferred, DeferredList, FAILURE
+from twisted.internet.defer import Deferred, DeferredList, FAILURE
 from twisted.python.failure import Failure
 
 

@@ -20,7 +20,8 @@ Twisted Cred Service
 """
 
 # Twisted Imports
-from twisted.python import defer, log, components
+from twisted.python import log, components
+from twisted.internet import defer
 
 # Sibling Imports
 from perspective import Perspective

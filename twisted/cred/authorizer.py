@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # Twisted Imports
-from twisted.python import defer
+from twisted.internet import defer
 
 
 class Authorizer:
@@ -70,7 +70,7 @@ class DefaultAuthorizer(Authorizer):
     def getIdentityRequest(self, name):
         """Get a Deferred callback registration object.
 
-        I return a deferred (twisted.python.defer.Deferred) which will
+        I return a deferred (twisted.internet.defer.Deferred) which will
         be called back to when an identity is discovered to be available
         (or errback for unavailable).  It will be returned unarmed, so
         you must arm it yourself.

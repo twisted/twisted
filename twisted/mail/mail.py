@@ -21,7 +21,8 @@
 # Twisted imports
 from twisted.protocols import smtp
 from twisted.cred import service
-from twisted.python import defer, components
+from twisted.python import components
+from twisted.internet import defer
 
 # Sibling imports
 import protocols

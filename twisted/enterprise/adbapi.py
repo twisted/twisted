@@ -20,9 +20,9 @@ This is designed to integrate with twisted.internet.threadtask.
 import traceback
 
 from twisted.spread import pb
-from twisted.internet import task, main
+from twisted.internet import task, main, defer
 from twisted.internet.threadtask import ThreadDispatcher
-from twisted.python import reflect, log, defer, failure
+from twisted.python import reflect, log, failure
 
 class Transaction:
     def __init__(self, pool, connection):

@@ -6,7 +6,8 @@ from twisted.spread.sturdy import PerspectiveConnector
 from twisted.spread.flavors import Referenceable
 from twisted.spread.refpath import PathReferenceDirectory
 
-from twisted.python import defer, log
+from twisted.internet import defer
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.cred.util import challenge
 

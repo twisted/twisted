@@ -16,8 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import dns, protocol
-from twisted.internet import reactor, udp, tcp
-from twisted.python import defer, components
+from twisted.internet import reactor, udp, tcp, defer
+from twisted.python import components
 import random, string, struct
 
 DNS, TCP = range(2)

@@ -23,7 +23,7 @@ from pyunit import unittest
 import twisted.protocols.protocol, twisted.protocols.smtp
 from twisted import protocols
 from twisted.protocols import loopback, smtp, protocol
-from twisted.python import defer
+from twisted.internet import defer
 from twisted.test.test_protocols import StringIOWithoutClosing
 import string
 from cStringIO import StringIO

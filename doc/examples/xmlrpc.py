@@ -14,7 +14,7 @@
 """
 
 from twisted.web import xmlrpc
-from twisted.python import defer
+from twisted.internet import defer
 import xmlrpclib
 
 

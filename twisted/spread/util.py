@@ -17,7 +17,7 @@
 
 """Utility classes for spread."""
 
-from twisted.python import defer
+from twisted.internet import defer
 from twisted.python.failure import Failure
 
 

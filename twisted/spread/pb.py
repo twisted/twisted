@@ -47,9 +47,9 @@ import sys
 import types
 
 # Twisted Imports
-from twisted.python import log, defer, failure
+from twisted.python import log, failure
 from twisted.protocols import protocol
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 
@@ -253,7 +253,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
 
-    See also twisted.python.defer.
+    See also twisted.internet.defer.
     """
 
     def __init__(self, perspective, broker, luid, doRefCount):

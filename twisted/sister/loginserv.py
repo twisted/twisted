@@ -6,7 +6,8 @@
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.python import log, defer
+from twisted.internet import defer
+from twisted.python import log
 from twisted.enterprise import row
 
 class LoginService(pb.Service):

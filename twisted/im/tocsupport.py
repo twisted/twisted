@@ -21,7 +21,7 @@ import string, re
 from twisted.protocols import toc
 from twisted.im.locals import ONLINE, OFFLINE, AWAY
 from twisted.internet import reactor
-from twisted.python.defer import succeed
+from twisted.internet.defer import succeed
 
 # Sibling Imports
 import basesupport

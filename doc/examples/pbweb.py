@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.python import defer
+from twisted.internet import defer
 from twisted.web import widgets
 class EchoDisplay(widgets.Presentation):
     template = """<H1>Welcome to my widget, displaying %%%%echotext%%%%.</h1>

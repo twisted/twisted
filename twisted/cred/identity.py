@@ -19,7 +19,8 @@
 import md5, types
 
 # Twisted Imports
-from twisted.python import defer, failure
+from twisted.python import failure
+from twisted.internet import defer
 
 # Sibling Imports
 from util import respond

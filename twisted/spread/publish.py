@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # Twisted imports
-from twisted.python import defer
+from twisted.internet import defer
 
 # sibling imports
 import jelly

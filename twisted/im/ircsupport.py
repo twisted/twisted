@@ -18,7 +18,7 @@ import string
 from twisted.protocols import irc
 from twisted.im.locals import ONLINE
 from twisted.internet import reactor
-from twisted.python.defer import succeed
+from twisted.internet.defer import succeed
 
 import basesupport
 

@@ -23,7 +23,8 @@ import re
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.python import defer, failure, log, rebuild, reflect, util
+from twisted.python import failure, log, rebuild, reflect, util
+from twisted.internet import defer
 from twisted.protocols import http
 
 # Sibling Imports
@@ -148,7 +149,7 @@ class Widget:
     def display(self, request):
         """Implement me to represent your widget.
 
-        I must return a list of strings and twisted.python.defer.Deferred
+        I must return a list of strings and twisted.internet.defer.Deferred
         instances.
         """
         raise NotImplementedError("%s.display" % str(self.__class__))

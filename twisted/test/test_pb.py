@@ -27,9 +27,9 @@ from pyunit import unittest
 from twisted.spread import pb, util
 from twisted.protocols import protocol
 from twisted.internet.app import Application
-from twisted.python import defer, failure, log
+from twisted.python import failure, log
 from twisted.cred import identity
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
 class Dummy(pb.Viewable):
     def view_doNothing(self, user):

@@ -18,8 +18,7 @@
 """
 
 from twisted.protocols import basic
-from twisted.internet import protocol
-from twisted.python import defer
+from twisted.internet import protocol, defer
 
 import os, time, string, operator
 

@@ -77,10 +77,9 @@ from twisted.web import resource
 from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
 from twisted.web import domwidgets
-from twisted.python.defer import Deferred
-from twisted.python import defer
+from twisted.internet.defer import Deferred
 from twisted.python import failure
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.python.mvc import View, IView, Controller
 from twisted.python import mvc
 from twisted.python import log

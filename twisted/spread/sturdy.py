@@ -15,7 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.python import defer, log
+from twisted.internet import defer
+from twisted.python import log
 import copy
 
 True = 1

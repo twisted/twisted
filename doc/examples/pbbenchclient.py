@@ -1,7 +1,6 @@
 
 from twisted.spread import pb
-from twisted.internet import main
-from twisted.python import defer
+from twisted.internet import main, defer
 import time
 
 class PBBenchClient:

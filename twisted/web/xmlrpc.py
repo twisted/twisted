@@ -26,7 +26,8 @@ import xmlrpclib
 
 # Sibling Imports
 from twisted.web import resource, server
-from twisted.python import log, defer
+from twisted.internet import defer
+from twisted.python import log
 
 
 # Error codes for Twisted, if they conflict with yours then
