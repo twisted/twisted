@@ -596,6 +596,7 @@ class Sourceforge(Transaction):
            "%(name)s@shell.sf.net:%(path)s/Twisted-%(ver)s/" % vars())
         sh("echo "
            "'"
+           "umask 0002&&"
            "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Packages.gz&&"
            "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Sources.gz&&"
            "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/override&&"
