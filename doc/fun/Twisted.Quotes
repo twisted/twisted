@@ -4131,3 +4131,8 @@ experience is characterised by waves of confusion and euphoria."
 <itamar> exarkun: does it do screenshots of empty landscapes?
 <itamar> if not it is NOT BEGUN
 %
+<moshez> glyph: I'm always polite
+%
+<z3p> what is a good way to debug crazy errors in C modules?
+<Jerub> z3p: find -name "*.c" -exec rm {} \;
+%
