@@ -277,7 +277,7 @@ class StaticFileTest(unittest.TestCase):
         import os
         dp = os.path.join(self.caseMethodName,"hello")
         ddp = os.path.join(dp, "goodbye")
-        tp = os.path.join(dp,"world.txt")
+        tp = os.path.abspath(os.path.join(dp,"world.txt"))
         tpy = os.path.join(dp,"wyrld.rpy")
         os.makedirs(dp)
         f = open(tp,"wb")
