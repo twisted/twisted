@@ -1082,8 +1082,9 @@ class Headers:
         """Removes the header named."""
         
         name=name.lower()
-        del self._raw_headers[name]
-        del self._headers[name]
+        if self._raw_headers.has_key(name):
+            del self._raw_headers[name]
+            del self._headers[name]
 
     def __repr__(self):
         return '<Headers: Raw: %s Parsed: %s>'% (self._raw_headers, self._headers)

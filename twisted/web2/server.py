@@ -38,7 +38,7 @@ class Request(http.Request):
     implements(iweb.IRequest)
     
     site = None
-    prepathuri = None
+    _initialprepath = None
     
     def __init__(self, *args, **kw):
         self.notifications = []

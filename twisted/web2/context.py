@@ -223,6 +223,8 @@ class RequestContext(FactoryContext):
     pass
 
 components.registerAdapter(lambda ctx: ctx.tag, RequestContext, iweb.IRequest)
+# FIXME: Why is this needed, don't we have transitive adaptation?
+components.registerAdapter(lambda ctx: iweb.IOldRequest(ctx.tag), RequestContext, iweb.IOldRequest)
 
 def getRequestContext(self):
     top = self.parent

@@ -88,7 +88,10 @@ class IRequest(components.Interface):
     startedWriting = Attribute("")
     out_headers = Attribute("")
     sentLength = Attribute("")
-    
+
+class IOldRequest(components.Interface):
+    """I'm an old request, completely unspecified. :("""
+
 class IChanRequestCallbacks(components.Interface):
     """The bits that are required of a Request for interfacing with a
     IChanRequest object"""
@@ -163,3 +166,4 @@ class IChanRequest(components.Interface):
         pass
     
     persistent = Attribute("""Whether this request supports HTTP connection persistence. May be set to False. Should not be set to other values.""")
+

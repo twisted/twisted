@@ -870,14 +870,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 pass
 
     def lineLengthExceeded(self, line):
-        first = False
         if self._first_line:
             # Fabricate a request object to respond to the line length violation.
             self.chanRequest = self.chanRequestFactory(self, "GET fake HTTP/1.0",
                                                        len(self.requests))
-            first = True
         try:
-            self.chanRequest.lineLengthExceeded(line, first)
+            self.chanRequest.lineLengthExceeded(line, self._first_line)
         except AbortedException:
             pass
             

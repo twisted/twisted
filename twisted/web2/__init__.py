@@ -8,3 +8,6 @@
 Twisted Web: a Twisted Web Server.
 
 """
+import compat
+from twisted.python import components
+components.registerAdapter(compat.OldRequestAdapter, iweb.IRequest, iweb.IOldRequest)
