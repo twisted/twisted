@@ -41,8 +41,19 @@ def getRegistry(r):
     else:
         return r
 
+class CannotAdapt(NotImplementedError):
+    """
+    Can't adapt some object to some Interface.
+    """
+    pass
+
 class MetaInterface(type):
     def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
+        """
+        Try to adapt `adaptable' to self; return `default' if it was passed, otherwise
+        raise L{CannotAdapt}.
+        """
+        adapter = default
         registry = getRegistry(registry)
         try:
             # should this be `implements' of some kind?
@@ -53,9 +64,12 @@ class MetaInterface(type):
                 if persist:
                     registry.persistAdapter(adaptable, adapter)
         except NotImplementedError:
-            adapter = self.__adapt__.im_func(adaptable, _Nothing)
-            if adapter is _Nothing:
-                raise
+            if hasattr(self, '__adapt__'):
+                adapter = self.__adapt__.im_func(adaptable, _Nothing)
+
+        if adapter is _Nothing:
+            raise CannotAdapt("%s cannot be adapted to %s." %
+                                      (adaptable, self))
         return adapter
 
 
@@ -87,6 +101,10 @@ class Interface:
         |
         |     def add(self, a, b):
         |         return a + b
+
+
+    You can call an Interface with a single argument; If the passed object can
+    be adapted to the Interface in some way, it will be returned.
 
     """
 
