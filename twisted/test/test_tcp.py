@@ -21,7 +21,7 @@ from __future__ import nested_scopes
 import socket, time
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, defer
 from twisted.internet import error
 
 
@@ -110,7 +110,7 @@ class ListeningTestCase(PortCleanerUpper):
         n = port.getHost()[2]
         self.ports.append(port)
         l = []
-        port.stopListening().addCallback(l.append)
+        defer.maybeDeferred(port.stopListening).addCallback(l.append)
         while not l:
             reactor.iterate(0.1)
         port = reactor.listenTCP(n, f, interface="127.0.0.1")
