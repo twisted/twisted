@@ -17,7 +17,13 @@
 from pyunit import unittest
 from twisted.internet import reactor
 from twisted.python.defer import Deferred
+from twisted.python import threadable
+threadable.init(1)
+
 import sys
+import time
+import threading
+
 
 class InterfaceTestCase(unittest.TestCase):
 
@@ -62,4 +68,94 @@ class InterfaceTestCase(unittest.TestCase):
         r.fireSystemEvent("remove")
         self.assertEquals(len(l), 1)
         self.assertEquals(len(l2), 0)
+
+    _called = 0
+    
+    def _callback(self, x, **d):
+        """Callback for testCallLater"""
+        self.assertEquals(x, 1)
+        self.assertEquals(d, {'a': 1})
+        self._called = 1
+        self._calledTime = time.time()
+
+    def testCallLater(self):
+        # add and remove a callback
+        def bad():
+            raise RuntimeError, "this shouldn't have been called"
+        i = reactor.callLater(0.1, bad)
+        reactor.cancelCallLater(i)
         
+        start = time.time()
+        reactor.callLater(0.5, self._callback, 1, a=1)
+        while time.time() - start < 0.6:
+            reactor.iterate(0.01)
+        self.assertEquals(self._called, 1)
+        self.assert_( self._calledTime - start - 0.5 < 0.05 )
+        del self._called
+        del self._calledTime
+
+
+class Counter:
+    index = 0
+    
+    def add(self):
+        self.index = self.index + 1
+
+
+class Order:
+
+    stage = 0
+    
+    def a(self):
+        if self.stage != 0: raise RuntimeError
+        self.stage = 1
+    
+    def b(self):
+        if self.stage != 1: raise RuntimeError
+        self.stage = 2
+    
+    def c(self):
+        if self.stage != 2: raise RuntimeError
+        self.stage = 3
+    
+
+class ThreadOrder(threading.Thread, Order):
+
+    def run(self):
+        self.schedule(self.a)
+        self.schedule(self.b)
+        self.schedule(self.c)
+
+
+class callFromThreadTestCase(unittest.TestCase):
+    """Task scheduling rom threads tests."""
+
+    def schedule(self, *args, **kwargs):
+        """Override in subclasses."""
+        apply(reactor.callFromThread, args, kwargs)
+    
+    def testScheduling(self):
+        c = Counter()
+        for i in range(100):
+            self.schedule(c.add)
+        for i in range(100):
+            reactor.iterate()
+        self.assertEquals(c.index, 100)
+    
+    def testCorrectOrder(self):
+        o = Order()
+        self.schedule(o.a)
+        self.schedule(o.b)
+        self.schedule(o.c)
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(o.stage, 3)
+    
+    def testNotRunAtOnce(self):
+        c = Counter()
+        self.schedule(c.add)
+        # scheduled tasks should not be run at once:
+        self.assertEquals(c.index, 0)
+        reactor.iterate()
+        self.assertEquals(c.index, 1)
