@@ -1,6 +1,9 @@
 
 from zope import interface
 
+from numarray import array, dot
+from numarray.linear_algebra import determinant
+
 class ILocated(interface.Interface):
     position = interface.Attribute(
         "position", __doc__="Three tuple of coordinates of a thing")
@@ -25,6 +28,36 @@ class _TerminalNode(object):
         for o in self.objects:
             if distance(o.position, center) < radius:
                 yield o
+
+    def itervisible(self, viewpoint, direction, cosAngle=0.866):
+        for o in self.objects:
+            if visible(viewpoint, direction, cosAngle, o.position):
+                yield o
+
+
+def magnitude(a):
+    return (sum(a * a) ** 0.5)
+
+def normalize(a):
+    return a / magnitude(a)
+
+def visible(viewpoint, direction, cosAngle, target):
+    if target == viewpoint:
+        return False
+    viewpoint = array(viewpoint)
+    target = normalize(array(target) - viewpoint)
+    direction = normalize(array(direction))
+    prod = dot(target, direction - viewpoint)
+    # print prod, cosAngle, prod > cosAngle, target
+    return prod > cosAngle
+
+def permute(s, n):
+    if n == 0:
+        yield []
+    else:
+        for e in s:
+            for r in permute(s, n - 1):
+                yield r + [e]
 
 class OctTree(object):
     def __init__(self, center, width, depth, height, n=0):
@@ -89,7 +122,7 @@ class OctTree(object):
         child.remove(obj)
 
     def __iter__(self):
-        for ch in self._children:
+        for ch in self._children.itervalues():
             if ch is not None:
                 for obj in ch:
                     yield obj
@@ -157,3 +190,44 @@ class OctTree(object):
             if child is not None:
                 for obj in child.iternear(center, radius):
                     yield obj
+
+    def itervisible(self, viewpoint, direction, cosAngle=0.866):
+        # There are 27 interesting boundary points.  First compute the
+        # visibility of each of them.
+        c = self.center
+        w = self.width / 2.
+        d = self.depth / 2.
+        h = self.height / 2.
+        v = []
+        for (x, y, z) in permute((-1, 0, 1), 3):
+            v.append(visible(viewpoint, direction, cosAngle,
+                             (c[0] + w * x, c[1] + d * y, c[2] + h * y)))
+
+        octantMap = {
+            # Left/Right Front/Back Bottom/Top
+            (True, True, True): [0, 1, 3, 4, 9, 10, 12, 13],
+            (False, True, True): [1, 2, 4, 5, 10, 11, 13, 14],
+            (True, False, True): [3, 4, 6, 7, 12, 13, 15, 16],
+            (False, False, True): [4, 5, 7, 8, 13, 14, 16, 17],
+
+            (True, True, False): [9, 10, 12, 13, 18, 19, 21, 22],
+            (False, True, False): [10, 11, 13, 14, 19, 20, 22, 23],
+            (True, False, False): [12, 13, 15, 16, 21, 22, 24, 25],
+            (False, False, False): [13, 14, 16, 17, 22, 23, 25, 26]}
+
+        for (chKey, vIdx) in octantMap.iteritems():
+            x = 0
+            for i in vIdx:
+                x += v[i]
+            if x == 0:
+                continue
+            elif x == 8:
+                child = self._children.get(chKey)
+                if child is not None:
+                    for obj in child:
+                        yield obj
+            else:
+                child = self._children.get(chKey)
+                if child is not None:
+                    for obj in child.itervisible(viewpoint, direction, cosAngle):
+                        yield obj

@@ -1,4 +1,4 @@
-from math import pi
+from math import pi, cos
 
 from twisted.trial import unittest
 from zope import interface
@@ -9,63 +9,78 @@ class Thingy:
     interface.implements(octtree.ILocated)
     def __init__(self, x=0, y=0, z=0):
         self.position = (x, y, z)
+    def __str__(self):
+        return 'Thingy%r' % (self.position,)
+    __repr__ = __str__
 
 class UtilTestCase(unittest.TestCase):
-    def testBetween(self):
+    def testPermute(self):
+        e = [['a', 'a'], ['a', 'b'], ['b', 'a'], ['b', 'b']]
+        e.sort()
+        r = list(octtree.permute(('a', 'b'), 2))
+        r.sort()
+        self.assertEquals(e, r)
+
+    def testVisible(self):
+        # Dead on
         self.failUnless(
-            octtree.between(
-                (0, 0, 0),
-                ((-1, -1, 0), (-1, 1, 0), (-1, 0, 1)),
-                (( 1, -1, 0), ( 1, 1, 0), ( 1, 0, 1))))
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0, 1, 0)))
 
-        self.failIf(
-            octtree.between(
-                (-2, 0, 0),
-                ((-1, -1, 0), (-1, 1, 0), (-1, 0, 1)),
-                (( 1, -1, 0), ( 1, 1, 0), ( 1, 0, 1))))
-
-        self.failIf(
-            octtree.between(
-                (2, 0, 0),
-                ((-1, -1, 0), (-1, 1, 0), (-1, 0, 1)),
-                (( 1, -1, 0), ( 1, 1, 0), (1, 0, 1))))
+        # Each of the 4 sides
+        self.failUnless(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0.9, 1, 0)))
 
         self.failUnless(
-            octtree.between(
-                (5, 5, 5),
-                ((-1, -1, 4), (1, -1, 4), (0, 1, 4)),
-                ((-1, -1, 6), (1, -1, 6), (0, 1, 6))))
-
-        import pdb; pdb.Pdb().set_trace()
-        self.failIf(
-            octtree.between(
-                (5, 5, 3),
-                ((-1, -1, 4), (1, -1, 4), (0, 1, 4)),
-                ((-1, -1, 6), (1, -1, 6), (0, 1, 6))))
-
-        self.failIf(
-            octtree.between(
-                (5, 5, 7),
-                ((-1, -1, 4), (1, -1, 4), (0, 1, 4)),
-                ((-1, -1, 6), (1, -1, 6), (0, 1, 6))))
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (-0.9, 1, 0)))
 
         self.failUnless(
-            octtree.between(
-                (0, -5, 0),
-                ((-1, -4, 0), (1, -4, 0), (0, -4, 1)),
-                ((-1, -6, 0), (1, -6, 0), (0, -6, 1))))
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0, 1, 0.9)))
+
+        self.failUnless(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0, 1, -0.9)))
+
+        # Each of the 4 corners
+        self.failUnless(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (1, 1.415, 1)))
+
+        self.failUnless(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (1, 1.415, -1)))
+
+        self.failUnless(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (-1, 1.415, 1)))
+
+        self.failUnless(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (-1, 1.415, -1)))
+
+        # Behind us
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0, -1, 0)))
+
+        # Just outside of each side
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (1.1, 1, 0)))
 
         self.failIf(
-            octtree.between(
-                (0, -3, 0),
-                ((-1, -4, 0), (1, -4, 0), (0, -4, 1)),
-                ((-1, -6, 0), (1, -6, 0), (0, -6, 1))))
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (-1.1, 1, 0)))
 
         self.failIf(
-            octtree.between(
-                (0, -7, 0),
-                ((-1, -4, 0), (1, -4, 0), (0, -4, 1)),
-                ((-1, -6, 0), (1, -6, 0), (0, -6, 1))))
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0, 1, 1.1)))
+
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (0, 1, -1.1)))
+
+        # Just outside each corner
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (1, 1.414, 1)))
+
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (1, 1.414, -1)))
+
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (-1, 1.414, 1)))
+
+        self.failIf(
+            octtree.visible((0, 0, 0), (0, 1, 0), cos(pi / 4), (-1, 1.414, -1)))
 
 
 class OctTreeTest(unittest.TestCase):
@@ -87,18 +102,18 @@ class OctTreeTest(unittest.TestCase):
         raise "Write Me"
 
     def testVisibility(self):
-        o1 = Thingy(5,5,5)
-        o2 = Thingy(6,6,6)
-        o3 = Thingy(3,3,3)
+        o = [Thingy(*c) for c in [(0, 0, 0), (-1, 1, 0), (1, 1, 0),
+                                  (3, 1, 0), (0, 1, 1), (0, 1, 3)]]
 
         ot = octtree.OctTree([0,0,0],
                              20, 20, 20)
 
-        ot.iterInPrism(
-            # Points defining the quadrilateral closest to the viewer,
-            # starting at the top left and proceeding clockwise
-            ((-2, 0, 2), (2, 0, 2), (2, 0, -2), (-2, 0, -2)),
+        for obj in o:
+            ot.add(obj)
 
-            # Points defining the quadrilateral further from the viewer,
-            # as above.
-            ((-8, 0, 8), (8, 0, 8), (8, 0, -8), (-8, 0, -8)))
+        vis = list(ot.itervisible((0, -1, 0), (0, 10, 0), cos(pi / 4)))
+        print vis
+        self.assertEquals(len(vis), 4)
+        for i in 0, 2, 3, 5:
+            self.assertIn(o[i], vis)
+
