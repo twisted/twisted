@@ -264,6 +264,7 @@ PyObject * cReactor_iterate(PyObject *self, PyObject *args, PyObject *kw);
 PyObject * cReactor_fireSystemEvent(PyObject *self, PyObject *args);
 PyObject * cReactor_addSystemEventTrigger(PyObject *self, PyObject *args, PyObject *kw);
 PyObject * cReactor_removeSystemEventTrigger(PyObject *self, PyObject *args);
+void fireSystemEvent_internal(cReactor *reactor, cReactorEventType event);
 
 /* Create a new Transport. */
 cReactorTransport * cReactorTransport_New(cReactor *reactor,
