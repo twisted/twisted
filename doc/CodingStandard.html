@@ -181,7 +181,38 @@ def foo2bar(f):
       <p>
         Functions should be named similiarly to methods.
       </p>
-      
+      <h3>Attributes</h3>
+      <p>
+        Attributes should be named similarly to functions and methods.
+        Attributes should be named descriptively; attribute names like
+        <code>mode</code>, <code>type</code>, and <code>buf</code> are
+        generally discouraged.  Instead, use <code>displayMode</code>,
+        <code>playerType</code>, or <code>inputBuffer</code>.
+      </p>
+      <p>
+        Do not use Python's "private" attribute syntax; prefix non-public
+        attributes with a single leading underscore.  Since several classes
+        have the same name in Twisted, and they are distinguished by which
+        package they come from, Python's double-underscore name mangling will
+        not work reliably in some cases.  Also, name-mangled private variables
+        are more difficult to address when unit testing or persisting a class.
+      </p>
+      <p>
+        An attribute (or function, method or class) should be considered private
+        when one or more of the following conditions are true:
+        <ul>
+          <li>The attribute represents intermediate state which is not always
+          kept up-to-date.</li>
+
+          <li>Referring to the contents of the attribute or otherwise
+          maintaining a reference to it may cause resources to leak.</li>
+
+          <li>Assigning to the attribute will break internal assumptions.</li>
+          
+          <li>The attribute is part of a known-to-be-sub-optimal interface and
+          will certainly be removed in a future release.</li>
+        </ul>
+      </p>
       <h3>C Code</h3>
       <p>
         Wherever possible, C code should be optional, and the default python
@@ -219,26 +250,11 @@ def foo2bar(f):
         function, class, method, or module, make sure that it won't instantly
         break other code.
       </p>
-      <p>
-        If your class has attributes that are intended to be private and
-        implementation specific (e.g. the current state of a state-machine),
-        prefix your attribute with __. This will make sure that they don't
-        interfere with subclasses' attributes by mistake. For example:
-        <pre>
-class Foo:
-
-    __state = 1
-
-    def doSomething(self):
-        # ...
-        self.__state = 2
-        </pre>
-      </p>
     <hr>
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Mon Oct 22 15:19:00 CDT 2001
+Last modified: Tue Oct 30 08:04:42 CST 2001
 <!-- hhmts end -->
   </body>
 </html>
