@@ -28,6 +28,7 @@ IPushProducer, which will write to a consumer. The second is a
 consumer which is a stream, so that other producers can write to it.
 """
 
+from __future__ import generators
 
 import copy,os
 from zope.interface import Interface, Attribute, implements
