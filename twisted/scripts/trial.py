@@ -202,10 +202,14 @@ class Options(usage.Options):
         if not os.path.isfile(filename):
             return
 
-        # recognize twisted/test/test_foo.py, which is itself a test case
+        # recognize twisted/test/test_foo.py, which is itself a test case.
+        # also twisted/web/test/test_foo.py
         d,f = os.path.split(filename)
-        if d == "twisted/test" and f.startswith("test_") and f.endswith(".py"):
-            self['modules'].append("twisted.test." + f[:-3])
+        if (d.startswith("twisted/") and d.endswith("/test")
+            and f.startswith("test_") and f.endswith(".py")):
+            modname = filename.replace("/",".")[:-3]
+            if modname not in self['modules']:
+                self['modules'].append(modname)
             return
         # ------------------------------------------------------------------
 
