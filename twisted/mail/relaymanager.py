@@ -35,6 +35,7 @@ from twisted.mail import relay
 from twisted.internet import tcp
 import os, string
 
+
 class SMTPManagedRelayer(relay.SMTPRelayer):
 
     '''SMTP Relayer which notifies a manager
@@ -62,18 +63,18 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         '''
         message = self.names[0]
         relay.SMTPRelayer.sentMail(self, addresses)
-	if addresses: 
-	    self.manager.notifySuccess(self, message)
-	else: 
-	    self.manager.notifyFailure(self, message)
+        if addresses: 
+            self.manager.notifySuccess(self, message)
+        else: 
+            self.manager.notifyFailure(self, message)
 
     def connectionFailed(self):
         '''called when connection could not be made
 
         our manager should be notified that this happened,
         it might prefer some other host in that case'''
-        self.manager.notifyNoConection()
-        self.manager.notifyDone()
+        self.manager.notifyNoConection(self)
+        self.manager.notifyDone(self)
 
     def connectionLost(self):
         '''called when connection is broken
@@ -81,6 +82,37 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         notify manager we will try to send no more e-mail
         '''
         self.manager.notifyDone(self)
+
+
+class MessageCollection:
+
+    def __init__(self):
+        self.waiting = {}
+        self.relayed = {}
+
+    def getWaiting(self):
+        return self.waiting.keys()
+
+    def hasWaiting(self):
+        return self.waiting
+
+    def getRelayed(self):
+        return self.relayed.keys()
+
+    def relaying(self, message):
+        del self.waiting[message]
+        self.relayed[message] = 1
+
+    def waiting(self, message):
+        del self.relayed[message]
+        self.waiting[message] = 1
+
+    def addMessage(self, message):
+        if not self.relayed.has_key(message):
+            self.waiting[message] = 1
+
+    def done(self, message):
+        del self.relayed[message]
 
 
 class SmartHostSMTPRelayingManager:
@@ -107,35 +139,41 @@ class SmartHostSMTPRelayingManager:
         Default values are meant for a small box with 1-5 users.
         '''
         self.directory = directory
-	self.maxConnections = maxConnections
-	self.maxMessagesPerConnection = maxMessagesPerConnection
-	self.smartHostAddr = smartHostAddr
-	self.managed = {}
-	self.relayingMessages = {}
-	self.readDirectory()
+        self.maxConnections = maxConnections
+        self.maxMessagesPerConnection = maxMessagesPerConnection
+        self.smartHostAddr = smartHostAddr
+        self.managed = {}
+        self.messageCollection = MessageCollection()
+        self.readDirectory()
+
+    def _finish(self, message):
+        os.remove(message+'-D')
+        os.remove(message+'-H')
+        message = os.path.basename(message)
+        self.messageCollection.done(message)
 
     def notifySuccess(self, relay, message):
         '''a relay sent a message successfully
 
         Mark it as sent in our lists
         '''
-        message = os.path.basename(message)
-	self.managed[relay].remove(message)
-	self.messages[message] = 1
-	del self.relayingMessages[message]
+        self._finish(message)
 
     def notifyFailure(self, relay, message):
         log.msg("could not relay "+message)
-        self.notifySuccess(relay, message)
+        # Moshe - Bounce E-mail here
+        # Be careful: if it's a bounced bounce, silently
+        # discard it
+        self._finish(message)
 
     def notifyDone(self, relay):
         '''a relay finished
 
-        mark all pending messages under this relay's resposibility
-        as failed, and note that this relay is no longer active
+        unmark all pending messages under this relay's resposibility
+        as being relayed, and remove the relay.
         '''
         for message in self.managed[relay]:
-	    self.notifyFailure(relay, message)
+            self.messageCollection.waiting(message) 
         del self.managed[relay]
 
     def notifyNoConnection(self, relay):
@@ -144,29 +182,26 @@ class SmartHostSMTPRelayingManager:
     def __getstate__(self):
         '''(internal) delete volatile state'''
         dct = self.__dict__.copy()
-	del dct['managed'], dct['relayingMessages'], dct['messages']
-	return dct
+        del dct['managed'], dct['messageCollection']
+        return dct
 
     def __setstate__(self, state):
         '''(internal) restore volatile state'''
         self.__dict__.update(state)
-	self.relayingMessages = {}
-	self.managed = {}
-	self.readDirectory()
+        self.messageCollection = MessageCollection()
+        self.managed = {}
+        self.readDirectory()
 
     def readDirectory(self):
         '''read the messages directory
 
         look for new messages
         ''' 
-	self.messages = {}
-	for message in os.listdir(self.directory):
+        for message in os.listdir(self.directory):
             # Skip non data files
             if message[-2:]!='-D':
                 continue
-            message = message[:-2]
-	    if not self.relayingMessages.has_key(message):
-	        self.messages[message] = 1
+            self.messageCollection.addMessage(message[:-2])
 
     def checkState(self):
         '''call me periodically to check I am still up to date
@@ -174,20 +209,19 @@ class SmartHostSMTPRelayingManager:
         synchronize with the state of the world, and maybe launch
         a new relay
         '''
-	self.readDirectory() 
-	if not self.messages:
-	    return
-        if len(self.managed) >= self.maxConnections:
-	    return
-	nextMessages = self.messages.keys()[:self.maxMessagesPerConnection]
+        self.readDirectory() 
+        if (len(self.managed) >= self.maxConnections or 
+            not self.messageCollection.hasWaiting()):
+            return
+        nextMessages = self.messageCollection.getWaiting()
+        nextMessages = nextMessages[:self.maxMessagesPerConnection]
         toRelay = []
-	for message in nextMessages:
-	    self.relayingMessages[message] = 1
-	    del self.messages[message]
-	    toRelay.append(os.path.join(self.directory, message))
+        for message in nextMessages:
+            toRelay.append(os.path.join(self.directory, message))
+            self.messageCollection.relaying(message)
         protocol = SMTPManagedRelayer(toRelay, self)
-	self.managed[protocol] = nextMessages
-	transport = tcp.Client(self.smartHostAddr[0], self.smartHostAddr[1], 
+        self.managed[protocol] = nextMessages
+        transport = tcp.Client(self.smartHostAddr[0], self.smartHostAddr[1], 
                                protocol)
 
 class MXCalculator:
@@ -221,11 +255,13 @@ class MXCalculator:
                 return
         deferred.callback(answers[0])
         
+
 # It's difficult to pickle methods
 # So just have a function call the method
 def checkState(manager):
     '''cause a manager to check the state'''
     manager.checkState()
+
 
 def attachManagerToDelayed(manager, delayed, time=1):
     '''attach a a manager to a Delayed
