@@ -67,8 +67,8 @@ class InMemoryUsernamePasswordDatabaseDontUse:
             raise error.UnauthorizedLogin()
 
 
-class OnDiskUsernamePasswordDatabase:
-    """An on-disk, text-based username/password database.
+class FilePasswordDB:
+    """An file-based, text-based username/password database.
     
     Records in the datafile for this class are delimited by a particular
     string.  The username appears in a fixed field of the columns delimited
@@ -108,7 +108,7 @@ class OnDiskUsernamePasswordDatabase:
         @param hash: A function used to transform the plaintext password
         received over the network to a format suitable for comparison against
         the version stored on disk.  The arguments to the callable are the
-        username, the network-supplied password, and the on-disk version of
+        username, the network-supplied password, and the in-file version of
         the password.
         """
         self.filename = filename
@@ -179,3 +179,7 @@ class OnDiskUsernamePasswordDatabase:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
             raise error.UnauthorizedLogin()
+
+# For backwards compatibility
+# Allow access as the old name.
+OnDiskUsernamePasswordDatabase = FilePasswordDB
