@@ -2,8 +2,8 @@
 
 """
 Usage: mkserver <servertype> <server_options>
-       mkserver --help
        mkserver --help <servertype>
+So far <servertype> can be "web", "irc", "reality", "toc", and "telnet"
 
 """
 
@@ -28,13 +28,21 @@ except:
     print __doc__
     sys.exit()
 
-try:
-    mod = __import__("twisted.util.mk%sserver" % command, globals(), locals(), command)
-except ImportError:
-    traceback.print_exc()
-    print "Please select one of 'telnet', 'irc', 'reality', 'web', 'toc'."
-    sys.exit()
+def getModule(type):
+    try:
+        mod = __import__("twisted.util.mk%sserver" % type, globals(), locals(), type)
+	return mod
+    except ImportError:
+        traceback.print_exc()
+        print "Please select one of 'telnet', 'irc', 'reality', 'web', 'toc'."
+        sys.exit()
 
+if command == "--help":
+    mod = getModule(sys.argv[2])
+    print mod.usage_message
+    sys.exit()
+else: 
+    mod = getModule(command)
 try:
     config = mod.Options()
     config.parseOptions(sys.argv[2:])
