@@ -105,6 +105,8 @@ class Perspective:
     """
 
     def remoteMessageReceived(self, broker, message, args, kw):
+        args = broker.unserialize(args, self)
+        kw = broker.unserialize(kw, self)
         method = getattr(self, "perspective_%s" % message)
         state = apply(method, args, kw)
         return broker.serialize(state, self, method, args, kw)
@@ -142,6 +144,8 @@ class Referenced(Serializable):
         The default implementation is to dispatch to a method called
         'remote_messagename' and call it with the same arguments.
         """
+        args = broker.unserialize(args)
+        kw = broker.unserialize(kw)
         method = getattr(self, "remote_%s" % message)
         state = apply(method, args, kw)
         return broker.serialize(state, self.perspective)
@@ -176,9 +180,14 @@ class Proxy(Referenced):
         The default implementation is to dispatch to a method called
         'proxy_messagename' and call it on my  with the same arguments.
         """
+        args = broker.unserialize(args, self.perspective)
+        kw = broker.unserialize(kw, self.perspective)
         method = getattr(self.object, "proxy_%s" % message)
         state = apply(method, (self.perspective,)+args, kw)
-        return broker.serialize(state, self.perspective, method, args, kw)
+        #print "serializing", state, self.perspective, method, args, kw
+        rv = broker.serialize(state, self.perspective, method, args, kw)
+        #print 'serialized'
+        return rv
 
 
 class Proxied(Serializable):
@@ -225,6 +234,8 @@ class Cache(Copy):
         The default implementation is to dispatch to a method called
         'observe_messagename' and call it on my  with the same arguments.
         """
+        args = broker.unserialize(args)
+        kw = broker.unserialize(kw)
         method = getattr(self, "observe_%s" % message)
         state = apply(method, args, kw)
         return broker.serialize(state, None, method, args, kw)
@@ -252,7 +263,19 @@ class CacheObserver:
         self.broker = broker
         self.cached = cached
         self.perspective = perspective
-        
+
+    def __repr__(self):
+        return "<CacheObserver(%s, %s, %s) at %s>" % (
+            self.broker, self.cached, self.perspective, id(self))
+    
+    def __hash__(self):
+        return (  (hash(self.broker) % 2**10)
+                + (hash(self.perspective) % 2**10)
+                + (hash(self.cached) % 2**10))
+    
+    def __cmp__(self, other):
+        return cmp((self.broker, self.perspective, self.cached), other)
+    
     def __getattr__(self, key):
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
@@ -303,7 +326,7 @@ class Reference(Serializable):
     """This is a translucent reference to a remote object.
     """
 
-    def __init__(self, broker, luid, doRefCount):
+    def __init__(self, perspective, broker, luid, doRefCount):
         """(internal) Initialize me with a broker and a locally-unique ID.
 
         The ID is unique only to the particular Perspective Broker instance.
@@ -311,6 +334,8 @@ class Reference(Serializable):
         self.luid = luid
         self.broker = broker
         self.doRefCount = doRefCount
+        # print 'creating reference:',perspective
+        self.perspective = perspective
 
     def remoteSerialize(self, broker):
         assert self.broker == broker, "Can't send references to brokers other than their own."
@@ -340,14 +365,17 @@ class Reference(Serializable):
         if kw.has_key('pberrback'):
             errback = kw['pberrback']
             del kw['pberrback']
-        self.broker.sendMessage(self.luid, key, args, kw, callback, errback)
+        self.broker.sendMessage(self.perspective, self.luid,
+                                key, args, kw,
+                                callback, errback)
 
     def __cmp__(self,other):
         """Compare me.
         """
         if isinstance(other, Reference):
-            return cmp(self.luid, other.luid)
-        return cmp(self.luid, other)
+            if other.broker == self.broker:
+                return cmp(self.luid, other.luid)
+        return cmp(self.broker, other)
 
     def __hash__(self):
         """Hash me.
@@ -378,16 +406,24 @@ class CacheProxy(Serializable):
         return 'lcache', self.__luid
 
     def __getattr__(self, name):
-        maybeMethod = getattr(self.__instance, name)
+        assert name != '_CacheProxy__instance', "Infinite recursion."
+        #print "CProxy:",self.__dict__.keys()
+        inst = self.__instance
+        maybeMethod = getattr(inst, name)
         if isinstance(maybeMethod, types.MethodType):
-            if maybeMethod.im_self is self.__instance:
+            if maybeMethod.im_self is inst:
                 psuedoMethod = new.instancemethod(maybeMethod.im_func,
                                                   self,
                                                   CacheProxy)
                 return psuedoMethod
-        if maybeMethod is self.__instance:
+        if maybeMethod is inst:
             return self
         return maybeMethod
+
+    def __repr__(self):
+        return "CacheProxy(%s)" % repr(self.__instance)
+    def __str__(self):
+        return "CacheProxy(%s)" % str(self.__instance)
 
     def __setattr__(self, name, value):
         if self.__inited:
@@ -477,10 +513,11 @@ class _NetUnjellier(jelly._Unjellier):
     def _unjelly_cache(self, rest):
         global copyTags
         luid = rest[0]
-        inst = copyTags[rest[1]]()
-        self._reference(inst)
-        self.broker.cacheLocally(luid, inst)
-        return jelly._Promise(self, inst, "cache", rest), CacheProxy(self.broker, inst, luid)
+        cNotProxy = copyTags[rest[1]]()
+        cProxy = CacheProxy(self.broker, cNotProxy, luid)
+        self._reference(cProxy)
+        self.broker.cacheLocally(luid, cNotProxy)
+        return jelly._Promise(self, cNotProxy, "cache", rest), cProxy
 
     def _postunjelly_cache(self, rest, inst):
         state = self.unjelly(rest[2])
@@ -500,7 +537,7 @@ class _NetUnjellier(jelly._Unjellier):
         return jelly._FalsePromise(), obj
 
     def _unjelly_remote(self, rest):
-        obj = Reference(self.broker, rest[0], 1)
+        obj = Reference(self.broker.getPerspective(), self.broker, rest[0], 1)
         self._reference(obj)
         return jelly._FalsePromise(), obj
 
@@ -765,7 +802,7 @@ class Broker(banana.Banana):
         object.__ping__() will always be answered with a 1 or 0 (never an
         error) depending on whether the peer knows about the object or not.
         """
-        return Reference(self, name, 0)
+        return Reference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance):
         """Returns an ID that says what this instance is cached as remotely, or None if it's not.
@@ -825,13 +862,15 @@ class Broker(banana.Banana):
             self.jellyArgs = None
             self.jellyKw = None
 
-    def unserialize(self, sexp):
+    def unserialize(self, sexp, perspective = None):
         """Unjelly an sexp according to the local security rules for this broker.
         """
+        self.perspective = perspective
         self.unjellier = _NetUnjellier(self)
         try:
             return self.unjellier.unjelly(sexp)
         finally:
+            self.perspective = None
             self.unjellier = None
 
     def _gotPerspective(self, perspective, isPerspective, *args):
@@ -874,10 +913,15 @@ class Broker(banana.Banana):
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
 
-    def sendMessage(self, objectID, message, args, kw, callback, errback):
+    def sendMessage(self, perspective, objectID,
+                    message, args, kw,
+                    callback, errback):
+        
         """(internal) Send a message to a remote object.
         
         Arguments:
+
+          * perspective: a perspective to serialize with/for.
 
           * objectID: an ID which will map to a remote object.
 
@@ -893,8 +937,8 @@ class Broker(banana.Banana):
           * errback: a callback to be made when this request is answered with
             an exception.
         """
-        netArgs = self.serialize(args, method = message)
-        netKw = self.serialize(kw, method = message)
+        netArgs = self.serialize(args, perspective=perspective, method=message)
+        netKw = self.serialize(kw, perspective=perspective, method=message)
         requestID = self.newRequestID()
         if self.disconnected:
             try:
@@ -932,9 +976,8 @@ class Broker(banana.Banana):
             if message == '__ping__':
                 result = (object is not None)
             else:
-                args = self.unserialize(netArgs)
-                kw = self.unserialize(netKw)
-                netResult = object.remoteMessageReceived(self, message, args, kw)
+                netResult = object.remoteMessageReceived(self, message,
+                                                         netArgs, netKw)
         except:
             io = cStringIO.StringIO()
             traceback.print_exc(file=io)

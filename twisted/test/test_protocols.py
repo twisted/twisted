@@ -17,10 +17,10 @@ class LineTester(basic.LineReceiver):
     delimiter = '\n'
 
     def connectionMade(self):
-        self.buffer = []
+        self.received = []
 
     def lineReceived(self, line):
-        self.buffer.append(line)
+        self.received.append(line)
         if line == '':
             self.setRawMode()
         if line[:4] == 'len ':
@@ -29,7 +29,7 @@ class LineTester(basic.LineReceiver):
     def rawDataReceived(self, data):
         data, rest = data[:self.length], data[self.length:]
         self.length = self.length - len(data)
-        self.buffer[-1] = self.buffer[-1] + data
+        self.received[-1] = self.received[-1] + data
         if self.length == 0:
             self.setLineMode(rest)
 
@@ -65,17 +65,17 @@ a'''
             for i in range(len(self.buffer)/packet_size + 1):
                 s = self.buffer[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
-            if a.buffer != self.output:
-                print a.buffer
+            if a.received != self.output:
+                print a.received
                 raise AssertionError
 
 class TestNetstring(basic.NetstringReceiver):
 
     def connectionMade(self):
-        self.buffer = []
+        self.received = []
 
     def stringReceived(self, s):
-        self.buffer.append(s)
+        self.received.append(s)
 
 
 class NetstringReceiverTestCase(unittest.TestCase):
@@ -94,8 +94,8 @@ class NetstringReceiverTestCase(unittest.TestCase):
                 s = out[i*packet_size:(i+1)*packet_size]
                 if s:
                     a.dataReceived(s)
-            if a.buffer != self.strings:
-                raise AssertionError(a.buffer)
+            if a.received != self.strings:
+                raise AssertionError(a.received)
 
 
 class DummyHTTPHandler(http.HTTP):

@@ -17,8 +17,6 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0])))) 
 ### end of preamble
 
-from twisted.test import test_all
-
 def runText():
     from pyunit import unittest
     from twisted.test import test_all
@@ -32,7 +30,7 @@ def runGUI():
         raise "error"
     try:
         from pyunit import unittestgui
-        unittestgui.main('twisted.test.test-all.testSuite')
+        unittestgui.main('twisted.test.test_all.testSuite')
     except Tkinter.TclError:
         raise "error"
 try:

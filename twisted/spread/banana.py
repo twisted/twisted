@@ -203,5 +203,5 @@ class Banana(protocol.Protocol):
                 write(STRING)
                 write(obj)
         else:
-            assert 0, "could not send object."
+            assert 0, "could not send object: %s" % repr(obj)
 
