@@ -167,6 +167,8 @@ class Deferred:
 
         These will be executed when the 'master' callback is run.
         """
+        assert callable(callback)
+        assert errback == None or callable(errback)
         cbs = ((callback, callbackArgs, callbackKeywords),
                (errback or (passthru), errbackArgs, errbackKeywords))
         if self.default:
