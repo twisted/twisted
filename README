@@ -40,16 +40,27 @@ What's new in 0.13.0?
 
   Updates to the config interface, and twisted.enterprise database support.
   
-  twisted.forum, an experimantal database-based web forum.
-  
-  twisted.metrics, a database-backed performance and stats system.
-  
-  experimental wxPython event loop support.
-  
   Delayed docs in doc/delayeds.html now give correct information.
   
-  Initial, experimental support for connectTCP and connectSSL, allowing client
-  protocols such as IRC bots to (re)connect to remote servers automatically.
+  Lots of bug fixes.
+  
+  Experimental stuff:
+  
+    - twisted.forum, a database-based web forum.
+  
+    - twisted.metrics, a database-backed performance and stats system.
+  
+    - wxPython event loop support.
+    
+    - Initial, experimental support for connectTCP and connectSSL, allowing
+      client protocols such as IRC bots to (re)connect to remote servers
+      automatically.
+  
+  Incompatible changes:
+  
+    - in twisted.web.guard, changed order of identitySession and
+      perspectiveSession in some of the constructors for consistency.
+
 
 What can I do with it?
 
