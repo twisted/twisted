@@ -40,7 +40,7 @@ defaultOptions = '--upver --tag --exp --dist --docs --balls --rel --deb' # --deb
 
 defaultSVNBase = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 
-debug = 0
+debug = False
 
 class Options(usage.Options):
     optParameters = [
@@ -63,7 +63,22 @@ class Options(usage.Options):
         ['svnurl', None, defaultSVNBase,
          "The BASE of the SVN root. trunk, branches/foo, etc, will "
          "automatically be added"],
+        ['releasedir', None, '/twisted/Releases',
+         "The directory to put tarballs."],
+        ['sfname', None, None,
+         "Your username on sourceforge."]
         ]
+
+    optFlags = [
+        ['notpermanent', None,
+         "Don't do anything 'permanent': finalize tags, upload tarballs, etc."]]
+
+    def opt_debug(self):
+        """
+        Turn on debug mode (Ask before running commands).
+        """
+        global debug
+        debug = True
 
     def postOptions(self):
         ## assertions ##
@@ -129,18 +144,23 @@ class Options(usage.Options):
                          ExportTemp,
                          MakeDocs,
                          MakeBalls,
-                         MakeDebs,
-                         FinalizeTag,
-                         Distribute,
-                         ]
+                         MakeDebs]
 
-            if self['type'] == 'final':
-                commands += [UpdateWebDocs]
+            if not self['notpermanent']:
+                commands += [
+                    FinalizeTag,
+                    ReleaseBalls,
+                    ReleaseDebs,
+                    ReleaseSourceforge,
+                    ]
 
-            commands += [UpdateWebSite,
-                         Announce,
-                         NotifyPackagers,
-                         ]
+                if self['type'] == 'final':
+                    commands += [UpdateWebDocs]
+
+                commands += [UpdateWebSite,
+                             Announce,
+                             NotifyPackagers,
+                             ]
 
         self['commands'] = commands
 
@@ -196,6 +216,7 @@ class CommandFailed(OSError):
 
 
 def main():
+    
     try:
         opts = Options()
         opts.parseOptions()
@@ -230,13 +251,13 @@ def main():
 # utilities
 
 
-def sh(command, sensitive=0):
+def sh(command):#, sensitive=0):
     """
     I'll try to execute `command', and if `sensitive' is true, I'll
     ask before running it.  If the command returns something other
     than 0, I'll raise CommandFailed(command).
     """
-    if debug or sensitive:
+   if debug:# or sensitive:
         if raw_input("%r ?? " % command).startswith('n'):
             return
     print command
@@ -305,7 +326,7 @@ class UpdateVersion(Transaction):
             replaceInFile(os.path.join(r, file), oldver, newver)
         sh('cd %s &&  svn diff || true' % (r))
         sh('cd %s &&  svn commit -m "Setting version for %s" %s'
-           % (r, newver, ' '.join(self.files)), sensitive=1)
+           % (r, newver, ' '.join(self.files)))#, sensitive=1)
 
     def undoIt(self, opts, fail):
         if self.files:
@@ -326,7 +347,7 @@ class TagTemp(Transaction):
         sh('cd %s &&  svn cp %s %s -m "Tagging preliminary %s"'
            % (checkoutdir, opts['wipurl'],
               opts['temptagurl'], opts['full-version']),
-           sensitive=1)
+           )# sensitive=1)
 
 
 class ExportTemp(Transaction):
@@ -343,7 +364,7 @@ class ExportTemp(Transaction):
 
 ##class PrepareDist(Transaction):
 ##    def doIt(self, opts):
-##        ver = opts['release-version']
+##        ver = opts['full-version']
 ##        tdir = "Twisted-%s" % ver
 
 ##        if os.path.exists(tdir):
@@ -354,7 +375,7 @@ class ExportTemp(Transaction):
 ##    def undoIt(self, opts, fail):
 ##        #don't delete the directory if we didn't create it!
 ##        if not fail.check(DirectoryExists):
-##            ver = opts['release-version']
+##            ver = opts['full-version']
 ##            tdir = "Twisted-%s" % ver
 
 ##            sh('rm -rf %s' % tdir)
@@ -364,7 +385,7 @@ class MakeDocs(Transaction):
 
     # documentation generation can take a looong time, so we don't
     # want to force redoing everything
-    sensitiveUndo = 1
+    #sensitiveUndo = 1
     
     def doIt(self, opts):
         ver = opts['full-version']
@@ -444,25 +465,26 @@ class MakeBalls(Transaction):
         ''' % locals())
 
 
-    def undoIt(self, opts, fail):
-        ver = opts['full-version']
-        for ext in ['tar.gz', 'tar.bz2']:
-            for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
-                try:
-                    sh('rm -f %s-%s.%s' % (prefix, ver, ext))
-                except:
-                    pass
+##    def undoIt(self, opts, fail):
+##        ver = opts['full-version']
+##        for ext in ['tar.gz', 'tar.bz2']:
+##            for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
+##                try:
+##                    sh('rm -f %s-%s.%s' % (prefix, ver, ext))
+##                except:
+##                    pass
 
 class MakeDebs(Transaction):
 
     #takes a while
-    sensitiveUndo = 1
+    #sensitiveUndo = 1
     
     def doIt(self, opts):
-        rel = os.path.abspath('.')
+        #rel = os.path.abspath('.')
         ver = opts['full-version']
         tgz = 'Twisted-%s.tar.gz' % (ver,)
         unique = '%s.%s' % (time.time(), os.getpid())
+        debdir = 'debian-%s' % ver
 
         os.mkdir('/sid-chroot/tmp/%s' % unique)
         sh('cd /sid-chroot/tmp/%s && tar xzf %s' % (unique, tgz))
@@ -470,21 +492,21 @@ class MakeDebs(Transaction):
              "'cd /tmp/%(unique)s && "
              "./Twisted-%(ver)s/admin/make-deb -a'"%vars())
 
-        if not os.path.isdir(os.path.join(rel, 'debian-%s' % ver)):
-            os.mkdir(os.path.join(rel, 'debian-%s' % ver))
+        if not os.path.isdir(debdir):
+            os.mkdir(debdir)
 
-        sys.stdout.write("Moving files to %s" % os.path.join(rel, 'debian-%s'%ver))
+        sys.stdout.write("Moving files to %s" % debdir)
         sys.stdout.flush()
 
         for file in glob.glob('/sid-chroot/tmp/%s/*' % unique):
             if not os.path.isfile(file):
                 continue
-            sh('cp %(file)s %(rel)s/debian-%(ver)s' % vars())
+            sh('cp %(file)s %(debdir)s' % vars())
             sys.stdout.write(".")
             sys.stdout.flush()
         sys.stdout.write("\n")
 
-        os.chdir("%(rel)s/debian-%(ver)s" % vars())
+        os.chdir(debdir)
         sh('tar xzf %(tgz)s Twisted-%(ver)s/admin' % vars())
         sh('mv Twisted-%(ver)s/admin/override .' % vars())
         sh('./Twisted-%(ver)s/admin/createpackages override'% vars())
@@ -507,19 +529,24 @@ class MakeDebs(Transaction):
         sh('rm -rf ../Twisted-%(ver)s' % vars())
         sh('rm -rf /sid-chroot/tmp/%s' % unique)
 
-    def undoIt(self, opts, fail):
-        rel = opts['release']
-        ver = opts['release-version']
-        sh("rm -rf %(rel)s/debian-%(ver)s" % vars())
+##    def undoIt(self, opts, fail):
+##        ver = opts['full-version']
+##        sh("rm -rf debian-%(ver)s" % vars())
 
 
-class InstallDebs(Transaction):
+class FinalizeTag(Transaction):
+    def doIt(self, opts):
+        # atomic-assumption
+        sh('svn mv %s %s' % opts['temptagurl'], opts['tagurl'])
+
+
+class ReleaseDebs(Transaction):
 
     target = '/twisted/Debian'
 
     def doIt(self, opts):
-        rel = opts['release']
-        ver = opts['release-version']
+        ver = opts['full-version']
+        debdir = 'debian-%s' % ver
         target = self.target
 
         for file in ('Packages.gz', 'Sources.gz', 'override'):
@@ -530,15 +557,15 @@ class InstallDebs(Transaction):
                 sh('rm -f %(target)s/woody/%(file)s.old' % vars())
                 sh('mv %(target)s/woody/%(file)s %(target)s/woody/%(file)s.old' % vars())
 
-        for file in os.listdir('%(rel)s/debian-%(ver)s/' % vars()):
+        for file in os.listdir(debdir):
             if file == 'woody':
                 continue
-            sh("cp %(rel)s/debian-%(ver)s/%(file)s %(target)s/" % vars())
+            sh("cp %(debdir)s/%(file)s %(target)s/" % vars())
 
-        sh("cp %(rel)s/debian-%(ver)s/woody/* %(target)s/woody/" % vars())
+        sh("cp %(debdir)s/woody/* %(target)s/woody/" % vars())
 
     def undoIt(self, opts, fail):
-        ver = opts['release-version']
+        ver = opts['full-version']
         target = self.target
         for dir in (target, target+'/woody'):
             for file in glob.glob('%(dir)s/*.old' % vars()):
@@ -548,16 +575,12 @@ class InstallDebs(Transaction):
             sh('rm -f %(dir)s/*%(ver)s*' % vars())
 
 
-class FinalizeTag(Transaction):
-    def doIt(self, opts):
-        # atomic-assumption
-        sh('svn mv %s %s' % opts['temptagurl'], opts['tagurl'])
 
 
-class Distribute(Transaction):
+class ReleaseBalls(Transaction):
     def doIt(self, opts):
-        rel = opts['release']
-        ver = opts['release-version']
+        rel = opts['releasedir']
+        ver = opts['full-version']
         tdir = "Twisted-%s" % ver
 
         if not os.path.exists(rel):
@@ -568,31 +591,27 @@ class Distribute(Transaction):
             print "Distribute: creating %s/old" % rel
             os.mkdir("%s/old" % rel)
 
-        print "Distribute: Moving old releases to %s/old" % rel
         sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/old || true' % locals())
 
-        print "Distribute: Copying Twisted_NoDocs."
         sh('''
         cp Twisted_NoDocs-%(ver)s.tar.gz  %(rel)s &&
         cp Twisted_NoDocs-%(ver)s.tar.bz2 %(rel)s
         ''' % locals())
 
 
-        print "Distribute: Copying TwistedDocs."
         sh('''
         cp TwistedDocs-%(ver)s.tar.gz  %(rel)s &&
         cp TwistedDocs-%(ver)s.tar.bz2 %(rel)s
         ''' % locals())
 
-        print "Distribute: Copying Twisted."
         sh('''
         cp %(tdir)s.tar.gz %(rel)s &&
         cp %(tdir)s.tar.bz2 %(rel)s
         ''' % locals())
 
     def undoIt(self, opts, fail):
-        ver = opts['release-version']
-        rel = opts['release']
+        ver = opts['full-version']
+        rel = opts['releasedir']
 
         for ext in ['zip', 'tar.gz', 'tar.bz2']:
             for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
@@ -604,15 +623,15 @@ class Distribute(Transaction):
 
     
 
-class Sourceforge(Transaction):
+class ReleaseSourceforge(Transaction):
 
     #takes a long time
-    sensitiveUndo = 1
+    #sensitiveUndo = 1
     
     def doIt(self, opts):
         name = opts['sfname']
-        rel = opts['release']
-        ver = opts['release-version']
+        rel = opts['releasedir']
+        ver = opts['full-version']
         path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
         sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
         sh("scp -r %(rel)s/Twisted*%(ver)s* %(rel)s/debian-%(ver)s "
