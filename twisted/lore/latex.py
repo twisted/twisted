@@ -155,23 +155,20 @@ class LatexSpitter:
         self.visitNode(node)
 
     def visitNode_table(self, node):
-        # All of my children should be <tr> elements
-        numCols = 0
-        for child in node.childNodes:
-            numCols = max(numCols, len(child.childNodes))
-        numCols += 1
+        rows = [[col for col in row.childNodes 
+                     if getattr(col, 'tagName', None) in ('th', 'td')]
+            for row in node.childNodes if getattr(row, 'tagName', None)=='tr']
+        numCols = 1+max([len(row) for row in rows])
         self.writer('\\begin{table}[ht]\\begin{center}')
         self.writer('\\begin{tabular}{@{}'+'l'*numCols+'@{}}')
-        for child in node.childNodes:
+        for row in rows:
             th = 0
-            for col in child.childNodes:
-                if getattr(col, 'tagName', None) not in ('th', 'td'):
-                    continue 
+            for col in row:
                 self.visitNode(col)
                 self.writer('&')
                 if col.tagName == 'th':
                     th = 1
-            self.writer('\\\\\n')
+            self.writer('\\\\\n') #\\ ends lines
             if th:
                 self.writer('\\hline\n')
         self.writer('\\end{tabular}\n')
