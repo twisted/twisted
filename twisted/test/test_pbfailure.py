@@ -106,9 +106,7 @@ class PBFailureTest(unittest.TestCase):
         return 4200
 
     def failureNoSuch(self, fail):
-        # XXX maybe PB shouldn't send AttributeErrors? and make generic exception
-        # for no such method?
-        fail.trap(AttributeError)
+        fail.trap(pb.NoSuchMethod)
         self.compare(fail.traceback, "Traceback unavailable\n")
         return 42000
 

@@ -86,7 +86,7 @@ import banana
 
 # Tightly coupled sibling import
 from flavors import Serializable
-from flavors import Referenceable
+from flavors import Referenceable, NoSuchMethod
 from flavors import Root, IPBRoot
 from flavors import ViewPoint
 from flavors import Viewable

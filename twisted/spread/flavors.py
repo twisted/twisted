@@ -50,6 +50,10 @@ cached_atom = "cached"
 remote_atom = "remote"
 
 
+class NoSuchMethod(AttributeError):
+    """Raised if there is no such remote method"""
+
+
 class IPBRoot(components.Interface):
     """Factory for root Referenceable objects for PB servers."""
 
@@ -108,7 +112,9 @@ class Referenceable(Serializable):
         """
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
-        method = getattr(self, "remote_%s" % message)
+        method = getattr(self, "remote_%s" % message, None)
+        if method is None:
+            raise NoSuchMethod("No such method: remote_%s" % (message,))
         try:
             state = method(*args, **kw)
         except TypeError:
