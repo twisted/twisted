@@ -252,6 +252,23 @@ collected by deleting all references to it when you are done with it, e.g.
 after <code class="python">callback()</code> is called.</p> 
 
 
+<h3>How do I use Deferreds to make my blocking code non-blocking?</h3><a name="deferreds-aren't-magic" />
+
+<p>You don't.  Deferreds don't magically turn a blocking function call into a
+non-blocking one.  A Deferred is just a simple object that represents a
+<em>deferred result</em>, with methods to allow convenient adding of
+callbacks.  (This is a common misunderstanding; suggestions on how to make this
+clearer in the <a href="defer.xhtml">Deferred Execution</a> howto are
+welcome!)</p>
+
+<p>If you have blocking code that you want to use non-blockingly in Twisted,
+either rewrite it to be non-blocking, or run it in a thread.  There is a
+convenience function, <code class="API"
+base="twisted.internet.threads">deferToThread</code>, to help you with the
+threaded approach -- but be sure to read <a href="threading.xhtml">Using
+Threads in Twisted</a>.</p>
+
+
 <h3>My exceptions and tracebacks aren't getting printed!</h3>
 
 <p>See previous question.</p>
