@@ -109,6 +109,20 @@ class TestInternet(unittest.TestCase):
         t1 = copy.copy(t)
         self.assert_(not hasattr(t1, '_port'))
         t.stopService()
+        t = internet.TimerService(1, lambda:None)
+        t.startService()
+        self.assert_(hasattr(t, '_call'))
+        t1 = copy.copy(t)
+        self.assert_(not hasattr(t1, '_call'))
+        t.stopService()
+        factory = protocol.ClientFactory()
+        factory.protocol = wire.Echo
+        t = internet.UNIXClient('echo.skt', factory)
+        t.startService()
+        self.assert_(hasattr(t, '_connection'))
+        t1 = copy.copy(t)
+        self.assert_(not hasattr(t1, '_connection'))
+        t.stopService()
 
     def testTimer(self):
         l = []
