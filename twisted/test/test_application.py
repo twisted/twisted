@@ -238,22 +238,22 @@ class TestAppSupport(unittest.TestCase):
 
     def testLoadApplication(self):
         a = service.Application("hello")
-        #baseconfig = {'file': None, 'xml': None, 'source': None, 'python':None}
-        #for style in 'source xml pickle'.split():
-        #    config = baseconfig.copy()
-        #    config[{'pickle': 'file'}.get(style, style)] = 'helloapplication'
-        #    sob.IPersistable(a).setStyle(style)
-        #    sob.IPersistable(a).save(filename='helloapplication')
-        #    a1 = app.getApplication(config, None)
-        #    self.assertEqual(service.IService(a1).name, "hello")
-        #config = baseconfig.copy()
-        #config['python'] = 'helloapplication'
-        #open("helloapplication", 'w').writelines([
-        #"from twisted.application import service\n",
-        #"application = service.Application('hello')\n",
-        #])
-        #a1 = app.getApplication(config, None)
-        #self.assertEqual(service.IService(a1).name, "hello")
+        baseconfig = {'file': None, 'xml': None, 'source': None, 'python':None}
+        for style in 'source xml pickle'.split():
+            config = baseconfig.copy()
+            config[{'pickle': 'file'}.get(style, style)] = 'helloapplication'
+            sob.IPersistable(a).setStyle(style)
+            sob.IPersistable(a).save(filename='helloapplication')
+            a1 = app.getApplication(config, None)
+            self.assertEqual(service.IService(a1).name, "hello")
+        config = baseconfig.copy()
+        config['python'] = 'helloapplication'
+        open("helloapplication", 'w').writelines([
+        "from twisted.application import service\n",
+        "application = service.Application('hello')\n",
+        ])
+        a1 = app.getApplication(config, None)
+        self.assertEqual(service.IService(a1).name, "hello")
 
     def test_convertStyle(self):
         appl = service.Application("lala")
