@@ -231,6 +231,12 @@ class LatexSpitter(BaseLatexSpitter):
     start_title = '\\title{'
     end_title = '}\n'
 
+    start_sub = '$_{'
+    end_sub = '}$'
+
+    start_sup = '$^{'
+    end_sup = '}$'
+
     start_html = '\\documentclass{article}\n'
     start_body = '\\begin{document}\n\\maketitle\n'
     end_body = '\\end{document}'

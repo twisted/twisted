@@ -184,7 +184,7 @@ classes = list2dict(['shell', 'API', 'python', 'py-prototype', 'py-filename',
 tags = list2dict(["html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
                   "dl", "li", "dt", "dd", "p", "code", "img", "blockquote", "a",
                   "cite", "div", "span", "strong", "em", "pre", "q", "table",
-                  "tr", "td", "th", "style"])
+                  "tr", "td", "th", "style", "sub", "sup"])
 
 span = list2dict(['footnote', 'manhole-output'])
 
