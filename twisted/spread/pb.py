@@ -540,7 +540,7 @@ class RemoteCache(RemoteCopy, Serializable):
         """Do distributed reference counting on finalize.
         """
         try:
-            print 'decache: %s' % self
+            print 'decache: %s %d' % (self, self.luid)
             self.broker.decCacheRef(self.luid)
         except:
             traceback.print_exc(file=log.logfile)
@@ -1398,7 +1398,9 @@ class Broker(banana.Banana):
         If the reference count is zero, it will free the reference to this
         object.
         """
-        if self.localObjects[objectID].decref() == 0:
+        refs = self.localObjects[objectID].decref()
+        print "decref for %d #refs: %d" % (objectID, refs)
+        if refs == 0:
             puid = self.localObjects[objectID].object.processUniqueID()
             del self.luids[puid]
             del self.localObjects[objectID]
@@ -1409,8 +1411,9 @@ class Broker(banana.Banana):
         If the reference count is zero, free the reference, then send an
         'uncached' directive.
         """
-        print 'decaching',objectID
-        if self.remotelyCachedObjects[objectID].decref() == 0:
+        refs = self.remotelyCachedObjects[objectID].decref()
+        print 'decaching: %s #refs: %s' % (objectID, refs)
+        if refs == 0:
             puid = self.remotelyCachedObjects[objectID].object.processUniqueID()
             del self.remotelyCachedLUIDs[puid]
             del self.remotelyCachedObjects[objectID]
@@ -1419,6 +1422,7 @@ class Broker(banana.Banana):
     def proto_uncache(self, objectID):
         """(internal) Tell the client it is now OK to uncache an object.
         """
+        print "uncaching %d" % objectID
         obj = self.locallyCachedObjects[objectID]
         def reallyDel(obj=obj):
             obj.__really_del__()

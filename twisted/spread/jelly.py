@@ -90,6 +90,7 @@ unpersistable_atom = "unpersistable"# u
 
 typeNames = {
     types.StringType: "string",
+    types.UnicodeType: "unicode",
     types.IntType: "int",
     types.LongType: "long",
     types.FloatType: "float",
@@ -208,6 +209,9 @@ class _Jellier:
         """
         return st
 
+    def _jelly_unicode(self, st):
+        return st
+    
     def _jelly_int(self, nt):
         """(internal)
         Return the serialized representation of an integer (which is the
