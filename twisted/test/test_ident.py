@@ -138,11 +138,14 @@ class ProcMixinTestCase(unittest.TestCase):
             (('127.0.0.1', 25), ('1.2.3.4', 762), 0))
 
     def testExistingAddress(self):
+        username = []
         p = ident.ProcServerMixin()
         p.entries = lambda: iter([self.line])
+        p.getUsername = lambda uid: (username.append(uid), 'root')[1]
         self.assertEquals(
             p.lookup(('127.0.0.1', 25), ('1.2.3.4', 762)),
             (p.SYSTEM_NAME, 'root'))
+        self.assertEquals(username, [0])
 
     def testNonExistingAddress(self):
         p = ident.ProcServerMixin()
