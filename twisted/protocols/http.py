@@ -540,7 +540,7 @@ class Request:
                     l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
                 if self.lastModified is not None:
-                    if 'last-modified' in self.headers:
+                    if self.headers.has_key('last-modified'):
                         log.msg("Warning: last-modified specified both in"
                                 " header list and lastModified attribute.")
                     else:
