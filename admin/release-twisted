@@ -202,8 +202,12 @@ def makeTwistedCore(opts):
     if not os.path.exists(tdir):
         shutil.copytree('Twisted.exp', tdir)
 
-    excludes = ' '.join(['--exclude %s/twisted/%s' % (tdir, x)
-                         for x in dist.twisted_subprojects])
+    excludes = []
+    for subProjectContainer in ['twisted', 'doc', 'bin']:
+        
+        excludes += ['--exclude %s/%s/%s' % (tdir, subProjectContainer, x)
+                    for x in dist.twisted_subprojects]
+    excludes = ' '.join(excludes)
 
     sh('''
     tar %(excludes)s -cjf %(tdir)s.tar.bz2 %(tdir)s
