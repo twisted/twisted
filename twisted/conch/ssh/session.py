@@ -161,7 +161,7 @@ class _DummyTransport:
     
 def wrapProcessProtocol(inst):
     if isinstance(inst, protocol.Protocol):
-        return ProtocolWrapper(inst)
+        return _ProtocolWrapper(inst)
     else:
         return inst
 

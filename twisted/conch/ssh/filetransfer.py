@@ -293,7 +293,7 @@ class FileTransferServer(FileTransferBase):
                     raise EOFError
                 return f
             if isinstance(info, defer.Deferred):
-                d.addCallback(self._cbScanDirectory, dirIter, f)
+                info.addCallback(self._cbScanDirectory, dirIter, f)
                 return
             else:
                 f.append(info)
