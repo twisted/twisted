@@ -171,31 +171,18 @@ Could not copy file %s because: %s" % (o['conffile'], e.strerr))
         genFile("README.txt", readme_template, o)
 
         if not o['skip-inno-script']:
-            import inno
-            script = inno.Script(destination="{pf}\%s" % o['name'], **o)
-            script.collect(os.path.join("dist", svc_appended))
-            outname = '%s.iss' % o['name']
-            out = file(outname, 'w+')
-            script.writeScript(out)
-            out.write(r'''[Run]
-Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"; StatusMsg: "Installing %(name)s service"
-Filename: "{app}\%(svc)s.exe"; Parameters: "-install"; StatusMsg: "Installing %(name)s service"
-[UninstallRun]
-Filename: "{sys}\net.exe"; Parameters: "%(name)s stop"
-Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"
-''' % {'svc':svc_appended, 'name':o['name']})
-            out.close()
             o['options-repr']=repr(o)
             genFile("do_inno_script.py", do_inno_script_template, o)
+            execfile("do_inno_script.py")
 
             if not o['skip-inno']:
-                inno.build(outname)
+                genFile("do_inno.py", do_inno_template, o)
+                execfile("do_inno.py")
                 final = os.path.abspath("%s\\%s-setup-%s.exe" %
                                         (svc_appended,
                                         o['name'],
                                         o['package_version']))
                 print "Output written to %s" % final
-                genFile("do_inno.py", do_inno_template, o)
 
     sys.stderr.write("%s: %d warnings.\n" %
                      (os.path.basename(argv[0]), len(o.warnings)))
@@ -347,7 +334,7 @@ MAKING CHANGES
 ______________
 
 Files in here that you are likely to modify: setup.cfg and %(name)s.iss.
-These contains the options for py2exe and Inno Setup, respectively.
+These contain the options for py2exe and Inno Setup, respectively.
 
 If you change: 
    setup.cfg
