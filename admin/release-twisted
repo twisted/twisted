@@ -262,7 +262,8 @@ class UpdateVersion(Transaction):
     #
     # state changes:
     #  * the CVS tree is modified. to back out we must copy all the .bak files created by replaceInFile back to their original location, and remove them.
-    #  * the tree is committed. this is atomic, afaict.
+    #  * the tree is committed. this is atomic, afaict. [this isn't, but
+    #    pretend it is anyway -- Moshe]
 
     files = None
     
@@ -521,6 +522,7 @@ class MakeDebs(Transaction):
         os.chdir(twisted_dir)
         replaceInFile('debian/changelog', ver+'-1', ver+'-1woody')
         replaceInFile('debian/control', ', python2.3-dev', '')
+        sh('rm -f debian/*.bak')
         sh('debuild -us -uc')
         os.chdir('..')
         sh('rm -rf %(twisted_dir)s' % vars())
