@@ -6,7 +6,7 @@ quotefile = os.path.join(os.path.split(__file__)[0], "quotes.txt")
 quoter = quoters.FortuneQuoter([quotefile])
 
 class Quoter(soap.SOAPPublisher):
-    """Publish two methods, 'add' and 'echo'."""
+    """Publish one method, 'quote'."""
 
     def soap_quote(self):
         return quoter.getQuote()
