@@ -1,5 +1,5 @@
 
-import os, traceback, socket
+import os, pwd, grp, traceback, socket
 
 from twisted.internet.app import Application
 from twisted.internet import reactor
@@ -16,15 +16,26 @@ class InetdProtocol(Protocol):
         pid = os.fork()
         if pid == 0:    # Child
             try:
-                # Close stdin/stdout
+                # Close stdin/stdout (we keep stderr from the parent to report
+                # errors with)
                 for fd in range(2):
                     os.close(fd)
-                os.dup(self.transport.fileno())   # Should be fd 0
-                os.dup(self.transport.fileno())   # Should be fd 1
+                
+                # Make the socket be fd 0 
+                # (and fd 1, although I'm not sure if that matters)
+                os.dup(self.transport.fileno())
+                os.dup(self.transport.fileno())
+
+                # Close unused file descriptors
                 for fd in range(3, 256):
                     try: os.close(fd)
                     except: pass
-                # FIXME: set uid/gid
+                
+                # Set uid/gid
+                os.setgid(service.group)
+                os.setuid(service.user)
+                
+                # Start the new process
                 os.execvpe(service.program, service.programArgs, os.environ)
             except:
                 # If anything goes wrong, just die.
@@ -68,14 +79,41 @@ def main(options=None):
     app = Application('tinetd')
     
     for service in conf.services:
-        if service.protocol != 'tcp' or service.socketType != 'stream':
+        if (service.protocol, service.socketType) not in [('tcp', 'stream')]:
             log.msg('Skipping unsupported type/protocol: %s/%s'
                     % (service.socketType, service.protocol))
             continue
 
-        print 'Adding service:', service.name, service.port, service.protocol
+        # Convert the username into a uid (if necessary)
+        try:
+            service.user = int(service.user)
+        except ValueError:
+            try:
+                service.user = pwd.getpwnam(service.user)[2]
+            except KeyError:
+                log.msg('Unknown user: ' + service.user)
+                continue
+
+        # Convert the group name into a gid (if necessary)
+        if service.group is None:
+            # If no group was specified, use the user's primary group
+            service.group = pwd.getpwuid(service.user)[3]
+        else:
+            try:
+                service.group = int(service.group)
+            except ValueError:
+                try:
+                    service.group = grp.getgrnam(service.group)[2]
+                except KeyError:
+                    log.msg('Unknown group: ' + service.group)
+                    continue
+
+        log.msg('Adding service:', service.name, service.port, service.protocol)
         factory = InetdFactory(service)
-        app.listenTCP(service.port, factory)
+        if service.protocol == 'tcp':
+            app.listenTCP(service.port, factory)
+        elif service.protocol == 'udp':
+            app.listenUDP(service.port, factory)
     
     app.run(save=0)
 
