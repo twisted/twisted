@@ -113,4 +113,35 @@ configuration information, as changed in the application.</p>
 
 <p>As always, the gory details are in the manual page.</p>
 
+<h2>tap2deb</h2>
+
+<p>
+For Twisted-based server application developers who want to deploy on
+Debian, Twisted supplies the <code>tap2deb</code> program. This program
+wraps a Twisted Application file (of any of the supported formats -- Python,
+source, xml or pickle)
+in a Debian archive, including correct installation and removal scripts
+and <code>init.d</code> scripts. This frees the installer from manually
+stopping or starting the service, will make sure it goes properly up
+on startup and down on shutdown and that it obeys the init levels.
+</p>
+
+<p>
+For the more savvy Debian users, the
+<code>tap2deb</code> also generates the source package, allowing her
+to modify and polish things which automated software cannot detect
+(such as dependencies or relationships to virtual packages). In addition,
+the Twisted team itself intends to produce Debian packages for some common
+services, such as web servers and an inetd replacement. Those packages
+will enjoy the best of all worlds -- both the consistency which comes
+from being based on the <code>tap2deb</code> and the delicate manual
+tweaking of a Debian maintainer, insuring perfect integration with
+Debian.
+</p>
+
+<p>
+Right now, there is a beta Debian archive of a web server available at
+<a href="http://twistedmatrix.com/users/moshez/debian">Moshe's archive</a>.
+</p>
+
 </body></html>
