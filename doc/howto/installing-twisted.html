@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Installing Twisted</title>
+</head>
+
+<body>
+<h1>Installing Twisted</h1>
+
+<h2>Installation</h2>
+
+<p> If you are on Windows, you may want to skip this and simply get the Windows Installer version of Twisted from the <a href="http://www.twistedmatrix.com/products/download">download page</a>.  </p>
+
+<p> To install Twisted, just make sure the <code>Twisted-$VERSION/</code> directory is in the "<code>PYTHONPATH</code>" environment variable. For example, if you extracted Twisted-0.18.0.tar.gz to /home/bob/, then you would have something like:  </p>
+
+<pre class="shell">
+export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.18.0/
+</pre>
+
+<p> in your <code>~/.bash_profile</code>, <code>~/.zshrc</code>, <code>~/.cshrc</code>, etc. If you use Windows NT, 2000, or XP, then set your environment variables by right-clicking on My Computer and selecting Properties. If you use some other version of windows, you'll need to set the variable at a command prompt, or in autoexec.bat, with the 'set' command.  </p>
+
+<p> If you'd like to install Twisted system-wide on your machine and into the default <code>PYTHONPATH</code>, you can use <code>setup.py</code> to do so:  </p>
+
+<pre class="shell">
+# python ./setup.py install
+</pre>
+
+<p> Be sure to run <code>setup.py</code> with appropriate privileges (root under Unix).  </p>
+
+<h2>Running Tests</h2>
+
+<p> See our unit tests run in a lovely Tkinter GUI, proving that the software is BugFree(TM):  </p>
+
+<pre class="shell">
+% admin/runtests
+</pre>
+
+<p> Some of these tests may fail if you don't have the Python XML packages installed on your system.  </p>
+
+</body>
+</html>

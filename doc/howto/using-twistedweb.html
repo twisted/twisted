@@ -76,7 +76,8 @@
 
 <p> Twisted.Web serves flat HTML files just as it does any other flat file.  </p>
 
-<h3>Embedded Python</h3>
+<a name="EmbeddedPythonScripts" />
+<h3>Embedded Python Scripts</h3>
 
 <p> An Embedded Python script is a Python file ending with the extension <code>.epy</code>, which is executed by the Twisted Web server.  </p>
 
@@ -102,6 +103,7 @@ request.write("""
 """)
 </pre>
 
+<a name="ResourceScripts" />
 <h3>Resource Scripts</h3>
 
 <p> A Resource script is a Python file ending with the extension <code>.rpy</code>, which is required to create an instance of a (subclass of a) <code class="API">twisted.web.resource.Resource</code>. </p>
@@ -128,6 +130,7 @@ resource = MyGreatResource()
 
 <p> The DOM Templates system is a system for handling templated content.  See <a href="domtemplate">its documentation</a> for more details.  </p>
 
+<a name="SpreadableWebServers" />
 <h3>Spreadable Web Servers</h3>
 
 <p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for "spreadable" computing.  In two different directories, run the commands:  </p>

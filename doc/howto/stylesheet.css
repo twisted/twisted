@@ -28,6 +28,11 @@ PRE
   background-color: #dddddd;
 }
 
+.htmlsource
+{
+  background-color: #dddddd;
+}
+
 .py-prototype
 {
   background-color: #ddddff;
@@ -78,6 +83,14 @@ PRE
   background-color: #eee;
 }
 .py-listing .python 
+{
+  margin-top: 0;
+  margin-bottom: 0;
+  border: none;
+  border-bottom: thin solid black;
+  }
+
+.py-listing .htmlsource
 {
   margin-top: 0;
   margin-bottom: 0;

@@ -68,7 +68,12 @@ class Options(usage.Options):
 command_line = ["-g", "--fast"]
 
 options = Options()
-options.parseOptions(command_line)
+try:
+    options.parseOptions(command_line)
+except usage.UsageError, errortext:
+    print '%s: %s' % (sys.argv[0], errortext)
+    print '%s: Try --help for usage details.' % (sys.argv[0])
+    sys.exit(1)
 if options.opts['fast']:
     print "fast",
 if options.opts['good']:
@@ -90,7 +95,7 @@ print
     impossible: in Python, the subclass's <code>optFlags</code>
     would shadow the superclass's. However,
     <code>usage.Options</code> uses special reflection code to get
-    all of the <code>optFlag</code>s defined in the hierarchy. So
+    all of the <code>optFlags</code> defined in the hierarchy. So
     the following:</p>
 <pre class="python">
 class BaseOptions(usage.Options):
@@ -125,7 +130,13 @@ class Options(usage.Options):
     optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
     optParameters = [["user", "u", None]]
 
-config.parseOptions() # When given no argument, parses sys.argv[1:]
+try:
+    config.parseOptions() # When given no argument, parses sys.argv[1:]
+except usage.UsageError, errortext:
+    print '%s: %s' % (sys.argv[0], errortext)
+    print '%s: Try --help for usage details.' % (sys.argv[0])
+    sys.exit(1)
+
 if config.opts['user'] is not None:
     print "Hello," config.opts['user']
 print "So, you want it:"
