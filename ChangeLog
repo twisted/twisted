@@ -4,6 +4,11 @@
 	getPage; If the web page takes longer than `timeout' to fetch,
 	defer.TimeoutError is errbacked.
 
+	* twisted/web/server.py, twisted/protocols/http.py: add `timeout'
+	argument to HTTPFactory and Site to specify how long to allow
+	connections to sit without communication before disconnecting
+	them.
+
 2003-07-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.7alpha1.

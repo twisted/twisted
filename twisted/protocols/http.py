@@ -897,8 +897,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     # set in instances or subclasses
     requestFactory = Request
 
-    # Timeout connections after 12 hours of inactivity
-    timeOut = 60 * 60 * 12
+    # this is set in HTTPFactory.buildProtocol now
+    #timeOut = 60 * 60 * 12
     _savedTimeOut = None
 
     def __init__(self):
@@ -1061,10 +1061,18 @@ class HTTPFactory(protocol.ServerFactory):
 
     logPath = None
 
-    def __init__(self, logPath=None):
+    def __init__(self, logPath=None, timeout=60*60*12):
         if logPath is not None:
             logPath = os.path.abspath(logPath)
         self.logPath = logPath
+        self.timeOut = timeout
+
+    def buildProtocol(self, addr):
+        p = protocol.ServerFactory.buildProtocol(self, addr)
+        # timeOut needs to be on the Protocol instance cause
+        # TimeoutMixin expects it there
+        p.timeOut = self.timeOut
+        return p
 
     def startFactory(self):
         _logDateTimeStart()

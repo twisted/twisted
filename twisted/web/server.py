@@ -413,10 +413,10 @@ class Site(http.HTTPFactory):
     counter = 0
     requestFactory = Request
 
-    def __init__(self, resource, logPath=None):
+    def __init__(self, resource, logPath=None, timeout=60*60*12):
         """Initialize.
         """
-        http.HTTPFactory.__init__(self, logPath=logPath)
+        http.HTTPFactory.__init__(self, logPath=logPath, timeout=timeout)
         self.sessions = {}
         self.resource = resource
 
