@@ -142,17 +142,14 @@ For example::
 @return: the gathered nodes as a single string
 @rtype: str
 """
-    childNodes = iNode.childNodes[:]
-    gathered = []
-    while childNodes:
-        node = childNodes.pop(0)
-        if node.childNodes:
-            [childNodes.insert(0, ch_node) for ch_node in node.childNodes]
-        if hasattr(node, 'nodeValue') and node.nodeValue is not None:
-            gathered.append(node.nodeValue)
-    gathered.reverse()
+    gathered=[]
+    slice=[iNode]
+    while len(slice)>0:
+        c=slice.pop(0)
+        if hasattr(c, 'nodeValue') and c.nodeValue is not None:
+            gathered.append(c.nodeValue)
+        slice=c.childNodes+slice
     return ''.join(gathered)
-
 
 class RawText(microdom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
