@@ -255,6 +255,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     # producer interface implementation
 
     def resumeProducing(self):
+        assert self.connected and not self.disconnecting
         self.startReading()
 
     def pauseProducing(self):
