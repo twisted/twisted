@@ -158,13 +158,11 @@ class MainPage(page.Page):
 '''
 
     def wchild_secret(self, request):
-        a=request.getComponent(simpleguard.Authenticated)
         if not request.getComponent(simpleguard.Authenticated):
             return InfiniChild(LoginPage())
         return Authenticated()
 
     def wchild_another(self, request):
-        a=request.getComponent(simpleguard.Authenticated)
         if not request.getComponent(simpleguard.Authenticated):
             return InfiniChild(LoginPage())
         return Another()
