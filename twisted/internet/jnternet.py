@@ -177,13 +177,9 @@ class JMultiplexor:
         self.writers = []
         self.q = timeoutqueue.TimeoutQueue()
 
-    def run(self):
+    def run(self, **kwargs):
         main.running = 1
-        # attempt to install a shutdown hook
-        #if hasattr(java.lang.Runtime, 'addShutdownHook'):
-        #    shutdownThread = java.lang.Thread(RunShutdown())
-        #    java.lang.Runtime.getRuntime().addShutdownHook(shutdownThread)
-
+        
         while 1:
             # run the delayeds
             timeout = None
@@ -208,6 +204,7 @@ class JMultiplexor:
             
             # check if we should shutdown
             if not main.running:
+                print "Shutting down jython event loop..."
                 for callback in main.shutdowns:
                     try:
                         callback()
