@@ -27,16 +27,13 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 
-import re
-import os
-import cStringIO
-import time
+import re, os, cStringIO, stat, time
 # syntax highlighting for Python source
 import py2html, PyFontify
 from twisted import copyright
 from twisted.python import usage
-
 from twisted.web import microdom as dom
+
 
 def findNodes(parent, matcher, accum=None):
     if accum is None:
@@ -92,7 +89,8 @@ class Cache:
         """
         # Evil is fun.
         if not '.' in name:
-            raise ValueError("Gimme more than just *%s* to work with, will ya?!?" % name)
+            raise ValueError("Gimme more than just *%s* to work with, "
+                             "will ya?!?" % name)
         name = '.*' + name.replace('.', '\.') + "\.html$"
         pat = re.compile(name)
         for k,v in self.stuff.items():
@@ -110,11 +108,15 @@ def writeNodeData(node, oldio):
             oldio.write(str(subnode.data))
         else:
             writeNodeData(subnode, oldio)
+
+
 def getNodeText(node):
     oldio = cStringIO.StringIO()
     writeNodeData(node, oldio)
     return oldio.getvalue()
+
 cols = 79
+
 
 def dircount(d):
     ents = d.split("/")
@@ -123,6 +125,7 @@ def dircount(d):
         if el and el != '.':
             cou += 1
     return cou
+
 
 class Walker:
     def __init__(self, templ, cache, ext):
@@ -149,18 +152,7 @@ class Walker:
         for linkrel, fname, fullpath, d in self.walked:
             i += 1
             self.percentdone((float(i) / len(self.walked)), fname)
-            try:
-                document = dom.parse(open(fullpath))
-            except dom.MismatchedTags, e:
-                print "%s:%s:%s: begin mismatched tags <%s>/</%s>" % (e.filename, e.begLine, e.begCol, e.got, e.expect)
-                print "%s:%s:%s: end mismatched tags <%s>/</%s>" % (e.filename, e.endLine, e.endCol, e.got, e.expect)
-                continue
-            except dom.ParseError, e:
-                print e
-                continue
-            template = self.templ.cloneNode(1)
-            munge(document, template, linkrel, d, fullpath, self.ext, self.cache)
-            template.writexml(open(fname+self.ext, 'wb'))
+            doFile(fullpath, d, self.ext, self.cache, self.templ)
         self.percentdone(1., "*Done*")
 
     def percentdone(self, percent, fname):
@@ -175,34 +167,32 @@ class Walker:
         sys.stdout.flush()
 
 
-
-def munge(document, template, linkrel, d, fullpath, ext, cache):
-    # relative links to html files
-    for node in (findElementsWithAttribute(template, "href")+
-                 findElementsWithAttribute(document, "href")):
+# relative links to html files
+def fixLinks(document, ext):
+    for node in findElementsWithAttribute(document, "href"):
         if not node.getAttribute("class") == "html-listing":
             href = node.getAttribute("href")
             if not (href.startswith("http://") or href.startswith("mailto:")):
                 fname = os.path.splitext(href)
                 if len(fname) == 2 and fname[1] == '.html':
-                    # print 'rel link', href
                     node.setAttribute("href", fname[0] + ext)
-    for node in findElementsWithAttribute(template, "class", "mtime"):
-        mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
-              os.stat(fullpath)
-        # print mtime
+
+
+def addMtime(document, fullpath):
+    mtime = os.stat(fullpath)[stat.ST_MTIME]
+    for node in findElementsWithAttribute(document, "class", "mtime"):
         node.appendChild(dom.Text(time.asctime(time.localtime(mtime))))
-    # things linked from the top
-    for node in (
-        findElementsWithAttribute(template,"src") +
-        findElementsWithAttribute(template,"href") +
-        findElementsWithAttribute(document, "fromtop")):
+
+def fixFromTop(nodes, linkrel):
+    for node in nodes:
         if node.hasAttribute('src'):
             attr = 'src'
         else:
             attr = 'href'
         node.setAttribute(attr, linkrel+node.getAttribute(attr))
 
+
+def fixAPI(document, cache):
     # API references
     for node in findElementsWithAttribute(document, "class", "API"):
         if len(node.childNodes) > 1:
@@ -216,6 +206,9 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
             node2.setAttribute("href", newref)
             node2.childNodes = node.childNodes
             node.childNodes = [node2]
+
+
+def fontifyPython(document):
     for node in findElementsWithAttribute(document, "class", "python"):
         if node.tagName == 'pre':
             newio = cStringIO.StringIO()
@@ -234,6 +227,8 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
             newel.setAttribute("class", "python")
             node.parentNode.replaceChild(newel, node)
 
+
+def addPyListings(document, d):
     for node in findElementsWithAttribute(document, "class", "py-listing"):
         fn = node.getAttribute("href")
         outfile = cStringIO.StringIO()
@@ -250,30 +245,29 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
         node.parentNode.replaceChild(newnode, node)
 
 
+def addHTMLListings(document, d):
     for node in findElementsWithAttribute(document, "class", "html-listing"):
         fn = node.getAttribute("href")
         val = open(os.path.join(d, fn)).read()
 
-        #somebody please let me know if there is a better way to convert from '<' to &lt;
+        # somebody please let me know if there is a better way to
+        # convert from '<' to &lt;
         import htmlentitydefs
-        reverseEntityDefs = {}
+        red = {}
         for key, value in htmlentitydefs.entitydefs.items():
-            reverseEntityDefs[value]=key
-        val = map(lambda x, red = reverseEntityDefs: red.has_key(x) and '&%s;' % red[x] or x, val)
-        val = string.join(val, '')
+            red[value]=key
+        val = ''.join([red.has_key(x) and '&%s;' or x for x in val])
 
-        text = str('<div class="py-listing">'
-                        '<pre class="htmlsource">%s</pre>'
-                        '<div class="py-caption">%s - '
-                        '<span class="py-filename">%s</span></div></div>' % (
+        text = ('<div class="py-listing">'
+                '<pre class="htmlsource">%s</pre>'
+                '<div class="py-caption">%s - '
+                '<span class="py-filename">%s</span></div></div>' % (
                         val, getNodeText(node), node.getAttribute('href')))
         newnode = dom.parseString(text).documentElement
         node.parentNode.replaceChild(newnode, node)
 
-    # the title
-    findNodesNamed(template, "title")[0].childNodes.extend(
-        findNodesNamed(document, 'title')[0].childNodes)
-    body = findNodesNamed(document, "body")[0]
+
+def generateToC(document):
     headers = findElements(document, 
                            lambda n,m=re.compile('h[23]$').match:m(n.nodeName))
     toc, level, id = '\n<ol>\n', 0, 0
@@ -291,13 +285,37 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
         id += 1
     toc += '</ul>\n' * level
     toc += '</ol>\n'
-    newnode = dom.parseString(toc).documentElement
+    return dom.parseString(toc).documentElement
+
+
+def putInToC(document, toc):
     h1 = findNodesNamed(document, 'h1')
     if h1:
         h1 = h1[0]
         parent = h1.parentNode
         i = parent.childNodes.index(h1)
-        parent.childNodes[i+1:i+1] = [newnode]
+        parent.childNodes[i+1:i+1] = [toc]
+
+
+def munge(document, template, linkrel, d, fullpath, ext, cache):
+    for doc in (template, document):
+        fixLinks(doc, ext)
+    addMtime(template, fullpath)
+    # things linked from the top
+    for list in (findElementsWithAttribute(template,"src"),
+                 findElementsWithAttribute(template,"href"),
+                 findElementsWithAttribute(document, "fromtop")):
+        fixFromTop(list, linkrel)
+    fixAPI(document, cache)
+    fontifyPython(document)
+    addPyListings(document, d)
+    addHTMLListings(document, d)
+    putInToC(document, generateToC(document))
+
+    # the title
+    findNodesNamed(template, "title")[0].childNodes.extend(
+        findNodesNamed(document, 'title')[0].childNodes)
+    body = findNodesNamed(document, "body")[0]
     tmplbody = findElementsWithAttribute(template, "class", "body")[0]
     tmplbody.childNodes = body.childNodes
     tmplbody.setAttribute("class", "content")
@@ -305,12 +323,21 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
 
 class Options(usage.Options):
     synopsis = "Usage: ./generate.py [options]"
-    optParameters = [["template", "t", "doc/howto/template.tpl", "The template to follow for generating content."],
-                     ["version", "v", str(copyright.version), "The version of API docs to link to"],
-                     ["apidir", "a", "doc/api", "The location of the API documentation generated by epydoc."],
+    optParameters = [["template", "t", "doc/howto/template.tpl",
+                      "The template to follow for generating content."],
+                     ["version", "v", str(copyright.version),
+                      "The version of API docs to link to"],
+                     ["apidir", "a", "doc/api",
+                      "The location of the API documentation generated by "
+                      "epydoc."],
                      ["docsdir", "d", "doc/howto"],
-                     ["ext", "e", ".xhtml", "The extension of output files (and thus what links are munged to)"],
-                     ["baseurl", "u", 'http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-%s/api/' % str(copyright.version),
+                     ["ext", "e", ".xhtml",
+                      "The extension of output files (and thus what links are "
+                      "munged to)"],
+                     ["baseurl", "u",
+                      'http://twistedmatrix.com/documents/'
+                       'TwistedDocs/TwistedDocs-%s/api/' %
+                       str(copyright.version),
                       "The URL that API-ref links are to use"]]
 
     def parseArgs(self, *files):
@@ -321,6 +348,23 @@ class Options(usage.Options):
                 self['docsdir'] = '.'
             if self['template'] == 'doc/howto/template.tpl':
                 self['template'] = 'template.tpl'
+
+
+def doFile(fn, docsdir, ext, c, templ):
+    try:
+        doc = dom.parse(open(fn))
+    except dom.MismatchedTags, e:
+        print ("%s:%s:%s: begin mismatched tags <%s>/</%s>" %
+               (e.filename, e.begLine, e.begCol, e.got, e.expect))
+        print ("%s:%s:%s: end mismatched tags <%s>/</%s>" %
+               (e.filename, e.endLine, e.endCol, e.got, e.expect))
+        return
+    except dom.ParseError, e:
+        print e
+        return
+    cn = templ.cloneNode(1)
+    munge(doc, cn, '', docsdir, fn, ext, c)
+    cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
 
 
 def main():
@@ -340,22 +384,11 @@ def main():
     c = Cache(opt['apidir'], opt['baseurl'])
     if opt['files']:
         for fn in opt['files']:
-            try:
-                doc = dom.parse(open(fn))
-            except dom.MismatchedTags, e:
-                print "%s:%s:%s: begin mismatched tags <%s>/</%s>" % (e.filename, e.begLine, e.begCol, e.got, e.expect)
-                print "%s:%s:%s: end mismatched tags <%s>/</%s>" % (e.filename, e.endLine, e.endCol, e.got, e.expect)
-                continue
-            except dom.ParseError, e:
-                print e
-                continue
-            cn = templ.cloneNode(1)
-            munge(doc, cn, '', opt['docsdir'], fn, ext, c)
-            cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
+            doFile(fn, opt['docsdir'], ext, c, templ)
     else:
         w = Walker(templ, c, ext)
         w.walkdir(opt['docsdir'])
-    print
+        print
 
 if __name__=='__main__':
     main()
