@@ -306,7 +306,7 @@ def processFile(spitter, fin):
 
 def convertFile(filename, spitterClass):
     fout = open(os.path.splitext(filename)[0]+".tex", 'w')
-    spitter = spitterClass(fout, os.path.dirname(filename), filename)
+    spitter = spitterClass(fout.write, os.path.dirname(filename), filename)
     fin = open(filename)
     processFile(spitter, fin)
     fin.close()
