@@ -110,7 +110,10 @@ class Connection(abstract.FileDescriptor,
         # there's another reference to it in the TCP/IP stack, e.g. if it was
         # was inherited by a subprocess. And we really do want to close the 
         # connection.
-        self.socket.shutdown(2)
+        try:
+            self.socket.shutdown(2)
+        except socket.error:
+            pass
         protocol = self.protocol
         del self.protocol
         del self.socket
