@@ -14,35 +14,37 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from twisted.python import failure
-import string
+from twisted.internet import interfaces
 
 def searchFileFor(file, name):
     fp = open(file)
     lines = fp.readlines()
     for line in lines:
-        idx = string.find(line, '#')
+        idx = line.find('#')
         if idx:
             line = line[:idx]
         if not line:
             continue
-        parts = string.split(line)
+        parts = line.split()
         if len(parts) != 3:
             continue
         if parts[2] == name:
             return parts[0]
         return None
 
+
 class Resolver:
+    __implements__ = (interfaces.IResolver,)
+
 
     def __init__(self, file='/etc/hosts'):
         self.file = file
 
-    def resolve(self, deferred, name, type=1, timeout=10):
-        if type != 1:
-            errback(failure.Failure(ValueError("type not supported")))
+    def lookupAddress(self, name, timeout=10):
         res = searchFileFor(self.file, name)
         if res is not None:
-            deferred.callback(res)
+            return defer.succeed([res])
         else:
-            deferred.errback(failure.Failure(IOError("address not found")))
+            return defer.fail(failure.Failure(IOError("address not found")))
