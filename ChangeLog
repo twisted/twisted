@@ -1,3 +1,10 @@
+2002-12-28  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/web/woven/guard.py: Newer, better wrappers for
+	authentication and session management.  In particular a nice
+	feature of this new code is automatic negotiation with browsers on
+	whether cookies are enabled or not.
+
 2002-12-27  Paul Swartz <z3p@twistedmatrix.com>
 
 	* bin/tkconch: initial commit of tkconch, a SSH client using Tkinter
