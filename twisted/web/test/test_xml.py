@@ -60,6 +60,16 @@ class MicroDOMTest(TestCase):
 	n = domhelpers.gatherTextNodes(l[0],1).replace('&nbsp;',' ')
 	self.assertEquals(n.find('insane'), -1)
 
+    def testUnEntities(self):
+	s = """
+		<HTML>
+		    This HTML goes between Stupid <=CrAzY!=> Dumb. 
+		</HTML>
+	    """
+	d = microdom.parseString(s, beExtremelyLenient=1)
+	n = domhelpers.gatherTextNodes(d)
+	self.assertNotEquals(n.find('>'), -1)
+
     def testEmptyError(self):
         self.assertRaises(sux.ParseError, microdom.parseString, "")
 
