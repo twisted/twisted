@@ -389,11 +389,11 @@ class Site(protocol.Factory):
             (string.split(request.uri,'?')[0])))
         return 'redirect!'
         
-    def getChildWithDefault(self, request):
+    def getChildWithDefault(self, pathEl, request):
         """Emulate a resource's getChild method.
         """
         request.site = self
-        return self.resource.getChildWithDefault(self, request)
+        return self.resource.getChildWithDefault(self, pathEl, request)
 
     def getResourceFor(self, request):
         """Get a resource for a request.
