@@ -143,17 +143,12 @@ class JellyTestCase(unittest.TestCase):
         test for all types currently supported in jelly
         """
         a = A()
-        # instance
         jelly.unjelly(jelly.jelly(a))
-        a = A()
-        jelly.unjelly(jelly.jelly(a.amethod)) # method
-        jelly.unjelly(jelly.jelly(afunc)) # function
-        jelly.unjelly(jelly.jelly([1,2,3])) # list
-        jelly.unjelly(jelly.jelly('test')) # string
-        jelly.unjelly(jelly.jelly(50.3)) # float
-        jelly.unjelly(jelly.jelly((1, 2, 3))) # tuple
-        # TODO: More thorough testing here.
-
+        jelly.unjelly(jelly.jelly(a.amethod))
+        items = [afunc, [1, 2, 3], 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
+        for i in items:
+            self.assertEquals(i, jelly.unjelly(jelly.jelly(i)))
+    
     def testSetState(self):
         global TupleState
         class TupleState:
