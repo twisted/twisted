@@ -139,7 +139,13 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     loaded = {}
     seenNames = {}
     paths = filter(os.path.isdir, map(cacheTransform, sys.path))
-
+    # special case for commonly used directories we *know* shouldn't be checked
+    # and really slow down mktap and such-like in real installations
+    for p in ("/usr/bin", "/usr/local/bin"):
+        try:
+            paths.remove(p)
+        except ValueError:
+            pass
     progress = 0.0
     increments = 1.0 / len(paths)
 
@@ -159,6 +165,8 @@ def getPluginFileList(debugInspection=None, showProgress=None):
             else:
                 raise
         else:
+            # filter out files we obviously don't need to check - ones with '.' in them
+            subDirs = filter(lambda s: "." not in s, subDirs)
             if not subDirs:
                 continue
             incr = increments * (1.0 / len(subDirs))
