@@ -6,7 +6,7 @@
 .Nd Conch SSH client
 .Sh SYNOPSIS
 .Nm conch
-.Op Fl AaCfINnsTtVvx
+.Op Fl AaCfINnrsTtVvx
 .Op Fl c Ar cipher_spec
 .Op Fl e Ar escape_char
 .Op Fl i Ar identity_file
@@ -176,6 +176,8 @@ port
 .Ar hostport
 from the client host.
 Only root can forward privieged ports.
+.It Fl s
+Reconnect to the server if the connection is lost.
 .It Fl s
 Invoke
 .Ar command
