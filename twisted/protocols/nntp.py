@@ -17,6 +17,10 @@
 """
 NNTP protocol support.
 
+Stability: semi-stable
+
+Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+
   The following protocol commands are currently understood:
     LIST        LISTGROUP                  XOVER        XHDR
     POST        GROUP        ARTICLE       STAT         HEAD

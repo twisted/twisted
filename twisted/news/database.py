@@ -14,6 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+News server backend implementations
+
+Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: A PyFramer-based backend and a new backend interface that is
+less NNTP specific
+"""
+
+
 from __future__ import nested_scopes
 
 from twisted.protocols.nntp import NNTPError
