@@ -169,6 +169,9 @@ defining an application object. That object will have uid and gid
 attributes. When running it (later we will see how) it will bind
 to ports, shed privileges and then run.</p>
 
+<p>After saving the example below as <q>finger.tac</q>, read on to find out
+how to run this code using the twistd utility.</p>
+
 <a href="listings/finger/finger11.py" class="py-listing">finger11.py</a>
 
 
@@ -185,8 +188,6 @@ application developer can concentrate on writing his networking code.
 
 <pre class="shell">
 root% twistd -ny finger.tac # just like before
-root% twistd -ny finger.tac  # also works
-root% twistd -ny finger.tac # usually a .tac is more of an app
 root% twistd -y finger.tac # daemonize, keep pid in twistd.pid
 root% twistd -y finger.tac --pidfile=finger.pid
 root% twistd -y finger.tac --rundir=/
