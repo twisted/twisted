@@ -23,7 +23,7 @@ for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision
     $LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
     echo "Lore-->HTML"
     $LORE -p --config template=$templ \
-    --config ext=.html --config version=$1 -l $(echo $doc | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/doc/core/howto/ \
+    --config ext=.html --config version=$1 -l $(echo $doc | sed -e 's/^doc\///' | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/core/howto/ \
     $doc/*.xhtml
     echo "Lore-->LaTeX"
     $LORE -p --output latex --config section $doc/*.xhtml
