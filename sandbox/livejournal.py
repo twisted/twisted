@@ -114,7 +114,7 @@ class LiveJournal:
                 f[1](e)
             self.onLogin = []
         d.addErrback(_)
-        
+
     def callRemote(self, name, **kw):
         if self.loggedIn:
             return self._callRemote(name, **kw)
@@ -129,7 +129,7 @@ class LiveJournal:
         data = urlencode(d)
         factory = LJFactory(self.host, self.url, data, 'TwistedLJ/0.1')
         return factory
-            
+
     def _callRemote(self, name, **kw):
         from twisted.internet import reactor
         factory = self._makeFactory(name, **kw)
@@ -173,7 +173,7 @@ def postFile(lj, fp, t=None):
 
 
 class SimpleProcessRunner(protocol.ProcessProtocol):
-    
+
     def __init__(self):
         self.d = defer.Deferred()
 
@@ -199,7 +199,7 @@ def prepareFile(lj, fname):
     d.addCallback(
 
     )
-  
+
 
 if __name__ == '__main__':
     from twisted.internet import reactor
