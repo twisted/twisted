@@ -75,6 +75,8 @@ class InputHandler(Controller):
         if not self.submodel or not self.model: return
         data = str(data)
         assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
+        # we're done handling the input in the request; prevent it getting handled again
+        del request.args[self.submodel]
         if data != self.view.getData():
             exec "self.model." + self.submodel + " = " + `data`
             self.model.notify({self.submodel: data})

@@ -12,6 +12,8 @@ document = parseString("<xml />")
 DOMWidgets are views which can be composed into bigger views.
 """
 
+DEBUG = 1
+
 class Widget(View):
     """A Widget wraps an object, its model, for display. The model can be a
     simple Python object (string, list, etc.) or it can be an instance of MVC.Model.
@@ -96,6 +98,9 @@ class Widget(View):
         return node
 
     def generateDOM(self, request, node):
+        if DEBUG:
+            template = node.toxml()
+            print template
         if self.tagName and str(node.tagName) != self.tagName:
             node = document.createElement(self.tagName)
         else:
@@ -188,7 +193,7 @@ class Input(Widget):
     def generateDOM(self, request, node):
         mVal = self.getData()
         if mVal:
-            self['value'] = mVal
+            self['value'] = str(mVal)
         return Widget.generateDOM(self, request, node)
 
 class CheckBox(Input):
@@ -240,7 +245,7 @@ class Anchor(Widget):
             href = href + '?' + params
         self['href'] = href
         node = Widget.generateDOM(self, request, node)
-        node.appendChild(document.createTextNode(self.getData()))
+        node.appendChild(document.createTextNode(str(self.getData())))
         return node
 
 class List(Widget):
