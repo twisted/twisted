@@ -13,9 +13,9 @@ class SplatFinished(Exception):
 class Splat:
     n = 0
 
-    def __init__(self, proto, row, col):
+    def __init__(self, proto, line, col):
         self.proto = proto
-        self.row = row
+        self.line = line
         self.col = col
 
     def iterate(self):
@@ -81,9 +81,9 @@ class Splat:
 
     def drawLines(self, s):
         lines = s.splitlines()
-        c = self.col - len(lines) / 2
+        c = self.col - len(lines)
         for l in lines:
-            self.proto.cursorPosition(self.row - len(l), c)
+            self.proto.cursorPosition(c, self.line - len(lines) / 2)
             self.proto.write(l)
             c += 1
 
@@ -97,10 +97,10 @@ class DemoHandler(insults.TerminalListener):
 
     def _iterate(self, proto):
         # Move to a random location on the screen
-        row = random.randrange(10) + 10
-        col = random.randrange(60) + 20
+        line = random.randrange(60) + 20
+        col = random.randrange(10) + 10
 
-        s = Splat(proto, row, col)
+        s = Splat(proto, line, col)
         c = task.LoopingCall(s.iterate)
         c.start(0.2).addErrback(lambda f: f.trap(SplatFinished)).addErrback(log.err)
 

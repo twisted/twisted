@@ -25,11 +25,11 @@ class TerminalListener:
 
 class ITerminal(components.Interface):
     def cursorDown(self, n=1):
-        """Move the cursor down n rows.
+        """Move the cursor down n lines.
         """
 
     def cursorUp(self, n=1):
-        """Move the cursor up n rows.
+        """Move the cursor up n lines.
         """
 
     def cursorForward(self, n=1):
@@ -40,8 +40,8 @@ class ITerminal(components.Interface):
         """Move the cursor left n columns.
         """
 
-    def cursorPosition(self, row, column):
-        """Move the cursor to the given row and column.
+    def cursorPosition(self, line, column):
+        """Move the cursor to the given line and column.
         """
 
     def cursorHome(self):
@@ -49,11 +49,11 @@ class ITerminal(components.Interface):
         """
 
     def index(self):
-        """Move the cursor down one row, performing scrolling if necessary.
+        """Move the cursor down one line, performing scrolling if necessary.
         """
 
     def reverseIndex(self):
-        """Move the cursor up one row, performing scrolling if necessary.
+        """Move the cursor up one line, performing scrolling if necessary.
         """
 
     def nextLine(self):
@@ -341,8 +341,8 @@ class ServerProtocol(protocol.Protocol):
     def cursorBackward(self, n=1):
         self.write('\x1b[%dD' % (n,))
 
-    def cursorPosition(self, row, column):
-        self.write('\x1b[%d;%dH' % (row, column))
+    def cursorPosition(self, line, column):
+        self.write('\x1b[%d;%dH' % (line, column))
 
     def cursorHome(self):
         self.write('\x1b[H')
