@@ -59,7 +59,7 @@ def getProcessOutput(executable, args=(), env={}, path='.', reactor=reactor):
                        full path should be used.
 
     @param args: the command line arguments to pass to the process; a
-                 sequence of strings. The first string should be the
+                 sequence of strings. The first string should *NOT* be the
                  executable's name.
 
     @param env: the environment variables to pass to the processs; a
