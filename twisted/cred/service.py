@@ -137,6 +137,8 @@ class Service(app.ApplicationService):
         to load your perspectives from somewhere else (e.g. LDAP or a
         database).  It is not recommended to call this directly, since
         getPerspectiveRequest provides management of caching perspectives.
+
+        @returntype: Deferred Perspective
         """
         return defer.fail("No such perspective %s" % name)
 
