@@ -917,6 +917,8 @@ class MyPerspective(pb.Perspective):
 
     __implements__ = pb.IPerspective,
 
+    loggedIn = loggedOut = False
+
     def __init__(self):
         pass
     
@@ -957,9 +959,8 @@ class NewCredTestCase(unittest.TestCase):
         self.assertEquals(self.realm.p.loggedIn, 1)
         self.assert_(isinstance(p, pb.RemoteReference))
         factory.disconnect()        
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+        for i in range(5):
+            reactor.iterate()
         self.assertEquals(self.realm.p.loggedOut, 1)
 
     def testBadLogin(self):
@@ -968,8 +969,10 @@ class NewCredTestCase(unittest.TestCase):
             d = factory.login(credentials.UsernamePassword("user1", "pass"), "BRAINS!")
             c = reactor.connectTCP("127.0.0.1", self.portno, factory)
             p = unittest.deferredError(d)
-            self.assert_(p.check("twisted.cred.error.UnauthorizedLogin"))
+            self.failUnless(p.check("twisted.cred.error.UnauthorizedLogin"))
             c.disconnect()
+            reactor.iterate()
+            reactor.iterate()
             reactor.iterate()
         from twisted.cred.error import UnauthorizedLogin
         log.flushErrors(UnauthorizedLogin)
