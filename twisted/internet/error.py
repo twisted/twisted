@@ -116,6 +116,9 @@ try:
         # return wrong exception, alas
         errno.EINVAL: ConnectionRefusedError,
     }
+    if hasattr(errno, "WSAECONNREFUSED"):
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
+        errnoMapping[errno.WSAENETUNREACH] = NoRouteError
 except ImportError:
     errnoMapping = {}
 
@@ -126,7 +129,6 @@ def getConnectError(e):
     except ValueError:
         return ConnectError(string=e)
 
-    number, string = e
     if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
         # only works in 2.2
         klass = UnknownHostError

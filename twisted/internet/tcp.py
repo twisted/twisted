@@ -363,7 +363,8 @@ class BaseClient(Connection):
         if platform.getType() == "win32":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
-                self.failIfNotConnected(error.getConnectError(e))
+                err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+                self.failIfNotConnected(error.getConnectError((err, os.strerror(err))))
                 return
 
         try:
