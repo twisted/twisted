@@ -246,3 +246,4 @@ bool = bool
 dict = dict
 StopIteration = StopIteration
 iter = iter
+isinstance = isinstance
