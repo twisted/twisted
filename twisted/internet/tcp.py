@@ -179,24 +179,22 @@ class Connection(abstract.FileDescriptor):
         self.socket.setblocking(0)
         self.fileno = skt.fileno
         self.protocol = protocol
-        
-    def canStartTLS(self):
-        return bool(SSL)
 
-    def startTLS(self, ctx):
-        if not SSL:
-            raise RuntimeException, "No SSL support available"
-        assert not self.TLS
+    if SSL:
+        __implements__ = __implements__ + (interfaces.ITLSTransport,)
 
-        self._startTLS()
-        self.socket = SSL.Connection(ctx.getContext(), self.socket)
-        self.fileno = self.socket.fileno
+        def startTLS(self, ctx):
+            assert not self.TLS
 
-    def _startTLS(self):
-        self.TLS = 1
-        class TLSConnection(_TLSMixin, self.__class__):
-            pass
-        self.__class__ = TLSConnection
+            self._startTLS()
+            self.socket = SSL.Connection(ctx.getContext(), self.socket)
+            self.fileno = self.socket.fileno
+
+        def _startTLS(self):
+            self.TLS = 1
+            class TLSConnection(_TLSMixin, self.__class__):
+                pass
+            self.__class__ = TLSConnection
 
     def doRead(self):
         """Calls self.protocol.dataReceived with all available data.

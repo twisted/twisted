@@ -896,12 +896,7 @@ class ITCPTransport(ITransport):
     def getPeer(self):
         """Returns tuple ('INET', host, port)."""
     
-    def canStartTLS(self):
-        """
-        Returns a boolean indicating whether a call to startTLS is likely to
-        be successful.
-        """
-    
+class ITLSTransport(ITCPTransport):
     def startTLS(self, contextFactory):
         """Initiate TLS negotiation
         
