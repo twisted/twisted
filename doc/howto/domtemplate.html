@@ -14,18 +14,17 @@
 
 <p>
 Most templating systems provide commands that you embed in the HTML to
-repeat elements, include fragments from other files, etc. This works
-fairly well for simple constructs and people tend to get a false sense of
-simplicity from this. However, as soon as the programmer wants to make
+repeat elements or include fragments from other files. This works
+fairly well for simple constructs; however, as soon as the programmer wants to make
 the logic even slightly more complicated, the templating system must be
-bent and abused in ways it was never meant to be used.
+bent in ways it was never meant to be used.
 </p>
 
 <p>
 The theory behind DOMTemplate is that Python code, rather than special
 syntax in the HTML template, should be used to manipulate the structure of
-the HTML. DOMTemplate uses the DOM, a w3c standard tree-based
-representation of an HTML document that provides an API that allows you
+the HTML. DOMTemplate uses the Document Object Model (DOM), a w3c standard tree-based
+representation of an HTML document. The DOM provides an API that allows you
 to traverse nodes in the tree, examine their attributes, move, add, and
 delete them. For more information on using DOM in Python, see 
 <a href="http://python.org/doc/lib/module-xml.dom.html">The xml.dom module documentation</a>.
@@ -45,41 +44,82 @@ twistd -f web.tap
 <p>
 Once you do this you should be able to throw any files in ~/public_html, and they'll be
 served on localhost:8080. Twisted Web also supports a number of special script types;
-the one we'll be using here is an .rpy, or Resorce Script.
+the one we'll be using here is an .rpy, or Resource Script.
 </p>
 
 <p>
-A Resource script is simply a python file ending with the extension '.rpy',
+A Resource Script is simply a python file ending with the extension '.rpy',
 which is required to create an instance of a (subclass of) a
 twisted.web.resource.Resource. The Resource subclass we'll be using in this
 example is, of course, DOMTemplate.
 </p>
 
+<p>
+Make sure the TwistedQuotes directory is on your PYTHONPATH, put webquotes.rpy
+and WebQuotes.html in your ~/public_html directory, and you are ready to go.
+</p>
+
 <h2>Getting To It</h2>
 
-<p> A DOMTemplate subclass must do two things: specify a template, and indicate
-which elements it is interested in, so it can process their respective Nodes
-when they are found in the template. The first simply requires a 'template'
-attribute to be a string of the (valid XML) template. To accomplish the second,
-we define the 'getTemplateMethods' method in our DOMTemplate subclass. This
-method is expected to return a list of dicts; there are a number of things that
-the dict can contain. The one thing that is required is a 'method' key, whose
-value must be a method that takes (request, node) as its arguments. You must
-have at least one other item with key 'class', 'id', or 'tag'; whenever a
-class, id, or tag is found with the value of what you specified in the dict,
-the associated method will be called to process that Node.  </p>
+<p>
+There are three files involved in this example; webquoteresource.py, WebQuotes.html, 
+and webquotes.rpy. webquoteresource.py is a normal python module and contains
+the class definition which will be used, a DOMTemplate subclass. WebQuotes.html is 
+placed in the web directory and is looked up at runtime by the DOMTemplate machinery. 
+It is converted into a DOM tree which is iterated during page rendering. Finally, 
+webquotes.rpy is placed in the web directory; each time the URL is visited, the file is
+executed; it imports webquoteresource.QuoteResource and instanciates it. This instance 
+is asked to render the page.
+</p>
+
+<h3>webquoteresource.py</h3>
 
 <p>
-In our example we associate the method 'getTitle' with all
-nodes with class="title" or id="title", and 'getQuote' with all nodes with class="quote". We do this
-with the list <code class="python">[{'class': 'title', 'id': 'title', 'method': self.getTitle},
-{'class': 'quote', 'method': self.getQuote}]</code>
-
+A DOMTemplate subclass must do two things: specify a template, and provide
+methods to handle specific nodes in the template. The first simply requires either a
+'template' attribute, which should be a string, or a 'templateFile' attribute, which should
+be a file name, specifying the XHTML template. To accomplish the second,
+we define methods with the prefix 'factory_' in our subclass. When the template is
+rendered, DOMTemplate will look for the 'view' attribute on any HTML node. If one
+is found, the corresponding factory method will be called to handle the node.
 </p>
 
 <p>
 <a href="listings/TwistedQuotes/webquote.rpy" class="py-listing">Listing 1:
 webquote.rpy: Twisted Quotes Web Interface</a>
+</p>
+
+<h3>WebQuotes.html</h3>
+
+<p>
+In our example template, we insert a 'view' attribute onto the &lt;title&gt; node with the value
+'getTitle'. We also insert a view attribute on a &lt;h1&gt; node with the value 'getTitle';
+this shows the ability of DOMTemplate to reuse functionality while applying formatting 
+defined by the template to the output. We also insert a 'view' attribute onto a &lt;pre&gt;
+node with the value 'getTitle'. This is where the real action will take place.
+</p>
+
+<p>
+When the DOM is iterated and nodes with view attributes are found, DOMTemplate will
+look in the instance's namespace for a method with the corresponding name, prefixed
+by 'factory_'.
+</p>
+
+<a href="listings/TwistedQuotes/WebQuotes.html" class="py-listing">Listing 2:
+WebQuotes.html: Twisted Quotes Web Template</a>
+</p>
+
+<h3>webquote.rpy</h3>
+
+<p>
+Finally, we need an rpy file in the web directory that twisted can find and execute.
+This is simply a matter of importing our module, instanciating our class, and assigning
+the instance to a variable named 'resource'. Twisted will discover this instance
+and call 'render' on it, causing the DOMTemplate to be rendered.
+</p>
+
+<a href="listings/TwistedQuotes/webquote.rpy" class="py-listing">Listing 3:
+webquote.rpy: Twisted Quotes Web Resource</a>
 </p>
 
 <p>
