@@ -17,7 +17,7 @@
 
 import types
 
-from twisted.python import components, mvc
+from twisted.python import components, mvc, reflect
 
 
 WModel = mvc.Model
@@ -47,6 +47,10 @@ class ListModel:
     def setData(self, data):
         setattr(self.parent, self.name, data)
 
+    def __repr__(self):
+        myLongName = reflect.qual(self.__class__)
+        return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
+                                                            id(self), self.orig)
 
 # pyPgSQL returns "PgResultSet" instances instead of lists, which look, act
 # and breathe just like lists. pyPgSQL really shouldn't do this, but this works
@@ -80,6 +84,10 @@ class DictionaryModel:
     def setData(self, data):
         setattr(self.parent, self.name, data)
 
+    def __repr__(self):
+        myLongName = reflect.qual(self.__class__)
+        return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
+                                                            id(self), self.orig)
 
 class Wrapper:
     """
@@ -105,6 +113,10 @@ class Wrapper:
     def setData(self, data):
         self.parent.setSubmodel(self.name, data)
 
+    def __repr__(self):
+        myLongName = reflect.qual(self.__class__)
+        return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
+                                                            id(self), self.orig)
 
 from twisted.internet import defer
 
