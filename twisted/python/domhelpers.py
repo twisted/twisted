@@ -22,4 +22,5 @@
 from twisted.web.domhelpers import *
 
 import warnings
-warnings.warn("Use twisted.web.domhelpers - twisted.python.domhelpers is deprecated.", stacklevel=2)
+warnings.warn("Use twisted.web.domhelpers - twisted.python.domhelpers is "
+              "deprecated.", DeprecationWarning, stacklevel=2)
