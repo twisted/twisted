@@ -557,7 +557,7 @@ class InstallDebs(Transaction):
         for file in os.listdir('%(rel)s/debian-%(ver)s/' % vars()):
             if file == 'woody':
                 continue
-            sh("cp %(rel)s/debian-%(ver)s/*twisted* %(target)s/" % vars())
+            sh("cp %(rel)s/debian-%(ver)s/%(file)s %(target)s/" % vars())
         sh("cp %(rel)s/debian-%(ver)s/woody/* %(target)s/woody/" % vars())
 
     def undoIt(self, opts, fail):
