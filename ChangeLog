@@ -1,3 +1,9 @@
+2003-06-05  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_dirdbm.py (DirDbmTestCase.testModificationTime):
+	dodge a kernel bug that lets mtime get skewed from time(), causing
+	an occasional test failure
+
 2003-06-03  Jp Calderone    <exarkun@twistedmatrix.com>
 
 	* twisted/__init__.py twisted/internet/app.py
