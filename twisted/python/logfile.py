@@ -59,7 +59,11 @@ class BaseLogFile:
             self._file = open(self.path, "w+")
         # set umask to be same as original log file
         if self.defaultMode is not None:
-            os.chmod(self.path, self.defaultMode)
+            try:
+                os.chmod(self.path, self.defaultMode)
+            except OSError:
+                # Probably /dev/null or something?
+                pass
     
     def __getstate__(self):
         state = self.__dict__.copy()
