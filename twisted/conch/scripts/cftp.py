@@ -117,21 +117,22 @@ class StdioClient(basic.LineReceiver):
 
     def connectionMade(self):
         self.client.realPath('').addCallback(self._cbSetCurDir)
-        if self.file:
-            self.transport.stopReading()
 
     def _cbSetCurDir(self, path):
         self.currentDirectory = path
         self._newLine()
 
     def lineReceived(self, line):
-        log.msg('got line "%s"' % repr(line))
+        if self.client.transport.localClosed:
+            return
+        log.msg('got line %s' % repr(line))
         line = line.lstrip()
         if not line:
             self._newLine()
             return
         if self.file and line.startswith('-'):
             self.ignoreErrors = 1
+            line = line[1:]
         else:
             self.ignoreErrors = 0
         if ' ' in line:
@@ -140,6 +141,7 @@ class StdioClient(basic.LineReceiver):
         else:
             command, rest = line, ''
         command = command.upper()
+        log.msg('looking up cmd %s' % command)
         f = getattr(self, 'cmd_%s' % command, None)
         if f is not None:
             d = defer.maybeDeferred(f, rest)
@@ -151,6 +153,8 @@ class StdioClient(basic.LineReceiver):
             self._newLine()
 
     def _newLine(self):
+        if self.client.transport.localClosed:
+            return
         self.transport.write(self.ps)
         self.ignoreErrors = 0
         if self.file:
@@ -158,17 +162,18 @@ class StdioClient(basic.LineReceiver):
             if not l:
                 self.client.transport.loseConnection()
             else:
-                self.lineReceived(l)
+                self.transport.write(l)
+                self.lineReceived(l.strip())
 
     def _cbCommand(self, result):
         if result is not None:
             self.transport.write(result)
             if not result.endswith('\n'):
                 self.transport.write('\n')
-        if not self.client.transport.localClosed:
-            self._newLine()
+        self._newLine()
 
     def _ebCommand(self, f):
+        log.msg(f)
         e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError, IOError)
         if e == NotImplementedError:
             self.transport.write(self.cmd_HELP(''))
@@ -180,6 +185,7 @@ class StdioClient(basic.LineReceiver):
                     (f.value.errno, f.value.strerror))
         if self.file and not self.ignoreErrors:
             self.client.transport.loseConnection()
+        self._newLine()
 
     def cmd_CD(self, path):
         if not path.endswith('/'):
@@ -319,6 +325,7 @@ class StdioClient(basic.LineReceiver):
             glob = 1
         else:
             glob = 0
+        log.msg(str((fullPath, head, tail, verbose, tail, glob)))
         if tail and not glob: # could be file or directory
            # try directory first
            d = self.client.openDirectory(fullPath)
@@ -433,22 +440,6 @@ class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
         self.openChannel(SSHSession())
 
-class FromFile(abstract.FileDescriptor):
-    def __init__(self, fileno, protocol):
-        abstract.FileDescriptor.__init__(self)
-        self.fileno = lambda: fileno
-        fdesc.setNonBlocking(self.fileno())
-        self.protocol = protocol
-        self.startReading()
-        self.writer = stdio.StandardIOWriter()
-        self.write = self.writer.write
-        self.closeStdin = self.writer.loseConnection
-        self.connectionLost = self.protocol.connectionLost
-        self.protocol.makeConnection(self)
-
-    def doRead(self):
-        fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
-
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
@@ -468,15 +459,12 @@ class SSHSession(channel.SSHChannel):
         self.client = filetransfer.FileTransferClient()
         self.client.makeConnection(self)
         self.dataReceived = self.client.dataReceived
+        f = None
         if self.conn.options['batchfile']:
-            f = self.conn.options['batchfile']
-            if f == '-':
-                fileno = 0
-            else:
-                fileno = open(f, 'r').fileno()
-            self.stdio = FromFile(fileno, StdioClient(self.client))
-        else:
-            self.stdio = stdio.StandardIO(StdioClient(self.client))
+            fn = self.conn.options['batchfile']
+            if fn != '-':
+                f = file(fn)
+        self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
     def extReceived(self, t, data):
         if t==connection.EXTENDED_DATA_STDERR:

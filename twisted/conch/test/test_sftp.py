@@ -14,11 +14,12 @@ from twisted.conch.scripts import cftp
 from twisted.conch.ssh import filetransfer, session
 from twisted.protocols import loopback
 from twisted.internet import defer, reactor, protocol
-from twisted.python import components, log
+from twisted.internet.utils import getProcessOutputAndValue
+from twisted.python import components, log, failure
 from twisted.test import test_process
 
 import test_conch
-import sys, os, os.path, time
+import sys, os, os.path, time, tempfile
 
 class FileTransferTestAvatar(avatar.ConchUser): 
 
@@ -385,7 +386,78 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.failUnlessEqual(lsRes, ['testfile2'])
         self.failIf(self._getCmdResult('rename testfile2 testfile1'))
 
-#class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
+class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
+
+    def setUp(self):
+        SFTPTestBase.setUp(self)
+        open('dsa_test.pub','w').write(test_conch.publicDSA_openssh)
+        open('dsa_test','w').write(test_conch.privateDSA_openssh)
+        os.chmod('dsa_test', 33152)
+        open('kh_test','w').write('localhost '+test_conch.publicRSA_openssh)
+
+        test_conch.theTest = self
+        realm = FileTransferTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(test_conch.ConchTestPublicKeyChecker())
+        fac = test_conch.SSHTestFactory()
+        fac.portal = p
+        self.fac = fac
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        port = self.server.getHost().port
+        import twisted
+        twisted_path = os.path.dirname(twisted.__file__)
+        cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
+        self.cmd = ('%s -p %i -l testuser '
+                    '--known-hosts kh_test '
+                    '--user-authentications publickey '
+                    '--host-key-algorithms ssh-rsa '
+                    '-K direct '
+                    '-i dsa_test '
+                    '-a --nocache '
+                    '-v -b %%s localhost') % (cftp_path, port)
+
+    def _getBatchOutput(self, f):
+        fn = tempfile.mktemp()
+        open(fn, 'w').write(f)
+        l = []
+        cmds = (self.cmd % fn).split()
+        d = getProcessOutputAndValue(sys.executable, cmds,)
+        d.setTimeout(10)
+        d.addBoth(l.append)
+        while not l:
+            reactor.iterate(0.1)
+            if hasattr(self.fac, 'proto'):
+                self.fac.proto.expectedLoseConnection = 1
+        os.remove(fn)
+        result = l[0]
+        if isinstance(result, failure.Failure):
+            raise result.value
+        else:
+            log.msg(result[1])
+            return result[0]
+
+    def testBatchFile(self):
+        cmds = """ls
+exit
+"""
+        res = self._getBatchOutput(cmds).split('\n')
+        self.failUnlessEqual(res[1:-2], ['testDirectory', 'testRemoveFile', 'testRenameFile', 'testfile1'])
+
+    def testError(self):
+        cmds = """chown 0 missingFile
+pwd
+exit
+"""
+        res = self._getBatchOutput(cmds)
+        self.failIf(res.find('sftp_test') != -1)
+
+    def testIgnoredError(self):
+        cmds = """-chown 0 missingFile
+pwd
+exit
+"""
+        res = self._getBatchOutput(cmds)
+        self.failIf(res.find('sftp_test') == -1)
 
 if not unix:
     TestOurServerOurClient.skip = "don't run on non-posix"
