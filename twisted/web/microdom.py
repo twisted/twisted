@@ -48,6 +48,7 @@ from twisted.python.compat import isinstance
 from types import ListType as NodeList
 from types import StringTypes, UnicodeType
 import sys
+dictsAreNotSequences=0
 try:
     'x' in {}
 except TypeError:
