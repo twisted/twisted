@@ -38,8 +38,8 @@ just document them here.  They are:</p>
 
   <dd><p>in which the Perspective keeps a list of clients instead of a
      single one.  The clients all share this Perspective, the actions
-     of any may effect the perspective for all.  (Seen in <span class=
-     "API" >twisted.manhole</span>.)</p></dd>
+     of any may effect the perspective for all.  (Seen in <code class=
+     "API" >twisted.manhole</code>.)</p></dd>
      
   <dt><a href="#anonymous">Anonymous Clients</a></dt>
   <dd><p>where any number of clients may connect to the service using
@@ -48,8 +48,8 @@ just document them here.  They are:</p>
      persist.</p></dd>
 </dl>
 
-<p class="doIt">explain or point to how clients get attached to
-perspectives (pb.connect, guard(?)).</p>
+<div class="doit"><p>explain or point to how clients get attached to
+perspectives (pb.connect, guard(?)).</p></div>
 
 <h2 id="clientless">Clientless Perspective</h2>
 
@@ -94,7 +94,7 @@ the single-client limit in a different manner:</p>
 
 <p>In fact, it turns out to be hard to kick a client off a Perspective, because
 there's no way you can force them to lose the reference they hold.  The best
-you can do is define a "goodbye" method on the client interface and hope
+you can do is define a <q>goodbye</q> method on the client interface and hope
 they honor and implement it correctly.  If the client is talking to you over
 a transport (as is the case with Perspective Broker), you can kick them off
 somewhat forcibly by closing the transport, but this is bad practice for
@@ -162,7 +162,4 @@ how you're using this code!  Questions, comments, reservations?
 Please send them to <a href= "mailto:twisted-python@twistedmatrix.com"
 >twisted-python@twistedmatrix.com</a>.</p>
 
-<hr />
-<!-- $Id -->
-<!-- hhmts start -->Last modified: Mon Apr 14 20:49:19 PDT 2003 <!-- hhmts end -->
 </body> </html>
