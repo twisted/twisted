@@ -131,14 +131,6 @@ class Connection(tcp.Connection):
             self.startReading()
             return None # don't close socket just yet
     
-    def _closeSocket(self):
-        # For some reason, SSL.Connection's shutdown() method doesn't take a parameter
-        try:
-            self.socket.shutdown()
-        except:
-            deferr.log()
-            
-    
     def doRead(self):
         """See tcp.Connection.doRead for details.
         """
