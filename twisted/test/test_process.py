@@ -25,11 +25,12 @@ import cStringIO, gzip, os, popen2, time, sys
 
 # Twisted Imports
 from twisted.internet import process, main
+from twisted.python import util, runtime
 
 s = "there's no place like home!\n" * 3
 
 
-class ProcessTestCase(unittest.TestCase):
+class PosixProcessTestCase(unittest.TestCase):
     """Test running processes."""
     
     def testProcess(self):
@@ -56,5 +57,32 @@ class ProcessTestCase(unittest.TestCase):
         self.assertEquals(err, f.getvalue())
 
 
-if os.name != 'posix':
-    del ProcessTestCase
+class Win32ProcessTestCase(unittest.TestCase):
+    """Test process programs that are packaged with twisted."""
+    
+    def testStdinReader(self):
+        import win32api
+        from twisted.internet import win32
+        win32.install()
+        pyExe = win32api.GetModuleFileName(0)
+        errF = cStringIO.StringIO()
+        outF = cStringIO.StringIO()
+        scriptPath = util.sibpath(__file__, "process_stdinreader.py")
+        p = process.Process(pyExe, ["-u", scriptPath], None, None)
+        p.handleError = errF.write
+        p.handleChunk = outF.write
+        main.iterate()
+        
+        p.write("hello, world")
+        p.closeStdin()
+        while not p.closed:
+            main.iterate()
+        self.assertEquals(errF.getvalue(), "err\nerr\n")
+        self.assertEquals(outF.getvalue(), "out\nhello, world\nout\n")
+
+
+if runtime.platform.getType() != 'posix':
+    del PosixProcessTestCase
+elif runtime.platform.getType() != 'win32':
+    del Win32ProcessTestCase
+
