@@ -71,21 +71,73 @@ class GroupSession(gtk.GtkWindow):
     def __init__(self, groupName, im):
         self.groupName = groupName
         self.im = im
+
+        self.history = ['']
+        self.histpos = 0
+
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
-        self.set_title("%s - Instance Messenger" % self.im.name)
+        self.set_title("%s - Instance Messenger" % groupName)
         self.connect('destroy', self.leaveGroup)
         
-        self.vb = gtk.GtkVBox()
+        vb = gtk.GtkVBox()
+        hb = gtk.GtkHBox()
+        
         self.output = gtk.GtkText()
         self.output.set_word_wrap(gtk.TRUE)
-        self.vb.pack_start(gtkutil.scrollify(self.output), 1,1,1)
+        gtkutil.defocusify(self.output)
+        hb.pack_start(gtkutil.scrollify(self.output), 1,1,1)
+        
+        userlist = gtk.GtkCList(1, ["Users"])
+        userlist.set_shadow_type(gtk.SHADOW_OUT)
+        gtkutil.defocusify(userlist)
+        hb.pack_start(gtkutil.scrollify(userlist), gtk.TRUE, gtk.TRUE, 0)
 
+#        print self.im.remote.groups
+#        for group in self.im.remote.groups:
+#            if group.name == groupName:
+#                for member in group.members:
+#                    userlist.append_items([member.name])
+
+        self.userlist = userlist
+        
+        vb.pack_start(hb, 1,1,1)
         self.input = gtk.GtkEntry()
-        self.vb.pack_start(self.input,0,0,1)
+        vb.pack_start(self.input,0,0,1)
+        #took this out so I can check in and not be broken
+        #self.input.connect('key_press_event', self.processKey)
         self.input.connect('activate', self.sendMessage)
-        self.add(self.vb)
+        self.add(vb)
         self.show_all()
 
+    def processKey(self, entry, event):
+        if event.keyval == gtk.GDK.Up:
+            self.historyUp()
+            self.focusInput()
+        elif event.keyval == gtk.GDK.Down:
+            self.historyDown()
+            self.focusInput()
+
+    def focusInput(self):
+        self.input.grab_focus()
+
+    def historyUp(self):
+        if self.histpos > 0:
+            l = self.input.get_text()
+            if len(l) > 0 and l[0] == '\n': l = l[1:]
+            if len(l) > 0 and l[-1] == '\n': l = l[:-1]
+            self.history[self.histpos] = l
+            self.histpos = self.histpos - 1
+            self.input.set_text(self.history[self.histpos])
+
+
+    def historyDown(self):
+        if self.histpos < len(self.history) - 1:
+            l = self.input.get_text()
+            if len(l) > 0 and l[0] == '\n': l = l[1:]
+            if len(l) > 0 and l[-1] == '\n': l = l[:-1]
+            self.history[self.histpos] = l
+            self.histpos = self.histpos + 1
+            self.input.set_text(self.history[self.histpos])
 
     def leaveGroup(self, blargh):
         self.im.remote.leaveGroup(self.groupName)
@@ -93,6 +145,13 @@ class GroupSession(gtk.GtkWindow):
 
     def sendMessage(self, entry):
         val = entry.get_text()
+        if not val:
+            return
+        self.histpos = len(self.history) - 1
+        self.history[self.histpos] = val 
+        self.histpos = self.histpos + 1
+        self.history.append('')
+
         self.im.remote.groupMessage(self.groupName, val)
         self.output.insert_defaults("<<%s>> %s\n" % (self.im.name, val))
         entry.set_text("")
@@ -102,10 +161,15 @@ class GroupSession(gtk.GtkWindow):
 
     def memberJoined(self,member):
         self.output.insert_defaults("%s joined!\n" % member)
+        #self.userlist.append_items(member)
 
     def memberLeft(self,member):
         self.output.insert_defaults("%s left!\n" % member)
-        
+        #row = self.list.find_row_from_data(intern(contact))
+        #if row != -1:
+        #    self.list.remove(row)
+        #else:
+        #    print "uhh.. %s wasn't found." % member
 
 class MessageSent:
     def __init__(self, im, conv, mesg):
@@ -156,10 +220,12 @@ class ContactList(gtk.GtkWindow):
         vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
         
         addContactButton = gtkutil.cbutton("Add Contact", self.addContactWindow)
+        removeContactButton = gtkutil.cbutton("Remove Contact", self.removeContact)
         sendMessageButton = gtkutil.cbutton("Send Message", self.sendMessage)
         joinGroupButton = gtkutil.cbutton("Join Group", self.joinGroupWindow)
         hb = gtk.GtkHBox()
         hb.pack_start(addContactButton)
+        hb.pack_start(removeContactButton)
         hb.pack_start(sendMessageButton)
         hb.pack_start(joinGroupButton)
         
@@ -173,25 +239,30 @@ class ContactList(gtk.GtkWindow):
     def joinGroupWindow(self, bleh):
         JoinGroup(self.im)
 
+    def removeContact(self, blonk):
+        self.im.remote.removeContact(self.list.get_row_data(self.list.selection[0]))
+        self.list.remove(self.list.selection[0])
+
     def contactSelected(self, clist, row, column, event):
-        print 'event on',row
+        #print 'event on',row
         target = self.list.get_row_data(row)
         if event.type == gtk.GDK._2BUTTON_PRESS:
-            print 'Double Click on', target
+            #print 'Double Click on', target
             self.im.conversationWith(target)
 
     def sendMessage(self, blah):
-        print 'message send'
+        self.im.conversationWith(self.list.get_row_data(self.list.selection[0]))
+        #print 'message send'
 
     def changeContactStatus(self, contact, newStatus):
         row = self.list.find_row_from_data(intern(contact))
         r = [str(newStatus), contact]
         if row != -1:
-            print 'pre-existing row',row,contact
+            #print 'pre-existing row',row,contact
             self.list.remove(row)
             self.list.insert(row, r)
         else:
-            print 'new row',row,contact
+            #print 'new row',row,contact
             row = self.list.append(r)
         self.list.set_row_data(row, intern(contact))
 
@@ -218,7 +289,7 @@ class InstanceMessenger(pb.Referenced):
         self.remote = perspective
 
     def remote_receiveContactList(self,contacts):
-        print 'got contacts'
+        #print 'got contacts'
         self.cl = ContactList(self)
         for contact,status in contacts:
             self.cl.changeContactStatus(contact,status)
@@ -229,7 +300,7 @@ class InstanceMessenger(pb.Referenced):
         w.messageReceived(message)
 
     def remote_notifyStatusChanged(self,contact,newStatus):
-        print contact,"changed status to",newStatus
+        #print contact,"changed status to",newStatus
         self.cl.changeContactStatus(contact,newStatus)
 
 
