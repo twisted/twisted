@@ -226,7 +226,7 @@ class File(resource.Resource, styles.Versioned):
             if index:
                 return index.render(request)
     
-            dirListingPage = WidgetPage(DirectoryListing(self.path))
+            dirListingPage = widgets.WidgetPage(DirectoryListing(self.path))
             return dirListingPage.render(request)
 
         request.setHeader('accept-ranges','bytes')
