@@ -120,11 +120,11 @@ start-up. It might, or might not, stop the connection on application
 shut-down. (This limitation will be removed at some point, and guaranteed
 disconnection will be implemnted.)</p>
 
-<p>The last time of service in <code>twisted.application.internet</code>
-is <code>TimerService</code>. The constructor takes a period, a callable
-and optionally arguments and keyword arguments. The service, when
-it is running, will make sure the callable will be called every time
-the period elapses.</p>
+<p>The last service in <code>twisted.application.internet</code> is
+<code>TimerService</code>. The constructor takes a period, a callable
+and optionally arguments and keyword arguments. The service, when it
+is running, will make sure the callable will be called every time the
+period elapses.</p>
 
 <h2>String Ports</h2>
 
@@ -147,8 +147,8 @@ use Python as the configuration mini-language. This format is called
 <code>TAC</code> and traditionally files with this format have the extension
 <code>.tac</code>.</p>
 
-<p>TAC files expect a valid Python file, which constructs a variable
-named <code>application</code>. This variable will be taken the configuration
+<p>TAC files need to be valid Python files, which construct a variable
+named <code>application</code>. This variable will be the configuration
 object. The full power of Python is available, of course.</p>
 
 <p>Here's an example:</p>
