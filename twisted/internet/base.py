@@ -34,10 +34,11 @@ except ImportError:
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolver
-from twisted.internet.interfaces import IConnector
+from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer
 from twisted.python import threadable, log, failure, reflect
 from twisted.internet.defer import Deferred, DeferredList
+from twisted.persisted import styles
 
 
 def _nmin(a, b):
@@ -49,7 +50,10 @@ def _nmin(a, b):
 
 
 
-class DelayedCall:
+class DelayedCall(styles.Ephemeral):
+    
+    __implements__ = IDelayedCall
+    
     def __init__(self, time, func, args, kw, cancel, reset):
         self.time, self.func, self.args, self.kw = time, func, args, kw
         self.resetter = reset
@@ -100,6 +104,7 @@ class DelayedCall:
             func = reflect.safe_repr(self.func)
         return "<DelayedCall [%ds] called=%s cancelled=%s %s%s>" % (self.time - time(), self.called, self.cancelled, func,
                                                                     reflect.safe_repr(self.args))
+
 
 class ReactorBase:
     """Default base class for Reactors.
@@ -453,7 +458,7 @@ class BCFactory(ClientFactory):
         self.protocol = None
 
 
-class BaseConnector:
+class BaseConnector(styles.Ephemeral):
     """Basic implementation of connector.
 
     State can be: "connecting", "connected", "disconnected"
