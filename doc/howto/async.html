@@ -16,7 +16,10 @@
 
 <ol>
     <li>Handle each connection in a separate process</li>
-    <li>Handle each connection in a separate thread[<a href="#footnote1">1</a>]</li>
+    <li>Handle each connection in a separate thread<span class="footnote">There
+    are variations on this method, such
+    as a limited-size pool of threads servicing all connections, which are
+    essentially just optimizations of the same idea.</span></li>
     <li>Use non-blocking system calls to handle all connections
         in one thread.</li>
 </ol>
@@ -91,9 +94,5 @@ change the actions when receiving some responses, with no additional
 harness code.  The SMTP client implementation can be found in 
 <code>twisted/protocols/smtp.py</code>.</p>
 
-
-<p><a name="footnote1" />[1] There are variations on this method, such
-as a limited-size pool of threads servicing all connections, which are
-essentially just optimizations of the same idea.</p>
 
 </body></html>
