@@ -139,24 +139,38 @@ def isTestClass(testClass):
 def isTestCase(testCase):
     return isinstance(testCase, TestCase)
 
-def _runOneTest(testClass, testCase, method, runner):
-    """Run a single test"""
-        
-    # If the test has the todo flag set, then our failures and errors are
-    # expected.
-    todo = getattr(method, "todo", getattr(testCase, "todo", None))
-    if todo:
-        failure = EXPECTED_FAILURE
-        error = EXPECTED_FAILURE
-    else:
-        failure = FAILURE
-        error = ERROR
 
-    def runStage(stage, *args, **kwargs):
+class Tester:
+    """I contain all the supporting machinery for running a single test method.
+    """
+    
+    def __init__(self, testClass, testCase, method, runner):
+        # If the test has the todo flag set, then our failures and errors are
+        # expected.
+        self.todo = getattr(method, "todo", getattr(testCase, "todo", None))
+        self.skip = getattr(method, "skip", getattr(testCase, "skip", None))
+        if self.todo:
+            self.failure = EXPECTED_FAILURE
+            self.error = EXPECTED_FAILURE
+        else:
+            self.failure = FAILURE
+            self.error = ERROR
+        self.failures = []
+        self.runs = 0
+        self.testClass = testClass
+        self.testCase = testCase
+        self.method = method
+        self.runner = runner
+
+    def _runPhase(self, stage, *args, **kwargs):
+        """I run a single phase of the testing process. My job is to give
+        meaning to exceptions raised during the phase. I attach the results to
+        the instance member failures.
+        """
         try:
             stage(*args, **kwargs)
         except FAILING_EXCEPTION, e:
-            return (failure, sys.exc_info())
+            self.failures.append((self.failure, sys.exc_info()))
         except KeyboardInterrupt:
             raise
         except SkipTest, r:
@@ -165,45 +179,61 @@ def _runOneTest(testClass, testCase, method, runner):
                 reason = r.args[0]
             else:
                 reason = sys.exc_info()
-            return (SKIP, reason)
+            self.failures.append((SKIP, reason))
         except:
-            return (error, sys.exc_info())
-        return None
+            self.failures.append((self.error, sys.exc_info()))
 
-    def do(results, stage, *args, **kwargs):
-        result = runStage(stage, *args, **kwargs)
-        if result:
-            results.append(result)
+    def _main(self):
+        """I actually to the setUp and run the test. I only make sense inside
+        _runPhase.
+        """
+        if self.skip:
+            raise SkipTest, self.skip
+        self.testCase.setUp()
+        self.runner(self.method)
 
-    def main(testCase, method):
-        if getattr(method, "skip", None):
-            raise SkipTest, method.skip
-        if getattr(testCase, "skip", None):
-            raise SkipTest, testCase.skip
-        testCase.setUp()
-        runner(method)
+    def setUp_and_test(self): self._runPhase(self._main)
+    def tearDown(self): self._runPhase(self.testCase.tearDown)
 
-    testCase.caseMethodName = method.__name__
+    def cleanUp(self):
+        """I clean up after the test is run. This includes making sure there
+        are no pending calls lying around, garbage collecting and flushing
+        errors.
 
-    failures = []
-    do(failures, main, testCase, method)
-    do(failures, testCase.tearDown)
-    do(failures, reactorCleanUp)
+        This is all to ensure that any errors caused by this tests are caught
+        by this test.
+        """
+        self._runPhase(reactorCleanUp)
+        if gc: gc.collect()
+        for e in log.flushErrors():
+            self.failures.append((error, e))
+
+    def run(self): 
+        """I run a single test. I go through the process of setUp, test,
+        tearDown and clean up for a single test method. I store my results
+        in the class and return self.getResult().
+
+        @raise KeyboardInterrupt: If someone hits Ctrl-C
+        """
+        self.runs += 1
+        self.testCase.caseMethodName = self.method.__name__
+        self.setUp_and_test()
+        self.tearDown()
+        self.cleanUp()
+        return self.getResult()
+
+    def getResult(self):
+        """I return a tuple containing the first result obtained from the test.
+        If the test was successful, this is also the only result.
+        """
+        if self.runs > 0:
+            if not self.failures:
+                if self.todo: self.failures.append((UNEXPECTED_SUCCESS, self.todo))
+                else: self.failures.append((SUCCESS,))
+            return self.failures[0]
+        else:
+            raise ValueError, "Test has not been run yet, no results to get"
         
-    # garbage collect now, to make sure any Deferreds with pending
-    # errbacks are caught and counted against this test, not some later
-    # one.
-    if gc: gc.collect()
-
-    for e in log.flushErrors():
-        failures.append((error, e))
-        
-    if not failures:
-        if todo: failures.append((UNEXPECTED_SUCCESS, todo))
-        else: failures.append((SUCCESS,))
-
-    return failures[0]
-
 
 def getClassAdapter(klass, interfaceClass, default=None):
     adapterClass = components.getAdapterClassWithInheritance(klass, interfaceClass, default)
@@ -260,7 +290,8 @@ class SingletonRunner:
         testCase = self.testClass()
         method = getattr(testCase, self.methodName)
         output.reportStart(self.testClass, method)
-        results = _runOneTest(self.testClass, testCase, method, self.runTest)
+        tester = Tester(self.testClass, testCase, method, self.runTest)
+        results = tester.run()
         output.reportResults(self.testClass, method, *results)
 
 
@@ -296,7 +327,8 @@ class TestClassRunner:
         for methodName in self.methodNames:
             method = getattr(self.testCase, methodName)
             output.reportStart(self.testClass, method)
-            results = _runOneTest(self.testClass, self.testCase, method, self.runTest)
+            results = Tester(self.testClass, self.testCase,
+                             method, self.runTest).run()
             output.reportResults(self.testClass, method, *results)
     
 components.registerAdapter(TestClassRunner, TestCase, ITestRunner)
@@ -380,7 +412,7 @@ def extract_tb(tb, limit=None):
     l = traceback.extract_tb(tb, limit)
     myfile = __file__.replace('.pyc','.py')
     # filename, line, funcname, sourcetext
-    while (l[0][0] == myfile) and (l[0][2] in ('_runOneTest', 'runStage', 'main', 'runTest')):
+    while (l[0][0] == myfile) and (l[0][2] in ('_runPhase', '_main', 'runTest')):
         del l[0]
         
     if (l[-1][0] == myfile) and (l[-1][2] in _failureConditionals):

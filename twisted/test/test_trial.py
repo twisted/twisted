@@ -2,7 +2,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.10 $"[11:-2]
+__version__ = "$Revision: 1.11 $"[11:-2]
 
 from twisted.python.compat import *
 from twisted.python import reflect
@@ -13,13 +13,12 @@ import sys
 class TestTraceback(unittest.TestCase):
     def testExtractTB(self):
         """Making sure unittest doesn't show up in traceback."""
-        raise unittest.SkipTest, "This test broken by recent refactorings. May be invalid"
         suite = unittest.TestSuite()
         testCase = self.FailingTest()
         reporter = unittest.Reporter()
-        result = unittest._runOneTest(testCase.__class__, testCase,
-                                      testCase.__class__.testThatWillFail,
-                                      lambda x: x())
+        result = unittest.Tester(testCase.__class__, testCase,
+                                 testCase.__class__.testThatWillFail,
+                                 lambda x: x()).run()
         failType, (eType, eVal, tb) = result
         stackList = unittest.extract_tb(tb)
         self.failUnlessEqual(len(stackList), 1)
@@ -30,6 +29,7 @@ class TestTraceback(unittest.TestCase):
         def testThatWillFail(self):
             self.fail("Broken by design.")
 
+    testExtractTB.todo = "This test broken by recent refactorings. May be invalid"
 
 ###################
 # trial.remote
@@ -295,9 +295,9 @@ class TestTests(unittest.TestCase):
 
             reporter.start(1)
 
-            result = unittest._runOneTest(testCase.__class__, testCase,
-                                          getattr(testCase, method),
-                                          lambda x: x())
+            result = unittest.Tester(testCase.__class__, testCase,
+                                     getattr(testCase, method),
+                                     lambda x: x()).run()
             reporter.reportResults(testCase.__class__, getattr(self.Tests, method),
                                    *result)
             # TODO: verify that case.setUp == 1 and case.tearDown == 1
