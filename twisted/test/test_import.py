@@ -16,6 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.trial import unittest
+from twisted.python.runtime import platformType
+
 
 class AtLeastImportTestCase(unittest.TestCase):
 
@@ -41,13 +43,20 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.internet import tcp
         from twisted.internet import main
         from twisted.internet import app
-        # from twisted.internet import ssl
-        from twisted.internet import stdio
+        # from twisted.internet import ssl    
         from twisted.internet import abstract
-        from twisted.internet import process
         from twisted.internet import udp
         from twisted.internet import protocol
         from twisted.internet import defer
+
+    def test_unix(self):
+        """internet modules for unix."""
+        from twisted.internet import stdio
+        from twisted.internet import process
+        from twisted.internet import unix
+    
+    if platformType != "posix":
+        test_unix.skip = "UNIX-only modules"
     
     def test_spread(self):
         """Test importing spreadables
