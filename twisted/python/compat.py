@@ -158,10 +158,10 @@ except:
             iterable = _SequenceIterator(iterable)
         return _CompatIterator(iterable.__iter__())
 
-    def _iter_sentinel(callable, sentinel):
-        if not callable(callable):
+    def _iter_sentinel(fn, sentinel):
+        if not callable(fn):
             raise TypeError, 'iter(v, w): v must be callable'
-        return _CompatSentinelIterator(callable, sentinel)
+        return _CompatSentinelIterator(fn, sentinel)
 
     def iter(*args): 
         """
