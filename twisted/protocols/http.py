@@ -487,13 +487,14 @@ class Request:
         """
         if not self.startedWriting:
             self.startedWriting = 1
-            if self.clientproto != "HTTP/0.9":
+            version = self.clientproto
+            if version != "HTTP/0.9":
                 l = []
                 message = RESPONSES.get(self.code, "Unknown Status")
-                l.append('%s %s %s\r\n' % (self.clientproto, self.code, message))
+                l.append('%s %s %s\r\n' % (version, self.code, message))
                 # if we don't have a content length, we sent data in chunked mode,
                 # so that we can support pipelining in persistent connections.
-                if self.clientproto == "HTTP/1.1" and self.headers.get('content-length', None) is None:
+                if version == "HTTP/1.1" and self.headers.get('content-length', None) is None:
                     l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
                 for name, value in self.headers.items():
@@ -501,6 +502,7 @@ class Request:
                 for cookie in self.cookies:
                     l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
                 l.append("\r\n")
+                                
                 self.transport.write(string.join(l, ""))
             
             # if this is a "HEAD" request, we shouldn't return any data
@@ -575,6 +577,9 @@ class Request:
             return self.client[1]
         else:
             return None
+
+    def isSecure(self):
+        return (self.client[0] == 'SSL')
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
