@@ -24,11 +24,9 @@ API Stability: Semi-stable
 
 To do: 
   Suspend idle timeout while server is processing
-  Use IProducer/IConsumer
   Use an async message parser instead of buffering in memory
   Figure out a way to not queue multi-message client requests (Flow? A simple callback?)
   Clarify some API docs (Query, etc)
-  Use newcred
 """
 
 from __future__ import nested_scopes
@@ -39,11 +37,23 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
-from twisted.cred import identity, error, perspective
+from twisted.cred import perspective
 from twisted.python.components import implements
 from twisted.internet.interfaces import ITLSTransport
 
-import base64, binascii, operator, re, string, time, types, rfc822, random
+from twisted import cred
+import twisted.cred.error
+import twisted.cred.credentials
+
+import base64
+import binascii
+import operator
+import re
+import string
+import time
+import types
+import rfc822
+import random
 import sys
 
 try:
@@ -203,7 +213,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     __implements__ = (IMailboxListener,)
 
     # Capabilities supported by this server
-    CAPABILITIES = {}
+    CAPABILITIES = None
 
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
@@ -217,8 +227,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     # Mapping of tags to commands we have received
     tags = None
 
+    # The object which will handle logins for us
+    portal = None
+
     # The account object for this connection
     account = None
+    
+    # Logout callback
+    _onLogout = None
 
     # The currently selected mailbox
     mbox = None
@@ -235,23 +251,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     
     state = 'unauth'
 
-    def __init__(self, contextFactory = None):
+    def __init__(self, chal = None, contextFactory = None):
+        if chal is None:
+            chal = []
+        self.challengers = dict([(c.getName().upper(), c) for c in chal])
         self.challengers = {}
-        self.CAPABILITIES = self.CAPABILITIES.copy()
+        self.CAPABILITIES = {'AUTH': self.challengers.keys()}
         self.ctx = contextFactory
-
-    def registerChallenger(self, chal):
-        """Register a new form of authentication
-
-        Challengers registered here will be listed as available to the client
-        in the CAPABILITY response.
-
-        @type chal: Implementor of C{IServerAuthentication}
-        @param chal: The object to use to perform the client
-        side of this authentication scheme.
-        """
-        self.challengers[chal.getName().upper()] = chal
-        self.CAPABILITIES.setdefault('AUTH', []).append(chal.getName().upper())
 
     def connectionMade(self):
         self.setTimeout(self.timeOut)
@@ -265,6 +271,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     
     def connectionLost(self, reason):
         self.setTimeout(None)
+        if self._onLogout:
+            self._onLogout()
+            self._onLogout = None
 
     def timeoutConnection(self):
         self.sendLine('* BYE Autologout; connection idle too long')
@@ -388,10 +397,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def listCapabilities(self):
         caps = ['IMAP4rev1']
         for c, v in self.CAPABILITIES.items():
-            if v:
-                caps.extend([('%s=%s' % (c, cap)) for cap in v])
-            else:
+            if v is None:
                 caps.append(c)
+            elif len(v):
+                caps.extend([('%s=%s' % (c, cap)) for cap in v])
         return caps
 
     def unauth_CAPABILITY(self, tag, args):
@@ -432,41 +441,57 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if args not in self.challengers:
             self.sendNegativeResponse(tag, 'AUTHENTICATE method unsupported')
         else:
-            auth = self.challengers[args]
-            try:
-               challenge = auth.generateChallenge()
-            except Exception, e:
-                self.sendBadResponse(tag, 'Server error: ' + str(e))
-            else:
-                coded = base64.encodestring(challenge)[:-1]
-                self._pendingLiteral = defer.Deferred()
-                self.sendContinuationRequest(coded)
-                self._pendingLiteral.addCallback(self.__cbAuthChunk, auth, challenge, tag)
-                self._pendingLiteral.addErrback(self.__ebAuthChunk, tag)
+            self.authenticate(self.challengers[args](), tag)
 
-    def __cbAuthChunk(self, result, auth, savedState, tag):
+    def authenticate(self, chal, tag):
+        if self.portal is None:
+            self.sendNegativeResponse(tag, 'Temporary authentication failure')
+            return
+
+        try:
+            challenge = chal.getChallenge()
+        except Exception, e:
+            self.sendBadResponse(tag, 'Server error: ' + str(e))
+            chal.abort()
+        else:
+            coded = base64.encodestring(challenge)[:-1]
+            self._pendingLiteral = defer.Deferred()
+            self.sendContinuationRequest(coded)
+            self._pendingLiteral.addCallback(self.__cbAuthChunk, chal, tag)
+            self._pendingLiteral.addErrback(self.__ebAuthChunk, chal, tag)
+
+    def __cbAuthChunk(self, result, chal, tag):
         try:
             uncoded = base64.decodestring(result)
-        except TypeError:
+        except binascii.Error:
+            chal.abort()
             raise error.Unauthorized, "Malformed Response - not base64"
-        d = maybeDeferred(auth.authenticateResponse, savedState, uncoded)
-        d.addCallbacks(
+
+        chal.setResponse(uncoded)
+        self.portal.login(chal, None, IAccount).addCallbacks(
             self.__cbAuthResp,
             self.__ebAuthResp,
             (tag,), None, (tag,), None
         )
 
-    def __cbAuthResp(self, result, tag):
-        self.sendPositiveResponse(tag, 'Authentication successful')
+    def __cbAuthResp(self, (iface, avatar, logout), tag):
+        assert iface is IAccount, "IAccount is the only supported interface"
+        self.account = avatar
         self.state = 'auth'
-        self.account = result
+        self._onLogout = logout
+        self.sendPositiveResponse(tag, 'Authentication successful')
         self.setTimeout(self.POSTAUTH_TIMEOUT)
     
     def __ebAuthResp(self, failure, tag):
-        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+        if failure.check(cred.error.UnauthorizedLogin):
+            self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+        else:
+            self.sendBadResponse(tag, 'Server error')
+            log.err(failure)
     
-    def __ebAuthChunk(self, failure, tag):
+    def __ebAuthChunk(self, auth, failure, tag):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+        auth.abort()
 
     def unauth_STARTTLS(self, tag, args):
         if self.ctx and implements(self.transport, ITLSTransport):
@@ -492,29 +517,40 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """Lookup the account associated with the given parameters
 
         Override this method to define the desired authentication behavior.
+        
+        The default behavior is to defer authentication to C{self.portal}
+        if it is not None, or to deny the login otherwise.
 
         @type user: C{str}
         @param user: The username to lookup
 
         @type passwd: C{str}
         @param passwd: The password to login with
-
-        @rtype: C{Account}
-        @return: An appropriate account object, or None
         """
-        return None
+        if self.portal:
+            return self.portal.login(
+                cred.credentials.UsernamePassword(user, passwd),
+                None, IAccount
+            )
+        raise cred.error.UnauthorizedLogin()
 
-    def __cbLogin(self, account, tag):
-        if account is None:
-            self.sendNegativeResponse(tag, 'LOGIN failed')
+    def __cbLogin(self, (iface, avatar, logout), tag):
+        if iface is not IAccount:
+            self.sendBadResponse(tag, 'Server error')
+            log.err("__cbLogin called with %r, IAccount expected" % (iface,))
         else:
-            self.account = account
+            self.account = avatar
+            self._onLogout = logout
             self.sendPositiveResponse(tag, 'LOGIN succeeded')
             self.state = 'auth'
             self.setTimeout(self.POSTAUTH_TIMEOUT)
 
     def __ebLogin(self, failure, tag):
-        self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+        if failure.check(cred.error.UnauthorizedLogin):
+            self.sendNegativeResponse(tag, 'LOGIN failed')
+        else:
+            self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+            log.err(failure)
 
     def _parseMbox(self, name):
         try:
@@ -1292,13 +1328,13 @@ class IMAP4Client(basic.LineReceiver):
         return d
 
     def __cbContinueAuth(self, rest, scheme, secret):
-        auth = self.authenticators[scheme]
         try:
             chal = base64.decodestring(rest + '\n')
         except binascii.Error:
             # XXX - Uh
             self.transport.loseConnection()
         else:
+            auth = self.authenticators[scheme]
             chal = auth.challengeResponse(secret, chal)
             self.sendLine(base64.encodestring(chal))
 
@@ -2730,36 +2766,6 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
-
-class IServerAuthentication(components.Interface):
-    def getName(self):
-        """Return an identifier associated with this Authentication scheme.
-        
-        @rtype: C{str}
-        """
-
-    def generateChallenge(self):
-        """Create a challenge string
-
-        @rtype: C{str}
-        @return: A string representing the challenge
-        """
-
-    def authenticateResponse(self, challenge, response):
-        """Examine a challenge response for validity.
-
-        @type challenge: C{str}
-        @param challenge: The challenge string associated with this response
-
-        @type response: C{str}
-        @param response: The response from the client
-
-        @rtype: Any object implemtenting C{IAccount} or a C{Deferred}
-
-        @raise twisted.cred.error.Unauthorized: if the response is
-        incorrect.
-        """
-
 class IClientAuthentication(components.Interface):
     def getName(self):
         """Return an identifier associated with this authentication scheme.
@@ -2769,75 +2775,6 @@ class IClientAuthentication(components.Interface):
 
     def challengeResponse(self, secret, challenge):
         """Generate a challenge response string"""
-
-class CramMD5Identity(identity.Identity):
-    def setPassword(self, plaintext):
-        self.plaintext = plaintext
-
-    def challenge(self):
-        # The data encoded in the first ready response contains an
-        # presumptively arbitrary string of random digits, a timestamp, and
-        # the fully-qualified primary host name of the server.  The syntax of
-        # the unencoded form must correspond to that of an RFC 822 'msg-id'
-        # [RFC822] as described in [POP3].
-        #   -- RFC 2195
-        chal = '<%d.%d@%s>' % (random.randrange(0x7fffffff),
-                               time.time(), self.host)
-        return chal
-    
-    def verifyResponse(self, digest, response):
-        verify = util.keyed_md5(self.plaintext, response)
-        if verify == digest:
-            return self
-        raise error.Unauthorized, "Incorrect response"
-
-# Do these belong here?
-class CramMD5ServerAuthenticator:
-    # RFC 2195
-    __implements__ = (IServerAuthentication,)
-
-    def __init__(self, host, authorizer):
-        self.host = host
-        self.authorizer = authorizer
-
-    def getName(self):
-        return "CRAM-MD5"
-
-    def generateChallenge(self):
-        # The data encoded in the first ready response contains an
-        # presumptively arbitrary string of random digits, a timestamp, and
-        # the fully-qualified primary host name of the server.  The syntax of
-        # the unencoded form must correspond to that of an RFC 822 'msg-id'
-        # [RFC822] as described in [POP3].
-        #   -- RFC 2195
-        chal = '<%d.%d@%s>' % (random.randrange(0x7fffffff),
-                               time.time(), self.host)
-        return chal
-
-    def authenticateResponse(self, state, response):
-        parts = response.split(None, 1)
-        if len(parts) != 2:
-            raise error.Unauthorized, "Malformed Response - wrong number of parts"
-        name, digest = parts
-        
-        identity = self.authorizer.getIdentityRequest(name)
-        identity.addCallback(self.__cbIdentity, state, digest)
-        identity.addCallback(self.__cbVerified, name)
-        identity.addCallback(self.__cbPerspective)
-        return identity
-
-    def __cbIdentity(self, identity, state, digest):
-        d = identity.verifyResponse(digest, state)
-        return identity
-
-    def __cbVerified(self, identity, name):
-        d = identity.requestPerspectiveForKey('MessageStorage', name)
-        d.addCallback(lambda perspective: (identity, perspective))
-        return d
-    
-    def __cbPerspective(self, (identity, perspective)):
-        perspective.attached(self, identity)
-        return perspective
 
 class CramMD5ClientAuthenticator:
     __implements__ = (IClientAuthentication,)
@@ -3388,8 +3325,7 @@ __all__ = [
     'IllegalOperation', 'IllegalMailboxEncoding', 'IMailboxListener',
     'UnhandledResponse', 'NegativeResponse', 'NoSupportedAuthentication',
     'IllegalServerResponse', 'IllegalIdentifierError', 'IllegalQueryError',
-    'MismatchedNesting', 'MismatchedQuoting', 'IServerAuthentication',
-    'IClientAuthentication', 'CramMD5ServerAuthenticator',
+    'MismatchedNesting', 'MismatchedQuoting', 'IClientAuthentication',
     'CramMD5ClientAuthenticator', 'MailboxException', 'MailboxCollision',
     'NoSuchMailbox', 'ReadOnlyMailbox', 'IAccount', 'MemoryAccount',
     'IMailbox'

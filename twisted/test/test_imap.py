@@ -29,12 +29,18 @@ import os, sys, types
 
 from twisted.protocols.imap4 import MessageSet
 from twisted.protocols import imap4
+from twisted.protocols import smtp
 from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.python import util
-from twisted.cred import authorizer, service
-from twisted.internet.app import _AbstractServiceCollection # I don't feel like reimplementing this.
+from twisted.python import components
+
+from twisted import cred
+import twisted.cred.error
+import twisted.cred.checkers
+import twisted.cred.credentials
+import twisted.cred.portal
 
 def strip(f):
     return lambda result, f=f: f()
@@ -371,8 +377,8 @@ class Account(imap4.MemoryAccount):
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
-            return self.theAccount
-        return None
+            return imap4.IAccount, self.theAccount, lambda: None
+        raise cred.error.UnauthorizedLogin()
 
 class SimpleClient(imap4.IMAP4Client):
     def __init__(self, deferred):
@@ -436,9 +442,20 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
         self.loopback()
         
-        refCaps = self.server.CAPABILITIES.copy()
-        refCaps['IMAP4rev1'] = None
-        self.assertEquals(refCaps, caps)
+        self.assertEquals({'IMAP4rev1': None}, caps)
+    
+    def testCapabilityWithAuth(self):
+        caps = {}
+        self.server.CAPABILITIES['AUTH'].append('CRAM-MD5')
+        def getCaps():
+            def gotCaps(c):
+                caps.update(c)
+                self.server.transport.loseConnection()
+            return self.client.getCapabilities().addCallback(gotCaps)
+        self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals({'IMAP4rev1': None, 'AUTH': ['CRAM-MD5']}, caps)
     
     def testLogout(self):
         self.loggedOut = 0
@@ -887,31 +904,50 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         
         self.assertEquals(self.results, [0, 2])
 
-class DummyService(service.Service):
-    def __init__(self, authorizer):
-        service.Service.__init__(self, 'MessageStorage', authorizer=authorizer)
+class TestRealm:
+    theAccount = None
 
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        return imap4.IAccount, self.theAccount, lambda: None
+
+class TestChecker:
+    credentialInterfaces = (cred.credentials.IUsernamePassword,)
+
+    users = {
+        'testuser': 'secret'
+    }
+
+    def requestAvatarId(self, credentials):
+        if components.implements(credentials, cred.credentials.IUsernamePassword):
+            if credentials.username in self.users:
+                return defer.maybeDeferred(
+                    credentials.checkPassword, self.users[credentials.username]
+            ).addCallback(self._cbCheck, credentials.username)
+        raise NotImplementedError
+
+    def _cbCheck(self, result, username):
+        if result:
+            return username
+        raise cred.error.UnauthorizedLogin()
+    
 class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
     def setUp(self):
         IMAP4HelperMixin.setUp(self)
-        services = _AbstractServiceCollection()
-        auth = authorizer.DefaultAuthorizer(services)
-        service = DummyService(auth)
-        services.addService(service)
-        ident = imap4.CramMD5Identity('testuser', auth)
-        ident.setPassword('secret')
-        a = Account('testuser')
-        service.addPerspective(a)
-        ident.addKeyForPerspective(a)
-        auth.addIdentity(ident) 
+        
+        realm = TestRealm()
+        realm.theAccount = Account('testuser')
+        portal = cred.portal.Portal(realm)
+        portal.registerChecker(TestChecker())
+        self.server.portal = portal
 
-        sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com', auth)
+        self.server.challengers['CRAM-MD5'] = smtp.CramMD5ChallengeResponse
+        self.server.CAPABILITIES['AUTH'].append('CRAM-MD5')
+
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
 
         self.client.registerAuthenticator(cAuth)
-        self.server.registerChallenger(sAuth)
         self.authenticated = 0
-        self.account = a
+        self.account = realm.theAccount
 
     def testCramMD5(self):
         def auth():
