@@ -1,6 +1,7 @@
 
 import insults, recvline
 
+from twisted.python import log
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -303,6 +304,7 @@ class _SSHMixin:
         self.HEIGHT = HEIGHT
         self.recvlineClient = recvlineClient
         self.sshClient = sshClient
+        self.sshServer = sshServer
         self.clientTransport = clientTransport
         self.serverTransport = serverTransport
 
@@ -310,8 +312,8 @@ class _SSHMixin:
 
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
-            self.serverTransport.clearBuffer()
-            self.clientTransport.clearBuffer()
+            log.callWithContext({'system': 'serverTransport'}, self.serverTransport.clearBuffer)
+            log.callWithContext({'system': 'clientTransport'}, self.clientTransport.clearBuffer)
 
     def _test(self, s, lines):
         self.sshClient.write(s)
