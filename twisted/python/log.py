@@ -62,7 +62,7 @@ def callWithLogger(logger, func, *args, **kw):
         lp = '(buggy logPrefix method)'
         err(system=lp)
     try:
-        callWithContext({"system": lp}, func, *args, **kw)
+        return callWithContext({"system": lp}, func, *args, **kw)
     except:
         err(system=lp)
 
