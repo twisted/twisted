@@ -731,6 +731,10 @@ class ProcessStreamer:
             # keep clean exit from being logged
             self._protocol.resultDeferred.addErrback(lambda _: _.trap(error.ProcessDone))
 
+    def getPID(self):
+        """Return the PID of the process."""
+        return self._protocol.transport.pid
+
 
 class BufferedStream(object):
     """A stream which buffers its data to provide operations like
