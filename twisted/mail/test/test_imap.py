@@ -49,7 +49,7 @@ import twisted.cred.portal
 from twisted.test.proto_helpers import StringTransport
 
 try:
-    from ssl_helpers import ClientTLSContext, ServerTLSContext
+    from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     ClientTLSContext = ServerTLSContext = None
 

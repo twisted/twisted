@@ -38,7 +38,7 @@ from twisted.mail import imap4
 
 
 try:
-    from ssl_helpers import ClientTLSContext, ServerTLSContext
+    from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     ClientTLSContext = ServerTLSContext = None
 
