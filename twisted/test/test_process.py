@@ -665,6 +665,7 @@ if (runtime.platform.getType() != 'win32') or (not components.implements(reactor
 
 if runtime.platform.getType() == 'win32':
     ProcessTestCase.testEcho.im_func.todo = "goes into infinite loop in win32eventreactor :("
+    UtilTestCase.todo = "do not assume that platform retains 'executable' mode"
 
 if (not components.implements(reactor, interfaces.IReactorProcess)):
     ProcessTestCase.skip = skipMessage
