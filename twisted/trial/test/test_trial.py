@@ -1,9 +1,8 @@
 # -*- test-case-name: twisted.trial.test.test_trial -*-
-#
+
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-#
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
+
 
 from __future__ import nested_scopes
 
@@ -101,6 +100,10 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
     """
     """
     cpp = None
+
+    tci = property(lambda self: self.suite.children[0].testCaseInstance)
+    tm = property(lambda self: self.suite.children[0].children[0])
+    stdio = property(lambda self: self.tm.stderr + self.tm.stdout)
 
     def assertMethodsCalled(self, *methNames):
         for name in methNames:
@@ -219,16 +222,10 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assertSubstring(suppression.METHOD_WARNING_MSG, self.stdio)
 
     def testImportErrorsFailRun(self):
-        self.failIfImportErrors = False
-        modname = 'twisted.trial.test.importErrors'
-        if modname in sys.modules:
-            del sys.modules[modname]
-        assert_(modname not in sys.modules)
-        self.suite.addModule(modname)
-        assert_(modname in sys.modules)
+        self.suite.addModule('twisted.trial.test.importErrors')
         self.suite.run()
-        
-        failIf(itrial.ITestStats(self.suite).allPassed)
+        assertEqual(itrial.ITestStats(self.suite).allPassed, False)
+        self.failIfImportErrors = False
 
         
 FunctionalTest.timeout = 30.0

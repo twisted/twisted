@@ -8,8 +8,9 @@
 """
 Twisted Test Framework v2.0::
 
-    The Cadillac of Python Unittesting
-
+   'So you think you are strong because you can survive the
+   soft cushions. Well, we shall see. Biggles! Put her in
+   the Comfy Chair!'
 
 Author/Maintainer: Jonathan D. Simms U{slyphon@twistedmatrix.com<mailto:slyphon@twistedmatrix.com>}
 
@@ -134,25 +135,6 @@ changes in trial v2.0:
       This will cause the traceback at the DelayedCall's creation point to
       be printed along with the error.
       
-  B{Trial now supports doctests}
-  ------------------------------
-    To run doctests as part of your unittests: 
-      - either use an existing or create a standard test module 
-        (i.e. a file named test_*.py)
-      - create a top-level module sequence __doctests__, which should contain
-        either python modules, classes, or methodds, or fully-qualified names
-        of python objects as strings
-      - run trial as normal, and doctests will be run and treated the same as
-        unittests
-        
-    Limitations:
-      - skip, todo, timeout, and suppress attributes have no effect on 
-        doctests (this is because we are not running the tests ourselves, but
-        rather using the doctest module's runner)
-      - raising SkipTest or FailTest in a doctest is not supported, and its
-        behavior is undefined.
-      - all setUp/tearDown methods are ignored, even if the doctest is 
-        defined in a unittest.
 
   B{The trial script now accepts a --reporter option}
   ---------------------------------------------------
@@ -242,11 +224,6 @@ Trial's 'special' attributes:
      The timeout attribute also gives you the option of setting it to a tuple,
      (timeoutvalue, TimeoutExceptionClass, exception_arg) for more control over
      the type of exception and message delivered when the method times out.
-
-  5. If you don't want to or if you want to explicitly specify the
-     classes-to-be-run in a module, you should make a module-level sequence 
-     named __unittests__ that contains the classes and methods that are to 
-     be run by trial.
 
 
 Non-obvious rules

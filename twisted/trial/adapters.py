@@ -1,11 +1,4 @@
-# -*- test-case-name: twisted.trial.test.test_adapters -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
-#
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
-
-import types, os, os.path as osp
+import types
 from cStringIO import StringIO
 
 from twisted.trial import itrial, reporter
@@ -15,24 +8,6 @@ from twisted.internet import defer
 import zope.interface as zi
 
 HIDE_TRIAL_INTERNALS = reporter.HIDE_TRIAL_INTERNALS
-
-def _overrideMe(ignore):
-    raise NotImplementedError, "you need to set the .adapter attribute"
-
-class PersistentAdapterFactory(object):
-    """I keep track of adapters to interfaces, returning the existing instance
-    of an adapter for an original object if it exists, else, creating one
-    @note: you need to register an B{INSTANCE} of this class as an adapter, not
-    the B{CLASS ITSELF}!
-    """
-    adapter = _overrideMe
-
-    def __init__(self):
-        self.__registry = {}
-
-    def __call__(self, original):
-        return self.__registry.setdefault(original, self.adapter(original))
-
 
 # --- Some Adapters for 'magic' attributes ------------
 
@@ -167,103 +142,27 @@ def getModuleFromMethodType(obj):
 def getClassFromFQString(obj):
     return reflect.namedAny(obj)
 
-# -- traceback formatting ---------------------
+
+# -- traceback formatting
 
 def formatFailureTraceback(fail):
-    if not HIDE_TRIAL_INTERNALS:
-        return fail.getTraceback()
-    else:
+    if HIDE_TRIAL_INTERNALS:
         sio = StringIO()
         fail.printTraceback(sio)
-
-        if sio.getvalue().find(failure.EXCEPTION_CAUGHT_HERE) == -1:
-            return sio.getvalue()
-        else:
-            foundit = False
-            L = []
-            for line in sio.getvalue().split('\n'):
-                if not foundit and line.find(failure.EXCEPTION_CAUGHT_HERE) != -1:
-                    foundit = True
-                    continue
-
-                if not foundit:
-                    continue
-                else:
-                    L.append(line)
-
-            return "\n".join(L)
+        L = []
+        for line in sio.getvalue().split('\n'):
+            if (line.find(failure.EXCEPTION_CAUGHT_HERE) != -1) or L:
+                L.append(line)
+        return "\n".join(L[1:])
+    return fail.getTraceback()
 
 def formatMultipleFailureTracebacks(failList):
     if failList:
-        s = '\n'.join(["\n%s" % itrial.IFormattedFailure(fail)
+        s = '\n'.join(["%s\n\n" % itrial.IFormattedFailure(fail)
                        for fail in failList])
         return s
     return ''
 
 def formatTestMethodFailures(testMethod):
     return itrial.IFormattedFailure(testMethod.errors + testMethod.failures)
-
-# -- IErrorReport and IImportErrorReport -------
-
-from twisted.trial.reporter import DOUBLE_SEPARATOR, SUCCESS, SKIP
-from twisted.trial.reporter import UNEXPECTED_SUCCESS, WORDS
-
-def formatError(tm): # would need another adapter for tbformat='emacs'
-    ret = [DOUBLE_SEPARATOR,
-           '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
-                              itrial.IFQClassName(tm.klass))]
-
-    for msg in tm.skip, itrial.ITodo(tm.todo).msg:
-        if msg is not None:
-            ret.append(msg + '\n')
-
-    if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
-        return "%s\n%s" % ('\n'.join(ret),
-                             itrial.IFormattedFailure(tm.errors + tm.failures))
-    return '\n'.join(ret)
-    
-def trimFilename(name, N):
-    """extracts the last N path elements of a path and returns them
-    as a string, preceeded by an elipsis and separated by os.sep
-    """
-    # XXX: this function is *not* perfect
-    # if N > num path elements you still get an elipsis prepended
-    def _recurse(lst, pth):
-        head, tail = osp.split(pth)
-        lst.insert(0, tail)
-        if head and head != os.sep:
-            _recurse(lst, head)
-        else:
-            return lst
-
-    L = []
-    _recurse(L, name)
-
-    if len(L) <= N:
-        return "%s" % (os.sep.join(L),)
-    return "...%s" % os.sep.join(L[-N:])
-
-    
-def formatDoctestError(tm):
-    ret = [DOUBLE_SEPARATOR,
-           '%s: %s (%s)\n' % (WORDS[tm.status], tm.name, trimFilename(tm.filename, 4))]
-
-    return "%s\n%s" % ('\n'.join(ret),
-                       itrial.IFormattedFailure(tm.errors + tm.failures))
-
-def formatImportError(aTuple):
-    """returns a string that represents an itrial.IImportErrorReport
-    @param args: a tuple of (name, error)
-    """
-    name, error = aTuple
-    ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
-    if isinstance(error, failure.Failure):
-        what = itrial.IFormattedFailure(error)
-    elif type(error) == types.TupleType:
-        what = error.args[0]
-    else:
-        what = "%s\n" % error
-    ret.append("Could not import %s: \n%s\n" % (name, what))
-    return ''.join(ret)
-
 

@@ -67,7 +67,6 @@ def format_frames(frames, write, detail="default"):
 #          so I made it a module-level constant
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---" 
 
-
 class Failure:
     """A basic abstraction for an error that has occurred.
 
@@ -350,9 +349,6 @@ class Failure:
             self.value.printDetailedTraceback(file)
         w('*--- End of Failure #%d ---\n' % self.count)
 
-# slyphon: make post-morteming exceptions tweakable
-
-DO_POST_MORTEM = True
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
              Failure__init__=Failure.__init__.im_func):
@@ -361,7 +357,7 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
         if exc == (None, None, None):
             print "Failure created without exception, debugger will debug stack:"
             import pdb; pdb.set_trace()
-        elif not exc[0] == self.__class__ and DO_POST_MORTEM:
+        elif not exc[0] == self.__class__:
             print "Jumping into debugger for post-mortem of exception '%s':" % exc[1]
             import pdb
             pdb.post_mortem(exc[2])

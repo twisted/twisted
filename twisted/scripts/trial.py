@@ -30,8 +30,7 @@ from twisted.application import app
 from twisted.python import usage, reflect, failure, log, plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
-from twisted.trial import runner, util, itrial, registerAdapter, remote
-from twisted.trial import adapters, reporter, tdoctest, _setUpAdapters
+from twisted.trial import runner, util, itrial, registerAdapter, remote, adapters, reporter
 from twisted.trial.itrial import ITrialDebug
 
 import zope.interface as zi
@@ -91,7 +90,6 @@ class Options(usage.Options):
                 ["rterrors", "e", "realtime errors, print out tracebacks as soon as they occur"],
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
-                ["nopm", None, "don't automatically jump into debugger for postmorteming of exceptions"],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
@@ -437,7 +435,6 @@ class Options(usage.Options):
 
 
     def postOptions(self):
-        self['_origdir'] = os.getcwd()
         # Want to do this stuff as early as possible
         _setUpTestdir()
         _setUpLogging(self)
@@ -466,10 +463,6 @@ class Options(usage.Options):
             except ImportError:
                 print "couldn't import psyco, so continuing on without..."
 
-        if self['nopm']:
-            if not self['debug']:
-                raise usage.UsageError, "you must specify --debug when using --nopm "
-            failure.DO_POST_MORTEM = False
 
 # options
 # ----------------------------------------------------------
@@ -481,6 +474,48 @@ def _monkeyPatchPyunit():
     from twisted.trial import unittest as twunit
     unittest.TestCase = twunit.TestCase
     # ------------------------------------------------------
+
+def _setUpAdapters():
+    from twisted.trial import reporter
+    for a, o, i in [(runner.TestCaseRunner, itrial.ITestCaseFactory, itrial.ITestRunner),
+                    (runner.TestModuleRunner, types.ModuleType, itrial.ITestRunner),
+                    (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
+                    (runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),
+                    (runner.TestMethod, types.MethodType, itrial.ITestMethod),
+                    (reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
+                    (reporter.TestStats, runner.TestModuleRunner, itrial.ITestStats),
+                    (reporter.TestCaseStats, runner.TestCaseRunner, itrial.ITestStats),
+                    (reporter.TestCaseStats, runner.TestCaseMethodRunner, itrial.ITestStats),
+                    (reporter.TestCaseStats, runner.PyUnitTestCaseRunner, itrial.ITestStats),
+                    (adapters.formatFailureTraceback, failure.Failure, itrial.IFormattedFailure),
+                    (adapters.formatMultipleFailureTracebacks, types.ListType, itrial.IFormattedFailure),
+                    (adapters.formatMultipleFailureTracebacks, types.TupleType, itrial.IFormattedFailure),
+                    (adapters.formatTestMethodFailures, itrial.ITestMethod, itrial.IFormattedFailure),
+                    (adapters.getModuleNameFromModuleType, types.ModuleType, itrial.IModuleName),
+                    (adapters.getModuleNameFromClassType, types.ClassType, itrial.IModuleName),
+                    (adapters.getModuleNameFromMethodType, types.MethodType, itrial.IModuleName),
+                    (adapters.getModuleNameFromFunctionType, types.FunctionType, itrial.IModuleName),
+                    (adapters.getClassNameFromClass, types.ClassType, itrial.IClassName),
+                    (adapters.getClassNameFromMethodType, types.MethodType, itrial.IClassName),
+                    (adapters.getFQClassName, types.ClassType, itrial.IFQClassName),
+                    (adapters.getFQClassName, types.MethodType, itrial.IFQClassName),
+                    (adapters.getFQMethodName, types.MethodType, itrial.IFQMethodName),
+                    (adapters.getClassFromMethodType, types.MethodType, itrial.IClass),
+                    (adapters.getClassFromFQString, types.StringType, itrial.IClass),
+                    (adapters.getModuleFromMethodType, types.MethodType, itrial.IModule),
+                    (lambda x: x, types.StringType, itrial.IClassName),
+                    (lambda x: x, types.StringType, itrial.IModuleName),
+                    (adapters.TupleTodo, types.TupleType, itrial.ITodo),
+                    (adapters.StringTodo, types.StringType, itrial.ITodo),
+                    (adapters.TodoBase, types.NoneType, itrial.ITodo),
+                    (adapters.TupleTimeout, types.TupleType, itrial.ITimeout),
+                    (adapters.NumericTimeout, types.FloatType, itrial.ITimeout),
+                    (adapters.NumericTimeout, types.IntType, itrial.ITimeout),
+                    (adapters.TimeoutBase, types.NoneType, itrial.ITimeout),
+                    (adapters.TimeoutBase, types.MethodType, itrial.ITimeout),
+                    (runner.UserMethodWrapper, types.MethodType, itrial.IUserMethod),
+                    (remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
+        registerAdapter(a, o, i)
 
     
 def _initialDebugSetup(config):
@@ -574,7 +609,7 @@ def _setUpTestdir():
     os.chdir(testdir)
 
 
-def _getDebugger(config):
+def _getDebugger():
     dbg = pdb.Pdb()
     try:
         import readline
@@ -583,20 +618,17 @@ def _getDebugger(config):
         hasattr(sys, 'exc_clear') and sys.exc_clear()
         pass
 
-    origdir = config['_origdir']
-    for path in opj(origdir, '.pdbrc'), opj(origdir, 'pdbrc'):
-        if osp.exists(path):
-            try:
-                rcFile = file(path, 'r')
-            except IOError:
-                hasattr(sys, 'exc_clear') and sys.exc_clear()
-            else:
-                dbg.rcLines.extend(rcFile.readlines())
+    try:
+        rcFile = open("../.pdbrc")
+    except IOError:
+        hasattr(sys, 'exc_clear') and sys.exc_clear()
+    else:
+        dbg.rcLines.extend(rcFile.readlines())
     return dbg
 
 def _setUpDebugging(config, suite):
     suite.debugger = suite.reporter.debugger = True
-    _getDebugger(config).runcall(suite.run, config['random'])
+    _getDebugger().runcall(suite.run, config['random'])
 
 def _doProfilingRun(config, suite):
     if config['until-failure']:

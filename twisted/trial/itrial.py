@@ -210,9 +210,6 @@ class ITestRunner(ITimed):
     def runTests():
         """runs this test class"""
 
-class IDocTestRunner(ITestRunner):
-    """locates and runs doctests"""
-
 class IReporterMethod(zi.Interface):
     """the subset of ITestMethod that is necessary for reporting"""
 
@@ -239,10 +236,6 @@ class ITestMethod(ITimed):
                            @type skip: string
                            @note: a TestMethod may raise SkipTest with a message, if so, this value takes precedence""")
 
-    suppress = zi.Attribute("""XXX: ADD DOCUMENTATION""")
-
-    timeout = zi.Attribute("""XXX: ADD DOCUMENTATION""")
-
     failures = zi.Attribute("""@ivar failures: a list of all failures that occurred during the run(s) of this test method
                             @type failures: list of failure.Failures""")
 
@@ -258,12 +251,8 @@ class ITestMethod(ITimed):
     runs = zi.Attribute("""@ivar runs: the number of times this method has been run
                            @type runs: int""")
 
-    hasTbs = zi.Attribute("""@ivar hasTbs: True if this test method has errors or failures
-                             @type: Boolean
-                          """)
-
     # XXX: Update Docs ------------------------------------------
-    def run(testCaseInstance):
+    def run(testCaseInstance, reporter, janitor):
         """I run the test method"""
     # -----------------------------------------------------------
 
@@ -284,10 +273,7 @@ class IReporter(zi.Interface):
     """I report results from a run of a test suite.
 
     In all lists below, 'Results' are either a twisted.python.failure.Failure
-    object, or a string.
-
-    @note: implementors: methods such as startTest/endTest must perform an adaptation
-    on the argument received to the proper interface.
+    object, an exc_info tuple, or a string.
     """
     debugger = zi.Attribute("""@ivar debugger: Run the debugger when encountering a failing test.
                                @type debugger: bool""")
@@ -315,12 +301,12 @@ class IReporter(zi.Interface):
 
     def startTest(method):
         """report the beginning of a run of a single test method
-        @param method: an object that is adaptable to ITestMethod
+        @param method: an object that implements ITestMethod
         """
 
     def endTest(method):
         """report the status of a single test method
-        @param method: an object that is adaptable to ITestMethod
+        @param method: an object that implements ITestMethod
         """
 
     def startSuite(expectedTests):
@@ -332,35 +318,6 @@ class IReporter(zi.Interface):
         """at the end of a test run report the overall status and print out any errors caught
         @param suite: an object implementing ITestSuite, can be adapted to ITestStats
         """
-
-    def startClass(klass):
-        "called at the beginning of each TestCase with the class"
-
-    def endClass(klass):
-        "called at the end of each TestCase with the class"
-
-    def startModule(module):
-        "called at the beginning of each module"
-
-    def endModule(module):
-        "called at the end of each module"
-
-    def cleanupErrors(errs):
-        """called when the reactor has been left in a 'dirty' state
-        @param errs: a list of L{twisted.python.failure.Failure}s
-        """
-
-    def upDownError(userMeth, warn=True, printStatus=True):
-        """called when an error occurs in a setUp* or tearDown* method
-        @param warn: indicates whether or not the reporter should emit a warning
-                     about the error
-        @type warn: Boolean
-        @param printStatus: indicates whether or not the reporter should print
-                            the name of the method and the status message appropriate
-                            for the type of error
-        @type printStatus: Boolean
-        """
-
 
 class IRemoteReporter(IReporter):
     def connectToSlave(self):
@@ -398,27 +355,6 @@ class ITestStats(zi.Interface):
                                 @type allPassed: boolean""")
 
 
-class IDocTestMethod(ITestMethod):
-    """a DocTestMethod, which is basically an ITestMethod with a few extra 
-    attributes specific to doctests (i.e. the filename and line number)
-    """
-    filename = zi.Attribute(
-       """@ivar filename: the tail part (os.path.split(name)[1] part) 
-       of the originating file name of this doctest""")
-
-    fullname = zi.Attribute(
-        """@ivar fullname: the repr() of the original doctest.DocTest object
-                           (quite informative)""")
-                            
-    docstr = zi.Attribute(
-        """@ivar docstr: a BIG FAT LIE! this value is what is printed when
-        the reporter reports the beginning of this doctest (i.e. startMethod
-        is called)
-        @note: this HORRID HACK will be fixed sometime in the near future
-               with the addition of IDisplayName or some such
-        """)
-    
-
 class IJellied(zi.Interface):
     pass
 
@@ -444,19 +380,6 @@ class IOldSkoolInfo(zi.Interface):
     resultType = zi.Attribute("ITestMethod.status")
     results = zi.Attribute("the appropriate results for the status of this test, a failure.Failure")
 
-class IFormattedFailure(zi.Interface):
-    """a properly formatted traceback as a string
-    @rtype: types.StringType
-    """
-
-class IErrorReport(zi.Interface):
-    """a fully formatted error report that appears in the summary of the report
-    @rtype: types.StringType
-    """
-
-class IImportErrorReport(IErrorReport):
-    """a fully formatted error report for import errors
-    """
 
 class ITrialDebug(zi.Interface):
     """used internally as an argument to log.msg"""

@@ -1,28 +1,13 @@
 # -*- test-case-name: twisted.trial.test.test_trial -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
-#
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
 
-import re, types
 from cStringIO import StringIO
 
 from twisted import trial
-from twisted.trial import reporter, util, runner, unittest
+from twisted.trial import reporter, util, runner
 from twisted.internet import defer
 from twisted.trial.assertions import assertIdentical, assertEqual, assert_
-from twisted.trial.assertions import assertSubstring
 
 import zope.interface as zi
-
-FAILURE_MSG = "this test failed"
-
-class FailfulTests(unittest.TestCase):
-    def testTracebackReporting(self):
-        1/0
-    def testFailure(self):
-        raise unittest.FailTest, FAILURE_MSG
 
 class BaseTest(object):
     setUpCalled = tearDownCalled = setUpClassCalled = tearDownClassCalled = False
@@ -52,6 +37,7 @@ class BogusReporter(reporter.TreeReporter):
     cleanerrs = importError = None
     setUpReporterCalled = tearDownReporterCalled = False
     
+
     def __init__(self):
         super(BogusReporter, self).__init__(StringIO(), 'plain', None, False)
         self.startCtr = dict([(n, 0) for n in self.names])
@@ -107,16 +93,13 @@ class BogusReporter(reporter.TreeReporter):
     def cleanupErrors(self, errs):
         self.cleanerrs = errs
 
-    def verify(self, failIfImportErrors=True, checkReporterSetup=True):
-        if checkReporterSetup:
-            for v in 'setUpReporterCalled', 'tearDownReporterCalled':
-                assert_(getattr(self, v), 'self.%s did not evaluate to non-zero' % (v,))
-
-        if failIfImportErrors:
-            assert_(not self.importError)
-
+    def verify(self, failIfImportErrors=True):
+        for v in self.setUpReporterCalled, self.tearDownReporterCalled:
+            assert_(v)
         for n in self.names:
             assertEqual(self.startCtr[n], self.endCtr[n])
+        if failIfImportErrors:
+            assert_(not self.importError)
 
 
 class RegistryBaseMixin(object):
@@ -128,14 +111,6 @@ class RegistryBaseMixin(object):
     # however, if a test needs to, and it is not an erroneous condition, the testMethod
     # should set this to False before the method returns
     failIfImportErrors = True
-
-    # similar to the above attribute, this one checks to make sure
-    # the reporter's setUp/tearDownReporter methods were called
-    checkReporterSetup = True
-
-    tci = property(lambda self: self.suite.children[0].testCaseInstance)
-    tm = property(lambda self: self.suite.children[0].children[0])
-    stdio = property(lambda self: self.tm.stderr + self.tm.stdout)
 
     def setUpClass(self):
         # here we replace the trial.__init__ adapter registry 
@@ -167,7 +142,7 @@ class RegistryBaseMixin(object):
 
     def tearDown(self):
         self.registry._clearAdapterRegistry()
-        self.reporter.verify(self.failIfImportErrors, self.checkReporterSetup)
+        self.reporter.verify(self.failIfImportErrors)
         self.failIfImportErrors = True
         self._suite = None
 
@@ -179,43 +154,3 @@ class RegistryBaseMixin(object):
     def getReporter(self):
         return self.reporter
 
-
-REGEX_PATTERN_TYPE = type(re.compile(''))
-
-def stringComparison(expect, output):
-    """compares the list of strings in output to the list of objects in 
-    expect. expect and output are not altered
-
-    @param output: a list of strings, '' is ignored 
-    @type output: types.ListType
-
-    @param expect: a list of strings, None, or _sre.SRE_Pattern objects 
-    (the object returned by re.compile()).
-    
-      - with string objects a simple == comparison is done
-      - with regex objects, a match() is done and if there is no Match object
-        returned, FailTest is raised
-      - a None object causes a non blank string in output to be ignored
-
-    @type expect: types.ListType
-    """
-    _expect, _output = expect[:], output[:]
-    while 1:
-        if not _output:
-            return
-        out = _output.pop(0)
-        if out == '':
-            continue
-        else:
-            if not _expect:
-                return
-            exp = _expect.pop(0)
-            if exp is None:
-                continue
-            elif isinstance(exp, types.StringType):
-                assertSubstring(exp, out)
-            elif isinstance(exp, REGEX_PATTERN_TYPE):
-                assert_(exp.match(out), "%r did not match string %r" % (exp.pattern, out))
-            else:
-                raise TypeError, "don't know what to do with object %r" % (exp,)
- 
