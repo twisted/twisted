@@ -22,6 +22,7 @@ import os, traceback
 
 from twisted.python import usage
 from twisted.protocols import dns
+from twisted.application import internet, service
 
 import server, authority
 
@@ -93,7 +94,7 @@ class Options(usage.Options):
             raise usage.UsageError("Invalid port: %r" % (self['port'],))
 
 
-def updateApplication(app, config):
+def makeService(config):
     import client, cache
 
     ca, cl = [], []
@@ -105,6 +106,8 @@ def updateApplication(app, config):
     f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
-
-    app.listenUDP(config['port'], p, interface=config['interface'])
-    app.listenTCP(config['port'], f, interface=config['interface'])
+    ret = service.MultiService()
+    for (klass, arg) in [(internet.TCPServer, f), (internet.UDPServer, p)]:
+        s = klass(config['port'], arg, interface=config['interface'])
+        s.setServiceParent(ret)
+    return ret
