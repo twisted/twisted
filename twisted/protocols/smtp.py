@@ -114,7 +114,8 @@ def rfc822date(timeinfo=None,local=1):
             tz = -time.timezone
             
         (tzhr, tzmin) = divmod(abs(tz), 3600)
-        tzhr *= int(abs(tz)/tz)
+        if tz:
+            tzhr *= int(abs(tz)/tz)
         (tzmin, tzsec) = divmod(tzmin, 60)
     else:
         (tzhr, tzmin) = (0,0)
