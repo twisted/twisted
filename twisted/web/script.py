@@ -32,10 +32,11 @@ import traceback
 
 def ResourceScript(path):
     """
-    I am a normal py file which will define a "resource" global upon completion
-    The resource global should be an instance of Resource, and will be returned
+    I am a normal py file which must define a 'resource' global, which should
+    be an instance of (a subclass of) web.resource.Resource; it will be
+    renderred.
     """
-    globals = {}
+    globals = {'__file__': path}
 
     execfile(path, globals, globals)
 
