@@ -1,0 +1,21 @@
+Following IReactorTCP:
+default.connectTCP:
+    instantiate tcp.Connector
+    call its connect method
+tcp.Connector.connect:
+    self.transport = self._makeTransport (which is tcp.Client for TCP)
+    call factory.startedConnecting(self)
+ClientFactory.startedConnecting:
+    noop
+tcp.Client.__init__:
+    call BaseClient.createInternetSocket
+    call BaseClient._finishInit
+tcp.BaseClient.createInternetSocket:
+    make a socket, set it to nonblocking
+tcp.BaseClient._finishInit:
+    
+abstract.FileDescriptor provides read/write notifications and writes buffered data
+(yuck, producer/consumer stuff as well)
+
+Now, one notification (self.operationComplete). TCP crud is on top of that
+Drop win32all and write my own wrapper?
