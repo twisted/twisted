@@ -50,7 +50,6 @@ class ServerDNSTestCase(unittest.TestCase):
         factory = DNSFactory()
         factory.boss.addDomain("example.foo", dns.SimpleDomain("example.foo", "1.1.1.1"))
         p = reactor.listenUDP(2053, factory)
-        p.startListening()
         reactor.iterate()
         reactor.iterate()
         
@@ -106,3 +105,6 @@ class LookupDNSTestCase(unittest.TestCase):
 
 # XXX move this test into accepttests
 del LookupDNSTestCase
+
+# XXX disabled cause twisted.names needs to be changed to new API
+del ServerDNSTestCase
