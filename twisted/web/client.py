@@ -33,6 +33,7 @@ class HTTPPageGetter(http.HTTPClient):
             self.transport.loseConnection()
 
     def connectionLost(self, reason):
+        http.HTTPClient.connectionLost(self, reason)
         self.factory.noPage(reason)
 
     def handleResponse(self, response):
