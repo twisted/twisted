@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-I am a support module for making SOCKS servers with mktap.
+I am a support module for making SOCKSv4 servers with mktap.
 """
 
 from twisted.protocols import socks
@@ -25,15 +25,22 @@ from twisted.python import usage
 import sys
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap socks [-p <port>] [-l <file>]"
-    optStrings = [["port", "p", 1080],
+    synopsis = "Usage: mktap socks [-i <interface>] [-p <port>] [-l <file>]"
+    optStrings = [["interface", "i", "127.0.0.1", "local interface to which we listen"],
+                  ["port", "p", 1080],
                   ["log", "l", "None", "file to log connection data to"]]
 
     longdesc = "Makes a SOCKSv4 server."
 
 def updateApplication(app, config):
-    print "\n\nWARNING: This SOCKSv4 proxy is configured insecurely.\nDO NOT RUN IT ON YOUR FIREWALL.\n\n"
+    if config.interface != "127.0.0.1":
+        print
+        print "WARNING:"
+        print "  You have chosen to listen on a non-local interface."
+        print "  This may allow intruders to access your local network"
+        print "  if you run this on a firewall."
+        print
     if config.log=="None": config.log=None
     t = socks.SOCKSv4Factory(config.log)
     portno = int(config.port)
-    app.listenTCP(portno, t)
+    app.listenTCP(portno, t, interface=config.interface)
