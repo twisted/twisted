@@ -31,7 +31,7 @@ CHANGES:
 1. __adapt__ now uses zope3's semantics, which are slighly different.
 2. dunno what happens to persisting adapters. I think it is always on
 in zope3, but need to check. For now no special code to deal with it.
-3. getComponent is *not* checked. If you want that, use __conform__ instead.
+3. getComponent will only be called if __conform__ is not present
 
 Removed features from old version:
 1. context-based registries.
@@ -69,22 +69,29 @@ class CannotAdapt(NotImplementedError, TypeError):
     pass
 
 class MetaInterface(interface.InterfaceClass):
-    def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
-        if registry != None:
-            raise RuntimeError, "registry argument will be ignored"
-        # possibly should be removed for efficiency reasons
-        if persist != None:
-            warnings.warn("persist argument is deprecated", DeprecationWarning)
-        if default == _Nothing:
-            default = self.marker
-        return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
-
+    def __call__():
+        # Copying evil trick I dinna understand
+        def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
+            if registry != None:
+                raise RuntimeError, "registry argument will be ignored"
+            # possibly should be removed for efficiency reasons
+            if persist != None:
+                warnings.warn("persist argument is deprecated", DeprecationWarning)
+            if default == _Nothing:
+                default = self.marker
+            # XXX does this go away?
+            if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__"):
+                warnings.warn("please use __conform__ instead of getComponent", DeprecationWarning)
+                return adaptable.getComponent(self)
+            return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
+    __call__ = __call__()
+    
     def adaptWith(self, using, to, registry=None):
         if registry != None:
             raise RuntimeError, "registry argument will be ignored"
         warnings.warn("persist argument is deprecated", DeprecationWarning)
         registry = theAdapterRegistry
-        registry.register([self], [to], '', using)
+        registry.registerAdapter(using, self, to)
 
 Interface = MetaInterface("Interface", __module__="twisted.python.components")
 
@@ -152,18 +159,21 @@ class AdapterRegistry(ZopeAdapterRegistry):
         'origInterface'.
         """
         assert interfaceClasses, "You need to pass an Interface"
-        
-
+        self.register([origInterface], interfaceClasses, '', adapterFactory)
+    
     def getAdapterFactory(self, fromInterface, toInterface, default):
         """Return registered adapter for a given class and interface.
         """
-        return self.adapterRegistry.get((fromInterface, toInterface), default)
+        # XXX
+        raise NotImplementedError
 
     getAdapterClass = getAdapterFactory
 
     def getAdapterClassWithInheritance(self, klass, interfaceClass, default):
         """Return registered adapter for a given class and interface.
         """
+        # XXX
+        raise NotImplementedError
         #import warnings
         #warnings.warn("You almost certainly want to be "
         #              "using interface->interface adapters. "
@@ -188,34 +198,11 @@ class AdapterRegistry(ZopeAdapterRegistry):
         the parameter itself if it already implements the interface. If no
         adapter can be found, the 'default' parameter will be returned.
         """
-        if implements(obj, interfaceClass):
-            return obj
-
-        if persist != False:
-            pkey = (id(obj), interfaceClass)
-            if self.adapterPersistence.has_key(pkey):
-                return self.adapterPersistence[pkey]
-
-        if hasattr(obj, '__class__'):
-            klas = obj.__class__
-        else:
-            klas = type(obj)
-        for fromInterface in classToInterfaces(klas):
-            adapterFactory = ( (adapterClassLocator or self.getAdapterFactory)(
-                fromInterface, interfaceClass, None) )
-            if adapterFactory is not None:
-                adapter = adapterFactory(obj)
-                if persist:
-                    self.persistAdapter(obj, interfaceClass, adapter)
-                return adapter
-        if default is _Nothing:
-            raise NotImplementedError('%s instance does not implement %s, and '
-                                      'there is no registered adapter.' %
-                                      (obj, interfaceClass))
-        return default
-
+        
 
 theAdapterRegistry = AdapterRegistry()
+# XXX may need to change to raise correct exceptions
+interface.adapter_hooks.append(lambda iface, ob: theAdapterRegistry.getAdapter(ob, iface))
 registerAdapter = theAdapterRegistry.registerAdapter
 getAdapterClass = theAdapterRegistry.getAdapterClass
 getAdapterClassWithInheritance = theAdapterRegistry.getAdapterClassWithInheritance
