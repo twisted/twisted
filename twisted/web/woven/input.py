@@ -131,7 +131,6 @@ class InputHandler(controller.Controller):
         valid; it is now safe for all handlers to commit changes to the model.
         """
         data = str(data)
-        print "commit got called.", self.__dict__
         if data != self.view.getData():
             if self._commit is None:
                 self.model.setData(data)
