@@ -1,3 +1,9 @@
+twisted (1.1.1-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Moshe Zadka <moshez@debian.org>  Thu, 21 Nov 2003 14:56:54 -0500
+
 twisted (1.0.7-1) unstable; urgency=low
 
   * New upstream version
