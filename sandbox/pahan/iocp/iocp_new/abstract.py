@@ -1,70 +1,79 @@
 from sets import Set
-import warnings
-import socket
+import warnings, socket
 
-from twisted.python import log, reflect
+from twisted.python import log
 from twisted.persisted import styles
-from twisted.internet import defer, main, base
+from twisted.internet import main, defer
 
-# sibling imports, change to fully-qualified at release (or not, circular imports :(
-from ops import ReadFileOp, WriteFileOp, WSARecvOp, WSASendOp, AcceptExOp, ConnectExOp
-from error import GenCannotListenError
+from ops import ReadFileOp, WriteFileOp
+import address, error
 
 class RWHandle(log.Logger, styles.Ephemeral):
-    # XXX: use a saner data structure for buffer entries or for buffer itself, for example an instance and a queue
+    # TODO: use a saner data structure for buffer entries or for buffer itself, for example an instance and a queue
+    # TODO: multiple pending overlapped ops. Complex and dangerous and everything else should be working first
     writebuf = None
     # if this is a temporary solution, read_op should be allowed to allocate it
     readbuf = None
     offset = 0
     writing = 0
-    reading = 1
+    reading = 0
+    dead = 0
+    handle = None
+    lconn_deferred = None
     bufferSize = 2**2**2**2
+    producerPaused = 0
+    streamingProducer = 0
+    producer = None
     writeBufferedSize = 0 # how much we have in the write buffer
-    bufferhandlers = None
+    bufferEvents = None # a dict of event string to set of handlers
     # XXX: specify read_op/write_op kwargs in a class attribute?
     read_op = ReadFileOp
     write_op = WriteFileOp
-    # XXX: we don't care about producer/consumer crap, let itamar and other smarties fix the stuff first
+    # XXX: we don't care about emulating existing producer/consumer crap,
+    # let itamar and other smarties fix the stuff first
     def __init__(self):
         from twisted.internet import reactor
         self.reactor = reactor
         self.writebuf = []
         self.readbuf = self.reactor.AllocateReadBuffer(self.bufferSize)
-        self.bufferhandlers = Set()
+        self.bufferEvents = {"buffer full": Set(), "buffer empty": Set()}
 
-    def addBufferCallback(self, handler):
-        self.bufferhandlers.add(handler)
+    def addBufferCallback(self, handler, event):
+        print "addBufferCallback(%s, %s, %s)" % (self, handler, event)
+        self.bufferEvents[event].add(handler)
 
-    def removeBufferCallback(self, handler):
-        self.bufferhandlers.remove(handler)
+    def removeBufferCallback(self, handler, event):
+        print "removeBufferCallback(%s, %s, %s)" % (self, handler, event)
+        self.bufferEvents[event].remove(handler)
 
-    def callBufferHandlers(self, *a, **kw):
-        for i in self.bufferhandlers:
+    def callBufferHandlers(self, event, *a, **kw):
+        for i in self.bufferEvents[event].copy():
             i(*a, **kw)
 
     def write(self, buffer, **kw):
-        print "RWHandle.write(%(buffer)r, %(kw)s" % locals()
-        print "    self.writebuf %r, self.offset %s, self.writing %s" % \
-            (self.writebuf, self.offset, self.writing)
-        self.writebuf.append((buffer, kw))
-        self.writeBufferedSize += len(buffer)
-        if self.writeBufferedSize >= self.bufferSize: # what's the proper semantics for this?
-            self.callBufferHandlers(type = "buffer full")
-        if not self.writing:
-            self.writing = 1
-            self.startWriting()
+        print "RWHandle.write(buffer of len %s, %s" % (len(buffer), kw)
+        print "    len(self.writebuf) %s, self.offset %s, self.writing %s" % \
+            (len(self.writebuf), self.offset, self.writing)
+        if not self.dead:
+            self.writebuf.append((buffer, kw))
+            self.writeBufferedSize += len(buffer)
+            if self.writeBufferedSize >= self.bufferSize: # what's the proper semantics for this?
+                self.callBufferHandlers(event = "buffer full")
+            if not self.writing:
+                self.writing = 1
+                self.startWriting()
+
+    def writeSequence(self, iovec, **kw):
+        self.write("".join(iovec), **kw)
 
     def startWriting(self):
         b = buffer(self.writebuf[0][0], self.offset)
         op = self.write_op()
-        # XXX: errback/callback order! this should do callback if no error and do errback if there is an error
-        # without propagating return value to callback. What are the semantics on that?
+        op.initiateOp(self.handle, b, **self.writebuf[0][1])
         op.addCallback(self.writeDone)
         op.addErrback(self.writeErr)
-        op.initiateOp(self.handle, b, **self.writebuf[0][1])
 
     def writeDone(self, bytes):
-        # XXX: bytes == 0 should be checked by OverlappedOp, as it is an error condition
         self.offset += bytes
         self.writeBufferedSize -= bytes
         if self.offset == len(self.writebuf[0][0]):
@@ -72,56 +81,127 @@ class RWHandle(log.Logger, styles.Ephemeral):
             self.offset = 0
         if self.writebuf == []:
             self.writing = 0
-            self.callBufferHandlers(type = "buffer empty")
+            self.callBufferHandlers(event = "buffer empty")
         else:
             self.startWriting()
 
-    def writeErr(self, err):
-        raise NotImplementedError
-
-    # called at start and never again? depends on future consumer thing
     def startReading(self):
+        if not self.reading:
+            self.reading = 1
         op = self.read_op()
+        op.initiateOp(self.handle, self.readbuf)
         op.addCallback(self.readDone)
         op.addErrback(self.readErr)
-        op.initiateOp(self.handle, self.readbuf)
 
     def readDone(self, (bytes, kw)):
         # XXX: got to pass a buffer to dataReceived to avoid copying, but most of the stuff expects that
         # to support str methods. Perhaps write a perverse C extension for this, but copying IS necessary
         # if protocol wants to store this string. I wish this was C++! No, wait, I don't.
+        print "RwHandle.readDone(%s, (%s, %s))" % (self, bytes, kw)
+        print "    self.reading is", self.reading
         self.dataReceived(self.readbuf[:bytes], **kw)
         if self.reading:
             self.startReading()
 
     def dataReceived(self, data, **kw):
         raise NotImplementedError
-
+    
     def readErr(self, err):
+        print "RwHandle.readErr(%s, %s)" % (self, err)
+        if isinstance(err, error.NonFatalException):
+            self.startReading() # delay or just fail?
+        else:
+            self.stopWorking(err)
+
+    def writeErr(self, err):
+        print "RwHandle.writeErr(%s, %s)" % (self, err)
+        import traceback
+        traceback.print_stack()
+        if isinstance(err, error.NonFatalException):
+            self.startWriting() # delay or just fail?
+        else:
+            self.stopWorking(err)
+
+    def stopWorking(self, err):
+        if not self.dead:
+            self.dead = 1
+            self.stopReading()
+            self.stopWriting()
+            del self.handle
+            self.handleDead(err)
+
+    def handleDead(self, err):
         raise NotImplementedError
 
     def stopReading(self):
         self.reading = 0
 
-# this is a handle with special read/write ops and error handling, Protocol dispatch and connection loss
-class Socket(RWHandle):
+    def stopWriting(self):
+        self.writing = 0
+
+    def registerProducer(self, producer, streaming):
+        if self.producer is not None:
+            raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))
+        self.producer = producer
+        self.streamingProducer = streaming
+        self.addBufferCallback(self.milkProducer, "buffer empty")
+        self.addBufferCallback(self.stfuProducer, "buffer full")
+        if not streaming:
+            producer.resumeProducing()
+
+    def milkProducer(self):
+        if not self.streamingProducer or self.producerPaused:
+            self.producer.resumeProducing()
+            self.producerPaused = 0
+
+    def stfuProducer(self):
+        self.producerPaused = 1
+        self.producer.pauseProducing()
+        
+    def unregisterProducer(self):
+        """Stop consuming data from a producer, without disconnecting.
+        """
+        self.removeBufferCallback(self.stfuProducer, "buffer full")
+        self.removeBufferCallback(self.milkProducer, "buffer empty")
+        self.producer = None
+
+    def stopConsuming(self):
+        """Stop consuming data.
+
+        This is called when a producer has lost its connection, to tell the
+        consumer to go lose its connection (and break potential circular
+        references).
+        """
+        self.unregisterProducer()
+        self.loseConnection() # XXX: bad assumption for this class, but oh well
+
+    # producer interface implementation
+
+    def resumeProducing(self):
+        self.startReading()
+
+    def pauseProducing(self):
+        self.stopReading()
+
+    def stopProducing(self):
+        self.loseConnection() # XXX: bad assumption for this class, but oh well
+
+    def loseConnection(self):
+        raise NotImplementedError
+
+class ConnectedSocket(RWHandle):
 #    read_op = WSARecvOp
 #    write_op = WSASendOp
+    logstr = None
+    repstr = None
+    disconnecting = 0
 
-    def __init__(self, sock, protocol, client, server, sessionno):
+    def __init__(self, sock, protocol, sf):
         RWHandle.__init__(self)
         self.socket = sock
         self.handle = sock.fileno()
         self.protocol = protocol
-        self.client = client
-        self.server = server
-        self.sessionno = sessionno
-        # XXX: Twisted needs a "socket address" class
-        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.client)
-        # same with self.server.port
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.address)
-        self.startReading()
-#        self.connected = 1
+        self.sf = sf
 
     def __repr__(self):
         """A string representation of this connection.
@@ -129,29 +209,19 @@ class Socket(RWHandle):
         return self.repstr
 
     def getHost(self):
-        return (self.server.afPrefix,)+self.socket.getsockname()
+        return address.getFull(self.socket.getsockname(), self.sf.af, self.sf.type, self.sf.proto)
 
     def getPeer(self):
-        return (self.server.afPrefix,)+self.client
+        return address.getFull(self.socket.getpeername(), self.sf.af, self.sf.type, self.sf.proto)
 
     def dataReceived(self, data, **kw):
         self.protocol.dataReceived(data)
 
-    def writeErr(self, err):
-        # XXX: depending on whether it was cancelled or
-        # a socket fuckup occurred, what should we do?
-        self.connectionLost(err)
-
-    def readErr(self, err):
-        self.connectionLost(err)
-
-    def connectionLost(self, reason):
-        try:
-            self.socket.shutdown(2)
-        except socket.error:
-            pass
+    def handleDead(self, reason):
+        print "ConnectedSocket.handleDead(%s, %s)" % (self, reason)
         protocol = self.protocol
         del self.protocol
+        self.socket.close()
         del self.socket
         try:
             protocol.connectionLost(reason)
@@ -167,115 +237,23 @@ class Socket(RWHandle):
                 raise
 
     def loseConnection(self):
-        def callback(self, v):
-            if v == "buffer empty":
-                self.connectionLost(main.CONNECTION_DONE)
-                self.lconn_deferred.callback(main.CONNECTION_DONE)
-                del self.lcon_deferred
-                self.removeBufferCallback(callback)
-        self.stopReading()
-        self.lconn_deferred = defer.Deferred()
-        if self.writing:
-            self.addBufferCallback(callback)
-        return self.lcon_deferred
-
-class SocketPort:
-    transport = Socket
-    accept_op = AcceptExOp
-    afPrefix = None
-    addressFamily = None
-    socketType = None
-    accepting = 0
-    sessionno = 0
-    address = None
-    factory = None
-    backlog = None
-    def __init__(self, address, factory, backlog, **kw):
-        self.address = address
-        self.factory = factory
-        self.backlog = backlog
-        self.kw = kw
-
-    def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, self.address)
-
-    def startListening(self):
-        log.msg("%s starting on %s"%(self.factory.__class__, self.address))
-        try:
-            skt = socket.socket(self.addressFamily, self.socketType)
-            skt.bind(self.address)
-        except socket.error, le:
-            raise GenCannotListenError, (self.address, le)
-        self.factory.doStart()
-        skt.listen(self.backlog)
-        self.accepting = 1
-        self.socket = skt
-        self.startAccepting()
-
-    def startAccepting(self):
-        op = self.accept_op()
-        op.addCallback(self.acceptDone)
-        op.addErrback(self.acceptErr)
-        op.initiateOp(self.socket)
-
-    def acceptDone(self, (sock, addr)):
-        if self.accepting:
-            protocol = self.factory.buildProtocol(addr)
-            if protocol is None:
-                sock.close()
-            else:
-                s = self.sessionno
-                self.sessionno = s+1
-                transport = self.transport(sock, protocol, addr, self, s)
-                protocol.makeConnection(transport)
-            self.startAccepting()
-
-    def acceptErr(self, err):
-        log.deferr(err)
-
-    def stopListening(self):
-        log.msg('(Port %r Closed)' % self.address)
-        self.accepting = 0
-        self.reactor.CancelIo(self.socket.fileno())
-        self.socket.close()
-        del self.socket
-        self.factory.doStop()
-
-    loseConnection = stopListening
-
-    def logPrefix(self):
-        """Returns the name of my class, to prefix log entries with.
-        """
-        return reflect.qual(self.factory.__class__)
-
-    def getHost(self):
-        """Returns a tuple of ('INET', hostname, port).
-
-        This indicates the server's address.
-        """
-        return (self.afPrefix,)+self.socket.getsockname()
-
-class Connector(base.BaseConnector):
-    transport = Socket
-    connect_op = ConnectExOp
-    afPrefix = None
-    addressFamily = None
-    socketType = None
-    def __init__(self, addr, factory, timeout, bindAddress, reactor=None):
-        self.host = host
-        if isinstance(port, types.StringTypes):
+        print "XXXConnectedSocket.loseConnection(%s)" % (self,)
+        def callback():
+            self.removeBufferCallback(callback, "buffer empty")
             try:
-                port = socket.getservbyname(port, 'tcp')
-            except socket.error, e:
-                raise error.ServiceNameUnknownError(string=str(e))
-        self.port = port
-        self.bindAddress = bindAddress
-        base.BaseConnector.__init__(self, factory, timeout, reactor)
+                self.socket.shutdown(2)
+            except socket.error:
+                pass
+            self.stopWorking(main.CONNECTION_DONE)
+            self.disconnecting = 0
+            self.lconn_deferred.callback(None)
+            del self.lconn_deferred
+        self.stopReading()
+        if self.writing:
+            self.lconn_deferred = defer.Deferred()
+            self.addBufferCallback(callback, "buffer empty")
+            self.disconnecting = 1
+            return self.lconn_deferred
+        else:
+            return None
 
-    def _makeTransport(self):
-        return Client(self.host, self.port, self.bindAddress, self, self.reactor)
-
-    def getDestination(self):
-        return (self.afPrefix,)+self.addr
-
-class SocketConnector(RWHandle):

@@ -51,3 +51,19 @@ server (ConnectedSocket subclass, SocketPort)
 tcp (Connector, Port)
 in a misguided attempt to have everything in a separate editor window
 
+Retarded GCQS behavior:
+res = 0, ov = NULL, either timeout or raise exception
+ov != NULl:
+    res, err, bytes:
+        !=0, _, _: set err to 0, not a failure
+        0, !=0, _: failure, err from GLE
+Experiment to distinguish between the last two:
+If the socket is closed while we have a pending AcceptEx request,
+it returns with 995 (operation cancelled)
+If the socket is closed while we have a pending ReadFile request,
+it returns with 64 (network name no longer available)
+#If the socket is closed before we post an AcceptEx request,
+#If the socket is closed before we post a ReadFile request,
+If remote side disconnects while we have a pending ReadFile request,
+it returns with ret=0, err=_, bytes=0
+

@@ -70,11 +70,12 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     Py_BEGIN_ALLOW_THREADS;
     res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
     Py_END_ALLOW_THREADS;
-//    printf("gqcs returned %d\n", res);
+//    printf("gqcs returned res %d, ov 0x%p\n", res, ov);
     err = GetLastError();
 //    printf("    GLE returned %d\n", err);
     if(!res) {
         if(!ov) {
+//            printf("gqcs returned NULL ov\n");
             if(err != WAIT_TIMEOUT) {
                 return PyErr_SetFromWindowsErr(err);
             } else {
@@ -91,6 +92,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
         if(res) {
             err = 0;
         }
+        printf("calling callback with err %d, bytes %d\n", err, bytes);
         ret = PyObject_CallFunction(object, "ll", err, bytes);
         if(!ret) {
             return NULL;
@@ -130,7 +132,7 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
-    printf("calling WriteFile(%d, %p, %d, %p, %p)\n", handle, buf, len, &bytes, ov);
+    printf("calling WriteFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = WriteFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
@@ -138,6 +140,9 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     printf("    wf returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
+    }
+    if(res) {
+        err = 0;
     }
     return Py_BuildValue("ll", err, bytes);
 }
@@ -170,12 +175,17 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
+    printf("calling ReadFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = ReadFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
+    printf("    rf returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
+    }
+    if(res) {
+        err = 0;
     }
     return Py_BuildValue("ll", err, bytes);
 }
