@@ -93,6 +93,12 @@ class ProcessTestCase(unittest.TestCase):
         while not p.finished:
             reactor.iterate()
         self.assertEquals(p.stages, [1, 2, 3, 4, 5])
+        
+        try:
+            import process_tester
+            os.remove(process_tester.test_file)
+        except:
+            pass
 
     def testEcho(self):
         exe = sys.executable
