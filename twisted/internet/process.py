@@ -225,7 +225,16 @@ class Process(styles.Ephemeral):
         """
 
         if not proto:
-            assert 'r' not in childFDs.values() and 'w' not in childFDs.values()
+            assert 'r' not in childFDs.values()
+            assert 'w' not in childFDs.values()
+        if not signal.getsignal(signal.SIGCHLD):
+            log.msg("spawnProcess called, but the SIGCHLD handler is not " +
+                    "installed. This probably means you have not yet " +
+                    "called reactor.run, and you will probably never see " +
+                    "this process finish")
+            # if you see this message during a unit test, look in
+            # test-standard.xhtml or twisted.test.test_process.SignalMixin
+            # for a workaround
 
         self.lostProcess = False
 
