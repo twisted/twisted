@@ -1,5 +1,10 @@
 from twisted.application import clients, servers, app
 
+mapping = []
+for tran in 'tcp unix udp ssl'.split():
+    mapping.append((tran+'Ports', getattr(servers, tran.upper()+'Server')))
+    mapping.append((tran+'Connectors', getattr(clients, tran.upper()+'Client')))
+
 def convert(oldApp):
     '''
     This function might damage oldApp beyond repair: services
@@ -10,21 +15,13 @@ def convert(oldApp):
     '''
     ret = app.Application(oldApp.name, oldApp.uid, oldApp.gid)
     ret.processName = oldApp.processName
-    for (portType,args,kw) in oldApp.extraPorts:
-        servers.GenericServer(portType, *args, **kw).setParent(ret)
-    for (portType,args,kw) in oldApp.extraConnectors:
-        clients.GenericClient(portType, *args, **kw).setParent(ret)
-    for (pList, klass) in [(oldApp.tcpPorts, servers.TCPServer),
-                           (oldApp.unixPorts, servers.UNIXServer),
-                           (oldApp.udpPorts, servers.UDPServer),
-                           (oldApp.sslPorts, servers.SSLServer),
-                           (oldApp.udpConnectors, clients.UDPClient),
-                           (oldApp.tcpConnectors, clients.TCPClient),
-                           (oldApp.sslConnectors, clients.SSLClient),
-                           (oldApp.unixConnectors, clients.UNIXClient),
-                          ]
-        for args in plist:
-            klass(*args).setParent(ret)
+    for (pList, klass) in [(oldApp.extraPorts, servers.GenericServer),
+                           (oldApp.extraConnectors, servers.GenericClient),]:
+        for (portType, args, kw) in pList:
+            klass(portType, args, kw).setServiceParent(ret)
+    for (name, klass) in mapping:
+        for args in getattr(oldApp, name):
+            klass(*args).setServiceParent(ret)
     for service in oldApp.services.values():
         service.disownServiceParent()
         service.setParent(ret)
