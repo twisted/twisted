@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.80 $'[11:-2]
+__version__ = '$Revision: 1.81 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -651,7 +651,7 @@ class IRCClient(basic.LineReceiver):
         self.noticed(user, channel, message)
 
     def irc_NICK(self, prefix, params):
-        nick = string.split(prefix,'!',0)[0]
+        nick = string.split(prefix,'!', 1)[0]
         if nick == self.nickname:
             self.nickChanged(params[0])
         else:
