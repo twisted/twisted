@@ -1,3 +1,12 @@
+twisted (0.13.0) unstable; urgency=low
+
+  * New upstream version 
+  * New forum
+  * New config interface
+  * New metrics
+
+ -- Moshe Zadka <moshez@debian.org>  Thu, 10 Jan 2002 20:04:30 +0200
+
 twisted (0.12.2-1) unstable; urgency=low
 
   * New upstream versions (many bugfixes) 
