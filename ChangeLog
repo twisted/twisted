@@ -1,5 +1,10 @@
 2004-7-18  Paul Swartz <z3p@twistedmatrix.com>
 
+	* twisted/internet/utils.py: By passing errortoo=1, you can get 
+	stderr from getProcessOutput
+
+2004-7-18  Paul Swartz <z3p@twistedmatrix.com>
+
 	* twisted/conch/unix.py: if the utmp module is available, record
 	user logins/logouts into utmp/wtmp.
 
