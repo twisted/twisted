@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
+#include <assert.h>
 #include <boost/python.hpp> 
 using namespace boost::python;
 #include "twisted/tcp.h"
@@ -31,10 +32,6 @@ void TwistedImpl::IOVecManager::ensureEnoughSpace()
 }
 
 
-namespace {
-    boost::pool<> chunkpool(sizeof(char) * TwistedImpl::LocalBuffer::CHUNK_SIZE);
-}
-
 char* TwistedImpl::LocalBufferManager::getBuffer(size_t bytes)
 {
     // first, make sure we have a buffer with sufficient 
@@ -45,7 +42,7 @@ char* TwistedImpl::LocalBufferManager::getBuffer(size_t bytes)
 	    b.numchunks++;
 	b.offset = 0;
 	b.len = 0;
-	b.buf = (char*) chunkpool.ordered_malloc(b.numchunks);
+	b.buf = (char*) new char[LocalBuffer::CHUNK_SIZE * b.numchunks];
 	m_localbuffers.push_back(b);
     }
     LocalBuffer& b = m_localbuffers.back();
@@ -72,7 +69,7 @@ void TwistedImpl::LocalBufferManager::freePartOfBuffer(size_t bytes)
 	if (m_localbuffers.size() == 1)
 	    return;
 	if (m_localbuffers.back().available() > 0) {
-	    chunkpool.ordered_free(b.buf, b.numchunks);
+	    delete[] b.buf;
 	    m_localbuffers.pop_front();
 	} else {
 	    m_localbuffers.push_back(b);
@@ -88,7 +85,7 @@ TwistedImpl::LocalBufferManager::~LocalBufferManager()
 {
     for (std::deque<LocalBuffer>::iterator it = m_localbuffers.begin();
 	 it != m_localbuffers.end(); ++it) {
-	chunkpool.ordered_free(it->buf, it->numchunks);
+	delete[] it->buf;
     }
 }
 
@@ -139,9 +136,7 @@ object Twisted::TCPTransport::doRead()
 
 object Twisted::TCPTransport::doWrite()
 {
-    std::cerr << "doWrite" << std::endl;
     if (!m_protocol) {
-	std::cerr << 1 << std::endl;
 	return import("twisted.internet.tcp").attr("Connection").attr("doWrite")(m_self);
     }
     m_iovec.twiddleFirst();
@@ -150,13 +145,10 @@ object Twisted::TCPTransport::doWrite()
     m_iovec.untwiddleFirst();
     if (result < 0) {
 	if (errno == EINTR) {
-	    std::cerr << 2 << std::endl;
 	    return doWrite(); // try again
 	} else if (errno == EWOULDBLOCK) {
-	    std::cerr << 3 << std::endl;
 	    return object(0);
 	} else {
-	    std::cerr << 4 << std::endl;
 	    return import("twisted.internet.main").attr("CONNECTION_LOST");
 	}
     }
@@ -164,16 +156,17 @@ object Twisted::TCPTransport::doWrite()
 	wrote(result);
     }
     if (m_bufferedbytes == 0) {
+	assert (m_local.m_localbuffers.empty() || 
+		m_local.localbuffers.front().len == 0);
+	assert (m_iovec.m_used == 0);
 	stopWriting();
 	if (m_hasproducer && (!this->streamingProducer || this->producerPaused)) {
 	    m_producer.attr("resumeProducing")();
 	    this->producerPaused = true;
 	} else if (this->disconnecting) {
-	    std::cerr << 5 << std::endl;
 	    return m_self.attr("_postLoseConnection")();
 	}
     }
-    std::cerr << 6 << std::endl;
     return None;
 }
 

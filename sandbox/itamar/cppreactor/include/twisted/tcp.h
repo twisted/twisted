@@ -5,7 +5,6 @@
 #include <boost/python.hpp> 
 #include <boost/python/call_method.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/pool/pool.hpp>
 #include <Python.h>
 #include <twisted/util.h>
 
@@ -219,7 +218,7 @@ namespace Twisted
 	}
 
 	void unregisterProducer() { 
-	    m_self.attr("unregisterProducer"); 	    
+	    m_self.attr("unregisterProducer")();
 	}
 
 	inline void startWriting() {

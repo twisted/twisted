@@ -23,7 +23,7 @@ struct Writer
 class Echo : public Protocol
 {
 private:
-    char buf[16384];
+    char buf[65536];
 public:
     virtual void connectionMade()
     {
