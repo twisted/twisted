@@ -165,7 +165,8 @@ changes in trial v2.0:
       or ((EException1, EException2, ...), msg). If the test's errors and or
       failures do not match the type(s) specified in the first tuple element,
       the condition is considered an ERROR, otherwise the test is considered
-      an EXPECTED_FAILURE.
+      an EXPECTED_FAILURE. 'msg' is the message you want printed out if the
+      test is reported with status [TODO].
     - For backwards compatibility, this attribute still accepts a string, or
       if you set todo = (None, msg), it will have the same effect as the old
       .todo attribute

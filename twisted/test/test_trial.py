@@ -157,7 +157,6 @@ class TestWait2(unittest.TestCase):
                 assert_(f.check(RuntimeError))
 
 
-
 class BogusReporter(reporter.Reporter):
     def __init__(self):
         pass

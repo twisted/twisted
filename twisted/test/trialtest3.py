@@ -165,7 +165,7 @@ class TestTests(unittest.TestCase):
         def testDeferred9_unexpass(self):
             pass
         testDeferred9_unexpass.todo = "Holy shit! i didn't get an F!"
-
+        
         def testTimeout1_pass(self):
             d = defer.Deferred()
             reactor.callLater(0, d.callback, 'hoorj!')
@@ -225,6 +225,12 @@ class TestTests(unittest.TestCase):
             raise RuntimeError, "we had no idea!+"
         testNewStyleTodo4_error.todo = ((OSError, SyntaxError), "we expected something else")
 
+        def testNewStyleTodoLoggedErr_exfail(self):
+            try:
+                1/0
+            except:
+                log.err()
+        testNewStyleTodoLoggedErr_exfail.todo = (ZeroDivisionError, "need to learn that I can't divide by 0")
 
     class TestLeetTimeout(unittest.TestCase):
         def testMethodAttributeHasPrecedence_timeout(self):
