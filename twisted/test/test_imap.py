@@ -1438,7 +1438,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {91825: 
             {'BODY': 
                 [None, None, [], None, None, None,
-                    '12', '1'
+                    '12'
                 ]
             }
         }
