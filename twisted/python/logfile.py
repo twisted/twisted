@@ -157,12 +157,13 @@ class LogFile(BaseLogFile):
         return result
 
     def __getstate__(self):
-        state = LogFile.__getstate__(self)
+        state = BaseLogFile.__getstate__(self)
         del state["size"]
         return state
 
 threadable.synchronize(LogFile)
-  
+
+
 class DailyLogFile(BaseLogFile):
     """A log file that is rotated daily (at or after midnight localtime)
     """
@@ -225,11 +226,12 @@ class DailyLogFile(BaseLogFile):
         self._openFile()
 
     def __getstate__(self):
-        state = LogFile.__getstate__(self)
+        state = BaseLogFile.__getstate__(self)
         del state["lastDate"]
         return state
 
 threadable.synchronize(DailyLogFile)
+
 
 class LogReader:
     """Read from a log file."""
