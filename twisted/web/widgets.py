@@ -8,7 +8,7 @@ from twisted.python import defer, rebuild
 from twisted.protocols import http
 
 # Sibling Imports
-import html, resource, static
+import html, resource, static, error
 from server import NOT_DONE_YET
 
 """A twisted web component framework.
@@ -249,24 +249,29 @@ class Page(resource.Resource, Container):
 class Gadget(resource.Resource):
     widgets = {
     }
+    resources = {
+    }
     files = [
     ]
-    def __init__(self, *files, **widgets):
-        assert self.__class__ is not Gadget, "Gadget may not be instantiated directly."
-        resource.Resource.__init__(self)
-        widgets.update(self.widgets)
-        widgets[''] = widgets.get("index")
-        mods = {}
-        for name, widget in widgets.items():
-            mods[widget.__module__] = (sys.modules[widget.__module__])
-            self.putChild(name, Page(widget))
-        self.putChild('__reload__', Page(Reloader(mods.values())))
-        files = self.files + list(files)
-        for file in files:
+    modules = [
+    ]
+
+    def getChild(self, path, resource):
+        if path == '':
+            path = 'index'
+        widget = self.widgets.get(path)
+        if widget:
+            return Page(widget)
+        elif path in self.files:
             prefix = getattr(sys.modules[self.__module__], '__file__', '')
             if prefix:
                 prefix = os.path.abspath(os.path.dirname(prefix))
-            self.putChild(file, static.File(os.path.join(prefix, file)))
+            return static.File(os.path.join(prefix, path))
+        elif path == '__reload__':
+            return Page(Reloader(map(reflect.named_module, self.modules)))
+        else:
+            return error.NoResource()
+
 
 class Presentation(Widget):
     template = 'hello %%%%world%%%%'
