@@ -80,26 +80,15 @@ DONT =          chr(254)  # Indicates the demand that the
 IAC =           chr(255)  # Data Byte 255.
 
 class Telnet(protocol.Protocol):
-    commandMap = {
-        SE: 'SE',
-        NOP: 'NOP',
-        DM: 'DM',
-        BRK: 'BRK',
-        IP: 'IP',
-        AO: 'AO',
-        AYT: 'AYT',
-        EC: 'EC',
-        EL: 'EL',
-        GA: 'GA'}
+    # One of a lot of things
+    state = 'data'
 
-    # Either 'data' or 'command'
-    mode = 'data'
+    def __init__(self):
+        self.options = {}
 
     def dataReceived(self, data):
         # Most grossly inefficient implementation ever
-        while data:
-            b = data[0]
-            data = data[1:]
+        for b in data:
             if self.state == 'data':
                 if b == IAC:
                     self.state = 'escaped'
@@ -140,7 +129,162 @@ class Telnet(protocol.Protocol):
             else:
                 raise ValueError("How'd you do this?")
 
+    def applicationByteReceived(self, byte):
+        pass
 
+    def telnetCommandReceived(self, command, argument):
+        cmdfunc = self.commandMap.get(command)
+        if cmdfunc is None:
+            # Some ill-formed command.  Return us to the data state.
+            # After complaining.
+            log.msg("Client (%r) sent a bad command: %d" % (self.transport.getPeer(), ord(command)))
+            self.state = 'data'
+        else:
+            if argument is None:
+                cmdfunc()
+            else:
+                cmdfunc(argument)
+
+    def telnet_NOP(self):
+        pass
+
+    def telnet_DM(self):
+        pass
+
+    def telnet_BREAK(self):
+        pass
+
+    def telnet_IP(self):
+        pass
+
+    def telnet_AO(self):
+        pass
+
+    def telnet_AYT(self):
+        pass
+
+    def telnet_EC(self):
+        pass
+
+    def telnet_EL(self):
+        pass
+
+    def telnet_GA(self):
+        pass
+
+    # DO/DONT WILL/WONT are a bit more complex.  They require us to
+    # track state to avoid negotiation loops and the like.
+
+    # options is a dict mapping options, as identified by length one
+    # strings, to their current state.  The state of an option is
+    # composed of four pieces of information, represented by a four
+    # tuple.  The first element of the tuple is our view of the state
+    # of the option.  The possible values for it are the strings no,
+    # wantno, yes, wantyes.  The second element is a boolean
+    # indicating a queued state change request.  It only has meaning
+    # if the first element is wantno or wantyes.  If it is False,
+    # no state change is queued.  If it is True, a state change to
+    # the opposite state is queued. The third element indicates the
+    # peer's state of this option, and may also be no, wantno, yes,
+    # or wantyes.  The fourth element is a boolean indicating a queued
+    # state change request.  It only has meaning if the third element
+    # is wantno or wantyes.  If it is False, no state change is queued.
+    # If it is True, a state change is queued on the peer.
+
+    # Options default to disabled.
+
+    def do(self, option):
+        """Request an option be enabled.
+        """
+        self.write(IAC + DO + option)
+
+    def dont(self, option):
+        """Request an option be disabled.
+        """
+        self.write(IAC + DONT + option)
+
+    def will(self, option):
+        """Indicate that we will enable an option.
+        """
+        self.write(IAC + WILL + option)
+
+    def wont(self, option):
+        """Indicate that we will not enable an option.
+        """
+        self.write(IAC + WONT + option)
+
+    def getOptionState(self, opt):
+        return self.options.get(opt, ('no', False, 'no', False))
+
+    def setOptionState(self, opt, n, v):
+        old = self.getOptionState(opt)
+        self.options[opt] = old[:n] + (v,) + old[n + 1:]
+
+    def _dowill(self, option, s, sq):
+        state = self.getOptionState(option)
+        if state[s] == 'no':
+            if self._shouldAllowEnable(option):
+                self.setOptionState(option, s, 'yes')
+                self.do(option)
+            else:
+                self.dont(option)
+        elif state[s] == 'yes':
+            pass
+        elif state[s] == 'wantno':
+            if state[sq]:
+                # This is an error state.  The peer is defective.
+                self.setOptionState(option, s, 'yes')
+                self.setOptionStatE(option, sq, False)
+            else:
+                # This is an error state.  The peer is defective.
+                self.setOptionState(option, s, 'no')
+        elif state[s] == 'wantyes':
+            if state[sq]:
+                self.setOptionState(option, s, 'wantno')
+                self.setOptionState(option, sq, False)
+                self.dont(option)
+            else:
+                self.setOptionState(option, s, 'yes')
+        else:
+            raise ValueError("Illegal state")
+
+    def _dontwont(self, option, s, sq):
+        state = self.getOptionState(option)
+        if state[s] == 'no':
+            pass
+        elif state[s] == 'yes':
+            self.setOptionState(option, s, 'no')
+            self.dont(option)
+        elif state[s] == 'wantno':
+            if self.state[sq]:
+                self.setOptionState(option, s, 'wantyes')
+                self.setOptionState(option, sq, False)
+                self.do(option)
+            else:
+                self.setOptionState(option, s, 'no')
+        elif state[s] == 'wantyes':
+            self.setOptionState(option, s, 'no')
+            if state[sq]:
+                self.setOptionState(option, sq, False)
+        else:
+            raise ValueError("Illegal state")
+
+    def telnet_WILL(self, option):
+        self._dowill(option, HIM, HIMQ)
+
+    def telnet_WONT(self, option):
+        self._dontwont(option, HIM, HIMQ)
+
+    def telnet_DO(self, option):
+        self._dowill(option, US, USQ)
+
+    def telnet_DONT(self, option):
+        self._dontwont(option, US, USQ)
+
+US = 0
+USQ = 1
+HIM = 2
+HIMQ = 3
 
 class TelnetBootstrapProtocol(telnet.Telnet):
     protocol = None
