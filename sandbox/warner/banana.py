@@ -82,19 +82,10 @@ def bytes_to_long(s):
 
 HIGH_BIT_SET = chr(0x80)
 
-class Banana(protocol.Protocol):
+class SendBanana:
     slicerClass = RootSlicer
-    unslicerClass = RootUnslicer
-    hangupOnLengthViolation = False
-    debug = False
-    logViolations = False
 
     def __init__(self):
-        self.initSend()
-        self.initReceive()
-
-    # output side
-    def initSend(self):
         self.rootSlicer = self.slicerClass()
         self.rootSlicer.protocol = self
         self.slicerStack = [self.rootSlicer]
@@ -130,6 +121,8 @@ class Banana(protocol.Protocol):
         slicer.finish(obj)
 
     # slicers require the following methods on their .banana object:
+    #  slice, slice2, setRefID, getRefID
+    # they also require the slicerStack list, which they will manipulate
 
     def slice(self, obj):
         # let everybody taste it
@@ -162,7 +155,7 @@ class Banana(protocol.Protocol):
                 return obj
         return None
 
-    # and these methods define how they emit low-level tokens
+    # these methods define how we emit low-level tokens
 
     def sendOpen(self, opentype):
         openID = self.openCount
@@ -217,12 +210,13 @@ class Banana(protocol.Protocol):
         int2b128(count, self.transport.write)
         self.transport.write(ABORT)
 
-    # they also require the slicerStack list, which they will manipulate
 
+class ReceiveBanana:
+    unslicerClass = RootUnslicer
+    debug = False
+    logViolations = False
 
-    # input side
-
-    def initReceive(self):
+    def __init__(self):
         self.rootUnslicer = self.unslicerClass()
         self.rootUnslicer.protocol = self
         self.receiveStack = [self.rootUnslicer]
@@ -650,3 +644,8 @@ class Banana(protocol.Protocol):
         """
         raise NotImplementedError
 
+
+class Banana(SendBanana, ReceiveBanana, protocol.Protocol):
+    def __init__(self):
+        SendBanana.__init__(self)
+        ReceiveBanana.__init__(self)
