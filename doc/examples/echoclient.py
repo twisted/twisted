@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, ConnectedDatagramProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.internet.app import Application
 from twisted.internet import reactor
@@ -44,6 +44,31 @@ class EchoClientFactory(ClientFactory):
         print 'connection lost:', reason.getErrorMessage()
         reactor.stop()
 
+class ConnectedEchoClientDatagramProtocol(ConnectedDatagramProtocol):
+    strings = [
+        "Hello, world!",
+        "What a fine day it is.",
+        "Bye-bye!"
+    ]
+    
+    def startProtocol(self):
+        self.sendDatagram()
+    
+    def sendDatagram(self):
+        if len(self.strings):
+            datagram = self.strings.pop(0)
+            self.transport.write(datagram)
+        else:
+            reactor.stop()
+
+    def datagramReceived(self, datagram):
+        print 'Datagram received: ', repr(datagram)
+        self.sendDatagram()
+
 factory = EchoClientFactory()
 reactor.connectTCP('localhost', 8000, factory)
+
+# protocol = ConnectedEchoClientDatagramProtocol()
+# reactor.connectUDP('localhost', 8000, protocol)
+
 reactor.run()
