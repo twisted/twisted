@@ -171,6 +171,7 @@ BOOST_PYTHON_MODULE(tcp)
 	.def("doRead", &TCPTransport::doRead)
 	;
     class_<Protocol, bases<>, boost::noncopyable>("Protocol", no_init)
+	.def("connectionMade", &Protocol::connectionMade)
 	.def("connectionLost", &Protocol::connectionLost)
 	.def("makeConnection", &Protocol::makeConnection)
 	;

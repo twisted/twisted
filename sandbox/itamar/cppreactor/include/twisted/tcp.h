@@ -53,14 +53,10 @@ namespace Twisted
 	void makeConnection(object t) {
 	    this->transportobj = t;
 	    this->transport = extract<TCPTransport*>(t);
-	    this->connectionMade();
-	}
-	virtual void connectionMade() {
 	    call_method<void>(self, "connectionMade");
 	}
-	virtual void connectionLost(object reason) {
-	     call_method<void,object>(self, "connectionLost", reason);
-	}
+	virtual void connectionMade() {}
+	virtual void connectionLost(object reason) {}
 	virtual void dataReceived(char* buf, int buflen) = 0;
 	virtual void bufferFull() = 0;
     };
