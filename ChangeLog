@@ -1,3 +1,15 @@
+2002-05-31  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/coil/plugins/portforward.py, twisted/tap/portforward.py:
+	  Forgot to add these before rc1 :-) You can use the portforwarder
+	  with Coil and mktap again (previously "stupidproxy")
+
+	* .: Releasing Twisted 0.18.0rc2
+
+2002-05-30  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* Twisted no longer barfs when the Python XML packages aren't available.
+
 2002-05-29  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.18.0rc1
