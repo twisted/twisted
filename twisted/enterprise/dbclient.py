@@ -19,54 +19,47 @@ from twisted.spread import pb
 import time
 import sys
 
-class clientCollector(pb.Referenced):
 
-    def __init__(self, player):
-        self.player = player
+class DbClient(pb.Referenced):
+
+    def __init__(self, host, name, password):
+        self.host = host
+        self.name = name
+        self.password = password
+        self.dbUser = None
         self.count = 0
-        self.start = time.time()        
+        self.start = time.time()
 
-    def remote_gotData(self, *data):
-        #print "Got some data:" , self.count
-        self.player.request("select * from accounts", self)
+    def doLogin(self):
+        """This begins the login process"""
+        self.client = pb.Broker()
+        tcp.Client(self.host, 8787, self.client)
+        self.client.requestIdentity("twisted", "matrix", callback = self.preConnected, errback  = self.couldntConnect)
+
+    def couldntConnect(self, err):
+        """Called when an error occurs"""
+        print "Could not connect.", err
+
+    def preConnected(self, identity):
+        print "preConnected."
+        identity.attach("twisted.enterprise.db","twisted",  None, pbcallback=self.gotConnection, pberrback=self.couldntConnect)
+
+    def gotConnection(self, dbUser):
+        print 'connected:', dbUser
+        self.dbUser = dbUser
+        self.dbUser.simpleSQL("select * from accdounts where name = ?", ("testuser",), self)
+
+    def remote_simpleSQLResults(self, *data):
+        print "Got some data:" , self.count, data
+        self.dbUser.simpleSQL("select * from accdounts where name = ?", ("testuser",), self)
         self.count = self.count + 1
         if self.count == 400:
             now = time.time()
             print "Started at %f finished at %f took %f" % ( self.start, now, now - self.start)
             main.shutDown()
 
-class DbClient:
-
-    def __init__(self, host, name, password):
-        self.host = host
-        self.name = name
-        self.password = password
-        self.player = None
-        self.count = 0
-
-
-    def doLogin(self):
-        self.client = pb.Broker()
-        tcp.Client(self.host, 8787, self.client)
-
-        self.client.requestIdentity("twisted",  # username
-                                    "matrix",  # password
-                                    callback = self.preConnected,
-                                    errback  = self.couldntConnect)
-
-    def couldntConnect(self, arg):
-        print "Could not connect.", arg
-
-    def preConnected(self, identity):
-        print "preConnected."
-        identity.attach("twisted.enterprise.db","twisted",  None, pbcallback=self.gotConnection, pberrback=self.couldntConnect)
-
-    def gotConnection(self, player):
-        print 'connected:', player
-        self.player = player
-        self.collector = clientCollector(player)
-        self.player.request("select * from accounts", self.collector)
-
+    def remote_simpleSQLError(self, *error):
+        print "Error!", error
 
 
 def run():

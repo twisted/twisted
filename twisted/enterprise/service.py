@@ -50,22 +50,29 @@ class Service(pb.Service):
 class DbUser(pb.Perspective):
     """A User that wants to interact with the database.
     """
-    def perspective_request(self, sql, clientCollector):
-        print "Got SQL request:" , sql
-        newRequest = GenericRequest(sql, clientCollector.gotData)
+    def perspective_simpleSQL(self, sql, args, client):
+        """Basic SQL submission method. This calls simpleSQLResults or simpleSQLError on the client
+        to pass results back.
+        """
+        print "Got SQL request:" , sql, " args: ", args
+        newRequest = GenericRequest(sql, args, client.simpleSQLResults, client.simpleSQLError)
         self.service.manager.addRequest(newRequest)
 
 
 class GenericRequest(manager.Request):
     """Generic sql execution request.
     """
-    def __init__(self, sql, callback):
-        manager.Request.__init__(self, callback)
+    def __init__(self, sql, args, callback, errback):
+        manager.Request.__init__(self, callback, errback)
         self.sql = sql
+        self.args = args
 
     def execute(self, connection):
         c = connection.cursor()
-        c.execute(self.sql)
+        if self.args:
+            c.execute(self.sql, params=self.args)
+        else:
+            c.execute(self.sql)
         self.results = c.fetchall()
         c.close()
         #print "Fetchall :", c.fetchall()
@@ -74,26 +81,26 @@ class GenericRequest(manager.Request):
 class AddUserRequest(manager.Request):
     """DbRequest to add a user to the accounts table
     """
-    def __init__(self, name, password, callback):
-        manager.Request.__init__(self, callback)
+    def __init__(self, name, password, callback, errback):
+        manager.Request.__init__(self, callback, errback)
         self.name = name
         self.password = password
 
     def execute(self, connection):
-         c = connection.cursor()
-         c.execute("insert into accounts (name, passwd, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
-         c.fetchall()
-         c.close()
-         connection.commit()
-         self.status = 1
+        c = connection.cursor()
+        c.execute("insert into accounts (name, passwd, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
+        c.fetchall()
+        c.close()
+        connection.commit()
+        self.status = 1
 
 class PasswordRequest(manager.Request):
     """DbRequest to look up the password for a user in the accounts table.
     """
-    def __init__(self, name, callback):
-        manager.Request.__init__(self, callback)
+    def __init__(self, name, callback, errback):
+        manager.Request.__init__(self, callback, errback)
         self.name = name
-
+        
     def execute(self, connection):
         c = connection.cursor()
         c.execute("select passwd from accounts where name = '%s'" % self.name)

@@ -77,6 +77,8 @@ class ManagerSingle:
                 apply(request.callback, request.results)
             else:
                 request.callback()
+        else:
+            request.errback(request.error)
 
         self.total = self.total + 1
         return request.status
@@ -269,15 +271,17 @@ class Request:
     the method 'execute' will be run. 'self.callback' will be executed after the request
     has been processed (in the main thread) with the data in 'self.results' and
     an error code in 'self.status'. These two member variables (results and status)
-    should be set by the user code in teh execute method.
+    should be set by the user code in the execute method. If there is an error, the
+    member variable 'error' should be set with some error state information.
     """
     lastId = 0
 
-    def __init__(self, callback):
+    def __init__(self, callback, errback):
         self.status = 0
         self.error = None
         self.results = None
         self.callback = callback
+        self.errback = errback
         self.id = Request.lastId
         Request.lastId = Request.lastId + 1
 
@@ -348,6 +352,7 @@ class DriverSybase:
             for k in self.error.keys():
                 text = text +  "    %s: %s\n" % (k, self.error[k])
             print text
+            request.error = text
             return 0
 
 
@@ -387,6 +392,7 @@ class DriverInterbase:
             return 1
         except gvibExceptions.StandardError, e:
             print "Interbase error: %s" % e.args
+            request.error = e
             return 0
  
 
@@ -419,6 +425,7 @@ class DriverPostgres:
             return 1
         except self.driver.DatabaseError, e:
             print "SQL ERROR: %s" % e
+            request.error = e
             return 0
 
 
