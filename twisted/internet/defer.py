@@ -87,9 +87,10 @@ class Deferred:
     This can be implemented for protocols that run over the network by
     writing an asynchronous protocol for twisted.internet. For methods
     that come from outside packages that are not under our control, we use
-    threads (see for example twisted.enterprise.adbapi).
+    threads (see for example L{twisted.enterprise.adbapi}).
 
-    For more information about Deferreds, see doc/howto/defer.html
+    For more information about Deferreds, see doc/howto/defer.html or
+    U{http://www.twistedmatrix.com/documents/howto/defer}
     """
 
     called = 0
@@ -120,7 +121,7 @@ class Deferred:
     def addCallback(self, callback, *args, **kw):
         """Convenience method for adding just a callback.
 
-        See addCallbacks.
+        See L{addCallbacks}.
         """
         return self.addCallbacks(callback, callbackArgs=args,
                                  callbackKeywords=kw)
@@ -128,7 +129,7 @@ class Deferred:
     def addErrback(self, errback, *args, **kw):
         """Convenience method for adding just an errback.
 
-        See addCallbacks.
+        See L{addCallbacks}.
         """
         return self.addCallbacks(passthru, errback,
                                  errbackArgs=args,
@@ -138,7 +139,7 @@ class Deferred:
         """Convenience method for adding a single callable as both a callback
         and an errback.
 
-        See addCallbacks.
+        See L{addCallbacks}.
         """
         return self.addCallbacks(callback, callback,
                                  callbackArgs=args, errbackArgs=args,
@@ -186,13 +187,13 @@ class Deferred:
 
 
     def pause(self):
-        """Stop processing on a Deferred until unpause() is called.
+        """Stop processing on a Deferred until L{unpause}() is called.
         """
         self.paused = self.paused + 1
 
 
     def unpause(self):
-        """Process all callbacks made since pause() was called.
+        """Process all callbacks made since L{pause}() was called.
         """
         self.paused = self.paused - 1
         if self.paused:
@@ -287,7 +288,7 @@ class Deferred:
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
 
-    I track a list of Deferreds for their callbacks, and make a single
+    I track a list of L{Deferred}s for their callbacks, and make a single
     callback when they have all completed.
     """
 
@@ -297,15 +298,14 @@ class DeferredList(Deferred):
     def __init__(self, deferredList, fireOnOneCallback=0, fireOnOneErrback=0):
         """Initialize a DeferredList.
 
-        Arguments::
-
-          deferredList: a list of Deferreds
-
-        Keyword arguments::
-          fireOnOneCallback: a flag indicating that only one callback needs to
+        @type deferredList:  C{list} of L{Deferred}s
+        @param deferredList: The list of deferreds to track.
+        @param fireOnOneCallback: (keyword param) a flag indicating that
+                             only one callback needs to
                              be fired for me to call my callback
-          fireOnOneErrback: a flag indicating that only one errback needs to
-                            be fired for me to call my errback
+        @param fireOnOneErrback: (keyword param) a flag indicating that
+                            only one errback needs to be fired for me to
+                            call my errback
         """
         self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)
