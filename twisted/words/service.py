@@ -174,6 +174,10 @@ class Group(pb.Cached):
         self.members = []
         self.topic = "Welcome to '%s'." % self.name
 
+    def __setstate__(self, persistentState):
+        self.__dict__ = persistentState
+        self.members = []
+
     def getStateToCopyFor(self, participant):
         assert participant in self.members, "illegal copy of group"
         return {'name':    self.name,

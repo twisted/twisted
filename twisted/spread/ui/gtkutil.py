@@ -28,6 +28,9 @@ errorFont = gtk.load_font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso885
 
 
 
+def selectAll(widget,event):
+    widget.select_region(0,-1)
+
 def cbutton(name, callback):
     b = gtk.GtkButton(name)
     b.connect('clicked', callback)
@@ -119,12 +122,14 @@ class Login(gtk.GtkWindow):
         vbox.add(self.logstat)
         vbox.add(okbtnbx)
         self.add(vbox)
-
+        for fld in self.username, self.password, self.hostname, self.service, self.perspective:
+            fld.signal_connect('activate',self.login)
+            fld.signal_connect('focus_in_event',selectAll)
         self.signal_connect('destroy',gtk.mainquit,None)
 
     def loginReset(self):
         self.logstat.set_text("Idle.")
-        
+
     def loginReport(self, txt):
         self.logstat.set_text(txt)
         gtk.timeout_add(30000, self.loginReset)
