@@ -285,8 +285,8 @@ components.registerAdapter(ListModel, types.ListType, IModel)
 # pyPgSQL returns "PgResultSet" instances instead of lists, which look, act
 # and breathe just like lists. pyPgSQL really shouldn't do this, but this works
 try:
-    import pyPgSQL
-    components.registerAdapter(ListModel, pyPgSQL.PgSQL.PgResultSet, IModel)
+    from pyPgSQL import PgSQL
+    components.registerAdapter(ListModel, PgSQL.PgResultSet, IModel)
 except:
     pass
 
