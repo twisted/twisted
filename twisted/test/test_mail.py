@@ -30,6 +30,8 @@ from twisted.protocols import dns
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
+from twisted.internet import reactor
+from twisted.internet import interfaces
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
@@ -672,7 +674,6 @@ class TestAuthority(common.ResolverBase):
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
 def setUpDNS(self):
-    from twisted.internet import reactor
     self.auth = TestAuthority()
     factory = server.DNSServerFactory([self.auth])
     protocol = dns.DNSDatagramProtocol(factory)
@@ -787,7 +788,6 @@ class LiveFireExercise(unittest.TestCase):
 
         f = service.getSMTPFactory()
         
-        from twisted.internet import reactor
         self.smtpServer = reactor.listenTCP(0, f, interface='127.0.0.1')
 
         client = LineSendingProtocol([
@@ -838,7 +838,6 @@ class LiveFireExercise(unittest.TestCase):
         self.auth.addresses['destination.domain'] = ['localhost']
         
         f = insServ.getSMTPFactory()
-        from twisted.internet import reactor
         self.insServer = reactor.listenTCP(0, f, interface='127.0.0.1')
         
         # Here is the service the previous one will connect to for final
@@ -1014,8 +1013,6 @@ class AliasTestCase(unittest.TestCase):
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
     def testAliasResolution(self):
-        from twisted.internet import reactor
-
         aliases = {}
         domain = {'': TestDomain(aliases, ['user1', 'user2', 'user3'])}
         A1 = mail.alias.AliasGroup(['user1', '|process', '/file'], domain, 'alias1')
@@ -1056,10 +1053,10 @@ class AliasTestCase(unittest.TestCase):
         ])
         expected.sort() 
         self.assertEquals(r3, expected)
+    if not components.implements(reactor, interfaces.IReactorProcess):
+        testAliasResolution.skip = "IReactorProcess not supported"
 
     def testCyclicAlias(self):
-        from twisted.internet import reactor
-
         aliases = {}
         domain = {'': TestDomain(aliases, [])}
         A1 = mail.alias.AddressAlias('alias2', domain, 'alias1')
@@ -1078,6 +1075,7 @@ class AliasTestCase(unittest.TestCase):
         A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
+        print os.system('/bin/ls')
         p = reactor.spawnProcess(protocol.ProcessProtocol(), "/bin/ls")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
@@ -1085,6 +1083,8 @@ class AliasTestCase(unittest.TestCase):
             mail.alias.MessageWrapper(p, 'process')
         ])
         self.assertEquals(r, expected)
+    if not components.implements(reactor, interfaces.IReactorProcess):
+        testCyclicAlias.skip = "IReactorProcess not supported"
 
 class TestDomain:
     def __init__(self, aliases, users):
