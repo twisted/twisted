@@ -168,6 +168,7 @@ install-indep-stamp: install-base-stamp
 	install -d debian/twisted-doc-api/${DOC}/twisted-doc/
 	cp -ar doc/api/ debian/twisted-doc-api/${DOC}/twisted-doc/
 	rm -rf `find debian/twisted-doc-api/${DOC}/twisted-doc -name .cvsignore`
+	rm -rf `find debian/twisted-doc-api/${DOC}/twisted-doc -name CVS`
 	install -m 644 debian/twisted-api \
 	               debian/twisted-doc-api/usr/share/doc-base/
 	set -e;for maint in postinst prerm;\
