@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_journal -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 # 
@@ -15,10 +17,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+
 """Basic classes and interfaces for journal."""
 
 # system imports
-import os, cPickle
+import os, cPickle, time
 
 # twisted imports
 from twisted.python.components import Interface
@@ -36,18 +39,18 @@ class Journal:
         self.latestIndex = self.log.getCurrentIndex()
         snapshotIndex = self.getLastSnapshot()
         if snapshotIndex < self.latestIndex:
-            for time, command in self.log.getCommandsSince(snapshotIndex + 1):
-                # do we need to deal with time?
-                command.execute(self.journaledService)
+            for cmdtime, command in self.log.getCommandsSince(snapshotIndex + 1):
+                command.execute(self.journaledService, cmdtime)
 
     def executeCommand(self, command):
         """Log and execute a command."""
-        d = self.log.logCommand(command)
-        d.addCallback(self._reallyExecute, command)
+        runTime = time.time()
+        d = self.log.logCommand(command, runTime)
+        d.addCallback(self._reallyExecute, command, runTime)
 
-    def _reallyExecute(self, index, command):
+    def _reallyExecute(self, index, command, runTime):
         """Callback called when logging command is done."""
-        command.execute(self.journaledService)
+        command.execute(self.journaledService, runTime)
         self.latestIndex = index
     
     def getLastSnapshot(self):
@@ -101,8 +104,11 @@ class ICommand(Interface):
 class ICommandLog(Interface):
     """Interface for command log."""
 
-    def logCommand(self, command):
-        """Add a command to the log, return Deferred of command index."""
+    def logCommand(self, command, runTime):
+        """Add a command and its run time to the log.
+
+        @return Deferred of command index.
+        """
 
     def getCurrentIndex(self):
         """Return index of last command that was logged."""

@@ -14,14 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
+# -*- test-case-name: twisted.test.test_journal -*-
 
 """Logging that uses pickles.
 
 TODO: add log that logs to a file.
 """
-
-# system imports
-import time
 
 # twisted imports
 from twisted.spread import banana
@@ -45,10 +43,10 @@ class DirDBMLog:
         else:
             self.currentIndex = 0
             
-    def logCommand(self, command):
+    def logCommand(self, command, time):
         """Log a command."""
         self.currentIndex += 1
-        self.db[str(self.currentIndex)] = (time.time(), command)
+        self.db[str(self.currentIndex)] = (time, command)
         return defer.succeed(1)
     
     def getCurrentIndex(self):

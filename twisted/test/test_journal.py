@@ -17,7 +17,7 @@ class AddEntry:
         self.key = key
         self.value = value
 
-    def execute(self, svc):
+    def execute(self, svc, time):
         svc.values[self.key] = self.value
 
     def __eq__(self, other):
@@ -34,7 +34,7 @@ class DeleteEntry:
     def __init__(self, key):
         self.key = key
 
-    def execute(self, svc):
+    def execute(self, svc, time):
         del svc.values[self.key]
 
     def __eq__(self, other):
