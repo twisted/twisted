@@ -24,15 +24,6 @@ def setup(**kw):
         kw['packages'] = getPackages(projdir, parent='twisted')
         kw['data_files'] = getDataFiles(projdir, parent='twisted')
         del kw['twisted_subproject']
-        if not 'scripts' in kw and os.path.exists('bin'):
-            scriptdir = os.path.join('bin', projname)
-            if not os.path.isdir(scriptdir):
-                scriptdir = 'bin'
-            thingies = os.listdir(scriptdir)
-            if '.svn' in thingies:
-                thingies.remove('.svn')
-            kw['scripts'] = [os.path.join(scriptdir, x)
-                             for x in thingies]
     if 'cmdclass' not in kw:
         kw['cmdclass'] = {
             'install_data': install_data_twisted,
@@ -153,6 +144,18 @@ def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
                         parent=parent)
     res = ['.'.join(result) for result in results]
     return res
+
+
+
+def getScripts(projname):
+    scriptdir = os.path.join('bin', projname)
+    if not os.path.isdir(scriptdir):
+        scriptdir = 'bin'
+    thingies = os.listdir(scriptdir)
+    if '.svn' in thingies:
+        thingies.remove('.svn')
+    return [os.path.join(scriptdir, x) for x in thingies]
+
 
 # Apple distributes a nasty version of Python 2.2 w/ all release builds of
 # OS X 10.2 and OS X Server 10.2

@@ -5,6 +5,7 @@ from twisted.python import dist
 if __name__ == '__main__':
     dist.setup(
         twisted_subproject="lore",
+        scripts=dist.getScripts("lore"),
         # metadata
         name="Twisted Lore",
         version="SVN-Trunk",
