@@ -1,7 +1,6 @@
 2004-06-05  Dave Peticolas  <dave@krondo.com>
 
-	* twisted/enterprise/adbapi.py: only log sql exceptions if noisy.
-	Closes issue 631.
+	* twisted/enterprise/adbapi.py: Don't log sql exceptions (issue 631).
 	Remove deprecated api.
 
 	* twisted/news/database.py: do not use adbapi.Augmentation
