@@ -11,6 +11,7 @@ class Perspective(pb.Perspective):
         self.namespace = {}
     def perspective_do(self, mesg):
         fn = "$manhole"
+        rtval = ""
         try:
             code = compile(mesg, fn, 'eval')
         except:
@@ -21,12 +22,22 @@ class Perspective(pb.Perspective):
                 traceback.print_exc(file=io)
                 return io.getvalue()
         try:
-            val = eval(code, self.namespace)
+            out = sys.stdout
+            sys.stdout = StringIO.StringIO()
+            try:
+                val = eval(code, self.namespace)
+            finally:
+                rtval = sys.stdout.getvalue()
+                sys.stdout = out
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
-            return io.getvalue()
-        return val
+            return rtval + io.getvalue()
+
+        if val is not None:
+            return rtval + '\n' + val
+        else:
+            return rtval
 
 class Service(pb.Service):
     # By default, "guest"/"guest" will work as login and password, though you
