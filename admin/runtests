@@ -18,7 +18,7 @@
 
 
 """
-Usage: python RunTests.py
+Usage: python RunTests.py [-t] [-v] [-q] [<reactor>]
 
 Run a python GUI which starts up a UnitTestRunner for the Twisted
 test-suite.
@@ -43,9 +43,10 @@ from twisted.test import test_all
 
 class TestProgram:
     value = 0
+
     def __init__(self, argv=None):
         if argv is None:
-            argv = []
+            argv = ["runtests"]
 
         if '-t' in argv:
             text_mode = 'always'
@@ -59,6 +60,12 @@ class TestProgram:
         else:
             self.verbosity = 1
 
+        if (len(argv) > 1) and argv[-1][0] != "-":
+            reactor = argv[-1]
+        else:
+            reactor = "default"
+        self._installReactor(reactor)
+        
         if not text_mode:
             try:
                 self.value = self.runGUI()
@@ -70,6 +77,26 @@ class TestProgram:
                 return
 
         self.value = self.runText()
+
+    def _installReactor(self, reactor):
+        from twisted.python import runtime
+        platformType = runtime.platform.getType()
+        if platformType == 'java':
+            from twisted.internet import jnternet
+            jnternet.install()
+        else:
+            reactorTypes = {
+                'gtk': 'twisted.internet.ingtkernet',
+                'default': 'twisted.internet.default',
+                'win32': 'twisted.internet.win32',
+                'win': 'twisted.internet.win32',
+                'poll': 'twisted.internet.poll'
+                }
+            from twisted.python.reflect import namedModule
+            namedModule(reactorTypes[reactor]).install()
+
+            from twisted.internet import reactor
+            print 'reactor class: %s' % reactor.__class__
 
     def runText(self):
         from pyunit import unittest

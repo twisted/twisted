@@ -20,8 +20,6 @@ Amalgamate all Twisted testcases
 """
 
 from pyunit import unittest
-from twisted.internet import default
-default.install()
 
 import string
 import traceback
