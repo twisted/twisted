@@ -75,9 +75,7 @@ class Options(usage.Options):
     """ % (os.path.basename(sys.argv[0]),)
 
     optFlags = [["help", "h"],
-                ["text", "t", "Text mode (ignored)"],
                 ["rterrors", "e", "realtime errors, print out tracebacks as soon as they occur"],
-                ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
                 ["nopm", None, "don't automatically jump into debugger for postmorteming of exceptions"],
                 ["dry-run", 'n', "do everything but run the tests"],
