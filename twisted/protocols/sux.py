@@ -431,62 +431,6 @@ class XMLParser(Protocol):
         Default behaviour is to print.'''
         print 'end', name
 
-from HTMLParser import HTMLParser
-
-import HTMLParser as htmlp
-import re
-htmlp.attrfind = re.compile(
-    r'\s*([a-zA-Z_][-.,:a-zA-Z_0-9]*)(\s*=\s*'
-    r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./,:;+*%?!&$\(\)_#=~]*))?',
-    re.MULTILINE)
-
-
-class HTMLParserTranslator(HTMLParser):
-    def __init__(self, xmlparser):
-        self.xmlparser = xmlparser
-        xmlparser.saveMark = self.getpos
-        HTMLParser.__init__(self)
-
-    def handle_starttag(self, tag, attrs):
-        d = {}
-        for k, v in attrs:
-            if v is None:
-                v = 'True'
-            d[k] = v
-        self.xmlparser.gotTagStart(tag, d)
-
-    def handle_endtag(self, tag):
-        self.xmlparser.gotTagEnd(tag)
-
-    def handle_charref(self, name):
-        self.xmlparser.gotEntityReference("#"+name)
-
-    def handle_entityref(self, name):
-        self.xmlparser.gotEntityReference(name)
-
-    def handle_data(self, data):
-        self.xmlparser.gotText(data)
-
-    def handle_decl(self, decl):
-        if decl.lower().startswith("doctype"):
-            self.xmlparser.gotDoctype(decl[len('doctype '):])
-
-    def handle_comment(self, comment):
-        self.xmlparser.gotComment(comment)
-
-    def makeConnection(self, other):
-        self.xmlparser.makeConnection(other)
-
-    def dataReceived(self, data):
-        self.feed(data)
-
-    def close(self, reason=None):
-        HTMLParser.close(self)
-        self.xmlparser.connectionLost(reason)
-
-    connectionLost = close
-
-
 if __name__ == '__main__':
     from cStringIO import StringIO
     testDocument = '''

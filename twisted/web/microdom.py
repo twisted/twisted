@@ -38,7 +38,7 @@ import copy
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.protocols.sux import XMLParser, ParseError, HTMLParserTranslator
+from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
 from twisted.python.reflect import Accessor
 
@@ -437,20 +437,16 @@ def parse(readable, *args, **kwargs):
     if not hasattr(readable, "read"):
         readable = open(readable)
     mdp = MicroDOMParser(*args, **kwargs)
-    if mdp.beExtremelyLenient:
-        mparser = mdp # HTMLParserTranslator(mdp)
-    else:
-        mparser = mdp
     mdp.filename = getattr(readable, "name", "<xmlfile />")
-    mparser.makeConnection(None)
+    mdp.makeConnection(None)
     if hasattr(readable,"getvalue"):
-        mparser.dataReceived(readable.getvalue())
+        mdp.dataReceived(readable.getvalue())
     else:
         r = readable.read(1024)
         while r:
-            mparser.dataReceived(r)
+            mdp.dataReceived(r)
             r = readable.read(1024)
-    mparser.connectionLost(None)
+    mdp.connectionLost(None)
     if mdp.beExtremelyLenient:
         if len(mdp.documents) == 1:
             d = mdp.documents[0]
