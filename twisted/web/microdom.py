@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_persisted -*-
+# -*- test-case-name: twisted.test.test_microdom -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -32,13 +32,19 @@ sample of XML.
 """
 # System Imports
 import copy
+from cStringIO import StringIO
 
 # Twisted Imports
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
 from twisted.python.reflect import Accessor
 
+# Sibling imports
 import html
+
+# create NodeList class
+from types import ListType as NodeList
+
 
 class MismatchedTags(Exception):
 
@@ -49,7 +55,9 @@ class MismatchedTags(Exception):
     def __str__(self):
         return "expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" % (self.expect, self.got, self.endLine, self.endCol, self.begLine, self.begCol)
 
+
 class Node:
+    
     def __init__(self, parentNode=None):
         self.parentNode = parentNode
         self.childNodes = []
@@ -57,14 +65,16 @@ class Node:
 
     def writexml(self, stream, indent='', addindent='', newl=''):
         raise NotImplementedError()
+
     def toxml(self, indent='', newl=''):
-        from cStringIO import StringIO
         s = StringIO()
         self.writexml(s, '', indent, newl)
         rv = s.getvalue()
         return rv
+
     def toprettyxml(self, indent='\t', newl='\n'):
         return self.toxml(indent, newl)
+
     def cloneNode(self, deep=0):
         if deep:
             return copy.deepcopy(self)
@@ -80,11 +90,13 @@ class Node:
     def appendChild(self, child):
         self.childNodes.append(child)
         child.parentNode = self
+
     def removeChild(self, child):
         if child in self.childNodes:
             self.childNodes.remove(child)
             child.parentNode = None
         return child
+
     def replaceChild(self, newChild, oldChild):
         if newChild.parentNode:
             newChild.parentNode.removeChild(newChild)
@@ -101,7 +113,9 @@ class Node:
             return self.childNodes[0]
         return None
 
+
 class Document(Node, Accessor):
+
     def __init__(self, documentElement=None):
         Node.__init__(self)
         if documentElement:
@@ -113,6 +127,7 @@ class Document(Node, Accessor):
     def appendChild(self, c):
         assert not self.childNodes, "Only one element per document."
         Node.appendChild(self, c)
+
     def writexml(self, stream, indent='', addindent='', newl=''):
         stream.write('<?xml version="1.0"?>' + newl)
         self.documentElement.writexml(stream, indent, addindent, newl)
@@ -124,7 +139,9 @@ class Document(Node, Accessor):
     def createTextNode(self, text):
         return Text(text)
 
+
 class EntityReference(Node):
+
     def __init__(self, eref, parentNode=None):
         Node.__init__(self, parentNode)
         self.eref = eref
@@ -133,12 +150,16 @@ class EntityReference(Node):
     def writexml(self, stream, indent='', addindent='', newl=''):
         stream.write(self.nodeValue)
 
+
 class CharacterData(Node):
+
     def __init__(self, data, parentNode=None):
         Node.__init__(self, parentNode)
         self.value = self.data = self.nodeValue = data
 
+
 class Text(CharacterData):
+
     def __init__(self, data, parentNode=None, raw=0):
         CharacterData.__init__(self, data, parentNode)
         self.raw = raw
@@ -150,16 +171,20 @@ class Text(CharacterData):
             val = html.escape(str(self.nodeValue))
         stream.write(val)
 
+
 class CDATASection(CharacterData):
     def writexml(self, stream, indent='', addindent='', newl=''):
         stream.write("<![CDATA[")
         stream.write(self.nodeValue)
         stream.write("]]>")
 
+
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
 
+
 class Element(Node):
+
     def __init__(self, tagName, attributes=None, parentNode=None, filename=None, markpos=None):
         Node.__init__(self, parentNode)
         if attributes is None:
@@ -331,7 +356,4 @@ def parseString(st):
     d = mdp.documents[0]
     return Document(d)
 
-# parseString("<!DOCTYPE suck it> <foo> testing testing, one two <bar/> </foo>").toxml()
-
-from types import ListType as NodeList
 
