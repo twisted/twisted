@@ -282,8 +282,7 @@ class Request(pb.Copyable, http.HTTP):
                     # Oh well, I guess we won't include the content
                     # length then.
                 else:
-                    # XXX: What's this "minus one" for?
-                    self.setHeader('content-length', str(len(body)-1))
+                    self.setHeader('content-length', len(body))
 
                 self.write('')
                 self.finish()
@@ -319,18 +318,16 @@ class Request(pb.Copyable, http.HTTP):
             self.setResponseCode(http.INTERNAL_SERVER_ERROR)
             self.setHeader('content-type',"text/html")
 
-        # XXX: What's this "minus one" for?
-
         if self.method == "HEAD":
             if len(body) > 0:
                 # This is a Bad Thing (RFC 2616, 9.4)
                 log.msg("Warning: HEAD request %s for resource %s is"
                         " returning a message body.  I think I'll eat it."
                         % (self, resrc))
-                self.setHeader('content-length',str(len(body)-1))
+                self.setHeader('content-length', len(body))
             self.write('')
         else:
-            self.setHeader('content-length',str(len(body)-1))
+            self.setHeader('content-length', len(body))
             self.write(body)
         self.finish()
 
