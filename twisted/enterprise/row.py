@@ -1,5 +1,6 @@
 import string
 import time
+import exceptions
 
 class DBError(Exception):
     pass
@@ -54,9 +55,10 @@ class RowObject:
             if string.lower(attr) == string.lower(attrName):
                 return self.__dict__[attr]
         raise DBError("Unable to find attribute %s" % attrName)
-    
-    def updateRow(self):
-        """update my contents to the database.
+
+
+    def buildUpdateSQL(self):
+        """build SQL to update my current state.
         """
         if not self.populated:
             raise ("ERROR: class %s has not been populated" % repr(self.__class__) )
@@ -69,13 +71,18 @@ class RowObject:
         # build where clause
         for keyColumn, type in self.dbKeyColumns:
             args.append( self.findAttribute(keyColumn))
+        return self.updateSQL % tuple(args)
 
-        sql = self.updateSQL % tuple(args)
+        
+    def updateRow(self):
+        """update my contents to the database.
+        """
+        sql = self.buildUpdateSQL()
         self.setDirty(0)
         return self.augmentation.runOperation(sql)
 
-    def insertRow(self):
-        """insert a new row for this object instance.
+    def buildInsertSQL(self):
+        """build SQL to insert my current state.
         """
         if not self.populated:
             raise DBError("class %s has not been populated" % repr(self.__class__) )     
@@ -83,36 +90,46 @@ class RowObject:
         # build values
         for column, type, typeid in self.dbColumns:
             args.append(self.findAttribute(column))
+        return self.insertSQL % tuple(args)
 
-        sql = self.insertSQL % tuple(args)
+    def insertRow(self):
+        """insert a new row for this object instance.
+        """
         self.setDirty(0)        
-
+        sql = self.buildInsertSQL()
         return self.augmentation.runOperation(sql)
 
+    def buildDeleteSQL(self):
+        """build SQL to delete me from the db.
+        """
+        if not self.populated:
+            raise DBError("class %s has not been populated" % repr(self.__class__) )                    
+        args = []
+        # build where clause
+        for keyColumn, type in self.dbKeyColumns:
+            args.append(self.findAttribute(keyColumn))
+
+        return self.deleteSQL % tuple(args)
+        
     def deleteRow(self):
         """delete the row for this object from the database.
         """
+        sql = self.buildDeleteSQL()
+        return self.augmentation.runOperation(sql)
+
+    def buildSelectSQL(self):
         if not self.populated:
             raise DBError("class %s has not been populated" % repr(self.__class__) )                    
         args = []
         # build where clause
         for keyColumn, type in self.dbKeyColumns:
             args.append(self.findAttribute(keyColumn))
-
-        sql = self.deleteSQL % tuple(args)
-        return self.augmentation.runOperation(sql)
-
+        return self.selectSQL % tuple(args)
+        
     def selectRow(self):
         """load this rows current values from the database.
         """
-        if not self.populated:
-            raise DBError("class %s has not been populated" % repr(self.__class__) )                    
-        args = []
-        # build where clause
-        for keyColumn, type in self.dbKeyColumns:
-            args.append(self.findAttribute(keyColumn))
-
-        sql = self.selectSQL % tuple(args)
+        sql = self.buildSelectSQL()
         return self.augmentation.runQuery(sql).addCallback(self.gotSelectData)
 
     def gotSelectData(self, data):
@@ -122,8 +139,10 @@ class RowObject:
             raise DBError("ERROR: select data was empty")
         actualPos = 0
         for i in range(0, len(self.dbColumns)):
-            if not getKeyColumn(self.__class__, self.dbColumns[i][0] ):            
-                setattr(self, self.dbColumns[i][0], data[0][actualPos] )
+            if not getKeyColumn(self.__class__, self.dbColumns[i][0] ):
+                for col in self.rowColumns:
+                    if string.lower(col) == string.lower(self.dbColumns[i][0]):
+                        setattr(self, col, data[0][actualPos] )
                 actualPos = actualPos + 1
         self.setDirty(0)
         return self
@@ -138,11 +157,12 @@ class RowObject:
         """
         # build where clause
         if getKeyColumn(self.__class__, name):
-            raise DBError("cannot assign to key column attribute <%s> of RowObject class" % name)
+            raise DBError("cannot assign value <%s> to key column attribute <%s> of RowObject class" % (value,name))
 
         if name in self.rowColumns:
-            if value != self.__dict__.get(name,None):
-                self.__dict__["dirty"] = 1  # no longer in sync with database
+            if value != self.__dict__.get(name,None) and not self.dirty:
+                ##print "dirtying %s for %s" % (self.objectType.name, name)
+                self.setDirty(1)
             
         self.__dict__[name] = value
 
@@ -221,7 +241,14 @@ class DBReflector:
         AND pg_attribute.atttypid not in (26,27,28,29)""" % tableName
 
         # get the columns for the table
-        transaction.execute(sql)
+        try:
+            transaction.execute(sql)
+        except exceptions.ValueError, e:
+            print "No data trying to populate rowclass <%s>. [%s] SQL was: '%s'" % (tableName,  e, sql)
+            raise e
+        except:
+            print "unknow ERROR!", sql
+            raise
         columns = transaction.fetchall()
 
         # populate rowClass data
@@ -346,6 +373,23 @@ class KeyFactory:
             raise "Key factory key pool exceeded."
         return next
         
+
+class StatementBatch:
+    """A keep a set of SQL statements to be executed in a single batch.
+    """
+    def __init__(self):
+        self.statements = []
+
+    def addStatement(self, statement):
+        self.statements.append(statement)
+
+    def batchSQL(self):
+        batchSQL =  string.join(self.statements,";\n")
+        self.statements = []
+        return batchSQL
+
+    def getSize(self):
+        return len(self.statements)
     
 NOQUOTE = 1
 USEQUOTE = 2
@@ -366,7 +410,7 @@ dbTypeMap = {
 
 def getKeyColumn(rowClass, name):
     for keyColumn, type in rowClass.dbKeyColumns:
-        if name == keyColumn:
+        if string.lower(name) == keyColumn:
             return name
     return None
 

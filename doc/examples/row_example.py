@@ -98,6 +98,10 @@ def onSelected(room):
     print "\ngot Room:", room
     main.shutDown()
 
+def tick():
+    main.addTimeout(tick, 0.5)
+
+
 
 newRoom = None
 
@@ -112,5 +116,8 @@ reflector = row.DBReflector(manager, stubs)
 reflector.populate().addCallback(runTests).arm()
 
 kf = row.KeyFactory(100000,50000)
+
+# make sure we can be shut down on windows.
+main.addTimeout(tick, 0.5)
 
 application.run()
