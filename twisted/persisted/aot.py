@@ -23,7 +23,7 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-import types, new, string, copy_reg
+import types, new, string, copy_reg, tokenize, re
 
 from twisted.python import reflect
 from twisted.persisted import crefutil
@@ -31,6 +31,9 @@ from twisted.persisted import crefutil
 ###########################
 # Abstract Object Classes #
 ###########################
+
+#"\0" in a getSource means "insert variable-width indention here".
+#see `indentify'.
 
 class Named:
     def __init__(self, name):
@@ -58,7 +61,7 @@ class InstanceMethod:
         self.instance = inst
 
     def getSource(self):
-        return "InstanceMethod(%r, %r, \n\t%s)" % (self.name, self.klass, prettify(self.instance))
+        return "InstanceMethod(%r, %r, \n\0%s)" % (self.name, self.klass, prettify(self.instance))
 
 
 class _NoStateObj:
@@ -89,7 +92,7 @@ class Instance:
             try:
                 return "Instance(%r, %s)" % (self.klass, dictToKW(stateDict))
             except NonFormattableDict:
-                pass
+                return "Instance(%r, %s)" % (self.klass, prettify(stateDict))
         return "Instance(%r, %s)" % (self.klass, prettify(self.state))
 
 class Ref:
@@ -117,7 +120,7 @@ class Ref:
         if self.obj is None:
             raise RuntimeError("Don't try to display me before setting an object on me!")
         if self.refnum:
-            return "Ref(%d, \n\t%s)" % (self.refnum, prettify(self.obj))
+            return "Ref(%d, \n\0%s)" % (self.refnum, prettify(self.obj))
         return prettify(self.obj)
  
 
@@ -155,15 +158,19 @@ class NonFormattableDict(Exception):
     """A dictionary was not formattable.
     """
 
+r = re.compile('[a-zA-Z_][a-zA-Z0-9_]*$')
+
 def dictToKW(d):
     out = []
     items = d.items()
     items.sort()
     for k,v in items:
         if not isinstance(k, types.StringType):
-            raise NonFormattableDict(d)
+            raise NonFormattableDict("%r ain't a string" % k)
+        if not r.match(k):
+            raise NonFormattableDict("%r ain't an identifier" % k)
         out.append(
-            "\n\t%s=%s," % (k, prettify(v))
+            "\n\0%s=%s," % (k, prettify(v))
             )
     return string.join(out, '')
 
@@ -182,22 +189,22 @@ def prettify(obj):
         elif t is types.DictType:
             out = ['{']
             for k,v in obj.items():
-                out.append('\n\t%s: %s,' % (prettify(k), prettify(v)))
-            out.append(len(obj) and '\n\t}' or '}')
+                out.append('\n\0%s: %s,' % (prettify(k), prettify(v)))
+            out.append(len(obj) and '\n\0}' or '}')
             return string.join(out, '')
 
         elif t is types.ListType:
             out = ["["]
             for x in obj:
-                out.append('\n\t%s,' % prettify(x))
-            out.append(len(obj) and '\n\t]' or ']')
+                out.append('\n\0%s,' % prettify(x))
+            out.append(len(obj) and '\n\0]' or ']')
             return string.join(out, '')
 
         elif t is types.TupleType:
             out = ["("]
             for x in obj:
-                out.append('\n\t%s,' % prettify(x))
-            out.append(len(obj) and '\n\t)' or ')')
+                out.append('\n\0%s,' % prettify(x))
+            out.append(len(obj) and '\n\0)' or ')')
             return string.join(out, '')
         else:
             raise TypeError("Unsupported type %s when trying to prettify %s." % (t, obj))
@@ -205,15 +212,19 @@ def prettify(obj):
 def indentify(s):
     out = []
     stack = []
-    for ch in s:
-        if ch in ['[', '(', '{']:
-            stack.append(ch)
-        elif ch in [']', ')', '}']:
+    def eater(type, val, r, c, l, out=out, stack=stack):
+        #import sys
+        #sys.stdout.write(val)
+        if val in ['[', '(', '{']:
+            stack.append(val)
+        elif val in [']', ')', '}']:
             stack.pop()
-        if ch == '\t':
+        if val == '\0':
             out.append('  '*len(stack))
         else:
-            out.append(ch)
+            out.append(val)
+    l = ['', s]
+    tokenize.tokenize(l.pop, eater)
     return string.join(out, '')
 
 
