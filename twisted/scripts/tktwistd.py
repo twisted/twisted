@@ -21,7 +21,7 @@
 
 # System imports
 import os
-import Tkinter, tkFileDialog, tkMessageBox
+import Tkinter, tkFileDialog, tkMessageBox, tkCommonDialog
 
 # Sibling imports
 import twistd, tkmktap, tapconvert
@@ -84,6 +84,15 @@ def pickOptions(master, filename):
     config.pack()
 
 
+# Define function so it works, if somewhat uncleanly for
+# Python2.1 users too
+def askdirectory():
+    d = tkCommonDialog.Dialog()
+    d.command = 'tk_chooseDirectory'
+    return d.show()
+
+askdirectory = getattr(tkFileDialog, 'askdirectory', askdirectory)
+
 def run():
     r = Tkinter.Tk()
     r.withdraw()
@@ -94,7 +103,7 @@ def run():
         filetypes=FILE_TYPES
     )
     
-    working = tkFileDialog.askdirectory(
+    working = askdirectory(
         parent=r, title="Select Working Directory"
     )
     
