@@ -26,11 +26,13 @@ class IRealm(components.Interface):
         pass
 
 class Portal:
-    def __init__(self, realm):
+    def __init__(self, realm, checkers=()):
         """Create a Portal to a L{IRealm}.
         """
         self.realm = realm
         self.checkers = {}
+        for checker in checkers:
+            self.registerChecker(checker)
 
     def listCredentialsInterfaces(self):
         """Return list of credentials interfaces that can be used to login."""
