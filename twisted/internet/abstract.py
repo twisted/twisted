@@ -69,14 +69,15 @@ class FileDescriptor(log.Logger):
         it indicates the connection was lost.
         """
 
-        raise NotImplementedError("%s does not implement writeSomeData" % str(self.__class__))
+        raise NotImplementedError("%s does not implement writeSomeData" %
+                                  str(self.__class__))
 
     def doWrite(self):
         """Called when data is available for writing.
 
-        A result that is true (e.g.) a negtive number implies the connection
-        was lost. A false result implies the connection is still there --
-        a result of 0 implies no write was done. A result of None
+        A result that is true (which will be a negtive number) implies the
+        connection was lost. A false result implies the connection is still
+        there; a result of 0 implies no write was done, and a result of None
         indicates that a write was done.
         """
         # Send as much data as you can.
