@@ -29,7 +29,17 @@ class LineTester(basic.LineReceiver):
         self.received.append(line)
         if line == '':
             self.setRawMode()
-        if line[:4] == 'len ':
+        elif line == 'pause':
+            self.pauseProducing()
+            reactor.callLater(0, self.resumeProducing)
+        elif line == 'rawpause':
+            self.pauseProducing()
+            self.setRawMode()
+            self.received.append('')
+            reactor.callLater(0, self.resumeProducing)
+        elif line == 'stop':
+            self.stopProducing()
+        elif line[:4] == 'len ':
             self.length = int(line[4:])
 
     def rawDataReceived(self, data):
@@ -125,6 +135,55 @@ a'''
                 s = self.buffer[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.failUnlessEqual(self.output, a.received)
+
+
+    pause_buf = 'twiddle1\ntwiddle2\npause\ntwiddle3\n'
+
+    pause_output1 = ['twiddle1', 'twiddle2', 'pause']
+    pause_output2 = pause_output1+['twiddle3']
+
+    def testPausing(self):
+        for packet_size in range(1, 10):
+            t = StringIOWithoutClosing()
+            a = LineTester()
+            a.makeConnection(protocol.FileWrapper(t))
+            for i in range(len(self.pause_buf)/packet_size + 1):
+                s = self.pause_buf[i*packet_size:(i+1)*packet_size]
+                a.dataReceived(s)
+            self.failUnlessEqual(self.pause_output1, a.received)
+            reactor.iterate(0)
+            self.failUnlessEqual(self.pause_output2, a.received)
+
+    rawpause_buf = 'twiddle1\ntwiddle2\nlen 5\nrawpause\n12345twiddle3\n'
+
+    rawpause_output1 = ['twiddle1', 'twiddle2', 'len 5', 'rawpause', '']
+    rawpause_output2 = ['twiddle1', 'twiddle2', 'len 5', 'rawpause', '12345', 'twiddle3']
+
+    def testRawPausing(self):
+        for packet_size in range(1, 10):
+            t = StringIOWithoutClosing()
+            a = LineTester()
+            a.makeConnection(protocol.FileWrapper(t))
+            for i in range(len(self.rawpause_buf)/packet_size + 1):
+                s = self.rawpause_buf[i*packet_size:(i+1)*packet_size]
+                a.dataReceived(s)
+            self.failUnlessEqual(self.rawpause_output1, a.received)
+            reactor.iterate(0)
+            self.failUnlessEqual(self.rawpause_output2, a.received)
+
+    stop_buf = 'twiddle1\ntwiddle2\nstop\nmore\nstuff\n'
+
+    stop_output = ['twiddle1', 'twiddle2', 'stop']
+    def testStopProducing(self):
+        for packet_size in range(1, 10):
+            t = StringIOWithoutClosing()
+            a = LineTester()
+            a.makeConnection(protocol.FileWrapper(t))
+            for i in range(len(self.stop_buf)/packet_size + 1):
+                s = self.stop_buf[i*packet_size:(i+1)*packet_size]
+                a.dataReceived(s)
+            self.failUnlessEqual(self.stop_output, a.received)
+        
 
 class LineOnlyReceiverTestCase(unittest.TestCase):
 

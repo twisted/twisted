@@ -181,7 +181,8 @@ class LineReceiver(protocol.Protocol):
     __buffer = ''
     delimiter = '\r\n'
     MAX_LENGTH = 16384
-
+    paused = False
+    
     def clearLineBuffer(self):
         """Clear buffered data."""
         self.__buffer = ""
@@ -193,7 +194,7 @@ class LineReceiver(protocol.Protocol):
         """
         self.__buffer = self.__buffer+data
         lastoffset=0
-        while self.line_mode:
+        while self.line_mode and not self.paused:
             offset=self.__buffer.find(self.delimiter, lastoffset)
             if offset == -1:
                 self.__buffer=self.__buffer[lastoffset:]
@@ -215,10 +216,13 @@ class LineReceiver(protocol.Protocol):
                 self.__buffer = self.__buffer[lastoffset:]
                 return why
         else:
-            data=self.__buffer[lastoffset:]
-            self.__buffer=''
-            if data:
-                return self.rawDataReceived(data)
+            if self.paused:
+                self.__buffer=self.__buffer[lastoffset:]
+            else:
+                data=self.__buffer[lastoffset:]
+                self.__buffer=''
+                if data:
+                    return self.rawDataReceived(data)
 
     def setLineMode(self, extra=''):
         """Sets the line-mode of this receiver.
@@ -267,6 +271,19 @@ class LineReceiver(protocol.Protocol):
         line.
         """
         return self.transport.loseConnection()
+
+    def pauseProducing(self):
+        self.paused = True
+        self.transport.pauseProducing()
+
+    def resumeProducing(self):
+        self.paused = False
+        self.dataReceived('')
+        self.transport.resumeProducing()
+
+    def stopProducing(self):
+        self.paused = True
+        self.transport.stopProducing()
 
 
 class Int32StringReceiver(protocol.Protocol):

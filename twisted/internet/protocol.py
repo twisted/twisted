@@ -609,6 +609,17 @@ class FileWrapper:
     def handleException(self):
         pass
 
+    def resumeProducing(self):
+        # Never sends data anyways
+        pass
+
+    def pauseProducing(self):
+        # Never sends data anyways
+        pass
+    
+    def stopProducing(self):
+        self.loseConnection()
+        
 components.backwardsCompatImplements(FileWrapper)
 
 
