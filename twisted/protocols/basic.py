@@ -52,8 +52,8 @@ class NetstringReceiver(protocol.Protocol):
 
     MAX_LENGTH = 99999
     brokenPeer = 0
-    __mode = LENGTH
-    __length = 0
+    _readerState = LENGTH
+    _readerLength = 0
 
     def stringReceived(self, line):
         """
@@ -62,16 +62,16 @@ class NetstringReceiver(protocol.Protocol):
         raise NotImplementedError
 
     def doData(self):
-        buffer,self.__data = self.__data[:int(self.__length)],self.__data[int(self.__length):]
-        self.__length = self.__length - len(buffer)
+        buffer,self.__data = self.__data[:int(self._readerLength)],self.__data[int(self._readerLength):]
+        self._readerLength = self._readerLength - len(buffer)
         self.__buffer = self.__buffer + buffer
-        if self.__length != 0:
+        if self._readerLength != 0:
             return
         self.stringReceived(self.__buffer)
-        self.__mode = COMMA
+        self._readerState = COMMA
 
     def doComma(self):
-        self.__mode = LENGTH
+        self._readerState = LENGTH
         if self.__data[0] != ',':
             if DEBUG:
                 raise NetstringParseError(repr(self.__data))
@@ -90,24 +90,24 @@ class NetstringReceiver(protocol.Protocol):
         self.__data = self.__data[m.end():]
         if m.group(1):
             try:
-                self.__length = self.__length * (10**len(m.group(1))) + long(m.group(1))
+                self._readerLength = self._readerLength * (10**len(m.group(1))) + long(m.group(1))
             except OverflowError:
                 raise NetstringParseError, "netstring too long"
-            if self.__length > self.MAX_LENGTH:
+            if self._readerLength > self.MAX_LENGTH:
                 raise NetstringParseError, "netstring too long"
         if m.group(2):
             self.__buffer = ''
-            self.__mode = DATA
+            self._readerState = DATA
 
     def dataReceived(self, data):
         self.__data = data
         try:
             while self.__data:
-                if self.__mode == DATA:
+                if self._readerState == DATA:
                     self.doData()
-                elif self.__mode == COMMA:
+                elif self._readerState == COMMA:
                     self.doComma()
-                elif self.__mode == LENGTH:
+                elif self._readerState == LENGTH:
                     self.doLength()
                 else:
                     raise RuntimeError, "mode is not DATA, COMMA or LENGTH"
