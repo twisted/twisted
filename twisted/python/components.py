@@ -323,16 +323,11 @@ class Adapter:
         """
         return self.original.getComponent(interface, registry=None, default=default)
 
-
-def isuper(iface, adapter):
-    assert isinstance(adapter.original, Componentized)
-    adapters = adapter.original._adapterCache.get(reflect.qual(iface), [])
-    i = adapters.index(adapter)
-    if i == 0:
-        if implements(adapter.original, iface):
-            return adapter.original
-        raise NotImplementError, "End of the line"
-    return adapters[i - 1]
+    def isuper(self, iface, adapter):
+        """
+        Forward isuper to self.original
+        """
+        return self.original.isuper(iface, adapter)
 
 class Componentized(styles.Versioned):
     """I am a mixin to allow you to be adapted in various ways persistently.
@@ -350,6 +345,18 @@ class Componentized(styles.Versioned):
 
     def __init__(self):
         self._adapterCache = {}
+
+
+    def isuper(self, iface, adapter):
+        #assert isinstance(adapter.original, Componentized)
+        adapters = self._adapterCache.get(reflect.qual(iface), [])
+        i = adapters.index(adapter)
+        if i == 0:
+            if implements(self, iface):
+                return self
+            raise NotImplementError, "End of the line"
+        return adapters[i - 1]
+
 
     def locateAdapterClass(self, klass, interfaceClass, default, registry=None):
         return getRegistry(registry).getAdapterClassWithInheritance(klass, interfaceClass, default)
