@@ -46,7 +46,7 @@ class IUsernameHashedPassword(ICredentials):
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
 
-    @type username: C{str} or C{Deferred}
+    @type username: C{str}
     @ivar username: The username associated with these credentials.
     """
 
@@ -70,10 +70,10 @@ class IUsernamePassword(ICredentials):
     it need only transform the stored password in a similar way before
     performing the comparison.
 
-    @type username: C{str} or C{Deferred}
+    @type username: C{str}
     @ivar username: The username associated with these credentials.
 
-    @type password: C{str} or C{Deferred}
+    @type password: C{str}
     @ivar password: The password associated with these credentials.
     """
 
