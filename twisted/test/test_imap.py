@@ -208,6 +208,15 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         for (case, expected) in zip(answers, cases):
             self.assertEquals('(' + imap4.collapseNestedLists(case) + ')', expected)
+
+    def testFiles(self):
+        inputStructure = [
+            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
+        ]
+        
+        output = 'foo bar baz {16}\r\nthis is a file\r\n buz'
+        
+        self.assertEquals(imap4.collapseNestedLists(inputStructure), output)
     
     def testLiterals(self):
         cases = [

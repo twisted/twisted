@@ -3138,6 +3138,9 @@ def collapseNestedLists(items):
     Strings in C{items} will be sent as literals if they contain CR or LF,
     quoted if they contain other whitespace, or sent unquoted otherwise.
     References to None in C{items} will be translated to the atom NIL.
+    Objects with a 'read' attribute will have it called on them with no
+    arguments and the returned string will be inserted into the output as a
+    literal.
 
     @type items: Any iterable
 
@@ -3147,6 +3150,9 @@ def collapseNestedLists(items):
     for i in items:
         if i is None:
             pieces.extend([' ', 'NIL'])
+        elif hasattr(i, 'read'):
+            d = i.read()
+            pieces.extend([' ', '{', str(len(d)), '}', IMAP4Server.delimiter, d])
         elif isinstance(i, types.StringTypes):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
