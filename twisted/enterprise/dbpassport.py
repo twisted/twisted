@@ -41,7 +41,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
         username = identity.name
         createIdentity = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (adbapi.safe(username), adbapi.safe(passwd) )
         s = [createIdentity]
-        for (svcname, pname), one in identity.keyring.items():
+        for (svcname, pname) in identity.keyring.keys():
             # note, we don't actually know perspective type at this point...
             s.append("INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" %
                      (adbapi.safe(username), adbapi.safe(pname), adbapi.safe(svcname)) )
@@ -117,7 +117,6 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
         sql = "INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" %\
                 (adbapi.safe(identityName), adbapi.safe(perspectiveName), adbapi.safe(serviceName))
         return self.runOperation(sql).addCallbacks(callback, errback)
-
 
     def removeIdentity(self, identityName, callback=None, errback=None):
         """Delete an identity
