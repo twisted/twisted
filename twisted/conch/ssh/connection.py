@@ -344,7 +344,9 @@ class SSHConnection(service.SSHService):
         channelType = channelType.replace('-','_')
         f = getattr(self, 'channel_%s' % channelType, None)
         if not f:
+            log.msg('got channel %s request, but it is unhandled' % channelType)
             return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know that channel"
+        log.msg('got channel %s request' % channelType)
         return f(windowSize, maxPacket, data)
 
     def channel_session(self, windowSize, maxPacket, data):
@@ -354,7 +356,7 @@ class SSHConnection(service.SSHService):
                                   remoteMaxPacket = maxPacket,
                                   conn = self)
 
-    def channel_forwarded_tcp(self, windowSize, maxPacket, data):
+    def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         if self.remoteForwards.has_key(remoteHP[1]):
             connectHP = self.remoteForwards[remoteHP[1]]
@@ -398,9 +400,10 @@ class SSHConnection(service.SSHService):
         f = getattr(self, 'global_%s' % requestType, None)
         if not f:
             return 0
+        log.msg('got global %s request' % requestType)
         return f(data)
 
-    def global_tcpip_forward(data):
+    def global_tcpip_forward(self, data):
         if self.transport.isClient:
             return 0 # no such luck
         hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
