@@ -1,3 +1,9 @@
+2002-07-13  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* Releasing Twisted 0.19.0rc4. All Known Issues in the README have
+	been fixed. This will hopefully be the last release candidate for
+	0.19.0.
+
 2002-07-07  Christopher Armstrong  <radix@twistxdmatrix.com>
 
 	* Releasing Twisted 0.19.0rc3.
