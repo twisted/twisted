@@ -116,8 +116,7 @@ def generateToC(document):
         toc += (level-elementLevel)*'</ul>\n'
         toc += (elementLevel-level)*'<ul>'
         toc += '<li><a href="#auto%d">' % id
-        for child in element.childNodes:
-            toc += child.toxml()
+        toc += domhelpers.getNodeText(element)
         toc += '</a></li>\n'
         level = elementLevel
         name = microdom.parseString('<a name="auto%d" />' % id).documentElement
