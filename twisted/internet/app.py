@@ -206,8 +206,17 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
 
     def stopService(self):
         ApplicationService.stopService(self)
-        l = [svc.stopService() for svc in self.services.values()]
-        return defer.DeferredList(l)
+        v = self.services.values()
+        l = [svc.stopService() for svc in v]
+        return defer.DeferredList(l).addBoth(self._cbAttachServiceNames, v)
+
+    def _cbAttachServiceNames(self, result, services):
+        r = {}
+        i = 0
+        for svc in services:
+            r[svc] = result[i]
+            i += 1
+        return r
 
 
     def addService(self, service):

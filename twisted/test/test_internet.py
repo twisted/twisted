@@ -210,15 +210,15 @@ class StoppingService(app.ApplicationService):
 class MultiServiceTestCase(unittest.TestCase):
     def testDeferredStopService(self):
         ms = app.MultiService("MultiService")
-        s1 = StoppingService("testService", 0)
-        s2 = StoppingService("testService2", 1)
-        ms.addService(s1)
-        ms.addService(s2)
+        self.s1 = StoppingService("testService", 0)
+        self.s2 = StoppingService("testService2", 1)
+        ms.addService(self.s1)
+        ms.addService(self.s2)
         ms.stopService().addCallback(self.woohoo)
 
     def woohoo(self, res):
-        self.assertEqual(res[1][0], 0)
-        self.assertEqual(res[0][0], 1)
+        self.assertEqual(res[self.s1][0], 0)
+        self.assertEqual(res[self.s2][0], 1)
 
         
 
