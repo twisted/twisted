@@ -248,7 +248,10 @@ class BaseClient(Connection):
                 self.failIfNotConnected(error.getConnectError(e))
                 return
 
-        connectResult = self.socket.connect_ex(self.realAddress)
+        try:
+            connectResult = self.socket.connect_ex(self.realAddress)
+        except socket.error, se:
+            connectResult = se.args[0]
         if connectResult:
             if connectResult == EISCONN:
                 pass
