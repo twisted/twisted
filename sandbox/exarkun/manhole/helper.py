@@ -9,8 +9,10 @@ BACKGROUND = 40
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, N_COLORS = range(9)
 
 class CharacterAttribute:
-    def __init__(self, charset, bold, underline, blink, reverseVideo,
-                 foreground, background):
+    def __init__(self, charset=insults.G0,
+                 bold=False, underline=False,
+                 blink=False, reverseVideo=False,
+                 foreground=WHITE, background=BLACK):
         self.charset = charset
         self.bold = bold
         self.underline = underline
@@ -18,6 +20,26 @@ class CharacterAttribute:
         self.reverseVideo = reverseVideo
         self.foreground = foreground
         self.background = background
+
+    def toVT102(self, only=False):
+        # Spit out a vt102 control sequence that will set up
+        # all the attributes set here.  Except charset.
+        attrs = []
+        if not only:
+            attrs.append(0)
+        if self.bold:
+            attrs.append(insults.BOLD)
+        if self.underline:
+            attrs.append(insults.UNDERLINE)
+        if self.blink:
+            attrs.append(insults.BLINK)
+        if self.reverseVideo:
+            attrs.append(insults.REVERSE_VIDEO)
+        if self.foreground != WHITE:
+            attrs.append(FOREGROUND + self.foreground)
+        if self.background != BLACK:
+            attrs.append(BACKGROUND + self.background)
+        return '\x1b[' + ';'.join(map(str, attrs)) + 'm'
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
