@@ -1310,7 +1310,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'internaldate':
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
-                hdrs = msg.getHeaders((), True)
+                hdrs = msg.getHeaders(True)
                 hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                 hdrs = '\r\n'.join(hdrs)
                 response.extend(('RFC822.HEADER', hdrs + '\r\n\r\n'))
@@ -1319,7 +1319,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'rfc822size':
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
-                hdrs = msg.getHeaders((), True)
+                hdrs = msg.getHeaders(True)
                 hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                 hdrs.append('')
                 hdrs = '\r\n'.join(hdrs)
@@ -1338,12 +1338,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        hdrs = msg.getHeaders((), True)
+                        hdrs = msg.getHeaders(True)
                         hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                         hdrs = '\r\n'.join(hdrs)
                         response.extend((str(part), hdrs + '\r\n\r\n'))
                     else:
-                        hdrs = subMsg.getHeaders(part.header.fields, part.header.negate)
+                        hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
                         hdrs = ['%s: %s' % x for x in hdrs.iteritems()]
                         hdrs.append('')
                         hdrs = '\r\n'.join(hdrs) + '\r\n'
@@ -1351,13 +1351,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 elif part.text:
                     response.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    hdrs = msg.getHeaders((), True)
+                    hdrs = msg.getHeaders(True)
                     hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n\r\n'))
                 elif part.empty:
                     # BODY[] request
-                    hdrs = msg.getHeaders((), True)
+                    hdrs = msg.getHeaders(True)
                     hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                     hdrs.append('')
                     hdrs = '\r\n'.join(hdrs)
@@ -3626,7 +3626,7 @@ def parseAddr(addr):
     return [[fn or None, None] + addr.split('@') for fn, addr in addrs]
 
 def getEnvelope(msg):
-    headers = msg.getHeaders(True, ())
+    headers = msg.getHeaders(True)
     date = headers.get('date')
     subject = headers.get('subject')
     from_ = headers.get('from')

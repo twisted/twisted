@@ -255,12 +255,21 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, False)
         self.assertEquals(p.result[0].header, None)
-        
+        self.assertEquals(str(p.result[0]), 'BODY')
+
         p = P()
         p.parseString('BODY.PEEK')
         self.assertEquals(len(p.result), 1)
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, True)
+        self.assertEquals(str(p.result[0]), 'BODY.PEEK')
+        
+        p = P()
+        p.parseString('BODY[]')
+        self.assertEquals(len(p.result), 1)
+        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertEquals(p.result[0].empty, True)
+        self.assertEquals(str(p.result[0]), 'BODY[]')
 
         p = P()
         p.parseString('BODY[HEADER]')
@@ -270,6 +279,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0].header, p.Header))
         self.assertEquals(p.result[0].header.negate, False)
         self.assertEquals(p.result[0].header.fields, None)
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
         p.parseString('BODY.PEEK[HEADER]')
@@ -279,6 +290,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0].header, p.Header))
         self.assertEquals(p.result[0].header.negate, False)
         self.assertEquals(p.result[0].header.fields, None)
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY.PEEK[HEADER]')
 
         p = P()
         p.parseString('BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
@@ -288,6 +301,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0].header, p.Header))
         self.assertEquals(p.result[0].header.negate, False)
         self.assertEquals(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
         p.parseString('BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
@@ -297,6 +312,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0].header, p.Header))
         self.assertEquals(p.result[0].header.negate, False)
         self.assertEquals(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
         p.parseString('BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
@@ -306,6 +323,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0].header, p.Header))
         self.assertEquals(p.result[0].header.negate, True)
         self.assertEquals(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
         
         p = P()
         p.parseString('BODY[1.MIME]<10.50>')
@@ -316,6 +335,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.assertEquals(p.result[0].part, (0,))
         self.assertEquals(p.result[0].partialBegin, 10)
         self.assertEquals(p.result[0].partialLength, 50)
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY[1.MIME]<10.50>')
 
         p = P()
         p.parseString('BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
@@ -327,6 +348,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.assertEquals(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
         self.assertEquals(p.result[0].partialBegin, 103)
         self.assertEquals(p.result[0].partialLength, 69)
+        self.assertEquals(p.result[0].empty, False)
+        self.assertEquals(str(p.result[0]), 'BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
 
 
     def testFiles(self):
@@ -1277,7 +1300,7 @@ class FakeyMessage:
         self.uid = uid
         self.subpart = subpart
         
-    def getHeaders(self, negate, names):
+    def getHeaders(self, negate, *names):
         self.got_headers = negate, names
         return self.headers
 
@@ -1375,11 +1398,12 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.messages = '15'
         self.msgObj = FakeyMessage({'from': 'user@domain', 
             'to': 'resu@domain', 'date': 'thursday',
-            'subject': 'it is a message'},
+            'subject': 'it is a message', 'message-id': 'id-id-id-yayaya'},
             (), '', '', 65656, None)
         self.expected = {65656: {'ENVELOPE': [
-            'thursday', 'it is a message', 'user@domain', 'user@domain',
-            'user@domain', 'resu@domain', None, None, None]}}
+            'thursday', 'it is a message', [[None, None, 'user', 'domain']],
+            [[None, None, 'user', 'domain']], [[None, None, 'user', 'domain']],
+            [[None, None, 'resu', 'domain']], None, None, None, 'id-id-id-yayaya']}}
         self._fetchWork(fetch, uid)
     
     def testFetchEnvelopeUID(self):
@@ -1396,8 +1420,15 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchSimplifiedBody(self.messages, uid=uid)
         
         self.messages = '21'
-        self.msgObj = FakeyMessage({}, (), '', 'This is body text, roar', 91825, None)
-        self.expected = {91825: {'BODY': '\r\nThis is body text, roar'}}
+        self.msgObj = FakeyMessage({}, (), '', 'Yea whatever', 91825, None)
+        self.expected = {91825: 
+            {'BODY': 
+                [None, None, ['CHARSET', 'US-ASCII'], None, None, '7BIT',
+                    '12', '1'
+                ]
+            }
+        }
+
         self._fetchWork(fetch, uid)
     
     def testFetchSimplifiedBodyUID(self):
