@@ -266,6 +266,33 @@ class DirDBM:
         for key, val in dict.items():
             self[key]=val
             
+    def copyTo(self, path):
+        """
+        Copy the contents of this dirdbm to the dirdbm at C{path}.
+        
+        @type path: C{str}
+        @param path: The path of the dirdbm to copy to.  If a dirdbm
+        exists at the destination path, it is cleared first.
+        
+        @rtype: C{DirDBM}
+        @return: The dirdbm this dirdbm was copied to.
+        """
+        path = os.path.abspath(path)
+        assert path != self.dname
+        
+        d = self.__class__(path)
+        d.clear()
+        for k in self.keys():
+            d[k] = self[k]
+        return d
+
+    def clear(self):
+        """
+        Delete all key/value pairs in this dirdbm.
+        """
+        for k in self.keys():
+            del self[k]
+
     def close(self):
         """
         Close this dbm: no-op, for dbm-style interface compliance.

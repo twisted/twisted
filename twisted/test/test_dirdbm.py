@@ -81,6 +81,24 @@ class DirDbmTestCase(unittest.TestCase):
         assert values == dbvalues, ".values() output didn't match: %s != %s" % (repr(values), repr(dbvalues))
         assert items == dbitems, "items() didn't match: %s != %s" % (repr(items), repr(dbitems))
         
+        copyPath = tempfile.mktemp()
+        d2 = d.copyTo(copyPath)
+        
+        copykeys = list(d.keys())
+        copyvalues = list(d.values())
+        copyitems = list(d.items())
+        copykeys.sort()
+        copyvalues.sort()
+        copyitems.sort()
+        
+        assert dbkeys == copykeys, ".copyTo().keys() didn't match: %s != %s" % (repr(dbkeys), repr(copykeys))
+        assert dbvalues == copyvalues, ".copyTo().values() didn't match: %s != %s" % (repr(dbvalues), repr(copyvalues))
+        assert dbitems == copyitems, ".copyTo().items() didn't match: %s != %s" % (repr(dbkeys), repr(copyitems))
+        
+        d2.clear()
+        assert len(d2.keys()) == len(d2.values()) == len(d2.items()) == 0, ".clear() failed"
+        shutil.rmtree(copyPath)
+        
         # delete items
         for k, v in self.items:
             del d[k]
@@ -88,6 +106,7 @@ class DirDbmTestCase(unittest.TestCase):
         assert len(d.keys()) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
+        
 
     def testModificationTime(self):
         import time
