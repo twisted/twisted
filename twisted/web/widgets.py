@@ -844,7 +844,7 @@ class Gadget(resource.Resource):
     def pageFactory(self, *obj):
         #This is a nasty backwards-compatibility hack.
         if hasattr(self, "page"):
-            return self.page(*obj)
+            return apply(self.page, obj, {})
 
     def getChild(self, path, request):
         if path == '':

@@ -28,7 +28,7 @@ class Counter:
     index = 0
     
     def add(self):
-        self.index += 1
+        self.index = self.index + 1
 
 
 class Order:
