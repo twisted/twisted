@@ -1,6 +1,8 @@
 
+@supported_pythons = ('py2.2', 'py2.3')
+
 all: ../main.aap
-    @for p in ['py2.2', 'py2.3']:
+    @for p in supported_pythons:
     @  for d in ['withdocs', 'nodocs']:
         :execute ../main.aap PyVersion=$p DoDocs=$d
     :print * Done with build.
@@ -9,7 +11,7 @@ all: ../main.aap
     :copy main.aap ..
 
 publish: ../main.aap
-    @for p in ['py2.2', 'py2.3']:
-    @  for d in ['withdocs', 'nodocs']:
+    @for p in supported_pythons:
+    @  for d in ('withdocs', 'nodocs'):
         :execute ../main.aap PyVersion=$p DoDocs=$d publish
     :print * Done publishing.
