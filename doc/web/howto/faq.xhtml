@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>The Twisted Web FAQ</title></head>
+<body>
+<h1>The Twisted Web FAQ</h1>
+
+<h2>Is the Twisted web server a toy?</h2>
+
+<p>No. It is a production grade server. It is running continously on several
+sites and has been proven quite stable. The server can take loads of up to 3000
+users at a time and still keep churning several million requests a day, even on
+low end hardware. It can serve static files or dynamically rendered pages.</p>
+
+<h2>But can Twisted Web do PHP?</h2>
+
+<p>Yes.  It works out-of-the-box, so long as you've got the standalone php
+interpreter installed.
+</p>
+
+<h2>And can Twisted Web do virtual hosting?</h2>
+
+<p>Can it ever!</p>
+
+<p>You can decide to go with one big process for all of them, a front server
+and a seperate server for each virtual host (for example, for permission
+reasons), and you can even mix-and-match between Apache and Twisted (for
+example, put Apache in the front and have Twisted handle some subset of the
+virtual host).</p>
+
+<h2>How do I use twisted.web to do complex things?</h2>
+
+<p>See <a href="using-twistedweb.xhtml">the Twisted.Web Howto</a>.</p>
+
+<h2>I've been using Woven since before it was called Woven.  I just upgraded
+and now I'm getting a confusing traceback talking about INodeMutator. What
+gives?</h2>
+
+<p>You probably have code that's survived the upgrade from PyXML's
+<code>minidom</code> to Twisted's <code>microdom</code>.  Try deleting any
+<code>.pxp</code> files that you have lying around and the error will probably
+go away.</p>
+
+<h2>My Woven pages are sent to the browser with a trailing slash appended to the
+URL, which breaks all of the relative links.  How do I get rid of the trailing
+slash?</h2>
+
+<p>If you are subclassing <code class="API"
+base="twisted.web.woven.page">Page</code>, you can add a class attribute <code
+class="python">addSlash = 0</code>, like this:</p>
+
+<pre class="python">
+class Foo(page.Page):
+        addSlash = 0
+</pre>
+
+<p>If you are still subclassing <code class="API"
+base="twisted.web.woven.controller">Controller</code>, you can put the <code
+class="python">addSlash = 0</code> there. Consider subclassing <code class="API"
+base="twisted.web.woven.page">Page</code> instead, as having a <code class="API"
+base="twisted.web.woven.model">Model</code>, <code class="API"
+base="twisted.web.woven.view">View</code>, <code class="API"
+base="twisted.web.woven.controller">Controller</code> triad as the base of a
+<code class="API" base="twisted.web.woven.page">Page</code> will be deprecated
+in the near future.</p>
+
+<p>If you're just using the generic <code class="API"
+base="twisted.web.woven.page">Page</code> instance, you can set it after
+creation like this:</p>
+
+<pre class="python">
+resource = page.Page("foo")
+resource.addSlash = 0
+</pre>
+
+<p>The default behavior of Woven is now to automatically add a slash
+because it makes creating relative links far easier, ironically ;-)</p>
+
+<h2>Argh! When using Woven, my newlines get mangled inside a &lt;pre&gt;</h2>
+
+<p>Use the <code>RawText</code> view.</p>
+
+
+<h2>When trying to use Guard, I get infinite redirects to URLs with long
+hexadecimal numbers. What's the deal?</h2>
+
+<p>Are you using an RPY? Add a single line containing <code>cache()</code> as
+the first line of your RPY.</p>
+
+<p>An RPY file is executed every time it is accessed, so the call to <code
+class="API" base="twisted.web.woven">guard.SessionWrapper</code> is executed
+once per request, making a new SessionWrapper for each request. There should be
+only one SessionWrapper object for your application. Caching the RPY file
+enforces this.</p>
+
+
+</body>
+</html>
