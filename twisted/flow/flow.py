@@ -112,10 +112,10 @@
 
 """
 
-from base import *
-from stage import *
-from wrap import wrap
-from controller import Deferred, Block
-from protocol import makeProtocol, Protocol
-from threads import Threaded, QueryIterator
+from twisted.flow.base import *
+from twisted.flow.stage import *
+from twisted.flow.wrap import wrap
+from twisted.flow.controller import Deferred, Block
+from twisted.flow.protocol import makeProtocol, Protocol
+from twisted.flow.threads import Threaded, QueryIterator
 
