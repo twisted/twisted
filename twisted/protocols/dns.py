@@ -435,8 +435,9 @@ class SimpleRecord:
     __implements__ = (IEncodable,)
     name = None
 
-    def __init__(self, name = ''):
+    def __init__(self, name='', ttl=None):
         self.name = Name(name)
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -450,7 +451,8 @@ class SimpleRecord:
 
     def __eq__(self, other):
         if isinstance(other, SimpleRecord):
-            return self.name == other.name
+            return (self.name == other.name and
+                    self.ttl == other.ttl)
         return 0
     
     
@@ -459,7 +461,7 @@ class SimpleRecord:
 
 
     def __str__(self):
-        return '<%s %s>' % (QUERY_TYPES[self.TYPE], self.name)
+        return '<%s %s ttl=%s>' % (QUERY_TYPES[self.TYPE], self.name, self.ttl)
 
 
 # Kinds of RRs - oh my!
@@ -496,9 +498,10 @@ class Record_A:
     TYPE = A
     address = None
 
-    def __init__(self, address = '0.0.0.0'):
+    def __init__(self, address='0.0.0.0', ttl=None):
         address = socket.inet_aton(address)
         self.address = address
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -511,7 +514,8 @@ class Record_A:
 
     def __eq__(self, other):
         if isinstance(other, Record_A):
-            return other.address == self.address
+            return (other.address == self.address and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -520,7 +524,7 @@ class Record_A:
 
 
     def __str__(self):
-        return '<A %s>' % (self.dottedQuad(),)
+        return '<A %s ttl=%s>' % (self.dottedQuad(), self.ttl)
 
 
     def dottedQuad(self):
@@ -532,11 +536,12 @@ class Record_SOA:
 
     TYPE = SOA
     
-    def __init__(self, mname = '', rname = '', serial = 0, refresh = 0, retry = 0, expire = 0, minimum = 0):
+    def __init__(self, mname='', rname='', serial=0, refresh=0, retry=0, expire=0, minimum=0, ttl=None):
         self.mname, self.rname = Name(mname), Name(rname)
         self.serial, self.refresh = str2time(serial), str2time(refresh)
         self.minimum, self.expire = str2time(minimum), str2time(expire)
         self.retry = str2time(retry)
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -566,7 +571,8 @@ class Record_SOA:
                     self.rname == other.rname and
                     self.refresh == other.refresh and
                     self.expire == other.expire and
-                    self.retry == other.retry)
+                    self.retry == other.retry and
+                    self.ttl == other.ttl)
         return 0
 
     
@@ -578,9 +584,9 @@ class Record_SOA:
 
 
     def __str__(self):
-        return '<SOA %s %s serial=%d refresh=%d retry=%d expire=%d min=%d>' % (
+        return '<SOA %s %s serial=%d refresh=%d retry=%d expire=%d min=%d ttl=%s>' % (
             self.mname, self.rname, self.serial, self.refresh,
-            self.retry, self.expire, self.minimum
+            self.retry, self.expire, self.minimum, self.ttl
         )
     
     
@@ -588,8 +594,9 @@ class Record_NULL:                   # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = NULL
 
-    def __init__(self, payload = None):
+    def __init__(self, payload=None, ttl=None):
         self.payload = payload
+        self.ttl = str2time(ttl)
     
     
     def encode(self, strio, compDict = None):
@@ -608,9 +615,10 @@ class Record_WKS:                    # OBSOLETE
     __implements__ = (IEncodable,)
     TYPE = WKS
 
-    def __init__(self, address = '0.0.0.0', protocol = 0, map = ''):
+    def __init__(self, address='0.0.0.0', protocol=0, map='', ttl=None):
         self.address = socket.inet_aton(address)
         self.protocol, self.map = protocol, map
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -629,7 +637,8 @@ class Record_WKS:                    # OBSOLETE
         if isinstance(other, Record_WKS):
             return (self.address == other.address and
                     self.protocol == other.protocol and
-                    self.map == other.map)
+                    self.map == other.map and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -638,8 +647,8 @@ class Record_WKS:                    # OBSOLETE
 
 
     def __str__(self):
-        return '<WKS addr=%s proto=%d>' % (
-            socket.inet_ntoa(self.address), self.protocol
+        return '<WKS addr=%s proto=%d ttl=%s>' % (
+            socket.inet_ntoa(self.address), self.protocol, self.ttl
         )
     
     
@@ -647,8 +656,9 @@ class Record_AAAA:               # OBSOLETE (or headed there)
     __implements__ = (IEncodable,)
     TYPE = AAAA
     
-    def __init__(self, address = '::'):
+    def __init__(self, address = '::', ttl=None):
         self.address = socket.inet_pton(AF_INET6, address)
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -661,7 +671,8 @@ class Record_AAAA:               # OBSOLETE (or headed there)
 
     def __eq__(self, other):
         if isinstance(other, Record_AAAA):
-            return other.address == self.address
+            return (other.address == self.address and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -670,18 +681,19 @@ class Record_AAAA:               # OBSOLETE (or headed there)
 
 
     def __str__(self):
-        return '<AAAA %s>' % (socket.inet_ntop(AF_INET6, self.address),)
+        return '<AAAA %s ttl=%s>' % (socket.inet_ntop(AF_INET6, self.address), self.ttl)
 
 
 class Record_A6:
     __implements__ = (IEncodable,)
     TYPE = A6
     
-    def __init__(self, prefixLen = 0, suffix = '::', prefix = ''):
+    def __init__(self, prefixLen=0, suffix='::', prefix='', ttl=None):
         self.prefixLen = prefixLen
         self.suffix = socket.inet_pton(AF_INET6, suffix)
         self.prefix = Name(prefix)
         self.bytes = int((128 - self.prefixLen) / 8.0)
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -706,7 +718,8 @@ class Record_A6:
         if isinstance(other, Record_A6):
             return (self.prefixLen == other.prefixLen and
                     self.suffix[-self.bytes:] == other.suffix[-self.bytes:] and
-                    self.prefix == other.prefix)
+                    self.prefix == other.prefix and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -715,10 +728,10 @@ class Record_A6:
 
 
     def __str__(self):
-        return '<A6 %s %s (%d)>' % (
+        return '<A6 %s %s (%d) ttl=%s>' % (
             self.prefix,
             socket.inet_ntop(AF_INET6, self.suffix),
-            self.prefixLen
+            self.prefixLen, self.ttl
         )
 
 
@@ -726,11 +739,12 @@ class Record_SRV:                # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = SRV
     
-    def __init__(self, priority = 0, weight = 0, port = 0, target = ''):
+    def __init__(self, priority=0, weight=0, port=0, target='', ttl=None):
         self.priority = int(priority)
         self.weight = int(weight)
         self.port = int(port)
         self.target = Name(target)
+        self.ttl = str2time(ttl)
     
     
     def encode(self, strio, compDict = None):
@@ -751,7 +765,8 @@ class Record_SRV:                # EXPERIMENTAL
             return (self.priority == other.priority and
                     self.weight == other.weight and
                     self.port == other.port and
-                    self.target == other.target)
+                    self.target == other.target and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -760,8 +775,8 @@ class Record_SRV:                # EXPERIMENTAL
 
 
     def __str__(self):
-        return '<SRV prio=%d weight=%d %s:%d>' % (
-            self.priority, self.weight, str(self.target), self.port
+        return '<SRV prio=%d weight=%d %s:%d ttl=%s>' % (
+            self.priority, self.weight, str(self.target), self.port, self.ttl
         )
     
     
@@ -769,9 +784,10 @@ class Record_AFSDB:
     __implements__ = (IEncodable,)
     TYPE = AFSDB
     
-    def __init__(self, subtype = 0, hostname = ''):
+    def __init__(self, subtype=0, hostname='', ttl=None):
         self.subtype = int(subtype)
         self.hostname = Name(hostname)
+        self.ttl = str2time(ttl)
     
     
     def encode(self, strio, compDict = None):
@@ -788,7 +804,8 @@ class Record_AFSDB:
     def __eq__(self, other):
         if isinstance(other, Record_AFSDB):
             return (self.subtype == other.subtype and
-                    self.hostname == other.hostname)
+                    self.hostname == other.hostname and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -797,16 +814,17 @@ class Record_AFSDB:
     
     
     def __str__(self):
-        return '<AFSB subtype=%d %s>' % (self.subtype, self.hostname)
+        return '<AFSB subtype=%d %s ttl=%s>' % (self.subtype, self.hostname, self.ttl)
     
     
 class Record_RP:
     __implements__ = (IEncodable,)
     TYPE = RP
     
-    def __init__(self, mbox = '', txt = ''):
+    def __init__(self, mbox='', txt='', ttl=None):
         self.mbox = Name(mbox)
         self.txt = Name(txt)
+        self.ttl = str2time(ttl)
     
     
     def encode(self, strio, compDict = None):
@@ -824,7 +842,8 @@ class Record_RP:
     def __eq__(self, other):
         if isinstance(other, Record_RP):
             return (self.mbox == other.mbox and 
-                    self.txt == other.txt)
+                    self.txt == other.txt and
+                    self.ttl == other.ttl)
         return 0
     
     
@@ -833,15 +852,16 @@ class Record_RP:
     
     
     def __str__(self):
-        return '<RP mbox=%s txt=%s>' % (self.mbox, self.txt)
+        return '<RP mbox=%s txt=%s ttl=%s>' % (self.mbox, self.txt, self.ttl)
     
     
 class Record_HINFO:
     __implements__ = (IEncodable,)
     TYPE = HINFO
 
-    def __init__(self, cpu = '', os = ''):
+    def __init__(self, cpu='', os='', ttl=None):
         self.cpu, self.os = cpu, os
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -859,7 +879,8 @@ class Record_HINFO:
     def __eq__(self, other):
         if isinstance(other, Record_HINFO):
             return (self.os.lower() == other.os.lower() and
-                    self.cpu.lower() == other.cpu.lower())
+                    self.cpu.lower() == other.cpu.lower() and
+                    self.ttl == other.ttl)
         return 0
     
     
@@ -868,7 +889,7 @@ class Record_HINFO:
 
 
     def __str__(self):
-        return '<HINFO cpu=%s os=%s>' % (self.cpu, self.os)
+        return '<HINFO cpu=%s os=%s ttl=%s>' % (self.cpu, self.os, self.ttl)
     
     
 class Record_MINFO:                 # EXPERIMENTAL
@@ -878,8 +899,9 @@ class Record_MINFO:                 # EXPERIMENTAL
     rmailbx = None
     emailbx = None
 
-    def __init__(self, rmailbx = '', emailbx = ''):
+    def __init__(self, rmailbx='', emailbx='', ttl=None):
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
+        self.ttl = str2time(ttl)
     
     
     def encode(self, strio, compDict = None):
@@ -896,7 +918,8 @@ class Record_MINFO:                 # EXPERIMENTAL
     def __eq__(self, other):
         if isinstance(other, Record_MINFO):
             return (self.rmailbx == other.rmailbx and
-                    self.emailbx == other.emailbx)
+                    self.emailbx == other.emailbx and
+                    self.ttl == other.ttl)
         return 0
     
     
@@ -905,15 +928,16 @@ class Record_MINFO:                 # EXPERIMENTAL
 
 
     def __str__(self):
-        return '<MINFO responsibility=%s errors=%s>' % (self.rmailbx, self.emailbx)
+        return '<MINFO responsibility=%s errors=%s ttl=%s>' % (self.rmailbx, self.emailbx, self.ttl)
 
 
 class Record_MX:
     __implements__ = (IEncodable,)
     TYPE = MX
 
-    def __init__(self, preference = 0, exchange = ''):
+    def __init__(self, preference=0, exchange='', ttl=None):
         self.preference, self.exchange = int(preference), Name(exchange)
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict = None):
@@ -930,7 +954,8 @@ class Record_MX:
     def __eq__(self, other):
         if isinstance(other, Record_MX):
             return (self.preference == other.preference and
-                    self.exchange == other.exchange)
+                    self.exchange == other.exchange and
+                    self.ttl == other.ttl)
         return 0
 
 
@@ -939,7 +964,7 @@ class Record_MX:
 
 
     def __str__(self):
-        return '<MX %d %s>' % (self.preference, self.exchange)
+        return '<MX %d %s ttl=%s>' % (self.preference, self.exchange, self.ttl)
     
     
 # Oh god, Record_TXT how I hate thee.
@@ -947,8 +972,10 @@ class Record_TXT:
     __implements__ = (IEncodable,)
 
     TYPE = TXT
-    def __init__(self, *data):
+    def __init__(self, *data, **kw):
         self.data = list(data)
+        # arg man python sucks so bad
+        self.ttl = str2time(kw.get('ttl', None))
     
     
     def encode(self, strio, compDict = None):
@@ -973,7 +1000,8 @@ class Record_TXT:
 
     def __eq__(self, other):
         if isinstance(other, Record_TXT):
-            return self.data == other.data
+            return (self.data == other.data and
+                    self.ttl == other.ttl)
         return 0
     
     
@@ -982,7 +1010,7 @@ class Record_TXT:
     
     
     def __str__(self):
-        return '<TXT %r>' % self.data
+        return '<TXT %r ttl=%s>' % (self.data, self.ttl)
     
     
 class Message:
@@ -1092,7 +1120,7 @@ class Message:
             t = self.lookupRecordType(header.type)
             if not t:
                 continue
-            header.payload = t()
+            header.payload = t(ttl=header.ttl)
             try:
                 header.payload.decode(strio, header.rdlength)
             except EOFError:

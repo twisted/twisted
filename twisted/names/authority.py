@@ -92,9 +92,13 @@ class FileAuthority(common.ResolverBase):
         results = []
         authority = []
         additional = []
-        ttl = max(self.soa[1].minimum, self.soa[1].expire)
+        default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
         try:
             for record in self.records[name.lower()]:
+                if record.ttl is not None:
+                    ttl = record.ttl
+                else:
+                    ttl = default_ttl
                 if record.TYPE == type or type == dns.ALL_RECORDS:
                     results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
@@ -110,7 +114,7 @@ class FileAuthority(common.ResolverBase):
                     for rec in self.records.get(n.lower(), ()):
                         if rec.TYPE == dns.A:
                             additional.append(
-                                dns.RRHeader(n, dns.A, dns.IN, ttl, rec, auth=True)
+                                dns.RRHeader(n, dns.A, dns.IN, rec.ttl, rec, auth=True)
                             )
             return defer.succeed((results, authority, additional))
         except KeyError:
@@ -123,10 +127,18 @@ class FileAuthority(common.ResolverBase):
     def lookupZone(self, name, timeout = 10):
         if self.soa[0].lower() == name.lower():
             # Wee hee hee hooo yea
-            ttl = max(self.soa[1].minimum, self.soa[1].expire)
-            results = [dns.RRHeader(self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1], auth=True)]
+            default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
+            if self.soa[1].ttl is not None:
+                soa_ttl = self.soa[1].ttl
+            else:
+                soa_ttl = default_ttl
+            results = [dns.RRHeader(self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True)]
             for (k, r) in self.records.items():
                 for rec in r:
+                    if rec.ttl is not None:
+                        ttl = rec.ttl
+                    else:
+                        ttl = default_ttl
                     if rec.TYPE != dns.SOA:
                         results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec, auth=True))
             results.append(results[0])
