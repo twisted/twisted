@@ -307,7 +307,7 @@ class TestSuite(Timed):
         if seed is not None:
             r = random.Random(seed)
             r.shuffle(tests)
-            self.reporter.writeln('Running tests shuffled with seed %d' % seed)
+            self.reporter.write('Running tests shuffled with seed %d' % seed)
 
 
         # set up SIGCHLD signal handler so that parents of spawned processes will be
