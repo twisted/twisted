@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.63 2003/12/12 04:04:11 z3p Exp $
+# $Id: conch.py,v 1.64 2004/03/10 03:22:45 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -122,9 +122,10 @@ options = None
 conn = None
 exitStatus = 0
 keyAgent = None
+old = None
 
 def run():
-    global options
+    global options, old
     args = sys.argv[1:]
     if '-l' in args: # cvs is an idiot
         i = args.index('-l')
@@ -857,9 +858,27 @@ class SSHSession(channel.SSHChannel):
         self.stdio.closeStdin()
 
     def closed(self):
+        global old
         log.msg('closed %s' % self)
         if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
+        elif not options['nocache']: # fork into the background
+            if os.fork():
+                if old:
+                    fd = sys.stdin.fileno()
+                    tty.tcsetattr(fd, tty.TCSANOW, old)
+                if (options['command'] and options['tty']) or \
+                    not options['notty']:
+                    signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+                os._exit(0)
+            os.setsid()
+            for i in range(3):
+                try:
+                    os.close(i)
+                except OSError, e:
+                    import errno
+                    if e.errno != errno.EBADF:
+                        raise
 
     def request_exit_status(self, data):
         global exitStatus
