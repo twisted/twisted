@@ -139,7 +139,7 @@ def superAppendAttribute(node, key, value):
         for child in node.childNodes:
             superAppendAttribute(child, key, value)
 
-def gatherTextNodes(iNode, dounescape=0):
+def gatherTextNodes(iNode, dounescape=0, joinWith=""):
     """Visit each child node and collect its text data, if any, into a string.
 For example::
     >>> doc=microdom.parseString('<a>1<b>2<c>3</c>4</b></a>')
@@ -161,7 +161,7 @@ With dounescape=1, also convert entities back into normal characters.
                 val=c.nodeValue
             gathered_append(val)
         slice[:0]=c.childNodes
-    return ''.join(gathered)
+    return joinWith.join(gathered)
 
 class RawText(microdom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
