@@ -231,6 +231,12 @@ class Failure:
         return error
 
     def check(self, *errorTypes):
+        """Check if this failure's type is in a predetermined list.
+
+        @type errorTypes: list of L{Exception} classes or
+                          fully-qualified class names.
+	@returns: the matching L{Exception} type, or None if no match.
+        """
         for error in errorTypes:
             err = error
             if isinstance(error, types.ClassType) and issubclass(error, Exception):
