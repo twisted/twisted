@@ -21,7 +21,7 @@ from twisted.internet import protocol, reactor, defer
 import cStringIO
 
 
-def _callProtocolWithDeferred(protocol, executable, args=(), env={}, path='.'):
+def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor):
     d = defer.Deferred() 
     p = protocol(d)
     reactor.spawnProcess(p, executable, (executable,)+args, env, path)
