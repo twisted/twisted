@@ -18,6 +18,8 @@ Requirements
         GMPy (optional - http://gmpy.sf.net)
         PyShadow (optional -
             http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.2.tar.gz)
+        Python-UTMP (optional -
+            http://melkor.dnp.fmph.uniba.sk/~garabik/python-utmp/)
 
 Installation
 

@@ -25,12 +25,17 @@ from avatar import ConchUser
 from error import ConchError
 from interfaces import ISession, ISFTPServer, ISFTPFile
 
-import struct, array, os, stat, time
+import struct, array, os, stat, time, socket
 import fcntl, tty
 import pwd
 import pty
 import ttymodes
 import os
+
+try:
+    import utmp
+except ImportError:
+    utmp = None
 
 class UnixSSHRealm:
     __implements__ = portal.IRealm
@@ -131,6 +136,33 @@ class SSHSessionForUnixConchUser:
         self.pty = None
         self.ptyTuple = 0
 
+    def addUTMPEntry(self, loggedIn=1):
+        if not utmp:
+            return
+        ipAddress = self.avatar.conn.transport.transport.getPeer().host
+        packedIp = struct.unpack('L', socket.inet_aton(ipAddress))[0]
+        ttyName = self.ptyTuple[2][5:]
+        t = time.time()
+        t1 = int(t)
+        t2 = int((t-t1) * 1e6)
+        entry = utmp.UtmpEntry()
+        entry.ut_type = loggedIn and utmp.USER_PROCESS or utmp.DEAD_PROCESS
+        entry.ut_pid = self.pty.pid
+        entry.ut_line = ttyName
+        entry.ut_id = ttyName[-4:]
+        entry.ut_tv = (t1,t2)
+        if loggedIn:
+            entry.ut_user = self.avatar.username
+            entry.ut_host = socket.gethostbyaddr(ipAddress)[0]
+            entry.ut_addr_v6 = (packedIp, 0, 0, 0)
+        a = utmp.UtmpRecord(utmp.UTMP_FILE)
+        a.pututline(entry)
+        a.endutent()
+        b = utmp.UtmpRecord(utmp.WTMP_FILE)
+        b.pututline(entry)
+        b.endutent()
+                            
+
     def getPty(self, term, windowSize, modes):
         self.environ['TERM'] = term
         self.winSize = windowSize
@@ -151,13 +183,15 @@ class SSHSessionForUnixConchUser:
         self.environ['USER'] = self.avatar.username
         self.environ['HOME'] = homeDir
         self.environ['SHELL'] = shell
+        shellExec = os.path.basename(shell)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
         self.getPtyOwnership()
         self.pty = reactor.spawnProcess(proto, \
-                  shell, ['-', '-i'], self.environ, homeDir, uid, gid,
+                  shell, ['-%s' % shellExec], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
+        self.addUTMPEntry()
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
                     struct.pack('4H', *self.winSize))
         if self.modes:
@@ -181,6 +215,7 @@ class SSHSessionForUnixConchUser:
                 shell, command, self.environ, homeDir,
                 uid, gid, usePTY = self.ptyTuple or 1)
         if self.ptyTuple:
+            self.addUTMPEntry()
             if self.modes:
                 self.setModes()
         else:
@@ -237,6 +272,7 @@ class SSHSessionForUnixConchUser:
             except OSError:
                 pass
             self.pty.loseConnection()
+            self.addUTMPEntry(0)
         log.msg('shell closed')
 
     def windowChanged(self, winSize):
