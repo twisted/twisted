@@ -1,3 +1,10 @@
+2002-12-30  Brian Warner  <warner@lothar.com>
+
+	* twisted/spread/pb.py (Broker.connectionLost): clear localObjects
+	too, to break a circular reference involving AuthServs that could
+	keep the Broker (and any outstanding pb.Referenceables) alive
+	forever.
+
 2002-12-29  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/python/compat.py: Single module where all compatability
