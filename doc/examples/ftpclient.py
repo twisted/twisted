@@ -33,12 +33,16 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+
 class BufferingProtocol(Protocol):
+    """Simple utility class that holds all data written to it in a buffer."""
     def __init__(self):
         self.buffer = StringIO()
 
     def dataReceived(self, data):
         self.buffer.write(data)
+
+# Define some callbacks
 
 def success(response):
     print 'Success!  Got response:'
@@ -78,8 +82,6 @@ class Options(usage.Options):
                      ['debug', 'd', 1],
                     ]
 
-    
-# this connects the protocol to an FTP server running locally
 def run():
     # Get config
     config = Options()
@@ -90,9 +92,9 @@ def run():
     
     # Create the client
     FTPClient.debug = config.opts['debug']
-    creactor = ClientCreator(reactor, FTPClient, config.opts['username'],
-                             config.opts['password'], passive=config.opts['passive'])
-    creactor.connectTCP(config.opts['host'], config.opts['port']).addCallback(connectionMade)
+    creator = ClientCreator(reactor, FTPClient, config.opts['username'],
+                            config.opts['password'], passive=config.opts['passive'])
+    creator.connectTCP(config.opts['host'], config.opts['port']).addCallback(connectionMade)
     reactor.run()
 
 
@@ -120,3 +122,4 @@ def connectionMade(ftpClient):
 # this only runs if the module was *not* imported
 if __name__ == '__main__':
     run()
+
