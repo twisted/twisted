@@ -372,11 +372,6 @@ def namedAny(name):
             # if the ImportError happened in the module being imported,
             # this is a failure that should be handed to our caller.
             # count stack frames to tell the difference.
-
-            # string-matching is another technique, but I think it could be
-            # fooled in some funny cases
-            #if sys.exc_info()[1] != "cannot import name %s" % trialname:
-            #    raise
             import traceback
             if len(traceback.extract_tb(sys.exc_info()[2])) > 1:
                 raise
