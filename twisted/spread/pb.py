@@ -1095,7 +1095,7 @@ class _ObjectRetrieval:
         if not self.term:
             self.term = 1
             del self.broker
-            self.deferred.armAndErrback(error.ConnectionError(string="Connection failed"))
+            self.deferred.armAndErrback(error.ConnectError(string="Connection failed"))
 
 
 class BrokerClientFactory(protocol.ClientFactory):
