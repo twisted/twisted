@@ -715,21 +715,16 @@ class ProcessStreamer:
         self._args = args
         self._env = env
     
-    def run(self, wantResult=False):
+    def run(self):
         """Run the process.
 
-        if wantResult is True, returns Deferred which will eventually
-        have errback with twisted.internet.error.ProcessDone or
-        ProcessTerminated.
+        Returns Deferred which will eventually have errback for non-clean (exit code > 0)
+        exit, with ProcessTerminated, or callback with None on exit code 0.
         """
         # XXX what happens if spawn fails?
         reactor.spawnProcess(self._protocol, self._program, self._args, env=self._env)
         del self._env
-        if wantResult:
-            return self._protocol.resultDeferred
-        else:
-            # keep clean exit from being logged
-            self._protocol.resultDeferred.addErrback(lambda _: _.trap(error.ProcessDone))
+        return self._protocol.resultDeferred.addErrback(lambda _: _.trap(error.ProcessDone))
 
     def getPID(self):
         """Return the PID of the process."""

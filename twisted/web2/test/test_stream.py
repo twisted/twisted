@@ -265,12 +265,17 @@ class ProcessStreamerTest(unittest.TestCase):
                          stream.MemoryStream("hello world"))
         l = []
         d = stream.pullStream(p.outStream, l.append)
-        d2 = p.run(True)
+        d2 = p.run()
         def verify(_):
             assertEquals("".join(l), "hello world")
             return d2
-        from twisted.internet import error
-        return d.addCallback(verify).addErrback(lambda _: _.trap(error.ProcessDone))
+        return d.addCallback(verify)
+
+    def test_badexit(self):
+        p = self.runCode("raise ValueError")
+        l = []
+        from twisted.internet.error import ProcessTerminated
+        return p.run().addErrback(lambda _: _.trap(ProcessTerminated) and l.append(1)).addCallback(lambda _: assertEquals(l, [1]))
 
 
 class AdapterTestCase(unittest.TestCase):
