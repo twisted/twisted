@@ -47,11 +47,15 @@ def callWithLogger(logger, func, *args, **kw):
     """
     try:
         lp = logger.logPrefix()
+    except KeyboardInterrupt:
+        raise
     except:
         lp = '(buggy logPrefix method)'
         err(system=lp)
     try:
         return callWithContext({"system": lp}, func, *args, **kw)
+    except KeyboardInterrupt:
+        raise
     except:
         err(system=lp)
 
@@ -246,6 +250,8 @@ class FileLogObserver:
             elif eventDict.has_key('format'):
                 try:
                     text = eventDict['format'] % eventDict
+                except KeyboardInterrupt:
+                    raise
                 except:
                     try:
                         text = ('Invalid format string in log message: %s'
