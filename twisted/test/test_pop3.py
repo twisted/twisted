@@ -378,15 +378,14 @@ class SASLTestCase(unittest.TestCase):
         p.connectionMade()
         
         p.lineReceived("CAPA")
-        self.assertIn("SASL CRAM-MD5", s.getvalue())
-        
+        self.failUnless(s.getvalue().find("SASL CRAM-MD5") >= 0)
+
         p.lineReceived("AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
         chal = base64.decodestring(chal)
         response = hmac.HMAC('testpassword', chal).hexdigest()
-        
+
         p.lineReceived(base64.encodestring('testuser ' + response).rstrip('\n'))
         self.failUnless(p.mbox)
-        self.assertIn("+OK", s.getvalue().splitlines()[-1])
+        self.failUnless(s.getvalue().splitlines()[-1].find("+OK") >= 0)
         p.connectionLost(failure.Failure(Exception()))
-        

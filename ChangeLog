@@ -1,3 +1,7 @@
+2003-07-21  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_pop3.py: string in string only works in 2.3
+
 2003-07-19  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.7alpha3 (for form and twisted.names
