@@ -157,6 +157,7 @@ Could not create directory %s because: %s" % (o['dirname'], e.strerr))
                  'README.txt' : readme_template,
                  'do_inno_script.py' : do_inno_script_template,
                  'do_inno.py' : do_inno_template,
+                 'Makefile' : makefile_template,
                  }
     for k in generated:
         genFile(k, generated[k], o)
@@ -375,7 +376,10 @@ finding files.  Supported commands are:
 "import inno.fmlang; help(inno.fmlang)" (in the Python interactive
 interpreter) will describe fmlang in more detail.
 
-After editing the file, do:
+After editing the file, you have two choices.  If you GNU Make (nmake
+might also work):
+    make
+If not, run the commands by hand:
     python do_inno_script.py; python do_inno.py
 
 -- Other Stuff --
@@ -383,7 +387,7 @@ You can do almost anything else you want with your distributable package by
 editing %(name)s.iss directly.  There is a help file for Inno Setup scripts in
 the inno/program directory of the Innoconda distribution.  After editing the
 file, do:
-   python do_inno.py
+   python do_inno.py   # (or make)
 '''
 
 makefile_template = '''\
@@ -391,9 +395,9 @@ makefile_template = '''\
 
 name=%(name)s
 version=%(package_version)s
-target=$(name)-$(package_version)-setup.exe
+target=$(name)-$(version)-setup.exe
 
-all: $target
+all: $(target)
 	@echo "Done"
 	
 $(target): $(name).iss do_inno.py
