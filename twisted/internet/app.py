@@ -32,7 +32,7 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.internet import interfaces
 from twisted.python import log
-from twisted.persisted import styles, marmalade
+from twisted.persisted import styles
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 from twisted.python.reflect import Accessor
