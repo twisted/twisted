@@ -190,7 +190,7 @@ class ThreadedLogOwner:
             i = self.threadId()
             owners = self.ownersPerThread[i]
             x = owners.pop()
-            assert x is owner, "Bad disown"
+            assert x is owner, "Bad disown: %s != %s" % (x, owner)
             if not owners: del self.ownersPerThread[i]
     
     def owner(self):

@@ -67,6 +67,7 @@ class ThreadPool:
         
         owner must be a loggable object.
         """
+        assert isinstance(owner, log.Logger), "owner isn't logger"
         if self.joined: return
         o=(owner,func,args,kw)
         self._startSomeWorkers()
@@ -97,18 +98,13 @@ class ThreadPool:
             self.waiters.remove(ct)
             if o == WorkerStop: break
             self.working[ct] = ct
-            owner = o[0]
+            owner, function, args, kwargs = o
             log.logOwner.own(owner)
             try:
-                apply(apply,o[1:])
+                apply(function, args, kwargs)
             except:
-                e = sys.exc_info()[1]
-                # breaking encapsulation here... not sure if the
-                # 'Exception' protocol supports a way to do this
-                # already.  this is for gloop remote tracebacks.
-                if hasattr(e, 'traceback'):
-                    print e.traceback
-                traceback.print_exc(file=sys.stdout)
+                log.msg('Thread raised an exception.')
+                traceback.print_exc(file=log.logfile)
             log.logOwner.disown(owner)
             del self.working[ct]
         self.threads.remove(ct)
