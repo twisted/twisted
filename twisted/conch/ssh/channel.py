@@ -34,10 +34,12 @@ class SSHChannel:
         self.localMaxPacket = localMaxPacket or 32768
         self.remoteWindowLeft = remoteWindow
         self.remoteMaxPacket = remoteMaxPacket
+        self.areWriting = 1
         self.conn = conn
         self.specificData = ''
         self.buf = ''
         self.extBuf = ''
+        self.client = None
         self.id = None # gets set later by SSHConnection
 
     def channelOpen(self, specificData):
@@ -66,6 +68,9 @@ class SSHChannel:
         @type bytes:    C{int}
         """
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
+        if not self.areWriting:
+            self.areWriting = 0
+            self.startWriting()
         if self.buf:
             b = self.buf
             self.buf = ''
@@ -136,6 +141,8 @@ class SSHChannel:
         if len(data) > self.remoteWindowLeft:
             data, self.buf = data[: self.remoteWindowLeft],  \
                             data[self.remoteWindowLeft:]
+            self.areWriting = 0  
+            self.stopWriting()
         if not data: return
         while len(data) > self.remoteMaxPacket:
             self.conn.sendData(self, data[: self.remoteMaxPacket])
@@ -162,6 +169,8 @@ class SSHChannel:
         if len(data) > self.remoteWindowLeft:
             data, self.extBuf = data[:self.remoteWindowLeft], \
                                 [(dataType, data[self.remoteWindowLeft:])]
+            self.areWriting = 0
+            self.stopWriting()
         if not data: return
         while len(data) > self.remoteMaxPacket:
             self.conn.sendExtendedData(self, dataType, 
@@ -203,4 +212,14 @@ class SSHChannel:
         """
         return('SSH', )+self.conn.transport.getHost()
 
+    def stopWriting(self):
+        """
+        Called when the remote buffer is full, as a hint to stop writing.
+        This can be ignored, but it can be helpful.
+        """
 
+    def startWriting(self):
+        """
+        Called when the remote buffer has more room, as a hint to continue
+        writing.
+        """

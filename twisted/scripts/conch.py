@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.46 2003/03/13 20:03:10 z3p Exp $
+# $Id: conch.py,v 1.47 2003/03/22 15:38:30 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -762,3 +762,9 @@ class SSHSession(channel.SSHChannel):
 
     def sendEOF(self):
         self.conn.sendEOF(self)
+
+    def stopWriting(self):
+        self.stdio.stopReading()
+
+    def startWriting(self):
+        self.stdio.startReading()
