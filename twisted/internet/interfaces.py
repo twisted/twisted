@@ -897,7 +897,24 @@ class IProcessTransport(ITransport):
 
 class IServiceCollection(Interface):
     """An object which provides access to a collection of services."""
-    pass
+
+    def getServiceNamed(self, serviceName):
+        """Retrieve the named service from this application.
+
+        Raise a KeyError if there is no such service name.
+        """
+        return self.services[serviceName]
+
+    def addService(self, service):
+        """Add a service to this collection.
+        """
+        if self.services.has_key(service.serviceName):
+            self.removeService(service)
+        self.services[service.serviceName] = service
+
+    def removeService(self, service):
+        """Remove a service from this collection."""
+        del self.services[service.serviceName]
 
 
 class IUDPTransport(Interface):
