@@ -29,7 +29,7 @@ import linecache
 import string
 from cStringIO import StringIO
 import types
-
+import inspect
 
 
 #sibling imports
@@ -143,14 +143,8 @@ class Failure:
             f = tb.tb_frame
         elif not isinstance(self.value, Failure):
             # Get the stack, unless this is a "chained Failure".
-            try:
-                raise Exception
-            except:
-                junk, junk, uptb = sys.exc_info()
-                del junk
-                f = uptb.tb_frame
-                stackOffset = 1
-                del uptb
+            f = inspect.currentframe()
+            stackOffset = 1
 
         while stackOffset and f:
             # This excludes this Failure.__init__ frame from the
