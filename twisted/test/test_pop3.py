@@ -48,6 +48,10 @@ class DummyDomain:
        self.users[name].append(message)
 
    def authenticateUserAPOP(self, name, magic, digest, domain):
+       print
+       print 'USERS AM ', self.users
+       print 'NAME AM ', name
+       print
        return ListMailbox(self.users[name])
 
 
@@ -108,7 +112,7 @@ Someone set up us the bomb!
 
     expectedOutput = '''\
 +OK <moshez>\015
-+OK \015
++OK Authentication succeeded\015
 +OK \015
 1 0\015
 .\015
@@ -198,7 +202,7 @@ RETR 2
 DELE 1
 RETR 1
 QUIT''', '\n')
-        expected_output = '+OK <moshez>\r\n+OK \r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
+        expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
         for line in lines:
             dummy.lineReceived(line)
         self.failUnlessEqual(expected_output, a.getvalue(),
