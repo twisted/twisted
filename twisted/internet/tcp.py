@@ -155,8 +155,8 @@ class Client(Connection):
         self.doRead = self.doConnect
         self.logstr = self.protocol.__class__.__name__+",client"
         whenDone()
-	if timeout is not None:
-	    main.addTimeout(self.failIfNotConnected, timeout)
+        if timeout is not None:
+            main.addTimeout(self.failIfNotConnected, timeout)
 
     def failIfNotConnected(self):
         if (not self.connected) and (not self.disconnected):
