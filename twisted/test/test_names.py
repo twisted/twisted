@@ -24,7 +24,7 @@ import socket
 from pyunit import unittest
 
 from twisted.names import dns
-from twisted.internet import main, udp
+from twisted.internet import reactor
 from twisted.protocols import protocol
 from twisted.python import log
 
@@ -50,10 +50,10 @@ class ServerDNSTestCase(unittest.TestCase):
     def testServer(self):
         factory = DNSFactory()
         factory.boss.addDomain("example.foo", dns.SimpleDomain("example.foo", "1.1.1.1"))
-        p = udp.Port(2053, factory)
+        p = reactor.listenUDP(2053, factory)
         p.startListening()
-        main.iterate()
-        main.iterate()
+        reactor.iterate()
+        reactor.iterate()
         
         resolver = dns.Resolver(["localhost"])
         d = resolver.resolve("example.foo")
@@ -61,10 +61,10 @@ class ServerDNSTestCase(unittest.TestCase):
         d.arm()
         
         while not hasattr(self, "gotAnswer"):
-            main.iterate()
+            reactor.iterate()
         del self.gotAnswer
         p.loseConnection()
-        main.iterate()
+        reactor.iterate()
     
     def tS_result(self, result):
         self.assertEquals(result, "1.1.1.1")
@@ -90,7 +90,7 @@ class LookupDNSTestCase(unittest.TestCase):
             d.addCallback(self._result).addErrback(self._error)
             d.arm()
             while len(self.results) == 0:
-                main.iterate()
+                reactor.iterate()
             self.assertEquals(self.results[0], result)
         
     def _result(self, result):
