@@ -149,7 +149,6 @@ this file directly.
 
 030 [[Moshe Zadka]] DNS
     A. Make sure we can server DNS correctly
-       A.1 Get all necessary constants into twisted.protocols.dns
     B. Make sure we can deal with asking several servers and dealing
        with the answers appropriately
     C. Generate unit tests for encoding/decoding
