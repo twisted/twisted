@@ -21,13 +21,6 @@ static PyObject *PyDirObject_Error;
 /*
  * Raa Raa Forward Decls
  */
-typedef struct _PyDirentObject {
-	PyObject_HEAD
-	int dirent_type;
-	int dirent_namelen;
-	char* dirent_name;
-} PyDirentObject;
-
 typedef struct _PyDirObject {
 	PyObject_HEAD
 	DIR* directory;
@@ -41,95 +34,6 @@ typedef struct _PyDirObjectIterator {
 
 static PyObject *
 PyDirObject_readdir(PyDirObject *self);
-
-
-/*
- **************************** PyDirentObject ********************************
- */
-
-
-staticforward PyTypeObject PyDirentObject_Type;
-
-static PyObject *
-PyDirentObject_FromDirent(struct dirent* entry) {
-	PyDirentObject *o;
-
-	o = (PyDirentObject *)PyType_GenericNew(&PyDirentObject_Type, NULL, NULL);
-	if (o != NULL) {
-		o->dirent_type = entry->d_type;
-		o->dirent_namelen = strlen(entry->d_name);
-		o->dirent_name = PyMem_New(char, o->dirent_namelen);
-		strncpy(o->dirent_name, entry->d_name, o->dirent_namelen);
-	}
-	return (PyObject *)o;
-}
-
-static void
-PyDirentObject_free(PyDirentObject *self) {
-	PyMem_Del(self->dirent_name);
-	PyObject_Del(self);
-}
-
-static PyObject *
-PyDirentObject_name_get(PyDirentObject *self) {
-	return PyString_FromStringAndSize(self->dirent_name, self->dirent_namelen);
-}
-
-static PyObject *
-PyDirentObject_type_get(PyDirentObject *self) {
-	return PyInt_FromLong(self->dirent_type);
-}
-
-static PyGetSetDef PyDirentObject_getsets[] = {
-	{"name", (getter)PyDirentObject_name_get, NULL,
-	 "a string representing the name of this directory entry"},
-	{"type", (getter)PyDirentObject_type_get, NULL,
-	 "an integer representing the type of this directory entry"},
-	{NULL},
-};
-
-static PyTypeObject PyDirentObject_Type = {
-	PyObject_HEAD_INIT(DEFERRED_ADDRESS(&PyType_Type))
-	0,
-	"dir.DirentType",
-	sizeof(PyDirentObject),
-	0,
-	0,							/* tp_dealloc */
-	0,							/* tp_print */
-	0,							/* tp_getattr */
-	0,							/* tp_setattr */
-	0,							/* tp_compare */
-	0,							/* tp_repr */
-	0,							/* tp_as_number */
-	0,							/* tp_as_sequence */
-	0,							/* tp_as_mapping */
-	0,							/* tp_hash */
-	0,							/* tp_call */
-	0,							/* tp_str */
-	0,							/* tp_getattro */
-	0,							/* tp_setattro */
-	0,							/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,	/* tp_flags */
-	0,							/* tp_doc */
-	0,							/* tp_traverse */
-	0,							/* tp_clear */
-	0,							/* tp_richcompare */
-	0,							/* tp_weaklistoffset */
-	0,							/* tp_iter */
-	0,							/* tp_iternext */
-	0,							/* tp_methods */
-	0,							/* tp_members */
-	PyDirentObject_getsets,			/* tp_getset */
-	0,							/* tp_base */
-	0,							/* tp_dict */
-	0,							/* tp_descr_get */
-	0,							/* tp_descr_set */
-	0,							/* tp_dictoffset */
-	0,							/* tp_init */
-	0,							/* tp_alloc */
-	0,							/* tp_new */
-	(destructor)PyDirentObject_free,	/* tp_free */
-};
 
 /*
  **************************** PyDirObjectIterator ***************************
@@ -179,7 +83,7 @@ PyDirObjectIterator_iter(PyDirObjectIterator *self) {
 
 static PyObject *
 PyDirObjectIterator_next(PyDirObjectIterator *self) {
-	PyDirentObject *ent;
+   PyObject *ent;
 	PyObject *args;
 	PyObject *result;
 
@@ -187,10 +91,11 @@ PyDirObjectIterator_next(PyDirObjectIterator *self) {
 		return PyDirObject_readdir(self->dirobj);
 	
 	while (1) {
-		if ((ent = (PyDirentObject *)PyDirObject_readdir(self->dirobj)) == NULL)
+		if ((ent = PyDirObject_readdir(self->dirobj)) == NULL)
 			return NULL;
 		
-		args = Py_BuildValue("(O)", ent);
+		args = PyTuple_New(1);
+		PyTuple_SetItem(args, 0, ent);
 		result = PyObject_CallObject(self->filter, args);
 		Py_DECREF(args);
 		
@@ -315,6 +220,7 @@ PyDirObject_readdir(PyDirObject *self)
 {
 	int lasterrno = 0;
 	struct dirent* next;
+	PyObject *ret;
 	
 	if (!self->directory) {
 		PyErr_SetString(PyDirObject_Error,
@@ -333,7 +239,10 @@ PyDirObject_readdir(PyDirObject *self)
 		errno = lasterrno;
 		return NULL;
 	}
-	return PyDirentObject_FromDirent(next);
+   ret = PyTuple_New(2);
+   PyTuple_SetItem(ret, 0, PyString_FromString(next->d_name));
+   PyTuple_SetItem(ret, 1, PyInt_FromLong(next->d_type));
+   return ret;
 }
 
 static PyObject *
@@ -462,8 +371,78 @@ static PyTypeObject PyDirObject_Type = {
 	(destructor)PyDirObject_free,		/* tp_free */
 };
 
+#ifndef PyBool_FromLong
+#define PyBool_FromLong(o) PyInt_FromLong(o)
+#endif
+
+#define DEFINE(name, const)                                                 \
+static PyObject *                                                           \
+dir_is##name(PyObject *self, PyObject *args) {                              \
+	PyObject *tup;                                                           \
+	if (!PyArg_ParseTuple(args, "O", &tup))                                  \
+		return;                                                               \
+	return PyBool_FromLong(PyInt_AsLong(PyTuple_GetItem(self, 1)) == const); \
+}
+
+DEFINE(Fifo, DT_FIFO)
+DEFINE(CharDevice, DT_CHR)
+DEFINE(BlockDevice, DT_BLK)
+DEFINE(Directory, DT_DIR)
+DEFINE(RegularFile, DT_REG)
+DEFINE(SymbolicLink, DT_LNK)
+DEFINE(Socket, DT_SOCK)
+DEFINE(Whiteout, DT_WHT)
+
+#undef DEFINE
+
+int select_dirs(struct dirent* ent) {
+	return ent->d_type == DT_DIR;
+}
+
+static PyObject *
+dir_listDirectories(PyObject *self, PyObject *args) {
+	int ret;
+	int i;
+	char *path;
+	PyObject *list;
+	struct dirent **ents;
+	
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+	
+	ret = scandir(path, &ents, select_dirs, alphasort);
+	if (ret == -1) {
+		PyErr_SetFromErrno(PyDirObject_Error);
+		return NULL;
+	}
+	
+	list = PyList_New(ret);
+	for (i = 0; i < ret; ++i)
+		PyList_SetItem(list, i, PyString_FromString(ents[i]->d_name));
+	
+	return list;
+}
+
 static PyMethodDef dir_functions[] = {
-	{NULL},
+	{"isFifo", (PyCFunction)dir_isFifo, METH_VARARGS,
+		"isFifo() -> True if this entry is of FIFO type"},
+	{"isCharDevice", (PyCFunction)dir_isCharDevice, METH_VARARGS,
+		"isCharDevice() -> True if this entry is of CHR type"},
+	{"isBlockDevice", (PyCFunction)dir_isBlockDevice, METH_VARARGS,
+		"isBlockDevice() -> True if this entry is of BLK type"},
+	{"isDirectory", (PyCFunction)dir_isDirectory, METH_VARARGS,
+		"isDirectory() -> True if this entry is of DIR type"},
+	{"isRegularFile", (PyCFunction)dir_isRegularFile, METH_VARARGS,
+		"isRegularFile() -> True if this entry is of REG type"},
+	{"isSymbolicLink", (PyCFunction)dir_isSymbolicLink, METH_VARARGS,
+		"isSymbolicLink() -> True if this entry is of SYM type"},
+	{"isSocket", (PyCFunction)dir_isSocket, METH_VARARGS,
+		"isSocket() -> True if this entry is of SOCK type"},
+	{"isWhiteout", (PyCFunction)dir_isWhiteout, METH_VARARGS,
+		"isWhiteout() -> True if this entry is of WHT type"},
+	{"listDirectories", (PyCFunction)dir_listDirectories, METH_VARARGS,
+		"listDirectories(path) -> List the directories in the given path"},
+	{NULL, NULL},
 };
 
 DL_EXPORT(void)
@@ -473,9 +452,6 @@ initdir(void)
 
 	PyDirObject_Error = PyErr_NewException("dir.error", PyDirObject_Error, NULL);
 	if (PyDirObject_Error == NULL)
-		return;
-
-	if (PyType_Ready(&PyDirentObject_Type) < 0)
 		return;
 
 	if (PyType_Ready(&PyDirObject_Type) < 0)
@@ -494,11 +470,6 @@ initdir(void)
 
 	Py_INCREF(PyDirObject_Error);
 	if (PyDict_SetItemString(d, "DirError", PyDirObject_Error) < 0)
-		return;
-
-	Py_INCREF(&PyDirentObject_Type);
-	if (PyDict_SetItemString(d, "DirentType",
-				 (PyObject *) &PyDirentObject_Type) < 0)
 		return;
 
 	Py_INCREF(&PyDirObject_Type);
