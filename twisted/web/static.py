@@ -179,7 +179,7 @@ class File(resource.Resource, styles.Versioned):
             for fn in os.listdir(self.path):
                 if os.path.splitext(fn)[0]==path:
                     log.msg('    Returning %s' % fn)
-                    return File(os.path.join(self.path, fn), self.defaultType, self.allowExt)
+                    path = fn
 
         newpath = os.path.join(self.path, path)
         if not os.path.exists(newpath):
