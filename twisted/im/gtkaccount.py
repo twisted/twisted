@@ -49,11 +49,7 @@ class AccountManager:
         from twisted.manhole.ui.pywidgets import LocalInteraction
         l = LocalInteraction()
         l.localNS['chat'] = self.chatui
-        l.signal_connect('delete_event', self.closeConsole)
         l.show_all()
-
-    def closeConsole(self, w, evt):
-        return 1
 
     def created(self, acct):
         self.accounts.append(acct)

@@ -36,6 +36,7 @@
       <name>vpaned1</name>
       <handle_size>10</handle_size>
       <gutter_size>6</gutter_size>
+      <position>0</position>
       <child>
 	<padding>0</padding>
 	<expand>True</expand>
@@ -66,7 +67,7 @@
 	<class>GtkScrolledWindow</class>
 	<name>scrolledwindow11</name>
 	<hscrollbar_policy>GTK_POLICY_NEVER</hscrollbar_policy>
-	<vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
+	<vscrollbar_policy>GTK_POLICY_AUTOMATIC</vscrollbar_policy>
 	<hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
 	<vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
 	<child>
@@ -227,7 +228,7 @@
 	    <last_modification_time>Tue, 07 May 2002 04:36:10 GMT</last_modification_time>
 	  </signal>
 	  <columns>4</columns>
-	  <column_widths>109,35,19,80</column_widths>
+	  <column_widths>109,35,23,80</column_widths>
 	  <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
 	  <show_titles>True</show_titles>
 	  <shadow_type>GTK_SHADOW_IN</shadow_type>
@@ -607,7 +608,7 @@ Of
 	  <name>accountsList</name>
 	  <can_focus>True</can_focus>
 	  <columns>4</columns>
-	  <column_widths>80,12,17,80</column_widths>
+	  <column_widths>80,36,34,80</column_widths>
 	  <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
 	  <show_titles>True</show_titles>
 	  <shadow_type>GTK_SHADOW_IN</shadow_type>
@@ -642,7 +643,7 @@ Of
 	    <class>GtkLabel</class>
 	    <child_name>CList:title</child_name>
 	    <name>label47</name>
-	    <label>Auto-Login</label>
+	    <label>Auto</label>
 	    <justify>GTK_JUSTIFY_CENTER</justify>
 	    <wrap>False</wrap>
 	    <xalign>0.5</xalign>
@@ -948,10 +949,11 @@ Of
     </widget>
 
     <widget>
-      <class>GtkHPaned</class>
-      <name>GroupHPaned</name>
-      <handle_size>6</handle_size>
+      <class>GtkVPaned</class>
+      <name>vpaned2</name>
+      <handle_size>10</handle_size>
       <gutter_size>6</gutter_size>
+      <position>0</position>
       <child>
 	<padding>0</padding>
 	<expand>True</expand>
@@ -959,42 +961,193 @@ Of
       </child>
 
       <widget>
-	<class>GtkScrolledWindow</class>
-	<name>scrolledwindow4</name>
-	<hscrollbar_policy>GTK_POLICY_NEVER</hscrollbar_policy>
-	<vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
-	<hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
-	<vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
+	<class>GtkHPaned</class>
+	<name>GroupHPaned</name>
+	<handle_size>6</handle_size>
+	<gutter_size>6</gutter_size>
 	<child>
 	  <shrink>False</shrink>
 	  <resize>True</resize>
 	</child>
 
 	<widget>
-	  <class>GtkText</class>
-	  <name>GroupOutput</name>
-	  <can_focus>True</can_focus>
-	  <editable>False</editable>
-	  <text></text>
+	  <class>GtkScrolledWindow</class>
+	  <name>scrolledwindow4</name>
+	  <hscrollbar_policy>GTK_POLICY_NEVER</hscrollbar_policy>
+	  <vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
+	  <hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
+	  <vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
+	  <child>
+	    <shrink>False</shrink>
+	    <resize>True</resize>
+	  </child>
+
+	  <widget>
+	    <class>GtkText</class>
+	    <name>GroupOutput</name>
+	    <can_focus>True</can_focus>
+	    <editable>False</editable>
+	    <text></text>
+	  </widget>
+	</widget>
+
+	<widget>
+	  <class>GtkVBox</class>
+	  <name>actionvbox</name>
+	  <width>110</width>
+	  <homogeneous>False</homogeneous>
+	  <spacing>1</spacing>
+	  <child>
+	    <shrink>True</shrink>
+	    <resize>False</resize>
+	  </child>
+
+	  <widget>
+	    <class>GtkScrolledWindow</class>
+	    <name>scrolledwindow5</name>
+	    <hscrollbar_policy>GTK_POLICY_NEVER</hscrollbar_policy>
+	    <vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
+	    <hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
+	    <vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
+	    <child>
+	      <padding>0</padding>
+	      <expand>True</expand>
+	      <fill>True</fill>
+	    </child>
+
+	    <widget>
+	      <class>GtkCList</class>
+	      <name>ParticipantList</name>
+	      <can_focus>True</can_focus>
+	      <signal>
+		<name>select_row</name>
+		<handler>on_ParticipantList_select_row</handler>
+		<last_modification_time>Sat, 13 Jul 2002 08:11:12 GMT</last_modification_time>
+	      </signal>
+	      <signal>
+		<name>unselect_row</name>
+		<handler>on_ParticipantList_unselect_row</handler>
+		<last_modification_time>Sat, 13 Jul 2002 08:23:25 GMT</last_modification_time>
+	      </signal>
+	      <columns>1</columns>
+	      <column_widths>80</column_widths>
+	      <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
+	      <show_titles>False</show_titles>
+	      <shadow_type>GTK_SHADOW_IN</shadow_type>
+
+	      <widget>
+		<class>GtkLabel</class>
+		<child_name>CList:title</child_name>
+		<name>label18</name>
+		<label>Users</label>
+		<justify>GTK_JUSTIFY_CENTER</justify>
+		<wrap>False</wrap>
+		<xalign>0.5</xalign>
+		<yalign>0.5</yalign>
+		<xpad>0</xpad>
+		<ypad>0</ypad>
+	      </widget>
+	    </widget>
+	  </widget>
+
+	  <widget>
+	    <class>GtkFrame</class>
+	    <name>frame10</name>
+	    <label>Group</label>
+	    <label_xalign>0</label_xalign>
+	    <shadow_type>GTK_SHADOW_ETCHED_IN</shadow_type>
+	    <child>
+	      <padding>0</padding>
+	      <expand>False</expand>
+	      <fill>False</fill>
+	    </child>
+
+	    <widget>
+	      <class>GtkVBox</class>
+	      <name>GroupActionsBox</name>
+	      <homogeneous>False</homogeneous>
+	      <spacing>0</spacing>
+
+	      <widget>
+		<class>Placeholder</class>
+	      </widget>
+
+	      <widget>
+		<class>Placeholder</class>
+	      </widget>
+
+	      <widget>
+		<class>Placeholder</class>
+	      </widget>
+	    </widget>
+	  </widget>
+
+	  <widget>
+	    <class>GtkFrame</class>
+	    <name>PersonFrame</name>
+	    <label>Person</label>
+	    <label_xalign>0</label_xalign>
+	    <shadow_type>GTK_SHADOW_ETCHED_IN</shadow_type>
+	    <child>
+	      <padding>0</padding>
+	      <expand>False</expand>
+	      <fill>False</fill>
+	    </child>
+
+	    <widget>
+	      <class>GtkVBox</class>
+	      <name>PersonActionsBox</name>
+	      <homogeneous>False</homogeneous>
+	      <spacing>0</spacing>
+
+	      <widget>
+		<class>Placeholder</class>
+	      </widget>
+
+	      <widget>
+		<class>Placeholder</class>
+	      </widget>
+
+	      <widget>
+		<class>Placeholder</class>
+	      </widget>
+	    </widget>
+	  </widget>
 	</widget>
       </widget>
 
       <widget>
-	<class>GtkVBox</class>
-	<name>actionvbox</name>
-	<width>110</width>
+	<class>GtkHBox</class>
+	<name>hbox6</name>
 	<homogeneous>False</homogeneous>
-	<spacing>1</spacing>
+	<spacing>0</spacing>
 	<child>
 	  <shrink>True</shrink>
 	  <resize>False</resize>
 	</child>
 
 	<widget>
+	  <class>GtkLabel</class>
+	  <name>NickLabel</name>
+	  <label>&lt;no nick&gt;</label>
+	  <justify>GTK_JUSTIFY_CENTER</justify>
+	  <wrap>False</wrap>
+	  <xalign>0.5</xalign>
+	  <yalign>0.5</yalign>
+	  <xpad>0</xpad>
+	  <ypad>0</ypad>
+	  <child>
+	    <padding>4</padding>
+	    <expand>False</expand>
+	    <fill>False</fill>
+	  </child>
+	</widget>
+
+	<widget>
 	  <class>GtkScrolledWindow</class>
-	  <name>scrolledwindow5</name>
+	  <name>scrolledwindow9</name>
 	  <hscrollbar_policy>GTK_POLICY_NEVER</hscrollbar_policy>
-	  <vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
+	  <vscrollbar_policy>GTK_POLICY_AUTOMATIC</vscrollbar_policy>
 	  <hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
 	  <vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
 	  <child>
@@ -1004,159 +1157,18 @@ Of
 	  </child>
 
 	  <widget>
-	    <class>GtkCList</class>
-	    <name>ParticipantList</name>
+	    <class>GtkText</class>
+	    <name>GroupInput</name>
 	    <can_focus>True</can_focus>
+	    <has_focus>True</has_focus>
 	    <signal>
-	      <name>select_row</name>
-	      <handler>on_ParticipantList_select_row</handler>
-	      <last_modification_time>Sat, 13 Jul 2002 08:11:12 GMT</last_modification_time>
+	      <name>key_press_event</name>
+	      <handler>handle_key_press_event</handler>
+	      <last_modification_time>Tue, 29 Jan 2002 12:41:03 GMT</last_modification_time>
 	    </signal>
-	    <signal>
-	      <name>unselect_row</name>
-	      <handler>on_ParticipantList_unselect_row</handler>
-	      <last_modification_time>Sat, 13 Jul 2002 08:23:25 GMT</last_modification_time>
-	    </signal>
-	    <columns>1</columns>
-	    <column_widths>80</column_widths>
-	    <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
-	    <show_titles>False</show_titles>
-	    <shadow_type>GTK_SHADOW_IN</shadow_type>
-
-	    <widget>
-	      <class>GtkLabel</class>
-	      <child_name>CList:title</child_name>
-	      <name>label18</name>
-	      <label>Users</label>
-	      <justify>GTK_JUSTIFY_CENTER</justify>
-	      <wrap>False</wrap>
-	      <xalign>0.5</xalign>
-	      <yalign>0.5</yalign>
-	      <xpad>0</xpad>
-	      <ypad>0</ypad>
-	    </widget>
+	    <editable>True</editable>
+	    <text></text>
 	  </widget>
-	</widget>
-
-	<widget>
-	  <class>GtkFrame</class>
-	  <name>frame10</name>
-	  <label>Group</label>
-	  <label_xalign>0</label_xalign>
-	  <shadow_type>GTK_SHADOW_ETCHED_IN</shadow_type>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-
-	  <widget>
-	    <class>GtkVBox</class>
-	    <name>GroupActionsBox</name>
-	    <homogeneous>False</homogeneous>
-	    <spacing>0</spacing>
-
-	    <widget>
-	      <class>Placeholder</class>
-	    </widget>
-
-	    <widget>
-	      <class>Placeholder</class>
-	    </widget>
-
-	    <widget>
-	      <class>Placeholder</class>
-	    </widget>
-	  </widget>
-	</widget>
-
-	<widget>
-	  <class>GtkFrame</class>
-	  <name>PersonFrame</name>
-	  <label>Person</label>
-	  <label_xalign>0</label_xalign>
-	  <shadow_type>GTK_SHADOW_ETCHED_IN</shadow_type>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-
-	  <widget>
-	    <class>GtkVBox</class>
-	    <name>PersonActionsBox</name>
-	    <homogeneous>False</homogeneous>
-	    <spacing>0</spacing>
-
-	    <widget>
-	      <class>Placeholder</class>
-	    </widget>
-
-	    <widget>
-	      <class>Placeholder</class>
-	    </widget>
-
-	    <widget>
-	      <class>Placeholder</class>
-	    </widget>
-	  </widget>
-	</widget>
-      </widget>
-    </widget>
-
-    <widget>
-      <class>GtkHBox</class>
-      <name>hbox6</name>
-      <homogeneous>False</homogeneous>
-      <spacing>0</spacing>
-      <child>
-	<padding>0</padding>
-	<expand>False</expand>
-	<fill>True</fill>
-      </child>
-
-      <widget>
-	<class>GtkLabel</class>
-	<name>NickLabel</name>
-	<label>&lt;no nick&gt;</label>
-	<justify>GTK_JUSTIFY_CENTER</justify>
-	<wrap>False</wrap>
-	<xalign>0.5</xalign>
-	<yalign>0.5</yalign>
-	<xpad>0</xpad>
-	<ypad>0</ypad>
-	<child>
-	  <padding>4</padding>
-	  <expand>False</expand>
-	  <fill>False</fill>
-	</child>
-      </widget>
-
-      <widget>
-	<class>GtkScrolledWindow</class>
-	<name>scrolledwindow9</name>
-	<hscrollbar_policy>GTK_POLICY_NEVER</hscrollbar_policy>
-	<vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
-	<hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
-	<vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
-	<child>
-	  <padding>0</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
-	</child>
-
-	<widget>
-	  <class>GtkText</class>
-	  <name>GroupInput</name>
-	  <can_focus>True</can_focus>
-	  <has_focus>True</has_focus>
-	  <signal>
-	    <name>key_press_event</name>
-	    <handler>handle_key_press_event</handler>
-	    <last_modification_time>Tue, 29 Jan 2002 12:41:03 GMT</last_modification_time>
-	  </signal>
-	  <editable>True</editable>
-	  <text></text>
 	</widget>
       </widget>
     </widget>
