@@ -43,7 +43,7 @@ NOT_DONE_YET = 1
 from twisted.spread import pb, refpath
 from twisted.internet import reactor
 from twisted.protocols import http, protocol
-from twisted.python import log, reflect, roots, failure
+from twisted.python import log, reflect, roots, failure, components
 from twisted import copyright
 from twisted.cred import util
 from twisted.persisted import styles
@@ -267,7 +267,7 @@ class Request(pb.Copyable, http.Request):
 
     session = None
 
-    def getSession(self):
+    def getSession(self, sessionInterface = None):
         # Session management
         if not self.session:
             cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
@@ -282,6 +282,13 @@ class Request(pb.Copyable, http.Request):
                 self.session = self.site.makeSession()
                 self.addCookie(cookiename, self.session.uid)
         self.session.touch()
+        if sessionInterface:
+            if self.session.sessionNamespaces.has_key(sessionInterface):
+                return self.session.sessionNamespaces[sessionInterface]
+            adapted = components.getAdapter(self.session, sessionInterface, None)
+            if adapted:
+                self.session.sessionNamespaces[sessionInterface] = adapted
+                return adapted
         return self.session
 
     def prePathURL(self):
@@ -319,6 +326,7 @@ class Session:
         self.uid = uid
         self.expireCallbacks = []
         self.touch()
+        self.sessionNamespaces = {}
 
     def notifyOnExpire(self, callback):
         """Call this callback when the session expires or logs out."""
