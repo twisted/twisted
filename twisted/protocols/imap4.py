@@ -1083,8 +1083,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         name = self._parseMbox(name)
         try:
             self.account.create(name)
-        except MailboxCollision, c:
+        except MailboxException, c:
             self.sendNegativeResponse(tag, str(c))
+        except:
+            self.sendBadResponse(tag, "Server error encountered while creating mailbox")
+            log.err()
         else:
             self.sendPositiveResponse(tag, 'Mailbox created')
 
@@ -1097,6 +1100,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.delete(name)
         except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
+        except:
+            self.sendBadResponse(tag, "Server error encountered while deleting mailbox")
+            log.err()
         else:
             self.sendPositiveResponse(tag, 'Mailbox deleted')
 
@@ -1111,6 +1117,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, 'Invalid command syntax')
         except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
+        except:
+            self.sendBadResponse(tag, "Server error encountered while renaming mailbox")
+            log.err()
         else:
             self.sendPositiveResponse(tag, 'Mailbox renamed')
 
@@ -1123,6 +1132,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.subscribe(name)
         except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
+        except:
+            self.sendBadResponse(tag, "Server error encountered while subscribing to mailbox")
+            log.err()
         else:
             self.sendPositiveResponse(tag, 'Subscribed')
 
@@ -1135,6 +1147,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.account.unsubscribe(name)
         except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
+        except:
+            self.sendBadResponse(tag, "Server error encountered while unsubscribing from mailbox")
+            log.err()
         else:
             self.sendPositiveResponse(tag, 'Unsubscribed')
 
@@ -3383,7 +3398,7 @@ def wildcardToRegexp(wildcard, delim=None):
         wildcard = wildcard.replace('%', '(?:.*?)')
     else:
         wildcard = wildcard.replace('%', '(?:(?:[^%s])*?)' % re.escape(delim))
-    return re.compile(wildcard)
+    return re.compile(wildcard, re.I)
 
 def splitQuoted(s):
     """Split a string into whitespace delimited tokens
