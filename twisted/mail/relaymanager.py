@@ -418,6 +418,7 @@ class RelayStateHelper(app.ApplicationService):
 
 class MXCalculator:
     timeOutBadMX = 60 * 60 # One hour
+    fallbackToDomain = True
 
     def __init__(self, resolver = None):
         self.badMXs = {}
@@ -472,6 +473,8 @@ class MXCalculator:
         return answer[0]
 
     def _ebMX(self, failure, domain):
-        failure.trap(IOError)
-        log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
-        return self.resolver.lookupAddress(domain)
+        if self.fallbackToDomain:
+            failure.trap(IOError)
+            log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
+            return self.resolver.getHostByName(domain)
+        return failure

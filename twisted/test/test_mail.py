@@ -32,6 +32,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import interfaces
+from twisted.internet.error import DNSLookupError
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
@@ -719,12 +720,16 @@ class MXTestCase(unittest.TestCase):
         self.assertEquals(str(mx.exchange), 'the.email.test.domain')
     
     def testSimpleFailure(self):
+        self.mx.fallbackToDomain = False
         self.assertEquals(
-            unittest.deferredResult(
-                self.mx.getMX('test.domain').addErrback(
-                    lambda f: f.trap(IOError)
-                )
-            ), IOError
+            unittest.deferredError(self.mx.getMX('test.domain')).type,
+            IOError
+        )
+
+    def testSimpleFailureWithFallback(self):
+        self.assertEquals(
+            unittest.deferredError(self.mx.getMX('test.domain')).type,
+            DNSLookupError
         )
     
     def testManyRecords(self):
