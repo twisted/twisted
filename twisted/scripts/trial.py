@@ -66,6 +66,23 @@ class Options(usage.Options):
         (relative to _trial_temp). Requires Python 2.3.3."""
         import trace
 
+        # WOO MONKEY PATCH
+        def find_executable_linenos(filename):
+            """Return dict where keys are line numbers in the line number table."""
+            #assert filename.endswith('.py') # YOU BASTARDS
+            try:
+                prog = open(filename).read()
+            except IOError, err:
+                print >> sys.stderr, ("Not printing coverage data for %r: %s"
+                                      % (filename, err))
+                return {}
+            code = compile(prog, filename, "exec")
+            strs = trace.find_strings(filename)
+            return trace.find_lines(code, strs)
+
+        #kaching!
+        trace.find_executable_linenos = find_executable_linenos
+
         #countfile = abs(os.path.join('_trial_temp', 'coverage.count'))
         self.coverdir = os.path.abspath(os.path.join('_trial_temp', coverdir))
         self.tracer = trace.Trace(count=1, trace=0)#, infile=countfile, outfile=countfile)
