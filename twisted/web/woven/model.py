@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.33 $"[11:-2]
+__version__ = "$Revision: 1.34 $"[11:-2]
 
 import types
 import weakref
@@ -54,6 +54,7 @@ class Model:
     def __getstate__(self):
         self.views = []
         self.subviews = {}
+        self.submodels = {}
         return self.__dict__
 
     def initialize(self, *args, **kwargs):
