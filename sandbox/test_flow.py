@@ -17,7 +17,6 @@
 #
 # to run test, use 'trial test_flow.py'
 #
-from __future__ import generators
 from __future__ import nested_scopes
 import flow
 from twisted.trial import unittest
@@ -38,21 +37,19 @@ class producer:
     def __iter__(self):
         self.lst   = flow.wrap([1,2,3])
         self.nam   = flow.wrap(['one','two','three'])
-        self.state = self.yield_lst
+        self.next = self.yield_lst
         return self
     def yield_lst(self):
-        self.state = self.yield_nam
+        self.next = self.yield_nam
         return self.lst
     def yield_nam(self):
-        self.state = self.yield_results
+        self.next = self.yield_results
         return self.nam
     def yield_results(self):
-        self.state = self.yield_lst
+        self.next = self.yield_lst
         if self.lst.stop or self.nam.stop:
             raise flow.StopIteration
         return (self.lst.result, self.nam.result)
-    def next(self):
-        return self.state()
 
 class consumer:
     """ iterator version of the following generator...
@@ -71,22 +68,20 @@ class consumer:
     def __iter__(self):
         self.title = flow.wrap(['Title'])
         self.lst   = flow.wrap(producer())
-        self.state = self.yield_title
+        self.next = self.yield_title
         return self
     def yield_title(self):
-        self.state = self.yield_title_result
+        self.next = self.yield_title_result
         return self.title
     def yield_title_result(self):
-        self.state = self.yield_lst
+        self.next = self.yield_lst
         return self.title.next()
     def yield_lst(self):
-        self.state = self.yield_result
+        self.next = self.yield_result
         return self.lst
     def yield_result(self):
-        self.state = self.yield_lst
+        self.next = self.yield_lst
         return self.lst.next()
-    def next(self):
-        return self.state()
 
 class badgen:
     """ a bad generator...
@@ -96,16 +91,14 @@ class badgen:
         err =  3/ 0
     """    
     def __iter__(self):
-        self.state = self.yield_x
+        self.next = self.yield_x
         return self
     def yield_x(self):
-        self.state = self.yield_done
+        self.next = self.yield_done
         return 'x'
     def yield_done(self):
         err = 3 / 0
         raise flow.StopIteration
-    def next(self):
-        return self.state()
 
 class buildlist:
     """ building a list
@@ -122,22 +115,43 @@ class buildlist:
         self.src  = src
     def __iter__(self):
         self.out  = []
-        self.state = self.yield_src
+        self.next = self.yield_src
         return self
     def yield_src(self):
-        self.state = self.yield_append
+        self.next = self.yield_append
         return self.src
     def yield_append(self):
         try:
             self.out.append(self.src.next())
         except flow.StopIteration: 
-            self.state = self.yield_finish
+            self.next = self.yield_finish
             return self.out
         return self.src
     def yield_finish(self):
         raise flow.StopIteration
-    def next(self):
-        return self.state()
+
+class testBoth:
+    """ interweving two concurrent stages
+
+        def testBoth(ca,cb):
+            both = flow.Concurrent(ca,cb)
+            yield both
+            for stage in both:
+                yield (stage.name, stage.result)
+                yield both
+    """
+    def __init__(self, ca, cb):
+        self.both = flow.Concurrent(ca,cb)
+    def __iter__(self):
+        self.next = self.yield_both
+        return self
+    def yield_both(self): 
+        self.next = self.yield_result
+        return self.both
+    def yield_result(self):
+        self.next = self.yield_both
+        stage = self.both.next()
+        return (stage.name, stage.result) 
 
 class FlowTest(unittest.TestCase):
     def testNotReady(self):
@@ -196,12 +210,6 @@ class FlowTest(unittest.TestCase):
         ca.name = 'a'
         cb = flow.Callback()
         cb.name = 'b'
-        def testBoth(ca,cb):
-            both = flow.Concurrent(ca,cb)
-            yield both
-            for stage in both:
-                yield (stage.name, stage.result)
-                yield both
         d = flow.Deferred(testBoth(ca,cb))
         ca.callback(1)
         cb.callback(2)
