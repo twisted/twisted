@@ -208,7 +208,7 @@ class SSHChannel:
 
     def getHost(self):
         """
-        Return a tuple describing out side of the connection.
+        Return a tuple describing our side of the connection.
 
         @rtype: C{tuple}
         """
