@@ -391,20 +391,21 @@ makefile_template = '''\
 
 name=%(name)s
 version=%(package_version)s
+target=$(name)-$(package_version)-setup.exe
 
-all: $(name)-$(package_version)-setup.exe
-        @echo "Done"
-        
-$(name)-$(package_version)-setup.exe: $(name).iss do_inno.py
-        python do_inno.py
+all: $target
+	@echo "Done"
+	
+$(target): $(name).iss do_inno.py
+	python do_inno.py
 
 $(name).iss: $(name).fms do_inno_script.py setup.py setup.cfg $(name).tap
-        python setup.py py2exe
-        python do_inno_script.py
+	python setup.py py2exe
+	python do_inno_script.py
 
 clean:
-        rm -rf dist build
-        rm -f $(name).iss
-        rm -f *.pyc
-        rm -f $(name)-$(package_version)-setup.exe
+	rm -rf dist build
+	rm -f $(name).iss
+	rm -f *.pyc
+	rm -f $(target)
 '''
