@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.45 2002/08/11 05:37:43 radix Exp $
+$Id: setup.py,v 1.46 2002/08/15 01:24:44 radix Exp $
 """
 
 import distutils, os, sys, string
@@ -276,8 +276,6 @@ your toaster.
         "twisted.test",
         "twisted.web",
         "twisted.words",
-        "twisted.words.ui",
-        "twisted.words.ui.gateways",
     ],
 
     'cmdclass': {
