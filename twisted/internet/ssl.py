@@ -250,9 +250,9 @@ class Port(tcp.Port):
     
     transport = Server
     
-    def __init__(self, port, factory, ctxFactory, backlog=5, interface=''):
+    def __init__(self, port, factory, ctxFactory, backlog=5, interface='', reactor=None):
+        tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
-        apply(tcp.Port.__init__, (self, port, factory), {'backlog': backlog, 'interface': interface})
     
     def createInternetSocket(self):
         """(internal) create an SSL socket
