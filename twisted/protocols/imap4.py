@@ -1285,7 +1285,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 ['BODY', [], 'INTERNALDATE', 'FLAGS'],
                 uid=uid
             ).addCallbacks(
-                self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag, mbox), None
+                self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag,),
             )
 
     select_COPY = (do_COPY, arg_seqset, arg_astring)
@@ -1321,6 +1321,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, '[ALERT] Some messages were not copied')
         else:
             self.sendPositiveResponse(tag, 'COPY completed')
+    
+    def __ebCopy(self, failure, tag):
+        self.sendBadResponse(tag, 'COPY failed')
+        log.err(failure)
 
     def do_UID(self, tag, command, line):
         command = command.upper()
