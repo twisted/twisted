@@ -85,8 +85,6 @@ class Options(usage.Options):
                 updateVersion,
                 tagTemp,
                 exportTemp,
-                makeDocs,
-                makeBalls,
                 ]
 
             if not self['nopermanent']:
