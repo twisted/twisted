@@ -16,6 +16,11 @@ An example session (assuming the server is running)::
     ['lala', 4, 3.3999999999999999]
     >>> s.echo("lala", 4, [1, 2])
     ['lala', 4, [1, 2]]
+
+
+API Stability: semi-stable
+
+Maintainer: L{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 from twisted.web import xmlrpc
