@@ -22,7 +22,7 @@ Test cases for dirdbm module.
 
 from pyunit import unittest
 from twisted.persisted import dirdbm
-import os, tempfile
+import os, tempfile, shutil, glob
 
 class DirDbmTestCase(unittest.TestCase):
 
@@ -32,7 +32,7 @@ class DirDbmTestCase(unittest.TestCase):
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
     
     def tearDown(self):
-        os.rmdir(self.path)
+        shutil.rmtree(self.path)
 
     def testDbm(self):
         d = self.dbm
@@ -80,6 +80,26 @@ class DirDbmTestCase(unittest.TestCase):
         assert len(d.keys()) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
+
+    def testRecovery(self):
+        """DirDBM: test recovery from directory after a faked crash""" 
+        k = self.dbm._encode("key1")
+        f = open(os.path.join(self.path, k + ".new"), "wb")
+        f.write("value")
+        f.close()
+        
+        k2 = self.dbm._encode("key2")
+        f = open(os.path.join(self.path, k2), "wb")
+        f.write("correct")
+        f.close()
+        f = open(os.path.join(self.path, k2 + ".new"), "wb")
+        f.write("wrong")
+        f.close()
+        
+        dbm = dirdbm.DirDBM(self.path)
+        assert dbm["key1"] == "value"
+        assert dbm["key2"] == "correct"
+        assert not glob.glob(os.path.join(self.path, "*.new"))
 
 
 class ShelfTestCase(DirDbmTestCase):

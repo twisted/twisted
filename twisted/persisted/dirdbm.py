@@ -21,6 +21,9 @@ I am a DBM-style interface to a directory.
 
 Each key is stored as a single file.  This is not expected to be very fast or
 efficient, but it's good for easy debugging.
+
+DirDBMs are *not* thread-safe, they should only be accessed by one thread at
+a time.
 """
 
 
@@ -28,6 +31,7 @@ import os
 import types
 import base64
 import string
+import glob
 import cPickle
 _open = __builtins__['open']
 
@@ -44,6 +48,20 @@ class DirDBM:
         self.dname = os.path.abspath(name)
         if not os.path.isdir(self.dname):
             os.mkdir(self.dname)
+        else:
+            # run recovery, in case we crashed. we find all files ending
+            # with ".new". If a corresponding file exists without ".new",
+            # we assume the write failed and delete the ".new" file. If
+            # only a ".new" exist we assume the program crashed right
+            # after deleting the old entry but before renaming the new
+            # entry.
+            newFiles = glob.glob(os.path.join(self.dname, "*.new"))
+            for f in newFiles:
+                old = f[:-4]
+                if os.path.exists(old):
+                    os.remove(f)
+                else:
+                    os.rename(f, old)
     
     def _encode(self, k):
         """Encode a key so it can be used as a filename.
@@ -62,10 +80,22 @@ class DirDBM:
         assert type(k) == types.StringType
         assert type(v) == types.StringType
         k = self._encode(k)
-        f = _open(os.path.join(self.dname, k),'wb')
-        f.write(v)
-        f.flush()
-        f.close()
+        
+        # we create a new file with extension .new, write the data to it, and
+        # if the write succeeds delete the old file and rename the new one.
+        old = os.path.join(self.dname, k)
+        new = old + ".new"
+        try:
+            f = _open(new,'wb')
+            f.write(v)
+            f.flush()
+            f.close()
+        except:
+            os.remove(new)
+            raise
+        else:
+            if os.path.exists(old): os.remove(old)
+            os.rename(new, old)
 
     def __getitem__(self, k):
         """dirdbm[foo]; get the contents of a file in this directory as a string
