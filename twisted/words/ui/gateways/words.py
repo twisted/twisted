@@ -38,12 +38,11 @@ class makeConnection:
         self.attached=0
         self.ref=WordsGateway(username)
         pb.connect(
-            self.pbCallback, self.connectionFailed,
             server, int(port),
             username, password,
             service, username, # need to fix this, maybe?
             self.ref, 60
-            )
+            ).addCallback(self.pbCallback, self.connectionFailed)
         self.connected=1
 
     def connectionFailed(self,tb):
