@@ -388,15 +388,45 @@ class TestMetaInterface(unittest.TestCase):
 
     def testRegistryPersistence(self):
         n = MetaNumber(1)
-        i1 = IMeta(n)
-        i2 = IMeta(n)
+        i1 = IMeta(n, persist=True)
+        i2 = IMeta(n, persist=True)
+        i3 = IMeta(n, persist=False)
+        i4 = IMeta(n)
         self.assertIdentical(i1, i2)
+        self.assertNotEqual(i1, i3)
+        self.assertIdentical(i1, i4)
         import weakref
         r = weakref.ref(i1)
-        del i1
-        del i2
+        del i1, i2, i3, i4
         self.assertNotEqual(r(), IMeta(n))
+        self.assertNotEqual(IMeta(n), IMeta(n))
 
-    testRegistryPersistence.todo = "implement registry weak-ref cache"
 
+class IISource1(components.Interface): pass
+class IISource2(components.Interface): pass
+class IIDest1(components.Interface): pass
 
+class Dest1Impl(components.Adapter):
+    __implements__ = IIDest1
+
+class Dest1Impl2(components.Adapter):
+    __implements__ = IIDest1
+
+class Source12:
+    __implements__ = IISource1, IISource2
+
+class Source21:
+    __implements__ = IISource2, IISource1
+
+IISource1.adaptWith(Dest1Impl,  IIDest1)
+IISource2.adaptWith(Dest1Impl2, IIDest1)
+
+class TestInterfaceInterface(unittest.TestCase):
+
+    def testBasic(self):
+        s12 = Source12()
+        d = IIDest1(s12)
+        self.failUnless(isinstance(d, Dest1Impl), str(s12))
+        s21 = Source21()
+        d = IIDest1(s21)
+        self.failUnless(isinstance(d, Dest1Impl2), str(s21))
