@@ -20,11 +20,28 @@ from twisted.python.release import replaceInFile, runChdirSafe, sh, CommandFaile
 
 import time, glob
 
+packaged_projects = dist.twisted_subprojects[:]
+packaged_projects.remove('web2')
+
+
 repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 #repourl = 'file:///home/radix/Twisted.repo'
 trunkurl = repourl + '/trunk'
 
 debug = False
+
+## NOTE: This script currently doesn't deal too well with building
+## subprojects alone, at least in its dealings with SVN.
+
+# FIXME:
+# 1. Don't use the core-version in the tag name; it doesn't make sense
+#    when doing subprojects alone...
+# 2. If we ever do a sumo release on the same day, the version will
+#    conflict, since we just use %Y-%m-%d as the version...
+# 3. Can't generate tarball from a particular tag without exporting it
+#    beforehand.
+
+# Parameterising the release-tag would fix #1 and #3.
 
 class Options(usage.Options):
     optParameters = [
@@ -157,13 +174,13 @@ makeDocXish = makeMakeDoc('xish')
 
 def makeDocAll(opts):
     runChdirSafe(makeDocCore, opts)
-    for sub in dist.twisted_subprojects:
+    for sub in packaged_projects:
         runChdirSafe(globals()['makeDoc%s' % sub.capitalize()],
                      opts)
 
 def makeBallAll(opts):
     runChdirSafe(makeBallCore, opts)
-    for sub in dist.twisted_subprojects:
+    for sub in packaged_projects:
         runChdirSafe(globals()['makeBall%s' % sub.capitalize()],
                      opts)
 
@@ -222,6 +239,7 @@ def makeBallSumo(opts):
     sh('''
     ln -s `pwd`/Twisted.exp/bin %(tdir)s/
     cp -r `pwd`/Twisted.exp/twisted %(tdir)s/
+    rm -rf `pwd`/Twisted.exp/twisted/web2 # XXX
     ln -s `pwd`/Twisted.exp/doc %(tdir)s/
     cp    `pwd`/Twisted.exp/README %(tdir)s/
     ln -s `pwd`/Twisted.exp/LICENSE %(tdir)s/
@@ -231,7 +249,7 @@ def makeBallSumo(opts):
     # SUMO README references all subproject versions
     sumoReplace = {'SUMO-Date': ver,
                    'Core-SVN-Trunk': opts['core-version']}
-    for subproj in dist.twisted_subprojects:
+    for subproj in packaged_projects:
         subver = opts['%s-version' % subproj]
         if not subver:
             raise Exception("You need to pass --proj-version for all "
@@ -246,7 +264,7 @@ def makeBallSumo(opts):
                'topfiles/setup.py'):
         replaceInFile(os.path.join(tdir, 'twisted', fn), coreReplace)
     # Replace versions for subproject files
-    for sub in dist.twisted_subprojects:
+    for sub in packaged_projects:
         subReplace = {'SVN-Trunk': opts['%s-version' % sub]}
         for fn in ('__init__.py', 'topfiles/setup.py', 'topfiles/README'):
             replaceInFile(os.path.join(tdir, 'twisted', sub, fn), subReplace)
