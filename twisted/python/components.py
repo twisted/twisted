@@ -64,7 +64,7 @@ class MetaInterface(type):
                 adapter = registry.getAdapter(adaptable, self, _Nothing, persist=persist)
         except NotImplementedError:
             if hasattr(self, '__adapt__'):
-                adapter = self.__adapt__.im_func(adaptable, _Nothing)
+                adapter = self.__adapt__.im_func(adaptable, default)
 
         if adapter is _Nothing:
             raise CannotAdapt("%s cannot be adapted to %s." %
