@@ -106,7 +106,7 @@ class Article:
 class NewsServerError(Exception):
     pass
 
-
+    
 class INewsStorage(components.Interface):
     """
     An interface for storing and requesting news articles
@@ -209,6 +209,36 @@ class INewsStorage(components.Interface):
         whose errback will be invoked if the article or group does not
         exist.
         """
+
+class NewsStorage:
+    """
+    Backwards compatibility class -- There is no reason to inherit from this,
+    just implement INewsStorage instead.
+    """
+    def listRequest(self):
+        raise NotImplementedError()
+    def subscriptionRequest(self):
+        raise NotImplementedError()
+    def postRequest(self, message):
+        raise NotImplementedError()
+    def overviewRequest(self):
+        return defer.succeed(OVERVIEW_FMT)
+    def xoverRequest(self, group, low, high):
+        raise NotImplementedError()
+    def xhdrRequest(self, group, low, high, header):
+        raise NotImplementedError()
+    def listGroupRequest(self, group):
+        raise NotImplementedError()
+    def groupRequest(self, group):
+        raise NotImplementedError()
+    def articleExistsRequest(self, id):
+        raise NotImplementedError()
+    def articleRequest(self, group, index, id = None):
+        raise NotImplementedError()
+    def headRequest(self, group, index):
+        raise NotImplementedError()
+    def bodyRequest(self, group, index):
+        raise NotImplementedError()
 
 
 class PickleStorage:
