@@ -27,6 +27,7 @@
 
     <ul>
       <li><a href="#creactor">cReactor for Unix</a></li>
+      <li><a href="#kqueue">KQueue for FreeBSD</a></li>
       <li><a href="#java">Java</a></li>
       <li><a href="#win32">Win32</a></li>
     </ul>
@@ -93,6 +94,18 @@ pollreactor.install()
 <pre class="python">
 from twisted.internet import cReactor
 cReactor.install()
+</pre>
+
+    <a name="kqueue" />
+    <h3>KQueue</h3>
+
+    <p>The KQueue Reactor allows Twisted to use FreeBSD's kqueue mechanism for
+       event scheduling. See instructions in the twisted.internet.kqreactor's
+       docstring for installation notes.</p>
+
+<pre class="python">
+from twisted.internet import kqreactor
+kqreactor.install()
 </pre>
 
     <a name="java" />
