@@ -815,13 +815,21 @@ class BasicAuthorizer:
 class DigestedCredentials(cred.credentials.UsernameHashedPassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
     
-    def __init__(self, username, challenge, response):
+    def __init__(self, username, fields):
         self.username = username
-        self.challenge = challenge.decode('base64')
-        self.response = response.decode('hex')
+        self.fields = fields
     
     def checkPassword(self, password):
-        return md5.md5(self.username + ':' + password)  == self.response
+        response = self.fields.get('response')
+        uri = self.fields.get('uri')
+        nonce = self.fields.get('nonce', '')
+
+        user, domain = self.username.split('@', 1)
+
+        a1 = ':'.join((user, domain, password))
+        a2 = ':'.join(('REGISTER', uri is None and ('sip:' + domain) or uri))
+        interim = ':'.join((md5.md5(a1).hexdigest(), nonce, md5.md5(a2).hexdigest()))
+        return md5.md5(interim).hexdigest() == response
 
 class DigestAuthorizer:
     CHALLENGE_LIFETIME = 15
@@ -846,12 +854,10 @@ class DigestAuthorizer:
         auth = dict([(k, unq(v)) for (k, v) in [p.split('=', 1) for p in parts]])
         try:
             username = auth['username']
-            response = auth['response']
-            challenge = auth['nonce']
         except KeyError:
             raise SIPError(401)
         try:
-            return DigestedCredentials(username, challenge, response)
+            return DigestedCredentials(username, auth)
         except:
             raise SIPError(400)
 
