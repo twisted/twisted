@@ -36,6 +36,8 @@ class Options(usage.Options):
     optParameters = [['rpc', 'r', '/etc/rpc'],
                      ['file', 'f', '/etc/inetd.conf'],]
 
+    optFlags = [['nointernal', 'i']]
+
 
 def updateApplication(app, config):
     
@@ -115,6 +117,9 @@ def updateApplication(app, config):
                     continue
 
         if service.program == 'internal':
+            if config['nointernal']:
+                continue
+
             # Internal services can use a standard ServerFactory
             if not inetd.internalProtocols.has_key(service.name):
                 log.msg('Unknown internal service: ' + service.name)
