@@ -221,6 +221,8 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     indexNames = ["index", "index.html", "index.htm", "index.trp", "index.rpy"]
 
+    type = None
+
     ### Versioning
 
     persistenceVersion = 6
@@ -259,13 +261,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, path)
         # Remove the dots from the path to split
-        p, ext = self.splitext()
-        ext = ext.lower()
-        if self.contentEncodings.has_key(ext):
-            self.encoding = enc = self.contentEncodings[ext]
-            ext = os.path.splitext(p)[1].lower()
-        else:
-            self.encoding = None
         self.defaultType = defaultType
         if ignoredExts in (0, 1) or allowExt:
             warnings.warn("ignoredExts should receive a list, not a boolean")
@@ -276,7 +271,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         else:
             self.ignoredExts = ignoredExts
         self.registry = registry or Registry()
-        self.type = self.contentTypes.get(ext, defaultType)
 
     def ignoreExt(self, ext):
         """Ignore the given extension.
@@ -327,6 +321,16 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     def render(self, request):
         """You know what you doing."""
         self.restat()
+
+        if self.type is None:
+            p, ext = self.splitext()
+            ext = ext.lower()
+            if self.contentEncodings.has_key(ext):
+                self.encoding = enc = self.contentEncodings[ext]
+                ext = os.path.splitext(p)[1].lower()
+            else:
+                self.encoding = None
+            self.type = self.contentTypes.get(ext, self.defaultType)
 
         if not self.exists():
             return error.NoResource("File not found.").render(request)
