@@ -30,9 +30,10 @@
 
     <h2>Testing</h2>
 
-    <p>Unit tests are written using the PyUnit framework. Many
-    examples are in the <code class="API">twisted.test</code>
-    package, and should use <code class="API">twisted.trial</code>.</p>
+    <p>Unit tests are written using the <code
+    class="API">twisted.trial</code> framework. Many examples are in
+    the <code class="API">twisted.test</code> package. Test modules
+    should start with 'test_' in their name.</p>
 
     <p>Acceptance tests are all automated by the admin/accepttests
     script currently. (TODO: real acceptance tests strategy!)</p>
@@ -52,16 +53,9 @@ the breakage to revocation of cvs commit privileges.</p>
 the F9 key to <q>run unit tests</q> and bang on it frequently.  Support for
 other editors is unavailable at this time but we would love to provide it.</p>
 
-<p>If you modify, or write a new, HOWTO, please run 
-<code>admin/generate-domdocs</code> and check the output is all right. 
-Also, it is useful to run <code>bin/hlint</code> on any howto you may have
-modified. There should never be any warnings -- if you're having problems,
-you can always explicitly silence warnings by using <code>hlint="off"</code>
-(though please do this sparingly).
-If you modify the quotes file, run <code>strfile(1)</code> to check you
-did not harm it. In particular, if the <q>shortest string</q> is too short, you
-might have trailing empty lines.</p>
-
+<p>If you modify, or write a new, HOWTO, please read the <a
+href="lore.html">Lore documentation</a> to learn the format the
+docs.</p>
 
     <h2>Whitespace</h2>
 
