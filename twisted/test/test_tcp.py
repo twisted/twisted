@@ -30,9 +30,13 @@ class ClosingFactory(protocol.ServerFactory):
 
 class ClosingProtocol(protocol.Protocol):
 
+    made = 0
     closed = 0
     failed = 0
-    
+
+    def connectionMade(self):
+        self.made = 1
+        
     def connectionLost(self):
         self.closed = 1
 
@@ -55,6 +59,7 @@ class LoopbackTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         
+        self.assert_(client.made)
         self.assert_(port.disconnected)
 
     def testFailing(self):
@@ -65,3 +70,4 @@ class LoopbackTestCase(unittest.TestCase):
             reactor.iterate()
             if client.closed:
                 raise ValueError, "connectionLost called instead of connectionFailed"
+        self.assert_(not client.made)
