@@ -15,9 +15,8 @@ bin/conch/conch.
 Documentation resides in the doc/ directory, with a similar layout to
 bin/ and topfiles/.
 
-== packages/ ==
-The packages/ directory contains subdirectories for each special
-Twisted package. Each subdirectory contains zpkgtools support files.
+== dist/ ==
+The dist/ directory contains support for the package mechanism.
 
 == twisted/ ==
 twisted/, of course, contains the code. Each package that represents a
