@@ -17,11 +17,11 @@ class TestCase:
 
     def failIf(self, condition, message=None):
         if condition:
-            raise AssertionError, msg
+            raise AssertionError, message
 
     def failUnless(self, condition, message=None):
         if not condition:
-            raise AssertionError, msg
+            raise AssertionError, message
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
         try:
