@@ -47,8 +47,7 @@ class Options(usage.Options):
 
                      ['cvsroot', 'c', '/cvs', "The CVSROOT to export from. (only revelant for --exp)."],
 
-                     ['root', 'r', 'Twisted.CVS', "The directory that your CVS checkout is."]]
-
+                     ['root', 't', 'Twisted.CVS', "The directory that your CVS checkout is."]]
 
     longdesc = "Specify -v and all steps to execute; if no steps are given, default is '--exp --dist --docs --balls --rel'"
     
@@ -88,7 +87,12 @@ class Options(usage.Options):
         """Copies tarballs to ~/Releases.
         Reqs: Tarballs."""
         self['commands'].append('rel')
-        
+
+    def opt_debug(self):
+        global debug
+        debug = 1
+
+    opt_d = opt_debug
 
 def main():
     try:
@@ -129,6 +133,10 @@ def sh(command, sensitive=0):
 def replaceInFile(filename, oldstr, newstr):
     sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr, newstr, filename, filename))
     sh('mv %s.new %s' % (filename,  filename))
+
+def checkout(opts):
+    root = opts['cvsroot']
+    os.system('cvs co -d%s co Twisted' % (root))
 
 def updateVersions(opts):
     print "updateVersions"
