@@ -42,7 +42,7 @@ def which(name, flags=os.X_OK):
         if os.access(p, flags):
             result.append(p)
         for e in exts:
-            pext = os.extsep.join((p, e))
+            pext = p + e
             if os.access(pext, flags):
                 result.append(pext)
     return result

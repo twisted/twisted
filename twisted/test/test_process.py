@@ -619,7 +619,7 @@ class UtilTestCase(unittest.TestCase):
     def testWhichPathExt(self):
         j = os.path.join
         old = os.environ.get('PATHEXT', None)
-        os.environ['PATHEXT'] = os.pathsep.join(('bin', 'exe', 'sh'))
+        os.environ['PATHEXT'] = os.pathsep.join(('.bin', '.exe', '.sh'))
         try:
             paths = procutils.which("executable")
         finally:
