@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.13 2002/11/29 01:39:59 z3p Exp $
+# $Id: conch.py,v 1.14 2002/11/29 19:32:15 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -37,7 +37,7 @@ class GeneralOptions(usage.Options):
                     ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
                     ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                     ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
-                    #['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
+                    ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
                     ]
     
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
@@ -51,6 +51,7 @@ class GeneralOptions(usage.Options):
 
     identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     localForwards = []
+    remoteForwards = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
@@ -60,6 +61,13 @@ class GeneralOptions(usage.Options):
         localPort = int(localPort)
         remotePort = int(remotePort)
         self.localForwards.append((localPort, (remoteHost, remotePort)))
+
+    def opt_remoteforward(self, f):
+        remotePort, connHost, connPort = f.split(':') # doesn't do v6 yet
+        remotePort = int(remotePort)
+        connPort = int(connPort)
+        self.remoteForwards.append((remotePort, (connHost, connPort)))
+
 
     def parseArgs(self, host, *command):
         self['host'] = host
@@ -242,6 +250,18 @@ class SSHConnection(connection.SSHConnection):
             for localPort, hostport in options.localForwards:
                 reactor.listenTCP(localPort,
                             forwarding.SSHLocalForwardingFactory(self, hostport))
+        if options.remoteForwards:
+            for remotePort, hostport in options.remoteForwards:
+                log.msg('asking for remote forwarding for %s:%s' %
+                        (remotePort, hostport))
+                data = forwarding.packGlobal_tcpip_forward(
+                    ('0.0.0.0', remotePort))
+                print repr(data)
+                d = self.sendGlobalRequest('tcpip-forward', data, 1)
+                self.remoteForwards[remotePort] = hostport
+                d.addCallback(self.reply)
+    def reply(self, data):
+        log.msg('GLOBAL MESSAGE REPLY: %s' % repr(data))
 
 class SSHSession(session.SSHChannel):
 

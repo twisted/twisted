@@ -37,8 +37,9 @@ class SSHConnection(service.SSHService):
     channels = {} # local channel ID -> subclass of SSHChannel
     channelsToRemoteChannel = {} # subclass of SSHChannel -> remote channel ID
     deferreds = {} # local channel -> list of deferreds for pending requests
-                   # or 'g' -> list of deferreds for global requests
-    remotePorts = [] # list of ports we should accept from server (client only)
+                   # or 'global' -> list of deferreds for global requests
+    remoteForwards = {} # list of ports we should accept from server
+                        # (client only)
 
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
@@ -56,6 +57,14 @@ class SSHConnection(service.SSHService):
         if wantReply:
             self.transport.sendPacket(reply, data)
 
+    def ssh_REQUEST_SUCCESS(self, packet):
+        data = packet
+        self.deferreds['global'].pop(0).callback(data)
+
+    def ssh_REQUEST_FAILURE(self, packet):
+        self.deferreds['global'].pop(0).errback(
+            error.ConchError('global request failed'))
+
     def ssh_CHANNEL_OPEN(self, packet):
         channelType, rest = common.getNS(packet)
         senderChannel, windowSize, maxPacket = struct.unpack('>3L', rest[: 12])
@@ -72,7 +81,7 @@ class SSHConnection(service.SSHService):
                 struct.pack('>4L', senderChannel, localChannel, 
                     channel.localWindowSize, 
                     channel.localMaxPacket)+channel.specificData)
-            channel.channelOpen()
+            channel.channelOpen('')
         else:
             reason, textualInfo = channel
             self.transport.sendPacket(MSG_CHANNEL_OPEN_FAILURE, 
@@ -169,13 +178,24 @@ class SSHConnection(service.SSHService):
             d.errback(ConchError('channel request failed'))
 
     # methods for users of the connection to call
+
+    def sendGlobalRequest(self, request, data, wantReply = 0):
+        self.transport.sendPacket(MSG_GLOBAL_REQUEST,
+                                  common.NS(request)
+                                  + (wantReply and '\xff' or '\x00')
+                                  + data)
+        if wantReply:
+            d = defer.Deferred()
+            self.deferreds.setdefault('global', []).append(d)
+            return d
+
     def openChannel(self, channel, extra = ''):
         log.msg('opening channel %s with %s %s'%(self.localChannelID, 
                 channel.localWindowSize, channel.localMaxPacket))
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name)
-        +struct.pack('>3L', self.localChannelID, 
+                    +struct.pack('>3L', self.localChannelID, 
                     channel.localWindowSize, channel.localMaxPacket)
-        +extra)
+                    +extra)
         channel.id = self.localChannelID
         self.channels[self.localChannelID] = channel
         self.localChannelID+=1
@@ -184,14 +204,13 @@ class SSHConnection(service.SSHService):
         log.msg('sending request for channel %s, request %s'%(channel.id, requestType))
 
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L', 
-                                    self.channelsToRemoteChannel[channel])+ \
-                                   common.NS(requestType)+chr(wantReply)+ \
-                                   data)
-        d = defer.Deferred()
-        if not self.deferreds.has_key(channel.id):
-            self.deferreds[channel.id] = []
-        self.deferreds[channel.id].append(d)
-        return d
+                                    self.channelsToRemoteChannel[channel])
+                                  + common.NS(requestType)+chr(wantReply)
+                                  + data)
+        if wantReply:
+            d = defer.Deferred()
+            self.deferreds.setdefault(channel.id, []).append(d)
+            return d
 
     def adjustWindow(self, channel, bytesToAdd):
         if channel not in self.channelsToRemoteChannel.keys():
@@ -246,20 +265,13 @@ class SSHConnection(service.SSHService):
                               remoteMaxPacket = maxPacket, 
                               conn = self)
         elif channelType == 'forwarded-tcpip':
-            remoteHost, rest = common.getNS(data)
-            remotePortPacked, rest = rest[: 4], rest[4:]
-            originatingHost, rest = common.getNS(rest)
-            originatingPortPacked, rest = rest[: 4], rest[4:]
-            remotePort, originatingPort = map(int, 
-                                             struct.unpack('>2L', 
-                                                        remotePortPacked+ \
-                                                       originatingPortPacked))
-            assert rest == ''
-            if self.remoteForwards.has_key((remoteHost, remotePort)):
-                hostToConnect, portToConnect =  \
-                              self.remoteForwards((remoteHost, remotePort))
-                return SSHForwardingChannel(hostToConnect, portToConnect, 
-                                            conn = self)
+            remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
+            if self.remoteForwards.has_key(remoteHP[1]):
+                connectHP = self.remoteForwards[remoteHP[1]]
+                return forwarding.SSHRemoteForwardingChannel(connectHP,
+                                                    remoteWindow = windowSize,
+                                                    remoteMaxPacket = maxPacket,
+                                                    conn = self)
             else:
                 return OPEN_CONNECT_FAILED, "don't know about that port"
 
@@ -275,11 +287,11 @@ class SSHConnection(service.SSHService):
             - 1, <data>: request accepted with request specific data
             - 0: request denied
         """
+        return 0 # all before doesn't work yet so ignore
         if self.transport.isClient:
             return 0 # no such luck
         elif requestType == 'tcpip-forward':
-            hostToBind, portToBindPacked = common.getNS(data)
-            portToBind = int(struct.unpack('>L', portToBindPacked)[0])
+            hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
             if portToBind < 1024:
                 return 0 # fix this later, for now don't even try
             from twisted.internet import reactor
@@ -319,7 +331,7 @@ class SSHChannel:
         self.specificData = ''
         self.buf = ''
 
-    def channelOpen(self, specificData = ''):
+    def channelOpen(self, specificData):
         log.msg('channel %s open'%self.id)
 
     def openFailed(self, reason):
@@ -413,3 +425,4 @@ for v in dir(connection):
 SSHConnection.protocolMessages = messages
 
 from session import SSHSession # evil circular import
+import forwarding
