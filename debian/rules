@@ -31,8 +31,7 @@ install-stamp: build-stamp
 		debian/scripts/install $$version; \
 		install -d debian/python$$version-twisted-bin/usr/share/doc/python$$version-twisted-bin/; \
 		install -d debian/python$$version-twisted-bin/DEBIAN; \
-		install -m 644 debian/python$$version-twisted-bin.README.Debian\
-		               debian/copyright \
+		install -m 644 debian/copyright \
 		              debian/python$$version-twisted-bin/usr/share/doc/python$$version-twisted-bin;\
 		install -m 644 debian/changelog \
 				debian/python$$version-twisted-bin/usr/share/doc/python$$version-twisted-bin/changelog.Debian;\
@@ -51,6 +50,7 @@ install-stamp: build-stamp
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/examples
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/howto
+	install -d debian/twisted-doc/usr/share/doc/twisted-doc/specifications
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/img
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/api
 	install -m 644 debian/copyright \
@@ -60,6 +60,10 @@ install-stamp: build-stamp
 	gzip -9 debian/twisted-doc/usr/share/doc/twisted-doc/changelog.Debian
 	install -m 644 doc/howto/*.html \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
+	cp -ar doc/howto/listings/ \
+	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
+	install -m 644 doc/specifications/*.html \
+	               debian/twisted-doc/usr/share/doc/twisted-doc/specifications/
 	install -m 644 doc/img/*.{png,bmp} \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/img/
 	cp -ar doc/api/* debian/twisted-doc/usr/share/doc/twisted-doc/
