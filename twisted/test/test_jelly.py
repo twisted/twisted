@@ -161,6 +161,14 @@ class JellyTestCase(unittest.TestCase):
         assert perst[0], "persistentStore was not called."
         assert x.b is a.b, "Persistent storage identity failure."
 
+    def testMoreReferences(self):
+        a = []
+        t = (a,)
+        a.append((t,))
+        s = jelly.jelly(t)
+        z = jelly.unjelly(s)
+        self.assertEquals(z[0][0][0], z)
+
     def testTypeSecurity(self):
         """
         test for type-level security of serialization
