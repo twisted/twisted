@@ -402,7 +402,7 @@ class TestFTPServer(FTPTestCase):
         self.failUnlessRaises(ftp.CmdNotImplementedForArgError, self.cnx.s.ftp_STRU, 'I')
 
     def testDecodeHostPort(self):
-        self.assertEquals(self.cnx.s.decodeHostPort('25,234,129,22,100,23'), 
+        self.assertEquals(ftp.decodeHostPort('25,234,129,22,100,23'), 
                 ('25.234.129.22', 25623))
 
     def testPASV(self):

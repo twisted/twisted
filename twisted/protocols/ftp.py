@@ -915,24 +915,10 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(ENTERING_PASV_MODE, "%s,%s,%s" % (localip, lp1, lp2))
         log.debug("passive port open on: %s:%s" % (localip, lport), level="debug")
 
-    def decodeHostPort(self, line):
-        """Decode an FTP response specifying a host and port.
-        
-        see RFC sec. 4.1.2 "PASV"
-
-        @returns: a 2-tuple of (host, port).
-        """
-        #abcdef = re.sub('[^0-9, ]', '', line[4:])
-        abcdef = re.sub('[^0-9, ]', '', line)
-        a, b, c, d, e, f = map(str.strip, abcdef.split(','))
-        host = "%s.%s.%s.%s" % (a, b, c, d)
-        port = (int(e)<<8) + int(f)
-        return (host, port)
-
     def ftp_PORT(self, params):
         log.debug('ftp_PORT')
         self.dtpTxfrMode = PORT
-        self.dtpHostPort = self.decodeHostPort(params)
+        self.dtpHostPort = decodeHostPort(params)
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
         if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
@@ -1590,7 +1576,7 @@ def decodeHostPort(line):
 
     @returns: a 2-tuple of (host, port).
     """
-    abcdef = re.sub('[^0-9, ]', '', line[4:])
+    abcdef = re.sub('[^0-9, ]', '', line)
     a, b, c, d, e, f = map(str.strip, abcdef.split(','))
     host = "%s.%s.%s.%s" % (a, b, c, d)
     port = (int(e)<<8) + int(f)
@@ -1765,7 +1751,7 @@ class FTPClient(basic.LineReceiver):
             _mutable = [None]
             def doPassive(response):
                 """Connect to the port specified in the response to PASV"""
-                host, port = decodeHostPort(response[-1])
+                host, port = decodeHostPort(response[-1][4:])
 
                 class _Factory(ClientFactory):
                     noisy = 0
