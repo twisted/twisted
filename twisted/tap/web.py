@@ -85,6 +85,10 @@ twisted.web.test in it."""
             '.trp': trp.ResourceUnpickler,
             }
 
+    def opt_processor(self, proc):
+        ext, klass = proc.split('=', 1)
+        self.opts['root'].processors[ext] = reflect.namedClass(klass)
+
     def opt_static(self, path):
         """Same as --path, this is deprecated and will be removed in a
         future release."""
