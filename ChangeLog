@@ -2,6 +2,8 @@
 
 	* twisted/protocols/dns.py: Can now correctly serialize answers
 
+	* twisted/names/dns.py: Can now do simple serving of domains
+
 	* twisted/internet/stupid.py: Removed spurious debugging print
 
 2002-02-28  Chris Armstrong  <carmstro@twistedmatrix.com>
