@@ -25,8 +25,7 @@ from twisted.web import server, static, twcgi, script, test, distrib, trp
 from twisted.internet import interfaces
 from twisted.python import usage, reflect
 from twisted.spread import pb
-
-import sys
+from twisted.application import internet, service
 
 
 class Options(usage.Options):
@@ -152,7 +151,8 @@ twisted.web.test in it."""
                 raise usage.UsageError("SSL support not installed")
 
 
-def updateApplication(app, config):
+def makeService(config):
+    s = service.MultiService()
     if config['root']:
         root = config['root']
         if config['indexes']:
@@ -174,18 +174,22 @@ def updateApplication(app, config):
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                  = pwd.getpwuid(os.getuid())
-        app.listenUNIX(os.path.join(pw_dir,
+        i = internet.UNIXServer(os.path.join(pw_dir,
                                    distrib.UserDirectory.userSocketName),
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
+        i.setServiceParent(s)
     else:
         if config['https']:
             from twisted.internet.ssl import DefaultOpenSSLContextFactory
-            app.listenSSL(int(config['https']), site,
+            i = internet.SSLServer(int(config['https']), site,
                           DefaultOpenSSLContextFactory(config['privkey'],
                                                        config['certificate']))
-        app.listenTCP(int(config['port']), site)
+            i.setServiceParent(s)
+        internet.TCPServer(int(config['port']), site).setServiceParent(s)
     
     flashport = config.get('flashconduit', None)
     if flashport:
         from twisted.web.woven.flashconduit import FlashConduitFactory
-        app.listenTCP(int(flashport), FlashConduitFactory(site))
+        i = internet.TCPServer(int(flashport), FlashConduitFactory(site))
+        i.setServiceParent(s)
+    return s
