@@ -1,0 +1,4 @@
+#finger/plugins.tml
+register('finger', 'finger.tap', 
+	description='Build a finger server tap',
+	type='tap', tapname='finger')
