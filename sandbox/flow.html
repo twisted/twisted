@@ -191,71 +191,107 @@ as our producer.
 </p>
 
 <pre class="python">
+from __future__ import generators
 
 def Consumer():
-    for result in Counter(3):
+    for result in [3,2,1]:
         if 2 != result:
             yield result
 
-for x in Consumer():
-    print x
+print list(Consumer())
 
-# prints:
-#   3
-#   1
-
+# prints: [3,2,1]
 </pre>
 
 <p>The problem with this approach, is that a producer could potentially
 block, and if it did, the entire process could potentially stop servicing
 other requests.   Thus, some mechanism for pausing the flow and rebuilding
 it is required.   The flow module provides this ability to Cooperate
-by placing itself between each iterator in the flow.</p>
+by placing itself between each iterator in the flow.  This is accomplished
+in code, by creating a wrapper object for each iterable, which you
+should yield just before each call to next().  In the yield, the wrapper
+can then use any underlying cooperative multi-tasking mechanisms.</p>
 
 <pre>
+from __future__ import generators
 import flow
 
 def Consumer():
-    producer = flow.Wrap(Counter(3))
-    while 1:
-        yield producer
-        result = producer.getResult()
+    producer = flow.wrap([3,2,1])
+    yield producer
+    for result in producer:
         if 2 != result:
             yield result
+        yield producer
 
-for x in flow.Iterator(Consumer):
-    print x
+print list(flow.Block(Consumer))
 
-# prints:
-#   3
-#   1
-
+# prints: [3, 1]
 </pre>
 
-<p>The call to <code>producer.getResult()</a> does quite a
-few things like checking for the end of the iterator, and
-then checking to see if the result is a failure.  Its behavior
-can best be described with a more verbose (but less useful)
-version below.</p>
+<p>In the code above, <code>producer.next()</code> is implicitly
+called.  It does several things like checking for the end of the
+iterator and scanning for failures.   Its behavior can best be
+described with a more verbose version below.</p>
 
 <pre>
+from __future__ import generators
+import flow
+
 def Consumer():
-    producer = flow.Wrap(Counter(3))
+    producer = flow.wrap([3,2,1])
     while 1:
         yield producer
         if producer.stop: break
         if producer.isFailure():
             raise producer.result
-        else:
-            if 2 != producer.result:
-                yield producer.result
+        if 2 != producer.result:
+            yield producer.result
 
-for x in flow.Iterator(Consumer):
-    print x
+print list(flow.Block(Consumer))
 
-# prints:  
-#   3
-#   1
+# prints: [3, 1]
+
+<h3>Handling failures</h3>
+
+<p>Another difference between plain old iterables and one wrapped with
+the flow module is that exceptions thrown must be delayed for later
+delivery.  This is done with <code>twisted.python.fail.Failure</code>.
+Within a for loop, failure objects are raised if they are not provided
+to <code>wrap()</code>.  Furthermore, Failure must also be used to 
+send Exceptions back from generators if it is recoverable.</p>
+
+<pre>
+from __future__ import generators
+import flow
+
+def Producer():
+    yield 1
+    yield flow.Failure(IOError("recoverable"))
+    yield 2
+    assert 0, "asserting"
+    yield 3
+
+def Consumer():
+    producer = flow.wrap(Producer(), trap=IOError)
+    yield producer
+    try:
+        for result in producer:
+            if result is IOError:
+                # handle recoverable error
+                pass
+            else:
+                yield result
+            yield producer
+    except flow.Failure, fail:
+        # pass other failures up the stack
+        fail.trap(AssertionError)
+        # handle non-recoverable error
+        yield str(fail.value)
+
+print list(flow.Block(Consumer))
+
+# prints: [1, 2, 'asserting']
 
 </pre>
 
@@ -270,17 +306,13 @@ flow.Iterator (which blocks), the implementation of Cooperate
 simply puts the call chain to sleep.</p>
 
 <pre class="python">
-from __future__ import generators
 import flow
 
 lst = ['1','2', flow.Cooperate(4), '3']
-for x in flow.Iterator(lst):
-    print x
+print list(flow.Block(lst))
 
-# prints (with a four second pause after the 2nd value)
-#   1
-#   2
-#   3
+# prints: ['1,'2','3']
+
 </pre>
 
 <h3>Merging iterators</h3>
@@ -308,15 +340,10 @@ def Counter(count):
         count -= 1
 
 mrg = flow.Merge(Counter(3),States)
-for x in flow.Iterator(mrg):
-    print x
+print list(flow.Block(mrg))
 
-# prints:
-#   3
-#   one
-#   two
-#   2
-#   1
+# prints: [3, 'one', 'two', 2, 1]
+
 </pre>
 
 
@@ -417,7 +444,7 @@ UNION ALL
 """
 
 def consumer():
-    query = flow.Wrap(flow.QueryIterator(dbpool, sql))
+    query = flow.wrap(flow.QueryIterator(dbpool, sql))
     while 1:
         yield query
         if query.stop: break

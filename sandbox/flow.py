@@ -23,7 +23,7 @@ from __future__ import nested_scopes
     its implementation, it isn't very useable without them.   A data flow
     is constructed with a top level generator, which can have three 
     types of yield statements:  flow.Cooperate, flow.Iterable, or
-    any other return value with exceptions wrapped using failure.Failure
+    any other return value with exceptions wrapped using Failure
 
     An example program...
 
@@ -60,14 +60,18 @@ from __future__ import nested_scopes
         (3, 'three')
         
 """
-from twisted.python import failure
+from twisted.python.failure import Failure
 from twisted.python.compat import StopIteration, iter
 
-def wrap(obj, *trapErrorTypes):
+def wrap(obj, trap = None):
     """ Wraps various objects for use within a flow """
     if isinstance(obj, Stage):
         return obj
-    return _Iterable(obj, *trapErrorTypes)
+    if trap:
+        import types
+        if type(trap) == types.ClassType: 
+            trap = (trap,)
+    return _Iterable(obj, trap)
 
 class Instruction:
     """ Has special meaning when yielded in a flow """
@@ -91,7 +95,7 @@ class Stage(Instruction):
         iterable object which must be passed to a yield statement 
         before each call to next().   Usage...
 
-           iterable = DerivedStage(SpamError, EggsError)
+           iterable = DerivedStage(trap=(SpamError, EggsError))
            yield iterable
            for result in iterable:
                // handle good result, or SpamError or EggsError
@@ -119,23 +123,24 @@ class Stage(Instruction):
                      // handle iterable.result
 
     """      
-    def __init__(self, *trapErrorTypes):
+    def __init__(self, trap = None):
         self._ready = 0
-        self._trapErrorTypes = trapErrorTypes
+        if not trap: trap = tuple()
+        self._trap = trap
         self.stop   = 0
         self.result = None
     def __iter__(self):
         return self
     def isFailure(self):
         """ return a boolean value if the result is a Failure """ 
-        return isinstance(self.result, failure.Failure)
+        return isinstance(self.result, Failure)
     def next(self):
         """ return the current result, raising failures if specified """
         if self.stop: raise StopIteration()
         assert self._ready, "must yield flow stage before calling next()"
         self._ready = 0
         if self.isFailure(): 
-            return self.result.trap(self._trapErrorTypes)
+            return self.result.trap(*self._trap)
         return self.result
     def _yield(self):
         """ executed during a yield statement
@@ -153,8 +158,8 @@ class Stage(Instruction):
 
 class _Iterable(Stage):
     """ Wraps iterables (generator/iterator) for use in a flow """      
-    def __init__(self, iterable, *trapErrorTypes):
-        Stage.__init__(self, *trapErrorTypes)
+    def __init__(self, iterable, trap):
+        Stage.__init__(self, trap)
         try:
             self._next = iter(iterable).next
         except TypeError:
@@ -200,11 +205,11 @@ class _Iterable(Stage):
                 return coop
             except StopIteration:
                 self.stop = 1
-            except failure.Failure, fail:
+            except Failure, fail:
                 self.result = fail
                 self._stop_next = 1
             except:
-                self.result = failure.Failure()
+                self.result = Failure()
                 self._stop_next = 1
             return
 
@@ -373,7 +378,7 @@ class ThreadedIterator:
                 try:
                     self.source.init()
                 except: 
-                    self.failure = failure.Failure()
+                    self.failure = Failure()
                 try:
                     while 1:
                         val = self.source.next()
@@ -385,7 +390,7 @@ class ThreadedIterator:
                     self.stop = 1
                 except: 
                     if not self.failure:
-                        self.failure = failure.Failure()
+                        self.failure = Failure()
                 self.source = None
             def next(self):
                 if self.buff:
