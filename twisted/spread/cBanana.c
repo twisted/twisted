@@ -3,6 +3,7 @@
 #ifdef WIN32
 #	include <windows.h>
 #	define EXTERN_API __declspec(dllexport)
+#	define snprintf _snprintf
 #else
 #	define EXTERN_API
 #endif
