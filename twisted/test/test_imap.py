@@ -101,10 +101,10 @@ class MessageProducerTestCase(unittest.TestCase):
     def testSinglePart(self):
         body = 'This is body text.  Rar.'
         msg = FakeyMessage({
-                'content-type': 'text/plain',
                 'from': 'sender@host',
                 'to': 'recipient@domain',
                 'subject': 'booga booga boo',
+                'content-type': 'text/plain',
             }, (), None, body, 123, None
         )
         
@@ -115,9 +115,9 @@ class MessageProducerTestCase(unittest.TestCase):
         self.assertEquals(''.join(c.buffer),
             '{119}\r\n'
             'From: sender@host\r\n'
+            'To: recipient@domain\r\n'
             'Subject: booga booga boo\r\n'
             'Content-Type: text/plain\r\n'
-            'To: recipient@domain\r\n'
             '\r\n'
             + body
         )
@@ -127,10 +127,10 @@ class MessageProducerTestCase(unittest.TestCase):
         outerBody = ''
         innerBody = 'Contained body message text.  Squarge.'
         msg = FakeyMessage({
-                'content-type': 'multipart/alternative; boundary="xyz"',
                 'from': 'sender@host',
                 'to': 'recipient@domain',
                 'subject': 'booga booga boo',
+                'content-type': 'multipart/alternative; boundary="xyz"',
             }, (), None, outerBody, 123, [FakeyMessage({
                     'content-type': 'text/plain',
                     'subject': 'this is subject text',
@@ -145,9 +145,9 @@ class MessageProducerTestCase(unittest.TestCase):
         self.assertEquals(''.join(c.buffer),
             '{239}\r\n'
             'From: sender@host\r\n'
+            'To: recipient@domain\r\n'
             'Subject: booga booga boo\r\n'
             'Content-Type: multipart/alternative; boundary="xyz"\r\n'
-            'To: recipient@domain\r\n'
             '\r\n'
             '\r\n'
             '--xyz\r\n'
@@ -164,17 +164,17 @@ class MessageProducerTestCase(unittest.TestCase):
         innerBody1 = 'Contained body message text.  Squarge.'
         innerBody2 = 'Secondary <i>message</i> text of squarge body.'
         msg = FakeyMessage({
-                'content-type': 'multipart/alternative; boundary="xyz"',
                 'from': 'sender@host',
                 'to': 'recipient@domain',
                 'subject': 'booga booga boo',
+                'content-type': 'multipart/alternative; boundary="xyz"',
             }, (), None, outerBody, 123, [FakeyMessage({
-                    'content-type': 'text/plain',
                     'subject': 'this is subject text',
+                    'content-type': 'text/plain',
                 }, (), None, innerBody1, None, None
             ), FakeyMessage({
-                    'content-type': 'text/html',
                     'subject': '<b>this is subject</b>',
+                    'content-type': 'text/html',
                 }, (), None, innerBody2, None, None
             )],
         )
@@ -186,19 +186,19 @@ class MessageProducerTestCase(unittest.TestCase):
         self.assertEquals(''.join(c.buffer),
             '{354}\r\n'
             'From: sender@host\r\n'
+            'To: recipient@domain\r\n'
             'Subject: booga booga boo\r\n'
             'Content-Type: multipart/alternative; boundary="xyz"\r\n'
-            'To: recipient@domain\r\n'
             '\r\n'
             '\r\n'
             '--xyz\r\n'
-            'Content-Type: text/plain\r\n'
             'Subject: this is subject text\r\n'
+            'Content-Type: text/plain\r\n'
             '\r\n'
             + innerBody1
             + '\r\n--xyz\r\n'
-            'Content-Type: text/html\r\n'
             'Subject: <b>this is subject</b>\r\n'
+            'Content-Type: text/html\r\n'
             '\r\n'
             + innerBody2
             + '\r\n--xyz--\r\n'
