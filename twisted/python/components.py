@@ -28,6 +28,8 @@ import types
 import warnings
 
 
+ALLOW_DUPLICATES = 0
+
 class Interface:
     """Base class for interfaces.
 
@@ -123,8 +125,10 @@ class AdapterRegistry:
         __init__ method should accept one parameter, an instance of 'origClass'.
         """
         assert interfaceClasses, "You need to pass an Interface"
+        global ALLOW_DUPLICATES
         for interfaceClass in interfaceClasses:
-            if self.adapterRegistry.has_key((origClass, interfaceClass)):
+            if (self.adapterRegistry.has_key((origClass, interfaceClass))
+                and not ALLOW_DUPLICATES):
                 raise ValueError(
                     "an adapter (%s) was already registered." % (
                         self.adapterRegistry[(origClass, interfaceClass)]

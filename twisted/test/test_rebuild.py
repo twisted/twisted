@@ -104,6 +104,11 @@ class RebuildTestCase(unittest.TestCase):
 
         self.assertEquals(newComponent.__class__, crash_test_dummy.XA)
 
+        # Test that a duplicate registerAdapter is not allowed
+        from twisted.python import components
+        self.failUnlessRaises(ValueError, components.registerAdapter,
+                              crash_test_dummy.XA, crash_test_dummy.X,
+                              crash_test_dummy.IX)
 
     if sys.version_info >= (2, 2, 0):
         def testUpdateInstance(self):

@@ -284,3 +284,19 @@ class AdapterTestCase(unittest.TestCase):
 
         # should fail because we already registered an IMultiply adapter for IntAdder
         self.assertRaises(ValueError, components.registerAdapter, IntMultiplyWithAdder, IntAdder, IMultiply)
+    
+    def testAllowDuplicates(self):
+        components.ALLOW_DUPLICATES = 1
+        try: 
+            components.registerAdapter(IntMultiplyWithAdder, IntAdder,
+                                       IMultiply)
+        except ValueError:
+            self.fail("Should have allowed re-registration")
+            
+        # should fail because we already registered an IMultiply adapter
+        # for IntAdder
+        components.ALLOW_DUPLICATES = 0
+        self.assertRaises(ValueError, components.registerAdapter,
+                          IntMultiplyWithAdder, IntAdder, IMultiply)
+
+        

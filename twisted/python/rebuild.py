@@ -146,6 +146,11 @@ def rebuild(module, doLog=1):
             raise RuntimeError, "I am not allowed to be rebuilt."
     if doLog:
         log.msg( 'Rebuilding %s...' % str(module.__name__))
+
+    ## Safely handle adapter re-registration
+    from twisted.python import components
+    components.ALLOW_DUPLICATES = 1
+    
     d = module.__dict__
     _modDictIDMap[id(d)] = module
     newclasses = {}
@@ -268,6 +273,8 @@ def rebuild(module, doLog=1):
         if doLog and not changed and ((modcount % 10) ==0) :
             log.logfile.write(".")
             log.logfile.flush()
+
+    components.ALLOW_DUPLICATES = 0
     if doLog:
         log.msg('')
         log.msg('   Rebuilt %s.' % str(module.__name__))

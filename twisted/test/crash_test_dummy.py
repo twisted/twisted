@@ -42,3 +42,5 @@ class XA(components.Adapter):
     def method(self):
         # Kick start :(
         pass
+
+components.registerAdapter(XA, X, IX)
