@@ -20,14 +20,28 @@ Test cases for twisted.protocols.smtp module.
 """
 
 from twisted.trial import unittest
-import twisted.internet.protocol, twisted.protocols.smtp
+import twisted.internet.protocol
+import twisted.protocols.smtp
 from twisted import protocols
 from twisted import internet
-from twisted.protocols import loopback, smtp
+from twisted.protocols import loopback
+from twisted.protocols import smtp
 from twisted.internet import defer, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
-import string, re
-from cStringIO import StringIO
+from twisted.python import components
+
+from twisted import cred
+import twisted.cred.error
+import twisted.cred.portal
+import twisted.cred.checkers
+import twisted.cred.credentials
+
+import re
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    import StringIO
 
 def spameater(*spam, **eggs):
     return None
@@ -45,7 +59,7 @@ class DummyMessage:
             self.buffer.append(line)
 
     def eomReceived(self):
-        message = string.join(self.buffer, '\n')+'\n'
+        message = '\n'.join(self.buffer) + '\n'
         self.domain.messages[self.user.dest.local].append(message)
         deferred = defer.Deferred()
         deferred.callback("saved")
@@ -216,7 +230,7 @@ class DummySMTPMessage:
         self.buffer.append(line)
 
     def eomReceived(self):
-        message = string.join(self.buffer, '\n')+'\n'
+        message = '\n'.join(self.buffer) + '\n'
         helo, origin = self.users[0].helo[0], str(self.users[0].orig)
         recipients = []
         for user in self.users:
@@ -335,46 +349,50 @@ class AnotherSMTPTestCase(AnotherTestCase, unittest.TestCase):
 # XXX - These need to be moved
 from twisted.protocols import imap4
 
-from twisted.internet.app import _AbstractServiceCollection
-from twisted.cred.perspective import Perspective
-from twisted.cred import authorizer
-from twisted.cred import service
+class DummyChecker:
+    __implements__ = (cred.checkers.ICredentialsChecker,)
+    
+    users = {
+        'testuser': 'testpassword'
+    }
+    
+    credentialInterfaces = (cred.credentials.IUsernamePassword,)
+    
+    def requestAvatarId(self, credentials):
+        if components.implements(credentials, cred.credentials.IUsernamePassword):
+            return defer.maybeDeferred(
+                credentials.checkPassword, self.users[credentials.username]
+            ).addCallback(self._cbCheck, credentials.username)
+        raise NotImplementedError
 
-class DummyService(service.Service):
-    def __init__(self, authorizer):
-        service.Service.__init__(self, 'DummyService', authorizer=authorizer)
+    def _cbCheck(self, result, username):
+        if result:
+            return username
+        raise cred.error.UnauthorizedLogin()
+
+class DummyDelivery:
+    __implements__ = (smtp.IMessageDelivery,)
+
+class DummyRealm:
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        return smtp.IMessageDelivery, DummyDelivery(), lambda: None
 
 class AuthTestCase(unittest.TestCase, LoopbackMixin):
     def testAuth(self):
-        class factory:
-            domain = 'foo.com'
-        server = DummyESMTP()
-        server.factory = factory()
-        client = MyESMTPClient()
+        realm = DummyRealm()
+        p = cred.portal.Portal(realm)
+        p.registerChecker(DummyChecker())
 
-        # rape-and-paste from test_imap4
-        # cred sucks cred sucks cred sucks cred sucks cred sucks cred sucks
-        services = _AbstractServiceCollection()
-        auth = authorizer.DefaultAuthorizer(services)
-        service = DummyService(auth)
-        services.addService(service)
-        ident = imap4.CramMD5Identity('testuser', auth)
-        ident.setPassword('secret')
-        a = Perspective('testuser')
-        service.addPerspective(a)
-        ident.addKeyForPerspective(a)
-        auth.addIdentity(ident)
+        server = DummyESMTP([smtp.CramMD5ChallengeResponse('testuser')])
+        server.portal = p
+        client = MyESMTPClient('testpassword')
 
-        sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com', auth)
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
-
-        server.registerChallenger(sAuth)
         client.registerAuthenticator(cAuth)
         
         self.loopback(server, client)
 
-        # We could do with some asserts here, but just getting to here
-        # with no exceptions is an almost-good test of the code.
+        self.assertEquals(server.authenticated, 1)
 
 class SMTPHelperTestCase(unittest.TestCase):
     def testMessageID(self):
@@ -397,3 +415,15 @@ class SMTPHelperTestCase(unittest.TestCase):
     def testUser(self):
         u = smtp.User('user@host', 'helo.host.name', None, None)
         self.assertEquals(str(u), 'user@host')
+
+    def testXtextEncoding(self):
+        cases = [
+            ('Hello world', 'Hello+20world'),
+            ('Hello+world', 'Hello+2Bworld'),
+            ('\0\1\2\3\4\5', '+00+01+02+03+04+05'),
+            ('e=mc2@example.com', 'e+3Dmc2@example.com')
+        ]
+        
+        for (case, expected) in cases:
+            self.assertEquals(case.encode('xtext'), expected)
+            self.assertEquals(expected.decode('xtext'), case)

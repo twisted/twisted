@@ -27,6 +27,10 @@ from twisted.python import components
 from twisted.python import util
 from twisted.python import reflect
 
+from twisted import cred
+import twisted.cred.checkers
+import twisted.cred.credentials
+
 # System imports
 import time, string, re, base64, types, socket, os, random
 import MimeWriter, tempfile, rfc822
@@ -38,7 +42,136 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+DNSNAME = socket.getfqdn() # Cache the hostname
+
+# Used for fast success code lookup
 SUCCESS = dict(map(None, range(200, 300), []))
+
+class IMessageDelivery(components.Interface):
+    def validateTo(self, user):
+        """
+        Validate the address for which the message is destined.
+        
+        @type user: C{User}
+        @param user: The address to validate.
+
+        @rtype: C{Deferred} or C{twisted.protocols.smtp.User}
+        @return: C{user} or a C{Deferred} whose callback will be
+        passed C{user}.
+        
+        @raise SMTPBadRcpt: Raised if messages to the address are
+        not to be accepted.
+        """
+
+    def validateFrom(self, helo, origin):
+        """
+        Validate the address from which the message originates.
+        
+        @type helo: C{(str, str)}
+        @param helo: The argument to the HELO command and the client's IP
+        address.
+
+        @type origin: C{Address}
+        @param origin: The address the message is from
+        
+        @rtype: C{Deferred} or C{Address}
+        @return: C{origin} or a C{Deferred} whose callback will be
+        passed C{origin}.
+        
+        @raise SMTPBadSender: Raised of messages from this address are
+        not to be accepted.
+        """
+    
+    def startMessage(self, recipients):
+        """Create and return IMessages for delivery to each given recipient
+        
+        @type recipients: C{list} of C{Address}
+        @param recipients: The addresses for which to create IMessages.
+        
+        @rtype: C{list}
+        @return: The IMessage objects.
+        """
+
+class IChallengeResponse(cred.credentials.IUsernamePassword):
+    def abort(self):
+        """Cancel this challenge/response transaction.
+        """
+
+    def getChallenge(self):
+        """Create a challenge string.
+        
+        @rtype: C{str}
+        @return: The challenge.  This should be the same for every invocation
+        of this method on a particular instance.
+        """
+
+    def setResponse(self, response):
+        """Set the response data for this transaction.
+        
+        @type response: C{str}
+        @param response: The string received from the client in response to
+        the challenge.
+        """
+
+    def checkPassword(self, password):
+        """Validate the received response against the generated challenge.
+        
+        @type password: C{str}
+        @param password: The shared secret the response should have been
+        generated based upon.
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: True if the response is correct, False otherwise, or a
+        deferred whose callback will be invoked with one of these arguments.
+        """
+
+class CramMD5ChallengeResponse(cred.credentials.UsernamePassword):
+    __implements__ = (IChallengeResponse,)
+    
+    host = None
+    chal = None
+    password = None
+    waiting = None
+    response = None
+
+    def __init__(self, host = DNSNAME):
+        self.host = host
+    
+    def getName(self):
+        return 'CRAM-MD5'
+
+    def abort(self):
+        if self.waiting:
+            self.waiting.errback(failure.Failure(cred.errors.UnauthorizedLogin()))
+            self.waiting = None
+
+    def getChallenge(self):
+        if self.chal is not None:
+            return self.chal
+        # The data encoded in the first ready response contains an
+        # presumptively arbitrary string of random digits, a timestamp, and
+        # the fully-qualified primary host name of the server.  The syntax of
+        # the unencoded form must correspond to that of an RFC 822 'msg-id'
+        # [RFC822] as described in [POP3].
+        #   -- RFC 2195
+        r = random.randrange(0x7fffffff)
+        t = time.time()
+        self.chal = '<%d.%d@%s>' % (r, t, self.host)
+        return self.chal
+    
+    def setResponse(self, response):
+        self.username, self.response = response.split(None, 1)
+        if self.waiting:
+            self.waiting.callback(self.checkPassword(self.password))
+            self.waiting = None
+
+    def checkPassword(self, password):
+        if self.response is None:
+            self.password = password
+            self.waiting = defer.Deferred()
+            return self.waiting
+        verify = util.keyed_md5(password, self.chal)
+        return verify == self.response
 
 class SMTPError(Exception):
     pass
@@ -92,8 +225,6 @@ class SMTPBadRcpt(SMTPAddressError):
 class SMTPBadSender(SMTPAddressError):
     def __init__(self, addr, code=550, resp='Sender not acceptable'):
         SMTPAddressError.__init__(self, addr, code, resp)
-
-DNSNAME = socket.getfqdn() # Cache the hostname
 
 def rfc822date(timeinfo=None,local=1):
     """
@@ -328,10 +459,33 @@ class IMessage(components.Interface):
 
         semantics should be to discard the message
         """
+    
+    # Let a message play around in a queue
+    # If I accidentally commit these, please disregard them.
+    def enqueue(self, queue):
+        """Add this message to the given queue.
+        
+        @type queue: C{IQueue} implementor
+        """
+    
+    def dequeue(self):
+        """Remove this message from its queue.
+        """
+    
+    def waiting(self):
+        """Set this message as waiting for delivery within its queue.
+        """
+    
+    def delivering(self):
+        """Set this message as being delivered within its queue.
+        """
 
 class SMTP(basic.LineReceiver):
     """SMTP server-side protocol."""
     
+    timeout = 600
+    host = DNSNAME
+
     def __init__(self):
         self.mode = COMMAND
         self._from = None
@@ -344,14 +498,11 @@ class SMTP(basic.LineReceiver):
                       self.host)
         self.transport.loseConnection()
 
+    def greeting(self):
+        return '%s Spammers beware, your ass is on fire' % (self.host,)
+
     def connectionMade(self):
-        self.host = self.factory.domain
-        if hasattr(self.factory, 'timeout'):
-            self.timeout = self.factory.timeout
-        else:
-            self.timeout = 600
-        self.sendCode(220, '%s Spammers beware, your ass is on fire' %
-                      self.host)
+        self.sendCode(220, self.greeting())
         if self.timeout:
             self.timeoutID = reactor.callLater(self.timeout, self.timedout)
 
@@ -365,6 +516,7 @@ class SMTP(basic.LineReceiver):
                                                lastline and lastline[0] or ''))
 
     def lineReceived(self, line):
+        # print self.mode, 'S:', repr(line)
         if self.timeout:
             self.timeoutID.cancel()
             self.timeoutID = reactor.callLater(self.timeout, self.timedout)
@@ -682,6 +834,9 @@ class SMTP(basic.LineReceiver):
         @raise SMTPBadSender: Raised of messages from this address are
         not to be accepted.
         """
+        if self.delivery:
+            return self.delivery.validateFrom(helo, origin)
+        raise SMTPBadSender(origin)
         if not helo:
             raise SMTPBadSender(origin, 503, "Who are you? Say HELO first")
         return origin
@@ -700,9 +855,13 @@ class SMTP(basic.LineReceiver):
         @raise SMTPBadRcpt: Raised if messages to the address are
         not to be accepted.
         """
-        return user
+        if self.delivery:
+            return self.delivery.validateTo(user)
+        raise SMTPBadRcpt(user)
 
     def startMessage(self, recipients):
+        if self.delivery:
+            return self.delivery.startMessage(recipients)
         return []
 
 
@@ -712,8 +871,17 @@ class SMTPFactory(protocol.ServerFactory):
     # override in instances or subclasses
     domain = DNSNAME
     timeout = 600
-
     protocol = SMTP
+    
+    portal = None
+    
+    def __init__(self, portal = None):
+        self.portal = portal
+    
+    def buildProtocol(self, addr):
+        p = protocol.ServerFactory.buildProtocol(self, addr)
+        p.portal = self.portal
+        return p
 
 class SMTPClient(basic.LineReceiver):
     """SMTP client for sending emails."""
@@ -739,6 +907,7 @@ class SMTPClient(basic.LineReceiver):
         self._failresponse = self.smtpConnectionFailed
 
     def lineReceived(self, line):
+        # print 'C:', repr(line)
         why = None
 
         self.log.append('<<< ' + line)
@@ -949,7 +1118,7 @@ class ESMTPClient(SMTPClient):
                 for s in schemes:
                     s = s.upper()
                     if s in self.authenticators:
-                        self.sendLine('AUTH %s' + s)
+                        self.sendLine('AUTH ' + s)
                         self._expected = [334]
                         self._okresponse = self.esmtpState_challenge
                         self._authinfo = self.authenticators[s]
@@ -982,15 +1151,13 @@ class ESMTPClient(SMTPClient):
             self._failresponse = self.smtpState_disconnect
 
 class ESMTP(SMTP):
-    def __init__(self):
+    def __init__(self, chal = None):
         SMTP.__init__(self)
-        self.challengers = {}
+        if chal is None:
+            chal = []
+        self.challengers = dict([(c.getName().upper(), c) for c in chal])
         self.authenticated = False
-        self.extArgs = {}
-
-    def registerChallenger(self, chal):
-        self.challengers[chal.getName().upper()] = chal
-        self.extArgs.setdefault('AUTH', []).append(chal.getName().upper())
+        self.extArgs = {'AUTH': self.challengers.keys()}
 
     def lookupMethod(self, command):
         m = SMTP.lookupMethod(self, command)
@@ -1013,43 +1180,69 @@ class ESMTP(SMTP):
                 self.host, peer
             )
         )
-    
+
     def ext_AUTH(self, rest):
         if self.authenticated:
             self.sendCode(503, 'Already authenticated')
             return
-
         parts = rest.split(None, 1)
         chal = self.challengers.get(parts[0].upper())
-
         if not chal:
             self.sendCode(504, 'Unrecognized authentication type')
             return
-        
-        challenge = chal.generateChallenge()
-        coded = base64.encodestring(challenge)[:-1]
-        self.sendCode(334, coded)
-        self.state = AUTH
-        self._authinfo = chal, challenge
+        self.authenticate(chal)
+    
+    def authenticate(self, challenger):
+        if self.portal:
+            challenge = challenger.getChallenge()
+            coded = base64.encodestring(challenge)[:-1]
+            self.sendCode(334, coded)
+            self.mode = AUTH
+            self.challenger = challenger
+        else:
+            self.sendCode(454, 'Temporary authentication failure')
 
     def state_AUTH(self, rest):
-        chal, challenge = self._authinfo
-        del self._authinfo
-        self.state = COMMAND
+        self.mode = COMMAND
         
         if rest == '*':
             self.sendCode(501, 'Authentication aborted')
+            self.challenger.abort()
+            self.challenger = None
             return
 
-        d = defer.maybeDeferred(None, chal.authenticateResponse, challenge, rest)
-        d.addCallbacks(
-            lambda result: (
-                self.sendCode(235, 'Authentication successful.'),
-                setattr(self, 'authenticated', 1)
-            ), lambda failure: (
-                self.sendCode(535, 'Authentication failed')
+        try:
+            uncoded = base64.decodestring(rest)
+        except TypeError:
+            self.challenger.abort()
+        else:
+            self.challenger.setResponse(uncoded)
+            self.portal.login(self.challenger, None, IMessageDelivery
+            ).addCallback(self._cbAuthenticated
+            ).addErrback(self._ebAuthenticated
             )
-        )
+
+    def _cbAuthenticated(self, (iface, avatar, logout)):
+        assert iface is IMessageDelivery, "IMessageDelivery is the only supported interface"
+        self.delivery = avatar
+        self._onLogout = logout
+        self.sendCode(235, 'Authentication successful.'),
+        self.authenticated = 1
+        self.challenger = None
+    
+    def _ebAuthenticated(self, reason):
+        import pdb; pdb.set_trace()
+        self.challenge = None
+        if reason.check(cred.error.UnauthorizedLogin):
+            self.sendCode(535, 'Authentication failed')
+        else:
+            self.sendCode(451, 'Requested action aborted: error in processing')
+            log.err(reason)
+    
+    def connectionLost(self, reason):
+        SMTP.connectionLost(self, reason)
+        self._onLogout()
+        self._onLogout = None
 
 
 class SMTPSender(SMTPClient):
@@ -1248,3 +1441,45 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
     reactor.connectTCP(smtphost, 25, factory)
 
     return d
+
+##
+## Yerg.  Codecs!
+##
+import codecs
+def xtext_encode(s):
+    r = []
+    for ch in s:
+        o = ord(ch)
+        if ch == '+' or ch == '=' or o < 33 or o > 126:
+            r.append('+%02X' % o)
+        else:
+            r.append(ch)
+    return (''.join(r), len(s))
+
+def xtext_decode(s):
+    r = []
+    i = 0
+    while i < len(s):
+        if s[i] == '+':
+            try:
+                r.append(chr(int(s[i + 1:i + 3], 16)))
+            except ValueError:
+                r.append(s[i:i + 3])
+            i += 3
+        else:
+            r.append(s[i])
+            i += 1
+    return (''.join(r), len(s))
+
+class xtextStreamReader(codecs.StreamReader):
+    def decode(self, s, errors='strict'):
+        return xtext_decode(s)
+
+class xtextStreamWriter(codecs.StreamWriter):
+    def decode(self, s, errors='strict'):
+        return xtext_encode(s)
+
+def xtext_codec(name):
+    if name == 'xtext':
+        return (xtext_encode, xtext_decode, xtextStreamReader, xtextStreamWriter)
+codecs.register(xtext_codec)
