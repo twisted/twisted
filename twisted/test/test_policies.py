@@ -315,7 +315,7 @@ class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
         self.resetTimeout()
         protocol.Protocol.dataReceived(self, data)
 
-    def connectionLost(self):
+    def connectionLost(self, reason=None):
         self.setTimeout(None)
 
     def timeoutConnection(self):
@@ -400,4 +400,4 @@ class TestTimeout(unittest.TestCase):
         self.assertEquals(p.setTimeout(1), None)
         self.assertEquals(p.timeOut, 1)
         
-        
+        p.connectionLost()
