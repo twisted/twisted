@@ -24,11 +24,15 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.python import log
 
+class AlreadyArmedError(Exception):
+    pass
+
 class Deferred:
     """This is a callback which will be put off until later.
     """
 
     armed = 0
+    #self.called: 0 = "not called"; 1 = "answered", 2 = "errored"
     called = 0
 
     def __init__(self):
@@ -41,6 +45,9 @@ class Deferred:
 
         These will be executed when the 'master' callback is run.
         """
+        if self.armed:
+            raise AlreadyArmedError("You cannot add callbacks after a deferred"
+                                    "has already been armed.")
         self.callbacks.append(((callback, callbackArgs, callbackKeywords),
                               (errback, errbackArgs, errbackKeywords)))
 
@@ -93,6 +100,7 @@ class Deferred:
             self.cbResult = result
 
     def arm(self):
+        #start doing callbacks whenever you're ready, Mr. Deferred.
         """State that this function is ready to be called.
 
         This is to prevent callbacks from being executed sometimes
@@ -100,9 +108,12 @@ class Deferred:
         expecting a Deferred will explicitly arm the delayed after
         it has been returned; at _that_ point, it may fire later.
         """
+
+        
         if not self.armed:
             self.armed = 1
             if self.called:
+                #'self.called - 1' is so self.called won't be changed.
                 self._runCallbacks(self.cbResult, self.called - 1)
         else:
             log.msg("WARNING: double-arming deferred.")
