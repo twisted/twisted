@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2004 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from sets import Set
 import socket
 
@@ -9,6 +25,7 @@ from ops import AcceptExOp
 from abstract import ConnectedSocket
 from util import StateEventMachineType
 import error
+from zope.interface import implements
 
 class ServerSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf, sessionno):
@@ -19,7 +36,7 @@ class ServerSocket(ConnectedSocket):
 
 class ListeningPort(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
-    __implements__ = interfaces.IListeningPort,
+    implements(interfaces.IListeningPort)
     events = ["startListening", "stopListening", "loseConnection", "acceptDone", "acceptErr"]
     sockinfo = None
     transport = ServerSocket

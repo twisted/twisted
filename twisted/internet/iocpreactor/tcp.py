@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2004 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import types, socket, operator
 
 from twisted.internet.abstract import isIPAddress # would rather not import "abstract"
@@ -6,6 +22,8 @@ from twisted.python import log
 
 import server, client, error
 import iocpdebug
+from zope.interface import implements
+
 
 class TcpMixin:
     def getTcpNoDelay(self):
@@ -33,7 +51,7 @@ class TcpMixin:
         return self.socket.getpeername()[1]
 
 class ServerSocket(server.ListeningPort.transport, TcpMixin):
-    __implements__ = server.ListeningPort.transport.__implements__ + (interfaces.ITCPTransport,)
+    implements(interfaces.ITCPTransport)
 
 class Port(server.ListeningPort):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -58,7 +76,7 @@ class Port(server.ListeningPort):
         return address._ServerFactoryIPv4Address('TCP', addr[0], addr[1], 'INET')
 
 class ClientSocket(client.SocketConnector.transport, TcpMixin):
-    __implements__ = client.SocketConnector.transport.__implements__ + (interfaces.ITCPTransport,)
+    implements(interfaces.ITCPTransport)
 
 class Connector(client.SocketConnector):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
