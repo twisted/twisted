@@ -1,0 +1,9 @@
+#run twistd -y on me
+from twisted.application import app, compat
+from twisted.protocols import wire
+from twisted.internet import protocol
+
+application = compat.IOldApplication(app.Application('test'))
+factory = protocol.ServerFactory()
+factory.protocol = wire.Echo
+application.listenTCP(8080, factory)
