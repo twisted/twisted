@@ -299,9 +299,8 @@ try:
     cBanana.pyb1282int = b1282int
     cBanana.pyint2b128 = int2b128
 except ImportError:
-    print 'using python banana'
+    pass
 else:
-    print 'using C banana'
     Banana = Canana
 
 
