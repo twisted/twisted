@@ -704,10 +704,12 @@ class DisconnectionTestCase(unittest.TestCase):
         self.assert_(self.gotCallback)
         self.assert_(self.objectCallback)
 
+class FreakOut(Exception):
+    pass
 
 class BadCopyable(pb.Copyable):
     def getStateToCopyFor(self, p):
-        raise "freak out"
+        raise FreakOut
 
 class BadCopySet(pb.Referenceable):
     def remote_setBadCopy(self, bc):
