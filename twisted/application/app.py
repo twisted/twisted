@@ -230,7 +230,7 @@ class ServerOptions(usage.Options):
         sending SIGUSR2 will drop into debugger
         """
         from twisted.internet import defer
-        defer.Deferred.debug = True
+        defer.setDebugging(True)
         failure.startDebugMode()
         self['debug'] = True
     opt_b = opt_debug

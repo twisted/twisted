@@ -18,7 +18,7 @@ from twisted.python import usage, reflect, failure, log, plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, remote
-from twisted.trial import adapters, reporter, tdoctest, _setUpAdapters
+from twisted.trial import adapters, reporter, tdoctest
 from twisted.trial.itrial import ITrialDebug
 
 import zope.interface as zi
@@ -471,7 +471,7 @@ def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
     if config['debug']:
         from twisted.internet import defer
-        defer.Deferred.debug = True
+        defer.setDebugging(True)
         failure.startDebugMode()
 
 

@@ -328,9 +328,9 @@ class DeferredTestCase(unittest.TestCase):
 
 class AlreadyCalledTestCase(unittest.TestCase):
     def setUp(self):
-        defer.Deferred.debug = True
+        defer.setDebugging(True)
     def tearDown(self):
-        defer.Deferred.debug = False
+        defer.setDebugging(False)
 
     def _callback(self, *args, **kw):
         pass
@@ -438,7 +438,7 @@ class AlreadyCalledTestCase(unittest.TestCase):
             self.fail("second errback failed to raise AlreadyCalledError")
 
     def testNoDebugging(self):
-        defer.Deferred.debug = False
+        defer.setDebugging(False)
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         self._call_1(d)
