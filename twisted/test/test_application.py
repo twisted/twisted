@@ -144,8 +144,10 @@ class TestService(unittest.TestCase):
         s1 = copy.copy(s)
         self.assert_(not s1.running)
         self.assert_(s.running)
- 
-        
+
+curuid = os.getuid()
+curgid = os.getgid()
+
 class TestProcess(unittest.TestCase):
 
     def testID(self):
@@ -156,13 +158,13 @@ class TestProcess(unittest.TestCase):
     def testDefaults(self):
         p = service.Process(5)
         self.assertEqual(p.uid, 5)
-        self.assertEqual(p.gid, 0)
+        self.assertEqual(p.gid, curgid)
         p = service.Process(gid=5)
-        self.assertEqual(p.uid, 0)
+        self.assertEqual(p.uid, curuid)
         self.assertEqual(p.gid, 5)
         p = service.Process()
-        self.assertEqual(p.uid, 0)
-        self.assertEqual(p.gid, 0)
+        self.assertEqual(p.uid, curuid)
+        self.assertEqual(p.gid, curgid)
 
     def testProcessName(self):
         p = service.Process()
@@ -197,11 +199,11 @@ class TestApplication(unittest.TestCase):
 
     def testProcessComponent(self):
         a = service.Application("hello")
-        self.assertEqual(service.IProcess(a).uid, 0)
-        self.assertEqual(service.IProcess(a).gid, 0)
+        self.assertEqual(service.IProcess(a).uid, curuid)
+        self.assertEqual(service.IProcess(a).gid, curgid)
         a = service.Application("hello", 5)
         self.assertEqual(service.IProcess(a).uid, 5)
-        self.assertEqual(service.IProcess(a).gid, 0)
+        self.assertEqual(service.IProcess(a).gid, curuid)
         a = service.Application("hello", 5, 6)
         self.assertEqual(service.IProcess(a).uid, 5)
         self.assertEqual(service.IProcess(a).gid, 6)
@@ -412,7 +414,7 @@ class DummyApp:
         self.services[service.name] = service
     def removeService(self, service):
         del self.services[service.name]
-    
+
 
 class TestConvert(unittest.TestCase):
 
@@ -693,4 +695,3 @@ if not components.implements(reactor, interfaces.IReactorUNIX):
 if not components.implements(reactor, interfaces.IReactorUDP):
     TestInternet2.testUDP.im_func.skip = "This reactor does not support UDP"
 """
-
