@@ -105,6 +105,7 @@ class Shell(telnet.Telnet):
 class ShellFactory(protocol.Factory):
     username = "admin"
     password = "admin"
+    protocol = Shell
 
     def __init__(self):
         self.namespace = {}
@@ -118,9 +119,3 @@ class ShellFactory(protocol.Factory):
         if ns.has_key('__builtins__'):
             del ns['__builtins__']
         return dict
-
-    def buildProtocol(self, addr):
-        p = Shell()
-        p.factory = self
-        return p
-
