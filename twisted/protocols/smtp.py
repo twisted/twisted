@@ -151,6 +151,7 @@ class DomainSMTP(SMTP):
     def validateTo(self, user, success, failure):
         if not self.factory.domains.has_key(user.domain):
             failure(user)
+            return
         self.factory.domains[user.domain].exists(user, success, failure)
 
     def handleMessage(self, users, message, success, failure):
@@ -174,7 +175,7 @@ class SMTPClient(basic.LineReceiver):
             return
         code = int(line[:3])
         method =  getattr(self, 'smtpCode_%d_%s' % (code, self.state), 
-                                'smtpCode_default')
+                                self.smtpCode_default)
         method(line[4:])
 
     def smtpCode_220_helo(self, line):
