@@ -137,27 +137,27 @@ time.</p>
 <ul>
 
   <li><b><code class="API" base="twisted.internet.app">Application</code></b>
-  : <tt>internet/app.py</tt></li>
+  : <code>internet/app.py</code></li>
 
   <li><b><code class="API" base="twisted.spread.pb">Service</code></b>
-  : <tt>spread/pb.py</tt>, subclassed from
+  : <code>spread/pb.py</code>, subclassed from
   <code class="API" base="twisted.cred.service">Service</code>
-  in <tt>cred/service.py</tt></li>
+  in <code>cred/service.py</code></li>
 
   <li><b><code class="API" base="twisted.internet.app">MultiService</code></b>
-  : <tt>internet/app.py</tt></li>
+  : <code>internet/app.py</code></li>
 
   <li><b><code class="API" base="twisted.internet.protocol">Factory</code></b>
-  : <tt>internet/protocol.py</tt></li>
+  : <code>internet/protocol.py</code></li>
 
   <li><b><code class="API" base="twisted.spread.pb">BrokerFactory</code></b>
-  : <tt>spread/pb.py</tt></li>
+  : <code>spread/pb.py</code></li>
 
   <li><b><code class="API" base="twisted.spread.pb">Broker</code></b>
-  : <tt>spread/pb.py</tt></li>
+  : <code>spread/pb.py</code></li>
 
   <li><b><code class="API" base="twisted.spread.pb">AuthRoot</code></b>
-  : <tt>spread/pb.py</tt></li>
+  : <code>spread/pb.py</code></li>
 
 </ul>
 
@@ -166,17 +166,17 @@ time.</p>
 <ul>
 
   <li> <b><code class="API" base="twisted.spread.pb">RemoteReference</code></b>
-  : <tt>spread/pb.py</tt> </li>
+  : <code>spread/pb.py</code> </li>
 
   <li> <b><code class="API" base="twisted.spread">pb.Root</code></b>
-  : <tt>spread/pb.py</tt>, actually defined as
+  : <code>spread/pb.py</code>, actually defined as
   <code class="API" base="twisted.spread.flavors">Root</code>
-  in <tt>spread/flavors.py</tt> </li>
+  in <code>spread/flavors.py</code> </li>
 
   <li> <b><code class="API" base="twisted.spread">pb.Referenceable</code></b>
-  : <tt>spread/pb.py</tt>, actually defined as
+  : <code>spread/pb.py</code>, actually defined as
   <code class="API" base="twisted.spread.flavors">Referenceable</code>
-  in <tt>spread/flavors.py</tt> </li>
+  in <code>spread/flavors.py</code> </li>
 
 </ul>
 
@@ -185,15 +185,15 @@ security:</p>
 
 <ul>
   <li><b><code class="API" base="twisted.cred.authorizer">Authorizer</code></b>
-  : <tt>cred/authorizer.py</tt></li>
+  : <code>cred/authorizer.py</code></li>
   
   <li><b><code class="API" base="twisted.cred.identity">Identity</code></b>
-  : <tt>cred/identity.py</tt></li>
+  : <code>cred/identity.py</code></li>
 
   <li><b><code class="API" base="twisted.spread.pb">Perspective</code></b>
-  : <tt>spread/pb.py</tt>, subclassed from
+  : <code>spread/pb.py</code>, subclassed from
   <code class="API" base="twisted.cred.perspective">Perspective</code>
-  in <tt>cred/perspective.py</tt></li>
+  in <code>cred/perspective.py</code></li>
 
 </ul>
 
@@ -276,9 +276,9 @@ pb.getObjectAt() on the client side.</p>
 <a href="../examples/pbsimpleclient.py" class="py-listing">pbsimpleclient.py</a>
 
 <p>First we look at the server. This defines an Echoer class (derived from
-pb.Root), with a method called remote_echo(). pb.Root objects (because of
+pb.Root), with a method called <code>remote_echo()</code>. pb.Root objects (because of
 their inheritance of pb.Referenceable, described later) can define methods
-with names of the form 'remote_*'; a client which obtains a remote reference
+with names of the form <code>remote_*</code>; a client which obtains a remote reference
 to that pb.Root object will be able to invoke those methods.</p>
 
 <p>The pb.Root-ish object is given to a pb.BrokerFactory(). This is a
@@ -288,7 +288,7 @@ pb.BrokerFactory() becomes the "root object", which simply makes it
 available for the client to retrieve. The client may only request references
 to the objects you want to provide it: this helps you implement your
 security model. Because it is so common to export just a single object (and
-because a remote_* method on that one can return a reference to any other
+because a <code>remote_*</code> method on that one can return a reference to any other
 object you might want to give out), the simplest example is one where the
 BrokerFactory is given the root object, and the client retrieves it.</p>
 
@@ -313,8 +313,8 @@ for .addCallback() and .addCallbacks()).</p>
 object.callRemote("echo", "hello network")
 </pre>
 
-<p>which causes the server's .remote_echo() method to be invoked. (running
-.callRemote("boom") would cause .remote_boom() to be run, etc). Again
+<p>which causes the server's <code>.remote_echo()</code> method to be invoked. (running
+<code>.callRemote("boom")</code> would cause <code>.remote_boom()</code> to be run, etc). Again
 because of the delay involved, callRemote() returns a Deferred. Assuming the
 remote method was run without causing an exception (including an attempt to
 invoke an unknown method), the callback attached to that Deferred will be
@@ -327,7 +327,7 @@ invoked with any objects that were returned by the remote method call.</p>
 echoer_object.remote_echo("hello network")
 </pre>
 
-<p>and from the definition of remote_echo() we see that this just returns
+<p>and from the definition of <code>remote_echo()</code> we see that this just returns
 the same string it was given: "hello network".</p>
 
 <p>From the client's point of view, the remote call gets another Deferred
@@ -351,12 +351,12 @@ inherits from pb.Root, which inherits from pb.Referenceable. It is that
 Referenceable class that makes the object eligible to be available for
 remote method calls <a name="F1"><a href="#f1" >[1]</a></a>. If you have an
 object that is Referenceable, then any client that manages to get a
-reference to it can invoke any 'remote_*' methods they please. Note: the
+reference to it can invoke any <code>remote_*</code> methods they please. Note: the
 <b>only</b> thing they can do is invoke those methods. In particular, they
 cannot access attributes. From a security point of view, you control what
-they can do by limiting what the remote_* methods can do. Also note: the
+they can do by limiting what the <code>remote_*</code> methods can do. Also note: the
 other classes like Referenceable allow access to other methods, in
-particular 'perspective_*' and 'view_*' may be accessed. Don't write
+particular <code>perspective_*</code> and <code>view_*</code> may be accessed. Don't write
 local-only methods with these names, because then remote callers will be
 able to do more than you intended. Also also note: the other classes like
 pb.Copyable <b>do</b> allow access to attributes, but you control which ones
@@ -379,14 +379,14 @@ returns a reference to the second object.</p>
 <a href="listings/pb/pb1server.py" class="py-listing">pb1server.py</a>
 <a href="listings/pb/pb1client.py" class="py-listing">pb1client.py</a>
 
-<p>The root object has a method called 'remote_getTwo', which returns the
+<p>The root object has a method called <code>remote_getTwo</code>, which returns the
 Two() instance. On the client end, the callback gets a RemoteReference to
-that instance. The client can then invoke two's .remote_three() method.</p>
+that instance. The client can then invoke two's <code>.remote_three()</code> method.</p>
 
 <p>You can use this technique to provide access to arbitrary sets of
 objects. Just remember that any object that might get passed "over the wire"
 must inherit from Referenceable (or one of the other flavors). If you try to
-pass a non-Referenceable object (say, by returning one from a remote_*
+pass a non-Referenceable object (say, by returning one from a <code>remote_*</code>
 method), you'll get an InsecureJelly exception. <a name="F2"><a
 href="#f2">[2]</a></a></p>
 
@@ -412,10 +412,10 @@ reference back to the server. The server compares the "two" given with the
 "two" received and shows that they are the same, and that both are real
 objects instead of remote references.</p>
 
-<p>A few other techniques are demonstrated in <tt>pb3client.py</tt>. One is
-that the callbacks are are added with <tt>.addCallback</tt> instead of
-<tt>.addCallbacks</tt>. As you can tell from the <a
-href="defer.html">Deferred</a> documentation, <tt>.addCallback</tt> is a
+<p>A few other techniques are demonstrated in <code>pb3client.py</code>. One is
+that the callbacks are are added with <code>.addCallback</code> instead of
+<code>.addCallbacks</code>. As you can tell from the <a
+href="defer.html">Deferred</a> documentation, <code>.addCallback</code> is a
 simplified form which only adds a success callback. The other is that to
 keep track of state from one callback to the next (the remote reference to
 the main One() object), we create a simple class, store the reference in an
@@ -507,7 +507,7 @@ created with ClientFactories instead of normal Factory objects. The Protocol
 that implements the client side of a PB connection is the same Broker class
 as used on the server side, but it gets an extra flag to indicate it is a
 client. Let's look at the code behind getObjectAt (stripped down to ignore
-the UNIX-domain socket case, and inlining the <tt>getObjectRetriever</tt>
+the UNIX-domain socket case, and inlining the <code>getObjectRetriever</code>
 utility function):</p>
 
 <pre class="python">
@@ -520,7 +520,7 @@ def getObjectAt(host, port, timeout=None):
   return d
 </pre>
 
-<p>_ObjectRetrieval is a small utility class which sets up a number of
+<p><code>_ObjectRetrieval</code> is a small utility class which sets up a number of
 callbacks. We only care about what happens when the connection is
 established:</p>
 
@@ -542,7 +542,7 @@ back from getObjectAt().</p>
 
 <p>So, to get something other than "root", we're going to need to replace
 getObjectAt() with a version that will take an object name, and then have it
-use a subclass of _ObjectRetrieval which can request that new name. These
+use a subclass of <code>_ObjectRetrieval</code> which can request that new name. These
 two functions use some internal symbols, so our versions will have to import
 more than a simple user of the normal behavior would need.</p>
 
@@ -578,25 +578,25 @@ references to the objects get transferred over the wire.</p>
 
   <li> <b>pb.Referenceable</b> is the most straightforward. It does not
   provide any access to the data attributes of the object, but allows
-  .callRemote() to be used to invoke any 'remote_*' methods that exist. When
+  .callRemote() to be used to invoke any <code>remote_*</code> methods that exist. When
   one of these is sent over the wire, it is simply serialized with an
   identifier that can be returned in the .callRemote() request. </li>
 
   <li> <b>pb.Viewable</b> much like Referenceable, but instead of exporting
-  'remote_*' methods, objects derived from this class export 'view_*'
+  <code>remote_*</code> methods, objects derived from this class export <code>view_*</code>
   methods. These methods are invoked with an extra first argument that
   contains the Perspective which provided the reference to the original
   pb.Viewable object.</li>
 
-<p>[[[[ Footnote [h4]: When a perspective_* method returns a pb.Viewable
+<p>[[[[ Footnote [h4]: When a <code>perspective_*</code> method returns a pb.Viewable
  object, an intermediate object called a ViewPoint is created, and the
  client gets a RemoteReference to that ViewPoint instead. The ViewPoint
  remembers which Perspective it came from. Running .callRemote() on the
- reference of the ViewPoint results in a 'view_*' method being invoked on
+ reference of the ViewPoint results in a <code>view_*</code> method being invoked on
  the pb.Viewable object. ]]]]</p>
 
-<p>[[[[ Footnote [h4]: Note that it is possible to have both 'perspective_*'
-methods and 'view_*' methods in the same class. See the docstring for
+<p>[[[[ Footnote [h4]: Note that it is possible to have both <code>perspective_*</code>
+methods and <code>view_*</code> methods in the same class. See the docstring for
 spread.flavors.ViewPoint for details. ]]]]</p>
 
   <p>This is useful to let the object know which client is calling the
@@ -629,15 +629,15 @@ Ahem. The differences between the remote method calls depends upon what your
 RemoteReference is actually pointing to on the other side.</p>
 
 <p>If it is pointing to a simple pb.Referenceable, then your .callRemote("foo")
-gets turned into a .remote_foo() on the other end.</p>
+gets turned into a <code>.remote_foo()</code> on the other end.</p>
 
 <p>If it points at a Perspective (described below), then .callRemote("foo")
-invokes .perspective_foo() on that object.</p>
+invokes <code>.perspective_foo()</code> on that object.</p>
 
 <p>If your Perspective named perspective1 returns a reference to a
 pb.Viewable named thing1, then .callRemote("foo", arg1) on the resulting
-RemoteReference causes thing1.view_foo(perspective1, arg1) to be invoked.
-This lets thing1 tell the difference between perspective1 doing .view_foo()
+RemoteReference causes <code>thing1.view_foo(perspective1, arg1)</code> to be invoked.
+This lets thing1 tell the difference between perspective1 doing <code>.view_foo()</code>
 and some other perspective doing the same method. pb.Referenceable
 subclasses have no way to find out who is invoking their methods, but
 pb.Viewable derivatives can.</p>
@@ -657,39 +657,39 @@ sort. The Twisted Way is the same.</p>
 deriving it from <code class="API" base="twisted.spread">pb.Error</code>.
 (You do define Exception subclasses, right? String exceptions are, like,
 <b>so</b> 5 minutes ago. Get with the new century, ok?). When any
-remotely-invokable method (like <tt>remote_*</tt> or <tt>perspective_*</tt>)
-raises a <tt>pb.Error</tt>-derived exception, a serialized form of that
+remotely-invokable method (like <code>remote_*</code> or <code>perspective_*</code>)
+raises a <code>pb.Error</code>-derived exception, a serialized form of that
 Exception object will be sent back over the wire <a name="F5"><a href="#f5"
->[5]</a></a> . The other side (which did <tt>callRemote</tt>) will have the
-"<tt>errBack</tt>" callback run with a <code class="API"
+>[5]</a></a> . The other side (which did <code>callRemote</code>) will have the
+"<code>errBack</code>" callback run with a <code class="API"
 base="twisted.python.failure">Failure</code> object that contains a copy of
-the exception object. This <tt>Failure</tt> object can be queried to
+the exception object. This <code>Failure</code> object can be queried to
 retrieve the error message and a stack traceback.</p>
 
 <p> <code class="API" base="twisted.python.failure">Failure</code> is a
-special class, defined in <tt>twisted/python/failure.py</tt>, created to
+special class, defined in <code>twisted/python/failure.py</code>, created to
 make it easier to handle asynchronous exceptions. Just as exception handlers
-can be nested, <tt>errBack</tt> functions can be chained. If one errback
+can be nested, <code>errBack</code> functions can be chained. If one errback
 can't handle the particular type of failure, it can be "passed along" to a
 errback handler further down the chain.</p>
 
-<p>For simple purposes, think of the <tt>Failure</tt> as just a container
-for remotely-thrown <tt>Exception</tt> objects. To extract the string that
+<p>For simple purposes, think of the <code>Failure</code> as just a container
+for remotely-thrown <code>Exception</code> objects. To extract the string that
 was put into the exception, use its <code>.getErrorMessage()</code> method.
 To get the type of the exception (as a string), look at its
 <code>.type</code> attribute. The stack traceback is available too. The
 intent is to let the errback function get just as much information about the
-exception as Python's normal <tt>try:</tt> clauses do, even though the
+exception as Python's normal <code>try:</code> clauses do, even though the
 exception occurred in somebody else's memory space at some unknown time in
 the past.</p>
 
 <p>To implement the equivalent of the Python try/except blocks (which can
 trap particular kinds of exceptions and pass others "up" to higher-level
 try/except blocks), you can use the <code>.trap()</code> method in
-conjunction with multiple <tt>errback</tt> handlers on the
-<code>Deferred</code>. Raising an exception in an <tt>errback</tt> handler
+conjunction with multiple <code>errback</code> handlers on the
+<code>Deferred</code>. Raising an exception in an <code>errback</code> handler
 serves to pass that new exception to the next handler in the chain. Check
-the <tt>Failure.trap</tt> docstring for details. XXX: add a working example
+the <code>Failure.trap</code> docstring for details. XXX: add a working example
 of this.</p>
 
 <a href="listings/pb/exc_server.py" class="py-listing">exc_server.py</a>
@@ -705,27 +705,27 @@ Main loop terminated.
 </pre>
 
 <p>Oh, and what happens if you raise some other kind of exception? Something
-that <b>isn't</b> subclassed from <tt>pb.Error</tt>? Well, those are called
+that <b>isn't</b> subclassed from <code>pb.Error</code>? Well, those are called
 "unexpected exceptions", which make Twisted think that something has
 <b>really</b> gone wrong. These will raise an exception on the <b>server</b>
 side. This won't break the connection (XXX: verify this), but it will print
 out an unsightly stack trace on the server's stderr (XXX: if logging is
 turned on, does it go into the log instead?), just as if the exception had
 happened outside a remotely-invokable method. The client will get the same
-<tt>Failure</tt> object in either case, but subclassing your exception from
-<tt>pb.Error</tt> is the way to tell Twisted that you expect this sort of
+<code>Failure</code> object in either case, but subclassing your exception from
+<code>pb.Error</code> is the way to tell Twisted that you expect this sort of
 exception, and that it is ok to just let the client handle it. Look at
-<tt>exc_client.py</tt> and change it to invoke <tt>broken2()</tt> instead of
-<tt>broken()</tt> to see the change in the server's behavior.</p>
+<code>exc_client.py</code> and change it to invoke <code>broken2()</code> instead of
+<code>broken()</code> to see the change in the server's behavior.</p>
 
-<p>If you don't add an <tt>errback</tt> function to the <code class="API"
+<p>If you don't add an <code>errback</code> function to the <code class="API"
 base="twisted.internet.defer">Deferred</code>, then a remote exception will
-still send a <tt>Failure</tt> object back over, but the side that did
-<tt>callRemote</tt> will emit a message about an "<tt>Unhandled error in
-Deferred</tt>", along with an ugly stack trace. It can't raise an exception
-(after all, the <tt>callRemote</tt> that triggered the problem is long
+still send a <code>Failure</code> object back over, but the side that did
+<code>callRemote</code> will emit a message about an "<code>Unhandled error in
+Deferred</code>", along with an ugly stack trace. It can't raise an exception
+(after all, the <code>callRemote</code> that triggered the problem is long
 gone), but it will emit a traceback. So be a good programmer and <b>always
-add <tt>errback</tt> handlers</b>.</p>
+add <code>errback</code> handlers</b>.</p>
 
 
 <a name="pb/LAST_SF_EXIT"><h2>Wrapup before touching twisted.cred</h2></a>
@@ -734,7 +734,7 @@ add <tt>errback</tt> handlers</b>.</p>
 waiting for the next chapter). Once you architect your system around the
 idea of objects in different processes invoking methods on each other, then
 it's a simple matter of writing the right pb.Referenceable and pb.Root
-classes, adding 'remote_*' methods to them, and starting the clients with
+classes, adding <code>remote_*</code> methods to them, and starting the clients with
 .getObjectAt(). Remember that .callRemote() always returns a Deferred, so
 think asynchronously: state machines are common, as are series of chained
 callbacks to implement multi-step RPC sequences one step at a time.</p>
@@ -747,7 +747,7 @@ object, each group has its own object, the Users have a list of Groups they
 belong to, the Groups have a list of Users who have joined them. Users can
 send a message to a Group; the Group then sends the message out to all their
 Users. The client side can probably be implemented with a single
-remote_showText() method, invokable by the Groups on the other end. For this
+<code>remote_showText()</code> method, invokable by the Groups on the other end. For this
 exercise, ignore security completely. When the User first connects, let them
 tell you what their name is, and give them a reference to their User object
 based upon that name.</p>
@@ -830,10 +830,10 @@ described in detail in the section on pb.cred.</p>
 
 <a  name="f5"><a href="#F5">[5]</a></a>
 
-<p>To be precise, the <tt>Failure</tt> will be sent if <b>any</b> exception
-is raised, not just <tt>pb.Error</tt>-derived ones. But the server will
+<p>To be precise, the <code>Failure</code> will be sent if <b>any</b> exception
+is raised, not just <code>pb.Error</code>-derived ones. But the server will
 print ugly error messages if you raise ones that aren't derived from
-<tt>pb.Error</tt>.</p>
+<code>pb.Error</code>.</p>
 
 
 <hr />

@@ -53,10 +53,10 @@ server, and see the power of easy remote method calls.</p>
 their name was 'bob': no passwords or anything. If you wanted a direct-send
 one-to-one message feature, you might have implemented it by handing a User
 reference directly off to another User. (so they could invoke
-<tt>.remote_sendMessage()</tt> on the receiving User): but that lets them do
+<code>.remote_sendMessage()</code> on the receiving User): but that lets them do
 anything else to that user too, things that should probably be restricted to
-the "owner" user, like <tt>.remote_joinGroup()</tt> or
-<tt>.remote_quit()</tt>.</p>
+the "owner" user, like <code>.remote_joinGroup()</code> or
+<code>.remote_quit()</code>.</p>
 
 <p>And there were probably places where the easiest implementation was to
 have the client send a message that included their own name as an argument.
@@ -99,7 +99,7 @@ class User(pb.Referenceable):
 
 <p>This improves matters because, as long as Alice only has a reference to
 <b>this</b> object and nobody else's, she can't cause a different
-<tt>self.name</tt> to get used. Of course, you have to make sure that you
+<code>self.name</code> to get used. Of course, you have to make sure that you
 don't give her a reference to the wrong object. <a name="F1"><a href="#f1"
 >[1]</a></a> </p>
 
@@ -221,14 +221,14 @@ href="#f4">[4]</a></a> </p>
 
 <p>Note that once this example has done the method call, you'll have to
 terminate both ends yourself. Also note that the Perspective's
-<tt>.attached()</tt> and <tt>.detached()</tt> methods are run when the
+<code>.attached()</code> and <code>.detached()</code> methods are run when the
 client connects and disconnects. The base class implementations of these
 methods just prints a message.</p>
 
 <p>Ok, so that wasn't really very exciting. It doesn't accomplish much more
 than the first PB example, and used a lot more code to do it. Let's try it
 again with two users this time, each with their own Perspective. We also
-override <tt>.attached()</tt> and <tt>.detached()</tt> <a name="F5"><a
+override <code>.attached()</code> and <code>.detached()</code> <a name="F5"><a
 href="#f5">[5]</a></a>, just to see how they are called.</p>
 
 
@@ -237,7 +237,7 @@ href="#f5">[5]</a></a>, just to see how they are called.</p>
 <a href="listings/pb/pb6client2.py" class="py-listing">pb6client2.py</a>
 
 <p>While pb6server.py is running, try starting pb6client1, then pb6client2.
-Compare the argument passed by the <tt>.callRemote()</tt> in each client.
+Compare the argument passed by the <code>.callRemote()</code> in each client.
 You can see how each client logs into a different Perspective.</p>
 
 
@@ -249,15 +249,15 @@ Here are the major classes involved:</p>
 
 <ul>
   <li><code class="API" base="twisted.internet.app">Application</code>:
-  <tt>twisted/internet/app.py</tt></li>
+  <code>twisted/internet/app.py</code></li>
   <li><code class="API" base="twisted.cred.service">Service</code>:
-  <tt>twisted/cred/service.py</tt></li>
+  <code>twisted/cred/service.py</code></li>
   <li><code class="API" base="twisted.cred.authorizer">Authorizer</code>:
-  <tt>twisted/cred/authorizer.py</tt></li>
+  <code>twisted/cred/authorizer.py</code></li>
   <li><code class="API" base="twisted.cred.identity">Identity</code>:
-  <tt>twisted/cred/identity.py</tt></li>
+  <code>twisted/cred/identity.py</code></li>
   <li><code class="API" base="twisted.cred.pb">Perspective</code>:
-  <tt>twisted/cred/pb.py</tt></li>
+  <code>twisted/cred/pb.py</code></li>
 </ul>
 
 <p>You've already seen <code>Application</code>. It holds the program-wide
@@ -282,12 +282,12 @@ one <code>Service</code>, while mere end-users get a less-powerful
 
 <p>The <code>Authorizer</code> is a class that provides
 <code>Identity</code> objects. The abstract base class is
-<tt>twisted.cred.authorizer.Authorizer</tt>, and for simple purposes you can
+<code>twisted.cred.authorizer.Authorizer</code>, and for simple purposes you can
 just use <code class="API"
 base="twisted.cred.authorizer">DefaultAuthorizer</code>, which is a subclass
 that stores pre-generated Identities in a simple dict (indexed by username).
 The <code>Authorizer</code>'s purpose in life is to implement the
-<tt>.getIdentityRequest()</tt> method, which takes a user name and
+<code>.getIdentityRequest()</code> method, which takes a user name and
 (eventually) returns the corresponding <code>Identity</code> object.</p>
 
 <p>Each <code>Identity</code> object represents a single user, with a
@@ -308,14 +308,14 @@ wrapper around it), giving them all the privileges of that
 (serviceName, perspectiveName) pairs that the corresponding authorized user
 is allowed to access. Once the user has been authenticated, the
 <code>Identity</code>'s job is to implement
-<tt>.requestPerspectiveForKey()</tt>, which it does by verifying the "key"
+<code>.requestPerspectiveForKey()</code>, which it does by verifying the "key"
 exists on the keyring, then asking the matching <code>Service</code> to do
-<tt>.getPerspectiveForIdentity()</tt>.</p>
+<code>.getPerspectiveForIdentity()</code>.</p>
 
 <p>Finally, the <code>Perspective</code> is the subclass of pb.Perspective
-that implements whatever 'perspective_*' methods you wish to expose to an
-authenticated remote user. It also implements <tt>.attached()</tt> and
-<tt>.detached()</tt>, which are run when the user connects (actually when
+that implements whatever <code>perspective_*</code> methods you wish to expose to an
+authenticated remote user. It also implements <code>.attached()</code> and
+<code>.detached()</code>, which are run when the user connects (actually when
 they finish the authentication sequence) or disconnects. Each
 <code>Perspective</code> has a name, which is scoped to the
 <code>Service</code> which owns the <code>Perspective</code>.
@@ -336,7 +336,7 @@ they get called.</p>
 <a name="responsibilities/authorizer"><h4>Authorizer</h4></a>
 
 <p>The <code>Authorizer</code> has to provide <code>Identity</code> objects
-(requested by name) by implementing <tt>.getIdentityRequest()</tt>. The
+(requested by name) by implementing <code>.getIdentityRequest()</code>. The
 <code class="API" base="twisted.cred.authorizer">DefaultAuthorizer</code>
 class just looks up the name in a dict called <code
 class="python">self.identities</code>, so when you use it, you have to make
@@ -345,14 +345,14 @@ auth.createIdentity()</code>) and store them in that dict (by handing them
 to <code class="python">auth.addIdentity(i)</code>).</p>
 
 <p>However, you can make a subclass of <code>Authorizer</code> with a
-<tt>.getIdentityRequest</tt> method that behaves differently: your version
-could look in <tt>/etc/passwd</tt>, or do an SQL database lookup<a
+<code>.getIdentityRequest</code> method that behaves differently: your version
+could look in <code>/etc/passwd</code>, or do an SQL database lookup<a
 name="F7"><a href="#f7">[7]</a></a>, or create new Identities for anyone
 that asks (with a really secret password like '1234' that the user will
 probably never change, even if you ask them to). The Identities could be
 created by your server at startup time and stored in a dict, or they could
 be pickled and stored in a file until needed (in which case
-<tt>.getIdentityRequest()</tt> would use the username to find a file,
+<code>.getIdentityRequest()</code> would use the username to find a file,
 unpickle the contents, and return the resulting <code>Identity</code>
 object), or created brand-new based upon whatever data you want. Any
 function that returns a Deferred (that will eventually get called back with
@@ -366,26 +366,26 @@ name="F8"><a href="#f8">[8]</a></a></p>
 The first is to authenticate the user, because so far they are unverified:
 they have claimed to be somebody (by giving a username to the Authorizer),
 but have not yet proved that claim. It does this by implementing
-<tt>.verifyPassword</tt>, which is called by IdentityWrapper (described
+<code>.verifyPassword</code>, which is called by IdentityWrapper (described
 later) as part of the challenge-response sequence. If the password is valid,
-<tt>.verifyPassword</tt> should return a Deferred and run its callback. If
+<code>.verifyPassword</code> should return a Deferred and run its callback. If
 the password is wrong, the Deferred should have the error-back run
 instead.</p>
 
 <p>The second responsibility is to provide <code>Perspective</code> objects
 to users who are allowed to access them. The authenticated user gives a
 service name and a perspective name, and
-<tt>.requestPerspectiveForKey()</tt> is invoked to retrieve the given
+<code>.requestPerspectiveForKey()</code> is invoked to retrieve the given
 <code>Perspective</code>. The <code>Identity</code> is the one who decides
 which services/perspectives the user is allowed to access. Unless you
 override it in a subclass, the default implementation uses a simple dict
-called <tt>.keyring</tt>, which has keys that are (servicename,
+called <code>.keyring</code>, which has keys that are (servicename,
 perspectivename) pairs. If the requested name pair is in the keyring, access
 is allowed, and the <code>Identity</code> will proceed to ask the
-<tt>Service</tt> to give back the specified <code>Perspective</code> to the
-user. <tt>.requestPerspectiveForKey()</tt> is required to return a Deferred,
+<code>Service</code> to give back the specified <code>Perspective</code> to the
+user. <code>.requestPerspectiveForKey()</code> is required to return a Deferred,
 which will eventually be called back with a <code>Perspective</code> object,
-or error-backed with a <tt>Failure</tt> object if they were not allowed
+or error-backed with a <code>Failure</code> object if they were not allowed
 access.</p>
 
 
@@ -394,12 +394,12 @@ XXX: explain perspective names being scoped to services better
 
 <p>You could subclass <code>Identity</code> to change the behavior of either
 of these, but chances are you won't bother. The only reason to change
-<tt>.verifyPassword()</tt> would be to replace it with some kind of
+<code>.verifyPassword()</code> would be to replace it with some kind of
 public-key verification scheme, but that would require changes to <code
 class="API" base="twisted.spread">pb.IdentityWrapper</code> too, as well as
 significant changes on the client side. Any changes you might want to make
-to <tt>.requestPerspectiveForKey()</tt> are probably more appropriate to put
-in the Service's <tt>.getPerspectiveForIdentity</tt> method instead. The
+to <code>.requestPerspectiveForKey()</code> are probably more appropriate to put
+in the Service's <code>.getPerspectiveForIdentity</code> method instead. The
 Identity simply passes all requests for Perspectives off to the Service.</p>
 
 <p>The default <code>Identity</code> objects are created with a username and
@@ -420,7 +420,7 @@ auth.addIdentity(i)
 
 <p>The <code class="API" base="twisted.cred.service">Service</code> object's
 job is to provide <code>Perspective</code> instances, by implementing
-<tt>.getPerspectiveForIdentity()</tt>. This function takes a Perspective
+<code>.getPerspectiveForIdentity()</code>. This function takes a Perspective
 name, and is expected to return a Deferred which will (eventually) be called
 back with an instance of <code>Perspective</code> (or a subclass).</p>
 
@@ -430,20 +430,20 @@ class="API">twisted.spread.pb.Service</code>) retrieves static pre-generated
 like DefaultAuthorizer does with Identities. And like
 <code>Authorizer</code>, it is very useful to subclass <code class="API"
 base="twisted.spread">pb.Service</code> to change the way
-<tt>.getPerspectiveForIdentity()</tt> works: to create
+<code>.getPerspectiveForIdentity()</code> works: to create
 <code>Perspective</code>s out of persistent data or database lookups, to set
 extra attributes in the <code>Perspective</code>, etc.</p>
 
 <p>When using the default implementation, you have to create the
 <code>Perspective</code>s at startup time. Each <code>Service</code> object
-has an attribute named <tt>.perspectiveClass</tt>, which helps it to create
+has an attribute named <code>.perspectiveClass</code>, which helps it to create
 the <code>Perspective</code> objects for you. You do this by running <code
 class="python">p = svc.createPerspective("perspective_name")</code>.</p>
 
-<p>You should use <tt>.createPerspective()</tt> rather than running the
+<p>You should use <code>.createPerspective()</code> rather than running the
 constructor of your Perspective-subclass by hand, because the Perspective
-object needs a pointer to its parent <tt>Service</tt> object, and the
-<tt>Service</tt> needs to have a list of all the <tt>Perspective</tt>s that
+object needs a pointer to its parent <code>Service</code> object, and the
+<code>Service</code> needs to have a list of all the <code>Perspective</code>s that
 it contains.</p>
 
 
@@ -453,7 +453,7 @@ it contains.</p>
 the previous example and see what was going on: we created a subclass called
 <code>MyPerspective</code>, made a <code>DefaultAuthorizer</code> and added
 it to the <code>Application</code>, created a <code>Service</code> and told
-it to make <code>MyPerspective</code>s, used <tt>.createPerspective()</tt>
+it to make <code>MyPerspective</code>s, used <code>.createPerspective()</code>
 to build a few, for each one we made an <code>Identity</code> (with a
 username and password), and allowed that <code>Identity</code> to access a
 single <code>MyPerspective</code> by adding it to the keyring. We added the
@@ -465,23 +465,23 @@ name="F9"><a href="#f9">[9]</a></a>, because it isn't very useful to
 override it, but you effectively hang an <code>Authorizer</code> off of a
 TCP port. The combination of the object and methods exported by the <code
 class="API" base="twisted.spread">pb.AuthRoot</code> object works together
-with the code inside the <tt>pb.connect()</tt> function to implement both
+with the code inside the <code>pb.connect()</code> function to implement both
 sides of the challenge-response sequence. When you (as the client) use
-<tt>pb.connect()</tt> to get to a given host/port, you end up talking to a
+<code>pb.connect()</code> to get to a given host/port, you end up talking to a
 single <code>Authorizer</code>. The username/password you give get matched
-against the <tt>Identities</tt> provided by that authorizer, and then the
+against the <tt>Identities</code> provided by that authorizer, and then the
 servicename/perspectivename you give are matched against the ones authorized
-by the <code>Identity</code> (in its <tt>.keyring</tt> attribute). You
+by the <code>Identity</code> (in its <code>.keyring</code> attribute). You
 eventually get back a remote reference to a <code>Perspective</code>
 provided by the <code>Service</code> that you named.</p>
 
 
-<a name="walkthrough"><h3>Code Walkthrough: <tt>pb.connect()</tt></h3></a>
+<a name="walkthrough"><h3>Code Walkthrough: pb.connect()</h3></a>
 
 <p>So, now that you've seen the complete sequence, it's time for a code
 walkthrough. This will give you a chance to see the places where you might
 write subclasses to implement different behaviors. We will look at what
-happens when <tt>pb6client1.py</tt> meets <tt>pb6server.py</tt>. We tune in
+happens when <code>pb6client1.py</code> meets <code>pb6server.py</code>. We tune in
 just as the client has run the <code class="python">pb.connect()</code>
 call.</p>
 
@@ -502,16 +502,16 @@ executed as a callback when the previous step completes.</p>
 
 <p>The client does <code class="python">getObjectAt()</code> to connect to
 the given host and port, and retrieve the object named "root". On the server
-side, the <tt>BrokerFactory</tt> accepts the connection, asks the <code
+side, the <code>BrokerFactory</code> accepts the connection, asks the <code
 class="API" base="twisted.spread">pb.AuthRoot</code> object for its <code
 class="python">.rootObject()</code>, getting an <code class="API"
 base="twisted.spread.pb">AuthServ</code> object (containing both the
 authorizer and the <code class="API" base="twisted.spread.pb">Broker</code>
-protocol object). It gives a remote reference to that <tt>AuthServ</tt> out
+protocol object). It gives a remote reference to that <code>AuthServ</code> out
 to the client.</p>
 
-<p>Now the client invokes the '<tt>.remote_username</tt>' method on that
-<tt>AuthServ</tt>. The <tt>AuthServ</tt> asks the <code>Authorizer</code> to
+<p>Now the client invokes the '<code>.remote_username</code>' method on that
+<code>AuthServ</code>. The <code>AuthServ</code> asks the <code>Authorizer</code> to
 <code class="python">.getIdentityRequest()</code>: this retrieves (or
 creates) the <code>Identity</code>. When that finishes, it asks the
 <code>Identity</code> to create a random challenge (usually just a random
@@ -521,29 +521,29 @@ which will only accept a response that matches that exact challenge.</p>
 
 <p>The client does its part of the MD5 challenge-response protocol and sends
 the response to the <code>AuthChallenger</code>'s
-<tt>.remote_response()</tt> method. The <code>AuthChallenger</code> verifies
+<code>.remote_response()</code> method. The <code>AuthChallenger</code> verifies
 the response: if it is valid then it gives back a reference to an <code
 class="API" base="twisted.spread.pb">IdentityWrapper</code>, which contains
 an internal reference to the <code>Identity</code> that we now know matches
 the user at the other end of the connection.</p>
 
-<p>The client then invokes the '<tt>.remote_attach</tt>' method on that
+<p>The client then invokes the '<code>.remote_attach</code>' method on that
 <code>IdentityWrapper</code>, passing in a serviceName, perspectiveName, and
 remoteRef. The wrapper asks the <code>Identity</code> to get a perspective
 using <code>identity.requestPerspectiveForKey</code>, which does the "is
 this user allowed to get this service/perspective" check by looking at the
-tuples on its <tt>.keyring</tt>, and if that is allowed then it gets the
+tuples on its <code>.keyring</code>, and if that is allowed then it gets the
 <code class="API" base="twisted.spread.pb">Service</code> (by giving
 serviceName to the authorizer), then asks the <code>Service</code> to
 provide the perspective (with <code>svc.getPerspectiveForIdentity</code>).
 The default <code class="API" base="twisted.cred.service">Service</code>
 will ignore the identity object and just look for <code>Perspective</code>s
 by perspectiveName. The <code>Service</code> looks up or creates the
-<code>Perspective</code> and returns it. The <tt>.remote_attach</tt> method
-runs the Perspective's <tt>.attached</tt> method (although there are some
-intermediate steps, in <tt>IdentityWrapper._attached</tt>, to make sure
-<tt>.detached</tt> will eventually be run, and the Perspective's
-<tt>.brokerAttached</tt> method is executed to give it a chance to return
+<code>Perspective</code> and returns it. The <code>.remote_attach</code> method
+runs the Perspective's <code>.attached</code> method (although there are some
+intermediate steps, in <code>IdentityWrapper._attached</code>, to make sure
+<code>.detached</code> will eventually be run, and the Perspective's
+<code>.brokerAttached</code> method is executed to give it a chance to return
 some other Perspective instead). Finally a remote reference to the <code
 class="API" base="twisted.spread.pb">Perspective</code> is returned to the
 client.</p>
@@ -551,7 +551,7 @@ client.</p>
 <p>The client gives the <code>Perspective</code> reference to the callback
 that was attached to the <code>Deferred</code> that
 <code>pb.connect()</code> returned, which brings us back up to the code
-visible in <tt>pb6client1.py</tt>.</p>
+visible in <code>pb6client1.py</code>.</p>
 
 
 
@@ -565,7 +565,7 @@ named Alice, Bob, etc (the usual suspects). Two of them log in, choose
 sides, and begin to make moves.</p>
 
 <p> We assume that the rules of the game are encapsulated into a
-<tt>GoGame</tt> object, so we can focus on the code that handles the remote
+<code>GoGame</code> object, so we can focus on the code that handles the remote
 players.</p>
 
 <p>XXX: finish this section</p>
@@ -592,7 +592,7 @@ by that one client: if they try to hand it off to a third party, they'll get
 an exception (XXX: which?). This helps somewhat: only the client you gave
 the reference to can cause any damage with it. Of course, the client might
 be a brainless zombie, simply doing anything some third party wants. When
-it's not proxying <tt>callRemote</tt> invocations, it's probably terrorizing
+it's not proxying <code>callRemote</code> invocations, it's probably terrorizing
 the living and searching out human brains for sustenance. In short, if you
 don't trust them, don't give them that reference.</p>
 
@@ -643,15 +643,15 @@ this will make more sense later. </p>
 
 <p>The Perspective object is usually expected to outlast the user's
 connection to it: it is nominally created some time before the user
-connects, and survives after they disconnect. <tt>.attached()</tt> and
-<tt>.detached()</tt> are invoked to let the Perspective know when the user
+connects, and survives after they disconnect. <code>.attached()</code> and
+<code>.detached()</code> are invoked to let the Perspective know when the user
 has connected and disconnected.</p>
 
-<p> When the client runs <tt>pb.connect</tt> to establish the connection,
-they can provide it with an optional '<tt>client</tt>' argument (which must
-be a <tt>pb.Referenceable</tt> object). If they do, then a reference to that
-object will be handed to the server-side Perspective's <tt>.attached</tt>
-method, in the '<tt>clientref</tt>' argument. </p>
+<p> When the client runs <code>pb.connect</code> to establish the connection,
+they can provide it with an optional '<code>client</code>' argument (which must
+be a <code>pb.Referenceable</code> object). If they do, then a reference to that
+object will be handed to the server-side Perspective's <code>.attached</code>
+method, in the '<code>clientref</code>' argument. </p>
 
 <p> The server-side Perspective can use it to invoke remote methods on
 something in the client, so that the client doesn't always have to drive the
@@ -662,28 +662,28 @@ boards. To actually use it, you'd probably want to subclass Perspective and
 change the .attached method to stash the clientref somewhere, because the
 default implementation just drops it.</p>
 
-<p><tt>.attached()</tt> also receives a reference to the <tt>Identity</tt>
+<p><code>.attached()</code> also receives a reference to the <code>Identity</code>
 object that represents the user. (The user has proved, by using a password
-of some sort, that they are that <tt>Identity</tt>, and then they can access
+of some sort, that they are that <code>Identity</code>, and then they can access
 any service/perspective on the Identity's keyring). The method can use that
 reference to extract more information about the user.</p>
 
-<p>In addition, <tt>.attached()</tt> has the opportunity to return a
+<p>In addition, <code>.attached()</code> has the opportunity to return a
 different Perspective, if it so chooses. You could have all users initially
 access the same Perspective, but then as they connect (and
-<tt>.attached()</tt> gets called), give them unique Perspectives based upon
+<code>.attached()</code> gets called), give them unique Perspectives based upon
 their individual Identities. The client will get a reference to whatever
-<tt>.attached()</tt> returns, so the default case is to 'return self'.</p>
+<code>.attached()</code> returns, so the default case is to 'return self'.</p>
 
 <p>Finally, when the client goes away (i.e., the network connection has been
-closed), <tt>.detached()</tt> will be called. The Perspective can use this
+closed), <code>.detached()</code> will be called. The Perspective can use this
 to mark the user as having gone away: this may mean that outgoing messages
 should be queued in the Perspective until they reconnect, or callers should
 be given an error message because they messages cannot be delivered, etc. It
 can also be used to terminate or suspend any sessions the user was
-participating in. <tt>detached</tt> is called with the same 'clientref' and
+participating in. <code>detached</code> is called with the same 'clientref' and
 Identity objects that were given to the original 'attached' call. It will be
-invoked on the Perspective object that was returned by <tt>.attached()</tt>.
+invoked on the Perspective object that was returned by <code>.attached()</code>.
 </p>
 
 <a  name="f6"><a href="#F6">[6]</a></a>
@@ -702,7 +702,7 @@ at the MultiService class for details.</p>
 
 <p>For static Identities that are available right away, the Deferred's
 callback() method is called right away. This is why the interface of
-<tt>.getIdentityRequest()</tt> specifies that its Deferred is returned
+<code>.getIdentityRequest()</code> specifies that its Deferred is returned
 unarmed, so that the caller has a chance to actually add a callback to it
 before the callback gets run. (XXX: check, I think armed/unarmed is an
 outdated concept)</p>
@@ -719,10 +719,10 @@ app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
 subclassed from <code class="API" base="twisted.spread">pb.Root</code>, so
 as we saw in the first example, they can be served up by <code
 class="python">pb.BrokerFactory()</code>. <code>AuthRoot</code> happens to
-use the <tt>.rootObject</tt> hook described earlier to serve up an <code
+use the <code>.rootObject</code> hook described earlier to serve up an <code
 class="API" base="twisted.spread.pb">AuthServ</code> object, which wraps the
 <code class="API" base="twisted.cred.authorizer">Authorizer</code> and
-offers a method called <tt>.remote_username</tt>, which is called by the
+offers a method called <code>.remote_username</code>, which is called by the
 client to declare which <code>Identity</code> it claims to be. That method
 starts the challenge-response sequence.</p>
 

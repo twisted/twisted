@@ -125,8 +125,8 @@ attributes on those elements that we are interested in operating
 on. When DOMTemplate is iterating the template looking for nodes to
 operate on, any node with these attributes will be looked for in both
 the view and controller. If a node has view attribute of "foo" the
-method factory_foo will be looked for in the view, and if a node has a
-controller attribute of "bar" the method factory_bar will be looked
+method <code>factory_foo</code> will be looked for in the view, and if a node has a
+controller attribute of "bar" the method <code>factory_bar</code> will be looked
 for in the controller.
 </p>
 
@@ -146,8 +146,8 @@ InputHandler subclass; these are defined in twisted.web.woven.input.
 
 <p>
 So, to bring our template to life, we first override setUp to
-prepare the view for rendering. We then add factory_quote and
-factory_title methods on our view subclass. In the case of title we
+prepare the view for rendering. We then add <code>factory_quote</code> and
+<code>factory_title</code> methods on our view subclass. In the case of title we
 can simply return a domwidgets.Text instance. Since this factory was
 called in response to a node with the model attribute set to "title",
 when the node is rendered it will use the "title" attribute of the
@@ -167,7 +167,7 @@ DOM text node, and insert it into the tree.
 </p>
 
 <p>
-Finally, we provide a factory_newQuote method on the controller
+Finally, we provide a <code>factory_newQuote</code> method on the controller
 which returns a custom InputHandler subclass. There are a few methods
 handlers may override to deal with data, but in this case we override
 "check", which decides if the input the user entered was valid, and

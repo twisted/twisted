@@ -96,7 +96,7 @@ might have trailing empty lines.</p>
     reasons, classes in volatile modules should never be
     subclassed.</p>
 
-    <p>Volatile modules will have a __volatile__ attribute set to
+    <p>Volatile modules will have a <code>__volatile__</code> attribute set to
     1, and should always have a docstring snippet like the one that
     follows:</p>
 <pre class="python">
@@ -123,8 +123,8 @@ but instead like this::
     names. All modules must be encapsulated in some package. Nested
     packages may be used to further organize related modules.</p>
 
-    <p>__init__.py must never contain anything other than a
-    docstring and (optionally) an __all__ attribute. Packages are
+    <p><code>__init__.py</code> must never contain anything other than a
+    docstring and (optionally) an <code>__all__</code> attribute. Packages are
     not modules and should be treated differently. This rule may be
     broken to preserve backwards compatibility if a module is made
     into a nested package as part of a refactoring.</p>
@@ -266,13 +266,13 @@ def foo2bar(f):
 
     <p>Methods should be in mixed case, with the first letter lower
     case, each word separated by having its first letter
-    capitalized. For example, "someMethodName", "method".</p>
+    capitalized. For example, <code>someMethodName</code>, <code>method</code>.</p>
 
     <p>Sometimes, a class will dispatch to a specialized sort of
     method using its name; for example, twisted.reflect.Accessor.
     In those cases, the type of method should be a prefix in all
     lower-case with a trailing underscore, so method names will
-    have an underscore in them. For example, "get_someAttribute".
+    have an underscore in them. For example, <code>get_someAttribute</code>.
     Underscores in method names in twisted code are therefore
     expected to have some semantic associated with them.</p>
 
@@ -281,8 +281,8 @@ def foo2bar(f):
     <p>Functions should be named similiarly to methods.</p>
 
     <p>Functions or methods which are responding to events to
-    complete a callback or errback should be named _cbMethodName or
-    _ebMethodName, in order to distinguish them from normal
+    complete a callback or errback should be named <code>_cbMethodName</code> or
+    <code>_ebMethodName</code>, in order to distinguish them from normal
     methods.</p>
 
     <h2>Attributes</h2>
