@@ -28,12 +28,8 @@ class IPathArgs(components.Interface):
     which were specified in pathargs format; pathargs format
     is /foo:bar/ where foo is the key and bar is the value.
     """
-
-
 # Use a dict as the IPathArgs implementor for any given request
 components.registerAdapter(lambda request: {}, server.Request, IPathArgs)
-
-
 
 class PathArgs(Resource):
     """ Provides a mechanism to add 'pathargs' attribute to
@@ -54,7 +50,6 @@ class PathArgs(Resource):
         if not ret: 
             ret = Resource.getChild(self,path,request)
         return ret 
-
 
 def test():
     from twisted.internet import reactor
@@ -79,7 +74,6 @@ def test():
     site = Site(root)
     reactor.listenTCP(8080,site)
     reactor.run()
-
 
 if '__main__' == __name__:
     import sys               
