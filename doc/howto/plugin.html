@@ -223,14 +223,6 @@ class="shell">PYTHONPATH</code> environment variable to add <code
 class="shell">/my/stuff;</code> at the beginning through the System
 Properties dialog on Windows.</p></div>
 
-<div style="float: right"><pre class="python-interpreter">
-Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
-[GCC 2.95.4 20011002 (Debian prerelease)] on linux2
-Type "copyright", "credits" or "license" for more information.
-&gt;&gt;&gt; import TwistedQuotes
-&gt;&gt;&gt; # No traceback means you're fine.
-</pre></div>
-
 <p>You will then need to add an <code class="shell">__init__.py</code> to this
 directory, to mark it as a package.  (For more information on exactly how
 Python packages work, read <a
@@ -238,6 +230,14 @@ href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000
 >this section</a> of the Python tutorial.) In order to test that everything is
 working, start up the Python interactive interpreter, or your favorite IDE, and
 verify that the package imports properly.</p>
+
+<pre class="python-interpreter">
+Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
+[GCC 2.95.4 20011002 (Debian prerelease)] on linux2
+Type "copyright", "credits" or "license" for more information.
+&gt;&gt;&gt; import TwistedQuotes
+&gt;&gt;&gt; # No traceback means you're fine.
+</pre>
 
 <h3>A Look at the Heart of the Application</h3>
 
