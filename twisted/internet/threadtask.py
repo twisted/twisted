@@ -78,6 +78,6 @@ def dispatchApply(callback, errback, func, args, kw):
     theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
 
 def dispatch(callback, errback, func, *args, **kw):
-    dispatchApply(callback, errback, func, args, kw)
+    theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
 
 main.callDuringShutdown(theDispatcher.stop)
