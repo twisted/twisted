@@ -282,7 +282,7 @@ def parseFileAndReport(filename):
     except IOError, e:
         raise process.ProcessingFailure(e.strerror + ", filename was '" + filename + "'")
 
-def getOutputFileName(originalFileName, outputExtension):
+def getOutputFileName(originalFileName, outputExtension, index=None):
     return os.path.splitext(originalFileName)[0]+outputExtension
 
 def makeSureDirectoryExists(filename):
