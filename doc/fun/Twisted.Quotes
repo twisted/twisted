@@ -2619,3 +2619,21 @@ under. very interesting. want some pictures? :)
 <mjs> spiv: yeah I starting to notice... but I am sure it will become more fervent when we have a Lisp twisted implementation. =)
 <dash> mjs: when that happens, i will become more powerful than you can possibly imagine
 %
+<glyph> Well, take C
+<glyph> Then lop off the right ankle of smalltalk
+<glyph> stuff said ankle down C's throat until it starts to choke
+<glyph> take a picture of C choking
+<glyph> (with a cheap polaroid)
+<glyph> send this fuzzy picture to a robotics engineer
+<glyph> then tell him to build a robot that looks like this
+<glyph> and tell him it has to have lasers for eyes and fight for justice in the universe, but also be good with kids, but also be totally obedient to your every whim and literally interpret everything you say
+<glyph> and it's OK if it kills the kids with its laser eyes if it (A) feels they are a threat to truth and justice, etc or (B) they ask it to
+<glyph> because you'll give the kids a very stern lecture about not telling the robot to kill anyone
+<glyph> the monstrosity that results from these instructions is C++
+<dash> you forgot the part about not paying for what you're not using
+<glyph> oh right. "It has to be constructed out of parts no larger than the thumb of my left hand, and each one must detach from all the others; although it's fine if, once attached, a particular part may explode and destroy the robot at any given moment as long as a replacement is available at no charge from the vendor"
+<dash> and then you submit it to a committee.
+<glyph> yes
+<glyph> and the committee will conscienciously standardize the radius of the ankle which the robot is appearing to choke o
+<glyph> meanwhile, back at the ranch, smalltalk is walking with a limp and C is having a hard time talking after having its voicebox crushed by the aformentioned violation, but nobody's thinking about them. They're worried about how to plug your left thumb (which the committee cut off as part of the standardization process) into the robot somehow, since it was the standard used for modularization (This is how COM happened)
+%
