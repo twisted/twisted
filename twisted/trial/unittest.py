@@ -148,7 +148,7 @@ class TestSuite:
                 reactor.iterate() # flush them
                 # this will go live someday: tests should not leave
                 # lingering surprises
-                #testCase.fail(msg)
+                testCase.fail(msg)
         except AssertionError, e:
             if ok:
                 output.reportFailure(testClass, method, sys.exc_info())

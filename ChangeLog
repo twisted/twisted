@@ -1,5 +1,7 @@
 2003-01-10  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/trial/unittest.py: enable test cruft checking
+
 	* twisted/test/test_policies.py: cleanup timers
 
 	* twisted/protocols/policies.py: start/stop bandwidth timers as needed
