@@ -1,0 +1,122 @@
+Twisted 0.9.0
+
+Quote of the Release::
+
+  <dash> i want distributed everything
+  <dash> yesterday
+
+What is this?
+
+  Twisted is an event-based framework for internet applications.  It includes a
+  web server, a telnet server, a multiplayer RPG engine, a generic client and
+  server for remote object access, and APIs for creating new
+  protocols.
+
+What can I do with it?
+
+  First, put /where/you/untarred/Twisted-0.9.0/bin into your PATH, or
+  equivalent variable for your OS.  If you plan to do Python development using
+  Twisted, you probably want to put /where/you/untarred/Twisted-0.9.0 into your
+  PYTHONPATH environment variable as well.  Currently these scripts take a
+  UNIX-centric view of the world, but to the best of my knowledge they function
+  on win32 as well.
+
+  Although there is lots of infrastructure support in Twisted, the immediately
+  useful application for the end-user is Twisted Web.  Twisted Web is
+  a webserver, written entirely in python, which is designed to be "zero
+  maintenance".  The built-in scripts are probably only appropriate for a
+  small-to-medium website, with between 1-100 users producing content; however,
+  since Twisted is entirely in Python, it's quite easy to script the webserver
+  to do whatever you like!
+
+Unit Tests
+
+  See our unit tests run in a lovely Tkinter GUI, proving that the software is
+  BugFree(TM)::
+
+   % runtests
+
+Basic Servers
+
+  There are various servers you can build and run in the main distribution,
+  although they won't be covered here.  Twisted servers do not have
+  configuration files; instead, you instantiate a server and put it into a
+  Pickle file; your servers and all of their component objects are saved in
+  that file, and can be loaded with the Twisted Daemon.
+
+  The normal type of server to create is a webserver.  You can run this
+  command::
+
+    % mkwebserver --static static
+
+  which will make a "static" webserver (one that reads from the filesystem) and
+  run it from the provided 'static' directory.  This creates a file named
+  'web.spl'.  By default, this server will run on port 8080, but you can change
+  it with the --port option.
+
+  You can also create a telnet server::
+
+    % mktelnetserver 8023 username password
+
+  which will create a python-console telnet server listening on port 8023,
+  which you can log into with the username "username" and the password
+  "password".  This creates a file called 'telnet.spl'
+
+Running Servers
+
+  In order to run any of these servers, run this command::
+
+    % twistd -f [application name].spl
+
+  You can stop the server at any time by going back to the directory you
+  started it in and running the command::
+
+    % kill `cat twistd.pid`
+
+"Spreadable" Webserver
+
+  The web server can also host a telnet server as well as other services;
+  mkwebserver --help can detail some of those options.  One of the most
+  interesting applications, however, is the distributed webserver; multiple
+  servers can all answer requests on the same port, using the twisted.spread
+  package for "spreadable" computing.  In two different directories, run the
+  commands::
+
+    % mkwebserver --user
+    % mkwebserver --personal [other options, if you desire]
+
+  Both of these create a 'web.spl'; you need to run both at the same time.
+  Once you have, go to http://localhost:8080/your_username.twistd/ -- you will
+  see the front page from the server you created with the --personal option.
+  What's happening here is that the request you've sent is being relayed from
+  the central (User) server to your own (Personal) server, over a PB
+  connection.  This technique can be highly useful for small "community" sites;
+  using the code that makes this demo work, you can connect one HTTP port to
+  multiple resources running with different permissions on the same machine, on
+  different local machines, or even over the internet to a remote site.
+
+Documentation and Support
+
+  As of this release, I realize that Twisted's documentation is rather sparse.
+  I encourage you to read the source code and docstrings, but if you're curious
+  as to what Twisted can do, please feel free to drop me an email at
+  glyph@twistedmatrix.com, or to join #python on irc.openprojects.net for some
+  live help.
+
+  Part of the problem with documentation on a project like this is that
+  everything seems obvious to me :-).  If you have trouble with a particular
+  aspect of the Twisted system, I'd like to hear about what was confusing and
+  why.  The process of your learning may be the material I build I tutorial
+  from, so don't hesitate to ask!
+
+Copyright
+
+  Most of the code in this distribution is (C) Twisted Matrix Laboratories.
+  (Twisted Matrix Laboratories is a trademark of Matthew W. Lefkowitz,
+  throughout this archive referred to as "Glyph").  The sole exception to this
+  is the PyUnit directory, which is a derivative work of PyUnit, which can be
+  found at http://pyunit.sourceforge.net.
+
+  Twisted is made available under the GNU Lesser General Public License.  The
+  included LICENSE file describes this in detail.
+
