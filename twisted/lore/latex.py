@@ -102,8 +102,10 @@ class LatexSpitter(XMLParser):
             self.writer(open(fileName).read())
             self.writer('\\end{verbatim}')
             self.ignoring = 1
-        elif attrs.has_key('href') and not attrs['href'].startswith('http:'):
-            self.ref = attrs['href']
+        elif attrs.has_key('href'):
+            href = attrs['href']
+            if not href.startswith('http:') and not href.startswith('#'):
+                self.ref = href
 
     def end_a(self, _):
         self.ignoring = 0
