@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_process -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -154,14 +155,32 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     on sockets...)
     """
 
-    def __init__(self, command, args, environment, path, proto):
+    def __init__(self, command, args, environment, path, proto,
+                 uid=None, gid=None):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
         files / forking / executing the new process happens.  (This is
         executed automatically when a Process is instantiated.)
-        """
 
+        This will also run the subprocess as a given user ID and group ID, if
+        specified.  (Implementation Note: this doesn't support all the arcane
+        nuances of setXXuid on UNIX: it will assume that either your effective
+        or real UID is 0.)
+        """
+        settingUID = (uid is not None) or (gid is not None)
+        if settingUID:
+            curegid = os.getegid()
+            currgid = os.getgid()
+            cureuid = os.geteuid()
+            curruid = os.getuid()
+            if uid is None:
+                uid = cureuid
+            if gid is None:
+                gid = curegid
+            # prepare to change UID in subprocess
+            os.setuid(0)
+            os.setgid(0)
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
@@ -187,6 +206,10 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                     except: pass
                 if path:
                     os.chdir(path)
+                # set the UID before I actually exec the process
+                if settingUID:
+                    os.setuid(uid)
+                    os.setgid(gid)
                 os.execvpe(command, args, environment)
             except:
                 # If there are errors, bail and try to write something
@@ -200,6 +223,9 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 for fd in range(3):
                     os.close(fd)
             os._exit(1)
+        if settingUID:
+            os.setregid(currgid, curegid)
+            os.setreuid(curruid, cureuid)
         self.status = -1
         for fd in stdout_write, stderr_write, stdin_read:
             os.close(fd)

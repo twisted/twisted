@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.15 2002/06/08 14:15:59 glyph Exp $
+# $Id: default.py,v 1.16 2002/06/26 06:47:50 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -148,9 +148,10 @@ class PosixReactorBase(ReactorBase):
         return tcp.Client(host, port, protocol, timeout)
 
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None):
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
+                     uid=None, gid=None):
         if platform.getType() == 'posix':
-            return process.Process(executable, args, env, path, processProtocol)
+            return process.Process(executable, args, env, path, processProtocol, uid, gid)
         else:
             raise NotImplementedError, "process only available in this reactor on POSIX"
 
