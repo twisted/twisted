@@ -153,16 +153,6 @@ cdef extern from "pymactoolbox.h":
         CFStreamErrorDomain domain
         int error
 
-    # this is really carbon.. but
-
-    ctypedef void *EventLoopRef
-    cdef CFTypeRef GetCFRunLoopFromEventLoop(EventLoopRef inEventLoop)
-    cdef EventLoopRef GetCurrentEventLoop()
-
-    
-    # pymactoolbox
-    #cdef int EventLoopRef_Convert(object, EventLoopRef *)
-    
     cdef object CFObj_New(CFTypeRef)
     cdef int CFObj_Convert(object, CFTypeRef *)
     cdef object CFTypeRefObj_New(CFTypeRef)

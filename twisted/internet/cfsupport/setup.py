@@ -5,7 +5,7 @@ try:
     # pyrex is available
     setup(
         name = 'cfsupport',
-        version = '0.2',
+        version = '0.4',
         description = "Enough CoreFoundation wrappers to deal with CFRunLoop",
         long_description = "Pythonic wrappers for pieces of Apple's CoreFoundation API's that are not otherwise wrapped by MacPython.\nPrimarily useful for dealing with CFRunLoop.",
         maintainer = 'Bob Ippolito',
@@ -20,7 +20,6 @@ try:
                 extra_link_args=[
                     '-framework','CoreFoundation',
                     '-framework','CoreServices',
-                    '-framework','Carbon',
                 ],
             ),
         ],
@@ -30,7 +29,7 @@ except ImportError:
     # pyrex is not available, use existing .c
     setup(
         name = 'cfsupport',
-        version = '0.2',
+        version = '0.4',
         description = "Enough CoreFoundation wrappers to deal with CFRunLoop",
         long_description = "Pythonic wrappers for pieces of Apple's CoreFoundation API's that are not otherwise wrapped by MacPython.\nPrimarily useful for dealing with CFRunLoop.",
         maintainer = 'Bob Ippolito',
@@ -45,7 +44,6 @@ except ImportError:
                 extra_link_args=[
                     '-framework','CoreFoundation',
                     '-framework','CoreServices',
-                    '-framework','Carbon',
                 ],
             ),
         ],

@@ -29,7 +29,6 @@ __all__ = ['install']
 import sys
 
 # hints for py2app
-import Carbon.CarbonEvt
 import Carbon.CF
 import traceback
 
@@ -38,6 +37,8 @@ import cfsupport as cf
 from twisted.python import log, threadable, failure
 from twisted.internet import posixbase, error
 from weakref import WeakKeyDictionary
+from Foundation import NSRunLoop
+from AppKit import NSApp
 
 # cache two extremely common "failures" without traceback info
 _faildict = {
@@ -183,34 +184,16 @@ class CFReactor(posixbase.PosixReactorBase):
         self._doRunUntilCurrent = True
         self.timer = None
         self.runLoop = None
-        self.inheritedRunLoop = runLoop is not None 
-        if self.inheritedRunLoop:
+        self.nsRunLoop = None
+        self.didStartRunLoop = False
+        if runLoop is not None:
             self.getRunLoop(runLoop)
         posixbase.PosixReactorBase.__init__(self)
 
-    def installWaker(self):
-        # I don't know why, but the waker causes 100% CPU
-        # so for now we don't install one, ever.
-        return
-    
     def getRunLoop(self, runLoop=None):
         if self.runLoop is None:
-            # If Foundation is loaded, assume they want the current
-            # NSRunLoop, not the base CFRunLoop.
-            # If None or an NSRunLoop instance is given, then we assume
-            # the user has caused it to begin running.  In reality, 
-            # NSApplication probably started it for them.
-            #
-            # If this is a wrong guess, the user can make the runloop go
-            # on their own after reactor.run().  It's a pretty good guess,
-            # though.
-            if 'Foundation' in sys.modules:
-                from Foundation import NSRunLoop
-                nsRunLoop = runLoop or NSRunLoop.currentRunLoop()
-                if isinstance(nsRunLoop, NSRunLoop):
-                    runLoop = nsRunLoop.getCFRunLoop()
-                    self.inheritedRunLoop = True
-            self.runLoop = cf.PyCFRunLoop(runLoop)
+            self.nsRunLoop = runLoop or NSRunLoop.currentRunLoop()
+            self.runLoop = cf.PyCFRunLoop(self.nsRunLoop.getCFRunLoop())
         return self.runLoop
     
     def addReader(self, reader):
@@ -252,11 +235,12 @@ class CFReactor(posixbase.PosixReactorBase):
         self.startRunning(installSignalHandlers=installSignalHandlers)
 
         self.running = True
-        if not self.inheritedRunLoop:
-            # Inherited runLoops are assumed to be running already,
-            # but we created this one so we have to start it.
+        if NSApp() is None and self.nsRunLoop.currentMode() is None:
+            # Most of the time the NSRunLoop will have already started,
+            # but in this case it wasn't.
             runLoop.run()
             self.crashing = False
+            self.didStartRunLoop = True
 
     def callLater(self, howlong, *args, **kwargs):
         rval = posixbase.PosixReactorBase.callLater(self, howlong, *args, **kwargs)
@@ -329,7 +313,7 @@ class CFReactor(posixbase.PosixReactorBase):
         if self.timer is not None:
             self.runLoop.removeTimer(self.timer)
             self.timer = None
-        if not self.inheritedRunLoop:
+        if self.didStartRunLoop:
             self.runLoop.stop()
 
     def stop(self):

@@ -1,4 +1,3 @@
-import _CarbonEvt
 import traceback
 
 # possibly figure out how to subclass these or something
@@ -52,20 +51,13 @@ cdef class PyCFRunLoop:
 
     def __new__(self, runLoop=None):
         cdef CFTypeRef _runLoop
-        cdef EventLoopRef _evtLoop
         if runLoop is None:
             _runLoop = CFRunLoopGetCurrent()
-        elif isinstance(runLoop, _CarbonEvt.EventLoopRef):
-            # XXX - I don't know how to get access to this
-            #
-            #if EventLoopRef_Convert(runLoop, &_evtLoop) == 0:
-            #    return -1
-            _evtLoop = GetCurrentEventLoop()
-            _runLoop = GetCFRunLoopFromEventLoop(_evtLoop)
         else:
             if CFObj_Convert(runLoop, &_runLoop) == 0:
                 raise
                 #return -1
+        # this is going to leak a reference
         self.cf = CFObj_New(CFRetain(_runLoop))
 
     def run(self):
