@@ -340,10 +340,10 @@ class SSHUserAuthClient(service.SSHService):
         else:
             return 0
 
-    def authdont_password(self):
+    def auth_password(self):
         d = self.getPassword()
         if d:
-            d.addCallbacks(self._cbPassword, self._errPass)
+            d.addCallbacks(self._cbPassword, self._ebAuth)
             return 1
         else: # returned None, don't do password auth
             return 0
