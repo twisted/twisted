@@ -44,8 +44,9 @@ def latexEscape(text):
     text = escapingRE.sub(_escapeMatch, text)
     return text.replace('\n', ' ')
 
-entities = { 'amp': '\&', 'gt': '>', 'lt': '<', 'quot': '"',
-             'copy': '\\copyright'}
+entities = {'amp': '\&', 'gt': '>', 'lt': '<', 'quot': '"',
+            'copy': '\\copyright', 'mdash': '---', 'rdquo': '``', 
+            'ldquo': "''"}
 
 
 def realpath(path):
