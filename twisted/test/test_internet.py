@@ -90,9 +90,18 @@ class InterfaceTestCase(unittest.TestCase):
         while time.time() - start < 0.6:
             reactor.iterate(0.01)
         self.assertEquals(self._called, 1)
-        self.assert_( self._calledTime - start - 0.5 < 0.05 )
+        self.assert_( 0 < self._calledTime - start - 0.5 < 0.05 )
         del self._called
         del self._calledTime
+
+    def testWakeUp(self):
+        def wake(reactor=reactor):
+            time.sleep(0.5)
+            reactor.wakeUp()
+        start = time.time()
+        t = threading.Thread(target=wake).start()
+        reactor.iterate(5)
+        self.assert_( abs(time.time() - start - 0.5) < 0.05 )
 
 
 class Counter:
