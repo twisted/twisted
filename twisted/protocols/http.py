@@ -33,7 +33,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # system imports
 from cStringIO import StringIO
 import tempfile
-import base64
+import base64, binascii
 import cgi
 import socket
 import math
@@ -850,11 +850,16 @@ class Request:
         try:
             authh = self.getHeader("Authorization")
             bas, upw = authh.split()
+            if bas.lower() != "basic":
+                raise ValueError
             upw = base64.decodestring(upw)
-            self.user, self.password = upw.split(':')
-        except:
+            self.user, self.password = upw.split(':', 1)
+        except (binascii.Error, ValueError):
             self.user = self.password = ""
-
+        except:
+            log.err()
+            self.user = self.password = ""
+    
     def getUser(self):
         try:
             return self.user

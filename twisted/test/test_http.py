@@ -291,6 +291,19 @@ class ParsingTestCase(unittest.TestCase):
         else:
             self.assert_(not hasattr(self, "didRequest"))
 
+    def testBasicAuth(self):
+        testcase = self
+        class Request(http.Request):
+            l = []
+            def process(self):
+                testcase.assertEquals(self.getUser(), self.l[0])
+                testcase.assertEquals(self.getPassword(), self.l[1])
+        for u, p in [("foo", "bar"), ("hello", "there:z")]:
+            Request.l[:] = [u, p]
+            s = "%s:%s" % (u, p)
+            f = "GET / HTTP/1.0\nAuthorization: Basic %s\n\n" % (s.encode("base64").strip(), )
+            self.runRequest(f, Request, 0)
+    
     def testTooManyHeaders(self):
         httpRequest = "GET / HTTP/1.0\n"
         for i in range(502):
