@@ -50,15 +50,16 @@ def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
 class Article:
     def __init__(self, head, body):
         self.body = body
-        head = map(lambda x: string.split(x, ': ', 1), string.split(head, '\r\n'))
         self.headers = {}
-        for i in head:
-            if len(i) == 0:
-                continue
-            elif len(i) == 1:
-                self.headers[string.lower(i[0])] = (i, '')
+        header = None
+        for line in head.split('\r\n'):
+            if line[0] in ' \t':
+                i = list(self.headers[header])
+                i[1] += '\r\n' + line
             else:
-                self.headers[string.lower(i[0])] = tuple(i)
+                i = line.split(': ', 1)
+                header = i[0].lower()
+            self.headers[header] = tuple(i)
 
         if not self.getHeader('Message-ID'):
             s = str(time.time()) + self.body
@@ -90,7 +91,7 @@ class Article:
         headers = []
         for i in self.headers.values():
             headers.append('%s: %s' % i)
-        return string.join(headers, '\r\n')
+        return string.join(headers, '\r\n') + '\r\n'
     
     def overview(self):
         xover = []
@@ -275,7 +276,7 @@ class PickleStorage(NewsStorage):
 
     def postRequest(self, message):
         cleave = string.find(message, '\r\n\r\n')
-        headers, article = message[:cleave], message[cleave + 1:]
+        headers, article = message[:cleave], message[cleave + 4:]
 
         a = Article(headers, article)
         groups = string.split(a.getHeader('Newsgroups'))
@@ -359,7 +360,7 @@ class PickleStorage(NewsStorage):
         if self.db.has_key(group):
             if self.db[group].has_key(index):
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + a.body))
+                return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + '\r\n' + a.body))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -431,7 +432,10 @@ class NewsShelf(NewsStorage):
         self.path = path
         self.mailhost = mailhost
 
-        self.dbm = dirdbm.Shelf(path)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        self.dbm = dirdbm.Shelf(os.path.join(path, "newsshelf"))
         if not len(self.dbm.keys()):
             self.initialize()
 
@@ -500,7 +504,7 @@ class NewsShelf(NewsStorage):
 
     def postRequest(self, message):
         cleave = message.find('\r\n\r\n')
-        headers, article = message[:cleave], message[cleave + 1:]
+        headers, article = message[:cleave], message[cleave + 4:]
         
         article = Article(headers, article)
         groups = article.getHeader('Newsgroups').split()
@@ -600,7 +604,7 @@ class NewsShelf(NewsStorage):
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + a.body))
+            return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + '\r\n' + a.body))
     
     
     def headRequest(self, group, index, id = None):
@@ -722,7 +726,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
 
     def postRequest(self, message):
         cleave = string.find(message, '\r\n\r\n')
-        headers, article = message[:cleave], message[cleave + 1:]
+        headers, article = message[:cleave], message[cleave + 4:]
         article = Article(headers, article)
         return self.runInteraction(self._doPost, article)
 
