@@ -37,7 +37,7 @@ def _no_log_output(func, *args, **kw):
     old = sys.stdout
     sys.stdout = io
     try:
-        result = apply(func, args, kw)
+        result = func(*args, **kw)
         return result, io.getvalue()
     finally:
         sys.stdout = old
@@ -47,17 +47,16 @@ def _log_output(func, *args, **kw):
     io = Output()
     logOwner.own(io)
     try:
-        result = apply(func, args, kw)
+        result = func(*args, **kw)
         return result, io.getvalue()
     finally:
         logOwner.disown(io)
 
 
 def output(func, *args, **kw):
-    return apply([_no_log_output, _log_output]
-                 [isinstance(sys.stdout, Log)],
-                 (func,)+args,kw)
-
+    if isinstance(sys.stdout, Log):
+        return _log_output(func, *args, **kw)
+    return _no_log_output(func, *args, **kw)
 
 file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
                  'readline', 'readlines', 'seek', 'softspace', 'tell',
@@ -256,8 +255,12 @@ class LogOwner:
     def disown(self, owner):
         """Remove an object as owner of the log."""
         if owner is not None:
-            x = self.owners.pop()
-            assert x is owner, "Bad disown"
+            if self.owners:
+                x = self.owners.pop()
+                if x is not owner:
+                    warnings.warn("Bad disown: %r is not %r" % (x, owner))
+            else:
+                warnings.warn("Bad disown: %r, owner stack is empty" % (owner,))
 
     def owner(self):
         """Return the owner of the log."""
@@ -280,9 +283,7 @@ class ThreadedLogOwner:
         """Set an object as owner of the log."""
         if owner is not None:
             i = self.threadId()
-            owners = self.ownersPerThread.get(i,[])
-            owners.append(owner)
-            self.ownersPerThread[i] = owners
+            self.ownersPerThread.setdefault(i, []).append(owner)
 
     def disown(self, owner):
         """Remove an object as owner of the log."""
@@ -359,7 +360,7 @@ except NameError:
 
 def _threaded_msg(*stuff):
     loglock.acquire()
-    apply(real_msg, stuff)
+    real_msg(*stuff)
     loglock.release()
 
 def initThreads():
