@@ -23,9 +23,6 @@ A simple port forwarder.
 from twisted.internet import reactor
 from twisted.protocols import protocol
 
-# System imports
-import types
-
 
 class StupidProtocol(protocol.Protocol):
 
@@ -42,8 +39,10 @@ class StupidProtocol(protocol.Protocol):
 
 class StupidProtocolServer(StupidProtocol):
 
+    clientProtocol = StupidProtocol
+
     def connectionMade(self):
-        clientProtocol = StupidProtocol()
+        clientProtocol = self.clientProtocol()
         clientProtocol.setPeer(self.transport)
         client = reactor.clientTCP(self.factory.host, self.factory.port,
                                    clientProtocol)
