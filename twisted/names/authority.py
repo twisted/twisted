@@ -89,6 +89,7 @@ class FileAuthority(common.ResolverBase):
 #        print 'setstate ', self.soa
 
     def _lookup(self, name, cls, type, timeout = None):
+        cnames = []
         results = []
         authority = []
         additional = []
@@ -107,6 +108,12 @@ class FileAuthority(common.ResolverBase):
                     authority.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
+                if record.TYPE == dns.CNAME:
+                    cnames.append(
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
+                    )
+            if not results:
+                results = cnames
             
             for record in results + authority:
                 if record.type == dns.NS or record.type == dns.CNAME:
