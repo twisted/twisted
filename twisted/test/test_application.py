@@ -18,7 +18,7 @@ from twisted.trial import unittest
 from twisted.application import service, compat, internet, app
 from twisted.persisted import sob
 from twisted.python import components
-from twisted.internet import utils, interfaces
+from twisted.internet import utils, interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
 import copy, os, pickle, sys
@@ -503,16 +503,14 @@ class TestInternet2(unittest.TestCase):
         t = internet.TCPServer(0, p)
         t.startService()
         num = t._port.getHost()[2]
-        d = t.stopService()
         l = []
-        d.addCallback(l.append)
+        defer.maybeDeferred(t.stopService).addCallback(l.append)
         while not l:
             reactor.iterate(0.1)
         t = internet.TCPServer(num, p)
         t.startService()
-        d = t.stopService()
         l = []
-        d.addCallback(l.append)
+        defer.maybeDeferred(t.stopService).addCallback(l.append)
         while not l:
             reactor.iterate(0.1)
 
