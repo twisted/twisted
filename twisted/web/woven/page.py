@@ -2,7 +2,7 @@
 #
 # page.py
 
-__version__ = "$Revision: 1.22 $"[11:-2]
+__version__ = "$Revision: 1.23 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.web import resource
@@ -78,6 +78,7 @@ class LivePage(model.MethodModel, controller.LiveController, view.LiveView):
         template = kwargs.setdefault('template', None)
         del kwargs['template']
 
+        model.Model.__init__(self, *args, **kwargs)
         if m is None:
             self.model = self
         else:
