@@ -17,6 +17,9 @@ and disconnect.
 supports all four arrow keys and spacebar to switch between "drawing"
 characters.
 
+  manhole.py is like demo_recvline.py, but is hooked up to a Python
+interpreter.
+
   All demos listen on two ports, 6022 for ssh and 6023 for telnet.  The
 telnet server requires no login.  The credentials for the ssh server are
 username / password.  No terminal cleanup can be performed in the event of
