@@ -25,27 +25,56 @@ from twisted.internet import reactor, protocol
 
 class Proxy(protocol.Protocol):
 
+    peer = None
+    buf = ''
+
     def setPeer(self, peer):
         self.peer = peer
+        self.peer.transport.write(self.buf)
+        self.buf = ''
 
     def connectionLost(self, reason):
-        self.peer.loseConnection()
+        self.peer.transport.loseConnection()
         del self.peer
 
     def dataReceived(self, data):
-        self.peer.write(data)
+        if self.peer:
+            self.peer.transport.write(data)
+        else:
+            self.buf += data
+
+
+class ProxyClient(Proxy):
+
+    def connectionMade(self):
+        self.peer.setPeer(self)
+
+
+class ProxyClientFactory(protocol.ClientFactory):
+
+    protocol = ProxyClient
+
+    def setServer(self, server):
+        self.server = server
+
+    def buildProtocol(self, *args, **kw):
+        prot = protocol.ClientFactory.buildProtocol(self, *args, **kw)
+        prot.setPeer(self.server)
+        return prot
+
+    def clientConnectionFailed(self, connector, reason):
+        self.server.transport.loseConnection()
 
 
 class ProxyServer(Proxy):
 
-    clientProtocol = Proxy
+    clientProtocolFactory = ProxyClientFactory
 
     def connectionMade(self):
-        clientProtocol = self.clientProtocol()
-        clientProtocol.setPeer(self.transport)
-        client = reactor.clientTCP(self.factory.host, self.factory.port,
-                                   clientProtocol)
-        self.setPeer(client)
+        client = self.clientProtocolFactory()
+        client.setServer(self)
+        client = reactor.connectTCP(self.factory.host, self.factory.port,
+                                    client)
 
 
 class ProxyFactory(protocol.Factory):
