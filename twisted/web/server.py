@@ -289,6 +289,8 @@ class Request(pb.Copyable, http.Request):
             if adapted:
                 self.session.sessionNamespaces[sessionInterface] = adapted
                 return adapted
+            else:
+                raise NotImplementedError, "A session adapter wasn't registered for interface %s" % sessionInterface
         return self.session
 
     def prePathURL(self):

@@ -85,6 +85,7 @@ from twisted.python import mvc
 from twisted.python import log
 
 from server import NOT_DONE_YET
+STOP_RENDERING = 1
 
 class MethodLookup:
     def __init__(self):
@@ -136,6 +137,7 @@ class DefaultWidget(domwidgets.Widget):
 
     def setSubmodel(self, submodel):
         self.submodel = submodel
+
 
 class DOMTemplate(Resource, View):
     """A resource that renders pages using DOM."""
@@ -377,7 +379,6 @@ class DOMTemplate(Resource, View):
         result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
         if not isinstance(returnNode, Deferred):
-            returnNode.toxml()
             self.recurseChildren(request, returnNode)
 
     def sendPage(self, request):
@@ -395,12 +396,13 @@ class DOMTemplate(Resource, View):
                 if self.controller:
                     self.controller.process(request, **process)
                 else:
-                    self.process(request, **process)
+                    stop = self.process(request, **process)
 
-        page = str(self.d.toxml())
-        request.write(page)
-        request.finish()
-        return page
+        if not stop:
+            page = str(self.d.toxml())
+            request.write(page)
+            request.finish()
+            return page
 
     def handleFailures(self, request, failures):
         print "There were failures: ", failures
@@ -413,7 +415,7 @@ class DOMTemplate(Resource, View):
             process[str(node.getAttribute('name'))] = data
         return process
 
-    def process(self, process):
+    def process(self, request, **kwargs):
         print "Processing results: ", process
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
@@ -431,10 +433,14 @@ class DOMController(mvc.Controller, Resource):
         mvc.Controller.__init__(self, *args, **kwargs)
         Resource.__init__(self)
     
+    def setUp(self, request):
+        pass
+
     def render(self, request):
+        self.setUp(request)
         self.view = components.getAdapter(self.model, mvc.IView, None)
         self.view.setController(self)
         return self.view.render(request)
 
-    def process(self, process):
+    def process(self, request, **kwargs):
         print "Processing results: ", process

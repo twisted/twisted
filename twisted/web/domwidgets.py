@@ -168,6 +168,9 @@ class Div(Widget):
 class Span(Widget):
     tagName = 'span'
 
+class Br(Widget):
+    tagName = 'br'
+
 class Input(Widget):
     tagName = 'input'    
     def setSubmodel(self, submodel):
