@@ -173,7 +173,7 @@ if not config.nodaemon:
     if os.fork():   # launch child and...
         os._exit(0) # kill off parent
     os.setsid()
-    os.umask(0)
+    os.umask(077)
     oldstdin.close()
     oldstdout.close()
     oldstderr.close()
