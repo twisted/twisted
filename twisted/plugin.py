@@ -108,6 +108,15 @@ except AttributeError:
 
 _exts = fromkeys(['.py', '.so', '.pyd', '.dll'])
 
+try:
+    WindowsError
+except NameError:
+    class WindowsError:
+        """
+        Stand-in for sometimes-builtin exception on platforms for which it
+        is missing.
+        """
+
 def getCache(module):
     topcache = {}
     for p in module.__path__:
@@ -122,6 +131,11 @@ def getCache(module):
             dropinNames = os.listdir(p)
         except OSError, ose:
             if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
+                raise
+            else:
+                continue
+        except WindowsError, e:
+            if e.errno != 3:
                 raise
             else:
                 continue
