@@ -19,8 +19,8 @@
 """
 Dynamic pseudo-scoping for Python.
 
-Call functions with context.call({key: value}, func) and 'func' and
-function that it calls will be able to use 'context.get(key)' to
+Call functions with context.call({key: value}, func); func and
+functions that it calls will be able to use 'context.get(key)' to
 retrieve 'value'.
 
 This is thread-safe.
