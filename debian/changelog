@@ -1,4 +1,4 @@
-twisted (1.0.1-1) unstable; urgency=low
+twisted (1.0.2-1) unstable; urgency=low
 
   * Semi dummy entry, to remind me stuff I need to write:
   * Split out conch
