@@ -26,19 +26,51 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 import struct, os
 
 from twisted.internet import protocol, reactor
-from twisted.python import log
+from twisted.python import log, components
 
 import common, channel, filetransfer
+
+class ISession(components.Interface):
+
+    def getPty(self, term, windowSize, modes):
+        """
+        Get a psuedo-terminal for use by a shell or command.
+
+        If a psuedo-terminal is not available, or the request otherwise
+        fails, raise an exception.
+        """
+
+    def openShell(self, proto):
+        """
+        Open a shell and connect it to proto.
+
+        proto should be a ProcessProtocol instance.
+        """
+
+    def execCommand(self, proto, command, *args):
+        """
+        Execute a command.
+
+        proto should be a ProcessProtocol instance.
+        """
+
+    def windowChanged(self, newWindowSize):
+        """
+        Called when the size of the remote screen has changed.
+        """
+
+    def closed(self):
+        """
+        Called when the session is closed.
+        """
 
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
     def __init__(self, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
-        self. environ = {'PATH':'/bin:/usr/bin:/usr/local/bin'}
         self.buf = ''
-        self.pty = None
-        self.ptyTuple = 0
+        self.session = ISession(self.avatar)
 
     def request_subsystem(self, data):
         subsystem = common.getNS(data)[0]
@@ -53,91 +85,142 @@ class SSHSession(channel.SSHChannel):
             return 0
 
     def request_shell(self, data):
+        try:
+            self.client = SSHSessionProcessProtocol(self)
+            self.session.openShell(self.client)
+        except:
+            log.msg('error getting shell:')
+            log.deferr()
+            return 0
+        else:
+            return 1
+
+    def request_exec(self, data):
+        l = []
+        while data:
+            f,data = common.getNS(data)
+            l.append(f)
+        try:
+            self.client = SSHSessionProcessProtocol(self)
+            self.session.execCommand(self.client, *l)
+        except:
+            log.msg('error executing command: %s' % l)
+            log.deferr()
+            return 0
+        else:
+            return 1
+
+    def request_pty_req(self, data):
+        term, windowSize, modes = parseRequest_pty_req(data)
+        try:
+            self.session.getPty(term, windowSize, modes) 
+        except:
+            log.msg('error getting pty')
+            log.deferr()
+            return 0
+        else:
+            return 1
+
+    def request_window_change(self, data):
+        import fcntl, tty
+        winSize = parseRequest_window_change(data)
+        try:
+            self.session.windowChanged(winSize)
+        except:
+            log.msg('error changing window size')
+            log.deferr()
+            return 0
+        else:
+            return 1
+
+    def dataReceived(self, data):
+        if not hasattr(self, 'client'):
+            #self.conn.sendClose(self)
+            self.buf += data
+            return
+        self.client.transport.write(data)
+
+    def extReceived(self, dataType, data):
+        if dataType == connection.EXTENDED_DATA_STDERR:
+            if hasattr(self, 'client') and hasattr(self.client.transport, 'writeErr'):
+                self.client.transport.writeErr(data)
+        else:
+            log.msg('weird extended data: %s'%dataType)
+
+    def eofReceived(self):
+        self.loseConnection() # don't know what to do with this
+
+    def loseConnection(self):
+        self.client.transport.loseConnection()
+        channel.SSHChannel.loseConnection(self)
+
+class SSHSessionForUnixConchUser:
+
+    __implements__ = ISession
+
+    def __init__(self, avatar):
+        self.avatar = avatar
+        self. environ = {'PATH':'/bin:/usr/bin:/usr/local/bin'}
+        self.pty = None
+        self.ptyTuple = 0
+
+    def getPty(self, term, windowSize, modes):
+        import pty
+        self.environ['TERM'] = term
+        self.winSize = windowSize
+        self.modes = modes
+        master, slave = pty.openpty()
+        ttyname = os.ttyname(slave)
+        self.environ['SSH_TTY'] = ttyname 
+        self.ptyTuple = (master, slave, ttyname)
+
+    def openShell(self, proto):
         import fcntl, tty
         if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
-            return 0
+            raise error.ConchError("no pty")
+        #proto = wrapProtocol(proto)
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
         shell = self.avatar.getShell()
         self.environ['USER'] = self.avatar.username
         self.environ['HOME'] = homeDir
         self.environ['SHELL'] = shell
-        peer = self.conn.transport.transport.getPeer()
-        host = self.conn.transport.transport.getHost()
+        peer = self.avatar.conn.transport.transport.getPeer()
+        host = self.avatar.conn.transport.transport.getHost()
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
         self.getPtyOwnership()
-        try:
-            self.client = SSHSessionClient()
-            pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
+        self.pty = reactor.spawnProcess(proto, \
                   shell, ['-', '-i'], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
-            fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
+        fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
-        except OSError, e:
-            log.msg('failed to get pty')
-            log.msg('reason:')
-            log.deferr()
-            return 0
-        else:
-            self.pty = pty
-            if self.modes:
-                self.setModes()
-            self.conn.transport.transport.setTcpNoDelay(1)
-            return 1
+        if self.modes:
+            self.setModes()
+        self.oldWrite = proto.transport.write
+        proto.transport.write = self._writeHack
+        self.avatar.conn.transport.transport.setTcpNoDelay(1)
 
-    def request_exec(self, data):
-        command = common.getNS(data)[0]
+    def execCommand(self, proto, cmd, *args):
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
-        shell = self.avatar.getShell()
-        command = [shell, '-c', command]
-        peer = self.conn.transport.transport.getPeer()
-        host = self.conn.transport.transport.getHost()
+        shell = self.avatar.getShell() or '/bin/sh'
+        command = (shell, '-c', cmd) + args
+        peer = self.avatar.conn.transport.transport.getPeer()
+        host = self.avatar.conn.transport.transport.getHost()
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
         if self.ptyTuple:
             self.getPtyOwnership()
-        try:
-            self.client = SSHSessionClient()
-            pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
-                    shell, command, self.environ, homeDir,
-                    uid, gid, usePTY = self.ptyTuple or 1)
-        except OSError, e:
-            log.msg('failed to exec %s' % command)
-            log.msg('reason:')
-            log.deferr()
-            return 0
+        self.pty = reactor.spawnProcess(proto, \
+                shell, command, self.environ, homeDir,
+                uid, gid, usePTY = self.ptyTuple or 1)
+        if self.ptyTuple:
+            if self.modes:
+                self.setModes()
         else:
-            self.pty = pty
-            if self.ptyTuple:
-                if self.modes:
-                    self.setModes()
-            else:
-                import tty
-                tty.setraw(pty.fileno(), tty.TCSANOW)
-            self.conn.transport.transport.setTcpNoDelay(1)
-            if self.buf:
-                self.client.dataReceived(self.buf)
-                self.buf = ''
-            return 1
-        return 0
-
-    def request_pty_req(self, data):
-        import pty
-        self.environ['TERM'], self.winSize, self.modes =  \
-                              parseRequest_pty_req(data)
-        master, slave = pty.openpty()
-        ttyname = os.ttyname(slave)
-        self.environ['SSH_TTY'] = ttyname 
-        self.ptyTuple = (master, slave, ttyname)
-        return 1
-
-    def request_window_change(self, data):
-        import fcntl, tty
-        self.winSize = parseRequest_window_change(data)
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
-                    struct.pack('4H', *self.winSize))
-        return 1
+            import tty
+            tty.setraw(self.pty.fileno(), tty.TCSANOW)
+        self.avatar.conn.transport.transport.setTcpNoDelay(1)
 
     def getPtyOwnership(self):
         ttyGid = os.stat(self.ptyTuple[2])[5]
@@ -176,59 +259,56 @@ class SSHSession(channel.SSHChannel):
                 attr[tty.CC][ttyval] = chr(modeValue)
         tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
 
-    def dataReceived(self, data):
-        if not hasattr(self, 'client'):
-            #self.conn.sendClose(self)
-            self.buf += data
-            return
-        if self.pty is not None:
-            import tty
-            attr = tty.tcgetattr(self.pty.fileno())[3]
-            if not attr & tty.ECHO and attr & tty.ICANON: # no echo
-                self.conn.transport.sendIgnore('\x00' * (8+len(data)))
-        self.client.dataReceived(data)
-
-    def extReceived(self, dataType, data):
-        if dataType == connection.EXTENDED_DATA_STDERR:
-            if hasattr(self.client, 'errReceieved'):
-                self.client.errReceived(data)
-        else:
-            log.msg('weird extended data: %s'%dataType)
-
-    def eofReceived(self):
-        self.loseConnection() # don't know what to do with this
-
-    def loseConnection(self):
-        self.pty = None
-        channel.SSHChannel.loseConnection(self)
-
     def closed(self):
-        import os
         if self.pty:
-            import signal
+            import os
             self.pty.loseConnection()
             self.pty.signalProcess('HUP')
             if self.ptyTuple:
                 ttyGID = os.stat(self.ptyTuple[2])[5]
                 os.chown(self.ptyTuple[2], 0, ttyGID)
-        try:
-            del self.client
-        except AttributeError:
-            pass # we didn't have a client
-        channel.SSHChannel.closed(self)
 
-class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
-    def __init__(self, session, client):
+    def _writeHack(self, data):
+        """
+        Hack to send ignore messages when we aren't echoing.
+        """
+        if self.pty is not None:
+            import tty
+            attr = tty.tcgetattr(self.pty.fileno())[3]
+            if not attr & tty.ECHO and attr & tty.ICANON: # no echo
+                self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
+        self.oldWrite(data)
+
+class ProtocolWrapper(protocol.ProcessProtocol):
+    """
+    This class wraps a Protocol instance in a ProcessProtocol instance.
+    """
+    def __init__(self, proto):
+        self.proto = proto
+
+    def connectionMade(self): self.proto.connectionMade()
+    
+    def outReceived(self, data): self.proto.dataReceived(data)
+
+    def processEnded(self, reason): self.proto.connectionLost(reason)
+    
+def wrapProtocol(inst):
+    if isinstance(inst, protocol.Protocol):
+        return ProtocolWrapper(inst)
+    else:
+        return inst
+
+class SSHSessionProcessProtocol(protocol.ProcessProtocol):
+    def __init__(self, session):
         self.session = session
-        self.client = client
 
     def connectionMade(self):
-        self.client.transport = self.transport
+        if self.session.buf:
+            self.transport.write(self.session.buf)
+            self.session.buf = None
 
-    def dataReceived(self, data):
+    def outReceived(self, data):
         self.session.write(data)
-
-    outReceived = dataReceived
 
     def errReceived(self, err):
         self.session.conn.sendExtendedData(self.session, connection.EXTENDED_DATA_STDERR, err)

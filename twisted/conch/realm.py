@@ -193,3 +193,4 @@ class UnixConchUser(ConchUser):
 
 
 components.registerAdapter(filetransfer.SFTPServerForUnixConchUser, UnixConchUser, filetransfer.ISFTPServer)
+components.registerAdapter(session.SSHSessionForUnixConchUser, UnixConchUser, session.ISession)
