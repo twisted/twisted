@@ -129,3 +129,17 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
         self.assertEquals(h.subcmd, [telnet.SE])
 
+    def testBoundardySubnegotiation(self):
+        cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + 'hello' + telnet.SE
+        for i in range(len(cmd)):
+            h = self.p.handler = TestHandler(self.p)
+
+            a, b = cmd[:i], cmd[i:]
+            L = ["first part" + a,
+                 b + "last part"]
+
+            for bytes in L:
+                self.p.dataReceived(bytes)
+
+            self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
+            self.assertEquals(h.subcmd, [telnet.SE] + list('hello'))
