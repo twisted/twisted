@@ -24,6 +24,7 @@ certPath = util.sibpath(__file__, "server.pem")
 class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
     
     def setUp(self):
+        self._setUp()
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
         self.listener = reactor.listenSSL(

@@ -573,9 +573,12 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
 
     numberRounds = 2048
     timeLimit = 200
-    
-    def setUp(self):
+
+    def _setUp(self):
         PortCleanerUpper.setUp(self)
+
+    def setUp(self):
+        self._setUp()
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
         self.listener = reactor.listenTCP(0, f, interface="127.0.0.1")
