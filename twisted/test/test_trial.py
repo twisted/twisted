@@ -235,14 +235,14 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
             # when it becomes an error to leave selectables in the reactor
             # uncomment the following line: 
             #self._failUnlessIn(reporter.UNCLEAN_REACTOR_WARN)
-            self._failUnlessIn(util.DIRTY_REACTOR_MSG)
+            #self._failUnlessIn("[ERROR]: test_socketsLeftOpen")
         return self.spawnChild(args).addCallback(_cb)
 
     def testLeftoverPendingCalls(self):
         args = self.args + ['twisted.test.trialtest1.ReactorCleanupTests.test_leftoverPendingCalls']
 
         def _cb(cpp):
-            self._failUnlessIn(reporter.UNCLEAN_REACTOR_WARN)
+            self._failUnlessIn("[ERROR]: test_leftoverPendingCalls")
             self._failUnlessIn(util.PENDING_TIMED_CALLS_MSG)
         return self.spawnChild(args).addCallback(_cb)
     

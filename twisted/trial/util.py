@@ -143,7 +143,7 @@ class Janitor(object):
             for p in pending:
                 p.cancel() # delete the rest
 
-            reactor.iterate(0.01) # flush them
+            spinWhile(reactor.getDelayedCalls)
 
         if s is not None:
             raise PendingTimedCallsError, s

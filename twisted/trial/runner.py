@@ -771,14 +771,12 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                         else:
                             reporter.upDownError(um, warn=False)
             finally:
-                reporter.endTest(self)
                 observer.remove()
                 self.logevents = observer.events
+                self.doCleanup()
+                reporter.endTest(self)
 
         finally:
-            errs = self.doCleanup()
-            if errs:
-                reporter.cleanupErrors(errs)
             self._signalStateMgr.restore()
 
 
@@ -788,10 +786,7 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
         """
         errs = self.getJanitor().postMethodCleanup()
         for f in errs:
-            if f.check(unittest.FailTest):
-                self.failures.append(f)
-            else:
-                self.errors.append(f)
+            self._eb(f)
         return errs
 
 
