@@ -14,7 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""NNTP protocol support.
+"""
+NNTP protocol support.
 
   The following protocol commands are currently understood:
     LIST        LISTGROUP                  XOVER        XHDR
@@ -35,6 +36,7 @@
     A control protocol
 """
 
+from twisted.internet import protocol
 from twisted.protocols import basic
 from twisted.python import log
 
@@ -176,9 +178,32 @@ class NNTPClient(basic.LineReceiver):
         "Override for notification when getXHeader() action fails"
 
 
+    def gotNewNews(self, news):
+        "Override for notification when getNewNews() action is successful"
+    
+    
+    def getNewNewsFailed(self, error):
+        "Override for notification when getNewNews() action fails"
+
+
+    def gotNewGroups(self, groups):
+        "Override for notification when getNewGroups() action is successful"
+    
+    
+    def getNewGroupsFailed(self, error):
+        "Override for notification when getNewGroups() action fails"
+
+
+    def setStreamSuccess(self):
+        "Override for notification when setStream() action is successful"
+
+
+    def setStreamFailed(self, error):
+        "Override for notification when setStream() action fails"
+
+
     def fetchGroups(self):
-        """fetchGroups(self)
-        
+        """
         Request a list of all news groups from the server.  gotAllGroups()
         is called on success, getGroupsFailed() on failure
         """
@@ -187,8 +212,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def fetchOverview(self):
-        """fetchOverview(self)
-        
+        """
         Request the overview format from the server.  gotOverview() is called
         on success, getOverviewFailed() on failure
         """
@@ -197,8 +221,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def fetchSubscriptions(self):
-        """fetchSubscriptions()
-        
+        """
         Request a list of the groups it is recommended a new user subscribe to.
         gotSubscriptions() is called on success, getSubscriptionsFailed() on
         failure
@@ -208,8 +231,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def fetchGroup(self, group):
-        """fetchGroup(self, groupName)
-        
+        """
         Get group information for the specified group from the server.  gotGroup()
         is called on success, getGroupFailed() on failure.
         """
@@ -218,8 +240,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def fetchHead(self, index = ''):
-        """fetchHead(self, index = '')
-        
+        """
         Get the header for the specified article (or the currently selected
         article if index is '') from the server.  gotHead() is called on
         success, getHeadFailed() on failure
@@ -229,8 +250,7 @@ class NNTPClient(basic.LineReceiver):
 
         
     def fetchBody(self, index = ''):
-        """fetchBody(self, index = '')
-        
+        """
         Get the body for the specified article (or the currently selected
         article if index is '') from the server.  gotBody() is called on
         success, getBodyFailed() on failure
@@ -240,19 +260,17 @@ class NNTPClient(basic.LineReceiver):
 
 
     def fetchArticle(self, index = ''):
-        """fetchArticle(self, index = '')
-        
+        """
         Get the complete article with the specified index (or the currently
-        selected article if index is '') from the server.  gotArticle() is
-        called on success, getArticleFailed() on failure
+        selected article if index is '') or Message-ID from the server.
+        gotArticle() is called on success, getArticleFailed() on failure.
         """
         self.sendLine('ARTICLE %s' % (index,))
         self._newState(self._stateArticle, self.getArticleFailed)
 
 
     def postArticle(self, text):
-        """postArticle(self, text)
-        
+        """
         Attempt to post an article with the specified text to the server.  'text'
         must consist of both head and body data, as specified by RFC 850.  If the
         article is posted successfully, postedOk() is called, otherwise postFailed()
@@ -263,9 +281,44 @@ class NNTPClient(basic.LineReceiver):
         self._postText.append(text)
 
 
-    def fetchXHeader(self, header, low = None, high = None, id = None):
-        """fetchXHeader(self, header, low = None, high = None, id = None)
+    def fetchNewNews(self, groups, date, distributions = ''):
+        """
+        Get the Message-IDs for all new news posted to any of the given
+        groups since the specified date - in seconds since the epoch, GMT -
+        optionally restricted to the given distributions.  gotNewNews() is
+        called on success, getNewNewsFailed() on failure.
         
+        One invocation of this function may result in multiple invocations
+        of gotNewNews()/getNewNewsFailed().
+        """
+        date, time = time.strftime('%y%m%d %H%M%S', date).split()
+        line = 'NEWNEWS %%s %s %s %s' % (date, time, distributions)
+        groupPart = ''
+        while len(line) + len(groupPart) + len(groups[-1]) + 1 < NNTPClient.MAX_COMMAND_LENGTH:
+            group = groups.pop()
+            groupPart = groupPart + ',' + group
+        
+        self.sendLine(line % (groupPart,))
+        self._newState(self._stateNewNews, self.getNewNewsFailed)
+        
+        if len(groups):
+            self.fetchNewNews(groups, date, distributions)
+    
+    
+    def fetchNewGroups(self, date, distributions):
+        """
+        Get the names of all new groups created/added to the server since
+        the specified date - in seconds since the ecpoh, GMT - optionally
+        restricted to the given distributions.  gotNewGroups() is called
+        on success, getNewGroupsFailed() on failure.
+        """
+        date, time = time.strftime('%y%m%d %H%M%S', date).split()
+        self.sendLine('NEWGROUPS %s %s %s' % (date, time, distributions))
+        self._newState(self._stateNewGroups, self.getNewGroupsFailed)
+
+
+    def fetchXHeader(self, header, low = None, high = None, id = None):
+        """
         Request a specific header from the server for an article or range
         of articles.  If 'id' is not None, a header for only the article
         with that Message-ID will be requested.  If both low and high are
@@ -287,6 +340,20 @@ class NNTPClient(basic.LineReceiver):
             r = header + ' %d-%d' % (low, high)
         self.sendLine('XHDR ' + r)
         self._newState(self._stateXHDR, self.getXHeaderFailed)
+
+
+    def setStream(self):
+        """
+        Set the mode to STREAM, suspending the normal "lock-step" mode of
+        communications.  setStreamSuccess() is called on success,
+        setStreamFailed() on failure.
+        """ 
+        self.sendLine('MODE STREAM')
+        self._newState(None, self.setStreamFailed, self._handleMode)
+
+
+    def quit(self):
+        self.sendLine('QUIT')
 
 
     def _newState(self, method, error, responseHandler = None):
@@ -427,6 +494,28 @@ class NNTPClient(basic.LineReceiver):
             self._newLine(line.split(), 0)
         else:
             self._gotXHeader(self._endState())
+    
+    
+    def _stateNewNews(self, line):
+        if line != '.':
+            self._newLine(line, 0)
+        else:
+            self.gotNewNews(self._endState())
+    
+    
+    def _stateNewGroups(self, line):
+        if line != '.':
+            self._newLine(line, 0)
+        else:
+            self.gotNewGroups(self._endState())
+
+
+    def _headerMode(self, (code, message)):
+        if code == 203:
+            self.setStreamSuccess()
+        else:
+            self.setStreamFailed((code, message))
+        self._endState()
 
 
 class NNTPServer(basic.LineReceiver):
@@ -900,3 +989,90 @@ class NNTPServer(basic.LineReceiver):
     def _errIHAVE(self, failure):
         print 'IHAVE failed: ', failure
         self.sendLine('436 transfer failed - try again later')
+
+
+class UsenetClientProtocol(NNTPClient):
+    """
+    A client that connects to an NNTP server and asks for articles new
+    since a certain time.
+    """
+    
+    def __init__(self, groups, date, storage):
+        """
+        Fetch all new articles from the given groups since the
+        given date and dump them into the given storage.  groups
+        is a list of group names.  date is an integer or floating
+        point representing seconds since the epoch (GMT).  storage is
+        any object that implements the NewsStorage interface.
+        """
+        NNTPClient.__init__(self)
+        self.groups, self.date, self.storage = groups, date, storage
+
+
+    def connectionMade(self):
+        NNTPClient.connectionMade(self)
+        self.setStream()
+        self.fetchNewNews(self.groups, self.date, '')
+
+
+    def gotNewNews(self, news):
+        self.count = len(news)
+        for i in news:
+            self.fetchArticle(i)
+
+
+    def gotArticle(self, article):
+        self.storage.postRequest(article)
+        self.count = self.count - 1
+        if not self.count:
+            self.factory.updateChecks(self.transport.getPeerName())
+            self.quit()
+
+
+class UsenetClientFactory(protocol.ClientFactory):
+    def __init__(self, groups, storage):
+        self.lastChecks = {}
+        self.groups = groups
+        self.storage = storage
+
+
+    def clientConnectionLost(self, connector, reason):
+        print 'Connection lost: ', reason
+
+
+    def clientConnectionFailed(self, connector, reason):
+        print 'Connection failed: ', reason
+    
+    
+    def updateChecks(self, addr):
+        self.lastChecks[addr] = time.gmtime()
+
+
+    def buildProtocol(self, addr):
+        last = self.lastChecks.setdefault(addr, time.gmtime() - (60 * 60 * 24 * 7))
+        p = UsenetClientProtocol(self.groups, last, self.storage)
+        p.factory = self
+        return p
+
+
+class UsenetServer(NNTPServer):
+    """
+    An NNTP server that will fetch messages from other NNTP servers
+    and attempt to forward locally posted messages to them.
+    """
+    
+    def __init__(self, remote = None):
+        NNTPServer.__init__(self)
+        self.remoteHosts = remote or []
+        self.clientFactory = None
+
+        # Ask for new messages every half hour for now
+        self._updateCall = reactor.callLater(60 * 30, self._syncWithRemotes)
+    
+    
+    def syncWithRemotes(self):
+        if self.clientFactory is None:
+            self.clientFactory = UsenetClientFactory(self.remoteHosts, self.factory.backend)
+
+        for remote in self.remoteHosts:
+            reactor.connectTCP(remote, 119, self.clientFactory)
