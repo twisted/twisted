@@ -16,7 +16,11 @@
 # 
 """Parser for inetd.conf files
 
+Stability: stable
+
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+
+Future Plans: xinetd configuration file support?
 """
 
 # Various exceptions

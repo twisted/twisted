@@ -15,6 +15,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+"""Twisted inetd TAP support
+
+Stability: semi-stable
+
+Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
+
+Future Plans: Bugfixes (don't call reactor.listenTCP or forkPassingFD when
+creating a TAP!), more configurability.
+"""
+
 import pwd, grp
 from twisted.inetd import inetd, inetdconf
 from twisted.python import log, usage

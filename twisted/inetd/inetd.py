@@ -15,6 +15,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+"""Twisted inetd.
+
+Stability: semi-stable
+
+Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
+
+Future Plans: Bugfixes.  Specifically for UDP and Sun-RPC, which don't work
+correctly yet.
+"""
+
 import os, pwd, grp, traceback, socket, commands
 
 from twisted.internet.app import Application

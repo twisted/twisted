@@ -17,14 +17,16 @@
 
 """File Transfer Protocol support for Twisted Python.
 
-This module is unstable.
+Stability: semi-stable
 
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 
-The goal for the server is that it should be secure, high-performance, and
-overloaded with stupid features.
+Future Plans: The server will be re-written.  The goal for the server is that
+it should be secure, high-performance, and overloaded with stupid features.
+The client is probably fairly final, but should share more code with the
+server, and some details could still change.
 
-TODO:
+Server TODO:
 
  * Authorization
    User / Password is stored in a dict (factory.userdict) in plaintext
