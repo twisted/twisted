@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.61 $"[11:-2]
+__version__ = "$Revision: 1.62 $"[11:-2]
 
 import os
 import cgi
@@ -365,10 +365,17 @@ class LiveController(Controller):
             nodeId = node.getAttribute('id')
             #logger.warn("DOM for %r is changing to %s", nodeId, node.toprettyxml())
             nodeXML = node.toxml()
-            nodeXML = nodeXML.replace('\n', '')
-            nodeXML = nodeXML.replace('\r', '')
             nodeXML = nodeXML.replace("\\", "\\\\")
             nodeXML = nodeXML.replace("'", "\\'")
+            nodeXML = nodeXML.replace('"', '\\"')
+            nodeXML = nodeXML.replace('\n', '\\n')
+            nodeXML = nodeXML.replace('\r', ' ')
+            nodeXML = nodeXML.replace('\b', ' ')
+            nodeXML = nodeXML.replace('\t', ' ')
+            nodeXML = nodeXML.replace('\000', ' ')
+            nodeXML = nodeXML.replace('\v', ' ')
+            nodeXML = nodeXML.replace('\f', ' ')
+
             js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
             #for key in widget.subviews.keys():
             #    view.subviews[key].unlinkViews()
