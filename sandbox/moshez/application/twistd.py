@@ -95,10 +95,10 @@ def startLogging(logfilename, sysLog, prefix, nodaemon):
             print 'daemons cannot log to stdout'
             os._exit(1)
         logFile = sys.stdout
-    elif nodaemon and not logfilename:
-        logFile = sys.stdout
     elif sysLog:
         syslog.startLogging(prefix)
+    elif nodaemon and not logfilename:
+        logFile = sys.stdout
     else:
         logPath = os.path.abspath(logfilename or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath),
@@ -174,8 +174,7 @@ def runApp(config):
     startApplication(config, application)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])
-    if config['report-profile']:
-        app.reportProfile(config['report-profile'], application.processName)
+    app.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 

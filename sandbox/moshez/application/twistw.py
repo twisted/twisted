@@ -57,8 +57,7 @@ def runApp(config):
         reactor.callLater(0.1, callMeAgain)
     reactor.callLater(0.1, callMeAgain)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
-    if config['report-profile']:
-        app.reportProfile(config['report-profile'], application.processName)
+    app.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 

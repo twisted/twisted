@@ -110,6 +110,8 @@ def getApplication(config, passphrase):
     return application
 
 def reportProfile(report_profile, name):
+    if not report_profile:
+        return
     if name:
         from twisted.python.dxprofile import report
         log.msg("Sending DXP stats...")
