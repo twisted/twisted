@@ -22,7 +22,7 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import os.path, base64, struct
+import struct
 from twisted import cred
 from twisted.conch import error
 from twisted.internet import app, defer, reactor
@@ -134,11 +134,11 @@ class SSHUserAuthServer(service.SSHService):
             d.addCallback(self._cbValidateKey, packet[1:])
             return d
 
-    def _cbToVerifySig(self, foo, ident, blob, signature):
+    def _cbToVerifySig(self, ignored, ident, blob, signature):
         if not self.verifySignatureFor(ident, blob, signature):
             raise error.ConchError('bad sig') # this kicks it into errback mode
 
-    def _cbValidateKey(self, foo, packet):
+    def _cbValidateKey(self, ignored, packet):
         self.transport.sendPacket(MSG_USERAUTH_PK_OK, packet)
         return -1
         
@@ -154,6 +154,8 @@ class SSHUserAuthServer(service.SSHService):
         return ident.verifyPlainPassword(password)
 
     def auth_keyboard_interactive(self, ident, packet):
+        if packet != '':
+            self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "keyboard_interactive auth takes no data")
         if hasattr(self, '_pamDeferred'):
             return defer.fail(error.ConchError('cannot run kbd-int twice at once'))
         d = pamauth.pamAuthenticate('ssh', ident.name, self._pamConv)
@@ -244,18 +246,20 @@ class SSHUserAuthClient(service.SSHService):
             # this is ok
             d  = self.getPrivateKey()
             if not d:
-                self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
-                # this should fail, we'll move on
+                self.askForAuth('none', '')
+                # this will fail, we'll move on
                 return
             d.addCallback(self._cbPK_OK)
             d.addErrback(self._ebPK_OK)
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             self._oldPass = self._newPass = None
-            op = self.getPassword('Old Password: ').addCallback(self._setOldPass)
-            np = self.getPassword(prompt).addCallback(self._setNewPass)
+            self.getPassword('Old Password: ').addCallback(self._setOldPass)
+            self.getPassword(prompt).addCallback(self._setNewPass)
         elif self.lastAuth == 'keyboard-interactive':
-            return self.ssh_USERAUTH_INFO_RESPONSE(packet)
+            # can't handle this in the client, so just try something else
+            self.askForAuth('none', '')
+            #return self.ssh_USERAUTH_INFO_RESPONSE(packet)
 
     def _cbPK_OK(self, privateKey):
         publicKey = self.lastPublicKey
@@ -266,8 +270,8 @@ class SSHUserAuthClient(service.SSHService):
         self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
                         NS(keys.signData(privateKey, b)))
 
-    def _ebPK_OK(self, failure):
-        self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
+    def _ebPK_OK(self, ignored):
+        self.askForAuth('none', '')
 
     def _setOldPass(self, op):
         if self._newPass:
@@ -295,6 +299,8 @@ class SSHUserAuthClient(service.SSHService):
             self.askForAuth('publickey', '\x00' + NS(keyType) + \
                             NS(publicKey))
             return 1
+        else:
+            return 0
 
     def auth_password(self):
         d = self.getPassword()

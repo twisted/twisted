@@ -72,8 +72,6 @@ class SSHTransportBase(protocol.Protocol):
     service = None
 
     def connectionLost(self, reason):
-        #from twisted.internet import reactor
-        #reactor.stop()
         if self.service:
             self.service.serviceStopped()
         log.msg('connection lost')
@@ -164,7 +162,7 @@ class SSHTransportBase(protocol.Protocol):
         if self.incomingCompression:
             try:
                 payload = self.incomingCompression.decompress(payload)
-            except zlib.error, e:
+            except zlib.error:
                 self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, 'compression error')
                 return
         self.incomingPacketSequence+=1
@@ -265,6 +263,8 @@ class SSHTransportBase(protocol.Protocol):
             return self.currentEncryptions.outCip != None
         elif direction == "both":
             return self.isEncrypted("in")and self.isEncrypted("out")
+        else:
+            raise TypeError, 'direction must be "out", "in", or "both"'
 
     def isVerified(self, direction = "out"):
         """direction must be in ["out", "in", "both"]
@@ -277,12 +277,14 @@ class SSHTransportBase(protocol.Protocol):
             return self.currentEncryptions.outCMAC != None
         elif direction == "both":
             return self.isVerified("in")and self.isVerified("out")
+        else:
+            raise TypeError, 'direction must be "out", "in", or "both"'
 
 class SSHServerTransport(SSHTransportBase):
     isClient = 0
     def ssh_KEXINIT(self, packet):
         self.clientKexInitPayload = chr(MSG_KEXINIT)+packet
-        cookie = packet[: 16]
+        #cookie = packet[: 16] # taking this is useless
         k = getNS(packet[16:], 10)
         strings, rest = k[:-1], k[-1]
         kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC =  \
@@ -350,7 +352,7 @@ class SSHServerTransport(SSHTransportBase):
             self.g, self.p = self.factory.getDHPrime(self.ideal)
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p)+MP(self.g))
         else:
-            raise ConchError('bad kexalg: %s'%self.kexAlg)
+            raise error.ConchError('bad kexalg: %s'%self.kexAlg)
 
     def ssh_KEX_DH_GEX_REQUEST(self, packet):
         if self.ignoreNextPacket:
@@ -386,6 +388,8 @@ class SSHServerTransport(SSHTransportBase):
         self._keySetup(sharedSecret, exchangeHash)
 
     def ssh_NEWKEYS(self, packet):
+        if packet != '':
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "NEWKEYS takes no data")
         self.currentEncryptions = self.nextEncryptions
         if self.outgoingCompressionType == 'zlib':
             self.outgoingCompression = zlib.compressobj(6)
@@ -429,7 +433,7 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_KEXINIT(self, packet):
         self.serverKexInitPayload = chr(MSG_KEXINIT)+packet
-        cookie = packet[: 16]
+        #cookie = packet[: 16] # taking this is unimportant
         k = getNS(packet[16:], 10)
         strings, rest = k[:-1], k[-1]
         kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC =  \
@@ -473,7 +477,7 @@ class SSHClientTransport(SSHTransportBase):
             fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
             d = self.verifyHostKey(pubKey, fingerprint)
             d.addCallback(self._continueGEX_GROUP, pubKey, f, signature)
-            d.addErrback(lambda x,self=self:self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
+            d.addErrback(lambda unused,self=self:self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
@@ -506,7 +510,7 @@ class SSHClientTransport(SSHTransportBase):
         fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
-        d.addErrback(lambda x, self=self: self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
+        d.addErrback(lambda unused, self=self: self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
 
     def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
         serverKey = keys.getPublicKeyObject(pubKey)
@@ -549,6 +553,8 @@ class SSHClientTransport(SSHTransportBase):
         return k1+k2
 
     def ssh_NEWKEYS(self, packet):
+        if packet != '':
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "NEWKEYS takes no data")
         if not hasattr(self.nextEncryptions, 'outCip'):
             self._gotNewKeys = 1
             return
@@ -561,6 +567,9 @@ class SSHClientTransport(SSHTransportBase):
         self.connectionSecure()
 
     def ssh_SERVICE_ACCEPT(self, packet):
+        name = getNS(packet)[0]
+        if name != self.instance.name:
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "received accept for service we did not request")
         self.setService(self.instance)
 
     def requestService(self, instance):

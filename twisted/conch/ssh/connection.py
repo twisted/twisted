@@ -45,6 +45,7 @@ class SSHConnection(service.SSHService):
         self.remoteForwards = {} # list of ports we should accept from server
                             # (client only)
         self.listeners = {} # dict mapping (internface, port) -> listener
+        self.transport = None # gets set later
 
     def serviceStopped(self):
         for channel in self.channels.values():
@@ -72,7 +73,7 @@ class SSHConnection(service.SSHService):
 
     def ssh_REQUEST_FAILURE(self, packet):
         self.deferreds['global'].pop(0).errback(
-            error.ConchError('global request failed'))
+            error.ConchError('global request failed', packet))
 
     def ssh_CHANNEL_OPEN(self, packet):
         channelType, rest = common.getNS(packet)
@@ -413,6 +414,7 @@ class SSHChannel:
         self.specificData = ''
         self.buf = ''
         self.extBuf = ''
+        self.id = None # gets set later by SSHConnection
 
     def channelOpen(self, specificData):
         """
@@ -538,12 +540,12 @@ class SSHChannel:
                                 [(dataType, data[self.remoteWindowLeft:])]
         if not data: return
         while len(data) > self.remoteMaxPacket:
-            self.conn.sendExtendedData(self, extType, 
+            self.conn.sendExtendedData(self, dataType, 
                                              data[:self.remoteMaxPacket])
             data = data[self.remoteMaxPacket:]
             self.remoteWindowLeft-=self.remoteMaxPacket
         if data:
-            self.conn.sendExtendedData(self, extType, data)
+            self.conn.sendExtendedData(self, dataType, data)
             self.remoteWindowLeft-=len(data)
 
     def writeSequence(self, data):

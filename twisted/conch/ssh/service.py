@@ -28,6 +28,8 @@ from twisted.python import log
 class SSHService:
     name = None # this is the ssh name for the service
     protocolMessages = {} # these map #'s -> protocol names
+    transport = None # gets set later
+
     def serviceStarted(self):
         """
         called when the service is active on the transport.
