@@ -7,16 +7,14 @@ from twisted.python import components
 from twisted.internet import protocol
 from twisted.application import internet, service
 
+class TerminalForwardingProtocol(insults.ServerProtocol):
+    def terminalSize(self, width, height):
+        self.protocol.terminalSize(width, height)
+
 def makeService(args):
-    class ConstructedProtocol(insults.ServerProtocol):
-        handlerFactory = args['handler']
-
-        def terminalSize(self, width, height):
-            self.handler.terminalSize(width, height)
-
     # SSH classes
     class ConstructedSessionTransport(TerminalSessionTransport):
-        protocolFactory = ConstructedProtocol
+        protocolFactory = staticmethod(lambda: TerminalForwardingProtocol(args['protocolFactory']))
 
     class ConstructedSession(TerminalSession):
         transportFactory = ConstructedSessionTransport
@@ -25,7 +23,7 @@ def makeService(args):
     components.registerAdapter(ConstructedSession, TerminalUser, session.ISession)
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol, ConstructedProtocol)
+    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol, TerminalForwardingProtocol, args['protocolFactory'])
     tsvc = internet.TCPServer(args['telnet'], f)
 
     f = ConchFactory()

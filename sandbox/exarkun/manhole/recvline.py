@@ -3,7 +3,9 @@ import string
 
 import insults
 
-class RecvLineHandler:
+from twisted.python import log
+
+class RecvLine(insults.TerminalProtocol):
     width = 80
     height = 24
 
@@ -12,9 +14,7 @@ class RecvLineHandler:
     ps = ('>>> ', '... ')
     pn = 0
 
-    def __init__(self, proto):
-        self.proto = proto
-
+    def connectionMade(self):
         # A list containing the characters making up the current line
         self.lineBuffer = []
 
@@ -22,41 +22,42 @@ class RecvLineHandler:
         # Indicates the current cursor position.
         self.lineBufferIndex = 0
 
+        t = self.transport
         # A map of keyIDs to bound instance methods.
         self.keyHandlers = {
-            proto.LEFT_ARROW: self.handle_LEFT,
-            proto.RIGHT_ARROW: self.handle_RIGHT,
+            t.LEFT_ARROW: self.handle_LEFT,
+            t.RIGHT_ARROW: self.handle_RIGHT,
             '\r': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
             '\t': self.handle_TAB,
-            proto.DELETE: self.handle_DELETE,
-            proto.INSERT: self.handle_INSERT,
-            proto.HOME: self.handle_HOME,
-            proto.END: self.handle_END}
+            t.DELETE: self.handle_DELETE,
+            t.INSERT: self.handle_INSERT,
+            t.HOME: self.handle_HOME,
+            t.END: self.handle_END}
 
         self.initializeScreen()
 
     def initializeScreen(self):
         # Hmm, state sucks.  Oh well.
         # For now we will just take over the whole terminal.
-        self.proto.reset()
-        self.proto.write(self.ps[self.pn])
+        self.transport.reset()
+        self.transport.write(self.ps[self.pn])
         self.setInsertMode()
 
     def setInsertMode(self):
         self.mode = 'insert'
-        self.proto.setMode([insults.IRM])
+        self.transport.setMode([insults.IRM])
 
     def setTypeoverMode(self):
         self.mode = 'typeover'
-        self.proto.resetMode([insults.IRM])
+        self.transport.resetMode([insults.IRM])
 
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new cursor position
-        self.proto.reset()
+        self.transport.reset()
         self.width = width
         self.height = height
-        self.proto.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+        self.transport.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def unhandledControlSequence(self, seq):
         print "Don't know about", repr(seq)
@@ -77,52 +78,53 @@ class RecvLineHandler:
             else:
                 self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [keyID]
             self.lineBufferIndex += 1
-            self.proto.write(keyID)
+            self.transport.write(keyID)
         else:
-            print 'Received', repr(keyID)
+            log.msg("Received unhandled keyID: %r" % (keyID,))
 
     def handle_TAB(self):
-        for i in range(self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)):
+        n = self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)
+        for i in xrange(n):
             self.keystrokeReceived(' ')
 
     def handle_LEFT(self):
         if self.lineBufferIndex > 0:
             self.lineBufferIndex -= 1
-            self.proto.cursorBackward()
+            self.transport.cursorBackward()
 
     def handle_RIGHT(self):
         if self.lineBufferIndex < len(self.lineBuffer):
             self.lineBufferIndex += 1
-            self.proto.cursorForward()
+            self.transport.cursorForward()
 
     def handle_HOME(self):
         if self.lineBufferIndex:
-            self.proto.cursorBackward(self.lineBufferIndex)
+            self.transport.cursorBackward(self.lineBufferIndex)
             self.lineBufferIndex = 0
 
     def handle_END(self):
         offset = len(self.lineBuffer) - self.lineBufferIndex
         if offset:
-            self.proto.cursorForward(offset)
+            self.transport.cursorForward(offset)
             self.lineBufferIndex = len(self.lineBuffer)
 
     def handle_BACKSPACE(self):
         if self.lineBufferIndex > 0:
             self.lineBufferIndex -= 1
             del self.lineBuffer[self.lineBufferIndex]
-            self.proto.cursorBackward()
-            self.proto.deleteCharacter()
+            self.transport.cursorBackward()
+            self.transport.deleteCharacter()
 
     def handle_DELETE(self):
         if self.lineBufferIndex < len(self.lineBuffer) - 1:
             del self.lineBuffer[self.lineBufferIndex]
-            self.proto.deleteCharacter()
+            self.transport.deleteCharacter()
 
     def handle_RETURN(self):
         line = ''.join(self.lineBuffer)
         self.lineBuffer = []
         self.lineBufferIndex = 0
-        self.proto.nextLine()
+        self.transport.nextLine()
         self.lineReceived(line)
 
     def handle_INSERT(self):
@@ -134,40 +136,41 @@ class RecvLineHandler:
     def lineReceived(self, line):
         pass
 
-class HistoricRecvLineHandler(RecvLineHandler):
-    def __init__(self, proto):
-        RecvLineHandler.__init__(self, proto)
+class HistoricRecvLine(RecvLine):
+    def connectionMade(self):
+        RecvLine.connectionMade(self)
 
         self.historyLines = []
         self.historyPosition = 0
 
-        self.keyHandlers.update({self.proto.UP_ARROW: self.handle_UP,
-                                 self.proto.DOWN_ARROW: self.handle_DOWN})
+        t = self.transport
+        self.keyHandlers.update({t.UP_ARROW: self.handle_UP,
+                                 t.DOWN_ARROW: self.handle_DOWN})
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
             self.historyLines.append(self.lineBuffer)
         if self.historyPosition > 0:
             self.handle_HOME()
-            self.proto.eraseToLineEnd()
+            self.transport.eraseToLineEnd()
 
             self.historyPosition -= 1
             self.lineBuffer = list(self.historyLines[self.historyPosition])
-            self.proto.write(''.join(self.lineBuffer))
+            self.transport.write(''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
 
     def handle_DOWN(self):
         if self.historyPosition < len(self.historyLines) - 1:
             self.handle_HOME()
-            self.proto.eraseToLineEnd()
+            self.transport.eraseToLineEnd()
 
             self.historyPosition += 1
             self.lineBuffer = list(self.historyLines[self.historyPosition])
-            self.proto.write(''.join(self.lineBuffer))
+            self.transport.write(''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
         else:
             self.handle_HOME()
-            self.proto.eraseToLineEnd()
+            self.transport.eraseToLineEnd()
 
             self.historyPosition = len(self.historyLines)
             self.lineBuffer = []
@@ -177,4 +180,4 @@ class HistoricRecvLineHandler(RecvLineHandler):
         if self.lineBuffer:
             self.historyLines.append(''.join(self.lineBuffer))
         self.historyPosition = len(self.historyLines)
-        return RecvLineHandler.handle_RETURN(self)
+        return RecvLine.handle_RETURN(self)

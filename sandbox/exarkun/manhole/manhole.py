@@ -94,40 +94,41 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def write(self, data, async=False):
         self.handler.addOutput(data, async)
 
-class Manhole(recvline.HistoricRecvLineHandler):
-    def __init__(self, proto):
-        recvline.HistoricRecvLineHandler.__init__(self, proto)
+class Manhole(recvline.HistoricRecvLine):
+
+    def connectionMade(self):
+        recvline.HistoricRecvLine.connectionMade(self)
         self.interpreter = ManholeInterpreter(self)
         self.keyHandlers['\x03'] = self.handle_INT
         self.keyHandlers['\x04'] = self.handle_QUIT
         self.keyHandlers['\x1c'] = self.handle_QUIT
 
     def handle_INT(self):
-        self.proto.nextLine()
-        self.proto.write("KeyboardInterrupt")
-        self.proto.nextLine()
-        self.proto.write(self.ps[self.pn])
+        self.transport.nextLine()
+        self.transport.write("KeyboardInterrupt")
+        self.transport.nextLine()
+        self.transport.write(self.ps[self.pn])
         self.lineBuffer = []
         self.lineBufferIndex = 0
 
     def handle_QUIT(self):
-        self.proto.disconnect()
+        self.transport.loseConnection()
 
     def addOutput(self, bytes, async=False):
         if async:
-            self.proto.eraseLine()
-            self.proto.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
+            self.transport.eraseLine()
+            self.transport.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
 
-        self.proto.write(bytes.replace('\n', '\r\n'))
+        self.transport.write(bytes.replace('\n', '\r\n'))
 
         if async:
-            if not self.proto.lastWrite.endswith('\r\n') and not self.proto.lastWrite.endswith('\x1bE'):
-                self.proto.write('\r\n')
-            self.proto.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+            if not self.transport.lastWrite.endswith('\r\n') and not self.transport.lastWrite.endswith('\x1bE'):
+                self.transport.write('\r\n')
+            self.transport.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
         self.pn = bool(more)
-        if not self.proto.lastWrite.endswith('\r\n') and not self.proto.lastWrite.endswith('\x1bE'):
-            self.proto.write('\r\n')
-        self.proto.write(self.ps[self.pn])
+        if not self.transport.lastWrite.endswith('\r\n') and not self.transport.lastWrite.endswith('\x1bE'):
+            self.transport.write('\r\n')
+        self.transport.write(self.ps[self.pn])

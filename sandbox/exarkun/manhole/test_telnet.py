@@ -6,23 +6,20 @@ from twisted.test import proto_helpers
 
 class TestProtocol:
     enableable = ()
-    def __init__(self, proto):
+    def __init__(self):
         self.bytes = ''
         self.subcmd = ''
         self.calls = []
-
-        d = proto.negotiationMap = {}
-        d['\x12'] = self.neg_TEST_COMMAND
-
-        d = proto.commandMap = proto.commandMap.copy()
-        for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
-            d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
-
         self.enabled = []
         self.disabled = []
 
     def makeConnection(self, transport):
-        pass
+        d = transport.negotiationMap = {}
+        d['\x12'] = self.neg_TEST_COMMAND
+
+        d = transport.commandMap = transport.commandMap.copy()
+        for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
+            d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
     def dataReceived(self, bytes):
         self.bytes += bytes
@@ -44,8 +41,7 @@ class TestProtocol:
 
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):
-        self.p = telnet.TelnetTransport()
-        self.p.protocolFactory = TestProtocol
+        self.p = telnet.TelnetTransport(TestProtocol)
         self.t = proto_helpers.StringTransport()
         self.p.makeConnection(self.t)
 
@@ -129,7 +125,7 @@ class TelnetTestCase(unittest.TestCase):
         # parsed and that the correct method is called.
         h = self.p.protocol
 
-        cmd = telnet.IAC + telnet.SB + '\x12hello world' + telnet.SE
+        cmd = telnet.IAC + telnet.SB + '\x12hello world' + telnet.IAC + telnet.SE
         L = ["These are some bytes but soon" + cmd,
              "there will be some more"]
 
@@ -139,12 +135,15 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
         self.assertEquals(h.subcmd, list("hello world"))
 
-    def testSubnegotiationWithEscape(self):
-        # Send a subnegotiation command with an embedded escaped SE.  Make sure
+    def testSubnegotiationWithEmbeddedSE(self):
+        # Send a subnegotiation command with an embedded SE.  Make sure
         # that SE gets passed to the correct method.
         h = self.p.protocol
 
-        cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + telnet.SE
+        cmd = (telnet.IAC + telnet.SB +
+               '\x12' + telnet.SE +
+               telnet.IAC + telnet.SE)
+
         L = ["Some bytes are here" + cmd + "and here",
              "and here"]
 
@@ -154,13 +153,17 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
         self.assertEquals(h.subcmd, [telnet.SE])
 
-    def testBoundardySubnegotiation(self):
+    def testBoundarySubnegotiation(self):
         # Send a subnegotiation command.  Split it at every possible byte boundary
         # and make sure it always gets parsed and that it is passed to the correct
         # method.
-        cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + 'hello' + telnet.SE
+        cmd = (telnet.IAC + telnet.SB +
+               '\x12' + telnet.SE + 'hello' +
+               telnet.IAC + telnet.SE)
+
         for i in range(len(cmd)):
-            h = self.p.protocol = TestProtocol(self.p)
+            h = self.p.protocol = TestProtocol()
+            h.makeConnection(self.p)
 
             a, b = cmd[:i], cmd[i:]
             L = ["first part" + a,

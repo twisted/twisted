@@ -120,20 +120,19 @@ class Drop(Drawable):
     def erase_3(self):
         self.drawLines('  ')
 
-class DemoHandler(insults.TerminalListener):
+class DemoProtocol(insults.TerminalProtocol):
     width = 80
     height = 24
 
     interval = 0.1
     rate = 0.05
 
-    def __init__(self, proto):
-        self.run(proto)
+    def connectionMade(self):
+        self.run()
 
-    def run(self, proto):
+    def run(self):
         # Clear the screen, matey
-        self.proto = proto
-        proto.eraseDisplay()
+        self.transport.eraseDisplay()
 
         self._call = task.LoopingCall(self._iterate)
         self._call.start(self.interval)
@@ -145,7 +144,7 @@ class DemoHandler(insults.TerminalListener):
         col = random.randrange(self.width - cls.WIDTH) + cls.WIDTH
         line = random.randrange(self.height - cls.HEIGHT) + cls.HEIGHT
 
-        s = cls(self.proto, col, line)
+        s = cls(self.transport, col, line)
 
         c = task.LoopingCall(s.iterate)
         c.start(self.rate).addErrback(lambda f: f.trap(DrawingFinished)).addErrback(log.err)
@@ -179,6 +178,6 @@ class DemoHandler(insults.TerminalListener):
 application = service.Application("Insults Demo App")
 
 from demolib import makeService
-makeService({'handler': DemoHandler,
+makeService({'protocolFactory': DemoProtocol,
              'telnet': 6023,
              'ssh': 6022}).setServiceParent(application)

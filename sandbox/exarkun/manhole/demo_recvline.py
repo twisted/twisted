@@ -6,15 +6,15 @@ from twisted.application import service
 
 application = service.Application("Insults RecvLine Demo")
 
-class DemoRecvLineHandler(recvline.HistoricRecvLineHandler):
+class DemoRecvLine(recvline.HistoricRecvLine):
     def lineReceived(self, line):
         if line == "quit":
-            self.proto.disconnect()
-        self.proto.write(line)
-        self.proto.nextLine()
-        self.proto.write(self.ps[self.pn])
+            self.transport.loseConnection()
+        self.transport.write(line)
+        self.transport.nextLine()
+        self.transport.write(self.ps[self.pn])
 
 from demolib import makeService
-makeService({'handler': DemoRecvLineHandler,
+makeService({'protocolFactory': DemoRecvLine,
              'telnet': 6023,
              'ssh': 6022}).setServiceParent(application)

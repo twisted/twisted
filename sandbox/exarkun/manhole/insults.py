@@ -1,10 +1,24 @@
 
 import string
 
-from twisted.internet import protocol, defer
+from twisted.internet import protocol, defer, interfaces as iinternet
 from twisted.python import components
 
-class ITerminalListener(components.Interface):
+class ITerminalProtocol(components.Interface):
+    def makeConnection(self, transport):
+        """Called with an ITerminalTransport when a connection is established.
+        """
+
+    def keystrokeReceived(self, keyID):
+        """A keystroke was received.
+
+        Each keystroke corresponds to one invocation of this method.
+        keyID is a string identifier for that key.  Printable characters
+        are represented by themselves.  Control keys, such as arrows and
+        function keys, are represented with symbolic constants on
+        C{ServerProtocol}.
+        """
+
     def terminalSize(self, width, height):
         """Called to indicate the size of the terminal.
 
@@ -22,14 +36,22 @@ class ITerminalListener(components.Interface):
         """Called when an unsupported control sequence is received.
         """
 
-    def keystrokeReceived(self, keyID):
-        """Called when a keystroke arrives.
+    def connectionLost(self, reason):
+        pass
 
-        @param keyID: An opaque value identifying the key which was received.
+class TerminalProtocol(object):
+    __implements__ = (ITerminalProtocol,)
+
+    def makeConnection(self, transport):
+        self.transport = transport
+        self.connectionMade()
+
+    def connectionMade(self):
+        """Called after a connection has been established.
         """
 
-class TerminalListener:
-    __implements__ = (ITerminalListener,)
+    def keystrokeReceived(self, keyID):
+        pass
 
     def terminalSize(self, width, height):
         pass
@@ -43,10 +65,10 @@ class TerminalListener:
     def unhandledControlSequence(self, seq):
         pass
 
-    def keystrokeReceived(self, keyID):
+    def connectionLost(self, reason):
         pass
 
-class ITerminal(components.Interface):
+class ITerminalTransport(iinternet.ITransport):
     def cursorUp(self, n=1):
         """Move the cursor up n lines.
         """
@@ -213,10 +235,6 @@ class ITerminal(components.Interface):
         """Reset the terminal to its initial state.
         """
 
-    def disconnect(self):
-        """Reset the terminal and drop the connection to it.
-        """
-
 CSI = '\x1b'
 CST = {'H': 'H',
        'f': 'f',
@@ -279,31 +297,29 @@ BOLD = 'BOLD'
 NORMAL = 'NORMAL'
 
 class ServerProtocol(protocol.Protocol):
-    __implements__ = (ITerminal,)
+    __implements__ = (ITerminalTransport,)
 
-    handlerFactory = TerminalListener
+    protocol = None
 
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
                   'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
                   'F10', 'F11', 'F12'):
-        exec '%s = %r' % (keyID, keyID)
+        exec '%s = object()' % (keyID,)
 
     _databuf = ''
     lastWrite = ''
 
-    def __init__(self, *a, **kw):
-        self.handlerArgs = a
-        self.handlerKwArgs = kw
+    def __init__(self, protocolFactory, *a, **kw):
+        self.protocolFactory = protocolFactory
+        self.protocolArgs = a
+        self.protocolKwArgs = kw
 
         self._cursorReports = []
 
-    def write(self, bytes):
-        self.lastWrite = bytes
-        self.transport.write(bytes)
-
     def connectionMade(self):
-        self.handler = self.handlerFactory(self, *self.handlerArgs, **self.handlerKwArgs)
+        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self.protocol.makeConnection(self)
 
     def dataReceived(self, data):
         data = self._databuf + data
@@ -320,16 +336,16 @@ class ServerProtocol(protocol.Protocol):
             elif ch == CSI:
                 escBuf.append(ch)
             else:
-                self.handler.keystrokeReceived(ch)
+                self.protocol.keystrokeReceived(ch)
         if escBuf:
             self._databuf = ''.join(escBuf)
 
     def _handleControlSequence(self, terminal, buf):
         f = getattr(self.controlSequenceParser, CST[terminal], None)
         if f is None:
-            self.handler.unhandledControlSequence(''.join(buf) + terminal)
+            self.protocol.unhandledControlSequence(''.join(buf) + terminal)
         else:
-            f(self, self.handler, ''.join(buf))
+            f(self, self.protocol, ''.join(buf))
 
     class ControlSequenceParser:
         def h(self, proto, handler, buf):
@@ -590,7 +606,20 @@ class ServerProtocol(protocol.Protocol):
     def reset(self):
         self.write('\x1bc')
 
-    def disconnect(self):
+    # ITransport
+    def write(self, bytes):
+        self.lastWrite = bytes
+        self.transport.write(bytes)
+
+    def writeSequence(self, bytes):
+        self.write(''.join(bytes))
+
+    def loseConnection(self):
         self.reset()
         self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        self.protocol.connectionLost(reason)
+        self.protocol = None
+
 
