@@ -36,26 +36,37 @@ class Space(object):
         # Do it in place for speeeed
         N.add(self.contents[:,_POSITION], self.contents[:,_VELOCITY], self.contents[:,_POSITION])
 
-    def _updateVelocity(self, sum=N.sum, add=N.add, _M=_MASS, _P=_POSITION, _V=_VELOCITY):
+    def _updateVelocity(self, sum=N.sum, add=N.add, _M=_MASS, _P=_POSITION, _V=_VELOCITY, NewAxis=N.NewAxis):
         # Adjust velocities for gravitational effects
         accel = self._accel
-        for a in self.contents:
+
+        # XXX This loop can probably be pushed into numeric, but I'm not sure
+        # how yet.
+        for i, a in enumerate(self.contents):
             mass = a[_M]
             if not mass:
                 continue
             accel[:] = 0
-            for b in self.contents:
-                deltas = b[_P] - a[_P]
-                delta2 = deltas * deltas
-                distance2 = sum(delta2)
-                if distance2:
-                    distance = distance2 ** 0.5
-                    unit = deltas / distance
-                    force = G * mass * b[_M] / distance2
-                    deltaA = unit * force / mass
-                    add(accel, deltaA, accel)
-            velocity = a[_V]
-            add(velocity, accel, velocity)
+
+            deltas = self.contents[:,_P] - a[_P]
+            deltas2 = deltas * deltas
+            distances2 = sum(deltas2, 1)
+            distances = distances2 ** 0.5
+
+            # NaN!@
+            distances[i] = 1
+            distances2[i] = 1
+            # @!NaN
+
+            units = deltas / distances[:,NewAxis]
+            forces = G * mass * self.contents[:,_M] / distances2
+            deltaAs = units * forces[:,NewAxis] / mass
+
+            # NaN!@
+            deltaAs[i][:] = [0]
+            # @!NaN
+
+            add(a[_V], sum(deltaAs), a[_V])
 
 class Body(object):
     __slots__ = ["_space", "_handle", "mass", "position", "velocity"]

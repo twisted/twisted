@@ -8,7 +8,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 # Get a configuration
-from sol import config, width as WIDTH, height as HEIGHT
+from rosette4 import config, width as WIDTH, height as HEIGHT
 
 # PyGame's clock sucks nuts
 class Clock:
@@ -28,7 +28,7 @@ def main():
         b = (point.Body(space, mass, pos, vel), image.get_rect())
         bodies.append(b)
 
-    perFrame = 60
+    perFrame = 10
     size = width, height = 800, 600
     screen = pygame.display.set_mode(size)
     clock = Clock()
