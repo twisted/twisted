@@ -77,3 +77,17 @@ def superPrependAttribute(node, key, value):
     if node.hasChildNodes():
         for child in node.childNodes:
             superPrependAttribute(child, key, value)
+
+class RawText(minidom.Text):
+    """This is an evil and horrible speed hack. Basically, if you have a big
+    chunk of XML that you want to insert into the DOM, but you don't want
+    to incur the cost of parsing it, you can construct one of these and insert 
+    it into the DOM. This will most certainly only work with minidom as the 
+    API for converting nodes to xml is different in every DOM implementation.
+    
+    This could be improved by making this class a Lazy parser, so if you
+    inserted this into the DOM and then later actually tried to mutate
+    this node, it would be parsed then.
+    """
+    def toxml(self):
+        return self.data
