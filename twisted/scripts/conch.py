@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.31 2002/12/30 21:44:57 z3p Exp $
+# $Id: conch.py,v 1.32 2003/01/03 04:53:31 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -31,10 +31,10 @@ class GeneralOptions(usage.Options):
  """
 
     optParameters = [['user', 'l', None, 'Log in using this user name.'],
-                    ['identity', 'i', '~/.ssh/identity', 'Identity for public key authentication'],
-                    ['escape', 'e', '~', "Set escape character; ``none'' = disable"],
-                    ['cipher', 'c', None, 'Select encryption algorithm.'],
-                    ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
+                    ['identity', 'i', None],
+                    ['escape', 'e', '~'],
+                    ['cipher', 'c', None],
+                    ['macs', 'm', None],
                     ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                     ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
                     ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
@@ -56,9 +56,11 @@ class GeneralOptions(usage.Options):
     remoteForwards = []
 
     def opt_identity(self, i):
+        """Identity for public-key authentication"""
         self.identitys.append(i)
 
     def opt_escape(self, esc):
+        "Set escape character; ``none'' = disable"
         if esc == 'none':
             self['escape'] = None
         elif esc[0] == '^' and len(esc) == 2:
@@ -69,30 +71,35 @@ class GeneralOptions(usage.Options):
             sys.exit("Bad escape character '%s'." % esc)
 
     def opt_cipher(self, cipher):
+        "Select encryption algorithm"
         if cipher in SSHClientTransport.supportedCiphers:
             SSHClientTransport.supportedCiphers = [cipher]
         else:
             sys.exit("Unknown cipher type '%s'" % cipher)
 
-    def opt_mac(self, mac):
+    def opt_macs(self, mac):
+        "Specify MAC algorithms"
         if mac in SSHClientTransport.supportedMACs:
             SSHClientTransport.supportedMACs = [mac]
         else:
             sys.exit("Unknown mac type '%s'" % mac)
 
     def opt_localforward(self, f):
+        "Forward local port to remote address (lport:host:port)"
         localPort, remoteHost, remotePort = f.split(':') # doesn't do v6 yet
         localPort = int(localPort)
         remotePort = int(remotePort)
         self.localForwards.append((localPort, (remoteHost, remotePort)))
 
     def opt_remoteforward(self, f):
+        """Forward remote port to local address (rport:host:port)"""
         remotePort, connHost, connPort = f.split(':') # doesn't do v6 yet
         remotePort = int(remotePort)
         connPort = int(connPort)
         self.remoteForwards.append((remotePort, (connHost, connPort)))
 
     def opt_compress(self):
+        "Enable compression"
         SSHClientTransport.supportedCompressions[0:1] = ['zlib']
 
     def parseArgs(self, host, *command):
