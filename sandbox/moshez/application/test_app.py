@@ -17,7 +17,10 @@
 from twisted.trial import unittest
 from twisted.application import app, service
 from twisted.persisted import sob
-import os
+import os, pickle
+
+class Dummy:
+    processName = None
 
 class TestAppSupport(unittest.TestCase):
 
@@ -108,3 +111,17 @@ class TestAppSupport(unittest.TestCase):
         appl = service.Application("lala")
         app.startApplication(appl, 0)
         self.assert_(service.IService(appl).running)
+
+    def test_implicitConversion(self):
+        a = Dummy()
+        a.__dict__ = {'udpConnectors': [], 'unixConnectors': [],
+                      '_listenerDict': {}, 'name': 'dummy',
+                      'sslConnectors': [], 'unixPorts': [],
+                      '_extraListeners': {}, 'sslPorts': [], 'tcpPorts': [],
+                      'services': {}, 'gid': 0, 'tcpConnectors': [],
+                      'extraConnectors': [], 'udpPorts': [], 'extraPorts': [],
+                      'uid': 0}
+        pickle.dump(a, open("file.tap", 'w'))
+        a1 = app.loadPersisted("file.tap", "pickle", None)
+        self.assertEqual(service.IService(a1).name, "dummy")
+        self.assertEqual(list(service.IServiceCollection(a1)), [])
