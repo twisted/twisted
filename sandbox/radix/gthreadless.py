@@ -52,16 +52,13 @@ class GreenletWrapper(object):
         wrappee = super(GreenletWrapper, self).__getattribute__('wrappee')
         original = getattr(wrappee, name)
         if callable(original):
-            def outerWrapper(*a, **kw):
+            def wrapper(*a, **kw):
                 assert greenlet.getcurrent() is not greenlet.main
-                def innerWrapper(result):
-                    return blockOn(result)
-                # result = greenlet.greenlet(original).switch(*a, **kw)
                 result = original(*a, **kw)
                 if isinstance(result, defer.Deferred):   
-                    return greenlet.greenlet(innerWrapper).switch(result)
+                    return greenlet.greenlet(blockOn).switch(result)
                 return result
-            return outerWrapper
+            return wrapper
         return original
 
 class Asynchronous(object):
