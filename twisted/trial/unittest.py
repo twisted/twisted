@@ -268,12 +268,12 @@ class TextReporter(Reporter):
             summaries.append('errors=%d' % len(self.errors))
         if self.skips:
             summaries.append('skips=%d' % len(self.skips))
-        summary = (summaries and '('+', '.join(summaries)+')') or ''
+        summary = (summaries and ' ('+', '.join(summaries)+')') or ''
         if self.failures or self.errors:
             status = 'FAILED'
         else:
             status = 'OK'
-        return '%s %s' % (status, summary)
+        return '%s%s' % (status, summary)
             
     def stop(self):
         Reporter.stop(self)
