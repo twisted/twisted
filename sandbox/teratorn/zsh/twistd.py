@@ -53,12 +53,12 @@ class ServerOptions(app.ServerOptions):
                     ]
 
     #extra attributes that zshcomp.py will use:
+    #these are bogus values for testing
 
     #these can appear more than once on the cmd-line
     zsh_multiUse = ['quiet']
     
     #each tuple lists options that cannot appear together
-    #these are bogus values for testing
     zsh_mutuallyExclusive = [('q', 'n'),
                          ('n', 'euid')]
 
