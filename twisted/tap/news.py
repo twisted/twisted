@@ -16,9 +16,62 @@
 
 from twisted.enterprise import adbapi
 from twisted.news import news, database
-from twisted.python import usage
+from twisted.python import usage, log
 
 import sys, getpass
+
+class DBOptions(usage.Options):
+    optParameters = [
+        ['module',   None, 'pyPgSQL.PgSQL', "DB-API 2.0 module to use"],
+        ['dbhost',   None, 'localhost',     "Host where database manager is listening"],
+        ['dbuser',   None, 'news',          "Username with which to connect to database"],
+        ['database', None, 'news',          "Database name to use"],
+        ['schema',   None, 'schema.sql',    "File to which to write SQL schema initialisation"],
+
+        # XXX - Hrm.
+        ["groups",     "g", "groups.list",   "File containing group list"],
+        ["servers",    "s", "servers.list",  "File containing server list"]
+    ]
+    
+    def postOptions(self):
+        # XXX - Hmmm.
+        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
+        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
+
+        try:
+            __import__(self['module'])
+        except ImportError:
+            log.msg("Warning: Cannot import %s" % (self['module'],))
+        
+        open(self['schema'], 'w').write(
+            database.NewsStorageAugmentation.schema + '\n' +
+            database.makeGroupSQL(self['groups']) + '\n' +
+            database.makeOverviewSQL()
+        )
+        
+        info = {
+            'host': self['dbhost'], 'user': self['dbuser'],
+            'database': self['database'], 'dbapiName': self['module']
+        }
+        self.db = database.NewsStorageAugmentation(info)
+
+
+class PickleOptions(usage.Options):
+    optParameters = [
+        ['file', None, 'news.pickle', "File to which to save pickle"],
+
+        # XXX - Hrm.
+        ["groups",     "g", "groups.list",   "File containing group list"],
+        ["servers",    "s", "servers.list",  "File containing server list"]
+    ]
+
+    def postOptions(self):
+        # XXX - Hmmm.
+        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
+        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
+
+        self.db = database.PickleStorage(filename, self['groups'])
+
 
 class Options(usage.Options):
     synopsis = "Usage: mktap news [options]"
@@ -26,52 +79,19 @@ class Options(usage.Options):
     optParameters = [
         ["port",       "p", "119",           "Listen port"],
         ["interface",  "i", "",              "Interface to which to bind"],
-        
-        ["groups",     "g", "groups.list",   "File containing group list"],
-        ["servers",    "s", "servers.list",  "File containing server list"],
-        
-        ["backend",    "b", "sql",           "Backend type"]
     ]
     
-    def postOptions(self):
-        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
+    subCommands = [
+        ['sql',    None, DBOptions,     'Create an SQL RDBM backed news server'],
+        ['pickle', None, PickleOptions, 'Create a Pickle backed news server']
+    ]
 
 
 def updateApplication(app, config):
-    if config['backend'].lower() == 'sql':
-        info = {
-            'dbapiName': 'pyPgSQL.PgSQL', 'host': 'localhost',
-            'user': 'news', 'database': 'news'
-        }
-        while 1:
-            info['dbapiName'] = raw_input('DB-API 2.0 module [%s]: ' % (info['dbapiName'],)) or info['dbapiName']
-            try:
-                __import__(info['dbapiName'])
-            except ImportError:
-                print 'No such module'
-            else:
-                break
-
-        info['host'] = raw_input('Database host [%s]: ' % (info['host'],)) or info['host']
-        info['user'] = raw_input('Database username [%s]: ' % (info['user'],)) or info['user']
-        info['database'] = raw_input('Database name [%s]: ' % (info['database'],)) or info['database']
-        schema = raw_input('File to output SQL initialisation to [schema.sql]: ') or 'schema.sql'
-
-        open(schema, 'w').write(
-            database.NewsStorageAugmentation.schema + '\n' +
-            database.makeGroupSQL(config['groups']) + '\n' +
-            database.makeOverviewSQL()
-        )
-        db = database.NewsStorageAugmentation(info)
-    elif config['backend'].lower() == 'pickle':
-        filename = raw_input('Pickle file: ')
-        db = database.PickleStorage(filename, config['groups'])
-    else:
-        raise usage.UsageError('Valid arguments to --backend are: sql pickle')
-
+    if not hasattr(config, 'subCommand'):
+        raise usage.UsageError("Must specify a subcommand.")
     app.listenTCP(
         int(config['port']),
-        news.UsenetServerFactory(db, config['servers']),
+        news.UsenetServerFactory(config.subOptions.db, config.subOptions['servers']),
         interface = config['interface']
     )
