@@ -199,6 +199,10 @@ class CharacterData(Node):
         self.value = self.data = self.nodeValue = data
 
 
+class Comment(CharacterData):
+    """A comment node."""
+
+
 class Text(CharacterData):
 
     def __init__(self, data, parentNode=None, raw=0):
@@ -332,6 +336,7 @@ def _unescapeDict(d):
         dd[k] = html.unescape(v)
     return dd
 
+
 class MicroDOMParser(XMLParser):
 
     # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
@@ -357,7 +362,6 @@ class MicroDOMParser(XMLParser):
 
 
     def __init__(self, beExtremelyLenient=0, caseInsensitive=1):
-        # to parse output from e.g. Mozilla Composer, try
         self.elementstack = []
         self.documents = []
         self._mddoctype = None
@@ -394,29 +398,25 @@ class MicroDOMParser(XMLParser):
         if (self.beExtremelyLenient and name in self.soonClosers):
             self.gotTagEnd(name)
 
-    def gotText(self, data):
+    def _gotStandalone(self, factory, data):
         parent = self._getparent()
-        te = Text(data, parent)
+        te = factory(data, parent)
         if parent:
             parent.appendChild(te)
         elif self.beExtremelyLenient:
             self.documents.append(te)
 
+    def gotText(self, data):
+        self._gotStandalone(Text, data)
+    
+    def gotComment(self, data):
+        self._gotStandalone(Comment, data)
+    
     def gotEntityReference(self, entityRef):
-        parent = self._getparent()
-        er = EntityReference(entityRef, parent)
-        if parent:
-            parent.appendChild(er)
-        elif self.beExtremelyLenient:
-            self.documents.append(er)
+        self._gotStandalone(EntityReference, entityRef)
 
     def gotCData(self, cdata):
-        parent = self._getparent()
-        cd = CDATASection(cdata, parent)
-        if parent:
-            parent.appendChild(cd)
-        elif self.beExtremelyLenient:
-            self.documents.append(cd)
+        self._gotStandalone(CDATASection, cdata)
 
     def gotTagEnd(self, name):
         if self.caseInsensitive:
