@@ -162,6 +162,7 @@ class DTP(protocol.Protocol):
 
     def connectionMade(self):
         "Will start an transfer, if one is queued up, when the client connects"
+        self.dtpPort = self.pi.dtpPort
         if self.action is not None:
             self.executeAction()
 
@@ -178,7 +179,7 @@ class DTP(protocol.Protocol):
             self.pi.reply('fileok')
             self.pi.queuedfile = None
         self.action = None
-        self.pi.dtpPort.loseConnection()
+        self.dtpPort.loseConnection()
 
     #
     #   "RETR"
