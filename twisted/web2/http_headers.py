@@ -982,11 +982,14 @@ class Headers:
     """This class stores the HTTP headers as both a parsed representation and
     the raw string representation. It converts between the two on demand."""
     
-    def __init__(self, parsers=DefaultHTTPParsers, generators=DefaultHTTPGenerators):
+    def __init__(self, headers=None, parsers=DefaultHTTPParsers, generators=DefaultHTTPGenerators):
         self._raw_headers = ODict()
         self._headers = ODict()
-        self.parsers=parsers
-        self.generators=generators
+        self.parsers = parsers
+        self.generators = generators
+        if headers is not None:
+            for key, value in headers.iteritems():
+                self.setHeader(key, value)
 
     def _setRawHeaders(self, headers):
         self._raw_headers = headers
@@ -995,7 +998,7 @@ class Headers:
     def _addHeader(self, name, strvalue):
         """Add a header & value to the collection of headers. Appends not replaces
         a previous header of the same name."""
-        name=name.lower()
+        name = name.lower()
         old = self._raw_headers.get(name, None)
         if old is None:
             old = []
@@ -1058,7 +1061,6 @@ class Headers:
         
         If the header doesn't exist, return default (or None if not specified)
         """
-        
         name=name.lower()
         parsed = self._headers.get(name, default)
         if parsed is not _RecalcNeeded:
