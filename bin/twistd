@@ -222,11 +222,19 @@ if usepid:
 if os.name == 'nt':
     # C-c can't interrupt select.select in win32.
     from twisted.python.delay import IDelayed
-    class Win32KillTimeout(IDelayed):
+    
+    class Win32KillTimeout:
         """I time out every 1/10 second in order to allow C-c to kill the server.
         """
+        
+        __implements__ = IDelayed
+        
+        def runUntilCurrent(self):
+            pass
+        
         def timeout(self):
             return 0.1
+    
     main.addDelayed(Win32KillTimeout())
 
 try:
