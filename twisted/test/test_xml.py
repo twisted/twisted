@@ -114,13 +114,22 @@ alert("I hate you");
         <script language="javascript">foo </scrip bar </script>
         <script src="foo">
         <script src="foo">baz</script>
+        <script /><script></script>
         """
         d = microdom.parseString(s, beExtremelyLenient=1)
         self.assertEquals(d.firstChild().firstChild().firstChild().data,
                           "(foo < bar) and (bar > foo)")
         self.assertEquals(d.firstChild().childNodes[1].firstChild().data,
                           "foo </scrip bar ")
-    
+
+    def testScriptLeniencyIntelligence(self):
+        # if there is comment or CDATA in script, the autoquoting in bEL mode
+        # should not happen
+        s = """<script><!-- lalal --></script>"""
+        self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+        s = """<script><![CDATA[lalal]]></script>"""
+        self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+        
     def testPreserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
         s2 = s.lower().replace('text', 'TeXt')

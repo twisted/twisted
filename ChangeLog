@@ -1,3 +1,12 @@
+2003-09-12  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/web/microdom.py: lenient mode correctly handles <script>
+	tags with CDATA or comments protecting the code.
+
+2003-09-10  Tommi Virtanen  <tv@twistedmatrix.com>
+
+	* HTTPS support for XML-RPC and web clients.
+
 2003-08-29  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.7rc1.

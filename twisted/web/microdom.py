@@ -619,7 +619,22 @@ class MicroDOMParser(XMLParser):
             return self.elementstack[-1]
         else:
             return None
-
+        
+    def _fixScriptElement(self, el):
+        if not self.beExtremelyLenient or not len(el.childNodes) == 1:
+            return
+        c = el.firstChild()
+        if isinstance(c, Text):
+            try:
+                e = parseString("<a>%s</a>" % c.value).childNodes[0]
+            except (ParseError, MismatchedTags):
+                return
+            if len(e.childNodes) != 1:
+                return
+            e = e.firstChild()
+            if isinstance(e, (CDATASection, Comment)):
+                el.childNodes = [e]
+    
     def gotDoctype(self, doctype):
         self._mddoctype = doctype
 
@@ -746,7 +761,9 @@ class MicroDOMParser(XMLParser):
         el.endTag(name)
         if not self.elementstack:
             self.documents.append(el)
-
+        if self.beExtremelyLenient and el.tagName == "script":
+            self._fixScriptElement(el)
+    
     def connectionLost(self, reason):
         if self.elementstack:
             if self.beExtremelyLenient:
