@@ -48,10 +48,10 @@ class DummyDomain:
        self.users[name].append(message)
 
    def authenticateUserAPOP(self, name, magic, digest, domain):
-       print
-       print 'USERS AM ', self.users
-       print 'NAME AM ', name
-       print
+       #print
+       #print 'USERS AM ', self.users
+       #print 'NAME AM ', name
+       #print
        return ListMailbox(self.users[name])
 
 
