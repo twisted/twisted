@@ -95,6 +95,8 @@ class SSHPublicKeyDatabase:
             return 0
         uid, gid = os.geteuid(), os.getegid()
         ouid, ogid = pwd.getpwnam(credentials.username)[2:4]
+        os.setegid(0)
+        os.seteuid(0)
         os.setegid(ogid)
         os.seteuid(ouid)
         for name in ['authorized_keys2', 'authorized_keys']:

@@ -136,19 +136,24 @@ class OpenSSHFactory(SSHFactory):
                     k = keys.getPublicKeyString(self.dataRoot+'/'+file)
                     t = common.getNS(k)[0]
                     ks[t] = k
-                except:
-                    log.msg('bad public key file %s' % file)
+                except Exception, e:
+                    log.msg('bad public key file %s: %s' % (file,e))
         return ks
     def getPrivateKeys(self):
         ks = {}
+        euid,egid = os.geteuid(), os.getegid()
+        os.setegid(0) # gain priviledges
+        os.seteuid(0)
         for file in os.listdir(self.dataRoot):
             if file[:9] == 'ssh_host_' and file[-4:]=='_key':
                 try:
                     k = keys.getPrivateKeyObject(self.dataRoot+'/'+file)
                     t = keys.objectType(k)
                     ks[t] = k
-                except:
-                    log.msg('bad private key file %s' % file)
+                except Exception, e:
+                    log.msg('bad private key file %s: %s' % (file, e))
+        os.setegid(egid) # drop them just as quickily
+        os.seteuid(euid)
         return ks
     def getPrimes(self):
         try:

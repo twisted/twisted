@@ -57,8 +57,8 @@ def makeService(config):
     t.portal = portal.Portal(realm.UnixSSHRealm())
     t.portal.registerChecker(checkers.UNIXPasswordDatabase())
     t.portal.registerChecker(checkers.SSHPublicKeyDatabase())
-    if checkers.pamauth:
-        t.portal.registerChecker(checkers.PluggableAuthenticationModulesChecker())
+    #if checkers.pamauth:
+    #    t.portal.registerChecker(checkers.PluggableAuthenticationModulesChecker())
     t.dataRoot = config['data']
     t.moduliRoot = config['moduli'] or config['data']
     portno = int(config['port'])

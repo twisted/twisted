@@ -34,18 +34,27 @@ class SSHUserAuthServer(service.SSHService):
     loginTimeout = 10 * 60 * 60 # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20 # number of attempts to allow before a disconnect
     protocolMessages = None # set later
-    supportedMethods = ['publickey', 'password', 'keyboard-interactive']
+    interfaceToMethod = {
+        credentials.ISSHPrivateKey : 'publickey',
+        credentials.IUsernamePassword : 'password',
+        credentials.IPluggableAuthenticationModules : 'keyboard-interactive',
+    }
 
     def serviceStarted(self):
-        self.supportedAuthentications = self.supportedMethods[:] 
         self.authenticatedWith = []
         self.loginAttempts = 0
         self.user = None
         self.nextService = None
         self.portal = self.transport.factory.portal
+        
+        self.supportedAuthentications = []
+        for i in self.portal.listCredentialsInterfaces():
+            if i in self.interfaceToMethod:
+                self.supportedAuthentications.append(self.interfaceToMethod[i])
 
         if not self.transport.isEncrypted('out'):
-            self.supportedAuthentications.remove('password')
+            if 'password' in self.supportedAuthentications:
+                self.supportedAuthentications.remove('password')
             if 'keyboard-interactive' in self.supportedAuthentications:
                 self.supportedAuthentications.remove('keyboard-interactive')
             # don't let us transport password in plaintext
