@@ -300,9 +300,9 @@ returns the reference back to the server. The server compares the <q>two</q>
 given with the <q>two</q> received and shows that they are the same, and that
 both are real objects instead of remote references.</p>
 
-<p>A few other techniques are demonstrated in <code>pb3client.py</code>. One is
-that the callbacks are are added with <code>.addCallback</code> instead of
-<code>.addCallbacks</code>. As you can tell from the <a
+<p>A few other techniques are demonstrated in <code>pb2client.py</code>. One
+is that the callbacks are are added with <code>.addCallback</code> instead
+of <code>.addCallbacks</code>. As you can tell from the <a
 href="defer.html">Deferred</a> documentation, <code>.addCallback</code> is a
 simplified form which only adds a success callback. The other is that to
 keep track of state from one callback to the next (the remote reference to
