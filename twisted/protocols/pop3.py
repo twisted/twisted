@@ -108,7 +108,24 @@ class POP3(basic.LineReceiver):
         d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
     
-    def _cbMailbox(self, (interface, avatar, logout), user):
+#    def _cbMailbox(self, (interface, avatar, logout), user):
+    def _cbMailbox(self, ial, user):
+        if isinstance(ial, Mailbox) or components.implements(ial, IMailbox):
+            import warnings
+            warnings.warn(
+                "POP3.authenticateUser*() methods must now return a 3-tuple,"
+                "not a Mailbox.  Please update your code.",
+                DeprecationWarning, 1
+            )
+            interface = IMailbox
+            avatar = ial
+            logout = lambda: None
+
+        if interface is not IMailbox:
+            self.failureResponse('Authentication failed')
+            log.err("_cbMailbox() called with an interface other than IMailbox")
+            return
+
         self.mbox = avatar
         self._onLogout = logout
         self.successResponse('Authentication succeeded')
@@ -251,8 +268,11 @@ class POP3(basic.LineReceiver):
         @param digest: The response string with which the user replied.
         
         @rtype: C{Deferred}
-        @return: A deferred whose callback invoked if the login is
-        successful, and whose errback will be invoked otherwise.
+        @return: A deferred whose callback is invoked if the login is
+        successful, and whose errback will be invoked otherwise.  The
+        callback will be passed a 3-tuple consisting of IMailbox, 
+        an object implementing IMailbox, and a zero-argument callable
+        to be invoked when this session is terminated.
         """
         if self.portal is not None:
             return self.portal.login(
@@ -260,7 +280,7 @@ class POP3(basic.LineReceiver):
                 None,
                 IMailbox
             )
-        return defer.fail(cred.error.UnauthorizedLogin())
+        raise cred.error.UnauthorizedLogin()
 
     def authenticateUserPASS(self, user, password):
         """Perform authentication of a username/password login.
@@ -272,8 +292,11 @@ class POP3(basic.LineReceiver):
         @param password: The password to attempt to authenticate with.
         
         @rtype: C{Deferred}
-        @return: A deferred whose callback invoked if the login is
-        successful, and whose errback will be invoked otherwise.
+        @return: A deferred whose callback is invoked if the login is
+        successful, and whose errback will be invoked otherwise.  The
+        callback will be passed a 3-tuple consisting of IMailbox, 
+        an object implementing IMailbox, and a zero-argument callable
+        to be invoked when this session is terminated.
         """
         if self.portal is not None:
             return self.portal.login(
