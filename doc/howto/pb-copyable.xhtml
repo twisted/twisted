@@ -226,10 +226,9 @@ persisted (across time) differently than they are transmitted (across
 <p>When this is run, it produces the following output:</p>
 
 <pre class="shell">
-% twistd -n -y copy_receiver.py
-[-] twisted.spread.pb.BrokerFactory starting on 8800
-[-] Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x406159cc&gt;
-[Broker,0,127.0.0.1]  got pond: &lt;__builtin__.ReceiverPond instance at 0x406ec7ac&gt;
+[-] twisted.spread.pb.PBServerFactory starting on 8800
+[-] Starting factory &lt;twisted.spread.pb.PBServerFactory instance at 0x406159cc&gt;
+[Broker,0,127.0.0.1]  got pond: &lt;__builtin__.ReceiverPond instance at 0x406ec5ec&gt;
 [Broker,0,127.0.0.1] 7 frogs
 </pre>
 
@@ -292,9 +291,9 @@ course, to create the object in the first place.</p>
 
 <pre class="shell">
 % twistd -n -y copy2_receiver.py 
-[-] twisted.spread.pb.BrokerFactory starting on 8800
-[-] Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x405af48c&gt;
-[Broker,0,127.0.0.1]  got pond: &lt;copy2_classes.ReceiverPond instance at 0x406eb5ac&gt;
+[-] twisted.spread.pb.PBServerFactory starting on 8800
+[-] Starting factory &lt;twisted.spread.pb.PBServerFactory instance at 0x40604b4c&gt;
+[Broker,0,127.0.0.1]  got pond: &lt;copy2_classes.ReceiverPond instance at 0x406eb2ac&gt;
 [Broker,0,127.0.0.1]  count 7
 </pre>
 
@@ -484,10 +483,10 @@ cache that tracks changes to the master:</p>
 
 <pre class="shell">
 % twistd -n -y cache_receiver.py 
-[-] twisted.spread.pb.BrokerFactory starting on 8800
-[-] Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x40615acc&gt;
+[-] twisted.spread.pb.PBServerFactory starting on 8800
+[-] Starting factory &lt;twisted.spread.pb.PBServerFactory instance at 0x40615acc&gt;
 [Broker,0,127.0.0.1]  cache - sitting, er, setting ducks
-[Broker,0,127.0.0.1] got pond: &lt;cache_classes.SlaveDuckPond instance at 0x406eb7ac&gt;
+[Broker,0,127.0.0.1] got pond: &lt;cache_classes.SlaveDuckPond instance at 0x406eb5ec&gt;
 [Broker,0,127.0.0.1] [2] ducks:  ['one duck', 'two duck']
 [Broker,0,127.0.0.1]  cache - addDuck
 [Broker,0,127.0.0.1] [3] ducks:  ['one duck', 'two duck', 'ugly duckling']

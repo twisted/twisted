@@ -14,5 +14,5 @@ class Receiver(pb.Root):
         reactor.stop()
 
 application = service.Application("copy_receiver")
-internet.TCPServer(8800, pb.BrokerFactory(Receiver())).setServiceParent(
+internet.TCPServer(8800, pb.PBServerFactory(Receiver())).setServiceParent(
     service.IServiceCollection(application))
