@@ -193,7 +193,9 @@ class CFReactor(default.PosixReactorBase):
         default.PosixReactorBase.__init__(self)
 
     def installWaker(self):
-        self.callLater(0, default.PosixReactorBase.installWaker, self)
+        # I don't know why, but the waker causes 100% CPU
+        # so for now we don't install one, ever.
+        return
     
     def getRunLoop(self, runLoop=None):
         if self.runLoop is None:
