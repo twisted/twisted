@@ -43,7 +43,7 @@ base="twisted.web.woven.interfaces">IView</code>:</p>
 
 <pre class="python">
 class MyView(view.View):
-  def generate(self, request, node, model):
+  def generate(self, request, node):
       return request.d.createTextNode("Hello, world!")
 
 class MyPage(page.Page):
@@ -65,7 +65,7 @@ class MyPage(page.Page):
 
 <pre class="python">
 class MyView(view.View):
-    def generate(self, request, node, model):
+    def generate(self, request, node):
         return request.d.createTextNode("Hello, world!")
 
 resource = page.Page()
