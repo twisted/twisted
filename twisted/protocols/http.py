@@ -324,25 +324,43 @@ class FieldStorage(cgi.FieldStorage):
             result = [result]
         fixedResult = []
         for i in result:
-            if isinstance(i, cgi.MiniFieldStorage):
+            if hasattr(i, "file"):
                 i = i.value
             fixedResult.append(i)
         return fixedResult
 
+    # emulate dictionaries
+    
     def values(self):
         return map(self.__getitem__, self.keys())
 
     def items(self):
         return [(k, self[k]) for k in self.keys()]
 
+    def __delitem__(self, k):
+        deleted = 0
+        for i in self.list:
+            if i.name == k:
+                self.list.remove(i)
+                deleted = 1
+        if not deleted:
+            raise KeyError, k
+
+    def get(self, k, default=None):
+        try:
+            return self[k]
+        except KeyError:
+            return default
+
 
 class Request:
     """A HTTP request.
 
     @ivar args: a mapping between field names and a list of values. These
-                values can be strings (for form fields) or C{cgi.FieldStorage} instances
-                when HTTP client uploaded a file in this request. Don't assume this is
-                a dictionary, in some cases it may be a FieldStorage instance.
+                values are strings. These string may very well be 10MB if
+                someone uploaded a 10MB file - they will be created on the
+                fly though. Use Request.getArg() in those cases instead,
+                so that this doesn't happen.
                 
     """
 
@@ -525,6 +543,21 @@ class Request:
 
     # http request methods
 
+    def getArg(self, key):
+        """Return list of FieldStorage objects for a specific arg.
+
+        These are gotten from GETs or POSTs. This is useful when
+        you expect a file upload and don't know its size, so you don't
+        convert a file into a 10MB string as your would with self.args[key].
+        """
+        if isinstance(self.args, types.DictType):
+            return [cgi.MiniFieldStorage(key, value) for value in self.args[key]]
+        elif isinstance(self.args, cgi.FieldStorage):
+            result = cgi.FieldStorage.__getitem__(self.args, key)
+            if not isinstance(result, types.ListType):
+                result = [result]
+            return result
+           
     def getHeader(self, key):
         """Get a header that was sent from the network.
         """
