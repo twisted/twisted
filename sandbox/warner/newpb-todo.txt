@@ -4,7 +4,24 @@ non-independent things left to do on newpb. These require deeper magic or
 can not otherwise be done casually. Many of these involve fundamental
 protocol issues, and therefore need to be decided sooner rather than later.
 
+* summary
+** protocol issues
+*** negotiation
+*** VOCABADD/DEL/SET sequences
+*** remove 'copy' prefix from RemoteCopy type sequences?
+*** smaller scope for OPEN-counter reference numbers
+** implementation issues
+*** cred
+*** oldbanana compatibility
+*** Copyable/RemoteCopy default to __getstate__ or self.__dict__ ?
+*** RIFoo['bar'] vs RIFoo.bar (should RemoteInterface inherit from Interface?)
+*** constrain ReferenceUnslicer
+*** serialize target.remote_foo usefully
+
 * decide whether to accept positional args in non-constrained methods
+
+DEFERRED until after 2.0
+<glyph> warner: that would be awesome but let's do it _later_
 
 This is really a backwards-source-compatibility issue. In newpb, the
 preferred way of invoking callRemote() is with kwargs exclusively: glyph's
