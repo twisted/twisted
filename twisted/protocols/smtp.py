@@ -172,8 +172,11 @@ class SMTP(basic.LineReceiver):
                 deferred = defer.Deferred()
                 deferred.addCallback(self._messageHandled)
                 deferred.addErrback(self._messageNotHandled)
+                ndeferred = NDeferred(len(self.__messages), deferred)
                 for message in self.__messages:
-                    message.eomReceived().chainDeferred(deferred)
+                    deferred = message.eomReceived()
+                    deferred.addCallback(ndeferred.callback)
+                    deferred.addErrback(ndeferred.errback)
                 return
             line = line[1:]
         for message in self.__messages:
