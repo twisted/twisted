@@ -308,7 +308,7 @@ class File(resource.Resource, styles.Versioned):
     def listEntities(self):
         return map(lambda fileName, self=self: File(os.path.join(self.path, fileName)), self.listNames())
 
-    def putChild(self, name, child):
+    def createPickleChild(self, name, child):
         if not os.path.isdir(self.path):
             resource.Resource.putChild(self, name, child)
         # xxx use a file-extension-to-save-function dictionary instead
