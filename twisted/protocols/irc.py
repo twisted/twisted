@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.66 $'[11:-2]
+__version__ = '$Revision: 1.67 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -757,7 +757,8 @@ class IRCClient(basic.LineReceiver):
         """Initiate a Direct Client Connection
         """
 
-        dcctype = data.split(None, 1).upper()
+        if not data: return
+        dcctype = data.split(None, 1)[0].upper()
         handler = getattr(self, "dcc_" + dcctype, None)
         if handler:
             if self.dcc_sessions is None:
