@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import runtime, log, usage
 from twisted.persisted import styles, sob
-from twisted.application import compat
+from twisted.application import compat, service
 from twisted import copyright
 import sys, os, pdb, profile, getpass, md5, traceback
 
@@ -108,7 +108,7 @@ def getApplication(config, passphrase):
         log.deferr()
         sys.exit('\n' + s + '\n')
     initRun = 1
-    if not hasattr(application, 'privilegedStartService'):
+    if service.IService(application, None) is None:
         # oh my god! it is an old style application
         # convert convert before anyone sees us with it
         application = compat.convert(application)
