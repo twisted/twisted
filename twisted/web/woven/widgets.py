@@ -184,7 +184,8 @@ class Widget(view.View):
         return result
     
     def setDataCallback(self, result, request, node):
-        self.setData(result)
+        if isinstance(self.getData(), defer.Deferred):
+            self.setData(result)
         data = self.getData()
         if isinstance(data, defer.Deferred):
             import warnings
