@@ -215,6 +215,13 @@ tksupport.install(root)
 
     <h3>wxPython</h3><a name="wxpython" />
 
+	<p>Twisted currently supports two methods of integrating
+	wxPython. Unfortunately, neither method will work on all wxPython
+	backends. It seems that the only portable way to integrate with
+	wxPython is to run it in a separate thread. One of these methods
+	may however be sufficient if your wx app is limited to a single
+	platform.</p>
+	
     <p>As with <a href="#tkinter">Tkinter</a>, the support for integrating
     Twisted with a <a href="http://www.wxpython.org">wxPython</a>
     application uses specialized support code rather than a simple reactor.</p>
