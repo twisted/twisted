@@ -342,11 +342,7 @@ class HTTPClient(basic.LineReceiver):
 
 
 # response codes that must have empty bodies
-# possibly 303 and 302 shouldn't be here, since they might in theory
-# have a body, but since then our chunking algorithm decides
-# they should be chunked, we get a screw up of sorts since for
-# some reason an empty chunk to end the redirect is never sent.
-NO_BODY_CODES = (204, 304, 302, 303)
+NO_BODY_CODES = (204, 304)
 
 class Request:
     """A HTTP request.
@@ -565,13 +561,19 @@ class Request:
         if not hasattr(self, 'channel'):
             warnings.warn("Warning! request.finish called twice.", stacklevel=2)
             return
-        if self.chunked and self.code not in NO_BODY_CODES:
-            # write last chunk and closing CRLF
-            self.transport.write("0\r\n\r\n")
-        elif not self.startedWriting:
+
+        if not self.startedWriting:
             # write headers
             self.write('')
 
+        # debug code just in case I made a mistake
+        if self.chunked and self.code in NO_BODY_CODES:
+            raise RuntimeError, "we screwed up"
+
+        if self.chunked:
+            # write last chunk and closing CRLF
+            self.transport.write("0\r\n\r\n")
+        
         # log request
         if hasattr(self.channel, "factory"):
             self.channel.factory.log(self)
@@ -677,7 +679,6 @@ class Request:
         """
         self.setResponseCode(FOUND)
         self.setHeader("location", url)
-        self.setHeader("content-length", "0")
     
     def setLastModified(self, when):
         """Set the X{Last-Modified} time for the response to this request.
