@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.7 2002/05/05 15:37:16 itamarst Exp $
+# $Id: default.py,v 1.8 2002/05/20 11:03:28 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -150,6 +150,9 @@ class PosixReactorBase(ReactorBase):
         """
         return tcp.Client(host, port, protocol, timeout)
 
+
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None):
+        return process.Process(executable, args, env, path, processProtocol)
 
     # IReactorSSL (sometimes, not implemented)
 

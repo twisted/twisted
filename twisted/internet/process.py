@@ -22,6 +22,7 @@
 import os, sys, traceback
 if os.name != 'java':
     import errno
+    import select
 
 if os.name == 'posix':
     # Inter-process communication and FCNTL fun isn't available on windows.
@@ -74,7 +75,8 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
         """Write some data to the open process.
         """
         try:
-            return os.write(self.proc.stdin, self.unsent)
+            rv = os.write(self.proc.stdin, self.unsent)
+            return rv
         except IOError, io:
             if io.args[0] == errno.EAGAIN:
                 return 0
@@ -87,13 +89,20 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
     def doRead(self):
         """This will raise an exception, as doRead should never be called.
         """
-        raise "doRead is illegal on a processWriter"
+        fd = self.fileno()
+        d = select.select([fd], [fd], [], 0)
+        # If I'm writable, AND readable, then I'm screwed.
+        if d[0] and d[1]:
+            return CONNECTION_LOST
+        else:
+            return 0
 
     def connectionLost(self):
         """See abstract.FileDescriptor.connectionLost.
         """
         abstract.FileDescriptor.connectionLost(self)
         os.close(self.proc.stdin)
+        self.proc.inConnectionLost()
 
     def fileno(self):
         """Return the fileno() of my process's stdin.
@@ -113,7 +122,7 @@ class ProcessError(abstract.FileDescriptor):
     def fileno(self):
         """Return the fileno() of my process's stderr.
         """
-        return self.proc.stderr.fileno()
+        return self.proc.stderr
 
     def doRead(self):
         """Call back to my process's doError.
@@ -124,7 +133,8 @@ class ProcessError(abstract.FileDescriptor):
         """I close my process's stderr.
         """
         abstract.FileDescriptor.connectionLost(self)
-        self.proc.stderr.close()
+        os.close(self.proc.stderr)
+        self.proc.errConnectionLost()
         del self.proc
 
 
@@ -140,7 +150,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     on sockets...)
     """
 
-    def __init__(self, command, args, environment, path):
+    def __init__(self, command, args, environment, path, proto):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
@@ -162,6 +172,12 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 os.dup(stdin_read)   # should be 0
                 os.dup(stdout_write) # 1
                 os.dup(stderr_write) # 2
+                os.close(stdin_read)
+                os.close(stdin_write)
+                os.close(stderr_read)
+                os.close(stderr_write)
+                os.close(stdout_read)
+                os.close(stdout_write)
                 for fd in range(3, 256):
                     try:    os.close(fd)
                     except: pass
@@ -183,17 +199,23 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         self.status = -1
         for fd in stdout_write, stderr_write, stdin_read:
             os.close(fd)
-        for fd in (stdout_read, stderr_read):
+        for fd in (stdout_read, stderr_read, stdin_write):
             fcntl.fcntl(fd, FCNTL.F_SETFL, os.O_NONBLOCK)
-        self.stdout = os.fdopen(stdout_read, 'r')
-        self.stderr = os.fdopen(stderr_read, 'r')
+        self.stdout = stdout_read # os.fdopen(stdout_read, 'r')
+        self.stderr = stderr_read # os.fdopen(stderr_read, 'r')
         self.stdin = stdin_write
         # ok now I really have a fileno()
         self.writer = ProcessWriter(self)
+        self.writer.startReading()
         err = ProcessError(self)
         err.startReading()
         self.startReading()
         self.connected = 1
+        self.proto = proto
+        try:
+            self.proto.makeConnection(self)
+        except:
+            log.deferr()
 
     def closeStdin(self):
         """Call this to close standard input on this process.
@@ -204,20 +226,21 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         """Called when my standard error stream is ready for reading.
         """
         try:
-            output = self.stderr.read()
+            output = os.read(self.stderr, 8192)
         except IOError, ioe:
             if ioe.args[0] == errno.EAGAIN:
                 return
             return CONNECTION_LOST
         if not output:
             return CONNECTION_LOST
-        self.handleError(output)
+        self.proto.errReceived(output)
 
     def doRead(self):
         """Called when my standard output stream is ready for reading.
         """
+        fd = self.fileno()
         try:
-            output = self.stdout.read()
+            output = os.read(self.stdout, 8192) #.read()
         except IOError, ioe:
             if ioe.args[0] == errno.EAGAIN:
                 return
@@ -225,7 +248,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 return CONNECTION_LOST
         if not output:
             return CONNECTION_LOST
-        self.handleChunk(output)
+        self.proto.dataReceived(output)
 
     def doWrite(self):
         """Called when my standard output stream is ready for writing.
@@ -243,15 +266,45 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def fileno(self):
         """This returns the file number of standard output on this process.
         """
-        return self.stdout.fileno()
+        return self.stdout
+
+    lostErrorConnection = 0
+    lostOutConnection = 0
+    lostInConnection = 0
+
+    def maybeCallProcessEnded(self):
+        if (self.lostErrorConnection and
+            self.lostOutConnection and
+            self.lostInConnection):
+            try:
+                self.proto.processEnded()
+            except:
+                log.deferr()
+
+    def inConnectionLost(self):
+        del self.writer
+        self.lostInConnection = 1
+        self.maybeCallProcessEnded()
+
+    def errConnectionLost(self):
+        self.lostErrorConnection = 1
+        try:
+            self.proto.errConnectionLost()
+        except:
+            log.deferr()
+        self.maybeCallProcessEnded()
 
     def connectionLost(self):
         """I call this to clean up when one or all of my connections has died.
         """
+        self.lostOutConnection = 1
         abstract.FileDescriptor.connectionLost(self)
-        self.stdout.close()
-        self.closeStdin()
-        del self.writer
+        os.close(self.stdout)
+        try:
+            self.proto.connectionLost()
+        except:
+            log.deferr()
+        self.maybeCallProcessEnded()
         reapProcess()
 
 

@@ -172,9 +172,6 @@ def removeCallAfterShutdown(function):
 
 
 
-# Sibling Import
-import process
-
 class Delayeds:
     """Wrapper for twisted.python.delay.IDelayed objects, so they use IReactorTime."""
 

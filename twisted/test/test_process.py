@@ -46,8 +46,9 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 
     def connectionLost(self):
         self.stages.append(2)
-        if self.data != "abced":
+        if self.data != "abcd":
             raise RuntimeError
+        self.transport.write("abcd")
 
     def errReceived(self, data):
         self.err = self.err + data

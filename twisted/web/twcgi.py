@@ -168,7 +168,17 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
 
     def view_stopProducing(self, issuer):
         self.stopProducing()
-    
+
+    def resumeProducing(self):
+        self.transport.resumeProducing()
+
+    def pauseProducing(self):
+        self.transport.pauseProducing()
+
+    def stopProducing(self):
+        self.transport.stopProducing()
+
+
     def __init__(self, request):
         self.request = request
 
@@ -178,7 +188,6 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         content = self.request.content.read()
         if content:
             self.transport.write(content)
-        self.transport.loseConnection()
 
     def errReceived(self, error):
         self.errortext = self.errortext + error
