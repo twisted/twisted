@@ -65,7 +65,9 @@ class URLPath:
                  query='', fragment=''):
         self.scheme = scheme or 'http'
         self.netloc = netloc
-        self.path = path or '/'
+        if path == '/':
+            path = ''
+        self.path = path
         self.query = query
         self.fragment = fragment
 
@@ -90,33 +92,42 @@ class URLPath:
         u = URLPath(*t)
         return u
 
-    def _pathMod(self, newpath, keepQuery):
+    def _pathMod(self, newpathsegs, keepQuery):
         if keepQuery:
             query = self.query
         else:
             query = ''
         return URLPath(self.scheme,
                         self.netloc,
-                        newpath,
+                        '/'.join(newpathsegs),
                         query)
 
     def sibling(self, path, keepQuery=0):
         l = self.pathList()
         l[-1] = path
-        newpath = '/'.join(l)
-        return self._pathMod(path, keepQuery)
+        return self._pathMod(l, keepQuery)
 
     def child(self, path, keepQuery=0):
         l = self.pathList()
-        l.append(path)
-        newpath = '/'.join(l)
-        return self._pathMod(path, keepQuery)
+        if l[-1] == '':
+            l[-1] = path
+        else:
+            l.append(path)
+        return self._pathMod(l, keepQuery)
 
     def parent(self, keepQuery=0):
         l = self.pathList()
-        l[-2:] = []
-        newpath = '/'.join(l)
-        return self._pathMod(newpath, keepQuery)
+        if l[-1] == '':
+            del l[-2]
+        else:
+            l.pop()
+        return self._pathMod(l, keepQuery)
+
+    def here(self, keepQuery=0):
+        l = self.pathList()
+        if l[-1] != '':
+            l.pop()
+        return self._pathMod(l, keepQuery)
 
     def click(self, st):
         """Return a path which is the URL where a browser would presumably take
