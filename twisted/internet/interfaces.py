@@ -143,7 +143,7 @@ class IReactorTime(Interface):
         """
 
 
-class IThreadDispatcher(Interface):
+class IReactorThreads(Interface):
     """Dispatch methods to be run in threads.
 
     Internally, this should use a thread pool and dispatch methods to them.
@@ -152,15 +152,8 @@ class IThreadDispatcher(Interface):
     def callInThread(self, callable, *args, **kwargs):
         """Run the callable object in a separate thread."""
 
-    def callMultipleInThread(self, callableList):
-        """Run a list of methods in order, in a single thread.
-
-        callableList should be a sequence of (callable, argsTuple, kwargsDict)
-        tuples.
-        """
-
-    def deferToThread(self, callable, *args, **kwargs):
-        """Run callable in a thread, returning a Deferred result."""
+    def suggestThreadPoolSize(self, size):
+        """Suggest the size of the thread pool."""
 
 
 class IReactorCore(Interface):

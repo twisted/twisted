@@ -23,10 +23,10 @@ import socket # needed only for sync-dns
 from time import time
 from bisect import insort
 
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
+from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
-from twisted.internet import main
+from twisted.internet import main, threads
 from twisted.python import threadable, log
 from twisted.python.defer import Deferred, DeferredList
 
@@ -42,7 +42,7 @@ class ReactorBase:
     """Default base class for Reactors.
     """
 
-    __implements__ = IReactorCore, IReactorTime
+    __implements__ = IReactorCore, IReactorTime, IReactorThreads
     installed = 0
 
     def __init__(self):
@@ -68,16 +68,17 @@ class ReactorBase:
     def installWaker(self):
         raise NotImplementedError()
 
-    def callFromThread(self, callable, *args, **kw):
+    def callFromThread(self, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callFromThread.
         """
+        assert callable(f), "%s is not callable" % f
         if threadable.isInIOThread():
-            #print self, ' not in a thread'
-            apply(self.callLater, (0, callable)+ args, kw)
-            #print self, ' did it'
+            apply(self.callLater, (0, f)+ args, kw)
         else:
-            # lists are thread-safe in CPython
-            self.threadCallQueue.append((callable, args, kw))
+            # lists are thread-safe in CPython, but not in Jython
+            # this is probably a bug in Jython, but until fixed this code won't work
+            # in Jython.
+            self.threadCallQueue.append((f, args, kw))
             self.wakeUp()
 
     def wakeUp(self):
@@ -202,17 +203,18 @@ class ReactorBase:
                 except:
                     log.deferr()
 
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(self, phase, eventType, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
+        assert callable(f)
         if self._eventTriggers.has_key(eventType):
             triglist = self._eventTriggers[eventType]
         else:
             triglist = [[], [], []]
             self._eventTriggers[eventType] = triglist
         evtList = triglist[{"before": 0, "during": 1, "after": 2}[phase]]
-        evtList.append((callable, args, kw))
-        return (phase, eventType, (callable, args, kw))
+        evtList.append((f, args, kw))
+        return (phase, eventType, (f, args, kw))
 
     def removeSystemEventTrigger(self, triggerID):
         """See twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger.
@@ -226,12 +228,12 @@ class ReactorBase:
 
     # IReactorTime
 
-    def callLater(self, seconds, callable, *args, **kw):
+    def callLater(self, seconds, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        tple = (time() + seconds, callable, args, kw)
+        assert callable(f)
+        tple = (time() + seconds, f, args, kw)
         insort(self._pendingTimedCalls, tple)
-        # print self, 'calling later', self._pendingTimedCalls, tple
         return tple
 
     def cancelCallLater(self, callID):
@@ -275,4 +277,12 @@ class ReactorBase:
                 log.deferr()
         self._delayeds.runUntilCurrent()
 
+
+    # IReactorThreads
+
+    def callInThread(self, callable, *args, **kwargs):
+        apply(threads.callInThread, (callable,) + args, kwargs)
+
+    def suggestThreadPoolSize(self, size):
+        threads.suggestThreadPoolSize(size)
 
