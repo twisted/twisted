@@ -50,13 +50,13 @@ resource = mygreatresource.MyGreatResource()
 </html>
 """
 
-def ResourceScript(path):
+def ResourceScript(path, registry):
     """
     I am a normal py file which must define a 'resource' global, which should
     be an instance of (a subclass of) web.resource.Resource; it will be
     renderred.
     """
-    glob = {'__file__': path, 'resource': SimpleErrorPage()}
+    glob = {'__file__': path, 'resource': SimpleErrorPage(), 'registry': registry}
 
     execfile(path, glob, glob)
 
@@ -69,10 +69,11 @@ class PythonScript(resource.Resource):
     internal to the webserver.
     """
     isLeaf = 1
-    def __init__(self, filename):
+    def __init__(self, filename, registry):
         """Initialize me with a script name.
         """
         self.filename = filename
+        self.registry = registry
 
     def render(self, request):
         """Render me to a web client.
@@ -84,7 +85,8 @@ class PythonScript(resource.Resource):
         """
         request.setHeader("x-powered-by","Twisted/%s" % copyright.version)
         namespace = {'request': request,
-                     '__file__': self.filename}
+                     '__file__': self.filename,
+                     'registry': self.registry}
         try:
             execfile(self.filename, namespace, namespace)
         except IOError, e:

@@ -135,7 +135,11 @@ class File(resource.Resource, styles.Versioned):
 
     ### Versioning
 
-    persistenceVersion = 3
+    persistenceVersion = 4
+
+    def upgradeToVersion4(self):
+        if not hasattr(self, 'registry'):
+            self.registry = {}
 
     def upgradeToVersion3(self):
         if not hasattr(self, 'allowExt'):
@@ -149,7 +153,7 @@ class File(resource.Resource, styles.Versioned):
             self.indexNames = [self.indexName]
             del self.indexName
 
-    def __init__(self, path, defaultType="text/html", allowExt=0):
+    def __init__(self, path, defaultType="text/html", allowExt=0, registry=None):
         """Create a file with the given path.
         """
         resource.Resource.__init__(self)
@@ -163,6 +167,11 @@ class File(resource.Resource, styles.Versioned):
             p, ext = os.path.splitext(p)
         self.defaultType = defaultType
         self.allowExt = allowExt
+        if not registry:
+            self.registry = {}
+        else:
+            self.registry = registry
+        
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
 
     def getChild(self, path, request):
@@ -213,7 +222,11 @@ class File(resource.Resource, styles.Versioned):
         p, ext = os.path.splitext(childPath)
         processor = self.processors.get(ext)
         if processor:
-            p = processor(childPath)
+            try: #the `registry' argument is new.
+                p = processor(childPath, self.registry)
+            except TypeError: # this isn't very robust :(
+                p = processor(childPath)
+            
             if components.implements(p, resource.IResource):
                 return p
             else:
@@ -222,7 +235,7 @@ class File(resource.Resource, styles.Versioned):
                     raise "%s instance does not implement IResource, and there is no registered adapter." % p.__class__
                 return adapter
 
-        f = File(childPath, self.defaultType, self.allowExt)
+        f = self.createSimilarFile(childPath)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
         return f
@@ -326,7 +339,7 @@ class File(resource.Resource, styles.Versioned):
         return directory
 
     def listEntities(self):
-        return map(lambda fileName, self=self: File(os.path.join(self.path, fileName)), self.listNames())
+        return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
 
     def createPickleChild(self, name, child):
         if not os.path.isdir(self.path):
@@ -343,6 +356,9 @@ class File(resource.Resource, styles.Versioned):
             pk = Pickler(fl)
             pk.dump(child)
         fl.close()
+
+    def createSimilarFile(self, path):
+        return File(path, self.defaultType, self.allowExt, self.registry)
 
 class DirectoryListing(widgets.StreamWidget):
     def __init__(self, pathname):
