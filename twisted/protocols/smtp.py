@@ -96,16 +96,13 @@ def rfc822date(timeinfo=None,local=1):
     """
     Format an RFC-2822 compliant date string.
 
-    Arguments: timeinfo    (optional) A sequence as returned by
-                           time.localtime() or time.gmtime(). Default
-                           is now.
-               local       (optional) Indicates if the supplied time
-                           is local or universal time, or if no time
-                           is given, whether now should be local or
-                           universal time. Default is local, as
-                           suggested (SHOULD) by rfc-2822.
+    @param timeinfo: (optional) A sequence as returned by C{time.localtime()}
+        or C{time.gmtime()}. Default is now.
+    @param local: (optional) Indicates if the supplied time is local or
+        universal time, or if no time is given, whether now should be local or
+        universal time. Default is local, as suggested (SHOULD) by rfc-2822.
 
-    Returns: A string representing the time and date in RFC-2822 format.
+    @returns: A string representing the time and date in RFC-2822 format.
     """
     if not timeinfo:
         if local:
@@ -1099,34 +1096,25 @@ def sendmail(smtphost, from_addr, to_addrs, msg):
     are not accepted, as we don't do ESMTP yet. I reserve the
     right to implement the ESMTP options differently.
 
-    Arguments:
-      smtphost   : The host the message should be sent to
-      from_addr  : The (envelope) address sending this mail.
-      to_addrs   : A list of addresses to send this mail to.
-                   A string will be treated as a list of one
-                   address
-      msg        : The message, including headers, either as
-                   a file or a string. File-like objects need
-                   to support read() and close(). Line endings
-                   must be local (i.e. '\\n'). If you pass
-                   something that doesn't look like a file,
-                   we try to convert it to a string (so you
-                   should be able to pass an email.Message
-                   directly, but doing the conversion using
-                   generator manually and passing the file
-                   object is probably more efficient).
+    @param smtphost: The host the message should be sent to
+    @param from_addr: The (envelope) address sending this mail.
+    @param to_addrs: A list of addresses to send this mail to.  A string will
+        be treated as a list of one address
+    @param msg: The message, including headers, either as a file or a string.
+        File-like objects need to support read() and close(). Line endings must
+        be local (i.e. '\\n'). If you pass something that doesn't look like a
+        file, we try to convert it to a string (so you should be able to pass
+        an email.Message directly, but doing the conversion using generator
+        manually and passing the file object is probably more efficient).
 
-    Returns:
-      defered    : The callback will be called if a message is
-                   sent to ANY address, the errback if no message
-                   is sent.
+    @rtype: L{Deferred}
+    @returns: A L{Deferred}, its callback will be called if a message is sent
+        to ANY address, the errback if no message is sent.
 
-                   The callback will be called with a tuple
-                   (numOk, addresses) where numOk is the number
-                   of successful recipient addresses and
-                   addresses is a list of tuples
-                   (address, code, resp) giving the response
-                   to the RCPT command for each address.
+        The callback will be called with a tuple (numOk, addresses) where numOk
+        is the number of successful recipient addresses and addresses is a list
+        of tuples (address, code, resp) giving the response to the RCPT command
+        for each address.
     """
     if not hasattr(msg,'read'):
         # It's not a file
