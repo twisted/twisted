@@ -135,6 +135,9 @@ class ResourcePublisher(pb.Service, pb.Perspective):
     def authenticate(self, user, challenge, password):
         return self
 
+    def getPerspectiveNamed(self, name):
+        return self
+
     def perspective_request(self, request):
         res = self.site.getResourceFor(request)
         log.msg( request )

@@ -10,8 +10,11 @@ import string
 
 # Twisted Imports
 from twisted.python import reflect, reference, delay
+from twisted.spread import pb
 
-class Reality(delay.Delayed,reference.Resolver):
+class Reality(delay.Delayed,
+              reference.Resolver,
+              pb.Service):
     def __init__(self):
         delay.Delayed.__init__(self)
         reference.Resolver.__init__(self,self)
@@ -19,18 +22,35 @@ class Reality(delay.Delayed,reference.Resolver):
         self.__ids = {}
         self.__names = {}
 
-
     def reload(self, module):
         reload(module)
         for thing in self.__ids.values():
             reflect.refrump(thing)
 
-
     def getThingById(self, thingid):
         return self.__ids[thingid]
 
+    ### PB methods
+    def getPassword(self, playerName):
+        """Attempt to look up a player by name, and return their MD5-hashed password.
+        """
+        try:
+            return self[playerName].password
+        except:
+            raise KeyError('bad login')
+
+    def getPerspectiveNamed(self, playerName):
+        """Get a perspective from a named player.
+
+        This will dispatch to an appropriate player by locating the named
+        player and calling their 'login' method.  (This is to facilitate guest
+        logins.)
+        """
+        return self[playerName].login()
 
     def _addThing(self,thing):
+        """(internal) add a thing to this reality
+        """
         self.__counter = self.__counter+1
         thing.thing_id = self.__counter
         idname = string.lower(thing.name)
@@ -46,6 +66,8 @@ class Reality(delay.Delayed,reference.Resolver):
 
 
     def _removeThing(self,thing):
+        """(internal) remove a thing from this reality
+        """
         if self.__ids.get(thing.thing_id) is thing:
             del self.__ids[thing.thing_id]
         else:
@@ -59,6 +81,8 @@ class Reality(delay.Delayed,reference.Resolver):
 
 
     def unplaced(self):
+        """return a list of objects in this Reality that have no place
+        """
         return filter(lambda x: not x.location, self.__ids.values())
 
 
@@ -82,9 +106,6 @@ class Reality(delay.Delayed,reference.Resolver):
 
     def resolveAll(self):
         self.resolve(self.objects())
-
-    def thingFromLogin(self, playerName):
-        return self[playerName].login()
 
     def printSource(self,write):
         "Create a source representation of the map"

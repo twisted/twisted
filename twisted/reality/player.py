@@ -7,6 +7,7 @@ import traceback
 
 # Twisted Imports
 from twisted.python import threadable, reflect
+from twisted.spread import pb
 
 # Sibling Imports
 import thing
@@ -20,7 +21,7 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 
-class Player(thing.Thing):
+class Player(thing.Thing, pb.Perspective):
     """Player
 
     A convenience class for sentient beings (implying turing-test quality AI)
@@ -37,6 +38,14 @@ class Player(thing.Thing):
     definiteArticle=indefiniteArticle
     aan=indefiniteArticle
     the=definiteArticle
+
+    ### Remote Interface
+
+    def perspective_execute(self, st):
+        self.execute(st)
+
+    def perspective_observe(self, i):
+        self.intelligence = LocalIntelligence(i)
 
     ### Basic Abilities
 

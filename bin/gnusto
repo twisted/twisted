@@ -16,7 +16,8 @@ import sys,os,string
 
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
     sys.path.append(os.path.dirname(
-        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+        os.path.dirname(os.path.abspath(sys.argv[0]))))
+    sys.path.append('.')
 ### end of preamble
 
 print "initializing...",

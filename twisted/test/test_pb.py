@@ -24,7 +24,7 @@ class DummyPerspective(pb.Perspective):
         return Dummy()
 
 class DummyService(pb.Service):
-    def getUser(self, user):
+    def getPerspectiveNamed(self, user):
         return DummyPerspective()
 
 class IOPump:

@@ -124,7 +124,7 @@ class Service(authenticator.Authenticator):
     """A service for Perspective Broker.
     """
 
-    def getUser(self, user):
+    def getPerspectiveNamed(self, name):
         """Return a perspective that represents a user for this service.
 
         Other services should really, really subclass this method.
@@ -657,8 +657,9 @@ class Broker(banana.Banana):
         """
         assert self.username is not None, "login directive must appear *BEFORE* password directive"
         try:
-            user = self.loginService.authenticate(self.username, self.challenge, password)
-            self.addPerspective(self.loginTag, user)
+            self.loginService.authenticate(self.username, self.challenge, password)
+            perspective = self.loginService.getPerspectiveNamed(self.username)
+            self.addPerspective(self.loginTag, perspective)
             self.sendCall("perspective", self.loginTag)
             del self.username
             del self.challenge

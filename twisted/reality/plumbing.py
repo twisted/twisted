@@ -16,20 +16,6 @@ from twisted import copyright
 portno  = 8889
 tportno = 8888
 
-class Authenticator(authenticator.Authenticator):
-    """An authenticator that backends to a Reality instance.
-    """
-    def __init__(self, world):
-        """Initialize.
-        """
-        self.reality = world
-        
-    def getPassword(self, playerName):
-        """Attempt to look up a player by name, and return their MD5-hashed password.
-        """
-        try:    return self.reality[playerName].password
-        except: raise KeyError('bad login')
-
 class Hose(telnet.Telnet):
     """A telnet protocol implementation for TR.
     """
@@ -50,12 +36,12 @@ class Hose(telnet.Telnet):
         """Checks authentication against the reality; returns a boolean indicating success.
         """
         try:
-            self.factory.authenticator.check(username, password)
+            self.factory.reality.check(username, password)
         except authenticator.Unauthorized:
             self.transport.write("NEIN!\r\n")
             return 0
         else:
-            self.player = self.factory.reality.thingFromLogin(self.username)
+            self.player = self.factory.reality.getPerspectiveNamed(self.username)
             self.transport.write("Hello "+self.player.name+", welcome to Reality!\r\n"+telnet.IAC+telnet.WONT+telnet.ECHO)
             self.player.intelligence = self
             return 1
@@ -140,9 +126,7 @@ class Spigot(protocol.Factory):
     def __init__(self, world):
         """Initialize with a twisted.reality.Reality instance.
         """
-        telnet.ShellFactory.__init__(self)
         self.reality = world
-        self.authenticator = Authenticator(world)
 
 class Placer(resource.Resource):
     """A callback to place() an object through the web.

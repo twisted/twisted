@@ -15,26 +15,31 @@ import sys,os,string
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
     sys.path.append(os.path.dirname(
         os.path.dirname(os.path.abspath(sys.argv[0])))) 
+    sys.path.append('.')
 ### end of preamble
 
 from cPickle import load
 from twisted.reality import plumbing, reality
 from twisted.internet import tcp, main
 from twisted.web import server
+from twisted.spread import pb
 
-mapname, setName = sys.argv[1:]
+mapname = sys.argv[1]
 
-print 'Loading %s...'%mapname,
+print 'Loading %s...' % mapname
 sys.stdout.flush()
-reality._default = load(open(mapname,'rb'))
+rdf = reality._default = load(open(mapname,'rb'))
 print 'Loaded.'
 
-spigot = plumbing.Spigot(reality._default)
-site = server.Site(plumbing.Web(reality._default))
+spigot = plumbing.Spigot(rdf)
+site = server.Site(plumbing.Web(rdf))
+bf = pb.BrokerFactory()
+bf.addService("reality", rdf)
 
 app = main.Application("reality")
-app.addPort(tcp.Port(8080, site))
-app.addPort(tcp.Port(4040, spigot))
+app.listenOn(8080, site)
+app.listenOn(4040, spigot)
+app.listenOn(8787, bf)
 app.save()
 print "Done."
 

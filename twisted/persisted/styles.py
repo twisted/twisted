@@ -111,9 +111,9 @@ class Ephemeral:
     are eliminated.
     """
     def __getstate__(self):
-        log.msg("WARNING: serializing ephemeral", self)
+        print "WARNING: serializing ephemeral", self
         return None
 
     def __setstate__(self, state):
-        log.msg("WARNING: unserializing ephemeral", self.__class__)
+        print "WARNING: unserializing ephemeral", self.__class__
         self.__class__ = Ephemeral
