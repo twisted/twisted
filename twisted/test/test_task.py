@@ -8,34 +8,89 @@ from twisted.internet import task, reactor, defer
 
 from twisted.python import failure
 
+class Clock(object):
+    rightNow = 0.0
+
+    def __call__(self):
+        return self.rightNow
+
+    def adjust(self, amount):
+        self.rightNow += amount
+
+    def pump(self, reactor, timings):
+        timings = list(timings)
+        timings.reverse()
+        self.adjust(timings.pop())
+        while timings:
+            self.adjust(timings.pop())
+            reactor.iterate()
+
 class TestException(Exception):
     pass
 
 class LoopTestCase(unittest.TestCase):
+    def setUpClass(self):
+        self.clock = Clock()
+
+        # Violation is fun.
+        from twisted.internet import base
+        self.original = base.seconds
+        base.seconds = self.clock
+
+    def tearDownClass(self):
+        from twisted.internet import base
+        base.seconds = self.original
+
     def testBasicFunction(self):
+        # Arrange to have time advanced enough so that our function is
+        # called a few times.
+        timings = [0.05, 0.1, 0.1, 0.1]
+
         L = []
         def foo(a, b, c=None, d=None):
             L.append((a, b, c, d))
 
         lc = task.LoopingCall(foo, "a", "b", d="d")
-        d = lc.start(0.1)
-        reactor.callLater(1, lc.stop)
-        d.addCallback(self._testBasicFunction, lc, L)
-        return d
+        D = lc.start(0.1)
 
-    def _testBasicFunction(self, result, lc, L):
-        self.assertIdentical(lc, result)
+        self.clock.pump(reactor, timings)
 
-        # this test will fail if the test process is delayed by more
-        # than about .1 seconds
-        self.failUnless(9 <= len(L) <= 11,
-                        "got %d iterations, not 10" % len(L))
+        self.assertEquals(len(L), 3,
+                          "got %d iterations, not 3" % (len(L),))
 
         for (a, b, c, d) in L:
             self.assertEquals(a, "a")
             self.assertEquals(b, "b")
             self.assertEquals(c, None)
             self.assertEquals(d, "d")
+
+        lc.stop()
+        self.clock.adjust(10)
+        reactor.iterate()
+        self.assertEquals(len(L), 3,
+                          "got extra iterations after stopping: " + repr(L))
+        self.failUnless(D.called)
+        self.assertIdentical(D.result, lc)
+
+    def testDelayedStart(self):
+        timings = [0.05, 0.1, 0.1, 0.1]
+
+        L = []
+        lc = task.LoopingCall(L.append, None)
+        d = lc.start(0.1, now=False)
+
+        self.clock.pump(reactor, timings)
+
+        self.assertEquals(len(L), 2,
+                          "got %d iterations, not 2" % (len(L),))
+        lc.stop()
+        self.clock.adjust(10)
+        reactor.iterate()
+        self.assertEquals(len(L), 2,
+                          "got extra iterations after stopping: " + repr(L))
+        self.failUnless(d.called)
+        self.assertIdentical(d.result, lc)
+
 
     def testFailure(self):
         def foo(x):
@@ -75,7 +130,7 @@ class LoopTestCase(unittest.TestCase):
         lc = task.LoopingCall(lambda: None)
         self.assertRaises(ValueError, lc.start, -1)
 
-    def testDelayedStart(self):
+    def testStoppingBeforeDelayedStart(self):
         ran = []
         def foo():
             ran.append(True)
