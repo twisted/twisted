@@ -197,7 +197,7 @@ class MakeMessageTestCase(unittest.TestCase):
         r.addHeader("foo", "bar")
         r.addHeader("Content-Length", "4")
         r.bodyDataReceived("1234")
-        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-length: 4\r\n\r\n1234")
+        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-Length: 4\r\n\r\n1234")
 
     def testStatusCode(self):
         r = sip.Response(200)
@@ -630,7 +630,7 @@ From: <sip:exarkun@intarweb.us:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9898 REGISTER\r
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER\r
-User-agent: Asterisk PBX\r
+User-Agent: Asterisk PBX\r
 Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
 Proxy-Authenticate: Digest nonce="92956076410767313901322208775",opaque="1674186428",qop-options="auth",algorithm="MD5",realm="intarweb.us"\r
 \r
@@ -659,10 +659,10 @@ From: <sip:exarkun@intarweb.us:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9899 REGISTER\r
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER\r
-User-agent: Asterisk PBX\r
+User-Agent: Asterisk PBX\r
 Contact: sip:exarkun@192.168.1.100:50609\r
 Expires: 3599\r
-Content-length: 0\r
+Content-Length: 0\r
 \r
 """
 
