@@ -28,7 +28,6 @@ import random, re, string, struct
 # twisted import
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
-from twisted.python.hashexpand import HashExpander
 
 true = 1
 false = 0
@@ -84,7 +83,7 @@ class GnutellaTalker(LineReceiver):
         self.initiator = false # True iff this instance initiated an outgoing TCP connection rather than being constructed to handle an incoming TCP connection.
         self.handshake = "start" # state transitions: "start" -> "initiatorsaidhello", "initiatorsaidhello" -> "completed"
         self.gotver = None
-        self.prng = HashExpander("MYSECRETSEED")
+        self.prng = None # HashExpander("MYSECRETSEED")
 
         self.buf = ''
 
