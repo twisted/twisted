@@ -1,4 +1,4 @@
-
+# -*- Python -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -19,11 +19,20 @@
 
 Stability: semi-stable.
 
-Future plans: The way the IRCClient class works here encourages people
-to implement IRC clients by subclassing the ephemeral protocol class,
-and it tends to end up with way more state than it should for an object
-which will be destroyed as soon as the TCP transport drops.  Someone
-oughta do something about that, ya know?
+Future Plans
+------------
+
+The way the IRCClient class works here encourages people to implement
+IRC clients by subclassing the ephemeral protocol class, and it tends
+to end up with way more state than it should for an object which will
+be destroyed as soon as the TCP transport drops.  Someone oughta do
+something about that, ya know?
+
+The DCC support needs to have more hooks for the client for it to be
+able to ask the user things like \"Do you want to accept this session?\"
+and \"Transfer #2 is 67% done.\" and otherwise manage the DCC sessions.
+
+Test coverage needs to be better.
 
 @author: U{Kevin Turner<mailto:acapnotic@twistedmatrix.com>}
 
@@ -33,7 +42,7 @@ oughta do something about that, ya know?
     <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.58 $'[11:-2]
+__version__ = '$Revision: 1.59 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -567,7 +576,7 @@ class IRCClient(basic.LineReceiver):
         if data is not None:
             self.quirkyMessage("Why did %s send '%s' with a SOURCE query?"
                                % (user, data))
-        if self.sourceHost:
+        if self.sourceURL:
             nick = string.split(user,"!")[0]
             # The CTCP document (Zeuge, Rollo, Mesander 1994) says that SOURCE
             # replies should be responded to with the location of an anonymous
@@ -677,6 +686,9 @@ class IRCClient(basic.LineReceiver):
 
         if dcctype == 'SEND':
             log.msg("hah! how dare you try to DCC me!")
+            # Commented out because because we don't want the default
+            # IRC implementation to write arbitrarily named files to
+            # the user's disk without their knowledge or consent.
 ##            size = -1
 ##            if len(data) >= 5:
 ##                try:
@@ -692,16 +704,9 @@ class IRCClient(basic.LineReceiver):
 ##            self.dcc_sessions.append(protocol)
 
         elif dcctype == 'CHAT':
-            protocol = DccChat(self, queryData=(user, channel, data))
-            reactor.clientTCP(address, port, protocol)
-            self.dcc_sessions.append(protocol)
-
-        #elif dcctype == 'PERSPECTIVE':
-        #    b = self.classDccPbRequest(user, channel, arg)
-        #    pb.connect(address, port,
-        #               string.split(arg, ':')[0],
-        #               string.split(arg, ':')[1],
-        #               string.split(arg, ':')[2]).addCallbacks(b.callback, b.errback)
+            factory = DccChatFactory(self, queryData=(user, channel, data))
+            reactor.connectTCP(address, port, factory)
+            self.dcc_sessions.append(factory)
         else:
             nick = string.split(user,"!")[0]
             self.ctcpMakeReply(nick, [('ERRMSG',
@@ -950,7 +955,6 @@ def fileSize(file):
 
     return size
 
-
 class DccChat(basic.LineReceiver, styles.Ephemeral):
     """Direct Client Connection protocol type CHAT.
 
@@ -1003,6 +1007,24 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
         log.msg("DCC CHAT<%s> %s" % (self.remoteParty, line))
         self.client.privmsg(self.remoteParty,
                             self.client.nickname, line)
+
+
+class DccChatFactory(protocol.ClientFactory):
+    protocol = DccChat
+    noisy = 0
+    def __init__(self, client, queryData):
+        self.client = client
+        self.queryData = queryData
+
+    def buildProtocol(self, addr):
+        p = self.protocol(client=self.client, queryData=self.queryData)
+        p.factory = self
+
+    def clientConnectionFailed(self, unused_connector, unused_reason):
+        self.client.dcc_sessions.remove(self)
+
+    def clientConnectionLost(self, unused_connector, unused_reason):
+        self.client.dcc_sessions.remove(self)
 
 
 def dccDescribe(data):
@@ -1584,3 +1606,8 @@ symbolic_to_numeric = {
 numeric_to_symbolic = {}
 for k, v in symbolic_to_numeric.items():
     numeric_to_symbolic[v] = k
+
+
+# Local Variables:
+# test-case-name: "twisted.test.test_irc"
+# End:
