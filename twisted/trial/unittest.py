@@ -123,12 +123,14 @@ class TestSuite:
                 try:
                     testCase.tearDown()
                 except AssertionError, e:
-                    output.reportFailure(testClass, method, sys.exc_info())
+                    if ok:
+                        output.reportFailure(testClass, method, sys.exc_info())
                     ok = 0
                 except KeyboardInterrupt:
                     pass
                 except:
-                    output.reportError(testClass, method, sys.exc_info())
+                    if ok:
+                        output.reportError(testClass, method, sys.exc_info())
                     ok = 0
 
                 try:
@@ -147,12 +149,14 @@ class TestSuite:
                         # lingering surprises
                         #self.fail(msg)
                 except AssertionError, e:
-                    output.reportFailure(testClass, method, sys.exc_info())
+                    if ok:
+                        output.reportFailure(testClass, method, sys.exc_info())
                     ok = 0
                 except KeyboardInterrupt:
                     pass
                 except:
-                    output.reportError(testClass, method, sys.exc_info())
+                    if ok:
+                        output.reportError(testClass, method, sys.exc_info())
                     ok = 0
                     
                 if ok:
