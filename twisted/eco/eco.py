@@ -59,9 +59,6 @@ def evalExp(exp, env):
         return exp
 
 
-# And then He created the Two Namespaces. Many people spoke out! They did
-# not want the segregation, but lo, it was how it was to be.
-
 globalValues = {"nil" : []}
 globalFunctions = {}
 
@@ -100,10 +97,6 @@ def extendEnv(varOrFun, oldEnv, bindings):
     return e
 
 
-
-## The functions were angered by this segregation. They came in hoardes to
-## plunder the lands of the variables -- But He defeated them! And He tamed
-## them to serve His followers.
 
 class Function:
     def __init__(self, forms, env):
@@ -219,6 +212,9 @@ def reduce_1(fun, list, prevResult):
         return reduce_1(fun, cdr(list), fun(prevResult, car(list)))
     else:
         return prevResult
+
+def func_format(str, *args):
+    return str % tuple(args)
 
 # car/cdr and compositions
 
