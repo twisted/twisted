@@ -239,9 +239,9 @@ def makeBalls(opts):
     
     print "makeBalls: Twisted_NoDocs."
     map(lambda x: sh(x % (tdir, ver, tdir)),
-        ['tar czf   --exclude %s/doc Twisted_NoDocs-%s.tar.gz  %s',
-         'tar cjf   --exclude %s/doc Twisted_NoDocs-%s.tar.bz2 %s',
-         'zip -9 -r        -x %s/doc Twisted_NoDocs-%s.zip     %s > /dev/null'])
+        ['tar --exclude %s/doc czf Twisted_NoDocs-%s.tar.gz  %s',
+         'tar --exclude %s/doc cjf Twisted_NoDocs-%s.tar.bz2 %s',
+         'zip -x %s/doc      -9 -r Twisted_NoDocs-%s.zip     %s > /dev/null'])
 
 
     if not os.path.exists('doc/api/tree.html' % tdir):#we didn't do the docs
