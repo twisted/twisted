@@ -182,11 +182,9 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
 
 class XmlStreamFactory(protocol.ReconnectingClientFactory):
-    def __init__(self, authenticator, port, host = None):
+    def __init__(self, authenticator):
         self.authenticator = authenticator
         self.bootstraps = []
-        self.host = host or authenticator.streamHost
-        self.port = port
 
     def buildProtocol(self, _):
         self.resetDelay()

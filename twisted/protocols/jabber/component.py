@@ -16,12 +16,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.xish import domish, xpath
+from twisted.xish import domish, xpath, utility
 from twisted.protocols import xmlstream
 
-def componentFactory(componentid, password, ip, port):
+def componentFactory(componentid, password):
     a = ComponentAuthenticator(componentid, password)
-    return xmlstream.XmlStreamFactory(a, port, ip)
+    return xmlstream.XmlStreamFactory(a)
 
 class ComponentAuthenticator(xmlstream.Authenticator):
     """ Authenticator to permit an XmlStream to authenticate against a Jabber
@@ -60,92 +60,68 @@ class ComponentAuthenticator(xmlstream.Authenticator):
 
 from twisted.application import service
 
-class Service(service.Service):
-    """ Business logic superclass for external/connect components
+class Service(service.MultiService):
+    """ Business logic representing a managed component connection to a Jabber router
 
-    This class provides the necessary functionality to create a new piece
-    of business logic that needs a connection a Jabber router via a connecting
-    TCP socket. Subclass key methods such as (L{componentConnected}, L{componentDisconnected})
-    to be notified when the component connection comes up and goes down.
-
-    @type xmlstream: L{XmlStream}
-    @ivar xmlstream: Accessor for the current XmlStream which connects this object to the router
-
+    This Service maintains a single connection to a Jabber router and
+    provides facilities for packet routing and transmission. Business
+    logic modules should be written as standard C{service.Service}
+    subclasses, and added as sub-service.
     """
-    def __init__(self, jabberId, serviceParent):
-        """
-        @type  jabberId: L{str}
-        @param jabberId: Jabber ID of this component (used to login to router)
+    def __init__(self, jid, password):
+        service.MultiService.__init__(self)
 
-        """
         # Setup defaults
-        self.jabberId = jabberId
-        self.jabberPassword = None
-        self.jabberRouterHost = None
-        self.jabberRouterPort = -1
+        self.jabberId = jid
         self.xmlstream = None
 
-        # Internal vars
-        self._xsFactory = None
-        self._xsConnector = None
+        # Internal buffer of packets
+        self._packetQueue = []
 
-    def associateWithRouter(self, password, host, port):
-        """
-        Bind this service to a particular password, host, and port on a router. The
-        component ID used to connect to the router is determined by the jabberId passed
-        in the constructor.
+        # Internal events for being (dis)connected
+        self.connectedEvent = utility.CallbackList()
+        self.disconnectedEvent = utility.CallbackList()
 
-        @param password: Password to use for logging into the router
-        @param host: DNS or IP address of the router
-        @param port: TCP port on the router to connect to
-        
-        """
-        self.jabberPassword = password
-        self.jabberRouterHost = host
-        self.jabberRouterPort = port
-
-        # Setup the factory
-        self._xsFactory = componentFactory(self.jabberId, self.jabberPassword,
-                                           self.jabberRouterHost, self.jabberRouterPort)
+        # Setup the xmlstream factory
+        self._xsFactory = componentFactory(self.jabberId, password)
 
         # Register some lambda functions to keep the self.xmlstream var up to date
         self._xsFactory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self._connected)
         self._xsFactory.addBootstrap(xmlstream.STREAM_END_EVENT, self._disconnected)
 
-        # Notify subclass that it should register for bootstrap events
-        self.configureEvents(self._xsFactory)
+        # Map addBootstrap and removeBootstrap to the underlying factory -- is this
+        # right? I have no clue...but it'll work for now, until i can think about it
+        # more.
+        self.addBootstrap = self._xsFactory.addBootstrap
+        self.removeBootstrap = self._xsFactory.removeBootstrap
+
+    def getFactory(self):
+        return self._xsFactory
 
     def _connected(self, xs):
         self.xmlstream = xs
-        self.componentConnected()
+        for p in self._packetQueue:
+            self.xmlstream.send(p)
+        self._packetQueue = []
+        self.connectedEvent.callback(self.xmlstream)
 
-    def _disconnected(self, obj):
+    def _disconnected(self, _):
         self.xmlstream = None
-        self.componentDisconnected()
+        self.disconnectedEvent.callback()
+
+    def send(self, obj):
+        if self.xmlstream != None:
+            self.xmlstream.send(obj)
+        else:
+            self._packetQueue.append(obj)
 
 
-    def configureEvents(self, factory):
-        """ Register bootstrap events here """
-        pass
+import jstrports
 
-    def componentConnected(self):
-        """ Fired when the component is auth'd with the router """
-        pass
-
-    def componentDisconnected(self):
-        """ Fired when the component has lost the connection to the router """
-        pass
-
-    def startService(self):
-        """ If you subclass me, you MUST call me """
-        assert self._xsFactory != None
-        # Start the connections
-        from twisted.internet import reactor
-        self._xsConnector = reactor.connectTCP(self._xsFactory.host,
-                                               self._xsFactory.port,
-                                               self._xsFactory)
-
-    def stopService(self):
-        """ If you subclass me, you MUST call me """
-        self._xsFactory.stopTrying()
-        self._xsConnector.transport.loseConnection()
+def buildService(jid, password, strport):
+    """ Constructs a pre-built C{component.Service}, using the specified strport string.    
+    """
+    svc = Service(jid, password)
+    client_svc = jstrports.client(strport, svc.getFactory())
+    client_svc.setServiceParent(svc)
+    return svc
