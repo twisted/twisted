@@ -5,6 +5,9 @@ Twisted Test Framework
 from twisted.python import reflect
 import sys, time, string, traceback, types, os, glob
 
+class SkipTest(Exception):
+    pass
+
 class TestCase:
     def setUp(self):
         pass
@@ -115,6 +118,8 @@ class TestSuite:
                     output.reportFailure(testClass, method, sys.exc_info())
                 except KeyboardInterrupt:
                     pass
+                except SkipTest:
+                    output.reportSkip(testClass, method, sys.exc_info())
                 except:
                     output.reportError(testClass, method, sys.exc_info())
                 else:
@@ -172,6 +177,7 @@ class Reporter:
         self.errors = []
         self.failures = []
         self.imports = []
+        self.skips = []
         self.numTests = 0
         self.expectedTests = 0
 
@@ -181,6 +187,10 @@ class Reporter:
 
     def reportImportError(self, name):
         self.imports.append(name)
+
+    def reportSkip(self, testClass, method, exc_info):
+        self.skips.append((testClass, method, exc_info))
+        self.numTests += 1
 
     def reportFailure(self, testClass, method, exc_info):
         self.failures.append((testClass, method, exc_info))
@@ -221,6 +231,10 @@ class TextReporter(Reporter):
         self.write('E')
         Reporter.reportError(self, testClass, method, exc_info)
 
+    def reportSkip(self, testClass, method, exc_info):
+        self.write('S')
+        Reporter.reportSkip(self, testClass, method, exc_info)
+
     def reportSuccess(self, testClass, method):
         self.write('.')
         Reporter.reportSuccess(self, testClass, method)
@@ -247,17 +261,18 @@ class TextReporter(Reporter):
         self.stream.flush()
 
     def _statusReport(self):
+        summaries = []
+        if self.failures:
+            summaries.append('failures=%d' % len(self.failures))
+        if self.errors:
+            summaries.append('errors=%d' % len(self.errors))
+        if self.skips:
+            summaries.append('skips=%d' % len(self.skips))
+        summary = (summaries and '('+', '.join(summaries)+')') or ''
         if not (self.failures or self.errors):
             status = 'OK'
-            summary = ''
         else:
             status = 'FAILED'
-            if self.failures and self.errors:
-                summary = '(failures=%d, errors=%d)' % (len(self.failures), len(self.errors))
-            elif self.failures:
-                summary = '(failures=%d)'  % (len(self.failures),)
-            else:
-                summary = '(errors=%d)' % (len(self.errors),)
         return '%s %s' % (status, summary)
             
     def stop(self):
@@ -267,6 +282,8 @@ class TextReporter(Reporter):
             self.write(self._formatError('FAILURE', error))
         for error in self.errors:
             self.write(self._formatError('ERROR', error))
+        for error in self.skips:
+            self.write(self._formatError('SKIPPED', error))
         self.writeln(self.SEPARATOR)
         self.writeln('Ran %d tests in %.3fs', self.numTests, self.getRunningTime())
         self.writeln()
@@ -291,4 +308,8 @@ class VerboseTextReporter(TextReporter):
 
     def reportError(self, testCase, method, exc_info):
         self.writeln('%s (%s) ... [ERROR]', method.__name__, reflect.qual(testCase))
+        Reporter.reportError(self, testCase, method, exc_info)
+
+    def reportSkip(self, testCase, method, exc_info):
+        self.writeln('%s (%s) ... [SKIPPED]', method.__name__, reflect.qual(testCase))
         Reporter.reportError(self, testCase, method, exc_info)
