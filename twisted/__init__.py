@@ -19,6 +19,12 @@
 Twisted: The Framework Of Your Internet.
 """
 
+# Ensure the user is running the version of python we require.
+import sys
+if sys.version_info < (2,2):
+	raise RuntimeError("Twisted requires Python 2.2 or later.")
+del sys
+
 # Ensure compat gets imported
 from twisted.python import compat
 del compat
