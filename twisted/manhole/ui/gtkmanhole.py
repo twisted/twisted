@@ -9,29 +9,29 @@ ingtkernet.install()
 class Interaction(gtk.GtkWindow):
     def __init__(self):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
-	self.set_title("Manhole Interaction")
+        self.set_title("Manhole Interaction")
 
-	vb = gtk.GtkVBox()
+        vb = gtk.GtkVBox()
 
-	self.output = gtk.GtkText()
-	gtkim.defocusify(self.output)
-	vb.pack_start(gtkim.scrolltxt(self.output), 1,1,0)
+        self.output = gtk.GtkText()
+        gtkim.defocusify(self.output)
+        vb.pack_start(gtkim.scrolltxt(self.output), 1,1,0)
 
         self.input = gtk.GtkText()
-	self.input.set_editable(gtk.TRUE)
-	vb.pack_start(gtkim.scrolltxt(self.input), 1,1,0)
+        self.input.set_editable(gtk.TRUE)
+        vb.pack_start(gtkim.scrolltxt(self.input), 1,1,0)
 
         self.send = gtkim.cbutton("Send", self.sendMessage)
         vb.pack_start(self.send, 1,1,0)
 
         self.add(vb)
-	self.signal_connect('destroy', sys.exit, None)
+        self.signal_connect('destroy', sys.exit, None)
 
     def messageReceived(self, message):
         t = self.output
         t.set_point(t.get_length())
         t.freeze()
-        t.insert(message)
+        t.insert_defaults('\n'+str(message))
         a = t.get_vadjustment()
         t.thaw()
         a.set_value(a.upper - a.page_size)
