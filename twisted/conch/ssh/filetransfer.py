@@ -628,7 +628,8 @@ class FileTransferClient(FileTransferBase):
         This method returns the target of the link, or a Deferred that
         returns the same.
         """
-        return self._sendRequest(FXP_READLINK, NS(path))
+        d = self._sendRequest(FXP_READLINK, NS(path))
+        return d.addCallback(self._cbRealPath)
 
     def makeLink(self, linkPath, targetPath):
         """

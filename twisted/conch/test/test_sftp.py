@@ -165,17 +165,14 @@ class TestOurServerOurClient(unittest.TestCase):
         attrs = self._waitWithBuffer(self.client.getAttrs('testLink',1))
         attrs2 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
         self.failUnlessEqual(attrs, attrs2)
+        link = self._waitWithBuffer(self.client.readLink('testLink'))
+        self.failUnlessEqual(link, os.path.join(os.getcwd(), 'testfile1'))
         realPath = self._waitWithBuffer(self.client.realPath('testLink'))
         self.failUnlessEqual(realPath, os.path.join(os.getcwd(), 'testfile1'))
 
     def testExtendedRequest(self):
-        log.msg('1')
         d = self.client.extendedRequest('testExtendedRequest', 'foo')
-        log.msg('1')
         self.failUnlessEqual(self._waitWithBuffer(d), 'bar')
-        log.msg('1')
         d = self.client.extendedRequest('testBadRequest', '')
-        log.msg('1')
         self.failUnlessRaises(NotImplementedError, self._waitWithBuffer, d)
-        log.msg('1')
 
