@@ -366,6 +366,7 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         self.conn = conn = test_conch.SSHTestConnectionForUnix(None)
         uao = default.SSHUserAuthClient(o['user'], o, conn)
         connect.connect(o['host'], int(o['port']), o, vhk, uao)
+        util.spinWhile(lambda: not conn.connected)
 
     def tearDownClass(self):
         test_process.SignalMixin.tearDownClass(self)
