@@ -71,7 +71,8 @@ class ThreadPool:
         if self.joined: return
         o=(owner,func,args,kw)
         self.q.put(o)
-        self._startSomeWorkers()
+        if self.workers < self.max:
+            self._startSomeWorkers()
     
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
