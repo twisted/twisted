@@ -287,9 +287,10 @@ class HistoricRecvLine(RecvLine):
             self.terminal.eraseToLineEnd()
 
             self.historyPosition -= 1
-            self.lineBuffer = list(self.historyLines[self.historyPosition])
-            self.terminal.write(''.join(self.lineBuffer))
-            self.lineBufferIndex = len(self.lineBuffer)
+            self.lineBuffer = []
+
+            for ch in self.historyLines[self.historyPosition]:
+                self.characterReceived(ch)
 
     def handle_DOWN(self):
         if self.historyPosition < len(self.historyLines) - 1:
@@ -297,9 +298,10 @@ class HistoricRecvLine(RecvLine):
             self.terminal.eraseToLineEnd()
 
             self.historyPosition += 1
-            self.lineBuffer = list(self.historyLines[self.historyPosition])
-            self.terminal.write(''.join(self.lineBuffer))
-            self.lineBufferIndex = len(self.lineBuffer)
+            self.lineBuffer = []
+
+            for ch in self.historyLines[self.historyPosition]:
+                self.characterReceived(ch)
         else:
             self.handle_HOME()
             self.terminal.eraseToLineEnd()
