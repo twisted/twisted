@@ -74,7 +74,28 @@ import main
 import interfaces
 import error
 
-class _TLSMixin:
+class _SocketCloser:
+    _socketShutdownMethod = 'shutdown'
+
+    def _closeSocket(self):
+        # socket.close() doesn't *really* close if there's another reference
+        # to it in the TCP/IP stack, e.g. if it was was inherited by a
+        # subprocess. And we really do want to close the connection. So we
+        # use shutdown() instead, and then close() in order to release the
+        # filedescriptor.
+        skt = self.socket
+        try:
+            getattr(skt, self._socketShutdownMethod)(2)
+        except socket.error:
+            pass
+        try:
+            skt.close()
+        except socket.error:
+            pass
+
+class _TLSMixin(_SocketCloser):
+    _socketShutdownMethod = 'sock_shutdown'
+
     writeBlockedOnRead = 0
     readBlockedOnWrite = 0
     _userWantRead = _userWantWrite = True
@@ -141,16 +162,6 @@ class _TLSMixin:
         except SSL.Error:
             log.err()
             return main.CONNECTION_LOST
-
-    def _closeSocket(self):
-        try:
-            self.socket.sock_shutdown(2)
-        except:
-            pass
-        try:
-            self.socket.close()
-        except:
-            pass
 
     def _postLoseConnection(self):
         """Gets called after loseConnection(), after buffered data is sent.
@@ -260,8 +271,8 @@ class _TLSMixin:
             self.startReading()
         else:
             self.stopReading()
-    
-class Connection(abstract.FileDescriptor):
+
+class Connection(abstract.FileDescriptor, _SocketCloser):
     """I am the superclass of all socket-based FileDescriptors.
 
     This is an abstract superclass of all objects which represent a TCP/IP
@@ -357,22 +368,6 @@ class Connection(abstract.FileDescriptor):
             else:
                 return main.CONNECTION_LOST
 
-    def _closeSocket(self):
-        """Called to close our socket."""
-        # This used to close() the socket, but that doesn't *really* close if
-        # there's another reference to it in the TCP/IP stack, e.g. if it was
-        # was inherited by a subprocess. And we really do want to close the
-        # connection. So we use shutdown() instead, and then close() in order
-        # to release the filedescriptor.
-        try:
-            self.socket.shutdown(2)
-        except socket.error:
-            pass
-        try:
-            self.socket.close()
-        except socket.error:
-            pass
-    
     def _closeWriteConnection(self):
         self.socket.shutdown(1)
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
@@ -460,10 +455,17 @@ class BaseClient(Connection):
         self.failIfNotConnected(error.UserError())
 
     def failIfNotConnected(self, err):
-        if (self.connected or
-            self.disconnected or
-            not (hasattr(self, "connector"))):
+        if (self.connected or self.disconnected or 
+            not hasattr(self, "connector")):
             return
+        
+        try:
+            self._closeSocket()
+        except AttributeError:
+            pass
+        else:
+            del self.socket, self.fileno
+
         self.connector.connectionFailed(failure.Failure(err))
         if hasattr(self, "reactor"):
             # this doesn't happen if we failed in __init__
@@ -650,7 +652,7 @@ class Server(Connection):
         """
         return address.IPv4Address('TCP', *(self.client + ('INET',)))
 
-class Port(base.BasePort):
+class Port(base.BasePort, _SocketCloser):
     """I am a TCP server port, listening for connections.
 
     When a connection is accepted, I will call my factory's buildProtocol with
@@ -784,7 +786,7 @@ class Port(base.BasePort):
         log.msg('(Port %r Closed)' % self.port)
         base.BasePort.connectionLost(self, reason)
         self.connected = 0
-        self.socket.close()
+        self._closeSocket()
         del self.socket
         del self.fileno
         self.factory.doStop()

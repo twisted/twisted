@@ -39,6 +39,7 @@ class DelayedCall(styles.Ephemeral):
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
+    _str = None
 
     def __init__(self, time, func, args, kw, cancel, reset):
         self.time, self.func, self.args, self.kw = time, func, args, kw
@@ -73,6 +74,9 @@ class DelayedCall(styles.Ephemeral):
         else:
             self.canceller(self)
             self.cancelled = 1
+            if self.debug:
+                self._str = str(self)
+            del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
         """Reschedule this call for a different time
@@ -134,6 +138,8 @@ class DelayedCall(styles.Ephemeral):
         return self.time <= other.time
 
     def __str__(self):
+        if self._str is not None:
+            return self._str
         if hasattr(self.func, 'func_name'):
             func = self.func.func_name
             if hasattr(self.func, 'im_class'):
@@ -571,7 +577,7 @@ class BaseConnector(styles.Ephemeral):
         del self.transport
 
     def cancelTimeout(self):
-        if self.timeoutID:
+        if self.timeoutID is not None:
             try:
                 self.timeoutID.cancel()
             except ValueError:
@@ -585,6 +591,7 @@ class BaseConnector(styles.Ephemeral):
 
     def connectionFailed(self, reason):
         self.cancelTimeout()
+        del self.transport
         self.state = "disconnected"
         self.factory.clientConnectionFailed(self, reason)
         if self.state == "disconnected":

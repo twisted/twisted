@@ -160,6 +160,8 @@ components.backwardsCompatImplements(Server)
 
 class Port(tcp.Port):
     """I am an SSL port."""
+    _socketShutdownMethod = 'sock_shutdown'
+    
     transport = Server
 
     def __init__(self, port, factory, ctxFactory, backlog=5, interface='', reactor=None):
