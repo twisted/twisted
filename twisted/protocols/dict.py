@@ -62,6 +62,17 @@ def makeAtom(line):
     # FIXME: proper quoting
     return filter(lambda x: not (x in map(chr, range(33)+[34, 39, 92])), line)
 
+def makeWord(s):
+    mustquote = range(33)+[34, 39, 92]
+    result = []
+    for c in s:
+        if ord(c) in mustquote:
+            result.append("\\")
+        result.append(c)
+    s = "".join(result)
+    print "word", repr(s)
+    return s
+
 def parseText(line):
     if len(line) == 1 and line == '.':
         return None
@@ -98,11 +109,13 @@ class DictClient(basic.LineReceiver):
 
     def sendLine(self, line):
         """Throw up if the line is longer than 1022 characters"""
+        print "line:", line
         if len(line) > self.MAX_LENGTH - 2:
             raise ValueError("DictClient tried to send a too long line")
         basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
+        print line
         try:
             line = line.decode("UTF-8")
         except UnicodeError: # garbage received, skip
@@ -153,8 +166,8 @@ class DictClient(basic.LineReceiver):
         self.result = None  # these two are just in case. In "ready" state, result and data
         self.data = None    # should be None
         self.state = "define"
-        command = "DEFINE %s %s" % (makeAtom(database), makeAtom(word))
-        self.sendLine(command.encode("UTF-8"))
+        command = "DEFINE %s %s" % (makeAtom(database.encode("UTF-8")), makeWord(word.encode("UTF-8")))
+        self.sendLine(command)
 
     def sendMatch(self, database, strategy, word):
         """Send a dict MATCH command"""
