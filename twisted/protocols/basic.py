@@ -204,24 +204,31 @@ class LineReceiver(protocol.Protocol):
         rawDataReceived, depending on mode.)
         """
         self.__buffer = self.__buffer+data
+        lastoffset=0
         while self.line_mode:
-            try:
-                line, self.__buffer = self.__buffer.split(self.delimiter, 1)
-            except ValueError:
+            offset=self.__buffer.find(self.delimiter, lastoffset)
+            if offset == -1:
+                self.__buffer=self.__buffer[lastoffset:]
                 if len(self.__buffer) > self.MAX_LENGTH:
-                    line, self.__buffer = self.__buffer, ''
+                    line=self.__buffer
+                    self.__buffer=''
                     return self.lineLengthExceeded(line)
                 break
-            else:
-                linelength = len(line)
-                if linelength > self.MAX_LENGTH:
-                    line, self.__buffer = self.__buffer, ''
-                    return self.lineLengthExceeded(line)
-                why = self.lineReceived(line)
-                if why or self.transport and self.transport.disconnecting:
-                    return why
+            
+            line=self.__buffer[lastoffset:offset]
+            lastoffset=offset+len(self.delimiter)
+            
+            if len(line) > self.MAX_LENGTH:
+                line=self.__buffer[lastoffset:]
+                self.__buffer=''
+                return self.lineLengthExceeded(line)
+            why = self.lineReceived(line)
+            if why or self.transport and self.transport.disconnecting:
+                self.__buffer = self.__buffer[lastoffset:]
+                return why
         else:
-            data, self.__buffer = self.__buffer, ''
+            data=self.__buffer[lastoffset:]
+            self.__buffer=''
             if data:
                 return self.rawDataReceived(data)
 
@@ -232,10 +239,14 @@ class LineReceiver(protocol.Protocol):
         you can pass in extra unhandled data, and that data will
         be parsed for lines.  Further data received will be sent
         to lineReceived rather than rawDataReceived.
+
+        Do not pass extra data if calling this function from
+        within a lineReceived callback.
         """
         self.line_mode = 1
-        return self.dataReceived(extra)
-
+        if extra:
+            return self.dataReceived(extra)
+        
     def setRawMode(self):
         """Sets the raw mode of this receiver.
         Further data received will be sent to rawDataReceived rather
@@ -261,6 +272,11 @@ class LineReceiver(protocol.Protocol):
     def lineLengthExceeded(self, line):
         """Called when the maximum line length has been reached.
         Override if it needs to be dealt with in some special way.
+
+        The argument 'line' contains the remainder of the buffer, starting
+        with (at least some part) of the line which is too long. This may
+        be more than one line, or may be only the initial portion of the
+        line.
         """
         return self.transport.loseConnection()
 
