@@ -9,6 +9,11 @@ try:
 except ImportError:
     unix = None
 
+try:
+    import Crypto
+except ImportError:
+    Crypto = None
+
 from twisted.cred import portal
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session
@@ -278,7 +283,8 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
         cmds = (cmd % (exe, cftp_path, port))
         self.processProtocol = SFTPTestProcess()
-        reactor.spawnProcess(self.processProtocol, exe, cmds.split(), env=None)
+        reactor.spawnProcess(self.processProtocol, exe, cmds.split(),
+                             env={'PYTHONPATH': twisted_path + '/..'})
         timeout = time.time() + 10
         while (not self.processProtocol.buffer) and (time.time() < timeout):
             reactor.iterate(0.1)
@@ -470,6 +476,6 @@ if not unix:
     TestOurServerCmdLineClient.skip = "don't run on non-posix"
     TestOurServerBatchFile.skip = "don't run on non-posix"
 
-if not interfaces.IReactorProcess(reactor, None):
-    TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess"
-    TestOurServerBatchFile.skip = "don't run w/o/ spawnProcess"
+if not interfaces.IReactorProcess(reactor, None) or Crypto is None:
+    TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
+    TestOurServerBatchFile.skip = "don't run w/o/ spawnProcess or PyCrypto"
