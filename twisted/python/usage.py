@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.54 2003/10/07 00:44:18 exarkun Exp $
+# $Id: usage.py,v 1.55 2003/10/07 05:20:16 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -340,13 +340,13 @@ class Options(dict):
             # in parseOptions, as it makes all option-methods have the
             # same signature.
             if takesArg:
-                fn = lambda self, name, value, m=method: m(value)
+                fn = lambda name, value, m=method: m(value)
             else:
                 # XXX: This won't raise a TypeError if it's called
                 # with a value when it shouldn't be.
-                fn = lambda self, name, value=None, m=method: m()
+                fn = lambda name, value=None, m=method: m()
 
-            dispatch[prettyName] = new.instancemethod(fn, self, self.__class__)
+            dispatch[prettyName] = fn
 
             if len(name) == 1:
                 shortOpt = shortOpt + name
