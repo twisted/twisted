@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.trial.test.test_trial -*-
+
 from cStringIO import StringIO
 
 from twisted import trial
@@ -59,7 +61,7 @@ class BogusReporter(reporter.TreeReporter):
     def endModule(self, mod):
         super(BogusReporter, self).endModule(mod)
         self.endCtr['module'] += 1
-        assertEquals(self.module, mod)
+        assertIdentical(self.module, mod)
 
     def startClass(self, klass):
         super(BogusReporter, self).startClass(klass)
@@ -69,7 +71,7 @@ class BogusReporter(reporter.TreeReporter):
     def endClass(self, klass):
         super(BogusReporter, self).endClass(klass)
         self.endCtr['class'] += 1
-        assertEquals(self.klass, klass)
+        assertIdentical(self.klass, klass)
 
     def startTest(self, tm):
         super(BogusReporter, self).startTest(tm)
@@ -79,7 +81,7 @@ class BogusReporter(reporter.TreeReporter):
     def endTest(self, tm):
         super(BogusReporter, self).endTest(tm)
         self.endCtr['test'] += 1
-        assertEquals(self.tm, tm)
+        assertIdentical(self.tm, tm)
 
     def upDownError(self, method, warn=True, printStatus=True):
         super(BogusReporter, self).upDownError(method, False, printStatus)
@@ -92,7 +94,7 @@ class BogusReporter(reporter.TreeReporter):
         self.cleanerrs = errs
 
     def verify(self, failIfImportErrors=True):
-        for v in (self.setUpReporterCalled, self.tearDownReporterCalled):
+        for v in self.setUpReporterCalled, self.tearDownReporterCalled:
             assert_(v)
         for n in self.names:
             assertEqual(self.startCtr[n], self.endCtr[n])
