@@ -318,10 +318,10 @@ objects. Each one receives the tokens emitted by the matching Slicer on the
 sending side. The whole stack is used to determine new Unslicer objects,
 perform Tasting of incoming tokens, and manage object references.</p>
 
-<p>OPEN tokens have a string to indicate what kind of object is being
-started. This is looked up in the UnbananaRegistry just like object types
-are looked up in the BananaRegistry. The new Unslicer is pushed onto the
-stack.</p>
+<p>OPEN tokens have a string (or short list of tokens.. see below) to
+indicate what kind of object is being started. This is looked up in the
+UnbananaRegistry just like object types are looked up in the BananaRegistry.
+The new Unslicer is pushed onto the stack.</p>
 
 <p><q>ABORT</q> tokens indicate that something went wrong on the sending
 side and that the current object is to be aborted. It causes the receiver to
@@ -330,6 +330,72 @@ is implemented by replacing the top-most slice with a DiscardUnslicer.</p>
 
 <p><q>CLOSE</q> tokens finish the current node. The slice will pass its
 completed object up to the <q>childFinished</q> method of its parent.</p>
+
+<h3>Open Index tokens</h3>
+
+<p>To be precise, OPEN tokens are followed by an arbitrary list of other
+tokens which are used to determine which UnslicerFactory should be invoked
+to create the new Unslicer. Basic Python types are designated with a simple
+string, like (OPEN <q>list</q>) or (OPEN <q>dict</q>), but instances are
+serialized with two strings (OPEN <q>instance</q> <q>classname</q>), and
+various exotic PB objects like method calls may involve a list of strings
+and numbers (OPEN <q>call</q> reqID objID methodname). The unbanana code
+works with the unslicer stack's designated <q>opener</q> object to apply
+constraints to these indexing tokens and finally obtain the new Unslicer
+when enough indexing tokens have been received.</p>
+
+<p>The reason for assembling this list before creating the Unslicer (instead
+of using a generic InstanceUnslicer which switches behavior depending upon
+its first received token) is to support classes or PB methods which wish to
+push custom Unslicers to handle their deserialization process. For example,
+a class could push a StreamingFileUnslicer that accepts a series of string
+tokens and appends their contents to a file on disk. This Unslicer could
+reduce memory consumption (by only holding one chunk at a time) and update
+some kind of progress indicator as the data arrives. This particular feature
+was provided by the old StringPager utility, but custom Unslicers offer more
+flexibility and better efficiency (no additional round-trips).</p>
+
+<p>(note: none of this affects the serialization side: those Slicers emit
+both their indexing tokens and their state tokens. It is only the receiving
+side where the index tokens are handled by a different piece of code than
+the content tokens).</p>
+
+<p>In yet greater detail:</p>
+
+<ul>
+
+  <li>Each OPEN sequence is divided into an <q>Index phase</q> and a
+  <q>Contents phase</q>. The first one (or two or three) tokens are the
+  Index Tokens and the rest are the Content Tokens. The sequence ends with a
+  CLOSE token.</li>
+
+  <li>Banana.inOpen is a boolean which indicates that we are in the Index
+  Phase. It is set to True when the OPEN token is received and returns to
+  False after the new Unslicer has been pushed.</li>
+
+  <li>Banana.opentype is a list of Index Tokens that are being accumulated.
+  It is cleared each time .inOpen is set to True. The tuple form of opentype
+  is passed to Slicer.doOpen, Constraint.checkOpentype, and used as a key in
+  the RootSlicer.openRegistry dictionary. Each Unslicer type is indexed by
+  an opentype tuple.</li>
+
+</ul>
+
+<p>If .inOpen is True, each new token type will be passed (through
+Banana.getLimit and top.openerCheckToken) to the opener's .openerCheckToken
+method, along with the current opentype tuple. The opener gets to decide if
+the token is acceptable (possibly raising a BananaError exception), and may
+return a length limit (usually for strings). Note that the opener does not
+maintain state about what phase the decoding process is in, so it may want
+to condition its response upon the length of the opentype.</p>
+
+<p>After each index token is complete, it is appended to .opentype, then the
+list is passed (through Banana.handleOpen, top.doOpen, and top.open) to the
+opener's .open method. This can either return an Unslicer (which will finish
+the index phase: all further tokens will be sent to the new Unslicer),
+return None (to continue the index phase), raise a Violation (which causes
+an UnbananaFailure to be passed to the current top unslicer), or raise
+another exception (which causes the connection to be abandoned).</p>
 
 
 
