@@ -1,3 +1,10 @@
+2002-10-07  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* .: Release 0.99.4rc1
+	
+	* twisted/protocols/http.py: backed out changes to HTTP that
+	broke 0.99.3 twisted.web.distrib.
+
 2002-10-7  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/web/script.py: Add ResourceTemplate which uses PTL for
@@ -7,6 +14,7 @@
 
 	* twisted/tap/web.py: It is now possibly to add processors via
 	the command line
+
 
 2002-10-04  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
