@@ -101,6 +101,14 @@ directory. When a straight Python file which defines an <code>Application</code>
 object called <code>application</code> is used, use the <code>-y</code>
 option.</p>
 
+<p>When <code>twistd</code> runs, it records its process id in a
+<code>twistd.pid</code> file (this can be configured via a command line
+switch). In order to shutdown the <code>twistd</code> process, kill that
+pid. When the process is killed in an orderly fashion it will leave behind
+the "shutdown Application" which is named the same as the original file
+as a <code>-shutdown</code> added to its base name. This contains the
+new configuration information, as changed in the application.</p>
+
 <p>As always, the gory details are in the manual page.</p>
 
 </body></html>
