@@ -26,7 +26,6 @@ import time
 import linecache
 
 # Sibling Imports
-import reflect
 import log
 
 lastRebuild = time.time()
@@ -56,7 +55,7 @@ class Sensitive:
         """
         t = type(object)
         if t == types.FunctionType:
-            return latestFunction(oldFunc)
+            return latestFunction(object)
         elif t == types.MethodType:
             if object.im_self is None:
                 return getattr(object.im_class, object.__name__)
@@ -67,7 +66,7 @@ class Sensitive:
             getattr(object, 'nothing', None)
             return object
         elif t == types.ClassType:
-            return latestClass(obejct)
+            return latestClass(object)
         else:
             print 'warning returning object!'
             return object
@@ -117,7 +116,7 @@ def rebuild(module, doLog=1):
     if hasattr(module, 'ALLOW_TWISTED_REBUILD'):
         # Is this module allowed to be rebuilt?
         if not module.ALLOW_TWISTED_REBUILD:
-            assert 0, "I am not allowed to be rebuilt."
+            raise RuntimeError, "I am not allowed to be rebuilt."
     if doLog:
         log.msg( 'Rebuilding %s...' % str(module.__name__))
     d = module.__dict__
