@@ -111,3 +111,6 @@ def dict(*a, **k):
     import twisted.python.compat
     warnings.warn('twisted.python.util.dict is deprecated.  Use twisted.python.compat.dict instead')
     return twisted.python.compat.dict(*a, **k)
+
+def println(*a):
+    sys.stdout.write(' '.join(map(str, a))+'\n')
