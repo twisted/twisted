@@ -14,23 +14,34 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
 
-from twisted.internet.protocol import Protocol, Factory
+from twisted.internet.protocol import ConnectedDatagramProtocol
 from twisted.internet import reactor
 
-### Protocol Implementation
+class ConnectedEchoClientDatagramProtocol(ConnectedDatagramProtocol):
+    strings = [
+        "Hello, world!",
+        "What a fine day it is.",
+        "Bye-bye!"
+    ]
+    
+    def startProtocol(self):
+        self.sendDatagram()
+    
+    def sendDatagram(self):
+        if len(self.strings):
+            datagram = self.strings.pop(0)
+            self.transport.write(datagram)
+        else:
+            reactor.stop()
 
-# This is just about the simplest possible protocol
-class Echo(Protocol):
-    def dataReceived(self, data):
-        """As soon as any data is received, write it back."""
-        self.transport.write(data)
+    def datagramReceived(self, datagram):
+        print 'Datagram received: ', repr(datagram)
+        self.sendDatagram()
 
 def main():
-    f = Factory()
-    f.protocol = Echo
-    reactor.listenTCP(8000, f)
+    protocol = ConnectedEchoClientDatagramProtocol()
+    reactor.connectUDP('localhost', 8000, protocol)
     reactor.run()
 
 if __name__ == '__main__':
