@@ -50,14 +50,18 @@ class AbstractMaildirDomain:
         """
         return None
 
-    def exists(self, name, domain, protocol):
+    def exists(self, user, success, failure):
         """Check for existence of user in the domain
         """
-        return self.userDirectory(name) is not None
+        if self.userDirectory(user.name) is not None:
+            success(user)
+        else:
+            failure(user)
 
-    def saveMessage(self, origin, name, message, domain):
+    def saveMessage(self, user, message):
         """Save a message for a given user
         """
+        name, domain = user.name, user.domain
         dir = os.path.join(self.userDirectory(name), 'inbox')
         fname = _generateMaildirName() 
         filename = os.path.join(dir, 'tmp', fname)

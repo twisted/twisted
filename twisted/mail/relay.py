@@ -32,12 +32,15 @@ class DomainPickler:
         self.path = path
         self.n = 0
 
-    def exists(self, user, domain, protocol):
+    def exists(self, user, success, failure):
         """Check whether we will relay
 
         Call overridable willRelay method
         """
-        return self.willRelay(protocol)
+        if self.willRelay(user.protocol):
+            success(user)
+        else:
+            failure(user)
 
     def willRelay(self, protocol):
         """Check whether we agree to relay
@@ -49,7 +52,7 @@ class DomainPickler:
         peer = protocol.transport.getPeer()
         return peer[0] != 'INET' or peer[1] == '127.0.0.1'
 
-    def saveMessage(self, origin, name, message, domain):
+    def saveMessage(self, user, message):
         """save a relayable pickle of the message
 
         The filename is uniquely chosen.
@@ -59,7 +62,8 @@ class DomainPickler:
         self.n = self.n+1
         fp = open(os.path.join(self.path, fname), 'w')
         try:
-            cPickle.dump((origin, '%s@%s' % (name, domain), message), fp)
+            cPickle.dump((origin, '%s@%s' % (user.name, user.domain), 
+                                             message), fp)
         finally:
             fp.close()
 

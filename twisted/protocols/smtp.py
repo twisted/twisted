@@ -27,6 +27,18 @@ class SMTPError(Exception):
 
 COMMAND, DATA = range(2)
 
+class User:
+
+    def __init__(self, destination, helo, protocol, orig):
+        try:
+            self.name, self.domain = string.split(destination, '@', 1)
+        except ValueError:
+            self.name = destination
+            self.domain = ''
+        self.helo = helo
+        self.protocol = protocol
+        self.orig = orig
+
 class SMTP(basic.LineReceiver):
 
     mode = COMMAND
@@ -65,19 +77,27 @@ class SMTP(basic.LineReceiver):
 
     def do_MAIL(self, rest):
         from_ = rest[len("MAIL:<"):-len(">")]
-        if self.validateFrom(self.__helo, from_):
-            self.__from = from_
-            self.sendCode(250, 'From address accepted')
-        else:
-            self.sendCode(550, 'No mail for you!')
+        self.validateFrom(self.__helo, from_, self._fromValid,
+                                              self._fromInvalid)
+
+    def _fromValid(self, from_):
+        self.__from = from_
+        self.sendCode(250, 'From address accepted')
+
+    def _fromInvalid(self, from_):
+        self.sendCode(550, 'No mail for you!')
 
     def do_RCPT(self, rest):
         to = rest[len("TO:<"):-len(">")]
-        if self.validateTo(self.__helo, to):
-            self.__to = self.__to + (to,)
-            self.sendCode(250, 'Address recognized')
-        else:
-            self.sendCode(550, 'Cannot receive for specified address')
+        user = User(to, self.__helo, self, self.__from)
+        self.validateTo(user, self._toValid, self._toInvalid)
+
+    def _toValid(self, to):
+        self.__to = self.__to + (to,)
+        self.sendCode(250, 'Address recognized')
+
+    def _toInvalid(self, to):
+        self.sendCode(550, 'Cannot receive for specified address')
 
     def do_DATA(self, rest):
         if self.__from is None or not self.__to:  
@@ -96,41 +116,42 @@ class SMTP(basic.LineReceiver):
                 self.__from = None
                 self.__to = ()
                 del self.__buffer
-                self.handleMessage(helo, origin, recipients, message)
-                self.sendCode(250, 'Delivery in progress')
+                success = self._messageHandled
+                failure = self._messageNotHandled
+                self.handleMessage(recipients, message, success, failure)
                 return
             line = line[1:]
         self.__buffer.append(line)
 
+    def _messageHandled(self):
+        self.sendCode(250, 'Delivery in progress')
+
+    def _messageNotHandled(self):
+        self.sendCode(550, 'Could not send e-mail')
+
     # overridable methods:
-    def validateFrom(self, helo, origin):
-        return 1
+    def validateFrom(self, helo, origin, success, failure):
+        success(origin)
 
-    def validateTo(self, helo, destination):
-        return 1
+    def validateTo(self, user, success, failure):
+        failure(user)
 
-    def handleMessage(self, helo, origin, recipients, message):
-        pass
+    def handleMessage(self, helo, origin, recipients, message, 
+                      success, failure):
+        success()
 
 
 class DomainSMTP(SMTP):
 
-    def validateTo(self, helo, destination):
-        try:
-            user, domain = string.split(destination, '@', 1)
-        except ValueError:
-            return 0
-        if not self.factory.domains.has_key(domain):
-            return 0
-        if not self.factory.domains[domain].exists(user, domain, self):
-            return 0
-        return 1
+    def validateTo(self, user, success, failure):
+        if not self.factory.domains.has_key(user.domain):
+            failure(user)
+        self.factory.domains[user.domain].exists(user, success, failure)
 
-    def handleMessage(self, helo, origin, recipients, message):
-        for recipient in recipients:
-            user, domain = string.split(recipient, '@', 1)
-            self.factory.domains[domain].saveMessage(origin, user, message,
-                                                     domain)
+    def handleMessage(self, users, message, success, failure):
+        for user in users:
+            self.factory.domains[user.domain].saveMessage(user, message)
+        success()
 
 
 class SMTPClient(basic.LineReceiver):
