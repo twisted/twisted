@@ -38,17 +38,15 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         reflector.LIKE        : "like"
         }
     
-    def __init__(self, dbpool, rowClasses, populatedCallback=None):
+    def __init__(self, dbpool, rowClasses):
         """
         Initialize me against a database.
         """
         adbapi.Augmentation.__init__(self, dbpool)
-        reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
+        reflector.Reflector.__init__(self, rowClasses)        
 
-    def _really_populate(self):
+    def _populate(self):
         self._transPopulateSchema()
-        if self.populatedCallback:
-            self.populatedCallback(None)
 
     def _transPopulateSchema(self):
         """Used to construct the row classes in a single interaction.

@@ -58,7 +58,6 @@ class EnterpriseTestCase(unittest.TestCase):
     def setUp(self):
         # creates XML db in file system
         self.reflector = XMLReflector(EnterpriseTestCase.DB, [TestRow, ChildRow])
-        self.reflector._really_populate()
 
         # create one row to work with
         self.newRow = TestRow()

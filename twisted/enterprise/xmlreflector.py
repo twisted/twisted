@@ -40,7 +40,7 @@ class XMLReflector(reflector.Reflector):
 
     extension = ".xml"
     
-    def __init__(self, baseDir, rowClasses, populatedCallback=None):
+    def __init__(self, baseDir, rowClasses):
         self.baseDir = baseDir
         try:
             os.mkdir(baseDir)
@@ -48,9 +48,9 @@ class XMLReflector(reflector.Reflector):
             #print "Base Directory %s already exists" % baseDir
             pass
         self.tableDirs = {}
-        reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
+        reflector.Reflector.__init__(self, rowClasses)        
 
-    def _really_populate(self):
+    def _populate(self):
         """load schema data
         """
         for rc in self.rowClasses:
@@ -64,8 +64,6 @@ class XMLReflector(reflector.Reflector):
 
             tableInfo = _TableInfo(rc)
             self.populateSchemaFor(tableInfo)
-        if self.populatedCallback:
-            self.populatedCallback(None)
         
     def _rowLoader(self, tableName, parentRow, data, whereClause, forceChildren):
         d = self.tableDirs[ tableName]
