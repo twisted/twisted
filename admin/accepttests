@@ -73,7 +73,9 @@ def staticWebTest():
 
 def sslWebTest():
     message("Running SSL Web Test")
-    cmd("mktap web --https=8443 -k doc/examples/server.pem -c doc/examples/server.pem --path %s/../static" % twistedBinDir)
+    cmd(("mktap web --https=8443 -k %s/../doc/examples/server.pem "
+         "-c %s/../doc/examples/server.pem --path %s/../static") % (
+        twistedBinDir, twistedBinDir, twistedBinDir))
     twistdf("web")
     browse("https://localhost:8443/")
     killit()
