@@ -34,10 +34,11 @@ class GetString(gtk.GtkWindow):
         self.im = im
         button = cbutton(desc, self.clicked)
         self.entry = gtk.GtkEntry()
+        self.entry.connect('activate', self.clicked)
         hb = gtk.GtkHBox()
         hb.add(self.entry)
         hb.add(button)
-        self.add(hb)   
+        self.add(hb)
         self.show_all()
 
     def clicked(self, btn):
