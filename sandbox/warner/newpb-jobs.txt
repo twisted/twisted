@@ -1,0 +1,169 @@
+
+Reasonably independent newpb sub-tasks that need doing.
+
+* implement schema.maxSize()
+
+In newpb, schemas serve two purposes:
+
+ a) make programs safer by reducing the surprises that can appear in their
+    arguments (i.e. factoring out argument-checking in a useful way)
+
+ b) remove memory-consumption DoS attacks by putting an upper bound on the
+    memory consumed by any particular message.
+
+Each schema has a pair of methods named maxSize() and maxDepth() which
+provide this upper bound. While the schema is in effect (say, during the
+receipt of a particular named argument to a remotely-invokable method), at
+most X bytes and Y slicer frames will be in use before either the object is
+accepted and processed or the schema notes the violation and the object is
+rejected (whereupon the temporary storage is released and all further bytes
+in the reject object are simply discarded). Strictly speaking, the number
+returned by maxSize() is the largest string on the wire which has not yet
+been rejected as violating the constraint, but it is also a reasonable metric
+to describe how much internal storage must be used while processing it. (To
+achieve greater accuracy would involve knowing exactly how large each Python
+type is; not a sensible thing to attempt).
+
+The idea is that someone who is worried about an attacker throwing a really
+long string or an infinitely-nested list at them can ask the schema just what
+exactly their current exposure is. The tradeoff between flexibility ("accept
+any object whatsoever here") and exposure to DoS attack is then user-visible
+and thus user-selectable.
+
+To implement maxSize() for a basic schema (like a string), you simply need to
+look at banana.xhtml and see how basic tokens are encoded. For a
+schema.StringConstraint(32) (which accepts strings <= 32 characters in
+length), the largest serialized form that has not yet been either accepted or
+rejected is:
+
+  64 bytes (header indicating 0x000000..0020 with lots of leading zeros)
+ + 1 byte (STRING token)
+ + 32 bytes (string contents)
+ = 97
+
+If the header indicates a conforming length (<=32) then just after the 32nd
+byte is received, the string object is created and handed to up the stack, so
+the temporary storage tops out at 97. If someone is trying to spam us with a
+million-character string, the serialized form would look like:
+
+  64 bytes (header indicating 1-million in hex, with leading zeros)
++  1 byte (STRING token)
+= 65
+
+at which point the receive parser would check the constraint, decide that
+1000000 > 32, and reject the remainder of the object.
+
+So (with the exception of pass/fail maxSize values, see below), the following
+should hold true:
+
+ schema.StringConstraint(32).maxSize() == 97
+
+Now, schemas which represent containers have size limits that are the sum of
+their contents, plus some overhead (and a stack level) for the container
+itself. For example, a list of two small integers is represented in newbanana
+as:
+
+ OPEN(list)
+  INT
+  INT
+ CLOSE()
+
+which really looks like:
+
+ opencount-OPEN
+  len-STRING-"list"
+  value-INT
+  value-INT
+ opencount-CLOSE
+
+This sequence takes at most:
+
+ opencount-OPEN: 64+1
+ len-STRING-"list": 64+1+1000  (opentypes are confined to be <= 1k long)
+ value-INT: 64+1
+ value-INT: 64+1
+ opencount-CLOSE: 64+1
+
+or 5*(64+1)+1000 = 1325, or rather:
+
+  3*(64+1)+1000 + N*(IntConstraint().maxSize())
+
+So ListConstraint.maxSize is computed by doing some math involving the
+.maxSize value of the objects that go into it (the ListConstraint.constraint
+attribute). This suggests a recursive algorithm. If any constraint is
+unbounded (say a ListConstraint with no limit on the length of the list),
+then maxSize() raises UnboundedSchema to indicate that there is no limit on
+the size of a conforming string. Clearly, if any constraint is found to
+include itself, UnboundedSchema must also be raised.
+
+This is a loose upper bound. For example, one non-conforming input string
+would be:
+
+ opencount-OPEN: 64+1
+ len-STRING-"x"*1000: 64+1+1000
+
+The entire string would be accepted before checking to see which opentypes
+were valid: the ListConstraint only accepts the "list" opentype and would
+reject this string immediately after the 1000th "x" was received. So a
+tighter upper bound would be 2*65+1000 = 1130.
+
+In general, the bound is computed by walking through the deserialization
+process and identifying the largest string that could make it past the
+validity checks. There may be later checks that will reject the string, but
+if it has not yet been rejected, then it still represents exposure for a
+memory consumption DoS.
+
+** pass/fail sizes
+
+I started to think that it was necessary to have each constraint provide two
+maxSize numbers: one of the largest sequence that could possibly be accepted
+as valid, and a second which was the largest sequence that could be still
+undecided. This would provide a more accurate upper bound because most
+containers will respond to an invalid object by abandoning the rest of the
+container: i.e. if the current active constraint is:
+
+ ListConstraint(StringConstraint(32), maxLength=30)
+
+then the first thing that doesn't match the string constraint (say an
+instance, or a number, or a 33-character string) will cause the ListUnslicer
+to go into discard-everything mode. This makes a significant difference when
+the per-item constraint allows opentypes, because the OPEN type (a string) is
+constrained to 1k bytes. The item constraint probably imposes a much smaller
+limit on the set of actual strings that would be accepted, so no
+kilobyte-long opentype will possibly make it past that constraint. That means
+there can only be one outstanding invalid object. So the worst case (maximal
+length) string that has not yet been rejected would be something like:
+
+  OPEN(list)
+   validthing [0]
+   validthing [1]
+    ...
+   validthing [n-1]
+   long-invalid-thing
+
+because if the long-invalid thing had been received earlier, the entire list
+would have been abandoned.
+
+This suggests that the calculation for ListConstraint.maxSize() really needs
+to be like
+  overhead
+  +(len-1)*itemConstraint.maxSize(valid)
+  +(1)*itemConstraint.maxSize(invalid)
+
+I'm still not sure about this. I think it provides a significantly tighter
+upper bound. The deserialization process itself does not try to achieve the
+absolute minimal exposure (i.e., the opentype checker could take the set of
+all known-valid open types, compute the maximum length, and then impose a
+StringConstraint with that length instead of 1000), because it is, in
+general, a inefficient hassle. There is a tradeoff between computational
+efficiency and removing the slack in the maxSize bound, both in the
+deserialization process (where the memory is actually consumed) and in
+maxSize (where we estimate how much memory could be consumed).
+
+Anyway, maxSize() and maxDepth() (which is easier: containers add 1 to the
+maximum of the maxDepth values of their possible children) need to be
+implemented for all the Constraint classes. There are some tests (disabled)
+in test_schema.py for this code: those tests assert specific values for
+maxSize. Those values are probably wrong, so they must be updated to match
+however maxSize actually works.
+
