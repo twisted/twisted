@@ -26,6 +26,7 @@ import string
 import cStringIO
 import time
 import threadable
+import traceback
 import failure
 
 StringIO = cStringIO
@@ -94,6 +95,27 @@ WARNING: %s::
 file: %s; line: %s
 ''' % (category, indent(message), filename, lineno))
 
+def logCaller():
+    """Log where the current function was called from.
+
+    Example output::
+    
+        load was called from file \"/foo/bar.py\", line 482, in loadConfig
+            config.load(self.serviceParent, *self.configArgs)
+
+    Useful for putting in those deprecated functions when you want to
+    find out what code is still using them.
+    """
+    stack = traceback.extract_stack(limit=3)
+    try:
+        # -1 is me, -2 is my caller, -3 is my caller's caller, which is
+        # what they really want to know about.
+        filename, lineno, func, code = stack[-3]
+    except IndexError:
+        return
+    funcCalled = stack[-2][2]
+    msg('%s was called from file "%s", line %s, in %s\n'
+        '    %s\n' % (funcCalled, filename, lineno, func, code))
 
 import warnings
 warnings.showwarning = showwarning
