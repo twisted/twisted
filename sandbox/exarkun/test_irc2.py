@@ -124,3 +124,24 @@ class SimpleActionTestCase(unittest.TestCase):
             "user", "another1", "another2", "another3", "another4",
             "another5"
         ]})
+
+    def testWho(self):
+        server = LineSendingProtocol([
+            ":server 352 user pattern jjs9GN0GAm hostmask3 servername1 user1 H :0 fullname2",
+            ":server 352 user pattern 15j7VkjDbD hostmask1 servername2 user2 H :2 fullname3",
+            ":server 352 user pattern 4X7zQjVK7h hostmask2 servername3 user3 H :3 fullname1",
+            ":server 315 user pattern :End of /WHO list.",
+        ])
+        client = AdvancedTestClient()
+        who = []
+        client.onC.addCallback(lambda p: p.who("pattern")
+            ).addCallback(who.extend
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.assertEquals(who, [
+            ("jjs9GN0GAm", "hostmask3", "servername1", "user1", "H", 0, "fullname2"),
+            ("15j7VkjDbD", "hostmask1", "servername2", "user2", "H", 2, "fullname3"),
+            ("4X7zQjVK7h", "hostmask2", "servername3", "user3", "H", 3, "fullname1"),
+        ])
