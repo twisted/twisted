@@ -1743,12 +1743,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_COPY(self, tag, messages, mailbox, uid=0):
         mailbox = self._parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox
-            ).addCallback(self._cbCopySelectedMailbox, tag, messages, uid
+            ).addCallback(self._cbCopySelectedMailbox, tag, messages, mailbox, uid
             ).addErrback(self._ebCopySelectedMailbox, tag
             )
     select_COPY = (do_COPY, arg_seqset, arg_astring)
 
-    def _cbCopySelectedMailbox(self, mbox, tag, messages, uid):
+    def _cbCopySelectedMailbox(self, mbox, tag, messages, mailbox, uid):
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + mailbox)
         else:
