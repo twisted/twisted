@@ -1,5 +1,6 @@
 """Support for relaying mail for twisted.mail"""
 
+from twisted.protocols import smtp
 import os, time, cPickle
 
 class DomainPickler:
@@ -44,3 +45,31 @@ class DomainPickler:
             cPickle.dump((origin, '%s@%s' % (name, domain), message), fp)
         finally:
             fp.close()
+
+
+class SMTPRelayer(smtp.SMTPClient):
+
+    def __init__(self, messages):
+        self.messages = []
+        for message in messages:
+            fp = open(message)
+            try:
+                messageContents = cPickle.load(fp)
+            finally:
+                fp.close()
+            self.messages.append((message, messageContents))
+
+    def getMailFrom(self):
+        if not self.messages:
+            return None
+        return self.messages[1][0]
+
+    def getMailTo(self):
+        return [self.messages[1][1]]
+
+    def getMailData(self):
+        return self.messages[1][2]
+
+    def sentMail(self, addresses):
+        if addresses:
+            os.remove(self.messages[0])
