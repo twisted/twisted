@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.65 $"[11:-2]
+__version__ = "$Revision: 1.66 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -31,7 +31,7 @@ import model
 from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
-from twisted.web import resource, microdom, html
+from twisted.web import resource, microdom, html, error
 from twisted.web.server import NOT_DONE_YET
 
 
@@ -91,7 +91,7 @@ class View:
     isLeaf = 1
 
     def getChild(self, path, request):
-        raise NotImplementedError()
+        return error.NoResource("No such child resource.")
 
     def getChildWithDefault(self, path, request):
         return self.getChild(path, request)
