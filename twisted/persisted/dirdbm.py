@@ -101,8 +101,8 @@ class DirDBM:
     def __setitem__(self, k, v):
         """dirdbm[foo] = bar; create or modify a textfile in this directory
         """
-        assert type(k) == types.StringType
-        assert type(v) == types.StringType
+        assert type(k) == types.StringType, AssertionError("DirDBM key must be a string")
+        assert type(v) == types.StringType, AssertionError("DirDBM value must be a string")
         k = self._encode(k)
         
         # we create a new file with extension .new, write the data to it, and
@@ -124,7 +124,7 @@ class DirDBM:
     def __getitem__(self, k):
         """dirdbm[foo]; get the contents of a file in this directory as a string
         """
-        assert type(k) == types.StringType
+        assert type(k) == types.StringType, AssertionError("DirDBM key must be a string")
         path = os.path.join(self.dname, self._encode(k))
         try:
             return self._readFile(path)
@@ -134,7 +134,7 @@ class DirDBM:
     def __delitem__(self, k):
         """del dirdbm[foo]; delete a file in this directory
         """
-        assert type(k) == types.StringType
+        assert type(k) == types.StringType, AssertionError("DirDBM key must be a string")
         k = self._encode(k)
         try:    os.remove(os.path.join(self.dname, k))
         except (OSError, IOError): raise KeyError(self._decode(k))
@@ -165,7 +165,7 @@ class DirDBM:
     def has_key(self, key):
         """dirdbm.has_key(key); return whether the file `key' exists.
         """
-        assert type(key) == types.StringType
+        assert type(key) == types.StringType, AssertionError("DirDBM key must be a string")
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
     
