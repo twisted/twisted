@@ -273,9 +273,15 @@ class Process(abstract.FileDescriptor):
         win32file.CloseHandle(self.hStdinW)
         self.hStdinW = tmp
 
+        # Add the specified environment to the current environment - this is
+        # necessary because certain operations are only supported on Windows
+        # if certain environment variables are present.
+        env = os.environ.copy()
+        env.update(environment or {})
+
         # create the process
         cmdline = "%s %s" % (command, string.join(args[1:], ' '))
-        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, path, StartupInfo)
+        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, env, path, StartupInfo)
 
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)
