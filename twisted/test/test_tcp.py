@@ -511,6 +511,7 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
         def connector():
             p = self.listener.getHost()[2]
             return reactor.connectTCP('0.0.0.0', p, f)
+        self.connector = connector
 
         self.totalConnections = 0
         try:
