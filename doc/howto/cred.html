@@ -1,0 +1,77 @@
+<html>
+<head>
+<title>Why and How to use Twisted.Cred</title>
+</head>
+
+<body>
+<h1>Why and How to use Twisted.Cred</h1>
+
+<h2>Authentication and Account Management in Twisted</h2>
+
+<p>(This document is a work in progress.  Later it will include some examples
+but for now a brief explanation is better than nothing!)</p>
+
+<p>Twisted unifies authentication and account management of multiple services
+in the Twisted.Cred package.  Although this authentication model was originally
+designed to integrate services in the <a href="pb.html">Perspective Broker</a>
+remote method invocation protocol, it is useful in many kinds of servers, and
+work is underway to move all systems that require log-in in Twisted to use
+twisted.cred. </p>
+
+<p>In order to use twisted.cred, your code has to be structured around a
+subclass of <code>Service</code>.  A service is a particular unit of
+functionality which has a way to request <code>Perspective</code> objects.  You
+will probably have to subclass both of these.</p>
+
+<p>In order to simplify integration of services that come from lots of
+different places, Twisted.Cred presents user-account related information in two
+different ways.  Application-independent user information, such as passwords,
+public keys, and other things related to the existence and authentication of a
+particular person should reside in an <code>Identity</code>.  Information
+related to a particular service, such as e-mail messages, high scores, or to-do
+lists should be represented by a <code>Perspective</code>.</p>
+
+<p>In support of these two basic abstractions is the <code>Authorizer</code>.
+An authorizer serves primarily as the storage mechanism for a collection of
+identities.  Its usage varies depending on whether the services it is providing
+authentication for can support multiple services on one port.
+<code>Authorizer</code> is an abstract class, but you don't need to implement
+your own; the simplest authorizer to get started with is
+<code>DefaultAuthorizer</code>.</p>
+
+<p>At this point, there are basically 2 ways that an authorizer can be used.
+It is either the root of a PB object hierarchy, or simply the authorizer for
+some number of non-PB services.</p>
+
+<h3>Setting Up a Service</h3>
+
+<pre class="python">
+from twisted.internet.app import MultiService
+# A service which collects other services.
+from twisted.cred.authorizer import DefaultAuthorizer
+# A simple in-memory Authorizer implementation.
+from my.service import MyService, OtherService
+# Two sample user-written services.
+
+multiserv = MultiService("pb")
+# multiservice named "pb" to hold other services
+auth = DefaultAuthorizer()
+# the authorizer for both of our other services
+myserv = MyService("my service", multiserv, auth)
+otherserv = OtherService("another service", multiserv, auth)
+# create both of our services pointing to their authorizer
+
+from twisted.internet import reactor
+from twisted.spread import pb
+reactor.listenTCP(pb.portno, pb.AuthRoot(auth))
+# If the services are all pb.Service subclasses, we can connect them to a
+# network like this.  It will look up services through the serviceCollection
+# passed to the Authorizer; which in this case was a MultiService but could
+# also be an Application.
+</pre>
+
+<p></p>
+
+<hr />
+</body>
+</html>
