@@ -11,7 +11,8 @@ from twisted.cred import credentials
 
 import os.path, os
 
-from twisted.protocols.ftp import FTP, FTPFactory, IFTPShell, FTPAnonymousShell, FTPRealm
+from ftp import FTP, Factory, IShell
+from ftpdav import AnonymousShell, Realm
 
 
 # Construct the application
@@ -21,8 +22,8 @@ application = service.Application("ftpserver")
 myService = service.IServiceCollection(application)
 
 # Create the protocol factory
-ftpFactory = FTPFactory()
-realm = FTPRealm(os.getcwd())
+ftpFactory = Factory()
+realm = Realm(os.getcwd())
 p = portal.Portal(realm)
 p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
 
@@ -47,15 +48,15 @@ myServer.setServiceParent(myService)
 #s = strports.service('2112', t)
 #t.setService(s)
 #s.setServiceParent(myService)
-import gc
-def logobjects(self):
-    log.msg('gc.get_objecte: %s' % gc.get_objects())
+#import gc
+#def logobjects(self):
+#    log.msg('gc.get_objecte: %s' % gc.get_objects())
 
-from twisted.application.internet import TimerService
+#from twisted.application.internet import TimerService
 #TimerService.step = 1000
 #TimerService.callable = logobjects
-ts = TimerService(1000, logobjects)
-ts.setServiceParent(myService)
+#ts = TimerService(1000, logobjects)
+#ts.setServiceParent(myService)
 
 
 # vim:ft=python

@@ -19,7 +19,11 @@ from twisted.python import failure, log, components
 # import my sandbox ftp
 import ftp
 
-import pwd, grp
+try:
+    import pwd, grp
+except ImportError:
+    print "sorry, currently ftpdav only works with linux and linux variants"
+    raise SystemExit("ftpdav doesn't do windows")
 
 def _callWithDefault(default, _f, *_a, **_kw):
     try:
