@@ -67,6 +67,20 @@ class IMAP4UTF7TestCase(unittest.TestCase):
             self.assertEquals(input, imap4.decoder(output)[0])
 
 class IMAP4HelperTestCase(unittest.TestCase):
+    def testMessageSet(self):
+        m1 = MessageSet()
+        m2 = MessageSet()
+
+        self.assertEquals(m1, m2)
+        
+        m1 = m1 + (1, 3)
+        self.assertEquals(len(m1), 2)
+        self.assertEquals(list(m1), [1, 2])
+        
+        m2 = m2 + (1, 3)
+        self.assertEquals(m1, m2)
+        self.assertEquals(list(m1 + m2), [1, 2, 1, 2])
+
     def testQuotedSplitter(self):
         cases = [
             '''Hello World''',
