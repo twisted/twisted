@@ -97,9 +97,6 @@ class Function:
 
 
     def __call__(self, *args):
-        if len(args) != len(self.llist):
-            raise TypeError("Wrong number of args, foo'!")
-
         bindings = []
         i = 0
         crap = self.llist
@@ -111,6 +108,8 @@ class Function:
             i = i + 1
             crap = cdr(crap)
 
+        if len(args) != len(bindings):
+            raise TypeError("Wrong number of arguments!")
         #pprint.pprint(bindings)
         bindings = consify(bindings)
         #pprint.pprint(bindings)
