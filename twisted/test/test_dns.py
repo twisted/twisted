@@ -106,4 +106,5 @@ class RoundtripDNSTestCase(unittest.TestCase):
             records.extend([dns.Record_AAAA, dns.Record_A6])
 
         for k in records:
-            self.assertEquals(hash(k()), hash(k()))
+            k1, k2 = k(), k()
+            self.assertEquals(hash(k1), hash(k2))
