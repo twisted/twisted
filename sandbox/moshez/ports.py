@@ -65,8 +65,8 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             {'interface': interface, 'backlog': backlog})
 
 _funcs = {"tcp": _parseTCP,
-         "unix": _parseUNIX,
-         "ssl": _parseSSL}
+          "unix": _parseUNIX,
+          "ssl": _parseSSL}
 
 _OP, _STRING = range(2)
 def _tokenize(description):
@@ -146,7 +146,7 @@ def parse(description, factory, default=None):
     backlog (how many clients to keep in the backlog).
     """
     args, kw = _parse(description)
-    if len(args)==1:
+    if len(args)==1 and not kw:
         args[0:0] = [default or 'tcp']
     return (args[0].upper(),)+_funcs[args[0]](factory, *args[1:], **kw)
 
@@ -197,6 +197,8 @@ def _test():
     print parse("ssl:443", f)
     print parse("ssl:443:privateKey=mykey.pem", f)
     print parse("ssl:443:privateKey=mykey.pem:certKey=cert.pem", f)
+    print parse(r"unix:foo\:bar\=baz\:qux\\", f)
+    print parse(r"unix:address=foo=bar", f)
     listen("unix:lala", f)
     s = service("unix:lolo", f)
     s.startService()
