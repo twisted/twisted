@@ -21,6 +21,8 @@ from twisted.internet import defer
 import os
 import weakref
 
+from twisted.python import log
+
 from twisted.persisted.styles import instance, instancemethod
 
 try:
@@ -84,10 +86,16 @@ class Freezer:
     def delete(self, obj):
         return self.dirty(obj, Freezer.DELETE)
 
+    def tick(self):
+        from twisted.internet import reactor
+        self.clean()
+        reactor.callLater(1.0, self.tick)
+
     def clean(self):
         """Persistence tick.  Clean out the fridge, persist everything that
         wants to be saved.
         """
+        log.msg("cleaning popsicle")
         self.cleaning = True
         savers = {}
         try:
@@ -108,9 +116,8 @@ class Freezer:
                                 # print 'deleting',obj
                                 saver.delete(obj)
                         except:
-                            # TODO: more error handling
-                            # backout transactions? restore state of objects?
-                            # what else?
+                            # TODO: more error handling: backout transactions?
+                            # restore state of objects?  what else?
                             log.err()
         finally:
             self.cleaning = False
@@ -126,6 +133,7 @@ try:
 except NameError:
     # Create the public interface singleton.
     theFreezer = Freezer()
+    theFreezer.tick()
     ref = theFreezer.getPersistentReference
     clean = theFreezer.clean
     dirty = theFreezer.dirty
