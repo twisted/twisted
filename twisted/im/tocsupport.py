@@ -45,7 +45,7 @@ def html(text):
     text=string.replace(text,'&lt;','<')
     text=string.replace(text,'&gt;','>')
     text=string.replace(text,"\n","<br>")
-    return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
+    return '<font color="#ffffff" back="#000000 size=3>%s</font>'%text
 
 class TOCPerson(basesupport.AbstractPerson):
     def isOnline(self):
