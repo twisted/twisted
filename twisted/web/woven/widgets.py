@@ -290,10 +290,10 @@ class Widget(view.View):
         for key, value in self.attributes.items():
             node.setAttribute(key, value)
         for item in self._children:
-            if hasattr(item, 'generateDOM'):
+            if hasattr(item, 'generate'):
                 parentNode = node.parentNode
                 node.parentNode = None
-                item = item.generateDOM(request, node.cloneNode(1))
+                item = item.generate(request, node.cloneNode(1))
                 node.parentNode = parentNode
             node.appendChild(item)
         #print "WE GOT A NODE", node.toxml()
