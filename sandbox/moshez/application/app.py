@@ -80,7 +80,7 @@ def getApplication(config, passphrase):
     filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
     try:
         log.msg("Loading %s..." % filename)
-        application = loadPersisted(filename, style, passphrase)
+        application = service.loadApplication(filename, style, passphrase)
         log.msg("Loaded.")
     except Exception, e:
         s = "Failed to load application: %s" % e
@@ -167,15 +167,6 @@ def initialLog():
 
 
 
-def loadPersisted(filename, kind, passphrase):
-    if kind == 'python':
-        application = sob.loadValueFromFile(filename, 'application', passphrase)
-    else:
-        application = sob.load(filename, kind, passphrase)
-    if service.IService(application, None) is None:
-        application = compat.convert(application)
-    return application
-
 def guessType(filename):
     ext = os.path.splitext(filename)[1]
     return {
@@ -192,7 +183,7 @@ def guessType(filename):
 
 def loadOrCreate(name, filename, procname, uid, gid):
     if filename and os.path.exists(filename):
-        a = loadPersisted(filename, 'pickle', None)
+        a = service.loadApplication(filename, 'pickle', None)
     else:
         a = service.Application(name, uid, gid)
     if procname:
@@ -200,7 +191,7 @@ def loadOrCreate(name, filename, procname, uid, gid):
     return a
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
-    application = loadPersisted(filein, typein, passphrase)
+    application = service.loadApplication(filein, typein, passphrase)
     sob.IPersistable(application).setStyle(typeout)
     if encrypt:
         passphrase = util.getPassword("Encryption passphrase: ")

@@ -270,5 +270,26 @@ def Application(name, uid=None, gid=None):
     IService(ret).setName(name)
     return ret
 
+def loadApplication(filename, kind, passphrase=None):
+    """Load Application from file
+
+    @type filename: C{str}
+    @type kind: C{str}
+    @type passphrase: C{str}
+
+    Load application from a given file. The serialization format it
+    was saved in should be given as C{kind}, and is one of 'pickle', 'source',
+    'xml' or 'python'. If C{passphrase} is given, the application was encrypted
+    with the given passphrase.
+    """
+    if kind == 'python':
+        application = sob.loadValueFromFile(filename, 'application', passphrase)
+    else:
+        application = sob.load(filename, kind, passphrase)
+    if IService(application, None) is None:
+        from twisted.application import compat
+        application = compat.convert(application)
+    return application
+
 __all__ = ['IService', 'Service', 'IServiceCollection', 'MultiService',
-           'IProcess', 'Process', 'Application']
+           'IProcess', 'Process', 'Application', 'loadApplication']

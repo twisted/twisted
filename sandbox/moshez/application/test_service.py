@@ -18,7 +18,10 @@ from twisted.trial import unittest
 from twisted.application import service
 from twisted.persisted import sob
 from twisted.python import components
-import copy
+import copy, pickle
+
+class Dummy:
+    processName=None
 
 class TestService(unittest.TestCase):
 
@@ -192,3 +195,34 @@ class TestApplication(unittest.TestCase):
         self.assertEqual(p.style, 'pickle')
         self.assertEqual(p.name, 'hello')
         self.assert_(p.original is a)
+
+class TestLoading(unittest.TestCase):
+
+    def test_simpleStoreAndLoad(self):
+        a = service.Application("hello")
+        p = sob.IPersistable(a)
+        for style in 'xml source pickle'.split():
+            p.setStyle(style)
+            p.save()
+            a1 = service.loadApplication("hello.ta"+style[0], style)
+            self.assertEqual(service.IService(a1).name, "hello")
+        open("hello.tac", 'w').writelines([
+        "from twisted.application import service\n",
+        "application = service.Application('hello')\n",
+        ])
+        a1 = service.loadApplication("hello.tac", 'python')
+        self.assertEqual(service.IService(a1).name, "hello")
+
+    def test_implicitConversion(self):
+        a = Dummy()
+        a.__dict__ = {'udpConnectors': [], 'unixConnectors': [],
+                      '_listenerDict': {}, 'name': 'dummy',
+                      'sslConnectors': [], 'unixPorts': [],
+                      '_extraListeners': {}, 'sslPorts': [], 'tcpPorts': [],
+                      'services': {}, 'gid': 0, 'tcpConnectors': [],
+                      'extraConnectors': [], 'udpPorts': [], 'extraPorts': [],
+                      'uid': 0}
+        pickle.dump(a, open("file.tap", 'w'))
+        a1 = service.loadApplication("file.tap", "pickle", None)
+        self.assertEqual(service.IService(a1).name, "dummy")
+        self.assertEqual(list(service.IServiceCollection(a1)), [])

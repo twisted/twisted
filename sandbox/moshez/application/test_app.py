@@ -92,7 +92,7 @@ class TestAppSupport(unittest.TestCase):
                 sob.IPersistable(appl).save(filename="converttest")
                 app.convertStyle("converttest", instyle, None,
                                  "converttest.out", outstyle, 0)
-                appl2 = app.loadPersisted("converttest.out", outstyle, None)
+                appl2 = service.loadApplication("converttest.out", outstyle)
                 self.assertEqual(service.IService(appl2).name, "lala")
 
     def test_getLogFile(self):
@@ -107,17 +107,3 @@ class TestAppSupport(unittest.TestCase):
         appl = service.Application("lala")
         app.startApplication(appl, 0)
         self.assert_(service.IService(appl).running)
-
-    def test_implicitConversion(self):
-        a = Dummy()
-        a.__dict__ = {'udpConnectors': [], 'unixConnectors': [],
-                      '_listenerDict': {}, 'name': 'dummy',
-                      'sslConnectors': [], 'unixPorts': [],
-                      '_extraListeners': {}, 'sslPorts': [], 'tcpPorts': [],
-                      'services': {}, 'gid': 0, 'tcpConnectors': [],
-                      'extraConnectors': [], 'udpPorts': [], 'extraPorts': [],
-                      'uid': 0}
-        pickle.dump(a, open("file.tap", 'w'))
-        a1 = app.loadPersisted("file.tap", "pickle", None)
-        self.assertEqual(service.IService(a1).name, "dummy")
-        self.assertEqual(list(service.IServiceCollection(a1)), [])
