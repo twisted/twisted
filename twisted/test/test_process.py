@@ -9,6 +9,7 @@ Test running processes.
 from __future__ import nested_scopes
 
 from twisted.trial import unittest
+from twisted.python import log
 
 import gzip
 import os
@@ -127,11 +128,15 @@ class SignalMixin:
         # reactor.run(). Do this because the reactor may not have been run
         # by the time this test runs.
         if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
+            log.msg("Installing SIGCHLD signal handler.")
             self.sigchldHandler = signal.signal(signal.SIGCHLD,
                                                 reactor._handleSigchld)
+        else:
+            log.msg("Skipped installing SIGCHLD signal handler.")
     
     def tearDownClass(self):
         if self.sigchldHandler:
+            log.msg("Uninstalled SIGCHLD signal handler.")
             signal.signal(signal.SIGCHLD, self.sigchldHandler)
 
 
