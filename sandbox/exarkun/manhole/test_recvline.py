@@ -248,7 +248,11 @@ class Loopback(unittest.TestCase):
             "\n" * (HEIGHT - 2))
 
         # An insults API for this would be nice.
-        telnetClient.write("\x1b[D\x1b[D\x1b[D\x1b[Dxxxx\n")
+        left = "\x1b[D"
+        insert = "\x1b[2~"
+        backspace = "\x7f"
+
+        telnetClient.write(left * 4 + "xxxx\n")
 
         clientTransport.clearBuffer()
         serverTransport.clearBuffer()
@@ -261,8 +265,52 @@ class Loopback(unittest.TestCase):
             "\n" * (HEIGHT - 4))
 
         # Try backspacing over some characters
-        telnetClient.write('\b\b\b\b')
+        telnetClient.write("second line" + backspace * 4 + "xxxx\n")
 
         clientTransport.clearBuffer()
         serverTransport.clearBuffer()
 
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> first xxxx\n" +
+            "first xxxx\n" +
+            ">>> second xxxx\n" +
+            "second xxxx\n" +
+            ">>>\n" +
+            "\n" * (HEIGHT - 6))
+
+        # Try switching to insert mode
+        telnetClient.write("third ine" + left * 3 + insert + "l\n")
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> first xxxx\n" +
+            "first xxxx\n" +
+            ">>> second xxxx\n" +
+            "second xxxx\n" +
+            ">>> third line\n" +
+            "third line\n" +
+            ">>>\n" +
+            "\n" * (HEIGHT - 8))
+
+        # Try switching back out of insert mode
+        telnetClient.write("fourth xine" + left * 4 + insert + "l\n")
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> first xxxx\n" +
+            "first xxxx\n" +
+            ">>> second xxxx\n" +
+            "second xxxx\n" +
+            ">>> third line\n" +
+            "third line\n" +
+            ">>> fourth line\n" +
+            "fourth line\n" +
+            ">>>\n" +
+            "\n" * (HEIGHT - 10))
