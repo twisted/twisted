@@ -12,14 +12,6 @@ sys.path.insert(0, os.curdir)
 
 import os, sys
 
-### ***** RISE FROM YOUR GRAVE! *****
-##import twisted.web.microdom
-##sys.modules['xml'] = twisted
-##twisted.dom = twisted.web
-##sys.modules['xml.dom'] = twisted.web
-##twisted.web.minidom = twisted.web.microdom
-##sys.modules['xml.dom.minidom'] = twisted.web.microdom
-
 #it'd be nice to get this working
 def myimport(*args):
     try: 
