@@ -299,7 +299,7 @@ class TestSuite:
             try:
                 package = reflect.namedModule(package)
             except ImportError, e:
-                self.couldNotImport[package] = e
+                self.couldNotImport[package] = failure.Failure()
                 return
         modGlob = os.path.join(os.path.dirname(package.__file__),
                                self.moduleGlob)
@@ -321,7 +321,7 @@ class TestSuite:
             try:
                 package = reflect.namedModule(package)
             except ImportError, e:
-                self.couldNotImport[package] = e
+                self.couldNotImport[package] = failure.Failure()
                 return
         packageDir = os.path.dirname(package.__file__)
         os.path.walk(packageDir, self._packageRecurse, None)

@@ -158,7 +158,7 @@ class TextReporter(Reporter):
 
     def _formatImportError(self, name, error):
         if isinstance(error, failure.Failure):
-            what = error.getErrorMessage()
+            what = error.getBriefTraceback()
         elif type(error) == types.TupleType:
             what = error.args[0]
         else:
