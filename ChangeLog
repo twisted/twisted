@@ -1,3 +1,8 @@
+2003-06-23  Cory Dodt <corydodt@yahoo.com>
+	* twisted/python/util.py twisted/web/microdom.py 
+	twisted/test/test_{util,xml}.py: preserveCase and caseInsensitive
+	work on attribute names as well as element names.
+
 2003-06-22  Jp Calderone  <exarkun@twistedmatrix.com>
 	* twisted/internet/defer.py: Changed maybeDeferred API from
 	maybeDeferred(deferred, f, *args, **kw) to maybeDeferred(f, *args,
