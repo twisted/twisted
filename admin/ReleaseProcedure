@@ -1,0 +1,59 @@
+TEST, TEST.
+ 
+ * run the unit tests.
+ * run the accepttests (I use "WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/runtests -b")
+ * make sure distributed web servers are working; test on zaibach.
+     * run a --user server on port 3080 ('mktap web --user -p 3080; twistd -f web.tap')
+     * check http://twistedmatrix.com:3080/jh.twistd/python/moin.cgi/, carmstro.twistd, z3p.twistd; if distributed
+       web *wasn't* supposed to break this release, scream at twisted.web hackers :-)
+     * start a new --personal server from the latest codebase, make sure it's working (yes, 
+       we've actually had a release once where a newer --user worked with older --personals but *not*
+       new --personals, and I never tested new --personals!)
+     * run the main webserver's .tap on a different port (this takes some hacking; and I forget exactly
+       how I did it last, i'll figure it out again and hopefully automate it)
+
+ * OK, so everything's working, time to update release documents
+ * README: add a new Quote of the Release, update all mentions of last version number (use your editors
+   search function, there are several of them)
+ * ChangeLog: Browse through twisted-commits; if you see any updates that are
+   significant but weren't mentioned in ChangeLog, retroactively add them
+ * ChangeLog: Add an entry: * .: Releasing Twisted <version>
+ * twisted/copyright.py: Update the version number.
+
+ * Alright, we're ready to pack it up!
+ * from one directory above "Twisted" CVS repos, run './Twisted/admin/release-twisted -v <version>'
+   * note that <version> must match the version number in twisted/copyright.py; I made
+     the mistake of forgetting to update copyright once and this will prevent that :-)
+ * There are a number of options available for 'release-twisted', use them if desired
+
+ * Time to deploy!
+ * su root
+   * cd /twised/Releases; mv *<oldversion>* old/; cp -a ~<myuser>/Releases/*<newversion>* .
+   * cd /twisted/; tar xzvf Twisted-<version>.tar.gz; mv Twisted Twisted.old; mv Twisted-<version> Twisted
+   * cd /var/www; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f web-shutdown.tap; mv web-shutdown.tap taps/web-shutdown-`date -I`.tap
+
+ * su pb; cd ~/Working; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f manhole-shutdown.tap; 
+   mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap
+ * Of course, testing the servers as you go.
+
+ * If everything's cool, edit WebSite/twistedmatrix.com/news.htc, index, and products/download.htc
+
+ * Alright, now for the hell that is sourceforge release-procedure:
+   * lftp upload.sf.net
+   * cd incoming; put <all of the 9 release files>
+   * go to http://sourceforge.net, log in, go to twisted project page, admin, edit/release files.
+   * for each package, click "Add Release", type in the version number for "Release Name", "Create This Release", 
+     there should be a checklist of all the files in incoming, click the three
+     relevent files for each package (ie, if you're in package TwistedDocs, click TwistedDocs-<version>.{zip,tar.gz,tar.bz2}),
+     and then "Add Files and/or Refresh View".
+   * OK, so the files for that package are added, now you have to "Edit Files in this release" (ugh, what a pain)
+   * You can only do one file at a time, you have to specify the architecture (platform idependant for each one), and the
+     file type (.zip, bz2, gz), and click on "Update/Refresh" for each file.
+   * Now, repeat for the other two packages. Hooray, you're done. Wasn't that easy? :\
+
+ * OK! All released up. Now, for the announcements:
+   * Freshmeat
+   * comp.lang.python
+   * comp.lang.python.announce
+   * parnassus.
+ 
