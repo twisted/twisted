@@ -19,50 +19,85 @@
 Amalgamate all Twisted testcases
 """
 
-import test_reality
-import test_observable
-import test_reflect
-import test_delay
-import test_hook
-import test_protocols
-import test_smtp
-import test_pop3
-import test_dirdbm
-import test_jelly
-import test_import
-import test_pb
-import test_explorer
-import test_banana
-import test_rebuild
-import test_toc
-import test_words
-import test_persisted
-import test_pureber
-import test_web
-import test_text
-
 from pyunit import unittest
 
+import string
+import traceback
+import glob
+import sys
+from os import path
 
-def makeBigSuite(testCaseClasses, prefix='test'):
-    cases = []
-    for testCaseClass in testCaseClasses:
-        cases = cases + map(testCaseClass,
-                            unittest.getTestCaseNames(testCaseClass,
-                                                      prefix,cmp))
-    return unittest.TestSuite(cases)
+# List which tests we *aren't* running, rather than the ones we are.
+# Less likely to forget about them this way.
+exclude_tests = [
+    'test_todo', # The PIM module doesn't exist anymore.
+    ]
+
+# If a module with this name is found, it's placed last on the list.
+last_test = 'test_import'
+
+class TestLoader(unittest.TestLoader):
+    """TestLoader with a method to load all test_* modules in its package.
+    """
+
+    def __init__(self):
+        self.load_errors = []
+        self.excluded_tests = []
+
+    def loadTestsFromMyPackage(self):
+        """Loads everything named test_*.py in this directory.
+
+        A test module may exclude itself from the suite by assigning
+        a non-false value to EXCLUDE_FROM_BIGSUITE.
+        """
+
+        testpath = path.dirname(path.abspath(__file__))
+
+        test_files = glob.glob(testpath + '/test_*.py')
+        test_mNames = map(lambda fp: path.splitext(path.basename(fp))[0],
+                         test_files)
+
+        if last_test in test_mNames:
+            test_mNames.remove(last_test)
+            test_mNames.append(last_test)
+
+        suites = []
+        for name in test_mNames:
+            if name in exclude_tests:
+                self.excluded_tests.append((name,
+                                            "in test_all.excluded_tests"))
+                continue
+
+            try:
+                module = __import__('twisted.test.%s' % (name,),
+                                    locals(), globals(), [name])
+                excluded = getattr(module, 'EXCLUDE_FROM_BIGSUITE', None)
+                if excluded:
+                    self.excluded_tests.append((name, excluded))
+                else:
+                    suites.append(self.loadTestsFromModule(module))
+            except ImportError:
+                (type, value, tb) = sys.exc_info()
+                errstring = traceback.format_exception(type, value, tb)
+                del tb
+                self.load_errors.append((name, errstring))
+
+        bigSuite = self.suiteClass(suites)
+        return bigSuite
+
+    def loadErrorText(self):
+        """Return a string explaining modules which didn't load."""
+
+        lines = []
+        for le in self.load_errors:
+            lines.append("* %s:\n" % (le[0],))
+            lines.extend(le[1])
+            lines.append("\n")
+
+        return string.join(lines, '')
 
 
 def testSuite():
-    cases = (test_observable.testCases + test_reality.testCases    +
-             test_reflect.testCases    + test_delay.testCases      +
-             test_hook.testCases       + test_protocols.testCases  +
-             test_dirdbm.testCases     + test_jelly.testCases      +
-             test_pb.testCases         + test_explorer.testCases   +
-             test_banana.testCases     + test_rebuild.testCases    +
-             test_toc.testCases        + test_smtp.testCases       +
-             test_pop3.testCases       + test_words.testCases      +
-             test_persisted.testCases  + test_pureber.testCases    +
-             test_web.testCases        + test_text.testCases       +
-             test_import.testCases) # Leave this one at the end.
-    return makeBigSuite(cases)
+    """unittestgui wants a callable to return a suite."""
+
+    return TestLoader().loadTestsFromMyPackage()

@@ -2,16 +2,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -22,6 +22,11 @@ Usage: python RunTests.py
 
 Run a python GUI which starts up a UnitTestRunner for the Twisted
 test-suite.
+
+Flags:
+ -t -- always use text-mode (otherwise try GUI first)
+ -v -- text-mode will be more verbose
+ -q -- text-mode won't will be quieter (doesn't print progress dots)
 """
 
 ### Twisted Preamble
@@ -31,26 +36,78 @@ import sys,os,string
 
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
     sys.path.append(os.path.dirname(
-        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+        os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
-def runText():
-    from pyunit import unittest
-    from twisted.test import test_all
-    runner = unittest.TextTestRunner()
-    runner.run(test_all.testSuite())
-    
-def runGUI():
-    try:
-        import Tkinter
-    except ImportError:
-        raise "error"
-    try:
-        from pyunit import unittestgui
-        unittestgui.main('twisted.test.test_all.testSuite')
-    except Tkinter.TclError:
-        raise "error"
-try:
-    runGUI()
-except "error":
-    runText()
+from twisted.test import test_all
+
+class TestProgram:
+    value = 0
+    def __init__(self, argv=None):
+        if argv is None:
+            argv = []
+
+        if '-t' in argv:
+            text_mode = 'always'
+        else:
+            text_mode = 0
+
+        if '-v' in argv:
+            self.verbosity = 2
+        elif '-q' in argv:
+            self.verbosity = 0
+        else:
+            self.verbosity = 1
+
+        if not text_mode:
+            try:
+                self.value = self.runGUI()
+            except GuiGoError, e:
+                print e
+                print "Falling back to text mode."
+                pass
+            else:
+                return
+
+        self.value = self.runText()
+
+    def runText(self):
+        from pyunit import unittest
+        from twisted.test import test_all
+
+        loader = test_all.TestLoader()
+        test = loader.loadTestsFromMyPackage()
+
+        runner = unittest.TextTestRunner(verbosity = self.verbosity)
+        result = runner.run(test)
+
+        success = result.wasSuccessful() and (not loader.load_errors)
+
+        if loader.load_errors:
+            print "The following test modules had errors when loading:\n"
+            print loader.loadErrorText()
+
+        # 0 means Ok
+        return (not success)
+
+    def runGUI(self):
+        try:
+            import Tkinter
+        except ImportError, e:
+            raise GuiGoError, e
+        try:
+            from pyunit import unittestgui
+            unittestgui.main('twisted.test.test_all.testSuite')
+        except Tkinter.TclError, e:
+            raise GuiGoError, e
+
+
+class GuiGoError(Exception):
+    """The gui won't go for me, no no no.
+
+    But the gui don't -- the gui won't -- go for me.
+    """
+    pass
+
+main = TestProgram
+sys.exit(main(sys.argv).value)
