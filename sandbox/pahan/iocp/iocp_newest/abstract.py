@@ -18,6 +18,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     reading = False
     write_shutdown = False
     read_shutdown = False
+
     def __init__(self, socket, protocol, sockfactory):
         self.state = "connected"
         from twisted.internet import reactor
@@ -98,9 +99,9 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
 
     def connectionLost(self, reason):
         log.msg("connectionLost called with reason", reason, "for socket", id(self))
-        import traceback
-        for i in traceback.format_stack():
-            log.msg(i[:-1])
+#        import traceback
+#        for i in traceback.format_stack():
+#            log.msg(i[:-1])
         self.state = "disconnected"
         protocol = self.protocol
         del self.protocol
