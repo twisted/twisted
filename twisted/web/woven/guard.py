@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.20 $"[11:-2]
+__version__ = "$Revision: 1.21 $"[11:-2]
 
 import random
 import time
@@ -344,7 +344,7 @@ class UsernamePasswordWrapper(Resource):
                 s.setResourceForPortal(avatarAspect, self.portal, logout)
 
             def triggerLogin(username, password):
-                deferred = self.portal.login(
+                return self.portal.login(
                     UsernamePassword(username, password),
                     None, 
                     IResource
