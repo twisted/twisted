@@ -109,7 +109,7 @@ class Deferred:
         it has been returned; at _that_ point, it may fire later.
         """
 
-        
+
         if not self.armed:
             self.armed = 1
             if self.called:

@@ -202,11 +202,11 @@ def run(installSignalHandlers=1):
     if installSignalHandlers:
         signal.signal(signal.SIGINT, shutDown)
         signal.signal(signal.SIGTERM, shutDown)
-    
+
         # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
         if hasattr(signal, "SIGBREAK"):
             signal.signal(signal.SIGBREAK, shutDown)
-    
+
         if platform.getType() == 'posix':
             signal.signal(signal.SIGCHLD, process.reapProcess)
 
@@ -303,8 +303,8 @@ def removeAll():
         if writes.has_key(reader):
             del writes[reader]
     return readers
-    
-    
+
+
 class _Win32Waker(styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
 

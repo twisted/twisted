@@ -220,7 +220,7 @@ class Client(Connection):
             Connection.connectionLost(self)
             if self.connector:
                 self.connector.connectionLost()
-    
+
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
 
@@ -243,15 +243,15 @@ class Client(Connection):
 
 class Connector:
     """Connect a protocol to a server using TCP and if it fails make a new one."""
-    
+
     transportFactory = Client
-    
+
     def __init__(self, host, portno, protocolFactory, timeout=30):
         self.host = host
         self.portno = portno
         self.factory = protocolFactory
         self.timeout = timeout
-    
+
     def connectionFailed(self):
         self.startConnecting()
 
@@ -261,7 +261,7 @@ class Connector:
     def startConnecting(self):
         proto = self.factory.buildProtocol((self.host, self.portno))
         self.transportFactory(self.host, self.portno, proto, self.timeout, self)
-        
+
 
 
 class Server(Connection):

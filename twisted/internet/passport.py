@@ -322,7 +322,7 @@ class Identity:
         return (userPass == self.hashedPassword)
 
 
-        
+
     # TODO: service discovery through listing of self.keyring.
 
 
@@ -400,4 +400,3 @@ class DefaultAuthorizer(Authorizer):
         """this authorizer does not create perspectives.
         """
         pass
-    

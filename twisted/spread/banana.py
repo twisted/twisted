@@ -259,4 +259,3 @@ def decode(st):
     _i.buffer = ''
     del _i.expressionReceived
     return l[0]
-
