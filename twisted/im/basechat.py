@@ -227,8 +227,8 @@ class ChatUI:
         return self.contactsList
 
     def getConversation(self, person, Class=Conversation, stayHidden=0):
-        """For the given person object, returns the conversation window or creates
-        and returns a new conversation window if one does not exist.
+        """For the given person object, returns the conversation window
+        or creates and returns a new conversation window if one does not exist.
 
         @type person: L{Person<interfaces.IPerson>}
         @type Class: L{Conversation<interfaces.IConversation>} class

@@ -48,8 +48,14 @@ class AbstractGroup:
         """
         return prefixedMethods(self, "imtarget_")
 
+    def __repr__(self):
+        return '<%s %r>' % (self.__class__, self.name)
+
+    def __str__(self):
+        return '%s@%s' % (self.name, self.client.account.accountName)
+
 class AbstractPerson:
-    def __init__(self,name,baseClient,chatui):
+    def __init__(self, name, baseClient, chatui):
         self.name = name
         self.client = baseClient
         self.status = OFFLINE
@@ -72,6 +78,11 @@ class AbstractPerson:
     def imperson_converse(self):
         self.chat.getConversation(self)
 
+    def __repr__(self):
+        return '<%s %r/%s>' % (self.__class__, self.name, self.status)
+
+    def __str__(self):
+        return '%s@%s' % (self.name, self.client.account.accountName)
 
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
