@@ -1,11 +1,12 @@
 Requirements
 
   Python 2.2 or later.
-  ZopeInterfaces (http://zope.org/Products/ZopeInterface) - if you
+  Zope Interfaces 3.0.1 (http://zope.org/Products/ZopeInterface) - if you
   have Zope3 installed that should work too.
 
-  On Windows win32all is recommended (or ActivePython)
-      http://starship.python.net/crew/mhammond/win32/Downloads.html
+  On Windows pywin32 is recommended (this is built in to ActivePython,
+  so no need to reinstall if you use it instead of standard Python)
+      http://sourceforge.net/project/showfiles.php?group_id=78018
 
   In addition to the above, a number of other packages are required
   for additional functionality provided by Twisted. You must install
