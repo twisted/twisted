@@ -202,7 +202,7 @@ def makeBalls(opts):
 def release(opts):
     rel = opts['release']
     ver = opts['version']
-
+    tdir = "Twisted-%s" % ver
 
     if not os.path.exists(rel):
         print "release: Creating", rel
