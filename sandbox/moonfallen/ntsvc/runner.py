@@ -54,6 +54,7 @@ def run():
     log.startLogging(logfile)
 
     log.msg("Loading application from %s" % cf)
+    app.initialLog()
     
     application = service.loadApplication(cf, config['cftype'])
 
