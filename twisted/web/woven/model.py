@@ -41,6 +41,7 @@ class Model:
     def __init__(self, *args, **kwargs):
         self.views = []
         self.subviews = {}
+        self.submodels = {}
         self.initialize(*args, **kwargs)
     
     def __getstate__(self):
@@ -89,7 +90,7 @@ class Model:
             if ref is not None:
                 retVal.append(ref.modelChanged(changed))
         for key, value in self.subviews.items():
-            if changed.has_key(key):
+            if value.wantsAllNotifications or changed.has_key(key):
                 for item in value:
                     ref = item()
                     if ref is not None:
@@ -160,10 +161,14 @@ class Model:
         Deferred, then I ought to check for cached values (created by
         L{setSubmodel}) before doing a regular Deferred lookup.
         """
+        if self.submodels.has_key(name):
+            return self.submodels[name]
         if name and name[0] != '_' and name not in self.protected_names:
             if hasattr(self, name):
                 m = getattr(self, name)
-                return adaptToIModel(m, self, name)
+                sm = adaptToIModel(m, self, name)
+                self.submodels[name] = sm
+                return sm
             return None
 
     def setSubmodel(self, name, value):
@@ -174,13 +179,15 @@ class Model:
         cache.
         """
         if name[0] != '_' and name not in self.protected_names:
+            if self.submodels.has_key(name):
+                del self.submodels[name]
             setattr(self, name, value)
 
     def getData(self):
         return self
     
     def setData(self, data):
-        if hasattr(self, 'parent'):
+        if hasattr(self, 'parent') and self.parent:
             self.parent.setSubmodel(self.name, data)
         if hasattr(self, 'orig'):
             self.orig = data
@@ -188,124 +195,12 @@ class Model:
 #backwards compatibility
 WModel = Model
 
-class ListModel(Model):
-    """
-    I wrap a Python list and allow it to interact with the Woven
-    models and submodels.
-    """
-    __implements__ = interfaces.IModel
-    
-    parent = None
-    name = None
-    def __init__(self, orig):
-        self.orig = orig
-
-    def getSubmodel(self, name):
-        orig = self.orig
-        return adaptToIModel(orig[int(name)], self, name)
-    
-    def setSubmodel(self, name, value):
-        self.orig[int(name)] = value
-
-    def __getitem__(self, name):
-        return self.getSubmodel(name)
-    
-    def __setitem__(self, name, value):
-        self.setSubmodel(name, value)
-    
-    def getData(self):
-        return self.orig
-    
-    def setData(self, data):
-        setattr(self.parent, self.name, data)
-
-    def __repr__(self):
-        myLongName = reflect.qual(self.__class__)
-        return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
-                                                            id(self), self.orig)
-
-
-class StringModel(Model):
-    
-    """ I wrap a Python string and allow it to interact with the Woven models
-    and submodels.  """
-    
-    __implements__ = interfaces.IModel
-    
-    parent = None
-    name = None
-    def __init__(self, orig):
-        self.orig = orig
-
-    def getSubmodel(self, name):
-        orig = self.orig
-        return adaptToIModel(orig[int(name)], self, name)
-    
-    def setSubmodel(self, name, value):
-        raise ValueError("Strings are immutable.")
-
-    def __getitem__(self, name):
-        return self.getSubmodel(name)
-    
-    def __setitem__(self, name, value):
-        self.setSubmodel(name, value)
-    
-    def getData(self):
-        return self.orig
-    
-    def setData(self, data):
-        setattr(self.parent, self.name, data)
-
-    def __repr__(self):
-        myLongName = reflect.qual(self.__class__)
-        return "<%s instance at 0x%x: wrapped data: %r>" % (myLongName, id(self), self.orig)
-
-
-# pyPgSQL returns "PgResultSet" instances instead of lists, which look, act
-# and breathe just like lists. pyPgSQL really shouldn't do this, but this works
-try:
-    from pyPgSQL import PgSQL
-    components.registerAdapter(ListModel, PgSQL.PgResultSet, interfaces.IModel)
-except:
-    pass
-
-class DictionaryModel(Model):
-    """
-    I wrap a Python dictionary and allow it to interact with the Woven
-    models and submodels.
-    """
-    __implements__ = interfaces.IModel
-
-    parent = None
-    name = None
-    def __init__(self, orig):
-        self.orig = orig
-
-    def getSubmodel(self, name):
-        orig = self.orig
-        return adaptToIModel(orig[name], self, name)
-
-    def setSubmodel(self, name, value):
-        self.orig[name] = value
-
-    def getData(self):
-        return self.orig
-
-    def setData(self, data):
-        setattr(self.parent, self.name, data)
-
-    def __repr__(self):
-        myLongName = reflect.qual(self.__class__)
-        return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
-                                                            id(self), self.orig)
 
 class Wrapper(Model):
     """
     I'm a generic wrapper to provide limited interaction with the
     Woven models and submodels.
-    """
-    __implements__ = interfaces.IModel
-    
+    """    
     parent = None
     name = None
     def __init__(self, orig):
@@ -325,6 +220,64 @@ class Wrapper(Model):
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
                                                             id(self), self.orig)
 
+
+class ListModel(Wrapper):
+    """
+    I wrap a Python list and allow it to interact with the Woven
+    models and submodels.
+    """
+    def getSubmodel(self, name):
+        orig = self.orig
+        return adaptToIModel(orig[int(name)], self, name)
+    
+    def setSubmodel(self, name, value):
+        self.orig[int(name)] = value
+
+    def __getitem__(self, name):
+        return self.getSubmodel(name)
+    
+    def __setitem__(self, name, value):
+        self.setSubmodel(name, value)
+    
+    def __repr__(self):
+        myLongName = reflect.qual(self.__class__)
+        return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
+                                                            id(self), self.orig)
+
+
+class StringModel(ListModel):
+    
+    """ I wrap a Python string and allow it to interact with the Woven models
+    and submodels.  """
+        
+    def setSubmodel(self, name, value):
+        raise ValueError("Strings are immutable.")
+
+
+# pyPgSQL returns "PgResultSet" instances instead of lists, which look, act
+# and breathe just like lists. pyPgSQL really shouldn't do this, but this works
+try:
+    from pyPgSQL import PgSQL
+    components.registerAdapter(ListModel, PgSQL.PgResultSet, interfaces.IModel)
+except:
+    pass
+
+class DictionaryModel(Wrapper):
+    """
+    I wrap a Python dictionary and allow it to interact with the Woven
+    models and submodels.
+    """
+    def getSubmodel(self, name):
+        orig = self.orig
+        return adaptToIModel(orig[name], self, name)
+
+    def setSubmodel(self, name, value):
+        self.orig[name] = value
+
+    def getData(self):
+        return self.orig
+
+
 class AttributeWrapper(Wrapper):
     """
     I wrap an attribute named "name" of the given parent object.
@@ -342,10 +295,6 @@ class ObjectWrapper(Wrapper):
     I may wrap an object and allow it to interact with the Woven models
     and submodels.  By default, I am not registered for use with anything.
     """
-    __implements__ = interfaces.IModel
-
-    parent = None
-    name = None
     def getSubmodel(self, name):
         return adaptToIModel(getattr(self.orig, name), self, name)
 
@@ -359,10 +308,6 @@ class UnsafeObjectWrapper(ObjectWrapper):
     I am unsafe because I allow methods to be called. In fact, I am
     dangerously unsafe.  Be wary or I will kill your security model!
     """
-    __implements__ = interfaces.IModel
-
-    parent = None
-    name = None
     def getSubmodel(self, name):
         value = getattr(self.orig, name)
         if callable(value):

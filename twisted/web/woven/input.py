@@ -104,8 +104,7 @@ class InputHandler(controller.Controller):
         assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
 
         if data != self.view.getData():
-            model = self._getMyModel()
-            model.setData(data)
+            self.model.setData(data)
 
 
 class DefaultHandler(InputHandler):

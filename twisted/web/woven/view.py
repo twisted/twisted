@@ -27,7 +27,7 @@ import model
 from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
-from twisted.web import resource, microdom
+from twisted.web import resource, microdom, server
 
 
 import warnings
@@ -36,11 +36,37 @@ import warnings
 NO_DATA_YET = 2
 
 
+def viewFactory(viewClass):
+    return lambda self, request, node, model: viewClass(model)
+
+
+class IWovenLivePage(server.Session):
+    def getCurrentPage():
+        """Return the current page object contained in this session.
+        """
+
+    def setCurrentPage(page):
+        """Set the current page object contained in this session.
+        """
+
+class WovenLivePage:
+    currentPage = None
+    def getCurrentPage(self):
+        """Return the current page object contained in this session.
+        """
+        return self.currentPage
+
+    def setCurrentPage(self, page):
+        """Set the current page object contained in this session.
+        """
+        self.currentPage = page
+
+
 class View(template.DOMTemplate):
 
     __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
 
-    wantsAllNotifications = 0
+    wantsAllNotifications = 1
 
     def __init__(self, m, templateFile=None):
         """
@@ -51,6 +77,8 @@ class View(template.DOMTemplate):
         self.controller = self.controllerFactory(self.model)
         self.modelStack = [self.model]
         self.viewStack = [self]
+        self.subviews = {}
+        self.currentId = 0
         self.controllerStack = [self.controller]
         template.DOMTemplate.__init__(self, self.model, templateFile)
 
@@ -86,15 +114,27 @@ class View(template.DOMTemplate):
     def setController(self, controller):
         self.controller = controller
 
-    def getNodeModel(self, request, submodel):
+    def setNode(self, node):
+        self.node = node
+    
+    def setSubmodel(self, name):
+        self.submodel = name
+    
+    def getNodeModel(self, request, node, submodel):
         """
         Get the model object associated with this node. If this node has a
         model= attribute, call getSubmodel on the current model object.
         If not, return the top of the model stack.
         """
         if submodel:
-            if submodel == '.':
-                parent = m = self.getTopOfModelStack()
+            for parent in self.modelStack:
+                if parent is None: continue
+                f = getattr(parent, "wmfactory_%s" % submodel, None)
+                if f is not None: break
+            if f:
+                m = f(request, node)
+            elif submodel == '.':
+                m = self.getTopOfModelStack()
             else:
                 for x in self.modelStack:
                     if x is None:
@@ -106,10 +146,15 @@ class View(template.DOMTemplate):
                     warnings.warn("POTENTIAL ERROR: Node had a model=%s "
                                   "attribute, but the submodel did not "
                                   "exist." % (submodel, ))
-                    m = parent = self.getTopOfModelStack()
+                    m = self.getTopOfModelStack()
         else:
             m = None
         self.modelStack.insert(0, m)
+        if m:
+            if parent is not m:
+                m.parent = parent
+            if not getattr(m, 'name', None):
+                m.name = submodel
         if submodel:
             return self.getTopOfModelStack()
         return None
@@ -142,7 +187,7 @@ class View(template.DOMTemplate):
                                           "a node, but no factory_%s method was "
                                           "found in %s." % (controllerName,
                                                             controllerName,
-                                                            namespaces + [input]))
+                                                            self.controllerStack + [input]))
         else:
             # If no "controller" attribute was specified on the node, see if 
             # there is a IController adapter registerred for the model.
@@ -151,6 +196,8 @@ class View(template.DOMTemplate):
                                 model.__class__, 
                                 interfaces.IController, 
                                 controllerFactory)
+        if model is None:
+            model = self.getTopOfModelStack()
         try:
             return controllerFactory(request, node, model)
         except TypeError:
@@ -159,7 +206,6 @@ class View(template.DOMTemplate):
             return controllerFactory(model)
     
     def getNodeView(self, request, node, submodel, model):
-        namespaces = []
         view = None   
         viewName = node.getAttribute('view')
 
@@ -235,29 +281,23 @@ class View(template.DOMTemplate):
         submodelName = node.getAttribute('model')
         if submodelName is None:
             submodelName = ""
-#         submodel_prefix = node.getAttribute("_submodel_prefix")
-#         if submodel_prefix and id:
-#             submodel = "/".join([submodel_prefix, id])
-#         elif id:
-#             submodel = id
-#         elif submodel_prefix:
-#             submodel = submodel_prefix
-#         else:
-#             submodel = ""
-        model = self.getNodeModel(request, submodelName)
-#         if model:
-#             print "got node model", model, submodelName, self.modelStack
+        model = self.getNodeModel(request, node, submodelName)
         controller = self.getNodeController(request, node, submodelName, model)
         controller.parent = self.controllerStack[0]
         self.controllerStack.insert(0, controller)
         view = self.getNodeView(request, node, submodelName, model)
-#         if not isinstance(view, microdom.Node):
-#             print "got node view", view
         if not isinstance(view, type("")):
             view.parent = self.viewStack[0]
             if hasattr(view, 'model') and view.model != self.modelStack[0]:
                 self.modelStack[0] = view.model
         self.viewStack.insert(0, view)
+        if isinstance(view, widgets.Widget):
+            id = node.getAttribute("id")
+            if not id:
+                id = "woven_id_" + str(self.currentId)
+                self.currentId += 1
+                view['id'] = id
+            self.subviews[id] = view
         
         if isinstance(view, View):
             controller.setView(view)
@@ -268,10 +308,9 @@ class View(template.DOMTemplate):
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
         if hasattr(view, 'setController'):
-            if view.wantsAllNotifications:
-                self.model.addView(view)
-            else:
-                self.model.addSubview(submodelName, view)
+            if model is None:
+                model = self.getTopOfModelStack()
+            model.addView(view)
             view.setController(controller)
             view.setNode(node)
             if not getattr(view, 'submodel', None):
@@ -329,6 +368,9 @@ class View(template.DOMTemplate):
     
         if not stop:
             log.msg("Sending page!")
+            #sess = request.getSession(IWovenLivePage)
+            #if sess:
+            #    sess.setCurrentPage(self)
             page = str(self.d.toxml())
             request.write(page)
             request.finish()
@@ -351,7 +393,7 @@ class View(template.DOMTemplate):
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
-            returnNodes = self.model.notify({'request': request, controller.submodel: data})
+            returnNodes = controller.model.notify({'request': request, controller.submodel: data})
             for newNode in returnNodes:
                 if newNode is not None:
                     self.recurseChildren(request, newNode)
