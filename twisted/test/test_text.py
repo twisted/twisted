@@ -18,6 +18,7 @@
 from twisted.trial import unittest
 from twisted.python import text
 import string
+from cStringIO import StringIO
 
 sampleText = \
 """Every attempt to employ mathematical methods in the study of chemical
@@ -102,4 +103,63 @@ class SplitTest(unittest.TestCase):
     #    r = text.splitQuoted(s)
     #    self.failUnlessEqual(["One Phrase"], r)
 
-testCases = [WrapTest, SplitTest]
+class StrFileTest(unittest.TestCase):
+    def setUp(self):
+        self.io = StringIO("this is a test string")
+
+    def tearDown(self):
+        pass
+
+    def test_1_f(self):
+        self.assertEquals(False, text.strFile("x", self.io))
+
+    def test_1_1(self):
+        self.assertEquals(True, text.strFile("t", self.io))
+
+    def test_1_2(self):
+        self.assertEquals(True, text.strFile("h", self.io))
+
+    def test_1_3(self):
+        self.assertEquals(True, text.strFile("i", self.io))
+
+    def test_1_4(self):
+        self.assertEquals(True, text.strFile("s", self.io))
+
+    def test_1_5(self):
+        self.assertEquals(True, text.strFile("n", self.io))
+
+    def test_1_6(self):
+        self.assertEquals(True, text.strFile("g", self.io))
+
+    def test_3_1(self):
+        self.assertEquals(True, text.strFile("thi", self.io))
+
+    def test_3_2(self):
+        self.assertEquals(True, text.strFile("his", self.io))
+
+    def test_3_3(self):
+        self.assertEquals(True, text.strFile("is ", self.io))
+
+    def test_3_4(self):
+        self.assertEquals(True, text.strFile("ing", self.io))
+
+    def test_3_f(self):
+        self.assertEquals(False, text.strFile("bla", self.io))
+
+    def test_large_1(self):
+        self.assertEquals(True, text.strFile("this is a test", self.io))
+
+    def test_large_2(self):
+        self.assertEquals(True, text.strFile("is a test string", self.io))
+
+    def test_large_f(self):
+        self.assertEquals(False, text.strFile("ds jhfsa k fdas", self.io))
+
+    def test_overlarge_f(self):
+        self.assertEquals(False, text.strFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew", self.io))
+
+    def test_self(self):
+        self.assertEquals(True, text.strFile("this is a test string", self.io))
+
+testCases = [WrapTest, SplitTest, StrFileTest]
+

@@ -213,3 +213,23 @@ def splitQuoted(s):
                 phrase.append(word)
 
     return out
+
+def strFile(p, f):
+    """Find whether string p occurs in a read()able object f
+    @rtype: C{bool}
+    """
+    buf = ""
+    buf_len = max(len(p), 2**2**2**2)
+    while 1:
+        r = f.read(buf_len-len(p))
+        bytes_read = len(r)
+        if bytes_read == 0:
+            return False
+        l = len(buf)+bytes_read-buf_len
+        if l <= 0:
+            buf = buf + r
+        else:
+            buf = buf[l:] + r
+        if buf.find(p) != -1:
+            return True
+
