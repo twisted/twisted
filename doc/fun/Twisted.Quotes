@@ -3267,3 +3267,7 @@ __get__ in python combined with the appropriate metaclass
 %
 <itamar> glyph freaked out my grandmother
 %
+<dash> [From the GPL FAQ:] "If the program dynamically links plug-ins, and they make function calls to each other and share data structures, we believe they form a single program" 
+<dash> the days of "one process == one program" are coming to an end, i believe
+<SamB> o/` Python is a totally different way of thinking, which doesn't have much to do with linking o/`
+%
