@@ -27,8 +27,8 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 sys.path.append('.')
 ### end of preamble
 
-from twisted.internet import ingtkernet
-ingtkernet.install()
+from twisted.internet import gtkreactor
+gtkreactor.install()
 
 from twisted.im.gtkaccount import AccountManager
 AccountManager()
