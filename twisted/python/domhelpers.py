@@ -62,3 +62,14 @@ def superSetAttribute(node, key, value):
     if node.hasChildNodes():
         for child in node.childNodes:
             superSetAttribute(child, key, value)
+
+def superPrependAttribute(node, key, value):
+    if not hasattr(node, 'setAttribute'): return
+    old = node.getAttribute(key)
+    if old:
+        node.setAttribute(key, value+'.'+old)
+    else:
+        node.setAttribute(key, value)
+    if node.hasChildNodes():
+        for child in node.childNodes:
+            superSetAttribute(child, key, value)

@@ -188,6 +188,8 @@ class List(Widget):
     <ul id="blah" view="List">
         <li id="listItem" view="Text">Foo</li>
     </ul>
+    
+    Where blah is the name of a list on the model; eg self.model.blah = ['foo', 'bar']
     """
     tagName = 'ul'
     def render(self, request):
@@ -204,6 +206,7 @@ class List(Widget):
             # Issue; how to spell each subnode's id?
             # This is the real question that needs to be solved.
             newNode = listItem.cloneNode(1)
-            domhelpers.superSetAttribute(newNode, 'model', self.id + '[' + str(itemNum) + ']')
+            
+            domhelpers.superPrependAttribute(newNode, 'model', self.id + '[' + str(itemNum) + ']')
             node.appendChild(newNode)
         return node
