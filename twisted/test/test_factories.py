@@ -78,6 +78,8 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
             howLong -= 1
             reactor.iterate(0.1)
         
+        self.assertEquals(len(f.allMessages), 2,
+                          "not enough messages -- %s" % f.allMessages)
         self.assertEquals(f.connections, 2,
                           "Number of successful connections incorrect %d" %
                           f.connections)
