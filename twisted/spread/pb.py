@@ -279,9 +279,11 @@ class ViewPoint(Referenceable):
     invoked with that perspective as a first argument, so that it can
     know who is calling it.
 
-    While Viewable objects will be converted to Proxies by default when
-    they are returned from or sent as arguments to a remote method, any
-    object may be manually proxied as well.
+    While Viewable objects will be converted to ViewPoints by default
+    when they are returned from or sent as arguments to a remote
+    method, any object may be manually proxied as well. (XXX: Now that
+    this class is no longer named Proxy, this is the only occourance
+    of the term 'proxied' in this docstring, and may be unclear.)
 
     This can be useful when dealing with Perspectives, Copyables,
     and Cacheables.  It is legal to implement a method as such on
