@@ -26,6 +26,7 @@
 from base import *
 from twisted.python.failure import Failure
 from twisted.internet import reactor
+from time import sleep
 
 class Threaded(Stage):
     """ A stage which runs a blocking iterable in a separate thread
@@ -69,6 +70,7 @@ class Threaded(Stage):
             if self.flow:
                 reactor.callFromThread(self.flow)
                 self.flow = None
+                return True
 
     def __init__(self, iterable, *trap):
         Stage.__init__(self, trap)
@@ -99,7 +101,8 @@ class Threaded(Stage):
             except: 
                 self.failure = Failure()
         self.stop = True
-        self._cooperate()
+        while not self._cooperate():
+            sleep(.1)
 
     def _yield(self):
         if self.results or self.stop or self.failure:
