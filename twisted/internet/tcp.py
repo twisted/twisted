@@ -415,7 +415,13 @@ class Port(abstract.FileDescriptor):
         wire-level protocol.
         """
         try:
-            for i in range(self.numberAccepts):
+            if os.name == "posix":
+                numAccepts = self.numberAccepts
+            else:
+                # win32 event loop breaks if we do more than one accept()
+                # in an iteration of the event loop.
+                numAccepts = 1
+            for i in range(numAccepts):
                 try:
                     skt,addr = self.socket.accept()
                 except socket.error, e:
