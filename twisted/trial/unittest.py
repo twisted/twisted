@@ -162,7 +162,7 @@ class TestSuite:
 
         for e in log.flushErrors():
             ok = 0
-            #output.reportError(testClass, method, e)
+            output.reportError(testClass, method, e)
 
         if ok:
             output.reportSuccess(testClass, method)
@@ -327,4 +327,4 @@ class VerboseTextReporter(TextReporter):
 
     def reportSkip(self, testCase, method, exc_info):
         self.writeln('[SKIPPED]')
-        Reporter.reportError(self, testCase, method, exc_info)
+        Reporter.reportSkip(self, testCase, method, exc_info)
