@@ -5129,6 +5129,10 @@ person.
 to write Java.
 <tjs> I don't have that problem.
 %
+<chrchr> exarkun: Note that all kryptonite locks are vulnerable to hacksaws.
+<exarkun> chrchr: That's why I have another lock too.
+<exarkun> chrchr: How many theives carry around _two_ hacksaws?
+%
 $ php sucks.php
 
 PHP EQUALITY -- An experiment:
