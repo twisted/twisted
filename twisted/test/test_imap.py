@@ -544,14 +544,22 @@ class Account(imap4.MemoryAccount):
         return mbox
 
 class SimpleServer(imap4.IMAP4Server):
+    def __init__(self, *args, **kw):
+        imap4.IMAP4Server.__init__(self, *args, **kw)
+        realm = TestRealm()
+        realm.theAccount = Account('testuser')
+        portal = cred.portal.Portal(realm)
+        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        self.checker = c
+        self.portal = portal
+        portal.registerChecker(c) 
+
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
             return imap4.IAccount, self.theAccount, lambda: None
         raise cred.error.UnauthorizedLogin()
 
 class SimpleClient(imap4.IMAP4Client):
-    startedTLS = False
-
     def __init__(self, deferred, contextFactory = None):
         imap4.IMAP4Client.__init__(self, contextFactory)
         self.deferred = deferred
@@ -571,12 +579,6 @@ class SimpleClient(imap4.IMAP4Client):
     def newMessages(self, exists, recent):
         self.events.append(['newMessages', exists, recent])
         self.transport.loseConnection()
-
-    # Let us notice when TLS is started
-    def _IMAP4Client__cbLoginTLS(self, *args):
-        r = imap4.IMAP4Client._IMAP4Client__cbLoginTLS(self, *args)
-        self.startedTLS = True
-        return r
 
 class IMAP4HelperMixin:
     serverCTX = None
@@ -1892,6 +1894,21 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEquals(self.server.startedTLS, True)
         self.assertEquals(self.client.startedTLS, True)
         self.assertEquals(len(called), len(methods))
+
+    def testLoginLogin(self):
+        self.server.checker.addUser('testuser', 'password-test')
+        success = []
+        self.client.registerAuthenticator(imap4.LOGINAuthenticator('testuser'))
+        self.connected.addCallback(
+                lambda _: self.client.authenticate('password-test')
+            ).addCallback(
+                lambda _: self.client.logout()
+            ).addCallback(success.append
+            ).addCallback(self._cbStopClient
+            ).addErrback(self._ebGeneral)
+        
+        self.loopback()
+        self.assertEquals(len(success), 1)
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):

@@ -360,6 +360,18 @@ class Command:
         if unuse:
             unusedCallback(unuse)
 
+class LOGINCredentials(cred.credentials.UsernamePassword):
+    def __init__(self):
+        cred.credentials.UsernamePassword.__init__(self, None, None)
+
+    def __setattr__(self, name, value):
+        if name == 'response':
+            name = 'password'
+        self.__dict__[name] = value
+
+    def getChallenge(self):
+        return ''
+    
 class IMAP4Exception(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
@@ -714,7 +726,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             rest = arg[1]
         arg = arg[0]
 
-        return (parseIdList(arg), rest)
+        try:
+            return (parseIdList(arg), rest)
+        except IllegalIdentifierError, e:
+            raise IllegalClientResponse("Bad message number " + str(e))
 
     def arg_fetchatt(self, line):
         """
@@ -922,6 +937,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
             self.startedTLS = True
+            if 'LOGIN' not in self.challengers:
+                self.challengers['LOGIN'] = LOGINCredentials
         else:
             self.sendNegativeResponse(tag, 'TLS not available')
 
@@ -932,9 +949,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, 'LOGIN is disabled before STARTTLS')
             return
 
-        maybeDeferred(self.authenticateLogin, user, passwd).addCallbacks(
-            self.__cbLogin, self.__ebLogin, (tag,), None, (tag,), None
-        )
+        maybeDeferred(self.authenticateLogin, user, passwd
+            ).addCallback(self.__cbLogin, tag
+            ).addErrback(self.__ebLogin, tag
+            )
 
     unauth_LOGIN = (do_LOGIN, arg_astring, arg_astring)
 
@@ -1642,6 +1660,8 @@ class IMAP4Client(basic.LineReceiver):
     queued = None
     tagID = 1
     state = None
+
+    startedTLS = False
     
     # Capabilities are not allowed to change during the session
     # So cache the first response and use that for all later
@@ -1742,7 +1762,7 @@ class IMAP4Client(basic.LineReceiver):
     def _regularDispatch(self, line):
         parts = line.split(None, 1)
         if len(parts) != 2:
-            raise IllegalServerResponse, line
+            parts.append('')
         tag, rest = parts
         self.dispatchCommand(tag, rest)
 
@@ -1957,20 +1977,27 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the authentication
         succeeds and whose errback will be invoked otherwise.
         """
-        def getAuthMethods(caps):
-            return caps.get('AUTH', [])
         if self._capCache is None:
             d = self.getCapabilities()
         else:
             d = defer.succeed(self._capCache)
-        d.addCallback(getAuthMethods).addCallback(self.__cbAuthenticate, secret)
+        d.addCallback(self.__cbAuthenticate, secret)
         return d
 
-    def __cbAuthenticate(self, auths, secret):
-        for scheme in auths:
+    def __cbAuthenticate(self, caps, secret):
+        for scheme in caps.get('AUTH', ()):
             if scheme.upper() in self.authenticators:
                 break
         else:
+            if 'STARTTLS' in caps:
+                if implements(self.transport, ITLSTransport):
+                    ctx = self._getContextFactory()
+                    if ctx:
+                        d = self.sendCommand(Command('STARTTLS'))
+                        d.addCallback(self._startedTLS, ctx)
+                        d.addCallback(lambda _: self.getCapabilities())
+                        d.addCallback(self.__cbAuthTLS, secret)
+                        return d
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
 
         continuation = defer.Deferred()
@@ -1992,6 +2019,19 @@ class IMAP4Client(basic.LineReceiver):
 
     def __cbAuth(self, *args, **kw):
         return None
+
+    def __cbAuthTLS(self, caps, secret):
+        for scheme in caps.get('AUTH', ()):
+            if scheme.upper() in self.authenticators:
+                break
+            else:
+                raise NoSupportedAuthentication(auths, self.authenticators.keys())
+        
+        continuation = defer.Deferred()
+        continuation.addCallback(self.__cbContinueAuth, scheme, secret)
+        d = self.sendCommand(Command('AUTHENTICATE', scheme, continuation))
+        d.addCallback(self.__cbAuth)
+        return d
 
     def login(self, username, password):
         """Authenticate with the server using a username and password
@@ -2039,10 +2079,11 @@ class IMAP4Client(basic.LineReceiver):
             ctx = self._getContextFactory()
             if ctx:
                 d = self.sendCommand(Command('STARTTLS'))
+                d.addCallback(self._startedTLS, ctx)
                 d.addCallbacks(
                     self.__cbLoginTLS,
                     self.__ebLoginTLS,
-                    callbackArgs=(username, password, ctx),
+                    callbackArgs=(username, password),
                 )
                 return d
             else:
@@ -2053,15 +2094,18 @@ class IMAP4Client(basic.LineReceiver):
             args = ' '.join((username, password))
             return self.sendCommand(Command('LOGIN', args))
 
+    def _startedTLS(self, result, context):
+        self.context = context
+        self.transport.startTLS(context)
+        self._capCache = None
+        self.startedTLS = True
+        return result
+
     def __ebLoginCaps(self, failure):
         log.err(failure)
         return failure
     
-    def __cbLoginTLS(self, result, username, password, context):
-        self.transport.startTLS(context)
-        self.context = context
-        # Flush capability cache now!
-        self._capCache = None
+    def __cbLoginTLS(self, result, username, password):
         args = ' '.join((username, password))
         return self.sendCommand(Command('LOGIN', args))
         
@@ -3541,6 +3585,18 @@ class CramMD5ClientAuthenticator:
     def challengeResponse(self, secret, chal):
         response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
+
+class LOGINAuthenticator:
+    __implements__ = (IClientAuthentication,)
+    
+    def __init__(self, user):
+        self.user = user
+    
+    def getName(self):
+        return "LOGIN"
+    
+    def challengeResponse(self, secret, chal):
+        return '%s %s' % (self.user, secret)
 
 class MailboxException(IMAP4Exception): pass
 
