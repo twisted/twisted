@@ -1093,6 +1093,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
             return
+        if '\\Noselect' in mbox.getFlags():
+            self.sendNegativeResponse(tag, 'Mailbox cannot be selected')
+            return
 
         self.state = 'select'
         flags = mbox.getFlags()
@@ -1219,7 +1222,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def _listWork(self, tag, ref, mbox, sub, cmdName):
         mbox = self._parseMbox(mbox)
-        mailboxes = self.account.listMailboxes(ref, mbox)
+        defer.maybeDeferred(self.account.listMailboxes, ref, mbox
+            ).addCallback(self._cbListWork, tag, sub, cmdName
+            ).addErrback(self._ebListWork, tag
+            )
+    
+    def _cbListWork(self, mailboxes, tag, sub, cmdName):
         for (name, box) in mailboxes:
             if not sub or self.account.isSubscribed(name):
                 flags = box.getFlags()
@@ -1227,6 +1235,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name)
                 self.sendUntaggedResponse(collapseNestedLists(resp))
         self.sendPositiveResponse(tag, '%s completed' % (cmdName,))
+
+    def _ebListWork(self, failure, tag):
+        self.sendBadResponse(tag, "Server error encountered while listing mailboxes.")
+        log.err(failure)
 
     auth_LIST = (_listWork, arg_astring, arg_astring, 0, 'LIST')
     select_LIST = auth_LIST
@@ -3977,7 +3989,7 @@ class IAccount(components.Interface):
 
         @rtype: C{list} of C{tuple}
         @return: A list of C{(mailboxName, mailboxObject)} which meet the
-        given criteria.
+        given criteria.  A Deferred may also be returned.
         """
 
 class INamespacePresenter(components.Interface):
