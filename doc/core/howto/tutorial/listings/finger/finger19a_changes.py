@@ -1,5 +1,5 @@
 
-class IFingerSetterService(components.Interface):
+class IFingerSetterService(Interface):
 
     def setUser(self, user, status):
         """Set the user's status to something"""
@@ -8,7 +8,7 @@ class IFingerSetterService(components.Interface):
 
 class MemoryFingerService(service.Service):
 
-    __implements__ = IFingerService, IFingerSetterService
+    implements([IFingerService, IFingerSetterService])
 
     def __init__(self, **kwargs):
         self.users = kwargs

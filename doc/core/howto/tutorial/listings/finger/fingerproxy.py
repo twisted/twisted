@@ -3,12 +3,13 @@ from twisted.application import internet, service
 from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import components
+from zope.interface import Interface, implements
 
 
 def catchError(err):
     return "Internal error in server"
 
-class IFingerService(components.Interface):
+class IFingerService(Interface):
 
     def getUser(self, user):
         """Return a deferred returning a string"""
@@ -17,7 +18,7 @@ class IFingerService(components.Interface):
         """Return a deferred returning a list of strings"""
 
 
-class IFingerFactory(components.Interface):
+class IFingerFactory(Interface):
 
     def getUser(self, user):
         """Return a deferred returning a string"""
@@ -39,7 +40,7 @@ class FingerProtocol(basic.LineReceiver):
 
 class FingerFactoryFromService(protocol.ClientFactory):
     
-    __implements__ = IFingerFactory,
+    implements(IFingerFactory)
 
     protocol = FingerProtocol
     
@@ -88,7 +89,7 @@ def finger(user, host, port=79):
 
 
 class ProxyFingerService(service.Service):
-    __implements__ = IFingerService
+    implements(IFingerService)
 
     def getUser(self, user):
         try:

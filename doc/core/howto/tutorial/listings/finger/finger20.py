@@ -4,9 +4,10 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic, irc
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc, microdom
+from zope.interface import Interface, implements
 import cgi
 
-class IFingerService(components.Interface):
+class IFingerService(Interface):
 
     def getUser(self, user):
         """Return a deferred returning a string"""
@@ -14,7 +15,7 @@ class IFingerService(components.Interface):
     def getUsers(self):
         """Return a deferred returning a list of strings"""
 
-class IFingerSetterService(components.Interface):
+class IFingerSetterService(Interface):
 
     def setUser(self, user, status):
         """Set the user's status to something"""
@@ -33,7 +34,7 @@ class FingerProtocol(basic.LineReceiver):
         d.addCallback(writeValue)
 
 
-class IFingerFactory(components.Interface):
+class IFingerFactory(Interface):
 
     def getUser(self, user):
         """Return a deferred returning a string"""
@@ -44,7 +45,7 @@ class IFingerFactory(components.Interface):
 
 class FingerFactoryFromService(protocol.ServerFactory):
 
-    __implements__ = IFingerFactory,
+    implements(IFingerFactory)
 
     protocol = FingerProtocol
 
@@ -71,7 +72,7 @@ class FingerSetterProtocol(basic.LineReceiver):
             self.factory.setUser(*self.lines)
 
 
-class IFingerSetterFactory(components.Interface):
+class IFingerSetterFactory(Interface):
 
     def setUser(self, user, status):
         """Return a deferred returning a string"""
@@ -82,7 +83,7 @@ class IFingerSetterFactory(components.Interface):
 
 class FingerSetterFactoryFromService(protocol.ServerFactory):
 
-    __implements__ = IFingerSetterFactory,
+    implements(IFingerSetterFactory)
 
     protocol = FingerSetterProtocol
 
@@ -112,7 +113,7 @@ class IRCReplyBot(irc.IRCClient):
             d.addCallback(lambda m: self.msg(user, m))
 
 
-class IIRCClientFactory(components.Interface):
+class IIRCClientFactory(Interface):
 
     """
     @ivar nickname
@@ -127,7 +128,7 @@ class IIRCClientFactory(components.Interface):
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
 
-    __implements__ = IIRCClientFactory,
+    implements(IIRCClientFactory)
 
     protocol = IRCReplyBot
     nickname = None
@@ -213,7 +214,7 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 class FingerService(service.Service):
 
-    __implements__ = IFingerService,
+    implements(IFingerService)
 
     def __init__(self, filename):
         self.filename = filename

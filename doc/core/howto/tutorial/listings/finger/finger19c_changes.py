@@ -7,7 +7,7 @@ import os
 
 class LocalFingerService(service.Service):
 
-    __implements__ = IFingerService
+    implements(IFingerService)
 
     def getUser(self, user):
         user = user.strip()

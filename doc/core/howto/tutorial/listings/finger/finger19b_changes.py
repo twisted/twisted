@@ -6,7 +6,7 @@ import pwd
 
 class LocalFingerService(service.Service):
 
-    __implements__ = IFingerService
+    implements(IFingerService)
 
     def getUser(self, user):
     # need a local finger daemon running for this to work
