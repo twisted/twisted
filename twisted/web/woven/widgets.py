@@ -580,10 +580,10 @@ class List(Widget):
     tagName = None
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
-        domhelpers.clearNode(node)
         listHeader = domhelpers.getIfExists(node, 'listHeader')
         listFooter = domhelpers.getIfExists(node, 'listFooter')
         emptyList = domhelpers.getIfExists(node, 'emptyList')
+        domhelpers.clearNode(node)
         if not listHeader is None:
             node.appendChild(listHeader)
         data = self.getData()
