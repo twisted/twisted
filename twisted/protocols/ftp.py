@@ -903,14 +903,14 @@ class FTPClient(basic.LineReceiver):
             self.queueCommand(pasvCmd)
             pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
+            d = DeferredList([cmd.deferred, protocol.deferred],
+                             fireOnOneErrback=1)
+
             # Ensure the connection is always closed
             def close(x, m=_mutable):
                 m[0] and m[0].disconnect()
                 return x
-            cmd.deferred.addBoth(close)
-
-            d = DeferredList([cmd.deferred, protocol.deferred],
-                             fireOnOneErrback=1)
+            d.addBoth(close)
 
         else:
             # We just place a marker command in the queue, and will fill in
