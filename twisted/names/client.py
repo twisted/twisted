@@ -94,6 +94,12 @@ class Resolver(common.ResolverBase):
         self.pending = []
 
 
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        d['connections'] = []
+        return d
+
+
     def parseConfig(self, conf):
         lines = open(conf).readlines()
         for l in lines:
