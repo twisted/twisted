@@ -166,7 +166,7 @@ Someone set up us the bomb!\015
         clientProtocol = MyPOP3Downloader()
         loopback.loopback(protocol, clientProtocol)
         self.failUnlessEqual(clientProtocol.message, self.message)
-        protocol.connectionLost(failure.Failure(Exception()))
+        protocol.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
 class DummyPOP3(pop3.POP3):
@@ -221,7 +221,7 @@ class AnotherPOP3TestCase(unittest.TestCase):
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
         loopback.loopback(dummy, client)
         self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
-        dummy.connectionLost(failure.Failure(Exception()))
+        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
                              
 
     def testBuffer(self):
@@ -251,7 +251,7 @@ QUIT''', '\n')
         expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
         loopback.loopback(dummy, client)
         self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
-        dummy.connectionLost(failure.Failure(Exception()))
+        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
 class TestServerFactory:
@@ -298,7 +298,7 @@ class CapabilityTestCase(unittest.TestCase):
         p.do_CAPA()
 
         self.lpcaps = s.getvalue().splitlines()
-        p.connectionLost(failure.Failure(Exception()))
+        p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
     def contained(self, s, *caps):
         for c in caps:
@@ -352,7 +352,7 @@ class GlobalCapabilitiesTestCase(unittest.TestCase):
         p.do_CAPA()
 
         self.lpcaps = s.getvalue().splitlines()
-        p.connectionLost(failure.Failure(Exception()))
+        p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
     def contained(self, s, *caps):
         for c in caps:
@@ -395,4 +395,44 @@ class SASLTestCase(unittest.TestCase):
         p.lineReceived(base64.encodestring('testuser ' + response).rstrip('\n'))
         self.failUnless(p.mbox)
         self.failUnless(s.getvalue().splitlines()[-1].find("+OK") >= 0)
-        p.connectionLost(failure.Failure(Exception()))
+        p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+
+class DualFunctionTestCase(unittest.TestCase):
+    def testLIST(self):
+        p = pop3.POP3()
+        p.mbox = DummyMailbox()
+            
+        s = StringIO.StringIO()
+        p.transport = internet.protocol.FileWrapper(s)
+        p.connectionMade()
+        s.truncate(0)
+        
+        p.lineReceived("LIST 1")
+        self.assertEquals(s.getvalue(), "+OK 44\r\n")
+        s.truncate(0)
+        
+        p.lineReceived("LIST")
+        self.assertEquals(s.getvalue(), "+OK 1\r\n1 44\r\n.\r\n")
+        s.truncate(0)
+
+        p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+
+    
+    def testUIDL(self):
+        p = pop3.POP3()
+        p.mbox = DummyMailbox()
+        
+        s = StringIO.StringIO()
+        p.transport = internet.protocol.FileWrapper(s)
+        p.connectionMade()
+        s.truncate(0)
+        
+        p.lineReceived("UIDL 1")
+        self.assertEquals(s.getvalue(), "+OK 0\r\n")
+        s.truncate(0)
+        
+        p.lineReceived("UIDL")
+        self.assertEquals(s.getvalue(), "+OK \r\n1 0\r\n.\r\n")
+        s.truncate(0)
+
+        p.connectionLost(failure.Failure(Exception("Test harness disconnect")))

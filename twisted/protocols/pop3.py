@@ -366,23 +366,31 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse('%d %d' % (i, sum))
 
     def do_LIST(self, i=None):
-        messages = self.mbox.listMessages()
-        lines = []
-        for msg in messages:
-            lines.append('%d %d' % (len(lines) + 1, msg))
-        self.successResponse(len(lines))
-        map(self.sendLine, lines)
-        self.sendLine('.')
+        if i is None:
+            messages = self.mbox.listMessages()
+            lines = []
+            for msg in messages:
+                lines.append('%d %d' % (len(lines) + 1, msg))
+            self.successResponse(len(lines))
+            map(self.sendLine, lines)
+            self.sendLine('.')
+        else:
+            msg = self.mbox.listMessages(int(i) - 1)
+            self.successResponse(str(msg))
 
     def do_UIDL(self, i=None):
-        messages = self.mbox.listMessages()
-        self.successResponse()
-        i = 0
-        for msg in messages:
-            if msg:
-                self.sendLine('%d %s' % (i + 1, self.mbox.getUidl(i)))
-            i += 1
-        self.sendLine('.')
+        if i is None:
+            messages = self.mbox.listMessages()
+            self.successResponse()
+            i = 0
+            for msg in messages:
+                if msg:
+                    self.sendLine('%d %s' % (i + 1, self.mbox.getUidl(i)))
+                i += 1
+            self.sendLine('.')
+        else:
+            msg = self.mbox.getUidl(int(i) - 1)
+            self.successResponse(str(msg))
 
     def getMessageFile(self, i):
         i = int(i) - 1
@@ -444,7 +452,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         try:
             self.mbox.undeleteMessages()
         except:
-            log.deferr()
+            log.err()
             self.failResponse()
         else:
             self.highest = 1
@@ -561,8 +569,8 @@ class IMailbox(components.Interface):
         """Retrieve the size of one or more messages.
         
         @type index: C{int} or C{None}
-        @param index: The number of the message for which to retrieve the size,
-        or None to retrieve the size of all messages.
+        @param index: The number of the message for which to retrieve the
+        size (starting at 0), or None to retrieve the size of all messages.
         
         @rtype: C{int} or any iterable of C{int}
         @return: The number of octets in the specified message, or an
