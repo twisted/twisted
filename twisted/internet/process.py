@@ -34,13 +34,14 @@ except:
 
 try:
     import pwd, grp
+    from os import setgroups
     def initgroups(uid, primaryGid):
         username = pwd.getpwuid(uid)[0]
         l=[primaryGid]
         for groupname, password, gid, userlist in grp.getgrall():
             if username in userlist:
                 l.append(gid)
-        os.setgroups(l)
+        setgroups(l)
 except:
     def initgroups(uid, primaryGid):
         pass
