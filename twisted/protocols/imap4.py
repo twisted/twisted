@@ -1086,7 +1086,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.mbox.removeListener(self)
             cmbx = ICloseableMailbox(self.mbox, default=None)
             if cmbx is not None:
-                cmbx.close().addErrback(log.err)
+                maybeDeferred(cmbx.close).addErrback(log.err)
             self.mbox = None
             self.state = 'auth'
 
