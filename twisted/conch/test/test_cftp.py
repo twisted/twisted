@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.conch.test.test_sftp -*-
+# -*- test-case-name: twisted.conch.test.test_cftp -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
