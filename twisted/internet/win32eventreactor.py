@@ -192,9 +192,9 @@ class Win32Reactor(default.PosixReactorBase):
 
     doIteration = doWaitForMultipleEvents
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}):
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None):
         """Spawn a process."""
-        Process(self, processProtocol, executable, args, env)
+        Process(self, processProtocol, executable, args, env, path)
 
 
 def install():
@@ -228,7 +228,7 @@ class Process(abstract.FileDescriptor):
     
     buffer = ''
     
-    def __init__(self, reactor, protocol, command, args, environment):
+    def __init__(self, reactor, protocol, command, args, environment, path):
         self.reactor = reactor
         self.protocol = protocol
         
@@ -265,7 +265,7 @@ class Process(abstract.FileDescriptor):
         
         # create the process
         cmdline = "%s %s" % (command, string.join(args[1:], ' '))
-        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, None, StartupInfo)
+        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, path, StartupInfo)
         
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)

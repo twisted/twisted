@@ -90,7 +90,7 @@ class IReactorUDP(Interface):
 
 class IReactorProcess(Interface):
     
-    def spawnProcess(self, processProtocol, executable, args=(), env={}):
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None):
         """Spawn a process, with a process protcol.
 
         Arguments:
@@ -104,6 +104,8 @@ class IReactorProcess(Interface):
 
           * env: the environment variables to pass to the processs; a
             dictionary of strings.
+
+          * path: the path to run the subprocess in - defaults to the current directory.
 
         See also:
 
