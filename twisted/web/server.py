@@ -41,7 +41,7 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb, refpath
-from twisted.internet import main
+from twisted.internet import reactor
 from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots, failure
 from twisted import copyright
@@ -343,7 +343,7 @@ class Session:
                 log.msg("no session to expire: %s" % self.uid)
         else:
             log.msg("session given the will to live for 30 more minutes")
-            main.addTimeout(self.checkExpired, 1800)
+            reactor.callLater(1800, self.checkExpired)
 
 version = "TwistedWeb/%s" % copyright.version
 
@@ -380,7 +380,7 @@ class Site(http.HTTPFactory):
         uid = self._mkuid()
         s = Session(self, uid)
         session = self.sessions[uid] = s
-        main.addTimeout(s.checkExpired, 1800)
+        reactor.callLater(1800, s.checkExpired)
         return session
 
     def getSession(self, uid):

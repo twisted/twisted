@@ -751,7 +751,7 @@ class FTPClient(basic.LineReceiver):
             return
         if not ftpCommand.ready:
             self.actionQueue.insert(0, ftpCommand)
-            internet.main.addTimeout(self.sendNextCommand, 1.0)
+            reactor.callLater(1.0, self.sendNextCommand)
             self.nextDeferred = None
             return
         if ftpCommand.text == 'PORT':

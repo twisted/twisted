@@ -55,7 +55,7 @@ from twisted.internet.interfaces import IConnector
 # Sibling Imports
 import abstract
 import main
-import task
+
 
 class Connection(abstract.FileDescriptor,
                  protocol.Transport,
@@ -174,7 +174,7 @@ class Client(Connection):
             # screws up that logic.
             self.reactor.callLater(0, whenDone)
             if timeout is not None:
-                main.addTimeout(self.failIfNotConnected, timeout)
+                self.reactor.callLater(timeout, self.failIfNotConnected)
         else:
             self.reactor.callLater(0, protocol.connectionFailed)
 
