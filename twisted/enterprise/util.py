@@ -60,8 +60,10 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
     q = dbTypeMap.get(typeCode, None)
     if q is None:
         raise DBError("Type %s not known" % typeCode)
+    if value is None:
+        return 'null'
     if q == NOQUOTE:
-        return value
+        return str(value)
     elif q == USEQUOTE:
         if typeCode.startswith('bool'):
             if value:
