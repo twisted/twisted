@@ -75,13 +75,13 @@ Unit Tests
   See our unit tests run in a lovely Tkinter GUI, proving that the software is
   BugFree(TM)::
 
-   % runtests
+   % admin/runtests
 
   If you're feeling more brave, you can try the new "acceptance tests".  These
   require some setup and are mainly for the developers to decide if it's OK to
   release, but:
 
-   % accepttests
+   % admin/accepttests
 
 Basic Servers
 
