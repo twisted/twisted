@@ -24,7 +24,7 @@ shortName="IRC"
 longName="Internet Relay Chat"
 
 loginOptions=[["text","Nickname","username","my_nickname"],
-	      ["text","Real Name","realname","Twisted User"],
+              ["text","Real Name","realname","Twisted User"],
               ["text","Password (optional)","password",""],
               ["text","Server","server","localhost"],
               ["text","Port #","port","6667"]]
@@ -54,8 +54,8 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self._groups={}
 
     def connectionMade(self):
-	irc.IRCClient.connectionMade(self)
-	if self.password: self.sendLine("PASS :%s"%self.password)
+        irc.IRCClient.connectionMade(self)
+        if self.password: self.sendLine("PASS :%s"%self.password)
         self.setNick(self.logonUsername)
         self.sendLine("USER %s foo bar :%s"%(self.nickname,self.realname))
 
@@ -71,11 +71,11 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 #        for g in self._ingroups[self.nickname]:
 #            self.part(g)
         self.sendLine("QUIT :Goodbye!")
-	self.transport.loseConnection()
+        self.transport.loseConnection()
 
     def setNick(self,nick):
-	self.username=nick
-	irc.IRCClient.setNick(self,nick)
+        self.username=nick
+        irc.IRCClient.setNick(self,nick)
 
     def event_addContact(self,contact):
         pass
@@ -112,29 +112,29 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.say(group,message)
 
     def irc_RPL_NAMREPLY(self,prefix,params):
-	"""
-	RPL_NAMREPLY
-	>> NAMES #bnl
-	<< :Arlington.VA.US.Undernet.Org 353 z3p = #bnl :pSwede Dan-- SkOyg AG
-	"""
-	channel=string.lower(params[2][1:])
-	users=string.split(params[3])
-	for ui in range(len(users)):
-	    while users[ui][0] in ["@","+"]: # channel modes
-		users[ui]=users[ui][1:]
-	if not self._namreplies.has_key(channel):
-	    self._namreplies[channel]=[]
-	self._namreplies[channel].extend(users)
-	for nickname in users:
+        """
+        RPL_NAMREPLY
+        >> NAMES #bnl
+        << :Arlington.VA.US.Undernet.Org 353 z3p = #bnl :pSwede Dan-- SkOyg AG
+        """
+        channel=string.lower(params[2][1:])
+        users=string.split(params[3])
+        for ui in range(len(users)):
+            while users[ui][0] in ["@","+"]: # channel modes
+                users[ui]=users[ui][1:]
+        if not self._namreplies.has_key(channel):
+            self._namreplies[channel]=[]
+        self._namreplies[channel].extend(users)
+        for nickname in users:
             try:
                 self._ingroups[nickname].append(channel)
             except:
                 self._ingroups[nickname]=[channel]
 
     def irc_RPL_ENDOFNAMES(self,prefix,params):
-	group=params[1][1:]
-	self.receiveGroupMembers(self._namreplies[string.lower(group)],group)
-	del self._namreplies[string.lower(group)]
+        group=params[1][1:]
+        self.receiveGroupMembers(self._namreplies[string.lower(group)],group)
+        del self._namreplies[string.lower(group)]
 
     def irc_RPL_AWAY(self,prefix,params):
         nickname=params[1]
@@ -146,26 +146,26 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         
 
     def irc_NICK(self,prefix,params):
-	oldname=string.split(prefix,"!")[0]
-	if self._ingroups.has_key(oldname):
+        oldname=string.split(prefix,"!")[0]
+        if self._ingroups.has_key(oldname):
             self._ingroups[params[0]]=self._ingroups[oldname]
             del self._ingroups[oldname]
-	self.notifyNameChanged(oldname,params[0])
+        self.notifyNameChanged(oldname,params[0])
 
     def irc_JOIN(self,prefix,params):
-	nickname=string.split(prefix,"!")[0]
-	group=self._groups[string.lower(params[0][1:])]
-	if nickname!=self.nickname:
+        nickname=string.split(prefix,"!")[0]
+        group=self._groups[string.lower(params[0][1:])]
+        if nickname!=self.nickname:
             try:
                 self._ingroups[nickname].append(group)
             except:
                 self._ingroups[nickname]=[group]
-	    self.memberJoined(nickname,group)
+            self.memberJoined(nickname,group)
 
     def irc_PART(self,prefix,params):
-	nickname=string.split(prefix,"!")[0]
-	group=self._groups[string.lower(params[0][1:])]
-	if nickname!=self.nickname:
+        nickname=string.split(prefix,"!")[0]
+        group=self._groups[string.lower(params[0][1:])]
+        if nickname!=self.nickname:
             if group in self._ingroups[nickname]:
                 self._ingroups[nickname].remove(group)
                 self.memberLeft(nickname,group)
@@ -182,11 +182,11 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def privmsg(self,user,channel,message):
         nickname=string.split(user,"!")[0]
-	if channel[0]=="#": # channel
+        if channel[0]=="#": # channel
             group=self._groups[string.lower(channel[1:])]
-	    self.receiveGroupMessage(nickname,group,message)
-	else:
-	    self.receiveDirectMessage(nickname,message)
+            self.receiveGroupMessage(nickname,group,message)
+        else:
+            self.receiveDirectMessage(nickname,message)
 
     def action(self, user, channel, data):
         group=self._groups[string.lower(channel[1:])]

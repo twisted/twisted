@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -42,10 +42,10 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         PathReferenceContext.__init__(self, path, root)
         self.metadata['parentRef'] = parentRef
 
-    def __lookup(self, name, acquire=0):
+    def _lookup(self, name, acquire=0):
         obRef = self
-    	ob = self.getObject()
-    	found = 0
+        ob = self.getObject()
+        found = 0
         while not found:
             if acquire and hasattr(ob, name):
                 retVal = getattr(ob, name)
@@ -56,7 +56,8 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
                 else:
                     foundPath = copy(obRef.path)
                     foundPath.append(name)
-                    retVal = PathReferenceAcquisitionContext(foundPath, obRef.root, obRef)         
+                    retVal = PathReferenceAcquisitionContext(foundPath,
+                                                             obRef.root, obRef)
                 break
 
             obRef = obRef['parentRef']
@@ -70,13 +71,13 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         Get a reference to an object with the given name which is somewhere
         on the path above us.
         """
-        return self.__lookup(name)
-        
+        return self._lookup(name)
+
     def acquire(self, name):
         """
         Look for an attribute or element by name in all of our parents
         """
-        return self.__lookup(name, acquire=1)
+        return self._lookup(name, acquire=1)
 
 class PathReference:
     def __init__(self):
@@ -133,4 +134,3 @@ class RemotePathReference:
     def callRemote(self, name, *args, **kw):
         apply(self.ref.callRemote,
               ("callPath", self.path, name)+args, kw)
-

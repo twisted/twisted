@@ -28,7 +28,7 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap telnet [options]"
     optParameters = [["username", "u", "admin","set the login username"],
-		  ["password", "w", "changeme","set the password"]]
+                  ["password", "w", "changeme","set the password"]]
 
     longdesc = "Makes a telnet server to a Python shell."
 
@@ -36,9 +36,9 @@ class Options(usage.Options):
         """set the port to listen on
         """
         try:
-	    self.opts['portno'] = int(opt)
-	except ValueError:
-	    raise usage.error("Invalid argument to 'port'!")
+            self.opts['portno'] = int(opt)
+        except ValueError:
+            raise usage.error("Invalid argument to 'port'!")
     opt_p = opt_port
 
 def updateApplication(app, config):

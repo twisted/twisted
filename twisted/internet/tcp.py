@@ -177,7 +177,7 @@ class Client(Connection):
         if (not self.connected) and (not self.disconnected):
             if self.connector:
                 self.connector.connectionFailed()
-	    self.protocol.connectionFailed()
+            self.protocol.connectionFailed()
             self.stopReading()
             self.stopWriting()
 
