@@ -45,6 +45,7 @@ try:
         pygtk.require('2.0')
 except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
+import gtk
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure
@@ -134,8 +135,8 @@ class Gtk2Reactor(default.PosixReactorBase):
         # idiom because lots of IO (in particular test_tcp's
         # ProperlyCloseFilesTestCase) can keep us from ever exiting.
         log.msg(channel='system', event='iteration', reactor=self)
-        if self.context.pending():
-            self.context.iteration(0)
+        if gtk.events_pending():
+            gtk.main_iteration(0)
             return
         # nothing to do, must delay
         if delay == 0:
@@ -143,7 +144,7 @@ class Gtk2Reactor(default.PosixReactorBase):
         self.doIterationTimer = gobject.timeout_add(int(delay * 1000),
                                                 self.doIterationTimeout)
         # This will either wake up from IO or from a timeout.
-        self.context.iteration(1) # block
+        gtk.main_iteration(1) # block
         # note: with the .simulate timer below, delays > 0.1 will always be
         # woken up by the .simulate timer
         if self.doIterationTimer:
@@ -157,7 +158,7 @@ class Gtk2Reactor(default.PosixReactorBase):
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
-        if sys.modules.has_key("gtk"):
+        if True: #sys.modules.has_key("gtk"):
             import gtk
             self.__crash = gtk.main_quit
             gtk.main()
