@@ -259,11 +259,14 @@ class Application(log.Logger, styles.Versioned,
         self.tcpPorts = []              # check
         self.udpPorts = []
         self.sslPorts = []
+        self.extraPorts = []
         self._listenerDict = {}
+        self._extraListeners = {}
         # a list of (tcp, ssl, udp) Connectors
         self.tcpConnectors = []
         self.sslConnectors = []
         self.unixConnectors = []
+        self.extraConnectors = []
         # a list of twisted.python.delay.Delayeds
         self.delayeds = []              # check
         # a list of twisted.internet.cred.service.Services
@@ -277,7 +280,7 @@ class Application(log.Logger, styles.Versioned,
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
 
-    persistenceVersion = 10
+    persistenceVersion = 11
 
     _authorizer = None
 
@@ -288,6 +291,16 @@ class Application(log.Logger, styles.Versioned,
             self._authorizer = DefaultAuthorizer()
             self._authorizer.setApplication(self)
         return self._authorizer
+
+    def upgradeToVersion11(self):
+        self._extraListeners = {}
+        self.extraPorts = []
+        self.extraConnectors = []
+
+    def upgradeToVersion10(self):
+        # persistenceVersion was 10, but this method did not exist
+        # I do not know why.
+        pass
 
     def upgradeToVersion9(self):
         self._authorizer = self.authorizer
@@ -364,7 +377,39 @@ class Application(log.Logger, styles.Versioned,
             del dict['_boundPorts']
         if dict.has_key("_listenerDict"):
             del dict['_listenerDict']
+        if dict.has_key("_extraListeners"):
+            del dict["_extraListeners"]
         return dict
+
+    def listenWith(self, portType, *args, **kw):
+        """
+        Start an instance of the given C{portType} listening.
+
+        @type portType: type which implements C{IListeningPort}
+        """
+        self.extraPorts.append((portType, args, kw))
+        if self.running:
+            from twisted.internet import reactor
+            p = reactor.listenWith(portType, *args, **kw)
+            self._extraListeners[(portType, args, kw)] = p
+            return p
+
+    def unlistenWith(self, portType, *args, **kw):
+        toRemove = []
+        for t in self.extraPorts:
+            _portType, _args, _kw = t
+            if portType == _portType:
+                if args == _args[:len(args)]:
+                    for (k, v) in kw.items():
+                        if _kw.has_key(k) and _kw[k] != v:
+                            break
+                    else:
+                        toRemove.append(t)
+        for t in toRemove:
+            self.extraPorts.remove(t)
+            if self._extraListeners.has_key(t):
+                self._extraListeners[t].stopListening()
+                del self._extraListeners[t]
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """
@@ -408,6 +453,17 @@ class Application(log.Logger, styles.Versioned,
         if self.running:
             from twisted.internet import reactor
             return reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
+
+    def connectWith(self, connectorType, *args, **kw):
+        """
+        Start an instance of the given C{connectorType} connecting.
+        
+        @type connectorType: type which implements C{IConnector}
+        """
+        self.extraConnectors.append((connectorType, args, kw))
+        if self.running:
+            from twisted.internet import reactor
+            return reactor.connectWith(connectorType, *args, **kw)
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """Connect a given client protocol factory to a specific TCP server."""
@@ -582,12 +638,17 @@ class Application(log.Logger, styles.Versioned,
                 except error.CannotListenError, msg:
                     log.msg('error on SSL port %s: %s' % (port, msg))
                     return
+            for portType, args, kw in self.extraPorts:
+                self._extraListeners[(portType, args, kw)] = reactor.listenWith(portType, *args, **kw)
+
             for host, port, factory, ctxFactory, timeout, bindAddress in self.sslConnectors:
                 reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
             for host, port, factory, timeout, bindAddress in self.tcpConnectors:
                 reactor.connectTCP(host, port, factory, timeout, bindAddress)
             for address, factory, timeout in self.unixConnectors:
                 reactor.connectUNIX(address, factory, timeout)
+            for connectorType, args, kw in self.extraConnectors:
+                reactor.connectWith(connectorType, *args, **kw)
 
             for service in self.services.values():
                 service.startService()

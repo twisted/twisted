@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.60 2003/01/29 04:51:18 acapnotic Exp $
+# $Id: default.py,v 1.61 2003/01/30 21:19:31 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -32,10 +32,10 @@ import sys
 import types
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
-from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
+from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
 from twisted.internet import main, error, protocol, interfaces
-from twisted.internet import tcp, udp, task, defer
+from twisted.internet import unix, tcp, udp, task, defer
 
 
 from twisted.python import log, threadable, failure
@@ -66,143 +66,12 @@ if platform.getType() == "win32":
         win32process = None
 
 
-class BaseConnector:
-    """Basic implementation of connector.
-
-    State can be: "connecting", "connected", "disconnected"
-    """
-
-    __implements__ = interfaces.IConnector
-
-    timeoutID = None
-    factoryStarted = 0
-
-    def __init__(self, reactor, factory, timeout):
-        self.state = "disconnected"
-        self.reactor = reactor
-        self.factory = factory
-        self.timeout = timeout
-
-    def disconnect(self):
-        """Disconnect whatever our are state is."""
-        if self.state == 'connecting':
-            self.stopConnecting()
-        elif self.state == 'connected':
-            self.transport.loseConnection()
-
-    def connect(self):
-        """Start connection to remote server."""
-        if self.state != "disconnected":
-            raise RuntimeError, "can't connect in this state"
-
-        self.state = "connecting"
-        if not self.factoryStarted:
-            self.factory.doStart()
-            self.factoryStarted = 1
-        self.transport = transport = self._makeTransport()
-        if self.timeout is not None:
-            self.timeoutID = self.reactor.callLater(self.timeout, transport.failIfNotConnected, error.TimeoutError())
-        self.factory.startedConnecting(self)
-
-    def stopConnecting(self):
-        """Stop attempting to connect."""
-        if self.state != "connecting":
-            raise error.NotConnectingError, "we're not trying to connect"
-
-        self.state = "disconnected"
-        self.transport.failIfNotConnected(error.UserError())
-        del self.transport
-
-    def cancelTimeout(self):
-        if self.timeoutID:
-            try:
-                self.timeoutID.cancel()
-            except ValueError:
-                pass
-            del self.timeoutID
-
-    def buildProtocol(self, addr):
-        self.state = "connected"
-        self.cancelTimeout()
-        return self.factory.buildProtocol(addr)
-
-    def connectionFailed(self, reason):
-        self.cancelTimeout()
-        self.state = "disconnected"
-        self.factory.clientConnectionFailed(self, reason)
-        if self.state == "disconnected":
-            # factory hasn't called our connect() method
-            self.factory.doStop()
-            self.factoryStarted = 0
-
-    def connectionLost(self, reason):
-        self.state = "disconnected"
-        self.factory.clientConnectionLost(self, reason)
-        if self.state == "disconnected":
-            # factory hasn't called our connect() method
-            self.factory.doStop()
-            self.factoryStarted = 0
-
-
-class TCPConnector(BaseConnector):
-
-    def __init__(self, reactor, host, port, factory, timeout, bindAddress):
-        self.host = host
-        if isinstance(port, types.IntType):
-            port = port
-        else:
-            try:
-                port = socket.getservbyname(port, 'tcp')
-            except socket.error, e:
-                raise error.ServiceNameUnknownError(string=str(e))
-        self.port = port
-        self.bindAddress = bindAddress
-        BaseConnector.__init__(self, reactor, factory, timeout)
-
-    def _makeTransport(self):
-        return tcp.TCPClient(self.host, self.port, self.bindAddress, self, self.reactor)
-
-    def getDestination(self):
-        return ('INET', self.host, self.port)
-
-
-class UNIXConnector(BaseConnector):
-
-    def __init__(self, reactor, address, factory, timeout):
-        self.address = address
-        BaseConnector.__init__(self, reactor, factory, timeout)
-
-    def _makeTransport(self):
-        return tcp.UNIXClient(self.address, self, self.reactor)
-
-    def getDestination(self):
-        return ('UNIX', self.address)
-
-
-class SSLConnector(BaseConnector):
-
-    def __init__(self, reactor, host, port, factory, contextFactory, timeout, bindAddress):
-        self.host = host
-        self.port = port
-        self.bindAddress = bindAddress
-        self.contextFactory = contextFactory
-        BaseConnector.__init__(self, reactor, factory, timeout)
-
-    def _makeTransport(self):
-        return ssl.Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
-
-    def getDestination(self):
-        return ('SSL', self.host, self.port)
-
-
-
-
-
 class PosixReactorBase(ReactorBase):
     """A basis for reactors that use file descriptors.
     """
     __implements__ = (ReactorBase.__implements__, IReactorUNIX,
-                      IReactorTCP, IReactorUDP, IReactorMulticast) # IReactorProcess
+                      IReactorArbitrary, IReactorTCP, IReactorUDP,
+                      IReactorMulticast) # IReactorProcess
 
     if sslEnabled:
         __implements__ = __implements__ + (IReactorSSL,)
@@ -293,7 +162,7 @@ class PosixReactorBase(ReactorBase):
 
         @returns: object conforming to L{IListeningPort}.
         """
-        p = udp.Port(self, port, protocol, interface, maxPacketSize)
+        p = udp.Port(port, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
 
@@ -303,7 +172,7 @@ class PosixReactorBase(ReactorBase):
 
         EXPERIMENTAL.
         """
-        p = udp.ConnectedPort(self, (remotehost, remoteport), localport, protocol, interface, maxPacketSize)
+        p = udp.ConnectedPort((remotehost, remoteport), localport, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
 
@@ -317,7 +186,7 @@ class PosixReactorBase(ReactorBase):
 
         @returns: object conforming to IListeningPort.
         """
-        p = udp.MulticastPort(self, port, protocol, interface, maxPacketSize)
+        p = udp.MulticastPort(port, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
 
@@ -327,7 +196,7 @@ class PosixReactorBase(ReactorBase):
 
         EXPERIMENTAL.
         """
-        p = udp.ConnectedMulticastPort(self, (remotehost, remoteport), localport, protocol, interface, maxPacketSize)
+        p = udp.ConnectedMulticastPort((remotehost, remoteport), localport, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
 
@@ -337,14 +206,14 @@ class PosixReactorBase(ReactorBase):
     def connectUNIX(self, address, factory, timeout=30):
         """@see: twisted.internet.interfaces.IReactorUNIX.connectUNIX
         """
-        c = UNIXConnector(self, address, factory, timeout)
+        c = unix.Connector(address, factory, timeout, self)
         c.connect()
         return c
 
     def listenUNIX(self, address, factory, backlog=5):
         """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
-        p = tcp.Port(address, factory, backlog=backlog)
+        p = unix.Port(address, factory, backlog, self)
         p.startListening()
         return p
 
@@ -353,14 +222,14 @@ class PosixReactorBase(ReactorBase):
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """@see: twisted.internet.interfaces.IReactorTCP.listenTCP
         """
-        p = tcp.Port(port, factory, backlog, interface)
+        p = tcp.Port(port, factory, backlog, interface, self)
         p.startListening()
         return p
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """@see: twisted.internet.interfaces.IReactorTCP.connectTCP
         """
-        c = TCPConnector(self, host, port, factory, timeout, bindAddress)
+        c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c
 
@@ -369,18 +238,27 @@ class PosixReactorBase(ReactorBase):
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """@see: twisted.internet.interfaces.IReactorSSL.connectSSL
         """
-        c = SSLConnector(self, host, port, factory, contextFactory, timeout, bindAddress)
+        c = ssl.Connector(host, port, factory, contextFactory, timeout, bindAddress, self)
         c.connect()
         return c
 
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         """@see: twisted.internet.interfaces.IReactorSSL.listenSSL
         """
-        p = ssl.Port(port, factory, contextFactory, backlog, interface)
+        p = ssl.Port(port, factory, contextFactory, backlog, interface, self)
         p.startListening()
         return p
 
+    # IReactorArbitrary
+    def listenWith(self, portType, *args, **kw):
+        p = portType(self, *args, **kw)
+        p.startListening()
+        return p
 
+    def connectWith(self, connectorType, *args, **kw):
+        c = connectorType(self, *args, **kw)
+        c.connect()
+        return c
 
 class _Win32Waker(log.Logger, styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.

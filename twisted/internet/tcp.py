@@ -53,12 +53,11 @@ elif os.name != 'java':
     from errno import ENOTCONN
 
 # Twisted Imports
-from twisted.internet import protocol
+from twisted.internet import protocol, defer, base
 from twisted.persisted import styles
-from twisted.python import log, failure, reflect
+from twisted.python import log, failure, reflect, compat
 from twisted.python.runtime import platform
 from twisted.internet.error import CannotListenError
-from twisted.internet import defer
 
 # Sibling Imports
 import abstract
@@ -67,7 +66,7 @@ import interfaces
 import error
 
 
-class Connection(abstract.FileDescriptor, styles.Ephemeral):
+class Connection(abstract.FileDescriptor):
     """I am the superclass of all socket-based FileDescriptors.
 
     This is an abstract superclass of all objects which represent a TCP/IP
@@ -166,6 +165,8 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
 class BaseClient(Connection):
     """A base class for client TCP (and similiar) sockets.
     """
+    addressFamily = socket.AF_INET
+    socketType = socket.SOCK_STREAM
 
     def _finishInit(self, whenDone, skt, error, reactor):
         """Called by base classes to continue to next stage of initialization."""
@@ -197,19 +198,20 @@ class BaseClient(Connection):
             del self.connector
 
     def createInternetSocket(self):
-        """(internal) Create an AF_INET socket.
+        """(internal) Create a non-blocking socket using
+        self.addressFamily, self.socketType.
         """
-        # factored out so as to minimise the code necessary for SecureClient
-        return socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        s = socket.socket(self.addressFamily, self.socketType)
+        s.setblocking(0)
+        return s
+
 
     def resolveAddress(self):
         if abstract.isIPAddress(self.addr[0]):
             self._setRealAddress(self.addr[0])
         else:
-            self.reactor.resolve(self.addr[0]
-                            ).addCallbacks(
-                self._setRealAddress, self.failIfNotConnected
-                )
+            d = self.reactor.resolve(self.addr[0])
+            d.addCallbacks(self._setRealAddress, self.failIfNotConnected)
 
     def _setRealAddress(self, address):
         self.realAddress = (address, self.addr[1])
@@ -258,6 +260,31 @@ class BaseClient(Connection):
             Connection.connectionLost(self, reason)
             self.connector.connectionLost(reason)
 
+
+class Client(BaseClient):
+    """A TCP client."""
+
+    def __init__(self, host, port, bindAddress, connector, reactor=None):
+        # BaseClient.__init__ is invoked later
+        self.connector = connector
+        self.addr = (host, port)
+        
+        whenDone = self.resolveAddress
+        err = None
+
+        try:
+            skt = self.createInternetSocket()
+        except socket.error, se:
+            err = error.ConnectBindError(se[0], se[1])
+            whenDone = None
+        if whenDone and bindAddress is not None:
+            try:
+                skt.bind(bindAddress)
+            except socket.error, se:
+                err = error.ConnectBindError(se[0], se[1])
+                whenDone = None
+        self._finishInit(whenDone, skt, err, reactor)
+
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
 
@@ -278,61 +305,6 @@ class BaseClient(Connection):
         return s
 
 
-class UNIXClient(BaseClient):
-    """A client for Unix sockets."""
-
-    def __init__(self, filename, connector, reactor=None):
-        self.connector = connector
-        err = None
-        whenDone = None
-        skt = None
-
-        try:
-            mode = os.stat(filename)[0]
-        except OSError, ose:
-            # no such file or directory
-            whenDone = None
-            err = error.BadFileError(string="No such file or directory")
-        else:
-            if not (mode & (stat.S_IFSOCK |  # that's not a socket
-                            stat.S_IROTH  |  # that's not readable
-                            stat.S_IWOTH )): # that's not writable
-                whenDone = None
-                err = error.BadFileError(string="File is not socket or unreadable/unwritable")
-            else:
-                # success.
-                self.realAddress = self.addr = filename
-                # we are using unix sockets
-                skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                whenDone = self.doConnect
-
-        self._finishInit(whenDone, skt, err, reactor)
-
-    def getPeer(self):
-        return ('UNIX', self.addr)
-
-    def getHost(self):
-        return ('UNIX', )
-
-class TCPClient(BaseClient):
-    """A TCP client."""
-
-    def __init__(self, host, port, bindAddress, connector, reactor=None):
-        self.connector = connector
-        skt = self.createInternetSocket()
-        self.addr = (host, port)
-        whenDone = self.resolveAddress
-        err = None
-        # try to bind to given address
-        if bindAddress is not None:
-            try:
-                skt.bind(bindAddress)
-            except socket.error, se:
-                err = error.ConnectBindError(se[0], se[1])
-                whenDone = None
-        self._finishInit(whenDone, skt, err, reactor)
-
-
 class Server(Connection):
     """Serverside socket-stream connection class.
 
@@ -351,10 +323,7 @@ class Server(Connection):
         self.server = server
         self.client = client
         self.sessionno = sessionno
-        try:
-            self.hostname = client[0]
-        except:
-            self.hostname = 'unix'
+        self.hostname = client[0]
         self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
         self.startReading()
@@ -377,14 +346,10 @@ class Server(Connection):
         Returns a tuple of ('INET', hostname, port), indicating the connected
         client's address.
         """
-        # ick someone clean this up someday
-        if isinstance(self.client, types.TupleType):
-            return ('INET',)+self.client
-        else:
-            return ("INET", self.client)
+        return ('INET',)+self.client
 
 
-class Port(abstract.FileDescriptor):
+class Port(base.BasePort):
     """I am a TCP server port, listening for connections.
 
     When a connection is accepted, I will call my factory's buildProtocol with
@@ -395,17 +360,18 @@ class Port(abstract.FileDescriptor):
     `transport' attribute will be called with the signature expected for
     Server.__init__, so it can be replaced.
     """
+    addressFamily = socket.AF_INET
+    socketType = socket.SOCK_STREAM
 
     transport = Server
     sessionno = 0
-    unixsocket = None
     interface = ''
     backlog = 5
 
     def __init__(self, port, factory, backlog=5, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
         """
-        abstract.FileDescriptor.__init__(self, reactor=reactor)
+        base.BasePort.__init__(self, reactor=reactor)
         self.port = port
         self.factory = factory
         self.backlog = backlog
@@ -415,10 +381,8 @@ class Port(abstract.FileDescriptor):
         return "<%s on %s>" % (self.factory.__class__, self.port)
 
     def createInternetSocket(self):
-        """(internal) create an AF_INET socket.
-        """
-        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        s = base.BasePort.createInternetSocket(self)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
     def startListening(self):
@@ -429,23 +393,11 @@ class Port(abstract.FileDescriptor):
         """
         log.msg("%s starting on %s"%(self.factory.__class__, self.port))
         self.factory.doStart()
-        if type(self.port) == types.StringType:
-            skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            try:
-                skt.bind(self.port)
-            except socket.error, le:
-                raise CannotListenError, (self.interface, self.port, le,)
-            # Make the socket readable and writable to the world.
-            os.chmod(self.port, 0666)
-            self.unixsocket = 1
-        else:
-            try:
-                skt = self.createInternetSocket()
-                skt.bind((self.interface, self.port))
-            except socket.error, le:
-                raise CannotListenError, (self.interface, self.port, le)
-        skt.setblocking(0)
+        try:
+            skt = self.createInternetSocket()
+            skt.bind((self.interface, self.port))
+        except socket.error, le:
+            raise CannotListenError, (self.interface, self.port, le)
         skt.listen(self.backlog)
         self.connected = 1
         self.socket = skt
@@ -472,7 +424,7 @@ class Port(abstract.FileDescriptor):
                 if self.disconnecting:
                     return
                 try:
-                    skt,addr = self.socket.accept()
+                    skt, addr = self.socket.accept()
                 except socket.error, e:
                     if e.args[0] == EWOULDBLOCK:
                         self.numberAccepts = i
@@ -491,11 +443,6 @@ class Port(abstract.FileDescriptor):
         except:
             log.deferr()
 
-    def doWrite(self):
-        """Raises an AssertionError.
-        """
-        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
-
     def loseConnection(self):
         """Stop accepting connections on this port.
 
@@ -512,12 +459,10 @@ class Port(abstract.FileDescriptor):
     def connectionLost(self, reason):
         """Cleans up my socket.
         """
-        log.msg('(Port %s Closed)' % self.port)
-        abstract.FileDescriptor.connectionLost(self, reason)
+        log.msg('(Port %r Closed)' % self.port)
+        base.BasePort.connectionLost(self, reason)
         self.connected = 0
         self.socket.close()
-        if self.unixsocket:
-            os.unlink(self.port)
         del self.socket
         del self.fileno
         self.factory.doStop()
@@ -530,6 +475,25 @@ class Port(abstract.FileDescriptor):
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
 
-        This indicates the servers address.
+        This indicates the server's address.
         """
         return ('INET',)+self.socket.getsockname()
+
+
+class Connector(base.BaseConnector):
+    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
+        self.host = host
+        if isinstance(port, types.StringTypes):
+            try:
+                port = socket.getservbyname(port, 'tcp')
+            except socket.error, e:
+                raise error.ServiceNameUnknownError(string=str(e))
+        self.port = port
+        self.bindAddress = bindAddress
+        base.BaseConnector.__init__(self, factory, timeout, reactor)
+
+    def _makeTransport(self):
+        return Client(self.host, self.port, self.bindAddress, self, self.reactor)
+
+    def getDestination(self):
+        return ('INET', self.host, self.port)

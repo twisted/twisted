@@ -35,7 +35,7 @@ elif os.name != 'java':
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED
 
 # Twisted Imports
-from twisted.internet import protocol
+from twisted.internet import protocol, base
 from twisted.persisted import styles
 from twisted.python import log, reflect
 
@@ -43,15 +43,18 @@ from twisted.python import log, reflect
 import abstract, main, error, interfaces
 
 
-class Port(abstract.FileDescriptor):
+class Port(base.BasePort):
     """UDP port, listening for packets."""
 
-    __implements__ = abstract.FileDescriptor.__implements__, interfaces.IUDPTransport
+    __implements__ = base.BasePort.__implements__, interfaces.IUDPTransport
+
+    addressFamily = socket.AF_INET
+    socketType = socket.SOCK_DGRAM
     
-    def __init__(self, reactor, port, protocol, interface='', maxPacketSize=8192):
+    def __init__(self, port, protocol, interface='', maxPacketSize=8192, reactor=None):
         """Initialize with a numeric port to listen on.
         """
-        abstract.FileDescriptor.__init__(self, reactor)
+        base.BasePort.__init__(self, reactor)
         self.port = port
         self.protocol = protocol
         self.maxPacketSize = maxPacketSize
@@ -60,24 +63,6 @@ class Port(abstract.FileDescriptor):
 
     def __repr__(self):
         return "<%s on %s>" % (self.protocol.__class__, self.port)
-
-    def createInternetSocket(self):
-        """(internal) create an AF_INET/SOCK_DGRAM socket.
-        """
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setblocking(0)
-        return s
-
-    def __getstate__(self):
-        """(internal) get my state for persistence
-        """
-        dct = self.__dict__.copy()
-        try: del dct['socket']
-        except KeyError: pass
-        try: del dct['fileno']
-        except KeyError: pass
-
-        return dct
 
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
@@ -110,11 +95,6 @@ class Port(abstract.FileDescriptor):
             self.protocol.datagramReceived(data, addr)
         except:
             log.deferr()
-
-    def doWrite(self):
-        """Raises an AssertionError.
-        """
-        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
 
     def write(self, datagram, (host, port)):
         """Write a datagram."""
@@ -150,7 +130,7 @@ class Port(abstract.FileDescriptor):
         """Cleans up my socket.
         """
         log.msg('(Port %s Closed)' % self.port)
-        abstract.FileDescriptor.connectionLost(self, reason)
+        base.BasePort.connectionLost(self, reason)
         if hasattr(self, "protocol"):
             # we won't have attribute in ConnectedPort, in cases
             # where there was an error in connection process
@@ -179,10 +159,10 @@ class Port(abstract.FileDescriptor):
 class ConnectedPort(Port):
     """A connected UDP socket."""
 
-    __implements__ = abstract.FileDescriptor.__implements__, interfaces.IUDPConnectedTransport
+    __implements__ = Port.__implements__, interfaces.IUDPConnectedTransport
         
-    def __init__(self, reactor, (remotehost, remoteport), port, protocol, interface='', maxPacketSize=8192):
-        Port.__init__(self, reactor, port, protocol, interface, maxPacketSize)
+    def __init__(self, (remotehost, remoteport), port, protocol, interface='', maxPacketSize=8192, reactor=None):
+        Port.__init__(self, port, protocol, interface, maxPacketSize, reactor)
         self.remotehost = remotehost
         self.remoteport = remoteport
     

@@ -44,7 +44,7 @@ import tcp, main, interfaces
 
 # Twisted imports
 from twisted.python import log
-
+from twisted.internet import base
 
 class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
@@ -189,18 +189,16 @@ class Connection(tcp.Connection):
 
 
 
-class Client(Connection, tcp.TCPClient):
-    """I am an SSL client.
-    """
-    
+class Client(tcp.Client):
+    """I am an SSL client."""
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
+        tcp.Client.__init__(self, host, port, bindAddress, connector, reactor)
         self.ctxFactory = ctxFactory
-        tcp.TCPClient.__init__(self, host, port, bindAddress, connector, reactor)
-    
+
     def createInternetSocket(self):
         """(internal) create an SSL socket
         """
-        sock = tcp.TCPClient.createInternetSocket(self)
+        sock = tcp.Client.createInternetSocket(self)
         return SSL.Connection(self.ctxFactory.getContext(), sock)
 
     def getHost(self):
@@ -220,14 +218,9 @@ class Client(Connection, tcp.TCPClient):
 
 
 
-class Server(Connection, tcp.Server):
+class Server(tcp.Server):
     """I am an SSL server.
     """
-    
-    def __init__(*args, **kwargs):
-        # we need those so we don't use ssl.Connection's __init__
-        apply(tcp.Server.__init__, args, kwargs)
-
     def getHost(self):
         """Returns a tuple of ('SSL', hostname, port).
 
@@ -243,11 +236,8 @@ class Server(Connection, tcp.Server):
         return ('SSL',)+self.client
 
 
-
 class Port(tcp.Port):
-    """I am an SSL port.
-    """
-    
+    """I am an SSL port."""
     transport = Server
     
     def __init__(self, port, factory, ctxFactory, backlog=5, interface='', reactor=None):
@@ -287,5 +277,19 @@ class Port(tcp.Port):
         except:
             log.deferr()
 
+
+class Connector(base.BaseConnector):
+    def __init__(self, host, port, factory, contextFactory, timeout, bindAddress, reactor=None):
+        self.host = host
+        self.port = port
+        self.bindAddress = bindAddress
+        self.contextFactory = contextFactory
+        base.BaseConnector.__init__(self, reactor, factory, timeout)
+
+    def _makeTransport(self):
+        return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
+
+    def getDestination(self):
+        return ('SSL', self.host, self.port)
 
 __all__ = ["ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory"]

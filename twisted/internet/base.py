@@ -30,6 +30,7 @@ from bisect import insort
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolver
+from twisted.internet.interfaces import IConnector
 from twisted.internet import main, error, abstract, defer
 from twisted.python import threadable, log, failure, reflect
 from twisted.internet.defer import Deferred, DeferredList
@@ -443,6 +444,101 @@ class BCFactory(ClientFactory):
         self.connector = None
         self.protocol.connectionFailed()
         self.protocol = None
+
+
+class BaseConnector:
+    """Basic implementation of connector.
+
+    State can be: "connecting", "connected", "disconnected"
+    """
+
+    __implements__ = IConnector,
+
+    timeoutID = None
+    factoryStarted = 0
+    
+    def __init__(self, factory, timeout, reactor):
+        self.state = "disconnected"
+        self.reactor = reactor
+        self.factory = factory
+        self.timeout = timeout
+
+    def disconnect(self):
+        """Disconnect whatever our state is."""
+        if self.state == 'connecting':
+            self.stopConnecting()
+        elif self.state == 'connected':
+            self.transport.loseConnection()
+
+    def connect(self):
+        """Start connection to remote server."""
+        if self.state != "disconnected":
+            raise RuntimeError, "can't connect in this state"
+
+        self.state = "connecting"
+        if not self.factoryStarted:
+            self.factory.doStart()
+            self.factoryStarted = 1
+        self.transport = transport = self._makeTransport()
+        if self.timeout is not None:
+            self.timeoutID = self.reactor.callLater(self.timeout, transport.failIfNotConnected, error.TimeoutError())
+        self.factory.startedConnecting(self)
+
+    def stopConnecting(self):
+        """Stop attempting to connect."""
+        if self.state != "connecting":
+            raise error.NotConnectingError, "we're not trying to connect"
+
+        self.state = "disconnected"
+        self.transport.failIfNotConnected(error.UserError())
+        del self.transport
+
+    def cancelTimeout(self):
+        if self.timeoutID:
+            try:
+                self.timeoutID.cancel()
+            except ValueError:
+                pass
+            del self.timeoutID
+
+    def buildProtocol(self, addr):
+        self.state = "connected"
+        self.cancelTimeout()
+        return self.factory.buildProtocol(addr)
+
+    def connectionFailed(self, reason):
+        self.cancelTimeout()
+        self.state = "disconnected"
+        self.factory.clientConnectionFailed(self, reason)
+        if self.state == "disconnected":
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+            self.factoryStarted = 0
+    
+    def connectionLost(self, reason):
+        self.state = "disconnected"
+        self.factory.clientConnectionLost(self, reason)
+        if self.state == "disconnected":
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+            self.factoryStarted = 0
+
+
+class BasePort(abstract.FileDescriptor):
+    """Basic implementation of a ListeningPort."""
+    
+    addressFamily = None
+    socketType = None
+    
+    def createInternetSocket(self):
+        s = socket.socket(self.addressFamily, self.socketType)
+        s.setblocking(0)
+        return s
+
+
+    def doWrite(self):
+        """Raises a RuntimeError"""
+        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
 
 
 __all__ = ["ReactorBase"]

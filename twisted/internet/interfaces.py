@@ -154,6 +154,25 @@ class IResolver(IResolverSimple):
         """Perform a zone transfer for the given C{name}."""
 
 
+class IReactorArbitrary(Interface):
+    def listenWith(self, portType, *args, **kw):
+        """Start an instance of the given C{portType} listening.
+
+        @type portType: type which implements C{IListeningPort}
+        @param portType: The object given by C{portType(*args, **kw)}
+        will be started listening.
+        """
+    
+    def connectWith(self, connectorType, *args, **kw):
+        """
+        Start an instance of the given C{connectorType} connecting.
+        
+        @type connectorType: type which implements C{IConnector}
+        @param connectorType: The object given by C{connectorType(*args, **kw)}
+        will be started connecting.
+        """
+
+
 class IReactorTCP(Interface):
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
