@@ -44,6 +44,7 @@ import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
 import sys
+from email.base64MIME import encode as encode_base64
 
 try:
     from cStringIO import StringIO
@@ -927,6 +928,7 @@ class SMTPClient(basic.LineReceiver):
         self._failresponse = self.smtpTransferFailed
         if self._from is not None:
             self.sendLine('MAIL FROM:%s' % quoteaddr(self._from))
+            self._expected = [250]
             self._okresponse = self.smtpState_to
         else:
             self.sendLine('QUIT')
@@ -1037,10 +1039,13 @@ class ESMTPClient(SMTPClient):
     heloFallback = 1
 
     # Refuse to proceed if authentication cannot be performed
-    requireAuthentication = 0
+    requireAuthentication = False
 
     # Refuse to proceed if TLS is not available
-    requireTransportSecurity = 0
+    requireTransportSecurity = False
+    
+    # Indicate whether or not our transport can be considered secure.
+    tlsMode = False
 
     # ClientContextFactory to use for STARTTLS
     context = None
@@ -1050,6 +1055,7 @@ class ESMTPClient(SMTPClient):
         self.authenticators = {}
         self.secret = secret
         self.context = contextFactory
+        self.tlsMode = False
 
     def registerAuthenticator(self, auth):
         self.authenticators[auth.getName().upper()] = auth
@@ -1062,12 +1068,15 @@ class ESMTPClient(SMTPClient):
     def esmtpState_ehlo(self, code, resp):
         self.sendLine('EHLO ' + self.identity)
         self._expected = SUCCESS
-        self._okresponse = self.esmtpState_auth
+
+        self._okresponse = self.esmtpState_serverConfig
+
         if self.heloFallback:
             self._failresponse = self.smtpState_helo
 
-    def esmtpState_auth(self, code, resp):
-        scheme = None
+
+    ###XXX: New method
+    def esmtpState_serverConfig(self, code, resp):
         items = {}
         for line in resp.splitlines():
             e = line.split(None, 1)
@@ -1076,35 +1085,58 @@ class ESMTPClient(SMTPClient):
             else:
                 items[e[0]] = None
 
+        if self.tlsMode:
+            self.authenticate(code, resp, items)
+        else:
+            self.tryTLS(code, resp, items)
+
+    def tryTLS(self, code, resp, items):
         if self.context and 'STARTTLS' in items:
             self._expected = [220]
             self._okresponse = self.esmtpState_starttls
-            self._carryon = items
             self.sendLine('STARTTLS')
         elif self.requireTransportSecurity:
+            self.tlsMode = False
             log.msg("TLS required but not available: closing connection")
             self.sendLine('QUIT')
             self._expected = xrange(0, 1000)
             self._okresponse = self.smtpState_disconnect
         else:
+            self.tlsMode = False
             self.authenticate(code, resp, items)
 
     def esmtpState_starttls(self, code, resp):
         self.transport.startTLS(self.context)
-        items = self._carryon
-        self._carryon = None
-        self.authenticate(code, resp, items)
+        self.tlsMode = True
+
+        """Send another EHLO  once TLS has been started to
+           get the TLS / AUTH schemes"""
+        self.esmtpState_ehlo(code, resp)
 
     def authenticate(self, code, resp, items):
         if self.secret and items.get('AUTH'):
             schemes = items['AUTH'].split()
+
             for s in schemes:
                 if s.upper() in self.authenticators:
-                    self.sendLine('AUTH ' + s)
-                    self._expected = [334]
-                    self._okresponse = self.esmtpState_challenge
                     self._authinfo = self.authenticators[s]
+
+                    """Special condition handled"""
+                    if s.upper() == "PLAIN":
+                        self._okresponse = self.smtpState_from
+                        self._failresponse = self._esmtpState_plainAuth
+                        self._expected = [235]
+                        challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 1), eol="")
+                        self.sendLine('AUTH ' + s + ' ' + challenge)
+
+                    else:
+                        self.sendLine('AUTH ' + s)
+                        self._expected = [334]
+                        self._okresponse = self.esmtpState_challenge
+                        self._authinfo = self.authenticators[s]
+
                     return
+
         if self.requireAuthentication:
             log.msg("Authentication required but none available: closing connection")
             self.sendLine('QUIT')
@@ -1112,6 +1144,13 @@ class ESMTPClient(SMTPClient):
             self._okresponse = self.smtpState_disconnect
         else:
             self.smtpState_from(code, resp)
+
+    def _esmtpState_plainAuth(self, code, resp):
+        self._okresponse = self.smtpState_from
+        self._failresponse = self.smtpState_disconnect
+        self._expected = [235]
+        challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 2), eol="")
+        self.sendLine('AUTH PLAIN ' + challenge)
 
     def esmtpState_challenge(self, code, resp):
         auth = self._authinfo
@@ -1121,16 +1160,25 @@ class ESMTPClient(SMTPClient):
     def _authResponse(self, auth, challenge):
         try:
             challenge = base64.decodestring(challenge)
+
         except binascii.Error, e:
             # Illegal challenge, give up, then quit
             self.sendLine('*')
             self._okresponse = self.smtpState_disconnect
             self._failresponse = self.smtpState_disconnect
+
         else:
             resp = auth.challengeResponse(self.secret, challenge)
-            self.sendLine(base64.encodestring(resp))
+            self._expected = [235]
             self._okresponse = self.smtpState_from
             self._failresponse = self.smtpState_disconnect
+            self.sendLine(encode_base64(resp, eol=""))
+
+        if auth.getName() == "LOGIN" and challenge == "Username:":
+            self._expected = [334]
+            self._authinfo = auth
+            self._okresponse = self.esmtpState_challenge
+
 
 class ESMTP(SMTP):
 
@@ -1315,6 +1363,110 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
     def buildProtocol(self, addr):
         p = self.protocol(self.domain, len(self.toEmail)*2+2)
+        p.factory = self
+        return p
+
+
+class IClientAuthentication(components.Interface):
+    def getName(self):
+        """Return an identifier associated with this authentication scheme.
+
+        @rtype: C{str}
+        """
+
+    def challengeResponse(self, secret, challenge):
+        """Generate a challenge response string"""
+
+
+class CramMD5ClientAuthenticator:
+    __implements__ = (IClientAuthentication,)
+
+    def __init__(self, user):
+        self.user = user
+
+    def getName(self):
+        return "CRAM-MD5"
+
+    def challengeResponse(self, secret, chal):
+        response = hmac.HMAC(secret, chal).hexdigest()
+        return '%s %s' % (self.user, response)
+
+
+class LOGINAuthenticator:
+    __implements__ = (IClientAuthentication,)
+
+    def __init__(self, user):
+        self.user = user
+
+    def getName(self):
+        return "LOGIN"
+
+    def challengeResponse(self, secret, chal):
+        if chal== "Username:":
+            return self.user
+        elif chal == 'Password:':
+            return secret
+
+
+class PLAINAuthenticator:
+    __implements__ = (IClientAuthentication,)
+
+    def __init__(self, user):
+        self.user = user
+
+    def getName(self):
+        return "PLAIN"
+
+    def challengeResponse(self, secret, chal=1):
+        if chal == 1:
+           return "%s\0%s\0%s" % (self.user, self.user, secret)
+        else:
+           return "%s\0%s" % (self.user, secret)
+
+
+class ESMTPSender(ESMTPClient):
+
+    requireAuthentication = True
+    requireTransportSecurity = True
+
+    def __init__(self, username, secret, *args, **kw):
+        self.heloFallback = 0
+        self.username = username
+        ESMTPClient.__init__(self, secret, self._getContextFactory(), *args, **kw)
+        self._registerAuthenticators()
+
+    def _registerAuthenticators(self):
+        self.registerAuthenticator(CramMD5ClientAuthenticator(self.username))
+        self.registerAuthenticator(LOGINAuthenticator(self.username))
+        self.registerAuthenticator(PLAINAuthenticator(self.username))
+
+    def _getContextFactory(self):
+        if self.context is not None:
+            return self.context
+        try:
+            from twisted.internet import ssl
+        except ImportError:
+            return None
+        else:
+            context = ssl.ClientContextFactory()
+            context.method = ssl.SSL.TLSv1_METHOD
+            return context
+
+
+class ESMTPSenderFactory(SMTPSenderFactory):
+    """
+    Utility factory for sending emails easily.
+    """
+
+    protocol = ESMTPSender
+
+    def __init__(self, username, password, fromEmail, toEmail, file, deferred, retries=5):
+        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries)
+        self.username = username
+        self.password = password
+
+    def buildProtocol(self, addr):
+        p = self.protocol(self.username, self.password, self.domain, len(self.toEmail)*2+2)
         p.factory = self
         return p
 
