@@ -291,8 +291,12 @@ def parseContentRange(header):
     kind, other = header.strip().split()
     if kind.lower() != "bytes":
         raise ValueError, "a range of type %r is not supported"
-    startend, realLength = other.split("*")
+    startend, realLength = other.split("/")
     start, end = map(int, startend.split("-"))
+    if realLength == "*":
+        realLength = None
+    else:
+        realLength = int(realLength)
     return (start, end, realLength)
 
 

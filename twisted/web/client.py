@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_webclient -*-
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -14,13 +16,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
 """HTTP client."""
 
 from twisted.protocols import http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
 from twisted.web import error
-import urlparse
+import urlparse, os
+
 
 class HTTPPageGetter(http.HTTPClient):
 
@@ -195,12 +199,12 @@ class HTTPDownloader(HTTPClientFactory):
 
     def gotHeaders(self, headers):
         if self.requestedPartial:
-            contentRange = headers.get("contentRange", None)
+            contentRange = headers.get("content-range", None)
             if not contentRange:
                 # server doesn't support partial requests, oh well
                 self.requestedPartial = 0 
                 return
-            start, end, realLength = http.parseContentRange(header)
+            start, end, realLength = http.parseContentRange(contentRange[0])
             if start != self.requestedPartial:
                 # server is acting wierdly
                 self.requestedPartial = 0
