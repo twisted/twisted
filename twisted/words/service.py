@@ -162,6 +162,23 @@ class Transcript:
     def endTranscript(self):
         self.voice.stopTranscribing(self.name)
 
+class IWordsPolicy(components.Interface):
+    def getNameFor(self, participant):
+        """Give a name for a participant, based on the current policy."""
+    def lookupParticipant(self, nick):
+        """ Get a Participant, given a name."""
+
+class NormalPolicy:
+    __implements__ = IWordsPolicy
+
+    def __init__(self, participant):
+        self.participant = participant
+    def getNameFor(self, participant):
+        return participant.name
+
+    def lookUpParticipant(self, nick):
+        return self.participant.service.getPerspectiveNamed(nick)
+
 class Participant(pb.Perspective, styles.Versioned):
     def __init__(self, name):
         pb.Perspective.__init__(self, name)
@@ -173,6 +190,7 @@ class Participant(pb.Perspective, styles.Versioned):
         self.client = None
         self.loggedNames = {}
 
+        self.policy = NormalPolicy(self)
     persistenceVersion = 2
 
     def upgradeToVersion2(self):
@@ -284,10 +302,11 @@ class Participant(pb.Perspective, styles.Versioned):
 
     def receiveDirectMessage(self, sender, message, metadata):        
         if self.client:
-            if self.loggedNames.has_key(sender.name):
-                self.loggedNames[sender.name].logMessage(sender.name, message,
+            nick = self.policy.getNameFor(sender)
+            if self.loggedNames.has_key(nick):
+                self.loggedNames[nick].logMessage(sender.name, message,
                                                          metadata)
-            self.client.callRemote('receiveDirectMessage', sender.name,
+            self.client.callRemote('receiveDirectMessage', nick,
                                    message, metadata)
         else:
             raise WrongStatusError(self.status, self.name)
@@ -307,10 +326,7 @@ class Participant(pb.Perspective, styles.Versioned):
             self.client.callRemote('memberLeft', member.name, group.name)
 
     def directMessage(self, recipientName, message, metadata=None):
-        # XXX getPerspectiveNamed is misleading here -- this ought to look up
-        # the user to make sure they're *online*, and if they're not, it may
-        # need to query a database.        
-        recipient = self.service.getPerspectiveNamed(recipientName)        
+        recipient = self.policy.lookUpParticipant(recipientName)
         recipient.receiveDirectMessage(self, message, metadata or {})
         if self.loggedNames.has_key(recipientName):
             self.loggedNames[recipientName].logMessage(self.name, message, metadata)
@@ -458,6 +474,11 @@ class Service(pb.Service, styles.Versioned):
         from twisted.spread.util import LocalAsyncForwarder
         p.attached(LocalAsyncForwarder(bot, IWordsClient, 1), None)
         self.bots.append(bot)
+
+    def deleteBot(self, bot):
+        bot.voice.detached(bot, None)
+        self.bots.remove(bot)
+        self.perspectives.remove(bot)
 
     createParticipant = createPerspective
 
