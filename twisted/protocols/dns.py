@@ -32,7 +32,7 @@ from math import ceil
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
-from twisted.python.compat import dict
+from twisted.python.compat import dict, isinstance
 from twisted.python import log
 
 

@@ -20,7 +20,7 @@ Compatability module to provide backwards compatability
 for useful Python features.
 """
 
-import socket, struct
+import socket, struct, __builtin__
 
 # Python 2.1 forward-compatibility hacks
 try:
@@ -73,8 +73,23 @@ except ImportError:
         else:
             raise ValueError, "unsupported address family"
 
+try:
+    assert isinstance('foo', types.StringTypes)
+except TypeError:
+    def isinstance(object, class_or_type_or_tuple):
+        if type(class_or_type_or_tuple) == types.TupleType:
+            for t in class_or_type_or_tuple:
+                if __builtin__.isinstance(object, t):
+                    return 1
+            return 0
+        else:
+            return __builtin__.isinstance(object, class_or_type_or_tuple)
+    assert isinstance('foo', types.StringTypes)
+else:
+    isinstance = isinstance
 
-__all__ = ['dict', 'inet_pton', 'inet_ntop']
+
+__all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance']
 
 #if __name__ == '__main__':
 #    print repr(inet_pton(socket.AF_INET, '1.2.3.4'))
