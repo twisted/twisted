@@ -7,7 +7,7 @@ Serial Port Protocol
 """
 
 # system imports
-import os
+import os, errno
 
 # dependent on pyserial ( http://pyserial.sf.net/ )
 # only tested w/ 1.18 (5 Dec 2002)
@@ -49,6 +49,11 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             if io.args[0] == errno.EAGAIN:
                 return 0
             return main.CONNECTION_LOST
+        except OSError, ose:
+            if ose.errno == errno.EAGAIN:
+                # I think most systems use this one
+                return 0
+            raise
 
     def doRead(self):
         """Some data's readable from serial device.
