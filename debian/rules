@@ -87,10 +87,10 @@ install-stamp: build-stamp
 	install -m 644 debian/changelog \
 	               debian/twisted-quotes/usr/share/doc/twisted-quotes/changelog.Debian
 	gzip -9 debian/twisted-quotes/usr/share/doc/twisted-quotes/changelog.Debian
-	install -d debian/twisted-quotes/usr/share/games/fortune/
+	install -d debian/twisted-quotes/usr/share/games/fortunes/
 	install -m 644 doc/fun/Twisted.Quotes \
-	               debian/twisted-quotes/usr/share/games/fortune/twisted-quotes
-	strfile debian/twisted-quotes/usr/share/games/fortune/twisted-quotes
+	               debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
+	strfile debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
 	touch install-stamp
 
 
