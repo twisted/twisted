@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.18 2002/04/19 23:56:46 acapnotic Exp $
+# $Id: usage.py,v 1.19 2002/04/22 22:57:51 glyph Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -120,6 +120,11 @@ class Options:
             self.synonyms.update(synonyms)
             self.__dispatch.update(dispatch)
 
+    def __getitem__(self, key):
+        """Get an item from the 'opts' dictionary.
+        """
+        return self.opts[key]
+
     def __getattr__(self, attr):
         """
         I make sure that old style 'optObj.option' access still works.
@@ -156,6 +161,7 @@ class Options:
                 opt = opt[2:]
             else:
                 opt = opt[1:]
+            opt = string.replace(opt, "-", "_")
 
             if not self.synonyms.has_key(opt):
                 raise UsageError, "No such option '%s'" % (opt,)
