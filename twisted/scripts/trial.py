@@ -41,8 +41,14 @@ class Options(usage.Options):
         "Package to test"
         self['packages'].append(package)
 
+    def opt_file(self, filename):
+        "Filename of module to test"
+        from twisted.python import reflect
+        self['modules'].append(reflect.filenameToModuleName(filename))
+
     opt_m = opt_module
     opt_p = opt_package
+    opt_f = opt_file
 
 
 def run():
