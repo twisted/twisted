@@ -38,6 +38,9 @@ Perspective Broker
 
 """
 
+# Future Imports
+from __future__ import nested_scopes
+
 # System Imports
 import traceback
 import cStringIO
