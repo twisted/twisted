@@ -1,7 +1,34 @@
 from twisted.test import test_protocols
-from stateful import MyInt32StringReceiver
+from stateful import StatefulProtocol
 
-import struct
+from struct import pack, unpack
+
+class MyInt32StringReceiver(StatefulProtocol):
+    MAX_LENGTH = 99999
+
+    def getInitialState(self):
+        return self._getHeader, 4
+
+    def _getHeader(self, msg):
+        length, = unpack("!i", msg)
+        if length > self.MAX_LENGTH:
+            self.transport.loseConnection()
+            return
+        return self._getString, length
+
+    def _getString(self, msg):
+        self.stringReceived(msg)
+        return self._getHeader, 4
+
+    def stringReceived(self, msg):
+        """Override this.
+        """
+        raise NotImplementedError
+
+    def sendString(self, data):
+        """Send an int32-prefixed string to the other end of the connection.
+        """
+        self.transport.write(pack("!i",len(data))+data)
 
 class TestInt32(MyInt32StringReceiver):
     def connectionMade(self):
@@ -22,7 +49,7 @@ class Int32TestCase(test_protocols.Int32TestCase):
         r = self.getProtocol()
         big = ""
         for s in self.strings * 4:
-            big += struct.pack("!i",len(s))+s
+            big += pack("!i",len(s))+s
         r.dataReceived(big)
         self.assertEquals(r.received, self.strings * 4)
 

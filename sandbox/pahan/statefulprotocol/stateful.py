@@ -63,30 +63,3 @@ class StatefulProtocol(protocol.Protocol):
             self._sful_buffer.write(b)
             self._sful_offset = 0
 
-class MyInt32StringReceiver(StatefulProtocol):
-    MAX_LENGTH = 99999
-
-    def getInitialState(self):
-        return self._getHeader, 4
-
-    def _getHeader(self, msg):
-        length, = unpack("!i", msg)
-        if length > self.MAX_LENGTH:
-            self.transport.loseConnection()
-            return
-        return self._getString, length
-
-    def _getString(self, msg):
-        self.stringReceived(msg)
-        return self._getHeader, 4
-
-    def stringReceived(self, msg):
-        """Override this.
-        """
-        raise NotImplementedError
-
-    def sendString(self, data):
-        """Send an int32-prefixed string to the other end of the connection.
-        """
-        self.transport.write(pack("!i",len(data))+data)
-
