@@ -15,6 +15,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Twisted Python Roots: an abstract hierarchy representation for Twisted.
+
+Maintainer: Glyph Lefkowitz
+
+Stability: Unstable
+
+Future Plans: Removing distinction between 'static' and 'dynamic' entities,
+which never made much sense anyway and bloats the API horribly.  This probably
+involves updating all of Coil to have tree widgets that can be dynamically
+expanded, which probably involves porting all of Coil to Woven, so it might not
+happen for a while.
+
 """
 
 # System imports
