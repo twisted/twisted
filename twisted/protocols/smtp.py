@@ -19,6 +19,8 @@
 """Simple Mail Transfer Protocol implementation.
 """
 
+from __future__ import generators
+
 # Twisted imports
 from twisted.protocols import basic
 from twisted.protocols import policies
