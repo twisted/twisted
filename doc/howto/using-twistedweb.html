@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Configuring and Using the Twisted.Web Server</title>
+</head>
+
+<body>
+<h1>Configuring and Using the Twisted.Web Server</h1>
+
+<h2>Installation</h2>
+
+<p> To install the Twisted.Web server, you'll need to have
+<a href="installing-twisted">installed Twisted</a>.</p>
+
+<p> Twisted servers, like the web server, do not have configuration files.  Instead, you instantiate the server and store it into a 'Pickle' file, <code>web.tap</code>.  This file will then be loaded by the Twisted Daemon.   </p>
+
+<pre class="shell">
+% mktap web --path /path/to/web/content
+</pre>
+
+<p> If you just want to serve content from your own home directory, the following will do:  </p>
+
+<pre class="shell">
+% mktap web --path ~/public_html/
+</pre>
+
+<p> Some other configuration options are available as well:  </p>
+
+<ul>
+  <li> <code>--port</code>: Specify the port for the web 
+       server to listen on.  This defaults to 8080.  </li>
+  <li> <code>--logfile</code>: Specify the path to the
+       log file. </li>
+</ul>
+
+<p> The full set of options that are available can be seen with:  </p>
+
+<pre class="shell">
+% mktap web --help
+</pre>
+
+<h2>Configuration</h2>
+
+<p> Once you've created a tap file, you can use COIL, a browser based interface, to configure it. Run this command:  </p>
+
+<pre class="shell">
+% coil web.tap
+</pre>
+
+<p> And then point your browser to http://localhost:9080 to see the config interface.  If you're configuring this on a remote machine, then substitute the name of that machine for <code>localhost</code>.  </p>
+
+<p> Once you've finished configuring the server, hit Ctrl-C in the terminal where you run coil in order to shutdown the web server and save your changes.  </p>
+
+<p> You're now ready to start your Twisted.Web server!  </p>
+
+<h2>Using Twisted.Web</h2>
+
+<h3>Stopping and Starting the Server</h3>
+
+<p> Once you've created your <code>web.tap</code> file and done any configuration, you can start the server:  </p>
+
+<pre class="shell">
+% twistd -f web.tap
+</pre>
+
+<p> You can stop the server at any time by going back to the directory you started it in and running the command: </p>
+
+<pre class="shell">
+% kill `cat twistd.pid`
+</pre>
+
+<h3>Serving Flat HTML</h3>
+
+<p> Twisted.Web serves flat HTML files just as it does any other flat file.  </p>
+
+<h3>Embedded Python</h3>
+
+<p> An Embedded Python script is a Python file ending with the extension <code>.epy</code>, which is executed by the Twisted Web server.  </p>
+
+<p> Embedded Python scripts have 2 special variables defined within their namespace:  </p>
+
+<ul>
+  <li> <code class="python"><span class="py-src-identifier">__file__</span></code>: The name of the .epy file, including the full path.  </li>
+  <li> <code class="python"><span class="py-src-identifier">request</span></code>: An instance of <code class="API">twisted.web.server.Request</code>.  </li>
+</ul>
+
+<p> A very simple Embedded Python Script might look like:  </p>
+
+<pre class="python">
+request.write("""
+
+&lt;html&gt;
+    &lt;head&gt;&lt;title&gt; Welcome To Twisted Python &lt;/title&gt;&lt;/head&gt;
+
+    &lt;body&gt;
+    This is a demonstration of embedded python in a webserver.
+    &lt;/body&gt;
+&lt;/html&gt;
+""")
+</pre>
+
+<h3>Resource Scripts</h3>
+
+<p> A Resource script is a Python file ending with the extension <code>.rpy</code>, which is required to create an instance of a (subclass of a) <code class="API">twisted.web.resource.Resource</code>. </p>
+
+<p> Resource scripts have 2 special variables: </p>
+
+<ul>
+  <li> <code class="python"><span class="py-src-identifier">__file__</span></code>: The name of the .rpy file, including the full path.  This variable is automatically defined and present within the namespace.  </li>
+  <li> <code class="python"><span class="py-src-identifier">resource</span></code>: The variable which must be defined by the script and set to the resource instance that will be used to render the page. </li>
+</ul>
+
+<p> A very simple Resource Script might look like:  </p>
+
+<pre class="python">
+from twisted.web import resource
+class MyGreatResource(resource.Resource):
+    def render(self, request):
+        return "&lt;html&gt;foo&lt;/html&gt;"
+
+resource = MyGreatResource()
+</pre>
+
+<h3>DOM Templates</h3>
+
+<p> The DOM Templates system is a system for handling templated content.  See <a href="domtemplate">its documentation</a> for more details.  </p>
+
+<h3>Spreadable Web Servers</h3>
+
+<p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for "spreadable" computing.  In two different directories, run the commands:  </p>
+
+<pre class="shell">
+% mktap web --user
+% mktap web --personal [other options, if you desire]
+</pre>
+
+<p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to http://localhost:8080/your_username.twistd/ -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small "community" sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
+
+
+</body>
+</html>
