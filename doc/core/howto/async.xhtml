@@ -7,10 +7,13 @@
 <head><title>Asynchronous Programming</title></head>
 <body>
 
-<h1>Asynchronous Programming</h1>
-
+<h1>Asynchronous Programming with Twisted</h1>
 
 <h2>Introduction</h2>
+
+<p>This document is a introduction to the asynchronous programming model, and
+to Twisted's Deferred abstraction, which symbolises a 'promised' result and
+which can pass an eventual result to handler functions.</p>
 
 <h3>Waiting for answers</h3>
 
@@ -78,86 +81,226 @@ next part of its job until the connection is open, the rest of the program can
 do other tasks, like begin the opening sequence for other email connections.
 Hence, the entire program is not waiting for the connection.</p>
 
-<h3>Advantages of asynchrony</h3>
+<h2>Deferreds - a signal that data is yet to come</h2>
 
-<p>Asynchrony has a major advantage over the threaded model of programming.
-Multi-threaded programming is tricky, even with high level abstractions.
-Letting the threading library decide when to give another thread a turn to do
-work means that at any point another thread may interupt your thread, and your
-thread will not be told. Hence, if the threads share data, there is always the
-possibility that one will modify it when the other is working with it.  Design
-solutions to this problem which mark pieces of data as untouchable, like the
-locking abstraction, have their own traps: unless you are extremely careful,
-you reintroduce blocking into your code in unexpected places.</p>
+<p>In our email sending example above, a parent function calls a function to
+connect to the remote server. Asynchrony requires that this connection
+function return <em>without waiting for the result</em> so that the parent
+function can do other things. So how does the parent function or its
+controlling program know that the connection doesn't exist yet, and how does
+it use the connection once it does exist?</p>
 
-<p>Usually the threaded model has a performance advantage over the asynchrony
-model on a machine with multiple CPUs or another mechanism of letting two
-threads work at once. However, Python's <a
-href="http://www.python.org/doc/current/api/threads.html">Global Interpreter
-Lock</a> limits this potential performance gain.</p>
+<p>Twisted has an object that signals this situation. When the connection
+function returns, it signals that the operation is incomplete by returning a
+<code class="API">twisted.internet.defer.Deferred</code> object.</p>
 
-<p>Note that Twisted still allows the use of threads if you really need them,
-usually to interface with synchronous legacy code.  See <a
-href="threading.xhtml">Using Threads</a> for details.</p>
+<p>The Deferred has two purposes. The first is that it says &quot;I am a
+signal that the result of whatever you wanted me to do is still pending.&quot;
+The second is that you can ask the Deferred to run things when the data
+does arrive.</p>
 
-<!-- FIXME: The "let other event-driven frameworks take over the main loop"
-needs to be spelled out to me before I can explain it properly.
+<h3>Callbacks</h3>
 
-<p>Event-driven frameworks have inherent advantages too. If you let other
-event-driven frameworks take over the main loop, server and client code are
-essentially the same,  -->
+<p>The way you tell a Deferred what to do with the data once it arrives is by
+adding a callback &mdash; asking the Deferred to call a function once the data
+arrives.</p>
 
-<p>Forking Python processes also has many disadvantages, such as Python's
-reference counting not playing well with copy-on-write and problems with
-shared state.  Consequently, an event-driven framework is the best overall
-option for a Python networking framework.</p>
+<p>One Twisted library function that returns a Deferred is <code
+class="API">twisted.web.client.getPage</code>. In this example, we call
+<code>getPage</code>, which returns a Deferred, and we attach a callback to
+handle the contents of the page once the data is available:</p>
 
-<h2>Async Design Issues</h2>
+<pre class="python">
+from twisted.web.client import getPage
 
-<p>Event-driven programming still contains some tricky aspects. As each
-callback must be finished as soon as possible, it is not possible to keep
-persistent state in function-local variables. In addition, some programming
-techniques, such as recursion, are impossible to use -- for example, this
-rules out protocol handlers being recursive-descent parsers. Event-driven
-programming has a reputation of being hard to use due to the frequent need to
-write state machines. Twisted was built with the assumption that with the
-right library, event-driven programming is easier than multi-threaded
-programming.</p>
+from twisted.internet import reactor
 
-<p>In Python, code is often divided into a generic class calling
-overridable methods which subclasses implement. In that, and similar,
-cases, it is important to think about likely implementations. If it is
-conceivable that an implementation might perform an action which takes
-a long time (either because of network or CPU issues), then one should
-design that method to be asynchronous. In general, this means to transform
-the method to be callback based. In Twisted, it usually means returning
-a <a href="defer.xhtml">Deferred</a>.</p>
+def printContents(contents):
+    '''
+    This is the 'callback' function, added to the Deferred and called by
+    it when the promised data is available
+    '''
 
-<p>Since non-volatile state cannot be kept in local variables, because each
-method must return quickly, it is usually kept in instance variables. In cases
-where recursion would have been tempting, it is usually necessary to keep
-stacks manually, using Python's list and the <code>.append</code> and
-<code>.pop</code> method. Because those state machines frequently get
-non-trivial, it is better to layer them such that each one state machine
-does one thing -- converting events from one level of abstraction to the
-next higher level of abstraction. This allows the code to be clearer, as
-well as easier to debug.</p>
+    print "The Deferred has called printContents with the following contents:"
+    print contents
 
-<h2>Using Reflection</h2>
+    # Stop the Twisted event handling system -- this is usually handled
+    # in higher level ways
+    reactor.stop()
 
-<p>One consequence of using the callback style of programming is the
-need to name small chunks of code. While this may seem like a trivial
-issue, used correctly it can prove to be an advantage. If strictly
-consistent naming is used, then much of the common code in parsers of
-the form of if/else rules or long cases can be avoided. For example,
-the SMTP client code has an instance variable which signifies what it
-is trying to do. When receiving a response from the server, it just calls
-the method <code>"do_%s_%s" % (self.state, responseCode)</code>. This
-eliminates the requirement for registering the callback or adding to
-large if/else chains. In addition, subclasses can easily override or
-change the actions when receiving some responses, with no additional
-harness code.  The SMTP client implementation can be found in 
-<code>twisted/protocols/smtp.py</code>.</p>
+# call getPage, which returns immediately with a Deferred, promising to
+# pass the page contents onto our callbacks when the contents are available
+deferred = getPage('http://twistedmatrix.com/')
 
+# add a callback to the deferred -- request that it run printContents when
+# the page content has been downloaded
+deferred.addCallback(printContents)
+
+# Begin the Twisted event handling system to manage the process -- again this
+# isn't the usual way to do this
+reactor.run()
+</pre>
+
+<p>A very common use of Deferreds is to attach two callbacks. The result of the
+first callback is passed to the second callback:</p>
+
+<pre class="python">
+from twisted.web.client import getPage
+
+from twisted.internet import reactor
+
+def lowerCaseContents(contents):
+    '''
+    This is a 'callback' function, added to the Deferred and called by
+    it when the promised data is available. It converts all the data to
+    lower case
+    '''
+
+    return contents.lower()
+
+def printContents(contents):
+    '''
+    This a 'callback' function, added to the Deferred after lowerCaseContents
+    and called by it with the results of lowerCaseContents
+    '''
+
+    print contents
+    reactor.stop()
+
+deferred = getPage('http://twistedmatrix.com/')
+
+# add two callbacks to the deferred -- request that it run lowerCaseContents
+# when the page content has been downloaded, and then run printContents with
+# the result of lowerCaseContents
+deferred.addCallback(lowerCaseContents)
+deferred.addCallback(printContents)
+
+reactor.run()
+</pre>
+
+<h3>Error handling: errbacks</h3>
+
+<p>Just as a asynchronous function returns before its result is available, it
+may also return before it is possible to detect errors: failed connections,
+erroneous data, protocol errors, and so on. Just as you can add callbacks to a
+Deferred which it calls when the data you are expecting is available, you can
+add error handlers ('errbacks') to a Deferred for it to call when an error
+occurs and it cannot obtain the data:</p>
+
+<pre class="python">
+from twisted.web.client import getPage
+
+from twisted.internet import reactor
+
+def errorHandler(error):
+    '''
+    This is an 'errback' function, added to the Deferred which will call
+    it in the event of an error
+    '''
+
+    # this isn't a very effective handling of the error, we just print it out:
+    print "An error has occurred: &lt;%s&gt;" % str(error)
+    # and then we stop the entire process:
+    reactor.stop()
+
+def printContents(contents):
+    '''
+    This a 'callback' function, added to the Deferred and called by it with
+    the page content
+    '''
+
+    print contents
+    reactor.stop()
+
+# We request a page which doesn't exist in order to demonstrate the
+# error chain
+deferred = getPage('http://twistedmatrix.com/does-not-exist')
+
+# add the callback to the Deferred to handle the page content
+deferred.addCallback(printContents)
+
+# add the errback to the Deferred to handle any errors
+deferred.addErrback(errorHandler)
+
+reactor.run()
+</pre>
+
+<h3>What Deferreds don't do</h3>
+
+<p><em>Deferreds do not make the code magically not block.</em></p>
+
+<p>Let's take this function as an example:</p>
+
+<pre class="python">
+from twisted.internet import defer
+    
+TARGET = 10000
+
+def largeFibonnaciNumber():
+    # create a Deferred object to return:
+    d = defer.Deferred()
+
+    # calculate the ten thousandth Fibonnaci number
+
+    first = 0
+    second = 1
+
+    for i in xrange(TARGET - 1):
+        new = first + second
+        first = second
+        second = new
+        if i % 100 == 0:
+            print "Progress: calculating the %dth Fibonnaci number" % i
+
+    # give the Deferred the answer to pass to the callbacks:
+    d.callback(second)
+
+    # return the Deferred with the answer:
+    return d
+
+import time
+
+timeBefore = time.time()
+
+# call the function and get our Deferred
+d = largeFibonnaciNumber()
+
+timeAfter = time.time()
+
+print "Total time taken for largeFibonnaciNumber call: %0.3f seconds" % (timeAfter - timeBefore)
+
+# add a callback to it to print the number
+
+def printNumber(number):
+    print "The %dth Fibonacci number is %d" % (TARGET, number)
+
+print "Adding the callback now."
+
+d.addCallback(printNumber)
+</pre>
+
+<p>You will notice that despite creating a Deferred in the
+<code>largeFibonnaciNumber</code> function, these things happened:</p>
+<ul>
+<li>the &quot;Total time taken for largeFibonnaciNumber call&quot; output
+shows that the function did not return immediately as asynchronous functions
+are expected to do; and</li>
+<li>rather than the callback being before the result was available, it's added
+after the calculation has been completed.</li>
+</ul>
+
+<p> The function completed its calculation before returning, blocking the
+process until it had finished, which is exactly what asynchronous functions
+are not meant to do.  Deferreds are not a non-blocking talisman: they are a
+signal for asynchronous functions to <em>use</em> to pass results onto
+callbacks, but using them does not guarantee that you have an asynchronous
+function.</p>
+
+<h2>Further reading</h2>
+
+<ol>
+<li><a href="defer.xhtml">Deferred Reference</a>, a more complete guide to
+using Deferreds, including Deferred chaining.</li>
+</ol>
 
 </body></html>
