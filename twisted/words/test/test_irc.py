@@ -136,6 +136,15 @@ class NoticingClient(object, IRCClientWithoutLogin):
             self.calls.append((fname, kw))
         return method
 
+def pop(dict, key, default):
+    try:
+        value = dict[key]
+    except KeyError:
+        return default
+    else:
+        del dict[key]
+        return value
+
 class ModeTestCase(unittest.TestCase):
     def setUp(self):
         self.file = StringIOWithoutClosing()
@@ -161,9 +170,9 @@ class ModeTestCase(unittest.TestCase):
                               'args': ('exarkun',)})])
 
     def _serverTestImpl(self, code, msg, func, **kw):
-        host = kw.pop('host', 'server.host')
-        nick = kw.pop('nick', 'nickname')
-        args = kw.pop('args', '')
+        host = pop(kw, 'host', 'server.host')
+        nick = pop(kw, 'nick', 'nickname')
+        args = pop(kw, 'args', '')
 
         message = (":" +
                    host + " " +
