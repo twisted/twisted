@@ -40,6 +40,8 @@ Usage:
     optParameters = [["new", "n", None],
                      ["port", "p", 9080]]
     
+    optFlags = [["localhost", "l"]]
+
     def parseArgs(self, tapFile):
         self.opts['tapFile'] = tapFile
 
@@ -85,5 +87,9 @@ def run():
     coilApp = app.Application("coil")
     root = web.ConfigRoot(application)
     site = server.Site(root)
-    coilApp.listenTCP(int(config.opts['port']), site)
+    if config.opts['localhost']:
+        interface = '127.0.0.1'
+    else:
+        interface = ''
+    coilApp.listenTCP(int(config.opts['port']), site, interface=interface)
     coilApp.run(save=0)
