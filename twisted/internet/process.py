@@ -24,7 +24,10 @@ import os, sys
 if os.name == 'posix':
     # Inter-process communication and FCNTL fun isn't available on windows.
     import fcntl
-    import FCNTL
+    if (sys.hexversion >> 16) >= 0x202:
+        FCNTL = fcntl
+    else:
+        import FCNTL
 
 from twisted.persisted import styles
 from twisted.python import log, threadable
@@ -185,7 +188,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         for fd in stdout_write, stderr_write, stdin_read:
             os.close(fd)
         for fd in (stdout_read, stderr_read):
-            fcntl.fcntl(fd, FCNTL.F_SETFL, FCNTL.O_NONBLOCK)
+            fcntl.fcntl(fd, FCNTL.F_SETFL, os.O_NONBLOCK)
         self.stdout = os.fdopen(stdout_read, 'r')
         self.stderr = os.fdopen(stderr_read, 'r')
         self.stdin = stdin_write
