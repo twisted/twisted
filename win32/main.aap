@@ -6,11 +6,7 @@ HERE=`os.getcwd()`
     import sys
     import os.path
     import winreg
-
-    def quickdict(initial={}, *args, **kwargs):
-        new=dict(initial)
-        new.update(kwargs)
-        return new
+    from aapwin import quickdict, getValueFromReg, pathdb
 
     def renderDatafilesToIss(data_files):
         """Iterate a distutils-style data_files list, yielding strings
@@ -52,19 +48,6 @@ HERE=`os.getcwd()`
 
         return iss_template % dct
 
-    def getValueFromReg(key, valuename, default, hive=winreg.HKLM):
-        """Pass valuename=None to get the (default) value."""
-        try:
-            key=winreg.Key(hive, key)
-        except winreg.KeyNotFound:
-            return default
-        if valuename is None:
-            return key.value
-        try:    
-            return key.values[valuename].value
-        except winreg.ValueNotFound:
-            return default
-
     def getBuildingTwistedVersion(dir):
         """Return the version of Twisted in $HERE, which may be
         different from the version of Twisted in sys.path.
@@ -77,13 +60,6 @@ HERE=`os.getcwd()`
         from twisted.copyright import version
         return version
 
-    def getPythonHomeForVersion(ver):
-        res=getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
-                               ver, None, r'C:\pythonxx')
-        if res==r'C:\pythonxx':
-            res=getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
-                               ver, None, r'C:\pythonxx', hive=winreg.HKCU)
-        return res
 
 # get the version of twisted from the tree being built, not sys.path
 Version=`getBuildingTwistedVersion(_recipe.HERE)`
@@ -93,11 +69,11 @@ Version=`getBuildingTwistedVersion(_recipe.HERE)`
 :variant PyVersion
     py2.2
         pyversion=2.2
-        pyhome=`getPythonHomeForVersion('2.2')`
+        pyhome=`_no.pathdb["python22"]`
         pyexe=$(pyhome)\python.exe
     py2.3
         pyversion=2.3
-        pyhome=`getPythonHomeForVersion('2.3')`
+        pyhome=`_no.pathdb["python23"]`
         pyexe=$(pyhome)\python.exe
 
 :variant DoDocs
@@ -106,10 +82,6 @@ Version=`getBuildingTwistedVersion(_recipe.HERE)`
     withdocs
         setupbase=Twisted
 
-innohome=`getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 4_is1',
-                          "Inno Setup: App Path",
-                          r'C:\Program Files\Inno Setup 4')`
-iscc='$innohome\ISCC.exe'
 
 all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
     :print : Done building $(target)
@@ -144,12 +116,13 @@ ExeDeps=py$(pyversion)-$(DoDocs).iss
         build/scripts-$(pyversion)
         $(TwSources)
 
+iscc=`pathdb["iscc"]`
 dist/Twisted-$(Version).win32-py$(pyversion).exe: doc/twisteddoc.zip $(ExeDeps)
-    :sys $(iscc) py$(pyversion)-withdocs.iss
+    :sys "$(iscc)" py$(pyversion)-withdocs.iss
 
 # build with inno
 dist/Twisted_NoDocs-$(Version).win32-py$(pyversion).exe: $(ExeDeps)
-    :sys $(iscc) py$(pyversion)-nodocs.iss
+    :sys "$(iscc)" py$(pyversion)-nodocs.iss
 
 
 # fetch docs from latest release (this better be there)
