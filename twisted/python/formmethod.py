@@ -113,7 +113,12 @@ class VerifiedPassword(String):
     def coerce(self, vals):
         if len(vals) != 2 or vals[0] != vals[1]:
             raise InputError, "Please enter the same password twice."
-        return str(vals[0])
+        s = str(vals[0])
+        if len(s) < self.min:
+            raise InputError, "Value must be at least %s characters long" % self.min
+        if self.max != None and len(s) > self.max:
+            raise InputError, "Value must be at most %s characters long" % self.max
+        return s
 
 
 class Hidden(String):

@@ -80,3 +80,10 @@ class ArgumentTestCase(unittest.TestCase):
         goodTests = {"0": 0, "12": 12, "3": 3}.items()
         badTests = ["-1", "x", "13", "-2000", "3.4"]
         self.argTest(formmethod.IntegerRange, goodTests, badTests, 0, 12)
+
+    def testVerifiedPassword(self):
+        goodTests = {("foo", "foo"): "foo", ("ab", "ab"): "ab"}.items()
+        badTests = [("ab", "a"), ("12345", "12345"), ("", ""), ("a", "a"), ("a",), ("a", "a", "a")]
+        self.argTest(formmethod.VerifiedPassword, goodTests, badTests, min=2, max=4)
+
+        
