@@ -83,7 +83,6 @@ class CGIScript(resource.Resource):
                "SCRIPT_NAME":       script_name, # XXX
                "SCRIPT_FILENAME":   self.filename,
                "REQUEST_URI":       request.uri,
-               "PYTHONPATH" :       python_path
         }
 
         client = request.getClient()
