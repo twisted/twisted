@@ -7,7 +7,7 @@ from twisted.python import runtime, log, usage, reflect, failure, util, logfile
 from twisted.persisted import sob
 from twisted.application import compat, service
 from twisted import copyright
-import sys, os, pdb, profile, getpass, traceback, signal
+import sys, os, pdb, getpass, traceback, signal
 
 reactorTypes = {
     'wx': 'twisted.internet.wxreactor',
@@ -32,6 +32,21 @@ def installReactor(reactor):
 
 def runWithProfiler(reactor, config):
     """Run reactor under standard profiler."""
+    try:
+        import profile
+    except ImportError, e:
+        s = "Failed to import module profile: %s" % e
+        s += """
+This is most likely caused by your operating system not including
+profile.py due to it being non-free. Either do not use the option
+--profile, or install profile.py; your operating system vendor
+may provide it in a separate package.
+"""
+        traceback.print_exc(file=log.logfile)
+        log.msg(s)
+        log.deferr()
+        sys.exit('\n' + s + '\n')
+
     p = profile.Profile(lineevents=1) # lineevents=1 for hotshot2kcachegrind compatability
     p.runcall(reactor.run)
     if config['savestats']:
@@ -45,7 +60,21 @@ def runWithProfiler(reactor, config):
 
 def runWithHotshot(reactor, config):
     """Run reactor under hotshot profiler."""
-    import hotshot, hotshot.stats
+    try:
+        import hotshot, hotshot.stats
+    except ImportError, e:
+        s = "Failed to import module hotshot: %s" % e
+        s += """
+This is most likely caused by your operating system not including
+profile.py due to it being non-free. Either do not use the option
+--profile, or install profile.py; your operating system vendor
+may provide it in a separate package.
+"""
+        traceback.print_exc(file=log.logfile)
+        log.msg(s)
+        log.deferr()
+        sys.exit('\n' + s + '\n')
+
     # this writes stats straight out
     p = hotshot.Profile(config["profile"])
     p.runcall(reactor.run)
