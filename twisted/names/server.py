@@ -85,7 +85,6 @@ class DNSServerFactory(protocol.ServerFactory):
     def handleQuery(self, message, protocol, address):
         answers = []
         for q in message.queries:
-            print 'Looking up results for query ', q.name, ' : ', dns.QUERY_TYPES[q.type]
             for a in self.authorities:
                 if a.records.has_key(str(q.name).lower()):
                     for r in a.records[str(q.name).lower()]:

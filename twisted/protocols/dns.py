@@ -27,7 +27,7 @@ Future Plans: Fix message encoding!  Get rid of some toplevels,
 """
 
 # System imports
-import StringIO, struct
+import StringIO, struct, random
 from socket import inet_aton, inet_ntoa
 
 # Twisted imports
@@ -342,7 +342,13 @@ class SimpleRecord:
         self.name = Name()
         self.name.decode(strio)
     
-    
+
+    def __eq__(self, other):
+        if isinstance(other, SimpleRecord):
+            return self.name.lower() == other.name.lower()
+        return 0
+
+
     def __str__(self):
         return '<%s %s>' % (QUERY_TYPES[self.TYPE], self.name)
 
@@ -393,6 +399,12 @@ class Record_A:
         self.address = readPrecisely(strio, 4)
 
 
+    def __eq__(self, other):
+        if isinstance(other, Record_A):
+            return other.address == self.address
+        return 0
+
+
     def __str__(self):
         return '<A %s>' % (inet_ntoa(self.address),)
 
@@ -429,6 +441,13 @@ class Record_SOA:
         self.serial, self.refresh, self.retry, self.expire, self.minimum = r
     
     
+    def __eq__(self, other):
+        if isinstance(other, Record_SOA):
+            # XXX - Is this a good idea?
+            return self.serial == other.serial
+        return 0
+
+
     def __str__(self):
         return '<SOA %s %s serial=%d refresh=%d retry=%d expire=%d min=%d>' % (
             self.mname, self.rname, self.serial, self.refresh,
@@ -478,6 +497,14 @@ class Record_WKS:
         self.map = strio.read()
 
 
+    def __eq__(self, other):
+        if isinstance(other, Record_WKS):
+            return (self.address == other.address and
+                    self.protocol == other.protocol and
+                    self.map == other.map)
+        return 0
+
+
     def __str__(self):
         return '<WKS addr=%s proto=%d>' % (self.address, self.protocol)
 
@@ -500,8 +527,15 @@ class Record_HINFO:
         self.cpu = readPrecisely(strio, cpu)
         os = struct.unpack('!B', readPrecisely(strio, 1))[0]
         self.os = readPrecisely(strio, os)
-    
-    
+
+
+    def __eq__(self, other):
+        if isinstance(other, Record_HINFO):
+            return (self.os.lower() == other.os.lower() and
+                    self.cpu.lower() == other.cpu.lower())
+        return 0
+
+
     def __str__(self):
         return '<HINFO cpu=%s os=%s>' % (self.cpu, self.os)
 
@@ -528,6 +562,13 @@ class Record_MINFO:                 # EXPERIMENTAL
         self.emailbx.decode(strio)
 
 
+    def __eq__(self, other):
+        if isinstance(other, Record_MINFO):
+            return (str(self.rmailbx).lower() == str(other.rmailbx).lower() and
+                    str(self.emailbx).lower() == str(other.emailbx).lower())
+        return 0
+
+
     def __str__(self):
         return '<MINFO responsibility=%s errors=%s>' % (self.rmailbx, self.emailbx)
 
@@ -549,6 +590,13 @@ class Record_MX:
         self.preference = struct.unpack('!H', readPrecisely(strio, 2))[0]
         self.exchange = Name()
         self.exchange.decode(strio)
+
+
+    def __eq__(self, other):
+        if isinstance(other, Record_MX):
+            return (self.preference == other.preference and
+                    str(self.exchange).lower() == str(other.exchange).lower())
+        return 0
 
 
     def __str__(self):
@@ -580,6 +628,12 @@ class Record_TXT:
             except EOFError:
                 break
             self.data.append(readPrecisely(strio, l))
+    
+    
+    def __eq__(self, other):
+        if isinstance(other, Record_TXT):
+            return self.data == other.data
+        return 0
 
 
 class Message:
@@ -710,19 +764,21 @@ class Message:
 
 # This is probably general enough to not be called "Client" anymore
 class DNSClientProtocol(protocol.DatagramProtocol):
-    id = 1000
-    liveMessages = {}
+    id = None
+    liveMessages = None
     
     timeout = 10
     reissue = 1
     
     def __init__(self, controller):
         self.controller = controller
+        self.liveMessages = {}
+        self.id = random.randrange(2 ** 10, 2 ** 15)
 
 
     def pickID(self):
-        DNSClientProtocol.id = DNSClientProtocol.id + 1
-        return DNSClientProtocol.id
+        self.id += 1
+        return self.id
 
 
     def writeMessage(self, message, address):
@@ -754,7 +810,7 @@ class DNSClientProtocol(protocol.DatagramProtocol):
                 d,
                 reactor.callLater(
                     timer, self._reissueQuery, message, address,
-                    counter - 1
+                    counter - 1, timer
                 )
             )
 
@@ -797,8 +853,8 @@ class DNSClientProtocol(protocol.DatagramProtocol):
 
 # Ditto
 class TCPDNSClientProtocol(protocol.Protocol):
-    id = 1000
-    liveMessages = {}
+    id = None
+    liveMessages = None
 
     length = None
     buffer = ''
@@ -807,11 +863,13 @@ class TCPDNSClientProtocol(protocol.Protocol):
 
     def __init__(self, controller):
         self.controller = controller
+        self.liveMessages = {}
+        self.id = random.randrange(2 ** 10, 2 ** 15)
 
 
     def pickID(self):
-        TCPDNSClientProtocol.id = TCPDNSClientProtocol.id + 1
-        return TCPDNSClientProtocol.id
+        self.id += 1
+        return self.id
 
 
     def writeMessage(self, message):

@@ -40,6 +40,7 @@ class Resolver:
     __implements__ = (interfaces.IResolver,)
 
     index = 0
+    timeout = 10
 
     factory = None
     servers = None
@@ -128,7 +129,7 @@ class Resolver:
         @raise C{twisted.internet.defer.TimeoutError}: When the query times
         out.
         """
-        address = (self.pickServer(), dns.PORT)
+        address = self.pickServer()
         if timeout is None:
             timeout = self.timeout
         return self.protocol.query(address, queries, timeout)

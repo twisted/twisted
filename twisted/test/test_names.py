@@ -86,25 +86,44 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         pass
 
 
-    def testServer(self):
+    def testAddressRecord(self):
         r = self.resolver
 
-        # Test A records
         self.deferredFailUnlessEqual(
             r.lookupAddress('test-domain.com'),
-            ['127.0.0.1']
+            [dns.Record_A('127.0.0.1')]
         )
         self.deferredFailUnlessEqual(
-            r.lookupAddress('host.test-domain.com').addCallback(
-                lambda r: (r.sort(), r)[1]
-            ),
-            ['0.255.0.255', '123.242.1.5']
+            r.lookupAddress('host.test-domain.com'),
+            [dns.Record_A('123.242.1.5'), dns.Record_A('0.255.0.255')]
         )
         self.deferredFailUnlessEqual(
-            r.lookupAddress('host-two.test-domain.com').addCallback(
-                lambda r: (r.sort(), r)[1]
-            ),
-            ['0.0.0.0', '255.255.255.255']
+            r.lookupAddress('host-two.test-domain.com'),
+            [dns.Record_A('255.255.255.254'), dns.Record_A('0.0.0.0')]
+        )
+
+        from twisted.internet import reactor
+        for i in range(10):
+            reactor.iterate(0.1)
+
+
+    def testMailExchangeRecord(self):
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupMailExchange('test-domain.com'),
+            [dns.Record_MX(10, 'host.test-domain.com')]
+        )
+
+        from twisted.internet import reactor
+        for i in range(10):
+            reactor.iterate(0.1)
+
+
+    def testNameserver(self):
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupNameserver('test-domain.com'),
+            [dns.Record_NS('39.28.189.39')]
         )
 
         from twisted.internet import reactor
