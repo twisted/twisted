@@ -26,7 +26,7 @@ from twisted import internet
 from twisted.protocols import loopback, smtp
 from twisted.internet import defer, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
-import string
+import string, re
 from cStringIO import StringIO
 
 class DummyMessage:
@@ -37,11 +37,13 @@ class DummyMessage:
         self.buffer = []
 
     def lineReceived(self, line):
-        self.buffer.append(line)
+        # Throw away the generated Received: header
+        if not re.match('Received: From yyy.com \(\[.*\]\) by localhost;', line):
+            self.buffer.append(line)
 
     def eomReceived(self):
         message = string.join(self.buffer, '\n')+'\n'
-        self.domain.messages[self.user.name].append(message)
+        self.domain.messages[self.user.dest.local].append(message)
         deferred = defer.Deferred()
         deferred.callback("saved")
         return deferred
@@ -55,7 +57,7 @@ class DummyDomain:
            self.messages[name] = []
 
    def exists(self, user, success, failure):
-       if self.messages.has_key(user.name):
+       if self.messages.has_key(user.dest.local):
            success(user)
        else:
            failure(user)
@@ -74,7 +76,7 @@ Someone set up us the bomb!\015
     mbox = {'foo': ['Subject: urgent\n\nSomeone set up us the bomb!\n']}
 
     def setUp(self):
-        self.factory = internet.protocol.Factory()
+        self.factory = smtp.SMTPFactory()
         self.factory.domains = {}
         self.factory.domains['baz.com'] = DummyDomain(['foo'])
         self.output = StringIOWithoutClosing()
@@ -84,6 +86,7 @@ Someone set up us the bomb!\015
         from twisted.mail import protocols
         protocol =  protocols.DomainSMTP()
         protocol.service = self.factory
+        protocol.factory = self.factory
         protocol.makeConnection(self.transport)
         protocol.lineReceived('HELO yyy.com')
         for message in self.messages:
@@ -95,7 +98,7 @@ Someone set up us the bomb!\015
             protocol.lineReceived('.')
         protocol.lineReceived('QUIT')
         if self.mbox != self.factory.domains['baz.com'].messages:
-            raise AssertionError(self.server.domains['baz.com'].messages)
+            raise AssertionError(self.factory.domains['baz.com'].messages)
 
 mail = '''\
 Subject: hello
@@ -132,12 +135,13 @@ class LoopbackSMTPTestCase(unittest.TestCase):
         loopback.loopbackTCP(server, client)
         
     def testMessages(self):
-        factory = internet.protocol.Factory()
+        factory = smtp.SMTPFactory()
         factory.domains = {}
         factory.domains['foo.bar'] = DummyDomain(['moshez'])
         from twisted.mail.protocols import DomainSMTP
         protocol =  DomainSMTP()
         protocol.service = factory
+        protocol.factory = factory
         clientProtocol = MySMTPClient()
         self.loopback(protocol, clientProtocol)
 
@@ -195,15 +199,17 @@ class DummySMTPMessage:
         self.buffer = []
 
     def lineReceived(self, line):
-        self.buffer.append(line)
+        # Throw away the generated Received: header
+        if not re.match('Received: From foo.com \(\[.*\]\) by foo.com;', line):
+            self.buffer.append(line)
 
     def eomReceived(self):
         message = string.join(self.buffer, '\n')+'\n'
-        helo, origin = self.users[0].helo, self.users[0].orig
+        helo, origin = self.users[0].helo[0], str(self.users[0].orig)
         recipients = []
         for user in self.users:
-            recipients.append(user.name+'@'+user.domain)
-        self.protocol.messages.append((helo, origin, recipients, message))
+            recipients.append(str(user))
+        self.protocol.message = (helo, origin, recipients, message)
         deferred = defer.Deferred()
         deferred.callback("saved")
         return deferred
@@ -212,51 +218,84 @@ class DummySMTP(smtp.SMTP):
 
     def connectionMade(self):
         smtp.SMTP.connectionMade(self)
-        self.messages = []
+        self.message = None
 
     def startMessage(self, users):
         return [DummySMTPMessage(self, users)]
 
-
 class AnotherSMTPTestCase(unittest.TestCase):
 
-    messages = [ ('foo.com', 'moshez@foo.com', ['moshez@bar.com'], '''\
+    messages = [ ('foo.com', 'moshez@foo.com', ['moshez@bar.com'],
+                  'moshez@foo.com', ['moshez@bar.com'], '''\
 From: Moshe
 To: Moshe
 
 Hi,
 how are you?
 '''),
-                 ('foo.com', 'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'], '''\
+                 ('foo.com', 'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'],
+                  'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'], '''\
 Subject: pass
 
 ..rrrr..
-''')
+'''),
+                 ('foo.com', '@this,@is,@ignored:foo@bar.com',
+                  ['@ignore,@this,@too:bar@foo.com'],
+                  'foo@bar.com', ['bar@foo.com'], '''\
+Subject: apa
+To: foo
+
+123
+.
+456
+'''),
               ]
 
-    expected_output = '220 Spammers beware, your ass is on fire\015\012250 Nice to meet you\015\012250 From address accepted\015\012250 Address recognized\015\012354 Continue\015\012250 Delivery in progress\015\012250 From address accepted\015\012250 Address recognized\015\012250 Address recognized\015\012354 Continue\015\012250 Delivery in progress\015\012221 See you later\015\012'
+    data = [
+        ('', '220.*\r\n$', None, None),
+        ('HELO foo.com\r\n', '250.*\r\n$', None, None),
+        ('RSET\r\n', '250.*\r\n$', None, None),
+        ]
+    for helo_, from_, to_, realfrom, realto, msg in messages:
+        data.append(('MAIL FROM:<%s>\r\n' % from_, '250.*\r\n',
+                     None, None))
+        for rcpt in to_:
+            data.append(('RCPT TO:<%s>\r\n' % rcpt, '250.*\r\n',
+                         None, None))
 
-    input = 'HELO foo.com\r\n'
-    for _, from_, to_, message in messages:
-        input = input + 'MAIL FROM:<%s>\r\n' % from_
-        for item in to_:
-            input = input + 'RCPT TO:<%s>\r\n' % item
-        input = input + 'DATA\r\n'
-        for line in string.split(message, '\n')[:-1]:
-            if line[:1] == '.': line = '.' + line
-            input = input + line + '\r\n'
-        input = input + '.' + '\r\n'
-    input = input + 'QUIT\r\n'
+        data.append(('DATA\r\n','354.*\r\n',
+                     msg, ('250.*\r\n',
+                           (helo_, realfrom, realto, msg))))
+                                                       
 
     def testBuffer(self):
         output = StringIOWithoutClosing()
         a = DummySMTP()
+        class fooFactory:
+            domain = 'foo.com'
+
+        a.factory = fooFactory()
         a.makeConnection(protocol.FileWrapper(output))
-        a.dataReceived(self.input)
-        if a.messages != self.messages:
-            raise AssertionError(a.messages)
-        if output.getvalue() != self.expected_output:
-            raise AssertionError(`output.getvalue()`)
+        for (send, expect, msg, msgexpect) in self.data:
+            if send:
+                a.dataReceived(send)
+            data = output.getvalue()
+            output.truncate(0)
+            if not re.match(expect, data):
+                raise AssertionError, (send, expect, data)
+            if data[:3] == '354':
+                for line in msg.splitlines():
+                    if line and line[0] == '.':
+                        line = '.' + line
+                    a.dataReceived(line + '\r\n')
+                a.dataReceived('.\r\n')
+                # Special case for DATA. Now we want a 250, and then
+                # we compare the messages
+                data = output.getvalue()
+                output.truncate()
+                resp, msgdata = msgexpect
+                if not re.match(resp, data):
+                    raise AssertionError, (resp, data)
+                self.assertEquals(a.message, msgdata)
 
 
-testCases = [SMTPTestCase, SMTPClientTestCase, LoopbackSMTPTestCase, AnotherSMTPTestCase]

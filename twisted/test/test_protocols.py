@@ -33,6 +33,7 @@ class StringIOWithoutClosing(StringIO.StringIO):
 class LineTester(basic.LineReceiver):
 
     delimiter = '\n'
+    MAX_LENGTH = 64
 
     def connectionMade(self):
         self.received = []
@@ -50,6 +51,10 @@ class LineTester(basic.LineReceiver):
         self.received[-1] = self.received[-1] + data
         if self.length == 0:
             self.setLineMode(rest)
+
+    def lineLengthExceeded(self, line):
+        if len(line) > self.MAX_LENGTH+1:
+            self.setLineMode(line[self.MAX_LENGTH+1:])
 
 class WireTestCase(unittest.TestCase):
 
@@ -103,13 +108,14 @@ foo 123
 012345678len 0
 foo 5
 
+1234567890123456789012345678901234567890123456789012345678901234567890
 len 1
 
 a'''
 
     output = ['len 10', '0123456789', 'len 5', '1234\n',
               'len 20', 'foo 123', '0123456789\n012345678',
-              'len 0', 'foo 5', '', 'len 1', 'a']
+              'len 0', 'foo 5', '', '67890', 'len 1', 'a']
 
     def testBuffer(self):
         for packet_size in range(1, 10):
@@ -175,3 +181,6 @@ class NetstringReceiverTestCase(unittest.TestCase):
             r.dataReceived(s)
             if not r.brokenPeer:
                 raise AssertionError("connection wasn't closed on illegal netstring %s" % repr(s))
+
+if __name__ == '__main__':
+    unittest.main()

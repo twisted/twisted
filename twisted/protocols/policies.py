@@ -21,7 +21,7 @@
 import sys, operator
 
 # twisted imports
-from twisted.internet.protocol import ServerFactory, Protocol
+from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet.interfaces import ITransport
 from twisted.internet import reactor
 from twisted.python import log
@@ -31,6 +31,8 @@ class ProtocolWrapper(Protocol):
     """Wraps protocol instances and acts as their transport as well."""
     
     __implements__ = ITransport,
+
+    disconnecting = 0
 
     def __init__(self, factory, wrappedProtocol):
         self.wrappedProtocol = wrappedProtocol
@@ -45,6 +47,7 @@ class ProtocolWrapper(Protocol):
         self.transport.writeSequence(data)
 
     def loseConnection(self):
+        self.disconnecting = 1
         self.transport.loseConnection()
 
     def getPeer(self):
@@ -77,7 +80,7 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol.connectionLost(reason)
 
 
-class WrappingFactory(ServerFactory):
+class WrappingFactory(ClientFactory):
     """Wraps a factory and its protocols, and keeps track of them."""
     
     protocol = ProtocolWrapper
@@ -86,13 +89,22 @@ class WrappingFactory(ServerFactory):
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
 
+    def startedConnecting(self, connector):
+        self.wrappedFactory.startedConnecting(connector)
+
+    def clientConnectionFailed(self, connector, reason):
+        self.wrappedFactory.clientConnectionFailed(connector, reason)
+
+    def clientConnectionLost(self, connector, reason):
+        self.wrappedFactory.clientConnectionLost(connector, reason)
+
     def buildProtocol(self, addr):
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr))    
 
     def registerProtocol(self, p):
         """Called by protocol to register itself."""
         self.protocols[p] = 1
-    
+
     def unregisterProtocol(self, p):
         """Called by protocols when they go away."""
         del self.protocols[p]
@@ -222,3 +234,16 @@ class ThrottlingFactory(WrappingFactory):
     def unregisterProtocol(self, p):
         WrappingFactory.unregisterProtocol(self, p)
         self.connectionCount -= 1
+
+
+class SpewingProtocol(ProtocolWrapper):
+    def dataReceived(self, data):
+        log.msg("Received: %r" % data)
+        ProtocolWrapper.dataReceived(self,data)
+
+    def write(self, data):
+        log.msg("Sending: %r" % data)
+        ProtocolWrapper.write(self,data)
+
+class SpewingFactory(WrappingFactory):
+    protocol = SpewingProtocol

@@ -28,27 +28,28 @@ class DomainSMTP(smtp.SMTP):
     """SMTP server that uses twisted.mail service's domains."""
     
     def validateTo(self, user, success, failure):
-        if not self.service.domains.has_key(user.domain):
+        if not self.service.domains.has_key(user.dest.domain):
             failure(user)
             return
-        self.service.domains[user.domain].exists(user, success, failure)
+        self.service.domains[user.dest.domain].exists(user, success, failure)
 
     def startMessage(self, users):
         ret = []
         for user in users:
-            ret.append(self.service.domains[user.domain].startMessage(user))
+            ret.append(self.service.domains[user.dest.domain].startMessage(user))
         return ret
 
 
-class SMTPFactory(protocol.ServerFactory):
+class SMTPFactory(smtp.SMTPFactory):
     """A protocol factory for SMTP."""
-    
+
     def __init__(self, service):
         self.service = service
     
     def buildProtocol(self, addr):
         p = DomainSMTP()
         p.service = self.service
+        p.factory = self
         return p
 
 
@@ -82,4 +83,5 @@ class POP3Factory(protocol.ServerFactory):
     def buildProtocol(self, addr):
         p = VirtualPOP3()
         p.service = self.service
+        p.factory = self
         return p

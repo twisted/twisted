@@ -238,7 +238,7 @@ class SmartHostSMTPRelayingManager:
         for line in string.split(bounceMessage, '\n')[:-1]:
              outgoingMessage.lineReceived(line)
         outgoingMessage.eomReceived()
-        self._finish(relay, message)
+        self._finish(relay, self.queue.getPath(message))
 
     def notifyDone(self, relay):
         """A relaying SMTP client is disconnected.

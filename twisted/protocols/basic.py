@@ -160,12 +160,15 @@ class LineReceiver(protocol.Protocol):
                 line, self.__buffer = self.__buffer.split(self.delimiter, 1)
             except ValueError:
                 if len(self.__buffer) > self.MAX_LENGTH:
-                    self.transport.loseConnection()
+                    line, self.__buffer = self.__buffer, ''
+                    self.lineLengthExceeded(line)
                     return
                 break
             else:
-                if len(line) > self.MAX_LENGTH:
-                    self.transport.loseConnection()
+                linelength = len(line)
+                if linelength > self.MAX_LENGTH:
+                    line, self.__buffer = self.__buffer, ''
+                    self.lineLengthExceeded(line)
                     return
                 self.lineReceived(line)
                 if self.transport.disconnecting:
@@ -207,6 +210,12 @@ class LineReceiver(protocol.Protocol):
         """Sends a line to the other end of the connection.
         """
         self.transport.write(line + self.delimiter)
+
+    def lineLengthExceeded(self, line):
+        """Called when the maximum line length has been reached.
+        Override if it needs to be dealt with in some special way.
+        """
+        self.transport.loseConnection()
 
 
 class Int32StringReceiver(protocol.Protocol):

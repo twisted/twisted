@@ -59,7 +59,7 @@ class AbstractMaildirDomain:
     def exists(self, user, success, failure):
         """Check for existence of user in the domain
         """
-        if self.userDirectory(user.name) is not None:
+        if self.userDirectory(user.dest.local) is not None:
             success(user)
         else:
             failure(user)
@@ -67,7 +67,7 @@ class AbstractMaildirDomain:
     def startMessage(self, user):
         """Save a message for a given user
         """
-        name, domain = user.name, user.domain
+        name, domain = user.dest.local, user.dest.domain
         dir = self.userDirectory(name)
         fname = _generateMaildirName() 
         filename = os.path.join(dir, 'tmp', fname)

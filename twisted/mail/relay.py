@@ -54,7 +54,7 @@ class DomainQueuer:
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
         try:
-            cPickle.dump([user.orig, '%s@%s' % (user.name, user.domain)], envelopeFile)
+            cPickle.dump([str(user.orig), str(user.dest)], envelopeFile)
         finally:
             envelopeFile.close()
         return smtpMessage
