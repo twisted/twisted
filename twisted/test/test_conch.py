@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from __future__ import nested_scopes
-import os, struct, sys
+import os, struct, sys, tty
 from twisted.conch import identity, error
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session
 from twisted.cred import authorizer
@@ -113,12 +113,14 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
                     self.fail('getting %s public key from string failed' % keyType)
 
     def _testGenerateKey(self, privKey, pubKey, privData, pubData):
-        assert keys.makePublicKeyString(pubKey, 'comment') == pubData, repr(keys.makePublicKeyString(pubKey, 'comment'))
-        assert keys.makePublicKeyString(privKey, 'comment') == pubData
-        assert keys.makePrivateKeyString(privKey) == privData, "%s\n!=\n                %s" %(repr(keys.makePrivateKeyString(privKey)) , repr(privData))
+        self.assertEquals(keys.makePublicKeyString(pubKey, 'comment'), pubData)
+        self.assertEquals(keys.makePublicKeyString(privKey, 'comment'), pubData)
+        self.assertEquals(keys.makePrivateKeyString(privKey), privData)
         encData = keys.makePrivateKeyString(privKey, passphrase='test')
-        assert keys.getPrivateKeyObject(data = encData, passphrase = 'test')==\
-               privKey
+        self.assertEquals(
+            keys.getPrivateKeyObject(data = encData, 
+                                     passphrase = 'test').__getstate__(),
+            privKey.__getstate__())
         
 
 theTest = None
@@ -412,10 +414,14 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     buf = ''
     done = 0 
-    
+
     def outReceived(self, data):
         self.buf += data
         theTest.fac.proto.expectedLoseConnection = 1
+        self.transport.write('x') 
+
+    def errReceived(self, data):
+        self.transport.write('x') # help to close stdin
 
     def processEnded(self, reason):
         global theTest
@@ -472,7 +478,7 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        cmdline = 'ssh -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
+        cmdline = 'ssh -v -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
