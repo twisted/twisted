@@ -1,7 +1,3 @@
-2003-01-07  Dave Peticolas  <dave@krondo.com>
-
-	* pyunit/.cvsignore: Ignore generated python code
-
 2003-01-06  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/python/microdom.py: Added beExtremelyLenient mode (for
