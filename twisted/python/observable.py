@@ -15,8 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-""" A group of classes which implement the observer/observable and
-publisher/subscriber pattern.  """
+"""
+A group of classes which implement the observer/observable and
+publisher/subscriber pattern.
+"""
 
 # System Imports
 import types

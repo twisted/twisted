@@ -41,10 +41,10 @@ import failure
 class Settable:
     """
     A mixin class for syntactic sugar.  Lets you assign attributes by
-    calling with keyword arguments; for example, x(a=b,c=d,y=z) is the
-    same as x.a=b;x.c=d;x.y=z.  The most useful place for this is
+    calling with keyword arguments; for example, C{x(a=b,c=d,y=z)} is the
+    same as C{x.a=b;x.c=d;x.y=z}.  The most useful place for this is
     where you don't want to name a variable, but you do want to set
-    some attributes; for example, X()(y=z,a=b).
+    some attributes; for example, C{X()(y=z,a=b)}.
     """
     def __init__(self, **kw):
         apply(self,(),kw)
@@ -160,11 +160,11 @@ class PropertyAccessor(object):
 class OriginalAccessor:
     """
     Extending this class will give you explicit accessor methods; a
-    method called set_foo, for example, is the same as an if statement
-    in __setattr__ looking for 'foo'.  Same for get_foo and del_foo.
-    There are also reallyDel and reallySet methods, so you can
-    override specifics in subclasses without clobbering __setattr__
-    and __getattr__.
+    method called C{set_foo}, for example, is the same as an if statement
+    in L{__setattr__} looking for C{'foo'}.  Same for C{get_foo} and
+    C{del_foo}.  There are also L{reallyDel} and L{reallySet} methods,
+    so you can override specifics in subclasses without clobbering 
+    L{__setattr__} and L{__getattr__}.
 
     This implementation is for Python 2.1.
     """
@@ -233,10 +233,10 @@ else:
 class Summer(Accessor):
     """
     Extend from this class to get the capability to maintain 'related
-    sums'.  Have a tuple in your class like the following:
+    sums'.  Have a tuple in your class like the following::
 
-    sums=(('amount','credit','credit_total'),
-          ('amount','debit','debit_total'))
+        sums=(('amount','credit','credit_total'),
+              ('amount','debit','debit_total'))
 
     and the 'credit_total' member of the 'credit' member of self will
     always be incremented when the 'amount' member of self is
@@ -276,8 +276,8 @@ class Promise:
     """I represent an object not yet available.
 
     Methods called on me will be queued and sent as soon as the object becomes
-    available.  Typically my __become__ method is registered as a callback with
-    some event that will return my new identity.
+    available.  Typically my L{__become__} method is registered as a callback
+    with some event that will return my new identity.
     """
     def __init__(self):
         self.calls = []

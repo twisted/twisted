@@ -59,7 +59,7 @@ class Looping:
     stopped = 0
 
     def __init__(self, ticks,func,delayed):
-        """ Looping(ticks,func,delayed)
+        """Looping(ticks,func,delayed)
 
         This initializer is only called internally.
         """

@@ -46,7 +46,7 @@ def format_frames(frames, write, detail="default"):
 
     @param frames: is a list of frames as used by Failure.frames, with
         each frame being a list of
-       (funcName, fileName, lineNumber, locals.items(), globals.items())
+        (funcName, fileName, lineNumber, locals.items(), globals.items())
     @type frames: list
     @param write: this will be called with formatted strings.
     @type write: callable

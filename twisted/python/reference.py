@@ -90,9 +90,10 @@ class Resolver:
         """Resolver(lookup)
         Create a resolver.
         
-        lookup: is an object which responds to the __getitem__ interface and
-        contains all the keys which can be referred to by the References in the
-        'reflist' argument to my 'resolve' method.
+        @param lookup: is an object which responds to the C{__getitem__}
+            interface and contains all the keys which can be referred to by
+            the L{Reference}s in the C{'reflist'} argument to my L{'resolve'}
+            method.
         
         """
         self.lookup=lookup
@@ -151,10 +152,9 @@ class Resolver:
     def resolve(self,reflist):
         """Resolve a list of references.
 
-        Arguments:
-        
-            reflist: a list of objects which may contain Reference
-            objects, which can be resolved by looking in self.lookup
+        @type reflist: C{List}
+        @param reflist: A list of objects which may contain L{Reference}
+            objects, which can be resolved by looking in C{self.lookup}.
         """
         global callList
         try:

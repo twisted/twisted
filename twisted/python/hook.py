@@ -28,13 +28,10 @@ This could be used to add optional preconditions, user-extensible callbacks
 
 The four exported calls are:
 
-   * addPre
-
-   * addPost
-
-   * removePre
-
-   * removePost
+   - L{addPre}
+   - L{addPost}
+   - L{removePre}
+   - L{removePost}
 
 All have the signature (class, methodName, callable), and the callable they
 take must always have the signature (instance, *args, **kw) unless the
