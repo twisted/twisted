@@ -1,3 +1,14 @@
+2004-11-07  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_internet.py: correctly check for SSL support.
+	Improve timeout for testCallLater and testGetDelayedCalls to avoid
+	spurious failures on slow test systems. Close sockets in
+	PortStringification to fix trial warnings.
+
+	* twisted/internet/ssl.py: add a comment describing the correct
+	way to import twisted.internet.ssl (since it might partially fail
+	if OpenSSL is not available)
+
 2004-11-06  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/trial/assertions.py: assertRaises/failUnlessRaises now 

@@ -3,7 +3,15 @@
 
 
 from twisted.trial import unittest
+from twisted.trial.util import spinUntil
 from twisted.internet import reactor, protocol, error, app, abstract, interfaces
+try:
+    from twisted.internet import ssl
+except ImportError:
+    ssl = None
+if ssl and not ssl.supported:
+    ssl = None
+
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
 from twisted.python import util, threadable, log
 threadable.init(1)
@@ -208,10 +216,8 @@ class InterfaceTestCase(unittest.TestCase):
         i = reactor.callLater(0.5, self._callback, 1, a=1)
         start = time.time()
 
-        while time.time() - start < 0.6:
-            reactor.iterate(0.01)
+        spinUntil(lambda :self._called, 5)
 
-        self.assertEquals(self._called, 1)
         self.assertApproximates(self._calledTime, start + 0.5, 0.2 )
         self.assertRaises(error.AlreadyCalled, i.cancel)
 
@@ -225,6 +231,8 @@ class InterfaceTestCase(unittest.TestCase):
         self._delaycallbackTime = time.time()
 
     def testCallLaterDelayAndReset(self):
+        # this test will fail if the test host is busy and this script is
+        # delayed by more than about 100ms
         self._resetcallbackTime = None
         self._delaycallbackTime = None
         ireset = reactor.callLater(0.4, self._resetcallback)
@@ -443,10 +451,6 @@ class DelayedTestCase(unittest.TestCase):
         self.finished = 1
         self.callback(tag)
 
-    def failsafe(self, tag):
-        self.finished = 1
-        self.fail("timeout")
-
     def addTimer(self, when, callback):
         self.timers[self.counter] = reactor.callLater(when * 0.01, callback,
                                                       self.counter)
@@ -468,14 +472,11 @@ class DelayedTestCase(unittest.TestCase):
         self.addTimer(25, self.addCallback)
         self.addTimer(26, self.callback)
 
-        self.addTimer(50, self.failsafe)
-
         self.timers[which].cancel()
         del self.timers[which]
         self.checkTimers()
 
-        while not self.finished:
-            reactor.iterate(0.01)
+        spinUntil(lambda :self.finished, 5)
         self.checkTimers()
 
     def testActive(self):
@@ -602,6 +603,7 @@ class PortStringification(unittest.TestCase):
             portNo = p.getHost().port
             self.assertNotEqual(str(p).find(str(portNo)), -1,
                                 "%d not found in %s" % (portNo, p))
+            return p.stopListening()
 
     if interfaces.IReactorUDP(reactor, None) is not None:
         def testUDP(self):
@@ -609,14 +611,13 @@ class PortStringification(unittest.TestCase):
             portNo = p.getHost().port
             self.assertNotEqual(str(p).find(str(portNo)), -1,
                                 "%d not found in %s" % (portNo, p))
+            return p.stopListening()
 
-    if interfaces.IReactorSSL(reactor, None) is not None:
-        from twisted.internet import ssl
+    if interfaces.IReactorSSL(reactor, None) is not None and ssl:
         def testSSL(self, ssl=ssl):
             pem = util.sibpath(__file__, 'server.pem')
             p = reactor.listenSSL(0, protocol.ServerFactory(), ssl.DefaultOpenSSLContextFactory(pem, pem))
             portNo = p.getHost().port
             self.assertNotEqual(str(p).find(str(portNo)), -1,
                                 "%d not found in %s" % (portNo, p))
-
-        testSSL.todo = """this test fails on freebsd: exceptions.AttributeError: 'module' object has no attribute 'DefaultOpenSSLContextFactory'"""
+            return p.stopListening()

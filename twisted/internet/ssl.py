@@ -29,6 +29,18 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # initialized module object.  This is wacko, but we will take advantage
 # of it to publish whether or not SSL is available.
 # See the end of this module for the other half of this solution.
+
+# The correct idiom to import this module is thus:
+
+# try:
+#    from twisted.internet import ssl
+# except ImportError:
+#    # happens the first time the interpreter tries to import it
+#    ssl = None
+# if ssl and not ssl.supported:
+#    # happens second and later times
+#    ssl = None
+
 supported = False
 
 # System imports
