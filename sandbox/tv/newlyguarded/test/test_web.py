@@ -55,7 +55,6 @@ class ActualTests:
         self.failUnless(url.startswith(self.url))
         self.failUnless(url.endswith('/another/more/more/'))
 
-
     def test_auth_traversal(self):
         b = self.browser
         b.open(self.url)
@@ -70,13 +69,36 @@ class ActualTests:
         b.follow_link(text_regex=re.compile(r'another'))
         self.assertEquals(b.title(), "Hello again!")
 
+    def test_public(self):
+        b = self.browser
+        b.open(self.url)
+        b.follow_link(text_regex=re.compile(r'public'))
+        self.assertEquals(b.title(), 'This is public')
+
+    def test_public_secret(self):
+        b = self.browser
+        b.open(self.url)
+        b.follow_link(text_regex=re.compile(r'public'))
+        self.assertEquals(b.title(), 'This is public')
+        b.follow_link(text_regex=re.compile(r'secret'))
+        self.assertEquals(b.title(), 'Log In')
+        b.select_form(name='login')
+        b["username"] = "test"
+        b["password"] = "test"
+        b.submit()
+        self.assertEquals(b.title(), "Hello!")
+        url = b.geturl()
+        self.failUnless(url.startswith(self.url))
+        self.failUnless(url.endswith('/public/secret/'))
+
+
 # TODO self.url = "http://localhost:8081/" won't work,
 # as mechanize tries to look for cookies set by "localhost.local",
 # of which there are none.
 
 class WithCookies:
     def setUp(self):
-        self.url = "http://127.0.0.1:8081/"
+        self.url = "http://127.0.0.1:8081/prefix/"
         self.browser = Browser()
 
 class TestWithCookies(ActualTests, WithCookies, unittest.TestCase):
@@ -88,7 +110,7 @@ class DenyAllCookiesPolicy(ClientCookie.DefaultCookiePolicy):
 
 class WithoutCookies:
     def setUp(self):
-        self.url = "http://127.0.0.1:8081/"
+        self.url = "http://127.0.0.1:8081/prefix/"
         self.browser = Browser()
         jar = ClientCookie.CookieJar(policy=DenyAllCookiesPolicy())
         self.browser.set_cookiejar(jar)

@@ -23,6 +23,7 @@ Requirements:
 
 import os
 from twisted.cred import checkers, portal, credentials
+from twisted.web import static
 from nevow import rend, loaders, inevow, guard, url
 
 def getActionURL(current, history):
@@ -81,6 +82,17 @@ class Another(rend.Page):
     def child_more(self, request):
         return self
 
+class Public(rend.Page):
+    addSlash = True
+    docFactory = loaders.xmlfile(
+        'public.xhtml',
+        templateDir=os.path.split(os.path.abspath(__file__))[0])
+
+    def child_secret(self, request):
+        if not request.getSession().getLoggedInRoot().loggedIn:
+            return LoginPage(['public', 'secret'])
+        return Authenticated()
+
 class MainPage(rend.Page):
     addSlash = True
     docFactory = loaders.xmlfile(
@@ -100,6 +112,9 @@ class MainPage(rend.Page):
         if not request.getSession().getLoggedInRoot().loggedIn:
             return LoginPage(['another'])
         return Another()
+
+    def child_public(self, request):
+        return Public()
 
 class TODOGetRidOfMeRealm:
     __implements__ = portal.IRealm,
@@ -129,4 +144,8 @@ def createResource():
     porta.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
     porta.registerChecker(checker)
 
-    return guard.SessionWrapper(porta)
+    top = static.Data('<a href="prefix/">click me</a>', 'text/html')
+    top.putChild('', top)
+    top.putChild('prefix', guard.SessionWrapper(porta))
+
+    return top
