@@ -113,7 +113,10 @@ class File(resource.Resource, styles.Versioned):
 
     ### Versioning
 
-    persistenceVersion = 1
+    persistenceVersion = 2
+
+    def upgradeToVersion2(self):
+        self.defaultType = "text/html"
 
     def upgradeToVersion1(self):
         if hasattr(self, 'indexName'):
