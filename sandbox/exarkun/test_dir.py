@@ -69,4 +69,3 @@ class DirTestCase(unittest.TestCase):
         L = list(d.scan(lambda d: d[0].startswith('5')))
         self.assertEquals(len(L), 1)
         self.assertEquals(L[0][0], '5')
-

@@ -1,5 +1,9 @@
+
 #include "Python.h"
 #include "structmember.h"
+
+#include <string.h>
+#include <signal.h>
 
 static char dir__doc__[] =
 "Wrapper for opendir(2) and readdir(2)";
@@ -35,11 +39,16 @@ typedef struct _PyDirObjectIterator {
 static PyObject *
 PyDirObject_readdir(PyDirObject *self);
 
+staticforward PyTypeObject PyDirObjectIterator_Type;
+staticforward PyTypeObject PyDirObject_Type;
+
+#define PyDirObject_Check(o) (PyObject_TypeCheck((o), &PyDirObject_Type))
+#define PyDirObject_CheckExact(o) ((o)->ob_type == &PyDirObject_Type)
+
 /*
  **************************** PyDirObjectIterator ***************************
  */
 
-staticforward PyTypeObject PyDirObjectIterator_Type;
 
 static PyObject *
 PyDirObjectIterator_FromDirObjectAndCallable(PyDirObject* dirobj, PyObject* callable) {
@@ -65,6 +74,13 @@ PyDirObjectIterator_new(PyDirObjectIterator *self, PyObject* args) {
 
 	if (!PyArg_ParseTuple(args, "OO:DirObjectIterator", &dirobj, &filter))
 		return NULL;
+	
+	if (!PyDirObject_Check(dirobj)) {
+		PyErr_SetString(PyExc_TypeError,
+			"First argument must be DirObject instance");
+		return NULL;
+	}
+	
 	return PyDirObjectIterator_FromDirObjectAndCallable(dirobj, filter);
 }
 
@@ -86,6 +102,8 @@ PyDirObjectIterator_next(PyDirObjectIterator *self) {
    PyObject *ent;
 	PyObject *args;
 	PyObject *result;
+	
+	/* kill(0, SIGINT); */
 
 	if (self->filter == Py_None)
 		return PyDirObject_readdir(self->dirobj);
@@ -95,6 +113,7 @@ PyDirObjectIterator_next(PyDirObjectIterator *self) {
 			return NULL;
 		
 		args = PyTuple_New(1);
+		Py_INCREF(ent);
 		PyTuple_SetItem(args, 0, ent);
 		result = PyObject_CallObject(self->filter, args);
 		Py_DECREF(args);
@@ -151,15 +170,13 @@ static PyTypeObject PyDirObjectIterator_Type = {
 	0,							/* tp_dictoffset */
 	0,							/* tp_init */
 	0,							/* tp_alloc */
-	0,							/* tp_new */
+	(newfunc)PyDirObjectIterator_new,		/* tp_new */
 	(destructor)PyDirObjectIterator_free,	/* tp_free */
 };
 
 /*
  ******************************* PyDirObject ********************************
  */
-
-staticforward PyTypeObject PyDirObject_Type;
 
 static PyObject *
 PyDirObject_FromDIR(DIR* directory)
@@ -222,6 +239,9 @@ PyDirObject_readdir(PyDirObject *self)
 	struct dirent* next;
 	PyObject *ret;
 	
+	PyObject *element;
+	PyObject *type;
+	
 	if (!self->directory) {
 		PyErr_SetString(PyDirObject_Error,
 			"Iteration on closed DirObject");
@@ -239,10 +259,27 @@ PyDirObject_readdir(PyDirObject *self)
 		errno = lasterrno;
 		return NULL;
 	}
-   ret = PyTuple_New(2);
-   PyTuple_SetItem(ret, 0, PyString_FromString(next->d_name));
-   PyTuple_SetItem(ret, 1, PyInt_FromLong(next->d_type));
-   return ret;
+	if (!(ret = PyTuple_New(2)))
+		goto tuple_error;
+	if (!(element = PyString_FromString(next->d_name)))
+		goto name_error;
+	if (!(type = PyInt_FromLong(next->d_type)))
+		goto type_error;
+   
+	if (PyTuple_SetItem(ret, 0, element) < 0)
+		goto setitem_error;
+	if (PyTuple_SetItem(ret, 1, type) < 0)
+		goto setitem_error;
+	return ret;
+	
+	setitem_error:
+		Py_DECREF(type);
+	type_error:
+		Py_DECREF(element);
+	name_error:
+		Py_DECREF(ret);
+	tuple_error:
+		return NULL;
 }
 
 static PyObject *
@@ -380,7 +417,7 @@ static PyObject *                                                           \
 dir_is##name(PyObject *self, PyObject *args) {                              \
 	PyObject *tup;                                                           \
 	if (!PyArg_ParseTuple(args, "O", &tup))                                  \
-		return;                                                               \
+		return NULL;                                                          \
 	return PyBool_FromLong(PyInt_AsLong(PyTuple_GetItem(self, 1)) == const); \
 }
 
@@ -395,32 +432,54 @@ DEFINE(Whiteout, DT_WHT)
 
 #undef DEFINE
 
-int select_dirs(struct dirent* ent) {
-	return ent->d_type == DT_DIR;
+int select_dirs(const struct dirent* ent) {
+	return
+		ent->d_type == DT_DIR && 
+		strcmp(ent->d_name, ".") &&
+		strcmp(ent->d_name, "..");
+}
+
+int select_links(const struct dirent* ent) {
+	return ent->d_type == DT_LNK;
 }
 
 static PyObject *
-dir_listDirectories(PyObject *self, PyObject *args) {
+dir_list(PyObject *self, PyObject *args, int (*select)(const struct dirent *)) {
 	int ret;
 	int i;
 	char *path;
 	PyObject *list;
+	PyObject *ent;
 	struct dirent **ents;
 	
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 	
-	ret = scandir(path, &ents, select_dirs, alphasort);
+	ret = scandir(path, &ents, select, NULL);
 	if (ret == -1) {
 		PyErr_SetFromErrno(PyDirObject_Error);
 		return NULL;
 	}
 	
 	list = PyList_New(ret);
-	for (i = 0; i < ret; ++i)
-		PyList_SetItem(list, i, PyString_FromString(ents[i]->d_name));
-	
+	for (i = 0; i < ret; ++i) {
+		if (!(ent = PyString_FromString(ents[i]->d_name))) {
+			Py_DECREF(list);
+			return NULL;
+		}
+		PyList_SetItem(list, i, ent);
+	}
 	return list;
+}
+
+static PyObject *
+dir_listDirectories(PyObject *self, PyObject *args) {
+	return dir_list(self, args, select_dirs);
+}
+
+static PyObject *
+dir_listLinks(PyObject *self, PyObject *args) {
+	return dir_list(self, args, select_links);
 }
 
 static PyMethodDef dir_functions[] = {
@@ -440,8 +499,11 @@ static PyMethodDef dir_functions[] = {
 		"isSocket() -> True if this entry is of SOCK type"},
 	{"isWhiteout", (PyCFunction)dir_isWhiteout, METH_VARARGS,
 		"isWhiteout() -> True if this entry is of WHT type"},
+
 	{"listDirectories", (PyCFunction)dir_listDirectories, METH_VARARGS,
 		"listDirectories(path) -> List the directories in the given path"},
+	{"listLinks", (PyCFunction)dir_listLinks, METH_VARARGS,
+		"listLinks(path) -> List the links in the given path"},
 	{NULL, NULL},
 };
 
@@ -477,7 +539,7 @@ initdir(void)
 				 (PyObject *) &PyDirObject_Type) < 0)
 		return;
 	Py_INCREF(&PyDirObjectIterator_Type);
-	if (PyDict_SetItemString(d, "DirTypeIterator",
+	if (PyDict_SetItemString(d, "DirIteratorType",
 				 (PyObject *) &PyDirObjectIterator_Type) < 0)
 		return;
 }
