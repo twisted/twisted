@@ -303,13 +303,12 @@ class Options:
                     name = name + '='
                 longOpt.append(name)
 
-
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
 
     def __str__(self, width=None):
         if not width:
-            width = int(os.getenv('COLUMNS', '80'))
+            width = int(os.environ.get('COLUMNS', '80'))
 
         longToShort = {}
         for key, value in self.synonyms.items():
