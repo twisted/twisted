@@ -203,5 +203,8 @@ def _test():
     reactor.addSystemEventTrigger('before', 'shutdown', s.stopService)
     reactor.run()
 
+__all__ = ['parse', 'service', 'listen']
+
 if __name__ == '__main__':
     _test()
+
