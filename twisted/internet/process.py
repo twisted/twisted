@@ -506,7 +506,10 @@ class Process(styles.Ephemeral):
     def closeChildFD(self, childFD):
         # for writer pipes, loseConnection tries to write the remaining data
         # out to the pipe before closing it
-        self.pipes[childFD].loseConnection()
+        # if childFD is not in the list of pipes, assume that it is already
+        # closed
+        if self.pipes.has_key(childFD):
+            self.pipes[childFD].loseConnection()
 
     # compatibility
     def closeStdin(self):
