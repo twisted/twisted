@@ -129,7 +129,7 @@ def formatFailure(myFailure):
               'Self'
               '</th></tr>')
         for name, var in localVars:
-            if name == 'self':
+            if name == 'self' and hasattr(var, '__dict__'):
                 for key, value in var.__dict__.items():
                     if re.search(r'\W'+'self.'+key+r'\W', snippet):
                         w('<tr><td valign="top"><b>%s</b></td>'
