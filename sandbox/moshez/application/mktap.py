@@ -44,13 +44,12 @@ def getid(uid, gid):
             gid = grp.getgrnam(gid)[2]
     return uid, gid
 
+
 def loadPlugins(debug = None, progress = None):
     try:
         plugins = plugin.getPlugIns("tap", debug, progress)
     except IOError:
-        print "Couldn't load the plugins file!"
-        sys.exit(2)
-
+        raise usage.UsageError("Couldn't load the plugins file!")
     tapLookup = {}
     for plug in plugins:
         if hasattr(plug, 'tapname'):
@@ -58,17 +57,8 @@ def loadPlugins(debug = None, progress = None):
         else:
             shortTapName = plug.module.split('.')[-1]
         tapLookup[shortTapName] = plug
-
     return tapLookup
 
-
-def getModule(tapLookup, type):
-    try:
-        mod = tapLookup[type].load()
-        return mod
-    except KeyError:
-        print """Please select one of: %s""" % ' '.join(tapLookup.keys())
-        sys.exit(2)
 
 class GeneralOptions:
     synopsis = """Usage:    mktap [options] <command> [command options] """
@@ -154,17 +144,17 @@ class FirstPassOptions(usage.Options, GeneralOptions):
             self.pb = util.makeStatBar(60, 1.0)
         self.tapLookup = loadPlugins(debug, progress)
         self.init(self.tapLookup)
-        
         self.recursing = 1
         self.parseOptions(self.params)
-
         if not hasattr(self, 'subOptions') or self['help']:
-            print str(self)
-            sys.exit(2)
-        elif hasattr(self, 'subOptions'):
-            if self.subOptions.has_key('help') and self.subOptions['help']:
-                print str(self.subOptions)
-                sys.exit(2)
+            raise usage.UsageError(str(self))
+        if hasattr(self, 'subOptions') and self.subOptions.get('help'):
+            raise usage.UsageError(str(self.subOptions))
+        if not self.tapLookup.has_key(self.subCommand):
+            raise usage.UsageError("Please select one of: "+
+                              ' '.join(self.tapLookup.keys()))
+       
+
         
 def makeService(mod, s, options):
     if hasattr(mod, 'updateApplication'):
@@ -183,7 +173,7 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    mod = getModule(options.tapLookup, options.subCommand)
+    mod = options.tapLookup[options.subCommand]
     a = app.loadOrCreate(options.subCommand, options['append'],
                          options['appname'],
                          *getid(options['uid'], options['gid']))

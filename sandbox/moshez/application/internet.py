@@ -31,6 +31,7 @@ class _AbstractServer(_VolatileDataService):
 
     privileged = 0
     volatile = ['_port']
+    method = None
 
     def __init__(self, *args, **kwargs):
         self.args = args
@@ -57,6 +58,7 @@ class _AbstractServer(_VolatileDataService):
 class _AbstractClient(_VolatileDataService):
 
     volatile = ['_connection']
+    method = None
 
     def __init__(self, *args, **kwargs):
         self.args = args
