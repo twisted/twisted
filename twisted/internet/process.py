@@ -213,19 +213,15 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             sys.settrace(None)
             # Destroy my stdin / stdout / stderr (in that order)
             try:
-                os.setsid()
                 for fd in range(3):
                     os.close(fd)
-                os.close(stdin_write)
                 os.dup(stdin_read)   # should be 0
-                os.close(stdin_read)
-
-                os.close(stdout_read)
                 os.dup(stdout_write) # 1
-                os.close(stdout_write)
-
-                os.close(stderr_read)
                 os.dup(stderr_write) # 2
+                os.close(stdin_read)
+                os.close(stdout_read)
+                os.close(stdout_write)
+                os.close(stderr_read)
                 os.close(stderr_write)
 
                 for fd in range(3, 256):
