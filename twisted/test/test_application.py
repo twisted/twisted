@@ -547,7 +547,21 @@ class TestInternet2(unittest.TestCase):
         while factory.line is None:
             reactor.iterate(0.1)
         self.assertEqual(factory.line, 'lalala')
-        s.stopService()
+        d = s.stopService()
+        l = []
+        d.addCallback(l.append)
+        while not l:
+            reactor.iterate(0.1)
+        factory.line = None
+        s.startService()
+        while factory.line is None:
+            reactor.iterate(0.1)
+        self.assertEqual(factory.line, 'lalala')
+        d = s.stopService()
+        l = []
+        d.addCallback(l.append)
+        while not l:
+            reactor.iterate(0.1)
 
     def testVolatile(self):
         factory = protocol.ServerFactory()
