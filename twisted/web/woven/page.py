@@ -19,6 +19,7 @@ class Page(model.Model, controller.Controller, view.View):
         self.view = self
         view.View.__init__(self, self.model, controller=self,
                            templateFile=templateFile)
+        self.controller = self
         self.controllerRendered = 0
     
     def renderView(self, request, block=0):
@@ -42,6 +43,7 @@ class LivePage(model.Model, controller.LiveController, view.View):
         self.view = self
         view.View.__init__(self, self.model, controller=self,
                            templateFile=templateFile)
+        self.controller = self
         self.controllerRendered = 0
     
     def wvfactory_webConduitGlue(self, request, node, m):
