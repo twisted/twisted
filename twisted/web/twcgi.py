@@ -24,8 +24,8 @@ import os
 import sys
 
 # Twisted Imports
-from twisted.protocols import http
-from twisted.internet import process
+from twisted.protocols import http, protocol
+from twisted.internet import reactor
 from twisted.spread import pb
 from twisted.python import log
 
@@ -117,9 +117,9 @@ class CGIScript(resource.Resource):
         return NOT_DONE_YET
 
     def runProcess(self, env, request):
-        """Callback that actually creates a process.
-        """
-        CGIProcess(self.filename, [self.filename], env, os.path.dirname(self.filename), request)
+        p = CGIProcessProtocol(request)
+        reactor.spawnProcess(p, self.filename, [self.filename], env, os.path.dirname(self.filename))
+
 
 class FilteredScript(CGIScript):
     """I am a special version of a CGI script, that uses a specific executable.
@@ -129,24 +129,30 @@ class FilteredScript(CGIScript):
     executable to run, and my 'filename' init parameter describes which script
     to pass to the first argument of that script.
     """
+
     filter = '/usr/bin/cat'
+
     def runProcess(self, env, request):
-        CGIProcess(self.filter, [self.filename], env, os.path.dirname(self.filename), request)
+        p = CGIProcessProtocol(request)
+        reactor.spawnProcess(p, self.filter, [self.filter, self.filename], env, os.path.dirname(self.filename))
+
 
 class PHP3Script(FilteredScript):
     """I am a FilteredScript that uses the default PHP3 command on most systems.
     """
+
     filter = '/usr/bin/php3'
+
 
 class PHPScript(FilteredScript):
     """I am a FilteredScript that uses the PHP command on most systems.
     Sometimes, php wants the path to itself as argv[0]. This is that time.
     """
+
     filter = '/usr/bin/php'
-    def runProcess(self, env, request):
-        CGIProcess(self.filter, [self.filter, self.filename], env, os.path.dirname(self.filename), request)
- 
-class CGIProcess(process.Process, pb.Viewable):
+
+
+class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     handling_headers = 1
     headers_written = 0
     headertext = ''
@@ -163,20 +169,21 @@ class CGIProcess(process.Process, pb.Viewable):
     def view_stopProducing(self, issuer):
         self.stopProducing()
     
-    def __init__(self, script, args, env, path, request):
+    def __init__(self, request):
         self.request = request
-        process.Process.__init__(self, script, args, env, path)
+
+    def connectionMade(self):
         self.request.registerProducer(self, 1)
         self.request.content.seek(0, 0)
         content = self.request.content.read()
         if content:
-            self.write(content)
-        self.closeStdin()
+            self.transport.write(content)
+        self.transport.loseConnection()
 
-    def handleError(self, error):
+    def errReceived(self, error):
         self.errortext = self.errortext + error
 
-    def handleChunk(self, output):
+    def dataReceived(self, output):
         """
         Handle a chunk of input
         """
@@ -221,8 +228,7 @@ class CGIProcess(process.Process, pb.Viewable):
         if not self.handling_headers:
             self.request.write(output)
 
-    def connectionLost(self):
-        process.Process.connectionLost(self)
+    def processEnded(self):
         if self.handling_headers:
             self.request.write(
                 error.ErrorPage(http.INTERNAL_SERVER_ERROR,
