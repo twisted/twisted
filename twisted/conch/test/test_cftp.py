@@ -97,7 +97,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         CFTPClientTestBase.setUpClass(self)
         
         self.startServer()
-        cmd = ('%s %s -p %i -l testuser ' 
+        cmds = ('-p %i -l testuser ' 
                '--known-hosts kh_test '
                '--user-authentications publickey '
                '--host-key-algorithms ssh-rsa '
@@ -107,15 +107,11 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
                '-v '
                'localhost')
         port = self.server.getHost().port
-        import twisted
-        exe = sys.executable
-        twisted_path = os.path.dirname(twisted.__file__)
-        cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
-        cmds = (cmd % (exe, cftp_path, port))
-        log.msg('running %s %s' % (exe, cmds))
+        cmds = test_conch._makeArgs((cmds % port).split(), mod='cftp')
+        log.msg('running %s %s' % (sys.executable, cmds))
         self.processProtocol = SFTPTestProcess()
-        reactor.spawnProcess(self.processProtocol, exe, cmds.split(),
-                             env=None)
+        reactor.spawnProcess(self.processProtocol, sys.executable, cmds,
+                             env=os.environ)
         timeout = time.time() + 10
         while (not self.processProtocol.buffer) and (time.time() < timeout):
             reactor.iterate(0.1)
@@ -267,20 +263,6 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
     def setUp(self):
         CFTPClientTestBase.setUp(self)
         self.startServer()
-        port = self.server.getHost().port
-        import twisted
-        twisted_path = os.path.dirname(twisted.__file__)
-        cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
-        exe = sys.executable
-        self.cmd = ('%s -p %i -l testuser '
-                    '--known-hosts kh_test '
-                    '--user-authentications publickey '
-                    '--host-key-algorithms ssh-rsa '
-                    '-K direct '
-                    '-i dsa_test '
-                    '-a --nocache '
-                    '-v -b %%s localhost') % (cftp_path, port)
-        log.msg('running %s %s' % (exe, self.cmd))
 
     def tearDown(self):
         CFTPClientTestBase.tearDown(self)
@@ -294,8 +276,18 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
         fn = tempfile.mktemp()
         open(fn, 'w').write(f)
         l = []
-        cmds = (self.cmd % fn).split()
-        d = getProcessOutputAndValue(sys.executable, cmds, env=None)
+        port = self.server.getHost().port
+        cmds = ('-p %i -l testuser '
+                    '--known-hosts kh_test '
+                    '--user-authentications publickey '
+                    '--host-key-algorithms ssh-rsa '
+                    '-K direct '
+                    '-i dsa_test '
+                    '-a --nocache '
+                    '-v -b %s localhost') % (port, fn)
+        cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
+        log.msg('running %s %s' % (sys.executable, cmds))
+        d = getProcessOutputAndValue(sys.executable, cmds, env=os.environ)
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
@@ -374,8 +366,14 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         fn = tempfile.mktemp()
         open(fn, 'w').write(f)
         l = []
-        cmds = (self.cmd % fn).split()
-        d = getProcessOutputAndValue(sys.executable, cmds, env=None)
+        port = self.server.getHost().port
+        cmds = ('-p %i -l testuser '
+                    '-K unix '
+                    '-a '
+                    '-v -b %s localhost') % (port, fn)
+        cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
+        log.msg('running %s %s' % (sys.executable, cmds))
+        d = getProcessOutputAndValue(sys.executable, cmds, env=os.environ)
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
@@ -391,15 +389,6 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
             return result[0]
 
     def testBatchFile(self):
-        port = self.server.getHost().port
-        import twisted
-        twisted_path = os.path.dirname(twisted.__file__)
-        cftp_path = os.path.abspath('%s/../bin/conch/cftp' % twisted_path)
-        exe = sys.executable
-        self.cmd = ('%s -p %i -l testuser '
-                    '-K unix '
-                    '-b %%s localhost') % (cftp_path, port)
-        log.msg('running %s %s' % (exe, self.cmd))
         cmds = """pwd
 exit
 """
