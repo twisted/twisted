@@ -9,23 +9,6 @@ from twisted.internet import tkinternet, main, tcp
 
 portno = 8787
 
-##class TKFaucet(gloop.ClientThread):
-##    def __init__(self, host, port, char, paswd, window):
-##        self.window = window
-##        gloop.ClientThread.__init__(self, host, port, char, paswd)
-        
-##    def connectionLost(self):
-##        self.window.close()
-
-##    def localSetup(self):
-##        'making sure "client" is available to server'
-##        self.addName('client', self.window)
-        
-##    def remoteSetup(self):
-##        'setting up "execute" from server'
-##        self.window.sendVerb_ = self['execute']
-
-
 class MainWindow(Toplevel, pb.Referenced):
     def __init__(self, *args,**kw):
         self.descriptions = {}
