@@ -52,7 +52,7 @@ def runApp(config):
     application.privilegedStartService()
     application.startService()
     if not config['no_save']:
-        application.scheduleSave()
+        apprun.scheduleSave(application)
     apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     if config['report-profile']:
         apprun.reportProfile(config['report-profile'], application.processName)

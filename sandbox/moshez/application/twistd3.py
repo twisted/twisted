@@ -160,7 +160,7 @@ def startApplication(config, application):
     shedPrivileges(config['euid'], application.uid, application.gid)
     application.startService()
     if not config['no_save']:
-        application.scheduleSave()
+        apprun.scheduleSave(application)
 
 def runApp(config):
     passphrase = apprun.getPassphrase(config['encrypted'])

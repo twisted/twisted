@@ -183,3 +183,8 @@ def initialLog():
                                                sys.executable,
                                                runtime.shortPythonVersion()))
     log.msg('reactor class: %s' % reactor.__class__)
+
+def scheduleSave(app):
+    from twisted.internet import reactor
+    p = sob.IPersistable(app)
+    reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
