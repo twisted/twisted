@@ -290,9 +290,7 @@ class ConnectionPool:
 
     def _close(self, conn):
         if self.noisy:
-            log.msg('adbapi closing: %s %s%s' % (self.dbapiName,
-                                                 self.connargs or '',
-                                                 self.connkw or ''))
+            log.msg('adbapi closing: %s' % (self.dbapiName,))
         try:
             conn.close()
         except:
