@@ -222,7 +222,7 @@ class File(resource.Resource):
         return server.NOT_DONE_YET
 
 
-class FileTransfer(pb.Proxied):
+class FileTransfer(pb.Viewable):
     """
     A class to represent the transfer of a file over the network.
     """
@@ -250,13 +250,13 @@ class FileTransfer(pb.Proxied):
 
     # Remotely relay producer interface.
 
-    def proxy_resumeProducing(self, issuer):
+    def view_resumeProducing(self, issuer):
         self.resumeProducing()
 
-    def proxy_pauseProducing(self, issuer):
+    def view_pauseProducing(self, issuer):
         self.pauseProducing()
 
-    def proxy_stopProducing(self, issuer):
+    def view_stopProducing(self, issuer):
         self.stopProducing()
     
 

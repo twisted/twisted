@@ -22,8 +22,12 @@ def message(*m):
     print '|####'
     print '\------'
 
-def twistd(f):
+def twistdf(f):
     cmd("twistd -f %s.tap" %f)
+    time.sleep(0.5)
+
+def twistdg(g):
+    cmd("twistd -g %s" %g)
     time.sleep(0.5)
 
 def killit():
@@ -38,7 +42,7 @@ def pause():
 def basicWebTest():
     message("Running Basic Web Test")
     cmd("mktap web")
-    twistd("web")
+    twistdf("web")
     message("You should see a rather complex bunch of widgetry now.")
     browse("http://localhost:8080/")
     killit()
@@ -46,7 +50,7 @@ def basicWebTest():
 def staticWebTest():
     message("Running Static Web Test")
     cmd("mktap web --static %s/../static" % twistedBinDir)
-    twistd("web")
+    twistdf("web")
     message("You should see an 'it worked' page now.",
             "(depending on your browser, you may need to reload)")
     browse("http://localhost:8080/")
@@ -63,12 +67,12 @@ def distWebTest():
     # make & start personal server
     os.chdir("Personal")
     cmd("mktap web --personal")
-    twistd("web")
+    twistdf("web")
     os.chdir("..")
     # make & start the user server
     os.chdir("User")
     cmd("mktap web --user")
-    twistd("web")
+    twistdf("web")
     os.chdir("..")
     # browse a dead web page
     message("This should say 'Unable to connect to distributed server'",
@@ -89,7 +93,7 @@ def distWebTest():
 def runTelnetTest():
     message("Running Telnet Test")
     cmd("mktap telnet -p 8023 -u username -w password")
-    twistd("telnet")
+    twistdf("telnet")
     message("Log in with the username 'username', password 'password'.",
             "You should be able to execute python code.",
             "Log out with '^]close'")
@@ -99,7 +103,7 @@ def runTelnetTest():
 def runManholeTest():
     message("Running Manhole Test")
     cmd("mktap manhole -u username -w password")
-    twistd("manhole")
+    twistdf("manhole")
     message("Log in with the username 'username', password 'password'.",
             "and bask in the l33tness of direct manipulation.")
     cmd("manhole")
@@ -108,7 +112,7 @@ def runManholeTest():
 def runWordsTest():
     message("Running Words Test")
     cmd("mktap words")
-    twistd("words")
+    twistdf("words")
     message("Create yourself an account, username 'test' password 'testing'.")
     browse("http://localhost:8080/create")
     message("You will have to '/msg *login* testing' to log in.")
@@ -122,10 +126,7 @@ def runRealityTest():
     for mapname, loginname, password in [('TRDemo', 'guest', 'guest'),
                                          ('Inheritance', 'damien', 'admin')]:
         if os.path.exists(mapname):
-            os.chdir(mapname)
-            cmd("gnusto build_map a b")
-            cmd("mktap reality -m a")
-            twistd("reality")
+            twistdg(mapname)
             message("Log in now, username %s password %s" %
                     (repr(loginname), repr(password)))
             cmd("faucet")
@@ -136,7 +137,6 @@ def runRealityTest():
             message("Now take a look at the website, after logging in")
             browse("http://localhost:8080/")
             killit()
-            os.chdir("..")
         else:
             message("reality map %s not found, skipping" % mapname)
 
@@ -145,7 +145,7 @@ def runExampleTest():
     os.environ['PYTHONPATH'] = '%s:%s' % (os.environ.get('PYTHONPATH') or '',
                                           examplesDir)
     scmd("python %s/pbecho.py" % examplesDir)
-    twistd("pbecho-start")
+    twistdf("pbecho-start")
     message("You should see a 'hello world'")
     scmd("python %s/pbclient.py" % examplesDir)
     pause()

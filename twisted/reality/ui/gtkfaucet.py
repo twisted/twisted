@@ -75,7 +75,7 @@ class ResponseWindow(gtk.GtkWindow):
         self.destroy()
 
     
-class GameWindow(gtk.GtkWindow, pb.Referenced):
+class GameWindow(gtk.GtkWindow, pb.Referenceable):
 
     shortcuts = {"n":"go north",
                  "s":"go south",

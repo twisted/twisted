@@ -67,13 +67,13 @@ class GetString(gtk.GtkWindow):
 
 class Login(gtk.GtkWindow):
     def __init__(self, callback,
-                 referenced=None,
+                 referenceable=None,
                  initialUser="guest", initialPassword="guest",
                  initialHostname="localhost",initialPortno=str(pb.portno),
                  initialService="", initialPerspective=""):
         gtk.GtkWindow.__init__(self,gtk.WINDOW_TOPLEVEL)
         version_label = gtk.GtkLabel("Twisted v%s" % copyright.version)
-        self.pbReferenced = referenced
+        self.pbReferenceable = referenceable
         self.pbCallback = callback
         # version_label.show()
         self.username = gtk.GtkEntry()
@@ -158,7 +158,7 @@ class Login(gtk.GtkWindow):
         # XXX HACKAGE: identity name and perspective name must currently be the
         # same!!!
         identity.attach(self.service.get_text(), self.perspective.get_text() or self.username.get_text(),
-                        self.pbReferenced, pbcallback=self.pbCallback)
+                        self.pbReferenceable, pbcallback=self.pbCallback)
 
     def couldNotConnect(self, msg):
         print 'couldNotConnect', msg

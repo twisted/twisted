@@ -20,7 +20,7 @@ import time
 import sys
 
 
-class DbClient(pb.Referenced):
+class DbClient(pb.Referenceable):
 
     def __init__(self, host, name, password):
         self.host = host

@@ -430,7 +430,7 @@ unpickleable.
                 traceback.print_exc(file=sio)
                 o.hears(sio.getvalue())
                 
-        c = Referenced()
+        c = Referenceable()
         c.remote_ok = ok
         c.remote_cancel = cancel
         
@@ -448,7 +448,7 @@ this will prompt you for a description.  enter something."""
             obj.description = desc
         def forgetit():
             pass
-        c = pb.Referenced()
+        c = pb.Referenceable()
         c.obj = obj
         c.remote_ok=setdesc
         c.remote_cancel=forgetit

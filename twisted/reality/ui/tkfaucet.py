@@ -24,7 +24,7 @@ from ScrolledText import *
 from twisted.spread import pb
 from twisted.internet import tkinternet, main, tcp
 
-class MainWindow(Toplevel, pb.Referenced):
+class MainWindow(Toplevel, pb.Referenceable):
     def __init__(self, *args,**kw):
         self.descriptions = {}
         self.items = {}

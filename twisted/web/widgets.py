@@ -180,10 +180,10 @@ class Form(StreamWidget):
         form = self.getFormFields(request)
         if args and args.has_key('__formtype__') and args['__formtype__'][0] == str(self.__class__):
             try:
-                return self.doProcess(write, request)
+                return self.doProcess(form, write, request)
             except FormInputError, fie:
                 write('<FONT COLOR=RED><B><I>%s</i></b></font><br>\n' % str(fie))
-        self.format(write)
+        self.format(form, write)
 
 
 class TextWidget(Widget):

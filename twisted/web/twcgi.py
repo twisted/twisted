@@ -133,7 +133,7 @@ class PHPScript(FilteredScript):
     """
     filter = '/usr/bin/php3'
 
-class CGIProcess(process.Process, pb.Proxied):
+class CGIProcess(process.Process, pb.Viewable):
     handling_headers = 1
     headers_written = 0
     headertext = ''
@@ -141,13 +141,13 @@ class CGIProcess(process.Process, pb.Proxied):
 
     # Remotely relay producer interface.
 
-    def proxy_resumeProducing(self, issuer):
+    def view_resumeProducing(self, issuer):
         self.resumeProducing()
 
-    def proxy_pauseProducing(self, issuer):
+    def view_pauseProducing(self, issuer):
         self.pauseProducing()
 
-    def proxy_stopProducing(self, issuer):
+    def view_stopProducing(self, issuer):
         self.stopProducing()
     
     def __init__(self, script, args, env, request):

@@ -29,15 +29,15 @@ from twisted.python import authenticator
 from twisted.protocols import protocol
 from twisted.internet import passport, main
 
-class Dummy(pb.Proxied):
-    def proxy_doNothing(self, user):
+class Dummy(pb.Viewable):
+    def view_doNothing(self, user):
         if isinstance(user, DummyPerspective):
             return 'hello world!'
         else:
             return 'goodbye, cruel world!'
 
 class DummyPerspective(pb.Perspective):
-    def perspective_getDummyProxy(self):
+    def perspective_getDummyViewPoint(self):
         return Dummy()
 
 class DummyService(pb.Service):
@@ -109,7 +109,7 @@ def connectedServerAndClient():
         pass
     return c, s, pump
 
-class SimpleRemote(pb.Referenced):
+class SimpleRemote(pb.Referenceable):
     def remote_thunk(self, arg):
         self.arg = arg
         return arg + 1
@@ -117,18 +117,18 @@ class SimpleRemote(pb.Referenced):
     def remote_knuth(self, arg):
         raise Exception()
 
-class NestedRemote(pb.Referenced):
+class NestedRemote(pb.Referenceable):
     def remote_getSimple(self):
         return SimpleRemote()
 
-class SimpleCopy(pb.Copied):
+class SimpleCopy(pb.Copyable):
     def __init__(self):
         self.x = 1
         self.y = {"Hello":"World"}
         self.z = ['test']
 
 class SimpleLocalCopy:
-    def setCopiedState(self, state):
+    def setCopyableState(self, state):
         self.__dict__.update(state)
 
     def check(self):
@@ -141,25 +141,25 @@ class SimpleLocalCopy:
 pb.setCopierForClass(str(SimpleCopy), SimpleLocalCopy)
 
 
-class NestedCopy(pb.Referenced):
+class NestedCopy(pb.Referenceable):
     def remote_getCopy(self):
         return SimpleCopy()
 
-class SimpleCache(pb.Cached):
+class SimpleCache(pb.Cacheable):
     def __init___(self):
         self.x = 1
         self.y = {"Hello":"World"}
         self.z = ['test']
 
-class NestedComplicatedCache(pb.Referenced):
+class NestedComplicatedCache(pb.Referenceable):
     def __init__(self):
-        self.c = VeryVeryComplicatedCached()
+        self.c = VeryVeryComplicatedCacheable()
 
     def remote_getCache(self):
         return self.c
 
 
-class VeryVeryComplicatedCached(pb.Cached):
+class VeryVeryComplicatedCacheable(pb.Cacheable):
     def __init__(self):
         self.x = 1
         self.y = 2
@@ -175,7 +175,7 @@ class VeryVeryComplicatedCached(pb.Cached):
                 "y": self.y,
                 "foo": self.foo}
 
-class RatherBaroqueCache(pb.Cache):
+class RatherBaroqueCache(pb.RemoteCache):
     def observe_foo(self, newFoo):
         self.foo = newFoo
 
@@ -189,10 +189,10 @@ class RatherBaroqueCache(pb.Cache):
         assert self.foo == 3
         return 1
 
-pb.setCopierForClass(str(VeryVeryComplicatedCached), RatherBaroqueCache)
+pb.setCopierForClass(str(VeryVeryComplicatedCacheable), RatherBaroqueCache)
 
 class SimpleLocalCache:
-    def setCopiedState(self, state):
+    def setCopyableState(self, state):
         self.__dict__.update(state)
 
     def checkMethod(self):
@@ -210,7 +210,7 @@ class SimpleLocalCache:
 
 pb.setCopierForClass(str(SimpleCache), SimpleLocalCache)
 
-class NestedCache(pb.Referenced):
+class NestedCache(pb.Referenceable):
     def __init__(self):
         self.x = SimpleCache()
 
@@ -221,7 +221,7 @@ class NestedCache(pb.Referenced):
         return (self.x is cache)
 
 
-class Observable(pb.Referenced):
+class Observable(pb.Referenceable):
     def __init__(self):
         self.observers = []
 
@@ -236,7 +236,7 @@ class Observable(pb.Referenced):
             observer.notify(self, obj)
 
 
-class Observer(pb.Referenced):
+class Observer(pb.Referenceable):
     notified = 0
     obj = None
     def remote_notify(self, other, obj):
@@ -263,11 +263,11 @@ class BrokerTestCase(unittest.TestCase):
     def testReference(self):
         c, s, pump = connectedServerAndClient()
 
-        class X(pb.Referenced):
+        class X(pb.Referenceable):
             def remote_catch(self,arg):
                 self.caught = arg
 
-        class Y(pb.Referenced):
+        class Y(pb.Referenceable):
             def remote_throw(self, a, b):
                 a.catch(b)
 
@@ -393,12 +393,12 @@ class BrokerTestCase(unittest.TestCase):
         cp = coll[0][0]
         assert cp.checkMethod().im_self is cp, "potential refcounting issue"
         assert cp.checkSelf() is cp, "other potential refcounting issue"
-        assert cp.__class__ is pb.CacheProxy, "class was %s" % str(cp.__class__)
-        assert cp._CacheProxy__instance is coll[1][0]._CacheProxy__instance
+        assert cp.__class__ is pb.RemoteCacheProxy, "class was %s" % str(cp.__class__)
+        assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
         col2 = []
         o2.putCache(cp, pbcallback = col2.append)
         # now, refcounting (similiar to testRefCount)
-        luid = cp._CacheProxy__luid
+        luid = cp._RemoteCacheProxy__luid
         assert s.remotelyCachedObjects.has_key(luid), "remote cache doesn't have it"
         del coll
         del cp
@@ -417,7 +417,7 @@ class BrokerTestCase(unittest.TestCase):
         # The objects were the same (testing lcache identity)
         assert col2[0]
 
-    def testProxy(self):
+    def testViewPoint(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
         ident = c.remoteForName("identity")
@@ -426,7 +426,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump() # send call
         pump.pump() # get response
         test = accum.pop() # okay, this should be our perspective...
-        test.getDummyProxy(pbcallback=accum.append)
+        test.getDummyViewPoint(pbcallback=accum.append)
         pump.pump() # send call
         pump.pump() # get response
         accum.pop().doNothing(pbcallback=accum.append)

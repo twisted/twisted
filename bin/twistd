@@ -98,7 +98,6 @@ class ServerOptions(usage.Options):
                   ['rundir','d','.']]
 
     def opt_plugin(self, pkgname):
-        print sys.path
         pkg = __import__(pkgname)
         self.python = os.path.join(os.path.dirname(os.path.abspath(pkg.__file__)), 'config.tac')
 

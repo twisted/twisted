@@ -71,7 +71,7 @@ def date_time_string(msSinceEpoch=None):
 
 
 
-class Request(pb.Copied, http.HTTP):
+class Request(pb.Copyable, http.HTTP):
 
     code = http.OK
     method = "(no method yet)"
@@ -84,7 +84,7 @@ class Request(pb.Copied, http.HTTP):
         # XXX refactor this attribute out; it's from protocol
         del x['server']
         del x['site']
-        x['remote'] = pb.Proxy(issuer, self)
+        x['remote'] = pb.ViewPoint(issuer, self)
         return x
 
     # HTML generation helpers
@@ -230,7 +230,7 @@ class Request(pb.Copied, http.HTTP):
                 self.endHeaders()
         self.transport.write(data)
 
-    def proxy_write(self, issuer, data):
+    def view_write(self, issuer, data):
         """Remote version of write; same interface.
         """
         self.write(data)
@@ -240,7 +240,7 @@ class Request(pb.Copied, http.HTTP):
         """
         self.transport.stopConsuming()
 
-    def proxy_finish(self, issuer):
+    def view_finish(self, issuer):
         """Remote version of finish; same interface.
         """
         self.finish()
@@ -250,7 +250,7 @@ class Request(pb.Copied, http.HTTP):
         """
         self.headers[string.lower(k)] = v
 
-    def proxy_setHeader(self, issuer, k, v):
+    def view_setHeader(self, issuer, k, v):
         """Remote version of setHeader; same interface.
         """
         self.setHeader(k, v)
@@ -260,7 +260,7 @@ class Request(pb.Copied, http.HTTP):
         """
         self.code = code
 
-    def proxy_setResponseCode(self, issuer, code):
+    def view_setResponseCode(self, issuer, code):
         """Remote version of setResponseCode; same interface.
         """
         self.setResponseCode(code)
@@ -270,7 +270,7 @@ class Request(pb.Copied, http.HTTP):
         """
         self.transport.registerProducer(producer, streaming)
 
-    def proxy_registerProducer(self, issuer, producer, streaming):
+    def view_registerProducer(self, issuer, producer, streaming):
         """Remote version of registerProducer; same interface.
         (requires a remote producer.)
         """

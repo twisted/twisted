@@ -22,7 +22,7 @@ class Conversation:
 class ContactList:
     def __init__(self,im):
         raise NotImplementedError
-class InstanceMessenger(pb.Referenced):
+class InstanceMessenger(pb.Referenceable):
     """This is a broker between the PB broker and the various windows
     that make up InstanceMessenger."""
     def __init__(self):

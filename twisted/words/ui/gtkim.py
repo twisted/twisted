@@ -26,7 +26,7 @@ ingtkernet.install()
 from twisted.spread import pb
 from twisted.spread.ui import gtkutil
 from twisted.words.ui import im
-class Group(pb.Cache):
+class Group(pb.RemoteCache):
     """A local cache of a group.
     """
 

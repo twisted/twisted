@@ -167,7 +167,7 @@ class Participant(pb.Perspective, styles.Versioned):
     perspective_leaveGroup = leaveGroup
     perspective_getGroupMembers = getGroupMembers
 
-class Group(pb.Cached):
+class Group(pb.Cacheable):
 
     def __init__(self, name):
         self.name = name
@@ -182,7 +182,7 @@ class Group(pb.Cached):
         assert participant in self.members, "illegal copy of group"
         return {'name':    self.name,
                 'members': self.members,
-                'remote':  pb.Proxy(participant, self)}
+                'remote':  pb.ViewPoint(participant, self)}
 
     def addMember(self, participant):
         if participant in self.members:

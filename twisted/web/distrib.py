@@ -34,9 +34,9 @@ import html
 import static
 from server import NOT_DONE_YET
 
-class Request(pb.Copy, server.Request):
-    def setCopiedState(self, state):
-        pb.Copy.setCopiedState(self, state)
+class Request(pb.RemoteCopy, server.Request):
+    def setCopyableState(self, state):
+        pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
         self.write            = self.remote.write
         self.finish           = self.remote.finish

@@ -221,7 +221,7 @@ class Login(Toplevel):
                  initialPortno   = pb.portno):
         Toplevel.__init__(self)
         version_label = Label(self,text="Twisted v%s" % copyright.version)
-        self.pbReferenced = referenced
+        self.pbReferenceable = referenceable
         self.pbCallback = callback
         # version_label.show()
         self.username = Entry(self)
@@ -290,7 +290,7 @@ class Login(Toplevel):
         tcp.Client(host, port, b)
 
     def gotIdentity(self,identity):
-        identity.attach(self.service.get(),self.pbReferenced,pbcallback=self.pbCallback)
+        identity.attach(self.service.get(),self.pbReferenceable,pbcallback=self.pbCallback)
 
     def couldNotConnect(self,*args):
         self.loginReport("could not connect.")
