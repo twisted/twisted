@@ -1,15 +1,17 @@
+import sys
 from socket import * # har har har
-from eunuchs.recvmsg import recvmsg
+sys.path.insert(0, "../../pahan/sendmsg")
+from sendmsg import recvmsg
 from struct import unpack
 from os import fdopen, read, close
 from time import sleep
 
 s = socket(AF_UNIX, SOCK_STREAM)
 s.connect("fd_control")
-foo = read(s.fileno(), 1)
-print "got foo", foo
-(message, addr, crap, ancillary) = recvmsg(s.fileno())
-print message, ancillary
+#foo = read(s.fileno(), 1)
+#print "got foo", foo
+(message, flags, ancillary) = recvmsg(s.fileno())
+print (message, flags, ancillary)
 try:
     close(4)
     close(5)
