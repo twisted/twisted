@@ -60,6 +60,7 @@ NON_AUTHORITATIVE_INFORMATION   = 203
 NO_CONTENT                      = 204
 RESET_CONTENT                   = 205
 PARTIAL_CONTENT                 = 206
+MULTI_STATUS                    = 207
 
 MULTIPLE_CHOICE                 = 300
 MOVED_PERMANENTLY               = 301
@@ -94,6 +95,7 @@ BAD_GATEWAY                     = 502
 SERVICE_UNAVAILABLE             = 503
 GATEWAY_TIMEOUT                 = 504
 HTTP_VERSION_NOT_SUPPORTED      = 505
+INSUFFICIENT_STORAGE_SPACE      = 507
 NOT_EXTENDED                    = 510
 
 RESPONSES = {
@@ -109,7 +111,8 @@ RESPONSES = {
     NO_CONTENT: "No Content",
     RESET_CONTENT: "Reset Content.",
     PARTIAL_CONTENT: "Partial Content",
-
+    MULTI_STATUS: "Multi-Status",
+    
     # 300
     MULTIPLE_CHOICE: "Multiple Choices",
     MOVED_PERMANENTLY: "Moved Permanently",
@@ -147,8 +150,9 @@ RESPONSES = {
     SERVICE_UNAVAILABLE: "Service Unavailable",
     GATEWAY_TIMEOUT: "Gateway Time-out",
     HTTP_VERSION_NOT_SUPPORTED: "HTTP Version not supported",
-
-    NOT_EXTENDED: "Not Extended"}
+    INSUFFICIENT_STORAGE_SPACE: "Insufficient Storage Space",
+    NOT_EXTENDED: "Not Extended"
+    }
 
 CACHED = """Magic constant returned by http.Request methods to set cache
 validation headers when the request is conditional and the value fails
