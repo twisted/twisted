@@ -1,0 +1,10 @@
+
+Package maintainers (WHO ARE THEY NOW?)
+
+mailto:python-list@python.org
+mailto:python-announce@python.org
+mailto:twisted-python@twistedmatrix.com
+mailto:lwn@lwn.net
+
+http://freshmeat.net/add-release/10835/
+http://python.org/pypi?:action=display&name=Twisted
