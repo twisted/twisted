@@ -16,6 +16,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """A task scheduler that is integrated with the main event loop.
+
+When using this module, *never* do::
+
+    | from twisted.internet.task import schedule
+    | schedule(foo)
+
+Instead, do::
+
+    | from twisted.internet import task
+    | task.schedule(foo)
+
 """
 
 # Twisted Imports
