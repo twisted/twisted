@@ -380,9 +380,9 @@ class Deferred:
     def __str__(self):
         cname = self.__class__.__name__
         if hasattr(self, 'result'):
-            return "<%s at 0x%x  current result: %r>" % (cname, id(self),
-                                                         self.result)
-        return "<%s at 0x%x>" % (cname, id(self))
+            return "<%s at %s  current result: %r>" % (cname, hex(id(self)),
+                                                       self.result)
+        return "<%s at %s>" % (cname, hex(id(self)))
     __repr__ = __str__
 
 
