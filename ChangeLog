@@ -1,3 +1,12 @@
+2002-04-19  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* .: Releasing Twisted 0.17.3.
+
+2002-04-19  Glyph Lefkowitz  <carmstro@twistedmatrix.com>
+
+	* twisted/web/distrib.py: Fix a bug where static.File transfers
+	over a distributed-web connection would not finish up properly.
+
 2002-04-18  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.2.
