@@ -45,6 +45,7 @@ class ServerOptions(usage.Options):
     synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
+                ['savestats', None, "save the Stats object rather than the text output of the profiler."],
                 ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
@@ -380,11 +381,14 @@ def runApp(config):
             import profile
             p = profile.Profile()
             p.runctx("application.run(%d)" % (not config['no_save']), globals(), locals())
-            # XXX - omfg python sucks
-            tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
-            p.print_stats()
-            sys.stdout, tmp = tmp, sys.stdout
-            tmp.close()
+            if config['savestats']:
+                p.dump_stats(config['profile'])
+            else:
+                # XXX - omfg python sucks
+                tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
+                p.print_stats()
+                sys.stdout, tmp = tmp, sys.stdout
+                tmp.close()
         elif config['debug']:
             import pdb
             sys.stdout = oldstdout
