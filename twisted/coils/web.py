@@ -62,7 +62,8 @@ class StaticConfigurator(ResourceConfigurator):
     
     configTypes = {'path': types.StringType,
                    'execCGI': 'boolean',
-                   'execEPY': 'boolean'}
+                   'execEPY': 'boolean',
+                   'defaultType': types.StringType}
 
     configName = 'Web Filesystem Access'
 
@@ -88,7 +89,8 @@ class StaticConfigurator(ResourceConfigurator):
         instance = self.instance
         return {'path': instance.path,
                 'execCGI': instance.processors.has_key('.cgi'),
-                'execEPY': instance.processors.has_key('.epy')}
+                'execEPY': instance.processors.has_key('.epy'),
+                'defaultType': instance.defaultType}
 
 def staticFactory(container, name):
     return static.File("somewhere/outthere")
