@@ -76,7 +76,7 @@ install-indep-stamp: install-base-stamp
 		install -d debian/$$package/usr/bin/;\
 		install -m 644 ChangeLog debian/$$package/${DOC}/changelog;\
 		gzip -9 debian/$$package/${DOC}/changelog;\
-		install -m 644 TODO README CREDITS debian/$$package/${DOC}/;\
+		install -m 644 TODO README CREDITS debian/$$package/${DOC}/$$package/;\
 		for file in debian/$$package/usr/bin/*;\
 			do sed "1s|.*|#!/usr/bin/python$$version|" $$file >\
 			   $$file$$version;\
