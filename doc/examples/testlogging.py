@@ -38,8 +38,14 @@ def startlog():
 def end():
     reactor.stop()
 
+# pre-reactor run
+test()
+
+# after reactor run
 reactor.callLater(0.1, test)
 reactor.callLater(0.2, startlog)
+
+# after startLogging
 reactor.callLater(0.3, test)
 reactor.callLater(0.4, end)
 
