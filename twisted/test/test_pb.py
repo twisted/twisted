@@ -836,7 +836,7 @@ class ConnectionTestCase(unittest.TestCase):
         auth.addIdentity(ident2)
         self.svr = pb.BrokerFactory(pb.AuthRoot(auth))
         self.port = reactor.listenTCP(0, self.svr, interface="127.0.0.1")
-        self.portno = self.port.getHost()[-1]
+        self.portno = self.port.getHost().port
 
     def tearDown(self):
         self.port.stopListening()
@@ -990,7 +990,7 @@ class NewCredTestCase(unittest.TestCase):
         self.portal.registerChecker(self.checker)
         self.factory = pb.PBServerFactory(self.portal)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-        self.portno = self.port.getHost()[-1]
+        self.portno = self.port.getHost().port
 
     def tearDown(self):
         self.port.stopListening()
@@ -1059,7 +1059,7 @@ class NSPTestCase(unittest.TestCase):
         self.portal.registerChecker(self.checker)
         self.factory = pb.PBServerFactory(self.portal)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-        self.portno = self.port.getHost()[-1]
+        self.portno = self.port.getHost().port
 
     def tearDown(self):
         self.port.stopListening()

@@ -112,7 +112,7 @@ class ThrottlingTestCase(unittest.TestCase):
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
         tServer = policies.ThrottlingFactory(server, 2)
         p = reactor.listenTCP(0, tServer, interface="127.0.0.1")
-        n = p.getHost()[2]
+        n = p.getHost().port
         self.doIterations()
 
         for c in c1, c2, c3:
@@ -257,7 +257,7 @@ class TimeoutTestCase(unittest.TestCase):
         # Create a client tha sends and receive nothing
         client = SimpleProtocol()
         f = SillyFactory(client)
-        reactor.connectTCP("127.0.0.1", port.getHost()[2], f)
+        reactor.connectTCP("127.0.0.1", port.getHost().port, f)
 
         for i in range(10):
             reactor.iterate()
@@ -282,7 +282,7 @@ class TimeoutTestCase(unittest.TestCase):
         client = SimpleSenderProtocol(self)
         f = SillyFactory(client)
         f.protocol = client
-        reactor.connectTCP("127.0.0.1", port.getHost()[2], f)
+        reactor.connectTCP("127.0.0.1", port.getHost().port, f)
         reactor.callLater(3.5, client.finish)
         reactor.run()
 
@@ -295,7 +295,7 @@ class TimeoutTestCase(unittest.TestCase):
         port = reactor.listenTCP(0, server, interface='127.0.0.1')
 
         clientFactory = policies.WrappingFactory(SillyFactory(SimpleProtocol()))
-        port = reactor.connectTCP('127.0.0.1', port.getHost()[2], clientFactory)
+        port = reactor.connectTCP('127.0.0.1', port.getHost().port, clientFactory)
 
         reactor.iterate()
         reactor.iterate()

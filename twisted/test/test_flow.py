@@ -402,7 +402,7 @@ class FlowTest(unittest.TestCase):
         client = protocol.ClientFactory()
         client.protocol = flow.makeProtocol(echoClient)
         client.d = defer.Deferred()
-        reactor.connectTCP("127.0.0.1", port.getHost()[2], client)
+        reactor.connectTCP("127.0.0.1", port.getHost().port, client)
         self.assertEquals('testing', unittest.deferredResult(client.d))
 
     def testProtocol(self):

@@ -779,7 +779,7 @@ class FTPClientTests(unittest.TestCase):
             f.noisy = 0
             f.protocol = protocol.Protocol
             port = reactor.listenTCP(0, f, interface="127.0.0.1")
-            n = port.getHost()[2]
+            n = port.getHost().port
             # This test data derived from a bug report by ranty on #twisted
             responses = ['220 ready, dude (vsFTPd 1.0.0: beat me, break me)',
                          # USER anonymous

@@ -52,7 +52,7 @@ class PBFailureTest(unittest.TestCase):
         factory = pb.PBServerFactory(SimpleRoot())
         factory.unsafeTracebacks = self.unsafeTracebacks
         p = reactor.listenTCP(0, factory, interface="127.0.0.1")
-        self.port = p.getHost()[2]
+        self.port = p.getHost().port
         self.runClient()
         reactor.run()
         p.stopListening()
