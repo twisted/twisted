@@ -109,8 +109,12 @@ a hierarchy.</p>
 
 <p>It is, of course, possible to write one's own services, but Twisted
 comes out of the box with several services which are useful in writing
-network applications. Those are in
-<code>twisted.application.internet</code>.</p>
+network applications. These are found in
+<code>twisted.application.internet</code>, including 
+<code class="API" base="twisted.application.internet">TCPServer</code>, 
+<code class="API" base="twisted.application.internet">TCPClient</code>, and
+<code class="API" base="twisted.application.internet">TimerService</code>. 
+</p>
 
 <p>To each <code>reactor.listenFoo</code> method corresponds a service
 named <code>FooServer</code>. The arguments to its constructor are the
