@@ -54,9 +54,12 @@ class LatexSpitter(XMLParser):
         if self.escaping:
             data = escapingRE.sub(r'\\\1{}',data.replace('\\', '$\\backslash$'))
         if self.hyphenateCode:
-            ## Add hyphenation points at dots (except not for leading dots)
-            #data = data[:1] + data[1:].replace('.', '.\\textrm{\\-}')
+            olddata = data
             data = lowerUpperRE.sub(r'\1\\textrm{\\-}\2', data)
+            if data == olddata:
+                # No hyphenation points were added, so fall back to adding
+                # hyphenation points at dots (except not for leading dots)
+                data = data[:1] + data[1:].replace('.', '.\\textrm{\\-}')
 
         self.writer(data)
 
