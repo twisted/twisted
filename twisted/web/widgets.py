@@ -364,7 +364,7 @@ class Form(StreamWidget):
     ]
 
     def getFormFields(self, request, fieldSet = None):
-        """I return a list of lists describing this form.
+        """I return a list of lists describing this form, or a Deferred.
 
         This information is used both to display the form and to process it.
         The list is in the following format::
@@ -610,6 +610,14 @@ class Form(StreamWidget):
         """
         args = request.args
         form = self.getFormFields(request)
+        if isinstance(form, defer.Deferred):
+            form.addCallback(lambda form, f=self._streamForm, w=write, r=request: f(w, r, form))
+            form.arm()
+        else:
+            return self._streamForm(write, request, form)
+
+    def _streamForm(self, write, request, form):
+        """Callback for rendering a form."""
         if self.shouldProcess(request):
             try:
                 return self._doProcess(form, write, request)
