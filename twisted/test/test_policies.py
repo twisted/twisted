@@ -390,3 +390,14 @@ class TestTimeout(unittest.TestCase):
             reactor.iterate()
         self.failIf(p.timedOut)
         p.connectionLost()
+
+    def testReturn(self):
+        p = TimeoutTester()
+        p.timeOut = 5
+        
+        self.assertEquals(p.setTimeout(10), 5)
+        self.assertEquals(p.setTimeout(None), 10)
+        self.assertEquals(p.setTimeout(1), None)
+        self.assertEquals(p.timeOut, 1)
+        
+        

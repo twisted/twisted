@@ -409,6 +409,7 @@ class TimeoutMixin:
         @param period: The period, in seconds, to change the timeout to, or
         C{None} to disable the timeout.
         """
+        prev = self.timeOut
         self.timeOut = period
         self.__lastReceived = time.time()
         if self.__timeoutCall:
@@ -416,6 +417,7 @@ class TimeoutMixin:
             self.__timeoutCall = None
         if period is not None:
             self.__timeoutCall = reactor.callLater(period, self.__timedOut)
+        return prev
 
     def __timedOut(self):
         self.__timeoutCall = None
