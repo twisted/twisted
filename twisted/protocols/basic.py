@@ -29,8 +29,8 @@ import struct
 
 # Twisted imports
 from twisted.internet import protocol, defer, interfaces, error
-from twisted.python import log
-
+from twisted.python import log, components
+from zope.interface import implements
 
 LENGTH, DATA, COMMA = range(3)
 NUMBER = re.compile('(\d*)(:?)')
@@ -391,7 +391,7 @@ class FileSender:
     
     This API is unstable.
     """
-    __implements__ = (interfaces.IProducer,)
+    implements(interfaces.IProducer)
     
     CHUNK_SIZE = 2 ** 14
     
@@ -448,3 +448,5 @@ class FileSender:
         if self.deferred:
             self.deferred.errback(Exception("Consumer asked us to stop producing"))
             self.deferred = None
+
+components.backwardsCompatImplements(FileSender)

@@ -25,13 +25,13 @@ import sys, operator, time
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet.interfaces import ITransport
 from twisted.internet import reactor, error
-from twisted.python import log
-
+from twisted.python import log, components
+from zope.interface import implements, providedBy, directlyProvides
 
 class ProtocolWrapper(Protocol):
     """Wraps protocol instances and acts as their transport as well."""
     
-    __implements__ = ITransport,
+    implements(ITransport)
 
     disconnecting = 0
 
@@ -40,9 +40,8 @@ class ProtocolWrapper(Protocol):
         self.factory = factory
 
     def makeConnection(self, transport):
-        class _MyClass(self.__class__):
-            __implements__ = transport.__implements__
-        self.__class__ = _MyClass
+        for iface in providedBy(transport):
+            directlyProvides(self, iface)
         Protocol.makeConnection(self, transport)
     
     # Transport relaying
@@ -87,6 +86,8 @@ class ProtocolWrapper(Protocol):
     def connectionLost(self, reason):
         self.factory.unregisterProtocol(self)
         self.wrappedProtocol.connectionLost(reason)
+
+components.backwardsCompatImplements(ProtocolWrapper)
 
 
 class WrappingFactory(ClientFactory):

@@ -20,8 +20,11 @@
 
 __version__ = '$Revision: 1.4 $'[11:-2]
 
-from twisted.python import log
+import operator
+from twisted.python import log, components
 from twisted.internet import interfaces
+from zope.interface import implements
+
 
 class BasicProducerConsumerProxy:
     """ I can act as a man in the middle between any Producer and Consumer.
@@ -33,7 +36,7 @@ class BasicProducerConsumerProxy:
     @ivar paused: As a Producer, am I paused?
     @type paused: bool
     """
-    __implements__ = (interfaces.IProducer, interfaces.IConsumer)
+    implements(interfaces.IProducer, interfaces.IConsumer)
 
     consumer = None
     producer = None
@@ -105,8 +108,8 @@ class BasicProducerConsumerProxy:
     def __repr__(self):
         return '<%s@%x around %s>' % (self.__class__, id(self), self.consumer)
 
+components.backwardsCompatImplements(BasicProducerConsumerProxy)
 
-import operator
 
 class ProducerConsumerProxy(BasicProducerConsumerProxy):
     """ProducerConsumerProxy with a finite buffer.
