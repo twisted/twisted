@@ -250,9 +250,10 @@ class MulticastTestCase(unittest.TestCase):
         self.client = Client()
         # multicast won't work if we listen over loopback, apparently
         self.port1 = reactor.listenMulticast(0, self.server)
-        self.port2 = reactor.connectMulticast("127.0.0.1", self.server.transport.getHost().port, self.client)
+        self.port2 = reactor.listenMulticast(0, self.client)
         reactor.iterate()
         reactor.iterate()
+        self.client.transport.connect("127.0.0.1", self.server.transport.getHost().port)
 
     def tearDown(self):
         self.port1.stopListening()
