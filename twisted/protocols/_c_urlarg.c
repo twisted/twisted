@@ -54,7 +54,7 @@ TM_INLINE int ishexdigit(unsigned char c) {
 
 static PyObject *unquote(PyObject *self, PyObject *args)
 {
-    unsigned char *s, *r;
+    unsigned char *s, *r, *end;
     unsigned char quotedchar, quotedchartmp = 0, tmp;
     int state = STATE_INITIAL, length;
     PyObject *output, *str;
@@ -66,15 +66,16 @@ static PyObject *unquote(PyObject *self, PyObject *args)
     if (output == NULL) {
         return NULL;
     }
+    end = s + length;
     s = s - 1;
-    while (*(++s) != '\x00') {
+    while ((++s) < end) {
         switch(state) {
         case STATE_INITIAL:
             if (*s == '%') {
                 state = STATE_PERCENT;
             } else {
                 r = s - 1;
-                while (*(++r) != '%' && *r);
+                while (*(++r) != '%' && r < end);
                 OUTPUTCHAR(s, r-s);
                 s = r-1;
             }
