@@ -42,7 +42,7 @@ class Options(usage.Options):
         # confirm it.  Otherwise, I use the first line from standard
         # input, stripping off a trailing newline if there is one.
         if password in ('', '-'):
-            self.opts['password'] = usage.newPasswordPrompt()
+            self.opts['password'] = util.getPassword(confirm=1)
         else:
             self.opts['password'] = password
 

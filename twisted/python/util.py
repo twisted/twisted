@@ -70,7 +70,7 @@ def sibpath(path, sibling):
     return os.path.join(os.path.dirname(os.path.abspath(path)), sibling)
 
 
-def getPassword(prompt = '', confirm = 0):
+def getPassword(prompt = 'Password: ', confirm = 0):
     """Obtain a password by prompting or from stdin.
 
     If stdin is a terminal, prompt for a new password, and confirm (if
