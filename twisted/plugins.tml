@@ -28,7 +28,7 @@ register("Telnet Shell",
          type='coil')
 
 register("TCP Port Forwarder",
-         "twisted.coil.plugins.stupidproxy",
+         "twisted.coil.plugins.portforward",
          description="TCP port forwarding.",
          type='coil')
 
@@ -83,7 +83,7 @@ register("Twisted SOCKS Automated TAP builder",
          type="tap")
 
 register("Twisted Port-Forwarding Automated TAP builder",
-         "twisted.tap.stupid",
+         "twisted.tap.portforward",
          description="automated TAP building",
          type="tap")
 
