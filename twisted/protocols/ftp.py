@@ -868,7 +868,7 @@ class FTPClient(basic.LineReceiver):
 
             pasvCmd = FTPCommand('PASV')
             self.queueCommand(pasvCmd)
-            pasvCmd.deferred.addCallbacks(doPassive, self.fail)
+            pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
             # Ensure the connection is always closed
             cmd.deferred.addBoth(lambda x, m=_mutable: m[0].disconnect() or x)
