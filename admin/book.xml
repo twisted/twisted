@@ -16,7 +16,6 @@
 
 <chapter><title>The Basics</title>
 
-@include installing-twisted.xml
 @include basics.xml
 @include using-twistedweb.xml
 @include manhole.xml

@@ -6,7 +6,6 @@ from twisted.python import usage
 
 class Options(usage.Options):
     updates = ('README',
-               'doc/howto/installing-twisted.html',
                'twisted/copyright.py',
                'admin/twisted.spec',
                'ChangeLog')

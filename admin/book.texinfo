@@ -37,7 +37,6 @@
 @node The Basics
 @chapter The Basics
 
-@include installing-twisted.texinfo
 @include basics.texinfo
 @include using-twistedweb.texinfo
 @include manhole.texinfo
