@@ -382,6 +382,7 @@ class FlowTest(unittest.TestCase):
         self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
+        self.fail("This test freezes and consumes 100% CPU.")
         class CountIterator:
             def __init__(self, count):
                 self.count = count
