@@ -76,6 +76,8 @@ class IllegalClientResponse(IMAP4Exception): pass
 
 class IllegalOperation(IMAP4Exception): pass
 
+class IllegalMailboxEncoding(IMAP4Exception): pass
+
 class IMailboxListener(components.Interface):
     def modeChanged(self, writeable):
         """Indicates that the write status of a mailbox has changed.
@@ -210,7 +212,9 @@ class IMAP4Server(basic.LineReceiver):
             except IllegalClientResponse, e:
                 self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
             except IllegalOperation, e:
-                self.sendNegativeResponse(tag, str(e))
+                self.sendNegativeResponse(tag, 'Illegal operation: ' + str(e))
+            except IllegalMailboxEncoding, e:
+                self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
             except Exception, e:
                 self.sendBadResponse(tag, 'Server error: ' + str(e))
                 log.deferr()
@@ -354,63 +358,47 @@ class IMAP4Server(basic.LineReceiver):
     def _ebLogin(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
+    def _parseMbox(self, name):
+        try:
+            return splitQuoted(name)[0].decode('imap4-utf-7')
+        except:
+            raise IllegalMailboxEncoding, name
+
+    def _selectWork(self, tag, args, rw, cmdName):
+        name = self._parseMbox(args)
+        mbox = self.account.select(name, rw)
+        
+        if mbox is None:
+            self.sendNegativeResponse(tag, 'No such mailbox')
+            return
+
+        self.state = 'select'
+        flags = mbox.getFlags()
+        self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
+        self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
+        self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
+        self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
+
+        s = mbox.isWriteable() and 'READ-WRITE' or 'READ-ONLY'
+
+        if self.mbox:
+            self.mbox.removeListener(self)
+        self.mbox = mbox
+        self.mbox.addListener(self)
+        self.sendPositiveResponse(tag, '[%s] %s successful' % (s, cmdName))
+
     def auth_SELECT(self, tag, args):
-        args = parseNestedParens(args)
-        if len(args) != 1:
-            raise IllegalClientResponse, args
-        mbox = self.account.select(args[0])
-        if mbox is None:
-            self.sendNegativeResponse(tag, 'No such mailbox')
-        else:
-            self.state = 'select'
-
-            flags = mbox.getFlags()
-            self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
-            self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
-            self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
-            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
-
-            if mbox.isWriteable():
-                s = 'READ-WRITE'
-            else:
-                s = 'READ-ONLY'
-
-            if self.mbox:
-                self.mbox.removeListener(self)
-            self.mbox = mbox
-            self.mbox.addListener(self)
-            self.sendPositiveResponse(tag, '[%s] SELECT successful' % s)
+        self._selectWork(tag, args, 1, 'SELECT')
     select_SELECT = auth_SELECT
-
+    
     def auth_EXAMINE(self, tag, args):
-        args = parseNestedParens(args)
-        if len(args) != 1:
-            raise IllegalClientResponse, args
-        mbox = self.account.select(args[0], 0)
-        if mbox is None:
-            self.sendNegativeResponse(tag, 'No such mailbox')
-        else:
-            self.state = 'select'
-
-            flags = mbox.getFlags()
-            self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
-            self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
-            self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
-            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
-
-            if self.mbox:
-                self.mbox.removeListener(self)
-            self.mbox = mbox
-            self.mbox.addListener(self)
-            self.sendPositiveResponse(tag, '[READ-ONLY] EXAMINE successful')
+        self._selectWork(tag, args, 0, 'EXAMINE')
     select_EXAMINE = auth_EXAMINE
 
     def auth_CREATE(self, tag, args):
-        name = parseNestedParens(args)
-        if len(name) != 1:
-            raise IllegalClientResponse, args
+        name = self._parseMbox(args)
         try:
-            self.account.create(name[0])
+            self.account.create(name)
         except MailboxCollision, c:
             self.sendNegativeResponse(tag, str(c))
         else:
@@ -418,24 +406,22 @@ class IMAP4Server(basic.LineReceiver):
     select_CREATE = auth_CREATE
 
     def auth_DELETE(self, tag, args):
-        name = parseNestedParens(args)
-        if len(name) != 1:
-            raise IllegalClientResponse, args
+        name = self._parseMbox(args)
         try:
-            self.account.delete(name[0])
+            self.account.delete(name)
         except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
         else:
             self.sendPositiveResponse(tag, 'Mailbox deleted')
     select_DELETE = auth_DELETE
 
-
     def auth_RENAME(self, tag, args):
-        names = parseNestedParens(args)
-        if len(names) != 2 or isinstance(names[0], types.ListType) or isinstance(names[1], types.ListType):
+        names = splitQuoted(args)
+        if len(names) != 2:
             raise IllegalClientResponse, args
+        oldname, newname = [self._parseMbox(n) for n in names]
         try:
-            self.account.rename(*names)
+            self.account.rename(oldname, newname)
         except TypeError:
             self.sendBadResponse(tag, 'Invalid command syntax')
         except MailboxException, m:
@@ -445,11 +431,9 @@ class IMAP4Server(basic.LineReceiver):
     select_RENAME = auth_RENAME
 
     def auth_SUBSCRIBE(self, tag, args):
-        name = parseNestedParens(args)
-        if len(name) != 1:
-            raise IllegalClientResponse, args
+        name = self._parseMbox(args)
         try:
-            self.account.subscribe(name[0])
+            self.account.subscribe(name)
         except MailboxError, m:
             self.sendNegativeResponse(tag, str(m))
         else:
@@ -457,51 +441,44 @@ class IMAP4Server(basic.LineReceiver):
     select_SUBSCRIBE= auth_SUBSCRIBE
 
     def auth_UNSUBSCRIBE(self, tag, args):
-        name = parseNestedParens(args)
-        if len(name) != 1:
-            raise IllegalClientResponse, args
+        name = self._parseMbox(args)
         try:
-            self.account.unsubscribe(name[0])
+            self.account.unsubscribe(name)
         except MailboxError, m:
             self.sendNegativeResponse(tag, str(m))
         else:
             self.sendPositiveResponse(tag, 'Unsubscribed')
     select_UNSUBSCRIBE = auth_UNSUBSCRIBE
 
-    def auth_LIST(self, tag, args):
-        parts = parseNestedParens(args)
-        if len(parts) != 2 or isinstance(args[0], types.ListType) or isinstance(args[1], types.ListType):
+    def _listWork(self, tag, args, sub, cmdName):
+        parts = splitQuoted(args)
+        if len(parts) != 2:
             self.sendBadResponse(tag, 'Incorrect usage')
         else:
-            ref, mbox = parts
+            ref = parts[0]
+            mbox = self._parseMbox(parts[1])
             mailboxes = self.account.listMailboxes(ref, mbox)
             for (name, box) in mailboxes:
-                flags = '(%s)' % ' '.join(box.getFlags())
-                delim = box.getHierarchicalDelimiter()
-                self.sendUntaggedResponse('LIST %s "%s" %s' % (flags, delim, name))
-            self.sendPositiveResponse(tag, 'LIST completed')
+                if not sub or self.account.isSubscribed(name):
+                    flags = '(%s)' % ' '.join(box.getFlags())
+                    delim = box.getHierarchicalDelimiter()
+                    self.sendUntaggedResponse('%s %s "%s" %s' % (cmdName, flags, delim, name))
+            self.sendPositiveResponse(tag, '%s completed' % (cmdName,))
+
+    def auth_LIST(self, tag, args):
+        self._listWork(tag, args, 0, 'LIST')
     select_LIST = auth_LIST
 
     def auth_LSUB(self, tag, args):
-        args = splitQuoted(args)
-        if len(args) != 2:
-            self.sendBadResponse(tag, 'Incorrect usage')
-        else:
-            ref, mbox = args
-            mailboxes = self.account.listMailboxes(ref, mbox)
-            for (name, box) in mailboxes:
-                if self.account.isSubscribed(name):
-                    flags = '(%s)' % ' '.join(box.getFlags())
-                    delim = box.getHierarchicalDelimiter()
-                    self.sendUntaggedResponse('LSUB %s "%s" %s' % (flags, delim, name))
-            self.sendPositiveResponse(tag, 'LSUB completed')
+        self._listWork(tag, args, 1, 'LSUB')
     select_LSUB = auth_LSUB
 
     def auth_STATUS(self, tag, args):
         names = parseNestedParens(args)
         if len(names) != 2:
             raise IllegalClientResponse(args)
-        mailbox, names = names
+        mailbox = self._parseMbox(names[0])
+        names = names[1]
         mbox = self.account.select(mailbox, 0)
         if mbox:
             d = mbox.requestStatus(names)
@@ -722,11 +699,13 @@ class IMAP4Server(basic.LineReceiver):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
     def select_COPY(self, tag, args, uid=0):
-        parts = args.split(None, 1)
+        parts = splitQuoted(args)
         if len(parts) != 2:
             raise IllegalClientResponse, args
-        messages = parseIdList(parts[0], self.mbox.getUIDNext())
-        mbox = self.account.select(parts[1])
+        ids = parts[0]
+        mbox = self._parseMbox(parts[1])
+        messages = parseIdList(ids, self.mbox.getUIDNext())
+        mbox = self.account.select(mbox)
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
         else:
@@ -782,8 +761,7 @@ class IMAP4Server(basic.LineReceiver):
 
         f = getattr(self, 'select_' + command)
         f(tag, args, uid=1)
-    
-    
+
     #
     # IMailboxListener implementation
     # 
@@ -1119,7 +1097,7 @@ class IMAP4Client(basic.LineReceiver):
         invoked otherwise.
         """
         cmd = 'SELECT'
-        args = mailbox
+        args = mailbox.encode('imap4-utf-7')
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbSelect, 1)
@@ -1139,7 +1117,7 @@ class IMAP4Client(basic.LineReceiver):
         is invoked otherwise.
         """
         cmd = 'EXAMINE'
-        args = mailbox
+        args = mailbox.encode('imap4-utf-7')
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbSelect, 0)
@@ -1213,7 +1191,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the mailbox creation
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('CREATE', name))
+        return self.sendCommand(Command('CREATE', name.encode('imap4-utf-7')))
 
     def delete(self, name):
         """Delete a mailbox
@@ -1227,7 +1205,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose calblack is invoked if the mailbox is
         deleted successfully and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('DELETE', name))
+        return self.sendCommand(Command('DELETE', name.encode('imap4-utf-7')))
 
     def rename(self, oldname, newname):
         """Rename a mailbox
@@ -1244,6 +1222,8 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the rename is
         successful and whose errback is invoked otherwise.
         """
+        oldname = oldname.encode('imap4-utf-7')
+        newname = newname.encode('imap4-utf-7')
         return self.sendCommand(Command('RENAME', ' '.join((oldname, newname))))
 
     def subscribe(self, name):
@@ -1258,7 +1238,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the subscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('SUBSCRIBE', name))
+        return self.sendCommand(Command('SUBSCRIBE', name.encode('imap4-utf-7')))
 
     def unsubscribe(self, name):
         """Remove a mailbox from the subscription list
@@ -1272,7 +1252,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the unsubscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('UNSUBSCRIBE', name))
+        return self.sendCommand(Command('UNSUBSCRIBE', name.encode('imap4-utf-7')))
 
     def list(self, reference, wildcard):
         """List a subset of the available mailboxes
@@ -1297,7 +1277,7 @@ class IMAP4Client(basic.LineReceiver):
         the deferred's errback is invoked instead.
         """
         cmd = 'LIST'
-        args = '"%s" "%s"' % (reference, wildcard)
+        args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
         resp = ('LIST',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbList, 'LIST')
@@ -1313,7 +1293,7 @@ class IMAP4Client(basic.LineReceiver):
         subscribed can be included in the resulting list.
         """
         cmd = 'LSUB'
-        args = '"%s" "%s"' % (reference, wildcard)
+        args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
         resp = ('LSUB',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbList, 'LSUB')
@@ -1347,7 +1327,7 @@ class IMAP4Client(basic.LineReceiver):
         if the command is successful and whose errback is invoked otherwise.
         """
         cmd = 'STATUS'
-        args = "%s (%s)" % (mailbox, ' '.join(names))
+        args = "%s (%s)" % (mailbox.encode('imap4-utf-7'), ' '.join(names))
         resp = ('STATUS',)
         d = self.sendCommand(Command(cmd, args, resp))
         d.addCallback(self._cbStatus)
@@ -1395,7 +1375,10 @@ class IMAP4Client(basic.LineReceiver):
         fmt = '%s (%s)%s%s {%d}'
         if date:
             date = '"%s"' % date
-        cmd = fmt % (mailbox, ' '.join(flags), date and ' ' or '', date, L)
+        cmd = fmt % (
+            mailbox.encode('imap4-utf-7'), ' '.join(flags),
+            date and ' ' or '', date, L
+        )
         continuation = defer.Deferred()
         continuation.addCallback(self._cbContinueAppend, message)
         d = self.sendCommand(Command('APPEND', cmd, continuation))
@@ -1938,6 +1921,25 @@ class IMAP4Client(basic.LineReceiver):
         d.addCallback(self._cbFetch, lookFor='FLAGS')
         return d
     
+    def copy(self, messages, mailbox):
+        """Copy the specified messages to the specified mailbox.
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @type mailbox: C{str}
+        @param mailbox: The mailbox to which to copy the messages
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a true value
+        when the copy is successful, or whose errback is invoked if there
+        is an error.
+        """
+        args = '%s %s' % (messages, mailbox.encode('imap4-utf-7'))
+        return self.sendCommand(Command('COPY', args))
+
     #
     # IMailboxListener methods
     #
@@ -2441,6 +2443,10 @@ class IAccount(components.Interface):
         @type rw: C{bool}
         @param rw: If a true value, request a read-write version of this
         mailbox.  If a false value, request a read-only version.
+        
+        @rtype: Any object implementing C{IMailbox} or C{Deferred}
+        @return: The mailbox object, or a C{Deferred} whose callback will
+        be invoked with the mailbox object.
         """
     
     def delete(self, name):
@@ -2821,3 +2827,61 @@ class IMailbox(components.Interface):
         @raise ReadOnlyMailbox: Raised if this mailbox is not open for
         read-write.
         """
+
+import codecs
+def imap4_utf_7(name):
+    if name == 'imap4-utf-7':
+        def modified_base64(s):
+            return binascii.b2a_base64(s)[:-1].rstrip('=').replace('/', ',')
+        def modified_unbase64(s):
+            return binascii.a2b_base64(s.replace(',', '/') + '===')
+        def encoder(s):
+            r = []
+            _in = []
+            for c in s:
+                if ord(c) in (range(0x20, 0x25) + range(0x27, 0x7e)):
+                    if _in:
+                        r.extend(['&', modified_base64(''.join(_in)), '-'])
+                        del _in[:]
+                    r.append(c)
+                elif c == '&':
+                    if _in:
+                        r.extend(['&', modified_base64(''.join(_in)), '-'])
+                        del _in[:]
+                    r.append('&-')
+                else:
+                    _in.append(c)
+            if _in:
+                r.extend(['&', modified_base64(''.join(_in)), '-'])
+            return (''.join(r), len(s))
+
+        def decoder(s):
+            r = []
+            decode = []
+            for c in s:
+                if c == '&' and not decode:
+                    decode.append('&')
+                elif c == '-' and decode:
+                    if len(decode) == 1:
+                        r.append('&')
+                    else:
+                        r.append(modified_unbase64(''.join(decode[1:])))
+                    decode = []
+                elif decode:
+                    decode.append(c)
+                else:
+                    r.append(c)
+            if decode:
+                r.append(modified_unbase64(''.join(decode[1:])))
+            return (''.join(r), len(s))
+
+        class StreamReader(codecs.StreamReader):
+            def decode(self, s, errors='strict'):
+                return decoder(s)
+
+        class StreamWriter(codecs.StreamWriter):
+            def decode(self, s, errors='strict'):
+                return encoder(s)
+
+        return (encoder, decoder, StreamReader, StreamWriter)
+codecs.register(imap4_utf_7)

@@ -40,6 +40,22 @@ def sortNest(l):
             l[i] = tuple(sortNest(list(l[i])))
     return l
 
+class IMAP4UTF7TestCase(unittest.TestCase):
+    tests = [
+        ['Hello world', 'Hello world'],
+        ['Hello & world', 'Hello &- world'],
+        ['Hello\xffworld', 'Hello&,w-world'],
+        ['\xff\xfe\xfd\xfc', '&,,79,A-'],
+    ]
+
+    def testEncode(self):
+        for (input, output) in self.tests:
+            self.assertEquals(input.encode('imap4-utf-7'), output)
+
+    def testDecode(self):
+        for (input, output) in self.tests:
+            self.assertEquals(input, output.decode('imap4-utf-7'))
+
 class IMAP4HelperTestCase(unittest.TestCase):
     def testQuotedSplitter(self):
         cases = [
@@ -452,6 +468,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 0
         })
+    testExamine.todo = "Test framework's mailbox is always READ-WRITE"
 
     def testCreate(self):
         succeed = ('testbox', 'test/box', 'test/', 'test/box/box', 'INBOX')
