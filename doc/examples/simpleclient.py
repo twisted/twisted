@@ -36,21 +36,25 @@ class EchoClient(Protocol):
         self.transport.loseConnection()
     
     def connectionLost(self):
-        from twisted.internet import main
-        main.shutDown()
+        from twisted.internet import reactor
+        reactor.stop()
 
     def connectionFailed(self):
         print "Connection failed - goodbye!"
-        from twisted.internet import main
-        main.shutDown()
+        from twisted.internet import reactor
+        reactor.stop()
 
 
 # this connects the protocol to a server runing on port 8000
 def main():
-    from twisted.internet import main, tcp
+    # install default reactor
+    from twisted.internet import default
+    default.install()
+
+    from twisted.internet import reactor
     p = EchoClient()
-    tcp.Client("localhost", 8000, p)
-    main.run()
+    reactor.clientTCP("localhost", 8000, p)
+    reactor.run()
 
 # this only runs if the module was *not* imported
 if __name__ == '__main__':
