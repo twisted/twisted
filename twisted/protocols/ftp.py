@@ -706,7 +706,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def finishedFileTransfer(self, *arg):
         """called back when a file transfer has been completed by the dtp"""
         log.debug('finishedFileTransfer! cleaning up DTP')
-        if self.fp is not None and not self.fp.closed:
+        if self.fp is not None:
             if self.fp.tell() == self.fpsize:
                 log.debug('transfer completed okay :-)')
                 self.reply(TXFR_COMPLETE_OK)
