@@ -17,7 +17,7 @@
 from __future__ import nested_scopes
 
 from twisted import copyright
-from twisted.python import usage, util, runtime, plugin
+from twisted.python import usage, util, runtime
 from twisted.python import log, logfile
 
 from twisted.persisted import styles
@@ -351,21 +351,6 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
             except OSError, e:
                 if e.errno != errno.EBADF:
                     raise
-
-    # Load any view plugins which have been registered in plugins.tml file
-    # This needs to be moved to an event which occurs on web server startup
-    # Once glyph is done with the Reactors
-
-    # (Note: 'view' is probably a bad name for a plugin, since this is really a
-    # 'twisted.web.view'.  I suppose 'tap' was a bad precedent for plugin system
-    # naming. --glyph)
-
-    plugins = plugin.getPlugIns('view')
-    for plug in plugins:
-        try:
-            plug.load()
-        except Exception, e:
-            log.msg("Loading view %s failed. %s" % (plug, e))
 
     log.msg("Loaded.")
     initRun = 1
