@@ -100,4 +100,4 @@ class RecvLineHandler:
         self.lineReceived(line)
 
     def lineReceived(self, line):
-        print 'Received line!', repr(line)
+        pass

@@ -50,10 +50,14 @@ class TerminalListener:
 class ITerminal(components.Interface):
     def cursorDown(self, n=1):
         """Move the cursor down n lines.
+
+        Note that "down" means "towards the top of the screen".
         """
 
     def cursorUp(self, n=1):
         """Move the cursor up n lines.
+
+        Note that "up" means "towards the bottom of the screen".
         """
 
     def cursorForward(self, n=1):
