@@ -79,7 +79,7 @@ from os import path
 # Sibling Imports
 import reflect
 import text
-
+import util
 
 class UsageError(Exception):
     pass
@@ -114,9 +114,9 @@ class Options:
             self.longOpt.extend(longOpt)
             self.shortOpt = self.shortOpt + shortOpt
             self.docs.update(docs)
-            
+
             self.opts.update(settings)
-            
+
             self.synonyms.update(synonyms)
             self.__dispatch.update(dispatch)
 
@@ -228,7 +228,7 @@ class Options:
         reflect.accumulateClassList(self.__class__, 'optFlags', flags)
 
         for flag in flags:
-            long, short, doc = padTo(3, flag)
+            long, short, doc = util.padTo(3, flag)
             if not long:
                 raise ValueError, "A flag cannot be without a name."
 
@@ -268,7 +268,7 @@ class Options:
         synonyms = {}
 
         for parameter in parameters:
-            long, short, default, doc = padTo(4, parameter)
+            long, short, default, doc = util.padTo(4, parameter)
             if not long:
                 raise ValueError, "A parameter cannot be without a name."
 
@@ -497,25 +497,3 @@ def docMakeChunks(optList, width=80):
         optChunks.append(string.join(optLines, ''))
 
     return optChunks
-
-
-def padTo(n, seq, default=None):
-    """Pads a sequence out to n elements,
-
-    filling in with a default value if it is not long enough.
-
-    If the input sequence is longer than n, raises ValueError.
-
-    Details, details:
-    This returns a new list; it does not extend the original sequence.
-    The new list contains the values of the original sequence, not copies.
-    """
-
-    if len(seq) > n:
-        raise ValueError, "%d elements is more than %d." % (len(seq), n)
-
-    blank = [default] * n
-
-    blank[:len(seq)] = list(seq)
-
-    return blank

@@ -27,6 +27,27 @@ def uniquify(lst):
         dict[k] = 1
     return result
 
+def padTo(n, seq, default=None):
+    """Pads a sequence out to n elements,
+
+    filling in with a default value if it is not long enough.
+
+    If the input sequence is longer than n, raises ValueError.
+
+    Details, details:
+    This returns a new list; it does not extend the original sequence.
+    The new list contains the values of the original sequence, not copies.
+    """
+
+    if len(seq) > n:
+        raise ValueError, "%d elements is more than %d." % (len(seq), n)
+
+    blank = [default] * n
+
+    blank[:len(seq)] = list(seq)
+
+    return blank
+
 def getPluginDirs():
     import twisted
     systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
