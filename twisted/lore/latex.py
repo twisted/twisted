@@ -135,7 +135,7 @@ class LatexSpitter:
             # repeating the url.
             if node.childNodes[0].data == href:
                 return
-            externalhref = '\\footnote{%s}' % href
+            externalhref = '\\footnote{%s}' % latexEscape(href)
         
         self.visitNodeDefault(node)
         ref = None
@@ -195,9 +195,6 @@ class LatexSpitter:
 
     mapStart_q = "``"
     mapEnd_q = "''"
-
-    mapStart_span_url = '\\url{'
-    mapEnd_span_url = '}'
 
     mapStart_span_footnote = '\\footnote{'
     mapEnd_span_footnote = '}'
