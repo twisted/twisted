@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -18,23 +18,23 @@
 """Mail support for twisted python.
 """
 
-import stat, os, socket, time, md5, string
+import errno, stat, os, socket, time, md5, string
 from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.mail import mail
 
 
-n = 0
+_n = 0
 
 def _generateMaildirName():
     """utility function to generate a unique maildir name
     """
-    global n
+    global _n
     t = str(int(time.time()))
     s = socket.gethostname()
     p = os.getpid()
-    n = n+1
-    return '%s.%s_%s.%s' % (t, p, n, s)
+    _n = _n+1
+    return '%s.%s_%s.%s' % (t, p, _n, s)
 
 
 def initializeMaildir(dir):
@@ -51,9 +51,9 @@ def initializeMaildir(dir):
 class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
     """
-    
+
     __implements__ = mail.IDomain
-    
+
     def __init__(self, service, root):
         """Initialize.
         """
@@ -80,7 +80,7 @@ class AbstractMaildirDomain:
         """
         name, domain = user.dest.local, user.dest.domain
         dir = self.userDirectory(name)
-        fname = _generateMaildirName() 
+        fname = _generateMaildirName()
         filename = os.path.join(dir, 'tmp', fname)
         fp = open(filename, 'w')
         fp.write("Delivered-To: %(name)s@%(domain)s\n" % vars())
@@ -138,17 +138,17 @@ class MaildirMailbox(pop3.Mailbox):
         os.rename(self.list[i], trashFile)
         self.deleted[self.list[i]] = trashFile
         self.list[i] = 0
-    
+
     def undeleteMessages(self):
         """Undelete any deleted messages it is possible to undelete
-        
+
         This moves any messages from .Trash/ subfolder back to their
         original position, and empties out the deleted dictionary.
         """
         for (real, trash) in self.deleted.items():
             try:
                 os.rename(trash, real)
-            except OSError, (err, str):
+            except OSError, (err, estr):
                 # If the file has been deleted from disk, oh well!
                 if err != errno.ENOENT:
                     raise
@@ -211,10 +211,10 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         my_digest = string.join(map(lambda x: "%02x"%ord(x), my_digest), '')
         if digest == my_digest:
             return MaildirMailbox(os.path.join(self.root, user))
+        else:
+            return None
 
     def authenticateUserPASS(self, username, password):
         if not self.dbm.has_key(username) or self.dbm[username] != password:
             return None
         return MaildirMailbox(os.path.join(self.root, username))
-
-        
