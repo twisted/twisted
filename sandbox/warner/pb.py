@@ -115,7 +115,7 @@ class CallUnslicer(BaseUnslicer):
     reqID = None
     obj = None
     methodname = None
-    methodSchema = None
+    methodSchema = None # will be a MethodArgumentsConstraint
     argname = None
     argConstraint = None
 
@@ -141,7 +141,7 @@ class CallUnslicer(BaseUnslicer):
                     self.argConstraint.checkToken(typebyte)
 
     def doOpen(self, opentype):
-        # this can only happen when we're receive an argument value, so
+        # this can only happen when we're receiving an argument value, so
         # we don't have to bother checking self.stage or self.argname
         if self.argConstraint:
             self.argConstraint.checkOpentype(opentype)
@@ -171,18 +171,25 @@ class CallUnslicer(BaseUnslicer):
             self.stage += 1
         elif self.stage == 3:
             if self.argname == None:
+                argname = token
+                if self.args.has_key(argname):
+                    raise BananaError("duplicate argument '%s'" % argname)
                 ms = self.methodSchema
                 if ms:
                     # if the argname is invalid, this may raise Violation
-                    self.argConstraint = ms.getArgConstraint(token)
-                self.argname = token
+                    self.argConstraint = ms.getArgConstraint(argname)
+                self.argname = argname
             else:
-                self.args[self.argname] = token
+                argvalue = token
+                self.args[self.argname] = argvalue
                 self.argname = None
 
     def receiveClose(self):
         if self.stage != 3 or self.argname != None:
             raise BananaError("sequence ended too early")
+        if self.methodSchema:
+            # ask them again so they can look for missing arguments
+            self.methodSchema.checkArgs(self.args)
         # this is where we actually call the method. doCall will catch any
         # exceptions.
         self.broker.doCall(self.reqID, self.obj, self.methodname,
