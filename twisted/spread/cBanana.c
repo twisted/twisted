@@ -11,13 +11,13 @@
 
 /* Python module initialization */
 
-EXTERN_API void initcBanana(void);
-
 PyObject* cBanana_module;
 PyObject* cBanana_dict;
 
-
 /* Python accessible */
+/* Initialization */
+EXTERN_API void initcBanana(void);
+
 /* Encoding */
 extern EXTERN_API PyObject *cBanana_encode( PyObject *self, PyObject *args );
 extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args );
@@ -458,9 +458,9 @@ PyObject* cBanana_encode(PyObject* self, PyObject *args) {
 }
 
 
-long long b1282int(unsigned char *str, int begin, int end) {
-  long long result = 0;
-  long long place = 0;
+long b1282int(unsigned char *str, int begin, int end) {
+  long result = 0;
+  long place = 0;
   int count;
 
   for (count=begin; count < end; count++) {
@@ -520,15 +520,6 @@ int gotItemFloat(double value, struct listItem *currentList, PyObject *expressio
 int gotItemInt(int value, struct listItem *currentList, PyObject *expressionReceived)
 {
   PyObject *object = PyInt_FromLong(value) ;
-  return gotPythonItem(object, currentList, expressionReceived);
-}
-
-/**************
-** Helper function to add a long int
-**************/
-int gotItemLong(long long value, struct listItem *currentList, PyObject *expressionReceived)
-{
-  PyObject *object = PyLong_FromLongLong(value) ;
   return gotPythonItem(object, currentList, expressionReceived);
 }
 
