@@ -150,6 +150,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
             # self.accountName = "%s (TOC)"%data[0]
             if self._logonDeferred is not None:
                 self._logonDeferred.callback(self)
+                self._logonDeferred = None
 
     ### Error Messages
     def hearError(self, code, args):
