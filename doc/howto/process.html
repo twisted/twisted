@@ -20,13 +20,13 @@
     <li>executable is the full path of the program to run. It will be connected to processProtocol.</li>
     <li>arguments is a list of command line arguments to be passed to the process.  The first should be the name of the process.</li>
     <li>environment is a dictionary containing the environment to pass through to the process.</li>
-    <li>path is the path to run the process is.  The default is the current directory.</li>
+    <li>path is the directory to run the process in.  The default is the current directory.</li>
     <li>userID and groupID are the user ID and group ID to run the subprocess as.</li>
     </ul>
     <p><code class="python">reactor.spawnProcess()</code> returns an instance that implements <code class="API">twisted.internet.interfaces.IProcessTransport</code>.</p>
 
   <h2>Writing a ProcessProtocol</h2>
-    <p>The ProcessProtocol you pass to spawnProcess is your interaction with the process.  It has a very similar signature to a regular Protocol, but it has several extra methods to deal with events specific to a protocol.  In our example, we will interface with 'wc' to create a word count of user-given text.  First, we'll start by importing the required modules, and writing the initialization for our ProcessProtocol.</p>
+    <p>The ProcessProtocol you pass to spawnProcess is your interaction with the process.  It has a very similar signature to a regular Protocol, but it has several extra methods to deal with events specific to a process.  In our example, we will interface with 'wc' to create a word count of user-given text.  First, we'll start by importing the required modules, and writing the initialization for our ProcessProtocol.</p>
 <pre class="python">
 from twisted.internet import protocol
 class WCProcessProtocol(protocol.ProcessProtocol):
