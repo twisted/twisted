@@ -19,7 +19,10 @@
 # System Imports
 import os
 
-if os.name != 'java':
+# Twisted Import
+from twisted.python.runtime import platform
+
+if platform.getType() != 'java':
     import select, signal
     from errno import EINTR
 
@@ -54,7 +57,7 @@ class Application(log.Logger, styles.Versioned):
         self.services = {}
         # a passport authorizer
         self.authorizer = authorizer or passport.DefaultAuthorizer()
-        if os.name == "posix":
+        if platform.getType() == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
         self.resolver = DummyResolver()
@@ -158,7 +161,7 @@ class Application(log.Logger, styles.Versioned):
         dump(self, f, 1)
         f.flush()
         f.close()
-        if os.name == "nt":
+        if platform.getType() == "win32":
             if os.path.isfile(finalname):
                 os.remove(finalname)
         os.rename(filename, finalname)
@@ -349,7 +352,7 @@ def run():
     threadable.registerAsIOThread()
     signal.signal(signal.SIGINT, shutDown)
     signal.signal(signal.SIGTERM, shutDown)
-    if os.name == 'posix':
+    if platform.getType() == 'posix':
         signal.signal(signal.SIGCHLD, process.reapProcess)
 
     work = threadable.dispatcher.work
@@ -374,7 +377,7 @@ def run():
                 log.msg('Warning!  Shutdown not called properly!')
                 traceback.print_exc(file=log.logfile)
                 shutDown()
-            if os.name =='nt':
+            if platform.getType() =='win32':
                 log.msg("(Logging traceback for WinXX exception info)")
                 traceback.print_exc(file=log.logfile)
         except:
@@ -436,7 +439,7 @@ def removeWriter(writer):
     if writes.has_key(writer):
         del writes[writer]
 
-if os.name == 'nt':
+if platform.getType() == 'win32':
     """redefine iterate on WinXX to handle wierd error case when passing empty lists to select
     """
     def iterate():
@@ -516,9 +519,9 @@ class _UnixWaker(styles.Ephemeral):
         self.i.close()
         self.o.close()
 
-if os.name == 'posix':
+if platform.getType() == 'posix':
     _Waker = _UnixWaker
-else:
+elif platform.getType() == 'win32':
     _Waker = _Win32Waker
 
 def wakeUp():
@@ -535,7 +538,7 @@ def installWaker():
         waker = _Waker()
         addReader(waker)
 
-if threadable.threaded and os.name != 'java':
+if threadable.threaded and platform.getType() != 'java':
     installWaker()
 
 def addPluginDir():
@@ -555,5 +558,5 @@ def addPluginDir():
 import process
 
 # eep
-if os.name == 'java':
+if platform.getType() == 'java':
     import jnternet
