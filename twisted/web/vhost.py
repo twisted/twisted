@@ -114,7 +114,7 @@ class NameVirtualHost(resource.Resource):
 class _HostResource(resource.Resource):
 
     def getChild(self, path, request):
-        request.received_headers['host'] = path
+        request.setHost(path)
         return request.site.getResourceFor(request)
 
 
