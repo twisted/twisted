@@ -41,29 +41,11 @@ CONNECTION_DONE = error.ConnectionDone('Connection done')
 CONNECTION_LOST = error.ConnectionLost('Connection lost')
 
 
-class DummyResolver:
-    """
-    An implementation of a synchronous resolver, from Python's socket stuff.
-    This may be ill-placed.
-    """
-    def resolve(self, deferred, name, type=1, timeout=10):
-        if type != 1:
-            deferred.errback(failure.Failure(ValueError("type not supported")))
-            return
-        try:
-            address = socket.gethostbyname(name)
-        except socket.error:
-            deferred.errback(failure.Failure(IOError("address not found")))
-        else:
-            deferred.callback(address)
-
-
 running = None
 shuttingDown = None
 beforeShutdown = []
 duringShutdown = []
 afterShutdown = []
-resolver = DummyResolver()
 interruptCountdown = 5
 
 def shutDown(*ignored):

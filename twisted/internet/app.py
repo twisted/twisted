@@ -470,8 +470,9 @@ class Application(log.Logger, styles.Versioned,
     def upgradeToVersion2(self):
         """Version 2 Persistence Upgrade
         """
-        self.resolver = main.DummyResolver()
-
+        #self.resolver = main.DummyResolver()
+        self.resolver = None # will be deleted in upgrade to v6
+    
     def upgradeToVersion1(self):
         """Version 1 Persistence Upgrade
         """
