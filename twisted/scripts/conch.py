@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.43 2003/03/04 20:43:47 z3p Exp $
+# $Id: conch.py,v 1.44 2003/03/04 21:23:00 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -204,6 +204,14 @@ def onConnect():
     if options['fork']:
         if os.fork():
             os._exit(0)
+        os.setsid()
+        for i in range(3):
+            try:
+                os.close(i)
+            except OSError, e:
+                import errno
+                if e.errno != errno.EBADF:
+                    raise
 
     if isinstance(conn, SSHConnection) and not options['nocache']:
         filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
@@ -485,7 +493,7 @@ class SSHUnixChannel(channel.SSHChannel):
 
     def closed(self):
         self.unix.sendMessage('closed', self.id)
-        if len(conn.channels) == 1: # just us left
+        if len(conn.channels) == 1 and not options['fork'] and not options['nocache']: # just us left
             reactor.stop()
 
 class SSHClientFactory(protocol.ClientFactory):
@@ -737,7 +745,7 @@ class SSHSession(channel.SSHChannel):
 
     def closed(self):
         log.msg('closed %s' % self)
-        if len(self.conn.channels) == 1: # just us left
+        if len(self.conn.channels) == 1 and not options['fork'] and not options['nocache']: # just us left
             reactor.stop()
 
     def request_exit_status(self, data):
