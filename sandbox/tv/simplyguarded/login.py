@@ -5,6 +5,21 @@ A demo app that can protect arbitrarily deep hierarchies.
 Try e.g. http://localhost:8081/secret/stuff/stuff/stuff/
 without authenticating first.
 
+Requirements:
+
+- Main page and some subpages do not need authentication.
+
+- There are multiple subpages that require authentication.
+
+- Pages that require authentication must show a login dialog, and
+  after a succesful login act as if user was logged in already.
+
+- The subpages requiring authentication may be deeply linked into from
+  each other or the non-aúthenticating pages.
+
+- The authentication should be shared amongst all the pages (TODO).
+
+
 """
 
 from twisted.web.woven import simpleguard, page, guard
@@ -52,10 +67,10 @@ class LoginPage(page.Page):
 
     def wvupdate_loginform(self, request, widget, model):
         root = request.getRootURL()
-        assert root is not None, 'holy cow batman. TODO'
+        if root is None:
+            root=request.prePathURL()
         url = urlpath.URLPath.fromString(root)
         microdom.lmx(widget.node).form(
-            #action=str(url.parent().sibling(guard.INIT_PERSPECTIVE)),
             action=str(url.sibling(guard.INIT_PERSPECTIVE)),
             model="form")
 
@@ -67,12 +82,19 @@ class LoginPage(page.Page):
 
 class Authenticated(page.Page):
     isLeaf = 1
-    template='<html>Hello <span model="name"/>! Look at all the <a href="stuff">stuff</a>.</html>'
+    template='''<html>Hello <span model="name"/>! Look at all the <a href="stuff">stuff</a>, or go <a href="../">up</a></html>'''
 
     def wmfactory_name(self, request):
         return request.getComponent(simpleguard.Authenticated).name
 
     def wchild_stuff(self, request):
+        return self
+
+class Another(page.Page):
+    isLeaf = 1
+    template='''<html>This is another page requiring authentication. And there's  <a href="more">more</a>. Go <a href="../">up</a>.</html>'''
+
+    def wchild_more(self, request):
         return self
 
 from twisted.python import components
@@ -131,17 +153,33 @@ class MainPage(page.Page):
 </head>
 <body>
 <a href="secret">secret</a>,
+<a href="secret/stuff/stuff/stuff">deep secret</a>,
+<a href="another">another</a>,
+<a href="another/more/more">another deep</a>,
+<a href="../">up</a>.
 </body>
 </html>
 '''
+
+    checkers = [checkers.InMemoryUsernamePasswordDatabaseDontUse(test="test")]
+
     foo=simpleguard.guardResource(
         Authenticated(),
-        [checkers.InMemoryUsernamePasswordDatabaseDontUse(test="test")],
+        checkers,
         nonauthenticated=InfiniChild(LoginPage()),
         callback=callback, errback=LoginPage)
 
     def wchild_secret(self, request):
         return self.foo
+
+    bar=simpleguard.guardResource(
+        Another(),
+        checkers,
+        nonauthenticated=InfiniChild(LoginPage()),
+        callback=callback, errback=LoginPage)
+
+    def wchild_another(self, request):
+        return self.bar
 
 def createResource():
     return MainPage()
