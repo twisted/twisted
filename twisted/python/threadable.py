@@ -137,13 +137,13 @@ class _ThreadedWaiter(_Waiter):
                 cond.release()
 
 class _XLock:
-
     """
     Exclusive lock class.  The advantage of this over threading.RLock
     is that it's picklable (kinda...).  The goal is to one day not be
-    dependent upon threlading, and to have this work for any old
+    dependent upon threading, and to have this work for any old
     'thread'
     """
+    
     def __init__(self):
         assert threaded,\
                "Locks may not be allocated in an unthreaded environment!"
@@ -268,6 +268,7 @@ def isInIOThread():
             return 0
     return 1
 
+
 def registerAsIOThread():
     """Mark the current thread as responsable for I/O requests.
     """
@@ -276,6 +277,30 @@ def registerAsIOThread():
     if threaded:
         import thread
         ioThread = thread.get_ident()
+
+
+class ThreadAttr:
+    """Stores a different set of attributes for each thread."""
+    
+    def __init__(self, threads=None, default=None):
+        self.__dict__['_threads'] = threads or {}
+        self.__dict__['_default'] = default
+
+    def __get(self):
+        import threading
+        try:
+            return self._threads[threading.currentThread()]
+        except KeyError:
+            return self._default
+
+    def __getattr__(self, key):
+        return getattr(self.__get(), key)
+
+    def __setattr__(self, key, val):
+        return setattr(self.__get(), key)
+
+    def __delattr__(self, key):
+        return delattr(self.__get(), key)
 
 
 synchronize(_ThreadedWaiter)
