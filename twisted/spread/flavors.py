@@ -501,10 +501,10 @@ class RemoteCacheMethod:
 
     def __cmp__(self, other):
         return cmp((self.name, self.broker, self.perspective, self.cached), other)
-    
+
     def __hash__(self):
         return hash((self.name, self.broker, self.perspective, self.cached))
-    
+
     def __call__(self, *args, **kw):
         """(internal) action method.
         """

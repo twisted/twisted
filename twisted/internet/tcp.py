@@ -108,7 +108,7 @@ class Connection(abstract.FileDescriptor,
         abstract.FileDescriptor.connectionLost(self)
         # This used to close() the socket, but that doesn't *really* close it if
         # there's another reference to it in the TCP/IP stack, e.g. if it was
-        # was inherited by a subprocess. And we really do want to close the 
+        # was inherited by a subprocess. And we really do want to close the
         # connection.
         try:
             self.socket.shutdown(2)
@@ -263,7 +263,7 @@ class Connector:
 
     transportFactory = Client
     protocol = None
-    
+
     def __init__(self, host, portno, protocolFactory, timeout=30):
         self.host = host
         self.portno = portno
@@ -280,7 +280,7 @@ class Connector:
         proto = self.factory.buildProtocol((self.host, self.portno))
         self.transportFactory(self.host, self.portno, proto, self.timeout, self)
         self.protocol = proto
-    
+
     def getProtocol(self):
         """Get the current protocol instance."""
         return self.protocol
@@ -315,7 +315,7 @@ class Server(Connection):
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
         self.startReading()
         self.connected = 1
-    
+
     def __repr__(self):
         """A string representation of this connection.
         """

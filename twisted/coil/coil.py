@@ -97,37 +97,37 @@ class IConfigurator(components.Interface):
 
     I have an attribute, configurableClass, which is the class of objects
     I can configure.
-    
+
     I have a dictionary attribute, configTypes, that indicates what sort of
     objects I will allow to be configured.  It is a mapping of variable names
     to a list of [variable type, prompt, description].  Variable types may be
     either python type objects, classes, or objects describing a desired 'hint'
-    to the interface (such as 'boolean' or ['choice', 'a', 'b', 'c']). 
+    to the interface (such as 'boolean' or ['choice', 'a', 'b', 'c']).
     (XXX Still in flux.)
     """
-    
+
     def getInstance(self):
         """Return instance being configured."""
         raise NotImplementedError
-    
+
     def getType(self, name):
         """Get the type of a configuration variable."""
         raise NotImplementedError
-    
+
     def configDispensers(self):
         """Indicates what methods on me may be called with no arguments to create
         an instance of another configurable.  It returns a list of the form
         [(method name, interface, descString), ...].
         """
         raise NotImplementedError
-    
+
     def configure(self, dict):
         """Configure our instance, given a dict of properties.
-        
+
         Will raise a InvalidConfiguration exception on bad input.
         """
         raise NotImplementedError
-    
+
     def getConfiguration(self):
         """Return a mapping of attribute to value.
 
@@ -146,7 +146,7 @@ class IStaticCollection(ICollection):
     def listStaticEntities(self):
         """Return list of children."""
         raise NotImplementedError
-    
+
     def getStaticEntity(self, name):
         """Return a child given its name."""
         raise NotImplementedError
@@ -154,7 +154,7 @@ class IStaticCollection(ICollection):
 
 class IConfigCollection(ICollection):
     """A coil collection to which objects can be added.
-    
+
     Must have an attribute entityType, which is either an Interface
     which added objects must implement, or a StringType, IntType or FloatType.
     """
@@ -168,17 +168,17 @@ class Configurator:
     Custom handling of configuration-item-setting can be had by adding
     configure_%s(self, value) methods to my subclass. The default is to set
     an attribute on the instance that will be configured.
-    
+
     A method getConfiguration should return a mapping of attribute to value, for
     attributes mentioned in configTypes. The default is to get the attribute from
     the instance that is being configured.
     """
-    
+
     __implements__ = [IConfigurator]
-    
+
     # Change this attribute in subclasses.
     configurableClass = None
-    
+
     configTypes = {}
 
     configName = None
@@ -192,22 +192,22 @@ class Configurator:
     def configDispensers(self):
         """Return list of dispensers."""
         return []
-    
+
     def getInstance(self):
         """Return the instance being configured."""
         return self.instance
-    
+
     def getType(self, name):
         """Get the type of a configuration variable."""
         if self.configTypes.has_key(name):
             return self.configTypes[name][0]
         else:
             return None
-    
+
     def configure(self, dict):
         """Set a list of configuration variables."""
         items = dict.items()
-        
+
         for name, value in items:
             t = self.getType(name)
             if isinstance(t, types.TypeType):
@@ -234,7 +234,7 @@ class Configurator:
 
     def getConfiguration(self):
         """Return a mapping of key/value tuples describing my configuration.
-        
+
         By default gets the attributes from the instance being configured,
         override in subclasses if necessary.
         """
@@ -246,18 +246,18 @@ class Configurator:
 
 class StaticCollection(roots.Locked):
     """A roots.Locked that implement IStaticCollection."""
-    
+
     __implements__ = [IStaticCollection]
 
 
 class ConfigCollection(roots.Constrained):
     """A default implementation of IConfigCollection."""
-    
+
     __implements__ = [IConfigCollection]
-    
+
     # override in subclasses
     entityType = components.Interface
-    
+
     def entityConstraint(self, entity):
         if isinstance(self.entityType, types.TypeType) and isinstance(entity, self.entityType):
             return 1
@@ -276,11 +276,11 @@ class ConfigCollection(roots.Constrained):
 
 class CollectionWrapper:
     """Wrap an existing roots.Collection as a IConfigCollection."""
-    
+
     __implements__ = [IConfigCollection]
-    
+
     def __init__(self, collection):
         self._collection = collection
-    
+
     def __getattr__(self, attr):
         return getattr(self._collection, attr)

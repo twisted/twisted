@@ -219,13 +219,13 @@ class Log:
             return getattr(self.file, attr)
         else:
             raise AttributeError, attr
-    
+
     def __setattr__(self, attr, value):
         if attr in file_protocol:
             setattr(self.file, attr, value)
         else:
             self.__dict__[attr] = value
-    
+
     def write(self,bytes):
         if not bytes:
             return
@@ -248,7 +248,7 @@ try:
 except NameError:
     logOwner = LogOwner()
 
-    
+
 def _threaded_msg(stuff):
     loglock.acquire()
     real_msg(stuff)

@@ -45,10 +45,10 @@ class DummyManholeClient(LocalAsRemote):
 
 class DummyApp(app.Application):
     name = 'None'
-    
+
     def __init__(self):
         pass
-    
+
     def addService(self, serv):
         pass
 

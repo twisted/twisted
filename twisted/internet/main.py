@@ -248,7 +248,7 @@ def run(installSignalHandlers=1):
 
     This call \"never\" returns.  It is the main loop which runs delayed timers
     (see twisted.python.delay and addDelayed), and the I/O monitor (doSelect).
-    
+
     """
     global running
     running = 1
@@ -258,7 +258,7 @@ def run(installSignalHandlers=1):
 
     if installSignalHandlers:
         handleSignals()
-    
+
     for function in _whenRunning:
         function()
     _whenRunning[:] = []
@@ -348,7 +348,7 @@ def removeCallDuringShutdown(function):
 
 def callAfterShutdown(function):
     afterShutdown.append(function)
-    
+
 def removeCallAfterShutdown(function):
     duringShutdown.remove(function)
 

@@ -73,7 +73,7 @@ class Collection:
     I contain methods designed to represent collections that can be dynamically
     created.
     """
-    
+
     def __init__(self, entities=None):
         """Initialize me.
         """
@@ -187,7 +187,7 @@ class ConstraintViolation(Exception):
 
 class Constrained(Collection):
     """A collection that has constraints on its names and/or entities."""
-    
+
     def nameConstraint(self, name):
         """A method that determines whether an entity may be added to me with a given name.
 
@@ -223,9 +223,9 @@ class Constrained(Collection):
 
 class Locked(Constrained):
     """A collection that can be locked from adding entities."""
-    
+
     locked = 0
-    
+
     def lock(self):
         self.locked = 1
 

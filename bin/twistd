@@ -88,7 +88,7 @@ platformType = runtime.platform.getType()
 if platformType != 'java':
     # java can't chdir
     os.chdir(config.opts['rundir'])
-    
+
 register.checkLicenseFile()
 sys.path.append(config.opts['rundir'])
 
@@ -149,7 +149,7 @@ elif config.opts['nodaemon'] and not config.opts['logfile']:
 else:
     logPath = os.path.abspath(config.opts['logfile'] or 'twistd.log')
     logFile = logfile.LogFile(os.path.basename(logPath), os.path.dirname(logPath))
-    
+
     # rotate logs on SIGUSR1
     if os.name == "posix":
         import signal
