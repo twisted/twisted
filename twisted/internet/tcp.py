@@ -54,6 +54,7 @@ from twisted.python import log
 # Sibling Imports
 import abstract
 import main
+import task
 
 class Connection(abstract.FileDescriptor,
                  protocol.Transport,
@@ -154,7 +155,10 @@ class Client(Connection):
         self.doWrite = self.doConnect
         self.doRead = self.doConnect
         self.logstr = self.protocol.__class__.__name__+",client"
-        whenDone()
+        # slightly cheezy -- deferreds in pb expect you to go through a
+        # mainloop before you actually connect them.  connecting immediately
+        # screws up that logic.
+        task.schedule(whenDone)
         if timeout is not None:
             main.addTimeout(self.failIfNotConnected, timeout)
 
