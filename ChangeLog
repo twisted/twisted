@@ -1,3 +1,8 @@
+2002-9-20  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* admin/epyrun: Now it runs robustly in the face of unimportable
+	modules.
+
 2002-9-20  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Together with Moshe
