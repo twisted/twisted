@@ -31,7 +31,7 @@ follows:</p>
 
 <h2>Alternate tree names</h2>
 
-<p>By using <code>cvs checkout -d foo Twisted</code>, you can put the
+<p>By using <code>svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk otherdir</code>, you can put the
 workspace tree in a directory other than <q>Twisted</q>. I do this (with a
 name like <q>Twisted-Subversion</q>) to remind myself that this tree comes
 from Subversion and not from a released version (like <q>Twisted-1.0.5</q>).
@@ -152,17 +152,17 @@ the index file will be placed in <code>doc/howto/index.html</code>.</p>
 <pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml</pre>
 
 <p>To run hlint over a single Lore document, such as
-<code>doc/howto/cvs-dev.xhtml</code>, do the following. This is useful
+<code>doc/howto/policy/svn-dev.xhtml</code>, do the following. This is useful
 because the HTML conversion may bail without a useful explanation if it sees
 mismatched tags.</p>
 
-<pre class="shell">./bin/lore -n --output lint doc/howto/cvs-dev.xhtml</pre>
+<pre class="shell">./bin/lore -n --output lint doc/howto/policy/svn-dev.xhtml</pre>
 
 <p>To convert it to HTML (including markup, interpolation of examples,
 footnote processing, etc), do the following. The results will be placed in
-<code>doc/howto/cvs-dev.html</code>:</p>
+<code>doc/howto/policy/svn-dev.html</code>:</p>
 
-<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/cvs-dev.xhtml</pre>
+<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/policy/svn-dev.xhtml</pre>
 
 <p>Note that hyperlinks to other documents may not be quite right unless you
 include a <q>-l</q> argument to <code>bin/lore</code>. Links in the .xhtml
@@ -174,7 +174,7 @@ probably be wrong unless the correct base URL is provided to Lore.</p>
 
 <h2>Emacs</h2>
 
-<p>Check out the TwistedEmacs module (which lives in the same Subversion
+<p>Check out the TwistedEmacs module (TODO this is not true: which lives in the same Subversion
 repository, just do <q>cvs checkout TwistedEmacs</q> instead of <q>cvs
 checkout Twisted</q>). <code>twisted-dev.el</code> has several utility
 functions which make it easier to grep for methods, run test cases, process

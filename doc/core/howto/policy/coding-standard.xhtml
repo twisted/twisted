@@ -54,7 +54,7 @@
     Code which breaks the unit tests in a way that you could have prevented 
     by running them yourself, however, may be grounds for anything from 
     merciless taunting through revertion of the breakage to revocation 
-    of cvs commit privileges.</p>
+    of SVN commit privileges.</p>
 
     <p>It is strongly suggested that developers learn to use Emacs, and use 
     the <code>twisted-dev.el</code> file included in the TwistedEmacs 
@@ -207,7 +207,7 @@ def foo2bar(f):
       to others.</li>
 
       <li>Write a file in <code class="shell">bin/</code> which contains the
-          Twisted running-from-CVS header, and ending with 
+          Twisted running-from-SVN header, and ending with 
 
 <pre class="python">
 from twisted.scripts.yourmodule import run
@@ -222,7 +222,7 @@ run()
       <code class="shell">setup.py</code>.</li>
     </ol>
 
-    <p>This will insure your program will work correctly for users of CVS,
+    <p>This will insure your program will work correctly for users of SVN,
     Windows releases and Debian packages.</p>
 
     <h2>Standard Library Extension Modules</h2>
@@ -466,7 +466,7 @@ def callRemote(self, _name, *args, **kw):
     whatever you like here.</p>
 
     <p>Checkin messages should be about <em>what</em>, not <em>how</em>: we
-    can get how from CVS diff. Explain reasons for checkins, and what they
+    can get how from SVN diff. Explain reasons for checkins, and what they
     affect.</p>
 
     <p>Each commit should be a single logical change, which is internally
