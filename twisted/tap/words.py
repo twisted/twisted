@@ -35,6 +35,9 @@ for bott in botTypeList:
 class Options(usage.Options):
     synopsis = "Usage: mktap words [options]"
     optParameters = [["irc", "i", "6667", "Port to run the IRC server on."],
+                     ["irchost", "h", '', "Host to bind IRC server to."],
+                     ["wordshost", "b", '', "Host to bind Words service to."],
+                     ["webhost", "s", '', "Host to bind web interface to."],
                      ["port", "p", str(pb.portno),
                       "Port to run the Words service on."],
                      ["web", "w", "8080",
@@ -73,6 +76,6 @@ def updateApplication(app, config):
         for username, pw in config.users:
             svc.createPerspective(username).makeIdentity(pw)
 
-    app.listenTCP(int(config.opts['port']), bkr)
-    app.listenTCP(int(config.opts['irc']), irc)
-    app.listenTCP(int(config.opts['web']), adm)
+    app.listenTCP(int(config.opts['port']), bkr, interface=config['wordshost'])
+    app.listenTCP(int(config.opts['irc']), irc, interface=config['irchost'])
+    app.listenTCP(int(config.opts['web']), adm, interface=config['webhost'])
