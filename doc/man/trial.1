@@ -2,7 +2,7 @@
 .SH NAME
 trial \- run unit tests
 .SH SYNOPSIS
-.B trial [-b] [-v|-o|-j] [-r \fIreactor\fR] [-l \fIlogfile\fR] [-m \fImodule\fR [-m \fImodule\fR ... ]] [-p \fIpackage\fR [-p \fIpackage\fR ... ]] \fIfile\fR|\fImodule\fR|\fIpackage\fR|\fITestCase\fR|\fItestMethod ...
+.B trial [-b] [-v|-o|-j]\fR [--coverage \fIcoverdir\fR] [-r \fIreactor\fR] [-l \fIlogfile\fR] [-m \fImodule\fR [-m \fImodule\fR ... ]] [-p \fIpackage\fR [-p \fIpackage\fR ... ]] \fIfile\fR|\fImodule\fR|\fIpackage\fR|\fITestCase\fR|\fItestMethod ...
 .PP
 .B trial --help
 .SH DESCRIPTION
@@ -50,6 +50,10 @@ Log exceptions (and other things) to the given logfile.
 \fB-r\fR, \fB--reactor\fR <reactor>
 Use this reactor for running the tests. The reactor names are the same as
 those accepted by twistd: c, qt, gtk2, and so on.
+.TP
+\fB--coverage\fR <coverdir>
+Generate coverage information in the given directory (relative to 
+_trial_temp). Requires Python 2.3.3.
 .TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in the Python debugger. Also does post-mortem
