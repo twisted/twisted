@@ -18,7 +18,7 @@
 #
 
 import types 
-from twisted.python import components, reflect
+from twisted.python import components, reflect, log
 
 class ITestRunner(components.Interface):
     def getTestClass(self):
@@ -104,6 +104,7 @@ class TestClassRunner:
         self.testCase._resultReporter_ = output
         self.testCase.setUpClass()
         for methodName in self.methodNames:
+            log.msg("--> %s.%s <--" % (self.testCase.__class__, methodName))
             method = getattr(self.testCase, methodName)
             output.reportStart(self.testClass, method)
             results = unittest.Tester(self.testClass, self.testCase,
