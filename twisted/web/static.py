@@ -40,7 +40,9 @@ class DirectoryListing(html.Interface):
     def directoryContents(self):
         io = StringIO.StringIO()
         io.write("<UL>\n")
-        for path in os.listdir(self.path):
+        directory = os.listdir(self.path)
+        directory.sort()
+        for path in directory:
             io.write('<LI><A HREF="%s">%s</a>' % (path,path))
         io.write("</UL>\n")
         return io.getvalue()
