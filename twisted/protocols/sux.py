@@ -90,7 +90,7 @@ class XMLParser(Protocol):
             if 'UTF-16' in self.encodings or 'UCS-2' in self.encodings:
                 assert not len(data) & 1, 'UTF-16 must come in pairs for now'
             for encoding in self.encodings:
-                data = data.decode(encoding)
+                data = unicode(data, encoding)
         curState = self.state
         stateFn = getattr(self, 'do_' + curState)
         lineno, colno = self.lineno, self.colno
