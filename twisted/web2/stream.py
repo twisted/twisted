@@ -720,8 +720,10 @@ class StreamProducer:
             return
         if data is None:
             # The end.
-            self.consumer.unregisterProducer()
-            self.finishedCallback.callback(None)
+            if self.consumer is not None:
+                self.consumer.unregisterProducer()
+            if self.finishedCallback is not None:
+                self.finishedCallback.callback(None)
             self.finishedCallback = self.deferred = self.consumer = self.stream = None
             return
         
@@ -742,6 +744,7 @@ class StreamProducer:
             self.consumer.unregisterProducer()
         if self.finishedCallback is not None:
             self.finishedCallback.errback(failure)
+            self.finishedCallback = None
         self.paused = True
         if self.stream is not None:
             self.stream.close()
