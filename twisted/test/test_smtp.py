@@ -375,3 +375,25 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
 
         # We could do with some asserts here, but just getting to here
         # with no exceptions is an almost-good test of the code.
+
+class SMTPHelperTestCase(unittest.TestCase):
+    def testMessageID(self):
+        d = {}
+        for i in range(1000):
+            m = smtp.messageid('testcase')
+            self.failIf(m in d)
+            d[m] = None
+    
+    def testQuoteAddr(self):
+        cases = [
+            ['user@host.name', '<user@host.name>'],
+            ['"User Name" <user@host.name>', '<user@host.name>'],
+            [smtp.Address('someguy@someplace'), '<someguy@someplace>'],
+        ]
+        
+        for (c, e) in cases:
+            self.assertEquals(smtp.quoteaddr(c), e)
+
+    def testUser(self):
+        u = smtp.User('user@host', 'helo.host.name', None, None)
+        self.assertEquals(str(u), 'user@host')

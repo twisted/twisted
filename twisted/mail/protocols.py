@@ -21,24 +21,38 @@ from twisted.protocols import pop3
 from twisted.protocols import smtp
 from twisted.internet import protocol
 from twisted.internet import defer
+from twisted.copyright import longversion
+from twisted.python import log
 
 from twisted import cred
 import twisted.cred.error
 import twisted.cred.credentials
 
-class DomainSMTP(smtp.SMTP):
-    """SMTP server that uses twisted.mail service's domains."""
+class DomainMixin:
+    """A server that uses twisted.mail service's domains."""
     
     service = None
+    protocolName = None
+    domainMixinBase = None
+
+    def receivedHeader(self, helo, origin, recipients):
+        from_ = "from %s ([%s])" % (helo[0], helo[1])
+        by = "by %s with %s (%s)" % (
+            self.host, self.protocolName, longversion
+        )
+        for_ = "for %s; %s" % (' '.join(map(str, recipients)), smtp.rfc822date())
+        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
     
     def validateTo(self, user):
-        """Determine whether or not a given user exists.
-        
-        @return: True if the user exists, false otherwise.
-        """
-        if not self.service.domains.has_key(user.dest.domain):
-            return defer.fail(smtp.SMTPBadRcpt(user))
-        return self.service.domains[user.dest.domain].exists(user)
+        return defer.maybeDeferred(
+            self.service.domains[user.dest.domain].exists,
+            user
+        ).addCallback(lambda result: user)
+
+    def validateFrom(self, helo, origin):
+        if not helo:
+            raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
+        return origin
 
     def startMessage(self, users):
         ret = []
@@ -46,20 +60,35 @@ class DomainSMTP(smtp.SMTP):
             ret.append(self.service.domains[user.dest.domain].startMessage(user))
         return ret
 
+    def connectionLost(self, reason):
+        log.msg('Disconnected from %s' % (self.transport.getPeer()[1:],))
+        self.domainMixinBase.connectionLost(self, reason)
+
+class DomainSMTP(DomainMixin, smtp.SMTP):
+    protocolName = 'smtp'
+    domainMixinBase = smtp.SMTP
+
+class DomainESMTP(DomainMixin, smtp.ESMTP):
+    protocolName = 'esmtp'
+    domainMixinBase = smtp.ESMTP
 
 class SMTPFactory(smtp.SMTPFactory):
     """A protocol factory for SMTP."""
+
+    protocol = DomainSMTP
 
     def __init__(self, service):
         self.service = service
     
     def buildProtocol(self, addr):
-        p = DomainSMTP()
+        log.msg('Connection from %s' % (addr,))
+        p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.service = self.service
-        p.factory = self
         return p
 
-
+class ESMTPFactory(SMTPFactory):
+    protocol = DomainESMTP
+    
 class VirtualPOP3(pop3.POP3):
     """Virtual hosting POP3."""
 
@@ -104,13 +133,15 @@ class VirtualPOP3(pop3.POP3):
 class POP3Factory(protocol.ServerFactory):
     """POP3 protocol factory."""
 
+    protocol = VirtualPOP3
+    service = None
+
     def __init__(self, service):
         self.service = service
     
     def buildProtocol(self, addr):
-        p = VirtualPOP3()
+        p = protocol.ServerFactory.buildProtocol(self, addr)
         p.service = self.service
-        p.factory = self
         return p
 
 #

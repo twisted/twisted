@@ -29,42 +29,30 @@ accepting mail for a small set of domains.
 The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 """
-from twisted.python import log, failure
-from twisted.mail import relay, mail, bounce
-from twisted.internet import protocol, app
+
+from twisted.python import log
+from twisted.python import failure
+from twisted.mail import relay
+from twisted.mail import mail
+from twisted.mail import bounce
+from twisted.internet import protocol
+from twisted.internet import app
 from twisted.protocols import smtp
-import os, string, time
+
+import rfc822
+import os
+import string
+import time
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-class SMTPManagedRelayerFactory(protocol.ClientFactory):
-
-    def __init__(self, messages, manager):
-        self.messages = messages
-        self.manager = manager
-
-    def buildProtocol(self, connection):
-        protocol = SMTPManagedRelayer(self.messages, self.manager)
-        protocol.factory = self
-        return protocol
-
-    def clientConnectionFailed(self, connector, reason):
-        """called when connection could not be made
-
-        our manager should be notified that this happened,
-        it might prefer some other host in that case"""
-        self.manager.notifyNoConection(self)
-        self.manager.notifyDone(self)
-
-
-
-class SMTPManagedRelayer(relay.SMTPRelayer):
+class ManagedRelayerMixin:
     """SMTP Relayer which notifies a manager
 
-    Notify the manager about successful main, failed mail
+    Notify the manager about successful mail, failed mail
     and broken connections
     """
 
@@ -77,12 +65,8 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         manager should support .notifySuccess, .notifyFailure
         and .notifyDone
         """
-        relay.SMTPRelayer.__init__(self, messages)
+        self.managedRelayMixinBase.__init__(self, messages)
         self.manager = manager
-
-    #def lineReceived(self, line):
-    #    log.msg("managed -- got %s" % line)
-    #    relay.SMTPRelayer.lineReceived(self, line)
 
     def sentMail(self, code, resp, numOk, addresses, log):
         """called when e-mail has been sent
@@ -104,6 +88,34 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         """
         self.manager.notifyDone(self.factory)
 
+class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
+    managedRelayMixinBase = relay.SMTPRelayer
+
+class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
+    managedRelayMixinBase = relay.ESMTPRelayer
+
+class SMTPManagedRelayerFactory(protocol.ClientFactory):
+    protocol = SMTPManagedRelayer
+
+    def __init__(self, messages, manager):
+        self.messages = messages
+        self.manager = manager
+
+    def buildProtocol(self, connection):
+        protocol = self.protocol(self.messages, self.manager)
+        protocol.factory = self
+        return protocol
+
+    def clientConnectionFailed(self, connector, reason):
+        """called when connection could not be made
+
+        our manager should be notified that this happened,
+        it might prefer some other host in that case"""
+        self.manager.notifyNoConnection(self)
+        self.manager.notifyDone(self)
+
+class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
+    protocol = ESMTPManagedRelayer
 
 class Queue:
     """A queue of ougoing emails."""
@@ -142,33 +154,36 @@ class Queue:
         return self.waiting.keys()
 
     def hasWaiting(self):
-        return self.waiting
+        return len(self.waiting) > 0
 
     def getRelayed(self):
         return self.relayed.keys()
 
-    def relaying(self, message):
+    def setRelaying(self, message):
         del self.waiting[message]
         self.relayed[message] = 1
 
-    def waiting(self, message):
+    def setWaiting(self, message):
         del self.relayed[message]
         self.waiting[message] = 1
 
     def addMessage(self, message):
-        if not self.relayed.has_key(message):
+        if message not in self.relayed:
             self.waiting[message] = 1
 
     def done(self, message):
         """Remove message to from queue."""
-        os.remove(message+'-D')
-        os.remove(message+'-H')
         message = os.path.basename(message)
+        os.remove(self.getPath(message) + '-D')
+        os.remove(self.getPath(message) + '-H')
         del self.relayed[message]
 
     def getPath(self, message):
         """Get the path in the filesystem of a message."""
         return os.path.join(self.directory, message)
+
+    def getEnvelope(self, message):
+        return pickle.load(self.getEnvelopeFile(message))
 
     def getEnvelopeFile(self, message):
         return open(os.path.join(self.directory, message+'-H'), 'rb')
@@ -196,16 +211,30 @@ class SmartHostSMTPRelayingManager:
 
     Someone should press .checkState periodically
     """
+    
+    factory = SMTPManagedRelayerFactory
+    
+    PORT = 25
 
-    def __init__(self, queue, smartHostAddr, maxConnections=1, 
+    def __init__(self, queue, smartHostAddr=None, maxConnections=1, 
                  maxMessagesPerConnection=10):
         """initialize
+        
+        @type queue: Any implementor of C{IQueue}
+        @param queue: The object used to queue messages on their way to
+        delivery.
 
-        directory should be a directory full of pickles
-        smartHostIP is the IP for the smart host
-        maxConnections is the number of simultaneous relayers
-        maxMessagesPerConnection is the maximum number of messages
-        a relayer will be given responsibility for.
+        @type smartHostAddr: C{(str, int)}
+        @param smartHostAddr: The address for the relay to use, or None to
+        lookup MX records and deliver messages appropriately.
+        
+        @type maxConnections: C{int}
+        @param maxConnections: The maximum number of SMTP connections to
+        allow to be opened at any given time.
+        
+        @type maxMessagesPerConnection: C{int}
+        @param maxMessagesPerConnection: The maximum number of messages a
+        relayer will be given responsibility for.
 
         Default values are meant for a small box with 1-5 users.
         """
@@ -214,6 +243,9 @@ class SmartHostSMTPRelayingManager:
         self.smartHostAddr = smartHostAddr
         self.managed = {} # SMTP clients we're managing
         self.queue = queue
+
+        if self.smartHostAddr is None:
+            self.mxcalc = MXCalculator()
 
     def _finish(self, relay, message):
         self.managed[relay].remove(os.path.basename(message))
@@ -252,8 +284,8 @@ class SmartHostSMTPRelayingManager:
         unmark all pending messages under this relay's resposibility
         as being relayed, and remove the relay.
         """
-        for message in self.managed[relay]:
-            self.queue.waiting[message] = 1
+        for message in self.managed.get(relay, ()):
+            self.queue.setWaiting(message)
         del self.managed[relay]
 
     def notifyNoConnection(self, relay):
@@ -281,22 +313,66 @@ class SmartHostSMTPRelayingManager:
         a new relay
         """
         self.queue.readDirectory() 
-        if (len(self.managed) >= self.maxConnections or 
-            not self.queue.hasWaiting()):
+        if (len(self.managed) >= self.maxConnections):
             return
+        if  not self.queue.hasWaiting():
+            return
+
+        if self.smartHostAddr is not None:
+            self._checkState()
+        else:
+            self._checkStateMX()
+    
+    def _checkState(self):
         nextMessages = self.queue.getWaiting()
         nextMessages = nextMessages[:self.maxMessagesPerConnection]
         toRelay = []
         for message in nextMessages:
             toRelay.append(self.queue.getPath(message))
-            self.queue.relaying(message)
-        factory = SMTPManagedRelayerFactory(toRelay, self)
+            self.queue.setRelaying(message)
+
+        factory = self.factory(toRelay, self)
         self.managed[factory] = nextMessages
         
-        from twisted.internet import reactor
-        reactor.connectTCP(self.smartHostAddr[0], self.smartHostAddr[1],
-                           factory)
+        try:
+            self._cbExchange(
+                self.smartHostAddr[0], self.smartHostAddr[1], factory
+            )
+        except:
+            log.err()
 
+    def _checkStateMX(self):
+        nextMessages = self.queue.getWaiting()
+        nextMessages.reverse()
+        
+        exchanges = {}
+        for msg in nextMessages:
+            from_, to = self.queue.getEnvelope(msg)
+            name, addr = rfc822.parseaddr(to)
+            parts = addr.split('@', 1)
+            if len(parts) != 2:
+                log.err("Illegal message destination: " + to)
+                continue
+            domain = parts[1]
+            
+            self.queue.setRelaying(msg)
+            exchanges.setdefault(domain, []).append(self.queue.getPath(msg))
+            if len(exchanges) >= (self.maxConnections - len(self.managed)):
+                break
+        
+        for (domain, msgs) in exchanges.iteritems():
+            factory = self.factory(msgs, self)
+            self.managed[factory] = map(os.path.basename, msgs)
+            self.mxcalc.getMX(domain).addCallback(lambda mx: str(mx.exchange)
+            ).addCallback(self._cbExchange, self.PORT, factory
+            ).addErrback(log.err)
+
+    def _cbExchange(self, address, port, factory):
+        from twisted.internet import reactor
+        reactor.connectTCP(address, port, factory)
+
+class SmartHostESMTPRelayingManager(SmartHostSMTPRelayingManager):
+    factory = ESMTPManagedRelayerFactory
 
 class RelayStateHelper(app.ApplicationService):
     """A helper to poke SmartHostSMTPRelayingManager.checkState()"""
@@ -322,32 +398,43 @@ class RelayStateHelper(app.ApplicationService):
             self.loopCall = None
 
 
+
 class MXCalculator:
+    timeOutBadMX = 60 * 60 # One hour
 
-    timeOutBadMX = 60*60 # One hour
-
-    def __init__(self):
+    def __init__(self, resolver = None):
         self.badMXs = {}
+        if resolver is None:
+            from twisted.names.client import theResolver as resolver
+        self.resolver = resolver
+            
 
     def markBad(self, mx):
-        self.badMXs[mx] = time.time()+self.timeOutBadMX
+        self.badMXs[mx] = time.time() + self.timeOutBadMX
 
     def markGood(self, mx):
-        del self.badMXs[mx]
+        try:
+            del self.badMXs[mx]
+        except KeyError:
+            pass
 
-    def getMX(self, deferred, domain):
-        "TBD"
+    def getMX(self, domain):
+        return self.resolver.lookupMailExchange(domain
+        ).addCallback(self._filterRecords
+        ).addCallbacks(self._cbMX, log.err)
 
-    def getMXAnswer(self, deferred, answers):
+    def _filterRecords(self, records):
+        answers = records[0]
+        return [a.payload for a in answers]
+
+    def _cbMX(self, answers):
         if not answers:
-            deferred.errback(failure.Failure(IOError("No MX found")))
+            return failure.Failure(IOError("No MX found"))
         for answer in answers:
-            if not self.badMXs.has_key(answer):
-                deferred.callback(answer)
-                return
+            if answer not in self.badMXs:
+                return answer
             t = time.time() - self.badMXs[answer]
             if t > 0:
                 del self.badMXs[answer]
-                deferred.callback(answer)
-                return
-        deferred.callback(answers[0])
+                return answer
+        return answer[0]

@@ -156,7 +156,7 @@ class MaildirMailbox(pop3.Mailbox):
                 else:
                     ret.append(0)
             return ret
-        return os.stat(self.list[i])[stat.ST_SIZE]
+        return self.list[i] and os.stat(self.list[i])[stat.ST_SIZE] or 0
 
     def getMessage(self, i):
         """Return an open file-pointer to a message
@@ -303,7 +303,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             mbox = StringListMailbox([INTERNAL_ERROR])
         else:
             mbox = MaildirMailbox(os.path.join(self.root, avatarId))
-                
+        
         return (
             pop3.IMailbox,
             mbox,

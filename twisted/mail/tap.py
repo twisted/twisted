@@ -42,7 +42,14 @@ class Options(usage.Options):
         ["relay", "r", None, 
             "relay mail we do not know how to handle to this IP,"
             " using the given path as a queue directory"],
-        ["certificate", "c", None, "Certificate file to use for SSL connections"]
+        ["certificate", "c", None, "Certificate file to use for SSL connections"],
+        ["smartrelay", "R", None, 
+            "Relay messages according to their envelope 'To', using the given"
+            "path as a queue directory."]
+    ]
+    
+    optFlags = [
+        ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"]
     ]
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
@@ -114,15 +121,30 @@ class Options(usage.Options):
             raise usage.UsageError("You cannot disable all protocols")
 
 def updateApplication(app, config):
-    if config['relay']:
-        addr, dir = config['relay'].split('=', 1)
-        ip, port = addr.split(',', 1)
-        port = int(port)
+    if config['esmtp']:
+        rmType = relaymanager.SmartHostESMTPRelayingManager
+        smtpFactory = config.service.getESMTPFactory
+    else:
+        rmType = relaymanager.SmartHostSMTPRelayingManager
+        smtpFactory = config.service.getSMTPFactory
+
+    if config['relay'] or config['smartrelay']:
+        address = None
+        if config['relay']:
+            addr, dir = config['relay'].split('=', 1)
+            ip, port = addr.split(',', 1)
+            port = int(port)
+            address = (ip, port)
+        else:
+            dir = config['smartrelay']
+            if not os.path.isdir(dir):
+                os.mkdir(dir)
         config.service.setQueue(relaymanager.Queue(dir))
         default = relay.DomainQueuer(config.service)
-        manager = relaymanager.SmartHostSMTPRelayingManager(config.service.queue, (ip, port))
+        manager = rmType(config.service.queue, address)
         helper = relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', app)
         config.service.domains.setDefaultDomain(default)
+
     
     if config['pop3']:
         app.listenTCP(config['pop3'], config.service.getPOP3Factory())
@@ -134,4 +156,4 @@ def updateApplication(app, config):
             SSLContextFactory(config['certificate'])
         )
     if config['smtp']:
-        app.listenTCP(config['smtp'], config.service.getSMTPFactory())
+        app.listenTCP(config['smtp'], smtpFactory())

@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_mail -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -30,23 +30,6 @@ import protocols
 # System imports
 import os
 
-class IDomain(components.Interface):
-    """An email domain."""
-
-    def exists(self, user):
-        """Check whether or not the specified user exists in this domain."""
-
-    def addUser(self, user, password):
-        """Add a username/password to this domain."""
-    
-    def startMessage(self, user):
-        """Create and return a new message to be delivered to the given user.
-        """
-
-    def getCredentialsCheckers(self):
-        """Return a list of ICredentialsChecker implementors for this domain.
-        """
-
 class DomainWithDefaultDict:
     '''Simulate a dictionary with a default value for non-existing keys.
     '''
@@ -59,6 +42,13 @@ class DomainWithDefaultDict:
     
     def has_key(self, name):
         return 1
+
+    def fromkeys(klass, keys, value=None):
+        d = klass()
+        for k in keys:
+            d[k] = value
+        return d
+    fromkeys = classmethod(fromkeys)
 
     def __contains__(self, name):
         return 1
@@ -105,6 +95,9 @@ class DomainWithDefaultDict:
     def values(self):
         return self.domains.values()
 
+    def items(self):
+        return self.domains.items()
+
     def popitem(self):
         return self.domains.popitem()
     
@@ -117,6 +110,48 @@ class DomainWithDefaultDict:
     def setdefault(self, key, default):
         return self.domains.setdefault(key, default)
 
+class IDomain(components.Interface):
+    """An email domain."""
+
+    def exists(self, user):
+        """
+        Check whether or not the specified user exists in this domain.
+        
+        @type user: C{twisted.protocols.smtp.User}
+        @param user: The user to check
+        
+        @rtype: C{twisted.protocols.smtp.User}
+        @return: C{user} or a C{Deferred} whose callback will be
+        passed C{user}.
+        
+        @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
+        user does not exist in this domain.
+        """
+
+    def willRelay(self, user, protocol):
+        """Check whether or not we will pass on a message
+        
+        @type user: C{twisted.protocols.smtp.User}
+        @param user: The user for whom the message is destined.
+        
+        @type protocol: C{twisted.internet.protocol.Protocol}
+        @param protocol: The connection asking for the message to be relayed.
+        
+        @rtype: C{bool}
+        @return: True if we will relay, false otherwise.
+        """
+
+    def addUser(self, user, password):
+        """Add a username/password to this domain."""
+    
+    def startMessage(self, user):
+        """Create and return a new message to be delivered to the given user.
+        """
+
+    def getCredentialsCheckers(self):
+        """Return a list of ICredentialsChecker implementors for this domain.
+        """
+
 class BounceDomain:
     """A domain in which no user exists. 
 
@@ -126,9 +161,19 @@ class BounceDomain:
     __implements__ = (IDomain,)
     
     def exists(self, user):
-        """No user exists in a BounceDomain -- always return 0
-        """
-        return defer.fail(smtp.SMTPBadRcpt(user))
+        raise smtp.SMTPBadRcpt(user)
+    
+    def willRelay(self, user, protocol):
+        return False
+    
+    def addUser(self, user, password):
+        pass
+    
+    def startMessage(self, user):
+        raise AssertionError, "No code should ever call this method for any reason"
+    
+    def getCredentialsCheckers(self):
+        return []
 
 class FileMessage:
     """A file we can write an email too."""
@@ -146,9 +191,7 @@ class FileMessage:
     def eomReceived(self):
         self.fp.close()
         os.rename(self.name, self.finalName)
-        deferred = defer.Deferred()
-        deferred.callback(self.finalName)
-        return deferred
+        return defer.succeed(self.finalName)
 
     def connectionLost(self):
         self.fp.close()
@@ -157,6 +200,10 @@ class FileMessage:
 
 class MailService(service.Service):
     """An email service."""
+
+    queue = None
+    domains = None
+    portals = None
 
     def __init__(self, name):
         service.Service.__init__(self, name)
@@ -168,6 +215,9 @@ class MailService(service.Service):
 
     def getSMTPFactory(self):
         return protocols.SMTPFactory(self)
+
+    def getESMTPFactory(self):
+        return protocols.ESMTPFactory(self)
 
     def setQueue(self, queue):
         """Set the queue for outgoing emails."""

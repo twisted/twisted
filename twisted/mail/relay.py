@@ -41,9 +41,9 @@ class DomainQueuer:
         Call overridable willRelay method
         """
         if self.willRelay(user.protocol):
-            return defer.succeed(user)
-        return defer.fail(smtp.SMTPBadRcpt(user))
-
+            return user
+        raise smtp.SMTPBadRcpt(user)
+    
     def willRelay(self, protocol):
         """Check whether we agree to relay
 
@@ -63,11 +63,14 @@ class DomainQueuer:
             envelopeFile.close()
         return smtpMessage
 
+class RelayerMixin:
 
-class SMTPRelayer(smtp.SMTPClient):
+    # XXX - This is -totally- bogus
+    # It opens about a -hundred- -billion- files
+    # and -leaves- them open!
 
     def __init__(self, messagePaths):
-        smtp.SMTPClient.__init__(self,smtp.DNSNAME)
+        self.relayerMixinBase.__init__(self, smtp.DNSNAME)
         self.messages = []
         self.names = []
         for message in messagePaths:
@@ -80,16 +83,20 @@ class SMTPRelayer(smtp.SMTPClient):
             messageContents.append(fp)
             self.messages.append(messageContents)
             self.names.append(message)
-
+    
     def getMailFrom(self):
         if not self.messages:
             return None
         return self.messages[0][0]
 
     def getMailTo(self):
+        if not self.messages:
+            return None
         return [self.messages[0][1]]
 
     def getMailData(self):
+        if not self.messages:
+            return None
         return self.messages[0][2]
 
     def sentMail(self, code, resp, numOk, addresses, log):
@@ -103,3 +110,9 @@ class SMTPRelayer(smtp.SMTPClient):
             os.remove(self.names[0]+'-H')
         del self.messages[0]
         del self.names[0]
+
+class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
+    relayerMixinBase = smtp.SMTPClient
+
+class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
+    relayerMixinBase = smtp.ESMTPClient

@@ -180,6 +180,12 @@ class Address:
 
     Source routes are stipped and ignored, UUCP-style bang-paths
     and %-style routing are not parsed.
+    
+    @type domain: C{str}
+    @ivar domain: The domain within which this address resides.
+    
+    @type local: C{str}
+    @ivar local: The local (\"user\") portion of this address.
     """
 
     tstring = re.compile(r'''( # A string of
@@ -259,7 +265,7 @@ class Address:
         return ''.join(res)
 
     def __str__(self):
-        return '%s%s' % (self.local, self.domain and ("@" + self.domain) or "")
+        return '@'.join((self.local, self.domain))
 
     def __repr__(self):
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
@@ -328,9 +334,9 @@ class SMTP(basic.LineReceiver):
     
     def __init__(self):
         self.mode = COMMAND
-        self.__from = None
-        self.__helo = None
-        self.__to = []
+        self._from = None
+        self._helo = None
+        self._to = []
 
     def timedout(self):
         self.timeoutID = None
@@ -394,9 +400,9 @@ class SMTP(basic.LineReceiver):
 
     def do_HELO(self, rest):
         peer = self.transport.getPeer()[1]
-        self.__helo = (rest, peer)
-        self.__from = None
-        self.__to = []
+        self._helo = (rest, peer)
+        self._from = None
+        self._to = []
         self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, peer))
 
     def do_QUIT(self, rest):
@@ -418,11 +424,11 @@ class SMTP(basic.LineReceiver):
                          $''',re.I|re.X)
 
     def do_MAIL(self, rest):
-        if self.__from:
+        if self._from:
             self.sendCode(503,"Only one sender per message, please")
             return
         # Clear old recipient list
-        self.__to = []
+        self._to = []
         m = self.mail_re.match(rest)
         if not m:
             self.sendCode(501, "Syntax error")
@@ -435,8 +441,8 @@ class SMTP(basic.LineReceiver):
             return
             
         try:
-            self.validateFrom(self.__helo, addr).addCallbacks(
-                self._cbFromValidate, self._ebValidate)
+            defer.maybeDeferred(self.validateFrom, self._helo, addr
+            ).addCallbacks(self._cbFromValidate, self._ebValidate)
         except TypeError:
             if self.validateFrom.func_code.co_argcount == 5:
                 warnings.warn(
@@ -448,7 +454,7 @@ class SMTP(basic.LineReceiver):
                      self.validateFrom.func_code.co_name,
                      self.__class__.__name__),
                     category=DeprecationWarning,stacklevel=2)
-                self.validateFrom(self.__helo, addr, self._cbFromValidate,
+                self.validateFrom(self._helo, addr, self._cbFromValidate,
                                   self._fromInvalid)
             else:
                 raise
@@ -458,23 +464,27 @@ class SMTP(basic.LineReceiver):
         self.sendCode(code,msg)
 
     def _cbFromValidate(self, from_, code=250, msg='Sender address accepted'):
-        try:
-            from_, code, msg = from_
-        except TypeError:
-            pass
-        self.__from = from_
+        if from_ is None:
+            warnings.warn(
+                "Returning None from validateFrom is deprecated.  "
+                "Raise smtp.SMTPBadSender instead", DeprecationWarning
+            )
+            self.sendCode(550, 'Cannot receive for specified address')
+        self._from = from_
         self.sendCode(code, msg)
 
     def _ebValidate(self, failure):
+        log.err(failure)
         if failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
             self.sendCode(
                 451,
-                'Requested action aborted: local error in processing')
+                'Requested action aborted: local error in processing'
+            )
 
     def do_RCPT(self, rest):
-        if not self.__from:
+        if not self._from:
             self.sendCode(503, "Must have sender before recipient")
             return
         m = self.rcpt_re.match(rest)
@@ -483,14 +493,14 @@ class SMTP(basic.LineReceiver):
             return
 
         try:
-            user = User(m.group('path'), self.__helo, self, self.__from)
+            user = User(m.group('path'), self._helo, self, self._from)
         except AddressError, e:
             self.sendCode(553, str(e))
             return
 
         try:
-            self.validateTo(user).addCallbacks(
-                self._cbToValidate, self._ebValidate)
+            defer.maybeDeferred(self.validateTo, user
+            ).addCallbacks(self._cbToValidate, self._ebValidate)
         except TypeError:
             if self.validateTo.func_code.co_argcount == 4:
                 warnings.warn(
@@ -511,25 +521,24 @@ class SMTP(basic.LineReceiver):
         "For compatibility"
         self.sendCode(code, msg)
 
-    def _cbToValidate(self, to, code=250, msg='Address recognized'):
-        if to is not None:
-            try:
-                to, code, msg = to
-            except TypeError:
-                pass
-            self.__to.append(to)
-            self.sendCode(code, msg)
-        else:
+    def _cbToValidate(self, to, code=250, msg='Recipient address accepted'):
+        if to is None:
+            warnings.warn(
+                "Returning None from validateTo is deprecated.  "
+                "Raise smtp.SMTPBadRcpt instead", DeprecationWarning
+            )
             self.sendCode(550, 'Cannot receive for specified address')
+        self._to.append(to)
+        self.sendCode(code, msg)
 
     def do_DATA(self, rest):
-        if self.__from is None or not self.__to:  
+        if self._from is None or not self._to:  
             self.sendCode(503, 'Must have valid receiver and originator')
             return
         self.mode = DATA
-        helo, origin, recipients = self.__helo, self.__from, self.__to
-        self.__from = None
-        self.__to = []
+        helo, origin, recipients = self._helo, self._from, self._to
+        self._from = None
+        self._to = []
         self.datafailed = None
         try:
             self.__messages = self.startMessage(recipients)
@@ -567,8 +576,8 @@ class SMTP(basic.LineReceiver):
             self.timeoutID.cancel()
 
     def do_RSET(self, rest):
-        self.__from = None
-        self.__to = []
+        self._from = None
+        self._to = []
         self.sendCode(250, 'I remember nothing.')
 
     def dataLineReceived(self, line):
@@ -632,18 +641,64 @@ class SMTP(basic.LineReceiver):
 
 
     # overridable methods:
-    def receivedHeader(self, helo, origin, recipents):
+    def receivedHeader(self, helo, origin, recipients):
+        """
+        Generate the Received header for a message
+        
+        @type helo: C{(str, str)}
+        @param helo: The argument to the HELO command and the client's IP
+        address.
+
+        @type origin: C{Address}
+        @param origin: The address the message is from
+        
+        @type recipients: C{list} of C{str}
+        @param recipients: A list of the addresses for which this message
+        is bound.
+        
+        @rtype: C{str}
+        @return: The full "Received" header string.
+        """
         return "Received: From %s ([%s]) by %s; %s" % (
             helo[0], helo[1], self.host, rfc822date())
     
     def validateFrom(self, helo, origin):
+        """
+        Validate the address from which the message originates.
+        
+        @type helo: C{(str, str)}
+        @param helo: The argument to the HELO command and the client's IP
+        address.
+
+        @type origin: C{Address}
+        @param origin: The address the message is from
+        
+        @rtype: C{Deferred} or C{Address}
+        @return: C{origin} or a C{Deferred} whose callback will be
+        passed C{origin}.
+        
+        @raise SMTPBadSender: Raised of messages from this address are
+        not to be accepted.
+        """
         if not helo:
-            return defer.fail(SMTPBadSender(origin, 503,
-                                     "Who are you? Say HELO first"))
-        return defer.succeed(origin)
+            raise SMTPBadSender(origin, 503, "Who are you? Say HELO first")
+        return origin
 
     def validateTo(self, user):
-        return defer.succeed(user)
+        """
+        Validate the address for which the message is destined.
+        
+        @type user: C{User}
+        @param user: The address to validate.
+
+        @rtype: C{Deferred} or C{twisted.protocols.smtp.User}
+        @return: C{user} or a C{Deferred} whose callback will be
+        passed C{user}.
+        
+        @raise SMTPBadRcpt: Raised if messages to the address are
+        not to be accepted.
+        """
+        return user
 
     def startMessage(self, recipients):
         return []
@@ -944,9 +999,9 @@ class ESMTP(SMTP):
     def do_EHLO(self, rest):
         extensions = reflect.prefixedMethodNames(self.__class__, 'ext_')
         peer = self.transport.getPeer()[1]
-        self.__helo = (rest, peer)
-        self.__from = None
-        self.__to = []
+        self._helo = (rest, peer)
+        self._from = None
+        self._to = []
         self.sendCode(
             250,
             '%s\n%s Hello %s, nice to meet you' % (

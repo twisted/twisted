@@ -375,6 +375,8 @@ class RRHeader:
         @type payload: An object implementing C{IEncodable}
         @param payload: A Query Type specific data object.
         """
+        assert (payload is None) or (payload.TYPE == type)
+
         self.name = Name(name)
         self.type = type
         self.cls = cls
