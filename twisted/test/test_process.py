@@ -62,8 +62,6 @@ class Win32ProcessTestCase(unittest.TestCase):
     
     def testStdinReader(self):
         import win32api
-        from twisted.internet import win32
-        win32.install()
         pyExe = win32api.GetModuleFileName(0)
         errF = cStringIO.StringIO()
         outF = cStringIO.StringIO()
