@@ -127,6 +127,11 @@ class SignalProtocol(protocol.ProcessProtocol):
         self.failure = None
 
 class SignalMixin:
+    # XXX: Trial now does this (see
+    #      twisted.trial.runner.MethodInfoBase._setUpSigchldHandler)... perhaps
+    #      this class should be removed?  Or trial shouldn't bother, and this
+    #      class used where it matters?
+    #        - spiv, 2005-04-01
     sigchldHandler = None
     
     def setUpClass(self):
