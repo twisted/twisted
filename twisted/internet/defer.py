@@ -453,6 +453,7 @@ class DeferredList(Deferred):
         self.fireOnOneCallback = fireOnOneCallback
         self.fireOnOneErrback = fireOnOneErrback
         self.consumeErrors = consumeErrors
+        self.finishedCount = 0
 
         index = 0
         for deferred in deferredList:
@@ -477,12 +478,13 @@ class DeferredList(Deferred):
         """
         self.resultList[index] = (succeeded, result)
 
+        self.finishedCount += 1
         if not self.called:
             if succeeded == SUCCESS and self.fireOnOneCallback:
                 self.callback((result, index))
             elif succeeded == FAILURE and self.fireOnOneErrback:
                 self.errback(failure.Failure((result, index)))
-            elif None not in self.resultList:
+            elif self.finishedCount == len(self.resultList):
                 self.callback(self.resultList)
         
         if succeeded == FAILURE and self.consumeErrors:
