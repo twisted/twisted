@@ -109,8 +109,7 @@ class ClientFactory(Factory):
     def startedConnecting(self, connector):
         """Called when a connection has been started.
 
-        Arguments:
-           - connector: a Connector object.
+        @param connector: a Connector object.
 
         You can call connector.stopConnecting() to stop the connection attempt.
         """
@@ -120,7 +119,7 @@ class ClientFactory(Factory):
 
         It may be useful to call connector.connect() - this will reconnect.
 
-        reason is a Failure object.
+        @type reason: L{twisted.python.failure.Failure}
         """
 
     def clientConnectionLost(self, connector, reason):
@@ -128,7 +127,7 @@ class ClientFactory(Factory):
 
         It may be useful to call connector.connect() - this will reconnect.
 
-        reason is a Failure object.
+        @type reason: L{twisted.python.failure.Failure}
         """
 
 
@@ -263,11 +262,11 @@ class BaseProtocol:
 
     My API is quite simple.  Implement dataReceived(data) to handle both
     event-based and synchronous input; output can be sent through the
-    'transport' attribute, which is to be an instance of a
-    twisted.protocols.protocol.Transport.
+    'transport' attribute, which is to be an instance that implements
+    L{twisted.internet.interfaces.Transport}.
 
     Some subclasses exist already to help you write common types of protocols:
-    see the twisted.protocols.basic module for a few of them.
+    see the L{twisted.protocols.basic} module for a few of them.
     """
 
     connected = 0
@@ -300,7 +299,7 @@ class Protocol(BaseProtocol):
     def dataReceived(self, data):
         """Called whenever data is received.
 
-        'data' will be a string of indeterminate length.  Please keep in
+        @param data: a string of indeterminate length.  Please keep in
         mind that you will probably need to buffer some data, as partial
         protocol messages may be received!  Use this method to translate
         to a higher-level message.  Usually, some callback will be made
@@ -316,7 +315,7 @@ class Protocol(BaseProtocol):
         Clear any circular references here, and any external references
         to this Protocol.  The connection has been closed.
 
-        reason is a Failure object.
+        @type reason: L{twisted.python.failure.Failure}
         """
 
     def connectionFailed(self):
@@ -355,7 +354,7 @@ class ProcessProtocol(BaseProtocol):
     def processEnded(self, reason):
         """This will be called when the subprocess is finished.
 
-        reason is a Failure object.
+        @type reason: L{twisted.python.failure.Failure}
         """
 
 
