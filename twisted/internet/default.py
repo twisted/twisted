@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.57 2003/01/01 19:32:49 tv Exp $
+# $Id: default.py,v 1.58 2003/01/08 14:18:53 spiv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -334,14 +334,14 @@ class PosixReactorBase(ReactorBase):
     # IReactorUNIX
 
     def connectUNIX(self, address, factory, timeout=30):
-        """@see twisted.internet.interfaces.IReactorUNIX.connectUNIX
+        """@see: twisted.internet.interfaces.IReactorUNIX.connectUNIX
         """
         c = UNIXConnector(self, address, factory, timeout)
         c.connect()
         return c
 
     def listenUNIX(self, address, factory, backlog=5):
-        """Listen on a UNIX socket.
+        """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
         p = tcp.Port(address, factory, backlog=backlog)
         p.startListening()
@@ -350,14 +350,14 @@ class PosixReactorBase(ReactorBase):
     # IReactorTCP
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
-        """See twisted.internet.interfaces.IReactorTCP.listenTCP
+        """@see: twisted.internet.interfaces.IReactorTCP.listenTCP
         """
         p = tcp.Port(port, factory, backlog, interface)
         p.startListening()
         return p
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
-        """See twisted.internet.interfaces.IReactorTCP.connectTCP
+        """@see: twisted.internet.interfaces.IReactorTCP.connectTCP
         """
         c = TCPConnector(self, host, port, factory, timeout, bindAddress)
         c.connect()
@@ -366,13 +366,15 @@ class PosixReactorBase(ReactorBase):
     # IReactorSSL (sometimes, not implemented)
 
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
-        """See twisted.internet.interfaces.IReactorSSL.connectSSL
+        """@see: twisted.internet.interfaces.IReactorSSL.connectSSL
         """
         c = SSLConnector(self, host, port, factory, contextFactory, timeout, bindAddress)
         c.connect()
         return c
 
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
+        """@see: twisted.internet.interfaces.IReactorSSL.listenSSL
+        """
         p = ssl.Port(port, factory, contextFactory, backlog, interface)
         p.startListening()
         return p

@@ -127,14 +127,15 @@ class Proxy(http.HTTPChannel):
     """This class implements a simple web proxy.
 
     Since it inherits from twisted.protocols.http.HTTPChannel, to use it you
-    should do something like this:
+    should do something like this::
 
         from twisted.protocols import http
         f = http.HTTPFactory()
         f.HTTPChannel = Proxy
 
     Make the HTTPFactory a listener on a port as per usual, and you have
-    a fully-functioning web proxy!"""
+    a fully-functioning web proxy!
+    """
 
     requestFactory = ProxyRequest
 

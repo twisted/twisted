@@ -267,7 +267,7 @@ class SSHSessionClient(protocol.Protocol):
 def parseRequest_pty_req(data):
     """Parse the data from a pty-req request into usable data.
 
-    @returns a tuple of (terminal type, (rows, cols, xpixel, ypixel), modes)
+    @returns: a tuple of (terminal type, (rows, cols, xpixel, ypixel), modes)
     """
     term, rest = common.getNS(data)
     cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[: 16])
@@ -278,6 +278,7 @@ def parseRequest_pty_req(data):
 
 def packRequest_pty_req(term, (rows, cols, xpixel, ypixel), modes):
     """Pack a pty-req request so that it is suitable for sending.
+
     NOTE: modes must be packed before being sent here.
     """
     termPacked = common.NS(term)
@@ -288,7 +289,7 @@ def packRequest_pty_req(term, (rows, cols, xpixel, ypixel), modes):
 def parseRequest_window_change(data):
     """Parse the data from a window-change request into usuable data.
 
-    @returns a tuple of (rows, cols, xpixel, ypixel)
+    @returns: a tuple of (rows, cols, xpixel, ypixel)
     """
     cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
     return rows, cols, xpixel, ypixel

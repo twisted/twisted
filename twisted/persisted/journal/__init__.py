@@ -17,7 +17,7 @@
 
 """Command-journalling persistence framework inspired by Prevayler.
 
-Maintainer: L{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 API Stability: unstable
 """

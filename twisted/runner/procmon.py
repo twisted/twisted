@@ -32,11 +32,11 @@ the process. In particular, attempting to add two processes with the
 same name will result in a key error.
 
 The arguments to addProcess are:
-- name -- a string, uniquely specifying the process
-- args -- a list of arguments. the first will be used to determine the
+  - name -- a string, uniquely specifying the process
+  - args -- a list of arguments. the first will be used to determine the
           executable
-- optionally, the uid and gid this process should be run as (by default,
-  it does not change uid/gid before running processes).
+  - optionally, the uid and gid this process should be run as (by default,
+    it does not change uid/gid before running processes).
 
 Note that args are passed to the system call, not to the shell. If running
 the shell is desired, the common idiom is to use
@@ -51,13 +51,13 @@ of an outside circumstances change -- for example, a new version of a library
 which is installed.
 
 The following attributes on the monitor can be set to configure behaviour
-- threshold -- how long a process has to live before the death is considered
-               instant (default 1, measured in seconds)
-- killTime -- how long a process being killed has to get its affairs in
-              order before it gets killed with an unmaskable signal
-              (default 5, measured in seconds)
-- consistencyDelay -- time between consistency checks
-                      (default 60, measured in seconds)
+  - threshold -- how long a process has to live before the death is considered
+                 instant (default 1, measured in seconds)
+  - killTime -- how long a process being killed has to get its affairs in
+                order before it gets killed with an unmaskable signal
+                (default 5, measured in seconds)
+  - consistencyDelay -- time between consistency checks
+                        (default 60, measured in seconds)
 """
 
 import os, time

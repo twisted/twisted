@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.56 $"[11:-2]
+__version__ = "$Revision: 1.57 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -216,7 +216,7 @@ class View(template.DOMTemplate):
     def getSubview(self, request, node, model, viewName):
         """Get a sub-view from me.
 
-        @returns L{widgets.Widget}
+        @returns: L{widgets.Widget}
         """
         view = None
         vm = getattr(self, 'wvfactory_' + viewName, None)

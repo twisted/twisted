@@ -22,7 +22,7 @@ downloaded from http://www.pythonware.com/products/xmlrpc/).
 
 API Stability: semi-stable
 
-Maintainer: L{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 from __future__ import nested_scopes
 

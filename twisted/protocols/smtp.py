@@ -571,7 +571,7 @@ class SMTPClient(basic.LineReceiver):
         """Return file-like object containing data of message to be sent.
 
         The file should be a text file with local line ending convention,
-        i.e. readline() should return a line ending in '\n'.
+        i.e. readline() should return a line ending in '\\n'.
         """
         raise NotImplementedError
 

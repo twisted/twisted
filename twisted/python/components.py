@@ -193,13 +193,13 @@ class _Nothing:
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
 
-    This docstring contains a limerick, by popular demand.
+    This docstring contains a limerick, by popular demand::
 
-    Subclassing made Zope and TR
-    much harder to work with by far.
-        So before you inherit,
-        be sure to declare it
-    Adapter, not PyObject*
+        Subclassing made Zope and TR
+        much harder to work with by far.
+            So before you inherit,
+            be sure to declare it
+        Adapter, not PyObject*
     """
 
     # These attributes are used with Componentized.

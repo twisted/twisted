@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.75 $'[11:-2]
+__version__ = '$Revision: 1.76 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -99,7 +99,7 @@ def parsemsg(s):
 def split(str, length = 80):
     """I break a message into multiple lines.
 
-    I prefer to break at whitespace near str[length].  I also break at \n.
+    I prefer to break at whitespace near str[length].  I also break at \\n.
 
     @returns: list of strings
     """

@@ -21,7 +21,7 @@ Lookup a name using multiple resolvers.
 API Stability: Unstable
 
 Future Plans: This needs someway to specify which resolver answered
-  the query, or someway to specify (authority|ttl|cache behavior|more?)
+the query, or someway to specify (authority|ttl|cache behavior|more?)
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
 """

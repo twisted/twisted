@@ -19,8 +19,9 @@ DNS protocol implementation.
 
 API Stability: Unstable
 
-Future Plans: Get rid of some toplevels, maybe.  Put in a better
-  lookupRecordType implementation.
+Future Plans: 
+    - Get rid of some toplevels, maybe.  
+    - Put in a better lookupRecordType implementation.
 
 @author: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>},
          U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
@@ -1071,9 +1072,6 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         """
         Send out a message with the given queries.
         
-        @type name: C{str}
-        @param name: The name about which to request information.
-        
         @type address: C{tuple} of C{str} and C{int}
         @param address: The address to which to send the query
         
@@ -1159,9 +1157,6 @@ class DNSProtocol(protocol.Protocol):
     def query(self, queries, timeout = None):
         """
         Send out a message with the given queries.
-        
-        @type name: C{str}
-        @param name: The name about which to request information.
         
         @type queries: C{list} of C{Query} instances
         @param queries: The queries to transmit

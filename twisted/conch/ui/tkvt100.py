@@ -17,7 +17,7 @@
 
 """Module to emulate a VT100 terminal in Tkinter.
 
-Maintainer: U{Paul Swartz <z3p@twistedmatrix.com>
+Maintainer: U{Paul Swartz <z3p@twistedmatrix.com>}
 """
 
 import Tkinter, tkFont

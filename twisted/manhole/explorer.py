@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_explorer -*-
-# $Id: explorer.py,v 1.2 2002/09/21 08:16:51 acapnotic Exp $
+# $Id: explorer.py,v 1.3 2003/01/08 14:18:54 spiv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -182,10 +182,9 @@ class ExplorerMapping(Explorer):
 
 class ExplorerBuiltin(Explorer):
     """
-    Properties:
-        name -- the name the function was defined as
-        doc -- function's docstring, or None if unavailable
-        self -- if not None, the function is a method of this object.
+    @ivar name: the name the function was defined as
+    @ivar doc: function's docstring, or C{None} if unavailable
+    @ivar self: if not C{None}, the function is a method of this object.
     """
     properties = ["doc", "name", "self"]
     def __init__(self, function, identifier):
@@ -197,17 +196,16 @@ class ExplorerBuiltin(Explorer):
 
 class ExplorerInstance(Explorer):
     """
-    Properties:
-        klass -- the class this is an instance of
-
     Attribute groups:
-        methods -- dictionary of methods
-        data -- dictionary of data members
+        - B{methods} -- dictionary of methods
+        - B{data} -- dictionary of data members
 
     Note these are only the *instance* methods and members --
     if you want the class methods, you'll have to look up the class.
 
     TODO: Detail levels (me, me & class, me & class ancestory)
+
+    @ivar klass: the class this is an instance of.
     """
     properties = ["klass"]
     attributeGroups = ["methods", "data"]
@@ -238,15 +236,14 @@ class ExplorerInstance(Explorer):
 
 class ExplorerClass(Explorer):
     """
-    Properties:
-        name -- the name the class was defined with
-        doc -- the class's docstring
-        bases -- a list of this class's base classes.
-        module -- the module the class is defined in
+    @ivar name: the name the class was defined with
+    @ivar doc: the class's docstring
+    @ivar bases: a list of this class's base classes.
+    @ivar module: the module the class is defined in
 
     Attribute groups:
-        methods -- class methods
-        data -- other members of the class
+        - B{methods} -- class methods
+        - B{data} -- other members of the class
     """
     properties = ["name", "doc", "bases", "module"]
     attributeGroups = ["methods", "data"]
@@ -352,15 +349,14 @@ class ExplorerMethod(ExplorerFunction):
 
 class ExplorerModule(Explorer):
     """
-    Properties:
-        name -- the name the module was defined as
-        doc -- documentation string for the module
-        file -- the file the module is defined in
+    @ivar name: the name the module was defined as
+    @ivar doc: documentation string for the module
+    @ivar file: the file the module is defined in
 
     Attribute groups:
-        classes -- the public classes provided by the module
-        functions -- the public functions provided by the module
-        data -- the public data members provided by the module
+        - B{classes} -- the public classes provided by the module
+        - B{functions} -- the public functions provided by the module
+        - B{data} -- the public data members provided by the module
 
     (\"Public\" is taken to be \"anything that doesn't start with _\")
     """
@@ -599,7 +595,7 @@ class _WatchMonkey:
     """I hang on a method and tell you what I see.
 
     TODO: Aya!  Now I just do browseObject all the time, but I could
-        tell you what got called with what when and returning what.
+    tell you what got called with what when and returning what.
     """
     oldMethod = None
 

@@ -141,7 +141,7 @@ def makePublicKeyString_openssh(obj, comment):
 
 def getPublicKeyObject(data):
     """
-    Return a C{Crypto.PublicKey.pubkey.pubkey) corresponding to the SSHv2
+    Return a C{Crypto.PublicKey.pubkey.pubkey} corresponding to the SSHv2
     public key data.  data is in the over-the-wire public key format.
 
     @type data:     C{str}

@@ -21,7 +21,7 @@ Asynchronous client DNS
 API Stability: Unstable
 
 Future plans: Proper nameserver acquisition on Windows/MacOS,
-    better caching, respect timeouts
+better caching, respect timeouts
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

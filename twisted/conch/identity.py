@@ -74,7 +74,7 @@ class ConchIdentity(identity.Identity):
         This will add the service, using our name as the name for the
         perspective.  Currently unused.
 
-        @type serivceName:  C{str}
+        @type serviceName:  C{str}
         """
         self.addKeyByString(serviceName, self.name)
 

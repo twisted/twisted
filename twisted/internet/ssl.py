@@ -27,8 +27,10 @@ moment this is not enforced, but in the future it might be.
 
 API Stability: stable
 
-Future Plans: split module so reactor-specific classes are in a separate
-              module, support for switching TCP into SSL, more options.
+Future Plans: 
+    - split module so reactor-specific classes are in a separate module 
+    - support for switching TCP into SSL
+    - more options
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
