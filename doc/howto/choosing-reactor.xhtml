@@ -30,6 +30,7 @@
       <li><a href="#kqueue">KQueue for FreeBSD</a></li>
       <li><a href="#java">Java</a></li>
       <li><a href="#win32">Win32</a></li>
+      <li><a href="#cfreactor">Mac OS X</a></li>
     </ul>
 
     <p>The remaining custom reactor implementations provide support
@@ -46,6 +47,7 @@
       <li><a href="#tkinter">Tkinter</a></li>
       <li><a href="#wxpython">WxPython</a></li>
       <li><a href="#win32">Win32</a></li>
+      <li><a href="#cfreactor">Cocoa</a></li>
       <li><a href="#pyui">PyUI</a></li>
     </ul>
 
@@ -68,6 +70,7 @@
     <tr><th>select()</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>poll()</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix</td></tr>
     <tr><th>Win32</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Win32</td></tr>
+    <tr><th>cfreactor</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>OS X</td></tr>
     <tr><th>Java</th><td>Y</td><td>N</td><td>N</td><td>Y</td><td>N</td><td>Y</td><td>Java 1.1+</td></tr>
     <tr><th>GTK+</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>Qt</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
@@ -163,6 +166,19 @@ win32eventreactor.install()
 <pre class="python">
 from twisted.internet import gtkreactor
 gtkreactor.install()
+</pre>
+
+    <h2>GUI Integration Reactors</h2>
+
+    <h3>Cocoa</h3><a name="cfreactor" />
+
+    <p>Twisted integrates with <a href="http://pyobjc.sf.net/"
+    >PyObjC</a>, version 1.0.  Sample applications using Cocoa and Twisted
+    are available at <a href="../examples/Cocoa/">doc/examples/Cocoa/</a>.</p>
+
+<pre class="python">
+from twisted.internet import cfreactor
+cfreactor.install()
 </pre>
 
     <h3>Qt</h3><a name="qt" />

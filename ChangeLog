@@ -1,5 +1,8 @@
 2003-10-13  Bob Ippolito <bob@redivi.com>
 
+	* doc/howto/choosing-reactor.xhtml:
+	Added cfreactor/Cocoa information.
+
 	* doc/examples/cocoaDemo:
 	Removed, replaced by doc/examples/Cocoa cfreactor demos.
 
