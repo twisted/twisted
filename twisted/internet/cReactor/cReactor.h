@@ -20,7 +20,6 @@
 
 /* includes */
 #include "Python.h"
-#include "structmember.h"
 #include <sys/poll.h>
 #include <pthread.h>
 
