@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -108,12 +107,9 @@ class SOCKSv4(protocol.Protocol):
             if code==1: # CONNECT
                 reactor.clientTCP(server,port,SOCKSv4Outgoing(self))
             elif code==2: # BIND
-                self.serv=tcp.Port(0,SOCKSv4IncomingFactory(self))
-                self.serv.startListening()
-                self.serv.approveConnection=self._approveConnection
-                self.ip=socket.gethostbyname(server)
-                ourip,ourport=self.serv.socket.getsockname()
-                self.makeReply(90,0,ourport,ourip)
+                self.serv = reactor.listenTCP(0, SOCKSv4IncomingFactory(self, socket.gethostbyname(server)))
+                kind, ourip, ourport = self.serv.getHost()
+                self.makeReply(90, 0, ourport, ourip)
             else:
                 raise RuntimeError, "Bad Connect Code: %s" % code
             assert self.buf=="","hmm, still stuff in buffer... '%s'"
@@ -150,18 +146,6 @@ class SOCKSv4(protocol.Protocol):
         f.write('\n')
         f.close()
 
-    def _approveConnection(self,skt,addr):
-        if addr[0]==self.ip:
-            self.ip=""
-            self.makeReply(90,0)
-            return 1
-        elif self.ip=="":
-            return 0
-        else:
-            self.makeReply(91,0)
-            self.ip=""
-            return 0
-
 
 class SOCKSv4Factory(protocol.Factory):
     """A factory for a SOCKSv4 proxy.
@@ -172,16 +156,25 @@ class SOCKSv4Factory(protocol.Factory):
     def __init__(self, log):
         self.logging = log
     
-    def buildProtocol(self,addr):
+    def buildProtocol(self, addr):
         return SOCKSv4(self.logging)
 
 
 class SOCKSv4IncomingFactory(protocol.Factory):
     """A utility class for building protocols for incoming connections."""
     
-    def __init__(self,socks):
-        self.socks=socks
+    def __init__(self, socks, ip):
+        self.socks = socks
+        self.ip = ip
     
-    def buildProtocol(self,addr):
-        return SOCKSv4Incoming(self.socks)
-
+    def buildProtocol(self, addr):
+        if addr[0] == self.ip:
+            self.ip = ""
+            self.socks.makeReply(90, 0)
+            return SOCKSv4Incoming(self.socks)
+        elif self.ip == "":
+            return None
+        else:
+            self.socks.makeReply(91, 0)
+            self.ip = ""
+            return None
