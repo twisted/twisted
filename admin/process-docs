@@ -10,7 +10,7 @@ for doc in doc/man doc/howto doc/specifications; do
   for file in $doc/*.html; do
     ./bin/hlint $file
   done
-  ./bin/generatelore --docsdir $doc -t $templ --baseurl $baseurl -l ../howto/
+  ./bin/generatelore -p --docsdir $doc -t $templ --baseurl $baseurl -l ../howto/
 done
 cp admin/book.tex doc/howto
 for file in doc/howto/*.html doc/man/*.html doc/specifications/*.html; do
