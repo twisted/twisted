@@ -18,6 +18,8 @@
 Test case for twisted.protocols.loopback
 """
 
+from __future__ import nested_scopes
+
 from twisted.trial import unittest
 from twisted.protocols import basic, loopback
 from twisted.internet import defer
