@@ -45,7 +45,7 @@ class SisterMotherClient(Referenceable):
             return defer.fail("Sister does not own this resource")
         method = getattr(resource, "sister_%s" % methodName)
         fullArgs = (srcResourceType, srcResourceName) + args
-        return apply(method, fullArgs, kw)
+        return method(*fullArgs, **kw)
 
 class SisterService(Service, Perspective):
     """A 'sister' object, managed by a mother server
@@ -96,7 +96,7 @@ class SisterService(Service, Perspective):
     # XXX I know what these mean, don't delete them -glyph
     def _cbLocked(self, result, path):
         if result is None:
-            obj = apply(func, args, kw)
+            obj = func(*args, **kw)
             self.ownedResources[path] = obj
             return (True, obj)
         else:
@@ -120,7 +120,7 @@ class SisterService(Service, Perspective):
 
         """
         log.msg( 'sister: loading resource %s/%s' %(resourceType, resourceName))
-        value = apply(self.resourceLoaders[resourceType], (resourceName,) + args)
+        value = self.resourceLoaders[resourceType](resourceName, *args)
         if isinstance(value, defer.Deferred):
             dvalue = value
         else:
@@ -161,7 +161,7 @@ class SisterService(Service, Perspective):
             raise "sister does not own this resource!"
         fullArgs = ('callDistributed', srcResourceType, srcResourceName,
                     destResourceType, destResourceName, methodName) + args
-        return apply( self.motherRef.callRemote, fullArgs, kw)
+        return self.motherRef.callRemote(*fullArgs, **kw)
 
 
     def removeIdentity(self, identityName):

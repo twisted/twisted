@@ -1,7 +1,7 @@
 
 from twisted.python import usage
 from twisted.spread import pb
-from twisted.sister.sisterserv import SisterService
+from twisted.sister.sisterserv import SisterService, TicketAuthorizer
 
 class Options(usage.Options):
     optParameters = [
@@ -14,6 +14,7 @@ class Options(usage.Options):
         ]
 
 def updateApplication(app, config):
+    app._authorizer = TicketAuthorizer()
     s = SisterService(config['parent_host'], int(config['parent_port']),
                       config['parent_service'], int(config['port']),
                       config['secret'], application=app)

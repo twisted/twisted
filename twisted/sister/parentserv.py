@@ -57,7 +57,7 @@ class MotherService(Service, Perspective):
         #TODO: better selection mechanism for sister server
         (host, port, sisterPerspective) = choice(self.sisters)
         
-        d = apply( sisterPerspective.callRemote, ("loadResource", resourceType, resourceName, generateTicket) + args )
+        d = sisterPerspective.callRemote("loadResource", resourceType, resourceName, generateTicket, *args)
         d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, sisterPerspective)
         return d
 
@@ -78,7 +78,7 @@ class MotherService(Service, Perspective):
         if self.lockedResources.has_key( (resourceType, resourceName) ):
             raise ("resource %s:%s already loaded on a sister" % (resourceName, resourceType) )
         
-        d = apply( sisterPerspective.callRemote, ("loadResource", resourceType, resourceName, generateTicket) + args )
+        d = sisterPerspective.callRemote("loadResource", resourceType, resourceName, generateTicket, *args)
         d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, sisterPerspective)
         return d
 
@@ -100,7 +100,7 @@ class MotherService(Service, Perspective):
         log.msg( "sister attached: %s:%s" % (host, port ) )
         self.sisters.append((host, port,clientRef) )
         for resourceType, resourceName, generateTicket, args, deferred in self.toLoadOnConnect:
-            apply(self.loadRemoteResource, (resourceType, resourceName, generateTicket) + args).chainDeferred(deferred)
+            self.loadRemoteResource(resourceType, resourceName, generateTicket, *args).chainDeferred(deferred)
         self.toLoadOnConnect = []
 
     def perspective_callDistributed(self, srcResourceType, srcResourceName, destResourceType, destResourceName, methodName, *args, **kw):
