@@ -284,16 +284,16 @@ class UNIXClient(BaseClient):
 
     def __init__(self, filename, connector, reactor=None):
         self.connector = connector
-        error = None
+        err = None
         whenDone = None
         skt = None
         
         try:
-            mode = os.stat(port)[0]
+            mode = os.stat(filename)[0]
         except OSError, ose:
             # no such file or directory
             whenDone = None
-            error = error.BadFileError(string="No such file or directory")
+            err = error.BadFileError(string="No such file or directory")
         else:
             if not (mode & (stat.S_IFSOCK |  # that's not a socket
                             stat.S_IROTH  |  # that's not readable
@@ -309,6 +309,11 @@ class UNIXClient(BaseClient):
 
         self._finishInit(whenDone, skt, err, reactor)
 
+    def getPeer(self):
+        return ('UNIX', self.addr)
+
+    def getHost(self):
+        return ('UNIX', )
 
 class TCPClient(BaseClient):
     """A TCP client."""

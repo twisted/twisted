@@ -41,7 +41,7 @@ class ContextFactory:
 class DefaultOpenSSLContextFactory(ContextFactory):
 
     def __init__(self, privateKeyFileName, certificateFileName,
-                 sslmethod=SSL.SSLv3_METHOD):
+                 sslmethod=SSL.SSLv23_METHOD):
         self.privateKeyFileName = privateKeyFileName
         self.certificateFileName = certificateFileName
         self.sslmethod = sslmethod
