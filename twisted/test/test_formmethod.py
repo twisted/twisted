@@ -62,4 +62,13 @@ class ArgumentTestCase(unittest.TestCase):
         tests =  [("yes", 1), ("", 0), ("False", 0), ("no", 0)]
         self.argTest(formmethod.Boolean, tests, ())
 
-    
+    def testDate(self):
+        goodTests = { 
+            ("2002", "12", "21"): (2002, 12, 21),
+            ("1996", "2", "29"): (1996, 2, 29),
+            ("", "", ""): None,
+            }.items()
+        badTests = [("2002", "2", "29"), ("xx", "2", "3"),
+                    ("2002", "13", "1"), ("1999", "12","32"),
+                    ("2002", "1"), ("2002", "2", "3", "4")]
+        self.argTest(formmethod.Date, goodTests, badTests)
