@@ -46,7 +46,7 @@ from twisted.persisted import styles
 
 class DelayedCall(styles.Ephemeral):
 
-    __implements__ = IDelayedCall
+    __implements__ = IDelayedCall,
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -598,6 +598,9 @@ class BaseConnector(styles.Ephemeral):
             # factory hasn't called our connect() method
             self.factory.doStop()
             self.factoryStarted = 0
+
+    def getDestination(self):
+        raise NotImplementedError, "implement in subclasses"
 
 
 class BasePort(abstract.FileDescriptor):
