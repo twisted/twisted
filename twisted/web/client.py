@@ -25,7 +25,6 @@ from twisted.python import failure
 from twisted.web import error
 import urlparse, os
 
-
 class HTTPPageGetter(http.HTTPClient):
 
     quietLoss = 0
@@ -34,7 +33,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     def connectionMade(self):
         method = getattr(self.factory, 'method', 'GET')
-        self.sendCommand(method, self.factory.url)
+        self.sendCommand(method, self.factory.path)
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
         for cookie, cookval in self.factory.cookies.items():
@@ -73,14 +72,16 @@ class HTTPPageGetter(http.HTTPClient):
         l = self.headers.get('location')
         if not l:
             self.handleStatusDefault()
-        host, port, url = _parse(l[0], defaultPort=self.transport.addr[1])
-        # if it's a relative redirect, e.g., /foo, then host==''
-        if host:
-            self.factory.host = host
-        self.factory.port = port
-        self.factory.url = url
+        url = l[0]
+        scheme, host, port, path = _parse(url, defaultPort=self.transport.addr[1])
+        self.factory.setURL(url)
 
-        reactor.connectTCP(self.factory.host, self.factory.port, self.factory)
+        if self.factory.scheme == 'https':
+            from twisted.internet import ssl
+            contextFactory = ssl.ClientContextFactory()
+            reactor.connectSSL(self.factory.host, self.factory.port, self.factory, contextFactory)
+        else:
+            reactor.connectTCP(self.factory.host, self.factory.port, self.factory)
         self.quietLoss = 1
         self.transport.loseConnection()
 
@@ -96,6 +97,8 @@ class HTTPPageGetter(http.HTTPClient):
             self.factory.noPage(reason)
 
     def handleResponse(self, response):
+        if self.quietLoss:
+            return
         if self.failed:
             self.factory.noPage(
                 failure.Failure(
@@ -157,11 +160,16 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     protocol = HTTPPageGetter
 
-    def __init__(self, host, url, method='GET', postdata=None, headers=None,
+    url = None
+    scheme = None
+    host = ''
+    port = None
+    path = None
+
+    def __init__(self, url, method='GET', postdata=None, headers=None,
                  agent="Twisted PageGetter", timeout=0):
         self.timeout = timeout
         self.agent = agent
-        self.url = url
 
         self.cookies = {}
         if headers is not None:
@@ -172,16 +180,21 @@ class HTTPClientFactory(protocol.ClientFactory):
             self.headers.setdefault('Content-Length', len(postdata))
         self.postdata = postdata
         self.method = method
-        if ':' in host:
-            self.host, self.port = host.split(':')
-            self.port = int(self.port)
-        else:
-            self.host = host
-            self.port = 80
+
+        self.setURL(url)
 
         self.waiting = 1
         self.deferred = defer.Deferred()
         self.response_headers = None
+
+    def setURL(self, url):
+        self.url = url
+        scheme, host, port, path = _parse(url)
+        if scheme and host:
+            self.scheme = scheme
+            self.host = host
+            self.port = port
+        self.path = path
 
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
@@ -225,7 +238,7 @@ class HTTPDownloader(HTTPClientFactory):
     protocol = HTTPPageDownloader
     value = None
 
-    def __init__(self, host, url, fileName, method='GET', postdata=None, headers=None,
+    def __init__(self, url, fileName, method='GET', postdata=None, headers=None,
                  agent="Twisted client", supportPartial=0):
         if supportPartial and os.path.exists(fileName):
             fileLength = os.path.getsize(fileName)
@@ -236,7 +249,7 @@ class HTTPDownloader(HTTPClientFactory):
                 headers["range"] = "bytes=%d-" % fileLength
         else:
             self.requestedPartial = 0
-        HTTPClientFactory.__init__(self, host, url, method=method, postdata=postdata, headers=headers, agent=agent)
+        HTTPClientFactory.__init__(self, url, method=method, postdata=postdata, headers=headers, agent=agent)
         self.fileName = fileName
         self.deferred = defer.Deferred()
         self.waiting = 1
@@ -279,29 +292,47 @@ class HTTPDownloader(HTTPClientFactory):
             self.file.write(data)
 
 
-def _parse(url, defaultPort=80):
+def _parse(url, defaultPort=None):
     parsed = urlparse.urlparse(url)
-    url = urlparse.urlunparse(('','')+parsed[2:])
+    scheme = parsed[0]
+    path = urlparse.urlunparse(('','')+parsed[2:])
+    if defaultPort is None:
+        if scheme == 'https':
+            defaultPort = 443
+        else:
+            defaultPort = 80
     host, port = parsed[1], defaultPort
     if ':' in host:
         host, port = host.split(':')
         port = int(port)
-    return host, port, url
+    return scheme, host, port, path
 
-def getPage(url, *args, **kwargs):
+def getPage(url, contextFactory=None, *args, **kwargs):
     '''download a web page
 
     Download a page. Return a deferred, which will
     callback with a page or errback with a description
     of the error.
     '''
-    host, port, url = _parse(url)
-    factory = HTTPClientFactory(host, url, *args, **kwargs)
-    reactor.connectTCP(host, port, factory)
+    scheme, host, port, path = _parse(url)
+    factory = HTTPClientFactory(url, *args, **kwargs)
+    if scheme == 'https':
+        from twisted.internet import ssl
+        if contextFactory is None:
+            contextFactory = ssl.ClientContextFactory()
+        reactor.connectSSL(host, port, factory, contextFactory)
+    else:
+        reactor.connectTCP(host, port, factory)
     return factory.deferred
 
-def downloadPage(url, file, *args, **kwargs):
-    host, port, url = _parse(url)
-    factory = HTTPDownloader(host, url, file, *args, **kwargs)
-    reactor.connectTCP(host, port, factory)
+def downloadPage(url, file, contextFactory=None, *args, **kwargs):
+    scheme, host, port, path = _parse(url)
+    factory = HTTPDownloader(url, file, *args, **kwargs)
+    if scheme == 'https':
+        from twisted.internet import ssl
+        if contextFactory is None:
+            contextFactory = ssl.ClientContextFactory()
+        reactor.connectSSL(host, port, factory, contextFactory)
+    else:
+        reactor.connectTCP(host, port, factory)
     return factory.deferred

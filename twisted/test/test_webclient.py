@@ -17,6 +17,12 @@
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
 from twisted.internet import reactor, defer
+from twisted.python.util import sibpath
+
+try:
+    from twisted.internet import ssl
+except:
+    ssl = None
 
 import os
 
@@ -33,6 +39,8 @@ class LongTimeTakingResource(resource.Resource):
         request.finish()
 
 class WebClientTestCase(unittest.TestCase):
+    def _listen(self, site):
+        return reactor.listenTCP(0, site, interface="127.0.0.1")
 
     def setUp(self):
         name = str(id(self)) + "_webclient"
@@ -44,7 +52,8 @@ class WebClientTestCase(unittest.TestCase):
         r = static.File(name)
         r.putChild("redirect", util.Redirect("/file"))
         r.putChild("wait", LongTimeTakingResource())
-        self.port = reactor.listenTCP(0, server.Site(r, timeout=None), interface="127.0.0.1")
+        site = server.Site(r, timeout=None)
+        self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
         self.portno = self.port.getHost()[2]
 
@@ -79,8 +88,9 @@ class WebClientTestCase(unittest.TestCase):
         f.trap(error.Error)
 
     def testFactoryInfo(self):
-        host, port, url = client._parse(self.getURL('file'))
-        factory = client.HTTPClientFactory(host, url)
+        url = self.getURL('file')
+        scheme, host, port, path = client._parse(url)
+        factory = client.HTTPClientFactory(url)
         reactor.connectTCP(host, port, factory)
         unittest.deferredResult(factory.deferred)
         self.assertEquals(factory.status, '200')
@@ -106,3 +116,72 @@ class WebClientTestCase(unittest.TestCase):
         self.assertEquals(open(name, "rb").read(), "abcd456789")
         r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name))
         self.assertEquals(open(name, "rb").read(), "0123456789")
+
+class WebClientSSLTestCase(WebClientTestCase):
+    def _listen(self, site):
+        return reactor.listenSSL(0, site,
+                                 contextFactory=ssl.DefaultOpenSSLContextFactory(
+            sibpath(__file__, 'server.pem'),
+            sibpath(__file__, 'server.pem'),
+            ),
+                                 interface="127.0.0.1")
+
+    def getURL(self, path):
+        return "https://127.0.0.1:%d/%s" % (self.portno, path)
+
+    def testFactoryInfo(self):
+        url = self.getURL('file')
+        scheme, host, port, path = client._parse(url)
+        factory = client.HTTPClientFactory(url)
+        reactor.connectSSL(host, port, factory, ssl.ClientContextFactory())
+        unittest.deferredResult(factory.deferred)
+        self.assertEquals(factory.status, '200')
+        self.assert_(factory.version.startswith('HTTP/'))
+        self.assertEquals(factory.message, 'OK')
+        self.assertEquals(factory.response_headers['content-length'][0], '10')
+
+class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
+    def getHTTPS(self, path):
+        return "https://127.0.0.1:%d/%s" % (self.tlsPortno, path)
+
+    def getHTTP(self, path):
+        return "http://127.0.0.1:%d/%s" % (self.plainPortno, path)
+
+    def setUp(self):
+        plainRoot = static.Data('not me', 'text/plain')
+        tlsRoot = static.Data('me neither', 'text/plain')
+
+        plainSite = server.Site(plainRoot, timeout=None)
+        tlsSite = server.Site(tlsRoot, timeout=None)
+
+        self.tlsPort = reactor.listenSSL(0, tlsSite,
+                                         contextFactory=ssl.DefaultOpenSSLContextFactory(
+            sibpath(__file__, 'server.pem'),
+            sibpath(__file__, 'server.pem'),
+            ),
+                                         interface="127.0.0.1")
+        self.plainPort = reactor.listenTCP(0, plainSite, interface="127.0.0.1")
+
+        reactor.iterate(); reactor.iterate()
+        self.plainPortno = self.plainPort.getHost()[2]
+        self.tlsPortno = self.tlsPort.getHost()[2]
+
+        plainRoot.putChild('one', util.Redirect(self.getHTTPS('two')))
+        tlsRoot.putChild('two', util.Redirect(self.getHTTP('three')))
+        plainRoot.putChild('three', util.Redirect(self.getHTTPS('four')))
+        tlsRoot.putChild('four', static.Data('FOUND IT!', 'text/plain'))
+
+    def tearDown(self):
+        self.plainPort.stopListening()
+        self.tlsPort.stopListening()
+        reactor.iterate(); reactor.iterate();
+        del self.plainPort
+        del self.tlsPort
+
+    def testHoppingAround(self):
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("one"))),
+                          "FOUND IT!")
+
+if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
+    for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
+        case.skip = "OpenSSL not present"
