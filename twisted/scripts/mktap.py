@@ -16,6 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.application import service, compat, app
+from twisted.persisted import sob
 from twisted.python import usage, util, plugin
 import sys, os
 try:
@@ -47,7 +48,7 @@ def loadPlugins(debug = None, progress = None):
         tapLookup[shortTapName] = plug
     return tapLookup
 
-def makeService(mod, s, options):
+def makeService(mod, options):
     if hasattr(mod, 'updateApplication'):
         ser = service.MultiService()
         mod.updateApplication(compat.IOldApplication(ser), options)
@@ -59,7 +60,7 @@ def addToApplication(ser, name, append, procname, type, encrypted, uid, gid):
     if append and os.path.exists(append):
         a = service.loadApplication(append, 'pickle', None)
     else:
-        a = service.Application(append, uid, gid)
+        a = service.Application(name, uid, gid)
     if procname:
         service.IProcess(a).processName = procname
     ser.setServiceParent(service.IServiceCollection(a))
@@ -154,6 +155,7 @@ def run():
         sys.exit(1)
     ser = makeService(options.tapLookup[options.subCommand].load(),
                       options.subOptions)
-    addToApplication(options.subCommand, options['append'], options['appname'],
+    addToApplication(ser,
+                     options.subCommand, options['append'], options['appname'],
                      options['type'], options['encrypted'],
                      *getid(options['uid'], options['gid']))
