@@ -126,7 +126,9 @@ class LatexSpitter(BaseLatexSpitter):
         self.writer('\\begin{center}\\includegraphics{%s}\\end{center}\n' % target)
 
     def convert_png(self, src, target):
-        os.system("pngtopnm %s | pnmtops > %s" % (src, target))
+        r = os.system("pngtopnm %s | pnmtops > %s" % (src, target))
+        if r != 0:
+            raise OSError(r)
 
     def convert_dia(self, src, target):
         # EVIL DISGUSTING HACK
