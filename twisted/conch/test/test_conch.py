@@ -248,6 +248,13 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         if d:
             util.wait(d)
 
+    def _getRandomPort(self):
+        f = EchoFactory()
+        serv = reactor.listenTCP(0, f)
+        port = serv.getHost().port
+        serv.stopListening()
+        return port
+
     # actual tests
 
     def testExec(self):
@@ -259,8 +266,9 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         f.fac = self.fac
         serv = reactor.listenTCP(0, f)
         port = serv.getHost().port
-        p = ConchTestForwardingProcess(port+10,self.fac)
-        self.execute('', p, preargs='-N -L%i:localhost:%i' % (port+10, port))
+        lport = self._getRandomPort()
+        p = ConchTestForwardingProcess(lport,self.fac)
+        self.execute('', p, preargs='-N -L%i:localhost:%i' % (lport, port))
         serv.stopListening()
 
     def testRemoteToLocalForwarding(self):
@@ -268,8 +276,9 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         f.fac = self.fac
         serv = reactor.listenTCP(0, f)
         port = serv.getHost().port
-        p = ConchTestForwardingProcess(port+10, self.fac)
-        self.execute('', p, preargs='-N -R %i:localhost:%i' % (port+10, port))
+        lport = self._getRandomPort()
+        p = ConchTestForwardingProcess(lport, self.fac)
+        self.execute('', p, preargs='-N -R %i:localhost:%i' % (lport, port))
         serv.stopListening()
 
 class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
