@@ -878,10 +878,12 @@ class SMTPClient(basic.LineReceiver):
         to the DATA command. If no addresses were accepted, code is -1
         and resp is an informative message.
 
-        numOK is the number of addresses accepted by the remote host.
-        addresses is a list of tuples (address, code, resp) listing
+        @param numOK: the number of addresses accepted by the remote host.
+        
+        @param addresses: is a list of tuples (address, code, resp) listing
             the response to each RCPT command.
-        log is the SMTP session log
+        
+        @param log: is the SMTP session log
         """
         raise NotImplementedError
 

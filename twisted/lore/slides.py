@@ -25,33 +25,33 @@ TODO:
         - one slides per page (with navigation links)
         - all in one page
 
-Example input file:
-<html>
-
-<head><title>Title of talk</title></head>
-
-<body>
-<h1>Title of talk</h1>
-
-<h2>First Slide</h2>
-
-<ul>
-  <li>Bullet point</li>
-  <li>Look ma, I'm <strong>bold</strong>!</li>
-  <li>... etc ...</li>
-</ul>
-
-
-<h2>Second Slide</h2>
-
-<pre class="python">
-# Sample code sample.
-print "Hello, World!"
-</pre>
-
-</body>
-
-</html>
+Example input file::
+    <html>
+    
+    <head><title>Title of talk</title></head>
+    
+    <body>
+    <h1>Title of talk</h1>
+    
+    <h2>First Slide</h2>
+    
+    <ul>
+      <li>Bullet point</li>
+      <li>Look ma, I'm <strong>bold</strong>!</li>
+      <li>... etc ...</li>
+    </ul>
+    
+    
+    <h2>Second Slide</h2>
+    
+    <pre class="python">
+    # Sample code sample.
+    print "Hello, World!"
+    </pre>
+    
+    </body>
+    
+    </html>
 """
 from __future__ import nested_scopes
 
