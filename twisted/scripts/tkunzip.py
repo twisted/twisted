@@ -211,7 +211,7 @@ def run(argv=sys.argv):
         comp.setIterator(compiler(opt['compiledir']))
         d.addCallback(comp.processAll)
 
-    d.addCallback(lambda _: reactor.stop)
+    d.addCallback(lambda _: reactor.stop())
 
     reactor.run()
 
