@@ -74,7 +74,7 @@ class PortCleanerUpper(unittest.TestCase):
                     wait(d)
                 else:
                     try:
-                        util.spinUntil(lambda :p.disconnected)
+                        spinUntil(lambda :p.disconnected)
                     except:
                         failure.Failure().printTraceback()
 
