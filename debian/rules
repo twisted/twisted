@@ -44,7 +44,7 @@ install-stamp: build-stamp
 			mv $$file $$target; \
 		done; \
 	done
-	debian/scripts/defaultpy
+	debian/scripts/defaultpy 2.2
 
 	install -d debian/twisted-doc/DEBIAN/
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/
