@@ -23,3 +23,17 @@ class UtilTestCase(unittest.TestCase):
     def testUniq(self):
         l = ["a", 1, "ab", "a", 3, 4, 1, 2, 2, 4, 6]
         self.assertEquals(util.uniquify(l), ["a", 1, "ab", 3, 4, 2, 6])
+
+    def testOrderedDict(self):
+        d = util.OrderedDict()
+        d['a'] = 'b'
+        d['b'] = 'a'
+        d[3] = 12
+        d[1234] = 4321
+        self.assertEquals(repr(d), "{'a': 'b', 'b': 'a', 3: 12, 1234: 4321}")
+        self.assertEquals(d.values(), ['b', 'a', 12, 4321])
+        del d[3]
+        self.assertEquals(repr(d), "{'a': 'b', 'b': 'a', 1234: 4321}")
+        self.assertEquals(d, {'a': 'b', 'b': 'a', 1234:4321})
+        self.assertEquals(d.keys(), ['a', 'b', 1234])
+        
