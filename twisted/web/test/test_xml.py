@@ -435,7 +435,22 @@ alert("I hate you");
         d = microdom.parseString(s, beExtremelyLenient=1)
         actual = d.documentElement.toxml()
         self.assertEquals(expected, actual)
-        
+
+    def testLaterCloserDL2(self):
+        s = ("<dl>"
+             "<dt>word<dd>definition<p>more definition"
+             "<dt>word"
+             "</dl>")
+        expected = ("<dl>"
+                    "<dt>word</dt><dd>definition<p>more definition</p></dd>"
+                    "<dt>word</dt>"
+                    "</dl>")
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        actual = d.documentElement.toxml()
+        self.assertEquals(expected, actual)
+
+    testLaterCloserDL2.todo = "unclosed <p> messes it up."
+    
     def testUnicodeTolerance(self):
         import struct
         s = '<foo><bar><baz /></bar></foo>'
