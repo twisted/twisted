@@ -84,6 +84,7 @@ class ProxyChangeChecker(ChangeChecker):
 
     def _getPage(self):
         factory = client.HTTPClientFactory(self.proxyHost, self.url)
+        factory.headers = {'pragma': 'no-cache'}
         reactor.connectTCP(self.proxyHost, self.proxyPort, factory)
         d = factory.deferred
         d.addErrback(self.noPage)
