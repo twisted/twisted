@@ -49,8 +49,11 @@ def staticWebTest():
     message("Running Static Web Test")
     cmd("mktap web --static %s/../static" % (os.path.dirname(sys.argv[0]) or '.'))
     twistd("web")
-    message("You should see an 'it worked' page now.")
+    message("You should see an 'it worked' page now.",
+            "(depending on your browser, you may need to reload)")
     browse("http://localhost:8080/")
+    message("This is Python CGI test output.")
+    browse("http://localhost:8080/test.cgi")
     killit()
 
 
@@ -101,9 +104,8 @@ def runWordsTest():
     twistd("words")
     message("Create yourself an account, username 'test' password 'testing'.")
     browse("http://localhost:8080/create")
-    # omit irc test for now
-    #message("You will have to '/msg *login* testing' to log in.")
-    #scmd(ircclient+" test localhost")
+    message("You will have to '/msg *login* testing' to log in.")
+    scmd(ircclient+" test localhost")
     message("Now let's test the 'im' interface.")
     cmd("im")
     killit()
@@ -133,12 +135,12 @@ def runRealityTest():
 
 def runAllTests():
     message("Starting test.")
-    #basicWebTest()
-    #staticWebTest()
-    #distWebTest()
-    #runTelnetTest()
+    basicWebTest()
+    staticWebTest()
+    distWebTest()
+    runTelnetTest()
     runWordsTest()
-    #runRealityTest()
+    runRealityTest()
     message('All tests run.')
 
 

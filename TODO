@@ -13,6 +13,10 @@ this file directly.
     time, please document API calls, write tutorials, and generally figure out
     how this stuff works.
 
+    Specifically weak documentation subsections include:
+      * How to write a complex service for PB
+      * Identities/Perspectives/Services (Passport & how to use it)
+
 001 [[Glyph]] Asynchronous Authentication Service.  PB (and similiar) servers
     ought to be able to defer their authentication at least to another PB
     service.  This means that the Authenticator interface has to be revamped to
@@ -25,14 +29,14 @@ this file directly.
     app at varying levels of complexity, ranging from the hard-core UNIX nerd's
     GTK app to the light'n'fruity Mac user's web admin page...)
 
-003 Integration of TOC and Words.  twisted.protocols.toc ought to integrate
-    with twisted.words, so that AIM, IRC, and PB clients can all access the
-    same chat "space".
+003 [[Paul Swartz]] Integration of TOC and Words.  twisted.protocols.toc ought
+    to integrate with twisted.words, so that AIM, IRC, and PB clients can all
+    access the same chat "space".
 
-004 Relaying for Twisted.Mail.  Twisted.Mail really ought to be a complete
-    sendmail/pop3d/imapd replacement, but currently it's lacking a few things.
-    Those things should be added; relaying is at the top of the list but there 
-    are other tasks too.
+004 [[Moshe Zadka]] Relaying for Twisted.Mail.  Twisted.Mail really ought to be
+    a complete sendmail/pop3d/imapd replacement, but currently it's lacking a
+    few things.  Those things should be added; relaying is at the top of the
+    list but there are other tasks too.
 
 005 Twisted.Internet for Jython.  Although Java lacks the select() call, JDK
     1.4 *does* have an API for doing asynchronous I/O.  Even previous to that
@@ -75,3 +79,8 @@ this file directly.
 012 Twisted.Internet for wxwindows.  This might be a better cross-platform
     toolkit solution than tkinter, especially given how poorly tkinter works on
     MacOS.  (At least wxwindows *plans* to support the mac...)
+
+013 [[Allen Short]] Destroy the sun.
+
+014 Web authentication widget which combines Passport with Web so that
+    asynchronous authentication won't bother web pages.

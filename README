@@ -1,20 +1,26 @@
 Twisted 0.10.0
 
-Quote of the Release::
+Quote of the Release:
 
-  * glyph returns
-  * rik wonders what glyph returns
-  <radix> rik: NOT_DONE_YET
+  <glyph> but one person's identity could have multiple perspectives
+  <e@ircnet> multiple perspective disorder
 
 What's new in 0.10.0?
 
-  Twisted Enterprise, a relational database integration server for Twisted.
+  Twisted Enterprise, relational database integration with Twisted.  Currently
+  it is comprised of a multithreaded database request processing service that
+  can handle multiple database connections, but there are plans to expand it to
+  provide more traditional "application-server" style services.
 
-  "Passport" addition to twisted internet.  This is a system-wide way of
+  "Passport" addition to Twisted Internet.  This is a system-wide way of
   representing services, identities, and perspectives.  Previously just for PB,
-  this model is being applied to all protocols so that a user will have only
+  this model is being applied to all protocols so that a user need have only
   one account with the system, but can access it through whatever protocols are
   available.
+
+  Many minor bugfixes and enhancements to Twisted Web/Reality/Spread/Internet.
+
+  Copyright text added.
 
 What is this?
 
@@ -46,6 +52,12 @@ Unit Tests
   BugFree(TM)::
 
    % runtests
+
+  If you're feeling more brave, you can try the new "acceptance tests".  These
+  require some setup and are mainly for the developers to decide if it's OK to
+  release, but:
+
+   % accepttests
 
 Basic Servers
 
@@ -163,6 +175,6 @@ Copyright
   derivative work of PyUnit, which can be found at
   http://pyunit.sourceforge.net.
 
-  Twisted is made available under the GNU Lesser General Public License.  The
-  included LICENSE file describes this in detail.
+  Twisted is made available under version 2.1 of the GNU Lesser General Public
+  License.  The included LICENSE file describes this in detail.
 

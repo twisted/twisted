@@ -211,7 +211,7 @@ P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
     def _input_password(self, request, name, data):
         return '<INPUT SIZE=60 TYPE="password" NAME="%s">' % (name)
 
-    def form(self, request, dataList, submit="OK", action=""):
+    def form(self, request, dataList, submit="OK", action=None):
         """Return an HTML form from some formatted parameters.
 
         'dataList' is of the format::
