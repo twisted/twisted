@@ -17,16 +17,19 @@ class Clock:
         left = now % (1.0 / n)
         time.sleep(left)
 
+def bodyList(config, space, image):
+    bodies = []
+    for (mass, pos, vel) in config:
+        b = (point.Body(space, mass, pos, vel), image.get_rect())
+        bodies.append(b)
+    return bodies
+
 def main():
     pygame.init()
     image = pygame.image.load("circle.png")
 
     space = point.Space()
-
-    bodies = []
-    for (mass, pos, vel) in config:
-        b = (point.Body(space, mass, pos, vel), image.get_rect())
-        bodies.append(b)
+    bodies = bodyList(config, space, image)
 
     perFrame = 1
     size = width, height = 800, 600
