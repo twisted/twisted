@@ -94,7 +94,7 @@ class _juserhost_Function:
         self.sourceValue = sourceValue
         
     def value(self, elem):
-        from twisted.protocols.jabber import jid
+        from twisted.words.protocols.jabber import jid
         try:
             user, host, resource = jid.parse(self.sourceValue.value(elem))
             if user:
