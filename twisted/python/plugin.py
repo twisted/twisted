@@ -231,3 +231,5 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     """
     tmlFiles = getPluginFileList(debugInspection, showProgress)
     return loadPlugins(plugInType, tmlFiles, debugInspection, showProgress)
+
+__all__ = ['PlugIn', 'DropIn', 'getPluginFileList', 'loadPlugins', 'getPlugIns']
