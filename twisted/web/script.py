@@ -35,7 +35,7 @@ import os
 import resource
 import static
 
-rpyNoResource = """<p>You forgot to assign to the variable "resource" in your .rpy script. For example:</p>
+rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>
 # MyCoolWebApp.rpy
 
