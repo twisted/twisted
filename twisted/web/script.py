@@ -23,6 +23,7 @@ import resource
 import html
 import error
 
+
 from twisted.protocols import http
 from twisted import copyright
 import cStringIO
@@ -31,14 +32,7 @@ del cStringIO
 import traceback
 import resource
 
-class SimpleErrorPage(resource.Resource):
-    def render(self, request):
-        return """<html><head><title>Whoops!</title></head><body>
-<h1>Whoops!</h1>
-<p>
-You forgot to assign to the variable "resource" in your .rpy script. For example:
-</p>
-
+rpyNoResource = """<p>You forgot to assign to the variable "resource" in your .rpy script. For example:</p>
 <pre>
 # MyCoolWebApp.rpy
 
@@ -46,8 +40,6 @@ import mygreatresource
 
 resource = mygreatresource.MyGreatResource()
 </pre>
-</body>
-</html>
 """
 
 def ResourceScript(path, registry):
@@ -56,7 +48,7 @@ def ResourceScript(path, registry):
     be an instance of (a subclass of) web.resource.Resource; it will be
     renderred.
     """
-    glob = {'__file__': path, 'resource': SimpleErrorPage(), 'registry': registry}
+    glob = {'__file__': path, 'resource': error.ErrorPage(500, "Whoops! Internal Error", rpyNoResource), 'registry': registry}
 
     execfile(path, glob, glob)
 

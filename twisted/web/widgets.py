@@ -99,7 +99,7 @@ def formatFailure(myFailure):
     io = StringIO()
     w = io.write
     w("<table>")
-    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (myFailure.type, myFailure.value))
+    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (html.escape(str(myFailure.type)), html.escape(str(myFailure.value))))
     line = 0
     for method, filename, lineno, localVars, globalVars in myFailure.frames:
         # Cheat to make tracebacks shorter.
