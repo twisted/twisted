@@ -14,7 +14,7 @@ the latest version of Python directly from your code, if possible.
 
 from __future__ import generators
 
-import os, sys, types, socket, struct, __builtin__, exceptions, UserDict
+import os, sys, string, types, socket, struct, __builtin__, exceptions, UserDict
 
 #elif sys.version_info[:2] == (2, 2):
 #    def dict(*arg, **kwargs):
@@ -48,43 +48,93 @@ if sys.version_info[:3] == (2, 2, 0):
     __builtin__.bool = bool
     del bool
 
+def inet_pton(af, addr):
+    if af == socket.AF_INET:
+        return socket.inet_aton(addr)
+    elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
+        if [x for x in addr if x not in string.hexdigits + ':.']:
+            raise ValueError("Illegal characters: %r" % (''.join(x),))
 
-if not hasattr(socket, 'inet_pton'):
-    def inet_pton(af, addr):
-        if af == socket.AF_INET:
-            parts = map(int, addr.split('.'))
-            return struct.pack('!BBBB', *parts)
-        elif af == getattr(socket, 'AF_INET6', None):
-            parts = addr.split(':')
-            elide = parts.count('')
-            if elide == 3:
-                return '\x00' * 16
-            elif elide == 2:
-                i = parts.index('')
-                parts[i:i+2] = ['0'] * (10 - len(parts))
-            elif elide == 1:
-                i = parts.index('')
-                parts[i:i+1] = ['0'] * (9 - len(parts))
-            parts = [int(x, 16) for x in parts]
-            return struct.pack('!HHHHHHHH', *parts)
+        parts = addr.split(':')
+        elided = parts.count('')
+        ipv4Component = '.' in parts[-1]
+
+        if len(parts) > (8 - ipv4Component) or elided > 3:
+            raise ValueError("Syntactically invalid address")
+
+        if elided == 3:
+            return '\x00' * 16
+
+        if elided:
+            zeros = ['0'] * (8 - len(parts) - ipv4Component + elided)
+
+            if addr.startswith('::'):
+                parts[:2] = zeros
+            elif addr.endswith('::'):
+                parts[-2:] = zeros
+            else:
+                idx = parts.index('')
+                parts[idx:idx+1] = zeros
+
+            if len(parts) != 8 - ipv4Component:
+                raise ValueError("Syntactically invalid address")
         else:
-            raise socket.error(97, 'Address family not supported by protocol')
+            if len(parts) != (8 - ipv4Component):
+                raise ValueError("Syntactically invalid address")
 
-    def inet_ntop(af, addr):
-        if af == socket.AF_INET:
-            parts = struct.unpack('!BBBB', addr)
-            return '.'.join(map(str, parts))
-        elif af == getattr(socket, 'AF_INET6', None):
-            parts = struct.unpack('!HHHHHHHH', addr)
-            return ':'.join([hex(x)[2:] for x in parts])
-        else:
-            raise socket.error(97, 'Address family not supported by protocol')
+        if ipv4Component:
+            if parts[-1].count('.') != 3:
+                raise ValueError("Syntactically invalid address")
+            rawipv4 = socket.inet_aton(parts[-1])
+            unpackedipv4 = struct.unpack('!HH', rawipv4)
+            parts[-1:] = [hex(x)[2:] for x in unpackedipv4]
 
+        parts = [int(x, 16) for x in parts]
+        return struct.pack('!8H', *parts)
+    else:
+        raise socket.error(97, 'Address family not supported by protocol')
+
+def inet_ntop(af, addr):
+    if af == socket.AF_INET:
+        return socket.inet_ntoa(addr)
+    elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
+        if len(addr) != 16:
+            raise ValueError("address length incorrect")
+        parts = struct.unpack('!8H', addr)
+        bestBase = -1
+        curBase = -1
+        for i in range(8):
+            if parts[i] == 0:
+                if curBase == -1:
+                    curBase, curLen = i, 1
+                else:
+                    curLen += 1
+            else:
+                if curBase != -1:
+                    if bestBase == -1 or curLen > bestLen:
+                        bestBase, bestLen = curBase, curLen
+                    curBase = -1
+        if curBase != -1 and (bestBase == -1 or curLen > bestLen):
+            bestBase, bestLen = curBase, curLen
+        parts = [hex(x)[2:] for x in parts]
+        if bestBase != -1:
+            parts[bestBase:bestBase + bestLen] = ['']
+        if parts[0] == '':
+            parts.insert(0, '')
+        if parts[-1] == '':
+            parts.insert(-1, '')
+        return ':'.join(parts)
+    else:
+        raise socket.error(97, 'Address family not supported by protocol')
+
+try:
+    socket.inet_pton(socket.AF_INET6, "::")
+except (AttributeError, NameError, socket.error):
     socket.inet_pton = inet_pton
     socket.inet_ntop = inet_ntop
+    socket.AF_INET6 = 'AF_INET6'
 
 if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
-    import string
     def lstrip(s, c=string.whitespace):
         while s and s[0] in c:
             s = s[1:]
@@ -95,7 +145,7 @@ if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
         return s
     def strip(s, c=string.whitespace, l=lstrip, r=rstrip):
         return l(r(s, c), c)
-    
+
     object.__setattr__(str, 'lstrip', lstrip)
     object.__setattr__(str, 'rstrip', rstrip)
     object.__setattr__(str, 'strip', strip)

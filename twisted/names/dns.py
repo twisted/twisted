@@ -24,7 +24,7 @@ try:
 except ImportError:
     import StringIO
 
-AF_INET6 = getattr(socket, 'AF_INET6', 'AF_INET6')
+AF_INET6 = socket.AF_INET6
 
 try:
     from Crypto.Util import randpool

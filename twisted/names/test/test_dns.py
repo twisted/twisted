@@ -15,8 +15,6 @@ except ImportError:
 
 from twisted.trial import unittest
 from twisted.names import dns
-from twisted.names.test.test_names import IPv6
-
 
 class RoundtripDNSTestCase(unittest.TestCase):
     """Encoding and then decoding various objects."""
@@ -88,11 +86,9 @@ class RoundtripDNSTestCase(unittest.TestCase):
             dns.Record_MB, dns.Record_MG, dns.Record_MR, dns.Record_PTR,
             dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
             dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
-            dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT
+            dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
+            dns.Record_AAAA, dns.Record_A6
         ]
-
-        if IPv6:
-            records.extend([dns.Record_AAAA, dns.Record_A6])
 
         for k in records:
             k1, k2 = k(), k()
