@@ -34,12 +34,13 @@ class UNIXServer(internet._AbstractServer):
 
 class Client(unix.Client):
     def doRead(self):
-        x = unix.Client.doRead(self)
         if not self.connected:
-            return x
+            return
         try:
+            print 'Woop'
             msg, flags, ancillary = recvmsg(self.fileno())
         except socket.error, e:
+            print 'feh', e
             if e[0] == errno.EAGAIN:
                 pass
             else:
@@ -49,6 +50,7 @@ class Client(unix.Client):
             log.msg('recvmsg():')
             log.err()
         else:
+            print repr(msg), flags, ancillary
             if ancillary:
                 buf = ancillary[0][2]
                 fds = struct.unpack('%di' % (len(buf) / 4), buf)
@@ -60,7 +62,7 @@ class Client(unix.Client):
                     log.err()
             else:
                 print 'Nothing!'
-        return x
+        return unix.Client.doRead(self)
 
 class Connector(unix.Connector):
     def _makeTransport(self):

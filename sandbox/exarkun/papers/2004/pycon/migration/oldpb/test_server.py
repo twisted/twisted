@@ -95,7 +95,7 @@ class MigrationServer(pb.Avatar):
         server.socket.close()
         if not self.servers and not self.transition:
             from twisted.internet import reactor
-            reactor.stop()
+            # reactor.stop()
 
 class MigrationRealm:
     __implements__ = (portal.IRealm,)
@@ -114,7 +114,6 @@ def makeService():
     p = portal.Portal(r)
     p.registerChecker(checkers.FilePasswordDB('passwd'))
 
-    svr = unix.UNIXServer('migrate', pb.PBServerFactory(p, True))
     svr = unix.UNIXServer('migrate', pb.PBServerFactory(p, True))
     return svr
 

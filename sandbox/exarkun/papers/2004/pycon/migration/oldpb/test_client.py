@@ -6,6 +6,7 @@ from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.cred import credentials
 from twisted.application import service
+from twisted.application import internet
 
 import unix
 import pbold
@@ -15,8 +16,7 @@ class FileDescriptorReceiver(protocol.Protocol):
     def __init__(self):
         self.fds = []
 
-    def fileDescriptorReceived(self, fds):
-        print 'Some fds', fds
+    def fileDescriptorsReceived(self, fds):
         self.fds.extend(fds)
 
     def __str__(self):
@@ -33,10 +33,14 @@ class ClientFactory(protocol.ClientFactory):
         self.onConnect.callback(p)
         return p
 
+def cbOwnedServer(result):
+    print 'Owned server'
+
 def cbGetServer(port, avatar, proto, sname):
-    print 'Server acheived!'
-    print sname, port, avatar, proto
-    return avatar.callRemote('gotServer', sname)
+    return avatar.callRemote('gotServer', sname
+        ).addCallback(cbOwnedServer
+        ).addErrback(log.err
+        )
 
 def cbServerList(lst, avatar, proto):
     sname = lst.pop()
@@ -50,14 +54,12 @@ def ebServerList(failure):
 
 def cbMigrate(avatar):
     # avatar.broker.transport.
-    print vars(avatar)
     return avatar.callRemote('allocateDescriptorChannel'
         ).addCallback(cbDescriptorChannel, avatar
         ).addErrback(log.err
         )
 
 def cbDescriptorChannel(channel, avatar):
-    print 'Here we are, yo'
     d = defer.Deferred()
     client = unix.UNIXClient(channel, ClientFactory(d), 10)
     client.startService()
@@ -73,7 +75,7 @@ def cbChannelConnected(proto, avatar):
 
 def makeService():
     cfac = pb.PBClientFactory()
-    client = unix.UNIXClient('migrate', cfac, 10)
+    client = internet.UNIXClient('migrate', cfac, 10)
     cfac.login(credentials.UsernamePassword('user', 'pass')
         ).addCallback(cbMigrate
         ).addErrback(log.err
