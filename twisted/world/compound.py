@@ -340,7 +340,7 @@ class StorableDictionaryStore(StorableList):
         h = self.getHash(inKey)
         for i in xrange(len(self)):
             pos = self.computePosition(h, i)
-            print 'deleting',inKey,pos
+            #print 'deleting',inKey,pos
             rowUsed, rowKey, rowValue = self[pos]
             if rowUsed == UNUSED:
                 raise KeyError('Storable dictionary did not have key %r' % inKey)
