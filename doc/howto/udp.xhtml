@@ -74,20 +74,24 @@ reactor.run()
     send datagrams to, and are not told where they came from since
     they can only come from address the socket is 'connected' to.</p>
 
-    <p>The protocol's <code class="python">transport</code> attribute will implement the
-    <code class="API">twisted.internet.interfaces.IUDPConnectedTransport</code>
-    interface.</p>
-
     <pre class="python">
-from twisted.internet.protocol import ConnectedDatagramProtocol
+from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
-class Echo(ConnectedDatagramProtocol):
-    
-    def datagramReceived(self, data):
-        self.transport.write(data)
+class Helloer(DatagramProtocol):
 
-reactor.connectUDP("www.example.com", 9999, Echo())
+    def startProtocol(self):
+        self.transport.connect("www.example.com", 1234).addCallback(self._cbConnected)
+
+    def _cbConnected(self, (host, port)):
+        print "we can only send to %s now" % str((host, port))
+	self.transport.write("hello") # no need for address
+
+    def datagramReceived(self, data, (host, port)):
+        print "received %r from %s:%d" % (data, host, port)
+
+# 0 means any port, we don't care in this case
+reactor.listenUDP(0, Helloer())
 reactor.run()
     </pre>
 

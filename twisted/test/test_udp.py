@@ -53,33 +53,28 @@ class Client(Mixin, protocol.ConnectedDatagramProtocol):
         self.refused = 1
 
 
-class UDPTestCase(unittest.TestCase):
+class GoodClient(Server):
+    
+    def connectionRefused(self):
+        self.refused = 1
+
+
+class OldConnectedUDPTestCase(unittest.TestCase):
 
     def testStartStop(self):
-        server = Server()
-        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
         client = Client()
         port2 = reactor.connectUDP("127.0.0.1", 8888, client)
-
         reactor.iterate()
         reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(server.started, 1)
         self.assertEquals(client.started, 1)
-        self.assertEquals(server.stopped, 0)
         self.assertEquals(client.stopped, 0)
-
         l = []
-        defer.maybeDeferred(port1.stopListening).addCallback(l.append)
         defer.maybeDeferred(port2.stopListening).addCallback(l.append)
-
         reactor.iterate()
         reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(server.stopped, 1)
         self.assertEquals(client.stopped, 1)
-        self.assertEquals(len(l), 2)
-    
+        self.assertEquals(len(l), 1)
+
     def testDNSFailure(self):
         client = Client()
         # if this domain exists, shoot your sysadmin
@@ -89,21 +84,6 @@ class UDPTestCase(unittest.TestCase):
         self.assert_(client.failure.trap(error.DNSLookupError))
         self.assertEquals(client.stopped, 0)
         self.assertEquals(client.started, 0)
-
-    def testBindError(self):
-        server = Server()
-        port = reactor.listenUDP(0, server, interface='127.0.0.1')
-        n = port.getHost()[2]
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(server.transport.getHost(), ('INET_UDP', '127.0.0.1', n))
-        server2 = Server()
-        self.assertRaises(error.CannotListenError, reactor.listenUDP, n, server2, interface='127.0.0.1')
-        port.stopListening()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
 
     def testSendPackets(self):
         server = Server()
@@ -127,6 +107,103 @@ class UDPTestCase(unittest.TestCase):
         # assume no one listening on port 80 UDP
         client = Client()
         port = reactor.connectUDP("127.0.0.1", 80, client)
+        server = Server()
+        port2 = reactor.listenUDP(0, server, interface="127.0.0.1")
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        client.transport.write("a")
+        client.transport.write("b")
+        server.transport.write("c", ("127.0.0.1", 80))
+        server.transport.write("d", ("127.0.0.1", 80))
+        server.transport.write("e", ("127.0.0.1", 80))
+        server.transport.write("toserver", port2.getHost()[1:])
+        server.transport.write("toclient", port.getHost()[1:])
+        reactor.iterate(); reactor.iterate()
+        self.assertEquals(client.refused, 1)
+        port.stopListening()
+        port2.stopListening()
+        reactor.iterate(); reactor.iterate()
+
+
+class UDPTestCase(unittest.TestCase):
+
+    def testStartStop(self):
+        server = Server()
+        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(server.started, 1)
+        self.assertEquals(server.stopped, 0)
+        l = []
+        defer.maybeDeferred(port1.stopListening).addCallback(l.append)
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(server.stopped, 1)
+        self.assertEquals(len(l), 1)
+
+    def testRebind(self):
+        server = Server()
+        p = reactor.listenUDP(0, server, interface="127.0.0.1")
+        reactor.iterate()
+        unittest.deferredResult(defer.maybeDeferred(p.stopListening))
+        p = reactor.listenUDP(0, server, interface="127.0.0.1")
+        reactor.iterate()
+        unittest.deferredResult(defer.maybeDeferred(p.stopListening))
+    
+    def testBindError(self):
+        server = Server()
+        port = reactor.listenUDP(0, server, interface='127.0.0.1')
+        n = port.getHost()[2]
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(server.transport.getHost(), ('INET_UDP', '127.0.0.1', n))
+        server2 = Server()
+        self.assertRaises(error.CannotListenError, reactor.listenUDP, n, server2, interface='127.0.0.1')
+        port.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+
+    def testDNSFailure(self):
+        client = GoodClient()
+        p = reactor.listenUDP(0, client)
+        # if this domain exists, shoot your sysadmin
+        d = client.transport.connect("xxxxxxxxx.zzzzzzzzz.yyyyy.", 8888)
+        unittest.deferredError(d).trap(error.DNSLookupError)
+        p.stopListening()
+
+    def testSendPackets(self):
+        server = Server()
+        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
+        client = GoodClient()
+        port2 = reactor.listenUDP(0, client, interface="127.0.0.1")
+        reactor.iterate()
+        reactor.iterate()
+        d = client.transport.connect("127.0.0.1", server.transport.getHost()[2])
+        self.assertEquals(unittest.deferredResult(d),
+                          tuple(server.transport.getHost()[1:]))
+        server.transport.write("hello", client.transport.getHost()[1:])
+        client.transport.write("a")
+        client.transport.write("b", None)
+        client.transport.write("c", server.transport.getHost()[1:])
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(client.packets, [("hello", ("127.0.0.1", server.transport.getHost()[2]))])
+        addr = ("127.0.0.1", client.transport.getHost()[2])
+        self.assertEquals(server.packets, [("a", addr), ("b", addr), ("c", addr)])
+        port1.stopListening(); port2.stopListening()
+        reactor.iterate(); reactor.iterate()
+
+    def testConnectionRefused(self):
+        # assume no one listening on port 80 UDP
+        client = GoodClient()
+        port = reactor.listenUDP(0, client, interface="127.0.0.1")
+        client.transport.connect("127.0.0.1", 80)
         server = Server()
         port2 = reactor.listenUDP(0, server, interface="127.0.0.1")
         reactor.iterate()

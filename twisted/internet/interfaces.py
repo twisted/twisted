@@ -327,7 +327,9 @@ class IReactorUDP(Interface):
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        """Connects a L{twisted.internet.protocol.ConnectedDatagramProtocol} instance to a UDP port.
+        """DEPRECATED.
+
+        Connects a L{twisted.internet.protocol.ConnectedDatagramProtocol} instance to a UDP port.
         """
 
 
@@ -1012,26 +1014,38 @@ class IServiceCollection(Interface):
 
 
 class IUDPTransport(Interface):
-    """Transport for UDP PacketProtocols."""
+    """Transport for UDP DatagramProtocols."""
 
-    def write(self, packet, (host, port)):
+    def write(self, packet, addr=None):
         """Write packet to given address.
 
-        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
+        @param addr: a tuple of (host, port). For connected transports must
+                     be the address the transport is connected to, or None.
+        @raise L{MessageLengthError<twisted.internet.error.MessageLengthError>},
+               L{ConnectInProgressError<twisted.internet.error.ConnectInProgressError>}
         """
 
+    def connect(self, host, port):
+        """Connect the transport to an address.
+
+        This changes it to connected mode. Datagrams can only be sent to
+        this address, and will only be received from this address. In addition
+        the protocol's connectionRefused method might get called if destination
+        is not receiving datagrams.
+
+        @return Deferred which triggers once we're connected. Failure will usually
+        be do to DNS lookup error.
+        """
+    
     def getHost(self):
         """Return ('INET_UDP', interface, port) we are listening on."""
 
 
 class IUDPConnectedTransport(Interface):
-    """Transport for UDP ConnectedPacketProtocols."""
+    """DEPRECATED. Transport for UDP ConnectedPacketProtocols."""
 
     def write(self, packet):
-        """Write packet to address we are connected to.
-
-        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
-        """
+        """Write packet to address we are connected to."""
 
     def getHost(self):
         """Return ('INET_UDP', interface, port) we are listening on."""
@@ -1041,10 +1055,7 @@ class IUNIXDatagramTransport(Interface):
     """Transport for UDP PacketProtocols."""
 
     def write(self, packet, address):
-        """Write packet to given address.
-
-        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
-        """
+        """Write packet to given address."""
 
     def getHost(self):
         """Return ('UNIX_DGRAM', address) we are listening on."""
@@ -1054,10 +1065,7 @@ class IUNIXDatagramConnectedTransport(Interface):
     """Transport for UDP ConnectedPacketProtocols."""
 
     def write(self, packet):
-        """Write packet to address we are connected to.
-
-        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
-        """
+        """Write packet to address we are connected to."""
 
     def getHost(self):
         """Return ('UNIX_DGRAM', address) we are listening on."""

@@ -75,6 +75,10 @@ class DNSLookupError(IOError):
         return s
 
 
+class ConnectInProgressError(Exception):
+    """A connect operation was started and isn't done yet."""
+
+
 # connection errors
 
 class ConnectError(Exception):
@@ -92,6 +96,7 @@ class ConnectError(Exception):
             s = '%s: %s' % (s, self[0])
         s = '%s.' % s
         return s
+
 
 class ConnectBindError(ConnectError):
     """Couldn't bind"""

@@ -70,7 +70,9 @@ class Port(base.BasePort):
         self.maxPacketSize = maxPacketSize
         self.interface = interface
         self.setLogStr()
-
+        self._connected = False
+        self._connectedAddr = None
+    
     def __repr__(self):
         return "<%s on %s>" % (self.protocol.__class__, self.port)
 
@@ -119,25 +121,60 @@ class Port(base.BasePort):
             except:
                 log.deferr()
 
-    def write(self, datagram, addr):
+    def write(self, datagram, addr=None):
         """Write a datagram.
 
-        @param addr: should be a tuple (host, port)
+        @param addr: should be a tuple (host, port), can be None in connected mode.
         """
-        try:
-            return self.socket.sendto(datagram, addr)
-        except socket.error, se:
-            no = se.args[0]
-            if no == EINTR:
-                return self.write(datagram, addr)
-            elif no == EMSGSIZE:
-                raise error.MessageLengthError, "message too long"
-            else:
-                raise
+        if self._connected:
+            if self._connectedAddr == None:
+                raise error.ConnectInProgressError
+            assert addr in (None, self._connectedAddr)
+            try:
+                return self.socket.send(datagram)
+            except socket.error, se:
+                no = se.args[0]
+                if no == EINTR:
+                    return self.write(datagram)
+                elif no == EMSGSIZE:
+                    raise error.MessageLengthError, "message too long"
+                elif no == ECONNREFUSED:
+                    self.protocol.connectionRefused()
+                else:
+                    raise
+        else:
+            assert addr != None
+            try:
+                return self.socket.sendto(datagram, addr)
+            except socket.error, se:
+                no = se.args[0]
+                if no == EINTR:
+                    return self.write(datagram, addr)
+                elif no == EMSGSIZE:
+                    raise error.MessageLengthError, "message too long"
+                else:
+                    raise
 
     def writeSequence(self, seq, addr):
         self.write("".join(seq), addr)
 
+    def connect(self, host, port):
+        """'Connect' to remote server."""
+        if self._connected:
+            raise RuntimeError, "already connected"
+        self._connected = True
+        if abstract.isIPAddress(host):
+            return defer.maybeDeferred(self._connectDone, host, port)
+        else:
+            d = self.reactor.resolve(host)
+            d.addCallback(self._connectDone, port)
+            return d
+    
+    def _connectDone(self, host, port):
+        self._connectedAddr = (host, port)
+        self.socket.connect((host, port))
+        return self._connectedAddr
+    
     def loseConnection(self):
         """Stop accepting connections on this port.
 

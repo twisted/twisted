@@ -29,6 +29,7 @@ from time import time, sleep
 import os
 import socket
 import sys
+import warnings
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
@@ -194,10 +195,11 @@ class PosixReactorBase(ReactorBase):
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        """Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
+        """DEPRECATED.
 
-        EXPERIMENTAL.
+        Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
         """
+        warnings.warn("use listenUDP and then transport.connect().", DeprecationWarning, stacklevel=2)
         p = udp.ConnectedPort((remotehost, remoteport), localport, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
