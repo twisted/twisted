@@ -462,7 +462,7 @@ class TestConvert(unittest.TestCase):
         s1 = services[0]
         self.assertEqual(s, s1)
 
-class TestInternet(unittest.TestCase):
+class TestInternet2(unittest.TestCase):
 
     def testTCP(self):
         s = service.MultiService()
