@@ -98,3 +98,7 @@ def run():
         interface = ''
     coilApp.listenTCP(int(config.opts['port']), site, interface=interface)
     coilApp.run(save=0)
+
+if __name__ == '__main__':
+    run()
+

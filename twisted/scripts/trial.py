@@ -81,6 +81,11 @@ class Options(usage.Options):
         from twisted.python.util import spewer
         sys.settrace(spewer)
 
+    def opt_disablegc(self):
+        """Disable the garbage collector"""
+        import gc
+        gc.disable()
+
     opt_m = opt_module
     opt_p = opt_package
     opt_c = opt_testcase

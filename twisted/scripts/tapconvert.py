@@ -214,3 +214,7 @@ def run():
         print "Error: Unsupported output type."
     else:
         savePersisted(a, filename=options["out"], encrypted=options["encrypt"])
+
+if __name__ == '__main__':
+    run()
+

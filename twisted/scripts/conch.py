@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.55 2003/04/28 03:53:27 exarkun Exp $
+# $Id: conch.py,v 1.56 2003/05/10 14:03:40 spiv Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -799,3 +799,7 @@ class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
         forwarding.SSHConnectForwardingChannel.closed(self)
         if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             reactor.stop()
+
+if __name__ == '__main__':
+    run()
+

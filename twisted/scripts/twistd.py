@@ -467,3 +467,7 @@ def run():
         os._exit(1)
 
     runApp(config)
+
+if __name__ == '__main__':
+    run()
+

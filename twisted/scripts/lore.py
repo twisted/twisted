@@ -62,6 +62,7 @@ def getProcessor(input, output, config):
     except process.NoProcessorError, e:
         print "%s: %s" % (sys.argv[0], e)
 
+
 def run():
     opt = Options()
     try:
@@ -90,3 +91,8 @@ def run():
             for error in errors:
                 print "%s:%s" % (file, error)
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    run()
+

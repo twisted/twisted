@@ -278,3 +278,7 @@ binary: binary-indep binary-arch
 
     os.chdir('.build/%(directory)s' % vars())
     os.system('dpkg-buildpackage -rfakeroot'+ ['', ' -uc -us'][config['unsigned']])
+
+if __name__ == '__main__':
+    run()
+

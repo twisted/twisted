@@ -185,3 +185,7 @@ class MyOptions(usage.Options):
                     "Front-end to use; one of %s"
                     % (' '.join(getAvailableToolkits()),)),
                    ]
+
+if __name__ == '__main__':
+    run()
+
