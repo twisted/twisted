@@ -18,9 +18,9 @@ class HaHa(resource.Resource):
         return self
 
     def render(self, request):
-        return '''I don't know you!<br />
-        <a href="perspective-init">login</a>
-        '''
+        return """I don't know you!<br />
+        <a href='perspective-init'>login</a>
+        """
 
 
 checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
