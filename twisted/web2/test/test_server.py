@@ -60,11 +60,37 @@ from twisted.web2 import http
 from twisted.web2 import responsecode
 
 class FakeResource(resource.Resource):
-    def child_foo(self, ctx, segments):
-        return self, segments[1:]
+    responseCode = 200
+    responseText = 'This is a fake resource.'
 
     def render(self, ctx):
-        return http.Response(
-            responsecode.OK,
-            stream.MemoryStream("Ok"))
+        return http.Response(self.responseCode, stream=self.responseStream())
 
+    def responseStream(self):
+        return stream.MemoryStream(self.responseText)
+
+    def child_validChild(self, ctx):
+        f = FakeResource()
+        f.responseCode = 200
+        f.responseText = 'This is a valid child resource.'
+        return f
+
+    def child_missingChild(self, ctx):
+        f = FakeResource()
+        f.responseCode = 404
+        f.responseStream = lambda self: None
+        return f
+
+
+
+class TestTest(unittest.TestCase):
+    def setUp(self):
+        self.root = FakeResource()
+        self.site = server.Site(self.root)
+        
+    def chanrequest(self):
+        return FakeChanRequest(self.site)
+
+    def request(self, path, headers, version=(1,1)):
+        return http.Request(self.chanrequest(), 'GET', path, version, headers)
+        
