@@ -4,7 +4,11 @@
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
 
+ifeq ($(TWISTED_2_3),1)
 versions=2.1 2.2 2.3
+else
+versions=2.1 2.2
+endif
 
 build: build-stamp
 build-stamp:
@@ -127,38 +131,23 @@ binary-indep: build install
 	chmod -R go=rX debian/python-twisted
 	dpkg --build debian/python-twisted ..
 
-	dpkg-gencontrol -isp -ppython2.1-twisted -Pdebian/python2.1-twisted
-	chown -R root.root debian/python2.1-twisted
-	chmod -R go=rX debian/python2.1-twisted
-	dpkg --build debian/python2.1-twisted ..
-
-	dpkg-gencontrol -isp -ppython2.2-twisted -Pdebian/python2.2-twisted
-	chown -R root.root debian/python2.2-twisted
-	chmod -R go=rX debian/python2.2-twisted
-	dpkg --build debian/python2.2-twisted ..
-
-	chown -R root.root debian/python2.3-twisted
-	chmod -R go=rX debian/python2.3-twisted
-	dpkg --build debian/python2.3-twisted ..
+	for ver in $(versions); \
+	do dpkg-gencontrol -isp -ppython$$ver-twisted -Pdebian/python$$ver-twisted;\
+	chown -R root.root debian/python$$ver-twisted;\
+	chmod -R go=rX debian/python$$ver-twisted;\
+	dpkg --build debian/python$$ver-twisted ..;\
+	done
 
 
 binary-arch: build install
 	find debian -name "*.so" | xargs -n 1 dpkg-shlibdeps
 
-	dpkg-gencontrol -isp -ppython2.1-twisted-bin -Pdebian/python2.1-twisted-bin
-	chown -R root.root debian/python2.1-twisted-bin
-	chmod -R go=rX debian/python2.1-twisted-bin
-	dpkg --build debian/python2.1-twisted-bin ..
-
-	dpkg-gencontrol -isp -ppython2.2-twisted-bin -Pdebian/python2.2-twisted-bin
-	chown -R root.root debian/python2.2-twisted-bin
-	chmod -R go=rX debian/python2.2-twisted-bin
-	dpkg --build debian/python2.2-twisted-bin ..
-
-	dpkg-gencontrol -isp -ppython2.3-twisted-bin -Pdebian/python2.3-twisted-bin
-	chown -R root.root debian/python2.3-twisted-bin
-	chmod -R go=rX debian/python2.3-twisted-bin
-	dpkg --build debian/python2.3-twisted-bin ..
+	for ver in $(versions); \
+	do dpkg-gencontrol -isp -ppython$$ver-twisted-bin -Pdebian/python$$ver-twisted-bin;\
+	chown -R root.root debian/python$$ver-twisted-bin;\
+	chmod -R go=rX debian/python$$ver-twisted-bin;\
+	dpkg --build debian/python$$ver-twisted-bin ..;\
+	done
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install
