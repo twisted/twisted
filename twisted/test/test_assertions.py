@@ -1,4 +1,4 @@
-# -*- twisted.test.test_assertions -*-
+# -*- test-case-name: twisted.test.test_assertions -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
