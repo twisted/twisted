@@ -314,6 +314,8 @@ def _getPlugIns(plugInType, debugInspection=None, showProgress=None):
         secondHalf = lambda x: showProgress(x / 2.0 + 0.5)
 
     tmlFiles = getPluginFileList(debugInspection, firstHalf)
+    if not tmlFiles:
+        return []
     return loadPlugins(plugInType, tmlFiles, debugInspection, secondHalf)
 
 def isAModule(d):
