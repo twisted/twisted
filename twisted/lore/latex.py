@@ -52,7 +52,7 @@ def realpath(path):
     path = os.path.normpath(os.path.join(cwd, path))
     if path.startswith(cwd + '/'):
         path = path[len(cwd)+1:]
-    return path
+    return path.replace('\\', '/') # windows slashes make Latex blow up
 
 
 def getLatexText(node, writer, filter=lambda x:x, entities=entities):
