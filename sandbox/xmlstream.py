@@ -60,50 +60,59 @@ class JabberCoreMixin:
 
     def gotElement_message(self, message):
         type = message.attributes.get('type')
+        from_ = message.attributes.get('from')
+        to = message.attributes.get('to')
+        id = message.attributes.get('id')
         if type:
             m = getattr(self, "gotMessage_"+type, self.gotMessageUnknown)
         else:
             m = self.gotMessageUnknown
-        m(message, type)
+        m(type, from_, to, id, message)
 
-    def gotMessage_error(self, message, type):
+    def gotMessage_error(self, type, from_, to, id, message):
         error = _getElementNamedOrNone(message, 'error')
-        from_ = message.attributes.get('from')
-        to = message.attributes.get('to')
         code = error.attributes['code']
         text = domhelpers.getNodeText(error)
-        self.gotMessageError(code, text, from_, to)
+        self.gotMessageError(from_, to, id, code, text)
 
-    def gotMessageUnknown(self, message, type):
+    def gotMessageUnknown(self, type, from_, to, id, message):
         body = _getElementNamedOrNone(message, 'body')
         subject = _getElementNamedOrNone(message, 'subject')
-        from_ = message.attributes.get('from')
-        to = message.attributes.get('to')
-        id = message.attributes.get('id')
         thread = _getElementNamedOrNone(message, 'thread')
-        self.gotMessageDefault(type, from, to, subject, body, id, thread)
+        self.gotMessageDefault(type, from, to, id, subject, body, thread)
 
     def gotElement_presence(self, element):
         type = message.attributes.get('type')
+        from_ = message.attributes.get('from')
+        to = message.attributes.get('to')
+        id = message.attributes.get('id')
         if type:
             m = getattr(self, "gotPresence_"+type, self.gotPresence_available)
         else:
             m = self.gotPresence_available
-        m(message, type)
+        m(type, from_, to, id, message)
 
-    def gotPresence_error(self, element, type):
+    def gotPresence_error(self, type, from_, to, id, message):
         error = _getElementNamedOrNone(message, 'error')
-        from_ = message.attributes.get('from')
-        to = message.attributes.get('to')
         code = error.attributes['code']
         text = domhelpers.getNodeText(error)
-        self.gotPresenceError(code, text, from_, to)
+        self.gotPresenceError(from_, to, id, code, text)
 
-    def gotPresence_available(self, element, type):
-        pass # graceful degradation
+    def gotPresence_available(self, type, from_, to, id, message):
+        show = _getElementNamedOrNone(message, 'show')
+        status = _getElementNamedOrNone(message, 'status')
+        priority = _getElementNamedOrNone(message, 'priority')
+        return self.gotPresenceNotification(from_, to, id, show, status,
+                                            priority)
 
-    def gotPresence_unavailable(self, element, type):
-        pass # implement
+    def gotPresence_unavailable(self, type, from_, to, id, message):
+        pass #
+
+    def gotPresence_subscribe(self, type, from_, to, id, message):
+        pass #
+
+    def gotPresence_subscribed(self, type, from_, to, id, message):
+        pass #
 
     def gotPresence_unavailable(self, element, type):
         pass # implement
@@ -228,12 +237,14 @@ Requesting               Responding
    to a natural-language description of the error.
 """
 
-    def gotMessageError(self, code, text, from_, to):
+    def gotMessageError(self, from_, to, id, code, text):
         raise NotImplementedError
 
-    def gotPresenceError(self, code, text, from_, to):
+    def gotPresenceError(self, from_, to, id, code, text):
         raise NotImplementedError
 
-    def gotMessageDefault(self, type, from_, to, subject, body, id, thread):
+    def gotMessageDefault(self, type, from_, to, id, subject, body, thread):
         raise NotImplementedError
 
+    def gotPresenceNotification(self, from_, to, id, show, status, priority):
+        raise NotImplementedError
