@@ -155,7 +155,8 @@ dist/Twisted_NoDocs-$(Version).win32-py$(pyversion).exe: $(ExeDeps)
 # uncompress and rezip doc
 doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
     :chdir doc
-    :sys tar xfj TwistedDocs-$(Version).tar.bz2
+    @if not os.path.isdir('TwistedDocs-%s' % _no.Version):
+        :sys tar xfj TwistedDocs-$(Version).tar.bz2
     :chdir TwistedDocs-$(Version)
     :sys zip -rq ../twisteddoc.zip *
 
