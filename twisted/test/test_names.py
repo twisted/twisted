@@ -74,16 +74,17 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         ])
         
         from twisted.internet import reactor
-        reactor.listenTCP(PORT, self.factory)
+        self.listenerTCP = reactor.listenTCP(PORT, self.factory)
         
         p = dns.DNSClientProtocol(self.factory)
-        reactor.listenUDP(PORT, p)
+        self.listenerUDP = reactor.listenUDP(PORT, p)
         
         self.resolver = client.Resolver(servers=[('127.0.0.1', PORT)])
 
 
     def tearDown(self):
-        pass
+        self.listenerTCP.stopListening()
+        self.listenerUDP.stopListening()
 
 
     def testAddressRecord(self):
@@ -122,7 +123,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
     def testNameserver(self):
         r = self.resolver
         self.deferredFailUnlessEqual(
-            r.lookupNameserver('test-domain.com'),
+            r.lookupNameservers('test-domain.com'),
             [dns.Record_NS('39.28.189.39')]
         )
 
