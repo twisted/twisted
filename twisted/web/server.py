@@ -448,8 +448,15 @@ class Request(pb.Copyable, http.HTTP):
         return socket.gethostbyaddr(self.transport.getHost()[1])
 
     def prePathURL(self):
-        return urllib.quote('http://%s/%s' % (self.getHeader("host"),
-                                 string.join(self.prepath, '/')), "/:")
+        inet, addr, port = self.transport.getHost()
+        if port == 80:
+            hostport = ''
+        else:
+            hostport = ':%d' % port
+        return urllib.quote('http://%s%s/%s' % (
+            self.getHeader("host"),
+            hostport,
+            string.join(self.prepath, '/')), "/:")
 
     def getClientIP(self):
         if self.client[0] == 'INET':
