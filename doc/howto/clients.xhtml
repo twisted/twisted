@@ -108,6 +108,13 @@ from twisted.internet import reactor
 reactor.connectTCP(host, port, EchoClientFactory())
 reactor.run()
     </pre>
+
+    <p>Note that <code class="API"
+    base="twisted.internet.protocol.ClientFactory">clientConnectionFailed</code>
+    is called when a connection could not be established, and that <code
+    class="API"
+    base="twisted.internet.protocol.ClientFactory">clientConnectionLost</code>
+    is called when a connection was made and then disconnected.</p>
     
     <h2>A Higher-Level Example: ircLogBot</h2>
     

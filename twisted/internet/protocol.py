@@ -115,7 +115,7 @@ class ClientFactory(Factory):
         """
 
     def clientConnectionFailed(self, connector, reason):
-        """Called when a connection has failed.
+        """Called when a connection has failed to connect.
 
         It may be useful to call connector.connect() - this will reconnect.
 
@@ -123,7 +123,7 @@ class ClientFactory(Factory):
         """
 
     def clientConnectionLost(self, connector, reason):
-        """Called when a connection is lost.
+        """Called when an established connection is lost.
 
         It may be useful to call connector.connect() - this will reconnect.
 
