@@ -110,7 +110,6 @@ class DirDbmTestCase(unittest.TestCase):
 
     def testModificationTime(self):
         import time
-        before = int(time.time())
         # the mtime value for files comes from a different place than the
         # gettimeofday() system call. On linux, gettimeofday() can be
         # slightly ahead (due to clock drift which gettimeofday() takes into
@@ -118,12 +117,10 @@ class DirDbmTestCase(unittest.TestCase):
         # close to the edge of the next second, time.time() can give a value
         # which is larger than the mtime which results from a subsequent
         # write(). I consider this a kernel bug, but it is beyond the scope
-        # of this test. Sleep for a second to make sure we don't hit it.
+        # of this test. Thus we keep the range of acceptability to 3 seconds time.
         # -warner
-        time.sleep(1)
         self.dbm["k"] = "v"
-        after = int(time.time())
-        self.assert_(before <= self.dbm.getModificationTime("k") <= after)
+        self.assert_(abs(time.time() - self.dbm.getModificationTime("k")) <= 3)
     
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash""" 
