@@ -86,7 +86,7 @@ class FileDescriptor(log.Logger):
     def doWrite(self):
         """Called when data is available for writing.
 
-        A result that is true (which will be a negtive number) implies the
+        A result that is true (which will be a negative number) implies the
         connection was lost. A false result implies the connection is still
         there; a result of 0 implies no write was done, and a result of None
         indicates that a write was done.
