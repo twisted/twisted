@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.47 2003/03/22 15:38:30 z3p Exp $
+# $Id: conch.py,v 1.48 2003/03/30 19:46:27 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -185,14 +185,14 @@ def handleError():
     raise
 
 def onConnect():
-    if not options['noshell'] and not options['fork']:
+    if not (options['noshell'] and options['fork']):
         conn.openChannel(SSHSession())
     if options.localForwards:
         for localPort, hostport in options.localForwards:
             reactor.listenTCP(localPort,
                         forwarding.SSHListenForwardingFactory(conn, 
                             hostport,
-                            forwarding.SSHListenClientForwardingChannel))
+                            SSHListenClientForwardingChannel))
     if options.remoteForwards:
         for remotePort, hostport in options.remoteForwards:
             log.msg('asking for remote forwarding for %s:%s' %
@@ -256,7 +256,7 @@ class SSHUnixServerFactory(protocol.Factory):
     def buildProtocol(self, addr):
         return SSHUnixServerProtocol()
 
-class SSHUnixClientProtocol(banana.Banana): #
+class SSHUnixClientProtocol(banana.Banana): 
     knownDialects = ['none']
 
     def __init__(self):
@@ -493,7 +493,7 @@ class SSHUnixChannel(channel.SSHChannel):
 
     def closed(self):
         self.unix.sendMessage('closed', self.id)
-        if len(conn.channels) == 1 and not options['fork'] and not options['nocache']: # just us left
+        if len(conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
             reactor.stop()
 
 class SSHClientFactory(protocol.ClientFactory):
@@ -654,6 +654,17 @@ class SSHConnection(connection.SSHConnection):
         conn = self
         onConnect()
 
+    def global_forwarded_tcp(self, windowSize, maxPacket, data):
+        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcp(data)
+        if self.remoteForwards.has_key(remoteHP[1]):
+            connectHP = self.remoteForwards[remoteHP[1]]
+            return SSHConnectForwardingChannel(connectHP,
+                                            remoteWindow = windowSize,
+                                            remoteMaxPacket = maxPacket,
+                                            conn = self)
+        else:
+            return OPEN_CONNECT_FAILED, "don't know about that port"
+
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
@@ -752,7 +763,10 @@ class SSHSession(channel.SSHChannel):
 
     def closed(self):
         log.msg('closed %s' % self)
-        if len(self.conn.channels) == 1 and not options['fork'] and not options['nocache']: # just us left
+        log.msg(str(self.conn.channels))
+        log.msg(str(options['fork']))
+        log.msg(str(options['nocache']))
+        if len(self.conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
             reactor.stop()
 
     def request_exit_status(self, data):
@@ -768,3 +782,18 @@ class SSHSession(channel.SSHChannel):
 
     def startWriting(self):
         self.stdio.startReading()
+
+class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel):
+
+    def closed(self):
+        forwarding.SSHListenClientForwardingChannel.closed(self)
+        if len(self.conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
+            reactor.stop()
+
+class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
+
+    def closed(self):
+        forwarding.SSHConnectForwardingChannel.closed(self)
+        if len(self.conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
+            reactor.stop()
+
