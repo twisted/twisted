@@ -349,7 +349,6 @@ class HelperTestCase(unittest.TestCase):
         f = self.mktemp()
         a = authority.getSerial(f)
         for i in range(20):
-            print a
             b = authority.getSerial(f)
             self.failUnless(a < b)
             a = b
