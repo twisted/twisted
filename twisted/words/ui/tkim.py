@@ -1,17 +1,11 @@
 from Tkinter import *
 import tkSimpleDialog
-from twisted.spread import pb
 from twisted.spread.ui import tkutil
 from twisted.internet import tkinternet
-from twisted.words import service
-from twisted.words.ui import im
+from twisted.words.ui import im2
+from twisted.words.ui.gateways import words
 import time
 import string
-
-class Group(pb.Cache):
-    """A local cache of a group.
-    """
-pb.setCopierForClass("twisted.words.service.Group",Group)
 
 class ErrorWindow(Toplevel):
     def __init__(self,code,message,*args,**kw):
@@ -21,12 +15,62 @@ class ErrorWindow(Toplevel):
         Label(f,text=message).grid()
         f.pack()
         self.protocol("WM_DELETE_WINDOW",self.destroy)
+class AddContact(Toplevel):
+    def __init__(self,im,*args,**kw):
+        apply(Toplevel.__init__,(self,)+args,kw)
+        self.im=im
+        self.title("Add Contact - Instance Messenger")
+        Label(self,text="Contact Name?").grid(column=0,row=0)
+        self.contact=Entry(self)
+        self.contact.grid(column=1,row=0)
+        self.contact.bind('<Return>',self.addContact)
+        self.gates=Listbox(self)
+        self.gates.grid(column=0,row=1,columnspan=2)
+        for k in self.im.gateways.keys():
+            self.gates.insert(END,k)
+        Button(self,text="Add Contact",command=self.addContact).grid(column=0,row=2)
+        Button(self,text="Cancel",command=self.destroy).grid(column=1,row=2)
+        self.protocol('WM_DELETE_WINDOW',self.destroy)
+        tkutil.grid_setexpand(self)
+    def addContact(self,*args):
+        contact=self.contact.get()
+        gatewayname=self.gates.get(ACTIVE)
+        if contact: 
+            self.im.addContact(gatewayname,contact)
+            self.destroy()
+
+class JoinGroup(Toplevel):
+    def __init__(self,im,*args,**kw):
+        apply(Toplevel.__init__,(self,)+args,kw)
+        self.im=im
+        self.title("Join Group - Instance Messenger")
+        Label(self,text="Group Name?").grid(column=0,row=0)
+        self.group=Entry(self)
+        self.group.grid(column=1,row=0)
+        self.group.bind('<Return>',self.joinGroup)
+        self.gates=Listbox(self)
+        self.gates.grid(column=0,row=1,columnspan=2)
+        for k in self.im.gateways.keys():
+            self.gates.insert(END,k)
+        Button(self,text="Join Group",command=self.joinGroup).grid(column=0,row=2)
+        Button(self,text="Cancel",command=self.destroy).grid(column=1,row=2)
+        tkutil.grid_setexpand(self)
+        self.protocol('WM_DELETE_WINDOW',self.destroy)
+
+    def joinGroup(self,*args):
+        group=self.group.get()
+        gatewayname=self.gates.get(ACTIVE)
+        if group: 
+            self.im.joinGroup(gatewayname,group)
+            self.destroy()
+
 class GroupSession(Toplevel):
-    def __init__(self,name,im,*args,**kw):
+    def __init__(self,name,im,gatewayname,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
         self.title("%s - Instance Messenger"%name)
         self.name=name
         self.im=im
+        self.gatewayname=gatewayname
         self.output=Text(self,height=3,wrap=WORD,state=DISABLED,bg="white")
         self.output.grid(column=0,row=0,sticky=N+E+S+W)
         sb=Scrollbar(self)
@@ -51,10 +95,10 @@ class GroupSession(Toplevel):
         self.columnconfigure(1,weight=0)
         self.columnconfigure(3,weight=0)
         self.rowconfigure(2,weight=0)
-        self._nolist=0
-        self.im.remote.getGroupMembers(self.name,pbcallback=self.gotGroupMembers,pberrback=self.noGroupMembers)
+        self._nolist=1
+        self.im.getGroupMembers(self.gatewayname,self.name)
     def close(self):
-        self.im.remote.leaveGroup(self.name)
+        self.im.leaveGroup(self.gatewayname,self.name)
         self.destroy()
     def _out(self,text):
         self.output.config(state=NORMAL)
@@ -62,11 +106,10 @@ class GroupSession(Toplevel):
         self.output.insert(END,text)
         self.output.see(END)
         self.output.config(state=DISABLED)
-    def gotGroupMembers(self,list):
+    def receiveGroupMembers(self,list):
+        self._nolist=0
         for m in list:
             self.list.insert(END,m)
-    def noGroupMembers(self,tb):
-        self._nolist=1
     def displayMessage(self,user,message):
         self._out("<%s> %s\n"%(user,message))
     def memberJoined(self,user):
@@ -82,23 +125,15 @@ class GroupSession(Toplevel):
         text=self.input.get("1.0",END)[:-1]
         if not text: return
         self.input.delete("1.0",END)
-        self.im.remote.groupMessage(self.name,text)
-        self._out("<<%s>> %s\n"%(self.im.name,text))
+        self.im.groupMessage(self.gatewayname,self.name,text)
+        self._out("<<%s>> %s\n"%(self.im.gateways[self.gatewayname].username,text))
         return "break"
-class MessageSent:
-    def __init__(self,im,conv,mesg):
-        self.im=im
-        self.conv=conv
-        self.mesg=mesg
-    def success(self,result):
-        self.conv.messageReceived(self.mesg,self.im.name)
-    def failure(self,tb):
-        self.conv.messageReceived("could not send message %s: %s"%(repr(self.mesg),tb),"error")
 class Conversation(Toplevel):
-    def __init__(self,im,contact,*args,**kw):
+    def __init__(self,im,gatewayname,contact,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
         self.contact=contact
         self.im=im
+        self.gatewayname=gatewayname
         self.title("%s - Instance Messenger"%contact)
         self.output=Text(self,height=3,width=10,wrap=WORD,bg="white")
         self.input=Text(self,height=1,width=10,wrap=WORD,bg="white") 
@@ -116,7 +151,7 @@ class Conversation(Toplevel):
         self.rowconfigure(0,weight=3)
         self.columnconfigure(1,weight=0)
     def close(self):
-        del self.im.conversations[self.contact]
+        del self.im.conversations[self.gatewayname+self.contact]
         self.destroy()
     def _addtext(self,text):
         self.output["state"]=NORMAL
@@ -132,23 +167,21 @@ class Conversation(Toplevel):
         message=self.input.get('1.0',END)[:-1]
         self.input.delete('1.0',END)
         if message:
-            ms=MessageSent(self.im,self,message)
-            self.im.remote.directMessage(self.contact,message,
-                                                    pbcallback=ms.success,
-                                                    pberrback=ms.failure)
+            self.messageReceived(message,self.im.gateways[self.gatewayname].username)
+            self.im.directMessage(self.gatewayname,self.contact,message)
         return "break" # don't put the newline in
 class ContactList(Toplevel):
     def __init__(self,im,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
         self.im=im
-        menu=Menu(self)
-        self.config(menu=menu)
-        myim=Menu(menu)
-        menu.add_cascade(label="My IM",menu=myim)
-        statuschange=Menu(myim)
-        myim.add_cascade(label="Change Status",menu=statuschange)
-        for k in service.statuses.keys():
-            statuschange.add_command(label=service.statuses[k],command=lambda im=self.im,status=k:im.remote.changeStatus(status))
+        #menu=Menu(self)
+        #self.config(menu=menu)
+        #myim=Menu(menu)
+        #menu.add_cascade(label="My IM",menu=myim)
+        #statuschange=Menu(myim)
+        #myim.add_cascade(label="Change Status",menu=statuschange)
+        #for k in service.statuses.keys():
+        #    statuschange.add_command(label=service.statuses[k],command=lambda im=self.im,status=k:im.remote.changeStatus(status))
         self.list=Listbox(self,height=2)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
         bar=Scrollbar(self)
@@ -169,40 +202,40 @@ class ContactList(Toplevel):
         self.tk.quit()
         self.destroy()
     def addContact(self):
-        contact=tkSimpleDialog.askstring("Add Contact","What user do you want to add to your contact list?")
-        if contact:self.im.remote.addContact(contact)
+        AddContact(self.im)
     def removeContact(self):
-        contact=string.split(self.list.get(ACTIVE)," :")[0]
+        gatewayname,contact,state=string.split(self.list.get(ACTIVE)," : ")
         self.list.delete(ACTIVE)
-        self.im.remote.removeContact(contact)
-    def changeContactStatus(self,contact,status):
+        self.im.removeContact(gatewayname,contact)
+    def changeContactStatus(self,gatewayname,contact,status):
         users=list(self.list.get(0,END))
+        start="%s : %s" % (gatewayname,contact)
         for u in users:
-            if u[:len(contact)]==contact:
+            if u[:len(start)]==start:
                 row=users.index(u)
                 self.list.delete(row)
-        self.list.insert(END,"%s : %s"%(contact,service.statuses[status]))
+        self.list.insert(END,"%s : %s : %s"%(gatewayname,contact,status))
     def sendMessage(self):
-        user=string.split(self.list.get(ACTIVE)," : ")[0]
-        self.im.conversationWith(user)
+        gatewayname,user,state=string.split(self.list.get(ACTIVE)," : ")
+        self.im.conversationWith(gatewayname,user)
     def joinGroup(self):
-        name=tkSimpleDialog.askstring("Join Group","What group do you want to join?")
-        if name:
-            self.im.remote.joinGroup(name)
-            self.im.groups[name]=GroupSession(name,self.im)
+        JoinGroup(self.im)
+im2.Conversation=Conversation
+im2.ContactList=ContactList
+im2.GroupSession=GroupSession
 
-im.Conversation=Conversation
-im.ContactList=ContactList
 def our_connected(perspective):
-    b.name=lw.username.get()
+    b.username=lw.username.get()
     b.connected(perspective)
+    im.attachGateway(b)
     lw.destroy()
 def main():
-    global lw,b
+    global lw,im,b
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
-    b=im.InstanceMessenger()
+    im=im2.InstanceMessenger()
+    b=words.WordsGateway(im)
     lw=tkutil.Login(our_connected,b,initialPassword="guest",initialService="twisted.words")
     mainloop()
     tkinternet.stop()

@@ -89,7 +89,7 @@ class Participant(pb.Perspective):
     def getGroupMembers(self, groupName):
         for group in self.groups:
             if group.name == groupName:
-                return map(lambda m:m.name,group.members)
+                self.client.receiveGroupMembers(map(lambda m:m.name,group.members),group.name)
         raise pb.Error("You're not in that group.")
 
     def receiveDirectMessage(self, sender, message):
