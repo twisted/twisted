@@ -25,6 +25,13 @@ from twisted.cred import identity, error
 
 class Authorizer(Accessor):
     """An interface to a set of identities.
+
+    @type identityClass:          L{identity.Identity}
+    @cvar identityClass:          The type of Identity that is created
+                                  and managed by this authorizer.
+    @type serviceCollection:      L{_AbstractServiceCollection}
+    @ivar serviceCollection:      The set of services that are using
+                                  this authorizer.
     """
 
     def __init__(self, serviceCollection=None):
