@@ -263,6 +263,17 @@ def run():
     if config['debug']:
         reporter.debugger = 1
         import pdb
+        from twisted.python import failure
+        def newinit(self, exc_value=None, exc_type=None, exc_tb=None,
+                    init=failure.Failure.__init__.im_func):
+            r = init(self, exc_value, exc_type, exc_tb)
+            if (exc_value, exc_type, exc_tb) == (None, None, None):
+                exc = sys.exc_info()
+                if not exc[0] == failure.Failure:
+                    print "Jumping into debugger - %s" % exc[1]
+                    pdb.post_mortem(exc[2])
+            return r
+        failure.Failure.__init__ = newinit
         dbg = pdb.Pdb()
         try:
             rcFile = open("../.pdbrc")
