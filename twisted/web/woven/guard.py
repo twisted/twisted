@@ -6,7 +6,7 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.24 $"[11:-2]
+__version__ = "$Revision: 1.25 $"[11:-2]
 
 import random
 import time
@@ -355,11 +355,21 @@ class UsernamePasswordWrapper(Resource):
             credentials.
         @type portal: L{twisted.cred.portal.Portal}
         
-        @param callback: I don't know what this callback does
-        @type callback: A callable (WHAT ARE IT'S ARGS)
+        @param callback: Gets called after a successful login attempt.
+            A resource that redirects to "." will display the avatar resource.
+            If this parameter isn't provided, defaults to a standard Woven
+            "Thank You" page.
+        @type callback: A callable that accepts a Woven
+            L{model<twisted.web.woven.model.IModel>} and returns a
+            L{Resource<twisted.web.resource.Resource>}.
 
-        @param errback: I don't know what this errback does
-        @type errback: A callable (WHAT ARE IT'S ARGS)
+        @param errback: Gets called after a failed login attempt.
+            If this parameter is not provided, defaults to a the standard Woven
+            form error (i.e. The original form on a page of its own, with
+            errors noted.)
+        @type errback: A callable that accepts a Woven
+            L{model<twisted.web.woven.model.IModel>} and returns a
+            L{Resource<twisted.web.resource.Resource>}.
         """
         Resource.__init__(self)
         self.portal = portal
