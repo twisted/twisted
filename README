@@ -63,7 +63,7 @@ Basic Servers
 
   You can also create a telnet server::
 
-    % mktap telnet -p 8023 -u username -p password
+    % mktap telnet -p 8023 -u username -w password
 
   which will create a python-console telnet server listening on port 8023,
   which you can log into with the username "username" and the password
