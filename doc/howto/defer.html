@@ -18,23 +18,26 @@
 file access - there are many APIs that are blocking, and many
 methods where the common idiom is to block until a result is
 gotten.</p>
-<pre class="python">
+
+<pre class="python"> 
+def someBlockingCall(x):
+    # imagine I/O blocking code here
+    print "blocking"
+    import time
+    time.sleep(4)
+    return x * 3
+
+def someNonBlockingCall():
+    # imagine some non-blocking code here
+    print "non-blocking"
 
 class Getter:
-
     def getData(self, x):
-        return self.someBlockingCall(x)
-
-    def someBlockingCall(self,x):
-        print "blocking"
-        import time
-        time.sleep(4)
-        return x * 3
+        someNonBlockingCall()
+        return someBlockingCall(x)
 
 g = Getter()
 print g.getData(3)
-print "blocking"
-
 </pre>
 
 <h3>Don't Call Us, We'll Call You</h3>
@@ -43,37 +46,30 @@ print "blocking"
 single threaded, and event based.  The solution for this issue is to refactor
 the code, so that instead of blocking until data is available, we return
 immediately, and use a callback to notify the requester once the data
-eventually arrives. Looking at how this is usually implemented will help us
-understand the necessity for Deferreds.</p>
+eventually arrives.  Looking at how this is usually implemented using Python's thread object will help us understand the necessity for Deferreds.</p>
 
 <pre class="python">
+def someAsyncCall(callback,x):
+    # using threads, a blocking call can be changed into
+    # a non-blocking call, using a callback
+    from threading import Thread
+    class BlockingThread(Thread):
+        def __init__(self, callback):
+            Thread.__init__(self)
+            self.callback = callback
+        def run(self,x):
+            self.callback(someBlockingCall(x))
+    BlockingThread(callback).run(x)
 
 class Getter:
-
     def getData(self, x, callback):
-        self.callback = callback; self.x = x
-        self.nonBlockingOperation()
-        #
-        # Timer class happens to wrap the previous code in 
-        # a thread; but this could be any asyncronous operation 
-        # such as selecting from a socket, etc.
-        #
-        from threading import Timer
-        t = Timer(4, self.gotResult)
-        t.start()
+        someNonBlockingCall()
+        someAsyncCall(callback,x)
 
-    def nonBlockingOperation(self): 
-        print "non-blocking"
-
-    def gotResult(self):
-        self.callback(3*self.x)
-
-def gotData(d):
+def printData(d):
     print d
 
 g = Getter()
-g.getData(3, gotData)
-
 </pre>
 
 <p>There are several things missing in this simple example.  There is no way
@@ -96,39 +92,20 @@ standardizes the application programmer's interface with all sorts of
 blocking or delayed operations.</p>
 
 <pre class="python">
-
-from twisted.internet.defer import Deferred
-
 class Getter:
-
     def getData(self, x):
+        from twisted.internet.defer import Deferred
         d = Deferred()
-        self.nonBlockingOperation()
-        #
-        # For a blocking operation, don't use python's threads
-        # directly, instead use twisted.internet.threads
-        #
-        from threading import Timer
-        t = Timer(4, self.gotResult, (d, x))
-        t.start()
+        someNonBlockingCall()
+        someAsyncCall(d.callback,x)
         return d
 
-    def nonBlockingOperation(self): 
-        print "non-blocking"
-
-    def gotResult(self, d, x):
-        """Called when we get some info from somewhere via the event 
-           loop.  E.g. this may be called because we got a chunk 
-           of data off a socket.
-        """
-        d.callback(3*x)
-
-def gotData(d):
+def printData(d):
     print d
 
 g = Getter()
 d = g.getData(3)
-d.addCallback(gotData)
+d.addCallback(printData)
 </pre>
 
 <p>As we said, multiple callbacks can be added to a Deferred.  The first
@@ -140,48 +117,39 @@ HTML, and pass the Deferred onwards, where the callback will be used by twisted
 to return the result to the HTTP client.</p>
 
 <pre class="python">
-
-from twisted.internet.defer import Deferred
-
 class Getter:
-
-    def getData(self, x):
-        d = Deferred()
-        self.nonBlockingOperation()
-        from threading import Timer
-        t = Timer(4, self.gotResult, (d, x))
-        t.start()
-        return d
-
-    def nonBlockingOperation(self):
-        print "non-blocking"
-
-    def gotResult(self, d, x):
-        """Simulate an error condition.  In this case,
-           odd numbers are good; even numbers are bad.
+    def gotResults(self, x):
+        """The Deferred mechanism provides an errback method
+           to handle error conditions.  In this 'example',
+           even numbers are bad.
         """
         if x % 2:
-            # tell the Deferred that we have a result for it
-            d.callback(x*3)
+            self.d.callback(x*3)
         else:
-            # tell the Deferred that we have an error
-            d.errback("You used an even number!")
+            self.d.errback("You used an even number!")
+    def getData(self, x):
+        from twisted.internet.defer import Deferred
+        self.d = Deferred()
+        someNonBlockingCall()
+        someAsyncCall(self.gotResults,x)
+        return self.d
 
-def printData(result):
-    print result
+def printData(d):
+    print d
+
 def printError(failure):
     import sys
     sys.stderr.write(str(failure))
 
 g = Getter()
 d = g.getData(3)
-d.addCallback(printData)  # for a good result
-d.addErrback(printError)  # for nasty situations
-
-d = g.getData(4)
 d.addCallback(printData)
 d.addErrback(printError)
 
+g = Getter()
+d = g.getData(4)
+d.addCallback(printData)
+d.addErrback(printError)
 </pre>
 
 <h3>Visual Explanation</h3>
