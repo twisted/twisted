@@ -165,6 +165,8 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     DWORD err, bytes;
     PyObject *object;
     MyOVERLAPPED *ov;
+//    LARGE_INTEGER time, time_after;
+//    QueryPerformanceCounter(&time);
     if(!PyArg_ParseTuple(args, "lt#O|l", &handle, &buf, &buflen, &object, &len)) {
         return NULL;
     }
@@ -205,6 +207,8 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     if(res) {
         err = 0;
     }
+//    QueryPerformanceCounter(&time_after);
+//    printf("wf total ticks is %ld", time_after.LowPart - time.LowPart);
     return Py_BuildValue("ll", err, bytes);
 }
 

@@ -5,7 +5,7 @@ from twisted.cred.credentials import UsernamePassword
 import time
 
 class PBBenchClient:
-    hostname = 'xpjail'
+    hostname = 'linen'
     portno = pb.portno
     calledThisSecond = 0
 

@@ -15,7 +15,7 @@ class PBBenchPerspective(pb.Avatar):
     def printCallsPerSec(self):
         print '(s) cps:', self.callsPerSec
         self.callsPerSec = 0
-        reactor.callLater(1, self.printCallsPerSec)
+#        reactor.callLater(1, self.printCallsPerSec)
 
     def perspective_complexTypes(self):
         return ['a', 1, 1l, 1.0, [], ()]
