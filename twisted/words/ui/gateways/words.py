@@ -48,14 +48,14 @@ class makeConnection:
 
     def connectionFailed(self,tb):
         if self.connected:
-            self.im.connectionFailed(self.ref,"Could not connect to host!\n"+tb)
+            self.im.send(self,"error",message="Connection Failed!")
             if self.attached:
                 self.ref.detachIM()
         self.connected=0
 
     def connectionLost(self):
         if self.connected:
-            self.im.connectionLost(self.ref,"Connection lost.")
+            self.im.send(self,"error",message="Connection Lost.")
             if self.attached:
                 self.ref.detachIM()
         self.connected=0

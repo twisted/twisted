@@ -223,6 +223,12 @@ class InstanceMessengerGUI:
         except KeyError:
             pass
 
+    def event_receiveGroupEmote(self,gateway,member,group,emote):
+        try:
+            self.groups[str(gateway)+group].receiveGroupEmote(member,emote)
+        except:
+            pass
+
     def event_memberJoined(self,gateway,member,group):
         """
         called when someone joins a group we're in.
@@ -425,6 +431,15 @@ class GroupSession:
         """
         raise NotImplementedError
     
+    def receiveGroupEmote(self,member,emote):
+        """
+        called when a member of the group sends a emote. note: we /don't/ get
+        this call when we send a message.
+        member := the member who sent the message (string)
+        emote := the emote (string)
+        """
+        raise NotImplementedError
+
     def memberJoined(self,member):
         """
         called when a member joins the group.
@@ -522,6 +537,15 @@ def logoffAccount(im,account):
         if g.logonUsername==account.options["username"] and g.protocol==account.gatewayname:
             im.im.connect(_handleDisconnect,"error",g)
             g.loseConnection()
+
+def disconnectGateways(im):
+    """
+    log off all the gateways connected to a given InstanceMessengerGUI
+    im := the InstanceMessengerGUI instance
+    """
+    for g in im.gateways.values():
+        im.im.connect(_handleDisconnect,"error",g)
+        g.loseConnection()
 
 def _handleDisconnect(gateway,message):
     gateway.im.disconnect(_handleDisconnect,"error",gateway)

@@ -39,6 +39,10 @@ def makeConnection(im,server=None,port=None,**kwargs):
     tcp.Client(server,port,c)
     
 def dehtml(text):
+    text=string.replace(text,"<br>","\n")
+    text=string.replace(text,"<BR>","\n")
+    text=string.replace(text,"<Br>","\n") # XXX make this a regexp
+    text=string.replace(text,"<bR>","\n")
     text=re.sub('<.*?>','',text)
     text=string.replace(text,'&gt;','>')
     text=string.replace(text,'&lt;','<')

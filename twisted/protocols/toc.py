@@ -22,10 +22,18 @@ TODO:
 info,dir: see how gaim connects for this...it may never work if it tries to connect to the aim server automatically
 """
 
+# twisted imports
 import protocol
+from twisted.internet import tcp
+
+# base imports
 import struct
 import string
 import time
+import base64
+import os
+import StringIO
+
 SIGNON,DATA,ERROR,SIGNOFF,KEEP_ALIVE=range(1,6)
 PERMITALL,DENYALL,PERMITSOME,DENYSOME=range(1,5)
 def quote(s):
@@ -76,6 +84,70 @@ def roast(pw):
         ro=ro+'%02x'%(c^ord(key[i%len(key)]))
         i=i+1
     return string.lower(ro)
+def checksum(b):
+    return 0xdeadbeef # do it like gaim does, since the checksum
+                      # formula doesn't work
+##    # used in file transfers
+##    check0 = check1 = 0x00ff
+##    for i in range(len(b)):
+##        if i%2:
+##            if ord(b[i])>check1: 
+##                check1=check1+0x100 # wrap
+##                if check0==0:
+##                    check0=0x00ff
+##                    if check1==0x100:
+##                        check1=check1-1
+##                else:
+##                    check0=check0-1
+##            check1=check1-ord(b[i])
+##        else:
+##            if ord(b[i])>check0: # wrap
+##                check0=check0+0x100
+##                if check1==0:
+##                    check1=0x00ff
+##                    if check0==0x100:
+##                        check0=check0-1
+##                else:
+##                    check1=check1-1
+##            check0=check0-ord(b[i])
+##    check0=check0 & 0xff
+##    check1=check1 & 0xff
+##    checksum=(long(check0)*0x1000000)+(long(check1)*0x10000)
+##    return checksum
+def checksum_file(f):
+    return 0xdeadbeef # do it like gaim does, since the checksum
+                      # formula doesn't work
+##    check0=check1=0x00ff
+##    i=0
+##    while 1:
+##        b=f.read()
+##        if not b: break
+##        for char in b:
+##            i=not i
+##            if i:
+##                if ord(char)>check1: 
+##                    check1=check1+0x100 # wrap
+##                    if check0==0:
+##                        check0=0x00ff
+##                        if check1==0x100:
+##                            check1=check1-1
+##                    else:
+##                        check0=check0-1
+##                check1=check1-ord(char)
+##            else:
+##                if ord(char)>check0: # wrap
+##                    check0=check0+0x100
+##                    if check1==0:
+##                        check1=0x00ff
+##                        if check0==0x100:
+##                            check0=check0-1
+##                    else:
+##                        check1=check1-1
+##                check0=check0-ord(char)
+##    check0=check0 & 0xff
+##    check1=check1 & 0xff
+##    checksum=(long(check0)*0x1000000)+(long(check1)*0x10000)
+##    return checksum
 def normalize(s):
     s=string.lower(s)
     s=string.replace(s," ","")
@@ -662,6 +734,7 @@ class TOCClient(protocol.Protocol):
         self._roomnames={} # the names for each of the rooms we're in
         self._receivedchatmembers={} # have we gotten who's in our room yet?
         self._denylist=[]
+        self._cookies={} # for file transfers
         self._buf='' # current data buffer
         self._awaymessage=''
     def _debug(self,data):
@@ -698,7 +771,7 @@ class TOCClient(protocol.Protocol):
         if len(self._buf)<6+length: return None
         data=self._buf[6:6+length]
         self._buf=self._buf[6+length:]
-        if data[-1]=="\000":
+        if data and data[-1]=="\000":
             data=data[:-1]
         return [type,data]
     def connectionMade(self):
@@ -722,6 +795,8 @@ class TOCClient(protocol.Protocol):
         self.sendFlap(2,s)
         self._mode="Data"
     def modeData(self,flap):
+        if not flap[1]:
+            return
         command,rest=string.split(flap[1],":",1)
         if MAXARGS.has_key(command):
             maxsplit=MAXARGS[command]
@@ -860,6 +935,47 @@ class TOCClient(protocol.Protocol):
         self.chatLeft(int(data[0]))
         del self._receivedchatmembers[int(data[0])]
         del self._roomnames[int(data[0])]
+
+    def tocRVOUS_PROPOSE(self,data):
+        """
+        RVOUS_PROPOSE:<user>:<uuid>:<cookie>:<seq>:<rip>:<pip>:<vip>:<port>
+              [:tlv tag1:tlv value1[:tlv tag2:tlv value2[:...]]]
+        """
+        user,uid,cookie,seq,rip,pip,vip,port=data[:8]
+        cookie=base64.decodestring(cookie)
+        port=int(port)
+        tlvs={}
+        for i in range(8,len(data),2):
+            key=data[i]
+            value=base64.decodestring(data[i+1])
+            tlvs[key]=value
+        name=UUIDS[uid]
+        try:
+            func=getattr(self,"toc%s"%name)
+        except:
+            self._debug("no function for UID %s" % uid)
+            return
+        func(user,cookie,seq,pip,vip,port,tlvs)
+
+    def tocSEND_FILE(self,user,cookie,seq,pip,vip,port,tlvs):
+        if tlvs.has_key('12'):
+            description=tlvs['12']
+        else:
+            description=""
+        subtype,numfiles,size=struct.unpack("!HHI",tlvs['10001'][:8])
+        name=tlvs['10001'][8:-4]
+        if numfiles>1:
+            name=name[:-1]
+        self._cookies[cookie]=[user,SEND_FILE_UID,pip,port,{'name':name}]
+        self.rvousProposal("send",cookie,user,vip,port,description=description,
+                           name=name,files=numfiles,size=size)
+        
+    def tocGET_FILE(self,user,cookie,seq,pip,vip,port,tlvs):
+        return
+        # XXX add this back in
+        #tcp.Client(pip,port,GetFileTransfer(self,cookie,os.path.expanduser("~")))
+        #self.rvous_accept(user,cookie,GET_FILE_UID)
+
     def onLine(self):
         """
         called when we are first online
@@ -955,6 +1071,26 @@ class TOCClient(protocol.Protocol):
         roomid := the AIM id for the room
         """
         pass
+    def rvousProposal(self,type,cookie,user,vip,port,**kw):
+        """
+        we were asked for a rondevouz
+        type := the type of rondevous.  currently, one of ["send"]
+        cookie := the cookie. pass this to rvous_accept()
+        user := the user who asked us
+        vip := their verified_ip
+        port := the port they want us to conenct to
+        kw := misc. args
+        """
+        pass #self.rvous_accept(cookie)
+    def receiveBytes(self,user,file,chunk,sofar,total):
+        """
+        we received part of a file from a file transfer
+        file := the name of the file
+        chunk := the chunk of data
+        sofar := how much data we've gotten so far
+        total := the total amount of data
+        """
+        pass #print user,file,sofar,total
     def isaway(self):
         """
         return our away status
@@ -1045,6 +1181,8 @@ class TOCClient(protocol.Protocol):
         called to finish the setup, and signon to the network
         """
         self.sendFlap(2,"toc_init_done")
+        self.sendFlap(2,"toc_set_caps %s" % (SEND_FILE_UID,) # GET_FILE_UID))
+
     def say(self,user,message,autoreply=0):
         """
         send a message
@@ -1127,6 +1265,143 @@ class TOCClient(protocol.Protocol):
         roomid := the AIM id for the room
         """
         self.sendFlap(2,"toc_chat_accept %s"%int(roomid))
+
+    def rvous_accept(self,cookie):
+        user,uuid,pip,port,d=self._cookies[cookie]
+        del self._cookies[cookie]
+        self.sendFlap(2,"toc_rvous_accept %s %s %s" % (normalize(user),
+                                                     cookie,uuid))
+        if uuid==SEND_FILE_UID:
+            tcp.Client(pip,port,SendFileTransfer(self,cookie,d["name"],user))
+
+class SendFileTransfer(protocol.Protocol):
+    header_fmt="!4s2H8s6H10I32s3c69s16s2H64s"
+
+    def __init__(self,client,cookie,user,filename):
+        self.client=client
+        self.cookie=cookie
+        self.user=user
+        self.filename=filename
+        self.hdr=[0,0,0]
+        self.sofar=0
+    def dataReceived(self,data):
+        if not self.hdr[2]==0x202:
+            self.hdr=list(struct.unpack(self.header_fmt,data[:256]))
+            self.hdr[2]=0x202
+            self.hdr[3]=self.cookie
+            self.hdr[4]=0
+            self.hdr[5]=0
+            self.transport.write(apply(struct.pack,[self.header_fmt]+self.hdr))
+            data=data[256:]
+            if self.hdr[6]==1:
+                self.name=self.filename
+            else:
+                self.name=self.filename+self.hdr[-1]
+        if not data: return
+        self.sofar=self.sofar+len(data)
+        self.client.receiveBytes(self.user,self.name,data,self.sofar,self.hdr[11])
+        if self.sofar==self.hdr[11]: # end of this file
+            self.hdr[2]=0x204
+            self.hdr[7]=self.hdr[7]-1
+            self.hdr[9]=self.hdr[9]-1
+            self.hdr[19]=0xdeadbeef # XXX really calculate this
+            self.hdr[18]=self.hdr[18]+1
+            self.hdr[21]="\000"
+            self.transport.write(apply(struct.pack,[self.header_fmt]+self.hdr))
+            self.sofar=0
+            if self.hdr[7]==0:
+                self.transport.loseConnection()
+        
+class GetFileTransfer(protocol.Protocol):
+    header_fmt="!4s 2H 8s 6H 10I 32s 3c 69s 16s 2H 64s"
+    def __init__(self,client,cookie,dir):
+        self.client=client
+        self.cookie=cookie
+        self.dir=dir
+        self.buf=""
+    def connectionMade(self):
+        def func(f,path,names):
+            names.sort(lambda x,y:cmp(string.lower(x),string.lower(y)))
+            for n in names:
+                name=os.path.join(path,n)
+                lt=time.localtime(os.path.getmtime(name))
+                size=os.path.getsize(name)
+                f[1]=f[1]+size
+                f.append("%02d/%02d/%4d %02d:%02d %8d %s" %
+                             (lt[1],lt[2],lt[0],lt[3],lt[4],size,name[f[0]:]))
+        f=[len(self.dir)+1,0]
+        os.path.walk(self.dir,func,f)
+        size=f[1]
+        self.listing=string.join(f[2:],"\r\n")+"\r\n"
+        open("\\listing.txt","w").write(self.listing)
+        hdr=["OFT2",256,0x1108,self.cookie,0,0,len(f)-2,len(f)-2,1,1,size,
+             len(self.listing),os.path.getmtime(self.dir),
+             checksum(self.listing),0,0,0,0,0,0,"OFT_Windows ICBMFT V1.1 32",
+             "\002",chr(0x1a),chr(0x10),"","",0,0,""]
+        self.transport.write(apply(struct.pack,[self.header_fmt]+hdr))
+                    
+    def dataReceived(self,data):
+        self.buf=self.buf+data
+        while len(self.buf)>=256:
+            hdr=list(struct.unpack(self.header_fmt,self.buf[:256]))
+            self.buf=self.buf[256:]
+            if hdr[2]==0x1209:
+                self.file=StringIO.StringIO(self.listing)
+                self.transport.registerProducer(self,0)
+            elif hdr[2]==0x120b: pass
+            elif hdr[2]==0x120c: # file request
+                file=hdr[-1]
+                for k,v in [["\000",""],["\001",os.sep]]:
+                    file=string.replace(file,k,v)
+                self.name=os.path.join(self.dir,file)
+                self.file=open(self.name,'rb')
+                hdr[2]=0x0101
+                hdr[6]=hdr[7]=1
+                hdr[10]=hdr[11]=os.path.getsize(self.name)
+                hdr[12]=os.path.getmtime(self.name)
+                hdr[13]=checksum_file(self.file)
+                self.file.seek(0)
+                hdr[18]=hdr[19]=0
+                hdr[21]=chr(0x20)
+                self.transport.write(apply(struct.pack,[self.header_fmt]+hdr))
+                print "got file request for %s"%file,hex(hdr[13])
+            elif hdr[2]==0x0202:
+                print "sending file"
+                self.transport.registerProducer(self,0)
+            elif hdr[2]==0x0204:
+                print "real checksum: %s"%hex(hdr[19])
+                del self.file
+            elif hdr[2]==0x0205: # resume
+                already=hdr[18]
+                if already:
+                    data=self.file.read(already)
+                else:
+                    data=""
+                print "restarting at %s"%already
+                hdr[2]=0x0106
+                hdr[19]=checksum(data)
+                self.transport.write(apply(struct.pack,[self.header_fmt]+hdr))
+            elif hdr[2]==0x0207:
+                self.transport.registerProducer(self,0)
+            else:
+                print "don't understand 0x%04x"%hdr[2]
+                print hdr
+    def resumeProducing(self):
+        data=self.file.read(4096)
+        print len(data)
+        if not data:
+            self.transport.unregisterProducer()
+        self.transport.write(data)
+    def pauseProducing(self): pass
+    def stopProducing(self): del self.file
+# UUIDs
+SEND_FILE_UID = "09461343-4C7F-11D1-8222-444553540000"
+GET_FILE_UID  = "09461348-4C7F-11D1-8222-444553540000"
+UUIDS={
+    SEND_FILE_UID:"SEND_FILE",
+    GET_FILE_UID:"GET_FILE"
+}
+
 # ERRORS
 # general
 NOT_AVAILABLE=901

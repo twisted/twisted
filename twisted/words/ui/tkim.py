@@ -408,6 +408,10 @@ class GroupSession(Toplevel):
         self.out.see(END)
         self.blink()
 
+    def receiveGroupEmote(self, member, emote):
+        self.out.insert(END,"\n* %s %s" % (member, emote))
+        self.out.see(END)
+
     def memberJoined(self, member):
         self.out.insert(END, "\n%s joined!" % member)
         self.out.see(END)
@@ -433,8 +437,8 @@ class GroupSession(Toplevel):
             self.userlist.delete(i)
             self.userlist.insert(END,newName)
             self._sortlist()
-        else:
-            print "user %s not in group %s!" % (member, self.name)
+        #else:
+        #    print "user %s not in group %s!" % (member, self.name)
 
     def nickComplete(self, e):
         start=self.input.get("1.0",END)[:-1]
@@ -443,7 +447,7 @@ class GroupSession(Toplevel):
         if type(result)==type(""):
             self.input.delete("1.0",END)
             self.input.insert(END,result+": ")
-        else:
+        elif result[0]:
             self.out.insert(END,"\n")
             for u in result[0]:
                 self.out.insert(END,"[%s] "%u)
@@ -712,8 +716,7 @@ def main():
 #    t.namespace['im']=im
 #    tcp.Port(10023,t).startListening()
     mainloop()
-    for a in im.am.accounts:
-        im3.logoffAccount(im,a)
+    im3.disconnectGateways(im)
     f=open(path,"w")
     im3.saveState(f,im.am.getState())
     tkinternet.stop()

@@ -184,6 +184,11 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	else:
 	    self.receiveDirectMessage(nickname,message)
 
+    def action(self, user, channel, data):
+        group=self._groups[string.lower(channel[1:])]
+        nickname=string.split(user,"!")[0]
+        self.receiveGroupEmote(nickname,group,data)
+
     def irc_RPL_WHOISUSER(self,prefix,params):
         """
         >>>WHOIS z3pfoo

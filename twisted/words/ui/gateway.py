@@ -197,6 +197,16 @@ class Gateway:
         self.im.send(self,"receiveGroupMessage",group=group,member=member,
                       message=message)
 
+    def receiveGroupEmote(self,member,group,emote):
+        """
+        called when a emote is sent to the group.
+        member := the user who sent the message
+        group := the group the message was sent to
+        emote := the actual emote
+        """
+        self.im.send(self,"receiveGroupEmote",group=group,member=member,
+                      emote=emote)
+
     def memberJoined(self,member,group):
         """
         called when a member joins a group we are in.
