@@ -26,7 +26,7 @@ creating a TAP!), more configurability.
 """
 
 import pwd, grp
-from twisted.inetd import inetd, inetdconf
+from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
 from twisted.internet.protocol import ServerFactory
 

@@ -119,7 +119,7 @@ class InetdFactory(ServerFactory):
 
 
 def main(options=None):
-    from twisted.inetd import tap
+    from twisted.runner import inetdtap as tap
     # Parse options, read various config files
     if not options:
         options = tap.Options()
