@@ -5,7 +5,7 @@ from twisted.trial import unittest
 from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand, command, Wrappable
 from twisted.persisted.journal.picklelog import DirDBMLog
 
-import tempfile
+import tempfile, shutil, os.path
 
 
 
@@ -97,6 +97,14 @@ class JournalTestCase(unittest.TestCase):
         if hasattr(self, "svc"):
             del self.svc
         # delete stuff? ...
+        if os.path.isdir(self.logpath):
+            shutil.rmtree(self.logpath)
+        if os.path.exists(self.logpath):
+            os.unlink(self.logpath)
+        if os.path.isdir(self.journalpath):
+            shutil.rmtree(self.journalpath)
+        if os.path.exists(self.journalpath):
+            os.unlink(self.journalpath)
 
     def testCommandExecution(self):
         svc = self.svc
