@@ -42,12 +42,9 @@ import calendar
 import warnings
 import os
 
-# sibling imports
-import basic
-
 # twisted imports
 from twisted.internet import interfaces, reactor, protocol, address
-from twisted.protocols import policies
+from twisted.protocols import policies, basic
 from twisted.python import log, components
 try: # try importing the fast, C version
     from twisted.protocols._c_urlarg import unquote
