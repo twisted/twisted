@@ -301,8 +301,6 @@ class Process(abstract.FileDescriptor):
         """Runs in thread."""
         try:
             buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStdoutR, 0)
-            if not bytesToRead:
-                return
             hr, data = win32file.ReadFile(self.hStdoutR, bytesToRead, None)
         except win32api.error:
             self.stdoutClosed = 1
@@ -316,8 +314,6 @@ class Process(abstract.FileDescriptor):
         """Runs in thread."""
         try:
             buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStderrR, 0)
-            if not bytesToRead:
-                return
             hr, data = win32file.ReadFile(self.hStderrR, bytesToRead, None)
         except win32api.error:
             self.stderrClosed = 1
