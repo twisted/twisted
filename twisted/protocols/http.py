@@ -36,7 +36,7 @@ import sys
 import basic, protocol
 
 # twisted imports
-from twisted.internet import interfaces
+from twisted.internet import interfaces, reactor
 from twisted.python import log
 
 
@@ -172,6 +172,19 @@ def datetimeToLogString(msSinceEpoch=None):
         day, monthname[month], year,
         hh, mm, ss)
     return s
+
+
+# a  hack so we don't need to recalculate log datetime every hit,
+# at the price of a small, unimportant, inaccuracy.
+logDateTime = None
+
+def _resetLogDateTime():
+    global logDateTime
+    logDateTime = datetimeToLogString()
+    reactor.callLater(1, _resetLogDateTime)
+
+_resetLogDateTime()
+
 
 def timegm(year, month, day, hour, minute, second):
     """Convert time tuple in GMT to seconds since epoch, GMT"""
@@ -788,14 +801,13 @@ class HTTPFactory(protocol.ServerFactory):
     
     def log(self, request):
         """Log a request's result to the logfile, by default in combined log format."""
-        line = '%s - %s %s "%s" %d %s "%s" "%s"\n' % (
+        line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
             request.getClientIP(),
-            request.getUser() or "-",
-            datetimeToLogString(),
+            # request.getUser() or "-", # the remote user is almost never important
+            logDateTime,
             repr(request),
             request.code,
             request.sentLength or "-",
             request.getHeader("referer") or "-",
             request.getHeader("user-agent") or "-")
         self.logFile.write(line)
-
