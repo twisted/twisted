@@ -14,7 +14,7 @@ from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
 from twisted.trial import unittest, reporter, util, runner, itrial
-from twisted.trial.test import trialtest1, pyunit, timeoutAttr, suppression, numOfTests, common
+from twisted.trial.test import erroneous, pyunit, timeoutAttr, suppression, numOfTests, common
 
 # this is ok, the module has been designed for this usage
 from twisted.trial.assertions import *
@@ -114,26 +114,26 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
             assertEqual(getattr(self.tci, "%sCalled" % name), False, '%s not called' % (name,))
 
     def testBrokenSetUp(self):
-        self.suite.addTestClass(trialtest1.TestFailureInSetUp)
+        self.suite.addTestClass(erroneous.TestFailureInSetUp)
         self.suite.run()
         imi = itrial.IMethodInfo(self.reporter.udeMethod)
         assertEqual(imi.name, 'setUp')
         self.assertMethodsCalled('setUpClass', 'setUp', 'tearDownClass')
         self.assertMethodsNotCalled('method', 'tearDown')
         assert_(self.tm.errors)
-        assert_(isinstance(self.tm.errors[0].value, trialtest1.FoolishError))
+        assert_(isinstance(self.tm.errors[0].value, erroneous.FoolishError))
 
     def testBrokenTearDown(self):
-        self.suite.addTestClass(trialtest1.TestFailureInTearDown)
+        self.suite.addTestClass(erroneous.TestFailureInTearDown)
         self.suite.run()
         imi = itrial.IMethodInfo(self.reporter.udeMethod)
         assertEqual(imi.name, 'tearDown')
         self.assertMethodsCalled(*allMethods)
         assert_(self.tm.errors)
-        assert_(isinstance(self.tm.errors[0].value, trialtest1.FoolishError))
+        assert_(isinstance(self.tm.errors[0].value, erroneous.FoolishError))
 
     def testBrokenSetUpClass(self):
-        self.suite.addTestClass(trialtest1.TestFailureInSetUpClass)
+        self.suite.addTestClass(erroneous.TestFailureInSetUpClass)
         self.suite.run()
         imi = itrial.IMethodInfo(self.reporter.udeMethod)
         assertEqual(imi.name, 'setUpClass')
@@ -142,7 +142,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assert_(self.tm.errors)
 
     def testBrokenTearDownClass(self):
-        self.suite.addTestClass(trialtest1.TestFailureInTearDownClass)
+        self.suite.addTestClass(erroneous.TestFailureInTearDownClass)
         self.suite.run()
         imi = itrial.IMethodInfo(self.reporter.udeMethod)
         assertEqual(imi.name, 'tearDownClass')
@@ -152,20 +152,20 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 #:    testBrokenTearDownClass.todo = "should tearDownClass failure fail the test method?"
 
     def testHiddenException(self):
-        self.suite.addMethod(trialtest1.DemoTest.testHiddenException)
+        self.suite.addMethod(erroneous.DemoTest.testHiddenException)
         self.suite.run()
-        assertSubstring(trialtest1.HIDDEN_EXCEPTION_MSG, self.reporter.out)
+        assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, self.reporter.out)
         self.assertMethodsCalled(*allMethods)
 
     def testLeftoverSockets(self):
-        self.suite.addMethod(trialtest1.SocketOpenTest.test_socketsLeftOpen)
+        self.suite.addMethod(erroneous.SocketOpenTest.test_socketsLeftOpen)
         self.suite.run()
         assert_(self.reporter.cleanerrs)
         assert_(isinstance(self.reporter.cleanerrs[0].value, util.DirtyReactorWarning))
         self.assertMethodsCalled(*allMethods)
 
     def testLeftoverPendingCalls(self):
-        self.suite.addMethod(trialtest1.ReactorCleanupTests.test_leftoverPendingCalls)
+        self.suite.addMethod(erroneous.ReactorCleanupTests.test_leftoverPendingCalls)
         self.suite.run()
         assert_(self.tm.errors)
         assert_(isinstance(self.tm.errors[0].value, util.PendingTimedCallsError))

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.trial.test.test_trial -*-
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol
 from twisted.trial.test.common import BaseTest
