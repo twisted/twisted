@@ -251,15 +251,15 @@ class DTP(protocol.Protocol):
         list = os.listdir(dir)
         s = ''
         for a in list:
-            s = a
-            ff = os.path.join(dir, s) # the full filename
+            ts = a
+            ff = os.path.join(dir, ts) # the full filename
             mtime = time.strftime("%b %d %H:%M", time.gmtime(os.path.getmtime(ff)))
             fsize = os.path.getsize(ff)
             if os.path.isdir(ff):
                 diracc = 'd'
             else:
                 diracc = '-'    
-            s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+s+'\r\n'
+            s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+ts+'\n'
         self.action = 'RETR'
         self.file = StringIO.StringIO(s)
         self.filesize = len(s)
