@@ -153,6 +153,20 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessEqual(o.subOptions['expect'], False)
         self.failUnlessEqual(o.subOptions['torture-device'], 'comfy-chair')
 
+    def test_subCommandInitHasParent(self):
+        class SubOpt(usage.Options):
+            def __init__(self, *a, **kw):
+                usage.Options.__init__(self, *a, **kw)
+                self.sawParent = self.parent
+        class Opt(usage.Options):
+            subCommands = [
+                ('foo', 'f', SubOpt, 'bar'),
+                ]
+        o=Opt()
+        o.parseOptions(['foo'])
+        self.failUnless(hasattr(o.subOptions, 'sawParent'))
+        self.failUnlessEqual(o.subOptions.sawParent , o)
+
 class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """Instantiate a well-behaved Options class.
