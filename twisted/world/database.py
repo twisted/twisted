@@ -167,7 +167,11 @@ class Database:
         c = 0
         self.tables.append(None)
         for cn, in self.classes:
-            classname = cn.strip('\x00')
+            #classname = cn.strip('\x00')
+            # strip(arg) is in 2.2.2, but not 2.2.0 or 2.2.1
+            classname = cn
+            while len(classname) and classname[-1] == '\x00':
+                classname = classname[:-1]
             if classname:
                 self.tables.append(Table(self, classname))
                 self.classToClassId[classname] = c
