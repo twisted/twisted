@@ -14,39 +14,48 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
+from __future__ import nested_scopes
 
-import os
-from twisted.lore import latex, texi, docbook
+import sys
+from twisted.lore import process
 from twisted.python import usage
 
 class Options(usage.Options):
 
-    optFlags = [['section', 's', 'Generate a section, not an article'],
-                ['texi', 'i', 'Generate a Texinfo section'],
-                ['docbook', 'c', 'Generate a Docbook section']]
+    optFlags = [["plain", 'p', "Report filenames without progress bar"],
+                ["section", 's', "Generate a section, not an article"]]
 
-    optParameters = [['dir', 'd', None, 'Directory relative to which references'
-                                        ' will be taken']]
+    optParameters = [["docsdir", "d", None]]
 
     def parseArgs(self, *files):
         self['files'] = files
 
+
+def makeProcessingFunction(d):
+    from twisted.lore import latex
+    if d['section']:
+        return lambda file, linkrel: latex.convertFile(file,
+                             latex.SectionLatexSpitter)
+    else:
+        return lambda file, linkrel: latex.convertFile(file,
+                             latex.LatexSpitter)
+
 def run():
     opt = Options()
-    opt.parseOptions()
-    ext = ".tex"
-    if opt['section']:
-        klass = latex.SectionLatexSpitter
-    elif opt['texi']:
-        klass = texi.TexiSpitter
-        ext = '.texinfo'
-    elif opt['docbook']:
-        klass = docbook.DocbookSpitter
-        ext = '.xml'
+    try:
+        opt.parseOptions()
+    except usage.UsageError, errortext:
+        print '%s: %s' % (sys.argv[0], errortext)
+        print '%s: Try --help for usage details.' % sys.argv[0]
+        sys.exit(1)
+    df = makeProcessingFunction(opt)
+    klass = process.Walker
+    if opt['plain']: 
+        klass = process.PlainReportingWalker
+    w = klass(df, '.html', '')
+    if opt['files']:
+        for fn in opt['files']:
+            w.walked.append(('', fn))
     else:
-        klass = latex.LatexSpitter
-    for file in opt['files']:
-        fout = open(os.path.splitext(file)[0]+ext, 'w')
-        dir = opt['dir'] or os.path.dirname(file)
-        spitter = klass(fout.write, dir, os.path.basename(file))
-        latex.processFile(spitter, open(file))
+        w.walkdir(opt['docsdir'] or '.')
+    w.generate()
