@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.31 2002/10/18 06:20:32 bruce Exp $
+# $Id: tendril.py,v 1.32 2003/01/08 10:34:29 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -211,7 +211,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.31 $'[11:-2]
+    versionNum = '$Revision: 1.32 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
@@ -777,7 +777,8 @@ class TendrilWords(wordsService.WordsClient):
             return
 
         for g in self.perspective.groups:
-            self.leaveGroup(g.name)
+            if g.name != self.errorGroup:
+                self.leaveGroup(g.name)
         for nick in self.participants.keys()[:]:
             self.logoutParticipant(nick)
         self.perspective.detached(self, None)
