@@ -50,3 +50,13 @@ class LoopTestCase(unittest.TestCase):
         d = lc.start(0.1)
         err = unittest.deferredError(d)
         err.trap(TestException)
+
+    def testDelayedStart(self):
+        ran = []
+        def foo():
+            ran.append(True)
+        
+        lc = task.LoopingCall(foo)
+        d = lc.start(10, now=False)
+        lc.stop()
+        self.failIf(ran)

@@ -47,12 +47,15 @@ class LoopingCall:
         self.a = a
         self.kw = kw
 
-    def start(self, interval):
+    def start(self, interval, now=True):
         """Start running function every interval seconds.
 
         @param interval: The number of seconds between calls.  May be less than
         one.  Precision will depend on the underlying platform, the available
         hardware, and the load on the system.
+        
+        @param now: If True, run this call right now.  Otherwise, wait until the
+        interval has elapsed before beginning.
 
         @return: A Deferred whose callback will be invoked with C{self} when
         C{self.stop} is called, or whose errback will be invoked if the function
@@ -64,7 +67,10 @@ class LoopingCall:
         self.starttime = seconds()
         self.count = 0
         self.interval = interval
-        self._loop()
+        if now:
+            self._loop()
+        else:
+            self._reschedule()
         return d
 
     def stop(self):
@@ -84,8 +90,10 @@ class LoopingCall:
         except:
             d, self.deferred = self.deferred, None
             d.errback()
-            return
-
+        else:
+            self._reschedule()
+    
+    def _reschedule(self):
         fromNow = self.starttime - seconds()
 
         while self.running:
