@@ -231,7 +231,7 @@ def _wait(d, timeout=None):
 
     r = resultSet[0]
     if isinstance(r, failure.Failure):
-        raise r.value.__class__, '\n\n%s' % r.getTraceback()
+        r.raiseException()
     Janitor.do_logErrCheck()
     return r
 
