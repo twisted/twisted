@@ -18,6 +18,20 @@ from twisted.web.woven import model, view, controller, widgets, input, interface
 from twisted.web.microdom import parseString, lmx
 
 
+# map formmethod.Argument to functions that render them:
+_renderers = {}
+
+def registerRenderer(argumentClass, renderer):
+    """Register a renderer for a given argument class.
+
+    The renderer function should act in the same way
+    as the 'input_XXX' methods of C{FormFillerWidget}.
+    """
+    assert callable(renderer)
+    global _renderers
+    _renderers[argumentClass] = renderer
+
+    
 def getValue(request, argument):
     """Return value for form inpurt."""
     values = request.args.get(argument.name, None)
@@ -149,7 +163,10 @@ class FormFillerWidget(widgets.Widget):
     
     def createInput(self, request, shell, arg):
         name = arg.__class__.__name__.lower()
-        imeth = getattr(self,"input_"+name)
+        if _renderers.has_key(arg.__class__):
+            imeth = _renderers[arg.__class__]
+        else:
+            imeth = getattr(self,"input_"+name)
         if name == "hidden":
             return (imeth(request, shell, arg).node, lmx())
         elif name == "submit":
