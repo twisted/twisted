@@ -407,9 +407,9 @@ class MSNEventBase(LineReceiver):
         try:
             cmd, params = line.split(' ', 1)
         except ValueError:
-            raise MSNProtocolError, "Invalid Message"
+            raise MSNProtocolError, "Invalid Message, %s" % repr(line)
 
-        if len(cmd) != 3: raise MSNProtocolError, "Invalid Command"
+        if len(cmd) != 3: raise MSNProtocolError, "Invalid Command, %s" % repr(cmd)
         if cmd.isdigit():
             if self.ids.has_key(params.split()[0]):
                 self.ids[id].errback(int(cmd))
@@ -432,7 +432,7 @@ class MSNEventBase(LineReceiver):
         diff = self.currentMessage.readPos - self.currentMessage.length
         if diff > 0:
             self.currentMessage.message += data[:-diff]
-            extra = data[diff:]
+            extra = data[-diff:]
         elif diff == 0:
             self.currentMessage.message += data
         else:
