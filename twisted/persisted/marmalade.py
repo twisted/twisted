@@ -26,8 +26,6 @@ identical.
 from twisted.python.reflect import namedModule, namedClass, namedObject
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference, _Defer
 
-from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection
-
 try:
     from new import instance
     from new import instancemethod
@@ -379,3 +377,13 @@ def unjellyFromXML(stringOrFile):
     else:
         document = parseString(stringOrFile)
     return unjellyFromDOM(document)
+
+
+try:
+    from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection
+except ImportError:
+    def jellyToXML(object, file=None):
+        raise NotImplementedError
+
+    def unjellyFromXML(stringOrFile):
+        raise NotImplementedError

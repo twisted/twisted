@@ -22,8 +22,8 @@ LICENSE_KEY = ""                # An ID which is most likely globally unique.
 LICENSE_TYPE = "Unregistered"   # The type of license the user has purchased.
 LICENSE_USER = "Nobody"         # Name of the user who registered this server
 LICENSE_EMAIL = ""              # Email Address of the registered user
-LICENSE_ORG = "Yoyodyne, Inc"   # Institution that registered this server
-LICENSE_HOST = socket.getfqdn() # Hostname for which this server registered
+LICENSE_ORG = "No Organization" # Institution that registered this server
+LICENSE_HOST = 'localhost'      # Hostname for which this server registered
 LICENSE_DIR = ""                # directory name the server should run from
 LICENSE_SECRET = ""             # Trivial precaution against people stealing ID numbers
 
