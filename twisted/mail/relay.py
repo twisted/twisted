@@ -19,6 +19,7 @@
 
 from twisted.mail import smtp
 from twisted.python import log
+from twisted.internet.address import UNIXAddress
 
 import os
 
@@ -54,7 +55,7 @@ class DomainQueuer:
         sockets and all connections from localhost.
         """
         peer = protocol.transport.getPeer()
-        return self.authed or peer[0] == 'UNIX' or peer[1] == '127.0.0.1' # or peer[1].startswith('192.168.1')
+        return self.authed or isinstance(peer, UNIXAddress) or peer.host == '127.0.0.1'
 
     def startMessage(self, user):
         """Add envelope to queue and returns ISMTPMessage."""

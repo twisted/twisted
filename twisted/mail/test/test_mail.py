@@ -23,6 +23,8 @@ import pickle
 import StringIO
 import rfc822
 
+from zope.interface import providedBy
+
 from twisted.trial import unittest
 from twisted.mail import smtp
 from twisted.mail import pop3
@@ -33,6 +35,7 @@ from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.internet.error import DNSLookupError, CannotListenError
+from twisted.internet import address
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
@@ -284,7 +287,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         creds = self.D.getCredentialsCheckers()
 
         self.assertEquals(len(creds), 1)
-        self.failUnless(components.implements(creds[0], cred.checkers.ICredentialsChecker))
+        self.failUnless(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
     
     def testRequestAvatar(self):
@@ -300,7 +303,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         t = self.D.requestAvatar('user', None, pop3.IMailbox)
         self.assertEquals(len(t), 3)
         self.failUnless(t[0] is pop3.IMailbox)
-        self.failUnless(components.implements(t[1], pop3.IMailbox))
+        self.failUnless(pop3.IMailbox.providedBy(t[1]))
         
         t[2]()
     
@@ -413,7 +416,7 @@ class VirtualPOP3TestCase(unittest.TestCase):
         
         self.assertEquals(len(result), 3)
         self.assertEquals(result[0], pop3.IMailbox)
-        self.failUnless(components.implements(result[1], pop3.IMailbox))
+        self.failUnless(pop3.IMailbox.providedBy(result[1]))
         result[2]()
         
         self.assertEquals(
@@ -444,7 +447,7 @@ class VirtualPOP3TestCase(unittest.TestCase):
         
         self.assertEquals(len(result), 3)
         self.assertEquals(result[0], pop3.IMailbox)
-        self.failUnless(components.implements(result[1], pop3.IMailbox))
+        self.failUnless(pop3.IMailbox.providedBy(result[1]))
         result[2]()
         
         self.assertEquals(
@@ -473,13 +476,13 @@ class RelayTestCase(unittest.TestCase):
         domain = mail.relay.DomainQueuer(service)
         
         doRelay = [
-            ('UNIX', '/var/run/mail-relay'),
-            ('TCP', '127.0.0.1', 12345),
+            address.UNIXAddress('/var/run/mail-relay'),
+            address.IPv4Address('TCP', '127.0.0.1', 12345),
         ]
         
         dontRelay = [
-            ('TCP', '192.168.2.1', 62),
-            ('TCP', '1.2.3.4', 1943),
+            address.IPv4Address('TCP', '192.168.2.1', 62),
+            address.IPv4Address('TCP', '1.2.3.4', 1943),
         ]
         
         for peer in doRelay:
@@ -683,7 +686,7 @@ def setUpDNS(self):
     protocol = dns.DNSDatagramProtocol(factory)
     while 1:
         self.port = reactor.listenTCP(0, factory, interface='127.0.0.1')
-        portNumber = self.port.getHost()[2]
+        portNumber = self.port.getHost().port
         
         try:
             self.udpPort = reactor.listenUDP(portNumber, protocol, interface='127.0.0.1')
@@ -803,7 +806,7 @@ class LiveFireExercise(unittest.TestCase):
         f = protocol.ClientFactory()
         f.protocol = lambda: client
         f.clientConnectionLost = lambda *args: done.append(None)
-        reactor.connectTCP('127.0.0.1', self.smtpServer.getHost()[2], f)
+        reactor.connectTCP('127.0.0.1', self.smtpServer.getHost().port, f)
 
         i = 0
         while len(done) == 0 and i < 1000:
@@ -858,7 +861,7 @@ class LiveFireExercise(unittest.TestCase):
         
         # Update the port number the *first* relay will connect to, because we can't use
         # port 25
-        manager.PORT = self.destServer.getHost()[2]
+        manager.PORT = self.destServer.getHost().port
 
         client = LineSendingProtocol([
             'HELO meson',
@@ -874,7 +877,7 @@ class LiveFireExercise(unittest.TestCase):
         f = protocol.ClientFactory()
         f.protocol = lambda: client
         f.clientConnectionLost = lambda *args: done.append(None)
-        reactor.connectTCP('127.0.0.1', self.insServer.getHost()[2], f)
+        reactor.connectTCP('127.0.0.1', self.insServer.getHost().port, f)
         
         i = 0
         while len(done) == 0 and i < 1000:
@@ -1109,7 +1112,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
 
-if not components.implements(reactor, interfaces.IReactorProcess):
+if interfaces.IReactorProcess(reactor, default=None) is None:
     ProcessAliasTestCase = "IReactorProcess not supported"
 
 class TestDomain:

@@ -21,7 +21,7 @@ Test cases for twisted.mail.smtp module.
 
 from zope.interface import implements
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted import protocols
 from twisted import internet
 from twisted.protocols import loopback
@@ -125,6 +125,7 @@ Someone set up us the bomb!\015
         if self.mbox != self.factory.domains['baz.com'].messages:
             raise AssertionError(self.factory.domains['baz.com'].messages)
         protocol.setTimeout(None)
+    testMessages = util.suppressWarnings(testMessages, ('DomainSMTP', DeprecationWarning))
 
 mail = '''\
 Subject: hello
@@ -173,6 +174,7 @@ class LoopbackTestCase(LoopbackMixin):
         protocol.factory = factory
         clientProtocol = self.clientClass()
         self.loopback(protocol, clientProtocol)
+    testMessages = util.suppressWarnings(testMessages, ('DomainSMTP', DeprecationWarning))
 
 class LoopbackSMTPTestCase(LoopbackTestCase, unittest.TestCase):
     clientClass = MySMTPClient

@@ -26,6 +26,8 @@ import socket
 import time
 import md5
 
+from zope.interface import implements
+
 try:
     import cStringIO as StringIO
 except ImportError:
@@ -37,6 +39,7 @@ from twisted.persisted import dirdbm
 from twisted.python import log
 from twisted.mail import mail
 from twisted.mail import alias
+from twisted.python.components import backwardsCompatImplements
 
 from twisted import cred
 import twisted.cred.portal
@@ -249,7 +252,7 @@ class MaildirMailbox(pop3.Mailbox):
         self.deleted.clear()
 
 class StringListMailbox:
-    __implements__ = (pop3.IMailbox,)
+    implements(pop3.IMailbox)
     
     def __init__(self, msgs):
         self.msgs = msgs
@@ -273,13 +276,13 @@ class StringListMailbox:
     
     def sync(self):
         pass
-
+backwardsCompatImplements(StringListMailbox)
 
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
     
-    __implements__ = (cred.portal.IRealm, mail.IAliasableDomain)
+    implements(cred.portal.IRealm, mail.IAliasableDomain)
     
     portal = None
     _credcheckers = None
@@ -349,9 +352,10 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             mbox,
             lambda: None
         )
+backwardsCompatImplements(MaildirDirdbmDomain)
 
 class DirdbmDatabase:
-    __implements__ = (cred.checkers.ICredentialsChecker,)
+    implements(cred.checkers.ICredentialsChecker)
     
     credentialInterfaces = (
         cred.credentials.IUsernamePassword,
@@ -366,3 +370,4 @@ class DirdbmDatabase:
             if c.checkPassword(self.dirdbm[c.username]):
                 return c.username
         raise cred.error.UnauthorizedLogin()
+backwardsCompatImplements(DirdbmDatabase)

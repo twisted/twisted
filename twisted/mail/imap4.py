@@ -40,7 +40,6 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure, text
 from twisted.cred import perspective
-from twisted.python.components import implements
 from twisted.internet import interfaces
 
 from twisted import cred
