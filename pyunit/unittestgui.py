@@ -217,7 +217,7 @@ class TkTestRunner(BaseGUITestRunner):
         # Status bar
         statusFrame = tk.Frame(self.top, relief=tk.SUNKEN, borderwidth=2)
         statusFrame.pack(anchor=tk.SW, fill=tk.X, side=tk.BOTTOM)
-        tk.Label(statusFrame, textvariable=self.statusVar).pack(side=tk.LEFT)
+        tk.Label(statusFrame, textvariable=self.statusVar, width=80, anchor="w").pack(side=tk.LEFT)
 
 	# Area to enter name of test to run
         leftFrame = tk.Frame(self.top, borderwidth=3)
