@@ -213,9 +213,6 @@ class AlreadyNegotiating(NegotiationError):
     pass
 
 class TelnetProtocol(protocol.Protocol):
-    def __init__(self, proto):
-        self.proto = proto
-
     def unhandledCommand(self, command, argument):
         pass
 
