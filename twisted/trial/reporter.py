@@ -118,7 +118,8 @@ class TestStatsBase(object):
 
 class TestStats(TestStatsBase):
     # this adapter is used for both TestSuite and TestModule objects
-    importErrors = property(lambda self: self.original.couldNotImport.items())
+    importErrors = property(lambda self: getattr(self.original,
+                                                 'couldNotImport', {}).items())
 
     def _collect(self, status):
         meths = []
@@ -137,7 +138,7 @@ class TestStats(TestStatsBase):
         for r in self.original.children:
             if not itrial.ITestStats(r).allPassed:
                 return False
-        if self.original.couldNotImport:
+        if getattr(self.original, 'couldNotImport', False):
             return False
         return True
     allPassed = property(allPassed)
