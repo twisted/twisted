@@ -1,5 +1,8 @@
 #!/usr/bin/python2.3
 
+"""An input/output window for the glade reactor inspector.
+"""
+
 import time
 import gtk
 import gobject
@@ -14,7 +17,7 @@ from twisted.protocols import policies
 
 # the glade file uses stock icons, which requires gnome to be installed
 import gnome
-version = "$Revision: 1.5 $"[11:-2]
+version = "$Revision: 1.1 $"[11:-2]
 gnome.init("gladereactor Inspector", version)
 
 class ConsoleOutput(gtk2manhole.ConsoleOutput):

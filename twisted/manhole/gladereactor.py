@@ -15,18 +15,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-crazy shit
+A modified gtk2 reactor with a Glade dialog in-process that allows you to stop,
+suspend, resume and inspect transports interactively.
 """
 
 __all__ = ['install']
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure, util, reflect, components
-from twisted.internet.interfaces import IReactorFDSet, ITransport
-
-# Sibling Imports
-from twisted.internet import main, default, error
-from gtk2reactor import Gtk2Reactor as sup
+from twisted.internet.gtk2reactor import Gtk2Reactor as sup
 
 import gtk
 import gobject
@@ -79,14 +76,14 @@ class GladeReactor(sup):
     def on_viewlog_clicked(self, w):
         store, iter = self.servers.get_selection().get_selected()
         data = store[iter][1]
-        from twisted.internet._inspectro import LogViewer
+        from _inspectro import LogViewer
         if hasattr(data, "protocol") and not data.protocol.logViewer:
             LogViewer(data.protocol)
     
     def on_inspect_clicked(self, w):
         store, iter = self.servers.get_selection().get_selected()
         data = store[iter]
-        from twisted.internet._inspectro import Inspectro
+        from _inspectro import Inspectro
         Inspectro(data[1])
 
     def on_suspend_clicked(self, w):

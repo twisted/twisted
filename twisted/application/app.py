@@ -24,7 +24,7 @@ reactorTypes = {
     'wx': 'twisted.internet.wxreactor',
     'gtk': 'twisted.internet.gtkreactor',
     'gtk2': 'twisted.internet.gtk2reactor',
-    'glade': 'twisted.internet.gladereactor',
+    'glade': 'twisted.manhole.gladereactor',
     'default': 'twisted.internet.default',
     'win32': 'twisted.internet.win32eventreactor',
     'win': 'twisted.internet.win32eventreactor',
