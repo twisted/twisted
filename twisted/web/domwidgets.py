@@ -345,6 +345,16 @@ class List(Widget):
     <ul id="blah" view="List">
         <li id="listItem" view="Text">Foo</li>
     </ul>
+
+    If you have nested lists, you may also do something like this:
+
+    <table model="blah" view="List">
+        <tr class="listHeader"><th>A</th><th>B</th></tr>
+        <tr class="listItem">
+            <td><span view="Text" model="1" /</td>
+            <td><span view="Text" model="2" /</td>
+        </tr>
+    </table>
     
     Where blah is the name of a list on the model; eg self.model.blah = ['foo', 'bar']
     """
