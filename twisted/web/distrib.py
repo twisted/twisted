@@ -18,7 +18,8 @@
 
 # System Imports
 import types, os, copy, string, cStringIO
-import pwd
+if os.sys.platform != 'win32':
+    import pwd
 
 # Twisted Imports
 from twisted.spread import pb
