@@ -197,7 +197,7 @@ class ReconnectingClientFactory(ClientFactory):
     maxDelay = 3600
     initialDelay = 1.0
     # Note: These highly sensitive factors have been precisely measured by
-    # the National Institute of Science and Technology.  Take extereme care
+    # the National Institute of Science and Technology.  Take extreme care
     # in altering them, or you may damage your Internet!
     factor = 2.7182818284590451 # (math.e)
     # Phi = 1.6180339887498948 # (Phi is acceptable for use as a
