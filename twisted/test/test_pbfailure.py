@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -17,16 +16,9 @@
 
 from twisted.trial import unittest
 
-
-import traceback
-
-
 from twisted.spread import pb
-from twisted.internet import app, reactor
+from twisted.internet import reactor
 from twisted.python import log
-from twisted.cred import authorizer
-
-
 
 ##
 # test exceptions
@@ -39,56 +31,36 @@ class TimeoutError(Exception): pass
 ####
 # server-side
 ####
-class SimplePerspective(pb.Perspective):
-    def perspective_poop(self):
+class SimpleRoot(pb.Root):
+    def remote_poop(self):
         raise PoopError("Someone threw poopie at me!")
-    def perspective_fail(self):
+    def remote_fail(self):
         raise FailError("I'm a complete failure! :(")
-    def perspective_die(self):
+    def remote_die(self):
         raise DieError("*gack*")
 
-class SimpleService(pb.Service):
-    def __init__(self, name, auth, appl, tester):
-        self.tester = tester
-        pb.Service.__init__(self, name, authorizer=auth, serviceParent=appl)
-
-    def startService(self):
-        self.tester.runClient()
-
-    def getPerspectiveNamed(self, name):
-        p = SimplePerspective(name)
-        p.setService(self)
-        return p
-
-
 class PBFailureTest(unittest.TestCase):
+
     def __init__(self):
         self.total = 0
 
-
     def testPBFailures(self):
-        auth = authorizer.DefaultAuthorizer()
-        appl = app.Application("pbfailure", authorizer=auth)
-        SimpleService("pbfailure",auth,appl,self).getPerspectiveNamed("guest").makeIdentity("guest")
-        p = reactor.listenTCP(0, pb.BrokerFactory(pb.AuthRoot(auth)), interface="127.0.0.1")
-        self.n = p.getHost()[2]
-        appl.run(save=0)
+        p = reactor.listenTCP(0, pb.PBServerFactory(SimpleRoot()), interface="127.0.0.1")
+        self.port = p.getHost()[2]
+        self.runClient()
+        reactor.run()
+        p.stopListening()
         log.flushErrors(PoopError, FailError, DieError)
-
 
     def runClient(self):
         f = pb.PBClientFactory()
-        reactor.connectTCP("127.0.0.1", self.n, f)
-        f.getPerspective("guest", "guest", "pbfailure", "guest").addCallbacks(
-            self.connected, self.notConnected)
+        reactor.connectTCP("127.0.0.1", self.port, f)
+        f.getRootObject().addCallbacks(self.connected, self.notConnected)
         self.id = reactor.callLater(10, self.timeOut)
-
 
     def a(self, d):
         for m in (self.failurePoop, self.failureFail, self.failureDie, lambda: None):
             d.addCallbacks(self.success, m)
-
-
 
     def stopReactor(self):
         self.id.cancel()
@@ -106,8 +78,7 @@ class PBFailureTest(unittest.TestCase):
     def notConnected(self, fail):
         self.stopReactor()
         raise pb.Error("There's probably something wrong with your environment"
-                       "(is port 54321 free?), because I couldn't connect to myself.")
-
+                       ", because I couldn't connect to myself.")
 
     def success(self, result):
         if result in [42, 420, 4200]:
@@ -130,5 +101,3 @@ class PBFailureTest(unittest.TestCase):
     def timeOut(self):
         reactor.crash()
         raise TimeoutError("Never got all three failures!")
-
-testCases = [PBFailureTest]
