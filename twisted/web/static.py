@@ -59,14 +59,15 @@ class Data(resource.Resource):
             return ''
         return self.data
 
-class Redirect(resource.Resource):
-    def __init__(self, url):
-        self.url = url
+def addSlash(request):
+    return "http://%s%s/" % (
+            request.getHeader("host"),
+            (string.split(request.uri,'?')[0]))
 
-    def render(self, request):
-        request.setHeader("location", self.url)
-        request.setResponseCode(http.TEMPORARY_REDIRECT)
-        return """
+def redirectTo(URL, request):
+    request.setHeader("location", URL)
+    request.setResponseCode(http.TEMPORARY_REDIRECT)
+    return """
 <html>
     <head>
         <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
@@ -76,8 +77,15 @@ class Redirect(resource.Resource):
         Click <a href=\"%(url)s\">here</a>.
     </body>
 </html>
-""" % {'url': self.url}
+""" % {'url': URL}
 
+class Redirect(resource.Resource):
+    def __init__(self, request):
+        self.url = addSlash(request)
+        
+    def render(self, request):
+        return redirectTo(self.url, request)
+    
 class File(resource.Resource, styles.Versioned):
     """
     File is a resource that represents a plain non-interpreted file.
@@ -171,7 +179,7 @@ class File(resource.Resource, styles.Versioned):
             # the request won't have a prepath, and we shouldn't do this kind
             # of mangling anyway because it has already been done.
             if hasattr(request, 'postpath') and not request.postpath and request.uri[-1] != '/':
-                return self.redirect(request)
+                return Redirect(request)
             if os.path.exists(childPath):
                 if hasattr(request, 'postpath') and not request.postpath and not self.getIndex(request):
                     return widgets.WidgetPage(DirectoryListing(self.path))
@@ -213,7 +221,6 @@ class File(resource.Resource, styles.Versioned):
         f = File(childPath, self.defaultType, self.allowExt)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
-
         return f
 
     def render(self, request):
@@ -222,11 +229,12 @@ class File(resource.Resource, styles.Versioned):
               os.stat(self.path)
 
         if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
-            index = self.getIndex(request)
-            if index:
-                return index.render(request)
-
-            return self.redirect(request).render(request)
+            if self.path[-1] == '/': 
+                index = self.getIndex(request)
+                if index:
+                    return index.render(request)
+            else:
+                return self.redirect(request)
             #dirListingPage = widgets.WidgetPage(DirectoryListing(self.path))
             #return dirListingPage.render(request)
 
@@ -279,10 +287,7 @@ class File(resource.Resource, styles.Versioned):
         return server.NOT_DONE_YET
 
     def redirect(self, request):
-        redirectURL = "http://%s%s/" % (
-            request.getHeader("host"),
-            (string.split(request.uri,'?')[0]))
-        return Redirect(redirectURL)
+        return redirectTo(addSlash(request), request)
 
     def getIndex(self, request):
         if not hasattr(request, 'prepath'): return
