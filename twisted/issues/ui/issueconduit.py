@@ -74,6 +74,7 @@ class ChatConduitSession(WordsClient):
     id = 0
     
     def __init__(self, session):
+        self.session = session
         self.complained = 0
         self.recipient = "IssueBot"
         ChatConduitSession.id = ChatConduitSession.id + 1
@@ -87,8 +88,10 @@ class ChatConduitSession(WordsClient):
         
     def die(self):
         self.service.deleteBot(self)
+        self.session.removeComponent(IConduitSession)
         if self.request:
             self.request.finish()
+
     def setRequest(self, request):        
         self.request = request
         for item in self.cached:
@@ -159,7 +162,9 @@ class CWebConduit(wmvc.WController):
         output = request.args.get("output", [None])[0]
         if output:
             session.setRequest(request)
-            session.output("<html>Output connected")
+            session.output("<html>Please state the nature of your problem "
+                           "in the text field below, and your question will "
+                           "be answered in the order it was received.<br/>")
             # We'll never be done!
             return server.NOT_DONE_YET
         return wmvc.WController.render(self, request)
