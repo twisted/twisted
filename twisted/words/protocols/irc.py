@@ -578,7 +578,7 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
-    def userQuit(self, user):
+    def userQuit(self, user, quitMessage):
         """Called when I see another user disconnect from the network.
         """
         pass
