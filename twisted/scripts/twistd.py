@@ -158,7 +158,7 @@ def startApplication(config, application):
 def runApp(config):
     passphrase = app.getPassphrase(config['encrypted'])
     app.installReactor(config['reactor'])
-    config['nodaemon'] = config['nodaemon'] and not config['debug']
+    config['nodaemon'] = config['nodaemon'] or config['debug']
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'], config['syslog'], config['prefix'],
