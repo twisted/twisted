@@ -7,43 +7,52 @@ import socket
 
 from twisted.trial import unittest
 
+def arith(x):
+    return (x * (x + 1)) // 2
+
+HARD_CHUNK_SIZE = 37
+
 class IOVectorTestCase(unittest.TestCase):
     def testAllocDealloc(self):
         v = iovec.iovec()
         del v
     
-    def testAdd(self):
+    def testAppend(self):
         v = iovec.iovec()
-        for s in [chr(i + ord('a')) * i for i in range(1, 11)]:
-            v.add(s)
-
+        for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
+            v.append(s)
+        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
         
     def testWriteToFile(self):
         v = iovec.iovec()
-        for s in [chr(i + ord('a')) * i for i in range(1, 11)]:
-            v.add(s)
-        
+        for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
+            v.append(s)
+
+        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
         f = tempfile.TemporaryFile('w+')
-        self.assertEquals(55, v.write(f))
+        self.assertEquals(arith(HARD_CHUNK_SIZE), v.write(f))
+        self.assertEquals(0, v.bytes)
         
         f.seek(0, 0)
-        self.assertEquals(f.read(), ''.join([chr(i + ord('a')) * i for i in range(1, 11)]))
+        self.assertEquals(f.read(), ''.join([chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]))
 
     def testWriteToFileDescriptor(self):
         v = iovec.iovec()
-        for s in [chr(i + ord('a')) * i for i in range(1, 11)]:
-            v.add(s)
+        for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
+            v.append(s)
+        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
         f = tempfile.TemporaryFile('w+')
         
-        self.assertEquals(55, v.write(f.fileno()))
+        self.assertEquals(arith(HARD_CHUNK_SIZE), v.write(f.fileno()))
         
         f.seek(0, 0)
-        self.assertEquals(f.read(), ''.join([chr(i + ord('a')) * i for i in range(1, 11)]))
+        self.assertEquals(f.read(), ''.join([chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]))
 
     def testIllegalWrites(self):
         v = iovec.iovec()
-        for s in ['x' * i for i in range(100)]:
-            v.add(s)
+        for s in ['x' * i for i in range(1, 101)]:
+            v.append(s)
+        self.assertEquals(v.bytes, arith(100))
 
         class Pah:
             def fileno(self):
@@ -54,6 +63,7 @@ class IOVectorTestCase(unittest.TestCase):
         del Pah.fileno
         self.assertRaises(AttributeError, v.write, Pah())
         self.assertRaises(AttributeError, v.write, 'a string')
+        self.assertEquals(v.bytes, arith(100))
 
     def testIncompleteWrites(self):
         server = socket.socket()
@@ -74,7 +84,8 @@ class IOVectorTestCase(unittest.TestCase):
         
         v = iovec.iovec()
         for i in range(1000, 2000):
-            v.add(chr(ord('a') + i % 26) * i)
+            v.append(chr(ord('a') + i % 26) * i)
+        self.assertEquals(v.bytes, arith(1999)-arith(999))
         
         written = v.write(client)
         # print

@@ -1,6 +1,6 @@
-
 /* Python includes */
 #include <Python.h>
+#include <structmember.h>
 
 /* System includes */
 #include <sys/uio.h>
@@ -247,43 +247,84 @@ PyIOVector_dealloc(PyIOVector* self) {
     PyObject_Del(self);
 }
 
-static char PyIOVector_add_doc[] = 
-"V.add(string) -- Add a string to this IOVector";
+static char PyIOVector_append_doc[] = 
+"V.append(string) -- Add a string to this IOVector";
 
-static PyObject*
-PyIOVector_add(PyIOVector* self, PyObject* args) {
-    PyObject* obj;
+static int
+PyIOVector_append_object(PyIOVector* self, PyObject* obj) {
     const char *buf;
     int len;
     IOVectors* next_tail;
-
-    if (!PyArg_ParseTuple(args, "O:add", &obj))
-        return NULL;
-    
     if (PyObject_CheckReadBuffer(obj) == 0) {
         PyErr_SetString(iovec_error, "Argument must support read buffer interface");
-        return NULL;
+        return -1;
     }
 
     if (PyObject_AsReadBuffer(obj, (const void **)&buf, &len) == -1) {
         PyErr_SetString(iovec_error, "Argument could not support simple read buffer");
+        return -1;
+    }
+
+    if (len == 0) {
+        return 0;
+    }
+
+    if (self->tail == NULL) {
+        /* XXX - assert self->head == NULL */
+        if ((self->tail = self->head = IOVectors_New(DEFAULT_NUM_VECTORS)) == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+    }
+
+    if ((next_tail = IOVectors_Add(self->tail, (char *)buf, (size_t)len, DEFAULT_NUM_VECTORS, obj)) == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    self->tail = next_tail;
+    self->bytes += len;
+    return 0;
+    /* retain the item yourself */
+}
+
+static PyObject*
+PyIOVector_append(PyIOVector* self, PyObject* args) {
+    PyObject* obj;
+
+    if (!PyArg_ParseTuple(args, "O:append", &obj))
+        return NULL;
+    
+    if (PyIOVector_append_object(self, obj) == -1) {
         return NULL;
     }
 
-    if (len > 0) {
-        if (self->tail == NULL) {
-            if ((self->tail = self->head = IOVectors_New(DEFAULT_NUM_VECTORS)) == NULL)
-                return PyErr_NoMemory();
-        }
+    /* retain item explicitly */
+    Py_INCREF(obj);
+    Py_INCREF(Py_None);
+    return Py_None;
+}
 
-        if ((next_tail = IOVectors_Add(self->tail, (char *)buf, (size_t)len, DEFAULT_NUM_VECTORS, obj)) == NULL) {
-            return PyErr_NoMemory();
-        }
-        self->tail = next_tail;
-        self->bytes += len;
-        Py_INCREF(obj);
+static char PyIOVector_extend_doc[] =
+"V.extend(sequence)";
+
+static PyObject*
+PyIOVector_extend(PyIOVector* self, PyObject* args) {
+    PyObject *iterator;
+    PyObject *item;
+    if (!PyArg_ParseTuple(args, "O:extend", &iterator))
+        return NULL;
+    iterator = PyObject_GetIter(iterator);
+    if (iterator == NULL) {
+        return NULL;
     }
-
+    while ((item = PyIter_Next(iterator)) != NULL) {
+        if (PyIOVector_append_object(self, item) == -1) {
+            return NULL;
+        }
+        /* retain item implicitly */
+    }
+    Py_DECREF(iterator);
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -335,13 +376,20 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
         PyErr_SetString(iovec_error, "head is supposed to get recycled?");
         return NULL;
     }
+    self->bytes -= result;
     return PyInt_FromLong(result);
 }
 
 static PyMethodDef PyIOVector_methods[] = {
-    {"add", (PyCFunction)PyIOVector_add, METH_VARARGS, PyIOVector_add_doc},
-    {"append", (PyCFunction)PyIOVector_add, METH_VARARGS, PyIOVector_add_doc},
+    {"add", (PyCFunction)PyIOVector_append, METH_VARARGS, PyIOVector_append_doc},
+    {"append", (PyCFunction)PyIOVector_append, METH_VARARGS, PyIOVector_append_doc},
     {"write", (PyCFunction)PyIOVector_write, METH_VARARGS, PyIOVector_write_doc},
+    {"extend", (PyCFunction)PyIOVector_extend, METH_VARARGS, PyIOVector_extend_doc},
+    {NULL, NULL},
+};
+
+static PyMemberDef PyIOVector_members[] = {
+    {"bytes", T_INT, offsetof(PyIOVector, bytes), RO, "bytes"},
     {NULL, NULL},
 };
 
@@ -377,7 +425,7 @@ static PyTypeObject PyIOVector_Type = {
     0,               /* tp_iter */
     0,               /* tp_iternext */
     PyIOVector_methods, /* tp_methods */
-    0,               /* tp_members */
+    PyIOVector_members, /* tp_members */
     0,               /* tp_getset */
     0,               /* tp_base */
     0,               /* tp_dict */
