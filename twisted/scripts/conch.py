@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.39 2003/02/19 07:09:21 z3p Exp $
+# $Id: conch.py,v 1.40 2003/02/19 07:23:21 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -205,7 +205,7 @@ def onConnect():
     if isinstance(conn, SSHConnection) and not options['nocache']:
         filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
         try:
-            reactor.listenUNIX(filename, SSHUnixServerFactory()).numberAccepts = 1
+            reactor.listenUNIX(filename, SSHUnixServerFactory())
         except CannotListenError:
             pass # we'll just not listen, not a big deal
 
