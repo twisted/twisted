@@ -27,8 +27,9 @@ from twisted.python import usage
 import sys, traceback, os, cPickle
 
 class GeneralOptions(usage.Options):
-    optFlags = [['help', 'h'], ['append', 'a']]
-    optStrings = [['uid', 'u', os.getuid()], ['gid', 'g', os.getgid()]]
+    optFlags = [['help', 'h']]
+    optStrings = [['uid', 'u', os.getuid()], ['gid', 'g', os.getgid()],
+                  ['append', 'a', '']]
 
     def parseArgs(self, *args):
         self.args = args
@@ -70,7 +71,7 @@ except usage.error, ue:
 if not options.append:
     a = main.Application(options.args[0], int(options.uid), int(options.gid))
 else:
-    a = cPickle.load(open(options.args[0]+'.tap'))
+    a = cPickle.load(open(options.append))
 for num, proto in mod.getPorts(a, config):
     a.listenOn(num, proto)
 a.save()

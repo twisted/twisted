@@ -7,10 +7,21 @@ mktap \- create twisted.servers
 .B mktap
 --help \fIapptype\fR
 .SH DESCRIPTION
-\fIapptype\fR can be 'web', 'irc', 'reality', 'toc', 'mail' and 'telnet'.
-Each of those support different options.
 .PP
 The \fB\--help\fR prints out a usage message to standard output.
+.TP 
+\fB\--uid\fR, \fB\-u\fR \fI<uid>\fR
+Application belongs to this uid, and should run with its permissions.
+.TP 
+\fB\--gid\fR, \fB\-d\fR \fI<gid>\fR
+Application belongs to this gid, and should run with its permissions.
+.TP 
+\fB\--append\fR, \fB\-a\fR \fI<file>\fR
+Append given servers to given file, instead of creating a new one.
+File should be be a tap file.
+.PP
+\fIapptype\fR can be 'web', 'irc', 'reality', 'toc', 'mail' and 'telnet'.
+Each of those support different options.
 .PP
 .SH \fBweb\fR options
 .TP
