@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import usage
 from twisted.application import app
-import sys
+import sys, getpass
 
 class ConvertOptions(usage.Options):
     synopsis = "Usage: tapconvert [options]"
@@ -50,7 +50,6 @@ def run():
         return
     passphrase = None
     if options.opts['decrypt']:
-        import getpass
         passphrase = getpass.getpass('Passphrase: ')
     app.convertStyle(options["in"], options["typein"], passphrase,
                      options["out"], options['typeout'], options["encrypt"])
