@@ -140,6 +140,11 @@ class buildlist:
         return self.state()
 
 class FlowTest(unittest.TestCase):
+    def testNotReady(self):
+        lhs = [1,2,3]
+        x = flow.wrap(lhs)
+        self.assertRaises(flow.NotReadyError,x.next)
+
     def testBasic(self):
         lhs = [1,2,3]
         rhs = list(flow.Block([1,2,flow.Cooperate(),3]))
@@ -186,7 +191,17 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(d)
         self.assertEquals([range(9)],rhs)
 
-    def testFailure(self):
+    def testCallbackFailure(self):
+        cb = flow.Callback()
+        d = flow.Deferred(buildlist(cb))
+        for x in range(3):
+            cb.callback(x)
+        cb.errback(flow.Failure(IOError()))
+        r = unittest.deferredError(d)
+        self.failUnless(isinstance(r, failure.Failure))
+        self.failUnless(isinstance(r.value, IOError))
+
+    def testDeferredFailure(self):
         #
         # By default, the first time an error is encountered, it is
         # wrapped as a Failure and send to the errback
@@ -211,7 +226,6 @@ class FlowTest(unittest.TestCase):
         # If failures are to be expected, then they can be
         # returned in the list of results.
         #
-        #
         #   ['x',Failure(ZeroDivisionError)]
         #
         d = flow.Deferred(badgen(), failureAsResult = 1)
@@ -229,6 +243,16 @@ class FlowTest(unittest.TestCase):
         b = flow.Merge(a, [1,2,flow.Cooperate(),3])
         rhs = unittest.deferredResult(flow.Deferred(b))
         self.assertEquals(rhs, [1, 2, 'test', 3])
+    
+    def testDeferredWrapperFail(self):
+        from twisted.internet import defer
+        from twisted.internet import reactor 
+        d = defer.Deferred()
+        f = lambda: d.errback(flow.Failure(IOError()))
+        reactor.callLater(0, f)
+        r = unittest.deferredError(d)
+        self.failUnless(isinstance(r, failure.Failure))
+        self.failUnless(isinstance(r.value, IOError))
 
     def testThreaded(self):
         class CountIterator:

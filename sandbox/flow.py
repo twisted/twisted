@@ -34,7 +34,7 @@ Flow ... asynchronous data flows
         def producer():
             lst = flow.wrap([1,2,3])
             nam = flow.wrap(['one','two','three'])
-            while 1:
+            while True:
                 # these are flow.Iterable
                 yield lst
                 yield nam
@@ -68,8 +68,9 @@ Flow ... asynchronous data flows
 
 import time, types
 from twisted.python.failure import Failure
-from twisted.python.compat import StopIteration, iter, isinstance
+from twisted.python.compat import StopIteration, iter, isinstance, True, False
 from twisted.internet import defer, reactor
+
 
 def wrap(obj, *trap):
     """ Wraps various objects for use within a flow """
@@ -80,8 +81,9 @@ def wrap(obj, *trap):
         return DeferredWrapper(obj)
 
     try:
-        # this is going to pass for 'foo', is that good?
-        return Iterable(obj, *trap)
+        # wrap all sequences (except strings) as iterable objects
+        if type(obj) != type(''):
+            return Iterable(obj, *trap)
     except TypeError: 
         # iteration over non-sequence 
         pass
@@ -91,8 +93,22 @@ def wrap(obj, *trap):
 class Instruction:
     """ Has special meaning when yielded in a flow """
     pass
+ 
+class Unsupported(TypeError):
+    """ Indicates that the given stage does not know what to do 
+        with the flow instruction that was returned.
+    """
+    def __init__(self, inst):
+        msg = "Unsupported flow instruction: %s " % repr(inst)
+        TypeError.__init__(self,msg)
 
-Continue = Instruction()
+class NotReadyError(RuntimeError):
+    """ Used for the default stage value indicating that 'yield' was
+        not used on the stage prior to calling it's next() method
+        or accessing its 'result' variable.
+    """
+    pass
+NotReady = NotReadyError("Must 'yield' this object before calling next()")
 
 class Cooperate(Instruction):
     """ Requests that processing be paused so other tasks can resume
@@ -132,37 +148,46 @@ class Stage(Instruction):
         For the following usage:
 
              iterable = DerivedStage()
-             while 1:
+             while True:
                  yield iterable
                  if iterable.stop: break
-                 if iterable.isFailure():
+                 if iterable.fail:
                      // handle iterable.result as a Failure
                  else:
                      // handle iterable.result
 
     """      
     def __init__(self, *trap):
-        self._ready = 0
         self._trap = trap
-        self.stop   = 0
-        self.result = None
+        self.stop = False
+        self.fail = False
+        self.result = NotReady
     
     def __iter__(self):
         return self
 
     def isFailure(self):
-        """ return a boolean value if the result is a Failure """ 
-        return isinstance(self.result, Failure)
+        """ for backwards compatibility, use 'fail' attribute instead """
+        return self.fail
 
     def next(self):
-        """ return the current result, raising failures if specified """
+        """ return current result
+
+            This is the primary function to be called to retrieve
+            the current result.  It complies with the iterator 
+            protocol by raising StopIteration when the stage is
+            complete.   It also raises an exception if it is 
+            called before the stage is yielded. 
+        """
+        result = self.result
+        self.result = NotReady
         if self.stop:
             raise StopIteration()
-        assert self._ready, "must yield flow stage before calling next()"
-        self._ready = 0
-        if self.isFailure(): 
-            return self.result.trap(*self._trap)
-        return self.result
+        if result is NotReady:
+            raise NotReady
+        if self.fail:
+            return result.trap(*self._trap)
+        return result
 
     def _yield(self):
         """ executed during a yield statement by previous stage
@@ -173,8 +198,7 @@ class Stage(Instruction):
             then stored in self.result and is an instance of Failure
             if a problem occurred.
         """
-        self._ready = 1
-        self.result = None
+        pass
 
 class Iterable(Stage):
     """ Wrapper for iterable objects, pass in a next() function
@@ -196,53 +220,43 @@ class Iterable(Stage):
     def __init__(self, iterable, *trap):
         Stage.__init__(self, *trap)
         self._iterable   = iter(iterable)
-        self._next_stage = None
-        self._stop_next  = 0
-
-    def _yield_next(self, result):
-        """ Fetch the next value from the underlying callable """
-        if isinstance(result, Instruction):
-            if isinstance(result, Stage):
-                self._next_stage = result
-                return Continue
-            return result
-        if isinstance(result, defer.Deferred):
-            self._next_stage = DeferredWrapper(result)
-            return Continue
-        self.result = result
+        self._next = None
 
     def _yield(self):
         """ executed during a yield statement """
-        Stage._yield(self)
-        if self._stop_next or self.stop:
-            self.stop = 1
+        if self.fail or self.stop:
+            self.stop = True
             return
-        while 1:
-            next = self._next_stage
+        while True:
+            next = self._next
             if next:
                 result = next._yield()
                 if result: 
                     return result
-                self._next_stage = None 
+                self._next = None 
             try:
-                ret = self._yield_next(self._iterable.next())
-                if ret is Continue: 
-                    continue
-                return ret
+                result = self._iterable.next()
+                if isinstance(result, Instruction):
+                    if isinstance(result, Stage):
+                        self._next = result
+                        continue
+                    return result
+                self.result = result
             except StopIteration:
-                self.stop = 1
+                self.result = None
+                self.stop = True
             except Failure, fail:
                 self.result = fail
-                self._stop_next = 1
+                self.fail   = True
             except:
                 self.result = Failure()
-                self._stop_next = 1
+                self.fail = True
             return
 
 class Zip(Stage):
     """ Zips two or more stages into a stream of N tuples
 
-        [1, Cooperate(), 2] + [3, 4] => [ (1, 3), (2, 4) ]
+        Zip([1, Cooperate(), 2],[3, 4]) => [ (1, 3), (2, 4) ]
 
     """
     def __init__(self, *stages):
@@ -250,30 +264,32 @@ class Zip(Stage):
         self._stage  = []
         for stage in stages:
             self._stage.append(wrap(stage))
-        self._result = []
         self._index  = 0
 
     def _yield(self):
-        Stage._yield(self)
+        if self.fail or self.stop:
+            self.stop = True
+            return
+        if not self._index:
+            self.result = []
         while self._index < len(self._stage):
             idx = self._index
             curr = self._stage[idx]
             result = curr._yield()
             if result:
-                if isinstance(result, Cooperate):
-                    return result
-                raise TypeError("Unsupported flow instruction")
-            if curr.isFailure() and not self.result:
+                return result
+            if curr.fail:
+                self.fail = True
                 self.result = curr.result
+                return
             if curr.stop:
-                self.stop = 1
-            self._result.append(curr.result)
+                self.stop = True
+                self.result = None
+                return
+            self.result.append(curr.result)
             self._index += 1
-        if not self.stop and not self.result:
-            self.result = tuple(self._result)
-        self._fail   = 0
-        self._index = 0
-        self._result = []
+        self.result = tuple(self.result)
+        self._index  = 0
 
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream
@@ -291,30 +307,38 @@ class Merge(Stage):
         self._queue = []
         for stage in stages:
             self._queue.append(wrap(stage))
-        self._cooperate = None
+        self._curr = None
+        self._instruction = []
 
     def _yield(self):
-        Stage._yield(self)
+        if self.fail or self.stop:
+            self.stop = True
+            return
         while self._queue:
             curr = self._queue.pop(0)
             result = curr._yield()
             if result: 
-                if isinstance(result, Cooperate):
-                    self._queue.append(curr)
-                    if self._cooperate is curr:
-                        self._cooperate = None
-                        return result
-                    if self._cooperate is None:
-                        self._cooperate = curr
-                        continue
-                    continue
-                raise TypeError("Unsupported flow instruction")
+                self._queue.append(curr)
+                if self._curr is curr:
+                    self._curr = None
+                    if self._instruction:
+                        return self._instruction.pop(0)
+                    return result
+                if not isinstance(result,Cooperate):
+                    self._instruction.append(result)
+                if self._curr is None:
+                    self._curr = curr
+                continue
             self.result = curr.result
+            if curr.fail:
+                self.fail = True
+                self.result = curr.result
+                return
             if not curr.stop:
                 self._queue.append(curr)
                 return
         self.result = None
-        self.stop = 1
+        self.stop = True
 
 class Block(Stage):
     """ A stage which Blocks on Cooperate events
@@ -337,98 +361,111 @@ class Block(Stage):
     def next(self):
         """ fetch the next value from the Stage flow """
         stage = self._stage
-        while 1:
+        while True:
             result = stage._yield()
             if result:
                 if isinstance(result, Cooperate):
                     if result.__class__ == Cooperate:
                         self.block(result.timeout)
                         continue
-                raise TypeError("Unsupported flow instruction")
+                raise Unsupported(result)
             return stage.next()
 
-class CooperateCallback(Cooperate):
-    """ Cooperate, with indirect rescheduling
+class CallLater(Instruction):
+    """ Instruction to support callbacks
 
-        This is similar to cooperate, in that all objects on the
-        call stack are popped; but differs in that it uses the 
-        callback function to resume the Flow.
+        This is the instruction which is returned during the yield
+        of the DeferredWrapper and Callback stage.   The underlying 
+        flow driver should call the 'callLater' function with the 
+        callable to be executed after each callback.
     """
-    def __init__(self, results, finished):
-        Cooperate.__init__(self)
-        self._results  = results
-        self._finished = finished
-        self.execute   = None
-    def finish(self):
-        self._finished.append(1)
-        if self.execute: 
-            self.execute()
-    def callback(self, value):
-        self._results.append(value)
-        if self.execute:
-            self.execute()
+    def callLater(self, callable):
+        pass
 
 class Callback(Stage):
-    """ Converts a single-thread push interface into a pull interface """
+    """ Converts a single-thread push interface into a pull interface.
+   
+        Once this stage is constructed, its callback, errback, and 
+        finish member variables may be called by a producer.   The
+        results of which can be obtained by yielding the Callback and
+        then calling next()
+    """
+    class Instruction(CallLater):
+        def __init__(self):
+            self.flow = lambda: True
+        def callLater(self, callable):
+            self.flow = callable
     def __init__(self, *trap):
         Stage.__init__(self, *trap)
+        self._fail       = False
+        self._finished   = False
         self._results    = []
-        self._finished   = []
-        self._cooperate  = CooperateCallback(self._results, self._finished)
-        self.callback    = self._cooperate.callback
-        self.finish      = self._cooperate.finish
+        self._cooperate  = Callback.Instruction()
+    def callback(self,result):
+        """ called by the producer to indicate a successful result """
+        self._results.append(result)
+        self._cooperate.flow()
+    def finish(self):
+        """ called by producer to indicate successful stream completion """
+        assert not self.fail, "failed streams should not be finished"
+        self._finished = 1
+        self._cooperate.flow()
+    def errback(self, fail):
+        """ called by the producer in case of Failure """
+        self.result = fail
+        self._fail = True
+        self._cooperate.flow()
     def _yield(self):
-        Stage._yield(self)
-        if self.stop or self._finished:
+        if self._fail:
+            self.fail = 1
+            return
+        if self.fail or self.stop:
             self.stop = 1
             return
         if not self._results: 
+            if self._finished:
+                self.result = None
+                self.stop = 1
+                return
             return self._cooperate
         self.result = self._results.pop(0)
-
-class CooperateDeferred(Cooperate):
-    """ Cooperate, with indirect rescheduling
-
-        This is similar to cooperate, in that all objects on the
-        call stack are popped; but differs in that it registers the
-        flow.Deferred's execute function instead of using callLater
-    """
-    def __init__(self, deferred):
-        self.deferred = deferred
 
 class DeferredWrapper(Stage):
     """ Wraps a Deferred object into a stage
 
-        Ideally, this could be done better with more indepth
-        knowledge of the reactor, i.e. instead of returning
-        Cooperate, it could return a WaitFor object, which
-        would then cause the stream to only be resumed once
-        the deferred has finished
+        This stage provides a callback 'catch' for errback and
+        callbacks.  If not called, then this returns an Instruction
+        which will let the reactor execute other operations, such
+        as the producer for this deferred.
     """
+    class Instruction(CallLater):
+        def __init__(self, deferred):
+            self.deferred = deferred
+        def callLater(self, callable):
+            self.deferred.addBoth(callable)
     def __init__(self, deferred, *trap):
         Stage.__init__(self, *trap)
-        deferred.addBoth(self._callback)
-        self._cooperate  = CooperateDeferred(deferred)
-        self._result     = None
-        self._stop_next = 0
+        deferred.addCallbacks(self._callback)
+        self._cooperate  = DeferredWrapper.Instruction(deferred)
+        self._called     = False
+        self._fetched    = False
 
     def _callback(self, res):
-        self._result = res
+        self._called = True
+        self.result  = res
+
+    def _errback(self, rail):
+        self._called = True
+        self.result = res
+        self.fail = 1
 
     def _yield(self):
-        Stage._yield(self)
-        if self.stop or self._stop_next:
-            self.stop = 1
-            return
-        if not self._result:
+        if not self._called:
             return self._cooperate
-        if self._result:
-            self.result = self._result
-            self._stop_next = 1
-
-#
-# Items following this comment depend upon twisted.internet
-#
+        if self._fetched:
+           self.stop = 1
+           return
+        self._fetched = 1
 
 class Threaded(Stage):
     """ A stage which runs a blocking iterable in a separate thread
@@ -448,13 +485,23 @@ class Threaded(Stage):
         that attribute is true, then this wrapper will assume that
         data arrives in chunks via a sequence instead of by values.
     """
+    class Instruction(CallLater):
+        def __init__(self):
+            self.flow = None
+        def callLater(self, callable):
+            self.flow = callable
+        def __call__(self):
+            if self.flow:
+                reactor.callFromThread(self.flow)
+                self.flow = None
+
     def __init__(self, iterable, *trap):
         Stage.__init__(self, trap)
         self._iterable  = iterable
-        self._stop      = 0
+        self._stop      = False
         self._buffer    = []
-        self._cooperate = Cooperate()
-        if getattr(iterable, 'chunked', 0):
+        self._cooperate = Threaded.Instruction()
+        if getattr(iterable, 'chunked', False):
             self._append = self._buffer.extend
         else:
             self._append = self._buffer.append
@@ -468,22 +515,23 @@ class Threaded(Stage):
             self._buffer.append(Failure())
         else:
             try:
-                while 1:
+                while True:
                     self._append(self._iterable.next())
+                    self._cooperate()
             except StopIteration:
                 pass
             except: 
                 self._buffer.append(Failure())
-        self._stop = 1
+        self._stop = True
+        self._cooperate()
 
     def _yield(self):
         """ update locals from the buffer, or return Cooperate """
-        Stage._yield(self)
         if self._buffer:
             self.result = self._buffer.pop(0)
             return
         if self._stop:
-            self.stop = 1
+            self.stop = True
             return
         return self._cooperate
 
@@ -503,8 +551,7 @@ class Deferred(defer.Deferred):
             reactor.iterate()
 
     """
-
-    def __init__(self, stage, failureAsResult = 0):
+    def __init__(self, stage, failureAsResult = False):
         """initialize a DeferredFlow
         @param stage:           a flow stage, iterator or generator
         @param failureAsResult  if true, then failures will be added to 
@@ -520,7 +567,7 @@ class Deferred(defer.Deferred):
 
     def _execute(self, dummy = None):
         cmd = self._stage
-        while 1:
+        while True:
             result = cmd._yield()
             if cmd.stop:
                 if not self.called:
@@ -528,40 +575,31 @@ class Deferred(defer.Deferred):
                 return
             if result:
                 if isinstance(result, Cooperate):
-                    if isinstance(result, CooperateCallback):
-                        result.execute = self._execute
-                        return
-                    if isinstance(result, CooperateDeferred):
-                        result.deferred.addBoth(self._execute)
-                        return
                     reactor.callLater(result.timeout, self._execute)
                     return
-                raise TypeError("Unsupported flow instruction")
+                if isinstance(result, CallLater):
+                    result.callLater(self._execute)
+                    return
+                raise Unsupported(result)
             if not self.failureAsResult: 
-                if cmd.isFailure():
+                if cmd.fail:
                     self.errback(cmd.result)
                     return
             self._results.append(cmd.result)
 
-#
-# This only depends upon twisted.enterprise.adbapi or any
-# other 'pool' object which has a connect() method returning
-# a DBAPI 2.0 database connection
-#
-
 class QueryIterator:
     """ Converts a database query into a result iterator """
 
-    def __init__(self, pool, sql, fetchmany=0, fetchall=0):
+    def __init__(self, pool, sql, fetchmany=False, fetchall=False):
         self.curs = None
         self.sql = sql
         self.pool = pool
         if fetchmany: 
             self.next = self.next_fetchmany
-            self.chunked = 1
+            self.chunked = True
         if fetchall:
             self.next = self.next_fetchall
-            self.chunked = 1  
+            self.chunked = True
 
     def __iter__(self):
         conn = self.pool.connect()
