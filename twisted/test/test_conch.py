@@ -407,9 +407,9 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         global theTest
+        self.done = True
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
         theTest.assertEquals(self.buf, 'hello\r\n')
-        self.done = True
 
 class SSHTransportTestCase(unittest.TestCase):
 
