@@ -543,6 +543,33 @@ class IMAP4Server(basic.LineReceiver):
             )
         else:
             self._cbSearch(d, tag)
+    
+    def _cbSearch(self, result, tag):
+        ids = ' '.join([str(i) for i in result])
+        self.sendUntaggedResponse('SEARCH ' + ids)
+        self.sendPositiveResponse(tag, 'SEARCH completed')
+    
+    def _ebSearch(self, failure, tag):
+        self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure))
+
+    def select_FETCH(self, tag, args):
+        query = parseNestedParens(args)
+        d = self.mbox.fetch(query)
+        if isinstance(d, defer.Deferred):
+            d.addCallbacks(
+                self._cbFetch,
+                self._ebFetch,
+                callbackArgs=(tag,),
+                errbackArgs=(tag,)
+            )
+        else:
+            self._cbFetch(d, tag)
+    
+    def _cbFetch(self, results, tag):
+        pass
+
+    def _ebFetch(self, failure, tag):
+        self.sendBadResponse(tag, 'FETCH failed: ' + str(failure))
 
 
 class UnhandledResponse(IMAP4Exception): pass
@@ -1456,6 +1483,91 @@ class IMAP4Client(basic.LineReceiver):
                             flags.setdefault(id, []).extend(data[1])
         return flags
 
+    def fetchSpecific(self, messages, headerType=None, headerNumber=None,
+                      headerArgs=None, peek=None, offset=None, length=None):
+        """Retrieve a specific section of one or more messages
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @param headerType: C{str} 
+        @param headerType: If specified, must be one of HEADER,
+        HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or TEXT, and will determine
+        which part of the message is retrieved.  For HEADER.FIELDS and
+        HEADER.FIELDS.NOT, C{headerArgs} must be a sequence of header names. 
+        For MIME, C{headerNumber} must be specified.
+        
+        @type headerNumber: C{int} or C{int} sequence
+        @param headerNumber: The nested rfc822 index specifying the
+        entity to retrieve.  For example, C{1} retrieves the first
+        entity of the message, and C{(2, 1, 3}) retrieves the 3rd
+        entity inside the first entity inside the second entity of
+        the message.
+        
+        @type headerArgs: A sequence of C{str}
+        @param headerArgs: If C{headerType} is HEADER.FIELDS, these are the
+        headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
+        headers to exclude from retrieval.
+        
+        @type peek: C{bool}
+        @param peek: If true, cause the server to not set the \\Seen
+        flag on this message as a result of this command.
+        
+        @type offset: C{int}
+        @param offset: The number of octets at the beginning of the result
+        to skip.
+        
+        @type length: C{int}
+        @param length: The number of octets to retrieve.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a mapping of
+        message numbers to retrieved data, or whose errback is invoked
+        if there is an error.
+        """
+        fmt = 'BODY%s[%s%s%s]%s'
+        if headerNumber is None:
+            number = ''
+        elif isinstance(headerNumber, types.IntType):
+            number = str(headerNumber)
+        else:
+            number = '.'.join(headerNumber)
+        if headerType is None:
+            header = ''
+        elif number:
+            header = '.' + headerType
+        else:
+            header = headerType
+        if header:
+            if headerArgs is not None:
+                payload = ' (%s)' % ' '.join(headerArgs)
+            else:
+                payload = ' ()'
+        else:
+            payload = ''
+        if offset is None:
+            extra = ''
+        else:
+            extra = '<%d.%d>' % (offset, length)
+        cmd = fmt % (peek and '.PEEK' or '', number, header, payload, extra)
+        d = self.sendCommand('FETCH', cmd)
+        d.addCallback(self._cbFetchSpecific)
+        return d
+        
+    def _cbFetchSpecific(self, (lines, last)):
+        info = {}
+        for line in lines:
+            parts = line.split(None, 2)
+            if len(parts) == 3:
+                if parts[1] == 'FETCH':
+                    try:
+                        id = int(parts[0])
+                    except ValueError:
+                        raise IllegalServerResponse, line
+                    else:
+                        info[id] = parseNestedParens(parts[2])
+        return info
+
     def _fetch(self, messages, **terms):
         cmd = ' '.join([s.upper() for s in terms.keys()])
         d = self.sendCommand('FETCH', cmd)
@@ -1703,14 +1815,14 @@ def parseNestedParens(s):
     contentStack = [[]]
     try:
         for c in s:
-            if inQuote or (c != '(' and c != ')'):
+            if inQuote or (c not in '()[]'):
                 if c == '"':
                     inQuote = not inQuote
                 contentStack[-1].append(c)
             elif not inQuote:
-                if c == '(':
+                if c == '(' or c == '[':
                     contentStack.append([])
-                elif c == ')':
+                elif c == ')' or c == ']':
                     contentStack[-2].append(contentStack.pop())
     except IndexError:
         raise MismatchedNesting(s)
