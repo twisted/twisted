@@ -229,16 +229,21 @@ def trimFilename(name, N):
     # XXX: this function is *not* perfect
     # if N > num path elements you still get an elipsis prepended
     L = []
+    drive, name = osp.splitdrive(name)
     while 1:
         head, tail = osp.split(name)
         L.insert(0, tail)
         if not head or head == os.sep:
             break
         name = head
+    if drive:
+        L.insert(0, drive)
 
     if len(L) <= N:
-        return "%s" % (os.sep.join(L),)
-    return "...%s" % os.sep.join(L[-N:])
+        ret = "%s" % (os.path.join(*L),)
+    else:
+        ret = "...%s" % os.path.join(*L[-N:])
+    return ret
 
     
 def formatDoctestError(tm):

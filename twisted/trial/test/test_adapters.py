@@ -31,9 +31,11 @@ expectGimmieAFailure = [re.compile(r'.*test_adapters.py.*in gimmeAFailure'),
                         re.compile(r'.*BogusError.*'),
                         re.compile(r'.*test_adapters\.BogusError: %s' % (ERROR_MSG,))]
 
-expectFailureInSetUp = [re.compile(r'.*twisted/internet/defer.py.*maybeDeferred'), # XXX: this may break
+re_psep = re.escape(os.path.sep)
+
+expectFailureInSetUp = [re.compile(r'.*twisted%(sep)sinternet%(sep)sdefer.py.*maybeDeferred' % {'sep': re_psep}), # XXX: this may break
                         None,
-                        re.compile(r'.*test/erroneous.py.*in setUp'),
+                        re.compile(r'.*test%(sep)serroneous.py.*in setUp' % {'sep': re_psep}),
                         re.compile(r'.*raise FoolishError.*'),
                         re.compile(r'.*erroneous.FoolishError: I am a broken setUp method')]
 
@@ -117,7 +119,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
     def testTrimFilename(self):
         self.checkReporterSetup = False
-        path = '/foo/bar/baz/spam/spunk'
+        path = os.sep.join(['foo', 'bar', 'baz', 'spam', 'spunk'])
 
         out = adapters.trimFilename(path, 3)
         s = "...%s" % (os.sep.join(['baz','spam','spunk']),)
@@ -139,7 +141,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         output = adapters.formatDoctestError(itm).split('\n')
 
         expect = [reporter.DOUBLE_SEPARATOR,
-                  '[ERROR]: unexpectedException (...twisted/trial/test/trialdoctest1.py)',
+                  '[ERROR]: unexpectedException (...%s)' % (os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'),),
                   'docstring',
                   '---------',
                   '--> >>> 1/0',
