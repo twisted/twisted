@@ -64,12 +64,10 @@ class ManConverter:
             self.text(line)
 
     def continueReceived(self, cont):
-        print 'FOO2', repr(cont)
         if not cont:
             return
         if cont[0].isupper():
             f = getattr(self, 'macro_' + cont[:2].rstrip().upper(), None)
-            print 'conting with', cont[:2].rstrip().upper(), f
             if f:
                 f(cont[2:].strip())
         else:
