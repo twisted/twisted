@@ -269,7 +269,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             else:
                 self.ignoredExts = []
         else:
-            self.ignoredExts = ignoredExts
+            self.ignoredExts = list(ignoredExts)
         self.registry = registry or Registry()
 
     def ignoreExt(self, ext):

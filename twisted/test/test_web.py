@@ -307,3 +307,12 @@ resource = Data('dynamic world','text/plain')
                           str(len('hello world')))
         self.assertNotEquals(f.getChild('', DummyRequest([''])).__class__,
                              static.File)
+
+    def testIgnoreExt(self):
+        f = static.File(".")
+        f.ignoreExt(".foo")
+        self.assertEquals(f.ignoredExts, [".foo"])
+        f = static.File(".")
+        self.assertEquals(f.ignoredExts, [])
+        f = static.File(".", ignoredExts=(".bar", ".baz"))
+        self.assertEquals(f.ignoredExts, [".bar", ".baz"])
