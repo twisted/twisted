@@ -27,7 +27,8 @@ class EventDispatcher:
     I'm mainly useful for complex GUIs.
     """
 
-    def __init__(self):
+    def __init__(self, prefix="event_"):
+        self.prefix = prefix
         self.callbacks = {}
 
 
@@ -38,7 +39,7 @@ class EventDispatcher:
     def autoRegister(self, obj):
         from twisted.python import reflect
         d = {}
-        reflect.accumulateMethods(obj, d, 'event_')
+        reflect.accumulateMethods(obj, d, self.prefix)
         for k,v in d.items():
             self.registerHandler(k, v)
 
