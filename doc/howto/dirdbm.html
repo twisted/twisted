@@ -10,6 +10,8 @@
   <body>
 <h1>DirDBM: Directory-based Storage</h1>
 
+<h2>DirDBM</h2>
+
 <p><code class="API">twisted.persisted.dirdbm.DirDBM</code> is a DBM-like storage system. 
 That is, it stores mappings between keys
 and values, like a Python dictionary, except that it stores the values in files
@@ -56,6 +58,20 @@ won't be saved.</p>
 &gt;&gt;&gt; d["key"]
 [1, 2, 3]
 </pre>
+
+
+<h2>dirdbm.Shelf</h2>
+
+<p>Sometimes it is neccessary to persist more complicated objects than strings.
+With some care, <code class="API">dirdbm.shelf</code> can transparently persist
+them. <code>Shelf</code> works exactly like <code>DirDBM</code>, except that
+the values (but not the keys) can be arbitrary picklable objects. However,
+notice that mutating an object after it has been stored in the
+<code>Shelf</code> has no effect on the Shelf.
+When mutating objects, it is neccessary to resest the <code>Shelf</code>
+afterwards.</p>
+
+
 
   </body>
 </html>
