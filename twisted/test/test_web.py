@@ -138,8 +138,6 @@ class GuardTest(unittest.TestCase):
         d.addArg('__formtype__', str(guard.AuthForm))
         g.render(d)
         assert d.finished, "didn't finish"
-        w = string.join(d.written,'%%%%')
-        # print w
-        assert d.written == ['correct'], "incorrect result: %s"% w
+        assert d.written == ['correct'], "incorrect result: %s" % d.written
 
 

@@ -625,7 +625,9 @@ class Form(Widget):
         l = []
         write = l.append
         try:
-            self._doProcess(form, write, request)
+            val = self._doProcess(form, write, request)
+            if val:
+                l.extend(val)
         except FormInputError, fie:
             write(self.formatError(str(fie)))
         return l
