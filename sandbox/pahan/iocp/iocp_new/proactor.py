@@ -34,11 +34,16 @@ class Proactor(iocpcore, base.ReactorBase):
                     t2 = self.timeout()
                     t = self.running and t2
                     self.doIteration(t)
+            except KeyboardInterrupt:
+                self.stop()
             except:
                 log.msg("Unexpected error in main loop.")
                 log.deferr()
             else:
                 log.msg('Main loop terminated.')
+
+    def removeAll(self):
+        return []
 
     def installWaker(self):
         pass
