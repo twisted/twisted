@@ -14,8 +14,18 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""
+A simple port forwarder.
+"""
+
+# Twisted imports
 from twisted.internet import tcp
 from twisted.protocols import protocol
+from twisted.manhole import coil
+
+# System imports
+import types
 
 
 class StupidProtocol(protocol.Protocol):
@@ -40,8 +50,34 @@ class StupidProtocolServer(StupidProtocol):
         self.setPeer(client)
 
 
-def makeStupidFactory(host, port):
-    factory = protocol.Factory()
-    factory.host, factory.port = host, port
-    factory.protocol = StupidProtocolServer
-    return factory
+class StupidFactory(protocol.Factory, coil.Configurable):
+    """Factory for port forwarder."""
+    
+    protocol = StupidProtocolServer
+    
+    def __init__(self, host="localhost", port=80):
+        self.host = host
+        self.port = port
+    
+    # configuration
+    
+    configName = 'TCP Port Forwarder'
+    configTypes = {'host': types.StringType,
+                   'port': types.IntType
+                  }
+    
+    def config_host(self, host):
+        self.host = host
+
+    def config_port(self, port):
+        if not (65536 > port > 0):
+            raise ValueError, "not a valid IP port"
+        self.port = port
+    
+    def getConfiguration(self):
+        return {"host": self.host, "port": self.port}
+
+coil.registerClass(StupidFactory)
+
+# backwards compatible interface
+makeStupidFactory = StupidFactory

@@ -24,10 +24,16 @@ register("Twisted Manhole",
          description="Mail protocol implementation for Twisted.",
          type='coil')
 
-register("Telnet Shell Plugin",
+register("Telnet Shell",
          "twisted.protocols.telnet",
          description="Shell access through telnet.  Warning: This is insecure!",
          type='coil')
+
+register("TCP Port Forwarder",
+         "twisted.internet.stupidproxy",
+         description="TCP port forwarding.",
+         type='coil')
+
 
 ## Pending making this realistically work...
 ##register("Twisted Forum",
@@ -91,5 +97,10 @@ register("Twisted TOC Server Automated TAP builder",
 
 register("Twisted Words Automated TAP builder",
          "twisted.tap.words",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Coil Automated TAP builder",
+         "twisted.tap.coil",
          description="automated TAP building",
          type="tap")
