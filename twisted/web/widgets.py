@@ -123,8 +123,20 @@ def formatFailure(myFailure):
                 color = ''
             w('<tr %s><td>%s</td><td><code>%s</code></td></tr>' % (color, snipLineNo,snipLine))
         w('</table></td></tr>')
-        # local vars
+        # Self vars
         w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
+        w('<td valign="top" colspan="2"><table><tr><th align="left" colspan="2">'
+              'Self'
+              '</th></tr>')
+        for name, var in localVars:
+            if name == 'self':
+                for key, value in var.__dict__.items():
+                    if re.search(r'\W'+'self.'+key+r'\W', snippet):
+                        w('<tr><td valign="top"><b>%s</b></td>'
+                            '<td>%s</td></tr>' % (key, htmlrepr(value)))
+        w('</table></td></tr>')
+        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
+        # Local and global vars
         for nm, varList in ('Locals', localVars), ('Globals', globalVars):
             w('<td valign="top"><table><tr><th align="left" colspan="2">'
               '%s'
