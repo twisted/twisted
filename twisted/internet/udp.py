@@ -31,6 +31,7 @@ import socket
 import operator
 import struct
 import warnings
+from zope.interface import implements
 
 from twisted.python.runtime import platformType
 if platformType == 'win32':
@@ -46,7 +47,7 @@ elif platformType != 'java':
 # Twisted Imports
 from twisted.internet import protocol, base, defer, address
 from twisted.persisted import styles
-from twisted.python import log, reflect
+from twisted.python import log, reflect, components
 
 # Sibling Imports
 import abstract, main, error, interfaces
@@ -55,7 +56,7 @@ import abstract, main, error, interfaces
 class Port(base.BasePort):
     """UDP port, listening for packets."""
 
-    __implements__ = base.BasePort.__implements__, interfaces.IUDPTransport, interfaces.ISystemHandle
+    implements(interfaces.IUDPTransport, interfaces.ISystemHandle)
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
@@ -221,13 +222,15 @@ class Port(base.BasePort):
         """
         return address.IPv4Address('UDP', *(self.socket.getsockname() + ('INET_UDP',)))
 
+components.backwardsCompatImplements(Port)
+
 
 class ConnectedPort(Port):
     """DEPRECATED.
 
     A connected UDP socket."""
 
-    __implements__ = Port.__implements__, interfaces.IUDPConnectedTransport
+    implements(interfaces.IUDPConnectedTransport)
 
     def __init__(self, (remotehost, remoteport), port, proto, interface='', maxPacketSize=8192, reactor=None):
         assert isinstance(proto, protocol.ConnectedDatagramProtocol)
@@ -295,6 +298,8 @@ class ConnectedPort(Port):
         """
         return address.IPv4Address('UDP', self.remotehost, self.remoteport, 'INET_UDP')
 
+components.backwardsCompatImplements(ConnectedPort)
+
 
 class MulticastMixin:
     """Implement multicast functionality."""
@@ -351,7 +356,7 @@ class MulticastMixin:
 class MulticastPort(MulticastMixin, Port):
     """UDP Port that supports multicasting."""
 
-    __implements__ = Port.__implements__, interfaces.IMulticastTransport
+    implements(interfaces.IMulticastTransport)
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
@@ -365,10 +370,14 @@ class MulticastPort(MulticastMixin, Port):
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return skt
 
+components.backwardsCompatImplements(MulticastPort)
+
 
 class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
     """DEPRECATED.
 
     Connected UDP Port that supports multicasting."""
 
-    __implements__ = ConnectedPort.__implements__, interfaces.IMulticastTransport
+    implements(interfaces.IMulticastTransport)
+
+components.backwardsCompatImplements(ConnectedMulticastPort)

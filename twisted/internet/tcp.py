@@ -38,6 +38,7 @@ try:
     import fcntl
 except ImportError:
     fcntl = None
+from zope.interface import implements, classImplements
 
 try:
     from OpenSSL import SSL
@@ -72,7 +73,7 @@ from errno import EAGAIN
 # Twisted Imports
 from twisted.internet import protocol, defer, base, address
 from twisted.persisted import styles
-from twisted.python import log, failure, reflect
+from twisted.python import log, failure, reflect, components
 from twisted.python.runtime import platform, platformType
 from twisted.internet.error import CannotListenError
 
@@ -193,7 +194,7 @@ class Connection(abstract.FileDescriptor):
     connection based socket.
     """
 
-    __implements__ = abstract.FileDescriptor.__implements__, interfaces.ITCPTransport, interfaces.ISystemHandle
+    implements(interfaces.ITCPTransport, interfaces.ISystemHandle)
 
     TLS = 0
 
@@ -205,7 +206,6 @@ class Connection(abstract.FileDescriptor):
         self.protocol = protocol
 
     if SSL:
-        __implements__ = __implements__ + (interfaces.ITLSTransport,)
 
         def startTLS(self, ctx):
             assert not self.TLS
@@ -220,7 +220,8 @@ class Connection(abstract.FileDescriptor):
             self.TLS = 1
             klass = self.__class__
             class TLSConnection(_TLSMixin, klass):
-                __implements__ = interfaces.ISSLTransport, klass.__implements__
+                implements(interfaces.ISSLTransport)
+            components.backwardsCompatImplements(TLSConnection)
             self.__class__ = TLSConnection
 
     def getHandle(self):
@@ -322,6 +323,10 @@ class Connection(abstract.FileDescriptor):
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
+
+if SSL:
+    classImplements(Connection, interfaces.ITLSTransport)
+components.backwardsCompatImplements(Connection)
 
 
 class BaseClient(Connection):

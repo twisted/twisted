@@ -23,9 +23,10 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System Imports
 import types, string
+from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, reflect
+from twisted.python import log, reflect, components
 from twisted.persisted import styles
 
 # Sibling Imports
@@ -47,8 +48,8 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     dataBuffer = ""
     offset = 0
 
-    __implements__ = (interfaces.IProducer, interfaces.IReadWriteDescriptor,
-                      interfaces.IConsumer, interfaces.ITransport)
+    implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
+               interfaces.IConsumer, interfaces.ITransport)
 
     def __init__(self, reactor=None):
         if not reactor:
@@ -276,6 +277,9 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         indicate a valid file descriptor for the operating system.
         """
         return -1
+
+components.backwardsCompatImplements(FileDescriptor)
+
 
 def isIPAddress(addr):
     parts = string.split(addr, '.')

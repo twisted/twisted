@@ -79,11 +79,12 @@ class Factory:
     def stopFactory(self):
         """This will be called before I stop listening on all Ports/Connectors.
 
-        This can be used to perform 'shutdown' tasks such as disconnecting
+        This can be overridden to perform 'shutdown' tasks such as disconnecting
         database connections, closing files, etc.
 
         It will be called, for example, before an application shuts down,
-        if it was connected to a port.
+        if it was connected to a port. User code should not call this function
+        directly.
         """
 
     def buildProtocol(self, addr):
