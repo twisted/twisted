@@ -196,7 +196,7 @@ class Delayed(rebuild.Sensitive):
         return steps
 
     def loop(self, func,ticks=0,args=()):
-        """Delayed.loop(ticks,func[,args=()]) -> Stoppable
+        """Delayed.loop(func[, ticks=0][, args=()]) -> Stoppable
 
         This schedules the function *func* for repeating execution
         every *ticks* ticks.
