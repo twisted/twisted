@@ -26,6 +26,7 @@ from twisted.protocols import imap4, loopback
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.python import util
+from twisted.cred import authorizer
 
 def strip(f):
     return lambda result, f=f: f()
@@ -769,9 +770,12 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testCramMD5(self):
         a = Account()
+        auth = authorizer.DefaultAuthorizer()
+        ident = imap4.CramMD5Identity('testuser', auth)
+        ident.setPassword('secret', a)
+        auth.addIdentity(ident) 
+        sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com', auth)
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
-        sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com')
-        sAuth.addUser('testuser', 'secret', a)
 
         self.client.registerAuthenticator(cAuth)
         self.server.registerChallenger(sAuth)

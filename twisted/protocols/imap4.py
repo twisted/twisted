@@ -30,6 +30,7 @@ from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.python.compat import *
+from twisted.cred import identity, error
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
 
@@ -178,7 +179,7 @@ class IMAP4Server(basic.LineReceiver):
                 self.setLineMode(passon)
 
     def lineReceived(self, line):
-        # print 'S: ' + line
+        # print 'S: ' + line.replace('\r', '\\r')
         args = line.split(None, 2)
         rest = None
         if self._pendingLiteral:
@@ -301,21 +302,26 @@ class IMAP4Server(basic.LineReceiver):
                 self._pendingLiteral = defer.Deferred()
                 self.sendContinuationRequest(coded)
                 self._pendingLiteral.addCallback(self._cbAuthChunk, auth, challenge, tag)
+                self._pendingLiteral.addErrback(self._ebAuthChunk, tag)
 
     def _cbAuthChunk(self, result, auth, savedState, tag):
-        try:
-            savedState, challenge = auth.authenticateResponse(savedState, result)
-        except AuthenticationError, e:
-            self.sendNegativeResponse(tag, 'Authentication failed: ' + str(e))
-        else:
-            if components.implements(challenge, IAccount):
-                self.sendPositiveResponse(tag, 'Authentication successful')
-                self.state = 'auth'
-                self.account = challenge
-            else:
-                self._pendingLiteral = defer.Deferred()
-                self.sendContinuationRequest(challenge)
-                self._pendingLiteral.addCallback(self._cbAuthChunk, savedState, tag)
+        d = maybeDeferred(None, auth.authenticateResponse, savedState, result)
+        d.addCallbacks(
+            self._cbAuthResp,
+            self._ebAuthResp,
+            (tag,), None, (tag,), None
+        )
+
+    def _cbAuthResp(self, result, tag):
+        self.sendPositiveResponse(tag, 'Authentication successful')
+        self.state = 'auth'
+        self.account = result
+    
+    def _ebAuthResp(self, failure, tag):
+        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+    
+    def _ebAuthChunk(self, failure, tag):
+        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(falure.value))
 
     def unauth_LOGIN(self, tag, args):
         args = parseNestedParens(args)
@@ -2271,6 +2277,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, types.StringTypes):
             if '\n' in i or '\r' in i:
+                i = '\r\n'.join(i.splitlines()) + '\r\n'
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             elif (not i.startswith('BODY')) and (' ' in i or '\t' in i):
                 pieces.extend([' ', '"%s"' % (i,)])
@@ -2282,8 +2289,6 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
-
-class AuthenticationError(IMAP4Exception): pass
 
 class IServerAuthentication(components.Interface):
     def getName(self):
@@ -2308,11 +2313,10 @@ class IServerAuthentication(components.Interface):
         @type response: C{str}
         @param response: The response from the client
 
-        @rtype: C{int} or C{str}
-        @return: Returns 1 if the response is correct, or a string if
-        further interaction is required with the client.
+        @rtype: Any object implemtenting C{IAccount} or a C{Deferred}
 
-        @raise: C{AuthenticationError} if the response is incorrect.
+        @raise: C{twisted.cred.error.Unauthorized} if the response is
+        incorrect.
         """
 
 class IClientAuthentication(components.Interface):
@@ -2325,20 +2329,36 @@ class IClientAuthentication(components.Interface):
     def challengeResponse(self, secret, challenge):
         """Generate a challenge response string"""
 
+class CramMD5Identity(identity.Identity):
+    def setPassword(self, plaintext, account):
+        self.plaintext = plaintext
+        self.account = account
+
+    def challenge(self):
+        # The data encoded in the first ready response contains an
+        # presumptively arbitrary string of random digits, a timestamp, and
+        # the fully-qualified primary host name of the server.  The syntax of
+        # the unencoded form must correspond to that of an RFC 822 'msg-id'
+        # [RFC822] as described in [POP3].
+        #   -- RFC 2195
+        chal = '<%d.%d@%s>' % (random.randrange(0x7fffffff),
+                               time.time(), self.host)
+        return chal
+    
+    def verifyResponse(self, digest, response):
+        verify = util.keyed_md5(self.plaintext, response)
+        if verify == digest:
+            return defer.succeed(self.account)
+        return defer.fail(error.Unauthorized("Incorrect password"))
+
 # Do these belong here?
 class CramMD5ServerAuthenticator:
     # RFC 2195
     __implements__ = (IServerAuthentication,)
 
-    def __init__(self, host, users = None, accounts = None):
+    def __init__(self, host, authorizer):
         self.host = host
-        if users is None:
-            users = {}
-        if accounts is None:
-            accounts = {}
-        self.users = users
-        self.accounts = accounts
-        assert self.users.keys() == self.accounts.keys()
+        self.authorizer = authorizer
 
     def getName(self):
         return "CRAM-MD5"
@@ -2358,23 +2378,15 @@ class CramMD5ServerAuthenticator:
         try:
             uncoded = base64.decodestring(response)
         except TypeError:
-            raise AuthenticationError, "Malformed Response - not base64"
+            raise error.Unauthorized, "Malformed Response - not base64"
         parts = uncoded.split(None, 1)
         if len(parts) != 2:
-            raise AuthenticationError, "Malformed Response - wrong number of parts"
+            raise error.Unauthorized, "Malformed Response - wrong number of parts"
         name, digest = parts
-        if not self.users.has_key(name):
-            raise AuthenticationError, "Unknown user"
-        secret = self.users[name]
-        verify = util.keyed_md5(secret, state)
-
-        if verify != digest:
-            raise AuthenticationError, "Invalid response"
-        return None, self.accounts[name]
-    
-    def addUser(self, name, secret, account):
-        self.users[name] = secret
-        self.accounts[name] = account
+        
+        identity = self.authorizer.getIdentityRequest(name)
+        identity.addCallback(CramMD5Identity.verifyResponse, digest, state)
+        return identity
 
 class CramMD5ClientAuthenticator:
     __implements__ = (IClientAuthentication,)
@@ -2390,7 +2402,6 @@ class CramMD5ClientAuthenticator:
         response = util.keyed_md5(secret, chal)
         both = '%s %s' % (self.user, response)
         return base64.encodestring(both)
-
 
 class MailboxException(IMAP4Exception): pass
 
@@ -2908,9 +2919,9 @@ __all__ = [
     'IllegalOperation', 'IllegalMailboxEncoding', 'IMailboxListener',
     'UnhandledResponse', 'NegativeResponse', 'NoSupportedAuthentication',
     'IllegalServerResponse', 'IllegalIdentifierError', 'IllegalQueryError',
-    'MismatchedNesting', 'MismatchedQuoting', 'AuthenticationError',
-    'IServerAuthentication', 'IClientAuthentication',
-    'CramMD5ServerAuthenticator', 'CramMD5ClientAuthenticator',
-    'MailboxException', 'MailboxCollision', 'NoSuchMailbox',
-    'ReadOnlyMailbox', 'IAccount', 'MemoryAccount', 'IMailbox'
+    'MismatchedNesting', 'MismatchedQuoting', 'IServerAuthentication',
+    'IClientAuthentication', 'CramMD5ServerAuthenticator',
+    'CramMD5ClientAuthenticator', 'MailboxException', 'MailboxCollision',
+    'NoSuchMailbox', 'ReadOnlyMailbox', 'IAccount', 'MemoryAccount',
+    'IMailbox'
 ]
