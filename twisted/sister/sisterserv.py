@@ -1,5 +1,6 @@
 # -*- test-case-name: twisted.test.test_sister -*-
 import copy
+import socket
 
 from twisted.spread.pb import Service, Perspective, Error
 from twisted.spread.sturdy import PerspectiveConnector
@@ -65,17 +66,18 @@ class SisterService(Service, Perspective):
         self.remoteResources = {}
         self.resourceLoaders = {}
         self.localPort = localPort
+        self.sisterParent = SisterParentClient(self)
         self.parentRef = PerspectiveConnector(
             parentHost, parentPort, "parent", sharedSecret,
-            parentService,
-            client=(localPort, SisterParentClient(self)))
+            parentService, client = self.sisterParent)
         self.makeIdentity(sharedSecret)
         self.application.authorizer.sisterService = self
-
+        # this will be the first method called on the parent connection once it is setup
+        self.parentRef.callRemote('publishIP', socket.gethostbyname(socket.gethostname()), self.localPort, self.sisterParent)
+        
     def startService(self):
         log.msg( 'starting sister, woo')
         print "sister: staring service"
-        self.parentRef.startConnecting()
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)

@@ -91,37 +91,30 @@ class ParentService(Service, Perspective):
     def perspective_unloadResource(self, resourceType, resourceName):
         """This is called by sister services to unload a resource
         """
-        print "parent: unloading ", resourceType, resourceName        
+        log.msg( "parent: unloading %s/%s" %( resourceType, resourceName ) )
         data = self.lockedResources.get( (resourceType, resourceName) )
         if not data:
             raise "Unable to unload not-loaded resource."
         (host, port, perspective) = data
         del self.lockedResources[ (resourceType, resourceName) ]
-    
-    def brokerAttached(self, cli, ident, broker):
-        log.msg( 'parent: sister attached %s' % repr(self.sisters))
-        print 'parent: sister attached %s' % repr(self.sisters)
-        port, ref = cli
-        host = broker.transport.getPeer()[1]
-        self.sisters.append((host, port, ref))
-        toLoad = self.toLoadOnConnect
-        self.toLoadOnConnect = []
-        for resourceType, resourceName, generateTicket, deferred in toLoad:
+
+    def perspective_publishIP(self, host, port, clientRef):
+        """called by sister to set the host and port to publish for clients.
+        """
+        log.msg( "sister attached: %s:%s" % (host, port ) )
+        self.sisters.append((host, port,clientRef) )
+        for resourceType, resourceName, generateTicket, deferred in self.toLoadOnConnect:
             self.loadRemoteResource(resourceType, resourceName, generateTicket).chainDeferred(deferred)
-        log.msg('sister attached: %s:%s %r' % (host, port, ref))
-        return self
+        self.toLoadOnConnect = []
+            
 
-    def brokerDetached(self, cli, ident, broker):
-        port, ref = cli
-        host = broker.transport.getPeer()[1]
-        self.sisters.remove((host, port, ref))
-        for path, (lhost, lport, ref) in self.lockedResources.items():
-            if (host, port) == (lhost, lport):
-                # XXX do i need some kind of notification here?
+    def detached(self, client, identity):
+        for path, (host, port, clientRef) in self.lockedResources.items():
+            if client == clientRef:
                 del self.lockedResources[path]
-        log.msg( 'sister detached %s:%s %r' % (host, port, ref))
-        return self
-
+        log.msg( "sister detached: %s" % client)
+        return Perspective.detached(self, client, identity)
+        
     def _cbLoaded(self, ignored, path):
         d, host, port = self.pendingResources[path]
         del self.pendingResources[path]
