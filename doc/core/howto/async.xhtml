@@ -285,8 +285,9 @@ d.addCallback(printNumber)
 <li>the &quot;Total time taken for largeFibonnaciNumber call&quot; output
 shows that the function did not return immediately as asynchronous functions
 are expected to do; and</li>
-<li>rather than the callback being before the result was available, it's added
-after the calculation has been completed.</li>
+<li>rather than the callback being added before the result was available and
+called after the result is available, it isn't even added until after the
+calculation has been completed.</li>
 </ul>
 
 <p> The function completed its calculation before returning, blocking the
