@@ -1,5 +1,5 @@
 
-import os, time
+import os, time, pickle
 
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -91,6 +91,11 @@ class FilePathTestCase(unittest.TestCase):
         self.failUnlessEqual(p.islink(), False)
         self.failUnlessEqual(p.isdir(), False)
         self.failUnlessEqual(p.isfile(), False)
+
+    def testPersist(self):
+        newpath = pickle.loads(pickle.dumps(self.path))
+        self.failUnlessEqual(self.path.__class__, newpath.__class__)
+        self.failUnlessEqual(self.path.path, newpath.path)
 
     def testInsecureUNIX(self):
         self.assertRaises(filepath.InsecurePath, self.path.child, "..")

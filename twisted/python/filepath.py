@@ -68,6 +68,7 @@ class FilePath:
         d = self.__dict__.copy()
         if d.has_key('statinfo'):
             del d['statinfo']
+        return d
 
     def child(self, path):
         norm = normpath(path)

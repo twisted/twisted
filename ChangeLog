@@ -1,3 +1,8 @@
+2003-07-31  Brian Warner  <warner@lothar.com>
+
+	* twisted/python/filepath.py (FilePath.__getstate__): allow
+	FilePath objects to survive unpersisting.
+
 2003-07-30  Brian Warner  <warner@lothar.com>
 
 	* doc/howto/faq.html: mention spawnProcess vs. os.environ
