@@ -224,8 +224,11 @@ class IRCChatter(irc.IRC):
         #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #divunal :foo
         log.msg('topic %s %s' % (prefix, params))
         if len(params) == 1:
+            if params[0][0] != '#':
+                self.receiveDirectMessage("*error*", "invalid channel name")
+                return
             channame = params[0][1:]
-            group = self.service.groups[channame]
+            group = self.service.getGroup(channame)
             self.sendLine(
                 ":%s 332 %s #%s :%s" %
                 (self.servicename, self.nickname, group.name, group.topic))
