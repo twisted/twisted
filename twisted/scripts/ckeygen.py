@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: ckeygen.py,v 1.2 2002/12/26 20:24:20 z3p Exp $
+# $Id: ckeygen.py,v 1.3 2002/12/27 01:07:04 z3p Exp $
 
 #""" Implementation module for the `ckeygen` command.
 #"""
@@ -23,6 +23,13 @@ from twisted.conch.ssh import keys, common
 from twisted.python import log, usage
 
 import sys, os, getpass, md5, socket
+if getpass.getpass == getpass.unix_getpass:
+    try:
+        import termios # hack around broken termios
+        termios.tcgetattr, termios.tcsetattr
+    except (ImportError, AttributeError):
+        sys.modules['termios'] = None
+        reload(getpass)
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ckeygen [options] 
