@@ -76,6 +76,8 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
         """
         try:
             rv = os.write(self.proc.stdin, self.unsent)
+            if rv == len(self.unsent):
+                self.startReading()
             return rv
         except IOError, io:
             if io.args[0] == errno.EAGAIN:
@@ -86,10 +88,18 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
                 return CONNECTION_LOST
             raise
 
+    def write(self, data):
+        self.stopReading()
+        abstract.FileDescriptor.write(self, data)
+
     def doRead(self):
         """This does nothing.
         """
-        return
+        fd = self.fileno()
+        r, w, x = select.select([fd], [fd], [], 0)
+        if r and w:
+            # print 'read r+w', r, w, x
+            return CONNECTION_LOST
 
     def connectionLost(self):
         """See abstract.FileDescriptor.connectionLost.

@@ -48,7 +48,7 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.stages.append(2)
         if self.data != "abcd":
             raise RuntimeError
-        self.transport.write("abcd")
+        self.transport.write("1234")
 
     def errReceived(self, data):
         self.err = self.err + data
@@ -62,8 +62,8 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 
     def processEnded(self):
         self.finished = 1
-        
-    
+
+
 class ProcessTestCase(unittest.TestCase):
     """Test running a process."""
     
