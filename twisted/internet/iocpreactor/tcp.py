@@ -26,10 +26,10 @@ class TcpMixin:
     def getPeer(self):
         return address.IPv4Address('TCP', *(self.socket.getpeername() + ('INET',)))
 
-    def getHost(self):
+    def getPeerHost(self):
         return self.socket.getpeername()[0]
 
-    def getPort(self):
+    def getPeerPort(self):
         return self.socket.getpeername()[1]
 
 class ServerSocket(server.ListeningPort.transport, TcpMixin):
@@ -48,7 +48,7 @@ class Port(server.ListeningPort):
                 raise error.ServiceNameUnknownError(string=str(e))
         server.ListeningPort.__init__(self, (host, port), factory, backlog)
 
-    def getPort(self):
+    def getOwnPort(self):
         return self.addr[1]
 
     def getHost(self):

@@ -13,8 +13,8 @@ import error
 class ServerSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf, sessionno):
         ConnectedSocket.__init__(self, sock, protocol, sf)
-        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.getHost())
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, sessionno, self.getPort())
+        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.getPeerHost())
+        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, sessionno, self.getPeerPort())
         self.startReading()
 
 class ListeningPort(log.Logger, styles.Ephemeral, object):
@@ -33,10 +33,10 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         self.accept_op = AcceptExOp(self)
 
     def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, self.getPort())
+        return "<%s on %s>" % (self.factory.__class__, self.getOwnPort())
 
     def handle_disconnected_startListening(self):
-        log.msg("%s starting on %s" % (self.factory.__class__, self.getPort()))
+        log.msg("%s starting on %s" % (self.factory.__class__, self.getOwnPort()))
         try:
             skt = socket.socket(*self.sockinfo)
             skt.bind(self.addr)
@@ -77,7 +77,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
     def handle_listening_stopListening(self):
         self.state = "disconnected"
         self.socket.close()
-        log.msg('(Port %s Closed)' % (self.getPort(),))
+        log.msg('(Port %s Closed)' % (self.getOwnPort(),))
         self.factory.doStop()
 
     handle_listening_loseConnection = handle_listening_stopListening

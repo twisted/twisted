@@ -92,7 +92,7 @@ class AcceptExOp(OverlappedOp):
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, sock)):
         if ret:
-            print "ConnectExOp err", ret
+#            print "ConnectExOp err", ret
             self.transport.connectErr(failure.Failure(error.errnoMapping.get(winerrcodeMapping.get(ret), error.ConnectError)())) # finish the mapping in error.py
         else:
             if have_connectex:

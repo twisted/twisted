@@ -8,6 +8,12 @@ class StateEventMachineType(type):
         return helpful
     makeHandleGetter = classmethod(makeHandleGetter)
 
+    def makeMethodProxy(klass, name):
+        def helpful(self, *a, **kw):
+            return getattr(self, "handle_%s_%s" % (self.state, name))(*a, **kw)
+        return helpful
+    makeMethodProxy = classmethod(makeMethodProxy)
+
 #    def __new__(klass, name, bases, attrs):
 #        for e in name.events:
 #            attrs[e] = property(klass.makeHandleGetter(e))
@@ -17,5 +23,6 @@ class StateEventMachineType(type):
         type.__init__(klass, name, bases, attrs)
 #        print "making a class", klass, "with events", klass.events
         for e in klass.events:
-            setattr(klass, e, property(klass.makeHandleGetter(e)))
+#            setattr(klass, e, property(klass.makeHandleGetter(e)))
+            setattr(klass, e, klass.makeMethodProxy(e))
 
