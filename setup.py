@@ -22,12 +22,116 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.19 2002/03/17 03:06:16 carmstro Exp $
+$Id: setup.py,v 1.20 2002/03/18 23:33:46 jh Exp $
 """
 
 import distutils, os, sys
+from glob import glob
+
 from distutils.core import setup, Extension
+from distutils.command.build_scripts import build_scripts
+from distutils.command.install_data import install_data
+
 from twisted import copyright
+
+
+#############################################################################
+### Helpers and distutil tweaks
+#############################################################################
+
+class build_scripts_create(build_scripts):
+    """ Overload the build_scripts command and create the scripts
+        from scratch, depending on the target platform.
+
+        You have to define the name of your package in an inherited
+        class (due to the delayed instantiation of command classes
+        in distutils, this cannot be passed to __init__).
+
+        The scripts are created in an uniform scheme: they start the
+        run() function in the module
+
+            <packagename>.scripts.<mangled_scriptname>
+
+        The mangling of script names replaces '-' and '/' characters
+        with '-' and '.', so that they are valid module paths. 
+    """
+    package_name = None
+
+    def copy_scripts(self):
+        """ Create each script listed in 'self.scripts'
+        """
+        if not self.package_name:
+            raise Exception("You have to inherit build_scripts_create and"
+                " provide a package name")
+        
+        to_module = string.maketrans('-/', '_.')
+
+        self.mkpath(self.build_dir)
+        for script in self.scripts:
+            outfile = os.path.join(self.build_dir, os.path.basename(script))
+
+            #if not self.force and not newer(script, outfile):
+            #    self.announce("not copying %s (up-to-date)" % script)
+            #    continue
+
+            if self.dry_run:
+                self.announce("would create %s" % outfile)
+                continue
+
+            module = os.path.splitext(os.path.basename(script))[0]
+            module = string.translate(module, to_module)
+            script_vars = {
+                'python': os.path.normpath(sys.executable),
+                'package': self.package_name,
+                'module': module,
+            }
+
+            self.announce("creating %s" % outfile)
+            file = open(outfile, 'w')
+
+            try:
+                if sys.platform == "win32":
+                    file.write('@echo off\n'
+                        '%(python)s -c "from %(package)s.scripts.%(module)s import run; run()" %%$\n'
+                        % script_vars)
+                else:
+                    file.write('#! %(python)s\n'
+                        'from %(package)s.scripts.%(module)s import run\n'
+                        'run()\n'
+                        % script_vars)
+            finally:
+                file.close()
+
+
+class build_scripts_twisted(build_scripts_create):
+    package_name = 'twisted'
+
+
+def scriptname(path):
+    """ Helper for building a list of script names from a list of
+        module files.
+    """
+    script = os.path.splitext(os.path.basename(path))[0]
+    script = string.replace(script, '_', '-')
+    if sys.platform == "win32":
+        script = script + ".bat"
+    return script
+
+
+# build list of scripts from their implementation modules
+twisted_scripts = map(scriptname, glob('twisted/scripts/[!_]*.py'))
+
+
+# make sure data files are installed in twisted package
+# this is evil.
+class install_data_twisted(install_data):
+    def finalize_options (self):
+        self.set_undefined_options('install',
+            ('install_lib', 'install_dir'),
+            ('root', 'root'),
+            ('force', 'force'),
+        )
+
 
 #############################################################################
 ### Call setup()
@@ -73,6 +177,7 @@ your toaster.
         "twisted.python",
         "twisted.reality",
         "twisted.reality.ui",
+        "twisted.scripts",
         "twisted.spread",
         "twisted.spread.ui",
         "twisted.tap",
@@ -82,6 +187,12 @@ your toaster.
         "twisted.words.ui",
         "twisted.words.ui.gateways",
     ],
+
+    'cmdclass': {
+        ## NOT YET for all platforms, see below for win32 test code!
+        ##'build_scripts': build_scripts_twisted,
+        'install_data': install_data_twisted,
+    },
 }
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
@@ -91,26 +202,20 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
     setup_args['platforms'] = "win32 posix"
 
 if os.name == 'posix':
-    import glob
-    setup_args['scripts'] = ['bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd', 'bin/im', 'bin/t-im', 'bin/faucet', 'bin/tap2deb', 'bin/eco']
-
-
-# make sure data files are installed in twisted package
-# this is evil.
-from distutils.command.install_data import install_data
-
-class MyInstallData(install_data):
-    def finalize_options (self):
-        self.set_undefined_options('install',
-            ('install_lib', 'install_dir'),
-            ('root', 'root'),
-            ('force', 'force'),
-        )
+    setup_args['scripts'] = [
+        'bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd',
+        'bin/im', 'bin/t-im', 'bin/faucet', 'bin/tap2deb', 'bin/eco'
+    ]
+else:
+    # new script schema only for win32, for now
+    setup_args['scripts'] = twisted_scripts
+    setup_args['cmdclass']['build_scripts'] = build_scripts_twisted
+    
 
 imPath = os.path.join('twisted', 'im')
 setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
                             ('twisted', [os.path.join('twisted', 'plugins.tml')])]
-setup_args['cmdclass']=  {'install_data': MyInstallData}
+
 
 #'"
 # for building C banana...
