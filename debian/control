@@ -28,7 +28,7 @@ Package: python2.1-twisted
 Architecture: all
 Depends: python2.1, python2.1-twisted-bin
 Suggests: python2.1-pyopenssl, twisted-doc
-Replaces: twisted
+Conflicts: twisted (<= 0.15.5-1)
 Description: Event-based framework for internet applications. (Python 2.1)
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
  generic client and server for remote object access, and APIs for creating 
@@ -39,7 +39,7 @@ Description: Event-based framework for internet applications. (Python 2.1)
 Package: python2.1-twisted-bin
 Architecture: any
 Depends: ${shlibs:Depends}, python2.1
-Replaces: twisted
+Conflicts: twisted (<= 0.15.5-1)
 Conflicts: python2.1-twisted (<< 0.18.1)
 Description: Event-based framework for internet applications
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
