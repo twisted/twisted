@@ -175,7 +175,7 @@ class Stage(Instruction):
         row by row.
 
              iterable = DerivedStage(...)
-             iterable.chunked = 1
+             iterable.chunked = True
              for results in iterable:
                  for result in results:
                       // handle good result
@@ -491,10 +491,15 @@ class Concurrent(Stage):
         if self.results or self.stop or self.failure:
             return
         stages = self._stages
-        coop = None
         later = []
         exit = None
         while stages:
+            def ids(lst):
+                ret = []
+                for x in lst:
+                    ret.append(id(x))
+                return ret
+            #print "_yield", ids(stages), id(exit), ids(later)
             if stages[0] is exit:
                 if self.results:
                     return
@@ -515,17 +520,13 @@ class Concurrent(Stage):
             if not exit:
                 exit = curr
             if instruction:
-                if isinstance(instruction, Cooperate):
-                    coop = instruction
-                    continue
                 if isinstance(instruction, CallLater):
-                    later.append(instruction)
+                    if instruction not in later:
+                        later.append(instruction)
                     continue
                 raise Unsupported(instruction)
         if later:
             return Concurrent.Instruction(later)
-        if coop:
-            return coop
         self.stop = True
 
 class Merge(Stage):

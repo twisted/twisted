@@ -568,15 +568,14 @@ def countCooperate(index):
         print "cooperate", index
         yield "coop %s" % index
 
-d1 = flow.Deferred(flow.Threaded(countSleep(5)))
-d2 = flow.Deferred(countCooperate(10))
-d = defer.DeferredList([d1,d2])
+d = flow.Deferred( flow.Merge(
+        flow.Threaded(countSleep(5)),
+        countCooperate(5)))
 
-# alternatively (but merge is somewhat broken)
-#
-# d = flow.Deferred( flow.Merge(
-#      flow.Threaded(countSleep(5)),
-#      countCooperate(5)))
+# # alternatively
+# d1 = flow.Deferred(flow.Threaded(countSleep(5)))
+# d2 = flow.Deferred(countCooperate(10))
+# d = defer.DeferredList([d1,d2])
 
 def prn(x):
     print x
