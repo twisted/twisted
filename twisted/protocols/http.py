@@ -358,11 +358,11 @@ class HTTPClient(basic.LineReceiver):
         self.handleResponseEnd()
 
     def handleResponseEnd(self):
-        if self.__buffer:
+        if self.__buffer != None:
             b = self.__buffer
-            self.__buffer = ''
+            self.__buffer = None
             self.handleResponse(b)
-
+    
     def handleResponsePart(self, data):
         self.__buffer += data
 
