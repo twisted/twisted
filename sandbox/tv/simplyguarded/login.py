@@ -19,13 +19,6 @@ Requirements:
 
 - The authentication should be shared amongst all the pages.
 
-
-You need a patch to fix a bug in how twisted.web.woven.guard processes
-requests.  For example, the patch at
-http://www.twistedmatrix.com/users/roundup.twistd/twisted/msg1344
-should be suitable. Hopefully, a proper fix will get integrated to
-Twisted soon.
-
 """
 
 from twisted.web.woven import simpleguard, page, guard
@@ -87,7 +80,6 @@ class LoginPage(page.Page):
             return guard.newLoginSignature.method(None)
 
 class Authenticated(page.Page):
-    isLeaf = 1
     template='''<html>Hello <span model="name"/>! Look at all the <a href="stuff">stuff</a>, or go <a href="../">up</a></html>'''
 
     def wmfactory_name(self, request):
@@ -97,7 +89,6 @@ class Authenticated(page.Page):
         return self
 
 class Another(page.Page):
-    isLeaf = 1
     template="""<html>This is another page requiring authentication. And there's  <a href="more">more</a>. Go <a href="../">up</a>.</html>"""
 
     def wchild_more(self, request):
