@@ -7,7 +7,7 @@ def main():
     def1 = pb.connect("localhost", 8800,
                       "user1", "pass1",
                       "myservice", "perspective1",
-                      30)
+                      timeout=30)
     def1.addCallbacks(connected)
     reactor.run()
 

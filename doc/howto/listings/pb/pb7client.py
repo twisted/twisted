@@ -6,7 +6,7 @@ from twisted.internet import reactor
 def one(port, user, pw, service, perspective, number):
     def1 = pb.connect("localhost", port,
                       user, pw, service, perspective,
-                      30)
+                      timeout=30)
     def1.addCallback(connected, number)
 
 def connected(perspective, number):
