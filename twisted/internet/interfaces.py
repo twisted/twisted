@@ -209,7 +209,7 @@ class IReactorTCP(Interface):
 
         @returns:  An object implementing L{IConnector}. This connector will call
            various callbacks on the factory when a connection is made,
-           failed, or lost - see L{ClientFactory<twisted.internet.protocol.ServerFactory>} docs for details.
+           failed, or lost - see L{ClientFactory<twisted.internet.protocol.ClientFactory>} docs for details.
         """
 
 class IReactorSSL(Interface):
