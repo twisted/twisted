@@ -43,7 +43,10 @@ import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
 
-from ssl_helpers import ClientTLSContext, ServerTLSContext
+try:
+    from ssl_helpers import ClientTLSContext, ServerTLSContext
+except ImportError:
+    ClientTLSContext = ServerTLSContext = None
 
 def strip(f):
     return lambda result, f=f: f()
@@ -445,43 +448,8 @@ class IMAP4HelperMixin:
         failure.printTraceback()
         raise failure.value
     
-    loopback = lambda self: loopback.loopback(self.server, self.client)
-
-class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
-    serverCTX = ServerTLSContext()
-    clientCTX = ClientTLSContext()
-
-    loopback = lambda self: loopback.loopbackTCP(self.server, self.client)
-
-    def testAPileOfThings(self):
-        SimpleServer.theAccount.addMailbox('inbox')
-        called = []
-        def login():
-            called.append(None)
-            return self.client.login('testuser', 'password-test')
-        def list():
-            called.append(None)
-            return self.client.list('inbox', '%')
-        def status():
-            called.append(None)
-            return self.client.status('inbox', 'UIDNEXT')
-        def examine():
-            called.append(None)
-            return self.client.examine('inbox')
-        def logout():
-            called.append(None)
-            return self.client.logout()
-        
-        self.client.requireTransportSecurity = True
-
-        methods = [login, list, status, examine, logout]
-        map(self.connected.addCallback, map(strip, methods))
-        self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-        
-        self.assertEquals(self.server.startedTLS, True)
-        self.assertEquals(self.client.startedTLS, True)
-        self.assertEquals(len(called), len(methods))
+    def loopback(self):
+        loopback.loopback(self.server, self.client)
 
 class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
@@ -1491,3 +1459,43 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     def testFetchFastUID(self):
         self.testFetchFast(1)
         
+class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
+    serverCTX = ServerTLSContext()
+    clientCTX = ClientTLSContext()
+
+    def loopback(self):
+        loopback.loopbackTCP(self.server, self.client)
+
+    def testAPileOfThings(self):
+        SimpleServer.theAccount.addMailbox('inbox')
+        called = []
+        def login():
+            called.append(None)
+            return self.client.login('testuser', 'password-test')
+        def list():
+            called.append(None)
+            return self.client.list('inbox', '%')
+        def status():
+            called.append(None)
+            return self.client.status('inbox', 'UIDNEXT')
+        def examine():
+            called.append(None)
+            return self.client.examine('inbox')
+        def logout():
+            called.append(None)
+            return self.client.logout()
+        
+        self.client.requireTransportSecurity = True
+
+        methods = [login, list, status, examine, logout]
+        map(self.connected.addCallback, map(strip, methods))
+        self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals(self.server.startedTLS, True)
+        self.assertEquals(self.client.startedTLS, True)
+        self.assertEquals(len(called), len(methods))
+
+if ClientTLSContext is None:
+    for case in (TLSTestCase,):
+        case.skip = "OpenSSL not present"
