@@ -67,7 +67,7 @@ class Node:
         self.parentNode = parentNode
         self.childNodes = []
 
-    def writexml(self, stream, indent='', addindent='', newl=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         raise NotImplementedError()
 
     def toxml(self, indent='', addindent='', newl='', strip=0):
@@ -202,6 +202,9 @@ class CharacterData(Node):
 
 class Comment(CharacterData):
     """A comment node."""
+
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0):
+        stream.write("<!--%s-->" % self.data)
 
 
 class Text(CharacterData):
