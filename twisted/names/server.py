@@ -133,8 +133,12 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def messageReceived(self, message, protocol, address = None):
-        if self.verbose > 0:
-            s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
+        if self.verbose:
+            if self.verbose > 1:
+                s = ' '.join([str(q) for q in message.queries])
+            elif self.verbose > 0:
+                s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
+
             if not len(s):
                 log.msg("Empty query from %r" % (address or protocol.transport.getPeer()))
             else:
@@ -142,7 +146,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         message.recAv = 0
         message.answer = 1
-        
+
         if message.opCode == dns.OP_QUERY:
             self.handleQuery(message, protocol, address)
         elif message.opCode == dns.OP_INVERSE:
