@@ -18,6 +18,7 @@
 
 from twisted.internet import reactor, protocol, defer
 from twisted.xish import domish, utility
+import string
 
 class InvalidFormat(Exception):
     pass
@@ -92,18 +93,10 @@ class JID:
         else:
             user, host, res = tuple
 
-        self.host = intern(host)
-
-        if user:
-            self.user = sys.intern(user)
-        else:
-            self.user = None
+        self.host = host
+        self.user = user
+        self.resource = res
             
-        if res:
-            self.resource = sys.intern(resource)
-        else:
-            self.resource = None
-
     def userhost(self):
         if self.user:
             return "%s@%s" % (self.user, self.host)
@@ -111,9 +104,12 @@ class JID:
             return self.host
 
     def userhostJID(self):
-        if "_uhjid" not in self.__dict__:
-            self._uhjid = jid.intern(self.userhost())
-        return self._uhjid
+        if self.resource:
+            if "_uhjid" not in self.__dict__:
+                self._uhjid = jid.intern(self.userhost())
+            return self._uhjid
+        else:
+            return self
 
     def full(self):
         if self.user:
