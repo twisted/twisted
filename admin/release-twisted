@@ -138,13 +138,20 @@ class Options(usage.Options):
 class Transaction:
     """I am a dead-simple Transaction."""
 
+    sensitiveUndo = 0
+
     def run(self, data):
         """Try to run this self.doIt; if it fails, call self.undoIt and return a Failure."""
         try:
             self.doIt(data)
         except:
             f = failure.Failure()
-            print "%s failed, running uncommit." % self.__class__.__name__
+            print "%s failed!" % self.__class__.__name__
+            if self.sensitiveUndo:
+                if raw_input("Are you sure you want to roll back "
+                             "this transaction? ").lower().startswith('n'):
+                    return f
+            print "rolling back transaction."
             self.undoIt(data, f)
             return f
 
@@ -308,9 +315,7 @@ class Tag(Transaction):
         ver = opts['release-version']
         sh('cd %s &&  cvs tag -c release-%s' % (opts['root'], ver.replace('.', '_')), 1)
 
-    def undoIt(self, opts, fail):
-        #tagging is atomic, afaict
-        pass
+    #tagging is atomic, afaict, so no undoIt
 
 
 class Export(Transaction):
@@ -345,6 +350,10 @@ class PrepareDist(Transaction):
         
 
 class GenerateDocs(Transaction):
+
+    # documentation generation can take a looong time,
+    #so we don't want to force redoing everything
+    sensitiveUndo = 1 
     
     def doIt(self, opts):
         print "GenerateDocs"
@@ -487,6 +496,9 @@ class Release(Transaction):
 
 
 class MakeDebs(Transaction):
+
+    #takes a while
+    sensitiveUndo = 1
     
     def doIt(self, opts):
         print "MakeDebs"
@@ -559,7 +571,6 @@ class InstallDebs(Transaction):
         sh("cp %(rel)s/debian-%(ver)s/woody/* %(target)s/woody/" % vars())
 
     def undoIt(self, opts, fail):
-        rel = opts['release']
         ver = opts['release-version']
         target = self.target
         for dir in (target, target+'/woody'):
@@ -572,6 +583,9 @@ class InstallDebs(Transaction):
 
 class Sourceforge(Transaction):
 
+    #takes a long time
+    sensitiveUndo = 1
+    
     def doIt(self, opts):
         name = opts['sfname']
         rel = opts['release']
@@ -605,7 +619,7 @@ class UpgradeDebian(Transaction):
     def doIt(self, opts):
         rel = opts['release']
         ver = opts['release-version']
-        path = "%(release)s/debian-%(ver)s/woody/" % vars()
+        path = "%(rel)s/debian-%(ver)s/woody/" % vars()
         sh("sudo dpkg -i %(path)s/*.deb" % vars())
 
 
