@@ -54,7 +54,7 @@ $SOMEWHERE/admin/release-twisted -n <sf username> -v <version> --sourceforge --r
  * go to 
 su - pb
 cd /var/www/WebSite/twistedmatrix.com
-generatelore --docsdir . --template template.tpl
+generatelore --docsdir . --template template.tpl -e None
 
  * OK! All released up. Now, for the announcements:
    * Freshmeat
