@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.45 2003/03/13 19:40:39 z3p Exp $
+# $Id: conch.py,v 1.46 2003/03/13 20:03:10 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -724,6 +724,13 @@ class SSHSession(channel.SSHChannel):
             elif char == 'R': # rekey connection
                 log.msg('rekeying connection')
                 self.conn.transport.sendKexInit()
+                return
+            elif char == '#': # display connections
+                self.stdio.write('\r\nThe following connections are open:\r\n')
+                channels = self.conn.channels.keys()
+                channels.sort()
+                for channelId in channels:
+                    self.stdio.write('  #%i %s\r\n' % (channelId, str(self.conn.channels[channelId])))
                 return
             self.write('~' + char)
         else:
