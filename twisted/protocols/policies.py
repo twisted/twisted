@@ -10,7 +10,7 @@
 """
 
 # system imports
-import sys, operator, time
+import sys, operator
 
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
@@ -396,11 +396,11 @@ class TimeoutMixin:
     timeOut = None
 
     __timeoutCall = None
-    __lastReceived = None
 
     def resetTimeout(self):
         """Reset the timeout count down"""
-        self.__lastReceived = time.time()
+        if self.__timeoutCall is not None and self.timeOut is not None:
+            self.__timeoutCall.reset(self.timeOut)
     
     def setTimeout(self, period):
         """Change the timeout period
@@ -411,23 +411,21 @@ class TimeoutMixin:
         """
         prev = self.timeOut
         self.timeOut = period
-        self.__lastReceived = time.time()
-        if self.__timeoutCall:
-            self.__timeoutCall.cancel()
-            self.__timeoutCall = None
-        if period is not None:
+        
+        if self.__timeoutCall is not None:
+            if period is None:
+                self.__timeoutCall.cancel()
+                self.__timeoutCall = None
+            else:
+                self.__timeoutCall.reset(period)
+        elif period is not None:
             self.__timeoutCall = reactor.callLater(period, self.__timedOut)
+            
         return prev
 
     def __timedOut(self):
         self.__timeoutCall = None
-
-        now = time.time()
-        if now - (self.__lastReceived or now) > self.timeOut:
-            self.timeoutConnection()
-        else:
-            when = self.__lastReceived - now + self.timeOut
-            self.__timeoutCall = reactor.callLater(when, self.__timedOut)
+        self.timeoutConnection()
 
     def timeoutConnection(self):
         """Called when the connection times out.
