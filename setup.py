@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.89 2003/01/07 00:48:16 warner Exp $
+$Id: setup.py,v 1.90 2003/01/08 17:23:55 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -235,7 +235,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         'bin/coil', 'bin/tapconvert', 'bin/websetroot',
         'bin/generatelore', 'bin/html2latex', 'bin/hlint',
         'bin/tkmktap', 'bin/conch', 'bin/ckeygen', 'bin/tktwistd',
-        'bin/tkconch', 'twisted-post-install.py', 'bin/trial'
+        'bin/tkconch', 'bin/trial'
     ],
     'cmdclass': {
         'install_scripts': install_scripts_twisted,
@@ -243,6 +243,14 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         'build_ext' : build_ext_twisted,
     },
 }
+
+if os.name=='nt':
+    # FIXME - see
+    # http://mail.python.org/pipermail/distutils-sig/2003-January/003147.html
+    # This Workaround: copy the script to Twisted/ at pre-build time.
+    import shutil
+    shutil.copyfile('win32/twisted-postinstall.py', 'twisted-postinstall.py')
+    setup_args['scripts'].append('twisted-postinstall.py')
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
     setup_args['keywords'] = "internet www tcp framework games"
