@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.33 $"[11:-2]
+__version__ = "$Revision: 1.34 $"[11:-2]
 
 import os
 import cgi
@@ -181,11 +181,13 @@ class Controller(resource.Resource):
 
     def gatheredControllers(self, v, d, request):
         process = {}
+        request.args = {}
         for key, value in self._valid.items():
             key.commit(request, None, value)
             process[key.submodel] = value
         self.process(request, **process)
         #log.msg("Sending page!")
+        self.pageRenderComplete(request)
         utils.doSendPage(v, d, request)
         #v.unlinkViews()
 
@@ -216,6 +218,11 @@ class Controller(resource.Resource):
         if parent is not None:
             parent.domChanged(request, node)
 
+    def pageRenderComplete(self, request):
+        """Override this to recieve notification when the view rendering
+        process is complete.
+        """
+        pass
 
 WOVEN_PATH = os.path.split(woven.__file__)[0]
 
