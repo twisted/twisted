@@ -306,7 +306,7 @@ Compare the argument passed by the <code>.callRemote()</code> in each client.
 You can see how each client logs into a different Perspective.</p>
 
 
-<a name="overview"><h2>Class Overview</h2></a>
+<h2>Class Overview</h2><a name="overview" />
 
 <p>Now that we've seen some of the motivation behind the Perspective class,
 let's start to de-mystify some of the parts labeled <q>magic</q> in
@@ -400,7 +400,7 @@ they finish the authentication sequence) or disconnects. Each
 </p>
 
 
-<a name="responsibilities"><h2>Class Responsibilities</h2></a>
+<h2>Class Responsibilities</h2><a name="responsibilities" />
 
 <p>Now that we've gone over the classes and objects involved, let's look at
 the specific responsibilities of each. Most of these classes are on the hook
@@ -410,7 +410,7 @@ subclassing). This section indicates what those main methods are and when
 they get called.</p>
 
 
-<a name="responsibilities/authorizer"><h3>Authorizer</h3></a>
+<h3>Authorizer</h3><a name="responsibilities/authorizer" />
 
 <p>The <code>Authorizer</code> has to provide <code>Identity</code> objects
 (requested by name) by implementing <code>.getIdentityRequest()</code>. The
@@ -445,7 +445,7 @@ before the callback gets run. (XXX: check, I think armed/unarmed is an
 outdated concept)</p>
 </div>
 
-<a name="responsibilities/identity"><h3>Identity</h3></a>
+<h3>Identity</h3><a name="responsibilities/identity" />
 
 <p>The <code>Identity</code> object thus returned has two responsibilities.
 The first is to authenticate the user, because so far they are unverified:
@@ -501,7 +501,7 @@ auth.addIdentity(i)
 </pre>
 
 
-<a name="responsibilities/service"><h3>Service</h3></a>
+<h3>Service</h3><a name="responsibilities/service" />
 
 <p>The <code class="API" base="twisted.cred.service">Service</code> object's
 job is to provide <code>Perspective</code> instances, by implementing
@@ -532,7 +532,7 @@ object needs a pointer to its parent <code>Service</code> object, and the
 it contains.</p>
 
 
-<a name="smallexample"><h2>How that example worked</h2></a>
+<h2>How that example worked</h2><a name="smallexample" />
 
 <p>Ok, so that's what everything is supposed to do. Now you can walk through
 the previous example and see what was going on: we created a subclass called
@@ -582,7 +582,7 @@ starts the challenge-response sequence.</p>
 </div>
 
 
-<a name="walkthrough"><h2>Code Walkthrough: pb.connect()</h2></a>
+<h2>Code Walkthrough: pb.connect()</h2><a name="walkthrough" />
 
 <p>So, now that you've seen the complete sequence, it's time for a code
 walkthrough. This will give you a chance to see the places where you might
@@ -662,7 +662,7 @@ visible in <code>pb6client1.py</code>.</p>
 
 
 
-<a name="bigexample"><h2>A Larger Example</h2></a>
+<h2>A Larger Example</h2><a name="bigexample" />
 
 <p>Now it's time to look more closely at the Go server described before.</p>
 
