@@ -1,21 +1,32 @@
 - More Tests!
+ - Check if closing input stream does right thing (should close connection after response is written)
+
 
 - Low level protocol:
+ - Proper POST support (need psudeo-MIME parser)
+ - Authentication (basic and digest)
+
  - sendfile (initial sketch in stream.py, but needs work in twisted, too)
  - Gzip Transfer-Encoding.
  - Add parsers/generators for the rest of the headers:
   - Cache-Control, Pragma, Trailer, Upgrade, Via, Warning
   - Authorization, WWW-Authenticate
 
- - Authentication (basic and digest)
  - Cookies
 
 - Application server:
  - Create default log observers for the log.msg's that we send.
  - Resource API for prerender checking (I've forgotten what I mean by this?)
  - Other useful filters: content-encoding, caching, others?
+ - API for adding response filters from resources
+
+- Convert twcgi, proxy?, vhost
+- add wsgi application support
+- Client library *LATER*
 
 - Compatibility Layer
  - Handle setETag and setLastModified RFC-compliantly, even though they are
    the wrong interface (need to have both before being able to respond properly)
  - 
+
+
