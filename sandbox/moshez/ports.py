@@ -105,7 +105,7 @@ def service(description, factory):
     virtual circuit server.
 
     See the documentation of the C{parse} function for description
-    of the arguments the semantics.
+    of the semantics of the arguments.
     """
     from twisted.application import internet
     name, args, kw = parse(description, factory)
@@ -121,7 +121,7 @@ def listen(description, factory):
     virtual circuit server.
 
     See the documentation of the C{parse} function for description
-    of the arguments the semantics.
+    of the semantics of the arguments.
     """
     from twisted.internet import reactor
     name, args, kw = parse(description, factory)
