@@ -165,9 +165,8 @@ class Process:
 
 def Application(name, uid=None, gid=None):
     ret = components.Componentized()
-    service = MultiService()
-    service.setName(name)
-    ret.addComponent(service, ignoreClass=1)
+    ret.addComponent(MultiService(), ignoreClass=1)
     ret.addComponent(sob.Persistant(ret, name), ignoreClass=1)
     ret.addComponent(Process(uid, gid), ignoreClass=1)
+    IService(ret).setName(name)
     return ret
