@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.53 2003/09/05 18:53:04 tv Exp $
+# $Id: usage.py,v 1.54 2003/10/07 00:44:18 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -32,7 +32,6 @@ import sys
 import new
 import getopt
 from os import path
-import UserDict
 
 # Sibling Imports
 import reflect
@@ -45,7 +44,7 @@ class UsageError(Exception):
 
 error = UsageError
 
-class Options(UserDict.UserDict):
+class Options(dict):
     """
     An option list parser class
 
@@ -113,8 +112,10 @@ class Options(UserDict.UserDict):
     defaultSubCommand = None
     parent = None
     def __init__(self):
-        UserDict.UserDict.__init__(self)
-        self.opts = self.data
+        super(Options, self).__init__()
+
+        self.opts = self
+
         # These are strings/lists we will pass to getopt
         self.longOpt = []
         self.shortOpt = ''
@@ -141,8 +142,8 @@ class Options(UserDict.UserDict):
             self.__dispatch.update(dispatch)
 
     def __hash__(self):
-        #This is required because UserDicts aren't hashable by default
-        #(They define __cmp__ but no __hash__)
+        # This is required because dicts aren't hashable by default
+        # (They define __cmp__ but no __hash__)
         return id(self)
 
     def opt_help(self):
