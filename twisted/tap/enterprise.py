@@ -84,7 +84,7 @@ def getPorts(app, config):
         port     = config.port
         )
     svc = service.Service(mgr, app, ["userRequests"])
-    
+
     i = passport.Identity(config.pbusername, app)
     i.setPassword(config.pbpassword)
     app.authorizer.addIdentity(i)

@@ -268,7 +268,7 @@ class Gadget(resource.Resource):
                 prefix = os.path.abspath(os.path.dirname(prefix))
             return static.File(os.path.join(prefix, path))
         elif path == '__reload__':
-            return Page(Reloader(map(reflect.named_module, self.modules)))
+            return Page(Reloader(map(reflect.named_module, [self.__module__] + self.modules)))
         else:
             return error.NoResource()
 

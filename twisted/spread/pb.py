@@ -455,10 +455,10 @@ copyTags = {}
 
 def setCopierForClass(classname, copier):
     """Set which local class will represent a remote type.
-    
+
     If you have written a Copied class that you expect your client to be
     receiving, write a local "copy" class to represent it, then call::
-    
+
       pb.setCopierForClass('module.package.Class', MyCopier).
 
     Call this at the module level immediately after its class definition.
