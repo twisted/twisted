@@ -54,7 +54,7 @@ for file in all('doc/man'):
     install([file], os.path.join(mandir, target))
     system('gzip -9 %s' % os.path.join(mandir, target))
 
-s = verread('debian/%s.menu' % package)
+s = verread('debian/python-twisted.menu.in')
 open(os.path.join(menudir, package), 'w').write(s)
 
 def strip(_, dirname, fnames):
