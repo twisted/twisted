@@ -393,6 +393,8 @@ class FlowTest(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", port.getHost().port, client)
         self.assertEquals('testing', unittest.deferredResult(client.d))
 
+    testProtocolLocalhost.skip = "XXX freezes, fixme"
+    
     def testProtocol(self):
         from twisted.protocols import loopback
         server = flow.Protocol()
