@@ -1199,7 +1199,7 @@ class IMAP4Client(basic.LineReceiver):
                             datum['READ-WRITE'] = 1
                         elif key == 'UIDVALIDITY':
                             try:
-                                datum['UID'] = int(content[1])
+                                datum['UIDVALIDITY'] = int(content[1])
                             except ValueError:
                                 raise IllegalServerResponse(parts)
                         elif key == 'UNSEEN':
