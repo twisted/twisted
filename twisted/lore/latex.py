@@ -134,8 +134,8 @@ class LatexSpitter:
             # If the text of the link is the url already, don't bother
             # repeating the url.
             if node.childNodes[0].data == href:
-                del node.childNodes[0]
-            externalhref = '\\url{%s}' % href
+                return
+            externalhref = '\\footnote{%s}' % href
         
         self.visitNodeDefault(node)
         ref = None
