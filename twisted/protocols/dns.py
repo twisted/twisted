@@ -34,7 +34,7 @@ from math import ceil, floor
 # Twisted imports
 from twisted.internet import protocol, defer, error
 from twisted.python.compat import dict, isinstance
-from twisted.python import log
+from twisted.python import log, compat
 
 
 PORT = 53
@@ -576,7 +576,7 @@ class Record_AAAA:               # OBSOLETE (or headed there)
     TYPE = AAAA
     
     def __init__(self, address = '::'):
-        self.address = socket.inet_pton(socket.AF_INET6, address)
+        self.address = compat.inet_pton(socket.AF_INET6, address)
 
 
     def encode(self, strio, compDict = None):
@@ -594,7 +594,7 @@ class Record_AAAA:               # OBSOLETE (or headed there)
 
 
     def __str__(self):
-        return '<AAAA %s>' % (socket.inet_ntop(socket.AF_INET6, self.address),)
+        return '<AAAA %s>' % (compat.inet_ntop(socket.AF_INET6, self.address),)
 
 
 class Record_A6:
@@ -603,33 +603,33 @@ class Record_A6:
     
     def __init__(self, prefixLen = 0, suffix = '::', prefix = ''):
         self.prefixLen = prefixLen
-        self.bytes = int(self.prefixLen / 8.0)
-        self.suffix = socket.inet_pton(socket.AF_INET6, suffix)
+        self.suffix = compat.inet_pton(socket.AF_INET6, suffix)
         self.prefix = Name(prefix)
+        self.bytes = int((128 - self.prefixLen) / 8.0)
 
 
     def encode(self, strio, compDict = None):
         strio.write(struct.pack('!B', self.prefixLen))
-        if self.prefixLen != 128:
-            strio.write(self.suffix[16-self.bytes:])
-        if self.prefixLen != 0:
+        if self.bytes:
+            strio.write(self.suffix[-self.bytes:])
+        if self.prefixLen:
             # This may not be compressed
             self.prefix.encode(strio, None)
 
 
     def decode(self, strio, length = None):
         self.prefixLen = struct.unpack('!B', readPrecisely(strio, 1))[0]
-        self.bytes = int(self.prefixLen / 8.0)
-        if self.prefixLen != 128:
+        self.bytes = int((128 - self.prefixLen) / 8.0)
+        if self.bytes:
             self.suffix = '\x00' * (16 - self.bytes) + readPrecisely(strio, self.bytes)
-        if self.prefixLen != 0:
+        if self.prefixLen:
             self.prefix.decode(strio)
 
 
     def __eq__(self, other):
         if isinstance(other, Record_A6):
             return (self.prefixLen == other.prefixLen and
-                    self.suffix[16-self.bytes:] == other.suffix[16-self.bytes:] and
+                    self.suffix[-self.bytes:] == other.suffix[-self.bytes:] and
                     self.prefix == other.prefix)
         return 0
 
@@ -637,7 +637,7 @@ class Record_A6:
     def __str__(self):
         return '<A6 %s %s (%d)>' % (
             self.prefix,
-            socket.inet_ntop(socket.AF_INET6, self.suffix),
+            compat.inet_ntop(socket.AF_INET6, self.suffix),
             self.prefixLen
         )
 
