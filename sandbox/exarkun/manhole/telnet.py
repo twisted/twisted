@@ -19,23 +19,21 @@ SUPPRESS_GO_AHEAD = chr(3)
 # Characters gleaned from the various (and conflicting) RFCs.  Not all of these are correct.
 
 NULL =            chr(0)  # No operation.
-LF   =           chr(10)  # Moves the printer to the
-                          # next print line, keeping the
-                          # same horizontal position.
-CR =             chr(13)  # Moves the printer to the left
-                          # margin of the current line.
 BEL =             chr(7)  # Produces an audible or
                           # visible signal (which does
                           # NOT move the print head).
-BS  =             chr(8)  # Moves the print head one
+BS =              chr(8)  # Moves the print head one
                           # character position towards
                           # the left margin.
-HT  =             chr(9)  # Moves the printer to the
+HT =              chr(9)  # Moves the printer to the
                           # next horizontal tab stop.
                           # It remains unspecified how
                           # either party determines or
                           # establishes where such tab
                           # stops are located.
+LF =             chr(10)  # Moves the printer to the
+                          # next print line, keeping the
+                          # same horizontal position.
 VT =             chr(11)  # Moves the printer to the
                           # next vertical tab stop.  It
                           # remains unspecified how
@@ -45,16 +43,19 @@ VT =             chr(11)  # Moves the printer to the
 FF =             chr(12)  # Moves the printer to the top
                           # of the next page, keeping
                           # the same horizontal position.
+CR =             chr(13)  # Moves the printer to the left
+                          # margin of the current line.
+
 SE =            chr(240)  # End of subnegotiation parameters.
-NOP=            chr(241)  # No operation.
+NOP =           chr(241)  # No operation.
 DM =            chr(242)  # "Data Mark": The data stream portion
                           # of a Synch.  This should always be
                           # accompanied by a TCP Urgent
                           # notification.
-BRK=            chr(243)  # NVT character Break.
+BRK =           chr(243)  # NVT character Break.
 IP =            chr(244)  # The function Interrupt Process.
 AO =            chr(245)  # The function Abort Output
-AYT=            chr(246)  # The function Are You There.
+AYT =           chr(246)  # The function Are You There.
 EC =            chr(247)  # The function Erase Character.
 EL =            chr(248)  # The function Erase Line
 GA =            chr(249)  # The Go Ahead signal.
@@ -78,7 +79,9 @@ DONT =          chr(254)  # Indicates the demand that the
                           # or confirmation that you are no
                           # longer expecting the other party
                           # to perform, the indicated option.
-IAC =           chr(255)  # Data Byte 255.
+IAC =           chr(255)  # Data Byte 255.  Introduces a
+                          # telnet command.
+
 
 class ITelnetProtocol(iinternet.IProtocol):
     def unhandledCommand(self, command, argument):
