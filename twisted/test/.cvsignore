@@ -1,3 +1,4 @@
-*.pyo
-*.pyc
 *.class
+*.pyc
+*.pyo
+myrebuilder.py
