@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.84 2003/09/28 03:29:29 exarkun Exp $
+# $Id: default.py,v 1.85 2003/11/03 18:28:32 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -140,6 +140,9 @@ class PosixReactorBase(ReactorBase):
 
     def installWaker(self):
         """Install a `waker' to allow other threads to wake up the IO thread.
+
+        We use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html) to wake
+        the reactor. On Windows we use a pair of sockets.
         """
         if not self.waker:
             self.waker = _Waker(self)
