@@ -152,6 +152,7 @@ class WView(template.DOMTemplate):
         self.handleControllerResults(controllerResult, request, node, controller, view, NO_DATA_YET)
 
     def handleControllerResults(self, controllerResult, request, node, controller, view, success):
+        isCallback = success != NO_DATA_YET
         self.outstandingCallbacks -= 1
         if isinstance(controllerResult, type(())):
             success, data = controllerResult
@@ -169,7 +170,7 @@ class WView(template.DOMTemplate):
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
 
-        if not self.outstandingCallbacks:
+        if isCallback and not self.outstandingCallbacks:
             log.msg("Sending page from controller callback!")
             self.sendPage(request)
 
