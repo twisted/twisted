@@ -18,6 +18,9 @@
 from twisted.lore import tree
 from twisted.web import domhelpers
 from twisted.python import reflect
+import twisted.python.text
+
+import parser
 
 class TagChecker:
 
@@ -90,6 +93,29 @@ class TagChecker:
                 if len(line) > 80:
                     self._reportError(filename, node, 
                                       'text wider than 80 columns in pre')
+
+    def check_pre_py_listing(self, dom, filename):
+        for node in domhelpers.findNodesNamed(dom, 'pre'):
+            if node.getAttribute('class') == 'python':
+                try:
+                    text = domhelpers.getNodeText(node)
+                    # Fix < and >
+                    text = text.replace('&gt;', '>').replace('&lt;', '<')
+                    # Strip blank lines
+                    lines = filter(None,[l.rstrip() for l in text.split('\n')])
+                    # Strip leading space
+                    while not [1 for line in lines if line[:1] not in ('', ' ')]:
+                        lines = [line[1:] for line in lines]
+                    text = '\n'.join(lines) + '\n'
+                    try:
+                        parser.suite(text)
+                    except parser.ParserError, e:
+                        # Pretend the "..." idiom is syntactically valid
+                        text = text.replace("...","'...'")
+                        parser.suite(text)
+                except parser.ParserError, e:
+                    self._reportError(filename, node, 
+                                      'invalid python code:' + str(e))
 
 
 def list2dict(l):
