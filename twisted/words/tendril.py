@@ -49,11 +49,11 @@ class ProxiedParticipant(wordsService.WordsClientInterface,
     def setNick(self, nickname):
         self.nickname = nickname
 
-    def receiveDirectMessage(self, sender, message):
+    def receiveDirectMessage(self, sender, message, metadata=None):
         """Pass this message through tendril to my IRC counterpart.
         """
         self.tendril.msgFromWords(self.nickname,
-                                  sender, message)
+                                  sender, message, metadata)
 
 
 class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
@@ -71,7 +71,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.13 $'[11:-2]
+    versionNum = '$Revision: 1.14 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -416,7 +416,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         nick = string.split(user,'!',1)[0]
         try:
             self._getParticipant(nick).groupMessage(group, message,
-                                                    {'style': 'emote'}) 
+                                                    {'style': 'emote'})
         except wordsService.NotInGroupError:
             self._getParticipant(nick).joinGroup(group)
             self._getParticipant(nick).groupMessage(group, message,
@@ -542,7 +542,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             return
         self.say(groupToChannelName(group), "%s left." % (member,))
 
-    def receiveGroupMessage(self, sender, group, message):
+    def receiveGroupMessage(self, sender, group, message, metadata=None):
         """Pass a message from the Words group on to IRC.
 
         Or, if it's in our errorGroup, recognize some debugging commands.
@@ -577,6 +577,11 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
                 elif irc.X_DELIM in message:
                     message = irc.ctcpQuote(message)
+
+                if metadata and metadata.has_key('style'):
+                    if metadata['style'] == "emote":
+                        self.say(channel, "* %s %s" % (sender, message))
+                        return
 
                 self.say(channel, "<%s> %s" % (sender, message))
         else:
@@ -637,10 +642,14 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
     ### Participant event methods
     ##      Words.Participant --> IRC
 
-    def msgFromWords(self, toNick, sender, message):
+    def msgFromWords(self, toNick, sender, message, metadata=None):
         """Deliver a directMessage as a privmsg over IRC.
         """
         if message[0] != irc.X_DELIM:
+            if metadata and metadata.has_key('style'):
+                # Damn.  What am I supposed to do with this?
+                message = "[%s] %s" % (metadata['style'], message)
+
             self.msg(toNick, '<%s> %s' % (sender, message))
         else:
             # If there is a CTCP delimeter at the beginning of the
