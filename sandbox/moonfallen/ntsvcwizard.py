@@ -5,6 +5,10 @@ gtk2reactor.install()
 import sys
 import os.path
 
+# win32all
+from win32ui import CreateFileDialog
+import win32con
+
 # gtk2
 import gtk
 from gtk import glade
@@ -13,8 +17,17 @@ from gtk import glade
 from twisted.internet import reactor, defer
 from twisted.python import usage, util, log, failure
 
+# local
+import tap2ntsvc
+
 
 class WizardThing:
+    def _logdlg(self, msg):
+        dlg = gtk.MessageDialog(self.gw_ntsvcwizard,
+                                gtk.DIALOG_MODAL|
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                gtk.MESSAGE_INFO, gtk.BUTTONS_OK, msg)
+        dlg.run()
     def __getattr__(self, name):
         if name.startswith("gw_"):
             return self.glade.get_widget(name[3:])
@@ -29,6 +42,17 @@ class WizardThing:
         self.gw_ntsvcwizard.show()
         self.gw_backbtn.set_sensitive(0)
 
+        self.gw_cftypes.set_popdown_strings(tap2ntsvc.cftypes)
+        self.gw_cftypes.entry.set_text("")
+
+        self.gw_reactor.set_popdown_strings(tap2ntsvc.reactorTypes.keys())
+        self.gw_reactor.entry.set_text("default")
+
+        ico = tap2ntsvc.default_icon
+        self.gw_pathtoicon.set_text(ico)
+        self.gw_pathtoicon.set_position(len(ico))
+        self.gw_icondisplay.set_from_file(ico)
+
     def on_ntsvcwizard_destroy(self, widget):
         log.msg("Goodbye.")
         self.deferredResult.callback(None)
@@ -42,14 +66,48 @@ class WizardThing:
         self.gw_notebook1.set_current_page(cur-1)
 
     def on_notebook1_switch_page(self, widget, data, pagenum):
-        if pagenum == 0:
-            self.gw_backbtn.set_sensitive(0)        
-        if pagenum == 4:
-            self.gw_nextbtn.set_sensitive(0)
-        if pagenum > 0:
-            self.gw_backbtn.set_sensitive(1)
-        if pagenum < 4:
-            self.gw_nextbtn.set_sensitive(1)
+        PAGES = 5
+        self.gw_backbtn.set_sensitive((pagenum in range(1, PAGES)))
+        self.gw_nextbtn.set_sensitive((pagenum in range(0, PAGES-1)))
+
+    def on_browsefortap_clicked(self, widget):
+        dlg = CreateFileDialog(1, None,
+                               os.path.join(os.getcwd(), '*'), 0,
+                               'All files (*)|*||', None)
+        if dlg.DoModal() == win32con.IDOK:
+            pn = dlg.GetPathName()
+            if os.path.isfile(pn):
+                self.gw_pathtotap.set_text(pn)
+                self.gw_pathtotap.set_position(len(pn))
+                self.setNewValues()
+
+    def on_browseforicon_clicked(self, widget):
+        dlg = CreateFileDialog(1, None,
+                               os.path.join(os.getcwd(), '*.ico'),
+                               0, 'Icon Files(*.ico)|*.ico||', None)
+        if dlg.DoModal() == win32con.IDOK:
+            pn = dlg.GetPathName()
+            if os.path.isfile(pn):
+                self.gw_pathtoicon.set_text(pn)
+                self.gw_pathtoicon.set_position(len(pn))
+                self.gw_icondisplay.set_from_file(pn)
+
+    def setNewValues(self):
+        cf = self.gw_pathtotap.get_text()
+        cfbase = os.path.basename(cf)
+        try:
+            guess = tap2ntsvc.guessType(cf)
+            if guess:
+                self.gw_cftypes.entry.set_text(guess)
+        except KeyError:
+            pass
+        name = os.path.splitext(cfbase)[0]
+        if not tap2ntsvc.isPythonName(name):
+            name = "genericname"
+        self.gw_name.set_text(name)
+        self.gw_display_name.set_text("%s run by Twisted" % (name,))
+        self.gw_package_version.set_text("1.0")
+        
 
 class WizOptions(usage.Options):
     optParameters = [['logfile', 'l', None, 'File to use for logging'],

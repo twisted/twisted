@@ -45,6 +45,7 @@
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="relief">GTK_RELIEF_NONE</property>
+		  <signal name="clicked" handler="on_browsefortap_clicked" last_modification_time="Tue, 23 Dec 2003 07:26:23 GMT"/>
 
 		  <child>
 		    <widget class="GtkAlignment" id="alignment3">
@@ -138,7 +139,7 @@
 	      </child>
 
 	      <child>
-		<widget class="GtkCombo" id="combo1">
+		<widget class="GtkCombo" id="cftypes">
 		  <property name="visible">True</property>
 		  <property name="value_in_list">False</property>
 		  <property name="allow_empty">True</property>
@@ -177,7 +178,7 @@
 	      </child>
 
 	      <child>
-		<widget class="GtkEntry" id="entry1">
+		<widget class="GtkEntry" id="pathtotap">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="editable">False</property>
@@ -307,7 +308,7 @@
 	      <child>
 		<widget class="GtkLabel" id="label15">
 		  <property name="visible">True</property>
-		  <property name="label" translatable="yes">Program Version</property>
+		  <property name="label" translatable="yes">Package Version</property>
 		  <property name="use_underline">False</property>
 		  <property name="use_markup">False</property>
 		  <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -353,7 +354,7 @@
 	      </child>
 
 	      <child>
-		<widget class="GtkEntry" id="entry2">
+		<widget class="GtkEntry" id="name">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="editable">True</property>
@@ -374,7 +375,7 @@
 	      </child>
 
 	      <child>
-		<widget class="GtkEntry" id="entry3">
+		<widget class="GtkEntry" id="display_name">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="editable">True</property>
@@ -395,7 +396,7 @@
 	      </child>
 
 	      <child>
-		<widget class="GtkEntry" id="entry4">
+		<widget class="GtkEntry" id="description">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="editable">True</property>
@@ -416,7 +417,7 @@
 	      </child>
 
 	      <child>
-		<widget class="GtkEntry" id="entry5">
+		<widget class="GtkEntry" id="package_version">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="editable">True</property>
@@ -447,6 +448,7 @@
 		      <property name="visible">True</property>
 		      <property name="can_focus">True</property>
 		      <property name="relief">GTK_RELIEF_NONE</property>
+		      <signal name="clicked" handler="on_browseforicon_clicked" last_modification_time="Wed, 24 Dec 2003 06:54:48 GMT"/>
 
 		      <child>
 			<widget class="GtkAlignment" id="alignment4">
@@ -512,7 +514,7 @@
 		  </child>
 
 		  <child>
-		    <widget class="GtkEntry" id="entry6">
+		    <widget class="GtkEntry" id="pathtoicon">
 		      <property name="visible">True</property>
 		      <property name="can_focus">True</property>
 		      <property name="editable">True</property>
@@ -531,12 +533,12 @@
 		  </child>
 
 		  <child>
-		    <widget class="GtkImage" id="image5">
+		    <widget class="GtkImage" id="icondisplay">
 		      <property name="visible">True</property>
 		      <property name="xalign">0.5</property>
 		      <property name="yalign">0.5</property>
-		      <property name="xpad">0</property>
-		      <property name="ypad">0</property>
+		      <property name="xpad">5</property>
+		      <property name="ypad">5</property>
 		    </widget>
 		    <packing>
 		      <property name="padding">0</property>
@@ -639,18 +641,103 @@
 	  </child>
 
 	  <child>
-	    <widget class="GtkLabel" id="label6">
+	    <widget class="GtkTable" id="table3">
+	      <property name="border_width">10</property>
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">reactor, other twistd options?</property>
-	      <property name="use_underline">False</property>
-	      <property name="use_markup">False</property>
-	      <property name="justify">GTK_JUSTIFY_LEFT</property>
-	      <property name="wrap">False</property>
-	      <property name="selectable">False</property>
-	      <property name="xalign">0.5</property>
-	      <property name="yalign">0.5</property>
-	      <property name="xpad">0</property>
-	      <property name="ypad">0</property>
+	      <property name="n_rows">5</property>
+	      <property name="n_columns">2</property>
+	      <property name="homogeneous">False</property>
+	      <property name="row_spacing">5</property>
+	      <property name="column_spacing">5</property>
+
+	      <child>
+		<widget class="GtkLabel" id="label21">
+		  <property name="visible">True</property>
+		  <property name="label" translatable="yes">Twisted Reactor</property>
+		  <property name="use_underline">False</property>
+		  <property name="use_markup">False</property>
+		  <property name="justify">GTK_JUSTIFY_LEFT</property>
+		  <property name="wrap">False</property>
+		  <property name="selectable">False</property>
+		  <property name="xalign">0</property>
+		  <property name="yalign">0.5</property>
+		  <property name="xpad">0</property>
+		  <property name="ypad">0</property>
+		</widget>
+		<packing>
+		  <property name="left_attach">0</property>
+		  <property name="right_attach">1</property>
+		  <property name="top_attach">0</property>
+		  <property name="bottom_attach">1</property>
+		  <property name="x_options">fill</property>
+		  <property name="y_options"></property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkCombo" id="reactor">
+		  <property name="visible">True</property>
+		  <property name="value_in_list">False</property>
+		  <property name="allow_empty">True</property>
+		  <property name="case_sensitive">False</property>
+		  <property name="enable_arrow_keys">True</property>
+		  <property name="enable_arrows_always">False</property>
+
+		  <child internal-child="entry">
+		    <widget class="GtkEntry" id="combo-entry1">
+		      <property name="visible">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="editable">True</property>
+		      <property name="visibility">True</property>
+		      <property name="max_length">0</property>
+		      <property name="text" translatable="yes"></property>
+		      <property name="has_frame">True</property>
+		      <property name="invisible_char" translatable="yes">*</property>
+		      <property name="activates_default">False</property>
+		    </widget>
+		  </child>
+
+		  <child internal-child="list">
+		    <widget class="GtkList" id="combo-list2">
+		      <property name="visible">True</property>
+		      <property name="selection_mode">GTK_SELECTION_BROWSE</property>
+		    </widget>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="left_attach">1</property>
+		  <property name="right_attach">2</property>
+		  <property name="top_attach">0</property>
+		  <property name="bottom_attach">1</property>
+		  <property name="y_options"></property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkLabel" id="label25">
+		  <property name="visible">True</property>
+		  <property name="label" translatable="yes">other twistd options?
+- runas account/pass
+- service deps</property>
+		  <property name="use_underline">False</property>
+		  <property name="use_markup">False</property>
+		  <property name="justify">GTK_JUSTIFY_LEFT</property>
+		  <property name="wrap">False</property>
+		  <property name="selectable">False</property>
+		  <property name="xalign">0</property>
+		  <property name="yalign">0.5</property>
+		  <property name="xpad">0</property>
+		  <property name="ypad">0</property>
+		</widget>
+		<packing>
+		  <property name="left_attach">1</property>
+		  <property name="right_attach">2</property>
+		  <property name="top_attach">2</property>
+		  <property name="bottom_attach">3</property>
+		  <property name="x_options">fill</property>
+		  <property name="y_options"></property>
+		</packing>
+	      </child>
 	    </widget>
 	    <packing>
 	      <property name="tab_expand">False</property>

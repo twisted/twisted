@@ -14,6 +14,7 @@ from twisted.persisted.sob import guessType
 # sort out what __file__ really is so py2exe can work
 if not os.path.isfile(__file__):
     __file__ = sys.executable
+default_icon = util.sibpath(__file__, "pysvc.ico")
 
 cftypes=('python', 'xml', 'source', 'pickle')
 
@@ -34,8 +35,7 @@ class Tap2NtsvcOptions(usage.Options):
                      ['includes', 'i', "", """\
 Comma-separated list of modules to bundle into the application
 """],
-                     ['icon', 'c',
-                      util.sibpath(__file__, 'pysvc.ico'),
+                     ['icon', 'c', default_icon,
                       "Windows icon file to use"],
                      ]
     optFlags = [['skip-py2exe', None,
