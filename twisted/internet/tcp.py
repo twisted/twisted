@@ -218,8 +218,9 @@ class Connection(abstract.FileDescriptor):
 
         def _startTLS(self):
             self.TLS = 1
-            class TLSConnection(_TLSMixin, self.__class__):
-                pass
+            klass = self.__class__
+            class TLSConnection(_TLSMixin, klass):
+                __implements__ = interfaces.ISSLTransport, klass.__implements__
             self.__class__ = TLSConnection
 
     def getHandle(self):

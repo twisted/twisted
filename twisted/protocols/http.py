@@ -46,9 +46,9 @@ import os
 import basic
 
 # twisted imports
-from twisted.internet import interfaces, reactor, protocol
+from twisted.internet import interfaces, reactor, protocol, address
 from twisted.protocols import policies
-from twisted.python import log
+from twisted.python import log, components
 try: # try importing the fast, C version
     from twisted.protocols._c_urlarg import unquote
 except ImportError:
@@ -417,7 +417,8 @@ class Request:
     sentLength = 0 # content-length of response, or total bytes sent via chunking
     etag = None
     lastModified = None
-
+    _forceSSL = 0
+    
     def __init__(self, channel, queued):
         """
         @param channel: the channel we're connected to.
@@ -829,21 +830,18 @@ class Request:
 
         This method is experimental.
         """
-        if ssl:
-            method = 'SSL'
-        else:
-            method = 'INET'
+        self._forceSSL = ssl
         self.received_headers["host"] = host
-        self.host = (method, host, port)
+        self.host = address.IPv4Address("TCP", host, port)
 
     def getClientIP(self):
-        if self.client.type in ('INET', 'SSL'):
+        if isinstance(self.client, address.IPv4Address):
             return self.client.host
         else:
             return None
 
     def isSecure(self):
-        return (self.host[0] == 'SSL')
+        return self._forceSSL or components.implements(self.channel.transport, interfaces.ISSLTransport)
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC

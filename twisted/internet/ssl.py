@@ -107,6 +107,9 @@ class ClientContextFactory:
 
 class Client(tcp.Client):
     """I am an SSL client."""
+
+    __implements__ = tcp.Client.__implements__, interfaces.ISSLTransport
+    
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
         self.ctxFactory = ctxFactory
@@ -130,6 +133,9 @@ class Client(tcp.Client):
 class Server(tcp.Server):
     """I am an SSL server.
     """
+
+    __implements__ = tcp.Server.__implements__, interfaces.ISSLTransport
+    
     def getHost(self):
         """Return server's address."""
         h, p = self.socket.getsockname()

@@ -17,9 +17,10 @@ from twisted.trial import unittest
 import string, random, copy
 
 from twisted.web import server, resource, util
-from twisted.internet import app, defer
+from twisted.internet import defer, interfaces
 from twisted.protocols import http, loopback
 from twisted.python import log, reflect
+from twisted.internet.address import IPv4Address
 
 class DummyRequest:
     uri='http://dummy/'
@@ -252,11 +253,12 @@ resource = Data('dynamic world','text/plain')
 class DummyChannel:
     class Baz:
         port = 80
-        type = 'TCP'
         def getPeer(self):
-            return None
+            return IPv4Address("TCP", 'client.example.com', 12344)
         def getHost(self):
-            return self.type, 'example.com', self.port
+            return IPv4Address("TCP", 'example.com', self.port)
+    class SSLBaz(Baz):
+        __implements__ = interfaces.ISSLTransport,
     transport = Baz()
     site = server.Site(resource.Resource())
 
@@ -301,9 +303,8 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.SSLBaz()
         d.transport.port = 443
-        d.transport.type = 'SSL'
         request = server.Request(d, 1)
         request.setHost('example.com', 443)
         request.gotLength(0)
@@ -312,9 +313,8 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.SSLBaz()
         d.transport.port = 80
-        d.transport.type = 'SSL'
         request = server.Request(d, 1)
         request.setHost('example.com', 80)
         request.gotLength(0)
@@ -323,15 +323,24 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.SSLBaz()
         d.transport.port = 81
-        d.transport.type = 'SSL'
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
 
+    def testPrePathURLSetSSLHost(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 81
+        request = server.Request(d, 1)
+        request.setHost('foo.com', 81, 1)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'https://foo.com:81/foo/bar')
+        
 class RootResource(resource.Resource):
     isLeaf=0
     def getChildWithDefault(self, name, request):
