@@ -24,7 +24,7 @@ structures. </p>
 <p>Simple object persistence (using <code>pickle</code> or
 <code>jelly</code>) provides the fundamental <q>save the object to disk</q>
 functionality at application shutdown. If you use the <code class="API"
-base="twisted.internet.app">Application</code> class, every object
+base="twisted.application.service">Application</code> object, every object
 referenced by your Application will be saved into the
 <code>-shutdown.tap</code> file when the program terminates. When you use
 <code>twistd</code> to launch that new .tap file, the Application object
@@ -38,14 +38,16 @@ like) are also remembered, and the sockets are created at startup time (when
 <code>Application.run</code> is called).</p>
 
 <p>To influence the way that the <code class="API"
-base="twisted.internet.app">Application</code> is persisted, you can set its
-<code>.persistStyle</code> attribute to a string like <q>pickle</q>,
-<q>xml</q>, or <q>aot</q>. These use different serializers (and different
+base="twisted.application.service">Application</code> is persisted, you can adapt
+it to <code class="API">twisted.persisted.sob.IPersistable</code> and use
+the <code class="python">setStyle(style)</code> method with
+a string like <q>pickle</q>, <q>xml</q>, or <q>source</q>. These use different serializers (and different
 extensions: <q>.tap</q>, <q>.tax</q>, and <q>.tas</q> respectively) for the
 saved Application.</p>
 
 <p>You can manually cause the application to be saved by calling its
-<code>.save</code> method.</p>
+<code>.save</code> method (on the <code class="API">twisted.persisted.sob.IPersistable</code>
+adapted object).</p>
 
 
 <h2>Versioned: New Code Meets Old Data</h2>
