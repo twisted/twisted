@@ -20,12 +20,12 @@
 """
 
 # System imports
-import Tkinter, tkMessageBox, StringIO, os, sys
+import Tkinter, tkMessageBox, StringIO, os, sys, inspect
 
 # Twisted imports
 from twisted.internet import tksupport, reactor, app
 from twisted.scripts import mktap
-from twisted.python import failure, usage
+from twisted.python import failure, usage, reflect
 
 class TkMkAppFrame(Tkinter.Frame):
     """
@@ -117,6 +117,9 @@ class TkMkAppFrame(Tkinter.Frame):
         Remove the existing coil-specific widgets and then create and add
         new ones based on the given plugin object.
         """
+        if coil is self.coil:
+            return
+
         try:
             opt = coil.load().Options()
         except:
@@ -208,22 +211,62 @@ class TkConfigFrame(Tkinter.Frame):
 
     def setupOptFlags(self):
         self.optFlags = []
+        flags = []
         if hasattr(self.options, 'optFlags'):
-            self.optFrame = f = Tkinter.Frame(self)
-            for (flag, _, desc) in self.options.optFlags:
-                b = Tkinter.BooleanVar()
-                c = Tkinter.Checkbutton(f, text=desc, variable=b, wraplen=200)
-                c.pack()
-                self.optFlags.append((flag, b))
-            f.grid(row=1, column=1)
+            flags.extend(self.options.optFlags)
+        
+        d = {}
+        helpFunc = getattr(self.options, 'opt_help', None)
+        for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
+            full = 'opt_' + meth
+            func = getattr(self.options, full)
+            
+            if not usage.flagFunction(func) or func == helpFunc:
+                continue
+            
+            existing = d.setdefault(func, meth)
+            if existing != meth:
+                if len(existing) < len(meth):
+                    d[func] = meth
+            
+            for (func, name) in d.items():
+                flags.append((name, None, func.__doc__))
+            
+            if len(flags):
+                self.optFrame = f = Tkinter.Frame(self)
+                for (flag, _, desc) in flags:
+                    b = Tkinter.BooleanVar()
+                    c = Tkinter.Checkbutton(f, text=desc, variable=b, wraplen=200)
+                    c.pack()
+                    self.optFlags.append((flag, b))
+                f.grid(row=1, column=1)
 
 
     def setupOptParameters(self):
         self.optParameters = []
+        params = []
+        i = 0
         if hasattr(self.options, 'optParameters'):
-            i = 0
+            params.extend(self.options.optParameters)
+        
+        d = {}
+        for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
+            full = 'opt_' + meth
+            func = getattr(self.options, full)
+
+            if usage.flagFunction(func):
+                continue
+
+            existing = d.setdefault(func, meth)
+            if existing != meth:
+                if len(existing) < len(meth):
+                    d[func] = meth
+        for (func, name) in d.items():
+            params.append((name, None, None, func.__doc__))
+
+        if len(params):
             self.paramFrame = f = Tkinter.Frame(self)
-            for (flag, _, default, desc) in self.options.optParameters:
+            for (flag, _, default, desc) in params:
                 s = Tkinter.StringVar()
                 if default:
                     s.set(default)
