@@ -187,18 +187,14 @@ class TestProcess(unittest.TestCase):
 class TestInterfaces(unittest.TestCase):
 
     def testService(self):
-        self.assert_(components.implements(service.Service(),
-                                           service.IService))
+        self.assert_(service.IService.providedBy(service.Service()))
 
     def testMultiService(self):
-        self.assert_(components.implements(service.MultiService(),
-                                           service.IService))
-        self.assert_(components.implements(service.MultiService(),
-                                           service.IServiceCollection))
+        self.assert_(service.IService.providedBy(service.MultiService()))
+        self.assert_(service.IServiceCollection.providedBy(service.MultiService()))
 
     def testProcess(self):
-        self.assert_(components.implements(service.Process(),
-                                           service.IProcess))
+        self.assert_(service.IProcess.providedBy(service.Process()))
 
 
 class TestApplication(unittest.TestCase):

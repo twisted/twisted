@@ -30,6 +30,7 @@ from twisted.python import components
 from twisted.application import internet, service
 from twisted.persisted import sob
 import warnings, sys
+from zope.interface import implements
 
 
 class IOldApplication(components.Interface):
@@ -204,7 +205,7 @@ class IOldApplication(components.Interface):
 class _NewService:
     """Wrap a twisted.internet.app.ApplicationService in new service API."""
 
-    __implements__ = service.IService,
+    implements(service.IService)
 
     running = 0
     
@@ -247,7 +248,7 @@ class _NewService:
 
 class _ServiceNetwork:
 
-    __implements__ = IOldApplication,
+    implements(IOldApplication)
 
     def __init__(self, app):
         self.app = service.IServiceCollection(app)
@@ -349,6 +350,8 @@ class _ServiceNetwork:
 
 components.registerAdapter(_ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
+components.backwardsCompatImplements(_ServiceNetwork)
+components.backwardsCompatImplements(_NewService)
 
 
 _mapping = []
@@ -382,7 +385,7 @@ def convert(oldApp):
         if hasattr(s, 'privileged'):
             s.privileged = 1
     for s in oldApp.services.values():
-        if not components.implements(s, service.IService):
+        if not service.IService.providedBy(s):
             s.serviceParent = None
             s = _NewService(s)
             s.setServiceParent(IOldApplication(c))

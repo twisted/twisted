@@ -33,6 +33,7 @@ except ImportError:
     import StringIO
 from twisted.python import components, log, runtime
 from twisted.persisted import styles
+from zope.interface import implements
 
 # Note:
 # These encrypt/decrypt functions only work for data formats
@@ -71,7 +72,7 @@ class IPersistable(components.Interface):
 
 class Persistent:
 
-    __implements__ = IPersistable,
+    implements(IPersistable)
 
     style = "pickle"
 
@@ -141,6 +142,8 @@ class Persistent:
 
 # "Persistant" has been present since 1.0.7, so retain it for compatibility
 Persistant = Persistent
+components.backwardsCompatImplements(Persistent)
+
 
 class _EverythingEphemeral(styles.Ephemeral):
 

@@ -30,6 +30,7 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 import os
 
 from twisted.python import components
+from zope.interface import implements
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python.runtime import platformType
@@ -102,7 +103,7 @@ class Service:
     as not serializing this book-keeping information.
     """
 
-    __implements__ = IService,
+    implements(IService)
 
     running = 0
     name = None
@@ -192,7 +193,7 @@ class MultiService(Service):
     will finish.
     """
 
-    __implements__ = Service.__implements__, IServiceCollection
+    implements(IServiceCollection)
 
     def __init__(self):
         self.services = []
@@ -268,7 +269,7 @@ class Process:
     Sets up uid/gid in the constructor, and has a default
     of C{None} as C{processName}.
     """
-    __implements__ = IProcess,
+    implements(IProcess)
     processName = None
 
     def __init__(self, uid=None, gid=None):
@@ -323,6 +324,13 @@ def loadApplication(filename, kind, passphrase=None):
         from twisted.application import compat
         application = compat.convert(application)
     return application
+
+
+# add backwards compatible __implements__ attribute
+components.backwardsCompatImplements(Service)
+components.backwardsCompatImplements(MultiService)
+components.backwardsCompatImplements(Process)
+
 
 __all__ = ['IService', 'Service', 'IServiceCollection', 'MultiService',
            'IProcess', 'Process', 'Application', 'loadApplication']
