@@ -31,8 +31,28 @@ for the twisted.mail SMTP server
 """
 from twisted.python import delay, log
 from twisted.mail import relay, mail, bounce
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 import os, string, time, cPickle
+
+class SMTPManagedRelayerFactory(protocol.ClientFactory):
+
+    def __init__(self, messages, manager):
+        self.messages = messages
+        self.manager = manager
+
+    def buildProtocol(self, connection):
+        protocol = SMTPManagedRelayer(self.messages, self.manager)
+        protocol.factory = self
+        return protocol
+
+    def clientConnectionFailed(self, connector, reason):
+        """called when connection could not be made
+
+        our manager should be notified that this happened,
+        it might prefer some other host in that case"""
+        self.manager.notifyNoConection(self)
+        self.manager.notifyDone(self)
+
 
 
 class SMTPManagedRelayer(relay.SMTPRelayer):
@@ -54,9 +74,9 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         relay.SMTPRelayer.__init__(self, messages)
         self.manager = manager
 
-    def lineReceived(self, line):
-        log.msg("managed -- got %s" % line)
-        relay.SMTPRelayer.lineReceived(self, line)
+    #def lineReceived(self, line):
+    #    log.msg("managed -- got %s" % line)
+    #    relay.SMTPRelayer.lineReceived(self, line)
 
     def sentMail(self, addresses):
         """called when e-mail has been sent
@@ -65,26 +85,18 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         """
         message = self.names[0]
         if addresses: 
-            self.manager.notifySuccess(self, message)
+            self.manager.notifySuccess(self.factory, message)
         else: 
-            self.manager.notifyFailure(self, message)
+            self.manager.notifyFailure(self.factory, message)
         del self.messages[0]
         del self.names[0]
-
-    def connectionFailed(self):
-        """called when connection could not be made
-
-        our manager should be notified that this happened,
-        it might prefer some other host in that case"""
-        self.manager.notifyNoConection(self)
-        self.manager.notifyDone(self)
 
     def connectionLost(self):
         """called when connection is broken
 
         notify manager we will try to send no more e-mail
         """
-        self.manager.notifyDone(self)
+        self.manager.notifyDone(self.factory)
 
 
 class Queue:
@@ -272,9 +284,10 @@ class SmartHostSMTPRelayingManager:
         for message in nextMessages:
             toRelay.append(self.queue.getPath(message))
             self.queue.relaying(message)
-        protocol = SMTPManagedRelayer(toRelay, self)
-        self.managed[protocol] = nextMessages
-        reactor.clientTCP(self.smartHostAddr[0], self.smartHostAddr[1], protocol)
+        factory = SMTPManagedRelayerFactory(toRelay, self)
+        self.managed[factory] = nextMessages
+        reactor.connectTCP(self.smartHostAddr[0], self.smartHostAddr[1],
+                           factory)
 
 
 class MXCalculator:
