@@ -10,7 +10,7 @@ from zope.interface import implements
 from twisted.conch.insults import insults
 from twisted.conch import recvline
 
-from twisted.python import log, reflect
+from twisted.python import log, reflect, components
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
@@ -236,64 +236,63 @@ end = "\x1b[4~"
 backspace = "\x7f"
 
 from twisted.cred import checkers
-from twisted.conch.ssh import userauth, channel, connection, session
 
 try:
-    from twisted.conch.ssh import transport
+    from twisted.conch.ssh import userauth, transport, channel, connection, session
+    from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
 except ImportError:
-    transport = None
+    ssh = None
+else:
+    class SessionChannel(channel.SSHChannel):
+        name = 'session'
 
-class TestAuth(userauth.SSHUserAuthClient):
-    def __init__(self, username, password, *a, **kw):
-        userauth.SSHUserAuthClient.__init__(self, username, *a, **kw)
-        self.password = password
+        def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
+            channel.SSHChannel.__init__(self, *a, **kw)
 
-    def getPassword(self):
-        return defer.succeed(self.password)
+            self.protocolFactory = protocolFactory
+            self.protocolArgs = protocolArgs
+            self.protocolKwArgs = protocolKwArgs
 
-class SessionChannel(channel.SSHChannel):
-    name = 'session'
+            self.width = width
+            self.height = height
 
-    def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
-        channel.SSHChannel.__init__(self, *a, **kw)
+        def channelOpen(self, data):
+            term = session.packRequest_pty_req("vt102", (self.height, self.width, 0, 0), '')
+            self.conn.sendRequest(self, 'pty-req', term)
+            self.conn.sendRequest(self, 'shell', '')
 
-        self.protocolFactory = protocolFactory
-        self.protocolArgs = protocolArgs
-        self.protocolKwArgs = protocolKwArgs
+            self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self._protocolInstance.makeConnection(self)
 
-        self.width = width
-        self.height = height
+        def dataReceived(self, data):
+            self._protocolInstance.dataReceived(data)
 
-    def channelOpen(self, data):
-        term = session.packRequest_pty_req("vt102", (self.height, self.width, 0, 0), '')
-        self.conn.sendRequest(self, 'pty-req', term)
-        self.conn.sendRequest(self, 'shell', '')
+    class TestConnection(connection.SSHConnection):
+        def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
+            connection.SSHConnection.__init__(self, *a, **kw)
 
-        self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-        self._protocolInstance.makeConnection(self)
+            self.protocolFactory = protocolFactory
+            self.protocolArgs = protocolArgs
+            self.protocolKwArgs = protocolKwArgs
 
-    def dataReceived(self, data):
-        self._protocolInstance.dataReceived(data)
+            self.width = width
+            self.height = height
 
-class TestConnection(connection.SSHConnection):
-    def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
-        connection.SSHConnection.__init__(self, *a, **kw)
+        def serviceStarted(self):
+            self.__channel = SessionChannel(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
+            self.openChannel(self.__channel)
 
-        self.protocolFactory = protocolFactory
-        self.protocolArgs = protocolArgs
-        self.protocolKwArgs = protocolKwArgs
+        def write(self, bytes):
+            return self.__channel.write(bytes)
 
-        self.width = width
-        self.height = height
+    class TestAuth(userauth.SSHUserAuthClient):
+        def __init__(self, username, password, *a, **kw):
+            userauth.SSHUserAuthClient.__init__(self, username, *a, **kw)
+            self.password = password
 
-    def serviceStarted(self):
-        self.__channel = SessionChannel(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
-        self.openChannel(self.__channel)
+        def getPassword(self):
+            return defer.succeed(self.password)
 
-    def write(self, bytes):
-        return self.__channel.write(bytes)
-
-if transport is not None:
     class TestTransport(transport.SSHClientTransport):
         def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
             # transport.SSHClientTransport.__init__(self, *a, **kw)
@@ -316,21 +315,19 @@ if transport is not None:
         def write(self, bytes):
             return self.__connection.write(bytes)
 
-from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
-from twisted.python import components
+    class TestSessionTransport(TerminalSessionTransport):
+        def protocolFactory(self):
+            print 'Hello, I am creating a serverProtocol, woopie.'
+            return self.avatar.conn.transport.factory.serverProtocol()
 
-class TestSessionTransport(TerminalSessionTransport):
-    def protocolFactory(self):
-        print 'Hello, I am creating a serverProtocol, woopie.'
-        return self.avatar.conn.transport.factory.serverProtocol()
+    class TestSession(TerminalSession):
+        transportFactory = TestSessionTransport
 
-class TestSession(TerminalSession):
-    transportFactory = TestSessionTransport
+    class TestUser(TerminalUser):
+        pass
 
-class TestUser(TerminalUser):
-    pass
+    components.registerAdapter(TestSession, TestUser, session.ISession)
 
-components.registerAdapter(TestSession, TestUser, session.ISession)
 
 class LoopbackRelay(loopback.LoopbackRelay):
     def logPrefix(self):
@@ -614,7 +611,7 @@ class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRe
     pass
 
 class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    if transport is None:
+    if ssh is None:
         skip = "Crypto requirements missing, can't run historic recvline tests over ssh"
 
 class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
