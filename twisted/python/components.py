@@ -59,7 +59,7 @@ class MetaInterface(type):
         try:
             # should this be `implements' of some kind?
             if (persist is None or persist) and hasattr(adaptable, 'getComponent'):
-                adapter = adaptable.getComponent(self, registry, _Nothing)
+                adapter = adaptable.getComponent(self, registry, default=_Nothing)
             else:
                 adapter = registry.getAdapter(adaptable, self, _Nothing, persist=persist)
         except NotImplementedError:
@@ -314,7 +314,7 @@ class Adapter:
         I forward getComponent to self.original on the assumption that it is an
         instance of Componentized.
         """
-        return self.original.getComponent(interface, registry=None, default=None)
+        return self.original.getComponent(interface, registry=None, default=default)
 
 class Componentized(styles.Versioned):
     """I am a mixin to allow you to be adapted in various ways persistently.
