@@ -21,6 +21,10 @@ End users should only use the ContextFactory classes directly - for SSL
 connections use the reactor.connectSSL/listenSSL and so on, as documented
 in IReactorSSL.
 
+All server context factories should inherit from ContextFactory, and all
+client context factories should inherit from ClientContextFactory. At the
+moment this is not enforced, but in the future it might be.
+
 API Stability: stable
 
 Future Plans: split module so reactor-specific classes are in a separate
@@ -41,7 +45,9 @@ from twisted.python import log
 
 
 class ContextFactory:
-    """A factory for SSL context objects."""
+    """A factory for SSL context objects, for server SSL connections."""
+
+    isClient = 0
     
     def getContext(self):
         """Return a SSL.Context object. override in subclasses."""
@@ -78,8 +84,10 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         return self._context
 
 
-class ClientContextFactory(ContextFactory):
-    """A sample context factory for SSL clients."""
+class ClientContextFactory:
+    """A context factory for SSL clients."""
+
+    isClient = 1
     
     def getContext(self):
         return SSL.Context(SSL.SSLv3_METHOD)
@@ -110,9 +118,9 @@ class Connection(tcp.Connection):
             done = self.socket.shutdown()
             self.sslShutdown = 1
         except SSL.Error:
-            return CONNECTION_LOST
+            return main.CONNECTION_LOST
         if done:
-            return CONNECTION_DONE
+            return main.CONNECTION_DONE
         else:
             # we wait for other side to close SSL connection -
             # this will be signaled by SSL.ZeroReturnError when reading
