@@ -249,7 +249,7 @@ is not available, re-scheduling the operation to be executed later.</p>
 
 <pre>
 from __future__ import generators
-import flow
+from twisted.flow import flow
 
 def Counter(count):
     while count &gt; 0:
@@ -320,7 +320,7 @@ a try/except block can be used, catching <code>flow.Failure</code> objects.
 
 <pre>
 from __future__ import generators
-import flow
+from twisted.flow import flow
 
 def Producer(throw):
     yield 1
@@ -363,7 +363,7 @@ simply puts the call chain to sleep.</p>
 
 <pre class="python">
 from __future__ import generators
-import flow
+from twisted.flow import flow
 
 def gen():
     yield 'immediate'
@@ -389,7 +389,7 @@ before it produces a result.</p>
 
 <pre class="python">
 from __future__ import generators
-import flow
+from twisted.flow import flow
 
 def Right():
     yield "one"
@@ -425,7 +425,7 @@ operation can be rewritten using flow.Deferred.</p>
 <pre class="python">
 from __future__ import generators
 from twisted.internet import reactor, defer
-import flow
+from twisted.flow import flow
 
 def request(name):
     print name, ": Step One"
@@ -459,7 +459,7 @@ being created at the same time.</p>
 from __future__ import generators
 from twisted.internet import reactor
 from twisted.web import server, resource
-import flow
+from twisted.flow import flow
 
 def cooperative(count):
     """ simulate a cooperative resource, that not block """
@@ -508,7 +508,7 @@ finishes, the connection is automatically closed.</p>
 
 <pre class="python">
 from __future__ import generators
-import flow
+from twisted.flow import flow
 from twisted.internet import protocol, reactor
 PORT = 8392
 
@@ -553,7 +553,7 @@ a similar, cooperative count is included.
 <pre class="python">
 from __future__ import generators
 from twisted.internet import reactor, defer
-import flow
+from twisted.flow import flow
 
 def countSleep(index):
     from time import sleep
@@ -595,7 +595,7 @@ query and a <code>ConnectionPool</code>.</p>
 from __future__         import generators
 from twisted.enterprise import adbapi
 from twisted.internet   import reactor
-import flow
+from twisted.flow import flow
 
 dbpool = adbapi.ConnectionPool("SomeDriver",host='localhost', 
              db='Database',user='User',passwd='Password')
