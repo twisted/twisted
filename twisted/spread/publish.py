@@ -97,6 +97,7 @@ class RemotePublished(flavors.RemoteCache):
         other = copy.copy(self.__dict__)
         # Remove PB-specific attributes
         del other['broker']
+        del other['remote']
         del other['luid']
         # remove my own runtime-tracking stuff
         del other['_activationListeners']

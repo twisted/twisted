@@ -70,6 +70,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         self.connectionReady()
 
     def callExpressionReceived(self, obj):
+        #print '---'
+        #import pprint
+        #pprint.pprint(obj)
+        #print '***'
         if self.currentDialect:
             self.expressionReceived(obj)
         else:

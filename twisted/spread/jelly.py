@@ -41,7 +41,9 @@ Class: UserString.UserString --> ['class', ['module', 'UserString'], 'UserString
 Function: string.join --> ['function', 'join', ['module', 'string']]
 
 Instance: s is an instance of UserString.UserString, with a __dict__ {'data': 'hello'}:
-['instance', ['class', ['module', 'UserString'], 'UserString'], ['dictionary', ['data', 'hello']]]
+["UserString.UserString", ['dictionary', ['data', 'hello']]]
+
+# ['instance', ['class', ['module', 'UserString'], 'UserString'], ['dictionary', ['data', 'hello']]]
 
 Class Method: UserString.UserString.center:
 ['method', 'center', ['None'], ['class', ['module', 'UserString'], 'UserString']]
@@ -51,10 +53,26 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 
 """
 
+# System Imports
 import string
 import pickle
 import sys
 import types
+from types import StringType
+from types import UnicodeType
+from types import IntType
+from types import TupleType
+from types import ListType
+from types import DictType
+from types import LongType
+from types import FloatType
+from types import FunctionType
+from types import MethodType
+from types import ModuleType
+from types import DictionaryType
+from types import InstanceType
+from types import NoneType
+from types import ClassType
 import copy
 
 try:
@@ -63,6 +81,9 @@ try:
 except:
     from org.python.core import PyMethod
     instancemethod = PyMethod
+
+# Twisted Imports
+from twisted.python.reflect import namedObject, namedModule
 
 None_atom = "None"                  # N
 # code
@@ -115,6 +136,84 @@ except ImportError:
     pass
 
 
+unjellyableRegistry = {}
+
+def setUnjellyableForClass(classname, unjellyable):
+    """Set which local class will represent a remote type.
+
+    If you have written a Copyable class that you expect your client to be
+    receiving, write a local "copy" class to represent it, then call::
+
+        jellier.setUnjellyableForClass('module.package.Class', MyJellier).
+
+    Call this at the module level immediately after its class
+    definition. MyCopier should be a subclass of RemoteCopy.
+
+    The classname may be a special tag returned by
+    'Copyable.getTypeToCopyFor' rather than an actual classname.
+
+    This call is also for cached classes, since there will be no
+    overlap.  The rules are the same.
+    """
+
+    global unjellyableRegistry
+    unjellyableRegistry[classname] = unjellyable
+    globalSecurity.allowTypes(classname)
+
+def setUnjellyableForClassTree(module, baseClass, prefix=None):
+    """Set all classes in a module derived from baseClass as copiers for a corresponding remote class.
+
+    When you have a heirarchy of Copyable (or Cacheable) classes on
+    one side, and a mirror structure of Copied (or RemoteCache)
+    classes on the other, use this to setCopierForClass all your
+    Copieds for the Copyables.
+
+    Each copyTag (the \"classname\" argument to getTypeToCopyFor, and
+    what the Copyable's getTypeToCopyFor returns) is formed from
+    adding a prefix to the Copied's class name.  The prefix defaults
+    to module.__name__.  If you wish the copy tag to consist of solely
+    the classname, pass the empty string \'\'.
+
+    module -- a module object from which to pull the Copied classes.
+              (passing sys.modules[__name__] might be useful)
+
+    baseClass -- the base class from which all your Copied classes derive.
+
+    prefix -- the string prefixed to classnames to form the unjellyableRegistry.
+    """
+    if prefix is None:
+        prefix = module.__name__
+
+    if prefix:
+        prefix = "%s." % prefix
+
+    for i in dir(module):
+        i_ = getattr(module, i)
+        if type(i_) == types.ClassType:
+            if issubclass(i_, baseClass):
+                setUnjellyableForClass('%s%s' % (prefix, i), i_)
+
+def getInstanceState(inst, jellier):
+    """Utility method to default to 'normal' state rules in serialization.
+    """
+    if hasattr(inst, "__getstate__"):
+        state = inst.__getstate__()
+    else:
+        state = inst.__dict__
+    sxp = jellier.prepare(inst)
+    sxp.extend([str(inst.__class__), jellier.jelly(state)])
+    return jellier.preserve(inst, sxp)
+
+def setInstanceState(inst, unjellier, jellyList):
+    """Utility method to default to 'normal' state rules in unserialization.
+    """
+    state = unjellier.unjelly(jellyList[1])
+    if hasattr(inst, "__setstate__"):
+        inst.__setstate__(state)
+    else:
+        inst.__dict__ = state
+    return inst
+
 class Unpersistable:
     """
     This is an instance of a class that comes back when something couldn't be
@@ -129,10 +228,34 @@ class Unpersistable:
     def __repr__(self):
         return "Unpersistable(%s)" % repr(self.reason)
 
+class Jellyable:
+    """Inherit from me to Jelly yourself directly.
+    """
+    def getStateFor(self, actor):
+        return self.__dict__
+
+    def jellyFor(self, jellier):
+        sxp = jellier.prepare(self)
+        sxp.extend([
+            str(self.__class__),
+            jellier.jelly(self.getStateFor(actor))])
+        return jellier.preserve(self, sxp)
+
+class Unjellyable:
+    """Inherit from me to Unjelly yourself directly.
+    """
+    def setStateFor(self, unjellier, state):
+        self.__dict__ = state
+
+    def unjellyFor(self, unjellier, jellyList):
+        state = unjellier.unjelly(jellyList[1])
+        self.setStateFor(unjellier, state)
+
+
 class _Jellier:
     """(Internal) This class manages state for a call to jelly()
     """
-    def __init__(self, taster, persistentStore):
+    def __init__(self, taster, persistentStore, invoker):
         """Initialize.
         """
         self.taster = taster
@@ -143,6 +266,7 @@ class _Jellier:
         self.cooker = {}
         self._ref_id = 1
         self.persistentStore = persistentStore
+        self.invoker = invoker
 
     def _cook(self, object):
         """(internal)
@@ -159,7 +283,7 @@ class _Jellier:
         self.cooked[id(object)] = [dereference_atom, refid]
         return aList
 
-    def _prepare(self, object):
+    def prepare(self, object):
         """(internal)
         create a list for persisting an object to.  this will allow
         backreferences to be made internal to the object. (circular
@@ -175,7 +299,7 @@ class _Jellier:
         self.cooker[id(object)] = object
         return []
 
-    def _preserve(self, object, sexp):
+    def preserve(self, object, sexp):
         """(internal)
         mark an object's persistent list for later referral
         """
@@ -191,176 +315,84 @@ class _Jellier:
 
     constantTypes = {types.StringType : 1, types.IntType : 1,
                      types.FloatType : 1, types.LongType : 1}
-    
-    def jelly(self, object):
-        """(internal) make a list
-        """
-        objType = type(object)
-        if self.constantTypes.has_key(objType):
-            return object
-        
-        objId = id(object)
-        # if it's been previously backreferenced, then we're done
-        if self.cooked.has_key(objId):
-            return self.cooked[objId]
-        # if it's been previously seen but NOT backreferenced,
-        # now's the time to do it.
-        if self.preserved.has_key(objId):
-            self._cook(object)
-            return self.cooked[objId]
-        typnm = string.replace(typeNames[objType], ' ', '_')
-### this next block not _necessarily_ correct due to some tricks in
-### NetJellier's _jelly_instance...
-##        if not self.taster.isTypeAllowed(typnm):
-##            raise InsecureJelly("Type %s not jellyable." % typnm)
-        typfn = getattr(self, "_jelly_%s" % typnm, None)
-        if typfn:
-            return typfn(object)
-        else:
-            return self.unpersistable("type: %s" % repr(objType))
 
-    ### these have to have unjelly equivalents
 
-    def _jelly_unicode(self, u):
-        """(internal) (python2.1 only) UTF-8 encode a unicode string.
-        """
-        return ['unicode', u.encode('UTF-8')]
-    
-    def _jelly_instance(self, instance):
-        '''Jelly an instance.
+    def jelly(self, obj):
+        if isinstance(obj, Jellyable):
+            return obj.jellyFor(self)
+        objType = type(obj)
+        if self.taster.isTypeAllowed(
+            string.replace(objType.__name__, ' ', '_')):
+            # "Immutable" Types
+            if ((objType is StringType) or
+                (objType is IntType) or
+                (objType is LongType) or
+                (objType is FloatType)):
+                return obj
+            elif objType is MethodType:
+                return ["method",
+                        obj.im_func.__name__,
+                        self.jelly(obj.im_self),
+                        self.jelly(obj.im_class)]
 
-        In the default case, this returns a list of 3 items::
-
-          (instance (class ...) (dictionary ("attrib" "val")) )
-
-        However, if I was created with a persistentStore method, then that
-        method will be called with the 'instance' argument.  If that method
-        returns a string, I will return::
-
-          (persistent "...")
-        '''
-        # like pickle's persistent_id
-        sxp = self._prepare(instance)
-        persistent = None
-        if self.persistentStore:
-            persistent = self.persistentStore(instance, self)
-        if persistent is not None:
-            sxp.append(persistent_atom)
-            sxp.append(persistent)
-        elif self.taster.isModuleAllowed(instance.__class__.__module__):
-            if self.taster.isClassAllowed(instance.__class__):
-                sxp.append(instance_atom)
-                sxp.append(self.jelly(instance.__class__))
-                if hasattr(instance, '__getstate__'):
-                    state = instance.__getstate__()
+            elif objType is UnicodeType:
+                return ['unicode', obj.encode('UTF-8')]
+            elif objType is NoneType:
+                return ['None']
+            elif objType is FunctionType:
+                name = obj.__name__
+                return ['function', str(pickle.whichmodule(obj, obj.__name__))
+                        + '.' +
+                        name]
+            elif objType is ModuleType:
+                return ['module', obj.__name__]
+            elif objType is ClassType:
+                return ['class', str(obj)]
+            else:
+                objId = id(obj)
+                if self.cooked.has_key(objId):
+                    return self.cooked[objId]
+                if self.preserved.has_key(objId):
+                    self._cook(obj)
+                    return self.cooked[objId]
+                # "Mutable" Types
+                sxp = self.prepare(obj)
+                if objType is ListType:
+                    sxp.append(list_atom)
+                    for item in obj:
+                        sxp.append(self.jelly(item))
+                elif objType is TupleType:
+                    sxp.append(tuple_atom)
+                    for item in obj:
+                        sxp.append(self.jelly(item))
+                elif objType is DictionaryType:
+                    sxp.append(dictionary_atom)
+                    for key, val in obj.items():
+                        sxp.append([self.jelly(key), self.jelly(val)])
+                elif objType is InstanceType:
+                    className = str(obj.__class__)
+                    persistent = None
+                    if self.persistentStore:
+                        persistent = self.persistentStore(obj, self)
+                    if persistent is not None:
+                        sxp.append(persistent_atom)
+                        sxp.append(persistent)
+                    elif self.taster.isClassAllowed(obj.__class__):
+                        sxp.append(className)
+                        if hasattr(obj, "__getstate__"):
+                            state = obj.__getstate__()
+                        else:
+                            state = obj.__dict__
+                        sxp.append(self.jelly(state))
+                    else:
+                        self.unpersistable(
+                            "instance of class %s deemed insecure" %
+                            str(obj.__class__), sxp)
                 else:
-                    state = instance.__dict__
-                sxp.append(self.jelly(state))
-            else:
-                self.unpersistable("instance of class %s deemed insecure" % str(instance.__class__), sxp)
+                    raise NotImplementedError("Don't know the type: %s" % objType)
+                return self.preserve(obj, sxp)
         else:
-            self.unpersistable("instance from module %s deemed insecure" % str(instance.__class__.__module__), sxp)
-        return self._preserve(instance, sxp)
-
-
-    def _jelly_class(self, klaus):
-        ''' (internal) Jelly a class.
-        returns a list of 3 items: (class "module" "name")
-        '''
-        if self.taster.isModuleAllowed(klaus.__module__):
-            if self.taster.isClassAllowed(klaus):
-                jklaus = self._prepare(klaus)
-                jklaus.append(class_atom)
-                jklaus.append(self.jelly(sys.modules[klaus.__module__]))
-                jklaus.append(klaus.__name__)
-                return self._preserve(klaus, jklaus)
-            else:
-                return self.unpersistable("class %s deemed insecure" % str(klaus))
-        else:
-            return self.unpersistable("class from module %s deemed insecure" % str(klaus.__module__))
-
-
-    def _jelly_dictionary(self, dict):
-        ''' (internal) Jelly a dictionary.
-        returns a list of n items of the form (dictionary (attribute value) (attribute value) ...)
-        '''
-        jdict = self._prepare(dict)
-        jdict.append(dictionary_atom)
-        for key, val in dict.items():
-            jkey = self.jelly(key)
-            jval = self.jelly(val)
-            jdict.append([jkey, jval])
-        return self._preserve(dict, jdict)
-
-    def _jelly_list(self, lst):
-        ''' (internal) Jelly a list.
-        returns a list of n items of the form (list "value" "value" ...)
-        '''
-        jlst = self._prepare(lst)
-        jlst.append(list_atom)
-        for item in lst:
-            jlst.append(self.jelly(item))
-        return self._preserve(lst, jlst)
-
-    def _jelly_None(self, nne):
-        ''' (internal) Jelly "None".
-        returns the list (none).
-        '''
-        return [None_atom]
-
-    def _jelly_instance_method(self, im):
-        ''' (internal) Jelly an instance method.
-        return a list of the form (method "name" (instance ...) (class ...))
-        '''
-        jim = self._prepare(im)
-        jim.append("method")
-        jim.append(im.im_func.__name__)
-        jim.append(self.jelly(im.im_self))
-        jim.append(self.jelly(im.im_class))
-        return self._preserve(im, jim)
-
-    def _jelly_tuple(self, tup):
-        ''' (internal) Jelly a tuple.
-        returns a list of n items of the form (tuple "value" "value" ...)
-        '''
-        jtup = self._prepare(tup)
-        jtup.append(tuple_atom)
-        for item in tup:
-            jtup.append(self.jelly(item))
-        return self._preserve(tup, jtup)
-
-    def _jelly_builtin_function_or_method(self, lst):
-        """(internal)
-        Jelly a builtin function.  This is currently unimplemented.
-        """
-        raise 'currently unimplemented'
-
-    def _jelly_function(self, func):
-        ''' (internal) Jelly a function.
-        Returns a list of the form (function "name" (module "name"))
-        '''
-        name = func.__name__
-        module = sys.modules[pickle.whichmodule(func, name)]
-        if self.taster.isModuleAllowed(module.__name__):
-            jfunc = self._prepare(func)
-            jfunc.append(function_atom)
-            jfunc.append(name)
-            jfunc.append(self.jelly(module))
-            return self._preserve(func, jfunc)
-        else:
-            return self.unpersistable("module %s deemed insecure" % str(module.__name__))
-
-    def _jelly_module(self, module):
-        '''(internal)
-        Jelly a module.  Return a list of the form (module "name")
-        '''
-        if self.taster.isModuleAllowed(module.__name__):
-            jmod = self._prepare(module)
-            jmod.append(module_atom)
-            jmod.append(module.__name__)
-            return self._preserve(module, jmod)
-        else:
-            return self.unpersistable("module %s deemed insecure" % str(module.__name__))
+            raise InsecureJelly("Type not allowed: %s" % objType)
 
     def unpersistable(self, reason, sxp=None):
         '''(internal)
@@ -427,26 +459,57 @@ class _Dereference(NotKnown):
         self.id = id
 
 class _Unjellier:
-    def __init__(self, taster, persistentLoad):
+    def __init__(self, taster, persistentLoad, invoker):
         self.taster = taster
         self.persistentLoad = persistentLoad
         self.references = {}
         self.postCallbacks = []
+        self.invoker = invoker
 
-    def unjelly(self, obj):
-        o = self._unjelly(obj)
+    def unjellyFull(self, obj):
+        o = self.unjelly(obj)
         for m in self.postCallbacks:
             m()
         return o
 
-    def _unjelly(self, obj):
+    def unjelly(self, obj):
         if type(obj) is not types.ListType:
             return obj
         jelType = obj[0]
         if not self.taster.isTypeAllowed(jelType):
             raise InsecureJelly(jelType)
-        thunk = getattr(self, '_unjelly_%s'%jelType)
-        ret = thunk(obj[1:])
+        regClass = unjellyableRegistry.get(jelType)
+        if regClass is not None:
+            if isinstance(regClass, ClassType):
+                inst = _Dummy() # XXX chomp, chomp
+                inst.__class__ = regClass
+                method = inst.unjellyFor
+            else:
+                method = regClass # this is how it ought to be done
+            val = method(self, obj)
+            if hasattr(val, 'postUnjelly'):
+                self.postCallbacks.append(inst.postUnjelly)
+            return val
+        thunk = getattr(self, '_unjelly_%s'%jelType, None)
+        if thunk is not None:
+            ret = thunk(obj[1:])
+        else:
+            nameSplit = string.split(jelType, '.')
+            modName = string.join(nameSplit[:-1], '.')
+            if not self.taster.isModuleAllowed(modName):
+                raise InsecureJelly("Module %s not allowed." % modName)
+            clz = namedObject(jelType)
+            if not self.taster.isClassAllowed(clz):
+                raise InsecureJelly("Class %s not allowed." % jelType)
+            if hasattr(clz, "__setstate__"):
+                ret = instance(clz, {})
+                state = self.unjelly(obj[1])
+                ret.__setstate__(state)
+            else:
+                state = self.unjelly(obj[1])
+                ret = instance(clz, state)
+            if hasattr(clz, 'postUnjelly'):
+                self.postCallbacks.append(ret.postUnjelly)
         return ret
 
     def _unjelly_None(self, exp):
@@ -456,7 +519,7 @@ class _Unjellier:
         return unicode(exp[0], "UTF-8")
 
     def unjellyInto(self, obj, loc, jel):
-        o = self._unjelly(jel)
+        o = self.unjelly(jel)
         if isinstance(o, NotKnown):
             o.addDependant(obj, loc)
         obj[loc] = o
@@ -474,7 +537,7 @@ class _Unjellier:
     def _unjelly_reference(self, lst):
         refid = lst[0]
         exp = lst[1]
-        o = self._unjelly(exp)
+        o = self.unjelly(exp)
         ref = self.references.get(refid)
         if (ref is None):
             self.references[refid] = o
@@ -521,11 +584,11 @@ class _Unjellier:
         return mod
 
     def _unjelly_class(self, rest):
-        mod = self._unjelly(rest[0])
-        if type(mod) is not types.ModuleType:
-            raise InsecureJelly("class has a non-module module")
-        name = rest[1]
-        klaus = getattr(mod, name)
+        clist = string.split(rest[0], '.')
+        modName = string.join(clist[:-1])
+        if not self.taster.isModuleAllowed(modName):
+            raise InsecureJelly("module %s not allowed" % modName)
+        klaus = namedObject(rest[0])
         if type(klaus) is not types.ClassType:
             raise InsecureJelly("class %s unjellied to something that isn't a class: %s" % (repr(name), repr(klaus)))
         if not self.taster.isClassAllowed(klaus):
@@ -533,10 +596,12 @@ class _Unjellier:
         return klaus
 
     def _unjelly_function(self, rest):
-        module = self._unjelly(rest[1])
-        if type(module) is not types.ModuleType:
-            raise InsecureJelly("function references a non-module module")
-        function = getattr(module, rest[0])
+        modSplit = string.split(rest[0], '.')
+        modName = string.join(modSplit[:-1], '.')
+        if not self.taster.isModuleAllowed(modName):
+            raise InsecureJelly("Module not allowed: %s"% modName)
+        # XXX do I need an isFunctionAllowed?
+        function = namedObject(rest[0])
         return function
 
     def _unjelly_persistent(self, rest):
@@ -547,15 +612,15 @@ class _Unjellier:
             return Unpersistable("persistent callback not found")
 
     def _unjelly_instance(self, rest):
-        clz = self._unjelly(rest[0])
+        clz = self.unjelly(rest[0])
         if type(clz) is not types.ClassType:
             raise InsecureJelly("Instance found with non-class class.")
         if hasattr(clz, "__setstate__"):
             inst = instance(clz, {})
-            state = self._unjelly(rest[1])
+            state = self.unjelly(rest[1])
             inst.__setstate__(state)
         else:
-            state = self._unjelly(rest[1])
+            state = self.unjelly(rest[1])
             inst = instance(clz, state)
         if hasattr(clz, 'postUnjelly'):
             self.postCallbacks.append(inst.postUnjelly)
@@ -568,8 +633,8 @@ class _Unjellier:
         ''' (internal) unjelly a method
         '''
         im_name = rest[0]
-        im_self = self._unjelly(rest[1])
-        im_class = self._unjelly(rest[2])
+        im_self = self.unjelly(rest[1])
+        im_class = self.unjelly(rest[2])
         if im_class.__dict__.has_key(im_name):
             if im_self is None:
                 im = getattr(im_class, im_name)
@@ -669,6 +734,7 @@ class SecurityOptions:
         self.allowBasicTypes()
         self.allowTypes("instance", "class", "module")
         for klass in classes:
+            self.allowTypes(str(klass))
             self.allowModules(klass.__module__)
             self.allowedClasses[klass] = 1
 
@@ -698,23 +764,24 @@ class SecurityOptions:
         """SecurityOptions.isTypeAllowed(typeName) -> boolean
         Returns 1 if the given type is allowed, 0 otherwise.
         """
-        return self.allowedTypes.has_key(typeName)
+        return (self.allowedTypes.has_key(typeName) or
+                '.' in typeName)
 
 
+globalSecurity = SecurityOptions()
+globalSecurity.allowBasicTypes()
 
-
-
-def jelly(object, taster = DummySecurityOptions(), persistentStore = None):
+def jelly(object, taster = DummySecurityOptions(), persistentStore=None, invoker=None):
     """Serialize to s-expression.
 
     Returns a list which is the serialized representation of an object.  An
     optional 'taster' argument takes a SecurityOptions and will mark any
     insecure objects as unpersistable rather than serializing them.
     """
-    return _Jellier(taster, persistentStore).jelly(object)
+    return _Jellier(taster, persistentStore, invoker).jelly(object)
 
 
-def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad = None):
+def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad=None, invoker=None):
     """Unserialize from s-expression.
 
     Takes an list that was the result from a call to jelly() and unserializes
@@ -722,6 +789,6 @@ def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad = None):
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a
     disallowed type, module, or class attempted to unserialize.
     """
-    return _Unjellier(taster, persistentLoad).unjelly(sexp)
+    return _Unjellier(taster, persistentLoad, invoker).unjellyFull(sexp)
 
 

@@ -53,7 +53,7 @@ from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 
 # Sibling Imports
-import jelly
+from jelly import jelly, unjelly, globalSecurity
 import banana
 
 # Tightly coupled sibling import
@@ -68,7 +68,7 @@ from flavors import RemoteCopy
 from flavors import RemoteCache
 from flavors import RemoteCacheObserver
 from flavors import copyTags
-from flavors import setCopierForClass
+from flavors import setCopierForClass, setUnjellyableForClass
 from flavors import setCopierForClassTree
 
 portno = 8787
@@ -272,11 +272,18 @@ class RemoteReference(Serializable, styles.Ephemeral):
             callback(self)
         self.disconnectCallbacks = None
 
-    def remoteSerialize(self, broker):
+    def jellyFor(self, jellier):
         """If I am being sent back to where I came from, serialize as a local backreference.
         """
-        assert self.broker == broker, "Can't send references to brokers other than their own."
-        return local_atom, self.luid
+        if jellier.invoker:
+            assert self.broker == jellier.invoker, "Can't send references to brokers other than their own."
+            return "local", self.luid
+        else:
+            return "unpersistable", "References cannot be serialized"
+
+    def unjellyFor(self, unjellier, unjellyList):
+        self.__init__(unjellier.invoker.unserializingPerspective, unjellier.invoker, unjellyList[1], 1)
+        return self
 
     def callRemote(self, name, *args, **kw):
         """Asynchronously invoke a remote method.
@@ -307,7 +314,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
         if self.doRefCount:
             self.broker.sendDecRef(self.luid)
 
-
+setUnjellyableForClass("remote", RemoteReference)
 
 class Local:
     """(internal) A reference to a local object.
@@ -336,119 +343,26 @@ class Local:
         return self.refcount
 
 
-class _NetJellier(jelly._Jellier):
-    """A Jellier for pb, serializing all serializable flavors.
-    """
-
-    def __init__(self, broker):
-        """initialize me for a single request.
-        """
-
-        jelly._Jellier.__init__(self, broker.localSecurity, None)
-        self.broker = broker
-
-    def _jelly_instance(self, instance):
-        """(internal) replacement method
-        """
-
-        assert isinstance(instance, Serializable),\
-               'non-serializable %s (%s) for: %s %s %s' % (
-            str(instance.__class__),
-            str(instance),
-            str(self.broker.jellyMethod),
-            str(self.broker.jellyArgs),
-            str(self.broker.jellyKw))
-
-        sxp = self._prepare(instance)
-        tup = instance.remoteSerialize(self.broker)
-        map(sxp.append, tup)
-        return self._preserve(instance, sxp)
-
 class _RemoteCacheDummy:
     """Ignore.
     """
-
-class _NetUnjellier(jelly._Unjellier):
-    """An unjellier for PB.
-
-    This unserializes the various Serializable flavours in PB.
-    """
-
-    def __init__(self, broker):
-        jelly._Unjellier.__init__(self, broker.localSecurity, None)
-        self.broker = broker
-
-    def _unjelly_copy(self, rest):
-        """Unserialize a Copyable.
-        """
-        global copyTags
-        inst = copyTags[rest[0]]()
-        inst.setCopyableState(self._unjelly(rest[1]))
-        self.postCallbacks.append(inst.postUnjelly)
-        return inst
-
-    def _unjelly_cache(self, rest):
-        global copyTags
-        luid = rest[0]
-        cNotProxy = _RemoteCacheDummy()
-        cNotProxy.broker = self.broker
-        cNotProxy.luid = luid
-        cNotProxy.__class__ = copyTags[rest[1]]
-        cProxy = _RemoteCacheDummy() # (self.broker, cNotProxy, luid)
-        cProxy.__class__ = cNotProxy.__class__
-        cProxy.__dict__ = cNotProxy.__dict__
-        init = getattr(cProxy, "__init__", None)
-        if init:
-            init()
-        cProxy.setCopyableState(self._unjelly(rest[2]))
-        # Might have changed due to setCopyableState method; we'll assume that
-        # it's bad form to do so afterwards.
-        cNotProxy.__dict__ = cProxy.__dict__
-        # chomp, chomp -- some existing code uses "self.__dict__ =", some uses
-        # "__dict__.update".  This is here in order to handle both cases.
-        cNotProxy.broker = self.broker
-        cNotProxy.luid = luid
-        # Must be done in this order otherwise __hash__ isn't right!
-        self.broker.cacheLocally(luid, cNotProxy)
-        self.postCallbacks.append(cProxy.postUnjelly)
-        return cProxy
-
-    def _unjelly_cached(self, rest):
-        luid = rest[0]
-        cNotProxy = self.broker.cachedLocallyAs(luid)
-        cProxy = _RemoteCacheDummy()
-        cProxy.__class__ = cNotProxy.__class__
-        cProxy.__dict__ = cNotProxy.__dict__
-        return cProxy
-
-    def _unjelly_lcache(self, rest):
-        luid = rest[0]
-        obj = self.broker.remotelyCachedForLUID(luid)
-        return obj
-
-    def _unjelly_remote(self, rest):
-        obj = RemoteReference(self.broker.unserializingPerspective, self.broker, rest[0], 1)
-        return obj
-
-    def _unjelly_local(self, rest):
-        obj = self.broker.localObjectForID(rest[0])
-        return obj
 
 
 class Broker(banana.Banana):
     """I am a broker for objects.
     """
 
-    version = 5
+    version = 6
     username = None
 
-    def __init__(self, isClient=1):
+    def __init__(self, isClient=1, security=globalSecurity):
         banana.Banana.__init__(self, isClient)
         self.disconnected = 0
         self.disconnects = []
         self.failures = []
         self.connects = []
         self.localObjects = {}
+        self.security = security
 
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
@@ -517,12 +431,6 @@ class Broker(banana.Banana):
         # Dictionary mapping (remote) LUIDs to (locally cached) objects.
         self.locallyCachedObjects = {}
         self.waitingForAnswers = {}
-        security = jelly.SecurityOptions()
-        self.remoteSecurity = self.localSecurity = security
-        security.allowBasicTypes()
-        security.allowTypes("copy", "cache", "cached", "local", "remote", "lcache")
-        self.jellier = None
-        self.unjellier = None
         for notifier in self.connects:
             try:
                 notifier()
@@ -637,6 +545,7 @@ class Broker(banana.Banana):
         puid = instance.processUniqueID()
         luid = self.remotelyCachedLUIDs.get(puid)
         if (luid is not None) and (incref):
+            # print 'caching remotely ', luid, instance
             self.remotelyCachedObjects[luid].incref()
         return luid
 
@@ -654,6 +563,7 @@ class Broker(banana.Banana):
         # This table may not be necessary -- for now, it's to make sure that no
         # monkey business happens with id(instance)
         self.remotelyCachedObjects[luid] = Local(instance, self.serializingPerspective)
+        # print "caching remotely for the first time", luid
         return luid
 
     def cacheLocally(self, cid, instance):
@@ -666,9 +576,6 @@ class Broker(banana.Banana):
     def cachedLocallyAs(self, cid):
         instance = self.locallyCachedObjects[cid]
         return instance
-
-    def jelly(self, object):
-        return self.jellier.jelly(object)
 
     def serialize(self, object, perspective=None, method=None, args=None, kw=None):
         """Jelly an object according to the remote security rules for this broker.
@@ -690,15 +597,14 @@ class Broker(banana.Banana):
         # from within a getState (this causes concurrency problems anyway so
         # you really, really shouldn't do it))
 
-        self.jellier = _NetJellier(self)
+        # self.jellier = _NetJellier(self)
         self.serializingPerspective = perspective
         self.jellyMethod = method
         self.jellyArgs = args
         self.jellyKw = kw
         try:
-            return self.jellier.jelly(object)
+            return jelly(object, self.security, None, self)
         finally:
-            self.jellier = None
             self.serializingPerspective = None
             self.jellyMethod = None
             self.jellyArgs = None
@@ -709,12 +615,10 @@ class Broker(banana.Banana):
         """
 
         self.unserializingPerspective = perspective
-        self.unjellier = _NetUnjellier(self)
         try:
-            return self.unjellier.unjelly(sexp)
+            return unjelly(sexp, self.security, None, self)
         finally:
             self.unserializingPerspective = None
-            self.unjellier = None
 
     def newLocalID(self):
         """Generate a new LUID.
@@ -782,9 +686,9 @@ class Broker(banana.Banana):
                 io = cStringIO.StringIO()
                 failure.Failure().printBriefTraceback(file=io)
                 self._sendError(io.getvalue(), requestID)
-                log.msg("Client Received PB Traceback:")
+                log.msg("Peer Will Receive PB Traceback:")
             else:
-                log.msg("Client Ignored PB Traceback:")
+                log.msg("Peer Will Ignore PB Traceback:")
             log.deferr()
         else:
             if answerRequired:
@@ -877,7 +781,7 @@ class Broker(banana.Banana):
     def proto_uncache(self, objectID):
         """(internal) Tell the client it is now OK to uncache an object.
         """
-        # log.msg("uncaching %d" % objectID)
+        # log.msg("uncaching locally %d" % objectID)
         obj = self.locallyCachedObjects[objectID]
         def reallyDel(obj=obj):
             obj.__really_del__()

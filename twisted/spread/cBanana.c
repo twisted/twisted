@@ -434,7 +434,9 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
     cBananaBuf_write_internal(writeobj, &singleByte, 1);
     cBananaBuf_write_internal(writeobj, src, len);
   } else {
-    PyErr_SetString(BananaError, "Unknown Python Type.  Can't deal with it.");
+    char errmsg[256];
+    snprintf(errmsg, 256, "Unknown Python Type: %s", encodeobj->ob_type->tp_name);
+    PyErr_SetString(BananaError, errmsg);
     return NULL;
   }
 

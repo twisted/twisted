@@ -249,13 +249,14 @@ def namedModule(name):
     """Return a module give it's name."""
     return __import__(name, {}, {}, 'x')
 
-
-def namedClass(name):
-    """Return class object given it's full name."""
+def namedObject(name):
+    """Get a fully named module-global object.
+    """
     classSplit = string.split(name, '.')
     module = namedModule(string.join(classSplit[:-1], '.'))
     return getattr(module, classSplit[-1])
 
+namedClass = namedObject # backwards compat
 
 def _reclass(clazz):
     clazz = getattr(namedModule(clazz.__module__),clazz.__name__)

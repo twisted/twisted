@@ -30,70 +30,23 @@ import types
 # twisted imports
 from twisted.python import log
 
+# sibling imports
+from jelly import setUnjellyableForClass, setUnjellyableForClassTree, unjellyableRegistry
+from jelly import Jellyable, Unjellyable, _Dummy
+from jelly import setInstanceState, getInstanceState
+# compatibility
+setCopierForClass = setUnjellyableForClass
+setCopierForClassTree = setUnjellyableForClassTree
+copyTags = unjellyableRegistry
 
 copy_atom = "copy"
 cache_atom = "cache"
 cached_atom = "cached"
 remote_atom = "remote"
 
-copyTags = {}
-
-def setCopierForClass(classname, copier):
-    """Set which local class will represent a remote type.
-
-    If you have written a Copyable class that you expect your client to be
-    receiving, write a local "copy" class to represent it, then call::
-
-      pb.setCopierForClass('module.package.Class', MyCopier).
-
-    Call this at the module level immediately after its class
-    definition. MyCopier should be a subclass of RemoteCopy.
-
-    The classname may be a special tag returned by
-    'Copyable.getTypeToCopyFor' rather than an actual classname.
-
-    This call is also for cached classes, since there will be no
-    overlap.  The rules are the same.
-    """
-
-    global copyTags
-    copyTags[classname] = copier
-
-def setCopierForClassTree(module, baseClass, prefix=None):
-    """Set all classes in a module derived from baseClass as copiers for a corresponding remote class.
-
-    When you have a heirarchy of Copyable (or Cacheable) classes on
-    one side, and a mirror structure of Copied (or RemoteCache)
-    classes on the other, use this to setCopierForClass all your
-    Copieds for the Copyables.
-
-    Each copyTag (the \"classname\" argument to getTypeToCopyFor, and
-    what the Copyable's getTypeToCopyFor returns) is formed from
-    adding a prefix to the Copied's class name.  The prefix defaults
-    to module.__name__.  If you wish the copy tag to consist of solely
-    the classname, pass the empty string \'\'.
-
-    module -- a module object from which to pull the Copied classes.
-              (passing sys.modules[__name__] might be useful)
-
-    baseClass -- the base class from which all your Copied classes derive.
-
-    prefix -- the string prefixed to classnames to form the copyTags.
-    """
-    if prefix is None:
-        prefix = module.__name__
-
-    if prefix:
-        prefix = "%s." % prefix
-
-    for i in dir(module):
-        i_ = getattr(module, i)
-        if type(i_) == types.ClassType:
-            if issubclass(i_, baseClass):
-                setCopierForClass('%s%s' % (prefix, i), i_)
 
 
-class Serializable:
+class Serializable(Jellyable):
     """An object that can be passed remotely.
 
     I am a style of object which can be serialized by Perspective
@@ -112,12 +65,6 @@ class Serializable:
     instances to or return them from remote methods, as many levels deep
     as you like.
     """
-
-    def remoteSerialize(self, broker):
-        """Return a list of strings & numbers which represents this object remotely.
-        """
-
-        raise NotImplementedError()
 
     def processUniqueID(self):
         """Return an ID which uniquely represents this object for this process.
@@ -158,14 +105,14 @@ class Referenceable(Serializable):
             raise
         return broker.serialize(state, self.perspective)
 
-    def remoteSerialize(self, broker):
+    def jellyFor(self, jellier):
         """(internal)
 
         Return a tuple which will be used as the s-expression to
         serialize this to a peer.
         """
 
-        return remote_atom, broker.registerReference(self)
+        return "remote", jellier.invoker.registerReference(self)
 
 
 class Root(Referenceable):
@@ -236,12 +183,6 @@ class ViewPoint(Referenceable):
         """
         return (id(self.perspective), id(self.object))
 
-    def remoteSerialize(self, broker):
-        """(internal) Serialize remotely.
-        """
-        # waste not, want not
-        return remote_atom, broker.registerReference(self)
-
     def remoteMessageReceived(self, broker, message, args, kw):
         """A remote message has been received.  Dispatch it appropriately.
 
@@ -271,10 +212,10 @@ class Viewable(Serializable):
     method.
     """
 
-    def remoteSerialize(self, broker):
+    def jellyFor(self, jellier):
         """Serialize a ViewPoint for me and the perspective of the given broker.
         """
-        return ViewPoint(broker.serializingPerspective, self).remoteSerialize(broker)
+        return ViewPoint(jellier.invoker.serializingPerspective, self).jellyFor(jellier)
 
 
 
@@ -327,17 +268,18 @@ class Copyable(Serializable):
 
         return self.getTypeToCopy()
 
-    def remoteSerialize(self, broker):
+    def jellyFor(self, jellier):
         """Assemble type tag and state to copy for this broker.
 
         This will call getTypeToCopyFor and getStateToCopy, and
-        return an appropriate s-expression to represent me.  Do
-        not override this method.
+        return an appropriate s-expression to represent me.
         """
 
-        p = broker.serializingPerspective
-        return (copy_atom, self.getTypeToCopyFor(p),
-                broker.jelly(self.getStateToCopyFor(p)))
+        if jellier.invoker is None:
+            return getInstanceState(self, jellier)
+        p = jellier.invoker.serializingPerspective
+        return (self.getTypeToCopyFor(p),
+                jellier.jelly(self.getStateToCopyFor(p)))
 
 
 class Cacheable(Copyable):
@@ -366,22 +308,23 @@ class Cacheable(Copyable):
 
         return self.getStateToCopyFor(perspective)
 
-    def remoteSerialize(self, broker):
+    def jellyFor(self, jellier):
         """Return an appropriate tuple to serialize me.
 
         Depending on whether this broker has cached me or not, this may
         return either a full state or a reference to an existing cache.
         """
-
-        luid = broker.cachedRemotelyAs(self, 1)
+        if jellier.invoker is None:
+            return getInstanceState(self, jellier)
+        luid = jellier.invoker.cachedRemotelyAs(self, 1)
         if luid is None:
-            luid = broker.cacheRemotely(self)
-            p = broker.serializingPerspective
+            luid = jellier.invoker.cacheRemotely(self)
+            p = jellier.invoker.serializingPerspective
             type_ = self.getTypeToCopyFor(p)
-            observer = RemoteCacheObserver(broker, self, p)
+            observer = RemoteCacheObserver(jellier.invoker, self, p)
             state = self.getStateToCacheAndObserveFor(p, observer)
-            jstate = broker.jelly(state)
-            return cache_atom, luid, type_, jstate
+            jstate = jellier.jelly(state)
+            return type_, luid, jstate
         else:
             return cached_atom, luid
 
@@ -394,7 +337,7 @@ class Cacheable(Copyable):
 
 
 
-class RemoteCopy:
+class RemoteCopy(Unjellyable):
     """I am a remote copy of a Copyable object.
 
     When the state from a Copyable object is received, an instance will
@@ -407,10 +350,6 @@ class RemoteCopy:
     constructor which requires args in a subclass of RemoteCopy!
     """
 
-    def postUnjelly(self):
-        """I will be invoked after the data I was sent with has been fully unjellied.
-        """
-
     def setCopyableState(self, state):
         """I will be invoked with the state to copy locally.
 
@@ -421,6 +360,13 @@ class RemoteCopy:
         """
 
         self.__dict__ = state
+
+    def unjellyFor(self, unjellier, jellyList):
+        if unjellier.invoker is None:
+            return setInstanceState(self, unjellier, jellyList)
+        self.setCopyableState(unjellier.unjelly(jellyList[1]))
+        return self
+           
 
 
 class RemoteCache(RemoteCopy, Serializable):
@@ -453,13 +399,38 @@ class RemoteCache(RemoteCopy, Serializable):
             raise
         return broker.serialize(state, None, method, args, kw)
 
-    def remoteSerialize(self, broker):
+    def jellyFor(self, jellier):
         """serialize me (only for the broker I'm for) as the original cached reference
         """
-
-        assert broker is self.broker, "You cannot exchange cached proxies between brokers."
+        if jellier.invoker is None:
+            return getInstanceState(self, jellier)
+        assert jellier.invoker is self.broker, "You cannot exchange cached proxies between brokers."
         return 'lcache', self.luid
 
+
+    def unjellyFor(self, unjellier, jellyList):
+        if unjellier.invoker is None:
+            return setInstanceState(self, unjellier, jellyList)
+        self.broker = unjellier.invoker
+        self.luid = jellyList[1]
+        cProxy = _Dummy()
+        cProxy.__class__ = self.__class__
+        cProxy.__dict__ = self.__dict__
+        # XXX questionable whether this was a good design idea...
+        init = getattr(cProxy, "__init__", None)
+        if init:
+            init()
+        unjellier.invoker.cacheLocally(jellyList[1], self)
+        cProxy.setCopyableState(unjellier.unjelly(jellyList[2]))
+        # Might have changed due to setCopyableState method; we'll assume that
+        # it's bad form to do so afterwards.
+        self.__dict__ = cProxy.__dict__
+        # chomp, chomp -- some existing code uses "self.__dict__ =", some uses
+        # "__dict__.update".  This is here in order to handle both cases.
+        self.broker = unjellier.invoker
+        self.luid = jellyList[1]
+        return cProxy
+    
     def __really_del__(self):
         """Final finalization call, made after all remote references have been lost.
         """
@@ -489,6 +460,30 @@ class RemoteCache(RemoteCopy, Serializable):
                 self.broker.decCacheRef(self.luid)
         except:
             log.deferr()
+
+def unjellyCached(unjellier, unjellyList):
+    luid = unjellyList[1]
+    cNotProxy = unjellier.invoker.cachedLocallyAs(luid)
+
+    cProxy = _Dummy()
+    cProxy.__class__ = cNotProxy.__class__
+    cProxy.__dict__ = cNotProxy.__dict__
+    return cProxy
+
+setUnjellyableForClass("cached", unjellyCached)
+
+def unjellyLCache(unjellier, unjellyList):
+    luid = unjellyList[1]
+    obj = unjellier.invoker.remotelyCachedForLUID(luid)
+    return obj
+
+setUnjellyableForClass("lcache", unjellyLCache)
+
+def unjellyLocal(unjellier, unjellyList):
+    obj = unjellier.invoker.localObjectForID(unjellyList[1])
+    return obj
+    
+setUnjellyableForClass("local", unjellyLocal)
 
 class RemoteCacheMethod:
     """A method on a reference to a RemoteCache.
