@@ -37,7 +37,7 @@ import widgets
 # Twisted Imports
 from twisted.protocols import http
 from twisted.python import threadable, log, components
-from twisted.internet import abstract, interfaces
+from twisted.internet import abstract, interfaces, defer
 from twisted.spread import pb
 from twisted.persisted import styles
 
