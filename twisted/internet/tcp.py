@@ -318,8 +318,7 @@ class Client(BaseClient):
     def getPeer(self):
         """Returns a tuple of ('INET', hostname, port).
 
-        This indicates the address that I am connected to.  I implement
-        twisted.protocols.protocol.Transport.
+        This indicates the address that I am connected to.
         """
         return ('INET',)+self.addr
 
@@ -377,7 +376,7 @@ class Port(base.BasePort):
 
     When a connection is accepted, I will call my factory's buildProtocol with
     the incoming connection as an argument, according to the specification
-    described in twisted.protocols.protocol.Factory.
+    described in twisted.internet.interfaces.IProtocolFactory.
 
     If you wish to change the sort of transport that will be used, my
     `transport' attribute will be called with the signature expected for
