@@ -30,7 +30,8 @@ class Port(server.SocketPort):
     proto = 0
     transport = ServerSocket
     def __init__(self, (host, port), factory, backlog, **kw):
-        log.msg("listening on (%s, %s)" % (host, port))
+        if __debug__:
+            print "listening on (%s, %s)" % (host, port)
         if isinstance(port, types.StringTypes):
             try:
                 port = socket.getservbyname(port, 'tcp')
@@ -52,7 +53,8 @@ class Connector(client.SocketConnector):
 
     def prepareAddress(self):
         host, port = self.addr
-        log.msg("connecting to (%s, %s)" % (host, port))
+        if __debug__:
+            print "connecting to (%s, %s)" % (host, port)
         if isinstance(port, types.StringTypes):
             try:
                 port = socket.getservbyname(port, 'tcp')
