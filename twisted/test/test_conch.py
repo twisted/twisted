@@ -976,7 +976,7 @@ class SSHTransportTestCase(unittest.TestCase):
                '-a '
                '-K direct '
                '-i dsa_test '
-               #'-v '
+               '-v '
                'localhost '
                'echo goodbye')
         global theTest
@@ -1040,7 +1040,7 @@ class SSHTransportTestCase(unittest.TestCase):
                 )
         cmd2 = ('%s %s -p %i -l testuser '
                 '-K unix '
-                #'-v '
+                '-v '
                 'localhost '
                 'echo goodbye'
                 )
