@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.152 $"[11:-2]
+__version__ = "$Revision: 1.153 $"[11:-2]
 
 
 # System Imports
@@ -370,18 +370,23 @@ class RemoteReference(Serializable, styles.Ephemeral):
         self.__init__(unjellier.invoker.unserializingPerspective, unjellier.invoker, unjellyList[1], 1)
         return self
 
-    def callRemote(self, name, *args, **kw):
+    def callRemote(self, _name, *args, **kw):
         """Asynchronously invoke a remote method.
 
-        @type name:   C{string}
-        @param name:  the name of the remote method to invoke
+        @type _name:   C{string}
+        @param _name:  the name of the remote method to invoke
         @param args: arguments to serialize for the remote function
         @param kw:  keyword arguments to serialize for the remote function.
         @rtype:   L{twisted.internet.defer.Deferred}
         @returns: a Deferred which will be fired when the result of
                   this remote call is received.
         """
-        return self.broker._sendMessage('',self.perspective, self.luid, name, args, kw)
+        # note that we use '_name' instead of 'name' so the user can call
+        # remote methods with 'name' as a keyword parameter, like this:
+        #  ref.callRemote("getPeopleNamed", count=12, name="Bob")
+
+        return self.broker._sendMessage('',self.perspective, self.luid,
+                                        _name, args, kw)
 
     def remoteMethod(self, key):
         """Get a L{RemoteMethod} for this key.

@@ -31,7 +31,7 @@ but may have a small impact on users who subclass and override methods.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.31 $"[11:-2]
+__version__ = "$Revision: 1.32 $"[11:-2]
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
@@ -589,7 +589,7 @@ class RemoteCacheObserver:
 
         return cmp((self.broker, self.perspective, self.cached), other)
 
-    def callRemote(self, name, *args, **kw):
+    def callRemote(self, _name, *args, **kw):
         """(internal) action method.
         """
         cacheID = self.broker.cachedRemotelyAs(self.cached)
@@ -598,7 +598,7 @@ class RemoteCacheObserver:
             raise ProtocolError("You can't call a cached method when the "
                                 "object hasn't been given to the peer yet.")
         return self.broker._sendMessage('cache', self.perspective, cacheID,
-                                        name, args, kw)
+                                        _name, args, kw)
 
     def remoteMethod(self, key):
         """Get a L{pb.RemoteMethod} for this key.
