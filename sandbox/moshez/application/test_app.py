@@ -91,3 +91,11 @@ application = service.Application("hello")
                                  "converttest.out", outstyle, 0)
                 appl2 = app.loadPersisted("converttest.out", outstyle, None)
                 self.assertEqual(service.IService(appl2).name, "lala")
+
+    def test_getLogFile(self):
+        os.mkdir("logfiledir")
+        l = app.getLogFile(os.path.join("logfiledir", "lala"))
+        self.assertEqual(l.path,
+                         os.path.abspath(os.path.join("logfiledir", "lala")))
+        self.assertEqual(l.name, "lala")
+        self.assertEqual(l.directory, os.path.abspath("logfiledir"))
