@@ -19,10 +19,11 @@
 
 import os
 
+from twisted.internet import defer
 from twisted.python.mvc import Controller
 from twisted.python import log
 
-from twisted.web.woven import widgets
+from twisted.web.woven import template, widgets
 
 class InputHandler(Controller):
     """
@@ -59,11 +60,19 @@ class InputHandler(Controller):
     def handle(self, request):
         data = self.getInput(request)
         success = self.check(request, data)
+        if isinstance(success, defer.Deferred):
+            success.addCallback(self.dispatchCheckResult, request, data)
+            return (None, success)
+        return self.dispatchCheckResult(success, request, data)
+    
+    def dispatchCheckResult(self, success, request, data):
         if success is not None:
             if success:
-                self.handleValid(request, data)
+                result = self.handleValid(request, data)
             else:
-                self.handleInvalid(request, data)
+                result = self.handleInvalid(request, data)
+            if isinstance(result, defer.Deferred):
+                data = result
         return (success, data)
 
     def check(self, request, data):
@@ -85,7 +94,7 @@ class InputHandler(Controller):
         Once it has been determined that the input is invalid, we should
         tell our view to report this fact to the user.
         """
-        self.view.setError("Error!")
+        self.view.setError(request, "Error!")
 
     _getMyModel = widgets._getModel
     
@@ -137,7 +146,7 @@ class Integer(SingleValue):
 
     def handleInvalid(self, request, data):
         if data is not None:
-            self.view.setError("%s is not an integer. Please enter an integer." % data)
+            self.view.setError(request, "%s is not an integer. Please enter an integer." % data)
 
 IntHandler = Integer
 
@@ -155,7 +164,7 @@ class Float(SingleValue):
 
     def handleInvalid(self, request, data):
         if data is not None:
-            self.view.setError("%s is not an float. Please enter a float." % data)
+            self.view.setError(request, "%s is not an float. Please enter a float." % data)
 
 FloatHandler = Float
 
@@ -203,6 +212,6 @@ class NewObject(SingleValue):
         """
         The user has entered an invalid project name.
         """
-        self.view.setError(self.errorReason)
+        self.view.setError(request, self.errorReason)
 
 NewObjectHandler = NewObject

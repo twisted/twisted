@@ -29,6 +29,9 @@ from twisted.web.woven import input
 from twisted.web.woven import widgets
 
 
+NO_DATA_YET = 2
+
+
 class DefaultHandler(input.InputHandler):
     def handle(self, request):
         """
@@ -131,25 +134,35 @@ class WView(template.DOMTemplate):
             submodel = ""
                 
         controller = self.getNodeController(request, node, submodel)
-        result = self.getNodeView(request, node, submodel)
+        view = self.getNodeView(request, node, submodel)
         
-        controller.setView(result)
+        controller.setView(view)
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodel)
-        # XXX: refactor this into a widget interface and check to see if
-        # the object implements IWidget
+        # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
-        if hasattr(result, 'setController'):
-            result.setController(controller)
-            result.setNode(node)
-            if not getattr(result, 'submodel', None):
-                result.setSubmodel(submodel)
+        if hasattr(view, 'setController'):
+            view.setController(controller)
+            view.setNode(node)
+            if not getattr(view, 'submodel', None):
+                view.setSubmodel(submodel)
         
-        success, data = controller.handle(request)
+        controllerResult = controller.handle(request)
+        self.handleControllerResults(controllerResult, request, node, controller, view, NO_DATA_YET)
+
+    def handleControllerResults(self, controllerResult, request, node, controller, view, success):
+        if isinstance(controllerResult, type(())):
+            success, data = controllerResult
+        else:
+            data = controllerResult
+        if isinstance(data, defer.Deferred):
+            data.addCallback(self.handleControllerResults, request, node, controller, view, success)
+            data.addErrback(template.renderFailure, request)
+            return data
         if success is not None:
             self.handlerResults[success].append((controller, data, node))
         
-        returnNode = self.dispatchResult(request, node, result)
+        returnNode = self.dispatchResult(request, node, view)
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
 
@@ -168,14 +181,12 @@ class WView(template.DOMTemplate):
                 stop = self.controller.process(request, **process)
 
         if not stop:
+            log.msg("Sending page!")
             page = str(self.d.toxml())
             request.write(page)
             request.finish()
             return page
         elif stop == template.RESTART_RENDERING:
-            # Set the last modified date to ask the browser to
-            # not use a cached version.
-            request.setLastModified(time.time())
             # Start the whole damn thing again with fresh state
             selfRef = request.pathRef()
             otherSelf = selfRef.getObject()
@@ -192,8 +203,21 @@ class WView(template.DOMTemplate):
             process[str(node.getAttribute('name'))] = data
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
-            controller.commit(request, node, data)
+            result = controller.commit(request, node, data)
+            if isinstance(result, defer.Deferred):
+                self.outstandingCallbacks += 1
+                result.addCallback(self.handleCommitCallback, request)
+                result.addErrback(template.renderFailure, request)
         return process
+
+    def handleCommitCallback(self, result, request):
+        log.msg("Got a handle commit callback!")
+        self.outstandingCallbacks -= 1
+        if not self.outstandingCallbacks:
+            log.msg("Sending page from commit callback!")
+            page = str(self.d.toxml())
+            request.write(page)
+            request.finish()
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
