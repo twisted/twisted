@@ -160,7 +160,8 @@ class LoopbackTestCase(PortCleanerUpper):
     
     def testFailing(self):
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", 0, clientF, timeout=5)
+        # XXX we assume no one is listening on TCP port 69
+        reactor.connectTCP("localhost", 69, clientF, timeout=5)
         start = time.time()
         
         while not clientF.failed:
