@@ -10,9 +10,13 @@ sys.modules['xml.dom'] = twisted.web
 twisted.web.minidom = twisted.web.microdom
 sys.modules['xml.dom.minidom'] = twisted.web.microdom
 
+class FakeClass: pass
+class FakeModule:
+    def __getattr__(self, attr):
+        return FakeClass
+
 # initial twisted
 from twisted.python import reflect
-from twisted.internet import gtkreactor
 from twisted.internet import reactor
 # epydoc
 from epydoc.cli import cli
