@@ -1,3 +1,7 @@
+2003-07-18  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.7alpha1.
+
 2003-07-17  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/protocols/smtp.py: Address class changed to provide a
