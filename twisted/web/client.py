@@ -240,8 +240,14 @@ class HTTPClientFactory(protocol.ClientFactory):
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
         if self.timeout:
-            reactor.callLater(self.timeout, p.timeout)
+            timeoutCall = reactor.callLater(self.timeout, p.timeout)
+            self.deferred.addBoth(self._cancelTimeout, timeoutCall)
         return p
+
+    def _cancelTimeout(self, result, timeoutCall):
+        if timeoutCall.active():
+            timeoutCall.cancel()
+        return result
 
     def gotHeaders(self, headers):
         self.response_headers = headers
