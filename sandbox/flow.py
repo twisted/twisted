@@ -221,7 +221,7 @@ class Stage(Instruction):
             then stored in self.result and is an instance of Failure
             if a problem occurred.
         """
-        pass
+        raise NotImplementedError
 
 class Iterable(Stage):
     """ Wrapper for iterable objects, pass in a next() function
@@ -626,7 +626,7 @@ class Deferred(defer.Deferred):
                 return
             self._results.append(cmd.result)
 
-def makeFlowProtocol(controller, baseClass = protocol.Protocol, 
+def makeProtocol(controller, baseClass = protocol.Protocol, 
                   *callbacks, **kwargs):
     """ Construct a flow based protocol
 
@@ -648,31 +648,20 @@ def makeFlowProtocol(controller, baseClass = protocol.Protocol,
                 reactor.callLater(0,reactor.stop)
             
             server = protocol.ServerFactory()
-            server.protocol = flow.makeFlowProtocol(echoServer)
+            server.protocol = flow.makeProtocol(echoServer)
             reactor.listenTCP(PORT,server)
             client = protocol.ClientFactory()
-            client.protocol = flow.makeFlowProtocol(echoClient)
+            client.protocol = flow.makeProtocol(echoClient)
             reactor.connectTCP("localhost", PORT, client)
             reactor.run()
 
     """
     if not callbacks:
         callbacks = ('dataReceived',)
-    if not kwargs:
-        kwargs = {"finishOnConnectionLost": True }
-    class FlowProtocol(baseClass):
+    class _Protocol(Callback, baseClass):
         def __init__(self):
-            cbs = []
-            for callback in callbacks:
-                cb = Callback()
-                setattr(self, callback, cb)
-                cbs.append(cb)
-            if len(cbs) > 1:
-                self.input = Concurrent(*cbs)
-            else:
-                self.input = cbs[0]
-            self.controller = controller
-            self.finishOnConnectionLost = kwargs["finishOnConnectionLost"]
+            Callback.__init__(self)
+            setattr(self, callbacks[0], self)  # only one callback support
         def _execute(self, dummy = None):
             cmd = self._controller
             while True:
@@ -691,19 +680,27 @@ def makeFlowProtocol(controller, baseClass = protocol.Protocol,
                     raise Unsupported(result)
                 self.transport.write(cmd.result)
         def connectionMade(self):
-            self._controller = wrap(self.controller(self.input))
-            self.input.transport = self.transport
-            self.input.factory   = self.factory
+            if types.ClassType == type(self.controller):
+                self._controller = wrap(self.controller(self))
+            else:
+                self._controller = wrap(self.controller())
             self._execute()
         def connectionLost(self, reason=protocol.connectionDone):
             if protocol.connectionDone is reason or \
                ( self.finishOnConnectionLost and \
                  isinstance(reason.value, ConnectionLost)):
-                self.input.finish()
+                self.finish()
             else:
-                self.input.errback(reason)
+                self.errback(reason)
             self._execute()
-    return FlowProtocol
+    _Protocol.finishOnConnectionLost = kwargs.get("finishOnConnectionLost",True)
+    _Protocol.controller = controller
+    return _Protocol
+
+def _NotImplController(protocol):
+    raise NotImplementedError
+Protocol = makeProtocol(_NotImplController) 
+Protocol.__doc__ = """ A concrete flow.Protocol for inheritance """
 
 class QueryIterator:
     """ Converts a database query into a result iterator """
