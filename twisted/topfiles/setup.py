@@ -91,9 +91,9 @@ desktop environments, and your toaster.
 """,
 
     # build stuff
-    packages=dist.getPackages(util.sibpath(__file__, 'twisted'),
+    packages=dist.getPackages('twisted',
                               ignore=dist.twisted_subprojects),
-    data_files=dist.getDataFiles(util.sibpath(__file__, 'twisted'),
+    data_files=dist.getDataFiles('twisted',
                                  ignore=dist.twisted_subprojects),
     detectExtensions=detectExtensions,
     scripts= [

@@ -63,10 +63,6 @@ class Options(usage.Options):
                                                  self['base-version'])
         self['temptagurl'] = '%s/tags/temp-%s' % (repourl, self['base-version'])
 
-        for x in ['wipurl', 'tagurl']:
-            print "%s: %s" % (x, self[x])
-
-
         commands = []
         if self['commands'] is not None:
             commands = self['commands'].split(',')
@@ -97,7 +93,7 @@ class Options(usage.Options):
 
         self['commands'] = commands
 
-        print "GOING TO DO", [x.__name__ for x in commands]
+        print "GOING TO DO", ','.join([x.__name__ for x in commands])
 
 
 def main():
@@ -109,7 +105,9 @@ def main():
         sys.exit(2)
 
     for command in opts['commands']:
-        print "-->", command.__name__
+        print
+        print command.__name__
+        print "="*len(command.__name__)
         f = runChdirSafe(command, opts)
 
 
@@ -157,14 +155,14 @@ def updateVersion(opts):
         if not crapout:
             raise Exception("No diff output!")
     sh('cd %s &&  svn commit -m "Setting version for %s" %s'
-       % (r, newver, ' '.join(files)))#, sensitive=1)
+       % (r, newver, ' '.join(files)))
 
 
 def tagTemp(opts):
     sh('cd %s &&  svn cp %s %s -m "Tagging preliminary %s"'
        % (checkoutdir, opts['wipurl'],
           opts['temptagurl'], opts['base-version']),
-       )# sensitive=1)
+       )
 
 
 def exportTemp(opts):
@@ -211,7 +209,6 @@ def makeBallCore(opts):
 
     sh('''
     ln -s `pwd`/Twisted.exp/twisted/* %(tdir)s/twisted/
-    ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
     rm -f %(tdir)s/twisted/{%(twisted_subprojects)s}
     rm -f %(tdir)s/twisted/topfiles
     ln -s `pwd`/Twisted.exp/twisted/topfiles/* %(tdir)s/
@@ -370,7 +367,8 @@ def updateWebDocs(opts):
         if os.path.islink('current'):
             os.unlink('current')
         else:
-            raise Exception("'current' exists and is NOT a symlink. Won't remove.")
+            raise Exception("'current' exists and is NOT a symlink. "
+                            "Won't remove.")
 
     os.symlink(tdocdir, 'current')
 
