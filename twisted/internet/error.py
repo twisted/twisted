@@ -243,3 +243,8 @@ class NotListeningError(RuntimeError):
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
         return s
+
+class ProcessExitedAlready(Exception):
+    """The process has already exited, and the operation requested can no longer be performed."""
+    pass
+

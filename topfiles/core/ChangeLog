@@ -1,3 +1,11 @@
+2004-09-11  Cory Dodt  <corydodt@twistedmatrix.com>
+
+	* twisted/python/{which,process}.py,
+	  twisted/test/{test_wprocess,wprocess_for_testing}.py,
+	  twisted/internet/{default,error,wprocess,process}.py: merge the
+	  "wprocess" branch which uses Trent Mick's process.py to enable
+	  spawnProcess in the default reactor on Windows
+
 2004-08-24  Brian Warner  <warner@lothar.com>
 
 	* twisted/application/internet.py (TimerService): make it possible
