@@ -134,8 +134,6 @@ class InfiniChild(resource.Resource):
         self.r = r
 
     def getChild(self, name, request):
-        if request.getRootURL() is None:
-            request.rememberRootURL()
         return self
 
     def render(self, request):
@@ -146,6 +144,7 @@ class InfiniChild(resource.Resource):
         return self.r.render(request)
 
 class MainPage(page.Page):
+    appRoot = True
     template='''\
 <html>
 <head>
