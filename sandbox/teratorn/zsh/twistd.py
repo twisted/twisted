@@ -52,14 +52,22 @@ class ServerOptions(app.ServerOptions):
                       'Chroot to a supplied directory before running'],
                     ]
 
+    #extra attributes that zshcomp.py will use:
 
-    # extra attributes that zshcomp.py will use
-    multiUse = ['quiet'] #these can appear more than once on the cmd-line
-    mutuallyExclusive = [('q', 'n'),
-                         ('n', 'euid')] #each tuple lists options that cannot appear together
-    altArgDescr = {'pidfile':'pidfile'} #alternate argument descriptions (defaults to the option description)
-    zshActions = {'pidfile':'_files -g "*.pid"',
-                  'chroot':'_directories'} # zsh-thing to do when user completes the argument
+    #these can appear more than once on the cmd-line
+    zsh_multiUse = ['quiet']
+    
+    #each tuple lists options that cannot appear together
+    #these are bogus values for testing
+    zsh_mutuallyExclusive = [('q', 'n'),
+                         ('n', 'euid')]
+
+    #alternate argument descriptions
+    zsh_altArgDescr = {'pidfile':'This is different than \'Name of the pidfile\''}
+
+    #zsh-thing to do when the user completes the argument,
+    zsh_actions = {'pidfile':'_files -g "*.pid"',
+                  'chroot':'_directories'}
 
     def opt_version(self):
         """Print version information and exit.
