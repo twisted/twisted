@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.88 2003/11/20 01:16:12 itamarst Exp $
+# $Id: default.py,v 1.89 2003/12/03 17:32:43 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -313,6 +313,7 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
 
+
 class _Win32Waker(log.Logger, styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
 
@@ -359,10 +360,11 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         self.w.close()
         self.reactor.waker = None
 
+
 class _UnixWaker(log.Logger, styles.Ephemeral):
     """This class provides a simple interface to wake up the select() loop.
 
-    This is necessary only in multi-threaded programs.
+    This is used by threads or signals to wake up the event loop.
     """
 
     disconnected = 0
@@ -384,15 +386,24 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
         """
-        self.o.write('x')
-        self.o.flush()
+        if hasattr(self, "o"):
+            self.o.write('x')
+            self.o.flush()
 
     def connectionLost(self, reason):
         """Close both ends of my pipe.
         """
-        self.i.close()
-        self.o.close()
+        if not hasattr(self, "o"):
+            return
+        try:
+            self.i.close()
+            self.o.close()
+        except IOError:
+            pass
+        del self.i
+        del self.o
         self.reactor.waker = None
+
 
 if platform.getType() == 'posix':
     _Waker = _UnixWaker
