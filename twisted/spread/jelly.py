@@ -16,11 +16,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.41 $"[11:-2]
-
 """S-expression-based persistence of python objects.
-
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 
 Stability: semi-stable
 
@@ -30,9 +26,9 @@ large-scale performance then they will be made.  Although Glyph is the
 maintainer, Bruce Mitchener will be supervising most of the optimization work
 here.
 
-I do something very much like Pickle; however, pickle's main goal seems to be
-efficiency (both in space and time); jelly's main goals are security, human
-readability, and portability to other environments.
+I do something very much like L{Pickle<pickle>}; however, pickle's main goal
+seems to be efficiency (both in space and time); jelly's main goals are
+security, human readability, and portability to other environments.
 
 
 This is how Jelly converts various objects to s-expressions:
@@ -43,7 +39,7 @@ Integer: 1 --> 1
 
 List: [1, 2] --> ['list', 1, 2]
 
-String: "hello" --> "hello"
+String: \"hello\" --> \"hello\"
 
 Float: 2.3 --> 2.3
 
@@ -56,7 +52,7 @@ Class: UserString.UserString --> ['class', ['module', 'UserString'], 'UserString
 Function: string.join --> ['function', 'join', ['module', 'string']]
 
 Instance: s is an instance of UserString.UserString, with a __dict__ {'data': 'hello'}:
-["UserString.UserString", ['dictionary', ['data', 'hello']]]
+[\"UserString.UserString\", ['dictionary', ['data', 'hello']]]
 
 # ['instance', ['class', ['module', 'UserString'], 'UserString'], ['dictionary', ['data', 'hello']]]
 
@@ -66,7 +62,10 @@ Class Method: UserString.UserString.center:
 Instance Method: s.center, where s is an instance of UserString.UserString:
 ['method', 'center', ['instance', ['reference', 1, ['class', ['module', 'UserString'], 'UserString']], ['dictionary', ['data', 'd']]], ['dereference', 1]]
 
+@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
+
+__version__ = "$Revision: 1.42 $"[11:-2]
 
 # System Imports
 import string
@@ -193,8 +192,8 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
     classname = _maybeClass(classname)
     unjellyableFactoryRegistry[classname] = copyFactory
     globalSecurity.allowTypes(classname)
-        
-    
+
+
 def setUnjellyableForClassTree(module, baseClass, prefix=None):
     """
     Set all classes in a module derived from C{baseClass} as copiers for
@@ -308,12 +307,12 @@ class _Jellier:
 
     def _cook(self, object):
         """(internal)
-        
-        backreference an object. 
+
+        backreference an object.
 
         Notes on this method for the hapless future maintainer: If I've already
         gone through the prepare/preserve cycle on the specified object (it is
-        being referenced after the serializer is "done with" it, e.g. this
+        being referenced after the serializer is \"done with\" it, e.g. this
         reference is NOT circular), the copy-in-place of aList is relevant,
         since the list being modified is the actual, pre-existing jelly
         expression that was returned for that object. If not, it's technically
@@ -509,7 +508,7 @@ class _Unjellier:
             return val
         regFactory = unjellyableFactoryRegistry.get(jelType)
         if regFactory is not None:
-            state = self.unjelly(obj[1])            
+            state = self.unjelly(obj[1])
             inst = regFactory(state)
             if hasattr(inst, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
@@ -772,7 +771,7 @@ class SecurityOptions:
     def allowInstancesOf(self, *classes):
         """SecurityOptions.allowInstances(klass, klass, ...): allow instances
         of the specified classes
-        
+
         This will also allow the 'instance', 'class' (renamed 'classobj' in
         Python 2.3), and 'module' types, as well as basic types.
         """
@@ -835,5 +834,3 @@ def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad=None, invoker=
     disallowed type, module, or class attempted to unserialize.
     """
     return _Unjellier(taster, persistentLoad, invoker).unjellyFull(sexp)
-
-

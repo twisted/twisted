@@ -16,15 +16,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.118 $"[11:-2]
-
 """
 Perspective Broker
 
 \"This isn\'t a professional opinion, but it's probably got enough
 internet to kill you.\" --glyph
-
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 
 Stability: semi-stable
 
@@ -36,6 +32,7 @@ anticipated protocol-breaking changes before a complete finalization but we
 need more users before we can be totally sure of that.
 
 Introduction
+============
 
 This is a broker for proxies for and copies of objects.  It provides a
 translucent interface layer to those proxies.
@@ -44,12 +41,15 @@ The protocol is not opaque, because it provides objects which
 represent the remote proxies and require no context (server
 references, IDs) to operate on.
 
-It is not transparent because it does *not* attempt to make remote
+It is not transparent because it does I{not} attempt to make remote
 objects behave identically, or even similiarly, to local objects.
 Method calls are invoked asynchronously, and specific rules are
 applied when serializing arguments.
 
+@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
+
+__version__ = "$Revision: 1.119 $"[11:-2]
 
 # Future Imports
 from __future__ import nested_scopes
@@ -244,11 +244,14 @@ class RemoteReference(Serializable, styles.Ephemeral):
     client's perspective, it is not possible to tell which
     except by convention.
 
-    I am a "translucent" reference because although no additional
+    I am a \"translucent\" reference because although no additional
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
 
     See also L{twisted.internet.defer}.
+
+    @ivar broker: The broker I am obtained through.
+    @type broker: L{Broker}
     """
 
     def __init__(self, perspective, broker, luid, doRefCount):
@@ -1277,6 +1280,7 @@ class IdentityConnector:
          Attempt to authenticate about the PB server, but don't
          request any services, yet.
 
+         @returns:                  L{IdentityWrapper}
          @rtype:                    L{twisted.internet.defer.Deferred}
          """
          if not self._identityWrapper:
@@ -1316,3 +1320,14 @@ class IdentityConnector:
                                                serviceName,
                                                perspectiveName,
                                                client))
+
+     def disconnect(self):
+         """Lose my connection to the server.
+
+         Useful to free up resources if you've completed requestLogin but
+         then change your mind.
+         """
+         if not self._identityWrapper:
+             return
+         else:
+             self._identityWrapper.broker.transport.loseConnection()

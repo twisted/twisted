@@ -15,7 +15,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.27 $"[11:-2]
 """
 This module represents flavors of remotely acessible objects.
 
@@ -23,15 +22,16 @@ Currently this is only objects accessible through Perspective Broker, but will
 hopefully encompass all forms of remote access which can emulate subsets of PB
 (such as XMLRPC or SOAP).
 
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
-
 Stability: semi-stable
 
 Future Plans: Optimization.  Exploitation of new-style object model.
 Optimizations to this module should not affect external-use semantics at all,
 but may have a small impact on users who subclass and override methods.
 
+@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
+
+__version__ = "$Revision: 1.28 $"[11:-2]
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
