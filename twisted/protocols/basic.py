@@ -119,7 +119,14 @@ class SafeNetstringReceiver(NetstringReceiver):
 class LineOnlyReceiver(protocol.Protocol):
     """A protocol that receives only lines.
     
-    This is purely a speed optimisation over LineReceiver, for the cases that raw mode is known to be unnecessary.
+    This is purely a speed optimisation over LineReceiver, for the
+    cases that raw mode is known to be unnecessary.
+
+    @cvar delimiter: The line-ending delimiter to use. By default this is
+                     '\\r\\n'.
+    @cvar MAX_LENGTH: The maximum length of a line to allow (If a
+                      sent line is longer than this, the connection is dropped).
+                      Default is 16384.
     """
     _buffer = ''
     delimiter = '\r\n'
