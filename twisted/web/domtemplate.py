@@ -323,26 +323,34 @@ class DOMTemplate(Resource, View):
             oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
     
-    def handleNode(self, request, node):
-        if not hasattr(node, 'getAttribute'): # text node?
-            return node
-        if node.nodeName and node.nodeName[0] == '#': return node
-        
+    def getNodeController(self, request, node):
+        # Most specific
         controllerName = node.getAttribute('controller')
-        viewName = node.getAttribute('view')
-        id = node.getAttribute('model')
-        if id is None: id = node.getAttribute('id')
+        # Next-most specific
+        if not controllerName:
+            controllerName = node.getAttribute('id')
+        # Least specific
+        if not controllerName:
+            controllerName = node.getAttribute('class')
         
-
         # Look up a handler
         controllerFactory = DefaultHandler
         if controllerName:
-            if hasattr(self, 'controller'):
-                controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
+            controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
             if controllerFactory is DefaultHandler:
                 controllerFactory = getattr(domhandlers, controllerName, DefaultHandler)
 
-        controller = controllerFactory(self.model)
+        return controllerFactory(self.model)
+    
+    def getNodeView(self, request, node):
+        # Most specific
+        viewName = node.getAttribute('view')
+        # Next-most specific
+        if not viewName:
+            viewName = node.getAttribute('id')
+        # Least specific
+        if not viewName:
+            viewName = node.getAttribute('class')
 
         # Look up either a widget factory, or a dom-mutating method
         view = DefaultWidget(self.model)
@@ -362,6 +370,18 @@ class DOMTemplate(Resource, View):
                     if isinstance(maybeWidget, domwidgets.Widget):
                         view = maybeWidget
                         viewMethod = view.generateDOM
+
+        return view, viewMethod
+
+    def handleNode(self, request, node):
+        if not hasattr(node, 'getAttribute'): # text node?
+            return node
+
+        id = node.getAttribute('model')
+        if id is None: id = node.getAttribute('id')
+        
+        controller = self.getNodeController(request, node)
+        view, viewMethod = self.getNodeView(request, node)
 
         controller.setView(view)
         controller.setSubmodel(id)
