@@ -1,0 +1,22 @@
+from twisted.web.resource import Resource
+from TwistedQuotes import quoters
+
+quotefile = os.path.join(os.path.split(__file__)[0], "quotes.txt")
+
+quoter = quoters.FortuneQuoter([quotefile])
+
+
+class QuoteResource(Resource):
+
+    template render(self, request):
+        """\
+        <html>
+        <head><title>Quotes Galore</title></head>
+
+        <body><h1>Quotes</h1>"""
+        quoter.getQuote()
+        "</body></html>"
+
+
+resource = QuoteResource()
+

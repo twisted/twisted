@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Light Weight Templating With Resource Templates</title>
+    <meta http-equiv="content-type"
+    content="text/html; charset=ISO-8859-1" />
+  </head>
+
+  <body text="#000000" bgcolor="#ffffff">
+    <h1>Light Weight Templating With Resource Templates</h1>
+
+<h2>Overview</h2>
+
+<p>While Twisted supports solution like <a href="woven.html">Woven</a>
+for high-content sophisticated templating needs, sometimes one needs
+a less file-heavy system which lets one directly write HTML. While 
+ResourceScripts are available, they have a high overhead of coding, needing
+some boring string arithmetic. ResourceTemplates fill the space between
+Woven and ResourceScript using Quixote's PTL (Python Templating Language).</p>
+
+<p>ResourceTemplates need Quixote installed. In 
+<a href="http://www.debian.org">Debian</a>, that means using Python 2.2
+and installing the <code>quixote</code> package 
+(<code>apt-get install quixote</code>). Other operating systems require
+other ways to install quixote, or it can be done manually.</p>
+
+<h2>Configuring Twisted.Web</h2>
+
+<p>The easiest way to get Twisted.Web to support ResourceTemplates is to
+bind them to some extension using the web tap's <code>--processor</code>
+flag. Here is an example:</p>
+
+<pre>
+% mktap web --processor=.rtl=twisted.web.script.ResourceTemplate
+</pre>
+
+<p>The above command line binds the "rtl" extension to use the 
+ResourceTemplate processor. Other ways are possible, but would require
+more Python coding and are outside the scope of this HOWTO.</p>
+
+<h2>Using ResourceTemplate</h2>
+
+<p>ResourceTemplates are coded in an extension of Python called the
+"Python Templating Language". Complete documentation of the PTL
+is available at <a href="...">the quixote web site</a>. The web server
+will expect the PTL source file to define a variable named "resource".
+This should be a <code class="api">twisted.web.server.Resource</code>,
+whose <code>.render</code> method be called. Usually, you would want
+to define <code>render</code> using the keyword <code>template</code>
+rather than <code>def</code>.</p>
+
+<p>Here is a simple example for a resource template.</p>
+
+<a href="listings/TwistedQuotes/webquote.rtl" class="py-listing">Resource Template for Quotes</a>
+
+</body>
+</html>
