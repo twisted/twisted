@@ -24,7 +24,8 @@ from __future__ import nested_scopes
 
 from twisted.trial import unittest
 from twisted.internet import reactor, defer
-from twisted.python import failure
+from twisted.python import failure, log
+
 
 class GenericError(Exception): pass
 
@@ -219,6 +220,30 @@ class DeferredTestCase(unittest.TestCase):
         r = unittest.deferredError(defer.maybeDeferred(None, lambda: d))
         r.trap(RuntimeError)
 
+
+class LogTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.c = []
+        log.addObserver(self.c.append)
+
+    def tearDown(self):
+        log.removeObserver(self.c.append)
+    
+    def testErrorLog(self):
+        c = self.c
+        d = defer.Deferred()
+        d.addCallback(lambda x: 1/0)
+        d.callback(1)
+        del d
+        c2 = [e for e in c if e["isError"]]
+        self.assertEquals(len(c2), 1)
+        c2[0]["failure"].trap(ZeroDivisionError)
+        log.flushErrors(ZeroDivisionError)
+
+    testErrorLog.todo = "fails for me, damn"
+
+
 class DeferredTestCaseII(unittest.TestCase):
     def setUp(self):
         self.callbackRan = 0
@@ -235,4 +260,3 @@ class DeferredTestCaseII(unittest.TestCase):
     def tearDown(self):
         self.failUnless(self.callbackRan, "Callback was never run.")
 
-testCases = [DeferredTestCase, DeferredTestCaseII]
