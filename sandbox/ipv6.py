@@ -57,16 +57,15 @@ class Port(tcp.Port):
 def connectTCP6(host, port, factory, timeout=30, bindAddress=None, reactor=None):
     if reactor is None:
         from twisted.internet import reactor
-    
-    c = Connector(host, port, factory, timeout, bindAddress, reactor)
-    c.connect()
-    return c
+    return reactor.connectWith(
+        Connector, host, port, factory, timeout, bindAddress
+    )
 
 
-def listenTCP6(port, factory, backlog=5, interface='::'):
-    p = Port(port, factory, backlog, interface)
-    p.startListening()
-    return p
+def listenTCP6(port, factory, backlog=5, interface='::', reactor=None):
+    if reactor is None:
+        from twisted.internet import reactor
+    return reactor.listenWith(Port, port, factory, backlog, interface)
 
 def main():
     from twisted.internet import reactor
