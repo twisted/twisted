@@ -1,6 +1,6 @@
 from __future__ import nested_scopes
 
-from twisted.web import widgets as oldwidgets
+from twisted.web import util as webutil
 from twisted.web.woven import model, interfaces
 
 from twisted.python import failure, log
@@ -10,7 +10,7 @@ def renderFailure(fail, request):
     if not fail:
         fail = failure.Failure()
     log.err(fail)
-    request.write(oldwidgets.formatFailure(fail))
+    request.write(webutil.formatFailure(fail))
     #request.finish()
 
 def _getModel(self):
@@ -89,7 +89,8 @@ def createGetFunction(namespace):
         """Get a name from the namespace in my closure.
         """
         if viewName == "None":
-            return DefaultWidget(model)
+            from twisted.web.woven import widgets
+            return widgets.DefaultWidget(model)
     
         vc = getattr(namespace, viewName, None)
         if vc:
