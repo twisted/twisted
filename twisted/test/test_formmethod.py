@@ -33,8 +33,11 @@ class ArgumentTestCase(unittest.TestCase):
             self.assertRaises(formmethod.InputError, arg.coerce, val)
     
     def testString(self):
-        self.argTest(formmethod.String, [("a", "a"), (1, "1")], ())
-
+        self.argTest(formmethod.String, [("a", "a"), (1, "1"), ("", "")], ())
+        self.argTest(formmethod.String, [("ab", "ab"), ("abc", "abc")], ("2", ""), min=2)
+        self.argTest(formmethod.String, [("ab", "ab"), ("a", "a")], ("223213", "345x"), max=3)
+        self.argTest(formmethod.String, [("ab", "ab"), ("add", "add")], ("223213", "x"), min=2, max=3)
+    
     def testInt(self):
         self.argTest(formmethod.Integer, [("3", 3), ("-2", -2), ("", None)], ("q", "2.3"))
         self.argTest(formmethod.Integer, [("3", 3), ("-2", -2)], ("q", "2.3", ""), allowNone=0)

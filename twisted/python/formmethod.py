@@ -78,8 +78,22 @@ class String(Argument):
     """A single string.
     """
     defaultDefault = ''
-
+    min = 0
+    max = None
+    
+    def __init__(self, name, default=None, shortDesc=None,
+                 longDesc=None, hints=None, allowNone=1, min=0, max=None):
+        Argument.__init__(self, name, default=None, shortDesc=None,
+                          longDesc=None, hints=None, allowNone=1)
+        self.min = min
+        self.max = max
+    
     def coerce(self, val):
+        s = str(val)
+        if len(s) < self.min:
+            raise InputError, "Value must be at least %s characters long" % self.min
+        if self.max != None and len(s) > self.max:
+            raise InputError, "Value must be at most %s characters long" % self.max
         return str(val)
 
 
