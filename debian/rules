@@ -120,8 +120,13 @@ install-indep-stamp: install-base-stamp
 		   debian/$$package/$$dir/twisted/;\
 		mv debian/$$tpackage/$$dir/twisted/scripts/conch.py \
 		   debian/$$package/$$dir/twisted/scripts;\
+		mv debian/$$tpackage/$$dir/twisted/scripts/ckeygen.py \
+		   debian/$$package/$$dir/twisted/scripts;\
 		mv debian/$$tpackage/usr/bin/conch* debian/$$package/usr/bin/; \
+		mv debian/$$tpackage/usr/bin/ckeygen* debian/$$package/usr/bin/; \
 		mv debian/$$tpackage/usr/share/man/man1/conch* \
+		   debian/$$package/usr/share/man/man1/; \
+		mv debian/$$tpackage/usr/share/man/man1/ckeygen* \
 		   debian/$$package/usr/share/man/man1/; \
 		for maint in postinst prerm; \
 			do sed -e "s/@VERSION@/$$version/g" \
