@@ -41,6 +41,7 @@ import sys, os, errno
 reactorTypes = {
     'gtk': 'twisted.internet.gtkreactor',
     'gtk2': 'twisted.internet.gtk2reactor',
+    'glade': 'twisted.internet.gladereactor',
     'default': 'twisted.internet.default',
     'win32': 'twisted.internet.win32eventreactor',
     'win': 'twisted.internet.win32eventreactor',
