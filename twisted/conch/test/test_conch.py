@@ -107,6 +107,7 @@ class ConchTestForwardingPort(protocol.Protocol):
 
         # forwarding-only clients don't die on their own
         self.proto.transport.write('\x03')
+        self.proto.transport.loseConnection()
         os.kill(self.proto.transport.pid, signal.SIGKILL)
 
 if Crypto:
