@@ -22,6 +22,33 @@ Test cases for twisted.reflect module.
 # Twisted Imports
 from pyunit import unittest
 from twisted.python import reflect
+from twisted.python import reference
+
+class ResolverTest(unittest.TestCase):
+    def testResolver(self):
+        t=reference.Reference
+        class A: pass
+        a=A()
+        a.m=t('x')
+        a.n=t('y')
+        a.o=t('z')
+
+        x=[1,2,t('x')]
+        y=[t('x'),t('y'),t('z')]
+        z={'a':1,'b':2,'x':t('x'),'y':t('y')}
+        look={'x':x,
+              'y':y,
+              'z':z}
+        reference.Resolver(look).resolve([a,x,y,z])
+        assert x[2]==x
+        assert y==[x,y,z], y
+        assert z['x']==x
+        assert z['y']==y
+        assert a.m==x
+        assert a.n==y
+        assert a.o==z
+
+
 
 class SettableTest(unittest.TestCase):
     def setUp(self):

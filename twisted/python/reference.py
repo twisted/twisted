@@ -54,7 +54,7 @@ class Reference:
     
     # Hasattr always returns true, and this crashes pickle.
     nonAttribs = ['__getinitargs__']
-    
+
     def __getattr__(self, methodName):
         if methodName in self.nonAttribs:
             raise AttributeError(methodName)
@@ -75,20 +75,26 @@ class AttributeReference(Reference):
         return result
     
 class Resolver:
-    """Resolver(reflist,lookup)
-    
-    reflist: a list of Reference objects.
-    
-    lookup: is an object which responds to the __getitem__ interface
-    and contains all the keys referred to by the References in
-    *reflist*.
-    
-    Traverse a (relatively -- I am not 100% sure there are no
-    limitations) arbitrary graph of objects and setattr()/setitem[]=
-    your way around them, to resolve all References.
+    """I am can resolve backward named references in a block of code.
+
+    Objects created by a block of code that are inserted into a dictionary I
+    store a reference to may later indicate a backreference to one of those
+    objects by creating a 'reference.Reference', specifying the key to be
+    looked up later.
+
+    Instantiate me with a lookup table populated with references, then resolve
+    a graph of objects using that table.
     """
 
     def __init__(self,lookup):
+        """Resolver(lookup)
+        Create a resolver.
+        
+        lookup: is an object which responds to the __getitem__ interface and
+        contains all the keys which can be referred to by the References in the
+        'reflist' argument to my 'resolve' method.
+        
+        """
         self.lookup=lookup
         self.__done={}
     
@@ -143,10 +149,12 @@ class Resolver:
         # make my life more difficult
 
     def resolve(self,reflist):
-        """Resolver.resolve(reflist) -> reflist
+        """Resolve a list of references.
+
+        Arguments:
         
-        reflist: a list of objects which may contain Reference
-        objects, which can be resolved by looking in self.lookup
+            reflist: a list of objects which may contain Reference
+            objects, which can be resolved by looking in self.lookup
         """
         global callList
         try:
@@ -154,39 +162,9 @@ class Resolver:
                 self.res(x)
             for call in callList:
                 name, method, args, kw = call
-                instance = self[name]
+                instance = self.lookup[name]
                 funcall = getattr(instance, method)
                 apply(funcall, args, kw)
-                
-            return reflist
         finally:
             callList = []
             del self.__done
-
-
-def _test():
-    _=Reference
-    class A: pass
-    a=A()
-    a.m=_('x')
-    a.n=_('y')
-    a.o=_('z')
-    
-    x=[1,2,_('x')]
-    y=[_('x'),_('y'),_('z')]
-    z={'a':1,'b':2,'x':_('x'),'y':_('y')}
-    look={'x':x,
-          'y':y,
-          'z':z}
-    Resolver(look).resolve([a,x,y,z])
-    assert x[2]==x
-    assert y==[x,y,z], y
-    assert z['x']==x
-    assert z['y']==y
-    assert a.m==x
-    assert a.n==y
-    assert a.o==z
-
-if __name__=='__main__':
-    _test()
-        
