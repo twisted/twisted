@@ -109,8 +109,9 @@ class WebClientTestCase(unittest.TestCase):
 
     def testPayload(self):
         s = "0123456789" * 10
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("payload"), postdata=s)),
-                          s)
+        return client.getPage(self.getURL("payload"), postdata=s
+            ).addCallback(self.assertEquals, s
+            )
 
     def testBrokenDownload(self):
         # test what happens when download gets disconnected in the middle
@@ -121,15 +122,12 @@ class WebClientTestCase(unittest.TestCase):
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise
         # it should extract from url
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("host"))),
-                          "127.0.0.1")
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("host"),
-                                                                 headers={"Host": "www.example.com"})),
-                          "www.example.com")
+        return defer.gatherResults([
+            client.getPage(self.getURL("host")).addCallback(self.assertEquals, "127.0.0.1"),
+            client.getPage(self.getURL("host"), headers={"Host": "www.example.com"}).addCallback(self.assertEquals, "www.example.com")])
     
     def testGetPage(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("file"))),
-                          "0123456789")
+        return client.getPage(self.getURL("file")).addCallback(self.assertEquals, "0123456789")
 
     def testTimeout(self):
         d = client.getPage(self.getURL("wait"), timeout=1.5)
@@ -139,13 +137,20 @@ class WebClientTestCase(unittest.TestCase):
             defer.TimeoutError)
 
     def testDownloadPage(self):
-        name = self.mktemp()
-        r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name))
-        self.assertEquals(open(name, "rb").read(), "0123456789")
-        name = self.mktemp()
-        r = unittest.deferredResult(client.downloadPage(self.getURL("nolength"), name))
-        self.assertEquals(open(name, "rb").read(), "nolength")
+        downloads = []
+        downloadData = [("file", self.mktemp(), "0123456789"),
+                        ("nolength", self.mktemp(), "nolength")]
 
+        for (url, name, data) in downloadData:
+            d = client.downloadPage(self.getURL(url), name)
+            d.addCallback(self._cbDownloadPageTest, data, name)
+            downloads.append(d)
+        return defer.gatherResults(downloads)
+    
+    def _cbDownloadPageTest(self, ignored, data, name):
+        bytes = file(name, "rb").read()
+        self.assertEquals(bytes, data)
+ 
     def testDownloadPageError1(self):
         class errorfile:
             def write(self, data):
@@ -202,7 +207,9 @@ class WebClientTestCase(unittest.TestCase):
         scheme, host, port, path = client._parse(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP(host, port, factory)
-        unittest.deferredResult(factory.deferred)
+        return factory.deferred.addCallback(self._cbFactoryInfo, factory)
+    
+    def _cbFactoryInfo(self, ignoredResult, factory):
         self.assertEquals(factory.status, '200')
         self.assert_(factory.version.startswith('HTTP/'))
         self.assertEquals(factory.message, 'OK')
@@ -210,10 +217,17 @@ class WebClientTestCase(unittest.TestCase):
         
 
     def testRedirect(self):
-        self.assertEquals("0123456789",
-            unittest.deferredResult(client.getPage(self.getURL("redirect"))))
-        d = client.getPage(self.getURL("redirect"), followRedirect = 0)
-        exc = self.assertRaises(error.PageRedirect, unittest.wait, d)
+        return client.getPage(self.getURL("redirect")).addCallback(self._cbRedirect)
+    
+    def _cbRedirect(self, pageData):
+        self.assertEquals(pageData, "0123456789")
+        d = unittest.assertFailure(
+            client.getPage(self.getURL("redirect"), followRedirect=0),
+            error.PageRedirect)
+        d.addCallback(self._cbCheckLocation)
+        return d
+    
+    def _cbCheckLocation(self, exc):
         self.assertEquals(exc.location, "/file")
 
     def testPartial(self):
@@ -221,14 +235,25 @@ class WebClientTestCase(unittest.TestCase):
         f = open(name, "wb")
         f.write("abcd")
         f.close()
-        r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name,
-                                                        supportPartial=1))
-        self.assertEquals(open(name, "rb").read(), "abcd456789")
-        r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name,
-                                                        supportPartial=1))
-        self.assertEquals(open(name, "rb").read(), "abcd456789")
-        r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name))
-        self.assertEquals(open(name, "rb").read(), "0123456789")
+        
+        downloads = []
+        partialDownload = [(True, "abcd456789"),
+                           (True, "abcd456789"),
+                           (False, "0123456789")]
+        
+        d = defer.succeed(None)
+        for (partial, expectedData) in partialDownload:
+            d.addCallback(self._cbRunPartial, name, partial)
+            d.addCallback(self._cbPartialTest, expectedData, name)
+        
+        return d
+    
+    def _cbRunPartial(self, ignored, name, partial):
+        return client.downloadPage(self.getURL("file"), name, supportPartial=partial)
+
+    def _cbPartialTest(self, ignored, expectedData, filename):
+        bytes = file(filename, "rb").read()
+        self.assertEquals(bytes, expectedData)
 
 class WebClientSSLTestCase(WebClientTestCase):
     def _listen(self, site):
