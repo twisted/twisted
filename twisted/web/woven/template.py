@@ -87,6 +87,7 @@ RESTART_RENDERING = 2
 
 def renderFailure(ignored, request):
     f = failure.Failure()
+    log.err(f)
     request.write(widgets.formatFailure(f))
     request.finish()
 
@@ -202,7 +203,7 @@ class DOMTemplate(Resource, View):
             return self.processNode(request, result.generateDOM(request, node), node)
         elif isinstance(result, Deferred):
             self.outstandingCallbacks += 1
-            result.addCallbacks(self.callback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
+            result.addCallbacks(self.dispatchResultCallback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
             # Got to wait until the callback comes in
             return result
         elif isinstance(result, types.StringType):
@@ -218,7 +219,7 @@ class DOMTemplate(Resource, View):
             for child in node.childNodes:
                 self.handleNode(request, child)
 
-    def callback(self, result, request, node):
+    def dispatchResultCallback(self, result, request, node):
         """
         Deal with a callback from a deferred, dispatching the result
         and recursing children.

@@ -38,6 +38,7 @@ DEBUG = 0
 
 def renderFailure(ignored, request):
     f = failure.Failure()
+    log.err(f)
     request.write(widgets.formatFailure(f))
     request.finish()
 
@@ -162,16 +163,16 @@ class Widget(mvc.View):
     def generate(self, request, node):
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallback(self.callback, request, node)
+            data.addCallback(self.setDataCallback, request, node)
             return data
         self.setUp(request, node, data)
         return self.generateDOM(request, node)
     
-    def callback(self, result, request, node):
+    def setDataCallback(self, result, request, node):
         self.setData(result)
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallbacks(self.callback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
+            data.addCallbacks(self.setDataCallback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
             return data
         self.setUp(request, node, data)
         return self.generateDOM(request, node)
