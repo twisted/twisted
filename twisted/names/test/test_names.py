@@ -1,4 +1,4 @@
-# test-case-name: twisted.names.test.test_names
+# -*- test-case-name: twisted.names.test.test_names -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -518,3 +518,56 @@ class HostsTestCase(unittest.TestCase):
         self.assertRaises(
             dns.DomainError,
             wait, self.resolver.lookupAddress('foueoa'))
+
+class FakeDNSDatagramProtocol(object):
+    transport = object()
+
+    def __init__(self):
+        self.queries = []
+
+    def query(self, address, queries, timeout=10, id=None):
+        self.queries.append((address, queries, timeout, id))
+        return defer.fail(dns.DNSQueryTimeoutError(queries))
+
+    def removeResend(self, id):
+        # Ignore this for the time being.
+        pass
+
+class RetryLogic(unittest.TestCase):
+    testServers = [
+        '1.2.3.4',
+        '4.3.2.1',
+        'a.b.c.d',
+        'z.y.x.w']
+
+    def testRoundRobinBackoff(self):
+        addrs = [(x, 53) for x in self.testServers]
+        r = client.Resolver(resolv=None, servers=addrs)
+        r.protocol = proto = FakeDNSDatagramProtocol()
+        return r.lookupAddress("foo.example.com"
+            ).addCallback(self._cbRoundRobinBackoff
+            ).addErrback(self._ebRoundRobinBackoff, proto
+            )
+
+    def _cbRoundRobinBackoff(self, result):
+        raise unittest.FailTest("Lookup address succeeded, should have timed out")
+
+    def _ebRoundRobinBackoff(self, failure, fakeProto):
+        failure.trap(defer.TimeoutError)
+
+        # Assert that each server is tried with a particular timeout
+        # before the timeout is increased and the attempts are repeated.
+
+        for t in (1, 3, 11, 45):
+            tries = fakeProto.queries[:len(self.testServers)]
+            del fakeProto.queries[:len(self.testServers)]
+
+            tries.sort()
+            expected = list(self.testServers)
+            expected.sort()
+
+            for ((addr, query, timeout, id), expectedAddr) in zip(tries, expected):
+                self.assertEquals(addr, (expectedAddr, 53))
+                self.assertEquals(timeout, t)
+
+        self.failIf(fakeProto.queries)

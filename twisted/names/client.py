@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.names.test.test_names -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -195,24 +196,46 @@ class Resolver(common.ResolverBase):
         if timeout is None:
             timeout = self.timeout
 
-        address = self.pickServer()
-        if address is None:
+        addresses = self.servers + list(self.dynServers)
+        if not addresses:
             return defer.fail(IOError("No domain name servers available"))
 
-        return self.protocol.query(address, queries, timeout[0]
-            ).addErrback(self._reissue, address, queries, timeout[1:]
+        used = addresses.pop()
+        return self.protocol.query(used, queries, timeout[0]
+            ).addErrback(self._reissue, addresses, [used], queries, timeout
             )
 
 
-    def _reissue(self, reason, address, query, timeout):
-        reason.trap(defer.TimeoutError)
-        if timeout and self.protocol.transport:
-            d = self.protocol.query(address, query, timeout[0], reason.value.id)
-            d.addErrback(self._reissue, address, query, timeout[1:])
-            return d
+    def _reissue(self, reason, addressesLeft, addressesUsed, query, timeout):
+        reason.trap(dns.DNSQueryTimeoutError)
 
-        self.protocol.removeResend(reason.value.id)
-        return failure.Failure(defer.TimeoutError(query))
+        # If there are no servers left to be tried, adjust the timeout
+        # move to the next longest timeout period and move all the
+        # "used" addresses back to the list of addresses to try.
+        if not addressesLeft:
+            addressesLeft = addressesUsed
+            addressesLeft.reverse()
+            addressesUsed = []
+            timeout = timeout[1:]
+
+        # If all timeout values have been used, or the protocol has no
+        # transport, this query has failed.  Tell the protocol we're
+        # giving up on it and return a terminal timeout failure to our
+        # caller.
+        if not timeout or self.protocol.transport is None:
+            self.protocol.removeResend(reason.value.id)
+            return failure.Failure(defer.TimeoutError(query))
+
+        # Get an address to try.  Take it out of the list of addresses
+        # to try and put it ino the list of already tried addresses.
+        address = addressesLeft.pop()
+        addressesUsed.append(address)
+
+        # Issue a query to a server.  Use the current timeout.  Add this
+        # function as a timeout errback in case another retry is required.
+        d = self.protocol.query(address, query, timeout[0], reason.value.id)
+        d.addErrback(self._reissue, addressesLeft, addressesUsed, query, timeout)
+        return d
 
 
     def queryTCP(self, queries, timeout = 10):
