@@ -5,6 +5,7 @@
 """Chop up shoutcast stream into MP3s and metadata, if available."""
 
 from twisted.protocols import http
+from twisted import copyright
 
 
 class ShoutcastClient(http.HTTPClient):
@@ -16,6 +17,8 @@ class ShoutcastClient(http.HTTPClient):
     for details on the protocol.
     """
 
+    userAgent = "Twisted Shoutcast client " + copyright.version
+
     def __init__(self, path="/"):
         self.path = path
         self.got_metadata = False
@@ -25,6 +28,7 @@ class ShoutcastClient(http.HTTPClient):
         
     def connectionMade(self):
         self.sendCommand("GET", self.path)
+        self.sendHeader("User-Agent", self.userAgent)
         self.sendHeader("Icy-MetaData", "1")
         self.endHeaders()
         
