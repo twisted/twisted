@@ -87,4 +87,4 @@ class DocCoverage(unittest.TestCase):
 
 
     # This test takes a while and doesn't come close to passing.  :(
-    test_modules.skip = "Activate me when you feel like writing docstrings."
+    test_modules.todo = "Activate me when you feel like writing docstrings."
