@@ -60,7 +60,6 @@ def evalExp(exp, env):
 
 
 globalValues = {"nil" : []}
-globalFunctions =  {"+": func_add, "-": func_subtract}
 nil = []
 
 VAR = 0
@@ -292,7 +291,6 @@ def func_and(*exp):
 
 def func_consp(exp):
     return isinstance(exp, types.ListType) and len(exp) == 2 
-cons = func_cons
 
 def func_or(*exp):
     return reduce(operator.__or__, exp)
@@ -302,6 +300,8 @@ def func_not(a):
 
 def func_cons(car, cdr):
     return [car, cdr]
+
+cons = func_cons
 
 def func_setcar(lst, newcar):
     lst[0] = newcar
@@ -365,3 +365,4 @@ def func_last(lst):
 def func_subtract(*exp):
     return reduce(operator.sub, exp)
 
+globalFunctions =  {"+": func_add, "-": func_subtract}
