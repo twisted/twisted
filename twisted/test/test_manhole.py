@@ -68,7 +68,7 @@ class ManholeTest(unittest.TestCase):
         """
         self.p.perspective_do("from twisted.manhole import service")
         self.client.setZero()
-        self.p.perspective_do("service is sys.modules['twisted.manhole.service']")
+        self.p.perspective_do("int(service is sys.modules['twisted.manhole.service'])")
         msg = self.client.getMessages()[0]
         self.failUnlessEqual(msg, ('result',"1\n"))
 
