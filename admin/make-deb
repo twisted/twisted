@@ -16,14 +16,17 @@
 import os, sys, getopt, re
 
 auto_version, run_dch, install = 0, 0, None
+old_version = None
 
-for (opt, val) in getopt.getopt(sys.argv[1:], "adi:")[0]:
-	if opt == "-d":
-		run_dch = 1
-	if opt == "-a":
-		auto_version = 1
-	if opt == "-i":
-		install = val
+for (opt, val) in getopt.getopt(sys.argv[1:], "ado:i:")[0]:
+    if opt == "-d":
+        run_dch = 1
+    if opt == "-a":
+        auto_version = 1
+    if opt == "-o":
+        old_version = val
+    if opt == "-i":
+        install = val
 
 here = os.path.dirname(os.path.abspath(sys.argv[0]))
 parent = os.path.dirname(here)
@@ -32,46 +35,47 @@ version = root.split("-")[1]
 
 version_re = re.compile('\((.*)\)')
 letter = re.compile('[a-z]')
-old_version=None
-if auto_version:
-	lines = [version_re.search(line).group(1)
-	              for  line in 
-	                   open(os.path.join(parent, 
-	                                     'debian', 'changelog')).readlines()
-	              if line.startswith('twisted')]
-        if letter.search(version):
-	        for line in lines:
-	            if not letter.search(line):
-	                old_version = line
-	                break
+
+
+if auto_version and old_version is None:
+    lines = [version_re.search(line).group(1)
+             for  line in 
+               open(os.path.join(parent, 
+                                 'debian', 'changelog')).readlines()
+               if line.startswith('twisted')]
+    if letter.search(version):
+        for line in lines:
+            if not letter.search(line):
+                old_version = line
+                break
 
 os.chdir(os.path.dirname(parent))
 if auto_version and old_version:
-	new_version = old_version.split("-")[0]+'+'+version
+    new_version = old_version.split("-")[0]+'+'+version
 else:
-	new_version = version
+    new_version = version
 
 os.system("mv Twisted-%(version)s twisted-%(new_version)s" % vars())
 os.system("tar czf twisted_%(new_version)s.orig.tar.gz "
                   "twisted-%(new_version)s" % vars())
 os.chdir("twisted-%(new_version)s" % vars())
 if auto_version:
-	lines = open('debian/changelog').readlines()
-	lines[0]='twisted (%(new_version)s-1) unstable; urgency=low\n' % vars()
-	open('debian/changelog', 'w').writelines(lines)
+    lines = open('debian/changelog').readlines()
+    lines[0]='twisted (%(new_version)s-1) unstable; urgency=low\n' % vars()
+    open('debian/changelog', 'w').writelines(lines)
 if run_dch:
-	os.system("dch")
+    os.system("dch")
 os.system("dpkg-buildpackage -rfakeroot -us -uc")
 
 if install:
-	current = os.getcwd()
-	os.chdir("..")
-	for file in os.listdir('.'):
-		if not os.path.isfile(file):
-			continue
-		base = file.split("_")[0]
-		os.system("rm -f %(install)s/%(base)s*" % vars())
-		os.system("cp %(file)s %(install)s" % vars())
-	os.chdir(install)
-	os.system("%(current)s/admin/createpackages "
-	          "%(current)s/admin/override" % vars())
+    current = os.getcwd()
+    os.chdir("..")
+    for file in os.listdir('.'):
+        if not os.path.isfile(file):
+            continue
+        base = file.split("_")[0]
+        os.system("rm -f %(install)s/%(base)s*" % vars())
+        os.system("cp %(file)s %(install)s" % vars())
+    os.chdir(install)
+    os.system("%(current)s/admin/createpackages "
+              "%(current)s/admin/override" % vars())
