@@ -1,329 +1,51 @@
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Twisted 1.0</title>
+</head>
+<body>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <title>The Road to Twisted 1.0</title>
-<style type="text/css">
-/*<![CDATA[*/
-.done { color: #005500; background-color: #99ff99 }
-/*]]>*/
-</style>
-  </head>
+<h1>Getting to 1.0</h1>
 
-  <body>
-    <p>The maintainers on each of these packages are not
-    necessarily the people who will be responsible for writing most
-    of their code, although I've certainly tried to do that in most
-    cases :). I would like to start delegating responsibility for
-    deciding when something is done to my various "lieutenants", as
-    linus calls them, that are currently working on Twisted. If you
-    don't think you're the right person to maintain a package, let
-    me know.</p>
+<h2>Introduction</h2>
 
-    <p align="right">--glyph</p>
+<p>Twisted 1.0 is not going to be stable. What is going to be stable are
+specific APIs, namely twisted.internet. Other parts of Twisted are still too
+immature to be considered stable, and will be worked on in later versions.</p>
 
-    <table border="1" cellpadding="3">
-      <tr>
-        <td colspan="6">
-          <h2>Twisted Platform 1.0</h2>
-        </td>
-      </tr>
+<p>The goal of this release, then, is to have 
+<code class="python">twisted.internet</code> in a state where it is a suitable
+replacement for asyncore/Medusa. That means it should be stable API-wise, have
+as many tests as we can possibly write for it, and be well documented.</p>
 
-      <tr>
-        <th>Package</th>
+<h2>Process</h2>
 
-        <th>Maintainer</th>
+<p>We will, as soon as the <code class="python">twisted.internet</code> APIs
+are stable, switch to version 0.99.0. At this point, our goal is to document,
+write tests and fix bugs in <code class="python">twisted.internet</code> - all
+changes must API compatible from this point onwards.</p>
 
-        <th>Description</th>
+<p>Changes to other parts of Twisted are acceptable, as long as they follow
+are usual policies.</p>
 
-        <th>Necessary for 1.0</th>
+<p>1.0 will be released when we feel that the level of bugs is sufficiently
+low, and the amount of documentation and unit tests is sufficiently high.</p>
 
-        <th>Desirable for 1.0</th>
+<h2>Requirements for 0.99</h2>
 
-        <th>Possible Remaining Incompatible Changes</th>
-      </tr>
+<ul>
+<li>Clean up connectors.</li>
+<li>New UDP API.</li>
+<li>Make necessary changes to Application - listenSSL/UDP and whatever changes
+    glyph wanted to make with authorizers and services.</li>
+</ul>
 
-      <tr>
-        <td>twisted.internet</td>
+<p>I don't think we need to mark all modules for API stability level. I think 
+we only need to mark modules that *are* stable, if they're not stable, 
+"semi-stable" isn't useful, since we may yet think of some major changes that 
+will make it less stable.</p>
 
-        <td>Glyph Lefkowitz</td>
+<p>So, another requirement is marking all modules whose API is stable as such,
+the rest of the modules can be left unmarked.</p>
 
-        <td>A main loop that dispatches events based on network
-        input and the passage of time, and mappings for the Twisted
-        API on to other main loops which it does not necessarily
-        control.</td>
-
-        <td>Fixing tkinternet to not use threads any longer</td>
-
-        <td>improved Jython support, and support for Java 1.4's
-        nbio, C optimization of the regular mainloop.</td>
-
-        <td>Moving a few packages around, a final decision on how,
-        exactly, the packages must be imported in order to work
-        correctly.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.protocols</td>
-
-        <td>Moshe Zadka</td>
-
-        <td>Wire-protocol implementations of various protocols,
-        decoupled from any processing logic.</td>
-
-        <td>HTTP 1.1 support, improved handling of FTP, a
-        readline-style input line for telnet</td>
-
-        <td>curses-over-telnet, ssh protocol implementation</td>
-
-        <td>None that I can think of.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.mail</td>
-
-        <td>Moshe Zadka</td>
-
-        <td>E-mail support: POP3, SMTP protocols.</td>
-
-        <td>twisted.cred awareness</td>
-
-        <td>mailman integration</td>
-
-        <td>pretty much everything; lots will break when we move to
-        support twisted.cred.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.web</td>
-
-        <td>Chris Armstrong</td>
-
-        <td>Support for document- and file-based protocols: http,
-        ftp, WebDAV, XMLRPC.</td>
-
-        <td>HTTP 1.1 support, real file-upload support</td>
-
-        <td>ZPT integration</td>
-
-        <td>Adding a distinction between a Request and an
-        Connection may result in some minor breakages, but I think
-        it can be fixed without any damage.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.names</td>
-
-        <td>????</td>
-
-        <td>Nameserver and client -- DNS and other protocols
-        related to name resolution.</td>
-
-        <td>Real DNS server support, finding someone to maintain
-        this code!</td>
-
-        <td>Complete BIND replacement.</td>
-
-        <td>Since it's not really being used, I'm not concerned
-        about breakages.</td>
-      </tr>
-
-      <tr class="done">
-        <td>twisted.enterprise</td>
-
-        <td>Sean Riley</td>
-
-        <td>Database support.</td>
-
-        <td>A simple asynchronous object-relational mapper.</td>
-
-        <td>None that I can think of.</td>
-
-        <td>None that I can think of.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.cred</td>
-
-        <td>Glyph Lefkowitz</td>
-
-        <td>An authentication abstraction.</td>
-
-        <td>API cleanup.</td>
-
-        <td>More authentication back-ends.</td>
-
-        <td>A few redundant methods should disappear, but I don't
-        think anyone was using them.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.im</td>
-
-        <td>Paul Swartz</td>
-
-        <td>A "universal client" for Twisted, with support for
-        multi-protocol chat.</td>
-
-        <td>Migration of all PB clients (manhole, faucet) into this
-        framework.</td>
-
-        <td>Blue sky on chat-client features...</td>
-
-        <td>It's not really in use yet, so breakages should not
-        affect external parties.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.words</td>
-
-        <td>Paul Swartz</td>
-
-        <td>Individual and group chat server for Twisted.</td>
-
-        <td>Multiple servers rebroadcasting messages.</td>
-
-        <td>Lots of bots that do cool things on the server side.
-        Total IRCD compatibility with respect to Hybrid
-        Services-style bots.</td>
-
-        <td>More APIs will become asynchronous.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.manhole</td>
-
-        <td>Kevin Turner</td>
-
-        <td>Direct manipulation interface for Twisted.</td>
-
-        <td>Easier to use COIL interface. COIL interface to
-        usage.options and mktap which allows for creation of
-        boilerplate servers. Fix manhole GUI so that it works
-        again.</td>
-
-        <td>More services related to debugging.</td>
-
-        <td>None that I can think of.</td>
-      </tr>
-
-      <tr>
-        <td>twisted.spread</td>
-
-        <td>Glyph Lefkowitz</td>
-
-        <td>Twisted's remote object protocol support.</td>
-
-        <td>Versioning for banana. An RFC cementing the wire-level
-        protocol. Standard for local method calls on references
-        (local_ naming convention). Perspective.observe() and other
-        methods to automate automatically unsubscribing for events
-        on logout. Standardized way of per-object protocol
-        versioning.</td>
-
-        <td>Persistent stateless references. Full implementations
-        of PB for more languages. ASCII version of the 'banana'
-        level protocol for debugging and easier protocol
-        implementation.</td>
-
-        <td>Wire-level protocols will break one more time --
-        banana's versioning is an additional feature that changes
-        the way the wire works. I also want to change the
-        wire-level representation of copy to shave a few more bytes
-        of state copying and make the basic types stick out less
-        :).</td>
-      </tr>
-
-      <tr>
-        <td>twisted.tap</td>
-
-        <td>Moshe Zadka</td>
-
-        <td>Simple Application Configuration for Twisted.</td>
-
-        <td>Integration with COIL's web-based frontend.</td>
-
-        <td>None I can think of.</td>
-
-        <td>None I can think of.</td>
-      </tr>
-
-      <tr>
-        <td colspan="6">
-          <h2>Currently Core Packages that should be Broken
-          Out</h2>
-        </td>
-      </tr>
-
-      <tr class="done">
-        <td>twisted.metrics</td>
-
-        <td>Sean Riley</td>
-
-        <td>Metrics collection and analysis tools.</td>
-
-        <td>Coil interface to set up.</td>
-
-        <td>None I can think of.</td>
-
-        <td>None I can think of.</td>
-      </tr>
-
-      <tr class="done">
-        <td>twisted.forum</td>
-
-        <td>Sean Riley</td>
-
-        <td>Persistent group messaging.</td>
-
-        <td>None I can think of.</td>
-
-        <td>More customizeability of web interface. More
-        integration with twisted.words and twisted.mail.</td>
-
-        <td>None I can think of.</td>
-      </tr>
-
-      <tr class="done">
-        <td>twisted.bugs</td>
-
-        <td>Itamar Shtull-Trauring</td>
-
-        <td>Bug tracking.</td>
-
-        <td>The ability to flag a bug as fixed.</td>
-
-        <td>Different interfaces to submit bugs (email, debbug,
-        bug-buddy...)</td>
-
-        <td>None I can think of.</td>
-      </tr>
-
-      <tr>
-        <td colspan="6">
-          <h2>Seperate Packages</h2>
-          (these have their own timeline and are separate from
-          Twisted's versioning scheme)
-        </td>
-      </tr>
-
-      <tr class="done">
-        <td>twisted.reality</td>
-
-        <td>Glyph Lefkowitz (but, it needs a new maintainer)</td>
-
-        <td>Text-adventure library.</td>
-
-        <td>At least one clear demonstration of some cool features
-        of Twisted.</td>
-
-        <td>If I started typing here, I would never stop.</td>
-
-        <td>Pretty much everything, I'd imagine.</td>
-      </tr>
-    </table>
-  </body>
+</body>
 </html>
-
