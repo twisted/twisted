@@ -300,8 +300,10 @@ class ConnectorTestCase(PortCleanerUpper):
         connector = reactor.connectTCP("127.0.0.1", n, factory)
         self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", n))
         
-        while not factory.stopped:
-            reactor.iterate()
+        i = 0
+        while i < 50 and not factory.stopped:
+            reactor.iterate(0.1)
+            i += 1
 
         self.assertEquals(l, [connector, connector])
 
@@ -343,8 +345,10 @@ class ConnectorTestCase(PortCleanerUpper):
         factory.clientConnectionLost = clientConnectionLost
         reactor.connectTCP("127.0.0.1", n, factory)
         
-        while not factory.failed:
-            reactor.iterate()
+        i = 0
+        while i < 50 and not factory.failed:
+            reactor.iterate(0.1)
+            i += 1
 
         p = factory.protocol
         self.assertEquals((p.made, p.closed), (1, 1))
