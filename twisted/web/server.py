@@ -332,7 +332,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             hostport = ':%d' % port
         return urllib.quote('http%s://%s%s/%s' % (
             self.isSecure() and 's' or '',
-            string.split(self.getHeader("host"), ':', 1)[0],
+            self.getRequestHostname(),
             hostport,
             string.join(self.prepath, '/')), "/:")
 
