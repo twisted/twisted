@@ -17,6 +17,8 @@
 
 from __future__ import nested_scopes
 
+__version__ = "$Revision: 1.28 $"[11:-2]
+
 import cgi
 import types
 

@@ -1,3 +1,6 @@
+
+__version__ = "$Revision: 1.8 $"[11:-2]
+
 from twisted.web import server
 from twisted.python import components
 

@@ -17,6 +17,8 @@
 
 from __future__ import nested_scopes
 
+__version__ = "$Revision: 1.53 $"[11:-2]
+
 # Sibling imports
 import interfaces
 import template

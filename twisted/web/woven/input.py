@@ -25,6 +25,7 @@ from twisted.python.reflect import qual
 
 from twisted.web.woven import template, controller, utils
 
+__version__ = "$Revision: 1.24 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 

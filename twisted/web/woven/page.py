@@ -1,5 +1,7 @@
 # page.py
 
+__version__ = "$Revision: 1.9 $"[11:-2]
+
 from twisted.python import reflect
 from twisted.web import resource
 from twisted.web.woven import model, view, controller, interfaces, template

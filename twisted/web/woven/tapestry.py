@@ -7,6 +7,8 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
+__version__ = "$Revision: 1.7 $"[11:-2]
+
 # System Imports
 import time
 import sys

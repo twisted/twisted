@@ -3,6 +3,8 @@
 
 from __future__ import nested_scopes
 
+__version__ = "$Revision: 1.6 $"[11:-2]
+
 import random
 import time
 import md5
