@@ -142,18 +142,18 @@ class Connection(tcp.Connection):
             pass
 
 
-class Client(Connection, tcp.Client):
+class Client(Connection, tcp.TCPClient):
     """I am an SSL client.
     """
     
-    def __init__(self, host, port, protocol, ctxFactory, timeout=None, connector=None):
+    def __init__(self, host, port, ctxFactory, connector, reactor=None):
         self.ctxFactory = ctxFactory
-        apply(tcp.Client.__init__, (self, host, port, protocol), {'timeout': timeout, 'connector': connector})
+        tcp.TCPClient.__init__(self, host, port, connector, reactor)
     
     def createInternetSocket(self):
         """(internal) create an SSL socket
         """
-        sock = tcp.Client.createInternetSocket(self)
+        sock = tcp.TCPClient.createInternetSocket(self)
         return SSL.Connection(self.ctxFactory.getContext(), sock)
 
     def getHost(self):

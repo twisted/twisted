@@ -147,62 +147,30 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
         
 
-class Client(Connection):
-    """A client for TCP (and similiar) sockets.
+class BaseClient(Connection):
+    """A base class for client TCP (and similiar) sockets.
     """
-    def __init__(self, host, port, protocol, timeout=None, connector=None, reactor=None):
-        """Initialize the client, setting up its socket, and request to connect.
-        """
-        if reactor is None:
-            from twisted.internet import reactor
-        self.reactor = reactor
-        if host == 'unix':
-            # "port" in this case is really a filename
-            try:
-                mode = os.stat(port)[0]
-            except OSError, ose:
-                # no such file or directory
-                whenDone = None
-            else:
-                if not (mode & (stat.S_IFSOCK |  # that's not a socket
-                                stat.S_IROTH  |  # that's not readable
-                                stat.S_IWOTH )):# that's not writable
-                    whenDone = None
-                else:
-                    # success.
-                    self.realAddress = self.addr = port
-                    # we are using unix sockets
-                    skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                    whenDone = self.doConnect
-        else:
-            skt = self.createInternetSocket()
-            self.addr = (host, port)
-            whenDone = self.resolveAddress
+
+    def _finishInit(self, whenDone, skt, error, reactor):
+        """Called by base classes to continue to next stage of initialization."""
         if whenDone:
-            self.host = host
-            self.port = port
-            self.connector = connector
-            Connection.__init__(self, skt, protocol, self.reactor)
+            Connection.__init__(self, skt, None, reactor)
             self.doWrite = self.doConnect
             self.doRead = self.doConnect
-            self.logstr = self.protocol.__class__.__name__+",client"
-            # slightly cheezy -- deferreds in pb expect you to go through a
-            # mainloop before you actually connect them.  connecting immediately
-            # screws up that logic.
-            self.reactor.callLater(0, whenDone)
-            if timeout is not None:
-                self.reactor.callLater(timeout, self.failIfNotConnected)
+            reactor.callLater(0, whenDone)
         else:
-            self.reactor.callLater(0, protocol.connectionFailed)
+            reactor.callLater(0, self.failIfNotConnected, error)
 
-    def failIfNotConnected(self, *ignored):
-        # print 'failing if not connected'
+    def stopConnecting(self):
+        """Stop attempt to connect."""
+        self.failIfNotConnected("user told us to stop") # XXX
+    
+    def failIfNotConnected(self, error):
         if (not self.connected) and (not self.disconnected):
-            if self.connector:
-                self.connector.connectionFailed()
-            self.protocol.connectionFailed()
+            self.connector.connectionFailed(error)
             self.stopReading()
             self.stopWriting()
+            del self.connector
 
     def createInternetSocket(self):
         """(internal) Create an AF_INET socket.
@@ -232,9 +200,7 @@ class Client(Connection):
         if platform.getType() == "win32":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
-                self.protocol.connectionFailed()
-                self.stopReading()
-                self.stopWriting()
+                self.failIfNotConnected(e) # XXX
                 return
 
         try:
@@ -247,9 +213,7 @@ class Client(Connection):
                 self.startWriting()
                 return
             else:
-                self.protocol.connectionFailed()
-                self.stopReading()
-                self.stopWriting()
+                self.failIfNotConnected(se) # XXX
                 return
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
@@ -260,15 +224,16 @@ class Client(Connection):
         self.stopReading()
         self.stopWriting()
         self.startReading()
+        self.protocol = self.connector.buildProtocol(self.getHost())
         self.protocol.makeConnection(self)
-
+        self.logstr = self.protocol.__class__.__name__+",client"
+    
     def connectionLost(self):
         if not self.connected:
             self.failIfNotConnected()
         else:
             Connection.connectionLost(self)
-            if self.connector:
-                self.connector.connectionLost()
+            self.connector.connectionLost()
 
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
@@ -290,41 +255,45 @@ class Client(Connection):
         return s
 
 
+class UNIXClient(BaseClient):
+    """A client for Unix sockets."""
 
-class Connector:
-    """Connect a protocol to a server using TCP and if it fails make a new one."""
+    def __init__(self, filename, connector, reactor=None):
+        self.connector = connector
+        error = None
+        whenDone = None
+        skt = None
+        
+        try:
+            mode = os.stat(port)[0]
+        except OSError, ose:
+            # no such file or directory
+            whenDone = None
+            error = "no such file" # XXX
+        else:
+            if not (mode & (stat.S_IFSOCK |  # that's not a socket
+                            stat.S_IROTH  |  # that's not readable
+                            stat.S_IWOTH )): # that's not writable
+                whenDone = None
+                error = "not socket/not readable/not writable" # XXX
+            else:
+                # success.
+                self.realAddress = self.addr = filename
+                # we are using unix sockets
+                skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                whenDone = self.doConnect
 
-    transportFactory = Client
-    protocol = None
+        self._finishInit(whenDone, skt, error, reactor)
 
-    __implements__ = [IConnector]
 
-    def __init__(self, host, portno, protocolFactory, timeout=30):
-        self.host = host
-        self.portno = portno
-        self.factory = protocolFactory
-        self.timeout = timeout
+class TCPClient(BaseClient):
+    """A TCP client."""
 
-    def connectionFailed(self):
-        self.startConnecting()
-
-    def connectionLost(self):
-        self.connectionFailed()
-
-    def startConnecting(self):
-        proto = self.factory.buildProtocol((self.host, self.portno))
-        self.transportFactory(self.host, self.portno, proto, self.timeout, self)
-        self.protocol = proto
-
-    def getProtocol(self):
-        """Get the current protocol instance."""
-        return self.protocol
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        if state.has_key('protocol'):
-            del state['protocol']
-        return state
+    def __init__(self, host, port, connector, reactor=None):
+        self.connector = connector
+        skt = self.createInternetSocket()
+        self.addr = (host, port)
+        self._finishInit(self.resolveAddress, skt, None, reactor)
 
 
 class Server(Connection):

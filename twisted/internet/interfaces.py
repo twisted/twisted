@@ -20,13 +20,38 @@ from twisted.python.components import Interface
 
 ### Reactor Interfaces
 
+class IConnecting(Interface):
+    """A connection in progress."""
+
+    def stopConnecting(self):
+        """Stop connecting."""
+
+
+class IConnector(Interface):
+    """Object used to interface between connections and protocols.
+
+    Each IConnector manages one connection.
+    """
+
+    def buildProtocol(self, addr):
+        """Return a protocol instance."""
+
+    def connectionFailed(self, reason):
+        """The connection attempt has failed."""
+
+    def connectionLost(self):
+        """The remote connection has been lost."""
+
+
 class IReactorTCP(Interface):
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """Connects a given protocol factory to the given numeric TCP/IP port.
         """
 
     def clientTCP(self, host, port, protocol, timeout=30):
-        """Connect a TCP client.
+        """XXX Deprecated. XXX
+
+        Connect a TCP client.
 
         Arguments:
 
@@ -40,12 +65,38 @@ class IReactorTCP(Interface):
             has failed.
         """
 
+    def startConnectTCP(self, host, protocol, connector):
+        """Connect a TCP client.
 
-class IReactorSSL(Interface):
-    def clientSSL(self, host, port, protocol, contextFactory, timeout=30,):
-        """Connect a client Protocol to a remote SSL socket.
+        Arguments:
+
+          * host: a host name
+
+          * port: a port number
+
+          * connector: object implemeting IConnector interface.
+
+        Returns object implementing IConnecting interface.
+
+        If the connection fails, connector.connectionFailed will be called.
+        If the connection succeeds, connector.buildProtocol will be called,
+        and a new TCP transport will be connected to this new protocol.
         """
 
+
+class IReactorSSL(Interface):
+    def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
+        """XXX deprecated XXX.
+        
+        Connect a client Protocol to a remote SSL socket.
+        """
+
+    def startConnectSSL(self, host, port, contextFactory, connector):
+        """Connect to remote SSL server.
+
+        See IReactorTCP.startConnectTCP for description of behaviour.
+        """
+    
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -58,9 +109,17 @@ class IReactorUNIX(Interface):
     """UNIX socket methods.
     """
     def clientUNIX(address, protocol, timeout=30):
-        """Connect a client Protocol to a UNIX socket.
+        """XXX deprecated XXX.
+
+        Connect a client Protocol to a UNIX socket.
         """
 
+    def startConnectUNIX(self, address, connector):
+        """Connect to UNIX socket.
+
+        See IReactorTCP.startConnectTCP for description of behaviour.
+        """
+    
     def listenUNIX(address, factory, backlog=5):
         """Listen on a UNIX socket.
         """

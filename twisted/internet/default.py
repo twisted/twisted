@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.19 2002/07/14 03:19:49 itamarst Exp $
+# $Id: default.py,v 1.20 2002/07/24 01:36:31 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -52,6 +52,38 @@ if platform.getType() != 'java':
 
 if platform.getType() == 'posix':
     import process
+
+
+
+class FakeConnector:
+    """Used to emulate deprecated clientTCP/SSL/UNIX behaviour."""
+
+    timeoutID = None
+    
+    def __init__(self, protocol, reactor):
+        self.reactor = reactor
+        self.protocol = protocol
+
+    def doTimeout(self, connecting, timeout=30):
+        if timeout is not None:
+            self.timeoutID = self.reactor.callLater(timeout, connecting.failIfNotConnected, "timeout")
+
+    def cancelTimeout(self):
+        if self.timeoutID:
+            self.reactor.cancelCallLater(self.timeoutID)
+            del self.timeoutID
+    
+    def buildProtocol(self, addr):
+        self.cancelTimeout()
+        return self.protocol
+
+    def connectionFailed(self, reason):
+        self.cancelTimeout()
+        self.protocol.connectionFailed()
+        del self.protocol
+    
+    def connectionLost(self):
+        pass
 
 
 class PosixReactorBase(ReactorBase):
@@ -125,10 +157,18 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorUNIX
 
+    def startConnectUNIX(self, address, connector):
+        """See twisted.internet.interfaces.IReactorUNIX.startConnectUNIX
+        """
+        return tcp.UNIXClient(address, connector, self)
+    
     def clientUNIX(self, address, protocol, timeout=30):
         """See twisted.internet.interfaces.IReactorUNIX.clientUNIX
         """
-        return tcp.Client("unix", address, protocol, timeout=timeout)
+        connector = FakeConnector(protocol, self)
+        connecting = self.startConnectUNIX(address, connector)
+        connector.doTimeout(connecting, timeout)
+        return connecting
 
     def listenUNIX(self, address, factory, backlog=5):
         """Listen on a UNIX socket.
@@ -146,11 +186,18 @@ class PosixReactorBase(ReactorBase):
         p.startListening()
         return p
 
+    def startConnectTCP(self, host, port, connector):
+        """See twisted.internet.interfaces.IReactorTCP.startConnectTCP
+        """
+        return tcp.TCPClient(host, port, connector, self)
+    
     def clientTCP(self, host, port, protocol, timeout=30):
         """See twisted.internet.interfaces.IReactorTCP.clientTCP
         """
-        return tcp.Client(host, port, protocol, timeout)
-
+        connector = FakeConnector(protocol, self)
+        connecting = self.startConnectTCP(host, port, connector)
+        connector.doTimeout(connecting, timeout)
+        return connecting
 
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
                      uid=None, gid=None):
@@ -161,9 +208,19 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorSSL (sometimes, not implemented)
 
-    def clientSSL(self, host, port, protocol, contextFactory, timeout=30,):
-        return ssl.Client(host, port, protocol, contextFactory, timeout)
-
+    def startConnectSSL(self, host, port, contextFactory, connector):
+        """See twisted.internet.interfaces.IReactorSSL.startConnectSSL
+        """
+        return ssl.Client(host, port, contextFactory, connector, self)
+    
+    def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
+        """See twisted.internet.interfaces.IReactorSSL.clientSSL
+        """
+        connector = FakeConnector(protocol, self)
+        connecting = self.startConnectSSL(host, port, contextFactory, connector)
+        connector.doTimeout(connecting, timeout)
+        return connecting
+    
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         p = ssl.Port(port, factory, contextFactory, backlog, interface)
         p.startListening()
