@@ -44,6 +44,7 @@ from twisted.python import failure, log
 import resolve, common
 
 class DNSServerFactory(protocol.ServerFactory):
+    protocol = dns.DNSProtocol
     cache = None
 
     def __init__(self, authorities = None, caches = None, clients = None, verbose = 0):
@@ -61,6 +62,11 @@ class DNSServerFactory(protocol.ServerFactory):
         if caches:
             self.cache = caches[-1]
 
+
+    def buildProtocol(self, addr):
+        p = self.protocol(self)
+        p.factory = self
+        return p
 
     def connectionMade(self, protocol):
         pass
