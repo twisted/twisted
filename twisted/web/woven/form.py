@@ -85,7 +85,7 @@ class FormFillerWidget(widgets.Widget):
             
         value = self.getValue(request, model)
         if value:
-            arguments["value"] = value
+            arguments["value"] = str(value)
 
         arguments["type"] = "text"  #these are default
         arguments["name"] = model.name
@@ -102,24 +102,26 @@ class FormFillerWidget(widgets.Widget):
 
     def input_text(self, request, content, model, templateAttributes={}):
         r = content.textarea(
-            cols=model.getHint('cols', templateAttributes.get('cols', '60')),
-            rows=model.getHint('rows', templateAttributes.get('rows', '10')),
+            cols=str(model.getHint('cols',
+                                   templateAttributes.get('cols', '60'))),
+            rows=str(model.getHint('rows',
+                                   templateAttributes.get('rows', '10'))),
             name=model.name,
-            wrap=model.getHint('wrap',
-                               templateAttributes.get('wrap', "virtual")))
+            wrap=str(model.getHint('wrap',
+                                   templateAttributes.get('wrap', "virtual"))))
         r.text(str(self.getValue(request, model)))
         return r
 
     def input_password(self, request, content, model, templateAttributes={}):
         return content.input(
             type="password",
-            size=templateAttributes.get('size', "60"),
+            size=str(templateAttributes.get('size', "60")),
             name=model.name)
 
     def input_hidden(self, request, content, model, templateAttributes={}):
         return content.input(type="hidden",
                              name=model.name,
-                             value=self.getValue(request, model))
+                             value=str(self.getValue(request, model)))
 
     def input_submit(self, request, content, model, templateAttributes={}):
         div = content.div()
@@ -132,7 +134,7 @@ class FormFillerWidget(widgets.Widget):
 
     def input_choice(self, request, content, model, templateAttributes={}):
         s = content.select(name=model.name)
-        default = self.getValue(request, model)
+        default = self.getValues(request, model)
         for tag, value, desc in model.choices:
             kw = {}
             if value in default:
@@ -157,6 +159,11 @@ class FormFillerWidget(widgets.Widget):
         """
         rows = model.getHint('rows', templateAttributes.get('rows', None))
         cols = model.getHint('cols', templateAttributes.get('cols', None))
+        if rows:
+            rows = int(rows)
+        if cols:
+            cols = int(cols)
+            
         defaults = self.getValues(request, model)
         if (rows and rows>1) or (cols and cols>1):  #build a table
             s = content.table(border="0")

@@ -44,9 +44,10 @@ class Argument:
     # default value for argument, if no other default is given
     defaultDefault = None
 
-    def __init__(self, name, default=None, shortDesc=None, longDesc=None,
-                 hints=None):
+    def __init__(self, name, default=None, shortDesc=None,
+                 longDesc=None, hints=None, allowNone=1):
         self.name = name
+        self.allowNone = allowNone
         if default is None:
             default = self.defaultDefault
         self.default = default
@@ -79,6 +80,11 @@ class String(Argument):
     defaultDefault = ''
 
     def coerce(self, val):
+        if not val.strip():
+            if self.allowNone:
+                return ''
+            else:
+                raise InputError, "Cannot be empty"
         return str(val)
 
 
@@ -102,13 +108,17 @@ class Hidden(String):
 class Integer(Argument):
     """A single integer.
     """
-
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None,
-                 shortDesc=None, longDesc=None, hints=None):
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
-        self.allowNone = allowNone
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None,
+                 longDesc=None, hints=None):
+        #although Argument now has allowNone, that was recently added, and
+        #putting it at the end kept things which relied on argument order
+        #from breaking.  However, allowNone originally was in here, so
+        #I have to keep the same order, to prevent breaking code that
+        #depends on argument order only
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints,
+                          allowNone)
 
     def coerce(self, val):
         if not val.strip() and self.allowNone:
@@ -125,8 +135,14 @@ class Float(Argument):
 
     def __init__(self, name, allowNone=1, default=None, shortDesc=None,
                  longDesc=None, hints=None):
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
-        self.allowNone = allowNone
+        #although Argument now has allowNone, that was recently added, and
+        #putting it at the end kept things which relied on argument order
+        #from breaking.  However, allowNone originally was in here, so
+        #I have to keep the same order, to prevent breaking code that
+        #depends on argument order only
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints,
+                          allowNone)
+
 
     def coerce(self, val):
         if not val.strip() and self.allowNone:
@@ -151,7 +167,7 @@ class Choice(Argument):
                  longDesc=None, hints=None):
         self.choices = choices
         if choices and not default:
-            default = [choices[0][1]]
+            default.append(choices[0][1])
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
     def coerce(self, inIdent):
