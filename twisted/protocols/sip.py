@@ -682,7 +682,7 @@ class Base(protocol.DatagramProtocol):
     def sendMessage(self, destURL, message):
         """Send a message.
 
-        @param dest: C{URL}. This should be a *physical* URL, not a logical one.
+        @param destURL: C{URL}. This should be a *physical* URL, not a logical one.
         @param message: The message to send.
         """
         log.msg("Sending %s to %s" % (message, destURL))
@@ -740,7 +740,7 @@ class ILocator(Interface):
     def getAddress(self, logicalURL):
         """Return physical URL of server for logical URL of user.
 
-        @param userURL: a logical C{URL}.
+        @param logicalURL: a logical C{URL}.
         @return: Deferred which becomes URL or fails with LookupError.
         """
 
@@ -852,7 +852,7 @@ class IAuthorizer(Interface):
         """Generate a challenge the client may respond to.
         
         @type peer: C{tuple}
-        @type peer: The client's address
+        @param peer: The client's address
         
         @rtype: C{str}
         @return: The challenge string
