@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.41 2003/02/19 22:40:47 z3p Exp $
+# $Id: conch.py,v 1.42 2003/02/27 23:36:19 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -158,7 +158,7 @@ def run():
     filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
     log.msg(filename)
     if not options['nocache'] and os.path.exists(filename):
-        reactor.connectUNIX(filename, SSHUnixClientFactory())
+        reactor.connectUNIX(filename, SSHUnixClientFactory(), timeout=2)
     else:
         reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
     fd = sys.stdin.fileno()
@@ -211,8 +211,12 @@ def onConnect():
 class SSHUnixClientFactory(protocol.ClientFactory):
     noisy = 1
     
-    def stopFactory(self):
+    def clientConnectionLost(self, connector, reason):
         reactor.stop()
+
+    def clientConnectionFailed(self, connector, reason):
+        os.unlink(connector.transport.addr)
+        reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
 
     def startedConnecting(self, connector):
         fd = connector.transport.fileno()
