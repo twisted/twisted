@@ -122,9 +122,11 @@ being used, and the body is empty.</p>
   Jelly as plain strings with no indication that they were compressed for
   transit.</p>
 
-  <p>The strings in this mapping are fixed and defined in banana.py, but the
-  intention is for dialect negotiation to allow other strings to be added to
-  the table.</p>
+  <p>The strings in this mapping are populated by the sender when it sends a
+  special <q>vocab</q> OPEN sequence. The intention is that this mapping
+  will be sent just once when the connection is first established, but a
+  sufficiently ambituous sender could use this to implement adaptive forward
+  compression.</p>
   </li>
 
   <li>

@@ -2,19 +2,14 @@
 
 import types, struct
 
-from twisted.internet import protocol
+from twisted.internet import protocol, error
 from twisted.python.failure import Failure
 
-from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, \
+from slicer import RootSlicer, RootUnslicer, \
      UnbananaFailure, VocabSlicer, SimpleTokens
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
-     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, tokenNames
-
-class BananaError(Exception):
-    """This exception is raised in response to a fundamental protocol
-    violation. The connection should be dropped immediately.
-    """
-    pass
+     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, tokenNames, \
+     BananaError
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -42,7 +37,7 @@ class Banana(protocol.Protocol):
     slicerClass = RootSlicer
     unslicerClass = RootUnslicer
     hangupOnLengthViolation = False
-    debug = not False
+    debug = False
 
     def __init__(self):
         self.initSend()
@@ -189,7 +184,6 @@ class Banana(protocol.Protocol):
                 print " %s: %s" % (s, d)
             else:
                 print " %s" % s
-
 
     def setObject(self, count, obj):
         for i in range(len(self.receiveStack)-1, -1, -1):
@@ -433,6 +427,8 @@ class Banana(protocol.Protocol):
 
 
     def handleOpen(self, openCount, opentype):
+        if self.debug:
+            print "handleOpen(%d,%s)" % (openCount, opentype)
         objectCount = self.objectCounter
         self.objectCounter += 1
         top = self.receiveStack[-1]
@@ -469,7 +465,7 @@ class Banana(protocol.Protocol):
 
     def handleToken(self, token):
         top = self.receiveStack[-1]
-        if self.debug: print "receivetoken(%s)" % token
+        if self.debug: print "handleToken(%s)" % token
         try:
             top.receiveChild(token)
         except Violation:
@@ -486,6 +482,8 @@ class Banana(protocol.Protocol):
             self.abandonUnslicer(f, top)
 
     def handleClose(self, closeCount):
+        if self.debug:
+            print "handleClose(%d)" % closeCount
         if self.receiveStack[-1].openCount != closeCount:
             print "LOST SYNC"
             self.printStack()
@@ -494,8 +492,6 @@ class Banana(protocol.Protocol):
         child = self.receiveStack[-1] # don't pop yet: describe() needs it
 
         try:
-            if self.debug:
-                print "receiveClose()"
             obj = child.receiveClose()
         except Violation:
             # the child is contaminated. However, they're finished, so we
@@ -597,9 +593,10 @@ class Banana(protocol.Protocol):
         where = []
         for i in self.receiveStack:
             try:
-                piece = i.describe()
+                piece = i.describeSelf()
             except:
                 piece = "???"
+                #raise
             where.append(piece)
         return ".".join(where)
 

@@ -294,7 +294,7 @@ class PolyConstraint(Constraint):
     def __init__(self, *alternatives):
         self.alternatives = [makeConstraint(a) for a in alternatives]
         self.alternatives = tuple(self.alternatives)
-        # TODO: should taster/opentypes be a union of the alternatives'
+        # TODO: taster/opentypes should be a union of the alternatives'
     def checkObject(self, obj):
         ok = False
         for c in self.alternatives:

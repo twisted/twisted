@@ -36,3 +36,19 @@ SIZE_LIMIT = 1000 # default limit on the body length of long tokens (STRING,
 
 class Violation(Exception):
     pass
+
+
+class BananaError(Exception):
+    """This exception is raised in response to a fundamental protocol
+    violation. The connection should be dropped immediately.
+
+    .where is an optional string that describes the node of the object graph
+    where the failure was noticed.
+    """
+
+    def __init__(self, why, where="?"):
+        self.why = why
+        self.where = where
+
+    def __str__(self):
+        return "BananaError(in %s): %s" % (self.where, self.why)

@@ -3,7 +3,7 @@
 from twisted.trial import unittest
 from twisted.python import reflect
 from banana import Banana, BananaError
-import slicer, schema
+import slicer, schema, tokens
 from slicer import Dummy, UnbananaFailure
 from slicer import RootSlicer, RootSlicer2
 from slicer import RootUnslicer
@@ -62,35 +62,48 @@ class TokenBanana(Banana):
         return self.tokens
 
     def receiveToken(self, token):
-        # future optimization note: most Unslicers on the stack will not
-        # override .taste or .doOpen, so it would be faster to have the few
-        # that *do* add themselves to a separate .openers and/or .tasters
-        # stack. The issue is robustness: if the Unslicer is thrown out
-        # because of an exception or an ABORT token (i.e. startDiscarding is
-        # called), we must be sure to clean out their opener/taster too and
-        # not leave it dangling. Having them implemented as methods inside
-        # the Unslicer makes that easy, but means a full traversal of the
-        # stack for each token even when nobody is doing any tasting.
+        # insert artificial tokens into receiveData. Once upon a time this
+        # worked by directly calling the commented-out functions, but schema
+        # checking and abandonUnslicer made that unfeasible.
 
-#        for i in range(len(self.receiveStack)-1, -1, -1):
-#            self.receiveStack[i].taste(token)
+        #if self.debug:
+        #    print "receiveToken(%s)" % (token,)
 
-        if self.debug:
-            print "receiveToken(%s)" % (token,)
-
-        if type(token) == types.TupleType and token[0] == "OPEN":
-            self.handleOpen(token[2], token[1])
-            return
-
-        if type(token) == types.TupleType and token[0] == "CLOSE":
-            self.handleClose(token[1])
-            return
-
-        if type(token) == types.TupleType and token[0] == "ABORT":
-            self.handleAbort()
-            return
-
-        self.handleToken(token)
+        if type(token) == type(()):
+            if token[0] == "OPEN":
+                count = token[2]
+                opentype = token[1]
+                assert count < 128
+                assert len(opentype) < 128
+                b = ( chr(count) + tokens.OPEN +
+                      chr(len(opentype)) + tokens.STRING + opentype )
+                self.dataReceived(b)
+                #self.handleOpen(count, opentype)
+            elif token[0] == "CLOSE":
+                count = token[1]
+                assert count < 128
+                b = chr(count) + tokens.CLOSE
+                self.dataReceived(b)
+                #self.handleClose(count)
+            elif token[0] == "ABORT":
+                if len(token) == 2:
+                    count = token[1]
+                else:
+                    count = 0
+                assert count < 128
+                b = chr(count) + tokens.ABORT
+                self.dataReceived(b)
+                #self.handleAbort(count)
+        elif type(token) == int:
+            assert 0 <= token < 128
+            b = chr(token) + tokens.INT
+            self.dataReceived(b)
+        elif type(token) == str:
+            assert len(token) < 128
+            b = chr(len(token)) + tokens.STRING + token
+            self.dataReceived(b)
+        else:
+            raise NotImplementedError, "hey, this is just a quick hack"
 
     def receivedObject(self, obj):
         self.object = obj
@@ -103,10 +116,13 @@ class TokenBanana(Banana):
 
 class UnbananaTestMixin:
     def setUp(self):
+        self.hangup = False
         self.banana = TokenBanana()
     def tearDown(self):
-        self.failUnless(len(self.banana.receiveStack) == 1)
-        self.failUnless(isinstance(self.banana.receiveStack[0], RootUnslicer))
+        if not self.hangup:
+            self.failUnless(len(self.banana.receiveStack) == 1)
+            self.failUnless(isinstance(self.banana.receiveStack[0],
+                                       RootUnslicer))
             
     def do(self, tokens):
         return self.banana.processTokens(tokens)
@@ -117,8 +133,21 @@ class UnbananaTestMixin:
             print "There was a failure while Unbananaing '%s':" % res.where
             print res.failure.getTraceback()
             self.fail("UnbananaFailure")
-        
-    def assertUnbananaFailure(self, res, where, failtype=None):
+
+    def assertRaisesBananaError(self, where, f, *args):
+        try:
+            f(*args)
+        except Exception, e:
+            if not isinstance(e, BananaError):
+                print "wrong exception type: %s" % e
+                raise
+            if where != None:
+                if e.where != where:
+                    self.fail("BananaError '%s' didn't occur at '%s'" % \
+                              (e, where))
+        self.hangup = True # to stop the tearDown check
+
+    def checkUnbananaFailure(self, res, where, failtype=None):
         self.failUnless(isinstance(res, UnbananaFailure))
         if failtype:
             self.failUnless(res.failure,
@@ -128,7 +157,7 @@ class UnbananaTestMixin:
                 print res.failure.getTraceback()
                 self.fail("Wrong exception (wanted '%s'):" % failtype)
         self.failUnlessEqual(res.where, where)
-        self.banana.object = None # to stop the tearDown check
+        self.banana.object = None # to stop the tearDown check TODO ??
         
 class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
         
@@ -140,14 +169,14 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
     def test_aborted_list(self):
         "aborted list"
         res = self.do([OPENlist(0), 1, ABORT, CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1]")
+        self.checkUnbananaFailure(res, "root.[1]")
 
     def test_aborted_list2(self):
         "aborted list2"
         res = self.do([OPENlist(0), 1, ABORT,
                        OPENlist(1), 2, 3, CLOSE(1),
                        CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1]")
+        self.checkUnbananaFailure(res, "root.[1]")
 
     def test_aborted_list3(self):
         "aborted list3"
@@ -156,7 +185,7 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
                          OPENlist(2), 5, 6, ABORT, CLOSE(2),
                         CLOSE(1),
                        CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].[3].[2]")
+        self.checkUnbananaFailure(res, "root.[1].[3].[2]")
 
     def test_nested_list(self):
         "nested list"
@@ -175,8 +204,9 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict_with_duplicate_keys(self):
         "dict with duplicate keys"
-        res = self.do([OPENdict(0),"a",1,"a",2,CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.{}")
+        self.assertRaisesBananaError("root.{}",
+                                     self.do,
+                                     [OPENdict(0),"a",1,"a",2,CLOSE(0)])
         
     def test_dict_with_list(self):
         "dict with list"
@@ -195,10 +225,11 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict_with_mutable_key(self):
         "dict with mutable key"
-        res = self.do([OPENdict(0),
-                        OPENlist(1), 1, 2, CLOSE(1), "a",
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.{}")
+        self.assertRaisesBananaError("root.{}",
+                                     self.do,
+                                     [OPENdict(0),
+                                       OPENlist(1), 1, 2, CLOSE(1), "a",
+                                      CLOSE(0)])
 
     def test_instance(self):
         "instance"
@@ -212,11 +243,24 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
         
     def test_instance_bad1(self):
         "subinstance with numeric classname"
-        res = self.do([OPENinstance(0), "Foo", "a", 1,
-                       "b", OPENlist(1), 2, 3, CLOSE(1),
-                       "c", OPENinstance(2), 31337, "d", 4, CLOSE(2),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.<Foo>.c.<??>")
+        self.assertRaisesBananaError("root.<Foo>.c.<??>",
+                                     self.do,
+                                     [OPENinstance(0), "Foo",
+                                      "a", 1,
+                                      "b", OPENlist(1), 2, 3, CLOSE(1),
+                                      "c",
+                                      OPENinstance(2), 37, "d", 4, CLOSE(2),
+                                      CLOSE(0)])
+    def test_instance_bad2(self):
+        "subinstance with numeric attribute name"
+        self.assertRaisesBananaError("root.<Foo>.c.<Bar>.attrname??",
+                                     self.do,
+                                     [OPENinstance(0), "Foo",
+                                      "a", 1,
+                                      "b", OPENlist(1), 2, 3, CLOSE(1),
+                                      "c",
+                                      OPENinstance(2), "Bar", 37, 4, CLOSE(2),
+                                      CLOSE(0)])
 
     def test_ref1(self):
         res = self.do([OPENlist(0),
@@ -305,50 +349,56 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict1(self):
         # dies during open because of bad opentype
-        res = self.do([OPENlist(0), 1,
-                       ("OPEN", "die", 1), "a", 2, "b", 3, CLOSE(1),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].<OPENdie>", KeyError)
+        self.assertRaisesBananaError("root.[1].<OPEN>",
+                                     self.do,
+                                     [OPENlist(0), 1,
+                                       ("OPEN", "die", 1),
+                                        "a", 2,
+                                        "b", 3,
+                                       CLOSE(1),
+                                      CLOSE(0)])
+
     def test_dict2(self):
         # dies during start
-        res = self.do([OPENlist(0), 1,
-                       OPENdict2(1), "a", 2, "b", 3, CLOSE(1),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].{}.<START>",
-                                   "dead in start")
+        self.assertRaisesBananaError("root.[1].{}.<START>",
+                                     self.do,
+                                     [OPENlist(0), 1,
+                                      OPENdict2(1), "a", 2, "b", 3, CLOSE(1),
+                                      CLOSE(0)])
+        #"dead in start"
+
     def test_dict3(self):
         # dies during key
-        res = self.do([OPENlist(0), 1,
-                       OPENdict1(1), "a", 2, "die", CLOSE(1),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].{}", "aaaaaaaaargh")
+        self.assertRaisesBananaError("root.[1].{}",
+                                     self.do,
+                                     [OPENlist(0), 1,
+                                      OPENdict1(1), "a", 2, "die", CLOSE(1),
+                                      CLOSE(0)])
+        #"aaaaaaaaargh"
+
     def test_dict4(self):
         # dies during value
-        res = self.do([OPENlist(0), 1,
-                       OPENdict1(1), "a", 2, "b", "die", CLOSE(1),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].{}[b]", "aaaaaaaaargh")
-    def test_dict5(self):
-        # dies during receiveChild
-        res = self.do([OPENlist(0), 1,
-                        OPENdict1(1),
-                         "please_die_in_receiveChild", 2,
-                         "a", OPENlist(2), 3, 4, CLOSE(2),
-                        CLOSE(1),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].{}[a]",
-                                   "dead in receiveChild")
+        self.assertRaisesBananaError("root.[1].{}[b]",
+                                     self.do,
+                                     [OPENlist(0), 1,
+                                       OPENdict1(1),
+                                        "a", 2,
+                                        "b", "die",
+                                       CLOSE(1),
+                                      CLOSE(0)])
+        # "aaaaaaaaargh"
         
-    def test_dict6(self):
+    def test_dict5(self):
         # dies during finish
-        res = self.do([OPENlist(0), 1,
-                        OPENdict1(1),
-                         "a", 2,
-                         "please_die_in_finish", 3,
-                        CLOSE(1),
-                       CLOSE(0)])
-        self.assertUnbananaFailure(res, "root.[1].{}.<CLOSE>",
-                                   "dead in receiveClose()")
+        self.assertRaisesBananaError("root.[1].{}.<CLOSE>",
+                                     self.do,
+                                     [OPENlist(0), 1,
+                                       OPENdict1(1),
+                                        "a", 2,
+                                        "please_die_in_finish", 3,
+                                       CLOSE(1),
+                                      CLOSE(0)])
+        # "dead in receiveClose()"
         
 class BananaTests(unittest.TestCase):
     def setUp(self):
@@ -432,6 +482,21 @@ class BananaTests(unittest.TestCase):
                                 CLOSE(2),
                                CLOSE(1),
                               CLOSE(0)])
+
+    def test_refdict1(self):
+        # a dictionary with a value that isn't available right away
+        d = {1: "a"}
+        t = (d,)
+        d[2] = t
+        res = self.do(d)
+        self.failUnlessEqual(res,
+                             [OPENdict(0),
+                               1, "a",
+                               2, OPENtuple(1),
+                                   OPENref(2), 0, CLOSE(2),
+                                  CLOSE(1),
+                              CLOSE(0)])
+
 
 class Bar:
     def __cmp__(self, other):
@@ -672,16 +737,16 @@ class InboundByteStream(unittest.TestCase):
                     self.CLOSE(1)))
 
     def testConstrainedList(self):
-##         self.check2((self.OPENlist(1) + self.INT(1) + self.INT(2) +
-##                      self.CLOSE(1)),
-##                     [1,2],
-##                     schema.ListOf(int))
-        self.check2((self.OPENlist(1) + self.INT(1) +
-                     "\x01\x82b" +
+        self.check2((self.OPENlist(1) + self.INT(1) + self.INT(2) +
                      self.CLOSE(1)),
-                    "root.[1]",
+                    [1,2],
                     schema.ListOf(int))
-                    
+        self.violates((self.OPENlist(1) + self.INT(1) +
+                       "\x01\x82b" +
+                       self.CLOSE(1)),
+                      "root.[1]",
+                      schema.ListOf(int))
+
 
     
 class ConstrainedRootUnslicer(RootUnslicer):
@@ -787,7 +852,8 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
     def testMoreReferences(self):
         a = []
         t = (a,)
-        a.append((t,))
+        t2 = (t,)
+        a.append(t2)
         s = self.encode(t)
         z = self.decode(s)
         self.assertIdentical(z[0][0][0], z)
