@@ -897,9 +897,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     # set in instances or subclasses
     requestFactory = Request
 
-    # this is set in HTTPFactory.buildProtocol now -radix
-    timeOut = 60 * 60 * 12
-    # not for old .taps it isn't -glyph
     _savedTimeOut = None
 
     def __init__(self):
@@ -1061,6 +1058,8 @@ class HTTPFactory(protocol.ServerFactory):
     protocol = HTTPChannel
 
     logPath = None
+    
+    timeOut = 60 * 60 * 12
 
     def __init__(self, logPath=None, timeout=60*60*12):
         if logPath is not None:
