@@ -103,7 +103,7 @@ class Deferred:
         These will be executed when the 'master' callback is run.
         """
         cbs = ((callback, callbackArgs, callbackKeywords),
-               (errback or logError, errbackArgs, errbackKeywords))
+               (errback or (lambda x: x), errbackArgs, errbackKeywords))
         if self.default:
             self.callbacks[-1] = cbs
         else:
@@ -152,10 +152,9 @@ class Deferred:
 
         Each callback will have its result passed as the first
         argument to the next; this way, the callbacks act as a
-        'processing chain'.
-
-        If this deferred has not been armed yet, nothing will happen until it
-        is armed.
+        'processing chain'. Also, if the success-callback returns a Failure
+        or raises an Exception, processing will continue on the *error*-
+        callback chain.
         """
         self._startRunCallbacks(result, 0)
 
@@ -165,13 +164,17 @@ class Deferred:
 
         Each callback will have its result passed as the first
         argument to the next; this way, the callbacks act as a
-        'processing chain'.
+        'processing chain'. Also, if the error-callback returns a non-Failure
+        or doesn't raise an Exception, processing will continue on the
+        *success*-callback chain.
 
-        If this deferred has not been armed yet, nothing will happen until it
-        is armed.
+        If the argument that's passed to me is not a failure.Failure instance,
+        it will be embedded in one. If no argument is passed, a failure.Failure
+        instance will be created based on the current traceback stack.
         """
-        if not fail:
-            fail = failure.Failure()
+        if not isinstance(fail, failure.Failure):
+            fail = failure.Failure(fail)
+            
         self._startRunCallbacks(fail, 1)
 
 
@@ -228,14 +231,8 @@ class Deferred:
                                              callbackArgs=(0,),
                                              errbackArgs=(1,))
                     break
-                if type(self.result) != types.StringType:
-                    # TODO: make this hack go away; it has something to do
-                    # with PB returning strings from errbacks that are
-                    # actually tracebacks that we still want to handle as
-                    # errors sometimes... can't find exactly where right
-                    # now
-                    if not isinstance(self.result, failure.Failure):
-                        self.isError = 0
+                if not isinstance(self.result, failure.Failure):
+                    self.isError = 0
             except:
                 self.result = failure.Failure()
                 self.isError = 1
@@ -314,14 +311,17 @@ class DeferredList(Deferred):
         """(internal) Callback for when one of my deferreds fires.
         """
         self.resultList[index] = (succeeded, result)
-        
+
+
         if not self.called:
             if succeeded == SUCCESS and self.fireOnOneCallback:
                 self.callback((result, index))
             elif succeeded == FAILURE and self.fireOnOneErrback:
-                self.errback((result, index))
+                self.errback(failure.Failure((result, index)))
             elif None not in self.resultList:
                 self.callback(self.resultList)
+
+            
 
 
 # Constants for use with DeferredList

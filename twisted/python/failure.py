@@ -28,6 +28,9 @@ import reflect
 
 count = 0
 
+class DefaultException(Exception):
+    pass
+
 class Failure:
     """A basic abstraction for an error that has occurred.
 
@@ -48,10 +51,24 @@ class Failure:
         count = count + 1
         self.count = count
         self.type, self.value, tb = None, None, None
+
+        #strings Exceptions/Failures are bad, mmkay?
+        if ((isinstance(exc_value, types.StringType) or
+             isinstance(exc_value, types.UnicodeType))
+            and exc_type is None):
+            import warnings
+            warnings.warn(
+                "Don't pass strings (like %r) to failure.Failure (replacing with a DefaultException)." %
+                exc_value, DeprecationWarning, stacklevel=2)
+            exc_value = DefaultException(exc_value)
+        
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
         elif exc_type is None:
-            self.type = exc_value.__class__
+            if isinstance(exc_value, Exception):
+                self.type = exc_value.__class__
+            else: #allow arbitrary objects.
+                self.type = type(exc_value)
             self.value = exc_value
         else:
             self.type = exc_type

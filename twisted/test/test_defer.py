@@ -22,7 +22,9 @@ Test cases for defer module.
 
 from pyunit import unittest
 from twisted.internet import reactor, defer
+from twisted.python import failure
 
+class GenericError(Exception): pass
 
 class DeferredTestCase(unittest.TestCase):
     
@@ -83,12 +85,17 @@ class DeferredTestCase(unittest.TestCase):
         def cb(resultList, result=result):
             result.extend(resultList)
         dl.addCallbacks(cb, cb)
-        defr1.armAndCallback(1)
-        defr2.armAndErrback(2)
-        defr3.armAndCallback(3)
-        self.failUnlessEqual(result, [(defer.SUCCESS, 1),
-                                      (defer.FAILURE, 2),
-                                      (defer.SUCCESS, 3)])
+        defr1.armAndCallback("1")
+        defr2.armAndErrback(GenericError("2"))
+        defr3.armAndCallback("3")
+        self.failUnlessEqual([result[0],
+                    #result[1][1] is now a Failure instead of an Exception
+                              (result[1][0], str(result[1][1].value)),
+                              result[2]],
+                             
+                             [(defer.SUCCESS, "1"),
+                              (defer.FAILURE, "2"),
+                              (defer.SUCCESS, "3")])
 
     def testDeferredListFireOnOneError(self):
         defr1 = defer.Deferred()
@@ -96,12 +103,12 @@ class DeferredTestCase(unittest.TestCase):
         defr3 = defer.Deferred()
         dl = defer.DeferredList([defr1, defr2, defr3], fireOnOneErrback=1)
         result = []
-        def eb(resultList, result=result):
-            result.append(resultList)
-        dl.addErrback(eb)
-        defr1.callback(1)
-        defr2.errback(2)
-        self.failUnlessEqual(result, [(2, 1)])
+        dl.addErrback(result.append)
+        defr1.callback("1")
+        defr2.errback(GenericError("2"))
+        self.failUnlessEqual([str(result[0].value[0].value), str(result[0].value[1])],
+                             
+                             ["2", "1"])
 
     def testTimeOut(self):
         d = defer.Deferred()
@@ -124,26 +131,18 @@ class DeferredTestCase(unittest.TestCase):
 
     def testImmediateFailure(self):
         l = []
-        d = defer.fail("fail")
+        d = defer.fail(GenericError("fail"))
         d.addErrback(l.append)
-        self.assertEquals(l, [])
-        reactor.iterate()
-        self.assertEquals(l, ["fail"])
-
-    def testImmediateFailure(self):
-        l = []
-        d = defer.fail("fail")
-        d.addErrback(l.append)
-        self.assertEquals(l, ["fail"])
+        self.assertEquals(str(l[0].value), "fail")
 
     def testPausedFailure(self):
         l = []
-        d = defer.fail("fail")
+        d = defer.fail(GenericError("fail"))
         d.pause()
         d.addErrback(l.append)
         self.assertEquals(l, [])
         d.unpause()
-        self.assertEquals(l, ["fail"])
+        self.assertEquals(str(l[0].value), "fail")
 
     def testUnpauseBeforeCallback(self):
         d = defer.Deferred()
