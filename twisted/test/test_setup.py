@@ -50,6 +50,9 @@ class CheckingPackagesTestCase(unittest.TestCase):
                 self.fail("Package %r listed in setup.py but was not found in"
                           " the source tree." % (package,))
 
+        # We don't want to distribute web2 quite yet, don't fail the test.
+        foundPackages = [p for p in foundPackages if not p.startswith("twisted.web2")]
+        
         # Everything in foundPackages should have been removed by its match
         # in setupPackages, nothing should be left.
         self.failIf(foundPackages, "Packages found which are not in setup.py: "
