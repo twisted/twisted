@@ -201,7 +201,7 @@ class LineReceiver(protocol.Protocol):
 class Int32StringReceiver(protocol.Protocol):
     """A receiver for int32-prefixed strings.
 
-    An int32 string is a string prefixed by 4 bytes, the length of
+    An int32 string is a string prefixed by 4 bytes, the 32-bit length of
     the string encoded in network byte order.
     
     This class publishes the same interface as NetstringReceiver.
@@ -234,6 +234,40 @@ class Int32StringReceiver(protocol.Protocol):
         """Send an int32-prefixed string to the other end of the connection.
         """
         self.transport.write(struct.pack("!i",len(data))+data)
+
+
+class Int16StringReceiver(protocol.Protocol):
+    """A receiver for int16-prefixed strings.
+
+    An int16 string is a string prefixed by 2 bytes, the 16-bit length of
+    the string encoded in network byte order.
+    
+    This class publishes the same interface as NetstringReceiver.
+    """
+    
+    recvd = ""
+
+    def stringReceived(self, msg):
+        """Override this.
+        """
+        raise NotImplementedError
+
+    def dataReceived(self, recd):
+        """Convert int16 prefixed strings into calls to stringReceived.
+        """
+        self.recvd = self.recvd + recd
+        while len(self.recvd) > 1:
+            length ,= struct.unpack("!h",self.recvd[:2])
+            if len(self.recvd) < length+2:
+                break
+            packet = self.recvd[2:length+2]
+            self.recvd = self.recvd[length+2:]
+            self.stringReceived(packet)
+
+    def sendString(self, data):
+        """Send an int16-prefixed string to the other end of the connection.
+        """
+        self.transport.write(struct.pack("!h",len(data)) + data)
 
 
 class StatefulStringProtocol:
