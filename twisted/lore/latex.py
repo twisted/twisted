@@ -32,27 +32,20 @@ def latexEscape(text):
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '\\copyright'}
 
-def getLatexText(node, writer, filter=lambda x:x):
+def getLatexText(node, writer, filter=lambda x:x, entities=entities):
     if hasattr(node, 'eref'):
         return writer(entities.get(node.eref, ''))
     if hasattr(node, 'data'):
         return writer(filter(node.data))
     for child in node.childNodes:
-        getLatexText(child, writer, filter)
+        getLatexText(child, writer, filter, entities)
 
-class LatexSpitter:
-
-    baseLevel = 0
+class BaseLatexSpitter:
 
     def __init__(self, writer, currDir='.', filename=''):
         self.writer = writer
         self.currDir = currDir
         self.filename = filename
-
-    def writeNodeData(self, node):
-        buf = StringIO()
-        getLatexText(node, buf.write, latexEscape)
-        self.writer(buf.getvalue().replace('<', '$<$').replace('>', '$>$'))
 
     def visitNode(self, node):
         if not hasattr(node, 'tagName'):
@@ -65,6 +58,40 @@ class LatexSpitter:
         for child in node.childNodes:
             self.visitNode(child)
         self.writer(getattr(self, 'end_'+node.tagName, None) or '')
+
+    def visitNode_a(self, node):
+        if node.hasAttribute('class'):
+            if node.getAttribute('class').endswith('listing'):
+                return self.visitNode_a_listing(node)
+        if node.hasAttribute('href'):
+            return self.visitNode_a_href(node)
+        if node.hasAttribute('name'):
+            return self.visitNode_a_name(node)
+        self.visitNodeDefault(node)
+
+    def visitNode_span(self, node):
+        if not node.hasAttribute('class'):
+            return self.visitNodeDefault(node)
+        node.tagName += '_'+node.getAttribute('class')
+        self.visitNode(node)
+
+    visitNode_div = visitNode_span
+
+    def visitNode_h1(self, node):
+        pass
+
+    def visitNode_style(self, node):
+        pass
+
+
+class LatexSpitter(BaseLatexSpitter):
+
+    baseLevel = 0
+
+    def writeNodeData(self, node):
+        buf = StringIO()
+        getLatexText(node, buf.write, latexEscape)
+        self.writer(buf.getvalue().replace('<', '$<$').replace('>', '$>$'))
 
     def visitNode_pre(self, node):
         self.writer('\\begin{verbatim}\n')
@@ -100,19 +127,6 @@ class LatexSpitter:
         self.visitNodeDefault(node)
         self.writer('}\n')
 
-    def visitNode_h1(self, node):
-        pass
-
-    def visitNode_a(self, node):
-        if node.hasAttribute('class'):
-            if node.getAttribute('class').endswith('listing'):
-                return self.visitNode_a_listing(node)
-        if node.hasAttribute('href'):
-            return self.visitNode_a_href(node)
-        if node.hasAttribute('name'):
-            return self.visitNode_a_name(node)
-        self.visitNodeDefault(node)
-
     def visitNode_a_listing(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
         self.writer('\\begin{verbatim}\n')
@@ -140,15 +154,6 @@ class LatexSpitter:
                                            node.getAttribute('name')))
         self.visitNodeDefault(node)
 
-    def visitNode_style(self, node):
-        pass
-
-    def visitNode_span(self, node):
-        if not node.hasAttribute('class'):
-            return self.visitNodeDefault(node)
-        node.tagName += '_'+node.getAttribute('class')
-        self.visitNode(node)
-
     def visitNode_table(self, node):
         rows = [[col for col in row.childNodes 
                      if getattr(col, 'tagName', None) in ('th', 'td')]
@@ -172,8 +177,6 @@ class LatexSpitter:
                         % latexEscape(node.getAttribute('title')))
         self.writer('\\end{center}\\end{table}\n')
          
-    visitNode_div = visitNode_span
-
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
 
     start_title = '\\title{'
