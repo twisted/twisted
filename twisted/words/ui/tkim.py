@@ -327,6 +327,8 @@ class ContactList(Toplevel):
             self.box.addRoot(g)
         return g
 
+    addGateway = getGateway
+
     def removeGateway(self,gateway):
         g=self.getGateway(gateway)
         self.box.remove(g.item)
@@ -471,12 +473,15 @@ class StatusNode(tktree.Node):
             if u==user:
                 self.users[i]=[user,status]
                 self.updateMe()
+                return
+        self.addUser(user,status)
     def updateName(self,olduser,newuser):
         for i in range(len(self.users)):
             u,s=self.users[i]
             if u==olduser:
                 self.users[i]=[newuser,s]
                 self.updateMe()
+                return
 
 class UserNode(tktree.Node):
     def __init__(self,user,status):
