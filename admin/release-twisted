@@ -372,6 +372,9 @@ class GenerateDocs(Transaction):
             sh("groff -man -Thtml %(tdir)s/doc/man/%(file)s.1 >"
                                  "%(tdir)s/doc/man/%(file)s.html" % vars())
 
+        print "makeDocs: book"
+        sh('cd %s &&  ./admin/makebook' % tdir)
+
         #everything after this is atomic (enough).
         #shwack the crap
         print "copyDist: Stripping *.pyc, .cvsignore"
@@ -402,7 +405,8 @@ class GenerateDocs(Transaction):
         sh('rm -f %s/doc/howto/*.xhtml' % tdir)
         sh('rm -f %s/doc/specifications/*.xhtml' % tdir)
 
-
+        #then swhack the results of the latex stuff
+        sh('cd %s/doc/howto && rm -f *.eps *.tex *.aux *.log book.*' % tdir)
 
 class CreateTarballs(Transaction):
 
