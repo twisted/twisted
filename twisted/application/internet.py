@@ -59,7 +59,7 @@ class _AbstractServer(_VolatileDataService):
 
     def stopService(self):
         service.Service.stopService(self)
-        self._port.stopListening()
+        return self._port.stopListening()
 
     def _getPort(self):
         from twisted.internet import reactor

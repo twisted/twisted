@@ -652,11 +652,15 @@ class Port(base.BasePort):
         """Stop accepting connections on this port.
 
         This will shut down my socket and call self.connectionLost().
+        It returns a deferred which will fire successfully when the
+        port is actually closed.
         """
         self.disconnecting = 1
         self.stopReading()
         if self.connected:
+            self.deferred = defer.Deferred()
             self.reactor.callLater(0, self.connectionLost, connDone)
+            return self.deferred
 
     stopListening = loseConnection
 
@@ -670,6 +674,8 @@ class Port(base.BasePort):
         del self.socket
         del self.fileno
         self.factory.doStop()
+        self.deferred.callback(None)
+        del self.deferred
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
