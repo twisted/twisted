@@ -1,0 +1,32 @@
+.TH GENERATELORE "1" "July 2001" "" ""
+.SH NAME
+generatelore \- generate spiffy HTML from a plain subset of HTML
+.SH SYNOPSIS
+.B generatelore [-t \fItemplate\fR] [-a \fIapidir\fR] [-d \fIdocsdir\fR]  [-e \fIext\fR] [-u \fIbaseurl\fR] [file [...]]
+.B generatelore --help
+.SH DESCRIPTION
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.TP \fB-t\fR, \fB--template\fR <template>
+The template file to follow for generating content (default: template.tpl)
+.TP \fB-a\fR, \fB--apidir\fR <apidir>
+The directory in which a copy of the epydoc-generated api documentation is.
+If available, will allow for non-full references to modules and classes.
+.TP \fB-e\fR, \fB--ext\fR <extension>
+The new extension (defaults to xhtml)
+.TP \fB-u\fR, \fB--baseurl\fR <url>
+URL in which the API documentation is available.
+.SH DESCRIPTION
+The exact HTML syntax to follow is documented in Twisted's doc-standard.html.
+If no files are given, all *.html documents in docsdir will be processed.
+.SH AUTHOR
+Written by Moshe Zadka, based on generatelore's help messages
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2000 Matthew W. Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+html2latex(1)

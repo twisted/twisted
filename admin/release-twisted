@@ -362,8 +362,7 @@ class GenerateDocs(Transaction):
            % (tdir))
 
         print "makeDocs: generate-domdocs."
-        sh('cd %s &&  ./admin/generate-domdocs -v %s' % (tdir, ver))
-        sh('cd %s &&  ./admin/generate-domdocs -v %s --docsdir doc/specifications' % (tdir, ver))
+        sh('cd %s && ./admin/genarate-domdocs %s' % (tdir, ver))
 
         print "makeDocs: man pages"
         for file in glob.glob("%s/doc/man/*.1" % tdir):

@@ -1,0 +1,28 @@
+.TH HTML2LATEX "1" "July 2001" "" ""
+.SH NAME
+html2latex \- generate LaTeX out of a subset of HTML
+.SH SYNOPSIS
+.B html2latex [-d \fIdirectory\fR] [-s] [file [...]]
+.B html2latex --help
+.SH DESCRIPTION
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.TP \fB-d\fR, \fB--directory\fR <directory>
+Directory relative to which links are resolved. The default is the directory
+in which the file is.
+.TP \fB-s\fR, \fB--section\fR
+Generate a section of LaTeX, not an article
+.SH DESCRIPTION
+The exact HTML syntax to follow is documented in Twisted's doc-standard.html.
+If no files are given, all *.html documents in docsdir will be processed.
+.SH AUTHOR
+Written by Moshe Zadka, based on html2latex's help messages
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2000 Matthew W. Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+generatelore(1)
