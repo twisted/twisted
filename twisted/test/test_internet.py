@@ -426,18 +426,19 @@ class DelayedTestCase(unittest.TestCase):
 
     def checkTimers(self):
         l1 = self.timers.values()
-        l1.sort()
         l2 = list(reactor.getDelayedCalls())
-        l2.sort()
 
-        # getDelayedCalls makes no promises about the order of the
-        # delayedCalls it returns, but they should be the same objects as
-        # we've recorded in self.timers. We sort both lists to make them
-        # easier to compare.
+        # There should be at least the calls we put in.  There may be other
+        # calls that are none of our business and that we should ignore,
+        # though.
 
-        if l1 != l2:
+        missing = []
+        for dc in l1:
+            if dc not in l2:
+                missing.append(dc)
+        if missing:
             self.finished = 1
-            self.assertEquals(l1, l2)
+        self.failIf(missing, "Should have been missing no calls, instead was missing " + repr(missing))
 
     def callback(self, tag):
         del self.timers[tag]
