@@ -200,6 +200,16 @@ class Configurator:
     Custom handling of configuration-item-setting can be had by adding
     configure_%s(self, value) methods to my subclass. The default is to set
     an attribute on the instance that will be configured.
+    
+    A method getConfiguration should return a mapping of attribute to value, for
+    attributes mentioned in configTypes. The default is to get the attribute from
+    the instance that is being configured.
+    
+    Specific types of Configurators should form a class heirarchy. For example,
+    lets say we have a Domain interface that classes need to implement in order
+    to be used in a mail server. We would then make a DomainConfigurator, and
+    all Configurators for domains classes should inherit from DomainConfigurator,
+    even if the configurable classes do not have a common base class.
     """
 
     # Change this attribute in subclasses.
