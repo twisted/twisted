@@ -56,6 +56,8 @@ class Test(XMLRPC):
     def xmlrpc_deferFault(self):
         return defer.fail(xmlrpc.Fault(17, "hi"))
 
+    def xmlrpc_complex(self):
+        return {"a": ["b", "c", 12, []], "D": "foo"}
 
 class XMLRPCTestCase(unittest.TestCase):
 
@@ -76,7 +78,10 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(unittest.deferredResult(x), 5)
         x = self.proxy().callRemote("defer", "a")
         self.assertEquals(unittest.deferredResult(x), "a")
-
+        x = self.proxy().callRemote("complex")
+        self.assertEquals(unittest.deferredResult(x),
+                          {"a": ["b", "c", 12, []], "D": "foo"})
+    
     def testErrors(self):
         for code, methodName in [(666, "fail"), (666, "deferFail"),
                                  (12, "fault"), (23, "noSuchMethod"),
