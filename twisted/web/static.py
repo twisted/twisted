@@ -145,7 +145,9 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
     # files (this defaults to ['/etc/mime.types']).
     for location in mimetype_locations:
         if os.path.exists(location):
-            contentTypes.update(mimetypes.read_mime_types(location))
+            more = mimetypes.read_mime_types(location)
+            if more is not None:
+                contentTypes.update(more)
             
     return contentTypes
 
