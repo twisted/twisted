@@ -14,7 +14,6 @@ build: build-stamp
 build-stamp:
 	dh_testdir
 	/usr/bin/python setup.py build
-	#strip build/lib*/twisted/spread/*.so
 	touch build-stamp
 
 clean:
@@ -35,14 +34,13 @@ install-stamp: build-stamp
 
 	# Add here commands to install the package into debian/tmp.
 	cp -rf build/lib*/twisted debian/tmp/usr/lib/python1.5/site-packages/
-	cp README CREDITS doc/CodingStandard.html debian/tmp/usr/share/doc/twisted
+	cp TODO README CREDITS doc/CodingStandard.html debian/tmp/usr/share/doc/twisted
 	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
 	cp debian/copyright debian/tmp/usr/share/doc/twisted/
-	cp bin/* debian/tmp/usr/bin
+	cp bin/mktap bin/gnusto bin/twistd bin/im bin/faucet debian/tmp/usr/bin
 	for file in debian/tmp/usr/bin/*;do sed '1s|.*|#!/usr/bin/python|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
-	for file in debian/tmp/usr/bin/*; do ln -s ../man7/undocumented.7.gz debian/tmp/usr/share/man/man1/`basename $${file}`.1.gz; done
-	
-
+	cp doc/man/*.1 debian/tmp/usr/share/man/man1/
+	gzip -9 debian/tmp/usr/share/man/man1/*
 	touch install-stamp
 
 binary-arch: build install
