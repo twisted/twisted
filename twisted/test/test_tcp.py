@@ -528,7 +528,7 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
     
     def testProperlyCloseFiles(self):
         self.connector()
-        timeLimit = time.time() + self.timeLimit + 100
+        timeLimit = time.time() + self.timeLimit
         while (self.totalConnections < self.numberRounds and 
                time.time() < timeLimit):
             reactor.iterate(0.01)
