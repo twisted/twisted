@@ -86,11 +86,15 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def sendReply(self, protocol, message, address):
         if self.verbose > 1:
-            s = ' '.join([str(a) for a in message.answers])
+            s = ' '.join([str(a.payload) for a in message.answers])
+            auth = ' '.join([str(a.payload) for a in message.authority])
+            add = ' '.join([str(a.payload) for a in message.additional])
             if not s:
                 log.msg("Replying with no answers")
             else:
                 log.msg("Answers are " + s)
+                log.msg("Authority is " + auth)
+                log.msg("Additional is " + add)
 
         if address is None:
             protocol.writeMessage(message)
@@ -98,22 +102,20 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message, address)
 
 
-    def gotResolverResponse(self, responses, protocol, message, address):
+    def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         message.rCode = dns.OK
-        message.answers = responses
+        message.answers = ans
+        message.authority = auth
+        message.additional = add
         self.sendReply(protocol, message, address)
         if self.verbose:
-            log.msg(
-                "Lookup found %d record%s" % (
-                    len(responses), len(responses) != 1 and "s" or ""
-                )
-            )
+            l = len(ans) + len(auth) + len(add)
+            log.msg("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
+
         if self.cache:
-            for res in responses:
-                if not res.cachedResponse:
-                    self.cache.cacheResult(
-                        res.name, res.ttl, res.type, res.cls, res.payload
-                    )
+            self.cache.cacheResult(
+                message.queries[0], (ans, auth, add)
+            )
 
 
     def gotResolverError(self, failure, protocol, message, address):
@@ -198,4 +200,5 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def allowQuery(self, message, protocol, address):
-        return 1
+        # Allow anything but empty queries
+        return len(message.queries)

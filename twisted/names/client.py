@@ -28,6 +28,8 @@ Future plans: Proper nameserver acquisition on Windows/MacOS,
 
 from __future__ import nested_scopes
 
+import socket
+
 # Twisted imports
 from twisted.python.runtime import platform
 from twisted.internet import defer, protocol, interfaces
@@ -168,41 +170,42 @@ class Resolver(common.ResolverBase):
             return self.connections[0].query(queries)
 
 
-    def filterAnswers(self, type):
-        def getOfType(message, type=type):
-            if message.trunc:
-                return self.queryTCP(message.queries).addCallback(self.filterAnswers(type))
-            else:
-                results = [ans for ans in message.answers if not type or ans.type == type]
-                return results
-        return getOfType
+    def filterAnswers(self, message):
+        if message.trunc:
+            return self.queryTCP(message.queries).addCallback(self.filterAnswers)
+        else:
+            return (message.answers, message.authority, message.additional)
 
 
     def _lookup(self, name, cls, type, timeout):
         return self.queryUDP(
             [dns.Query(name, type, cls)], timeout
-        ).addCallback(self.filterAnswers(type))
+        ).addCallback(self.filterAnswers)
     
     
     # This one we can do more efficiently than the default
     def lookupAllRecords(self, name, timeout = 10):
         return self.queryUDP(
             [dns.Query(name, dns.ALL_RECORDS, dns.IN)], timeout
-        ).addCallback(self.filterAnswers(None))
+        ).addCallback(self.filterAnswers)
     
+
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout = 10):
         return self.queryTCP(
             [dns.Query(name, dns.AXFR, dns.IN)], timeout
-        ).addCallback(self.filterAnswers(None))
+        ).addCallback(self.filterAnswers)
 
 
 class ThreadedResolver:
     __implements__ = (interfaces.IResolverSimple,)
 
-    def lookupAddress(self, name, timeout = 10):
-        import socket
-        return defer.deferToThread(socket.gethostbyname, name)
+    def __init__(self):
+        self.cache = {}
+
+    def getHostByName(self, name, timeout = 10):
+        # XXX - Make this respect timeout
+        return defer.deferToThread(socket.gethostbyname, name).chainDeferred(d)
 
 
 class DNSClientFactory(protocol.ClientFactory):

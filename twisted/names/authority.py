@@ -38,6 +38,8 @@ class FileAuthority(common.ResolverBase):
 
     def _lookup(self, name, cls, type, timeout = 10):
         results = []
+        authority = []
+        additional = []
         ttl = max(self.soa[1].minimum, self.soa[1].expire)
         try:
             for record in self.records[name.lower()]:
@@ -45,7 +47,11 @@ class FileAuthority(common.ResolverBase):
                     results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
                     )
-            return defer.succeed(results)
+                elif record.TYPE == dns.NS:
+                    authority.append(
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
+                    )
+            return defer.succeed((results, authority, additional))
         except KeyError:
             if name.lower().endswith(self.soa[0].lower()):
                 # We are the authority and we didn't find it.  Goodbye.
@@ -63,7 +69,7 @@ class FileAuthority(common.ResolverBase):
                     if rec.TYPE != dns.SOA:
                         results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec))
             results.append(results[0])
-            return defer.succeed(results)
+            return defer.succeed((results, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
 

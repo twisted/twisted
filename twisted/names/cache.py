@@ -37,68 +37,67 @@ class CacheResolver(common.ResolverBase):
             cache = {}
         self.cache = cache
         self.verbose = verbose
+        self.cancel = {}
 
 
-    def addHeader(self, results, name, cls):
-        """Mark all these results as cache hits"""
-        for r in results:
-            r = copy.copy(r)
-            r.cachedResponse = 1
-            r.ttl = r.ttl - time.time()
-        results = common.ResolverBase.addHeader(self, results, name, cls)
-        return [r for r in results if r.ttl > 0]
+    def __setstate__(self, state):
+        self.__dict__ = state
+        
+        now = time.time()
+        for (k, (when, (ans, add, ns))) in self.cache.items():
+            diff = now - when
+            for rec in ans + add + ns:
+                if rec.ttl < diff:
+                    del self.cache[k]
+                    break
+
+
+    def __getstate__(self):
+        self.cancel.clear()
+        return self.__dict__
 
 
     def _lookup(self, name, cls, type, timeout):
         now = time.time()
+        q = dns.Query(name, cls, type)
         try:
-            records = self.cache[name.lower()][cls][type] = [r for r in self.cache[name.lower()][cls][type] if r.ttl > now]
+            when, (ans, auth, add) = self.cache[q]
         except KeyError:
             if self.verbose > 1:
                 log.msg('Cache miss for ' + repr(name))
             return defer.fail(failure.Failure(dns.DomainError(name)))
         else:
-            if records:
-                if self.verbose:
-                    log.msg('Cache hit for ' + repr(name))
-                return defer.succeed([
-                    dns.RRHeader(name, type, cls, r.ttl - now, r) for r in records
-                ])
-            else:
-                if self.verbose:
-                    log.msg('Cache miss (expired) for ' + repr(name))
-                return defer.fail(failure.Failure(dns.DomainError(name)))
+            if self.verbose:
+                log.msg('Cache hit for ' + repr(name))
+            diff = now - when
+            return defer.succeed((
+                [dns.RRHeader(str(r.name), r.type, r.cls, r.ttl - diff, r.payload) for r in ans],
+                [dns.RRHeader(str(r.name), r.type, r.cls, r.ttl - diff, r.payload) for r in auth],
+                [dns.RRHeader(str(r.name), r.type, r.cls, r.ttl - diff, r.payload) for r in add]
+            ))
 
 
     def lookupAllRecords(self, name, timeout = 10):
-        now = time.time()
-        try:
-            rec = reduce(
-                operator.add,
-                self.cache[name.lower()][dns.IN].values(),
-            )
-            if self.verbose:
-                log.msg('Cache hit for ' + repr(name))
-            return defer.succeed([
-                dns.RRHeader(name, r.TYPE, dns.IN, r.ttl - now, r) for r in rec
-            ])
-        except (KeyError, TypeError), e:
-            if self.verbose > 1:
-                log.msg('Cache miss for ' + repr(name))
-            return defer.fail(failure.Failure(dns.DomainError(name)))
+        return defer.fail(failure.Failure(dns.DomainError(name)))
 
 
-    def cacheResult(self, name, ttl, type, cls, payload):
-        l = self.cache.setdefault(
-            str(name).lower(), {}
-        ).setdefault(
-            cls, {}
-        ).setdefault(
-            type, []
-        )
-        if payload not in l:
-            payload = copy.copy(payload)
-            payload.ttl = time.time() + ttl
-            if self.verbose > 1:
-                log.msg('Adding %r to cache' % name)
-            l.append(payload)
+    def cacheResult(self, query, payload):
+        if self.verbose > 1:
+            log.msg('Adding %r to cache' % query)
+
+        self.cache[query] = (time.time(), payload)
+
+        if self.cancel.has_key(query):
+            self.cancel[query].cancel()
+
+        m = 2 ** 32
+        for r in list(payload[0]) + list(payload[1]) + list(payload[2]):
+            m = min(m, r.ttl)
+        
+        from twisted.internet import reactor
+        self.cancel[query] = reactor.callLater(m, self.clearEntry, query)
+
+
+    def clearEntry(self, query):
+        del self.cache[query]
+        del self.cancel[query]

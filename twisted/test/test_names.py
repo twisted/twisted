@@ -37,7 +37,7 @@ def setDone(message):
     gotResponse = message
 
 def justPayload(results):
-    return [r.payload for r in results]
+    return [r.payload for r in results[0]]
 
 class NoFileAuthority(authority.FileAuthority):
     def __init__(self, soa, records):
@@ -326,6 +326,6 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
     def testZoneTransfer(self):
         """Test DNS 'AXFR' queries (Zone transfer)"""
         self.namesTest(
-            self.resolver.lookupZone('test-domain.com').addCallback(lambda r: r[:-1]),
+            self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
             reduce(operator.add, test_domain_com.records.values())
         )

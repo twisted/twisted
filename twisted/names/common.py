@@ -15,11 +15,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import operator, sys
+import operator, sys, socket, random
 
 from twisted.protocols import dns
-from twisted.internet import defer
+from twisted.internet import defer, error
 from twisted.python import failure, log
+
+EMPTY_RESULT = (), (), ()
 
 class ResolverBase:
     typeToMethod = None
@@ -28,7 +30,6 @@ class ResolverBase:
         self.typeToMethod = {}
         for (k, v) in typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
-
 
     def query(self, query, timeout = 10):
         try:
@@ -102,13 +103,66 @@ class ResolverBase:
     def lookupAllRecords(self, name, timeout = 10):
         return defer.DeferredList([
             self._lookup(name, dns.IN, type, timeout).addErrback(
-                lambda f: f.trap(NotImplementedError) and []
+                lambda f: f.trap(NotImplementedError) and EMPTY_RESULT
             ) for type in dns.QUERY_TYPES.keys()
-        ]).addCallback(
-            lambda r: reduce(operator.add, [res[1] for res in r if res[0]], [])
+        ]).addCallback(self._cbAllRecords)
+    
+    def _cbAllRecords(self, results):
+        ans, auth, add = [], [], []
+        for res in results:
+            if res[0]:
+                ans.extend(res[1][0])
+                auth.extend(res[1][1])
+                add.extend(res[1][2])
+        return ans, auth, add
+
+    def getHostByName(self, name, timeout = 10):
+        # XXX - respect timeout
+        return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout).addCallback(
+            self._cbRecords, name
         )
 
+    def _cbRecords(self, (ans, auth, add), name):
+        result = extractRecord(self, dns.Name(name), ans + auth + add)
+        if not result:
+            raise error.DNSLookupError(name)
+        return result
 
+
+if hasattr(socket, 'inet_ntop'):
+    def extractRecord(resolver, name, answers, level = 10):
+        if not level:
+            return None
+        for r in ans:
+            if r.name == name and r.type == dns.A6:
+                return socket.inet_ntop(socket.AF_INET6, r.payload.address)
+        for r in ans:
+            if r.name == name and r.type == dns.AAAA:
+                return socket.inet_ntop(socket.AF_INET6, r.payload.address)
+        for r in ans:
+            if r.name == name and r.type == dns.A:
+                return socket.inet_ntop(socket.AF_INET, r.payload.address)
+        for r in ans:
+            if r.name == name and r.type == dns.CNAME:
+                result = extractRecord(resolver, r.payload.name, answers, level - 1)
+                if not result:
+                    return resolver.getHostByName(str(r.payload.name))
+                return result
+        
+else:
+    def extractRecord(resolver, name, answers, level = 10):
+        if not level:
+            return None
+        for r in answers:
+            if r.name == name and r.type == dns.A:
+                return socket.inet_ntoa(r.payload.address)
+        for r in answers:
+            if r.name == name and r.type == dns.CNAME:
+                result = extractRecord(resolver, r.payload.name, answers, level - 1)
+                if not result:
+                    return resolver.getHostByName(str(r.payload.name))
+                return result
+        
 typeToMethod = {
     dns.A:     'lookupAddress',
     dns.AAAA:  'lookupIPV6Address',

@@ -155,6 +155,8 @@ class Name:
 
 
     def __init__(self, name=''):
+        import types
+        assert isinstance(name, types.StringTypes)
         self.name = name
 
     def encode(self, strio, compDict=None):
@@ -886,8 +888,8 @@ class Message:
         self.rCode = rCode
         self.queries = []
         self.answers = []
-        self.ns = []
-        self.add = []
+        self.authority = []
+        self.additional = []
 
 
     def addQuery(self, name, type=ALL_RECORDS, cls=IN):
@@ -913,9 +915,9 @@ class Message:
             q.encode(body_tmp, compDict)
         for q in self.answers:
             q.encode(body_tmp, compDict)
-        for q in self.ns:
+        for q in self.authority:
             q.encode(body_tmp, compDict)
-        for q in self.add:
+        for q in self.additional:
             q.encode(body_tmp, compDict)
         body = body_tmp.getvalue()
         size = len(body) + self.headerSize
@@ -932,7 +934,7 @@ class Message:
         
         strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
                                 len(self.queries), len(self.answers), 
-                                len(self.ns), len(self.add)))
+                                len(self.authority), len(self.additional)))
         strio.write(body)
 
 
@@ -958,7 +960,7 @@ class Message:
                 return
             self.queries.append(q)
 
-        items = ((self.answers, nans), (self.ns, nns), (self.add, nadd))
+        items = ((self.answers, nans), (self.authority, nns), (self.additional, nadd))
         for (l, n) in items:
             self.parseRecords(l, n, strio)
 
