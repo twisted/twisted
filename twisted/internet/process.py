@@ -395,6 +395,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             log.deferr()
         self.maybeCallProcessEnded()
 
+
 class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process that uses PTY support."""
 
@@ -468,8 +469,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         registerReapProccessHandler(self.pid, self)
 
     def setWindowSize(self, rows, cols, xpixels = 0, ypixels = 0):
-# set the window size for applications like curses
-# idea stolen from pexpect
+        """Set the window size for applications like curses."""
+        # idea stolen from pexpect
         fcntl.ioctl(self.fd, termios.TIOCSWINSZ, 
                     struct.pack('4H', rows, cols, xpixels, ypixels))
 
