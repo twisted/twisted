@@ -63,11 +63,14 @@ class ThreadDispatcher(threadpool.ThreadPool):
         self.dispatch(owner, self._runWithCallback, callback, errback, func, args, kw)
 
 
-theDispatcher = ThreadDispatcher()
+theDispatcher = ThreadDispatcher(0)
+
 def dispatchApply(callback, errback, func, args, kw):
     theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
+
 def dispatch(callback, errback, func, *args, **kw):
     dispatchApply(callback, errback, func, args, kw)
+
 main.addShutdown(theDispatcher.stop)
 
 threadable.synchronize(ThreadDispatcher)

@@ -53,8 +53,10 @@ class ThreadPool:
         self.waiters = []
         self.threads = []
         self.working = {}
-        self.workers = 0
+        self.workers = minthreads
         self.joined = 0
+        for i in range(minthreads):
+            threading.Thread(target=self._worker).start()
 
     def _startSomeWorkers(self):
         if not self.waiters:
@@ -71,7 +73,7 @@ class ThreadPool:
         if self.joined: return
         o=(owner,func,args,kw)
         self.q.put(o)
-        if self.workers < self.max:
+        if not self.waiters:
             self._startSomeWorkers()
     
     def _runWithCallback(self, callback, errback, func, args, kwargs):
