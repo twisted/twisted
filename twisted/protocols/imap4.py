@@ -1185,6 +1185,325 @@ class IMAP4Client(basic.LineReceiver):
                         raise IllegalServerResponse, line
         return ids
 
+    def fetchUID(self, messages):
+        """Retrieve the unique identifier for one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to message identifiers, or whose errback is invoked
+        if there is an error.
+        """
+        d = self._fetch(messages, uid=1)
+        d.addCallback(self._cbFetch, lookFor=('UID',))
+        return d
+    
+    def fetchFlags(self, messages):
+        """Retrieve the flags for one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set (e.g., '1,3,4' or '2:5,11')
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to lists of flags, or whose errback is invoked if
+        there is an error.
+        """
+        d = self._fetch(messages, flags=1)
+        d.addCallback(self._cbFetch, lookFor=('FLAGS',))
+        return d
+
+    def fetchInternalDate(self, messages):
+        """Retrieve the internal date associated with one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to date strings, or whose errback is invoked
+        if there is an error.
+        """
+        d = self._fetch(messages, internaldate=1)
+        d.addCallback(self._cbFetch, lookFor=('INTERNALDATE',))
+        return d
+
+    def fetchEnvelope(self, messages):
+        """Retrieve the envelope data for one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to envelope data, or whose errback is invoked
+        if there is an error.
+        """
+        d = self._fetch(messages, envelope=1)
+        d.addCallback(self._cbFetch, lookFor=('ENVELOPE',))
+        return d
+
+    def fetchBodyStructure(self, messages):
+        """Retrieve the structure of the body of one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to structure data, or whose errback is invoked
+        if there is an error.
+        """
+        d = self._fetch(messages, bodystructure=1)
+        d.addCallback(self._cbFetch, lookFor=('BODYSTRUCTURE',))
+        return d
+
+    def fetchSimplifiedBody(self, messages):
+        """Retrieve the simplified body structure of one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to body data, or whose errback is invoked
+        if there is an error.
+        """
+        d = self._fetch(messages, body=1)
+        d.addCallback(self._cbFetch, lookFor=('BODY',))
+        return d
+
+    def fetchMessage(self, messages):
+        """Retrieve one or more entire messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to messages objects, or whose errback is invoked
+        if there is an error.
+        """
+        d = self._fetch(messages, rfc822=1)
+        d.addCallback(self._cbFetch, lookFor=('RFC822',))
+        return d
+
+    def fetchHeaders(self, messages):
+        """Retrieve headers of one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to dicts of message headers, or whose errback is
+        invoked if there is an error.
+        """
+        d = self._fetch(messages, rfc822header=1)
+        d.addCallback(self._cbFetch, lookFor=('RFC822.HEADER',))
+        return d
+
+    def fetchBody(self, messages):
+        """Retrieve body text of one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to body text, or whose errback is invoked if there
+        is an error.
+        """
+        d = self._fetch(messages, rfc822text=1)
+        d.addCallback(self._cbFetch, lookFor=('RFC822.TEXT',))
+        return d
+
+    def fetchSize(self, messages):
+        """Retrieve the size, in octets, of one or more messages
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to sizes, or whose errback is invoked if there is
+        an error.
+        """
+        d = self._fetch(message, rfc822size=1)
+        d.addCallback(self._cbFetch, lookFor=('RFC822.SIZE',))
+        return d
+
+    def fetchFull(self, messages):
+        """Retrieve several different fields of one or more messages
+        
+        This command is allowed in the Selected state.  This is equivalent
+        to issuing all of the C{fetchFlags}, C{fetchInternalDate},
+        C{fetchSize}, C{fetchEnvelope}, and C{fetchSimplifiedBody}
+        functions.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to dict of the retrieved data values, or whose
+        errback is invoked if there is an error.  They dictionary keys
+        are "flags", "date", "size", "envelope", and "body".
+        """
+        d = self._fetch(
+            messages, flags=1, internaldate=1,
+            rfc822size=1, envelope=1, body=1
+        )
+        d.addCallback(
+            self._cbFetch,
+            lookFor=(
+                'FLAGS', 'INTERNALDATE', 'RFC822.SIZE',
+                'ENVELOPE', 'BODY'
+            )
+        )
+        return d
+
+    def fetchAll(self, messages):
+        """Retrieve several different fields of one or more messages
+        
+        This command is allowed in the Selected state.  This is equivalent
+        to issuing all of the C{fetchFlags}, C{fetchInternalDate},
+        C{fetchSize}, and C{fetchEnvelope} functions.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to dict of the retrieved data values, or whose
+        errback is invoked if there is an error.  They dictionary keys
+        are "flags", "date", "size", and "envelope".
+        """
+        d = self._fetch(
+            messages, flags=1, internaldate=1,
+            rfc822size=1, envelope=1
+        )
+        d.addCallback(
+            self._cbFetch,
+            lookFor=(
+                'FLAGS', 'INTERNALDATE', 'RFC822.SIZE', 'ENVELOPE'
+            )
+        )
+        return d
+
+    def fetchFast(self, messages):
+        """Retrieve several different fields of one or more messages
+        
+        This command is allowed in the Selected state.  This is equivalent
+        to issuing all of the C{fetchFlags}, C{fetchInternalDate}, and
+        C{fetchSize} functions.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a dict mapping
+        message numbers to dict of the retrieved data values, or whose
+        errback is invoked if there is an error.  They dictionary keys are
+        "flags", "date", and "size".
+        """
+        d = self._fetch(
+            messages, flags=1, internaldate=1, rfc822size=1
+        )
+        d.addCallback(
+            self._cbFetch,
+            lookFor=(
+                'FLAGS', 'INTERNALDATE', 'RFC822.SIZE'
+            )
+        )
+        return d
+
+    def _cbFetch(self, (lines, last), lookFor):
+        flags = {}
+        for line in lines:
+            parts = line.split(None, 2)
+            if len(parts) == 3:
+                if parts[1] == 'FETCH':
+                    try:
+                        id = int(parts[0])
+                    except ValueError:
+                        raise IllegalServerResponse, line
+                    else:
+                        data = parseNestedParens(parts[2])
+                        if data[0] in lookFor:
+                            flags.setdefault(id, []).extend(data[1])
+        return flags
+
+    def _fetch(self, messages, **terms):
+        cmd = ' '.join([s.upper() for s in terms.keys()])
+        d = self.sendCommand('FETCH', cmd)
+        return d
+
+_ALLOWED_SECTIONS = (
+    'HEADER', 'HEADER.FIELDS', 'HEADER.FIELDS.NOT', 'MIME', 'TEXT'
+)
+
+def All():
+    return 'ALL'
+
+def Body(sectionNumber=None, sectionType=None, start=None, length=None):
+    """Retrieve the body of a message
+    
+    @type sectionNumber: C{int}
+    @param sectionNumber: The MIME-IMB section number to retrieve.
+    
+    @type sectionType: C{str}
+    @param sectionType: The MIME-IMB section type to retrieve.  This
+    must be one of HEADER, HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or
+    TEXT.
+    
+    @type start: C{int}
+    @param start: If specified, the number of octets at the beginning of
+    the data to skip.  If specified, C{length} must be specified as well.
+    
+    @type length: C{int}
+    @param length: The number of octets to retrieve.
+
+    @rtype: C{str}
+    @return: The IMAP4 query string representing this item.
+    """
+    cmd = 'BODY[%s]'
+
+    assert sectionType is None or sectionType in _ALLOWED_SECTIONS
+
+    if sectionNumber is not sectionType is not None:
+        cmd = cmd % ('%d.%s' % (sectionNumber, sectionType))
+    else:
+        cmd = cmd % (sectionType or sectionNumber or '')
+    
+    assert (not not start) is (not not length)
+    
+    if start:
+        cmd = cmd + '<%d.%d>' % (start, length)
+    return cmd
+
 class IllegalQueryError(IMAP4Exception): pass
 
 _SIMPLE_BOOL = (
