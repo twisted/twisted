@@ -9,6 +9,7 @@ Package: twisted
 Architecture: any
 Depends: python2.1
 Recommends: python-tk
+Suggests: pyopenssl
 Description: Event-based framework for internet applications.
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
  generic client and server for remote object access, and APIs for creating 
