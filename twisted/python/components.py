@@ -16,6 +16,9 @@
 
 """Component architecture for Twisted."""
 
+# sibling imports
+import reflect, util
+
 
 class Interface:
     """Base class for interfaces.
@@ -66,6 +69,28 @@ def classImplements(klass, interfaceClass):
     return 0
 
 
+def getInterfaces(klass):
+    """Return list of all interfaces a class implements."""
+    if not hasattr(klass, '__implements__'):
+        return []
+    
+    result = []
+    for i in klass.__implements__:
+        result.append(i)
+        result.extend(reflect.allYourBase(i))
+    result = util.uniquify(result)
+    result.remove(Interface)
+    return result
+
+def superInterfaces(interface):
+    """Given an interface, return list of super-interfaces (including itself)."""
+    result = [interface]
+    result.extend(reflect.allYourBase(interface))
+    result = util.uniquify(result)
+    result.remove(Interface)
+    return result
+
+
 # mapping between (<class>, <interface>) and <adapter class>
 adapterRegistry = {}
 
@@ -97,13 +122,18 @@ def getAdapter(obj, interfaceClass, default):
     adapter can be found, the 'default' parameter will be returned.
     """
     if not hasattr(obj, '__class__'):
-        raise TypeError, "%s is not an instance" % obj
+        return default
     
     if implements(obj, interfaceClass):
         return obj
     
-    adapterClass = adapterRegistry.get((obj.__class__, interfaceClass), None)
+    adapterClass = getAdapterClass(obj.__class__, interfaceClass, None)
     if adapterClass is None:
         return default
     else:
         return adapterClass(obj)
+
+
+def getAdapterClass(klass, interfaceClass, default):
+    """Return registered adapter for a given class and interface."""
+    return adapterRegistry.get((klass, interfaceClass), default)

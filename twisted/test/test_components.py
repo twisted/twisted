@@ -106,6 +106,26 @@ class InterfacesTestCase(unittest.TestCase):
         self.assert_( not components.implements(3, ISub) )
         self.assert_( not components.implements("foo", ISub) )
 
+    def testGetInterfaces(self):
+        l = components.getInterfaces(Sub)
+        l.sort()
+        l2 = [IAdder, ISub]
+        l2.sort()
+        self.assertEquals(l, l2)
+        
+        l = components.getInterfaces(MultiplyAndAdd)
+        l.sort()
+        l2 = [IAdder, IMultiply]
+        l2.sort()
+        self.assertEquals(l, l2)
+    
+    def testSuperInterfaces(self):
+        l = components.superInterfaces(ISub)
+        l.sort()
+        l2 = [ISub, IAdder]
+        l2.sort()
+        self.assertEquals(l, l2)
+
 
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""
@@ -130,6 +150,10 @@ class AdapterTestCase(unittest.TestCase):
         # check that it complies with the IMultiply interface
         self.assertEquals(multiplier.multiply(3, 4), 12)
 
+    def testGetAdapterClass(self):
+        mklass = components.getAdapterClass(IntAdder, IMultiply, None)
+        self.assertEquals(mklass, IntMultiplyWithAdder)
+    
     def testParentInterface(self):
         o = Sub()
         adder = components.getAdapter(o, IAdder, None)
