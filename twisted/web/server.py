@@ -50,7 +50,6 @@ from twisted.persisted import styles
 # Sibling Imports
 import error
 import resource
-import static
 
 
 # backwards compatability
