@@ -274,8 +274,6 @@ class Failure:
             ]
 
         c['pickled'] = 1
-        c['type'] = str(self.type)
-        c['value'] = str(self.value)
         return c
 
     def cleanFailure(self):
