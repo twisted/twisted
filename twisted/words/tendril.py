@@ -67,6 +67,11 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
     errorGroup = 'TendrilErrors'
     perspectiveName = nickname + networkSuffix
 
+    realname = 'Tendril'
+    versionName = 'Tendril'
+    versionNum = '$Version$'
+    versionEnv = 'Twisted'
+
     def __init__(self, service, groupList=None,
                  nickname=None, networkSuffix=None, perspectiveName=None):
         """Create a new Tendril client.
@@ -105,6 +110,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             self.groupList = list(TendrilClient.groupList)
 
         self.service = service
+        self.realname = 'Tendril to %s' % (service.serviceName,)
 
         if not perspectiveName:
             perspectiveName = self.nickname + self.networkSuffix
@@ -280,54 +286,15 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
                                        % (orig_data))])
             return
 
-        (dcctype, arg, address, port) = data[:4]
+        dcc_text = irc.dccDescribe(orig_data)
 
-        if '.' in address:
-            pass
-        else:
-            try:
-                address = long(address)
-            except ValueError:
-                pass
-            else:
-                address = (
-                    (address >> 24) & 0xFF,
-                    (address >> 16) & 0xFF,
-                    (address >> 8) & 0xFF,
-                    address & 0xFF,
-                    )
-                # The mapping to 'int' is to get rid of those accursed
-                # "L"s which python 1.5.2 puts on the end of longs.
-                address = string.join(map(str,map(int,address)), ".")
-
-        if dcctype == 'SEND':
-            filename = arg
-
-            size_txt = ''
-            if len(data) >= 5:
-                try:
-                    size = int(data[4])
-                    size_txt = ' of size %d bytes' % (size,)
-                except ValueError:
-                    pass
-
-            dcc_text = ("SEND for file '%s'%s at host %s, port %s"
-                        % (filename, size_txt, address, port))
-        elif dcctype == 'CHAT':
-            dcc_text = ("CHAT for host %s, port %s"
-                        % (address, port))
-        else:
-            dcc_text = None
-
-        if dcc_text:
-            self.notice(nick, "Got your DCC %s" % (dcc_text,))
-        else:
-            self.notice(nick, "Got your DCC %s" % (orig_data,))
+        self.notice(nick, "Got your DCC %s"
+                    % (irc.dccDescribe(orig_data),))
 
         pName = self.getParticipant(nick).name
         self.dcc_sessions[pName] = (user, dcc_text, orig_data)
 
-        self.notice(nick, "If I should pass it on to another user,"
+        self.notice(nick, "If I should pass it on to another user, "
                     "/msg %s DCC PASSTO theirNick" % (self.nickname,))
 
     def bot_DCC(self, user, params):
@@ -347,12 +314,8 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
                     else:
                         dcc_text = ''
 
-                    s = ("The following DCC request%s is from %s."
-                         % (dcc_text, origUser))
-
                     ctcpMsg = irc.ctcpStringify([('DCC',orig_data)])
                     try:
-                        self.getParticipant(nick).directMessage(dst, s)
                         self.getParticipant(nick).directMessage(dst,
                                                                 ctcpMsg)
                     except wordsService.WordsError, e:
@@ -421,8 +384,21 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
     def msgFromWords(self, toNick, sender, message):
         if message[0] == irc.X_DELIM:
             # If there is a CTCP delimeter at the beginning of the
-            # message, let's leave it there.
-            self.msg(toNick, '%s (from %s)' % (message, sender))
+            # message, let's leave it there to accomidate not-so-
+            # tolerant clients.
+            dcc_data = None
+            if message[1:5] == 'DCC ':
+                dcc_query = irc.ctcpExtract(message)['extended'][0]
+                dcc_data = dcc_query[1]
+
+            if dcc_data:
+                desc = "DCC " + irc.dccDescribe(dcc_data)
+            else:
+                desc = "CTCP request"
+
+            self.msg(toNick, 'The following %s is from %s'
+                     % (desc, sender))
+            self.msg(toNick, '%s' % (message,))
         else:
             self.msg(toNick, '<%s> %s' % (sender, message))
 
@@ -441,6 +417,10 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         if not self.participants.has_key(nick):
             self.newParticipant(nick)
         return self.participants[nick][1]
+
+    # TODO: let IRC users authorize themselves and then give them a
+    # *real* perspective (one attached to their identity) instead
+    # of one of my @networkSuffix-Nobody perspectives.
 
     def newParticipant(self, nick):
         try:
