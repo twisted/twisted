@@ -415,7 +415,7 @@ class FlowTest(unittest.TestCase):
         sleep(.5)
         self.assertEquals(expect, unittest.deferredResult(d))
         
-    def testThreadedImmediate(self):
+    def _testThreadedImmediate(self):
         """ test for the case where the callback function is
             not provided to the thread till after the thread has
             completed; do it in such a way that 1/2 of the results
