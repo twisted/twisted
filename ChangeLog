@@ -1,3 +1,9 @@
+2003-05-27  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_factories.py (testStopTrying): stop test after
+	5 seconds rather than 2000 iterations. Some reactors iterate at
+	different rates.
+
 2003-05-24  Brian Warner  <warner@lothar.com>
 
 	* twisted/scripts/trial.py (Options.opt_testmodule): ignore

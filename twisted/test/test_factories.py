@@ -22,7 +22,7 @@ from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory, ReconnectingClientFactory
 from twisted.protocols.basic import Int16StringReceiver
-import pickle
+import time, pickle
 
 class In(Int16StringReceiver):
     def __init__(self):
@@ -72,10 +72,9 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         port = reactor.listenTCP(0, f)
         PORT = port.getHost()[2]
         reactor.connectTCP('localhost', PORT, c)
-        
-        howLong = 2000
-        while howLong and len(f.allMessages) != 2:
-            howLong -= 1
+
+        now = time.time()
+        while len(f.allMessages) != 2 and (time.time() < now + 5):
             reactor.iterate(0.1)
         
         self.assertEquals(len(f.allMessages), 2,
