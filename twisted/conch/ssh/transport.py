@@ -649,15 +649,15 @@ class SSHCiphers:
         if not modName: return # no cipher
         mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
         if counterMode:
-            def counter(bs = mod.block_size,
-                        initialCounter=getMP('\xff\xff\xff\xff'+iv)[0]%(2L**keySize)):
-                ret = MP(initialCounter)[4:]
+            def counter(bs = mod.block_size):
+                ret = MP(counter.current)[4:]
                 if len(ret) < bs:
                     ret = '\x00'*(bs-len(ret)) + ret
-                initialCounter+=1
-                if initialCounter==2L**keySize:
-                    initialCounter = 0
+                counter.current+=1
+                if counter.current==2L**keySize:
+                    counter.current = 0
                 return ret
+            counter.current = getMP('\xff\xff\xff\xff'+iv)[0]%(2L**keySize)
             return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=counter)
         else:
             return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
