@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Using Processes</title>
+  </head>
+  
+  <body>
+    <h1>Using Processes</h1>
+    
+    <h2>Overview</h2>
+      <p>Along with connection to servers across the internet, Twisted also connects to local processes with much the same API.  The API is described in more detail in <code class="API">twisted.internet.interfaces.IReactorProcess</code>, <code class="API">twisted.internet.interfaces.IProcessTransport</code>, and <code class="API">twisted.internet.protocol.ProcessProtocol</code>.</p>
+
+    <h2>Running Another Process</h2>
+      <p>Processes are run through the reactor, using <code class="python">reactor.spawnProcess()</code>.  It requires two arguments, processProtocol and executable, and optionally takes five more: arguments, environment, path, userID, and groupID.</p>
+    <ul>
+    <li>processProtocol should be an instance of a subclass of <code class="API">twisted.internet.protocol.ProcessProtocol</code>, whos interface is described in a section below.</li>
+    <li>executable is the full path of the program to run. It will be connected to processProtocol.</li>
+    <li>arguments is a list of command line arguments to be passed to the process.  The first should be the name of the process.</li>
+    <li>environment is a dictionary containing the environment to pass through to the process.</li>
+    <li>path is the path to run the process is.  The default is the current directory.</li>
+    <li>userID and groupID are the user ID and group ID to run the subprocess as.</li>
+    </ul>
+    <p><code class="python">reactor.spawnProcess()</code> returns an instance that implements <code class="API">twisted.internet.interfaces.IProcessTransport</code>.</p>
+
+  <h2>Writing a ProcessProtocol</h2>
+    <p>The ProcessProtocol you pass to spawnProcess is your interaction with the process.  It has a very similar signature to a regular Protocol, but it has several extra methods to deal with events specific to a protocol.  In our example, we will interface with 'wc' to create a word count of user-given text.  First, we'll start by importing the required modules, and writing the initialization for our ProcessProtocol.</p>
+<pre class="python">
+from twisted.internet import protocol
+class WCProcessProtocol(protocol.ProcessProtocol):
+
+    def __init__(self, text):
+        self.text = text
+</pre>
+
+    <p>When the ProcessProtocol is connected to the protocol, it has the connectionMade method called.  In our protocol, we will write our text to the standard input of our process and then close standard input, to the let the process know we are done writing to it.</p>
+<pre class="python">
+    def connectionMade(self):
+        self.transport.write(self.text)
+        self.transport.closeStdin()
+</pre>
+
+    <p>At this point, the process has receieved the data, and it's time for us to read the results.  Instead of being receieved in dataReceived, data from standard output is receieve in outReceived.  This is to distinguish it from data on standard error.</p>
+<pre class="python">
+    def outReceived(self, data):
+        fieldLength = len(data) / 3
+        lines = int(data[:fieldLength])
+        words = int(data[fieldLength:fieldLength*2])
+        chars = int(data[fieldLength*2:])
+        self.transport.loseConnection()
+        self.receiveCounts(lines, words, chars)
+</pre>
+
+    <p>Now, the process has parsed the output, and ended the connection to the process.  Then it sends the results on to the final method, receiveCounts.  This is for users of the class to override, so as to do other things with the data.  For our demonstration, we will just print the results.</p>
+<pre class="python">
+    def receiveCounts(self, lines, words, chars):
+        print 'Received counts from wc.'
+        print 'Lines:', lines
+        print 'Words:', words
+        print 'Characters:', chars
+</pre>
+
+    <p>We're done!  To use our WCProcessProtocol, we create an instance, and pass it to spawnProcess.</p>
+<pre class="python">
+from twisted.internet import reactor
+wcProcess = WCProcessProtocol("acessing protocols through Twisted is fun!\n")
+reactor.spawnProcess(wcProcess, 'wc', ['wc'])
+reactor.run()
+</pre>
+  </body>
+</html>
