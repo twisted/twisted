@@ -241,13 +241,14 @@ def makeBalls(opts):
     #sh('mv %s/doc TwistedDocs-%s' % (tdir, ver))
     
     print "makeBalls: Twisted_NoDocs."
-    map(lambda x: sh(x % (tdir, ver, tdir)),
-        ['tar --exclude %s/doc czf Twisted_NoDocs-%s.tar.gz  %s',
-         'tar --exclude %s/doc cjf Twisted_NoDocs-%s.tar.bz2 %s',
-         'zip -x %s/doc      -9 -r Twisted_NoDocs-%s.zip     %s > /dev/null'])
+    sh('''
+         tar --exclude %(tdir)s/doc -czf Twisted_NoDocs-%(ver)s.tar.gz  %(tdir)s;
+         tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s;
+         zip -9 -r Twisted_NoDocs-%(ver)s.zip %(tdir)s -x %(tdir)s/doc > /dev/null;
+         ''' % locals())
 
 
-    if not os.path.exists('doc/api/tree.html'):#we didn't do the docs
+    if not os.path.exists('%(tdir)s/doc/api/tree.html'%locals()):#we didn't do the docs
         print "makeBalls: Not continuing: `doc/api/tree.html' not found."
         return
     
@@ -256,7 +257,6 @@ def makeBalls(opts):
     # Fullball
     ##
     print "makeBalls: Twisted"
-    sh('mkdir %s/doc; mv TwistedDocs-%s/* %s/doc' % (tdir, ver, tdir))
     map(lambda x: sh(x % (tdir, tdir)),
         ['tar czf   %s.tar.gz  %s',
          'tar cjf   %s.tar.bz2 %s',
@@ -273,7 +273,7 @@ def makeBalls(opts):
     docdir = "TwistedDocs-%s" % ver
     
     sh(  '''
-         cd %(tdir)/doc;
+         cd %(tdir)s/doc;
          mv api %(docdir)s
          
          tar czf   %(docdir)s.tar.gz  %(docdir)s;
