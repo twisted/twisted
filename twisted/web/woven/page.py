@@ -29,7 +29,7 @@ class Page(model.Model, controller.Controller, view.View):
                                 doneCallback=self.gatheredControllers,
                                 block=block)
 
-class LivePage(model.Model, controller.LiveController, view.View):
+class LivePage(model.Model, controller.LiveController, view.LiveView):
     # M.I. sucks.
     __implements__ = (model.Model.__implements__, view.View.__implements__,
                       controller.Controller.__implements__)
@@ -49,9 +49,6 @@ class LivePage(model.Model, controller.LiveController, view.View):
         self.controller = self
         self.controllerRendered = 0
     
-    def wvfactory_webConduitGlue(self, request, node, m):
-    	return view.View(m, templateFile="WebConduitGlue.html")
-
     def renderView(self, request, block=0):
         return view.View.render(self, request,
                                 doneCallback=self.gatheredControllers,

@@ -425,6 +425,11 @@ class View(template.DOMTemplate):
             value.model.removeView(value)
 
 
+class LiveView(View):
+    def wvfactory_webConduitGlue(self, request, node, m):
+    	return view.View(m, templateFile="WebConduitGlue.html")
+
+
 #backwards compatibility
 WView = View
 
