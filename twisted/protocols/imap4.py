@@ -47,6 +47,7 @@ from twisted import cred
 import twisted.cred.error
 import twisted.cred.credentials
 
+import inspect
 import base64
 import binascii
 import hmac
@@ -493,7 +494,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 #        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-        #print 'S:', repr(line)
+        # print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -1224,10 +1225,21 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def do_FETCH(self, tag, messages, query, uid=0):
-        maybeDeferred(self.mbox.fetch, messages, query, uid=uid).addCallbacks(
-            self.__cbFetch, self.__ebFetch,
-            (tag, query, uid), None, (tag,), None
-        )
+        if len(inspect.getargs(self.mbox.fetch.im_func.func_code)[0]) == 4:
+            import warnings
+            warnings.warn(
+                "Accepting the query argument in IMailbox.fetch() is deprecated.",
+                DeprecationWarning, stacklevel=2
+            )
+            maybeDeferred(self.mbox.fetch, messages, query, uid=uid).addCallbacks(
+                self.__cbFetch, self.__ebFetch,
+                (tag, query, uid), None, (tag,), None
+            )
+        else:
+            maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
+                self.__cbFetch, self.__ebFetch,
+                (tag, query, uid), None, (tag,), None
+            )
 
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
 
@@ -1283,12 +1295,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _sendMessageFetchResponse(self, msgId, msg, query, uid):
+        seenUID = False
         response = []
         for part in query:
             if part.type == 'envelope':
                 response.extend(('ENVELOPE', '(%s)' % collapseNestedLists(getEnvelope(msg))))
             elif part.type == 'flags':
-                response.extend(('FLAGS', '(%s)' % ' '.join(msg.getFlags())))
+                response.extend(('FLAGS', msg.getFlags()))
             elif part.type == 'internaldate':
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
@@ -1306,12 +1319,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 hdrs = '\r\n'.join(hdrs)
                 response.extend(('RFC822', hdrs + '\r\n\r\n', msg.getBodyFile()))
             elif part.type == 'uid':
+                seenUID = True
                 if uid:
                     response.extend(('UID', str(msgId)))
                 else:
                     response.extend(('UID', str(msg.getUID())))
             elif part.type == 'bodystructure':
-                response.extend(('BODYSTRUCTURE', collapseNestedLists(getBodyStructure(msg))))
+                response.extend(('BODYSTRUCTURE', getBodyStructure(msg)))
             elif part.type == 'body':
                 subMsg = msg
                 for p in part.part or ():
@@ -1338,6 +1352,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n\r\n'))
+        if uid and not seenUID:
+            response[:0] = ['UID', str(msgId)]
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
 
     def __ebFetch(self, failure, tag):

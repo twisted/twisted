@@ -1265,6 +1265,106 @@ class FakeyServer(imap4.IMAP4Server):
     def sendServerGreeting(self):
         pass
 
+class FakeyMessage:
+    __implements__ = (imap4.IMessage,)
+    
+    def __init__(self, headers, flags, date, body, uid, subpart):
+        self.headers = headers
+        self.flags = flags
+        self.body = StringIO(body)
+        self.size = len(body)
+        self.date = date
+        self.uid = uid
+        self.subpart = subpart
+        
+    def getHeaders(self, negate, names):
+        self.got_headers = negate, names
+        return self.headers
+
+    def getFlags(self):
+        return self.flags
+    
+    def getInternalDate(self):
+        return self.date
+    
+    def getBodyFile(self):
+        return self.body
+    
+    def getSize(self):
+        return self.size
+    
+    def getUID(self):
+        return self.uid
+    
+    def getSubPart(self, part):
+        self.got_subpart = part
+        return self.subpart
+
+class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
+    def setUp(self):
+        self.received_messages = self.received_uid = None
+        
+        self.server = imap4.IMAP4Server()
+        self.server.state = 'select'
+        self.server.mbox = self
+        self.connected = defer.Deferred()
+        self.client = SimpleClient(self.connected)
+
+    def fetch(self, messages, uid):
+        self.received_messages = messages
+        self.received_uid = uid
+        return iter([(self.msgObj.getUID(), self.msgObj)])
+
+    def _fetchWork(self, fetch, uid):
+        if uid:
+            self.expected[self.msgObj.uid]['UID'] = str(self.msgObj.uid)
+    
+        def result(R):
+            self.result = R
+        
+        self.connected.addCallback(strip(fetch)
+        ).addCallback(result
+        ).addCallback(self._cbStopClient
+        ).addErrback(self._ebGeneral)
+        
+        loopback.loopbackTCP(self.server, self.client)
+        self.assertEquals(self.result, self.expected)
+
+    def testFetchUID(self):
+        def fetch():
+            return self.client.fetchUID(self.messages)
+        
+        self.messages = '7'
+        self.msgObj = FakeyMessage({}, (), '', '', 12345, None)
+        self.expected = {12345: {'UID': '12345'}}
+        self._fetchWork(fetch, 0)
+        
+    def testFetchFlags(self, uid=0):
+        def fetch():
+            return self.client.fetchFlags(self.messages, uid=uid)
+        
+        self.messages = '9'
+        self.msgObj = FakeyMessage({}, ['FlagA', 'FlagB', '\\FlagC'], '', '', 54321, None)
+        self.expected = {54321: {'FLAGS': ['FlagA', 'FlagB', '\\FlagC']}}
+        self._fetchWork(fetch, uid)
+        
+    def testFetchFlagsUID(self):
+        self.testFetchFlags(1)
+
+    def testFetchInternalDate(self, uid=0):
+        def fetch():
+            return self.client.fetchInternalDate(self.messages, uid=uid)
+        
+        self.messages = '13'
+        self.msgObj = FakeyMessage({}, (), 'Tuesday', '', 23232, None)
+        self.expected = {23232: {'INTERNALDATE': 'Tuesday'}}
+        self._fetchWork(fetch, uid)
+    
+    def testFetchInternalDateUID(self):
+        self.testFetchInternalDate(1)
+
+
+
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.expected = self.result = None
