@@ -274,6 +274,7 @@ class DTPFactory(protocol.ClientFactory):
     """The DTP-Factory.
     This class is not completely self-contained.
     """
+    dtpClass = DTP
     dtp = None      # The DTP-protocol
     dtpPort = None  # The TCPClient / TCPServer
     action = None
@@ -294,7 +295,7 @@ class DTPFactory(protocol.ClientFactory):
         self.dtpPort = reactor.connectTCP(self.peerhost, self.peerport, self)
 
     def buildProtocol(self,addr):
-        p = DTP()
+        p = self.dtpClass()
         p.factory = self
         p.pi = self
         self.dtp = p
