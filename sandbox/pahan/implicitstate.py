@@ -32,27 +32,27 @@ class ImplicitStateProtocol(protocol.Protocol):
     buffer = None
 
     def dataReceived(self, data):
-        if not self.buffer:
-            self.buffer = StringIO()
-        left = self.implicit_state[1] - self.buffer.tell()
-        if left > len(data):
+        while 1:
+            if not self.buffer:
+                self.buffer = StringIO()
+            left = self.implicit_state[1] - self.buffer.tell()
+            if left > len(data):
+                self.buffer.write(data)
+                return
+            self.buffer.write(data[:left])
+            data = data[left:]
+            message = self.buffer.getvalue()
+            self.buffer.reset()
+            self.buffer.truncate()
             self.buffer.write(data)
-            return
-        self.buffer.write(data[:left])
-        data = data[left:]
-        message = self.buffer.getvalue()
-        self.buffer.reset()
-        self.buffer.truncate()
-        next = self.implicit_state[0](message)
-        if next is None:
-            self.transport.loseConnection()
-            return
-        self.implicit_state = next
+            next = self.implicit_state[0](message)
+            if next is not None:
+                self.implicit_state = next
 
 class MyInt32StringReceiver(ImplicitStateProtocol):
     MAX_LENGTH = 99999
 
-    def __init__(self):
+    def connectionMade(self):
         self.implicit_state = (self._getHeader, 4)
 
     def _getHeader(self, msg):

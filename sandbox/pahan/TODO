@@ -1,0 +1,3 @@
+test several messages in one dataReceived call
+Use next_len=None for "just give me the next chunk"
+use next=None for "same state"
