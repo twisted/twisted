@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -67,7 +67,7 @@ class ContactsList:
     def on_AddContactButton_clicked(self, b):
         self.currentAccount.addContact(
             self.xml.get_widget("ContactNameEntry").get_text())
-        
+
     def unregisterAccountClient(self,account):
         print 'unregistering account client', self, account
         self.accountMenuItems.remove(account)
@@ -114,7 +114,7 @@ class ContactsList:
         for person in self.people:
             if person.isOnline():
                 self.onlinePeople.append(person)
-                online.append([person.name, person.getStatus(),
+                online.append([person.name, str(person.getStatus()),
                                person.getIdleTime(), person.client.accountName])
                 self.countOnline = self.countOnline + 1
             offline.append([person.name, person.client.accountName,
@@ -329,7 +329,7 @@ class GroupConversation(InputOutputWindow):
         return potentialMatches
 
     # Internal
-        
+
     def _cbTextSent(self, result, text, metadata=None):
         _msgDisplay(self.output, self.group.client.name, text, self.myColor,
                     (metadata and metadata.get("style", None) == "emote"))
@@ -342,7 +342,7 @@ class GroupConversation(InputOutputWindow):
         for member in self.members:
             pl.append([member])
         pl.thaw()
-        
+
     def _cacheColorHash(self, name):
         if self._colorcache.has_key(name):
             return self._colorcache[name]
@@ -363,7 +363,7 @@ class GtkChatClientUI:
         self.groupCache = {}            # cache of all groups
         self.theContactsList = ContactsList(self,xml)
         self.onlineAccounts = []     # list of message sources currently online
-        
+
     def registerAccountClient(self,account):
         print 'registering account client'
         self.onlineAccounts.append(account)

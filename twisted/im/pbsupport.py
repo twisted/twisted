@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -34,7 +34,7 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
                 (self.status == AWAY))
 
     def getStatus(self):
-        return ((self.status == ONLINE) and "Online" or "Away")
+        return self.status
 
     def sendMessage(self, text, metadata):
         """Return a deferred...
@@ -108,7 +108,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
 
     def getPerson(self, name):
         return self.chat.getPerson(name, self, TwistedWordsPerson)
-                  
+
     def getGroup(self, name):
         return self.chat.getGroup(name, self, TwistedWordsGroup)
 
@@ -196,11 +196,10 @@ class PBAccount(basesupport.AbstractAccount):
             self.services.append([pbFrontEnds[serviceType], serviceName,
                                   perspectiveName])
 
-    def startLogOn(self, chatui):
+    def _startLogOn(self, chatui):
         print 'Connecting...',
-        return pb.getObjectAt(self.host, self.port).addCallbacks(self._cbConnected,
-                                                                 self._ebConnected,
-                                                                 callbackArgs=(chatui,))
+        return pb.getObjectAt(self.host, self.port).addCallbacks(
+            self._cbConnected, self._ebConnected, callbackArgs=(chatui,))
 
     def _cbConnected(self, root, chatui):
         print 'Connected!'
@@ -220,4 +219,3 @@ class PBAccount(basesupport.AbstractAccount):
     def _ebConnected(self, error):
         print 'Not connected.'
         return error
-

@@ -1,18 +1,19 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import string
 
 from twisted.protocols import irc
@@ -33,13 +34,13 @@ class IRCPerson(basesupport.AbstractPerson):
         return ONLINE
 
     def getStatus(self):
-        return "Online"
+        return ONLINE
 
     def setStatus(self,status):
         self.status=status
         self.chat.getContactsList().setContactStatus(self)
 
-    def sendMessage(self, text, meta={}):
+    def sendMessage(self, text, meta=None):
         if meta and meta.get("style", None) == "emote":
             self.client.ctcpMakeQuery(self.name,[('ACTION', text)])
             return succeed(text)
@@ -57,7 +58,7 @@ class IRCGroup(basesupport.AbstractGroup):
             self.name, target.name, reason))
 
     ### Interface Implementation
-    
+
     def setTopic(self, topic):
         self.client.topic(self.name, topic)
 
@@ -66,7 +67,7 @@ class IRCGroup(basesupport.AbstractGroup):
             self.client.me(self.name,text)
             return succeed(text)
         #standard shmandard, clients don't support plain escaped newlines!
-        for line in string.split(text, '\n'): 
+        for line in string.split(text, '\n'):
             self.client.say(self.name, line)
         return succeed(text)
 
@@ -144,7 +145,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             self.getGroupConversation(group).showGroupMessage(username, emote, meta)
             return
         self.chat.getConversation(self.getPerson(username)).showMessage(emote,meta)
-    
+
     def irc_RPL_NAMREPLY(self,prefix,params):
         """
         RPL_NAMREPLY
@@ -166,9 +167,9 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
                     self._ingroups[nickname]=[group]
 
     def irc_RPL_ENDOFNAMES(self,prefix,params):
-    	group=params[1][1:]
-    	self.getGroupConversation(group).setGroupMembers(self._namreplies[string.lower(group)])
-    	del self._namreplies[string.lower(group)]
+	group=params[1][1:]
+	self.getGroupConversation(group).setGroupMembers(self._namreplies[string.lower(group)])
+	del self._namreplies[string.lower(group)]
 
     def irc_RPL_TOPIC(self,prefix,params):
         self._topics[params[1][1:]]=params[2]
@@ -247,6 +248,5 @@ class IRCAccount(basesupport.AbstractAccount):
         self.port = port
         self._isOnline = 0
 
-    def startLogOn(self, chatui):
+    def _startLogOn(self, chatui):
         return protocol.ClientCreator(reactor, IRCProto, self, chatui).connectTCP(self.host, self.port)
-

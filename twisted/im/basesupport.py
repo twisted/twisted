@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 
 # Abstract representation of chat "model" classes
 
@@ -94,6 +110,14 @@ class AbstractClientMixin:
 
 
 class AbstractAccount:
+    """
+
+    @type _isConnecting: boolean
+    @ivar _isConnecting: Whether I am in the process of establishing a
+    connection to the server.
+    @type _isOnline: boolean
+    @ivar _isOnline: Whether I am currently on-line with the server.
+    """
     _isOnline = 0
     _isConnecting = 0
 
@@ -115,17 +139,34 @@ class AbstractAccount:
     def isOnline(self):
         return self._isOnline
 
-    def startLogOn(self, chatui):
-        """Should return Deferred whose errback indicates connection failed."""
+    def logOn(self, chatui):
+        """Log on to this account.
+
+        Takes care to not start a connection if a connection is
+        already in progress.  You will need to implement
+        L{_startLogOn} for this to work, and it would be a good idea
+        to override L{_loginFailed} too.
+        """
+        if (not self._isConnecting) and (not self._isOnline):
+            self._isConnecting = 1
+            self._startLogOn(chatui).addErrback(self._loginFailed)
+        else:
+            print 'already connecting'
+
+    def _startLogOn(self):
+        """Start the sign on process.
+
+        Factored out of L{logOn}.
+
+        @returns: None
+        @returntype: Deferred
+        """
         raise NotImplementedError()
 
     def _loginFailed(self, reason):
+        """Errorback for L{logOn}.
+
+        @type reason: Failure
+        """
         self._isConnecting = 0
         self._isOnline = 0 # just in case
-    
-    def logOn(self, chatui):
-        if (not self._isConnecting) and (not self._isOnline):
-            self._isConnecting = 1
-            self.startLogOn(chatui).addErrback(self._loginFailed)
-        else:
-            print 'already connecting'
