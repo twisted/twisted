@@ -18,7 +18,7 @@
 Gnutella, v0.4
 http://www9.limewire.com/developer/gnutella_protocol_0.4.pdf
 
-This module is incomplete.  The "GnutellaTalker" class is complete but is completely untested.
+This module is incomplete.  The "GnutellaTalker" class is almost complete.
 The "GnutellaRouter" and "GnutellaServent" classes are yet to be written.
 """
 
@@ -28,6 +28,7 @@ import random, re, string, struct
 # twisted import
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
+from twisted.python.hashexpand import HashExpander
 
 true = 1
 false = 0
@@ -78,17 +79,26 @@ class GnutellaTalker(LineReceiver):
 
     One constraint that it imposes which is not specified in the Gnutella 0.4 spec is that payload lengths must be less than or equal to 640 KB.  If the payload length is greater than that, GnutellaTalker closes the connection.
     """
+    # METHODS OF INTEREST TO CLIENTS (including subclasses)
     def __init__(self):
         self.initiator = false # True iff this instance initiated an outgoing TCP connection rather than being constructed to handle an incoming TCP connection.
         self.handshake = "start" # state transitions: "start" -> "initiatorsaidhello", "initiatorsaidhello" -> "completed"
         self.gotver = None
+        self.prng = HashExpander("MYSECRETSEED")
 
         self.buf = ''
 
-    # METHODS OF INTEREST TO CLIENTS (including subclasses)
+    def setInitiator(self):
+        assert self.handshake == "start"
+        assert self.initiator == false
+        self.initiator = true
+
     def sendPing(self, ttl):
-        self.transport.write(struct.pack(HEADERENCODING, ""))
-        ### XXXX incomplete.  Zooko stopped here to go to bed after the first night of hacking this file.  --Zooko 2002-07-15
+        """
+        @precondition ttl must be > 0 and <= 256.: (ttl > 0) and (ttl <= 256): "ttl: %s" % str(ttl)
+        """
+        assert (ttl > 0) and (ttl <= 256), "ttl must be > 0 and <= 256." + " -- " + "ttl: %s" % str(ttl)
+        self.transport.write(struct.pack(HEADERENCODING, (self._nextDescriptorId(), 0, ttl, 0, 0,)))
 
     # METHODS OF INTEREST TO SUBCLASSES
     def pingReceived(self, descriptorId, ttl, hops):
@@ -144,18 +154,15 @@ class GnutellaTalker(LineReceiver):
         """
         log.msg("%s.pushReceived(%s, %s, %s, ipAddress=%s, port=%s, serventIdentifier=%s, fileIndex=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(serventIdentifier), str(fileIndex),))
         pass
-    
+   
     # METHODS OF INTEREST TO THIS CLASS ONLY
-    def initiateConnection(self, ipAddress, port):
-        assert self.handshake == "start"
-        assert self.initiator == false
-        self.initiator = true
-        # xxx ask Twisted to make a connection here.
-        # self.makeConnection(xxx) # ??
+    def _nextDescriptorId(self):
+        return self.prng.get(16)
 
     def connectionMade(self):
         if self.initiator:
-            self.transport.write(CONNSTRING)
+            log.msg("sending %s" % CONNSTRING)
+            self.sendLine(CONNSTRING)
             self.handshake = "initiatorsaidhello"
 
     def _abortConnection(self, logmsg):
@@ -289,6 +296,7 @@ class GnutellaTalker(LineReceiver):
 
             self.handshake = "completed"
             self.gotver = mo.group(1)
+            log.msg("sending %s" % ACKSTRING)
             self.sendLine(ACKSTRING)
             self.setRawMode()
 
