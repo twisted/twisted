@@ -8,7 +8,7 @@ ingtkernet.install()
 # Twisted Imports
 from twisted.spread import pb
 from twisted.spread.ui import gtkutil
-
+from twisted.words.ui.im import InstanceMessenger
 class Group(pb.Cache):
     """A local cache of a group.
     """
@@ -265,54 +265,6 @@ class ContactList(gtk.GtkWindow):
             #print 'new row',row,contact
             row = self.list.append(r)
         self.list.set_row_data(row, intern(contact))
-
-
-class InstanceMessenger(pb.Referenced):
-    """This is a broker between the PB broker and the various windows
-    that make up InstanceMessenger."""
-
-    def __init__(self):
-        self.conversations = {}
-        self.groups = {}
-
-    def conversationWith(self, target):
-        conv = self.conversations.get(target)
-        if not conv:
-            conv = Conversation(self, target)
-            self.conversations[target] = conv
-        return conv
-
-#The PB interface.
-    def connected(self, perspective):
-        self.name = lw.username.get_text()
-        lw.hide()
-        self.remote = perspective
-
-    def remote_receiveContactList(self,contacts):
-        #print 'got contacts'
-        self.cl = ContactList(self)
-        for contact,status in contacts:
-            self.cl.changeContactStatus(contact,status)
-
-    def remote_receiveDirectMessage(self, sender, message):
-        #make sure we've started the conversation
-        w = self.conversationWith(sender) 
-        w.messageReceived(message)
-
-    def remote_notifyStatusChanged(self,contact,newStatus):
-        #print contact,"changed status to",newStatus
-        self.cl.changeContactStatus(contact,newStatus)
-
-
-    def remote_receiveGroupMessage(self,member,group,message):
-        self.groups[group].displayMessage(member,message)
-
-    def remote_memberJoined(self,member,group):
-        self.groups[group].memberJoined(member)
-
-    def remote_memberLeft(self,member,group):
-        self.groups[group].memberLeft(member)
-
 
         
 def main():
