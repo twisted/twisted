@@ -92,7 +92,9 @@ class ThreadedScheduler:
         try:
             for thread, tasks in threadTasks.items():
                 tasksTodo.append(tasks.pop(0))
-                if len(tasks) == 0: del threadTasks[thread]
+                if tasks: tasksTodo.append(tasks.pop(0))
+                if not tasks:
+                    del threadTasks[thread]
         finally:
             self._lock.release()
         
