@@ -510,7 +510,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         self.tags = {}
-        self.canStartTLS = implements(self.transport, interfaces.ITLSTransport)
+        self.canStartTLS = interfaces.ITLSTransport(self.transport, default=None) is not None
         self.setTimeout(self.timeOut)
         self.sendServerGreeting()
 
@@ -1045,10 +1045,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_NAMESPACE(self, tag):
         personal = public = shared = None
-        if implements(self.account, INamespacePresenter):
-            personal = self.account.getPersonalNamespaces()
-            public = self.account.getSharedNamespaces()
-            shared = self.account.getSharedNamespaces()
+        np = INamespacePresenter(self.account, default=None)
+        if np is not None:
+            personal = np.getPersonalNamespaces()
+            public = np.getSharedNamespaces()
+            shared = np.getSharedNamespaces()
         self.sendUntaggedResponse('NAMESPACE ' + collapseNestedLists([personal, public, shared]))
         self.sendPositiveResponse(tag, "NAMESPACE command completed")
 
@@ -1323,8 +1324,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def do_SEARCH(self, tag, charset, query, uid=0):
-        if components.implements(self.mbox, ISearchableMailbox):
-            maybeDeferred(self.mbox.search, query, uid=uid).addCallbacks(
+        sm = ISearchableMailbox(self.mbox, default=None)
+        if sm is not None:
+            maybeDeferred(sm.search, query, uid=uid).addCallbacks(
                 self.__cbSearch, self.__ebSearch,
                 (tag, self.mbox, uid), None, (tag,), None
             )
@@ -1583,8 +1585,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def spew_rfc822(self, id, msg):
         self.transport.write('RFC822 ')
-        if components.implements(msg, IMessageFile):
-            return FileProducer(msg.open()
+        mf = IMessageFile(msg, default=None)
+        if mf is not None:
+            return FileProducer(mf.open()
                 ).beginProducing(self.transport
                 )
         return MessageProducer(msg
@@ -1614,8 +1617,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.transport.write(str(part) + ' ' + _literal(hdrs))
         elif part.empty:
             self.transport.write(str(part) + ' ')
-            if components.implements(msg, IMessageFile):
-                return FileProducer(msg.open()).beginProducing(self.transport)
+            mf = IMessageFile(msg, default=None)
+            if mf is not None:
+                return FileProducer(mf.open()).beginProducing(self.transport)
             return MessageProducer(msg).beginProducing(self.transport)
         else:
             self.transport.write('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
@@ -2126,7 +2130,8 @@ class IMAP4Client(basic.LineReceiver):
                 break
         else:
             if 'STARTTLS' in caps:
-                if implements(self.transport, interfaces.ITLSTransport):
+                tls = interfaces.ITLSTransport(self.transport, default=None)
+                if tls is not None:
                     ctx = self._getContextFactory()
                     if ctx:
                         d = self.sendCommand(Command('STARTTLS'))
@@ -2207,7 +2212,7 @@ class IMAP4Client(basic.LineReceiver):
             return context
 
     def __cbLoginCaps(self, capabilities, username, password):
-        tryTLS = 'STARTTLS' in capabilities and implements(self.transport, interfaces.ITLSTransport)
+        tryTLS = 'STARTTLS' in capabilities and (interfaces.ITLSTransport(self.transport, default=None) is not None)
         if tryTLS:
             ctx = self._getContextFactory()
             if ctx:
