@@ -72,9 +72,11 @@ class LockableMixin:
 
 
     def checkKeyMatch(self, key):
-        """
-        Check to see if the given key matches this object's lock; raise a
-        error.Failure if it does not.
+        """ Check to see if the given key matches this object's lock.
+
+        Raise a error.Failure if it does not.  Override this method to
+        implement different key-matching mechanisms; by default, I will check
+        that one of the key's lockTypes is in my list of lockTypes.
         """
         if not reflect.isinst(key, Key):
             error.Failure("That's not a key.")

@@ -125,12 +125,13 @@ oldstdin = sys.stdin
 oldstdout = sys.stdout
 oldstderr = sys.stderr
 log.startLogging(logFile)
-sys.modules['__main__'] = EverythingEphemeral()
 sys.stdout.flush()
 
 if not config.python:
     print "Loading %s..." % config.file
+    sys.modules['__main__'] = EverythingEphemeral()
     application = load(open(config.file,'rb'))
+    sys.modules['__main__'] = mainMod
     from twisted.internet import main
     main.theApplication = application
     styles.doUpgrade()
@@ -141,7 +142,6 @@ else:
     application = dict['application']
 
 print "Loaded."
-sys.modules['__main__'] = mainMod
 initRun = 1
 
 if not config.nodaemon:

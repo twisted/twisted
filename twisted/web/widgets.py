@@ -1,13 +1,14 @@
 
 # System Imports
-import string, time, types, traceback, copy, pprint
+import string, time, types, traceback, copy, pprint, sys, os
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.python import defer
+from twisted.python import defer, rebuild
+from twisted.protocols import http
 
 # Sibling Imports
-import html, resource
+import html, resource, static
 from server import NOT_DONE_YET
 
 """A twisted web component framework.
@@ -53,6 +54,7 @@ class FormInputError(Exception):
     pass
 
 class Form(StreamWidget):
+
     formGen = {
         'hidden': htmlFor_hidden,
         'file': htmlFor_file,
@@ -62,15 +64,20 @@ class Form(StreamWidget):
         'menu': htmlFor_menu,
         'password': htmlFor_password
     }
+
     formParse = {
         'int': int
     }
+
     # Subclasses should override this!
     form = [
     ]
+
+    submitName = 'OK'
+
     def format(self, write):
         write('<FORM ENCTYPE="multipart/form-data" METHOD="post">\n'
-              '<TABLE BORDER="2">\n')
+              '<TABLE BORDER="0">\n')
         for inputType, displayName, inputName, inputValue in self.form:
             write('<TR>\n<TD ALIGN="right" VALIGN="top"><B>%s</b></td>\n'
                   '<TD VALIGN="%s">\n' %
@@ -78,38 +85,46 @@ class Form(StreamWidget):
             self.formGen[inputType](write, inputName, inputValue)
             write('</td>\n</tr>\n')
         write('<TR><TD></TD><TD ALIGN="center">\n'
-              '<INPUT TYPE="submit" NAME=submit VALUE="%s">\n'
-              '</td></tr>\n</table></form>' % str(self.__class__))
+              '<INPUT TYPE="submit" NAME="submit" VALUE="%s">\n'
+              '</td></tr>\n</table>\n'
+              '<INPUT TYPE="hidden" NAME="__formtype__" VALUE="%s">\n'
+              '</form>\n' % (self.submitName, str(self.__class__)))
 
 
     def process(self, write, request, **kw):
         write(pprint.PrettyPrinter().pformat(kw))
 
+    def doProcess(self, write, request):
+        args = request.args
+        del args['__formtype__']
+        kw = {}
+        for inputType, displayName, inputName, inputValue in self.form:
+            if not args.has_key(inputName):
+                raise FormInputError("suck ït down!")
+            formData = args[inputName]
+            del args[inputName]
+            if not len(formData) == 1:
+                raise FormInputError("Suck it Down!!")
+            formData = formData[0]
+            method = self.formParse.get(inputType)
+            if method:
+                formData = method(formData)
+            kw[inputName] = formData
+        if args.has_key('submit'):
+            del args['submit']
+        if args:
+            raise FormInputError("SUCK IT DOWN!!! %s" % repr(args))
+        apply(self.process, (write, request), kw)
+
     # Form generation HTML constants:
     def stream(self, write, request):
         args = request.args
-        print args
-        print request.received
-        if args and args.has_key('submit') and args['submit'][0] == str(self.__class__):
-            del args['submit']
-            kw = {}
-            for inputType, displayName, inputName, inputValue in self.form:
-                if not args.has_key(inputName):
-                    raise FormInputError("suck ït down!")
-                formData = args[inputName]
-                del args[inputName]
-                if not len(formData) == 1:
-                    raise FormInputError("Suck it Down!!")
-                formData = formData[0]
-                method = self.formParse.get(inputType)
-                if method:
-                    formData = method(formData)
-                kw[inputName] = formData
-            if args:
-                raise FormInputError("SUCK IT DOWN!!! %s" % repr(args))
-            apply(self.process, (write, request), kw)
-        else:
-            return self.format(write)
+        if args and args.has_key('__formtype__') and args['__formtype__'][0] == str(self.__class__):
+            try:
+                return self.doProcess(write, request)
+            except FormInputError, fie:
+                write('<FONT COLOR=RED><B><I>%s</i></b></font><br>\n' % str(fie))
+        self.format(write)
 
 
 class TextWidget(Widget):
@@ -136,9 +151,7 @@ class Time(Widget):
         """
         return [time.ctime(time.time())]
 
-class Wrapper(Widget):
-    """I wrap another widget inside a box with a border and a title.
-    """
+class TitleBox(Widget):
     templateBegin = ('<table cellpadding=1 cellspacing=0 border=0><tr>'
                      '<td bgcolor="#000000"><center><font color="#FFFFFF">')
     # Title
@@ -223,8 +236,8 @@ class RenderSession:
                 return
 
 
-
 class Page(resource.Resource, Container):
+    isLeaf = 1
     def __init__(*args):
         resource.Resource.__init__(args[0])
         apply(Container.__init__, args)
@@ -234,16 +247,35 @@ class Page(resource.Resource, Container):
         return NOT_DONE_YET
 
 class Gadget(resource.Resource):
-    def __init__(self, **pages):
-        pages[''] = pages.get("index")
-        self.children = pages
+    widgets = {
+    }
+    files = [
+    ]
+    def __init__(self, *files, **widgets):
+        assert self.__class__ is not Gadget, "Gadget may not be instantiated directly."
+        resource.Resource.__init__(self)
+        widgets.update(self.widgets)
+        widgets[''] = widgets.get("index")
+        mods = {}
+        for name, widget in widgets.items():
+            mods[widget.__module__] = (sys.modules[widget.__module__])
+            self.putChild(name, Page(widget))
+        self.putChild('__reload__', Page(Reloader(mods.values())))
+        files = self.files + list(files)
+        for file in files:
+            prefix = getattr(sys.modules[self.__module__], '__file__', '')
+            if prefix:
+                prefix = os.path.abspath(os.path.dirname(prefix))
+            self.putChild(file, static.File(os.path.join(prefix, file)))
 
 class Presentation(Widget):
     template = 'hello %%%%world%%%%'
 
-    def __init__(self, filename=None):
+    def __init__(self, template=None, filename=None):
         if filename:
-            self.template = open('filename').read()
+            self.template = open(filename).read()
+        elif template:
+            self.template = template
         self.tmpl = string.split(self.template, "%%%%")
 
     def addClassVars(self, namespace, Class):
@@ -283,39 +315,85 @@ class Presentation(Widget):
                     elif isinstance(x, Widget):
                         tm.extend(x.display(request))
                     else:
+                        # Only two allowed types here should be deferred and
+                        # string.
                         tm.append(x)
         return tm
 
-class AuthGadget(Gadget):
-    """Uhh... TODO.
-    """
+class Reloader(Presentation):
+    template = '''
+    <html>
+    <head><title>Reloader</title></head>
+    <body>
+    <h1>Reloader</h1>
+    Reloading...
+    <ul>
+    %%%%reload(request)%%%%
+    </ul> ... reloaded!
+    </body>
+    </html>
+    '''
+    def __init__(self, modules):
+        Presentation.__init__(self)
+        self.modules = modules
 
+    def reload(self, request):
+        request.setHeader("location", "..")
+        request.setResponseCode(http.MOVED_PERMANENTLY)
+        x = []
+        write = x.append
+        for module in self.modules:
+            rebuild.rebuild(module)
+            write('<li>reloaded %s<br>' % module.__name__)
+        return x
 
-class Toolbar(StreamWidget):
-    bar = ['Twisted',
+class Sidebar(StreamWidget):
+    bar = [
+        ['Twisted',
             ['mirror', 'http://coopweb.org/ssd/twisted/'],
-            ['mailing list', 'cgi-bin/mailman/listinfo/twisted-python']]
+            ['mailing list', 'cgi-bin/mailman/listinfo/twisted-python']
+        ]
+    ]
 
-    start = "<TABLE width=120 cellspacing=1 cellpadding=1 border=0>"
-    rowstart = '<TR><TD colspan=2 bgcolor="#000000"><font color=white><b>%s</b></font></td></td></tr>'
-    row = ('<TR><td align=right bgcolor="#e0e0e0" width=6>·</td>'
-           '<TD bgcolor="#eeeeee"><A HREF="%s">%s</a></td></tr>')
-    rowend = ''
-    highlightedRowstart = '<TR><TD colspan=2 bgcolor="#000000"><font color=white><b>%s</b></font></td></td></tr>'
-    highlightedRow = ('<TR><td align=right bgcolor="#8080e0" width=6>·</td>'
-                      '<TD bgcolor="#8888ee"><A HREF="%s">%s</a></td></tr>')
-    highlightedRowend = ''
-    end = '</table>'
+    headingColor = 'ffffff'
+    headingTextColor = '000000'
+    activeHeadingColor = '000000'
+    activeHeadingTextColor = 'ffffff'
+    sectionColor = '000088'
+    sectionTextColor = '008888'
+    activeSectionColor = '0000ff'
+    activeSectionTextColor = '00ffff'
 
-    def __init__(self, highlightHeader, highlight):
-        self.highlightPage = highlihg
+    def __init__(self, highlightHeading, highlightSection):
+        self.highlightHeading = highlightHeading
+        self.highlightSection = highlightSection
 
-    def stream(self, write):
-        highlighted = 0
-        write(self.start)
-        for each in self.bar:
-            write(((highlighted and self.highlightedRowstart) or self.rowstart) % each[0])
+    def getList(self):
+        return self.bar
+
+    def stream(self, write, request):
+        write("<TABLE width=120 cellspacing=1 cellpadding=1 border=0>")
+        for each in self.getList():
+            if each[0] == self.highlightHeading:
+                headingColor = self.activeHeadingColor
+                headingTextColor = self.activeHeadingTextColor
+                canHighlight = 1
+            else:
+                headingColor = self.headingColor
+                headingTextColor = self.headingTextColor
+                canHighlight = 0
+            write('<TR><TD colspan=2 bgcolor="#%s"><FONT COLOR="%s"><b>%s</b>'
+                  '</font></td></td></tr>\n' % (headingColor, headingTextColor, each[0]))
             for name, link in each[1:]:
-                write(((highlighted and self.highlightedRow) or self.row) % (link, name))
-        write(self.end)
+                if canHighlight and (name == self.highlightSection):
+                    sectionColor = self.activeSectionColor
+                    sectionTextColor = self.activeSectionTextColor
+                else:
+                    sectionColor = self.sectionColor
+                    sectionTextColor = self.sectionTextColor
+                write('<TR><td align=right bgcolor="#%s" width=6>-</td>'
+                      '<TD bgcolor="#%s"><A HREF="%s"><FONT COLOR="#%s">%s'
+                      '</font></a></td></tr>'
+                       % (sectionColor, sectionColor, request.sibLink(link), sectionTextColor, name))
+        write("</table>")
 

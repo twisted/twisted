@@ -68,7 +68,7 @@ import sys
 class Options(usage.Options):
     optStrings = [["port", "p", "8080"],
                   ["index","i", "index.html"],
-		  ["telnet", "t", ""]]
+                  ["telnet", "t", ""]]
     optFlags = [["personal", ""]]
     def opt_module(self, identifier):
         modulename, classname = string.split(identifier, ':')
