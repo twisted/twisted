@@ -27,7 +27,7 @@ for more details.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.35 $"[11:-2]
+__version__ = "$Revision: 1.36 $"[11:-2]
 
 from twisted.internet import protocol
 from twisted.persisted import styles
@@ -52,9 +52,9 @@ def b1282int(st):
         num = ord(char)
         i = i + (num * (oneHundredAndTwentyEight ** place))
         place = place + 1
-    try:
+    if i <= 2147483647:
         return int(i)
-    except OverflowError:
+    else:
         return i
 
 # delimiter characters.
