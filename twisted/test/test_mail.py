@@ -882,8 +882,8 @@ class LiveFireExercise(unittest.TestCase):
         # so we don't have to wait for the queue to be flushed.
         manager.checkState()
 
-        for i in range(50):
-            reactor.iterate(0.1)
+        for i in range(1000):
+            reactor.iterate(0.01)
         
         mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
         msg = mbox.getMessage(0).read()
