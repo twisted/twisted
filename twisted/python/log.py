@@ -67,8 +67,9 @@ def callWithLogger(logger, func, *args, **kw):
         err(system=lp)
 
 def write(stuff):
-    """Write some data to the log."""
-    warnings.warn("What the hell is wrong with you?", DeprecationWarning, stacklevel=2)
+    """Write some data to the log.
+    DEPRECATED. Use L{msg} instead."""
+    warnings.warn("Use log.msg, not log.write.", DeprecationWarning, stacklevel=2)
     msg(str(stuff))
 
 def debug(*stuff,**otherstuff):
