@@ -246,9 +246,9 @@ def handleSignals():
 def run(installSignalHandlers=1):
     """Run input/output and dispatched/delayed code.
 
-    This call never returns.  It is the main loop which runs
-    delayed timers (see twisted.python.delay and addDelayed),
-    and the I/O monitor (doSelect).
+    This call \"never\" returns.  It is the main loop which runs delayed timers
+    (see twisted.python.delay and addDelayed), and the I/O monitor (doSelect).
+    
     """
     global running
     running = 1
