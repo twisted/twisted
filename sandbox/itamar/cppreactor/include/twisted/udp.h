@@ -48,9 +48,8 @@ namespace Twisted
 
     class DatagramProtocol
     {
-    private:
-	object m_portobj; // so that we have INCREF the port
     public:
+	object m_portobj; // so that we have INCREF the port
 	PyObject* self;
 	UDPPort* transport;
 
