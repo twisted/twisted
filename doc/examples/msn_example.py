@@ -57,8 +57,12 @@ class Dispatch(msn.DispatchClient):
 
 class Notification(msn.NotificationClient):
 
+    def loginFailure(self, message):
+        print 'Login failure:', message
+
     def listSynchronized(self, *args):
         contactList = self.factory.contacts
+        print 'Contact list has been synchronized, number of contacts = %s' % len(contactList.getContacts())
         for contact in contactList.getContacts().values():
             print 'Contact: %s' % (contact.screenName,)
             print '    email: %s' % (contact.userHandle,)
