@@ -75,20 +75,21 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
-class DeferredResource(Resource):
+class DeferredResource(resource.Resource):
     """
     I wrap up a Deferred that will eventually result in a Resource
     object.
     """
     isLeaf = 1
     def __init__(self, d):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.d = d
 
     def render(self, request):
         # TODO: getChild stuffs
         self.d.addCallback(self._cbChild, request).addErrback(
             self._ebChild,request)
+        from twisted.web.server import NOT_DONE_YET
         return NOT_DONE_YET
 
     def _cbChild(self, child, request):
