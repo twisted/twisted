@@ -56,6 +56,7 @@ if os.name == 'nt':
     ECONNRESET  = 10054
     EISCONN     = 10056
     ENOTCONN    = 10057
+    EINTR       = 10004
 elif os.name != 'java':
     from errno import EPERM
     from errno import EINVAL
@@ -65,6 +66,7 @@ elif os.name != 'java':
     from errno import ECONNRESET
     from errno import EISCONN
     from errno import ENOTCONN
+    from errno import EINTR
 
 # Twisted Imports
 from twisted.internet import protocol, defer, base
@@ -224,7 +226,9 @@ class Connection(abstract.FileDescriptor):
         try:
             return self.socket.send(data)
         except socket.error, se:
-            if se.args[0] == EWOULDBLOCK:
+            if se.args[0] == EINTR:
+                self.writeSomeData(data)
+            elif se.args[0] == EWOULDBLOCK:
                 return 0
             else:
                 return main.CONNECTION_LOST
