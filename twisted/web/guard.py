@@ -128,7 +128,7 @@ class AuthForm(widgets.Form):
         # must be done before page is displayed so cookie can get set!
         request.getSession()
         # this site must be tagged with an application.
-        idrq = self.reqauth.service.application.authorizer.getIdentityRequest(username)
+        idrq = self.reqauth.service.authorizer.getIdentityRequest(username)
         idrq.needsHeader = 1
         idrq.addCallbacks(self.gotIdentity, self.didntGetIdentity,
                           callbackArgs=(password,request,perspective or username),

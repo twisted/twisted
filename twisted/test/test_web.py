@@ -18,7 +18,7 @@ import string, random, copy
 
 from twisted.web import server, resource, widgets, guard
 from twisted.internet import app, defer
-from twisted.cred import service, identity, perspective
+from twisted.cred import service, identity, perspective, authorizer
 from twisted.protocols import http, loopback
 
 
@@ -114,11 +114,12 @@ class WidgetTest(unittest.TestCase):
 
 class GuardTest(unittest.TestCase):
     def setUp(self):
-        self.app = app.Application("guard")
-        ident = identity.Identity("bob", self.app)
+        self.auth = authorizer.DefaultAuthorizer()
+        self.app = app.Application("guard", authorizer=self.auth)
+        ident = identity.Identity("bob", authorizer=self.auth)
         ident.setPassword("joe")
-        self.app.authorizer.addIdentity(ident)
-        self.svc = service.Service("simple", self.app)
+        self.auth.addIdentity(ident)
+        self.svc = service.Service("simple", authorizer=self.auth, serviceParent=self.app)
         self.psp = perspective.Perspective('jethro',ident.name)
         self.svc.addPerspective(self.psp)
         ident.addKeyForPerspective(self.psp)
