@@ -3,16 +3,18 @@ from twisted.python import usage
 import string
 
 class WellBehaved(usage.Options):
-    parameters = [['long', 'w', 'default', 'and a docstring'],
-                  ['another', 'n', 'no docstring'],
-                  ['longonly', None, 'noshort'],
-                  ['shortless', None, 'except', 'this one got docstring'],
+    optParameters = [['long', 'w', 'default', 'and a docstring'],
+                     ['another', 'n', 'no docstring'],
+                     ['longonly', None, 'noshort'],
+                     ['shortless', None, 'except',
+                      'this one got docstring'],
                   ]
-    flags = [['aflag', 'f', 'flagallicious docstringness for this here'],
-             ['flout', 'o'],
-             ]
+    optFlags = [['aflag', 'f',
+                 'flagallicious docstringness for this here'],
+                ['flout', 'o'],
+                ]
 
-    def opt_myflag(self):        
+    def opt_myflag(self):
         self.myflag = "PONY!"
 
     def opt_myparam(self, value):
@@ -25,15 +27,15 @@ class ParseCorrectnessTest(unittest.TestCase):
     def setUp(self):
         """Instantiate and parseOptions a well-behaved Options class.
         """
-        
+
         self.niceArgV = string.split("--long Alpha -n Beta "
                                      "--shortless Gamma -f --myflag "
                                      "--myparam Tofu")
-        
+
         self.nice = WellBehaved()
 
         self.nice.parseOptions(self.niceArgV)
-        
+
     def test_checkParameters(self):
         """Checking that parameters have correct values.
         """
@@ -58,13 +60,13 @@ class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """Instantiate a well-behaved Options class.
         """
-        
+
         self.niceArgV = string.split("--long Alpha -n Beta "
                                      "--shortless Gamma -f --myflag "
                                      "--myparam Tofu")
-        
+
         self.nice = WellBehaved()
-    
+
     def test_noGoBoom(self):
         """__str__ shouldn't go boom.
         """
@@ -72,7 +74,8 @@ class HelpStringTest(unittest.TestCase):
         try:
             self.nice.__str__()
         except Exception, e:
+            raise
             self.fail(e)
-        
+
 if __name__ == '__main__':
     unittest.main()
