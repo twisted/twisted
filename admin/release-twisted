@@ -653,7 +653,7 @@ class ReleaseSourceforge(Transaction):
         ver = opts['full-version']
         path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
         sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
-        sh("scp -r %(rel)s/Twisted*%(ver)s* %(rel)s/debian-%(ver)s "
+        sh("scp -r %(rel)s/Twisted*%(ver)s* debian-%(ver)s "
            "%(name)s@shell.sf.net:%(path)s/Twisted-%(ver)s/" % vars())
         sh("echo "
            "'"
