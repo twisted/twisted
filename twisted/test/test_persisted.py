@@ -262,7 +262,9 @@ else:
                  "he\tllo\n\n\"x world!",
                  u"goodbye \n\t\u1010 world!",
                  1, 1.0, 100 ** 100l, unittest, marmalade.DOMJellier, d,
-                 funktion
+                 funktion,
+                 True, False,
+                 (2, 4, [2]),
                  ]
             t = tuple(l)
             l.append(l)
