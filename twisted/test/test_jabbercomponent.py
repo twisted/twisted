@@ -19,6 +19,7 @@ import sys, os, sha
 from twisted.trial import unittest
 
 from twisted.protocols.jabber.component import ConnectComponentAuthenticator
+from twisted.protocols import jabber
 from twisted.protocols import xmlstream
 
 class ComponentAuthTest(unittest.TestCase):
@@ -50,4 +51,52 @@ class ComponentAuthTest(unittest.TestCase):
 
         self.assertEquals(self.authComplete, True)
         
-            
+
+class JabberServiceHarness(jabber.component.Service):
+    def __init__(self):
+        self.componentConnectedFlag = False
+        self.componentDisconnectedFlag = False
+        self.transportConnectedFlag = False
+        
+    def componentConnected(self, xmlstream):
+        self.componentConnectedFlag = True
+
+    def componentDisconnected(self):
+        self.componentDisconnectedFlag = True
+        
+    def transportConnected(self, xmlstream):
+        self.transportConnectedFlag = True
+
+
+class TestJabberServiceManager(unittest.TestCase):
+    def testSM(self):
+        # Setup service manager and test harnes
+        sm = jabber.component.ServiceManager("foo", "password")
+        svc = JabberServiceHarness()
+        svc.setServiceParent(sm)
+
+        # Create a write list
+        wlist = []
+
+        # Setup a XmlStream
+        xs = sm.getFactory().buildProtocol(None)
+        xs.transport = self
+        xs.transport.write = wlist.append
+
+        # Indicate that it's connected
+        xs.connectionMade()
+
+        # Ensure the test service harness got notified
+        self.assertEquals(True, svc.transportConnectedFlag)
+
+        # Jump ahead and pretend like the stream got auth'd
+        xs.dispatch(xs, xmlstream.STREAM_AUTHD_EVENT)
+
+        # Ensure the test service harness got notified
+        self.assertEquals(True, svc.componentConnectedFlag)
+
+        # Pretend to drop the connection
+        xs.connectionLost(None)
+
+        # Ensure the test service harness got notified
+        self.assertEquals(True, svc.componentDisconnectedFlag)

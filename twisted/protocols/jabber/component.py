@@ -75,6 +75,10 @@ class IService(components.Interface):
         """ Parent component has lost a connection to the Jabber system
         """
 
+    def transportConnected(self, xmlstream):
+        """ Parent component has established a connection over the underlying transport
+        """
+
 class Service(service.Service):
     __implements__ = (IService, )
 
@@ -83,6 +87,12 @@ class Service(service.Service):
 
     def componentDisconnected(self):
         pass
+
+    def transportConnected(self, xmlstream):
+        pass
+
+    def send(self, obj):
+        self.parent.send(obj)
 
 class ServiceManager(service.MultiService):
     """ Business logic representing a managed component connection to a Jabber router
@@ -106,7 +116,8 @@ class ServiceManager(service.MultiService):
         self._xsFactory = componentFactory(self.jabberId, password)
 
         # Register some lambda functions to keep the self.xmlstream var up to date
-        self._xsFactory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self._connected)
+        self._xsFactory.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self._connected)
+        self._xsFactory.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self._authd)
         self._xsFactory.addBootstrap(xmlstream.STREAM_END_EVENT, self._disconnected)
 
         # Map addBootstrap and removeBootstrap to the underlying factory -- is this
@@ -120,7 +131,11 @@ class ServiceManager(service.MultiService):
 
     def _connected(self, xs):
         self.xmlstream = xs
+        for c in self:
+            if components.implements(c, IService):
+                c.transportConnected(xs)
 
+    def _authd(self, xs):
         # Flush all pending packets
         for p in self._packetQueue:
             self.xmlstream.send(p)

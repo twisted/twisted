@@ -19,6 +19,7 @@
 from twisted.internet import reactor, protocol, defer
 from twisted.xish import domish, utility
 
+STREAM_CONNECTED_EVENT = intern("//event/stream/connected")
 STREAM_START_EVENT = intern("//event/stream/start")
 STREAM_END_EVENT = intern("//event/stream/end")
 STREAM_ERROR_EVENT = intern("//event/stream/error")
@@ -146,6 +147,8 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.stream.DocumentStartEvent = self.onDocumentStart
         self.stream.ElementEvent = self.onElement
         self.stream.DocumentEndEvent = self.onDocumentEnd
+
+        self.dispatch(self, STREAM_CONNECTED_EVENT)
 
         self.authenticator.connectionMade()
 
