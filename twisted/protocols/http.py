@@ -739,7 +739,7 @@ class HTTPChannel(basic.LineReceiver):
         """Check if the channel should close or not."""
         connection = request.getHeader('connection')
         if connection:
-            tokens = map(str.lower, connection.split(' '))
+            tokens = map(lambda x: x.lower(), connection.split(' '))
         else:
             tokens = []
 
