@@ -451,6 +451,13 @@ class SQLReflectorTestCase(ReflectorTestCase):
     def startDB(self): pass
     def stopDB(self): pass
 
+    def makePool(self, **newkw):
+    	args, kw = self.getPoolArgs()
+	kw.update(newkw)
+        return ConnectionPool(cp_openfun=self.openfun, *args, **kw)
+
+    def getPoolArgs(): raise NotImplementedError
+
 
 class NoSlashSQLReflector(SQLReflector):
     def escape_string(self, text):
@@ -478,9 +485,10 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
         conn.commit()
         conn.close()
 
-    def makePool(self):
-        return ConnectionPool('gadfly', self.DB_NAME, self.DB_DIR, cp_max=1,
-                              cp_openfun=self.openfun)
+    def getPoolArgs(self):
+    	args = ('gadfly', self.DB_NAME, self.DB_DIR)
+	kw = {'cp_max': 1}
+	return args, kw
 
 
 class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -495,28 +503,31 @@ class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
         self.database = os.path.join(self.DB_DIR, self.DB_NAME)
         if os.path.exists(self.database): os.unlink(self.database)
 
-    def makePool(self):
-        return ConnectionPool('sqlite', database=self.database, cp_max=1,
-                              cp_openfun=self.openfun)
+    def getPoolArgs(self):
+    	args = ('sqlite',)
+	kw = {'database': self.database, 'cp_max': 1}
+	return args, kw
 
 
 class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using Postgres.
     """
 
-    def makePool(self):
-        return ConnectionPool('pyPgSQL.PgSQL', database=self.DB_NAME,
-                              user=self.DB_USER, password=self.DB_PASS,
-                              cp_min=0, cp_openfun=self.openfun)
+    def getPoolArgs(self):
+    	args = ('pyPgSQL.PgSQL',)
+	kw = {'database': self.DB_NAME, 'user': self.DB_USER,
+	      'password': self.DB_PASS, 'cp_min': 0}
+	return args, kw
 
 class PsycopgTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using psycopg for Postgres.
     """
 
-    def makePool(self):
-        return ConnectionPool('psycopg', database=self.DB_NAME,
-                              user=self.DB_USER, password=self.DB_PASS,
-                              cp_min=0, cp_openfun=self.openfun)
+    def getPoolArgs(self):
+        args = ('psycopg',)
+	kw = {'database': self.DB_NAME, 'user': self.DB_USER,
+	      'password': self.DB_PASS, 'cp_min': 0}
+	return args, kw
 
 
 class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -526,16 +537,16 @@ class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
     trailingSpacesOK = False
     can_rollback = False
 
-    def makePool(self):
-        return ConnectionPool('MySQLdb', db=self.DB_NAME,
-                              user=self.DB_USER, passwd=self.DB_PASS,
-                              cp_openfun=self.openfun)
+    def getPoolArgs(self):
+        args = ('MySQLdb',)
+	kw = {'db': self.DB_NAME, 'user': self.DB_USER, 'passwd': self.DB_PASS}
+	return args, kw
 
 
 class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using Firebird/Interbase."""
 
-    count = 2 # CHANGEME
+    count = 25
     test_failures = False # failure testing causes problems
     reflectorClass = NoSlashSQLReflector
     DB_DIR = tempfile.mktemp()
@@ -550,10 +561,11 @@ class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
         conn.close()
         os.chmod(self.DB_NAME, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)
 
-    def makePool(self):
-        return ConnectionPool('kinterbasdb', database=self.DB_NAME,
-                              host='localhost', user=self.DB_USER,
-                              password=self.DB_PASS, cp_openfun=self.openfun)
+    def getPoolArgs(self):
+        args = ('kinterbasdb',)
+	kw = {'database': self.DB_NAME, 'host': 'localhost',
+	      'user': self.DB_USER, 'password': self.DB_PASS}
+	return args, kw
 
     def stopDB(self):
         conn = kinterbasdb.connect(database=self.DB_NAME,
