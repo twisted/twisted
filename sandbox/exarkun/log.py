@@ -11,20 +11,27 @@ import logging.handlers
 
 from twisted.python import log
 
-class LogOwner:
-    fmt = "%(asctime)s %(levelname)-5s %(name)s: %(filename)s:%(lineno)d: %(message)s"
+class Unfilter(logging.Filter):
+    def filter(self, record):
+        return 1
 
-    preBufferSize = 1024 * 1024 # 1 meg in memory, then bye-bye!  Better
+class LogOwner:
+    fmt = "%(asctime)s [%(name)s] %(message)s"
+
+    preBufferSize = 1024 * 1024 # 1 meg in memory, then bye-bye!  Better start
                                 # logging before then.
 
     def __init__(self):
         self.formatter = logging.Formatter(self.fmt)
         self.filer = logging.handlers.MemoryHandler(self.preBufferSize)
         self.filer.setFormatter(self.formatter)
-        self.filer.setLevel(logging.DEBUG)
+        self.filer.addFilter(Unfilter())
+        self.filer.setLevel(1)
         self.logs = []
         self._log = logging.getLogger("Uninitialized")
         self._log.addHandler(self.filer)
+        self._log.setLevel(1)
+
     
     def replaceFiler(self, filer):
         self._log.removeHandler(self.filer)
@@ -39,6 +46,8 @@ class LogOwner:
             self.filer.flush()
 
         self.filer = filer
+        self.filer.setFormatter(self.formatter)
+        self.filer.addFilter(Unfilter())
         self._log.addHandler(self.filer)
         for l in self.logs:
             l.addHandler(self.filer)
@@ -46,6 +55,7 @@ class LogOwner:
     def own(self, owner):
         if owner is not None:
             log = logging.getLogger(owner.logPrefix())
+            log.setLevel(1)
             log.addHandler(self.filer)
             self.logs.append(log)
     
@@ -67,14 +77,26 @@ def msg(*args):
 def err(*args):
     logOwner.owner().error(' '.join(map(str, args)))
 
+class LogWrapper:
+    softspace = None
+    
+    def __init__(self, f):
+        self.f = f
+
+    def write(self, s):
+        self.f(s)
+    
+    def flush(self):
+        logOwner.filer.flush()
+
 def startLogging(logFile, setStdout=1):
     """Initialize logging to a specified file."""
-    print 'hi'
+    print 'Logging to', logFile
     logOwner.replaceFiler(logging.StreamHandler(logFile))
     msg("Log opened.")
     if setStdout:
-        sys.stdout = sys.stderr = logFile
-    print 'zong'
+        sys.stdout = LogWrapper(msg)
+#        sys.stderr = LogWrapper(err)
 
 from twisted.python import log
 
