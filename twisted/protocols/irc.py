@@ -9,33 +9,21 @@ class IRCParseError(ValueError):
     pass
 
 def parsemsg(s):
-    # Does a prefix exist?
-    if s[0] == ':':
-        # If so, grab it.
-        x = string.find(s,' ')
-        if x == -1:
-            raise IRCParseError
-        prefix = s[1:x]
-        s = s[x+1:]
-    else:
-        prefix = ''
-    # Grab the command.
-    x = string.find(s,' ')
-    if x == -1:
+    prefix = ''
+    trailing = []
+    try:
+        if s[0] == ':':
+            prefix, s = string.split(s[1:], maxsplit=1)
+        if s.find(':') != -1:
+            s, trailing = string.split(s, ':', 1)
+            args = string.split(s)
+            args.append(trailing)
+        else:
+            args = string.split(s)
+        command = args.pop(0)
+        return prefix, command, args
+    except:
         raise IRCParseError
-    command = s[:x]
-    s = s[x+1:]
-    x = string.find(s,':')
-    # Is there a "long" parameter?
-    if x != -1:
-        trailing = s[x+1:]
-        s = s[:x]
-    else:
-        trailing = None
-    params = string.split(s, ' ')
-    if trailing is not None:
-        params.append(trailing)
-    return prefix, command, params
 
 
 class IRC(protocol.Protocol):
