@@ -234,7 +234,8 @@ class View(object):
 
     def update(self, model):
         """The view is being rendered against the given model;
-        this method should use self.add and self.__setitem__
+        this method should use self.__call__ and self.__getitem__
+        (as though self were an XMLAbomination)
         to influence how this node is going to look.
         """
         pass
