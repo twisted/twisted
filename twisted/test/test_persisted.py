@@ -4,6 +4,8 @@
 
 
 # System Imports
+import sys
+
 from twisted.trial import unittest
 
 try:
@@ -316,6 +318,11 @@ class NonDictState:
         self.state = state
 
 class AOTTestCase(unittest.TestCase):
+    def testSimpleTypes(self):
+        obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
+        rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
+        self.assertEquals(obj, rtObj)
+
     def testMethodSelfIdentity(self):
         a = A()
         b = B()

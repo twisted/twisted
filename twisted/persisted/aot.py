@@ -171,7 +171,9 @@ def prettify(obj):
         t = type(obj)
 
         if t in [types.StringType, types.UnicodeType, types.IntType,
-                   types.FloatType, types.LongType, types.NoneType]:
+                 types.FloatType, types.ComplexType, types.LongType,
+                 types.NoneType, types.BooleanType, types.SliceType,
+                 types.EllipsisType]:
             return repr(obj)
 
         elif t is types.DictType:
@@ -378,7 +380,9 @@ class AOTUnjellier:
         #Types
                 
         elif t in [types.NoneType, types.StringType, types.UnicodeType,
-                   types.IntType, types.FloatType, types.LongType]:
+                   types.IntType, types.FloatType, types.ComplexType,
+                   types.LongType, types.BooleanType, types.SliceType,
+                   types.EllipsisType]:
             return ao
             
         elif t is types.ListType:
@@ -464,7 +468,9 @@ class AOTJellier:
 
         #immutable: We don't care if these have multiple refs!
         if objType in [types.NoneType, types.StringType, types.UnicodeType,
-                       types.IntType, types.FloatType, types.LongType]:
+                       types.IntType, types.FloatType, types.ComplexType,
+                       types.LongType, types.BooleanType, types.SliceType,
+                       types.EllipsisType]:
             retval = obj
             
         elif objType is types.MethodType:
