@@ -1,3 +1,8 @@
+2002-10-11  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/internet/wxsupport.py: improved responsiveness of wxPython
+	GUI (50 FPS instead of 10 FPS).
+
 2002-10-08  Brian Warner  <warner@twistedmatrix.com>
 
 	* doc/howto: Added PB/cred and Application docs, updated Manhole
