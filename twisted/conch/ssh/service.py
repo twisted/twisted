@@ -33,6 +33,12 @@ class SSHService:
         called when the service is active on the transport.
         """
 
+    def serviceStopped(self):
+        """
+        called when the service is stopped, either by the connection ending
+        or by another service being started
+        """
+
     def packetReceived(self, messageType, packet):
         """
         called when we receieve a packet on the transport

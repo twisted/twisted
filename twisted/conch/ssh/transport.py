@@ -74,6 +74,8 @@ class SSHTransportBase(protocol.Protocol):
     def connectionLost(self, reason):
         #from twisted.internet import reactor
         #reactor.stop()
+        if self.service:
+            self.service.serviceStopped()
         log.msg('connection lost')
 
     def connectionMade(self):
@@ -220,6 +222,8 @@ class SSHTransportBase(protocol.Protocol):
 
     def setService(self, service):
         log.msg('starting service %s'%service.name)
+        if self.service:
+            self.service.serviceStopped()
         self.service = service
         service.transport = self
         self.service.serviceStarted()

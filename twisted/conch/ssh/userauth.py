@@ -50,10 +50,20 @@ class SSHUserAuthServer(service.SSHService):
             if 'keyboard-interactive' in self.supportedAuthentications:
                 self.supportedAuthentications.remove('keyboard-interactive')
             # don't let us transport password in plaintext
-        self.cancelLoginTimeout = reactor.callLater(self.loginTimeout,
-                                                    self.transport.sendDisconnect,
-                                                    transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
-                                                    'you took too long')
+        self.cancelLoginTimeout = reactor.callLater(self.loginTimeout, 
+                                                    self.timeoutAuthentication)
+
+    def serviceStopped(self):
+        if self.cancelLoginTimeout:
+            self.cancelLoginTimeout.cancel()
+            self.cancelLoginTimeout = None
+
+    def timeoutAuthentication(self):
+        self.cancelLoginTimeout = None
+        self.transport.sendDisconnect(
+            transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+            'you took too long')
+
 
     def tryAuth(self, kind, user, data):
         log.msg('%s trying auth %s' % (user, kind))
@@ -90,6 +100,7 @@ class SSHUserAuthServer(service.SSHService):
         self.authenticatedWith.append(self.method)
         if self.areDone():
             self.cancelLoginTimeout.cancel()
+            self.cancelLoginTimeout = None
             self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
             self.transport.authenticatedUser = self.identity
             self.transport.setService(self.transport.factory.services[self.nextService]())

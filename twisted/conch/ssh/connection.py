@@ -46,6 +46,10 @@ class SSHConnection(service.SSHService):
                             # (client only)
         self.listeners = {} # dict mapping (internface, port) -> listener
 
+    def serviceStopped(self):
+        for channel in self.channels.values():
+            self.channel.closed()
+
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
         requestType, rest = common.getNS(packet)

@@ -37,6 +37,7 @@ class SSHSession(connection.SSHChannel):
         connection.SSHChannel.__init__(self, *args, **kw)
         self.environ = {}
         self.buf = ''
+        self.pty = None
         self.ptyTuple = 0
 
     def request_subsystem(self, data):
@@ -215,7 +216,13 @@ class SSHSession(connection.SSHChannel):
     def eofReceived(self):
         self.loseConnection() # don't know what to do with this
 
+    def loseConnection(self):
+        self.pty = None
+        connection.SSHChannel.loseConnection(self)
+
     def closed(self):
+        if self.pty:
+            self.pty.loseConnection()
         ttyGID = os.stat(self.ptyTuple[2])[5]
         os.chown(self.ptyTuple[2], 0, ttyGID)
         try:
