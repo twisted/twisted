@@ -90,7 +90,7 @@ class PBFailureTest(unittest.TestCase):
 
     def stopReactor(self):
         reactor.cancelCallLater(self.id)
-        reactor.stop()
+        reactor.crash()
         
     ##
     # callbacks
@@ -126,7 +126,7 @@ class PBFailureTest(unittest.TestCase):
         return 4200
 
     def timeOut(self):
-        reactor.stop()
+        reactor.crash()
         raise TimeoutError("Never got all three failures!")
 
 testCases = [PBFailureTest]
