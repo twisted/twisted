@@ -31,7 +31,8 @@ class Options(usage.Options):
     synopsis = "Usage: mktap mail [options]"
 
     optParameters = [
-        ["pop", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
+        ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
+#        ["pop3s", "S", 8995, "Port to start the POP3 over SSL server on (0 to disable)."],
         ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
         ["relay", "r", None, 
             "relay mail we do not know how to handle to this IP,"
@@ -75,18 +76,24 @@ class Options(usage.Options):
     
     def postOptions(self):
         try:
-            self['pop'] = int(self['pop'])
-            assert 0 <= self['pop'] < 2 ** 16, ValueError
+            self['pop3'] = int(self['pop3'])
+            assert 0 <= self['pop3'] < 2 ** 16, ValueError
         except ValueError:
-            raise usage.UsageError('Invalid port specified to --pop: %s' % self['pop'])
+            raise usage.UsageError('Invalid port specified to --pop3: %s' % self['pop3'])
         try:
             self['smtp'] = int(self['smtp'])
             assert 0 <= self['smtp'] < 2 ** 16, ValueError
         except ValueError:
             raise usage.UsageError('Invalid port specified to --smtp: %s' % self['smtp'])
-        
-        if not (self['pop'] or self['smtp']):
-            raise usage.UsageError("You cannot disable both POP and SMTP")
+#        try:
+#            self['pop3s'] = int(self['pop3s'])
+#            assert 0 <= self['pop3s'] < 2 ** 16, ValueError
+#        except ValueError:
+#            raise usage.UsageError('Invalid port specified to --pop3s: %s' % self['pop3s'])
+
+#        if not (self['pop3'] or self['smtp'] or self['pop3s']):
+        if not (self['pop3'] or self['smtp']):
+            raise usage.UsageError("You cannot disable all protocols")
 
 def updateApplication(app, config):
     if config.opts['relay']:
@@ -101,7 +108,9 @@ def updateApplication(app, config):
         config.service.domains.setDefaultDomain(default)
         app.addDelayed(delayed)
     
-    if config['pop']:
-        app.listenTCP(config.opts['pop'], config.service.getPOP3Factory())
+    if config['pop3']:
+        app.listenTCP(config.opts['pop3'], config.service.getPOP3Factory())
+#    if config['pop3s']:
+#        app.listenSSL(config.opts['pop3s'], config.service.getPOP3Factory())
     if config['smtp']:
         app.listenTCP(config.opts['smtp'], config.service.getSMTPFactory())
