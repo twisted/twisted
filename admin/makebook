@@ -3,8 +3,10 @@ set -e
 cp admin/book.tex doc/howto
 cd doc/howto
 for file in *.html
-    do ../../admin/latex.py $file
+    do echo $file
+    ../../admin/latex.py $file
 done
+latex book.tex
 latex book.tex
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
