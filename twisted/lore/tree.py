@@ -227,8 +227,8 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     addHTMLListings(document, d)
     fixLinks(document, ext)
     putInToC(template, generateToC(document))
-    #footnotes(document)
-    #notes(document)
+    footnotes(document)
+    notes(document)
 
     # Insert the document into the template
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
