@@ -23,7 +23,10 @@ class RecvLineHandler:
             proto.RIGHT_ARROW: self.handle_RIGHT,
             '\r': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
-            '\x04': self.handle_DELETE}
+            '\x04': self.handle_DELETE,
+            proto.DELETE: self.handle_DELETE,
+            proto.HOME: self.handle_HOME,
+            proto.END: self.handle_END}
 
         self.initializeScreen()
 
@@ -49,7 +52,7 @@ class RecvLineHandler:
         self.proto.cursorPosition(0, self.height)
 
     def unhandledControlSequence(self, seq):
-        pass
+        print "Don't know about", repr(seq)
 
     def setMode(self, modes):
         print 'Setting', modes
@@ -81,6 +84,14 @@ class RecvLineHandler:
             self.lineBufferIndex += 1
             self.proto.cursorForward()
 
+    def handle_HOME(self):
+        self.lineBufferIndex = 0
+        self.proto.cursorPosition(0, self.height)
+
+    def handle_END(self):
+        self.lineBufferIndex = len(self.lineBuffer)
+        self.proto.cursorPosition(self.lineBufferIndex + 1, self.height)
+
     def handle_BACKSPACE(self):
         if self.lineBufferIndex > 0:
             self.lineBufferIndex -= 1
@@ -104,3 +115,18 @@ class RecvLineHandler:
 
     def lineReceived(self, line):
         pass
+
+class HistoricRecvLineHandler(RecvLineHandler):
+    def __init__(self, proto):
+        RecvLineHandler.__init__(self, proto)
+
+        self.historyLines = []
+        self.historyPosition = 0
+
+        self.keyHandlers.update({self.proto.UP_ARROW: self.handle_UP,
+                                 self.proto.DOWN_ARROW: self.handle_DOWN})
+
+    def handle_UP(self):
+        if self.lineBuffer:
+            self.historyLines.append(self.lineBuffer)
+        

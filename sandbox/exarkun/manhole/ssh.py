@@ -18,8 +18,11 @@ class TerminalRealm:
         raise NotImplementedError()
 
 class _Ugg:
-    def __init__(self, f):
-        self.write = f
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+    def __getattr__(self, name):
+        raise AttributeError(self.name, "has no attribute", name)
 
 class TerminalSessionTransport:
     protocolFactory = insults.ServerProtocol
@@ -29,8 +32,10 @@ class TerminalSessionTransport:
         self.avatar = avatar
         self.chainedProtocol = self.protocolFactory()
 
-        self.proto.makeConnection(_Ugg(self.chainedProtocol.dataReceived))
-        self.chainedProtocol.makeConnection(_Ugg(self.proto.write))
+        self.proto.makeConnection(_Ugg(write=self.chainedProtocol.dataReceived,
+                                       name="SSH Proto Transport"))
+        self.chainedProtocol.makeConnection(_Ugg(write=self.proto.write,
+                                                 name="Chained Proto Transport"))
 
 class TerminalSession:
     transportFactory = TerminalSessionTransport

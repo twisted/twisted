@@ -1,9 +1,8 @@
 
 import string
 
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 from twisted.python import components
-
 
 class ITerminalListener(components.Interface):
     def terminalSize(self, width, height):
@@ -205,9 +204,35 @@ class ITerminal(components.Interface):
         the scroll region.
         """
 
+    def reportCursorPosition(self):
+        """Return a Deferred that fires with a two-tuple of (x, y) indicating the cursor position.
+        """
+
+    def reset(self):
+        """Reset the terminal to its initial state.
+        """
+
+    def disconnect(self):
+        """Reset the terminal and drop the connection to it.
+        """
 
 CSI = '\x1b'
-CST = dict.fromkeys('HfABCDsuJKmhlp')
+CST = {'H': 'H',
+       'f': 'f',
+       'A': 'A',
+       'B': 'B',
+       'C': 'C',
+       'D': 'D',
+       's': 's',
+       'u': 'u',
+       'J': 'J',
+       'K': 'K',
+       'm': 'm',
+       'h': 'h',
+       'l': 'l',
+       'p': 'p',
+       'R': 'R',
+       '~': 'tilde'}
 
 # These are nominally public
 # XXX - Put them in a namespace or something
@@ -258,8 +283,7 @@ class ServerProtocol(protocol.Protocol):
     handlerFactory = TerminalListener
 
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12'):
+                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN'):
         exec '%s = %r' % (keyID, keyID)
 
     _databuf = ''
@@ -267,6 +291,8 @@ class ServerProtocol(protocol.Protocol):
     def __init__(self, *a, **kw):
         self.handlerArgs = a
         self.handlerKwArgs = kw
+
+        self._cursorReports = []
 
     def write(self, bytes):
         self.transport.write(bytes)
@@ -294,9 +320,9 @@ class ServerProtocol(protocol.Protocol):
             self._databuf = ''.join(escBuf)
 
     def _handleControlSequence(self, terminal, buf):
-        f = getattr(self.controlSequenceParser, terminal, None)
+        f = getattr(self.controlSequenceParser, CST[terminal], None)
         if f is None:
-            self.handler.unhandledControlSequence(handler, ''.join(buf) + terminal)
+            self.handler.unhandledControlSequence(''.join(buf) + terminal)
         else:
             f(self, self.handler, ''.join(buf))
 
@@ -357,6 +383,44 @@ class ServerProtocol(protocol.Protocol):
             else:
                 handler.unhandledControlSequence(buf + 'D')
 
+        def R(self, proto, handler, buf):
+            if not proto._cursorReports:
+                handler.unhandledControlSequence(buf + 'R')
+            elif buf.startswith('\x1b['):
+                report = buf[2:]
+                parts = report.split(';')
+                if len(parts) != 2:
+                    handler.unhandledControlSequence(buf + 'R')
+                else:
+                    Pl, Pc = parts
+                    try:
+                        Pl, Pc = int(Pl), int(Pc)
+                    except ValueError:
+                        handler.unhandledControlSequence(buf + 'R')
+                    else:
+                        d = proto._cursorReports.pop(0)
+                        d.callback((Pc - 1, Pl - 1))
+            else:
+                handler.unhandledControlSequence(buf + 'R')
+
+        def tilde(self, proto, handler, buf):
+            map = (proto.HOME, proto.INSERT, proto.DELETE,
+                   proto.END, proto.PGUP, proto.PGDN)
+            if buf.startswith('\x1b['):
+                ch = buf[2:]
+                try:
+                    v = int(ch)
+                except ValueError:
+                    handler.unhandledControlSequence(buf + '~')
+                else:
+                    if v > 0 and v <= len(map):
+                        handler.keystrokeReceived(map[v - 1])
+                    else:
+                        handler.unhandledControlSequence(buf + '~')
+            else:
+                handler.unhandledControlSequence(buf + '~')
+
+
     controlSequenceParser = ControlSequenceParser()
 
     # ITerminal
@@ -373,7 +437,7 @@ class ServerProtocol(protocol.Protocol):
         self.write('\x1b[%dD' % (n,))
 
     def cursorPosition(self, column, line):
-        self.write('\x1b[%d;%dH' % (line, column))
+        self.write('\x1b[%d;%dH' % (line + 1, column + 1))
 
     def cursorHome(self):
         self.write('\x1b[H')
@@ -509,4 +573,17 @@ class ServerProtocol(protocol.Protocol):
         else:
             last = ''
         self.write('\x1b[%s;%sr' % (first, last))
+
+    def reportCursorPosition(self):
+        d = defer.Deferred()
+        self._cursorReports.append(d)
+        self.write('\x1b[6n')
+        return d
+
+    def reset(self):
+        self.write('\x1bc')
+
+    def disconnect(self):
+        self.reset()
+        self.transport.loseConnection()
 

@@ -2,7 +2,7 @@
 import insults
 from recvline import RecvLineHandler
 
-from twisted.application import service, internet
+from twisted.application import service
 
 application = service.Application("Insults RecvLine Demo")
 

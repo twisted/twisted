@@ -51,3 +51,10 @@ class TelnetBootstrapProtocol(telnet.Telnet):
     def processChunk(self, bytes):
         self.chainedProtocol.dataReceived(bytes)
 
+    # ITransport or whatever
+    def loseConnection(self):
+        self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        self.chainedProtocol.connectionLost(reason)
+
