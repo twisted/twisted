@@ -136,8 +136,6 @@ class SSHTransportBase(protocol.Protocol):
         packetLen, randomLen = struct.unpack('!LB',first[:5])
         if packetLen > 1048576: # 1024 ** 2
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length %s' % packetLen)
-            log.msg(buffer_dump(self.buf, title = 'encrypted:\t'))
-            log.msg(buffer_dump(first, title = 'plain:\t'))
             return           
         if len(self.buf) < packetLen: 
             self.first = first
