@@ -16,11 +16,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+defaultContextDict = {}
+
+setDefault = defaultContextDict.__setitem__
+
 class ContextTracker:
     def __init__(self):
-        self.contexts = [{}]
+        self.contexts = [defaultContextDict]
 
-    def runWithContext(self, ctx, func, *args, **kw):
+    def callWithContext(self, ctx, func, *args, **kw):
         newContext = self.contexts[-1].copy()
         newContext.update(ctx)
         self.contexts.append(newContext)
@@ -44,21 +48,20 @@ class ThreadedContextTracker:
         if not self.contextPerThread.has_key(tkey):
             self.contextPerThread[tkey] = ContextTracker()
         return self.contextPerThread[tkey]
-        
-    def runWithContext(self, ctx, func, *args, **kw):
-        return self.currentContext().runWithContext(ctx, func, *args, **kw)
+
+    def callWithContext(self, ctx, func, *args, **kw):
+        return self.currentContext().callWithContext(ctx, func, *args, **kw)
 
     def getContext(self, key, default=None):
         return self.currentContext().getContext(key, default)
 
-
 def installContextTracker(ctr):
     global theContextTracker
-    global run
+    global call
     global get
 
     theContextTracker = ctr
-    run = theContextTracker.runWithContext
+    call = theContextTracker.callWithContext
     get = theContextTracker.getContext
 
 def initThreads():

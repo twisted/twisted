@@ -23,5 +23,5 @@ class ContextTest(TestCase):
 
     def testBasicContext(self):
         self.assertEquals(context.get("x"), None)
-        self.assertEquals(context.run({"x": "y"}, context.get, "x"), "y")
+        self.assertEquals(context.call({"x": "y"}, context.get, "x"), "y")
         self.assertEquals(context.get("x"), None)
