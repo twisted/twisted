@@ -25,14 +25,14 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # Sibling Imports
 # XXX TODO: actually watch file descriptors on UNIX, using IO timeouts...
 
-def _doReactorIter(reactor, widget):
+def _doReactorIter(delay, reactor, widget):
     reactor.iterate()
-    widget.after(6, _doReactorIter, reactor, widget)
+    widget.after(delay, _doReactorIter, delay, reactor, widget)
 
-def install(widget):
+def install(widget, delay = 6):
     from twisted.internet import reactor
     reactor.startRunning() # I only support PosixReactorBase subclasses anyway
-    widget.after(6, _doReactorIter, reactor, widget)
+    widget.after(delay, _doReactorIter, delay, reactor, widget)
 
 
 __all__ = ["install"]
