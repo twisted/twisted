@@ -195,34 +195,25 @@ components.registerAdapter(PerspectiveFingerFromService, IFingerService,
                            IPerspectiveFinger)
 
 
-class FingerService(service.Service):
+class FingerService(internet.TimerService):
 
-    __implements__ = service.Service.__implements__, IFingerService,
+    __implements__ = internet.TimerService.__implements__, IFingerService,
 
     def __init__(self, file):
-        self.file = file
-
-    def startService(self):
-        service.Service.startService(self)
-        self._read()
+        internet.TimerService(self, self._read)
 
     def _read(self):
-        from twisted.internet import reactor
         self.users = {}
         for line in file(self.file):
             user, status = line.split(':', 1)
             self.users[user] = status
-        self.call = reactor.callLater(30, self._read)
-
-    def stopService(self):
-        service.Service.stopService(self)
-        self.call.cancel()
 
     def getUser(self, user):
         return defer.succeed(self.users.get(user, "No such user"))
 
     def getUsers(self):
         return defer.succeed(self.users.keys())
+
 
 def makeService(file):
     m = service.MultiService()
