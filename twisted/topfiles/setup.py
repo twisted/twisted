@@ -104,11 +104,6 @@ desktop environments, and your toaster.
 )
 
 
-# Include the post install script when building windows packages
-# because it's executed after install-time
-if os.name=='nt':
-    setup_args['scripts'].append('win32/twisted_postinstall.py')
-
 if __name__ == '__main__':
     dist.setup(**setup_args)
 
