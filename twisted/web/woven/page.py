@@ -8,6 +8,7 @@ class Page(model.Model, controller.Controller, view.View):
     __implements__ = (model.Model.__implements__, view.View.__implements__,
                       controller.Controller.__implements__)
     def __init__(self, m=None, templateFile=None, inputhandlers=None,
+                controllers=None,
                  *args, **kwargs):
         model.Model.__init__(self, *args, **kwargs)
         if m is None:
@@ -15,7 +16,8 @@ class Page(model.Model, controller.Controller, view.View):
         else:
             self.model = m
         controller.Controller.__init__(self, self.model,
-                                       inputhandlers=inputhandlers)
+                                       inputhandlers=inputhandlers,
+                                       controllers=controllers)
         self.view = self
         view.View.__init__(self, self.model, controller=self,
                            templateFile=templateFile)
@@ -32,14 +34,15 @@ class LivePage(model.Model, controller.LiveController, view.View):
     __implements__ = (model.Model.__implements__, view.View.__implements__,
                       controller.Controller.__implements__)
     def __init__(self, m=None, templateFile=None, inputhandlers=None,
-                 *args, **kwargs):
+                 controllers=None, *args, **kwargs):
         model.Model.__init__(self, *args, **kwargs)
         if m is None:
             self.model = self
         else:
             self.model = m
         controller.LiveController.__init__(self, self.model,
-                                       inputhandlers=inputhandlers)
+                                       inputhandlers=inputhandlers,
+                                       controllers=controllers)
         self.view = self
         view.View.__init__(self, self.model, controller=self,
                            templateFile=templateFile)

@@ -47,7 +47,7 @@ class Controller(resource.Resource):
     __implements__ = (interfaces.IController, resource.IResource)
     setupStacks = 1
     controllerLibraries = []
-    def __init__(self, m, inputhandlers=None, view=None):
+    def __init__(self, m, inputhandlers=None, view=None, controllers=None):
         #self.start = now()
         resource.Resource.__init__(self)
         self.model = m
@@ -57,12 +57,16 @@ class Controller(resource.Resource):
         self.subcontrollers = []
         if self.setupStacks:
             self.setupControllerStack()
-        if inputhandlers is None:
+        if inputhandlers is None and controllers is None:
             self._inputhandlers = []
-        else:
+        elif inputhandlers:
+            print "The inputhandlers arg is deprecated, please use controllers instead"
             self._inputhandlers = inputhandlers
+        else:
+            self._inputhandlers = controllers
         self._valid = {}
         self._invalid = {}
+        self._process = {}
 
     def setupControllerStack(self):
         self.controllerStack = utils.Stack([])
@@ -140,9 +144,15 @@ class Controller(resource.Resource):
         when it is done.
         """
         # Handle any inputhandlers that were passed in to the controller first
+        print "INPUTHANDLERS", self._inputhandlers
         for ih in self._inputhandlers:
             ih._parent = self
             ih.handle(request)
+        print "VALID", self._valid, self._invalid
+        for key, value in self._valid.items():
+            key.commit(request, None, value)
+        self._valid = {}
+        print "COMMIT DONE", self.model
         return self.renderView(request, block=block)
 
     def renderView(self, request, block=0):
