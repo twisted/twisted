@@ -10,7 +10,7 @@ Distutils-launcher for Twisted projects.
 import sys, os, os.path
 
 subprojects = ('core', 'conch', 'flow', 'lore', 'mail', 'names', 'pair',
-               'runner', 'web', 'words', 'xish')
+               'runner', 'web', 'words', 'xish', 'news')
 
 specialPaths = {'core': 'twisted/topfiles/setup.py'}
 specialModules = {'core': 'twisted'}
