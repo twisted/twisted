@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.55 2003/10/07 05:20:16 exarkun Exp $
+# $Id: usage.py,v 1.56 2003/10/29 17:28:03 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -87,7 +87,7 @@ class Options(dict):
     C{['--horseback', '--for-grail']}.  Currently, only the first sub-command
     is parsed, and all options following it are passed to its parser.  If a
     subcommand is found, the subCommand attribute is set to its name and the
-    subOptions attribute is set to the Option instance that parsers the
+    subOptions attribute is set to the Option instance that parses the
     remaining options. If a subcommand is not given to parseOptions,
     the subCommand attribute will be None. You can also mark one of
     the subCommands to be the default.
