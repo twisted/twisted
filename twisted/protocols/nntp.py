@@ -91,6 +91,8 @@ class NNTPClient(basic.LineReceiver):
         self._responseCodes = []
         self._responseHandlers = []
         
+        self._postText = []
+        
         self._newState(self._statePassive, None, self._headerInitial)
 
 
@@ -100,10 +102,6 @@ class NNTPClient(basic.LineReceiver):
         # We're not always connected with a socket
         except AttributeError:
             self.ip = "unknown"
-
-
-    def sendLine(self, line):
-        basic.LineReceiver.sendLine(self, line)
 
 
     def gotAllGroups(self, groups):
@@ -150,7 +148,7 @@ class NNTPClient(basic.LineReceiver):
         "Override for notification when fetchHead() action is completed"
 
 
-    def gotHead(self, error):
+    def getHeadFailed(self, error):
         "Override for notification when fetchHead() action fails"
 
 
@@ -179,57 +177,105 @@ class NNTPClient(basic.LineReceiver):
 
 
     def fetchGroups(self):
-        log.msg('%s: fetchGroups()' % self.ip)
+        """fetchGroups(self)
+        
+        Request a list of all news groups from the server.  gotAllGroups()
+        is called on success, getGroupsFailed() on failure
+        """
         self.sendLine('LIST')
         self._newState(self._stateList, self.getAllGroupsFailed)
 
 
     def fetchOverview(self):
-        log.msg('%s: fetchOverview()' % self.ip)
+        """fetchOverview(self)
+        
+        Request the overview format from the server.  gotOverview() is called
+        on success, getOverviewFailed() on failure
+        """
         self.sendLine('LIST OVERVIEW.FMT')
         self._newState(self._stateOverview, self.getOverviewFailed)
 
 
     def fetchSubscriptions(self):
-        log.msg('%s: fetchSubscriptions()' % self.ip)
+        """fetchSubscriptions()
+        
+        Request a list of the groups it is recommended a new user subscribe to.
+        gotSubscriptions() is called on success, getSubscriptionsFailed() on
+        failure
+        """
         self.sendLine('LIST SUBSCRIPTIONS')
         self._newState(self._stateSubscriptions, self.getSubscriptionsFailed)
 
 
     def fetchGroup(self, group):
-        log.msg('%s: fetchGroup()' % self.ip)
-        self.sendLine('GROUP %s' % group)
+        """fetchGroup(self, groupName)
+        
+        Get group information for the specified group from the server.  gotGroup()
+        is called on success, getGroupFailed() on failure.
+        """
+        self.sendLine('GROUP %s' % (group,))
         self._newState(None, self.getGroupFailed, self._headerGroup)
 
 
-    def fetchHead(self, index):
-        log.msg('%s: fetchHead(%s)' % (self.ip, index))
-        self.sendLine('HEAD %d' % index)
+    def fetchHead(self, index = ''):
+        """fetchHead(self, index = '')
+        
+        Get the header for the specified article (or the currently selected
+        article if index is '') from the server.  gotHead() is called on
+        success, getHeadFailed() on failure
+        """
+        self.sendLine('HEAD %s' % (index,))
         self._newState(self._stateHead, self.getHeadFailed)
 
         
-    def fetchBody(self, index):
-        log.msg('%s: fetchBody(%s)' % (self.ip, index))
-        self.sendLine('BODY %d' % index)
+    def fetchBody(self, index = ''):
+        """fetchBody(self, index = '')
+        
+        Get the body for the specified article (or the currently selected
+        article if index is '') from the server.  gotBody() is called on
+        success, getBodyFailed() on failure
+        """
+        self.sendLine('BODY %s' % (index,))
         self._newState(self._stateBody, self.getBodyFailed)
 
 
-    def fetchArticle(self, index):
-        log.msg('%s: fetchArticle(%s)' % (self.ip, index))
-        self.sendLine('ARTICLE %d' % index)
+    def fetchArticle(self, index = ''):
+        """fetchArticle(self, index = '')
+        
+        Get the complete article with the specified index (or the currently
+        selected article if index is '') from the server.  gotArticle() is
+        called on success, getArticleFailed() on failure
+        """
+        self.sendLine('ARTICLE %s' % (index,))
         self._newState(self._stateArticle, self.getArticleFailed)
 
 
     def postArticle(self, text):
-        log.msg('%s: postArticle()')
+        """postArticle(self, text)
+        
+        Attempt to post an article with the specified text to the server.  'text'
+        must consist of both head and body data, as specified by RFC 850.  If the
+        article is posted successfully, postedOk() is called, otherwise postFailed()
+        is called.
+        """
         self.sendLine('POST')
         self._newState(None, self.postFailed, self._headerPost)
-        self._postText = text
+        self._postText.append(text)
 
 
     def fetchXHeader(self, header, low = None, high = None, id = None):
-        log.msg('%s: fetchXHeader()')
-        if message is not None:
+        """fetchXHeader(self, header, low = None, high = None, id = None)
+        
+        Request a specific header from the server for an article or range
+        of articles.  If 'id' is not None, a header for only the article
+        with that Message-ID will be requested.  If both low and high are
+        None, a header for the currently selected article will be selected;
+        If both low and high are zero-length strings, headers for all articles
+        in the currently selected group will be requested;  Otherwise, high
+        and low will be used as bounds - if one is None the first or last
+        article index will be substituted, as appropriate.
+        """
+        if id is not None:
             r = header + ' <%s>' % (id,)
         elif low is high is None:
             r = header
@@ -357,10 +403,11 @@ class NNTPClient(basic.LineReceiver):
 
     def _headerPost(self, (code, message)):
         if code == 340:
-            self.transport.write(self._postText)
+            self.transport.write(self._postText[0])
             if self._postText[-2:] != '\r\n':
                 self.sendLine('\r\n')
             self.sendLine('.')
+            del self._postText[0]
             self._newState(None, self.postFailed, self._headerPosted)
         else:
             self.postFailed(line)
