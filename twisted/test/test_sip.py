@@ -426,6 +426,14 @@ class RegistrationTestCase(unittest.TestCase):
         r.addHeader("via", sip.Via("client.com").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
     
+    def unregister(self):
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "*")
+        r.addHeader("via", sip.Via("client.com").toString())
+        r.addHeader("expires", "0")
+        self.proxy.datagramReceived(r.toString()m ("client.com", 5060))
+    
     def testRegister(self):
         self.register()
         dest, m = self.sent[0]
@@ -441,6 +449,18 @@ class RegistrationTestCase(unittest.TestCase):
         desturl = unittest.deferredResult(
             self.proxy.locator.getAddress(sip.URL(username="joe", host="bell.example.com")))
         self.assertEquals((desturl.host, desturl.port), ("client.com", 1234))
+
+    def testUnregister(self):
+        self.register()
+        self.unregister()
+        dest, m = self.sent[1]
+        self.assertEquals((dest.host, dest.port), ("client.com", 5060))
+        self.assertEquals(m.code, 200)
+        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
+        self.assertEquals(m.headers["to"], ["sip:joe@bell.example.com"])
+        self.assertEquals(m.headers["contact"], ["sip:joe@client.com:1234"])
+        self.assertEquals(m.headers["expires"], ["0"])
+        self.assertEquals(self.registry.users, [])
 
     def addPortal(self):
         r = TestRealm()

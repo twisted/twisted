@@ -171,7 +171,7 @@ class FileMessageTestCase(unittest.TestCase):
 
 class MailServiceTestCase(unittest.TestCase):
     def setUp(self):
-        self.service = mail.mail.MailService("test.mail")
+        self.service = mail.mail.MailService()
 
     def testFactories(self):
         f = self.service.getPOP3Factory()
@@ -264,7 +264,7 @@ class MaildirTestCase(unittest.TestCase):
 class MaildirDirdbmDomainTestCase(unittest.TestCase):
     def setUp(self):
         self.P = self.mktemp()
-        self.S = mail.mail.MailService('test.mail')
+        self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.P)
     
     def tearDown(self):
@@ -319,7 +319,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
 class ServiceDomainTestCase(unittest.TestCase):
     def setUp(self):
-        self.S = mail.mail.MailService('test.mail')
+        self.S = mail.mail.MailService()
         self.D = mail.protocols.DomainDeliveryBase(self.S, None)
         self.D.service = self.S
         self.D.protocolName = 'TEST'
@@ -386,7 +386,7 @@ class ServiceDomainTestCase(unittest.TestCase):
 class VirtualPOP3TestCase(unittest.TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
-        self.S = mail.mail.MailService('test.mail')
+        self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         self.D.addUser('user', 'password')
         self.S.domains['test.domain'] = self.D
@@ -469,7 +469,7 @@ class empty(smtp.User):
 
 class RelayTestCase(unittest.TestCase):
     def testExists(self):
-        service = mail.mail.MailService('test.mail')
+        service = mail.mail.MailService()
         domain = mail.relay.DomainQueuer(service)
         
         doRelay = [
@@ -769,7 +769,7 @@ class LiveFireExercise(unittest.TestCase):
                 shutil.rmtree(d)
 
     def testLocalDelivery(self):
-        service = mail.mail.MailService('test.mail')
+        service = mail.mail.MailService()
         service.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(service, 'domainDir')
         domain.addUser('user', 'password')
@@ -780,7 +780,7 @@ class LiveFireExercise(unittest.TestCase):
         
         service.setQueue(mail.relay.DomainQueuer(service))
         manager = mail.relaymanager.SmartHostSMTPRelayingManager(service.queue, None)
-        helper = mail.relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', None)
+        helper = mail.relaymanager.RelayStateHelper(manager, 1)
 
         f = service.getSMTPFactory()
         
@@ -817,7 +817,7 @@ class LiveFireExercise(unittest.TestCase):
 
     def testRelayDelivery(self):
         # Here is the service we will connect to and send mail from
-        insServ = mail.mail.MailService('test.insertion')
+        insServ = mail.mail.MailService()
         insServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(insServ, 'insertionDomain')
         insServ.domains['insertion.domain'] = domain
@@ -827,7 +827,7 @@ class LiveFireExercise(unittest.TestCase):
         insServ.domains.setDefaultDomain(mail.relay.DomainQueuer(insServ))
         manager = mail.relaymanager.SmartHostSMTPRelayingManager(insServ.queue)
         manager.fArgs += ('test.identity.hostname',)
-        helper = mail.relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper A', None)
+        helper = mail.relaymanager.RelayStateHelper(manager, 1)
         # Yoink!  Now the internet obeys OUR every whim!
         manager.mxcalc = mail.relaymanager.MXCalculator(self.resolver)
         # And this is our whim.
@@ -838,7 +838,7 @@ class LiveFireExercise(unittest.TestCase):
         
         # Here is the service the previous one will connect to for final
         # delivery
-        destServ = mail.mail.MailService('test.destination')
+        destServ = mail.mail.MailService()
         destServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(destServ, 'destinationDomain')
         domain.addUser('user', 'password')
@@ -847,7 +847,8 @@ class LiveFireExercise(unittest.TestCase):
         os.mkdir('destinationQueue')
         destServ.setQueue(mail.relaymanager.Queue('destinationQueue'))
         manager2 = mail.relaymanager.SmartHostSMTPRelayingManager(destServ.queue)
-        helper = mail.relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper B', None)
+        helper = mail.relaymanager.RelayStateHelper(manager, 1)
+        helper.startService()
         
         f = destServ.getSMTPFactory()
         self.destServer = reactor.listenTCP(0, f, interface='127.0.0.1')
@@ -892,6 +893,7 @@ class LiveFireExercise(unittest.TestCase):
         
         self.insServer.stopListening()
         self.destServer.stopListening()
+        helper.stopService()
 
 aliasFile = StringIO.StringIO("""\
 # Here's a comment
