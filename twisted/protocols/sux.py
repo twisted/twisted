@@ -38,7 +38,7 @@ from twisted.python.reflect import prefixedMethodNames
 
 
 identChars = '.-_:'
-lenientIdentChars = identChars + ';+#/' 
+lenientIdentChars = identChars + ';+#/%~' 
 
 def nop(*args, **kw):
     "Do nothing."
