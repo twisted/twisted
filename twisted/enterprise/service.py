@@ -32,20 +32,14 @@ class Service(pb.Service):
     This service manages users that request to interact with the database. It keeps track the registered
     database Request classes and does the loading of Requests from the directories passed in on startup.
 
-    Request classes will be imported automatically on startup from the requestDirectories specified.
-    To be imported the file name must be of the format "dbrequest*.py" and must implement a module
-    level method called "loadRequests". This method should call registerRequestClass for each of the
-    database Request classes in the module.
+    Requests must be registered with the service with the registerRequestClass method.
 
-    The default configuration reads request classes from the directory "userRequests"
     """
-    def __init__(self, manager, app, requestDirectories, name='twisted.enterprise.db'):
+    def __init__(self, manager, app, name='twisted.enterprise.db'):
         pb.Service.__init__(self, name, app)
         self.manager = manager
         self.requestMap = {}
-        self.requestDirectories = requestDirectories
         self.loadDefaultRequests()
-        self.loadRequests()
 
     def startService(self):
         print "Starting db service"
@@ -67,23 +61,6 @@ class Service(pb.Service):
         self.registerRequestClass("__generic__", requests.GenericRequest)
         self.registerRequestClass("__adduser__", requests.AddUserRequest)
         self.registerRequestClass("__password__", requests.PasswordRequest)
-
-    def loadRequests(self):
-        """Loads any database Request classes from the list of directories stored in requestDirectories.
-        """
-        for dir in self.requestDirectories:
-            if os.path.exists(dir):
-                dir = os.path.abspath(dir)
-                sys.path.append(dir)
-                files = os.listdir(dir)
-                for file in files:
-                    prefix = file[0:9]
-                    suffix = file[-3:]
-                    moduleName = file[0:-3]
-                    print "Found file %s  '%s' '%s'" % ( file, prefix, suffix )
-                    if prefix == "dbrequest" and suffix == ".py":
-                        mod = __import__(moduleName)
-                        mod.loadRequests(self)
 
     def getRequestClass(self, name):
         """Lookup a Request class by name"""
