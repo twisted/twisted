@@ -2,8 +2,12 @@
 
 import gc
 
+from twisted.python import log
+import sys
+#log.startLogging(sys.stderr)
+
 from zope.interface import implements, implementsOnly
-from twisted.python import components
+from twisted.python import components, failure
 from twisted.trial import unittest
 
 dr = unittest.deferredResult
@@ -11,10 +15,7 @@ dr = unittest.deferredResult
 import schema, pb, flavors
 from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import UnbananaFailure
-
-from twisted.python import log
-import sys
-#log.startLogging(sys.stderr)
+from debug import LoggingBroker
 
 class TestBroker(pb.Broker):
     def gotAnswer(self, req, results):
@@ -148,7 +149,13 @@ class TestAnswer(unittest.TestCase):
 class Loopback:
 #   implements(interfaces.ITransport)
     def write(self, data):
-        self.peer.dataReceived(data)
+        try:
+            # isolate exceptions
+            self.peer.dataReceived(data)
+        except Exception, e:
+            print "Loopback.write exception", e
+            log.err()
+
     def loseConnection(self, why):
         self.protocol.connectionLost(why)
         self.peer.connectionLost(why)
@@ -204,8 +211,8 @@ class Target2(Target):
 class TargetMixin:
 
     def setupBrokers(self):
-        self.targetBroker = pb.Broker()
-        self.callingBroker = pb.Broker()
+        self.targetBroker = LoggingBroker()
+        self.callingBroker = LoggingBroker()
         self.targetTransport = Loopback()
         self.targetTransport.peer = self.callingBroker
         self.targetBroker.transport = self.targetTransport
@@ -447,9 +454,13 @@ class HelperTarget(pb.Referenceable):
         return True
 
 class TestCopyable(unittest.TestCase, TargetMixin):
-
+    skip = "not ready yet"
     def send(self, arg):
         self.setupBrokers()
+        if 1:
+            print
+            self.callingBroker.doLog = "TX"
+            self.targetBroker.doLog = " rx"
         rr, target = self.setupTarget(HelperTarget())
         d = rr.callRemote("store", obj=arg)
         self.failUnless(dr(d))
@@ -458,6 +469,14 @@ class TestCopyable(unittest.TestCase, TargetMixin):
     def testCopy0(self):
         res = self.send(1)
         self.failUnlessEqual(res, 1)
+
+    def testFailure(self):
+        try:
+            raise RuntimeError("message here")
+        except:
+            f = failure.Failure()
+        res = self.send([f])
+        #print "CopiedFailure is:", len(res)
         
     def testCopy1(self):
         obj = MyCopyable1() # just copies the dict

@@ -5,7 +5,7 @@ from twisted.python import reflect, log
 from twisted.python.components import registerAdapter
 from banana import StorageBanana, BananaError
 from tokens import ISlicer
-import slicer, schema, tokens
+import slicer, schema, tokens, debug
 from slicer import UnbananaFailure
 
 import cStringIO, types, sys
@@ -18,27 +18,22 @@ def CLOSE(count):
     return ("CLOSE", count)
 ABORT = ("ABORT",)
 
-class TokenBanana(StorageBanana):
+# DecodeTest (24): turns tokens into objects, tests objects and UFs
+# EncodeTest (13): turns objects/instance into tokens, tests tokens
+# FailedInstanceTests (2): 1:turn instances into tokens and fail, 2:reverse
+
+# ByteStream (3): turn object into bytestream, test bytestream
+# InboundByteStream (14): turn bytestream into object, check object
+#                         with or without constraints
+# ThereAndBackAgain (20): encode then decode object, check object
+
+# VocabTest1 (2): test setOutgoingVocabulary and an inbound Vocab sequence
+# VocabTest2 (1): send object, test bytestream w/vocab-encoding
+# Sliceable (2): turn instance into tokens (with ISliceable, test tokens
+
+class TokenBanana(debug.TokenStorageBanana):
     """this Banana formats tokens as strings, numbers, and ('OPEN',) tuples
     instead of bytes. Used for testing purposes."""
-
-    tokens = []
-
-    def sendOpen(self):
-        openID = self.openCount
-        self.openCount += 1
-        self.sendToken(("OPEN", openID))
-        return openID
-
-    def sendToken(self, token):
-        #print token
-        self.tokens.append(token)
-
-    def sendClose(self, openID):
-        self.sendToken(("CLOSE", openID))
-
-    def sendAbort(self, count=0):
-        self.sendToken(("ABORT",))
 
     def testSlice(self, obj):
         assert len(self.slicerStack) == 1
@@ -65,62 +60,6 @@ class TokenBanana(StorageBanana):
     def __del__(self):
         assert not self.rootSlicer.sendQueue
 
-    def getTokens(self):
-        self.produce()
-        assert(len(self.slicerStack) == 1)
-        assert(isinstance(self.slicerStack[0][0], slicer.RootSlicer))
-        return self.tokens
-        
-    def receiveToken(self, token):
-        # insert artificial tokens into receiveData. Once upon a time this
-        # worked by directly calling the commented-out functions, but schema
-        # checking and abandonUnslicer made that unfeasible.
-
-        #if self.debug:
-        #    print "receiveToken(%s)" % (token,)
-
-        if type(token) == type(()):
-            if token[0] == "OPEN":
-                count = token[1]
-                assert count < 128
-                b = ( chr(count) + tokens.OPEN )
-                self.dataReceived(b)
-                #self.handleOpen(count, opentype)
-            elif token[0] == "CLOSE":
-                count = token[1]
-                assert count < 128
-                b = chr(count) + tokens.CLOSE
-                self.dataReceived(b)
-                #self.handleClose(count)
-            elif token[0] == "ABORT":
-                if len(token) == 2:
-                    count = token[1]
-                else:
-                    count = 0
-                assert count < 128
-                b = chr(count) + tokens.ABORT
-                self.dataReceived(b)
-                #self.handleAbort(count)
-        elif type(token) == int:
-            assert 0 <= token < 128
-            b = chr(token) + tokens.INT
-            self.dataReceived(b)
-        elif type(token) == str:
-            assert len(token) < 128
-            b = chr(len(token)) + tokens.STRING + token
-            self.dataReceived(b)
-        else:
-            raise NotImplementedError, "hey, this is just a quick hack"
-
-    def receivedObject(self, obj):
-        self.object = obj
-
-    def processTokens(self, tokens):
-        self.object = None
-        for t in tokens:
-            self.receiveToken(t)
-        return self.object
-
 class UnbananaTestMixin:
     def setUp(self):
         self.hangup = False
@@ -132,7 +71,14 @@ class UnbananaTestMixin:
                                        slicer.StorageRootUnslicer))
             
     def do(self, tokens):
-        return self.banana.processTokens(tokens)
+        self.failUnless(len(self.banana.receiveStack) == 1)
+        self.failUnless(isinstance(self.banana.receiveStack[0],
+                                   slicer.StorageRootUnslicer))
+        obj = self.banana.processTokens(tokens)
+        self.failUnless(len(self.banana.receiveStack) == 1)
+        self.failUnless(isinstance(self.banana.receiveStack[0],
+                                   slicer.StorageRootUnslicer))
+        return obj
 
     def failIfUnbananaFailure(self, res):
         if isinstance(res, UnbananaFailure):
@@ -170,7 +116,7 @@ class UnbananaTestMixin:
         self.failUnlessEqual(res.where, where)
         self.banana.object = None # to stop the tearDown check TODO ??
         
-class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
+class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         
     def test_simple_list(self):
         "simple list"
@@ -351,15 +297,12 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
         self.failUnlessEqual(res, wanted)
         self.failUnlessIdentical(res[0][0][0], res)
 
-        # need a test where tuple[0] and [1] are deferred, but tuple[0]
-        # becomes available before tuple[2] is inserted. Not sure this is
-        # possible, but it would improve test coverage in TupleUnslicer
+        # TODO: need a test where tuple[0] and [1] are deferred, but
+        # tuple[0] becomes available before tuple[2] is inserted. Not sure
+        # this is possible, but it would improve test coverage in
+        # TupleUnslicer
         
-class FailureTests(UnbananaTestMixin, unittest.TestCase):
-    def setUp(self):
-        UnbananaTestMixin.setUp(self)
-        
-    def test_dict1(self):
+    def test_failed_dict1(self):
         # dies during open because of bad opentype
         res = self.do([OPEN(0),'list', 1,
                         OPEN(1),"bad",
@@ -369,7 +312,7 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
                        CLOSE(0)])
         self.checkUnbananaFailure(res, "root.[1]")
 
-    def test_dict2(self):
+    def test_failed_dict2(self):
         # dies during start
         res = self.do([OPEN(0),'list', 1,
                        OPEN(1),'dict2', "a", 2, "b", 3, CLOSE(1),
@@ -377,15 +320,17 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         self.checkUnbananaFailure(res, "root.[1].{}")
         #"dead in start"
 
-    def test_dict3(self):
+    def test_failed_dict3(self):
         # dies during key
         res = self.do([OPEN(0),'list', 1,
                        OPEN(1),'dict1', "a", 2, "die", CLOSE(1),
                        CLOSE(0)])
         self.checkUnbananaFailure(res, "root.[1].{}")
         #"aaaaaaaaargh"
+        res = self.do([OPEN(2),'list', 3, 4, CLOSE(2)])
+        self.failUnlessEqual(res, [3,4])
 
-    def test_dict4(self):
+    def test_failed_dict4(self):
         # dies during value
         res = self.do([OPEN(0),'list', 1,
                         OPEN(1),'dict1',
@@ -396,7 +341,7 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         self.checkUnbananaFailure(res, "root.[1].{}[b]")
         # "aaaaaaaaargh"
         
-    def test_dict5(self):
+    def test_failed_dict5(self):
         # dies during finish
         res = self.do([OPEN(0),'list', 1,
                         OPEN(1),'dict1',
@@ -407,8 +352,16 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         self.checkUnbananaFailure(res, "root.[1].{}")
         # "dead in receiveClose()"
 
+class Bar:
+    def __cmp__(self, them):
+        if not type(them) == type(self):
+            return -1
+        return cmp((self.__class__, self.__dict__),
+                   (them.__class__, them.__dict__))
+class Foo(Bar):
+    pass
         
-class BananaTests(unittest.TestCase):
+class EncodeTest(unittest.TestCase):
     def setUp(self):
         self.banana = TokenBanana()
     def do(self, obj):
@@ -505,35 +458,15 @@ class BananaTests(unittest.TestCase):
                                    OPEN(2),'reference', 0, CLOSE(2),
                                   CLOSE(1),
                               CLOSE(0)])
-
-
-class Bar:
-    def __cmp__(self, them):
-        if not type(them) == type(self):
-            return -1
-        return cmp((self.__class__, self.__dict__),
-                   (them.__class__, them.__dict__))
-class Foo(Bar):
-    pass
-
-class InstanceTests(unittest.TestCase):
-    def setUp(self):
-        self.banana = TokenBanana()
-    def do(self, obj):
-        return self.banana.testSlice(obj)
-    def tearDown(self):
-        self.failUnless(len(self.banana.slicerStack) == 1)
-        self.failUnless(isinstance(self.banana.slicerStack[0][0],
-                                   slicer.RootSlicer))
     
-    def test_one(self):
+    def test_instance_one(self):
         obj = Bar()
         obj.a = 1
         classname = reflect.qual(Bar)
         res = self.do(obj)
         self.failUnlessEqual(res,
                              [OPEN(0),'instance', classname, "a", 1, CLOSE(0)])
-    def test_two(self):
+    def test_instance_two(self):
         f1 = Foo(); f1.a = 1; f1.b = [2,3]
         f2 = Bar(); f2.d = 4; f1.c = f2
         fooname = reflect.qual(Foo)
@@ -580,6 +513,10 @@ class FailedInstanceTests(unittest.TestCase):
         res = self.decode(tokens)
         self.failUnless(isinstance(res, UnbananaFailure))
 
+class TestBanana(debug.LoggingStorageBanana):
+    #doLog = "rx"
+    pass
+
 class TestBananaMixin:
     def setUp(self):
         self.banana = TestBanana()
@@ -602,8 +539,8 @@ class TestBananaMixin:
     def wantEqual(self, got, wanted):
         if got != wanted:
             print
-            print "wanted: '%s'" % wanted
-            print "got   : '%s'" % got
+            print "wanted: '%s'" % wanted, repr(wanted)
+            print "got   : '%s'" % got, repr(got)
             self.fail("did not get expected string")
 
     def loop(self, obj):
@@ -736,8 +673,9 @@ class InboundByteStream(unittest.TestCase):
         self.check("c"*1025, "\x01\x08\x82" + "c" * 1025 + "extra")
         self.check("fluuber", self.STRING("fluuber"))
 
-    def decode2(self, string, constraint, childConstraint=None):
-        constraint = schema.makeConstraint(constraint)
+    def decode2(self, string, constraint=None, childConstraint=None):
+        if constraint:
+            constraint = schema.makeConstraint(constraint)
         if childConstraint:
             childConstraint = schema.makeConstraint(childConstraint)
         banana = TestBanana()
@@ -745,6 +683,7 @@ class InboundByteStream(unittest.TestCase):
         banana.receiveStack[-1].childConstraint = childConstraint
         banana.object = None
         banana.dataReceived(string)
+        self.failUnlessEqual(len(banana.receiveStack), 1)
         return banana.object
     def conform2(self, stream, obj, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
@@ -783,6 +722,30 @@ class InboundByteStream(unittest.TestCase):
                          self.OPEN(2,'list'), self.INT(3), self.INT(4),
                          self.CLOSE(2),
                         self.CLOSE(1)))
+
+    def NOTtestFoo(self):
+        if 0:
+            a100 = chr(100) + "\x82" + "a"*100
+            b100 = chr(100) + "\x82" + "b"*100
+            self.violate2(join(self.OPEN(1,'list'),
+                               self.OPEN(2,'list'), a100, b100, self.CLOSE(2),
+                               self.CLOSE(1)),
+                          "root.[0].[0]",
+                          schema.ListOf(
+                schema.ListOf(schema.StringConstraint(99), 2), 2))
+
+        def OPENweird(count, weird):
+            return chr(count) + "\x88" + weird
+        
+        self.violate2(join(self.OPEN(1,'list'),
+                           self.OPEN(2,'list'),
+                           OPENweird(3, self.INT(64)),
+                           self.INT(1), self.INT(2), self.CLOSE(3),
+                           self.CLOSE(2),
+                           self.CLOSE(1)),
+                      "root.[0].[0]", None)
+
+
 
     def testConstrainedList(self):
         self.conform2(join(self.OPEN(1,'list'), self.INT(1), self.INT(2),
@@ -961,10 +924,6 @@ class InboundByteStream(unittest.TestCase):
                       schema.BooleanConstraint(True))
 
 
-class TestBanana(StorageBanana):
-    def receivedObject(self, obj):
-        self.object = obj
-
 class A:
     """
     dummy class
@@ -1126,13 +1085,13 @@ class VocabTest2(TestBananaMixin, unittest.TestCase):
         s = self.encode([({'a':1},)])
 
         OPEN = self.OPEN; CLOSE = self.CLOSE; INT = self.INT; STR = self.STR
-        expected = "".join([OPEN(0,"list"),
-                             OPEN(1,"tuple"),
-                              OPEN(2,"dict"),
+        expected = "".join([OPEN(1,"list"),
+                             OPEN(2,"tuple"),
+                              OPEN(3,"dict"),
                                STR('a'), INT(1),
-                              CLOSE(2),
-                             CLOSE(1),
-                            CLOSE(0)])
+                              CLOSE(3),
+                             CLOSE(2),
+                            CLOSE(1)])
         self.wantEqual(s, expected)
 
 
@@ -1179,23 +1138,3 @@ class Sliceable(unittest.TestCase):
                                    CLOSE(0)])
 
 
-
-def encode(obj, debug=0):
-    b = UnsafeTokenBanana()
-    b.debug = debug
-    return b.testSlice(obj)
-def decode(tokens, debug=0):
-    b = UnsafeTokenBanana()
-    b.debug = debug
-    obj = b.processTokens(tokens)
-    return obj
-
-def encode2(obj):
-    b = TestBanana()
-    b.transport = cStringIO.StringIO()
-    b.send(obj)
-    return b.transport.getvalue()
-def decode2(string):
-    b = TestBanana()
-    b.dataReceived(string)
-    return b.object

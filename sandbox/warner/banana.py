@@ -86,7 +86,7 @@ class SendBanana:
     slicerClass = slicer.RootSlicer
     paused = False
     streamable = True
-    debug = False
+    debugSend = False
 
     def __init__(self):
         self.rootSlicer = self.slicerClass(self)
@@ -109,7 +109,7 @@ class SendBanana:
             try:
                 slicer, next, streamable, openID = self.slicerStack[-1]
                 obj = next()
-                if self.debug: print " obj", obj
+                if self.debugSend: print " obj", obj
                 if isinstance(obj, defer.Deferred):
                     assert streamable
                     obj.addCallback(self.produce)
@@ -132,7 +132,7 @@ class SendBanana:
                     else:
                         self.pushSlicer(slicer, obj)
             except StopIteration:
-                if self.debug: print "StopIteration"
+                if self.debugSend: print "StopIteration"
                 self.popSlicer()
             except Violation, v1:
                 # Violations that occur because of Constraints are caught
@@ -156,7 +156,7 @@ class SendBanana:
                     # pushSlicer has completed.
                     self.popSlicer()
                     if not self.slicerStack:
-                        if self.debug: print "RootSlicer died!"
+                        if self.debugSend: print "RootSlicer died!"
                         raise BananaError("Hey! You killed the RootSlicer!")
                     topSlicer = self.slicerStack[-1][0]
                     try:
@@ -177,7 +177,7 @@ class SendBanana:
         return topSlicer.slicerForObject(obj)
 
     def pushSlicer(self, slicer, obj):
-        if self.debug: print "push", slicer
+        if self.debugSend: print "push", slicer
         topSlicer = self.slicerStack[-1][0]
         slicer.parent = topSlicer
         streamable = self.slicerStack[-1][2]
@@ -199,7 +199,7 @@ class SendBanana:
         openID = slicertuple[3]
         if openID is not None:
             self.sendClose(openID)
-        if self.debug: print "pop", slicertuple[0]
+        if self.debugSend: print "pop", slicertuple[0]
 
     def setOutgoingVocabulary(self, vocabDict):
         # build a VOCAB message, send it, then set our outgoingVocabulary
@@ -289,8 +289,9 @@ class SendBanana:
 
 class ReceiveBanana:
     unslicerClass = slicer.RootUnslicer
-    debug = False
+    debugReceive = False
     logViolations = False
+    logDiscardCount = False
 
     def __init__(self):
         self.rootUnslicer = self.unslicerClass()
@@ -421,6 +422,11 @@ class ReceiveBanana:
                     self.checkToken(typebyte, header)
                 except Violation, v:
                     rejected = True
+                    if typebyte == OPEN or self.inOpen:
+                        # need to discard the rest of this new sequence
+                        self.discardCount += 1
+                        if self.logDiscardCount:
+                            print "discardCount+++++ now", self.discardCount
                     gotItem(UnbananaFailure(v, self.describe()))
 
             rest = buffer[pos+1:]
@@ -459,6 +465,8 @@ class ReceiveBanana:
                     if rejected:
                         # drop all we have and note how much more should be
                         # dropped
+                        if self.logDiscardCount:
+                            print "DROPPED some string bits"
                         self.skipBytes = strlen - len(rest)
                         self.buffer = ""
                     return
@@ -505,12 +513,14 @@ class ReceiveBanana:
 
             elif typebyte == OPEN:
                 buffer = rest
-                self.openCount = header
+                self.inboundOpenCount = header
                 if rejected:
                     # either 1) we are discarding everything, or 2) we
                     # rejected the OPEN token. In either case, discard
                     # everything until the matching CLOSE token.
                     self.discardCount += 1
+                    if self.logDiscardCount:
+                        print "discardCount++ now", self.discardCount
                 else:
                     if self.inOpen:
                         raise BananaError("OPEN token followed by OPEN")
@@ -523,6 +533,8 @@ class ReceiveBanana:
                 count = header
                 if self.discardCount:
                     self.discardCount -= 1
+                    if self.logDiscardCount:
+                        print "discardCount-- now", self.discardCount
                 else:
                     self.handleClose(count)
                 continue
@@ -530,10 +542,11 @@ class ReceiveBanana:
             elif typebyte == ABORT:
                 buffer = rest
                 count = header
-                self.discardCount += 1
                 # TODO: this isn't really a Violation, but we need something
                 # to describe it. It does behave identically to what happens
-                # when receiveChild raises a Violation.
+                # when receiveChild raises a Violation. The .handleViolation
+                # will pop the now-useless Unslicer and start discarding
+                # tokens just as if the Unslicer had made the decision.
                 v = Violation("ABORT received")
                 self.handleViolation(v, "receive-abort", True)
                 continue
@@ -543,13 +556,15 @@ class ReceiveBanana:
 
             if not rejected:
                 if self.inOpen:
-                    self.handleOpen(self.openCount, obj)
+                    self.handleOpen(self.inboundOpenCount, obj)
                     # handleOpen might push a new unslicer and clear
                     # .inOpen, or leave .inOpen true and append the object
                     # to .indexOpen
                 else:
                     gotItem(obj)
             else:
+                if self.logDiscardCount:
+                    print "DROP", obj
                 pass # drop the object
 
             #while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
@@ -561,7 +576,7 @@ class ReceiveBanana:
     def handleOpen(self, openCount, indexToken):
         self.opentype.append(indexToken)
         opentype = tuple(self.opentype)
-        if self.debug:
+        if self.debugReceive:
             print "handleOpen(%d,%s)" % (openCount, indexToken)
         objectCount = self.objectCounter
         top = self.receiveStack[-1]
@@ -569,15 +584,17 @@ class ReceiveBanana:
             # obtain a new Unslicer to handle the object
             child = top.doOpen(opentype)
             if not child:
-                if self.debug:
+                if self.debugReceive:
                     print " doOpen wants more index tokens"
                 return # they want more index tokens, leave .inOpen=True
-            if self.debug:
+            if self.debugReceive:
                 print " opened[%d] with %s" % (openCount, child)
         except Violation, v:
             # must discard the rest of the child object. There is no new
             # unslicer pushed yet, so we don't use abandonUnslicer
             self.discardCount += 1
+            if self.logDiscardCount:
+                print "discardCount++++ now", self.discardCount
             self.inOpen = False
             self.handleViolation(v, "doOpen", False)
             return
@@ -600,7 +617,7 @@ class ReceiveBanana:
 
     def handleToken(self, token):
         top = self.receiveStack[-1]
-        if self.debug: print "handleToken(%s)" % token
+        if self.debugReceive: print "handleToken(%s)" % token
         try:
             top.receiveChild(token)
         except Violation, v:
@@ -612,7 +629,7 @@ class ReceiveBanana:
             self.handleViolation(v, "receiveChild", True)
 
     def handleClose(self, closeCount):
-        if self.debug:
+        if self.debugReceive:
             print "handleClose(%d)" % closeCount
         if self.receiveStack[-1].openCount != closeCount:
             print "LOST SYNC"
@@ -630,7 +647,7 @@ class ReceiveBanana:
             self.handleViolation(v, "receiveClose", True, discard=False)
             return
 
-        if self.debug: print "receiveClose returned", obj
+        if self.debugReceive: print "receiveClose returned", obj
 
         try:
             child.finish()
@@ -677,7 +694,7 @@ class ReceiveBanana:
         assert isinstance(f, UnbananaFailure)
 
         if doPop:
-            if self.debug:
+            if self.debugReceive:
                 print "## abandonUnslicer called"
                 print "##  while decoding '%s'" % f.where
                 print "## current stack leading up to abandonUnslicer:"
@@ -690,6 +707,8 @@ class ReceiveBanana:
             if discard:
                 # throw out everything until matching CLOSE
                 self.discardCount += 1
+                if self.logDiscardCount:
+                    print "discardCount+++ now", self.discardCount
 
             try:
                 # TODO: if handleClose encountered a Violation in .finish,
@@ -700,7 +719,8 @@ class ReceiveBanana:
 
             if not self.receiveStack:
                 # Oh my god, you killed the RootUnslicer! You bastard!
-                # now there's nobody left to 
+                # now there's nobody left to create new Unslicers, so we
+                # must drop the connection
                 raise BananaError("we abandoned the RootUnslicer!")
 
         # and give the UnbananaFailure to the (new) parent
@@ -738,3 +758,8 @@ class StorageBanana(BaseBanana):
     # StorageBanana should be used only once.
     slicerClass = slicer.StorageRootSlicer
     unslicerClass = slicer.StorageRootUnslicer
+
+    # it also stashes top-level objects in .obj, so you can retrieve them
+    # later
+    def receivedObject(self, obj):
+        self.object = obj

@@ -9,7 +9,7 @@ TEST=test_banana test_schema test_pb
 test:
 	../../bin/trial -v $(TEST)
 test2:
-	../../bin/trial -o $(TEST)
+	python -Wignore ../../bin/trial -o $(TEST)
 
 clean:
 	rm -f *~ *.pyc *.html

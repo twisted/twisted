@@ -1,12 +1,16 @@
 #! /usr/bin/python
 
 import weakref, types
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 from twisted.python import components, failure, log
 from twisted.internet import defer
 registerAdapter = components.registerAdapter
 
-import slicer, schema, tokens, banana
+import slicer, schema, tokens, banana, flavors
 from tokens import BananaError, Violation, ISlicer
 from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
 ScopedSlicer = slicer.ScopedSlicer
@@ -494,6 +498,32 @@ class PBRootUnslicer(slicer.RootUnslicer):
         if typebyte != tokens.OPEN:
             raise BananaError("top-level must be OPEN")
 
+    def openerCheckToken(self, typebyte, size, opentype):
+        if typebyte == tokens.STRING:
+            if len(opentype) == 0:
+                if size > self.maxIndexLength:
+                    why = "first opentype STRING token is too long, %d>%d" % \
+                          (size, self.maxIndexLength)
+                    raise Violation(why)
+            if opentype == ("copyable",):
+                # TODO: this is silly, of course (should pre-compute maxlen)
+                maxlen = reduce(max,
+                                [len(cname) \
+                                 for cname in flavors.CopyableRegistry.keys()]
+                                )
+                if size > maxlen:
+                    why = "copyable-classname token is too long, %d>%d" % \
+                          (size, maxlen)
+                    raise Violation(why)
+        elif typebyte == tokens.VOCAB:
+            return
+        else:
+            # TODO: hack for testing
+            raise Violation("index token 0x%02x not STRING or VOCAB" % \
+                              ord(typebyte))
+            raise BananaError("index token 0x%02x not STRING or VOCAB" % \
+                              ord(typebyte))
+        
     def open(self, opentype):
         # used for lower-level objects, delegated up from childunslicer.open
         assert len(self.protocol.receiveStack) > 1
@@ -567,22 +597,22 @@ class FailureSlicer(slicer.BaseSlicer):
     def describe(self):
         return "<%s>" % self.classname
         
-    def getStateToCopy(self, obj, banana):
+    def getStateToCopy(self, obj, broker):
         state = obj.__dict__.copy()
         state['tb'] = None
         state['frames'] = []
         state['stack'] = []
-        if isinstance(self.value, failure.Failure):
+        if isinstance(obj.value, failure.Failure):
             # TODO: how can this happen? I got rid of failure2Copyable, so
             # if this case is possible, something needs to replace it
-            state['value'] = failure2Copyable(self.value,
-                                              banana.unsafeTracebacks)
+            raise RuntimeError("not implemented yet")
+            #state['value'] = failure2Copyable(obj.value, banana.unsafeTracebacks)
         else:
-            state['value'] = str(self.value) # Exception instance
-        state['type'] = str(self.type) # Exception class
-        if banana.unsafeTracebacks:
+            state['value'] = str(obj.value) # Exception instance
+        state['type'] = str(obj.type) # Exception class
+        if broker.unsafeTracebacks:
             io = StringIO.StringIO()
-            self.printTraceback(io)
+            obj.printTraceback(io)
             state['traceback'] = io.getvalue()
         else:
             state['traceback'] = 'Traceback unavailable\n'
@@ -590,6 +620,7 @@ class FailureSlicer(slicer.BaseSlicer):
 registerAdapter(FailureSlicer, failure.Failure, ISlicer)
 
 class CopiedFailure(RemoteCopy, failure.Failure):
+    pickled = 1
     def printTraceback(self, file=None):
         if not file: file = log.logfile
         file.write("Traceback from remote host -- ")
@@ -634,9 +665,13 @@ class PBRootSlicer(slicer.RootSlicer):
 class Broker(banana.BaseBanana):
     slicerClass = PBRootSlicer
     unslicerClass = PBRootUnslicer
+    unsafeTracebacks = True
 
     def __init__(self):
         banana.BaseBanana.__init__(self)
+        self.initBroker()
+
+    def initBroker(self):
         self.rootSlicer.broker = self
         self.rootUnslicer.broker = self
         self.remoteReferences = weakref.WeakValueDictionary()

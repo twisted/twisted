@@ -2,14 +2,17 @@
 
 import types
 
-from zope.interface import implements, providedBy, Interface
+from zope.interface import implements, providedBy
 from zope.interface.interface import InterfaceClass
-from twisted.python import components
+from twisted.python import components, reflect
 registerAdapter = components.registerAdapter
-from tokens import ISlicer
-import schema, slicer
+Interface = components.Interface
+from twisted.internet.defer import Deferred
 
-class RemoteInterfaceClass(InterfaceClass):
+import schema, slicer, tokens
+from tokens import ISlicer, BananaError
+
+class RemoteInterfaceClass(components.MetaInterface):
     def __init__(self, iname, bases=(), attrs=None, __module__=None):
         if attrs is not None:
             # determine all remotely-callable methods
@@ -36,8 +39,9 @@ class RemoteInterfaceClass(InterfaceClass):
                 
             self.__remote_stuff__ = (methods, constraints, remote_name)
 
-        # now let InterfaceClass at it
-        InterfaceClass.__init__(self, iname, bases, attrs, __module__)
+        # now let the MetaInterface at it
+        components.MetaInterface.__init__(self, iname, bases, attrs,
+                                          __module__)
 
         # auto-register the interface
         if attrs is not None:
@@ -220,6 +224,9 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         self.propagateUnbananaFailures(obj)
         if self.attrname == None:
             attrname = obj
+            if self.d.has_key(attrname):
+                raise BananaError("duplicate attribute name '%s'" % attrname,
+                                  self.where())
             s = self.schema
             if s:
                 accept, self.attrConstraint = s.getAttrConstraint(attrname)
@@ -232,9 +239,6 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
                 # it carefully first
                 raise BananaError("unreferenceable object in attribute",
                                   self.where())
-            if self.d.has_key(self.attrname):
-                raise BananaError("duplicate attribute name '%s'" % name,
-                                  self.where())
             self.setAttribute(self.attrname, obj)
         self.gettingAttrname = not self.gettingAttrname
 
@@ -245,6 +249,9 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         obj = self.factory()
         obj.setCopyableState(self.d)
         self.protocol.setObject(self.count, obj)
+        # TODO: guess what! this deferred makes it impossible to use this
+        # unslicer for CopiedFailures, since Deferred won't let you .callback
+        # with a Failure (it treats it identically to doing an .errback)
         self.deferred.callback(obj)
         return obj
 

@@ -258,7 +258,7 @@ class RootSlicer:
         if self.sendQueue:
             (obj, self.objectSentDeferred) = self.sendQueue.pop()
             return obj
-        if self.sendbanana.debug:
+        if self.sendbanana.debugSend:
             print "LAST BAG"
         self.producingDeferred = Deferred()
         return self.producingDeferred
@@ -434,13 +434,13 @@ class ScopedUnslicer(BaseUnslicer):
         self.references = {}
 
     def setObject(self, counter, obj):
-        if self.protocol.debug:
+        if self.protocol.debugReceive:
             print "setObject(%s): %s{%s}" % (counter, obj, id(obj))
         self.references[counter] = obj
 
     def getObject(self, counter):
         obj = self.references.get(counter)
-        if self.protocol.debug:
+        if self.protocol.debugReceive:
             print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
         return obj
 
@@ -1156,8 +1156,11 @@ class RootUnslicer(BaseUnslicer):
                       (size, self.maxIndexLength)
                 raise Violation(why)
         elif typebyte == tokens.VOCAB:
-            return None
+            return
         else:
+            # TODO: hack for testing
+            raise Violation("index token 0x%02x not STRING or VOCAB" % \
+                              ord(typebyte))
             raise BananaError("index token 0x%02x not STRING or VOCAB" % \
                               ord(typebyte))
 
@@ -1191,7 +1194,7 @@ class RootUnslicer(BaseUnslicer):
         return child
 
     def receiveChild(self, obj):
-        if self.protocol.debug:
+        if self.protocol.debugReceive:
             print "RootUnslicer.receiveChild(%s)" % (obj,)
         self.objects = {}
         if isinstance(obj, NewVocabulary):
