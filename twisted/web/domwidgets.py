@@ -283,6 +283,10 @@ class InputText(Input):
     def initialize(self):
         self['type'] = 'text'
 
+class PasswordText(Input):
+    def initialize(self):
+        self['type'] = 'password'
+
 class Button(Input):
     def initialize(self):
         self['type'] = 'button'
