@@ -32,29 +32,28 @@ def registerRenderer(argumentClass, renderer):
     _renderers[argumentClass] = renderer
 
     
-def getValue(request, argument):
-    """Return value for form input."""
-    values = request.args.get(argument.name, None)
-    if values:
-        try:
-            return argument.coerce(values[0])
-        except formmethod.InputError:
-            return values[0]
-    return argument.default
-
-
-def getValues(request, argument):
-    """Return values for form input."""
-    values = request.args.get(argument.name, None)
-    if values:
-        try:
-            return argument.coerce(values)
-        except formmethod.InputError:
-            return values
-    return argument.default
-
-
 class FormFillerWidget(widgets.Widget):
+    def getValue(self, request, argument):
+        """Return value for form input."""
+        if not self.model.alwaysDefault:
+            values = request.args.get(argument.name, None)
+            if values:
+                try:
+                    return argument.coerce(values[0])
+                except formmethod.InputError:
+                    return values[0]
+        return argument.default
+
+    def getValues(self, request, argument):
+        """Return values for form input."""
+        if not self.model.alwaysDefault:
+            values = request.args.get(argument.name, None)
+            if values:
+                try:
+                    return argument.coerce(values)
+                except formmethod.InputError:
+                    return values
+        return argument.default
 
     def createShell(self, request, node, data):
         """Create a `shell' node that will hold the additional form elements, if one is required.
@@ -62,7 +61,7 @@ class FormFillerWidget(widgets.Widget):
         return lmx(node).table(border="0")
     
     def input_single(self, request, content, arg):
-        value = getValue(request, arg)
+        value = self.getValue(request, arg)
         if value == None:
             value = ""
         else:
@@ -77,7 +76,7 @@ class FormFillerWidget(widgets.Widget):
                              rows=arg.getHint('rows', '10'),
                              name=arg.name,
                              wrap=arg.getHint('wrap', "virtual"))
-        r.text(str(getValue(request, arg)))
+        r.text(str(self.getValue(request, arg)))
         return r
 
     def input_string(self, request, content, arg):
@@ -91,7 +90,7 @@ class FormFillerWidget(widgets.Widget):
 
     def input_choice(self, request, content, arg):
         s = content.select(name=arg.name)
-        default = getValue(request, arg)
+        default = self.getValue(request, arg)
         for tag, value, desc in arg.choices:
             if value == default:
                 kw = {'selected' : '1'}
@@ -102,7 +101,7 @@ class FormFillerWidget(widgets.Widget):
 
     def input_radiogroup(self, request, content, arg):
         s = content.div()
-        defaults = getValues(request, arg)
+        defaults = self.getValues(request, arg)
         for tag, value, desc in arg.choices:
             if value in defaults:
                 kw = {'checked' : '1'}
@@ -114,7 +113,7 @@ class FormFillerWidget(widgets.Widget):
 
     def input_checkgroup(self, request, content, arg):
         s = content.div()
-        defaults = getValues(request, arg)
+        defaults = self.getValues(request, arg)
         for tag, value, desc in arg.flags:
             if value in defaults:
                 kw = {'checked' : '1'}
@@ -126,7 +125,7 @@ class FormFillerWidget(widgets.Widget):
         return s
 
     def input_boolean(self, request, content, arg):
-        if getValue(request, arg):
+        if self.getValue(request, arg):
             kw = {'checked' : '1'}
         else:
             kw = {}
@@ -140,7 +139,7 @@ class FormFillerWidget(widgets.Widget):
                              name=arg.name)
 
     def input_flags(self, request, content, arg):
-        defaults = getValues(request, arg)
+        defaults = self.getValues(request, arg)
         for key, val, label in arg.flags:
             if val in defaults:
                 kw = {'checked' : '1'}
@@ -155,7 +154,7 @@ class FormFillerWidget(widgets.Widget):
     def input_hidden(self, request, content, arg):
         return content.input(type="hidden",
                              name=arg.name,
-                             value=getValue(request, arg))
+                             value=self.getValue(request, arg))
 
     def input_submit(self, request, content, arg):
         div = content.div()
@@ -168,7 +167,7 @@ class FormFillerWidget(widgets.Widget):
 
     def input_date(self, request, content, arg):
         breakLines = arg.getHint('breaklines', 1)
-        date = getValues(request, arg)
+        date = self.getValues(request, arg)
         if date == None:
             year, month, day = "", "", ""
         else:
@@ -268,8 +267,9 @@ class FormErrorWidget(FormFillerWidget):
 
 
 class FormDisplayModel(model.MethodModel):
-    def initialize(self, fmethod):
+    def initialize(self, fmethod, alwaysDefault=False):
         self.fmethod = fmethod
+        self.alwaysDefault = alwaysDefault
 
 class FormErrorModel(FormDisplayModel):
     def initialize(self, fmethod, args, err):
