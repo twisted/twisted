@@ -54,18 +54,28 @@ The Official Twisted is built with native Python 2.2 (latest), not the
 Cygwin version of Python, however it is built with the help of Cygwin
 packages.
 
+
 * A-A-P ***
 This is what actually does the building.
+http://www.a-a-p.org/download.html
+
 
 * winreg ***
 You need this little module:
 http://www.rutherfurd.net/python/winreg/   # FIXME -- make aap fetch it
+
 
 * Cygwin ***
 You will need Cygwin, with the gcc-mingw package installed.  Get
 Cygwin at:
 
 http://cygwin.com
+
+
+* Inno Setup ***
+This creates nice self-installers with uninstall functionality:
+http://www.jrsoftware.org/isinfo.php
+
 
 * Bootstrap Twisted ***
 You will need an existing installation of Twisted, as the build script

@@ -29,7 +29,7 @@ Type: filesandordirs; Name: "{app}\TwistedDocs"
 [Icons]
 Name: "{group}\Manual"; Filename: "{app}\TwistedDocs\howto\index.xhtml"
 Name: "{group}\API Documentation"; Filename: "{app}\TwistedDocs\api\index.html"
-Name: "{group}\Twisted Command Prompt"; Filename: "{%%ComSpec}"; Parameters: "/k {app}\twisted\twistenv.bat %(pykey)s\scripts"; WorkingDir: "{sd}\"
+Name: "{group}\Twisted Command Prompt"; Filename: "{cmd}"; Parameters: "/k {app}\twisted\twistenv.bat %(pykey)s\scripts"; WorkingDir: "{sd}\"
 Name: "{group}\Application Maker"; Filename: "%(pykey)s\scripts\tktwistd.py"
 Name: "{group}\TkConch (ssh)"; Filename: "%(pykey)s\scripts\tkconch.py"
 Name: "{group}\Uninstall {groupname}"; Filename: "{uninstallexe}"
