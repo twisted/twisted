@@ -204,6 +204,79 @@ def immediateIsValidUser(user):
 base="twisted.internet">defer.fail</code> method to return a Deferred with the
 errback chain already fired.</p>
 
+<h2>Integrating blocking code with Twisted</h2>
+
+<p>At some point, you are likely to need to call a blocking function: many
+functions in third party libraries will have long running blocking functions.
+There is no way to 'force' a function to be asynchronous: it must be written
+that way specifically. When using Twisted, your own code should be
+asynchronous, but there is no way to make third party functions asynchronous
+other than rewriting them.</p>
+
+<p>In this case, Twisted provides the ability to run the blocking code in a
+separately thread rather than letting it block your application. The <code
+class="API">twisted.internet.threads.deferToThread</code> function will set up
+a thread to run your blocking function, return a Deferred and later fire that
+Deferred when the thread completes.</p>
+
+<p>Let's assume our <code class="python">largeFibonnaciNumber</code> function
+from above is in a third party library (returning the result of the
+calculation, not a Deferred) and is not easily modifiable to be finished in
+discrete blocks. This example shows it being called in a thread, unlike in the
+earlier section we'll see that the operation does not block our entire
+program:</p>
+
+<pre class="python">
+def largeFibonnaciNumber():
+    """
+    Represent a long running blocking function by calculating
+    the TARGETth Fibonnaci number
+    """
+    TARGET = 10000
+
+    first = 0
+    second = 1
+
+    for i in xrange(TARGET - 1):
+        new = first + second
+        first = second
+        second = new
+        if i % 100 == 0:
+
+    return second
+
+from twisted.internet import threads, reactor
+
+def fibonacciCallback(result):
+    """
+    Callback which manages the largeFibonnaciNumber result by
+    printing it out
+    """
+    print "largeFibonnaciNumber result =", result
+    # make sure the reactor stops after the callback chain finishes,
+    # just so that this example terminates
+    reactor.stop()
+
+def run():
+    """
+    Run a series of operations, deferring the largeFibonnaciNumber
+    operation to a thread and performing some other operations after
+    adding the callback
+    """
+    # get our Deferred which will be called with the largeFibonnaciNumber result
+    d = threads.deferToThread(largeFibonnaciNumber)
+    # add our callback to print it out
+    d.addCallback(fibonacciCallback)
+    # unless the largeFibonnaciNumber thread returns very fast, these print
+    #lines should happen first
+    print "1st line after the addition of the callback"
+    print "2nd line after the addition of the callback"
+
+if __name__ == '__main__':
+    run()
+    reactor.run()
+</pre>
+
 <h2>Possible sources of error</h2>
 
 <p>Deferreds greatly simplify the process of writing asynchronous code by
