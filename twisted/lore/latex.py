@@ -155,7 +155,7 @@ class LatexSpitter:
 
     visitNode_div = visitNode_span
 
-    visitNode_h2 = visitNode_3 = visitNode_h4 = visitNodeHeader
+    visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
 
     mapStart_title = '\\title{'
     mapEnd_title = '}\n'
