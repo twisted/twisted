@@ -3703,3 +3703,9 @@ On 2003.05.23 18:54, Glyph Lefkowitz wrote:
 <glyph> So, how do I tell distutils to compile/link with g++ rather than gcc?
 <spiv> glyph: By typing your commands IN BLOOD
 %
+<cehteh> >>> foo()
+<cehteh> Segmentation fault
+<cehteh> doh
+<whitestar> cehteh: sucks to be foo()!
+<deltab> I pity the foo()
+%
