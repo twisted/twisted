@@ -212,6 +212,8 @@ UnsafeSlicerTable.update({
     types.ClassType: ClassSlicer,
     types.MethodType: MethodSlicer,
     types.FunctionType: FunctionSlicer,
+    #types.TypeType: NewstyleClassSlicer,
+    # ???: NewstyleInstanceSlicer,
     })
 
 
@@ -902,7 +904,7 @@ class ModuleUnslicer(LeafUnslicer):
             raise BananaError("ModuleUnslicer only accepts one string")
         self.finished = True
         # TODO: taste here!
-        mod = __import__(moduleName, {}, {}, "x")
+        mod = __import__(name, {}, {}, "x")
         self.mod = mod
 
     def receiveClose(self):

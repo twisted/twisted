@@ -1498,6 +1498,15 @@ class A:
             return -1
         return cmp(self.__dict__, other.__dict__)
 
+class B(object):
+    # new-style class
+    def amethod(self):
+        pass
+    def __cmp__(self, other):
+        if not type(other) == type(self):
+            return -1
+        return cmp(self.__dict__, other.__dict__)
+    
 def afunc(self):
     pass
 
@@ -1544,8 +1553,17 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
     def test_instance(self):
         a = A()
         self.looptest(a)
-    def test_module(self):
+    def test_instance_newstyle(self):
+        raise unittest.SkipTest("new-style classes still broken")
+        b = B()
+        self.looptest(b)
+
+    def test_class(self):
         self.looptest(A)
+    def test_class_newstyle(self):
+        raise unittest.SkipTest("new-style classes still broken")
+        self.looptest(B)
+
     def test_boundMethod(self):
         a = A()
         m1 = a.amethod
@@ -1555,8 +1573,22 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         self.failUnlessEqual(m1.im_self, m2.im_self)
         self.failUnlessEqual(m1.im_func, m2.im_func)
 
+    def test_boundMethod_newstyle(self):
+        raise unittest.SkipTest("new-style classes still broken")
+        b = B()
+        m1 = b.amethod
+        m2 = self.loop(m1)
+
+        self.failUnlessEqual(m1.im_class, m2.im_class)
+        self.failUnlessEqual(m1.im_self, m2.im_self)
+        self.failUnlessEqual(m1.im_func, m2.im_func)
+
     def test_classMethod(self):
         self.looptest(A.amethod)
+
+    def test_classMethod_newstyle(self):
+        raise unittest.SkipTest("new-style classes still broken")
+        self.looptest(B.amethod)
 
     # some stuff from test_newjelly
     def testIdentity(self):
