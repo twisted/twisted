@@ -178,6 +178,7 @@ class ReverseProxyResource(resource.Resource):
 
     def render(self, request):
         request.received_headers['host'] = self.host
+        request.content.seek(0, 0)
         clientFactory = ProxyClientFactory(request.method, self.path, 
                                      request.clientproto, 
                                      request.getAllHeaders(),
