@@ -42,6 +42,9 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
     hostname = "nowhere"
     servicename = "twisted.words"
 
+    def callRemote(self, key, *args, **kw):
+        apply(getattr(self, key), args, kw)
+
     def receiveContactList(self, contactList):
         for name, status in contactList:
             self.notifyStatusChanged(name, status)

@@ -19,7 +19,7 @@ from twisted.spread import pb
 from twisted.internet import main
 def gotObject(object):
     print "got object:",object
-    object.echo("hello network").addCallback(gotEcho)
+    object.callRemote("echo", "hello network").addCallback(gotEcho)
 def gotEcho(echo):
     print 'server echoed:',echo
     main.shutDown()

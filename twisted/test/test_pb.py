@@ -171,7 +171,7 @@ class VeryVeryComplicatedCacheable(pb.Cacheable):
 
     def setFoo4(self):
         self.foo = 4
-        self.observer.foo(4)
+        self.observer.callRemote('foo',4)
 
     def getStateToCacheAndObserveFor(self, perspective, observer):
         self.observer = observer
@@ -237,7 +237,7 @@ class Observable(pb.Referenceable):
 
     def notify(self, obj):
         for observer in self.observers:
-            observer.notify(self, obj)
+            observer.callRemote('notify', self, obj)
 
 class DeferredRemote(pb.Referenceable):
     def __init__(self):
@@ -264,7 +264,7 @@ class Observer(pb.Referenceable):
     def remote_notify(self, other, obj):
         self.obj = obj
         self.notified = self.notified + 1
-        other.unobserve(self)
+        other.callRemote('unobserve',self)
 
 
 class BrokerTestCase(unittest.TestCase):
@@ -291,20 +291,20 @@ class BrokerTestCase(unittest.TestCase):
 
         class Y(pb.Referenceable):
             def remote_throw(self, a, b):
-                a.catch(b)
+                a.callRemote('catch', b)
 
         s.setNameForLocal("y", Y())
         y = c.remoteForName("y")
         x = X()
         z = X()
-        y.throw(x, z)
+        y.callRemote('throw', x, z)
         pump.pump()
         pump.pump()
         pump.pump()
         assert x.caught is z, "X should have caught Z"
 
         # make sure references to remote methods are equals
-        self.assertEquals(y.throw, y.throw)
+        self.assertEquals(y.remoteMethod('throw'), y.remoteMethod('throw'))
 
     def testResult(self):
         c, s, pump = connectedServerAndClient()
@@ -314,7 +314,7 @@ class BrokerTestCase(unittest.TestCase):
             x.setNameForLocal("foo", foo)
             bar = y.remoteForName("foo")
             self.expectedThunkResult = 8
-            bar.thunk(self.expectedThunkResult - 1).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
+            bar.callRemote('thunk',self.expectedThunkResult - 1).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
             # Send question.
             pump.pump()
             # Send response.
@@ -331,7 +331,7 @@ class BrokerTestCase(unittest.TestCase):
         foo = NestedCopy()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
-        x.getCopy().addCallbacks(self.thunkResultGood, self.thunkErrorBad)
+        x.callRemote('getCopy').addCallbacks(self.thunkResultGood, self.thunkErrorBad)
         pump.pump()
         pump.pump()
         assert self.thunkResult.check() == 1, "check failed"
@@ -346,7 +346,7 @@ class BrokerTestCase(unittest.TestCase):
         b = Observer()
         s.setNameForLocal("a", a)
         ra = c.remoteForName("a")
-        ra.observe(b)
+        ra.callRemote('observe',b)
         pump.pump()
         a.notify(1)
         pump.pump()
@@ -365,7 +365,7 @@ class BrokerTestCase(unittest.TestCase):
         e = c.remoteForName("d")
         pump.pump(); pump.pump()
         results = []
-        e.doItLater().addCallback(results.append)
+        e.callRemote('doItLater').addCallback(results.append)
         pump.pump(); pump.pump()
         assert not d.run, "Deferred method run too early."
         d.d.callback(5)
@@ -378,7 +378,7 @@ class BrokerTestCase(unittest.TestCase):
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
-        bar.getSimple().addCallbacks(self.refcountResult, self.thunkErrorBad)
+        bar.callRemote('getSimple').addCallbacks(self.refcountResult, self.thunkErrorBad)
 
         # send question
         pump.pump()
@@ -410,10 +410,10 @@ class BrokerTestCase(unittest.TestCase):
         o2 = c.remoteForName("obj")
         o3 = c.remoteForName("xxx")
         coll = []
-        o2.getCache().addCallback(coll.append)
-        o2.getCache().addCallback(coll.append)
+        o2.callRemote("getCache").addCallback(coll.append)
+        o2.callRemote("getCache").addCallback(coll.append)
         complex = []
-        o3.getCache().addCallback(complex.append)
+        o3.callRemote("getCache").addCallback(complex.append)
         pump.pump() # ask for first cache
         pump.pump() # respond with it
         pump.pump() # ask for second cache
@@ -433,7 +433,7 @@ class BrokerTestCase(unittest.TestCase):
         # assert cp.__class__ is pb.RemoteCacheProxy, "class was %s" % str(cp.__class__)
         # assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
         col2 = []
-        o2.putCache(cp).addCallback(col2.append)
+        o2.callRemote('putCache',cp).addCallback(col2.append)
         # now, refcounting (similiar to testRefCount)
         luid = cp.luid
         assert s.remotelyCachedObjects.has_key(luid), "remote cache doesn't have it"
@@ -455,7 +455,7 @@ class BrokerTestCase(unittest.TestCase):
         # The objects were the same (testing lcache identity)
         assert col2[0]
         # test equality of references to methods
-        self.assertEquals(o2.getCache, o2.getCache)
+        self.assertEquals(o2.remoteMethod("getCache"), o2.remoteMethod("getCache"))
 
     def whatTheHell(self, obj):
         print '!?!?!?!?', repr(obj)
@@ -470,44 +470,40 @@ class BrokerTestCase(unittest.TestCase):
         # ident.attach("test", "any", None).addCallback(accum.append)
         pump.flush()
         test = accum.pop() # okay, this should be our perspective...
-        test.getDummyViewPoint().addCallback(accum.append)
+        test.callRemote('getDummyViewPoint').addCallback(accum.append)
         pump.flush()
-        accum.pop().doNothing().addCallback(accum.append)
+        accum.pop().callRemote('doNothing').addCallback(accum.append)
         pump.flush()
         assert accum.pop() == 'hello world!', 'oops...'
 
     def testPublishable(self):
-        print '<<< PUBLISHABLE'
+        import os
         try:
-            import os
-            try:
-                os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
-            except OSError:
-                print "couldn't unlink publishable cache file"
-            else:
-                print "unlinked publishable cache file"
-            c, s, pump = connectedServerAndClient()
-            foo = GetPublisher()
-            # foo.pub.timestamp = 1.0
-            s.setNameForLocal("foo", foo)
-            bar = c.remoteForName("foo")
-            accum = []
-            bar.getPub().addCallbacks(accum.append, self.thunkErrorBad)
-            pump.flush()
-            obj = accum.pop()
-            self.assertEquals(obj.activateCalled, 1)
-            self.assertEquals(obj.isActivated, 1)
-            self.assertEquals(obj.yayIGotPublished, 1)
-            self.assertEquals(obj._wasCleanWhenLoaded, 0) # timestamp's dirty, we don't have a cache file
-            c, s, pump = connectedServerAndClient()
-            s.setNameForLocal("foo", foo)
-            bar = c.remoteForName("foo")
-            bar.getPub().addCallbacks(accum.append, self.thunkErrorBad)
-            pump.flush()
-            obj = accum.pop()
-            self.assertEquals(obj._wasCleanWhenLoaded, 1) # timestamp's clean, our cache file is up-to-date
-        finally:
-            print '>>> PUBLISHABLE'
+            os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
+        except OSError:
+            print "couldn't unlink publishable cache file"
+        else:
+            print "unlinked publishable cache file"
+        c, s, pump = connectedServerAndClient()
+        foo = GetPublisher()
+        # foo.pub.timestamp = 1.0
+        s.setNameForLocal("foo", foo)
+        bar = c.remoteForName("foo")
+        accum = []
+        bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
+        pump.flush()
+        obj = accum.pop()
+        self.assertEquals(obj.activateCalled, 1)
+        self.assertEquals(obj.isActivated, 1)
+        self.assertEquals(obj.yayIGotPublished, 1)
+        self.assertEquals(obj._wasCleanWhenLoaded, 0) # timestamp's dirty, we don't have a cache file
+        c, s, pump = connectedServerAndClient()
+        s.setNameForLocal("foo", foo)
+        bar = c.remoteForName("foo")
+        bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
+        pump.flush()
+        obj = accum.pop()
+        self.assertEquals(obj._wasCleanWhenLoaded, 1) # timestamp's clean, our cache file is up-to-date
 
 from twisted.spread import publish
 

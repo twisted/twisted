@@ -220,7 +220,7 @@ class Perspective(pb.Perspective):
             'longversion': copyright.longversion,
             }
 
-        client.console([("stdout", msg)])
+        client.callRemote('console', [("stdout", msg)])
 
         return pb.Perspective.attached(self, client, identity)
 
@@ -252,7 +252,7 @@ class Perspective(pb.Perspective):
         clients = self.clients.keys()
         for client in clients:
             try:
-                client.console(message)
+                client.callRemote('console', message)
             except pb.ProtocolError:
                 # Stale broker.
                 self.detached(client, None)
@@ -263,7 +263,7 @@ class Perspective(pb.Perspective):
         clients = self.clients.keys()
         for client in clients:
             try:
-                client.receiveExplorer(objectLink)
+                client.callRemote('receiveExplorer', objectLink)
             except pb.ProtocolError:
                 # Stale broker.
                 self.detached(client, None)

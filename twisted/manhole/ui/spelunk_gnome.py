@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: spelunk_gnome.py,v 1.6 2002/01/24 10:20:41 itamarst Exp $
+# $Id: spelunk_gnome.py,v 1.7 2002/02/22 05:34:27 glyph Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -184,7 +184,7 @@ class Explorer(pb.RemoteCache):
             spelunker.fill_attributeGroup(a, things)
 
     def requestState(self):
-        self.view.updateState()
+        self.view.callRemote("updateState")
 
 class _LooseBoxBorder:
     box = None
@@ -547,7 +547,7 @@ class ClassVisage(Visage):
     def fill_properties(self, propValues):
         Visage.fill_properties(self, propValues)
         basesExplorer = propValues.get('bases')[1]
-        basesExplorer.view.get_elements().addCallback(self.fill_bases)
+        basesExplorer.view.callRemote("get_elements").addCallback(self.fill_bases)
 
     def fill_bases(self, baseExplorers):
         box = gtk.HBox()

@@ -280,11 +280,23 @@ class RemoteReference(Serializable, styles.Ephemeral):
         assert self.broker == broker, "Can't send references to brokers other than their own."
         return local_atom, self.luid
 
+    def callRemote(self, name, *args, **kw):
+        """Asynchronously invoke a remote method.
+        """
+        return self.broker._sendMessage('',self.perspective, self.luid, name, args, kw)
+
     def __getattr__(self, key):
-        """Get a RemoteMethod for this key.
+        """(Deprecated) Return a RemoteMethod.
         """
         if (key[:2]=='__' and key[-2:]=='__') or key[:6] == 'local_':
             raise AttributeError(key)
+        file, lineno, func, nne = traceback.extract_stack()[-2] # caller
+        log.msg("%s:%s %s calls obsolete 'transparent' RemoteMethod %s" % (file, lineno, func, key))
+        return self.remoteMethod(key)
+
+    def remoteMethod(self, key):
+        """Get a RemoteMethod for this key.
+        """
         return RemoteMethod(self, key)
 
     def __cmp__(self,other):
@@ -1088,33 +1100,33 @@ def authIdentity(authServRef, username, password):
     return a remote Identity reference.
     """
     d = defer.Deferred()
-    authServRef.username(username).addCallbacks(
+    authServRef.callRemote('username', username).addCallbacks(
         _cbRespondToChallenge, d.armAndErrback,
         callbackArgs=(password,d))
     return d
 
 def _cbRespondToChallenge((challenge, challenger), password, d):
-    challenger.respond(identity.respond(challenge, password)).addCallbacks(
+    challenger.callRemote("respond", identity.respond(challenge, password)).addCallbacks(
         d.armAndCallback, d.armAndErrback)
 
 def logIn(authServRef, client, service, username, password, perspectiveName=None):
     """I return a Deferred which will be called back with a Perspective.
     """
     d = defer.Deferred()
-    authServRef.username(username).addCallbacks(
+    authServRef.callRemote('username', username).addCallbacks(
         _cbLogInRespond, d.armAndErrback,
         callbackArgs=(d, client, service, password,
                       perspectiveName or username))
     return d
 
 def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
-    challenger.respond(
+    challenger.callRemote('respond',
         identity.respond(challenge, password)).addCallbacks(
         _cbLogInResponded, d.armAndErrback,
         callbackArgs=(d, client, service, perspectiveName))
 
 def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
     if identity:
-        identity.attach(serviceName, perspectiveName, client).armAndChain(d)
+        identity.callRemote("attach", serviceName, perspectiveName, client).armAndChain(d)
     else:
         d.armAndErrback("invalid username or password")

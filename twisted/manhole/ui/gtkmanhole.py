@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.31 2002/01/14 10:18:12 acapnotic Exp $
+# $Id: gtkmanhole.py,v 1.32 2002/02/22 05:34:27 glyph Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -343,7 +343,7 @@ class InputText(gtk.GtkText):
         self.histpos = len(self.history)
         self.toplevel.output.console([['command',fmt % text]])
 
-        method = self.toplevel.perspective.do
+        methodName = 'do'
 
         if text[0] == '/':
             split = string.split(text[1:],' ',1)
@@ -351,10 +351,10 @@ class InputText(gtk.GtkText):
             if len(split) == 2:
                 remainder = split[1]
             if statement in ('browse', 'explore'):
-                method = self.toplevel.perspective.explore
+                methodName = 'explore'
                 text = remainder
             elif statement == 'watch':
-                method = self.toplevel.perspective.watch
+                methodName = 'watch'
                 text = remainder
             elif statement == 'self_rebuild':
                 rebuild.rebuild(explorer)
@@ -363,7 +363,7 @@ class InputText(gtk.GtkText):
                 rebuild.rebuild(sys.modules[__name__])
                 return
         try:
-            method(text)
+            self.toplevel.perspective.callRemote(methodName, text)
         except pb.ProtocolError:
             # ASSUMPTION: pb.ProtocolError means we lost our connection.
             (eType, eVal, tb) = sys.exc_info()

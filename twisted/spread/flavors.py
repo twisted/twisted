@@ -546,14 +546,26 @@ class RemoteCacheObserver:
 
         return cmp((self.broker, self.perspective, self.cached), other)
 
+    def callRemote(self, name, *args, **kw):
+        """(internal) action method.
+        """
+        cacheID = self.broker.cachedRemotelyAs(self.cached)
+        if cacheID is None:
+            from pb import ProtocolError
+            raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
+        return self.broker._sendMessage('cache', self.perspective, cacheID, name, args, kw)
+
     def __getattr__(self, key):
         """Create a RemoteCacheMethod.
         """
-
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
+        import traceback
+        file, lineno, func, nne = traceback.extract_stack()[-2] # caller
+        log.msg("%s:%s %s calls obsolete 'transparent' RemoteCacheMethod %s" % (file, lineno, func, key))
+        return self.remoteMethod(key)
+
+    def remoteMethod(self, key):
+        """Get a RemoteMethod for this key.
+        """
         return RemoteCacheMethod(key, self.broker, self.cached, self.perspective)
-
-
-
-

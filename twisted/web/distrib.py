@@ -40,11 +40,12 @@ class Request(pb.RemoteCopy, server.Request):
     def setCopyableState(self, state):
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
-        self.write            = self.remote.write
-        self.finish           = self.remote.finish
-        self.setHeader        = self.remote.setHeader
-        self.setResponseCode  = self.remote.setResponseCode
-        self.registerProducer = self.remote.registerProducer
+        self.write            = self.remote.remoteMethod('write')
+        self.finish           = self.remote.remoteMethod('finish')
+        self.setHeader        = self.remote.remoteMethod('setHeader')
+        self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
+        self.registerProducer = self.remote.remoteMethod('registerProducer')
+
 
 pb.setCopierForClass(str(server.Request), Request)
 
@@ -133,7 +134,7 @@ class ResourceSubscription(resource.Resource):
 
         else:
             i = Issue(request)
-            self.publisher.request(request).addCallbacks(i.finished, i.failed)
+            self.publisher.callRemote('request', request).addCallbacks(i.finished, i.failed)
         return NOT_DONE_YET
 
 class ResourcePublisher(pb.Root, styles.Versioned):

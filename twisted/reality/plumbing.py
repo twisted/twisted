@@ -129,6 +129,10 @@ class Hose(telnet.Telnet):
         self.transport.write(telnet.BOLD_MODE_ON+"[ "+name+" ]"+telnet.BOLD_MODE_OFF+
                              "\r\n")
 
+    def callRemote(self, key, *args, **kw):
+        # pass-through of remote methods
+        apply(getattr(self, key), args, kw)
+
 
     def seeItem(self, key, parent, value):
         """Display an item that's present.

@@ -67,11 +67,11 @@ class ResponseWindow(gtk.GtkWindow):
 
 
     def callok(self,*ev):
-        self.callback.ok(gtktextget(self.text))
+        self.callback.callRemote('ok', gtktextget(self.text))
         self.destroy()
 
     def callcancel(self,*ev):
-        self.callback.cancel()
+        self.callback.callRemote('cancel')
         self.destroy()
 
 
@@ -166,7 +166,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
     def sendVerb(self, verb):
         self.seeEvent("> "+verb,boldFont)
         self.cmdarea.set_text(verb)
-        self.remote.execute(verb).addCallbacks(self.finishVerb, self.errorVerb)
+        self.remote.callRemote("execute", verb).addCallbacks(self.finishVerb, self.errorVerb)
 
     def errorVerb(self, error):
         self.seeEvent(error, boldFont)

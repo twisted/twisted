@@ -169,9 +169,9 @@ class Participant(pb.Perspective, styles.Versioned):
             self.detached(client, identity)
         log.msg("attached: %s" % self.name)
         self.client = client
-        client.receiveContactList(map(lambda contact: (contact.name,
-                                                       contact.status),
-                                      self.contacts))
+        client.callRemote('receiveContactList', map(lambda contact: (contact.name,
+                                                                     contact.status),
+                                                    self.contacts))
         self.changeStatus(ONLINE)
         return self
 
@@ -182,7 +182,7 @@ class Participant(pb.Perspective, styles.Versioned):
 
     def notifyStatusChanged(self, contact):
         if self.client:
-            self.client.notifyStatusChanged(contact.name, contact.status)
+            self.client.callRemote('notifyStatusChanged', contact.name, contact.status)
 
     def detached(self, client, identity):
         log.msg("detached: %s" % self.name)
@@ -230,21 +230,21 @@ class Participant(pb.Perspective, styles.Versioned):
     def getGroupMembers(self, groupName):
         for group in self.groups:
             if group.name == groupName:
-                self.client.receiveGroupMembers(map(lambda m: m.name,
-                                                    group.members),
-                                                group.name)
+                self.client.callRemote('receiveGroupMembers', map(lambda m: m.name,
+                                                                  group.members),
+                                       group.name)
         raise NotInGroupError(groupName)
 
     def getGroupMetadata(self, groupName):
         for group in self.groups:
             if group.name == groupName:
-                self.client.setGroupMetadata(group.metadata, group.name)
+                self.client.callRemote('setGroupMetadata', group.metadata, group.name)
 
     def receiveDirectMessage(self, sender, message, metadata):
         if self.client:
             if metadata:
-                d = self.client.receiveDirectMessage(sender.name, message,
-                                                     metadata)
+                d = self.client.callRemote('receiveDirectMessage', sender.name, message,
+                                           metadata)
                 #If the client doesn't support metadata, call this function
                 #again with no metadata, so none is sent
                 #
@@ -255,7 +255,7 @@ class Participant(pb.Perspective, styles.Versioned):
                     d.addErrback(self.receiveDirectMessage,
                                  sender.name, message, None)
             else:
-                self.client.receiveDirectMessage(sender.name, message)
+                self.client.callRemote('receiveDirectMessage', sender.name, message)
         else:
             raise WrongStatusError(self.status, self.name)
 
@@ -294,7 +294,7 @@ class Participant(pb.Perspective, styles.Versioned):
 
     def setGroupMetadata(self, dict_, groupName):
         if self.client:
-            self.client.setGroupMetadata(dict_, groupName)
+            self.client.callRemote('setGroupMetadata', dict_, groupName)
 
     # Establish client protocol for PB.
     perspective_changeStatus = changeStatus

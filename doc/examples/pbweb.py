@@ -30,7 +30,7 @@ class EchoDisplay(widgets.Presentation):
                 '</b>']
 
     def makeListOf(self, echoer):
-        return [echoer.echo(self.echotext, pbcallback=d.callback, pberrback=d.errback).addCallback(widgets.listify)]
+        return [echoer.callRemote('echo', self.echotext).addCallback(widgets.listify)]
 
 if __name__ == "__main__":
     from twisted.web import server

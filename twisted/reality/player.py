@@ -111,7 +111,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
 
         and therefore follows those rules.
         """
-        if not hasattr(remoteIntelligence, 'seeName'): # web sessions may be attached too.
+        if not hasattr(remoteIntelligence, 'callRemote'): # web sessions may be attached too.
             log.msg("web viewer login: [%s]")
             return self
             
@@ -277,32 +277,32 @@ class LocalIntelligence(Intelligence):
     def __init__(self,remote):
         self.remote=remote
     def seeName(self, name):
-        self.remote.seeName(name)
+        self.remote.callRemote("seeName", name)
     def seeItem(self, thing,name):
-        self.remote.seeItem(id(thing),
-                             id(thing.place),
-                             name)
+        self.remote.callRemote("seeItem", id(thing),
+                               id(thing.place),
+                               name)
     def dontSeeItem(self, thing):
-        self.remote.dontSeeItem(id(thing),
-                                id(thing.place))
+        self.remote.callRemote("dontSeeItem", id(thing),
+                               id(thing.place))
     def seeNoItems(self):
-        self.remote.seeNoItems()
+        self.remote.callRemote('seeNoItems')
     def seeExit(self, direction, exit):
-        self.remote.seeExit(direction)
+        self.remote.callRemote('seeExit', direction)
     def dontSeeExit(self, direction):
-        self.remote.dontSeeExit(direction)
+        self.remote.callRemote('dontSeeExit', direction)
     def seeNoExits(self):
-        self.remote.seeNoExits()
+        self.remote.callRemote('seeNoExits',)
     def seeDescription(self, key, description):
-        self.remote.seeDescription(key,description)
+        self.remote.callRemote('seeDescription', key,description)
     def dontSeeDescription(self, key):
-        self.remote.dontSeeDescription(key)
+        self.remote.callRemote('dontSeeDescription',key)
     def seeNoDescriptions(self):
-        self.remote.seeNoDescriptions()
+        self.remote.callRemote('seeNoDescriptions')
     def seeEvent(self, string):
-        self.remote.seeEvent(string)
+        self.remote.callRemote('seeEvent', string)
     def request(self, question,default,c):
-        self.remote.request(question,default,c)
+        self.remote.callRemote('request', question,default,c)
 
 
 def discover(name,x,y,z,

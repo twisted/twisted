@@ -79,7 +79,7 @@ class RemotePublished(flavors.RemoteCache):
             self._cbGotUpdate(newself.__dict__)
             self._wasCleanWhenLoaded = 1
         else:
-            self.remote.getStateToPublish().addCallbacks(self._cbGotUpdate)
+            self.remote.callRemote('getStateToPublish').addCallbacks(self._cbGotUpdate)
 
     def __getstate__(self):
         other = copy.copy(self.__dict__)

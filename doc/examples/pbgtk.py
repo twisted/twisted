@@ -34,7 +34,7 @@ class EchoClient:
     def clicked(self, b):
         txt = self.entry.get_text()
         self.entry.set_text("")
-        self.echoer.echo(txt).addCallback(self.outry.set_text)
+        self.echoer.callRemote('echo',txt).addCallback(self.outry.set_text)
 l = gtkutil.Login(EchoClient, None, initialService="pbecho")
 l.show_all()
 gtk.mainloop()

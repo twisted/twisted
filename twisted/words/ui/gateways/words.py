@@ -130,33 +130,33 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
                 self.im.send(self,"receiveGroupTopic",group=group,topic=v)
 
     def event_addContact(self,contact):
-        self.remote.addContact(contact)
+        self.remote.callRemote("addContact",contact)
     
     def event_removeContact(self,contact):
-        self.remote.removeContact(contact)
+        self.remote.callRemote("removeContact", contact)
     
     def event_changeStatus(self,status):
-        self.remote.changeStatus(statuses.index(status))
+        self.remote.callRemote("changeStatus", statuses.index(status))
 
     def event_joinGroup(self,group):
-        self.remote.joinGroup(group)
+        self.remote.callRemote("joinGroup", group)
         self.joinedGroup(group)
 
     def event_leaveGroup(self,group):
-        self.remote.leaveGroup(group)
+        self.remote.callRemote("leaveGroup", group)
         self.leftGroup(group)
 
     def event_getGroupMembers(self,group):
-        self.remote.getGroupMembers(group).addCallbacks(lambda x: x, lambda tb,s=self,g=group:s.noGroupMembers(g))
+        self.remote.callRemote("getGroupMembers", group).addCallbacks(lambda x: x, lambda tb,s=self,g=group:s.noGroupMembers(g))
 
     def noGroupMembers(self,group):
         self.receiveGroupMembers([],group)
 
     def event_directMessage(self,user,message):
-        self.remote.directMessage(user,message)
+        self.remote.callRemote("directMessage", user,message)
 
     def event_groupMessage(self,group,message):
-        self.remote.groupMessage(group,message)
+        self.remote.callRemote("groupMessage", group,message)
 
 groupExtras=[]
 

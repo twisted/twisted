@@ -24,7 +24,7 @@ def failure(error):
     print "Failure...",error
     main.shutDown()
 def connected(perspective):
-    perspective.echo("hello world").addCallbacks(success, failure)
+    perspective.callRemote('echo', "hello world").addCallbacks(success, failure)
     print "connected."
 pb.connect("localhost", pb.portno,
            "guest", "guest",

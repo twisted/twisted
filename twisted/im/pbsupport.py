@@ -36,7 +36,7 @@ class TwistedWordsPerson:
                          "* "+text)
             return d
         else:
-            return self.account.perspective.directMessage(self.name, text)
+            return self.account.perspective.callRemote('directMessage',self.name, text)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text
@@ -64,11 +64,11 @@ class TwistedWordsGroup:
                          "* "+text)
             return d
         else:
-            return self.account.perspective.groupMessage(self.name, text)
+            return self.account.perspective.callRemote('groupMessage', self.name, text)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text
-        return self.account.perspective.groupMessage(self.name, text)
+        return self.account.perspective.callRemote('groupMessage', self.name, text)
 
     def joining(self):
         self.joined = 1
@@ -77,7 +77,7 @@ class TwistedWordsGroup:
         self.joined = 0
 
     def leave(self):
-        return self.account.perspective.leaveGroup(self.name)
+        return self.account.perspective.callRemote('leaveGroup', self.name)
 
 
 
@@ -128,16 +128,16 @@ class TwistedWordsClient(pb.Referenceable):
 
     def joinGroup(self, name):
         self.getGroup(name).joining()
-        return self.perspective.joinGroup(name).addCallback(self._cbGroupJoined, name)
+        return self.perspective.callRemote('joinGroup', name).addCallback(self._cbGroupJoined, name)
 
     def leaveGroup(self, name):
         self.getGroup(name).leaving()
-        return self.perspective.leaveGroup(name).addCallback(self._cbGroupLeft, name)
+        return self.perspective.callRemote('leaveGroup', name).addCallback(self._cbGroupLeft, name)
 
     def _cbGroupJoined(self, result, name):
         groupConv = getGroupConversation(self.getGroup(name))
         groupConv.showGroupMessage("sys", "you joined")
-        self.perspective.getGroupMembers(name)
+        self.perspective.callRemote('getGroupMembers', name)
 
     def _cbGroupLeft(self, result, name):
         print 'left',name
@@ -192,7 +192,7 @@ class PBAccount:
         print 'Identified!'
         for handlerClass, sname, pname in self.services:
             handler = handlerClass(self, sname, pname)
-            ident.attach(sname, pname, handler).addCallback(handler.connected)
+            ident.callRemote('attach', sname, pname, handler).addCallback(handler.connected)
 
     def _ebConnected(self, error):
         print 'Not connected.'
