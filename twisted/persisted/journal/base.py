@@ -39,6 +39,13 @@ class Journal:
         self.log = log
         self.journaledService = journaledService
         self.latestIndex = self.log.getCurrentIndex()
+
+    def updateFromLog(self):
+        """Run all commands from log that haven't been run yet.
+
+        This method should be run on startup to ensure the snapshot
+        is up-to-date.
+        """
         snapshotIndex = self.getLastSnapshot()
         if snapshotIndex < self.latestIndex:
             for cmdtime, command in self.log.getCommandsSince(snapshotIndex + 1):

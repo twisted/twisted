@@ -39,7 +39,8 @@ class Service:
     def __init__(self, logpath, journalpath):
         log = DirDBMLog(logpath)
         self.journal = MemoryJournal(log, self, journalpath, self._gotData)
-
+        self.journal.updateFromLog()
+    
     def _gotData(self, result):
         if result is None:
             self.values = {}
