@@ -23,6 +23,8 @@ try:
 except ImportError:
     import StringIO
 
+from twisted.protocols import smtp
+
 def generateBounce(message, failedFrom, failedTo, transcript=''):
     if not transcript:
         transcript = '''\
