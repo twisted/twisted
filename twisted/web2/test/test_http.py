@@ -2,10 +2,11 @@ from __future__ import nested_scopes
 
 import time, sys
 from twisted.trial import unittest
-from twisted.trial.util import deferredResult
+from twisted.trial.util import wait, spinUntil
 from twisted.web2 import http, http_headers, responsecode, error
 
 from twisted.internet import reactor, protocol, address, interfaces, utils
+from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import util
 from zope.interface import implements
@@ -807,6 +808,19 @@ class PipelinedErrorTestCase(ErrorTestCase):
         ErrorTestCase.checkError(self, cxn, code)
 
 
+class SimpleFactory(http.HTTPFactory):
+    def buildProtocol(self, addr):
+        # Do a bunch of crazy crap just so that the test case can know when the
+        # connection is done.
+        p = http.HTTPFactory.buildProtocol(self, addr)
+        cl = p.connectionLost
+        def newCl(reason):
+            self.testcase.connlost = True
+            return cl(reason)
+        p.connectionLost = newCl
+        self.conn = p
+        return p
+
 class SimpleRequest(http.Request):
     def process(self):
         self.code = 404
@@ -818,22 +832,27 @@ class SimpleRequest(http.Request):
     def handleContentComplete(self):
         pass
         
-    def connectionLost(self, reason):
-        pass
-
 class RealServerTest(unittest.TestCase):
     def setUp(self):
-        factory=http.HTTPFactory()
+        factory=SimpleFactory()
         factory.requestFactory = SimpleRequest
+        factory.testcase = self
+        self.factory = factory
+        self.connlost = False
         
         self.socket = reactor.listenTCP(0, factory)
         self.port = self.socket.getHost().port
 
     def tearDown(self):
-        self.socket.loseConnection()
+        # Make sure the listening port is closed
+        wait(defer.maybeDeferred(self.socket.stopListening))
+
+        # And make sure the established connection is, too
+        self.factory.conn.transport.loseConnection()
+        spinUntil(lambda: self.connlost)
         
     def testBasicWorkingness(self):
-        out,err,code = deferredResult(
+        out,err,code = wait(
             utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port))))
         if code != 0:
             print "Error output: \n", err
@@ -841,7 +860,7 @@ class RealServerTest(unittest.TestCase):
         self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
 
     def testLingeringClose(self):
-        out,err,code = deferredResult(
+        out,err,code = wait(
             utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port))))
         if code != 0:
             print "Error output: \n", err
