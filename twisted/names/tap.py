@@ -34,7 +34,7 @@ class Options(usage.Options):
         ["port",      "p", "53", "The port on which to listen"],
         ["resolv-conf", None, None,
             "Override location of resolv.conf (implies --recursive)"],
-        ["hosts-file", None, "/etc/hosts", "Perform lookups with a hosts file"],
+        ["hosts-file", None, None, "Perform lookups with a hosts file"],
     ]
 
     optFlags = [
