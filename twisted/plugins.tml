@@ -116,3 +116,21 @@ register("Twisted Coil Automated TAP builder",
          "twisted.tap.coil",
          description="automated TAP building",
          type="tap")
+
+register("Twisted Instance Messenger Automated TAP builder",
+         "twisted.im.tap",
+         description="automated TAP building",
+         type="tap",
+         tapname="im")
+
+register("Twisted Sister: Automated Parent TAP builder",
+         "twisted.sister.parentap",
+         description="automated TAP building",
+         type="tap",
+         tapname="parent")
+
+register("Twisted Sister: Automated Sister TAP builder",
+         "twisted.sister.sistap",
+         description="automated TAP building",
+         type="tap",
+         tapname="sister")
