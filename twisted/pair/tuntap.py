@@ -15,8 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import errno, os
-from twisted.python import log, reflect
-from twisted.internet import base, fdesc
+from twisted.python import log, reflect, components
+from twisted.internet import base, fdesc, error
 from twisted.protocols import ethernet
 
 from eunuchs.tuntap import opentuntap, TuntapPacketInfo, makePacketInfo
@@ -30,11 +30,11 @@ class TuntapPort(base.BasePort):
     maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
 
     def __init__(self, interface, proto, maxPacketSize=8192, reactor=None):
-        if isinstance(proto, ethernet.EthernetProtocol):
+        if components.implements(proto, ethernet.IEthernetProtocol):
             self.ethernet = 1
         else:
             self.ethernet = 0
-            assert isinstance(proto, ip.IPProtocol)
+            assert components.implements(proto, ip.IIPProtocol) # XXX: fix me
         base.BasePort.__init__(self, reactor)
         self.interface = interface
         self.protocol = proto
@@ -42,7 +42,7 @@ class TuntapPort(base.BasePort):
         self.setLogStr()
 
     def __repr__(self):
-        return "<%s on %s>" % (self.protocol.__class__, self.port)
+        return "<%s on %s>" % (self.protocol.__class__, self.interface)
 
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
@@ -112,8 +112,8 @@ class TuntapPort(base.BasePort):
             else:
                 raise
 
-    def writeSequence(self, seq, addr):
-        self.write("".join(seq), addr)
+    def writeSequence(self, seq):
+        self.write("".join(seq))
 
     def loseConnection(self):
         """Stop accepting connections on this port.

@@ -18,6 +18,15 @@
 import struct
 from twisted.internet import protocol
 from twisted.protocols import raw
+from twisted.python import components
+
+class IEthernetProtocol(components.Interface):
+    """An interface for protocols that handle Ethernet frames"""
+    def addProto():
+        """Add an IRawPacketProtocol protocol"""
+
+    def datagramReceived():
+        """An Ethernet frame has been received"""
 
 class EthernetHeader:
     def __init__(self, data):
@@ -26,6 +35,7 @@ class EthernetHeader:
                     = struct.unpack("!6s6sH", data[:6+6+2])
 
 class EthernetProtocol(protocol.AbstractDatagramProtocol):
+    __implements__ = IEthernetProtocol
     def __init__(self):
         self.etherProtos = {}
 
