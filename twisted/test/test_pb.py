@@ -270,6 +270,13 @@ class Observer(pb.Referenceable):
 class BrokerTestCase(unittest.TestCase):
     thunkResult = None
 
+    def tearDown(self):
+        import os
+        try:
+            os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
+        except OSError:
+            pass
+
     def thunkErrorBad(self, error):
         assert 0, "This should cause a return value, not %s" % error
 
