@@ -1,7 +1,3 @@
-2002-10-2  Moshe Zadka <moshez@twistedmatrix.com>
-
-	* twisted/spread/ui/tkutil.py: removed file
-
 2002-10-01  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* twisted/protocols/http.py: Fixed many bugs in protocol parsing,
