@@ -5,10 +5,10 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.1 2001/07/09 18:12:40 jh Exp $
+$Id: setup.py,v 1.2 2001/07/09 18:35:11 jh Exp $
 """
 
-import distutils
+import distutils, os, sys
 from distutils.core import setup
 from twisted import copyright
 
@@ -52,6 +52,10 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
     setup_args['platforms'] = "win32 posix"
+
+if sys.platform == 'posix':
+    import glob
+    setup_args['scripts'] = filter(os.path.isfile, glob.glob('bin/*'))
 
 apply(setup, (), setup_args)
 

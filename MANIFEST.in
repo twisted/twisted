@@ -3,11 +3,12 @@
 # Copyright (c) 2001 by Twisted Matrix Laboratories
 # All rights reserved, see LICENSE for details.
 #
-# $Id: MANIFEST.in,v 1.1 2001/07/09 18:12:40 jh Exp $
+# $Id: MANIFEST.in,v 1.2 2001/07/09 18:35:11 jh Exp $
 
 include CREDITS LICENSE QUICKSTART
 include MANIFEST.in TwistedLogo.bmp
 
+recursive-include bin *
 recursive-include doc *.html
 recursive-include doc/img *
 recursive-include pyunit *.py
