@@ -486,3 +486,57 @@ class DeferredTestCaseII(unittest.TestCase):
 
     def tearDown(self):
         self.failUnless(self.callbackRan, "Callback was never run.")
+
+class OtherPrimitives(unittest.TestCase):
+    def _incr(self, result):
+        self.counter += 1
+
+    def setUp(self):
+        self.counter = 0
+
+    def testLock(self):
+        lock = defer.DeferredLock()
+        lock.acquire().addCallback(self._incr)
+        self.failUnless(lock.locked)
+        self.assertEquals(self.counter, 1)
+
+        lock.acquire().addCallback(self._incr)
+        self.failUnless(lock.locked)
+        self.assertEquals(self.counter, 1)
+
+        lock.release()
+        self.failUnless(lock.locked)
+        self.assertEquals(self.counter, 2)
+
+        lock.release()
+        self.failIf(lock.locked)
+        self.assertEquals(self.counter, 2)
+
+        self.assertRaises(TypeError, lock.run)
+
+        firstUnique = object()
+        secondUnique = object()
+
+        controlDeferred = defer.Deferred()
+        def helper(self, b):
+            self.b = b
+            return controlDeferred
+
+        resultDeferred = lock.run(helper, self=self, b=firstUnique)
+        self.failUnless(lock.locked)
+        self.assertEquals(self.b, firstUnique)
+
+        resultDeferred.addCallback(lambda x: setattr(self, 'result', x))
+
+        lock.acquire().addCallback(self._incr)
+        self.failUnless(lock.locked)
+        self.assertEquals(self.counter, 2)
+
+        controlDeferred.callback(secondUnique)
+        self.assertEquals(self.result, secondUnique)
+        self.failUnless(lock.locked)
+        self.assertEquals(self.counter, 3)
+
+        lock.release()
+        self.failIf(lock.locked)
+

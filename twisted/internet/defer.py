@@ -201,7 +201,7 @@ class Deferred:
         if asDefaults:
             # what the heck is this crappy argument for?
             warnings.warn("The 'asDefaults' argument will be going away soon. Has anyone ever actually used it?", DeprecationWarning, stacklevel=2)
-                
+
         self.default = asDefaults
         if self.called:
             self._runCallbacks()
@@ -310,7 +310,7 @@ class Deferred:
                 self.timeoutCall.cancel()
             except:
                 pass
-            
+
             del self.timeoutCall
         self._runCallbacks()
 
@@ -340,7 +340,7 @@ class Deferred:
                         break
                 except:
                     self.result = failure.Failure()
-            
+
         if isinstance(self.result, failure.Failure):
             self.result.cleanFailure()
             if self._debugInfo is None:
@@ -547,7 +547,7 @@ class waitForDeferred:
     API Stability: semi-stable
 
     Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
-    
+
     waitForDeferred and deferredGenerator help you write
     Deferred-using code that looks like it's blocking (but isn't
     really), with the help of generators.
@@ -650,8 +650,82 @@ def deferredGenerator(f):
     return lambda *args, **kwargs: _deferGenerator(f(*args, **kwargs))
 
 
+class DeferredLock(object):
+    """A lock for event driven systems.
+
+    API stability: Unstable
+
+    @ivar locked: True when this Lock has been acquired, false at all
+    other times.  Do not change this value, but it is useful to
+    examine for the equivalent of a \"non-blocking\" acquisition.
+    """
+
+    locked = 0
+
+    def __init__(self):
+        self.waiting = []
+
+    def acquire(self):
+        """Attempt to acquire the lock.
+
+        @return: a Deferred which fires on lock acquisition.
+        """
+        d = Deferred()
+        if self.locked:
+            self.waiting.append(d)
+        else:
+            self.locked = 1
+            d.callback(self)
+        return d
+
+    def release(self):
+        """Release the lock.
+
+        Should be called by whomever did the acquire() when the shared
+        resource is free.
+        """
+        assert self.locked, "Tried to release an unlocked lock"
+        self.locked = 0
+        if self.waiting:
+            # someone is waiting to acquire lock
+            self.locked = 1
+            d = self.waiting.pop(0)
+            d.callback(self)
+
+    def _releaseAndReturn(self, r):
+        self.release()
+        return r
+
+    def run(*args, **kwargs):
+        """Acquire lock, run function, release lock.
+
+        This function takes a callable as its first argument and any
+        number of other positional and keyword arguments.  When the
+        lock is acquired, the callable will be invoked with those
+        arguments.
+
+        @return Deferred of function result.
+        """
+        if len(args) < 2:
+            if not args:
+                raise TypeError("DeferredLock.run() takes at least 2 arguments, none given.")
+            raise TypeError("%s.run() takes at least 2 arguments, %d given" % (
+                args[0].__class__.__name__, len(args)))
+        self, f = args[:2]
+        args = args[2:]
+
+        def execute(ignoredResult):
+            d = maybeDeferred(f, *args, **kwargs)
+            d.addBoth(self._releaseAndReturn)
+            return d
+
+        d = self.acquire()
+        d.addCallback(execute)
+        return d
+
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred", "waitForDeferred", "deferredGenerator",
+           "DeferredLock",
           ]
