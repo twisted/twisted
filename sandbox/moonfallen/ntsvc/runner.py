@@ -1,3 +1,5 @@
+"""NT Service Driver"""
+
 import sys
 import os.path
 import ConfigParser
@@ -22,6 +24,8 @@ def searchlikely(filename):
     Raise the default error if it is simply missing.
     """
     unreadable = []
+    # If we don't check os.access, we might stop on a file that exists
+    # but it unreadable, and never reach the file that exists and is readable.
     for fn in [util.sibpath(__file__, filename), filename]:
         if os.path.isfile(fn):
             if os.access(fn, os.R_OK):
@@ -31,7 +35,7 @@ def searchlikely(filename):
     if len(unreadable) > 0:
         raise EnvironmentError(' '.join(unreadable))
 
-    # raise a missing file exception
+    # check for missing file
     file(filename, 'r').close()
 
 # read the name of the tac, etc. from an ini file

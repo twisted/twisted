@@ -1,7 +1,10 @@
 To run this you need
  
+- Python 2.3 or later
 - py2exe installed, 0.5+
-- win32all
+- win32all 206 or greater.  Older ActiveState Pythons come with a version of
+  win32all that is not sufficiently up-to-date and you may have to upgrade
+  win32all.
 - unzip modulegraph.zip into sys.path
 
 IMPORTANT: for py2exe 0.5.4, a patch is needed.  After the next official
@@ -17,7 +20,7 @@ _______________________________________________________________________
 +        # Use the documented fact that when a fromlist is present,
 +        # __import__ returns the innermost module in "name".
 +        # This makes it possible to have a dotted name work the
-+        # way you"d expect.
++        # way you would expect.
 +        mod = __import__(name, globals(), locals(), ["DUMMY"])
          for ob in mod.__dict__.values():
              if hasattr(ob, "_svc_name_"):
@@ -40,6 +43,14 @@ setup(appconfig='my.tac')  # currently only works on tac files.
 You can also use all the setup options that py2exe allows, such as includes and
 data_files.  The .tac file itself is automatically appended to data_files,
 and everything the .tac imports will be in library.zip.
+
+To use additional py2exe options, add them inside an options block named
+'twistedservice'.  For example:
+
+-=-=-=-=-
+# note the nested dicts
+setup(appconfig='my.tac', options = {'twistedservice': {'includes': [...]}})
+-=-=-=-=-
 
 
 

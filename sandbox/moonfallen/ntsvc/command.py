@@ -82,6 +82,7 @@ class twistedservice(build_exe):
         
         config = os.path.abspath(twcfg['basecf'])
         isinteresting = lambda m: interestingModule(m, config)
+        # remove modules that aren't worthy of explicit importing
         li = list(itertools.ifilter(isinteresting, mf.flatten()))
         
         self.includes.extend([node.identifier for node in li])
