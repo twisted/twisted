@@ -128,6 +128,10 @@ objects</q> to the authentication system.</p>
 <p>This method will typically be called from 'Portal.login'.  The avatarId 
 is the one returned by a CredentialChecker.</p>
 
+<div class="note">Note that <code>avatarId</code> must always be a string. In
+particular, do not use unicode strings. If internationalized support is needed,
+it is recommended to use UTF-8, and take care of decoding in the realm.  </div>
+
 <p>The important thing to realize about this method is that if it is being 
 called, <em>the user has already authenticated</em>.  Therefore, if possible, 
 the Realm should create a new user if one does not already exist 
