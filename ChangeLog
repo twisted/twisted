@@ -1,9 +1,9 @@
 2003-02-06  Bob Ippolito  <bob@redivi.com>
 
-    * twisted/protocols/smtp.py: sendEmail supports multipartboundary
-    keyword argument, which is useful for doing HTML emails if passed 
-    "alternative" as opposed to the default "mixed".  Uses 7bit
-    encoding for mime types that start with 'text', base64 otherwise.
+	* twisted/protocols/smtp.py: sendEmail supports multipartboundary
+	keyword argument, which is useful for doing HTML emails if passed 
+	"alternative" as opposed to the default "mixed".  Uses 7bit
+	encoding for mime types that start with 'text', base64 otherwise.
     
 2003-02-04  Jp Calderone  <exarkun@twistedmatrix.com>
 
