@@ -45,6 +45,12 @@ class GladeReactor(sup):
         store, iter = self.servers.get_selection().get_selected()
         store[iter][COLUMN_TRANSPORT].loseConnection()
 
+    def on_inspect_clicked(self, w):
+        store, iter = self.servers.get_selection().get_selected()
+        data = store[iter]
+        from twisted.internet._inspectro import Inspectro
+        Inspectro(data[1])
+
     def on_suspend_clicked(self, w):
         store, iter = self.servers.get_selection().get_selected()
         data = store[iter]
