@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 """I deal with static resources.
 """
 
@@ -76,11 +78,27 @@ class Redirect(resource.Resource):
 from twisted.internet.interfaces import IServiceCollection
 from twisted.internet.app import ApplicationService
 
-class Registry(components.Componentized):
+class Registry(components.Componentized, styles.Versioned):
     """
     I am a Componentized object that will be made available to internal Twisted
     file-based dynamic web content such as .rpy and .epy scripts.
     """
+
+    def __init__(self):
+        components.Componentized.__init__(self)
+        self._pathCache = {}
+
+    persistenceVersion = 1
+
+    def upgradeToVersion1(self):
+        self._pathCache = {}
+
+    def cachePath(self, path, rsrc):
+        self._pathCache[path] = rsrc
+
+    def getCachedPath(self, path):
+        return self._pathCache.get(path)
+
     def _grabService(self, svc, sclas):
         """
         Find an instance of a particular class in a service collection and all
