@@ -70,6 +70,8 @@ class SSHSession(connection.SSHChannel):
         peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
         hostP = (self.conn.transport.transport.getHost()[2],)
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
+        ttyGID = os.stat(self.ptyTuple[2])[5]
+        os.chown(self.ptyTuple[2], uid, ttyGID)
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
@@ -99,6 +101,8 @@ class SSHSession(connection.SSHChannel):
         peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
         hostP = (self.conn.transport.transport.getHost()[2],)
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
+        ttyGID = os.stat(self.ptyTuple[2])[5]
+        os.chown(self.ptyTuple[2], uid, ttyGID)
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
@@ -208,6 +212,8 @@ class SSHSession(connection.SSHChannel):
         self.loseConnection() # don't know what to do with this
 
     def closed(self):
+        ttyGID = os.stat(self.ptyTuple[2])[5]
+        os.chown(self.ptyTuple[2], 0, ttyGID)
         try:
             del self.client
         except AttributeError:
