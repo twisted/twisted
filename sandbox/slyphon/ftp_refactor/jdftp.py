@@ -2,6 +2,13 @@
 # FTPClient written by spiv
 # server and client refactor by slyphon (Jonathan D. Simms)
 
+# NOTES:
+# This is a really crazy protocol, so i'm making some notes up here for myself
+# and whatever unlucky person is going to have to maintain this code after me.
+#
+# 
+
+
 # System Imports
 import os
 import time
@@ -153,10 +160,7 @@ RESPONSE = {
     FILENAME_NOT_ALLOWED:               '553 requested action not taken, file name not allowed'
 }
 
-# -- Utility Functions --
-
-def debugDeferred(self, *_):
-    log.debug(_)
+   
         
 # -- Custom Exceptions --
 
@@ -234,7 +238,11 @@ class DTPFileSender(basic.FileSender):
             self.deferred.errback(ClientDisconnectError())
             self.deferred = None
 
+# -- Utility Functions --
 
+def debugDeferred(self, *_):
+    log.debug('debugDeferred(): %s' % str(_))
+ 
 def _getFPName(fp):
     '''returns a file object's name attr if it has one,
     otherwise it returns "name"
@@ -250,10 +258,10 @@ class DTP(protocol.Protocol):
     def connectionMade(self):
         """Will start an transfer, if one is queued up, 
         when the client connects"""
+        self.pi.setTimeout(None)        # don't timeout as long as we have a connection
         peer = self.transport.getPeer()
-        log.debug('got a DTP connection %s:%s' % (peer[1],peer[2]))
+        #log.debug('got a DTP connection %s:%s' % (peer[1],peer[2]))
 
-        d, self.factory.deferred = self.factory.deferred, defer.Deferred()
 
         if self.factory.peerCheck and peer[1] != self.pi.peerHost[1]:
             # DANGER Will Robinson! Bailing!
@@ -262,17 +270,20 @@ class DTP(protocol.Protocol):
             return
 
         log.debug('firing dtpFactory deferred')
+        d, self.factory.deferred = self.factory.deferred, defer.Deferred()
         d.callback(None)
 
-    #TODO: need to test this. taken directly from the pop3 code
-    #      so i don't know if the commented-out chunk on the right
-    #      is necessary
     def transformChunk(self, chunk):
+        #TODO: need to test this. taken directly from the pop3 code
+        #      so i don't know if the commented-out chunk on the right
+        #      is necessary
         return chunk.replace('\n', '\r\n') #.replace('\r\n.', '\r\n..')
 
-    def dtp_RETR(self, fp): # RETR = sendFile
-        '''ssnds a file object out the wire'''
-        filename = _getFPName(fp)
+    def dtp_RETR(self): # RETR = sendFile
+        '''ssnds a file object out the wire
+        @param fpSizeTuple a tuple of a file object and that file's size
+        '''
+        filename = _getFPName(self.pi.fp)
 
         log.debug('sendfile sending %s' % filename)
 
@@ -281,55 +292,63 @@ class DTP(protocol.Protocol):
             transform = self.transformChunk
         else:
             transform = None
-        return fs.beginFileTransfer(fp, self.transport, transform
-                ).addCallback(self.finishedFileTransfer
+        return fs.beginFileTransfer(self.pi.fp, self.transport, transform
+                ).addCallback(debugDeferred,'firing at end of file transfer'
+                ).addCallback(self._finishedFileTransfer
                 )
 
-    def finishedFileTransfer(self, *arg):
+    def _finishedFileTransfer(self, *arg):
+        log.debug("dtp._finishedFileTransfer")
         self.transport.loseConnection()
-        self.pi.reply(TXFR_COMPLETE_OK)
+        t = self.transport
+        log.debug("disconnecting?: %d, disconnected?: %d" % (t.disconnecting, t.disconnected))
 
+    def connectionLost(self, reason):
+        log.debug('dtp.connectionLost: %s' % reason)
+#        self.pi.cleanupDTP()
+        
 
-#TODO:  implement timeout functionality for this factory
-#       after the factories' creation, it should wait for n minutes
-#       before giving up. this wouldn't work in the protocol because
-#       the protocol waits for n minutes of idle time and for some reason
-#       the TimeoutMixin doesn't seem to work in this scenario
-#
-#       the factory times *waiting* for a connection (to create a protocol)
-class DTPFactory(protocol.ServerFactory): 
+class DTPFactory(protocol.Factory): 
     # -- configuration variables --
     peerCheck = True
-    protocol = DTP
 
     # -- class variables --
-    def __init__(self, pi, peerHost):
+    def __init__(self, pi, peerHost=None):
         self.pi = pi                        # the protocol interpreter that is using this factory
-        self.peerHost = peerHost            # the from FTP.transport.getHost()
+        self.peerHost = peerHost            # the from FTP.transport.peerHost()
         self.deferred = defer.Deferred()    # deferred will fire when instance is connected
+        self.delayedCall = None
 
     def buildProtocol(self, addr):
+        log.debug('buildProtocol')
         self.cancelTimeout()
         if self.pi.dtpInstance:   # only create one instance
             return 
-        p = protocol.ServerFactory.buildProtocol(self, addr)      # like in __init__ of a base-class
+        p = DTP()
         p.factory = self
         p.pi = self.pi
         self.pi.dtpInstance = p
         return p
 
-    def stopFactory(self):
-        self.pi.cleanupDTP()
+    def doStop(self):
+        log.debug('dtpFactory.doStop')
+        if self.numPorts > 0:
+            protocol.Factory.doStop(self)
+        self.cancelTimeout()
 
     def timeoutFactory(self):
         log.msg('timed out waiting for DTP connection')
         if self.deferred:
             d, self.deferred = self.deferred, None 
             d.errback(defer.TimeoutError())
-        self.stopFactory()
+        self.doStop()
 
     def cancelTimeout(self):
-        self.delayedCall.cancel()
+        if not self.delayedCall.called and not self.delayedCall.cancelled: 
+            log.debug('cancelling DTP timeout')
+            self.delayedCall.cancel()
+            assert self.delayedCall.cancelled
+            log.debug('timeout has been cancelled')
 
     def setTimeout(self, seconds):
         self.delayedCall = reactor.callLater(seconds, self.timeoutFactory)
@@ -342,26 +361,30 @@ def cleanPath(params):
     if params:
         params = re.sub(r'[\\]{2,}?', '/', params)
         params = re.sub(r'[/]{2,}?','/', params)
+        params = re.sub(r'[*]?', '', params)
+    log.debug('cleaned path: %s' % params)
     return params
 
 class FTP(basic.LineReceiver, policies.TimeoutMixin):      
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
+    reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
 
     # how long the DTP waits for a connection
-    dtpTimeout = 13
+    dtpTimeout = 10
     
     def __init__(self):
         self.portal      = None
         self.shell       = None     # the avatar
-        self.dtpFactory  = None     # generates a single DTP for this session
-        self.dtpInstance = None     # a DTP protocol instance
-        self.dtpPort     = None     # the port that the DTPFactory is listening on
         self.user        = None     # the username of the client connected 
         self.peerHost    = None     # the (type,ip,port) of the client
         self.dtpTxfrMode = None     # PASV or PORT, no default
         self.blocked     = None     # a command queue for pipelining 
         self.binary      = None     # binary transfers? False implies ASCII
+        self.dtpFactory  = None     # generates a single DTP for this session
+        self.dtpInstance = None     # a DTP protocol instance
+        self.dtpPort     = None     # object returned from listenTCP
+        self.dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
         self.dtpHostPort = None     # client address/port to connect to on PORT command
         self.timeOut     = None     # how much idleness we can stand before leaving
     
@@ -377,14 +400,14 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
             --> DEBUGGING CODE ACTIVE!!! <--
 ''')
-        self.timeOut = 10
-        lr = self.lineReceived
-        lr('USER anonymous')
-        lr('PASS f@d.com')
-        lr('PASV')
-        lr('LIST')
-        lr('RETR .vim/vimrc')
-        lr('RETR Session.vim')
+        reactor._pi = self
+        #lr = self.lineReceived
+        #lr('USER anonymous')
+        #lr('PASS f@d.com')
+        #lr('PASV')
+        #lr('LIST')
+        #lr('RETR .vim/vimrc')
+        #lr('RETR Session.vim')
 
     def connectionLost(self, reason):
         log.msg("Oops! lost connection\n %s" % reason)
@@ -401,40 +424,46 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory.deferred:
             d, self.dtpFactory.deferred = self.dtpFactory.deferred, None
             d.errback(FTPTimeoutError('cleaning up dtp!'))
-        
+
     def lineReceived(self, line):
         "Process the input from the client"
         self.resetTimeout()
         line = string.strip(line)
         log.debug(repr(line))
+        line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
         line = line.encode() 
         try:
-            #return self.processCommand(*line.split())
             self.processCommand(*line.split())
         except CmdSyntaxError, (e,):
             self.reply(SYNTAX_ERR, string.upper(command))
         except CmdArgSyntaxError, (e,):
-            log.err(e)
+            log.debug(e)
             self.reply(SYNTAX_ERR_IN_ARGS, e)
         except AnonUserDeniedError, (e,):
-            log.err(e)
+            log.debug(e)
             self.reply(ANON_USER_DENIED, e)
         except CmdNotImplementedError, (e,):
-            log.err(e)
+            log.debug(e)
             self.reply(CMD_NOT_IMPLMNTD, e)
         except BadCmdSequenceError, (e,): 
-            log.err(e)
+            log.debug(e)
             self.reply(BAD_CMD_SEQ, e)
         except AuthorizationError, (e,):
-            log.err(e)
+            log.debug(e)
             self.reply(AUTH_FAILURE, 'internal server error')
         except FileNotFoundError, (e,):
+            log.debug(e)
             self.reply(FILE_NOT_FOUND, e)
         except PathBelowTLDError, (e,):
+            log.debug(e)
             self.reply(PERMISSION_DENIED, e)
-        except (ValueError, AttributeError, TypeError), (e,):
-            log.err(e)
+        except OperationFailedError, (e,):
+            log.debug(e)
+            self.reply(REQ_ACTN_NOT_TAKEN, '')
+        except Exception, (e,):
+            log.err()
             self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
+            raise
 
     def processCommand(self, cmd, *args):
         if self.blocked != None:                                                # all DTP commands block, 
@@ -452,6 +481,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             if not self.dtpInstance:                                            # if no one has connected yet
                 # a bit hackish, but manually blocks this command 
                 # until we've set up the DTP protocol instance
+                # _unblock will run this first command and subsequent
                 assert self.blocked == None                                     # we should not be blocked if we haven't run any DTP commands yet
                 self.blocked = [(cmd,args)]                                     # add item to queue and start blocking
                 log.debug('during dtp setup, blocked = %s' % self.blocked)
@@ -460,7 +490,6 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         if method:
             return method(*args)                                                
         raise CmdNotImplementedError(cmd)                 # if we didn't find cmd, raise an error and alert client
-        log.debug("SOMETHING IS SCREWY")
 
     def _unblock(self, *_):
         log.debug('_unblock running')                                           # unblock commands
@@ -487,7 +516,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         if not self.dtpFactory:
             phost = self.transport.getPeer()[1]
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
-
+            self.dtpFactory.setTimeout(self.dtpTimeout)
         if self.dtpTxfrMode == PASV:
             self.dtpPort = reactor.listenTCP(0, self.dtpFactory)   
         elif self.dtpHostPort: 
@@ -524,18 +553,33 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         """call when DTP connection exits
         """
         log.debug('cleanupDTP')
-        if hasattr(self.dtpPort, 'connected'):
-            if self.dtpPort.connected:
-                self.dtpPort.loseConnection()
-            if hasattr(self.dtpPort.transport, 'socket'):
-                log.debug('transport has socket, running stopListening()')
-                self.dtpPort.stopListening()
-            self.dtpFactory = None
-            self.dtpInstance = None
-            self.dtpPort = None
 
-    def _doDTPCommand(self, cmd, arg):
+        dtpPort, self.dtpPort = self.dtpPort, None
+        if hasattr(dtpPort, 'connected'):
+            if dtpPort.connected:
+                log.debug('dtpPort is still connected')
+                dtpPort.loseConnection()
+        if hasattr(dtpPort, 'transport') and hasattr(dtpPort.transport, 'socket'):
+            log.debug('transport has socket, running stopListening()')
+            dtpPort.stopListening()
+
+        self.dtpFactory.doStop()
+
+        if self.dtpFactory is None:
+            log.debug('ftp.dtpFactory already set to None')
+        else:
+            self.dtpFactory = None
+
+        if self.dtpInstance is None:
+            log.debug('ftp.dtpInstance already set to None')
+        else:
+            self.dtpInstance = None
+        return
+
+    def _doDTPCommand(self, cmd, *arg): 
         self.setTimeout(None)               # don't Time out when waiting for DTP Connection
+        #if self.dtpPort and not hasattr(self.dtpPort, 'socket'):      # if we've already executed one command, but are not listening any longer
+        #    self._createDTP()
         if self.blocked is None:
             self.blocked = []
         try:
@@ -545,16 +589,44 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             raise e
         else:
             self.dtpFactory.setTimeout(self.dtpTimeout)
-            f(arg).addCallback(debugDeferred, 'deferred returned to _doDTPCommand'
-                ).addCallback(self._cbDTPCommand
-                ).addCallback(self._unblock
-                ).addErrback(self._ebDTP)
+            if arg:
+                d = f(arg)
+            else:
+                d = f()
+            d.addCallback(debugDeferred, 'deferred returned to _doDTPCommand has fired')
+            d.addCallback(lambda _: self._cbDTPCommand())
+            d.addCallback(debugDeferred, 'running cleanupDTP')
+            d.addCallback(lambda _: self.cleanupDTP())
+            d.addCallback(debugDeferred, 'running ftp._finishedFileTransfer')
+            d.addCallback(lambda _: self._finishedFileTransfer())
+            d.addCallback(debugDeferred, 'running ftp.setTimeout(%s)' % self.timeOut)
+            d.addCallback(lambda _: self.setTimeout(self.timeOut))
+            d.addCallback(debugDeferred, 'running ftp._unblock')
+            d.addCallback(lambda _: self._unblock())
+            d.addErrback(self._ebDTP)
+                
 
-    def _cbDTPCommand(self, arg):
-        log.debug("DTP Command success: %s" % arg)
-        self.setTimeout(self.timeOut)               # restart timeOut clock after DTP returns
+    def _finishedFileTransfer(self, *arg):
+        '''called back when a file transfer has been completed by the dtp'''
+        log.debug('finishedFileTransfer! cleaning up DTP')
+        if self.fp is not None:
+            if self.fp.tell() == self.fpsize:
+                log.debug('transfer completed okay :-)')
+                self.reply(TXFR_COMPLETE_OK)
+            else:
+                log.debug("uh-oh there was an error...must have been the client's fault")
+                self.reply(CNX_CLOSED_TXFR_ABORTED)
+            self.fp.close()
 
-    def ftp_USER(self, params):
+
+    def _cbDTPCommand(self):
+        '''called back when any DTP command has completed successfully'''
+        log.debug("DTP Command success")
+        return
+#        self.cleanupDTP()
+#        self.setTimeout(self.timeOut)               # restart timeOut clock after DTP returns
+
+    def ftp_USER(self, params, *_):
         """Get the login name, and reset the session
         PASS is expected to follow
 
@@ -580,8 +652,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             self.reply(USR_NAME_OK_NEED_PASS, self.user)
 
     # TODO: add max auth try before timeout from ip...
+    # TODO: need to implement minimal ABOR command
 
-    def ftp_PASS(self, params):
+    def ftp_PASS(self, params='', *_):
         """Authorize the USER and the submitted password
 
         from the rfc:
@@ -598,6 +671,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         log.debug('ftp_PASS params: %s' % params)
 
+        if params == '':
+            raise CmdArgSyntaxError('you must specify a password with PASS')
         
         self.passwd = params.split()[0]        # parse password 
 
@@ -660,10 +735,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         else:
             raise CmdSyntaxError(p)
 
-    def ftp_SYST(self, params=None):
+    def ftp_SYST(self, params=None, *_):
         self.reply(NAME_SYS_TYPE)
 
-    def ftp_LIST(self, params=''):
+    def ftp_LIST(self, params='', *_):
         """ This command causes a list to be sent from the server to the
         passive DTP.  If the pathname specifies a directory or other
         group of files, the server should transfer a list of files
@@ -676,18 +751,27 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         if params == "-a": params = ''  # bug in konqueror
         if params == "-aL": params = '' # bug in gFTP 2.0.15
 
-        sioObj = self.shell.list(cleanPath(params))    # returns a StringIO object
-        if self.dtpInstance.connected:
+        self.fp, self.fpsize = self.shell.list(cleanPath(params))    # returns a StringIO object
+        if self.dtpInstance and self.dtpInstance.connected:
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
         else:
             self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
-        self._doDTPCommand('RETR', sioObj)
+        self._doDTPCommand('RETR')
+
+    def ftp_SIZE(self, params='', *_):
+        log.debug('ftp_SIZE: %s' % params)
+        filesize = self.shell.size(cleanPath(params))
+        self.reply(FILE_STATUS, filesize)
+
+    def ftp_MDTM(self, params='', *_):
+        log.debug('ftp_MDTM: %s' % params)
+        dtm = self.shell.mdtm(cleanPath(params))
+        self.reply(FILE_STATUS, dtm)
  
-    def ftp_PWD(self, params=''):
+    def ftp_PWD(self, params='', *_):
         """ Print working directory command
         """
         self.reply(PWD_REPLY, self.shell.pwd())
-    
 
     def ftp_PASV(self, *_):
         """Request for a passive connection
@@ -725,14 +809,14 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         @returns: a 2-tuple of (host, port).
         """
-        abcdef = re.sub('[^0-9, ]', '', line[4:])
+        #abcdef = re.sub('[^0-9, ]', '', line[4:])
+        abcdef = re.sub('[^0-9, ]', '', line)
         a, b, c, d, e, f = map(str.strip, abcdef.split(','))
         host = "%s.%s.%s.%s" % (a, b, c, d)
         port = (int(e)<<8) + int(f)
         return (host, port)
 
-
-    def ftp_PORT(self, params):
+    def ftp_PORT(self, params, *_):
         log.debug('ftp_PORT')
         self.dtpTxfrMode = PORT
         self.dtpHostPort = self.decodeHostPort(params)
@@ -745,40 +829,43 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
                 log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
         self.reply(PORT_MODE_OK)
 
-
-
-    def ftp_CWD(self, params):
+    def ftp_CWD(self, params, *_):
         self.shell.cwd(cleanPath(params))
         self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
-    def ftp_CDUP(self, params):
+    def ftp_CDUP(self, *_):
         self.shell.cdup()
         self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
-    def ftp_RETR(self, params):
+    def ftp_RETR(self, params, *_):
         if self.dtpTxfrMode is None:
             raise BadCmdSequenceError('must send PORT or PASV before RETR')
-        fp = self.shell.retr(cleanPath(params))
-        self._doDTPCommand('RETR', fp)
+        self.fp, self.fpsize = self.shell.retr(cleanPath(params))
+        self._doDTPCommand('RETR')
 
-    def ftp_STRU(self, params=""):
+    def ftp_STRU(self, params="", *_):
         p = params.upper()
         if params == 'F':
             return self.reply(CMD_OK)
         raise CmdNotImplementedForArgError(params)
 
-    def ftp_MODE(self, params=""):
+    def ftp_MODE(self, params="", *_):
         p = params.upper()
         if params == 'S':
             return self.reply(CMD_OK)
         raise CmdNotImplementedForArgError(params)
+
+    def ftp_QUIT(self, params='', *_):
+        self.transport.loseConnection()
+        log.debug("Client Quit")
 
 
 class FTPFactory(protocol.Factory):
     protocol = FTP
     allowAnonymous = True
     userAnonymous = 'anonymous'
-    timeOut = 300
+    timeOut = 1000
+    instances = []
 
     def __init__(self, portal=None):
         self.portal = portal
@@ -788,7 +875,13 @@ class FTPFactory(protocol.Factory):
         pi.protocol   = self.protocol
         pi.portal     = self.portal
         pi.timeOut    = self.timeOut
+        pi.factory    = self
+        self.instances.append(pi)
         return pi
+
+    def stopFactory(self):
+        for p in self.instances:
+            p.setTimeout(None)
 
 # -- Cred Objects --
 
@@ -797,13 +890,18 @@ class IFTPShell(components.Interface):
     for a given user account
     """
 
-    def buildFullPath(self, path):
+    def mapCPathToSPath(self, path):
         """converts a specified path relative to the user's top level directory
         into a path in the filesystem representation
 
         example: if the user's tld is /home/foo and there's a file in the filesystem
         /home/foo/bar/spam.tar.gz the user would specify path /bar/spam.tar.gz in the 
         ftp command, and this function would translate it into /home/foo/bar/spam.tar.gz
+
+        @returns a tuple (cpath, spath) where cpath is the client's top level directory
+        plus path, and spath is cpath in relation to the server's filesystem.
+
+        cpath is an illusion, spath is a real file in the filesystem
         """
         pass
 
@@ -860,8 +958,9 @@ class IFTPShell(components.Interface):
         pass
 
     def list(self, path):
-        """return a StringIO object containing the directory listing to
-        be sent to the client via the DTP
+        """@returns a tuple of (StringIO_object, size) containing the directory 
+        listing to be sent to the client via the DTP
+        
 
         from the rfc:
             This command causes a list to be sent from the server to the
@@ -891,7 +990,8 @@ class IFTPShell(components.Interface):
         at the other end of the data connection.  The status and
         contents of the file at the server site shall be unaffected.
 
-        returns an opened file-like object to the data requested
+        @returns a tuple of (fp, size) where fp is an opened file-like object 
+        to the data requested and size is the size, in bytes, of fp
         """
         pass
 
@@ -906,6 +1006,9 @@ class IFTPShell(components.Interface):
         """
         pass
 
+    def mdtm(self, path):
+        '''returns the date of path in the form of %Y%m%d%H%M%S'''
+        pass
 
 class FTPAnonymousShell(object):
     __implements__ = (IFTPShell,)
@@ -945,29 +1048,20 @@ class FTPAnonymousShell(object):
         common = os.path.commonprefix([self.tld, nspath])
         if common != self.tld:
             raise PathBelowTLDError('Cannot access below / directory')
-        class _:
-            def __init__(self, cpath, spath):
-                self.clientPath = cpath
-                self.serverPath = spath
-        return _(ncpath, nspath)
+        if not os.path.exists(nspath):
+            raise FileNotFoundError(nspath)
+        return (mappedClientPath, mappedServerPath)
  
     def cwd(self, path):
-        mapped = self.mapCPathToSPath(path)
-        if os.path.exists(mapped.serverPath) and os.path.isdir(mapped.serverPath):
-            self.clientwd = mapped.clientPath
+        cpath, spath = self.mapCPathToSPath(path)
+        log.debug(cpath, spath)
+        if os.path.exists(spath) and os.path.isdir(spath):
+            self.clientwd = cpath
         else:
-            raise FileNotFoundError(mapped.clientPath)
+            raise FileNotFoundError(cpath)
        
     def cdup(self):
         self.cwd('..')
-
-#    def size(self, path):
-#        # is this specified in the RFC?
-#        """"""
-#        npath = self.buildFullPath(path)
-#        if not os.path.isfile(npath):
-#            raise FileNotFoundError(path)
-#        return os.path.getsize(npath)
 
     def dele(self, path):
         raise AnonUserDeniedError()
@@ -979,46 +1073,116 @@ class FTPAnonymousShell(object):
         raise AnonUserDeniedError()
  
     def retr(self, path):
-        mapped = self.mapCPathToSPath(path)
-        if not os.path.isfile(mapped.serverPath):
-            raise FileNotFoundError(mapped.clientPath)
+        cpath, spath = self.mapCPathToSPath(path)
+        if not os.path.isfile(spath):
+            raise FileNotFoundError(cpath)
 #        if not os.access(npath, os.O_RDONLY):
 #            raise PermissionDeniedError(npath)
         # TODO: need to do some kind of permissions checking here
-        return file(mapped.serverPath, 'rb')
+        
+        try:
+            return (file(spath, 'rb'), os.path.getsize(spath))
+        except OSError, (e,):
+            log.debug(e)
+            raise OperationFailedError('')
 
     def stor(self, params):
         raise AnonUserDeniedError()
 
-    def list(self, path):
-        spath = self.mapCPathToSPath(path).serverPath
-        alist = os.listdir(spath)
-        s = ''
-        for a in alist:
-            ts = a
-            ff = os.path.join(path, ts) # the full filename
-            try:
-                # TODO: FIX THIS ALREADY!!!
-                #
-                # os.path.getmtime calls os.stat: os.stat fails w/ an IOError
-                # on broken symlinks.  I know there's some way to get the real
-                # mtime out, since ls does it, but I haven't had time to figure
-                # out how to do it from python.
-                mtn = os.path.getmtime(ff)
-                fsize = os.path.getsize(ff)
-            except OSError:
-                mtn = 0
-                fsize = 0
-            mtime = time.strftime("%b %d %H:%M", time.gmtime(mtn))
-            if os.path.isdir(ff):
-                diracc = 'd'
-            else:
-                diracc = '-'    
-            s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+ts+'\r\n'
-        sio = StringIO(s)
-        sio.seek(0)         # rewind the file position to the beginning
-        return sio          # a file-like object to send down the wire
+    def getUnixLongListString(self, path):
+        from stat import ST_MODE,ST_NLINK,ST_UID,ST_GID,ST_SIZE,ST_MTIME
+        import pwd, grp, time
+        cpath, spath = self.mapCPathToSPath(path)
+        log.debug('cpath: %s,   spath:%s' % (cpath, spath))
 
+        TYPE, PMSTR, NLINKS, OWN, GRP, SZ, MTIME, NAME = range(8)
+
+        if os.path.isdir(spath):
+            log.debug('list path isdir')
+            dlist = os.listdir(spath)
+            log.debug(dlist)
+            dlist.sort()
+        else:
+            log.debug('list path is not dir')
+            dlist = [spath]
+
+        pstat = None
+        result = []
+        sio = StringIO()
+        maxNameWidth, maxOwnWidth, maxGrpWidth, maxSizeWidth, maxNlinksWidth = 0, 0, 0, 0, 0
+        
+
+        for item in dlist:
+            try:
+                pstat = os.lstat(os.path.join(spath, item))
+
+                # this is exarkun's bit of magic
+                fmt = 'pld----'
+                pmask = lambda mode: ''.join([mode & (256 >> n) and 'rwx'[n % 3] or '-' for n in range(9)])
+                dtype = lambda mode: [fmt[i] for i in range(7) if (mode >> 12) & (1 << i)][0]
+
+                type = dtype(pstat[ST_MODE])
+                pmstr = pmask(pstat[ST_MODE])
+                nlinks = str(pstat[ST_NLINK])
+                owner = pwd.getpwuid(pstat[ST_UID])[0]
+                group = grp.getgrgid(pstat[ST_GID])[0]
+                size = str(pstat[ST_SIZE])
+                mtime = time.strftime('%b %d %I:%M', time.gmtime(pstat[ST_MTIME]))
+                name = os.path.split(item)[1]
+                unixpms = "%s%s" % (type,pmstr)
+            except (OSError, KeyError), e:
+                log.debug(e)
+                continue
+
+            if len(name) > maxNameWidth:
+                maxNameWidth = len(name)
+            if len(owner) > maxOwnWidth:
+                maxOwnWidth = len(owner)
+            if len(group) > maxGrpWidth:
+                maxGrpWidth = len(group)
+            if len(size) > maxSizeWidth:
+                maxSizeWidth = len(size)
+            if len(nlinks) > maxNlinksWidth:
+                maxNlinksWidth = len(nlinks)
+
+            result.append([type, pmstr, nlinks, owner, group, size, mtime, name])
+
+        for r in result:
+            r[OWN]  = r[OWN].ljust(maxOwnWidth)
+            r[GRP]  = r[GRP].ljust(maxGrpWidth)
+            r[SZ]   = r[SZ].rjust(maxSizeWidth)
+            #r[NAME] = r[NAME].ljust(maxNameWidth)
+            r[NLINKS] = r[NLINKS].rjust(maxNlinksWidth)
+            sio.write('%s%s %s %s %s %s %8s %s\n' % tuple(r))
+
+        sio.seek(0)
+        return sio
+       
+    def list(self, path):
+        sio = self.getUnixLongListString(path)
+        log.debug(sio.getvalue())
+        return (sio, len(sio.getvalue()))
+
+    def mdtm(self, path):
+        from stat import ST_MTIME
+        cpath, spath = self.mapCPathToSPath(path)
+        if not os.path.isfile(spath):
+            raise FileNotFoundError(spath)
+        try:
+            dtm = time.strftime("%Y%m%d%H%M%S", time.gmtime(os.stat(spath)[ST_MTIME]))
+        except OSError, (e,):
+            log.err(e)
+            raise OperationFailedError(e)
+        else:
+            return dtm
+
+    def size(self, path):
+        """returns the size in bytes of path"""
+        cpath, spath = self.mapCPathToSPath(path)
+        if not os.path.isfile(spath):
+            raise FileNotFoundError(spath)
+        return os.path.getsize(spath)
+   
     def nlist(self, path):
         pass
 
