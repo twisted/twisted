@@ -20,7 +20,7 @@ import string, re
 # Twisted Imports
 from twisted.protocols import toc
 from twisted.im.locals import ONLINE, OFFLINE, AWAY
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.python.defer import succeed
 
 # Sibling Imports
@@ -183,5 +183,5 @@ class TOCAccount(basesupport.AbstractAccount):
         self.port = port
 
     def startLogOn(self, chatui):
-        tcp.Client(self.host, self.port, TOCProto(self, chatui))
+        reactor.clientTCP(self.host, self.port, TOCProto(self, chatui))
 

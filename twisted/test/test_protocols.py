@@ -21,7 +21,7 @@ Test cases for twisted.protocols package.
 
 from pyunit import unittest
 from twisted.protocols import protocol, basic, wire
-from twisted.internet import tcp, main
+from twisted.internet import reactor
 
 import string
 import StringIO
@@ -192,20 +192,22 @@ class ClosingProtocol(protocol.Protocol):
     def connectionLost(self):
         self.closed = 1
 
+    connectionFailed = connectionLost
+
+
 class LoopbackTestCase(unittest.TestCase):
     """Test loopback connections."""
     
     def testClosePortInProtocolFactory(self):
         f = ClosingFactory()
-        port = tcp.Port(10080, f)
+        port = reactor.listenTCP(10080, f)
         f.port = port
-        port.startListening()
         client = ClosingProtocol()
-        tcp.Client("localhost", 10080, client)
+        reactor.clientTCP("localhost", 10080, client)
         
         while not client.closed:
-            main.iterate()
-        main.iterate()
-        main.iterate()
+            reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
         
         self.assert_(port.disconnected)

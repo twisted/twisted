@@ -99,3 +99,4 @@ if runtime.platform.getType() != 'posix':
     del PosixProcessTestCase
 elif runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase
+

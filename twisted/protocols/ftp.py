@@ -65,7 +65,7 @@ import re
 from math import floor
 
 # Twisted Imports
-from twisted.internet import abstract, tcp
+from twisted.internet import abstract, reactor
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.protocols import protocol
@@ -275,8 +275,7 @@ class DTPFactory(protocol.Factory):
                 self.dtp.transport.loseConnection()
             self.dtp = None
         # giving 0 will generate a free port
-        self.dtpPort = tcp.Port(0, self)
-        self.dtpPort.startListening()
+        self.dtpPort = reactor.listenTCP(0, self)
  
     def createActiveServer(self):
         if self.dtp is not None:
@@ -284,7 +283,7 @@ class DTPFactory(protocol.Factory):
                 self.dtp.transport.loseConnection()
             self.dtp = None
         self.dtp = self.buildProtocol(self.peerport)
-        self.dtpPort = tcp.Client(self.peerhost, self.peerport, self.dtp)
+        self.dtpPort = reactor.clientTCP(self.peerhost, self.peerport, self.dtp)
 
     def buildProtocol(self,addr):
         p = DTP()
@@ -665,7 +664,9 @@ class FTPFactory(protocol.Factory):
 #   * Doesn't understand any of the weird, obscure TELNET stuff (\377...)
 #   * FIXME: Doesn't share any code with the FTPServer
 
-class FTPDataPort(tcp.Port):
+# this uses APIs that no longer exist - someone had better clean this stuff
+# up. you know how you are :)
+class XXXFTPDataPort:
     def approveConnection(self, sock, addr):
         # FIXME: Guard against FTP spoofing
         return 1
@@ -810,7 +811,7 @@ class FTPClient(basic.LineReceiver):
                 host = "%s.%s.%s.%s" % (a, b, c, d)
                 port = int(e)*256 + int(f)
 
-                mutable[0] = (tcp.Client(host, port, protocol, 30.0))
+                mutable[0] = (reactor.clientTCP(host, port, protocol, 30.0))
 
             pasvCmd = FTPCommand('PASV')
             self.queueCommand(pasvCmd)

@@ -23,7 +23,7 @@ Implementation of the SOCKSv4 protocol.
 import protocol
 
 # twisted imports
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.python import log
 
 # python imports
@@ -106,7 +106,7 @@ class SOCKSv4(protocol.Protocol):
                 self.makeReply(91)
                 return
             if code==1: # CONNECT
-                tcp.Client(server,port,SOCKSv4Outgoing(self))
+                reactor.clientTCP(server,port,SOCKSv4Outgoing(self))
             elif code==2: # BIND
                 self.serv=tcp.Port(0,SOCKSv4IncomingFactory(self))
                 self.serv.startListening()

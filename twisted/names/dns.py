@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import dns, protocol
-from twisted.internet import tcp, udp, main
+from twisted.internet import reactor, udp, tcp
 from twisted.python import defer, components
 import random, string, struct
 
@@ -82,7 +82,7 @@ class DNSBoss:
         self.createTCPFactory()
         protocol = self.factories[1].buildProtocol(addr)
         protocol.setQuery(name, callback, type, cls)
-        transport = tcp.Client(addr[0], addr[1], protocol, recursive)
+        transport = reactor.clientTCP(addr[0], addr[1], protocol, recursive)
 
     def stopReading(self, i):
         if self.ports[i] is not None:
@@ -220,7 +220,7 @@ class Resolver:
         deferred = defer.Deferred()
         query = SentQuery(name, type, deferred.callback, deferred.errback, 
                           self.boss, self.nameservers)
-        main.addTimeout(query.timeOut, timeout)
+        reactor.callLater(timeout, query.timeOut)
         return deferred
 
 
