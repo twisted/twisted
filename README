@@ -46,7 +46,7 @@ What can I do with it?
   is in your $PYTHONPATH. For example, if you extracted Twisted-0.15.0.tar.gz
   to /home/bob/, then you would have something like: 
 
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.15.0/twisted
+    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.15.0/
   
   in your ~/.bash_profile.
 
