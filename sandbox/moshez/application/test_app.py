@@ -92,9 +92,19 @@ application = service.Application("hello")
         self.assertEqual(service.IService(appl).name, "lala")
         self.assertEqual(sob.IPersistable(appl).name, "lala")
         self.assertEqual(sob.IPersistable(appl).style, "pickle")
-        
+
+    def test_convertStyle(self):
+        appl = service.Application("lala")
+        for instyle in 'xml source pickle'.split():
+            for outstyle in 'xml source pickle'.split():
+                sob.IPersistable(appl).setStyle(instyle)
+                sob.IPersistable(appl).save(filename="converttest")
+                app.convertStyle("converttest", instyle, None,
+                                 "converttest.out", outstyle, 0)
+                appl2 = app.loadPersisted("converttest.out", outstyle, None)
+                self.assertEqual(service.IService(appl2).name, "lala")
+    
         
 '''
-def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
 def startApplication(application, save):
 '''
