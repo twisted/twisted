@@ -110,7 +110,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
         self.pArgs = args
         self.pKwArgs = kw
 
-    def buildProtocol(self, connection):
+    def buildProtocol(self, addr):
         protocol = self.protocol(self.messages, self.manager, *self.pArgs,
             **self.pKwArgs)
         protocol.factory = self
@@ -192,6 +192,7 @@ class Queue:
     def addMessage(self, message):
         if message not in self.relayed:
             self.waiting[message] = 1
+            log.msg('Set ' + message + ' waiting')
 
     def done(self, message):
         """Remove message to from queue."""
@@ -312,15 +313,31 @@ class SmartHostSMTPRelayingManager:
         as being relayed, and remove the relay.
         """
         for message in self.managed.get(relay, ()):
+            log.msg("Setting " + message + " waiting")
             self.queue.setWaiting(message)
-        del self.managed[relay]
+        try:
+            del self.managed[relay]
+        except KeyError:
+            pass
 
     def notifyNoConnection(self, relay):
         """Relaying SMTP client couldn't connect.
 
         Useful because it tells us our upstream server is unavailable.
         """
-        pass
+        # Back off a bit
+        try:
+            msgs = self.managed[relay]
+        except KeyError:
+            log.msg("notifyNoConnection passed unknown relay!")
+            return
+
+        log.msg("Backing off on delivery of " + str(msgs))
+        def setWaiting(queue, messages):
+            map(queue.setWaiting, messages)
+        from twisted.internet import reactor
+        reactor.callLater(30, setWaiting, self.queue, msgs)
+        del self.managed[relay]
 
     def __getstate__(self):
         """(internal) delete volatile state"""
@@ -370,7 +387,7 @@ class SmartHostSMTPRelayingManager:
             self.mxcalc = MXCalculator()
         
         for (domain, msgs) in exchanges.iteritems():
-            factory = self.factory(self, msgs, *self.fArgs, **self.fKwArgs)
+            factory = self.factory(msgs, self, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
             self.mxcalc.getMX(domain
             ).addCallback(lambda mx: str(mx.exchange),
