@@ -7,6 +7,11 @@ register("Twisted Words",
          description="A chat and collaboration system.",
          type='coil')
 
+register("Words Tendril",
+         "twisted.coil.plugins.tendril",
+         description="A Tendril connecting a Words service to an IRC network.",
+         type='coil')
+
 register("Twisted News",
          "twisted.tap.news",
          description="News",
