@@ -614,15 +614,19 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
     elif isinstance(start, types.ListType) or isinstance(start, types.TupleType):
         for idx in xrange(len(start)):
             objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen)
+    elif isinstance(start, types.MethodType):
+        objgrep(start.im_self, goal, eq, path+'.im_self', paths, seen)
+        objgrep(start.im_func, goal, eq, path+'.im_func', paths, seen)
+        objgrep(start.im_class, goal, eq, path+'.im_class', paths, seen)
     elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
             objgrep(v, goal, eq, path+'.'+k, paths, seen)
         if isinstance(start, types.InstanceType):
             objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen)
-    elif (isinstance(start, weakref.ProxyTypes + (weakref.ReferenceType,))):
+    elif isinstance(start, weakref.ReferenceType):
         objgrep(start(), goal, eq, path+'()', paths, seen)
     elif (isinstance(start, types.StringTypes+
-                    (types.IntType, types.FunctionType, types.MethodType,
+                    (types.IntType, types.FunctionType,
                      types.BuiltinMethodType, RegexType, types.FloatType,
                      types.NoneType, types.FileType)) or
           type(start).__name__ in ('wrapper_descriptor', 'method_descriptor',
