@@ -287,6 +287,7 @@ def run():
         application = loadApplication(config, passphrase)
     except Exception, e:
         s = "Failed to load application: %s" % (e,)
+        traceback.print_exc(file=log.logfile)
         log.msg(s)
         sys.exit('\n' + s + '\n')
 
