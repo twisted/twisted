@@ -418,10 +418,6 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
     def outReceived(self, data):
         self.buf += data
         theTest.fac.proto.expectedLoseConnection = 1
-        self.transport.write('x') 
-
-    def errReceived(self, data):
-        self.transport.write('x') # help to close stdin
 
     def processEnded(self, reason):
         global theTest
