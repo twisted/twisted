@@ -390,21 +390,6 @@ def _reclass(clazz):
     return clazz
 
 
-# Whoever named this should have check-in priviliges removed,
-# unless he or she makes sure no one uses this and then *kills it*.
-#
-# You know who you are ;)
-def refrump(obj):
-    """Fix an instance's class after a reload(module). I think.
-
-    See twisted.python.rebuild for a better way of doing this.
-    """
-    x = _reclass(obj.__class__)
-    if x is not obj.__class__:
-        obj.__class__ = x
-    return obj
-
-
 def macro(name, filename, source, **identifiers):
     """macro(name, source, **identifiers)
 
