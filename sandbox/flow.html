@@ -554,7 +554,7 @@ a similar, cooperative count is included.
 
 <pre class="python">
 from __future__ import generators
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 import flow
 
 def countSleep(index):
@@ -570,9 +570,15 @@ def countCooperate(index):
         print "cooperate", index
         yield "coop %s" % index
 
-d = flow.Deferred( flow.Merge(
-      flow.Threaded(countSleep(5)),
-      countCooperate(5)))
+d1 = flow.Deferred(flow.Threaded(countSleep(5)))
+d2 = flow.Deferred(countCooperate(10))
+d = defer.DeferredList([d1,d2])
+
+# alternatively (but merge is somewhat broken)
+#
+# d = flow.Deferred( flow.Merge(
+#      flow.Threaded(countSleep(5)),
+#      countCooperate(5)))
 
 def prn(x):
     print x
