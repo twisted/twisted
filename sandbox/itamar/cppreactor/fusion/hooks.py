@@ -40,6 +40,8 @@ class CConnector(tcp.Connector):
 
 
 _origUDPPort = udp.Port
+_origMulticastPort = udp.MulticastPort
+
 
 class CUDPPort(cudp.UDPPortMixin, _origUDPPort):
 
@@ -51,10 +53,13 @@ class CUDPPort(cudp.UDPPortMixin, _origUDPPort):
         cudp.UDPPortMixin.__init__(self, self)
 
 
-class CMulticastPort(cudp.UDPPortMixin, udp.MulticastPort):
+class CMulticastPort(cudp.UDPPortMixin, _origMulticastPort):
 
     def __init__(self, *args, **kwargs):
-        udp.MulticastPort.__init__(self, *args, **kwargs)
+        _origMulticastPort.__init__(self, *args, **kwargs)
+
+    def _bindSocket(self):
+        _origMulticastPort._bindSocket(self)
         cudp.UDPPortMixin.__init__(self, self)
 
 
