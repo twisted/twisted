@@ -4806,3 +4806,10 @@ person.
 %
 <radix> A VoIP server "powered entirely by stabbing, that I made out of this gun I had"
 %
+<exarkun> I can't tell if HP-UX sucks /even more/ than last time I used it or if somehow my terminal settings are causing non-deterministic behavior
+<exarkun> For example!
+<exarkun> T.................................................................................SSSS........Changing password for jcalder9 on NIS server
+<exarkun> Old NIS password:
+<exarkun> I hit <enter> and the tests proceeded
+<exarkun> Do we call passwd in our tests or something? :)
+%
