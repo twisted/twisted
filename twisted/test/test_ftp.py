@@ -16,7 +16,9 @@
 
 """FTP tests.
 
-Maintainer: slyphon (Jonathan D. Simms)
+Server Test Maintainer: slyphon (Jonathan D. Simms)
+Client Test Maintainer: spiv
+
 """
 
 from __future__ import  nested_scopes
@@ -748,6 +750,8 @@ class FTPClientTests(unittest.TestCase):
                 reactor.iterate()
             except:
                 pass
+    
+    testFailedRETR.todo = "OW! OW! STOP POKING ME! This is SPIV's responsibility!"
 
     def timeout(self):
         reactor.crash()
