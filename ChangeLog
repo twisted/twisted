@@ -1,3 +1,7 @@
+2002-05-29  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 0.18.0rc1
+
 2002-05-25  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/spread/pb.py, twisted/internet/defer.py, 

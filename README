@@ -1,15 +1,14 @@
-Twisted 0.17.4-post
+Twisted 0.18.0rc1
 
 Quote of the Release:
 
-<gt3> i had a dream guido really did get hit by a bus
-<jafo> :-(
-<jafo> He's a nice guy.
-<gt3> then somehow twisted came standard with it after dash took over
-<gt3> he seems nice
-<gt3> but nice doesn't stop a bus
+<glyph> So...
+<glyph> XML.
+*** Quits: dash:#twisted [washort@d136.narrowgate.net] (Read error: 113 (No route to host))
+<glyph> Wow... just _saying_ it makes him disappear
 
-For information on what's new in Twisted 0.17.4, see the ChangeLog file
+
+For information on what's new in Twisted 0.18.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 What is this?
@@ -47,9 +46,9 @@ What can I do with it?
 
   To install Twisted, just make sure the Twisted-$VERSION/twisted directory
   is in the "PYTHONPATH" environment variable. For example, if you extracted
-  Twisted-0.17.4.tar.gz to /home/bob/, then you would have something like:
+  Twisted-0.18.0.tar.gz to /home/bob/, then you would have something like:
 
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.17.4/
+    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.18.0/
   
   in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc. If you use Windows NT,
   2k, or XP, then set your environment variables by right-clicking on My

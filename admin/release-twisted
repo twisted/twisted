@@ -100,7 +100,7 @@ def makeDist(opts):
 
     #shwack the crap
     print "Stripping *~, *.pyc, *.rpl, *.tap..."
-    for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
+    for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*', '*.log']:
         os.system('find Twisted-%s -name "%s" | xargs rm -f' % (ver, x))
 
     print "Stripping 'CVS' directories..."
