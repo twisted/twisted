@@ -21,11 +21,12 @@ class Drawable:
 
     def drawLines(self, s):
         lines = s.splitlines()
-        c = self.col - len(lines)
+        c = self.col
+        line = self.line
         for l in lines:
-            self.proto.cursorPosition(c, self.line - len(lines) / 2)
+            self.proto.cursorPosition(c - len(lines) / 2, line)
             self.proto.write(l)
-            c += 1
+            line += 1
 
     def iterate(self):
         getattr(self, 'erase_' + str(self.n))()
