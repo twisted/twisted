@@ -42,7 +42,8 @@ TODO:
 2. WaitForMultipleObjects can only handle 64 objects, so we need threads.
 3. Event loop handling of writes is *very* problematic.
 4. Support GUI events.
-5. Switch everyone to a decent OS so we don't have to deal with insane APIs.
+5. Replace icky socket loopback waker with event based waker.
+6. Switch everyone to a decent OS so we don't have to deal with insane APIs.
 """
 
 # Win32 imports
@@ -344,7 +345,6 @@ def initThreads():
     import main
     if main.wakerInstalled:
         # make sure waker is registered with us
-        # XXX use a real win32 waker, an event, instead of the icky socket hack
         removeReader(main.waker)
         addReader(main.waker)
 
