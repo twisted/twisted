@@ -364,7 +364,7 @@ class BaseClient(Connection):
             return
         self.connector.connectionFailed(failure.Failure(err))
         if hasattr(self, "reactor"):
-            # this doesn't happens if we failed in __init__
+            # this doesn't happen if we failed in __init__
             self.stopReading()
             self.stopWriting()
             del self.connector
