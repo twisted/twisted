@@ -59,6 +59,24 @@ class PollReactor(default.PosixReactorBase):
         else:
             if selectables.has_key(fd): del selectables[fd]
 
+    def _dictRemove(self, selectable, mdict):
+        try:
+            # the easy way
+            fd = reader.fileno()
+        except:
+            # the hard way: necessary because fileno() may disappear at any
+            # moment, thanks to python's underlying sockets impl
+            for fd, fdes in selectables.items():
+                if selectable is fdes:
+                    break
+            else:
+                # Hmm, maybe not the right course of action?  This method can't
+                # fail, because it happens inside error detection...
+                return
+        if mdict.has_key(fd):
+            del mdict[fd]
+            self._updateRegisteration(fd)
+
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
@@ -80,18 +98,12 @@ class PollReactor(default.PosixReactorBase):
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
         """
-        fd = reader.fileno()
-        if reads.has_key(fd):
-            del reads[fd]
-            self._updateRegisteration(fd)
+        return self._dictRemove(reader, reads)
 
     def removeWriter(self, writer, writes=writes):
         """Remove a Selectable for notification of data available to write.
         """
-        fd = writer.fileno()
-        if writes.has_key(fd):
-            del writes[fd]
-            self._updateRegisteration(fd)
+        return self._dictRemove(writer, writes)
 
     def removeAll(self):
         """Remove all selectables, and return a list of them."""

@@ -216,7 +216,8 @@ class SentQuery:
     def timeOut(self):
         if not self.done:
             self.removeAll()
-            self.errback("Timed out")
+            from twisted.python import failure
+            self.errback(failure.Failure(Exception("Timed out")))
         self.done = 1
 
     def removeAll(self):
