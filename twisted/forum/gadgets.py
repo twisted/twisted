@@ -8,7 +8,6 @@ from twisted.web import widgets, guard, webpassport, html
 from twisted.python import defer
 from twisted.internet import passport
 
-from sim.server import engine, player
 
 class ForumPage(webpassport.SessionPerspectiveMixin, widgets.WidgetPage):
     """This class and stylesheet give forum pages a look different from the
