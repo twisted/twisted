@@ -1461,49 +1461,6 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('FETCH', cmd)
         return d
 
-_ALLOWED_SECTIONS = (
-    'HEADER', 'HEADER.FIELDS', 'HEADER.FIELDS.NOT', 'MIME', 'TEXT'
-)
-
-def All():
-    return 'ALL'
-
-def Body(sectionNumber=None, sectionType=None, start=None, length=None):
-    """Retrieve the body of a message
-    
-    @type sectionNumber: C{int}
-    @param sectionNumber: The MIME-IMB section number to retrieve.
-    
-    @type sectionType: C{str}
-    @param sectionType: The MIME-IMB section type to retrieve.  This
-    must be one of HEADER, HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or
-    TEXT.
-    
-    @type start: C{int}
-    @param start: If specified, the number of octets at the beginning of
-    the data to skip.  If specified, C{length} must be specified as well.
-    
-    @type length: C{int}
-    @param length: The number of octets to retrieve.
-
-    @rtype: C{str}
-    @return: The IMAP4 query string representing this item.
-    """
-    cmd = 'BODY[%s]'
-
-    assert sectionType is None or sectionType in _ALLOWED_SECTIONS
-
-    if sectionNumber is not sectionType is not None:
-        cmd = cmd % ('%d.%s' % (sectionNumber, sectionType))
-    else:
-        cmd = cmd % (sectionType or sectionNumber or '')
-    
-    assert (not not start) is (not not length)
-    
-    if start:
-        cmd = cmd + '<%d.%d>' % (start, length)
-    return cmd
-
 class IllegalQueryError(IMAP4Exception): pass
 
 _SIMPLE_BOOL = (
