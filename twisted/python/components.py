@@ -27,8 +27,8 @@ class Interface:
     """Base class for interfaces.
     
     Interfaces define and document an interface for a class. An interface
-    class's name must begin with I, and all its methods must raise 
-    NotImplementedError, to show they are abstract.
+    class's name must begin with I, and all its methods should have no
+    implementation code.
 
     Objects that implement an interface should have an attribute __implements__,
     that should be either an Interface subclass or a tuple, or tuple of tuples,
@@ -40,11 +40,10 @@ class Interface:
     For example::
     
         | class IAdder(Interface):
-        |     "Objects implementing this interface can add objects."
+        |     'Objects implementing this interface can add objects.'
         | 
         |     def add(self, a, b):
-        |         "Add two objects together and return the result."
-        |         raise NotImplementedError
+        |         'Add two objects together and return the result.'
         |
         | class Adder:
         | 
