@@ -138,9 +138,13 @@ class Banana(protocol.Protocol):
     def sendToken(self, obj):
         write = self.transport.write
         if isinstance(obj, types.IntType) or isinstance(obj, types.LongType):
-            if obj >= 0:
+            if obj >= 2**(64*7):
+                raise ValueError("need to write new LONGINT support")
+            elif obj >= 0:
                 int2b128(obj, write)
                 write(INT)
+            elif -obj >= 2**(64*7):
+                raise ValueError("need to write new LONGNEG support")
             else:
                 int2b128(-obj, write)
                 write(NEG)
@@ -309,6 +313,14 @@ class Banana(protocol.Protocol):
         self.receiveStack[-1].receiveAbort()
         return
 
+    def getLimit(self, typebyte):
+        # the purpose here is to limit the memory consumed by the body of a
+        # STRING, OPEN, LONGINT, or LONGNEG token (i.e., the size of a
+        # primitive type).
+        return SIZE_LIMIT
+        top = self.receiveStack[-1]
+        return top.checkToken(typebyte)
+
     def handleToken(self, token):
         top = self.receiveStack[-1]
         if self.debug: print "receivetoken(%s)" % token
@@ -336,9 +348,15 @@ class Banana(protocol.Protocol):
             else:
                 if pos > 64:
                     raise BananaError("Security precaution: more than 64 bytes of prefix")
-                return
-            header = buffer[:pos]
+                return # still waiting for header to finish
             typebyte = buffer[pos]
+            if self.inOpen:
+                if typebyte not in (STRING, VOCAB):
+                    raise Violation
+                sizelimit = SIZE_LIMIT # open types are max 1k long
+            else:
+                sizelimit = self.getLimit(typebyte) # might raise exception
+            header = buffer[:pos]
             rest = buffer[pos+1:]
             if len(header) > 64:
                 raise BananaError("Security precaution: longer than 64 bytes worth of prefix")
@@ -350,16 +368,16 @@ class Banana(protocol.Protocol):
                 #listStack.append((header, []))
                 #buffer = rest
             elif typebyte == STRING:
-                header = b1282int(header)
-                if header > SIZE_LIMIT:
+                strlen = b1282int(header)
+                if strlen > sizelimit:
                     raise BananaError("Security precaution: String too long.")
-                if len(rest) >= header:
-                    buffer = rest[header:]
+                if len(rest) >= strlen:
+                    buffer = rest[strlen:]
                     if self.inOpen:
                         self.inOpen = 0
-                        self.handleOpen(self.openCount, rest[:header])
+                        self.handleOpen(self.openCount, rest[:strlen])
                     else:
-                        gotItem(rest[:header])
+                        gotItem(rest[:strlen])
                 else:
                     return
             elif typebyte == INT:
@@ -367,12 +385,10 @@ class Banana(protocol.Protocol):
                 header = b1282int(header)
                 gotItem(int(header))
             elif typebyte == LONGINT:
-                # OLD: remove this code
                 buffer = rest
                 header = b1282int(header)
                 gotItem(long(header))
             elif typebyte == LONGNEG:
-                # OLD: remove this code
                 buffer = rest
                 header = b1282int(header)
                 gotItem(-long(header))
