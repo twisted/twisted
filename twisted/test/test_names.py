@@ -69,6 +69,7 @@ class ServerDNSTestCase(unittest.TestCase):
         self.gotAnswer = 1
     
     def tS_error(self, error):
+        self.gotAnswer = 1
         raise RuntimeError, error
 
 

@@ -197,7 +197,6 @@ class KQueueReactor(default.PosixReactorBase):
 
 def install():
     k = KQueueReactor()
-    import main
     main.installReactor(k)
 
 

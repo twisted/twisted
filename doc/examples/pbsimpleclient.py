@@ -16,15 +16,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.internet import main
+from twisted.internet import reactor
 def gotObject(object):
     print "got object:",object
     object.callRemote("echo", "hello network").addCallback(gotEcho)
 def gotEcho(echo):
     print 'server echoed:',echo
-    main.shutDown()
+    reactor.stop()
 def gotNoObject(reason):
     print "no object:",reason
-    main.shutDown()
+    reactor.stop()
 pb.getObjectAt("localhost", 8789, 30).addCallbacks(gotObject, gotNoObject)
-main.run()
+reactor.run()

@@ -1,6 +1,6 @@
 
 from twisted.spread import pb
-from twisted.internet import main, app
+from twisted.internet import reactor, app
 
 class PBBenchPerspective(pb.Perspective):
     callsPerSec = 0
@@ -11,7 +11,7 @@ class PBBenchPerspective(pb.Perspective):
     def printCallsPerSec(self):
         print '(s) cps:', self.callsPerSec
         self.callsPerSec = 0
-        main.addTimeout(self.printCallsPerSec, 1)
+        reactor.callLater(1, self.printCallsPerSec)
 
     def perspective_complexTypes(self):
         return ['a', 1, 1l, 1.0, [], ()]

@@ -1,6 +1,6 @@
 
 from twisted.spread import pb
-from twisted.internet import main, defer
+from twisted.internet import defer
 import time
 
 class PBBenchClient:
@@ -31,4 +31,5 @@ class PBBenchClient:
                    "benchmark", "benchmark", "benchmark").addCallback(self._cbPerspective)
 
 PBBenchClient().runTest()
-main.run()
+from twisted.internet import reactor
+reactor.run()

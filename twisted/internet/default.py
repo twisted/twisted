@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.25 2002/07/29 23:33:55 itamarst Exp $
+# $Id: default.py,v 1.26 2002/08/06 03:31:03 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -30,8 +30,8 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
 from twisted.internet import main, error, protocol, interfaces
+from twisted.internet import tcp, udp, task
 
-from twisted.internet import main, tcp, udp, task
 from twisted.python import log, threadable
 from twisted.persisted import styles
 from twisted.python.runtime import platform

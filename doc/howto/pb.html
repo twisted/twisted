@@ -1,0 +1,362 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html> <head>
+<title>Writing Applications with Perspective Broker</title>
+</head>
+
+<body>
+<h1>Writing Applications with Perspective Broker</h1>
+
+<h2>Who?</h2>
+
+<p>This document is for programmers who want to write applications using
+Perspective Broker, or interface with existing PB services and clients.  This
+assumes that you have a basic familiarity with Python, and with Twisted.  You
+should have read the <q><a href="plugin.html">So You Want to be a Twisted
+Hacker</a></q> document to explain the basics of getting started with
+Twisted.</p>
+
+<h2>What?</h2>
+
+<p> Perspective Broker (affectionately known as <q>PB</q>) is an asynchronous,
+symmetric <a href="#almostsymmetric">[1]</a>, network protocol for secure,
+remote method calls.  PB is <q>translucent, not transparent</q>, meaning that
+it is very visible and obvious to see the difference between local method calls
+and potentially remote method calls, but remote method calls are still
+extremely convenient to make, and it is easy to emulate them to have objects
+which work both locally and remotely.</p>
+
+<p>PB supports user-defined serialized data in return values, which can be
+either copied each time the value is returned, or <q>cached</q>: only copied
+once and updated by notifications.</p>
+
+<p>PB gets its name from the fact that access to objects is through a
+<q>perspective</q>.  This means that when you are responding to a remote method
+call, you can establish who is making the call.</p>
+
+<h2>Why?</h2>
+
+<p>No other currently existing protocols have all the properties of PB at the
+same time.  The particularly interesting combination of attributes, though, is
+that PB is flexible and lightweight, allowing for rapid development, while
+still powerful enough to do two-way method calls and user-defined data
+types.</p>
+
+<p>It is important to have these attributes in order to allow for a protocol
+which is extensible.  One of the facets of this flexibility is that PB can
+integrate an arbitrary number of services could be aggregated over a single
+connection, as well as publish and call new methods on existing objects without
+restarting the server or client.</p>
+
+<h2>How?</h2>
+
+<p>The best way to read this section is to have a basic PB-enabled application
+you'd like to write, start off with the basic example given, and experiment
+with the more advanced features later on, depending on which ones you need.</p>
+
+<h3> Getting Started: A Simple Example</h3>
+<p>So, now you've decided that you have an application that's just dying for
+integration with PB.  Let's dig a bit deeper into Twisted to see which pieces
+we'll need to build.</p>
+
+<p>Typically you might think of building this application as a client and a
+server.  With PB, however, the role of the processes is less important; the
+thing you need to be thinking about is what <em>objects</em> you are trying to
+make accessible over the network.  In order to provide you with a grounding for
+where to start, PB provides various <q>top level</q> abstractions.</p>
+
+<p>The two topmost things you need to be concerned about are your
+<code>Service</code>, and your <code>Perspective</code>.  The exact definitions
+of these abstractions will vary from system to system, but in general, they
+represent the same things.</p>
+
+<p>A service is the <q>global</q> state associated with your application, which
+can contain things such as support for archiving objects, basic abstractions
+common to all users, and collections of domain-specific objects.  A perspective
+is the representation of a user with respect to a particular service.  For PB,
+a Perspective is where all interaction begins.  When a user logs in for the
+first time, all the methods they can initially call are methods of their
+Perspective.  The Perspective's methods can return objects which themselves
+have methods that you can call, as well as copies of objects, as described
+later. </p>
+
+<a href="listings/TwistedQuotes/pbquote.py" class="py-listing">Quote Service
+and Perspective</a>
+
+<p>For examples of these, we're returning to the TwistedQuotes project
+discussed in the <q>Writing Plugins</q>.  The PB <class>Service</class> for
+TwistedQuotes is pretty small.  The only thing it needs to keep track of for
+itself is the quoter object; PB's service, that we will inherit from, already
+keeps track of perspectives.</p>
+
+<p>The perspective is a <code>QuoteReader</code>, which publishes one method.
+By subclassing <code>Perspective</code>, we are declaring that all methods with
+the <code>perspective_</code> prefix are remotely accessible.</p>
+
+<p>In order to get this Service published, so that we can actually connect to
+it, we need to re-visit the TAP building plugin, so we can actually get an
+Application that has a PB broker factory listening on a port.  (The default
+port for PB is 8787.)  </p>
+
+<a href="listings/TwistedQuotes/quotetap2.py" class="py-listing">TAP Plugin
+with PB Quotes Service support</a>
+
+<p>In the TAP builder, we create a <code>QuoteService</code> that wraps the
+quoter.  We then create a <code>QuoteReader</code> perspective and attach it to
+the <code>QuoteService</code>, through the <code>createPerspective</code> call
+inherited from <code>pb.Service</code>. Finally, we register with the
+<code>QuoteService</code>'s authorizer.  </p>
+
+<p>Accessing this through a client is fairly easy, as we can use the
+<code>pb.connect</code> convenience function.</p>
+
+<a href="listings/TwistedQuotes/pbquoteclient.py" class="py-listing">PB Quotes
+Client Code</a>
+
+<p> <code>pb.connect</code> will handle all the details of creating a
+connection and authenticating.  It returns a <code>Deferred</code>, which will
+have its callback called when <code>pb.connect</code> connects to a
+perspective, and have its <code>errback</code> called when the
+object-connection fails for any reason, whether it's host lookup failure,
+connection refusal, or incorrect authentication credentials.  </p>
+
+<p>An API that uses PB-based URLs to avoid the large number of arguments being
+passed is forthcoming.</p>
+
+<p>In this example, the <code>connected</code> callback should be made when the
+script is run.  Looking at the code, it should be clear that in the event of a
+connection success, the client will print out a quote and exit.  If you start
+up a server, you can see:</p>
+
+<pre class="shell">
+% <b>mktap qotd --pb 8787</b>
+Saving qotd application to qotd.tap...
+Saved.
+% <b>twistd -f qotd.tap</b>
+% <b>python -c 'import TwistedQuotes.pbquoteclient'</b>
+An apple a day keeps the doctor away.
+</pre>
+
+<p>The argument to this callback, <code>perspective</code>, is a <code
+class="API">twisted.spread.pb.RemoteReference</code>.  The
+<code>perspective</code> reference represents a reference to a
+<code>QuoteReader</code> perspective object.</p>
+
+<p><code class="API">twisted.spread.pb.RemoteReference</code> objects have one
+method which is their purpose for being: <code>callRemote</code>.  This method
+allows you to call a remote method on the object being referred to by the
+Reference.  <code>RemoteReference.callRemote</code>, like
+<code>pb.connect</code>, returns a <code>Deferred</code>.  When a response to
+the method-call being sent arrives, the <code>Deferred</code>'s
+<code>callback</code> or <code>errback</code> will be made, depending on
+whether an error occurred in processing the method-call.  </p>
+
+<p>This introduction to PB does not showcase all of the features that it
+provides, but hopefully it gives you a good idea of where to get started
+setting up your own application.  Here are some of the othe building blocks you
+can use.</p>
+
+<h3>Things you can Call Remotely</h3>
+
+<p>At this writing, there are three <q>flavors</q> of objects that can be
+accessed remotely through <code>RemoteReference</code> objects.  Each of these
+flavors has a rule for how the <code>callRemote</code> message is transformed
+into a local method call on the server.  In order to use one of these
+<q>flavors</q>, subclass them and name your published methods with the
+appropriate prefix.
+
+<ul>
+  <li><code class="api">twisted.spread.pb.Perspective</code>
+  
+  <p>This is the first class we dealt with.  Perspectives are slightly special
+  because they are the root object that a given user can access from a service.
+  A user should only receive a reference to their Perspective PB works hard to
+  verify, as best it can, that any method that can be called on a perspective
+  directly is being called on behalf of the user who is represented by that
+  perspective.  (Services with unusual requirements for <q>on behalf of</q>,
+  such as simulations with the ability to posess another player's avatar, are
+  accomplished by providing indirected access to another user's Perspective.)
+  </p>
+
+  <p>Perspectives are not usually serialized as remote references, so do not
+  return a perspective directly. </p>
+  
+  <p>Remotely accessible methods on Perspectives are named with the
+  <code>perspective_</code> prefix. </p>
+  </li>
+ 
+  <li><code class="api">twisted.spread.flavors.Referenceable</code>
+
+  <p>Referenceable objects are the simplest kind of PB object.  You can call
+  methods on them and return them from methods to provide access to other
+  objects' methods.  </p>
+
+  <p>However, when a method is called on a Referenceable, it's not possible to
+  tell who called it.</p>
+  
+  <p>Remotely accessible methods on Referenceables are named with the
+  <code>remote_</code> prefix.</p>
+  
+  </li>
+
+  <li><code class="api">twisted.spread.flavors.Viewable</code>
+
+  <p>Viewable objects are remotely referenceable objects which have the
+  additional requirement that it must be possible to tell who is calling them.
+  The argument list to a Viewable's remote methods is modified in order to
+  include the Perspective representing the calling user.</p>
+
+  <p>Remotely accessible methods on Viewables are named with the
+  <code>view_</code> prefix.</p>
+
+  </li>
+  
+</ul>
+
+</p>
+
+<h3>Things you can Copy Remotely</h3>
+
+<p>In addition to returning objects that you can call remote methods on, you
+can return structured copies of local objects.</p>
+
+<p>There are 2 basic flavors that allow for copying objects remotely.  Again,
+you can use these by subclassing them.  In order to specify what state you want
+to have copied when these are serialized, you can either use the Python default
+<code>__getstate__</code> or specialized method calls for that flavor.</p>
+
+<p>
+<ul>
+  <li><code class="API">twisted.spread.flavors.Copyable</code>
+  
+  <p>This is the simpler kind of object that can be copied.  Every time this
+  object is returned from a method or passed as an argument, it is serialized
+  and unserialized.</p>
+
+  <p><code>Copyable</code> provides a method you can override,
+  <code class="py-prototype">getStateToCopyFor(perspective)</code>, which
+  allows you to decide what an object will look like for the user who is
+  requesting it. The <code>perspective</code> argument will be an instance of
+  the <code>Perspective</code> subclass for your service, the one which is
+  either pasing an argument or returning a result an instance of your Copyable
+  class. </p>
+  
+  <p>For security reasons, in order to allow a particular Copyable class to
+  actually be copied, you must declare a <code>RemoteCopy</code> handler for
+  that Copyable subclass.  The easiest way to do this is to declare both in the
+  same module, like so:
+
+  <pre class="python">
+from twisted.spread import flavors
+class Foo(flavors.Copyable):
+    pass
+class RemoteFoo(flavors.RemoteCopy):
+    pass
+flavors.setCopierForClass(str(Foo), RemoteFoo)
+  </pre>
+  
+  In this case, each time a Foo is copied between peers, a RemoteFoo will be
+  instantiated and populated with the Foo's state.  If you do not do this, PB
+  will complain that there have been security violations, and it may close the
+  connection.
+  </p>
+
+  </li>
+  
+  <li><code class="API">twisted.spread.flavors.Cacheable</code>
+  
+  <p>Let me preface this with a warning: Cacheable may be hard to understand.
+  The motivation for it may be unclear if you don't have some experience with
+  real-world applications that use remote method calling of some kind.  Once
+  you understand why you need it, what it does will likely seem simple and
+  obvious, but if you get confused by this, forget about it and come back
+  later.  It's possible to use PB without understanding Cacheable at all.
+  </p>
+
+  <p>Cacheable is a flavor which is designed to be copied only when necessary,
+  and updated on the fly as changes are made to it.  When passed as an argument
+  or a return value, if a Cacheable exists on the side of the connection it is
+  being copied to, it will be referred to by ID and not copied.</p>
+
+  <p>Cacheable is designed to minimize errors involved in replicating an object
+  between multiple servers, especially those related to having stale
+  information.  In order to do this, Cacheable automatically registers
+  observers and queries state atomically, together.  You can override the
+  method <code class="py-prototype">getStateToCacheAndObserveFor(self,
+  perspective, observer)</code> in order to specify how your observers will be
+  stored and updated.
+  </p>
+
+  <p>Similar to <code>getStateToCopyFor</code>,
+<code>getStateToCacheAndObserveFor</code> passes a <code>Perspective</code>
+  instance from your service.  It also passes an <code>observer</code>, which
+  is a remote reference to a <q>secret</q> fourth referenceable flavor:
+  <code>RemoteCache</code>.</p>
+
+  <p>A <code>RemoteCache</code> is simply the object that represents your
+  <code>Cacheable</code> on the other side of the connection.  It is registered
+  using the same method as <code>RemoteCopy</code>, above.  RemoteCache is
+  different, however, in that it will be referenced by its peer.  It acts as a
+  Referenceable, where all methods prefixed with <code>observe_</code> will be
+callable remotely.  It is recommended that your object maintain a list (note:
+library support for this is forthcoming!) of observers, and update them using
+<code>callRemote</code> when the Cacheable changes in a way that should be
+noticeable to its clients.  </p>
+
+  <p>Finally, when all references to a Cacheable from a given Perspective are
+lost, <code class="py-signature">stoppedObserving(perspective, observer)</code>
+will be called on the Cacheable, with the same perspective/observer pair that
+<code>getStateToCacheAndObserveFor</code> was originally called with.  Any
+cleanup remote calls can be made there, as well as removing the observer object
+from any lists which it was previously in.  Any further calls to this observer
+object will be invalid.</p>
+  </li>
+</ul>
+</p>
+<div class="doit">
+<h3>What's Coming?</h3>
+
+<p>PB is a core part of the Twisted project, and is heavily in use by many
+members of the Twisted development team.  It is ready to write applications
+with today.  However, as such a critical library, it is going to be enhanced
+and expanded as time goes on. </p>
+
+<p>A few of the changes have already been mentioned: URLs for pb.connect, and
+library support for monitoring Cacheable observers.  One other area we are
+going to be focusing on is optimization: while PB is already faster than most
+XMLRPC implementations, it's still pretty slow when compared to CORBA.  PB will
+support killing references.  Also, monitoring reference loss (for types other
+than Cacheable, that is).  In other words, we hope to implement a
+<code>stoppedViewing</code> (and possibly <code>stoppedReferencing</code>) in
+parallel with <code>stoppedObserving</code>.  <code>Perspective.detached</code>
+already implements this for Perspectives.
+</p>
+
+<p>There are also some addenda to this document in progress, documenting
+features that already exist but are more subtle to explain:
+
+<ul>
+  <li>Pageable objects, that can be broken up into pages (chunks) so that very
+  large results don't need to be serialized and written all at once. </li>
+  
+  <li>Sturdy references to objects that pb.connect can access.</li>
+
+  <li>Publishable objects: Cacheable-like objects whose observed state persists
+  across sessions.</li>
+</ul>
+
+</p>
+
+</div>
+
+<hr />
+
+Footnotes:
+
+<a name="almostsymmetric" />[1] There is a negotiation phase for banana with
+particular roles for listener and initiator, so it's not *completely*
+symmetric, but after the connection is fully established, the protocol is
+completely symmetrical.
+
+<address><a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a></address>
+<!-- hhmts start --> Last modified: Mon Aug  5 19:39:25 CDT 2002 <!-- hhmts end -->
+</body> </html>

@@ -382,8 +382,9 @@ class Site(http.HTTPFactory):
     def _mkuid(self):
         """(internal) Generate an opaque, unique ID for a user's session.
         """
+        import md5, random
         self.counter = self.counter + 1
-        return "%sx%s" % (long(time.time()*1000), self.counter)
+        return md5.new("%s_%s" % (str(random.random()) , str(self.counter))).hexdigest()
 
     def makeSession(self):
         """Generate a new Session instance, and store it for future reference.
