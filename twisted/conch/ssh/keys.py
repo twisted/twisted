@@ -83,10 +83,7 @@ def getPublicKeyString_lsh(data):
         raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
 
 def getPublicKeyString_openssh(data):
-    if data.count(' ') == 2:
-        fileKind, fileData, desc = data.split()
-    else:
-        fileKind, fileData = data.split()
+    fileKind, fileData = data.split()[:2]
     #    if fileKind != kind:
     #        raise BadKeyError, 'key should be %s but instead is %s' % (kind, fileKind)
     return base64.decodestring(fileData)
