@@ -34,6 +34,7 @@ import warnings
 
 import context
 
+
 class ILogContext:
     """Actually, this interface is just a synoym for the dictionary interface,
     but it serves as a key for the default information in a log.
@@ -42,7 +43,7 @@ class ILogContext:
     """
 
 context.setDefault(ILogContext,
-                   {"isError": False,
+                   {"isError": 0,
                     "system": "-"})
 
 def callWithContext(ctx, func, *args, **kw):
@@ -75,7 +76,7 @@ def debug(*stuff,**otherstuff):
     Write some data to the log, indented, so it's easier to
     distinguish from 'normal' output.
     """
-    msg(debug=True, *stuff, **otherstuff)
+    msg(debug=1, *stuff, **otherstuff)
 
 def showwarning(message, category, filename, lineno, file=None):
     if file is None:
@@ -292,11 +293,11 @@ class StdioOnnaStick:
         self.buf = d[-1]
         messages = d[0:-1]
         for message in messages:
-            msg(message, printed=True, isError=self.isError)
+            msg(message, printed=1, isError=self.isError)
 
     def writelines(self, lines):
         for line in lines:
-            msg(line, printed=True, isError=self.isError)
+            msg(line, printed=1, isError=self.isError)
 
 
 try:
