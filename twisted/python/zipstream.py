@@ -65,7 +65,7 @@ class ZipFileEntry:
         if n == 0 or self.finished:
             return ''
         
-        data = self.fp.read(min(n, 1024, self.length - self.readBytes))
+        data = self.fp.read(min(n, self.length - self.readBytes))
         self.readBytes += len(data)
         if self.readBytes == self.length or len(data) <  n:
             self.finished = 1
@@ -201,15 +201,17 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
     czf=ChunkingZipFile(filename, 'r')
     if not os.path.exists(directory): os.makedirs(directory)
     remaining=countZipFileChunks(filename, chunksize)
+    names=czf.namelist()
+    infos=czf.infolist()
     
-    for entry in czf.namelist():
-        info=czf.getinfo(entry)
+    for entry, info in zip(names, infos):
         isdir=info.external_attr & DIR_BIT
         f=os.path.join(directory, entry)
         if isdir:
             # overwrite flag only applies to files
             if not os.path.exists(f): os.makedirs(f)
             remaining=remaining-1
+            assert remaining>=0
             yield remaining
         else:
             # create the directory the file will be in first,
@@ -222,6 +224,7 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
                 fp=czf.readfile(entry)
                 if info.file_size==0:
                     remaining=remaining-1
+                    assert remaining>=0
                     yield remaining
                 fread=fp.read
                 ftell=fp.tell
@@ -231,8 +234,10 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
                     hunk=fread(chunksize)
                     owrite(hunk)
                     remaining=remaining-1
+                    assert remaining>=0
                     yield remaining
                 outfile.close()
             else:
                 remaining=remaining-countFileChunks(info, chunksize)
+                assert remaining>=0
                 yield remaining
