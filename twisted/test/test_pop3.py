@@ -214,5 +214,19 @@ QUIT''', '\n')
                              "\nExpected:\n%s\nResults:\n%s\n"
                              % (expected_output, a.getvalue()))
 
+    def testNoop(self):
+        a = StringIOWithoutClosing()
+        dummy = DummyPOP3()
+        dummy.makeConnection(protocol.FileWrapper(a))
+        p = pop3.POP3()
+        lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
+        expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
+        for line in lines:
+            dummy.lineReceived(line)
+        self.failUnlessEqual(expected_output, a.getvalue(),
+                             "\nExpected:\n%s\nResults:\n%s\n"
+                             % (expected_output, a.getvalue()))
+
+
 
 testCases = [POP3TestCase, AnotherPOP3TestCase]
