@@ -356,7 +356,7 @@ class XMLParser(Protocol):
                 # I saw this in actual HTML once:
                 # <font size=\"3\"><sup>SM</sup></font>
                 return
-        self._parseError("Invalid intial attribute value: %r" % byte)
+        self._parseError("Invalid initial attribute value: %r" % byte)
 
     attrname = ''
     attrval = ''
