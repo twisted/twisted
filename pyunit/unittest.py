@@ -55,6 +55,11 @@ import string
 import os
 import types
 
+# Twisted hackery
+
+import twisted.python.failure
+import twisted.python.log
+
 ##############################################################################
 # Test framework core
 ##############################################################################
@@ -200,8 +205,7 @@ class TestCase:
                 return
 
             ok = 0
-            from twisted.python.log import msg
-            msg("---- Running Test: %s.%s ----- " % (self.__class__, self.__testMethodName))
+            twisted.python.log.msg("---- Running Test: %s.%s ----- " % (self.__class__, self.__testMethodName))
             try:
                 testMethod()
                 ok = 1
@@ -214,6 +218,9 @@ class TestCase:
                 self.tearDown()
             except:
                 result.addError(self,self.__exc_info())
+                ok = 0
+            for e in twisted.python.log.flushErrors():
+                result.addError(self, e)
                 ok = 0
             if ok: result.addSuccess(self)
         finally:
@@ -556,8 +563,9 @@ class _TextTestResult(TestResult):
             self.stream.writeln("ERROR")
         elif self.dots:
             self.stream.write('E')
-        if err[0] is KeyboardInterrupt:
-            self.shouldStop = 1
+        if not isinstance(err, twisted.python.failure.Failure):
+            if err[0] is KeyboardInterrupt:
+                self.shouldStop = 1
 
     def addFailure(self, test, err):
         TestResult.addFailure(self, test, err)
@@ -577,9 +585,12 @@ class _TextTestResult(TestResult):
             self.stream.writeln(self.separator1)
             self.stream.writeln("%s: %s" % (flavour,self.getDescription(test)))
             self.stream.writeln(self.separator2)
-            for line in apply(traceback.format_exception, err):
-                for l in string.split(line,"\n")[:-1]:
-                    self.stream.writeln("%s" % l)
+            if isinstance(err, twisted.python.failure.Failure):
+                err.printTraceback()
+            else:
+                for line in apply(traceback.format_exception, err):
+                    for l in string.split(line,"\n")[:-1]:
+                        self.stream.writeln("%s" % l)
 
 
 class TextTestRunner:

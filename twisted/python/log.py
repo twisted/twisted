@@ -79,13 +79,41 @@ def msg(stuff):
     logfile.write(str(stuff) + os.linesep)
     logfile.flush()
 
+_keepErrors = 0
+_keptErrors = []
+
+def startKeepingErrors():
+    """Support function for testing frameworks.
+
+    Start keeping errors in a buffer which can be retrieved (and emptied) with
+    flushErrors.
+    """
+    global _keepErrors
+    _keepErrors = 1
+    
+
+def flushErrors():
+    """Support function for testing frameworks.
+
+    Return a list of errors that occurred since the last call to flushErrors().
+    (This will return None unless startKeepingErrors has been called.)
+    """
+    global _keptErrors
+    k = _keptErrors
+    _keptErrors = []
+    return k
+
+
 def err(stuff):
     """Write a failure to the log.
     """
     if isinstance(stuff, failure.Failure):
+        if _keepErrors:
+            _keptErrors.append(stuff)
         stuff.printTraceback(file=logfile)
     else:
         msg(stuff)
+
 def deferr():
     """Write the default failure (the current exception) to the log.
     """

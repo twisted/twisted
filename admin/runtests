@@ -91,9 +91,7 @@ class TestProgram:
         """Override default behaviours in order to facilitate testing."""
         # log.deferr() should raise exception instead of logging it
         from twisted.python import log
-        def deferr():
-            raise
-        log.deferr = deferr
+        log.startKeepingErrors()
     
     def _installReactor(self, reactor):
         """Install a reactor which will be used for testing."""
