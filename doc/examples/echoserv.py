@@ -15,31 +15,26 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet.protocol import Protocol, Factory
-from twisted.internet import udp
+from twisted.internet.protocol import DatagramProtocol, Protocol, Factory
+from twisted.internet.app import Application
 
 ### Protocol Implementation
 
 # This is just about the simplest possible protocol
-
 class Echo(Protocol):
     def dataReceived(self, data):
         "As soon as any data is received, write it back."
         self.transport.write(data)
 
-### Persistent Application Builder
+# Here's a UDP version of the simplest possible protocol
+class EchoUDP(DatagramProtocol):
+    def datagramReceived(self, datagram, address):
+        self.transport.write(datagram, address)
 
-# This builds a .tap file
 
-if __name__ == '__main__':
-    # Since this is persistent, it's important to get the module naming right
-    # (If we just used Echo, then it would be __main__.Echo when it attempted
-    # to unpickle)
-    import echoserv
-    from twisted.internet.app import Application
-    factory = Factory()
-    factory.protocol = echoserv.Echo
-    app = Application("echo")
-    app.listenTCP(8000,factory)
-    app.listenUDP(8000, factory)
-    app.save("start")
+f = Factory()
+f.protocol = Echo
+app = Application("echo")
+app.listenTCP(8000, f)
+app.listenUDP(8000, EchoUDP())
+app.run(save=0)
