@@ -104,6 +104,12 @@ class LatexSpitter(XMLParser):
     def end_a(self, _):
         self.ignoring = 0
 
+    def start_style(self, _, _1):
+        self.ignoring = 1
+
+    def end_style(self, _):
+        self.ignoring = 0
+
     def start_span(self, _, attributes):
         class_ = attributes.get('class')
         self.spans.append(class_)
