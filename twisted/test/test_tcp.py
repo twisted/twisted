@@ -311,5 +311,28 @@ class CannotBindTestCase (unittest.TestCase):
         reactor.iterate()
 
 
+class MyOtherClientFactory(protocol.ClientFactory):
+    def buildProtocol(self, address):
+        self.address = address
+        return MyProtocol()
 
 
+class LocalRemoteAddressTestCase(unittest.TestCase):
+    """Tests for correct getHost/getPeer values and that the correct address
+    is passed to buildProtocol.
+    """
+
+
+    def testHostAddress(self):
+        f1 = MyServerFactory()
+        p1 = reactor.listenTCP(9990, f1, interface='127.0.0.1')
+
+        f2 = MyOtherClientFactory()
+        p2 = reactor.connectTCP('127.0.0.1', 9990, f2)
+        
+        reactor.iterate()
+
+        self.assertEquals(p1.getHost(), f2.address)
+        self.assertEquals(p1.getHost(), p2.transport.getPeer())
+
+        p1.stopListening()
