@@ -27,9 +27,8 @@ import os.path
 
 class Options(usage.Options):
     synopsis = """Usage: mktap ftp [options].
-    WARNING: This FTP server currently is very simple and will
-    not work with a number of clients. We are working on making
-    it more interoperable."""
+    WARNING: This FTP server is probably INSECURE do not use it.
+    """
     optParameters = [
         ["port", "p", "2121",                 "set the port number"],
         ["root", "r", "/usr/local/ftp",       "define the root of the ftp-site."],
