@@ -13,27 +13,52 @@
 # * cd ~moshez/public_html/snapshot
 # * ./createpackages
 # celebrate
-import os, sys, getopt
+import os, sys, getopt, re
 
-run_dch, install = 0, None
+auto_version, run_dch, install = 0, 0, None
 
-for (opt, val) in getopt.getopt(sys.argv[1:], "di:")[0]:
+for (opt, val) in getopt.getopt(sys.argv[1:], "adi:")[0]:
 	if opt == "-d":
 		run_dch = 1
+	if opt == "-a":
+		auto_version = 1
 	if opt == "-i":
 		install = val
 
 here = os.path.dirname(os.path.abspath(sys.argv[0]))
 parent = os.path.dirname(here)
 root = os.path.basename(parent)
-print root
 version = root.split("-")[1]
 
+version_re = re.compile('\((.*)\)')
+letter = re.compile('[a-z]')
+old_version=None
+if auto_version:
+	lines = [version_re.search(line).group(1)
+	              for  line in 
+	                   open(os.path.join(parent, 
+	                                     'debian', 'changelog')).readlines()
+	              if line.startswith('twisted')]
+        if letter.search(version):
+	        for line in lines:
+	            if not letter.search(line):
+	                old_version = line
+	                break
+
 os.chdir(os.path.dirname(parent))
-os.system("mv Twisted-%(version)s twisted-%(version)s" % vars())
-os.system("tar czf twisted_%(version)s.orig.tar.gz "
-                  "twisted-%(version)s" % vars())
-os.chdir("twisted-%(version)s" % vars())
+if auto_version and old_version:
+	new_version = old_version+'+'+version
+else:
+	new_version = version
+
+os.system("mv Twisted-%(version)s twisted-%(new_version)s" % vars())
+os.system("tar czf twisted_%(new_version)s.orig.tar.gz "
+                  "twisted-%(new_version)s" % vars())
+os.chdir("twisted-%(new_version)s" % vars())
+if auto_version:
+	lines = open('debian/changelog').readlines()
+	lines[0]='twisted (%(new_version)s-1) unstable; urgency=low\n' % vars()
+	open('debian/changelog', 'w').writelines(lines)
 if run_dch:
 	os.system("dch")
 os.system("debuild -us -uc")
