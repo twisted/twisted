@@ -42,10 +42,35 @@ like twisted.web, etc. Twisted itself is very careful with internal
 dependancies, so importing one subpackage is not likely to import the whole
 twisted package.</p>
 
-<h2>Is Twisted stable enough for use in real programs?</h2>
+<h2>Does the 1.0 release mean that all of Twisted's APIs are stable?</h2>
 
-<p>Large parts of Twisted have stable or semi-stable APIs - see the 
-<a href="one-point-oh.html">Twisted 1.0</a> document.</p>
+<p>No, only specific parts of Twisted are stable, i.e. we only promise
+backwards compatibility for some parts of Twisted. While these APIs may be
+extended, they will not change in ways that break existing code that uses
+them. </p>
+
+<p>While other parts of Twisted are not stable, we will however do
+our best to make sure that there is backwards compatibility for these parts
+as well. In general, the more the module or package are used, and the closer they
+are to being feature complete, the more we will concentrate on providing backwards
+compatibility when API changes take place.</p>
+
+<h2>Which parts of Twisted 1.0 are stable?</h2>
+
+<p>Only modules explictily marked as such can be considered stable. Semi-stable
+modules may change, but not in a large way and some sort of backwards-compatibily
+will probably be provided. If no comment about API stability is present, assume
+the module is unstable.</p>
+
+<p>In Twisted 1.0, <b>most of twisted.internet is completely stable</b>, other than:
+
+<ol>
+<li>UDP support</li>
+<li>twisted.internet.win32eventreactor - will be replaced with win32support in future.</li>
+</ol>
+
+But as always, the only accurate way of knowing a module's stability is reading
+the module's docstrings.</p>
 
 <h2>Is the Twisted web server a toy?</h2>
 
@@ -64,6 +89,23 @@ Servers</a>.</p>
 <p>Great! Read our the docs, and if you're feeling generous, contribute
 patches.</p>
 
+<h2>Twisted really needs documentation for X, Y or Z - how come it's not documented?.</h2>
+
+<p>We are doing the best we can, and there is documentation
+in progress for many parts of Twisted. There is a limit to how much we
+can do in our free time. See also the answer to the next question.</p>
+
+<h2>My company would love to use Twisted, but it's missing feature X, can you implement it?</h2>
+
+<p>You have 3 options:</p>
+
+<ul>
+<li>Pay one of the Twisted developers to implement the feature.</li>
+<li>Implement the feature yourself.</li>
+<li>Add a feature request to our bug tracker. We will try to implement the
+feature, but there are no guarantees when and if this will happen.</li>
+</ul>
+
 <h2>Help!</h2>
 
 <p>Ask for help <a href="http://twistedmatrix.com/services/online-help">where
@@ -71,7 +113,10 @@ the Twisted team hangs out</a></p>
 
 <h2>I have this cool patch. To whom do I send it?</h2>
 
-<p>To the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a></p>
+<p>To the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>.
+If no one picks it up after a days, it's recommended that you add it to the 
+<a href="http://sourceforge.net/tracker/?group_id=49387&atid=456015">bug tracker</a> so that
+it doesn't get lost.</p>
 
 <h2>There's a bug in Twisted. Where do I report it?</h2>
 
@@ -80,7 +125,8 @@ fixed in <a href="http://twistedmatrix.com/developers/cvs">CVS</a>, so you
 would do well to look there. Then send any pertinent information about the
 bug (hopefully as much information needed to reproduce it: OS, CVS versions
 of any important files, Python version, code you wrote or things you did
-to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a></p>
+to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>. If no one answers immediately, you should add it to the 
+<a href="http://sourceforge.net/tracker/?group_id=49387&atid=456015">bug tracker</a>.</p>
 
 <h2>How do I use twisted.web to do complex things?</h2>
 
