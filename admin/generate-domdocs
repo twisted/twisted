@@ -28,10 +28,8 @@ sys.path.insert(0, os.curdir)
 
 
 import re, os, cStringIO, stat, time, cgi
-# syntax highlighting for Python source
-import py2html, PyFontify
 from twisted import copyright
-from twisted.python import usage
+from twisted.python import usage, htmlizer
 from twisted.web import microdom as dom
 
 
@@ -114,8 +112,7 @@ class Cache:
                 return v
 
 def fontifyFiles(infile, outfile):
-    py2html.PrettyPrint(PyFontify.fontify,
-                        "rawhtml", "color").file_filter(infile, outfile)
+    htmlizer.filter(infile, outfile)
     
 
 def writeNodeData(node, oldio):
