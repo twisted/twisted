@@ -402,7 +402,7 @@ class IReactorTime(Interface):
 
         @param args: the arguments to call it with.
 
-        @param kw: they keyword arguments to call it with.
+        @param kw: the keyword arguments to call it with.
 
         @returns: An L{IDelayedCall} object that can be used to cancel
                   the scheduled call, by calling its C{cancel()} method.
@@ -589,6 +589,23 @@ class IReactorCore(Interface):
         """Removes a trigger added with addSystemEventTrigger.
 
         @param triggerID: a value returned from addSystemEventTrigger.
+        """
+
+    def callWhenRunning(self, callable, *args, **kw):
+        """Call a function when the reactor is running.
+
+        If the reactor has not started, the callable will be scheduled
+        to run when it does start. Otherwise, the callable will be invoked
+        immediately.
+
+        @param callable: the callable object to call later.
+
+        @param args: the arguments to call it with.
+
+        @param kw: the keyword arguments to call it with.
+
+        @returns: None if the callable was invoked, otherwise a system
+        event id for the scheduled call.
         """
 
 

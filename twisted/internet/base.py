@@ -163,6 +163,7 @@ class ReactorBase:
     def __init__(self):
         self._eventTriggers = {}
         self._pendingTimedCalls = []
+        self.running = 0
         self.waker = None
         self.resolver = None
         self.usingThreads = 0
@@ -349,6 +350,14 @@ class ReactorBase:
                                         "after":  2}[phase]
                                        ].remove(item)
 
+    def callWhenRunning(self, callable, *args, **kw):
+        """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
+        """
+        if self.running:
+            callable(*args, **kw)
+        else:
+            return self.addSystemEventTrigger('after', 'startup',
+                                              callable, *args, **kw)
 
     # IReactorTime
 

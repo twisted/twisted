@@ -1,5 +1,9 @@
 2003-07-21  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/internet/base.py: implement callWhenRunning
+
+	* twisted/internet/interfaces.py: add callWhenRunning API
+
 	* twisted/test/test_pop3.py: string in string only works in 2.3
 
 2003-07-19  Christopher Armstrong  <radix@twistedmatrix.com>
