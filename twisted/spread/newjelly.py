@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.5 $"[11:-2]
+__version__ = "$Revision: 1.6 $"[11:-2]
 
 # System Imports
 import string
@@ -311,9 +311,20 @@ class _Jellier:
     def preserve(self, obj, jlist):
         return jlist
 
+    def _checkMutable(self, obj, refId):
+        objId = id(obj)
+        if self.seen.has_key(objId):
+            objCheck, derefKey = self.seen[objId]
+            return [dereference_atom, derefKey]
+        self.seen[objId] = obj, refId
 
     def jelly(self, obj):
         if isinstance(obj, Jellyable):
+            refId = self._ref_id
+            self._ref_id += 1
+            preRef = self._checkMutable(obj, refId)
+            if preRef:
+                return preRef
             return obj.jellyFor(self)
         objType = type(obj)
         if self.taster.isTypeAllowed(
@@ -351,11 +362,9 @@ class _Jellier:
                 return ['class', qual(obj)]
             else:
                 # "Mutable" Types
-                objId = id(obj)
-                if self.seen.has_key(objId):
-                    objCheck, derefKey = self.seen[objId]
-                    return [dereference_atom, derefKey]
-                self.seen[objId] = obj, refId
+                preRef = self._checkMutable(obj, refId)
+                if preRef:
+                    return preRef
                 sxp = []
                 if objType is ListType:
                     sxp.append(list_atom)
