@@ -89,7 +89,7 @@ class UsenetServerFactory(NNTPFactory):
 
 
     def buildProtocol(self, connection):
-        p = self.protocol(self.remoteHosts)
+        p = self.protocol()
         p.factory = self
         return p
 

@@ -538,9 +538,6 @@ class NNTPServer(basic.LineReceiver):
     def __init__(self):
         self.servingSlave = 0
 
-    def sendLine(self, line):
-        print line
-        basic.LineReceiver.sendLine(self, line)
 
     def connectionMade(self):
         try:
@@ -554,7 +551,6 @@ class NNTPServer(basic.LineReceiver):
         self.sendLine('200 server ready - posting allowed')
 
     def lineReceived(self, line):
-        print line
         if self.inputHandler is not None:
             self.inputHandler(line)
         else:
