@@ -6,7 +6,7 @@ def printAnswer(answer):
     main.shutDown()
 
 def printFailure(arg):
-    print "error: could not resolve", arg
+    print "error: could not resolve:", arg
     main.shutDown()
 
 
