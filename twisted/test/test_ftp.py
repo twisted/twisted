@@ -372,6 +372,15 @@ class TestFTPFactory(FTPTestCase):
     testBuildProtocol.skip = "add test for maxProtocolInstances=None"
 
 
+class _BufferingProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.buffer = ''
+        self.d = defer.Deferred()
+    def dataReceived(self, data):
+        self.buffer += data
+    def connectionLost(self, reason):
+        self.d.callback(None)
+
 
 class SaneTestFTPServer(unittest.TestCase):
     """Simple tests for an FTP server with the default settings."""
@@ -383,7 +392,6 @@ class SaneTestFTPServer(unittest.TestCase):
 
         # Start the server
         portal = getPortal()
-        #portal.realm.tld = '.'
         portal.realm.tld = self.directory
         self.factory = ftp.FTPFactory(portal=portal)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
@@ -470,9 +478,14 @@ class SaneTestFTPServer(unittest.TestCase):
                 ('25.234.129.22', 25623))
 
     def testPASV(self):
+        # Login
         self.client.queueLogin('anonymous', 'anonymous')
+
+        # Issue a PASV command, and extract the host and port from the response
         responseLines = wait(self.client.queueStringCommand('PASV'))
         host, port = ftp.decodeHostPort(responseLines[-1][4:])
+
+        # Make sure the server is listening on the port it claims to be
         server = self.factory.instances[0]
         self.assertEqual(port, server.dtpPort.getHost().port)
 
@@ -485,52 +498,71 @@ class SaneTestFTPServer(unittest.TestCase):
         responseLines = wait(self.client.queueStringCommand('SYST'))
         self.assertEqual(["215 UNIX Type: L8"], responseLines)
 
-    def testLIST(self):
-        self.client.queueLogin('anonymous', 'anonymous')
+    def _makePassiveConnection(self):
         responseLines = wait(self.client.queueStringCommand('PASV'))
         host, port = ftp.decodeHostPort(responseLines[-1][4:])
-        class BufferingProtocol(protocol.Protocol):
-            def connectionMade(self):
-                self.buffer = ''
-                self.d = defer.Deferred()
-            def dataReceived(self, data):
-                self.buffer += data
-            def connectionLost(self, reason):
-                self.d.callback(None)
         downloader = wait(
             protocol.ClientCreator(reactor, 
-                                   BufferingProtocol).connectTCP('127.0.0.1',
-                                                                 port)
+                                   _BufferingProtocol).connectTCP('127.0.0.1',
+                                                                  port)
         )
+        return downloader
+
+    def testLIST(self):
+        # Login
+        self.client.queueLogin('anonymous', 'anonymous')
+
+        # Download a listing
+        downloader = self._makePassiveConnection()
         d = self.client.queueStringCommand('LIST')
         wait(defer.gatherResults([d, downloader.d]))
 
-        # No files, should be empty
+        # No files, so the file listing should be empty
         self.assertEqual('', downloader.buffer)
 
         # Make some directories
         os.mkdir(os.path.join(self.directory, 'foo'))
         os.mkdir(os.path.join(self.directory, 'bar'))
 
-        # Do it again
-        responseLines = wait(self.client.queueStringCommand('PASV'))
-        host, port = ftp.decodeHostPort(responseLines[-1][4:])
-        downloader = wait(
-            protocol.ClientCreator(reactor, 
-                                   BufferingProtocol).connectTCP('127.0.0.1',
-                                                                 port)
-        )
+        # Download a listing again
+        downloader = self._makePassiveConnection()
         d = self.client.queueStringCommand('LIST')
         wait(defer.gatherResults([d, downloader.d]))
 
-        # 2 files means we expect 2 lines
+        # Now we expect 2 lines because there are two files.
         self.assertEqual(2, len(downloader.buffer.rstrip('\n').split('\n')))
 
+        # Download a names-only listing
+        downloader = self._makePassiveConnection()
+        d = self.client.queueStringCommand('NLST')
+        wait(defer.gatherResults([d, downloader.d]))
+        filenames = downloader.buffer.rstrip('\n').split('\n')
+        filenames.sort()
+        self.assertEqual(['bar', 'foo'], filenames)
+
+        # Download a listing of the 'foo' subdirectory
+        downloader = self._makePassiveConnection()
+        d = self.client.queueStringCommand('LIST foo')
+        wait(defer.gatherResults([d, downloader.d]))
+
+        # 'foo' has no files, so the file listing should be empty
+        self.assertEqual('', downloader.buffer)
+
+        # Change the current working directory to 'foo'
+        wait(self.client.queueStringCommand('CWD foo'))
+        
+        # Download a listing from within 'foo', and again it should be empty
+        downloader = self._makePassiveConnection()
+        d = self.client.queueStringCommand('LIST')
+        wait(defer.gatherResults([d, downloader.d]))
+        self.assertEqual('', downloader.buffer)
+
     def tearDown(self):
-        # Clean up
+        # Clean up sockets
         self.client.transport.loseConnection()
         wait(self.port.stopListening())
         
+        # Clean up temporary directory
         shutil.rmtree(self.directory)
 
 

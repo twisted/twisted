@@ -856,6 +856,15 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
         self._doDTPCommand('RETR')
 
+    def ftp_NLST(self, params=''):
+        self.fp, self.fpsize = self.shell.nlst(cleanPath(params))
+        if self.dtpInstance and self.dtpInstance.isConnected:
+            self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
+        else:
+            self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
+        self._doDTPCommand('RETR')
+        
+    
     def ftp_SIZE(self, params=''):
         log.debug('ftp_SIZE: %s' % params)
         filesize = self.shell.size(cleanPath(params))
@@ -1415,6 +1424,15 @@ We will continue using the user %s.
             #raise PermissionDeniedError(cpath)
         sio = self.getUnixLongListString(spath)
         return (sio, len(sio.getvalue()))
+
+    def nlst(self, path):
+        cpath, spath = self.mapCPathToSPath(path)
+        filenames = os.listdir(spath)
+        result = StringIO()
+        # FIXME: escape filenames?
+        result.write('\n'.join(filenames))
+        result.write('\n')
+        return result, len(result.getvalue())
 
     def mdtm(self, path):
         cpath, spath = self.mapCPathToSPath(path)
