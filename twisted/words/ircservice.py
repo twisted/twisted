@@ -72,7 +72,7 @@ class IRCChatter(irc.IRC):
         """Register a password.
         """
         self.paswd = params[-1]
-        
+
     def irc_NICK(self, prefix, params):
         """Set your nickname.
         """
@@ -90,6 +90,21 @@ class IRCChatter(irc.IRC):
             else:
                 self.sendLine(":%s 001 %s :connected to Twisted IRC" %
                               (self.servicename, nickname))
+                self.sendLine(":%s 002 %s :Your host is %s,"
+                              " running version %s" %
+                              (self.servicename, nickname,
+                               self.servicename, "0.9.6")) # XXX
+                self.sendLine(":%s 003 %s :This server was created %s" %
+                              (self.servicename, nickname,
+                               "by a very sick man."))
+                # "Bummer.  This server returned a worthless 004 numeric.
+                #  I'll have to guess at all the values"
+                #    -- epic
+                self.sendLine(":%s 004 %s :%s %s %s %s" %
+                              (self.servicename, nickname,
+                               self.servicename, "0.9.6", # XXX
+                               '' and "XXX:user_modes",
+                               '' and "XXX:channel_modes"))
                 self.nickname = nickname
                 if self.paswd is None:
                     self.receiveDirectMessage("*login*", "Password?")
@@ -147,7 +162,7 @@ class IRCChatter(irc.IRC):
                 self.participant.attached(self)
             else:
                 self.receiveDirectMessage("*login*", "You haven't logged in yet.")
-                
+
 
 
     def irc_JOIN(self, prefix, params):
@@ -268,5 +283,3 @@ class IRCGateway(protocol.Factory):
         i = IRCChatter()
         i.service = self.service
         return i
-
-
