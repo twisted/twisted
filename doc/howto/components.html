@@ -263,7 +263,7 @@ done in code than to describe it:</p>
 from twisted.python import components
 
 class IAmericanSocket(components.Interface):
-    def voltage():
+    def voltage(self):
       """Return the voltage produced by this socket object, as an integer.
       """
     
