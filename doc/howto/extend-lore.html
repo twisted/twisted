@@ -28,7 +28,7 @@ can be solved by creating an extension.</p>
 whatever output the user specifies on the command line.  If the HTML document
 is well-formed XML that meets a certain minimum standard, Lore will be able to
 to produce some output.  Most Lore extensions will be written to redefine the
-<em>input</em>, not the output.  The default input is "lore", and it is the
+<em>input</em>, not the output.  The default input is <q>lore</q>, and it is the
 only one Lore comes with.  When you write your extension, you will come up
 with a new name for your input, telling Lore what rules to use to process the
 file.</p>
@@ -46,7 +46,7 @@ LaTeX.</p>
 <p>Create a new input to tell Lore that your document is marked up differently
 from a vanilla Lore document.  This gives you the power to define a new tag 
 class, for example:</p>
-<pre class="html">
+<pre>
 &lt;p&gt;The Frabjulon &lt;span class="productname"&gt;Limpet 2000&lt;/span&gt;
 is the &lt;span class="marketinglie"&gt;industry-leading&lt;/span&gt; aquatic 
 mollusc counter, bar none.&lt;/p&gt;
@@ -77,12 +77,11 @@ Also create an <code class="py-filename">__init__.py</code> file in
   your new package.  Note that <em>the __init__ file can be empty, but it must
     exist.</em> The combination of plugin file and __init__ file
 causes the new package to be treated like a Twisted plugin, one that Lore
-knows how to make use of.  The first three arguments to <code
-  class="py-identifier">register()</code> are the human-readable name, module
-name, and description of your plugin.  The <code
-  class="py-identifier">type</code> parameter makes this plugin visible to the
-Lore system (rather than some other part of Twisted).  The <code
-  class="py-identifier">tapname</code> parameter is an arbitrary filename with
+knows how to make use of.  The first three arguments to <code>register()</code>
+are the human-readable name, module name, and description of your plugin.  The
+<code>type</code> parameter makes this plugin visible to the Lore system
+(rather than some other part of Twisted).  The <code>tapname</code> parameter
+is an arbitrary filename with
 no extension; by convention you should use the lowercase version of your first
 argument (the human-readable name).  Users of your extension will pass this
 argument to lore with the <code class="shell">--input</code> parameter on the
@@ -98,11 +97,11 @@ the factory module is to tell Lore how to process your input.</p>
   Factory</a>
 
 <p>In Listing 2, we create a subclass of ProcessingFunctionFactory.  This
-class provides a hook for you, a class variable named <code
-  class="py-identifier">latexSpitters</code>.  This variable tells Lore
+class provides a hook for you, a class variable named
+<code>latexSpitters</code>.  This variable tells Lore
 what new class will be generating LaTeX from your input format.  We redefine
-<code class="py-identifier">latexSpitters</code> to <code
-  class="py-identifier">MyLatexSpitter</code> in the subclass because this
+<code>latexSpitters</code> to <code>MyLatexSpitter</code> in the subclass
+because this
 class knows what to do with the new input we have already defined.</p>
 
 <p>Now let's actually write some code to generate the LaTeX.  Doing this
@@ -113,11 +112,10 @@ resources.</p>
 <a href="listings/lore/spitters.py" class="py-listing">Listing 3:
   spitters.py</a>
 
-<p>The method <code class="py-identifier">visitNode_span_productname</code> is
+<p>The method <code>visitNode_span_productname</code> is
 our handler for &lt;span&gt; tags with the <code>class="productname"</code>
-identifier.  Lore knows to try methods <code
-  class="py-identifier">visitNode_span_*</code> and <code
-  class="py-identifier">visitNode_div_*</code> whenever it encounters a new
+identifier.  Lore knows to try methods <code>visitNode_span_*</code> and
+<code>visitNode_div_*</code> whenever it encounters a new
 class in one of these tags.</p>
 
 <p>Now let's see what Lore does with these new classes with the following
