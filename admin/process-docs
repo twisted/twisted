@@ -2,6 +2,8 @@
 
 # note: in order to run this script you need the programs 'pngtopnm' and 'pnmtops'
 # both of which are available (in debian) as part of the 'netpbm' package (as of 2004-05-27)
+# Also required is the 'ps2pdf13' program, part of the (debian) package
+# 'gs-common' (as of 2004-07-30).
 
 set -e
 if test "x$1" = "x" ; then
