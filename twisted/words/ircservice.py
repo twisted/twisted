@@ -99,6 +99,7 @@ class IRCChatter(irc.IRC):
                 else:
                     self.service.check(nickname, self.paswd)
                     self.participant = participant
+                    self.participant.attached(self)
                     self.receiveDirectMessage("*login*", "Pasword already accepted.  Thank you.")
         else:
             self.sendLine(":%s 433 %s %s :this username is invalid" %
