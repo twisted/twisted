@@ -1,5 +1,7 @@
 2002-11-10  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
+	* .: Releasing 1.0.1alpha2
+
 	* twisted/web/static.py, twisted/tap/web.py: Changed 'mktap web'
 	to use --ignore-ext .ext so that you can assign order to the
 	extensions you want to ignore, and not accidentally catch bad
