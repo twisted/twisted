@@ -116,5 +116,30 @@ resource = MyGreatResource()
 <p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to http://localhost:8080/your_username.twistd/ -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small "community" sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
 
 
+<h3>Serving PHP/Perl/CGI</h3>
+
+<p>Everything related to CGI is located in the
+<code>twisted.web.twcgi</code>, and it's here you'll find the classes that you
+need to subclass in order to support the language of your (or somebody elses)
+taste. You'll also need to create your own kind of resource if you are using a
+non-unix operatingsystem (such as Windows), or if the default resources has
+wrong pathnames to the parsers.</p>
+
+<p>The following snippet is a .rpy that serves perl-files. Look at <code>twisted.web.twcgi</code>
+for more examples regarding twisted.web and CGI.</p>
+
+<pre class="python">
+from twisted.internet import main, app
+from twisted.web import server, static, twcgi
+
+class PerlScript(twcgi.FilteredScript):
+    filter = '/usr/bin/perl' # Points to the perl parser
+
+application = app.Application("perlwebserver")
+resource = static.File("/perlsite") # Points to the perl website
+resource.processors = {".pl": PerlScript} # Files that end with .pl will be processed by PerlScript
+resource.indexNames = ['index.pl']
+</pre>
+
 </body>
 </html>
