@@ -172,8 +172,8 @@ def updateApplication(app, config):
                                    distrib.UserDirectory.userSocketName),
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
-        from twisted.internet.ssl import DefaultOpenSSLContextFactory
         if config['https']:
+            from twisted.internet.ssl import DefaultOpenSSLContextFactory
             app.listenSSL(int(config['https']), site,
                           DefaultOpenSSLContextFactory(config['privkey'],
                                                        config['certificate']))
