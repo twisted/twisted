@@ -27,7 +27,7 @@ components.registerAdapter(GetFoosName, Foo, IHaveAName)
 
 def main():
     f = Foo()
-    print "f is an instance of %r" % f
+    print "repr(f) %r" % f
 
     # what happens here is that the component architecture looks to see
     # if someone has registered an adapter from Foo to IHaveAName, it
@@ -37,7 +37,12 @@ def main():
     #
     haveAName = IHaveAName(f)
 
-    print "haveAName is an instance of %r" % haveAName
+    print "repr(haveAName): %r" % haveAName
+
+    print "repr(haveAName.original): %r" % haveAName.original
+
+    print "haveAName.original is f: %s" % (haveAName.original is f)
+
     name = haveAName.getName()
     print "name: %s" % name
 

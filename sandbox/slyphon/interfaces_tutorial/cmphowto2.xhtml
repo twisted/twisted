@@ -66,35 +66,41 @@ with the instance as it's first (and only) argument.</p>
 
 <a href="cmplist1.py" class="py-listing"></a>
 
+<h3>Explanation</h3>
+
+<p>So we start out by defining our interface <code>IHaveAName</code>, which has
+one method <code>getName</code>. <code>Foo</code> is the class we will adapt to our
+interface, and <code>GetFoosName</code> is our adapter. The important bit that
+relates these three classes is the call to <code>components.registerAdapter</code>.
+This call tells the component system that we will use <code>GetFoosName</code> to
+adapt <code>Foo</code> to the interface <code>IHaveAName</code>. When we run
+this code we see:
+</p>
+
+<pre>
+repr(f) &lt;__main__.Foo object at 0x403f43ac&gt;
+repr(haveAName): &lt;__main__.GetFoosName instance at 0x403f458c&gt;
+repr(haveAName.original): &lt;__main__.Foo object at 0x403f43ac&gt;
+haveAName.original is f: True
+name: scrubble
+</pre>
+
 <h2>A slightly more involved example</h2>
 
-<a href="simple_interface.py" class="py-listing"></a>
+<a href="cmplist2.py" class="py-listing" />
 
 <h3>Explanation</h3>
 
 <p>Okay, now there's a fair amount of stuff going on here, so lemme begin at
 the beginning.</p>
 
-<p>First we define our interface. An interface represents the public API that
-we want to be able to use. Notice that in the zope interface sytle, interfaces do not
+<p>First we define our interface. Notice that in the zope interface sytle, interfaces do not
 use <code>self</code> in their function definitions. This is because zope thinks that
 interfaces should how you <strong>use</strong> interfaces, rather than their implementation
 details (and, one could argue that self is an implementation detail of the Python
 langugage). Our interface is dead-simple and only defines one method,
-<code>get path</code>. Interface definitions are an ideal place to put docstrings,
+<code>getPath</code>. Interface definitions are an ideal place to put docstrings,
 as your public interfaces are likely to remain more stable than your classes.</p>
-
-<p>Next we have our adapters. These are classes that by definition, have the following
-<code>__init__</code> method defined.</p>
-
-<pre class="python">
-class Adapter:
-    def __init__(self, original):
-        self.original = original
-</pre>
-
-<p><em>to be technically accurate, an adapter doesn't have to be a class, but I'll cover
-that later</em></p>
 
 <p>Pretty simple, huh? The Adapter simply "wraps" the instance of the class it is
 adapting, and performs whatever "middle steps" are necessary to get that original
@@ -120,15 +126,17 @@ the interfaces to which those classes will be adapted. We do that by using
 <code>twisted.python.components.registerAdapter</code>. When we call <code>registerAdapter</code>
 in line XXX we are saying to the component architecture:</p>
 
-<quote><em>"When we request
+<blockquote><q>When we request
 that instance <code>aList</code> of <code>types.ListType</code> be adapted to the interface
-<code>IFilePath</code>, pass <code>aList</code> to the callable <code>ListPath</code> and return
-the result.</em>
-</quote>
+<code>IFilePath</code>, pass <code>aList</code> to the callable<span class="footnote">to be
+technically accurate, we say <q>callable</q> here because an adapter doesn't have to be a
+class, but we'll cover that later</span>&nbsp;<code>ListPath</code> and return the result.</q>
+</blockquote>
+
 
 <p>So, in our <code>main</code> method, we can see what it looks like to "wrap" or "adapt"
 an instance to an interface. The line <code>adapterToIFilePath = IFilePath(original)</code>
-is where the adaptation happens. <code>adapterToIFilePath.getPath()</code> is actually calling
+is where the adaptation happens and <code>adapterToIFilePath.getPath()</code> is actually calling
 the method <code>getPath</code> on the proper adapter instance.</p>
 
 <p>When you run the program, you'll see the following output:</p>
@@ -140,13 +148,13 @@ path/to/knowhere
 /home/slyphon/Projects/Twisted/trunk/sandbox/slyphon/interfaces_tutorial/simple_interface.py
 </pre>
 
-<p>You have just witnessed the awesome power of adapters...umm...on a very small scale. At the
-time we call <code>IFilePath(original).getPath()</code> on the object, we don't care <em>what type that
-object is an instance of!</em> As long as we have defined an adapter class to act as an interpreter
-between the original object's interface and the desired interface, we know that the adapted object
-will do what we want it to do!</p>
+<p>So, this is what all the fuss is about. At the time we call <code>IFilePath(original).getPath()</code>
+on the object, we don't care <em>what class that object is an instance of!</em> As long as we have
+defined an adapter class to act as an interpreter between the original object's interface and the
+desired interface, we know that the adapted object will do what we want it to do!</p>
 
-<p>Ladies and gentlemen, this is <strong>true</strong> polymorphism!</p>
+<h2>A slight variation on the last example</h2>
+
 
 </body>
 </html>
