@@ -115,7 +115,7 @@ except:
             idx = self.idx
             self.idx += 1
             try:
-                return self.lst[idx]
+                return self.seq[idx]
             except IndexError: 
                 raise StopIteration
 
@@ -155,7 +155,7 @@ except:
             return iterable
         if not hasattr(iterable, '__iter__'):
             # implicit iteration, dependent on sequence or dict behavior
-            iterable = _SequenceIterator(lst)
+            iterable = _SequenceIterator(iterable)
         return _CompatIterator(iterable.__iter__())
 
     def _iter_sentinel(callable, sentinel):
