@@ -14,7 +14,21 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Simplistic HTTP proxy support."""
+"""Simplistic HTTP proxy support.
+
+This comes in two main variants - the Proxy and the ReverseProxy.
+
+When a Proxy is in use, a browser trying to connect to a server (say,
+www.yahoo.com) will be intercepted by the Proxy, and the proxy will covertly
+connect to the server, and return the result.
+
+When a ReverseProxy is in use, the client connects directly to the ReverseProxy
+(say, www.yahoo.com) which farms off the request to one of a pool of servers,
+and returns the result.
+
+Normally, a Proxy is used on the client end of an Internet connection, while a
+ReverseProxy is used on the server end.
+"""
 
 # twisted imports
 from twisted.protocols import http
@@ -27,6 +41,7 @@ import string
 
 
 class ProxyClient(http.HTTPClient):
+    """Used by ProxyClientFactory to implement a simple web proxy."""
 
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father
@@ -58,6 +73,7 @@ class ProxyClient(http.HTTPClient):
 
 
 class ProxyClientFactory(protocol.ClientFactory):
+    """Used by ProxyRequest to implement a simple web proxy."""
 
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father
@@ -82,6 +98,7 @@ class ProxyClientFactory(protocol.ClientFactory):
 
 
 class ProxyRequest(http.Request):
+    """Used by Proxy to impelement a simple web proxy."""
 
     protocols = {'http': ProxyClientFactory}
     ports = {'http': 80}
@@ -107,11 +124,23 @@ class ProxyRequest(http.Request):
         reactor.connectTCP(host, port, clientFactory)
 
 class Proxy(http.HTTPChannel):
+    """This class implements a simple web proxy.
+
+    Since it inherits from twisted.protocols.http.HTTPChannel, to use it you
+    should do something like this:
+
+        from twisted.protocols import http
+        f = http.HTTPFactory()
+        f.HTTPChannel = Proxy
+
+    Make the HTTPFactory a listener on a port as per usual, and you have
+    a fully-functioning web proxy!"""
 
     requestFactory = ProxyRequest
 
 
 class ReverseProxyRequest(http.Request):
+    """Used by ReverseProxy to implement a simple reverse proxy."""
 
     def process(self):
         self.received_headers['host'] = self.factory.host
@@ -123,11 +152,19 @@ class ReverseProxyRequest(http.Request):
                            clientFactory)
 
 class ReverseProxy(http.HTTPChannel):
+    """Implements a simple reverse proxy.
+
+    For details of usage, see the file examples/proxy.py"""
 
     requestFactory = ReverseProxyRequest
 
 
 class ReverseProxyResource(resource.Resource):
+    """Resource that renders the results gotten from another server
+
+    Put this resource in the tree to cause everything below it to be relayed
+    to a different server.
+    """
 
     def __init__(self, host, port, path):
         resource.Resource.__init__(self)
