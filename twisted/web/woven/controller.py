@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.63 $"[11:-2]
+__version__ = "$Revision: 1.64 $"[11:-2]
 
 import os
 import cgi
@@ -107,7 +107,7 @@ class Controller(resource.Resource):
                 warnings.warn("factory_ methods are deprecated; please use "
                               "wcfactory_ instead", DeprecationWarning)
         if cm:
-            if cm.func_code.co_argcount == 1 and not type(vm) == types.LambdaType:
+            if cm.func_code.co_argcount == 1 and not type(cm) == types.LambdaType:
                 warnings.warn("A Controller Factory takes "
                               "(request, node, model) "
                               "now instead of (model)", DeprecationWarning)
