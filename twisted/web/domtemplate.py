@@ -339,7 +339,11 @@ class DefaultHandler(Controller):
         """
         By default, we don't do anything, and we return the default view.
         """
-        return self.view.render(request)
+        # support deferreds
+        if hasattr(self.view, 'render'):
+            return self.view.render(request)
+        else:
+            return self.view
 
     def setId(self, id):
         self.id = id
