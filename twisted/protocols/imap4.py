@@ -1232,10 +1232,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def do_SEARCH(self, tag, charset, query, uid=0):
-        maybeDeferred(self.mbox.search, query, uid=uid).addCallbacks(
-            self.__cbSearch, self.__ebSearch,
-            (tag, self.mbox, uid), None, (tag,), None
-        )
+        if components.implements(self.mbox, ISearchableMailbox):
+            maybeDeferred(self.mbox.search, query, uid=uid).addCallbacks(
+                self.__cbSearch, self.__ebSearch,
+                (tag, self.mbox, uid), None, (tag,), None
+            )
+        else:
+            s = MessageSet()
+            s.add(1)
+            maybeDeferred(self.mbox.fetch, s, uid=uid).addCallbacks(
+                self.__cbManualSearch, self.__ebSearch,
+                (tag, self.mbox, query, uid), None, (tag,), None
+            )
 
     select_SEARCH = (do_SEARCH, opt_charset, arg_searchkeys)
 
@@ -1245,6 +1253,180 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         ids = ' '.join([str(i) for i in result])
         self.sendUntaggedResponse('SEARCH ' + ids)
         self.sendPositiveResponse(tag, 'SEARCH completed')
+
+    def __cbManualSearch(self, result, tag, mbox, query, uid, searchResults = None):
+        if searchResults is None:
+            searchResults = []
+        for (i, (id, msg)) in zip(range(5), result):
+            if self.searchFilter(query, id, msg):
+                if uid:
+                    searchResults.append(str(msg.getUID()))
+                else:
+                    searchResults.append(str(id))
+        if i == 4:
+            reactor.callLater(0, self.__cbManualSearch, result, tag, mbox, query, uid, searchResults)
+        else:
+            self.sendUntaggedResponse('SEARCH' + ' '.join(searchResults))
+            self.sendPositiveResponse(tag, 'OK SEARCH completed')
+    
+    def searchFilter(self, query, id, msg):
+        while query:
+            if not self.singleSearch(query, id, msg):
+                return False
+        return True
+
+    def singleSearchStep(self, query, id, msg):
+        q = query.pop(0)
+        if isinstance(q, list):
+            if not self.searchFilter(q, id, msg):
+                return False
+        else:
+            c = query.pop(0).upper()
+            f = getattr(self, 'search_' + c)
+            if f:
+                if not f(query, id, msg):
+                    return False
+            else:
+                # IMAP goes *out of its way* to be complex
+                # Sequence sets to search should be specified
+                # with a command, like EVERYTHING ELSE.
+                try:
+                    m = parseIdList(c)
+                except:
+                    log.err('Unknown search term: ' + c)
+                else:
+                    if id not in m:
+                        return False
+        return True
+
+    def search_ALL(self, query, id, msg):
+        return True
+    
+    def search_ANSWERED(self, query, id, msg):
+        return '\\Answered' in msg.getFlags()
+    
+    def search_BCC(self, query, id, msg):
+        bcc = msg.getHeaders(False, 'bcc').get('bcc', '')
+        return bcc.lower().find(query.pop(0).lower()) != -1
+    
+    def search_BEFORE(self, query, id, msg):
+        date = parseTime(query.pop(0))
+        return rfc822.parsedate(msg.getInternalDate()) < date
+    
+    def search_BODY(self, query, id, msg):
+        body = query.pop(0).lower()
+        return text.strFile(body, msg.getBody(), False)
+    
+    def search_CC(self, query, id, msg):
+        cc = msg.getHeaders(False, 'cc').get('cc', '')
+        return cc.lower().find(query.pop(0).lower()) != -1
+    
+    def search_DELETED(self, query, id, msg):
+        return '\\Deleted' in msg.getFlags()
+    
+    def search_DRAFT(self, query, id, msg):
+        return '\\Draft' in msg.getFlags()
+    
+    def search_FLAGGED(self, query, id, msg):
+        return '\\Flagged' in msg.getFlags()
+    
+    def search_FROM(self, query, id, msg):
+        fm = msg.getHeaders(False, 'from').get('from', '')
+        return fm.lower().find(query.pop(0).lower()) != -1
+    
+    def search_HEADER(self, query, id, msg):
+        hdr = query.pop(0).lower()
+        hdr = msg.getHeaders(False, hdr).get(hdr, '')
+        return hdr.lower().find(query.pop(0).lower()) != -1
+    
+    def search_KEYWORD(self, query, id, msg):
+        query.pop(0)
+        return False
+    
+    def search_LARGER(self, query, id, msg):
+        return int(query.pop(0)) < msg.getSize()
+    
+    def search_NEW(self, query, id, msg):
+        return '\\Recent' in msg.getFlags() and '\\Seen' not in msg.getFlags()
+    
+    def search_NOT(self, query, id, msg):
+        return not self.singleSearchStep(query, id, msg)
+    
+    def search_OLD(self, query, id, msg):
+        return '\\Recent' not in msg.getFlags()
+    
+    def search_ON(self, query, id, msg):
+        date = parseTime(query.pop(0))
+        return rfc822.parsedate(msg.getInternalDate()) == date
+    
+    def search_OR(self, query, id, msg):
+        a = self.singleSearchStep(query, id, msg)
+        b = self.singleSearchStep(query, id, msg)
+        return a or b
+    
+    def search_RECENT(self, query, id, msg):
+        return '\\Recent' in msg.getFlags()
+    
+    def search_SEEN(self, query, id, msg):
+        return '\\Seen' in msg.getFlags()
+    
+    def search_SENTBEFORE(self, query, id, msg):
+        date = msg.getHeader(False, 'date').get('date', '')
+        date = rfc822.parsedate(date)
+        return date < parseTime(query.pop(0))
+    
+    def search_SENTON(self, query, id, msg):
+        date = msg.getHeader(False, 'date').get('date', '')
+        date = rfc822.parsedate(date)
+        return date[:3] == parseTime(query.pop(0))[:3]
+    
+    def search_SENTSINCE(self, query, id, msg):
+        date = msg.getHeader(False, 'date').get('date', '')
+        date = rfc822.parsedate(date)
+        return date > parseTime(query.pop(0))
+    
+    def search_SINCE(self, query, id, msg):
+        date = parseTime(query.pop(0))
+        return rfc822.parsedate(msg.getInternalDate()) > date
+    
+    def search_SMALLER(self, query, id, msg):
+        return int(query.pop(0)) > msg.getSize()
+    
+    def search_SUBJECT(self, query, id, msg):
+        subj = msg.getHeaders(False, 'subject').get('subject', '')
+        return subj.lower().find(query.pop(0).lower()) != -1
+    
+    def search_TEXT(self, query, id, msg):
+        # XXX - This msut search headers too
+        body = query.pop(0).lower()
+        return text.strFile(body, msg.getBody(), False)
+
+    def search_TO(self, query, id, msg):
+        to = msg.getHeaders(False, 'to').get('to', '')
+        return to.lower().find(query.pop(0).lower()) != -1
+    
+    def search_UID(self, query, id, msg):
+        m = parseIdList(c)
+        return msg.getUID() in m
+    
+    def search_UNANSWERED(self, query, id, msg):
+        return '\\Answered' not in msg.getFlags()
+    
+    def search_UNDELETED(self, query, id, msg):
+        return '\\Deleted' not in msg.getFlags()
+    
+    def search_UNDRAFT(self, query, id, msg):
+        return '\\Draft' not in msg.getFlags()
+    
+    def search_UNFLAGGED(self, query, id, msg):
+        return '\\Flagged' not in msg.getFlags()
+    
+    def search_UNKEYWORD(self, query, id, msg):
+        query.pop(0)
+        return False
+    
+    def search_UNSEEN(self, query, id, msg):
+        return '\\Seen' not in msg.getFlags()
 
     def __ebSearch(self, failure, tag):
         self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
@@ -3883,6 +4065,23 @@ class IMessage(components.Interface):
         @return: The specified sub-part.
         """
 
+class ISearchableMailbox(components.Interface):
+    def search(self, query, uid):
+        """Search for messages that meet the given query criteria.
+
+        @type query: C{list}
+        @param query: The search criteria
+
+        @type uid: C{bool}
+        @param uid: If true, the IDs specified in the query are UIDs;
+        otherwise they are message sequence IDs.
+
+        @rtype: C{list} or C{Deferred}
+        @return: A list of message sequence numbers or message UIDs which
+        match the search criteria or a C{Deferred} whose callback will be
+        invoked with such a list.
+        """
+
 class IMailbox(components.Interface):
     def getUIDValidity(self):
         """Return the unique validity identifier for this mailbox.
@@ -4024,22 +4223,6 @@ class IMailbox(components.Interface):
 
         @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
         read-write.
-        """
-
-    def search(self, query, uid):
-        """Search for messages that meet the given query criteria.
-
-        @type query: C{list}
-        @param query: The search criteria
-
-        @type uid: C{bool}
-        @param uid: If true, the IDs specified in the query are UIDs;
-        otherwise they are message sequence IDs.
-
-        @rtype: C{list} or C{Deferred}
-        @return: A list of message sequence numbers or message UIDs which
-        match the search criteria or a C{Deferred} whose callback will be
-        invoked with such a list.
         """
 
     def fetch(self, messages, uid):
@@ -4402,6 +4585,33 @@ class _FetchParser:
         self.pending_body.partialLength = length
         
         return end + 1
+
+def parseTime(s):
+    # XXX - This may require localization :(
+    months = [   
+        'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
+        'nov', 'dec', 'january', 'february', 'march', 'april', 'may', 'june',
+        'july', 'august', 'september', 'october', 'november', 'december'
+    ]
+    expr = {
+        'day': r"(?P<day>3[0-1]|[1-2]\d|0[1-9]|[1-9]| [1-9])",
+        'mon': r"(?P<mon>\w+)",
+        'year': r"(?P<year>\d\d\d\d)"
+    }
+    m = re.match('%(day)s-%(mon)s-%(year)s' % expr, s)
+    if not m:
+        raise ValueError, "Cannot parse time string %r" % (s,)
+    d = m.groupdict()
+    try:
+        d['mon'] = 1 + (months.index(d['mon'].lower()) % 12)
+        d['year'] = int(d['year'])
+        d['day'] = int(d['day'])
+    except ValueError:
+        raise ValueError, "Cannot parse time string %r" % (s,)
+    else:
+        return time.struct_time(
+            (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
+        )
 
 import codecs
 def modified_base64(s):

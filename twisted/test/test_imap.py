@@ -1755,6 +1755,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
 
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
+    __implements__ = (imap4.ISearchableMailbox,)
+
     def setUp(self):
         self.expected = self.result = None
         self.server_received_query = None
