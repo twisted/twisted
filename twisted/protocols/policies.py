@@ -269,12 +269,14 @@ class SpewingFactory(WrappingFactory):
 
 
 class LimitConnectionsByPeerProtocol(ProtocolWrapper):
+    """Stability: Unstable"""
     def connectionLost(self):
         self.factory.peerDisconnected(self)
         self.wrappedProtocol.connectionLost(self)
     
 
 class LimitConnectionsByPeer(WrappingFactory):
+    """Stability: Unstable"""
     protocol = LimitConnectionsByPeerProtocol
 
     maxConnectionsPerPeer = 5
@@ -298,7 +300,10 @@ class LimitConnectionsByPeer(WrappingFactory):
 
 
 class TimeoutProtocol(ProtocolWrapper):
-    """Protocol that automatically disconnects when the connection is idle."""
+    """Protocol that automatically disconnects when the connection is idle.
+    
+    Stability: Unstable
+    """
 
     def __init__(self, factory, wrappedProtocol, timeoutPeriod):
         """Constructor.
@@ -368,6 +373,10 @@ class TimeoutProtocol(ProtocolWrapper):
 
 
 class TimeoutFactory(WrappingFactory):
+    """Factory for TimeoutWrapper.
+
+    Stability: Unstable
+    """
     protocol = TimeoutProtocol
 
     def __init__(self, wrappedFactory, timeoutPeriod=30*60):
