@@ -339,14 +339,12 @@ class Request(http.Request):
             else:
                 raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
             
-        
         newres = iweb.IResource(newres)
-        
         if newres is pageContext.tag:
             assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
-            assert  len(newpath) < len(path), "Infinite loop impending..."
-
-        ## We found a Resource... update the request.prepath and postpath
+            assert len(newpath) < len(path), "Infinite loop impending..."
+            
+        # We found a Resource... update the request.prepath and postpath
         for x in xrange(len(path) - len(newpath)):
             self.prepath.append(self.postpath.pop(0))
 

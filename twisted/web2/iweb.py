@@ -13,8 +13,13 @@ class IResource(Interface):
     """
 
     def locateChild(self, ctx, segments):
-        """Locate another object which can be adapted to IResource
-        Return a tuple of resource, path segments
+        """Locate another object which can be adapted to IResource.
+
+        @return: A 2-tuple of (resource, remaining-path-segments).
+                 Optionally, remaining-path-segments can be
+                 L{server.StopTraversal}, which instructs the server
+                 to stop looking for children and leave the rest of
+                 the path string alone.
         """
 
     def renderHTTP(self, ctx):
@@ -75,7 +80,6 @@ class IRemainingSegments(components.Interface):
     
     Equivalent to request.postpath in twisted.web
     """
-
 
 class ICurrentSegments(components.Interface):
     # Shared interface with inevow.ICurrentSegments
