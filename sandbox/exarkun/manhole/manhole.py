@@ -144,7 +144,10 @@ class VT102Writer:
         'identifier': '\x1b[31m',
         'keyword': '\x1b[32m',
         'parameter': '\x1b[33m',
-        'variable': '\x1b[34m'}
+        'variable': '\x1b[34m',
+        'string': '\x1b[35m',
+        'number': '\x1b[36m',
+        'op': '\x1b[37m'}
 
     normalColor = '\x1b[0m'
 
@@ -152,7 +155,8 @@ class VT102Writer:
         self.written = []
 
     def color(self, type):
-        return self.typeToColor.get(type, '')
+        r = self.typeToColor.get(type, '')
+        return r
 
     def write(self, token, type=None):
         if token and token != '\r':
