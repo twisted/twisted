@@ -514,7 +514,7 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
     long fileno;
     PyObject* obj;
     
-    if (!PyArg_ParseTuple(args, "O:add", &obj))
+    if (!PyArg_ParseTuple(args, "O:write", &obj))
         return NULL;
     
     if (PyInt_Check(obj)) {
