@@ -22,6 +22,7 @@ from twisted.internet import reactor, protocol
 
 ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
 GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')
+SUBSCRIPTIONS = ['alt.test.nntp', 'news.testgroup']
 
 POST_STRING = """Path: not-for-mail
 From: <exarkun@somehost.domain.com>
@@ -52,6 +53,14 @@ class TestNNTPClient(nntp.NNTPClient):
     
     def connectionMade(self):
         nntp.NNTPClient.connectionMade(self)
+        self.fetchSubscriptions()
+
+
+    def gotSubscriptions(self, subscriptions):
+        self.assertEquals(len(subscriptions), len(SUBSCRIPTIONS))
+        for s in subscriptions:
+            assert s in SUBSCRIPTIONS
+
         self.fetchGroups()
     
     def gotAllGroups(self, info):
@@ -72,6 +81,10 @@ class TestNNTPClient(nntp.NNTPClient):
         self.postArticle(string.replace(POST_STRING, '\n', '\r\n'))
     
     
+    def getSubscriptionsFailed(self, error):
+        raise AssertionError("fetchSubscriptions() failed: %s" % (error,))
+
+
     def getGroupFailed(self, error):
         raise AssertionError("fetchGroup() failed: %s" % (error,))
 
@@ -108,6 +121,9 @@ class NNTPTestCase(unittest.TestCase):
         self.server.factory = self
         self.backend = database.NewsShelf(None, 'news.db')
         self.backend.addGroup('alt.test.nntp', 'y')
+        
+        for s in SUBSCRIPTIONS:
+            self.backend.addSubscription(s)
 
         self.client = TestNNTPClient()
 
