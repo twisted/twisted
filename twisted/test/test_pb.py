@@ -27,6 +27,7 @@ from cStringIO import StringIO
 from zope.interface import implements
 
 from twisted.trial import unittest
+from twisted.trial.util import suppressWarnings
 dR = unittest.deferredResult
 
 from twisted.spread import pb, util
@@ -127,7 +128,12 @@ def connectedServerAndClient():
     # Challenge-response authentication:
     pump.flush()
     return c, s, pump
-
+connectedServerAndClient = suppressWarnings(connectedServerAndClient,
+                                            ("twisted.internet.app", DeprecationWarning),
+                                            ("Identities", DeprecationWarning),
+                                            ("Cred services", DeprecationWarning),
+                                            ("This is deprecated. Use PBServerFactory.", DeprecationWarning),
+                                            ("Authorizers are deprecated, switch to portals/realms/etc.", DeprecationWarning))
 class SimpleRemote(pb.Referenceable):
     def remote_thunk(self, arg):
         self.arg = arg
@@ -543,6 +549,9 @@ class BrokerTestCase(unittest.TestCase):
         accum.pop().callRemote('doNothing').addCallback(accum.append)
         pump.flush()
         assert accum.pop() == 'hello world!', 'oops...'
+    testViewPoint = suppressWarnings(testViewPoint, 
+                                     ("This is deprecated. Use PBClientFactory.", DeprecationWarning),
+                                     ("pb.Perspective is deprecated, please use pb.Avatar.", DeprecationWarning))
 
     def testPublishable(self):
         import os
@@ -838,6 +847,11 @@ class ConnectionTestCase(unittest.TestCase):
         self.svr = pb.BrokerFactory(pb.AuthRoot(auth))
         self.port = reactor.listenTCP(0, self.svr, interface="127.0.0.1")
         self.portno = self.port.getHost().port
+    setUp = suppressWarnings(setUp,
+                             ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning),
+                             ("This is deprecated. Use PBServerFactory.", DeprecationWarning),
+                             ("Identities are deprecated, switch to credentialcheckers etc.", DeprecationWarning),
+                             ("Cred services are deprecated, use realms instead.", DeprecationWarning))
 
     def tearDown(self):
         self.port.stopListening()
@@ -853,12 +867,17 @@ class ConnectionTestCase(unittest.TestCase):
         root = dR(pb.getObjectAt("127.0.0.1", self.portno))
         self._checkRootObject(root)
         root.broker.transport.loseConnection()
-                       
+    testGetObjectAt = suppressWarnings(testGetObjectAt,
+                                       ("This is deprecated. Use PBClientFactory.", DeprecationWarning)) 
+                          
     def testConnect(self):
         p = dR(pb.connect("127.0.0.1", self.portno, "guest", "guest", "test",
                           perspectiveName="any"))
         self.assert_(isinstance(p, pb.RemoteReference))
         p.broker.transport.loseConnection()
+    testConnect = suppressWarnings(testConnect, 
+                                   ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning),
+                                   ("This is deprecated. Use PBClientFactory.", DeprecationWarning))
 
     def testIdentityConnector(self):
         iConnector = pb.IdentityConnector("127.0.0.1", self.portno, "guest", "guest")
@@ -867,6 +886,8 @@ class ConnectionTestCase(unittest.TestCase):
         self.assert_(isinstance(p1, pb.RemoteReference))
         self.assert_(isinstance(p2, pb.RemoteReference))
         iConnector.disconnect()
+    testIdentityConnector = suppressWarnings(testIdentityConnector, 
+                                            ("This is deprecated. Use PBClientFactory.", DeprecationWarning))
 
     # tests for new, shiny API, although getPerspective stuff is also deprecated:
     def testGoodGetObject(self):
@@ -891,6 +912,8 @@ class ConnectionTestCase(unittest.TestCase):
         p = dR(d)
         self.assert_(isinstance(p, pb.RemoteReference))
         p.broker.transport.loseConnection()
+    testGoodPerspective = suppressWarnings(testGoodPerspective, 
+                                           ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning))
     
     def testGoodFailedConnect(self):
         factory = pb.PBClientFactory()
@@ -899,6 +922,8 @@ class ConnectionTestCase(unittest.TestCase):
         f = unittest.deferredError(d)
         from twisted.internet import error
         f.trap(error.ConnectError)
+    testGoodFailedConnect = suppressWarnings(testGoodFailedConnect, 
+                                             ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning))
 
     def testDisconnect(self):
         factory = pb.PBClientFactory()
@@ -909,6 +934,8 @@ class ConnectionTestCase(unittest.TestCase):
         factory.disconnect()
         reactor.iterate(); reactor.iterate(); reactor.iterate()
         self.assertRaises(pb.DeadReferenceError, p.callRemote, "getDummyViewPoint")
+    testDisconnect = suppressWarnings(testDisconnect, 
+                                      ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning))
 
     def testEmptyPerspective(self):
         factory = pb.PBClientFactory()
@@ -917,6 +944,8 @@ class ConnectionTestCase(unittest.TestCase):
         p = dR(d)
         self.assert_(isinstance(p, pb.RemoteReference))
         p.broker.transport.loseConnection()
+    testEmptyPerspective = suppressWarnings(testEmptyPerspective, 
+                                            ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning))
 
     def testReconnect(self):
         factory = ReconnectOnce()
@@ -935,6 +964,8 @@ class ConnectionTestCase(unittest.TestCase):
         p = dR(l[0])
         self.assert_(isinstance(p, pb.RemoteReference))
         factory.disconnect()
+    testReconnect = suppressWarnings(testReconnect,
+                                     ("Update your backend to use PBServerFactory, and then use login().", DeprecationWarning))
 
     def testImmediateClose(self):
         from twisted.internet import protocol
@@ -1067,7 +1098,6 @@ class NSPTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
 
-
     def testNSP(self):
         factory = pb.PBClientFactory()
         d = factory.login(credentials.UsernamePassword('user', 'pass'), "BRAINS!")
@@ -1076,4 +1106,3 @@ class NSPTestCase(unittest.TestCase):
         self.assertEquals(dR(p.callRemote('ANYTHING', 'here', bar='baz')),
                           ('ANYTHING', ('here',), {'bar': 'baz'}))
         factory.disconnect()
-
