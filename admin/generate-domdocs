@@ -84,8 +84,6 @@ class Cache:
             module = (file.replace('.py.html', '')
                       .replace('/', '.'))
 
-            if not file.endswith('.py.html'):
-                file = file + '/index.html'
             self.stuff[module] = self.baseURL + file
 
     def match(self, name):
@@ -96,7 +94,7 @@ class Cache:
         # Evil is fun.
         if not '.' in name:
             raise ValueError("Gimme more than just *%s* to work with, will ya?!?" % name)
-        name = '.*' + name.replace('.', '[\._]') + "$"
+        name = '.*' + name.replace('.', '\.') + "\.html$"
         pat = re.compile(name)
         for k,v in self.stuff.items():
             if pat.match(k):

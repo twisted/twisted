@@ -212,15 +212,12 @@ def makeDocs(opts):
         print "makeDocs: %s doesn't exist!" % tdir
         sys.exit(2)
         
-    print "makeDocs: HappyDoc."
-    sh('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" '
-              '--no_comments -t "Twisted Documentation" %s > /dev/null' % tdir)
+    print "makeDocs: epydoc."
+    sh('cd %s; ./admin/epyrun -o doc/api/%s' % (tdir, tdir))
 
     print "makeDocs: generate-domdocs."
-    os.chdir("%s" % tdir)
-    sh('./admin/generate-domdocs -v %s' % ver)
-    sh('./admin/generate-domdocs -v %s --docsdir doc/specifications' % ver)
-    os.chdir("..")
+    sh('cd %s; ./admin/generate-domdocs -v %s' % (tdir, ver))
+    sh('cd %s; ./admin/generate-domdocs -v %s --docsdir doc/specifications' % (tdir, ver))
     
     #shwack the crap
     print "copyDist: Stripping *.pyc, .cvsignore"
