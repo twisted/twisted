@@ -3759,7 +3759,7 @@ class _FetchParser:
         s = self.remaining + s
         try:
             while s or self.state:
-                print 'Entering state_' + self.state[-1] + ' with', repr(s)
+                # print 'Entering state_' + self.state[-1] + ' with', repr(s)
                 state = self.state.pop()
                 try:
                     s = s[getattr(self, 'state_' + state)(s):]
