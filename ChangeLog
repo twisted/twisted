@@ -17,7 +17,7 @@
 	* twisted/test/test_process.py (FDTest): add test for childFDs
 	mapping. Also add timeouts to most tests, and make all
 	reactor.iterate() loops wait 10ms between iterations to avoid
-	spamming the CPU quite so badly.
+	spamming the CPU quite so badly. Closes issue435.
 	* twisted/test/process_fds.py: new child process for FDTest
 
 	* doc/howto/process.xhtml: document childFDs argument, add example
