@@ -24,26 +24,6 @@ from twisted.internet import ssl, reactor
 from echoserv_ssl import ServerContextFactory
 import sys
 
-# TODO for some reason this raises an exception when run against an
-# "nc -l -p 8000" (which seems to exit in the middle of the handshake).
-
-#[tv@ki ..ork/twistedmatrix/Twisted/doc/examples]$ PYTHONPATH=~/work/twistedmatrix/Twisted python ./echoclient_ssl.py
-#Installing SelectReactor, since unspecified.
-#Starting factory <__main__.EchoClientFactory instance at 0x830c55c>
-#Traceback (most recent call last):
-#  File "/home/tv/work/twistedmatrix/Twisted/twisted/internet/default.py", line 528, in doSelect
-#    why = getattr(selectable, method)()
-#  File "/home/tv/work/twistedmatrix/Twisted/twisted/internet/tcp.py", line 220, in doConnect
-#    self.socket.connect(self.realAddress)
-#SSL.WantReadError: 
-#closing socket
-#Traceback (most recent call last):
-#  File "/home/tv/work/twistedmatrix/Twisted/twisted/internet/default.py", line 539, in doSelect
-#    selectable.connectionLost()
-#  File "/home/tv/work/twistedmatrix/Twisted/twisted/internet/tcp.py", line 139, in connectionLost
-#    protocol.connectionLost()
-#exceptions.AttributeError: 'None' object has no attribute 'connectionLost'
-
 
 class EchoClient(LineReceiver):
     end="Bye-bye!"
@@ -52,7 +32,7 @@ class EchoClient(LineReceiver):
         self.sendLine("What a fine day it is.")
         self.sendLine(self.end)
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         print 'connection lost (protocol)'
         reactor.stop()
 
