@@ -235,12 +235,16 @@ class FilePath:
     def makedirs(self):
         return os.makedirs(self.path)
 
-    def glob(self, pattern):
+    def globChildren(self, pattern):
         """
-        Assuming I am representing a directory, glob my contents.
+        Assuming I am representing a directory, return a list of
+        FilePaths representing my children that match the given
+        pattern.
         """
         import glob
-        return map(self.clonePath, glob.glob(slash.join(self.path, pattern)))
+        path = self.path[-1] == '/' and self.path + pattern or slash.join([self.path, pattern])
+        print "path is", path
+        return map(self.clonePath, glob.glob(path))
 
     def basename(self):
         return basename(self.path)
