@@ -982,3 +982,43 @@ class NewCredTestCase(unittest.TestCase):
         v = dR(p.callRemote("getViewPoint"))
         self.assertEquals(dR(v.callRemote("check")), 1)
         factory.disconnect()
+
+class NonSubclassingPerspective:
+    __implements__ = pb.IPerspective,
+
+    # IPerspective implementation
+    def perspectiveMessageReceived(self, *args):
+        self.args = args
+
+    # Methods required by MyRealm
+    def logout(self):
+        self.loggedOut = True
+    
+class NSPTestCase(unittest.TestCase):
+    def setUp(self):
+        self.realm = MyRealm()
+        self.realm.p = NonSubclassingPerspective()
+        self.portal = portal.Portal(self.realm)
+        self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        self.checker.addUser("user", "pass")
+        self.portal.registerChecker(self.checker)
+        self.factory = pb.PBServerFactory(self.portal)
+        self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        self.portno = self.port.getHost()[-1]
+
+    def tearDown(self):
+        self.port.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+
+
+    def testNSP(self):
+        factory = pb.PBClientFactory()
+        d = factory.login(credentials.UsernamePassword('user', 'pass'), "BRAINS!")
+        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        p = dR(d)
+        dR(p.callRemote('ANYTHING', 'here', bar='baz'))
+        self.assertEquals(p.args, ('ANYTHING', 'here', {'bar': 'baz'}))
+        factory.disconnect()
+
+NSPTestCase.testNSP.im_func.todo = 'dunno!'
