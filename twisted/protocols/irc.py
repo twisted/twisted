@@ -194,9 +194,12 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
-    def joined(self, group):
+    def joined(self, channel):
         """Called when I finish joining a channel.
+
+        channel has the starting character (# or &) intact.
         """
+        pass
 
     def noticed(self, user, channel, message):
         """Called when I have a notice from a user to me or a channel.
@@ -231,22 +234,32 @@ class IRCClient(basic.LineReceiver):
     ### user input commands, client->server
     ### Your client will want to invoke these.
 
+    # i have tried to keep backward compatibility with the 0.16
+    # way of doings (join('channel') when you really want #channel), 
+    # however trying to join channels like ##foo and ###foo will
+    # work differently now. leave, say and me all have the same issue
+    # the old way made it impossible to join &channel's (and IMHO
+    # was a little bit annoying :))
+
     def join(self, channel, key=None):
+        if channel[0] not in '&#': channel = '#' + channel
         if key:
-            self.sendLine("JOIN #%s %s" (channel, key))
+            self.sendLine("JOIN %s %s" (channel, key))
         else:
-            self.sendLine("JOIN #%s" % (channel,))
+            self.sendLine("JOIN %s" % (channel,))
 
     def leave(self, channel, reason=None):
+        if channel[0] not in '&#': channel = '#' + channel
         if reason:
-            self.sendLine("PART #%s :%s" % (channel, reason))
+            self.sendLine("PART %s :%s" % (channel, reason))
         else:
-            self.sendLine("PART #%s" % (channel,))
+            self.sendLine("PART %s" % (channel,))
 
     part = leave
 
     def say(self, channel, message):
-        self.sendLine("PRIVMSG #%s :%s" % (channel, message))
+        if channel[0] not in '&#': channel = '#' + channel
+        self.sendLine("PRIVMSG %s :%s" % (channel, message))
 
     def msg(self, user, message):
         self.sendLine("PRIVMSG %s :%s" % (user, message))
@@ -266,7 +279,8 @@ class IRCClient(basic.LineReceiver):
     def me(self, channel, action):
         """Strike a pose.
         """
-        self.ctcpMakeQuery('#' + channel, [('ACTION', action)])
+        if channel[0] not in '&#': channel = '#' + channel
+        self.ctcpMakeQuery(channel, [('ACTION', action)])
 
     _pings = None
     _MAX_PINGRING = 12
@@ -331,7 +345,8 @@ class IRCClient(basic.LineReceiver):
         self.signedOn()
 
     def irc_JOIN(self, prefix, params):
-        self.joined(params[-1][1:])
+        nick = string.split(prefix,'!')[0]
+        if nick == self.nickname: self.joined(params[-1]) # whoops! :)
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])
@@ -340,6 +355,8 @@ class IRCClient(basic.LineReceiver):
         user = prefix
         channel = params[0]
         message = params[-1]
+
+        if not message: return # don't raise an exception if some idiot sends us a blank message
 
         if message[0]==X_DELIM:
             m = ctcpExtract(message)
@@ -506,6 +523,15 @@ class IRCClient(basic.LineReceiver):
 
         (dcctype, arg, address, port) = data[:4]
 
+        # workaround for clients that send '"file name.ext"' instead of 'file_name.ext'.
+        # XXX: What does the standard say? (haw haw)
+        if arg[0] == '"':
+          dcctype = data[0]
+          args = data[1:]
+          port = args.pop()
+          address = args.pop()
+          arg = string.join(args,' ')[1:-1]
+
         port = int(port)
         if '.' in address:
             pass
@@ -655,18 +681,21 @@ class IRCClient(basic.LineReceiver):
                                             '0', self.realname))
 
     def lineReceived(self, line):
-        line = lowDequote(line)
-        try:
-            prefix, command, params = parsemsg(line)
-            if numeric_to_symbolic.has_key(command):
-                command = numeric_to_symbolic[command]
-            method = getattr(self, "irc_%s" % command, None)
-            if method is not None:
-                method(prefix, params)
-            else:
-                self.irc_unknown(prefix, command, params)
-        except IRCBadMessage:
-            apply(self.badMessage, (line,) + sys.exc_info())
+        # some servers (dalnet!) break RFC and send their first few lines just delimited by \n
+        lines = string.split(line,'\n')
+        for line in lines:
+          line = lowDequote(line)
+          try:
+              prefix, command, params = parsemsg(line)
+              if numeric_to_symbolic.has_key(command):
+                  command = numeric_to_symbolic[command]
+              method = getattr(self, "irc_%s" % command, None)
+              if method is not None:
+                  method(prefix, params)
+              else:
+                  self.irc_unknown(prefix, command, params)
+          except IRCBadMessage:
+              apply(self.badMessage, (line,) + sys.exc_info())
 
     def sendLine(self, line):
         basic.LineReceiver.sendLine(self, lowQuote(line))
@@ -697,8 +726,9 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
         data has been received; it doesn't *do* anything with the
         data, so you'll want to override this.
         """
-        self.transport.write(struct.pack('!i', self.bytesReceived))
         self.bytesReceived = self.bytesReceived + len(data)
+        self.transport.write(struct.pack('!i', self.bytesReceived))
+        # these two were the wrong way around.
 
 
 class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
@@ -1003,6 +1033,7 @@ class DccFileReceive(DccFileReceiveBasic):
 
         and then I moveFileIn().
         """
+        self.connected = 0
         logmsg = ("%s closed." % (self,))
         if self.fileSize > 0:
             logmsg = ("%s  %d/%d bytes received"
