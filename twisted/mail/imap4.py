@@ -3920,15 +3920,19 @@ class LOGINAuthenticator:
 
     def __init__(self, user):
         self.user = user
+        self.challengeResponse = self.challengeUsername
 
     def getName(self):
         return "LOGIN"
 
-    def challengeResponse(self, secret, chal):
-        if chal == 'User Name\0':
-            return self.user
-        elif chal == 'Password\0':
-            return secret
+    def challengeUsername(self, secret, chal):
+        # Respond to something like "Username:"
+        self.challengeResponse = self.challengeSecret
+        return self.user
+
+    def challengeSecret(self, secret, chal):
+        # Respond to something like "Password:"
+        return secret
 
 components.backwardsCompatImplements(LOGINAuthenticator)
 
