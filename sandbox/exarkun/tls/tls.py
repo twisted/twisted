@@ -1,4 +1,6 @@
 
+import sha
+import md5
 import hmac
 
 def P_hash(hash, secret, seed, bytes):
@@ -52,7 +54,7 @@ class ConnectionState:
     """
     
     SERVER_END = "server"
-    CLIENT_END = "client
+    CLIENT_END = "client"
     connectionEnd = None
 
     NULL = "null"
