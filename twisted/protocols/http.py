@@ -442,25 +442,12 @@ class Request:
             del self.producer
         else:
             self.transport.unregisterProducer()
-    
-    
-    # http response methods
-    
-    def _sendStatus(self, code, resp=''):
-        """Send a status code."""
-        self.transport.write('%s %s %s\r\n' % (self.clientproto, code, resp))
 
-    def _sendHeader(self, name, value):
-        """Send a header."""
-        self.transport.write('%s: %s\r\n' % (name, value))
 
-    def _endHeaders(self):
-        """Finished sending headers."""
-        self.transport.write('\r\n')
-
+    # private http response methods
+    
     def _sendError(self, code, resp=''):
-        self._sendStatus(code, resp)
-        self._endHeaders()
+        self.transport.write('%s %s %s\r\n\r\n' % (self.clientproto, code, resp))
 
     
     # http request methods
@@ -501,18 +488,20 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             if self.clientproto != "HTTP/0.9":
+                l = []
                 message = RESPONSES.get(self.code, "Unknown Status")
-                self._sendStatus(self.code, message)
+                l.append('%s %s %s\r\n' % (self.clientproto, self.code, message))
                 # if we don't have a content length, we sent data in chunked mode,
                 # so that we can support pipelining in persistent connections.
                 if self.clientproto == "HTTP/1.1" and self.headers.get('content-length', None) is None:
-                    self._sendHeader('Transfer-encoding', 'chunked')
+                    l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
                 for name, value in self.headers.items():
-                    self._sendHeader(string.capitalize(name), value)
+                    l.append("%s: %s\r\n" % (string.capitalize(name), value))
                 for cookie in self.cookies:
-                    self._sendHeader("Set-Cookie", cookie)
-                self._endHeaders()
+                    l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
+                l.append("\r\n")
+                self.transport.write(string.join(l, ""))
             
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == "HEAD":
@@ -586,9 +575,6 @@ class Request:
             return self.client[1]
         else:
             return None
-
-    def isSecure(self):
-        return (self.client[0] == 'SSL')
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
