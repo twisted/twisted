@@ -362,7 +362,7 @@ class TestTimeout(unittest.TestCase):
         s = StringIOWithoutClosing()
         p.makeConnection(protocol.FileWrapper(s))
         
-        p.resetTimeout(1)
+        p.setTimeout(1)
         self.assertEquals(p.timeOut, 1)
         
         for i in range(10):
@@ -380,7 +380,7 @@ class TestTimeout(unittest.TestCase):
         s = StringIOWithoutClosing()
         p.makeConnection(protocol.FileWrapper(s))
         
-        p.resetTimeout(None)
+        p.setTimeout(None)
         self.assertEquals(p.timeOut, None)
         
         for i in range(10):

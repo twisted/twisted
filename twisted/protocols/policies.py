@@ -411,7 +411,7 @@ class TimeoutMixin:
     def dataReceived(self, data):
         self.__lastReceived = time.time()
     
-    def resetTimeout(self, period):
+    def setTimeout(self, period):
         self.timeOut = period
         self.__lastReceived = time.time()
         if self.__timeoutCall:
