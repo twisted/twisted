@@ -19,7 +19,7 @@
 from pyunit import unittest
 
 from twisted.internet import protocol, reactor
-from twisted.internet.error import CannotListenError
+from twisted.internet import error
 
 
 class ClosingFactory(protocol.ServerFactory):
@@ -28,6 +28,7 @@ class ClosingFactory(protocol.ServerFactory):
     def buildProtocol(self, conn):
         self.port.loseConnection()
         return
+
 
 class MyProtocol(protocol.Protocol):
 
@@ -41,15 +42,28 @@ class MyProtocol(protocol.Protocol):
     def connectionLost(self):
         self.closed = 1
 
-    def connectionFailed(self):
-        self.failed = 1
 
-class MyFactory(protocol.ServerFactory):
+
+class MyServerFactory(protocol.ServerFactory):
 
     def buildProtocol(self, addr):
         p = MyProtocol()
         self.protocol = p
         return p
+
+
+class MyClientFactory(protocol.ClientFactory):
+
+    failed = 0
+    
+    def buildProtocol(self, addr):
+        p = MyProtocol()
+        self.protocol = p
+        return p
+
+    def connectionFailed(self, connector, reason):
+        self.failed = 1
+        self.reason = reason
 
 
 class LoopbackTestCase(unittest.TestCase):
@@ -59,34 +73,35 @@ class LoopbackTestCase(unittest.TestCase):
         f = ClosingFactory()
         port = reactor.listenTCP(10080, f)
         f.port = port
-        client = MyProtocol()
+        clientF = MyClientFactory()
         try:
-            reactor.clientTCP("localhost", 10080, client)
+            reactor.connectTCP("localhost", 10080, clientF)
         except:
             port.stopListening()
             raise
-        
-        while not client.closed:
+
+
+        while not clientF.protocol or not clientF.protocol.closed:
             reactor.iterate()
         reactor.iterate()
         reactor.iterate()
         
-        self.assert_(client.made)
+        self.assert_(clientF.protocol.made)
         self.assert_(port.disconnected)
 
     def testTcpNoDelay(self):
-        f = MyFactory()
+        f = MyServerFactory()
         port = reactor.listenTCP(10080, f)
-        client = MyProtocol()
+        clientF = MyClientFactory()
         try:
-            reactor.clientTCP("localhost", 10080, client)
+            reactor.connectTCP("localhost", 10080, clientF)
         except:
             port.stopListening()
             raise
 
         reactor.iterate()
         reactor.iterate()
-        for p in client, f.protocol:
+        for p in clientF.protocol, f.protocol:
             transport = p.transport
             self.assertEquals(transport.getTcpNoDelay(), 0)
             transport.setTcpNoDelay(1)
@@ -95,20 +110,19 @@ class LoopbackTestCase(unittest.TestCase):
             reactor.iterate()
             self.assertEquals(transport.getTcpNoDelay(), 0)
 
-        client.transport.loseConnection()
+        clientF.protocol.transport.loseConnection()
         port.stopListening()
         reactor.iterate()
         reactor.iterate()
     
     def testFailing(self):
-        client = MyProtocol()
-        reactor.clientTCP("localhost", 10081, client, timeout=5)
+        clientF = MyClientFactory()
+        reactor.connectTCP("localhost", 10081, clientF, timeout=5)
 
-        while not client.failed:
+        while not clientF.failed:
             reactor.iterate()
-            if client.closed:
-                raise ValueError, "connectionLost called instead of connectionFailed"
-        self.assert_(not client.made)
+
+        clientF.reason.trap(error.ConnectionRefusedError)
 
 
 class StartStopFactory(protocol.Factory):
@@ -127,10 +141,27 @@ class StartStopFactory(protocol.Factory):
         self.stopped = 1
 
 
+class ClientStartStopFactory(MyClientFactory):
+
+    started = 0
+    stopped = 0
+    
+    def startFactory(self):
+        if self.started or self.stopped:
+            raise RuntimeError
+        self.started = 1
+
+    def stopFactory(self):
+        if not self.started or self.stopped:
+            raise RuntimeError
+        self.stopped = 1
+
+
+
 class FactoryTestCase(unittest.TestCase):
     """Tests for factories."""
 
-    def testStartStop(self):
+    def testServerStartStop(self):
         f = StartStopFactory()
 
         # listen on port
@@ -159,18 +190,32 @@ class FactoryTestCase(unittest.TestCase):
         reactor.iterate()
         self.assertEquals((f.started, f.stopped), (1, 1))
 
+    def testClientStartStop(self):
+        f = ClosingFactory()
+        p = reactor.listenTCP(9995, f, interface="127.0.0.1")
+        f.port = p
+        reactor.iterate()
+        reactor.iterate()
+
+        factory = ClientStartStopFactory()
+        reactor.connectTCP("127.0.0.1", 9995, factory)
+
+        while not factory.stopped:
+            reactor.iterate()
+
+
 class CannotBindTestCase (unittest.TestCase):
     """Tests for correct behavior when a reactor cannot bind to the required TCP port."""
 
     def testCannotBind(self):
-        f = MyFactory()
+        f = MyServerFactory()
 
         # listen on port 9990
         p1 = reactor.listenTCP(9990, f, interface='127.0.0.1')
         self.assertEquals(p1.getHost(), ("INET", "127.0.0.1", 9990,))
         
         # make sure new listen raises error
-        self.assertRaises(CannotListenError, reactor.listenTCP, 9990, f, interface='127.0.0.1')
+        self.assertRaises(error.CannotListenError, reactor.listenTCP, 9990, f, interface='127.0.0.1')
 
         p1.stopListening()
 
