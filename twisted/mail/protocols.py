@@ -29,15 +29,28 @@ from twisted import cred
 import twisted.cred.error
 import twisted.cred.credentials
 
-class DomainMixin:
+from twisted.mail import relay
+
+class DomainDeliveryBase:
     """A server that uses twisted.mail service's domains."""
+
+    __implements__ = (smtp.IMessageDelivery,)
     
     service = None
     protocolName = None
-    domainMixinBase = None
 
+    def __init__(self, service, user, host=smtp.DNSNAME):
+        self.service = service
+        self.user = user
+        self.host = host
+    
     def receivedHeader(self, helo, origin, recipients):
-        from_ = "from %s ([%s])" % (helo[0], helo[1])
+        authStr = heloStr = ""
+        if self.user:
+            authStr = " auth=%s" % (self.user.encode('xtext'),)
+        if helo[0]:
+            heloStr = " helo=%s" % (helo[0],)
+        from_ = "from %s ([%s]%s%s)" % (helo[0], helo[1], heloStr, authStr)
         by = "by %s with %s (%s)" % (
             self.host, self.protocolName, longversion
         )
@@ -45,14 +58,20 @@ class DomainMixin:
         return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
     
     def validateTo(self, user):
-        return defer.maybeDeferred(
-            self.service.domains[user.dest.domain].exists,
-            user
-        ).addCallback(lambda result: user)
+        # XXX - Yick.  This needs cleaning up.
+        if self.user and self.service.queue:
+            d = self.service.domains.get(user.dest.domain, None)
+            if d is None:
+                d = relay.DomainQueuer(self.service, True)
+        else:
+            d = self.service.domains[user.dest.domain]
+        return defer.maybeDeferred(d.exists, user)
 
     def validateFrom(self, helo, origin):
         if not helo:
             raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
+        if not origin.domain:
+            raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
         return origin
 
     def startMessage(self, users):
@@ -61,36 +80,70 @@ class DomainMixin:
             ret.append(self.service.domains[user.dest.domain].startMessage(user))
         return ret
 
-    def connectionLost(self, reason):
-        log.msg('Disconnected from %s' % (self.transport.getPeer()[1:],))
-        self.domainMixinBase.connectionLost(self, reason)
-
-class DomainSMTP(DomainMixin, smtp.SMTP):
+class SMTPDomainDelivery(DomainDeliveryBase):
     protocolName = 'smtp'
-    domainMixinBase = smtp.SMTP
 
-class DomainESMTP(DomainMixin, smtp.ESMTP):
+class ESMTPDomainDelivery(DomainDeliveryBase):
     protocolName = 'esmtp'
-    domainMixinBase = smtp.ESMTP
+
+class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
+    service = user = None
+
+    def __init__(self, *args, **kw):
+        import warnings
+        warnings.warn(
+            "DomainSMTP is deprecated.  Use IMessageDelivery objects instead.",
+            DeprecationWarning, stacklevel=2,
+        )
+        smtp.SMTP.__init__(self, *args, **kw)
+        if self.delivery is None:
+            self.delivery = self
+
+class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
+    service = user = None
+
+    def __init__(self, *args, **kw):
+        import warnings
+        warnings.warn(
+            "DomainESMTP is deprecated.  Use IMessageDelivery objects instead.",
+            DeprecationWarning, stacklevel=2,
+        )
+        smtp.ESMTP.__init__(self, *args, **kw)
+        if self.delivery is None:
+            self.delivery = self
 
 class SMTPFactory(smtp.SMTPFactory):
     """A protocol factory for SMTP."""
 
-    protocol = DomainSMTP
+    protocol = smtp.SMTP
+    portal = None
 
-    def __init__(self, service):
+    def __init__(self, service, portal = None):
         smtp.SMTPFactory.__init__(self)
         self.service = service
+        self.portal = portal
     
     def buildProtocol(self, addr):
         log.msg('Connection from %s' % (addr,))
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.service = self.service
+        p.portal = self.portal
         return p
 
 class ESMTPFactory(SMTPFactory):
-    protocol = DomainESMTP
+    protocol = smtp.ESMTP
+
+    def __init__(self, *args):
+        SMTPFactory.__init__(self, *args)
+        self.challengers = {
+            'CRAM-MD5': cred.credentials.CramMD5Credentials
+        }
     
+    def buildProtocol(self, addr):
+        p = SMTPFactory.buildProtocol(self, addr)
+        p.challengers = self.challengers
+        return p
+
 class VirtualPOP3(pop3.POP3):
     """Virtual hosting POP3."""
 

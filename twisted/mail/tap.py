@@ -25,11 +25,12 @@ from twisted.mail import mail
 from twisted.mail import maildir
 from twisted.mail import relay
 from twisted.mail import relaymanager
+from twisted.mail import alias
 
-from twisted.protocols import pop3
-from twisted.protocols import smtp
 from twisted.python import usage
-from twisted.cred import portal
+from twisted.python import components
+
+from twisted.cred import checkers
 
 
 class Options(usage.Options):
@@ -39,26 +40,38 @@ class Options(usage.Options):
         ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
         ["pop3s", "S", 0, "Port to start the POP3-over-SSL server on (0 to disable)."],
         ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
-        ["relay", "r", None, 
-            "relay mail we do not know how to handle to this IP,"
-            " using the given path as a queue directory"],
         ["certificate", "c", None, "Certificate file to use for SSL connections"],
-        ["smartrelay", "R", None, 
+        ["relay", "R", None, 
             "Relay messages according to their envelope 'To', using the given"
             "path as a queue directory."],
         ["hostname", "H", None, "The hostname by which to identify this server."],
     ]
     
     optFlags = [
-        ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"]
+        ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"],
+        ["disable-anonymous", None, "Disallow non-authenticated SMTP connections"],
     ]
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
 
     def __init__(self):
-    	self.service = mail.MailService("twisted.mail")
-        self.last_domain = None
         usage.Options.__init__(self)
+        self.service = mail.MailService("twisted.mail")
+        self.last_domain = None
+
+    def opt_passwordfile(self, filename):
+        """Specify a file containing username:password login info for authenticated ESMTP connections."""
+        ch = checkers.OnDiskUsernamePasswordDatabase(filename)
+        self.service.smtpPortal.registerChecker(ch)
+    opt_P = opt_passwordfile
+
+    def opt_default(self):
+        """Make the most recently specified domain the default domain."""
+        if self.last_domain:
+            self.service.addDomain('', self.last_domain)
+        else:
+            raise usage.UsageError("Specify a domain before specifying using --default")
+    opt_D = opt_default
 
     def opt_maildirdbmdomain(self, domain):
         """generate an SMTP/POP3 virtual domain which saves to \"path\"
@@ -69,9 +82,7 @@ class Options(usage.Options):
             raise usage.UsageError("Argument to --maildirdbmdomain must be of the form 'name=path'")
         
         self.last_domain = maildir.MaildirDirdbmDomain(self.service, os.path.abspath(path))
-        self.service.domains[name] = self.last_domain
-        self.service.portals[name] = portal.Portal(self.last_domain)
-        map(self.service.portals[name].registerChecker, self.last_domain.getCredentialsCheckers())
+        self.service.addDomain(name, self.last_domain)
     opt_d = opt_maildirdbmdomain
 
     def opt_user(self, user_pass):
@@ -81,7 +92,10 @@ class Options(usage.Options):
             user, password = user_pass.split('=', 1)
         except ValueError:
             raise usage.UsageError("Argument to --user must be of the form 'user=password'")
-        self.last_domain.addUser(user, password)
+        if self.last_domain:
+            self.last_domain.addUser(user, password)
+        else:
+            raise usage.UsageError("Specify a domain before specifying users")
     opt_u = opt_user
 
     def opt_bounce_to_postmaster(self):
@@ -90,38 +104,61 @@ class Options(usage.Options):
         self.last_domain.postmaster = 1
     opt_b = opt_bounce_to_postmaster
     
+    def opt_aliases(self, filename):
+        """Specify an aliases(5) file to use for this domain"""
+        if self.last_domain:
+            if components.implements(self.last_domain, mail.IAliasableDomain):
+                aliases = alias.loadAliasFile(self.service.domains, filename)
+                self.last_domain.setAliasGroup(aliases)
+                self.service.monitor.monitorFile(
+                    filename,
+                    AliasUpdater(self.service.domains, self.last_domain)
+                )
+            else:
+                raise usage.UsageError(
+                    "%s does not support alias files" % (
+                        self.last_domain.__class__.__name__,
+                    )
+                )
+        else:
+            raise usage.UsageError("Specify a domain before specifying aliases")
+    opt_A = opt_aliases
     
     def postOptions(self):
-        try:
-            self['pop3'] = int(self['pop3'])
-            assert 0 <= self['pop3'] < 2 ** 16, ValueError
-        except ValueError:
-            raise usage.UsageError('Invalid port specified to --pop3: %s' %
-                                   self['pop3'])
-        try:
-            self['smtp'] = int(self['smtp'])
-            assert 0 <= self['smtp'] < 2 ** 16, ValueError
-        except ValueError:
-            raise usage.UsageError('Invalid port specified to --smtp: %s' %
-                                   self['smtp'])
-        try:
-            self['pop3s'] = int(self['pop3s'])
-            assert 0 <= self['pop3s'] < 2 ** 16, ValueError
-        except ValueError:
-            raise usage.UsageError('Invalid port specified to --pop3s: %s' %
-                                   self['pop3s'])
-        else:
-            if self['pop3s']:
-                if not self['certificate']:
-                    raise usage.UsageError("Cannot specify --pop3s without "
-                                           "--certificate")
-                elif not os.path.exists(self['certificate']):
-                    raise usage.UsageError("Certificate file %r does not exist."
-                                           % self['certificate'])
+        for f in ('pop3', 'smtp', 'pop3s'):
+            try:
+                self[f] = int(self[f])
+                if not (0 <= self[f] < 2 ** 16):
+                    raise ValueError
+            except ValueError:
+                raise usage.UsageError(
+                    'Invalid port specified to --%s: %s' % (f, self[f])
+                )
+        if self['pop3s']:
+            if not self['certificate']:
+                raise usage.UsageError("Cannot specify --pop3s without "
+                                       "--certificate")
+            elif not os.path.exists(self['certificate']):
+                raise usage.UsageError("Certificate file %r does not exist."
+                                       % self['certificate'])
+
+        if not self['disable-anonymous']:
+            self.service.smtpPortal.registerChecker(checkers.AllowAnonymousAccess())
+        
         if not (self['pop3'] or self['smtp'] or self['pop3s']):
             raise usage.UsageError("You cannot disable all protocols")
+        
+class AliasUpdater:
+    def __init__(self, domains, domain):
+        self.domains = domains
+        self.domain = domain
+    def __call__(self, new):
+        self.domain.setAliasGroup(alias.loadAliasFile(self.domains, new))
 
 def updateApplication(app, config):
+
+    config.service.setServiceParent(app)
+
     if config['esmtp']:
         rmType = relaymanager.SmartHostESMTPRelayingManager
         smtpFactory = config.service.getESMTPFactory
@@ -129,20 +166,19 @@ def updateApplication(app, config):
         rmType = relaymanager.SmartHostSMTPRelayingManager
         smtpFactory = config.service.getSMTPFactory
 
-    if config['relay'] or config['smartrelay']:
-        address = None
-        if config['relay']:
-            addr, dir = config['relay'].split('=', 1)
-            ip, port = addr.split(',', 1)
-            port = int(port)
-            address = (ip, port)
-        else:
-            dir = config['smartrelay']
-            if not os.path.isdir(dir):
-                os.mkdir(dir)
+    if config['relay']:
+        dir = config['relay']
+        if not os.path.isdir(dir):
+            os.mkdir(dir)
+
         config.service.setQueue(relaymanager.Queue(dir))
         default = relay.DomainQueuer(config.service)
-        manager = rmType(config.service.queue, address)
+        
+        manager = rmType(config.service.queue)
+        if config['esmtp']:
+            manager.fArgs += (None, None)
+        manager.fArgs += (config['hostname'],)
+        
         helper = relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', app)
         config.service.domains.setDefaultDomain(default)
 
@@ -160,4 +196,7 @@ def updateApplication(app, config):
         f = smtpFactory()
         if config['hostname']:
             f.domain = config['hostname']
+            f.fArgs = (f.domain,)
+        if config['esmtp']:
+            f.fArgs = (None, None) + f.fArgs
         app.listenTCP(config['smtp'], f)

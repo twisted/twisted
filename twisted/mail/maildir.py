@@ -15,8 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Mail support for twisted python.
+"""Maildir-style mailbox support
 """
+
+from __future__ import generators
 
 import os
 import stat
@@ -32,9 +34,9 @@ except ImportError:
 from twisted.protocols import pop3
 from twisted.protocols import smtp
 from twisted.persisted import dirdbm
-from twisted.python import components
+from twisted.python import log
 from twisted.mail import mail
-from twisted.internet import defer
+from twisted.mail import alias
 
 from twisted import cred
 import twisted.cred.portal
@@ -98,6 +100,8 @@ class MaildirMessage(mail.FileMessage):
 class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
     """
+    alias = None
+    root = None
 
     def __init__(self, service, root):
         """Initialize.
@@ -113,26 +117,56 @@ class AbstractMaildirDomain:
         return None
 
     ##
+    ## IAliasableDomain
+    ##
+
+    def setAliasGroup(self, alias):
+        self.alias = alias
+
+    ##
     ## IDomain
     ##
-    def exists(self, user):
+    def exists(self, user, memo=None):
         """Check for existence of user in the domain
         """
         if self.userDirectory(user.dest.local) is not None:
-            return user
-        raise smtp.SMTPBadRcpt(user)
+            return lambda: self.startMessage(user)
+        try:
+            a = self.alias[user.dest.local]
+        except:
+            raise smtp.SMTPBadRcpt(user)            
+        else:
+            aliases = a.resolve(self.alias, memo)
+            if aliases:
+                return lambda: aliases
+            log.err("Bad alias configuration: " + str(user))
+            raise smtp.SMTPBadRcpt(user)
 
     def startMessage(self, user):
         """Save a message for a given user
         """
-        name, domain = user.dest.local, user.dest.domain
+        if isinstance(user, str):
+            name, domain = user.split('@', 1)
+        else:
+            name, domain = user.dest.local, user.dest.domain
         dir = self.userDirectory(name)
         fname = _generateMaildirName()
         filename = os.path.join(dir, 'tmp', fname)
         fp = open(filename, 'w')
         return MaildirMessage('%s@%s' % (name, domain), fp, filename,
                               os.path.join(dir, 'new', fname))
+    
+    def willRelay(self, user, protocol):
+        return False
 
+    def addUser(self, user, password):
+        raise NotImplementedError
+    
+    def getCredentialsCheckers(self):
+        raise NotImplementedError
+    ##
+    ## end of IDomain
+    ##
 
 class MaildirMailbox(pop3.Mailbox):
     """Implement the POP3 mailbox semantics for a Maildir mailbox
@@ -214,7 +248,6 @@ class MaildirMailbox(pop3.Mailbox):
                     self.list.append(real)
         self.deleted.clear()
 
-
 class StringListMailbox:
     __implements__ = (pop3.IMailbox,)
     
@@ -240,12 +273,13 @@ class StringListMailbox:
     
     def sync(self):
         pass
-     
+
+
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
     
-    __implements__ = (cred.portal.IRealm,)
+    __implements__ = (cred.portal.IRealm, mail.IAliasableDomain)
     
     portal = None
     _credcheckers = None
@@ -319,13 +353,16 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
 class DirdbmDatabase:
     __implements__ = (cred.checkers.ICredentialsChecker,)
     
-    credentialInterfaces = (cred.credentials.IUsernamePassword,)
+    credentialInterfaces = (
+        cred.credentials.IUsernamePassword,
+        cred.credentials.IUsernameHashedPassword
+    )
     
     def __init__(self, dbm):
         self.dirdbm = dbm
     
-    def requestAvatarId(self, credentials):
-        if credentials.username in self.dirdbm:
-            if credentials.checkPassword(self.dirdbm[credentials.username]):
-                return credentials.username
+    def requestAvatarId(self, c):
+        if c.username in self.dirdbm:
+            if c.checkPassword(self.dirdbm[c.username]):
+                return c.username
         raise cred.error.UnauthorizedLogin()

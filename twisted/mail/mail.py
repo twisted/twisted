@@ -19,10 +19,14 @@
 """
 
 # Twisted imports
-from twisted.protocols import smtp, http
-from twisted.cred import service
+from twisted.protocols import smtp
 from twisted.python import components
 from twisted.internet import defer
+from twisted.internet import app
+from twisted.python import util
+
+from twisted import cred
+import twisted.cred.portal
 
 # Sibling imports
 import protocols
@@ -120,25 +124,14 @@ class IDomain(components.Interface):
         @type user: C{twisted.protocols.smtp.User}
         @param user: The user to check
         
-        @rtype: C{twisted.protocols.smtp.User}
-        @return: C{user} or a C{Deferred} whose callback will be
-        passed C{user}.
+        @rtype: No-argument callable
+        @return: A C{Deferred} which becomes, or a callable which
+        takes no arguments and returns an object implementing C{IMessage}.
+        This will be called and the returned object used to deliver the
+        message when it arrives.
         
         @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
         user does not exist in this domain.
-        """
-
-    def willRelay(self, user, protocol):
-        """Check whether or not we will pass on a message
-        
-        @type user: C{twisted.protocols.smtp.User}
-        @param user: The user for whom the message is destined.
-        
-        @type protocol: C{twisted.internet.protocol.Protocol}
-        @param protocol: The connection asking for the message to be relayed.
-        
-        @rtype: C{bool}
-        @return: True if we will relay, false otherwise.
         """
 
     def addUser(self, user, password):
@@ -146,10 +139,41 @@ class IDomain(components.Interface):
     
     def startMessage(self, user):
         """Create and return a new message to be delivered to the given user.
+        
+        DEPRECATED.  Implement validateTo() correctly instead.
         """
 
     def getCredentialsCheckers(self):
         """Return a list of ICredentialsChecker implementors for this domain.
+        """
+
+class IAliasableDomain(IDomain):
+    def setAliasGroup(self, aliases):
+        """Set the group of defined aliases for this domain
+        
+        @type alias: Implementor of C{IAlias}
+        """
+    
+    def exists(self, user, memo=None):
+        """
+        Check whether or not the specified user exists in this domain.
+        
+        @type user: C{twisted.protocols.smtp.User}
+        @param user: The user to check
+        
+        @type memo: C{dict}
+        @param memo: A record of the addresses already considered while
+        resolving aliases.  The default value should be used by all
+        external code.
+        
+        @rtype: No-argument callable
+        @return: A C{Deferred} which becomes, or a callable which
+        takes no arguments and returns an object implementing C{IMessage}.
+        This will be called and the returned object used to deliver the
+        message when it arrives.
+        
+        @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
+        user does not exist in this domain.
         """
 
 class BounceDomain:
@@ -197,33 +221,112 @@ class FileMessage:
         self.fp.close()
         os.remove(self.name)
 
-class MailService(service.Service):
+class MailService(app.MultiService):
     """An email service."""
 
     queue = None
     domains = None
     portals = None
+    aliases = None
+    smtpPortal = None
 
     def __init__(self, name):
-        service.Service.__init__(self, name)
+        """
+        @type name: C{str}
+        @param name: This service's name
+        
+        @type portal: C{twisted.cred.portal.Portal}
+        @param portal: The portal to use to authenticate incoming SMTP and
+        ESMTP connections.
+        """
+        app.MultiService.__init__(self, name)
+
+        # Domains and portals for "client" protocols - POP3, IMAP4, etc
         self.domains = DomainWithDefaultDict({}, BounceDomain())
         self.portals = {}
+
+        self.monitor = FileMonitoringService('AliasMonitor', self)
+        self.smtpPortal = cred.portal.Portal(self)
 
     def getPOP3Factory(self):
         return protocols.POP3Factory(self)
 
     def getSMTPFactory(self):
-        return protocols.SMTPFactory(self)
+        return protocols.SMTPFactory(self, self.smtpPortal)
 
     def getESMTPFactory(self):
-        return protocols.ESMTPFactory(self)
+        return protocols.ESMTPFactory(self, self.smtpPortal)
+    
+    def addDomain(self, name, domain):
+        portal = cred.portal.Portal(domain)
+        map(portal.registerChecker, domain.getCredentialsCheckers())
+        self.domains[name] = domain
+        self.portals[name] = portal
+        if self.aliases and components.implements(domain, IAliasableDomain):
+            domain.setAliasGroup(self.aliases)
 
     def setQueue(self, queue):
         """Set the queue for outgoing emails."""
         self.queue = queue
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if smtp.IMessageDelivery in interfaces:
+            a = protocols.ESMTPDomainDelivery(self, avatarId)
+            return smtp.IMessageDelivery, a, lambda: None
+        raise NotImplementedError()
 
     def lookupPortal(self, name):
         return self.portals[name]
     
     def defaultPortal(self):
         return self.portals['']
+
+
+class FileMonitoringService(app.ApplicationService):
+    _monitorCall = None
+    
+    def __init__(self, serviceName=None, serviceParent=None):
+        if serviceName is None:
+            serviceName = self.__class__.__name__
+        app.ApplicationService.__init__(self, serviceName, serviceParent)
+        self.files = []
+        self.intervals = iter(util.IntervalDifferential([], 60))
+
+    def startService(self):
+        from twisted.internet import reactor
+        t, self.index = self.intervals.next()
+        self._monitorCall = reactor.callLater(t, self._monitor)
+    
+    def stopService(self):
+        if self._monitorCall:
+            self._monitorCall.cancel()
+            self._monitorCall = None
+    
+    def monitorFile(self, name, callback, interval=10):
+        try:
+            mtime = os.path.getmtime(name)
+        except:
+            mtime = 0
+        self.files.append((interval, name, callback, mtime))
+        self.intervals.addInterval(interval)
+
+    def unmonitorFile(self, name):
+        for i in range(len(self.files)):
+            if name == self.files[i][1]:
+                self.intervals.removeInterval(self.files[i][0])
+                del self.files[i]
+                break
+     
+    def _monitor(self):
+        self._monitorCall = None
+        if self.index is not None:
+            name, callback, mtime = self.files[self.index][1:]
+            try:
+                now = os.path.getmtime(name)
+            except:
+                now = 0
+            if now > mtime:
+                callback(name)
+        t, self.index = self.intervals.next()
+        from twisted.internet import reactor
+        self._monitorCall = reactor.callLater(t, self._monitor)

@@ -16,14 +16,31 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import rfc822, string, time, os
+import rfc822
+import string
+import time
+import os
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
 
 from twisted.protocols import smtp
+
+BOUNCE_FORMAT = """\
+From: postmaster@%(failedDomain)s
+To: %(failedFrom)s
+Subject: Returned Mail: see transcript for details
+Message-ID: %(messageID)s
+Content-Type: multipart/report; report-type=delivery-status;
+    boundary="%(boundary)s"
+
+--%(boundary)s
+
+%(transcript)s
+
+--%(boundary)s
+Content-Type: message/delivery-status
+Arrival-Date: %(ctime)s
+Final-Recipient: RFC822; %(failedTo)
+"""
 
 def generateBounce(message, failedFrom, failedTo, transcript=''):
     if not transcript:
@@ -31,26 +48,15 @@ def generateBounce(message, failedFrom, failedTo, transcript=''):
 I'm sorry, the following address has permanent errors: %(failedTo)s.
 I've given up, and I will not retry the message again.
 ''' % vars()
+
     boundary = "%s_%s_%s" % (time.time(), os.getpid(), 'XXXXX')
-    fp = StringIO.StringIO()
     failedAddress = rfc822.AddressList(failedTo)[0][1]
     failedDomain = string.split(failedAddress, '@', 1)[1]
-    fp.write('From: postmaster@'+failedDomain+'\n')
-    fp.write('To: '+failedFrom+'\n')
-    fp.write('Subject: Returned Mail: see transcript for details\n')
-    fp.write('Message-ID: %s\n' % (smtp.messageid(uniq='bounce'),))
-    fp.write('Content-Type: multipart/report; report-type=delivery-status; boundary="%s"\n' % boundary)
-    fp.write('\n')
-    fp.write('--%s\n' % boundary)
-    fp.write('\n')
-    fp.write(transcript)
-    fp.write('\n')
-    fp.write('--%s\n' % boundary)
-    fp.write('Content-Type: message/delivery-status')
-    fp.write('\n')
-    fp.write('Arrival-Date: %s\n' % time.ctime(time.time()))
-    fp.write('\n')
-    fp.write('Final-Recipient: RFC822; ' + failedTo + '\n')
+    messageID = smtp.messageid(uniq='bounce')
+    ctime = time.ctime(time.time())
+
+    fp = StringIO.StringIO()
+    fp.write(BOUNCE_FORMAT % vars())
     orig = message.tell()
     message.seek(2, 0)
     sz = message.tell()

@@ -80,7 +80,7 @@ class DummyDomain:
 
    def exists(self, user):
        if self.messages.has_key(user.dest.local):
-           return defer.succeed(user)
+           return defer.succeed(lambda: self.startMessage(user))
        return defer.fail(smtp.SMTPBadRcpt(user))
 
    def startMessage(self, user):
@@ -236,32 +236,33 @@ class DummySMTPMessage:
         recipients = []
         for user in self.users:
             recipients.append(str(user))
-        self.protocol.message = (helo, origin, recipients, message)
-        deferred = defer.Deferred()
+        self.protocol.message[tuple(recipients)] = (helo, origin, recipients, message)
+        return defer.succeed("saved")
         deferred.callback("saved")
         return deferred
 
-class Dummy:
+class DummyProto:
     def connectionMade(self):
         self.dummyMixinBase.connectionMade(self)
-        self.message = None
+        self.message = {}
 
     def startMessage(self, users):
-        return [DummySMTPMessage(self, users)]
+        return DummySMTPMessage(self, users)
 
     def receivedHeader(*spam):
         return None
     
     def validateTo(self, user):
-        return user
+        self.delivery = DummyDelivery()
+        return lambda: self.startMessage([user])
     
     def validateFrom(self, helo, origin):
         return origin
 
-class DummySMTP(Dummy, smtp.SMTP):
+class DummySMTP(DummyProto, smtp.SMTP):
     dummyMixinBase = smtp.SMTP
 
-class DummyESMTP(Dummy, smtp.ESMTP):
+class DummyESMTP(DummyProto, smtp.ESMTP):
     dummyMixinBase = smtp.ESMTP
 
 class AnotherTestCase:
@@ -339,7 +340,13 @@ To: foo
                 resp, msgdata = msgexpect
                 if not re.match(resp, data):
                     raise AssertionError, (resp, data)
-                self.assertEquals(a.message, msgdata)
+                for recip in msgdata[2]:
+                    expected = list(msgdata[:])
+                    expected[2] = [recip]
+                    self.assertEquals(
+                        a.message[(recip,)],
+                        tuple(expected)
+                    )
         a.setTimeout(None)
 
 
@@ -362,14 +369,12 @@ class DummyChecker:
         'testuser': 'testpassword'
     }
     
-    credentialInterfaces = (cred.credentials.IUsernamePassword,)
+    credentialInterfaces = (cred.credentials.IUsernameHashedPassword,)
     
     def requestAvatarId(self, credentials):
-        if components.implements(credentials, cred.credentials.IUsernamePassword):
-            return defer.maybeDeferred(
-                credentials.checkPassword, self.users[credentials.username]
-            ).addCallback(self._cbCheck, credentials.username)
-        raise NotImplementedError
+        return defer.maybeDeferred(
+            credentials.checkPassword, self.users[credentials.username]
+        ).addCallback(self._cbCheck, credentials.username)
 
     def _cbCheck(self, result, username):
         if result:
@@ -378,6 +383,15 @@ class DummyChecker:
 
 class DummyDelivery:
     __implements__ = (smtp.IMessageDelivery,)
+    
+    def validateTo(self, user):
+        return user
+    
+    def validateFrom(self, helo, origin):
+        return origin
+    
+    def receivedHeader(*args):
+        return None 
 
 class DummyRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
@@ -389,7 +403,7 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP({'CRAM-MD5': smtp.CramMD5ChallengeResponse})
+        server = DummyESMTP({'CRAM-MD5': cred.credentials.CramMD5Credentials})
         server.portal = p
         client = MyESMTPClient('testpassword')
 
@@ -454,7 +468,6 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
         
         self.assertEquals(client.tls, True)
         self.assertEquals(server.startedTLS, True)
-
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):

@@ -52,6 +52,25 @@ DNSNAME = socket.getfqdn() # Cache the hostname
 SUCCESS = dict(map(None, range(200, 300), []))
 
 class IMessageDelivery(components.Interface):
+    def receivedHeader(self, helo, origin, recipients):
+        """
+        Generate the Received header for a message
+        
+        @type helo: C{(str, str)}
+        @param helo: The argument to the HELO command and the client's IP
+        address.
+
+        @type origin: C{Address}
+        @param origin: The address the message is from
+        
+        @type recipients: C{list} of C{str}
+        @param recipients: A list of the addresses for which this message
+        is bound.
+        
+        @rtype: C{str}
+        @return: The full "Received" header string.
+        """
+
     def validateTo(self, user):
         """
         Validate the address for which the message is destined.
@@ -59,9 +78,11 @@ class IMessageDelivery(components.Interface):
         @type user: C{User}
         @param user: The address to validate.
 
-        @rtype: C{Deferred} or C{twisted.protocols.smtp.User}
-        @return: C{user} or a C{Deferred} whose callback will be
-        passed C{user}.
+        @rtype: no-argument callable
+        @return: A C{Deferred} which becomes, or a callable which
+        takes no arguments and returns an object implementing C{IMessage}.
+        This will be called and the returned object used to deliver the
+        message when it arrives.
         
         @raise SMTPBadRcpt: Raised if messages to the address are
         not to be accepted.
@@ -89,90 +110,14 @@ class IMessageDelivery(components.Interface):
     def startMessage(self, recipients):
         """Create and return IMessages for delivery to each given recipient
         
+        DEPRECATED.  Implement validateTo() correctly.
+        
         @type recipients: C{list} of C{Address}
         @param recipients: The addresses for which to create IMessages.
         
         @rtype: C{list}
         @return: The IMessage objects.
         """
-
-class IChallengeResponse(cred.credentials.IUsernamePassword):
-    def abort(self):
-        """Cancel this challenge/response transaction.
-        """
-
-    def getChallenge(self):
-        """Create a challenge string.
-        
-        @rtype: C{str}
-        @return: The challenge.  This should be the same for every invocation
-        of this method on a particular instance.
-        """
-
-    def setResponse(self, response):
-        """Set the response data for this transaction.
-        
-        @type response: C{str}
-        @param response: The string received from the client in response to
-        the challenge.
-        """
-
-    def checkPassword(self, password):
-        """Validate the received response against the generated challenge.
-        
-        @type password: C{str}
-        @param password: The shared secret the response should have been
-        generated based upon.
-        
-        @rtype: C{Deferred} or C{bool}
-        @return: True if the response is correct, False otherwise, or a
-        deferred whose callback will be invoked with one of these arguments.
-        """
-
-class CramMD5ChallengeResponse(cred.credentials.UsernamePassword):
-    __implements__ = (IChallengeResponse,)
-    
-    host = None
-    chal = None
-    password = None
-    waiting = None
-    response = None
-
-    def __init__(self, host = DNSNAME):
-        self.host = host
-    
-    def abort(self):
-        if self.waiting:
-            self.waiting.errback(failure.Failure(cred.errors.UnauthorizedLogin()))
-            self.waiting = None
-
-    def getChallenge(self):
-        if self.chal is not None:
-            return self.chal
-        # The data encoded in the first ready response contains an
-        # presumptively arbitrary string of random digits, a timestamp, and
-        # the fully-qualified primary host name of the server.  The syntax of
-        # the unencoded form must correspond to that of an RFC 822 'msg-id'
-        # [RFC822] as described in [POP3].
-        #   -- RFC 2195
-        r = random.randrange(0x7fffffff)
-        t = time.time()
-        self.chal = '<%d.%d@%s>' % (r, t, self.host)
-        return self.chal
-    
-    def setResponse(self, response):
-        self.username, self.response = response.split(None, 1)
-        if self.waiting:
-            self.waiting.callback(self.checkPassword(self.password))
-            self.waiting = None
-
-    def checkPassword(self, password):
-        if self.response is None:
-            self.password = password
-            self.waiting = defer.Deferred()
-            return self.waiting
-        verify = util.keyed_md5(password, self.chal)
-        return verify == self.response
 
 class SMTPError(Exception):
     pass
@@ -486,13 +431,17 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     
     timeout = 600
     host = DNSNAME
+    portal = None
     delivery = None
+    _onLogout = None
     
-    def __init__(self):
+    def __init__(self, delivery=None):
         self.mode = COMMAND
         self._from = None
         self._helo = None
         self._to = []
+        self._user_to = []
+        self.delivery = delivery
 
     def timeoutConnection(self):
         msg = '%s Timeout. Try talking faster next time!' % (self.host,)
@@ -517,7 +466,6 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
         self.resetTimeout()
-        # print 'S:', repr(line)
         return getattr(self, 'state_' + self.mode)(line)
     
     def state_COMMAND(self, line):
@@ -552,6 +500,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._helo = (rest, peer)
         self._from = None
         self._to = []
+        self._user_to = []
         self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, peer))
 
     def do_QUIT(self, rest):
@@ -578,6 +527,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             return
         # Clear old recipient list
         self._to = []
+        self._user_to = []
         m = self.mail_re.match(rest)
         if not m:
             self.sendCode(501, "Syntax error")
@@ -591,7 +541,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             
         try:
             defer.maybeDeferred(self.validateFrom, self._helo, addr
-            ).addCallbacks(self._cbFromValidate, self._ebValidate)
+            ).addCallbacks(self._cbFromValidate, self._ebFromValidate)
         except TypeError:
             if self.validateFrom.func_code.co_argcount == 5:
                 warnings.warn(
@@ -622,8 +572,8 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._from = from_
         self.sendCode(code, msg)
 
-    def _ebValidate(self, failure):
-        if failure.check(SMTPBadRcpt):
+    def _ebFromValidate(self, failure):
+        if failure.check(SMTPBadSender):
             self.sendCode(550, 'Cannot receive for specified address')
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
@@ -633,6 +583,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 451,
                 'Requested action aborted: local error in processing'
             )
+
 
     def do_RCPT(self, rest):
         if not self._from:
@@ -650,8 +601,12 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         try:
-            defer.maybeDeferred(self.validateTo, user
-            ).addCallbacks(self._cbToValidate, self._ebValidate)
+            d = defer.maybeDeferred(self.validateTo, user)
+            d.addCallbacks(
+                self._cbToValidate,
+                self._ebToValidate,
+                callbackArgs=(user,)
+            )
         except TypeError:
             if self.validateTo.func_code.co_argcount == 4:
                 warnings.warn(
@@ -672,33 +627,71 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         "For compatibility"
         self.sendCode(code, msg)
 
-    def _cbToValidate(self, to, code=250, msg='Recipient address accepted'):
+    def _cbToValidate(self, to, user=None, code=250, msg='Recipient address accepted'):
+        if user is None:
+            user = to
         if to is None:
             warnings.warn(
                 "Returning None from validateTo is deprecated.  "
-                "Raise smtp.SMTPBadRcpt instead", DeprecationWarning
+                "Raise smtp.SMTPBadRcpt instead.", DeprecationWarning
             )
             self.sendCode(550, 'Cannot receive for specified address')
-        self._to.append(to)
+        elif isinstance(to, User):
+            warnings.warn(
+                "Returning a User from validateTo is deprecated.  "
+                "Return an IMessage factory instead.", DeprecationWarning
+            )
+            self._user_to.append(to)
+        else:
+            self._to.append((user, to))
         self.sendCode(code, msg)
 
+    def _ebToValidate(self, failure):
+        if failure.check(SMTPBadRcpt):
+            self.sendCode(550, 'Cannot receive for specified address')
+        elif failure.check(SMTPServerError):
+            self.sendCode(failure.value.code, failure.value.resp)
+        else:
+            log.err(failure)
+            self.sendCode(
+                451,
+                'Requested action aborted: local error in processing'
+            )
+
     def do_DATA(self, rest):
-        if self._from is None or not self._to:  
+        if self._from is None or (not self._to and not self._user_to):  
             self.sendCode(503, 'Must have valid receiver and originator')
             return
+        assert self.delivery
         self.mode = DATA
-        helo, origin, recipients = self._helo, self._from, self._to
+        helo, origin, user_recipients = self._helo, self._from, self._user_to
+        recipients = self._to
+        
         self._from = None
         self._to = []
+        self._user_to = []
         self.datafailed = None
-        try:
-            self.__messages = self.startMessage(recipients)
-        except SMTPServerError, e:
-            self.sendCode(e.code, e.resp)
-            self.mode = COMMAND
-            return
+        
+        if user_recipients:
+            try:
+                self.__messages = self.startMessage(user_recipients)
+            except SMTPServerError, e:
+                self.sendCode(e.code, e.resp)
+                self.mode = COMMAND
+                return
+            rcvdhdr = self.delivery.receivedHeader(
+                helo, origin, map(str, user_recipients))
+        else:
+            try:
+                self.__messages = [f() for (u, f) in recipients]
+            except SMTPServerError, e:
+                self.sendCode(e.code, e.resp)
+                self.mode = COMMAND
+                return
+            rcvdhdr = self.delivery.receivedHeader(
+                helo, origin, [u for (u, f) in recipients])
+
         self.__inheader = self.__inbody = 0
-        rcvdhdr = self.receivedHeader(helo, origin, recipients)
         if rcvdhdr:
             try:
                 for message in self.__messages:
@@ -709,7 +702,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 return
         self.sendCode(354, 'Continue')
         fmt = 'Receiving message for delivery: from=%s to=%s'
-        log.msg(fmt % (origin, map(str, recipients)))
+        log.msg(fmt % (origin, map(str, [u for (u, f) in recipients] or user_recipients)))
 
     def connectionLost(self, reason):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
@@ -723,11 +716,15 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 del self.__messages
             except AttributeError:
                 pass
+        if self._onLogout:
+            self._onLogout()
+            self._onLogout = None
         self.setTimeout(None)
 
     def do_RSET(self, rest):
         self._from = None
         self._to = []
+        self._user_to = []
         self.sendCode(250, 'I remember nothing.')
 
     def dataLineReceived(self, line):
@@ -741,7 +738,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 if not self.__messages:
                     self._messageHandled("thrown away")
                     return
-                defer.gatherResults([
+                defer.DeferredList([
                     m.eomReceived() for m in self.__messages
                 ]).addCallback(self._messageHandled
                 ).addErrback(self._messageNotHandled)
@@ -789,29 +786,22 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             log.msg('Message not handled: (550) Could not send e-mail')
         log.err(failure)
 
+    def _cbAuthenticated(self, (iface, avatar, logout)):
+        assert iface is IMessageDelivery, "IMessageDelivery is the only supported interface"
+        self.delivery = avatar
+        self._onLogout = logout
+        self.authenticated = 1
+        self.challenger = None
+    
+    def _ebAuthenticated(self, reason):
+        self.challenge = None
+        if reason.check(cred.error.UnauthorizedLogin):
+            self.sendCode(535, 'Authentication failed')
+        else:
+            self.sendCode(451, 'Requested action aborted: error in processing')
+            log.err(reason)
 
     # overridable methods:
-    def receivedHeader(self, helo, origin, recipients):
-        """
-        Generate the Received header for a message
-        
-        @type helo: C{(str, str)}
-        @param helo: The argument to the HELO command and the client's IP
-        address.
-
-        @type origin: C{Address}
-        @param origin: The address the message is from
-        
-        @type recipients: C{list} of C{str}
-        @param recipients: A list of the addresses for which this message
-        is bound.
-        
-        @rtype: C{str}
-        @return: The full "Received" header string.
-        """
-        return "Received: From %s ([%s]) by %s; %s" % (
-            helo[0], helo[1], self.host, rfc822date())
-    
     def validateFrom(self, helo, origin):
         """
         Validate the address from which the message originates.
@@ -831,11 +821,20 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         not to be accepted.
         """
         if self.delivery:
-            return self.delivery.validateFrom(helo, origin)
+            return defer.maybeDeferred(self.delivery.validateFrom,
+                helo, origin)
+        
+        # No login has been performed, no default delivery object has been
+        # provided: try to perform an anonymous login and then invoke this
+        # method again.
+        if self.portal:
+            return self.portal.login(cred.credentials.Anonymous(), None,
+                    IMessageDelivery
+                ).addCallback(self._cbAuthenticated
+                ).addCallback(lambda _: self.validateFrom(helo, origin)
+                ).addErrback(self._ebAuthenticated
+                )
         raise SMTPBadSender(origin)
-        if not helo:
-            raise SMTPBadSender(origin, 503, "Who are you? Say HELO first")
-        return origin
 
     def validateTo(self, user):
         """
@@ -844,9 +843,11 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         @type user: C{User}
         @param user: The address to validate.
 
-        @rtype: C{Deferred} or C{twisted.protocols.smtp.User}
-        @return: C{user} or a C{Deferred} whose callback will be
-        passed C{user}.
+        @rtype: no-argument callable
+        @return: A C{Deferred} which becomes, or a callable which
+        takes no arguments and returns an object implementing C{IMessage}.
+        This will be called and the returned object used to deliver the
+        message when it arrives.
         
         @raise SMTPBadRcpt: Raised if messages to the address are
         not to be accepted.
@@ -884,7 +885,7 @@ class SMTPClient(basic.LineReceiver):
     """SMTP client for sending emails."""
 
     def __init__(self, identity, logsize=10):
-        self.identity = identity
+        self.identity = identity or ''
         self.toAddressesResult = []
         self.successAddresses = []
         self._from = None
@@ -904,7 +905,6 @@ class SMTPClient(basic.LineReceiver):
         self._failresponse = self.smtpConnectionFailed
 
     def lineReceived(self, line):
-        # print 'C:', repr(line)
         why = None
 
         self.log.append('<<< ' + line)
@@ -1095,7 +1095,7 @@ class ESMTPClient(SMTPClient):
     # ClientContextFactory to use for STARTTLS
     context = None
 
-    def __init__(self, secret, contextFactory = None, *args, **kw):
+    def __init__(self, secret, contextFactory=None, *args, **kw):
         SMTPClient.__init__(self, *args, **kw)
         self.authenticators = {}
         self.secret = secret
@@ -1146,7 +1146,7 @@ class ESMTPClient(SMTPClient):
         self.authenticate(code, resp, items)
     
     def authenticate(self, code, resp, items):
-        if items.get('AUTH'):
+        if self.secret and items.get('AUTH'):
             schemes = items['AUTH'].split()
             for s in schemes:
                 if s.upper() in self.authenticators:
@@ -1156,7 +1156,7 @@ class ESMTPClient(SMTPClient):
                     self._authinfo = self.authenticators[s]
                     return
         if self.requireAuthentication:
-            log.msg("Authentication but none available: closing connection")
+            log.msg("Authentication required but none available: closing connection")
             self.sendLine('QUIT')
             self._expected = xrange(0, 1000)
             self._okresponse = self.smtpState_disconnect
@@ -1172,7 +1172,6 @@ class ESMTPClient(SMTPClient):
         try:
             challenge = base64.decodestring(challenge)
         except binascii.Error, e:
-            print 'woop', e, challenge
             # Illegal challenge, give up, then quit
             self.sendLine('*')
             self._okresponse = self.smtpState_disconnect
@@ -1189,10 +1188,7 @@ class ESMTP(SMTP):
     canStartTLS = False
     startedTLS = False
     
-    portal = None
-    _onLogout = None
     authenticated = False
-    delivery = None
 
     def __init__(self, chal = None, contextFactory = None):
         SMTP.__init__(self)
@@ -1221,8 +1217,10 @@ class ESMTP(SMTP):
     def listExtensions(self):
         r = []
         for (c, v) in self.extensions().iteritems():
-            if v:
-                r.append('%s %s' % (c, ' '.join(v)))
+            if v is not None:
+                if v:
+                    # Intentionally omit extensions with empty argument lists
+                    r.append('%s %s' % (c, ' '.join(v)))
             else:
                 r.append(c)
         return '\n'.join(r)
@@ -1232,6 +1230,7 @@ class ESMTP(SMTP):
         self._helo = (rest, peer)
         self._from = None
         self._to = []
+        self._user_to = []
         ext = self.extensions()
         self.sendCode(
             250,
@@ -1256,7 +1255,7 @@ class ESMTP(SMTP):
             self.sendCode(503, 'Already authenticated')
             return
         parts = rest.split(None, 1)
-        chal = self.challengers.get(parts[0].upper())()
+        chal = self.challengers.get(parts[0].upper(), lambda: None)()
         if not chal:
             self.sendCode(504, 'Unrecognized authentication type')
             return
@@ -1284,36 +1283,19 @@ class ESMTP(SMTP):
         try:
             uncoded = base64.decodestring(rest)
         except binascii.Error, e:
-            self.challenger.abort()
+            self._ebAuthenticated(failure.Failure(e))
         else:
-            self.challenger.setResponse(uncoded)
+            parts = uncoded.split(None, 1)
+            if len(parts) != 2:
+                self._ebAuthenticated(failure.Failure(SMTPClientError("Invalid challenge response")))
+                
+            self.challenger.username = parts[0]
+            self.challenger.response = parts[1]
             self.portal.login(self.challenger, None, IMessageDelivery
-            ).addCallback(self._cbAuthenticated
-            ).addErrback(self._ebAuthenticated
-            )
-
-    def _cbAuthenticated(self, (iface, avatar, logout)):
-        assert iface is IMessageDelivery, "IMessageDelivery is the only supported interface"
-        self.delivery = avatar
-        self._onLogout = logout
-        self.sendCode(235, 'Authentication successful.'),
-        self.authenticated = 1
-        self.challenger = None
-    
-    def _ebAuthenticated(self, reason):
-        self.challenge = None
-        if reason.check(cred.error.UnauthorizedLogin):
-            self.sendCode(535, 'Authentication failed')
-        else:
-            self.sendCode(451, 'Requested action aborted: error in processing')
-            log.err(reason)
-    
-    def connectionLost(self, reason):
-        SMTP.connectionLost(self, reason)
-        if self._onLogout:
-            self._onLogout()
-            self._onLogout = None
-
+                ).addCallback(self._cbAuthenticated
+                ).addCallback(lambda _: self.sendCode(235, 'Authentication successful.')
+                ).addErrback(self._ebAuthenticated
+                )
 
 class SMTPSender(SMTPClient):
     """Utility class for sending emails easily - use with SMTPSenderFactory."""

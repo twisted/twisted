@@ -32,9 +32,7 @@ for the twisted.mail SMTP server
 """
 
 from twisted.python import log
-from twisted.python import failure
 from twisted.mail import relay
-from twisted.mail import mail
 from twisted.mail import bounce
 from twisted.internet import protocol
 from twisted.internet import app
@@ -42,7 +40,6 @@ from twisted.protocols import smtp
 
 import rfc822
 import os
-import string
 import time
 
 try:
@@ -57,16 +54,7 @@ class ManagedRelayerMixin:
     and broken connections
     """
 
-    identity = 'foo.bar'
-
-    def __init__(self, messages, manager):
-        """initialize with list of messages and a manager
-
-        messages should be file names.
-        manager should support .notifySuccess, .notifyFailure
-        and .notifyDone
-        """
-        self.managedRelayMixinBase.__init__(self, messages)
+    def __init__(self, manager):
         self.manager = manager
 
     def sentMail(self, code, resp, numOk, addresses, log):
@@ -90,20 +78,41 @@ class ManagedRelayerMixin:
         self.manager.notifyDone(self.factory)
 
 class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
-    managedRelayMixinBase = relay.SMTPRelayer
+    def __init__(self, manager, messages, *args, **kw):
+        """
+        @type messages: C{list} of C{str}
+        @param messages: Filenames of messages to relay
+
+        manager should support .notifySuccess, .notifyFailure
+        and .notifyDone
+        """
+        ManagedRelayerMixin.__init__(self, manager)
+        relay.SMTPRelayer.__init__(self, messages, *args, **kw)
 
 class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
-    managedRelayMixinBase = relay.ESMTPRelayer
+    def __init__(self, manager, messages, *args, **kw):
+        """
+        @type messages: C{list} of C{str}
+        @param messages: Filenames of messages to relay
+
+        manager should support .notifySuccess, .notifyFailure
+        and .notifyDone
+        """
+        ManagedRelayerMixin.__init__(self, manager)
+        relay.ESMTPRelayer.__init__(self, messages, *args, **kw)
 
 class SMTPManagedRelayerFactory(protocol.ClientFactory):
     protocol = SMTPManagedRelayer
 
-    def __init__(self, messages, manager):
+    def __init__(self, messages, manager, *args, **kw):
         self.messages = messages
         self.manager = manager
+        self.pArgs = args
+        self.pKwArgs = kw
 
     def buildProtocol(self, connection):
-        protocol = self.protocol(self.messages, self.manager)
+        protocol = self.protocol(self.messages, self.manager, *self.pArgs,
+            **self.pKwArgs)
         protocol.factory = self
         return protocol
 
@@ -117,6 +126,18 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
 
 class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
     protocol = ESMTPManagedRelayer
+    
+    def __init__(self, messages, manager, secret, contextFactory, *args, **kw):
+        self.secret = secret
+        self.contextFactory = contextFactory
+        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args, **kw)
+    
+    def buildProtocol(self, addr):
+        s = self.secret and self.secret(addr)
+        protocol = self.protocol(self.messages, self.manager, s,
+            self.contextFactory, *self.pArgs, **self.pKwArgs)
+        protocol.factory = self
+        return protocol
 
 class Queue:
     """A queue of ougoing emails."""
@@ -200,7 +221,9 @@ class Queue:
         tempFilename = os.path.join(self.directory, fname+'-C')
         finalFilename = os.path.join(self.directory, fname+'-D')
         messageFile = open(tempFilename, 'wb')
-        return headerFile, mail.FileMessage(messageFile, tempFilename, finalFilename)
+        
+        from twisted.mail.mail import FileMessage
+        return headerFile,FileMessage(messageFile, tempFilename, finalFilename)
 
 
 class SmartHostSMTPRelayingManager:
@@ -211,28 +234,31 @@ class SmartHostSMTPRelayingManager:
     more relayers if the need arises.
 
     Someone should press .checkState periodically
+    
+    @ivar fArgs: Additional positional arguments used to instantiate
+    C{factory}.
+
+    @ivar fKwArgs: Additional keyword arguments used to instantiate
+    C{factory}.
+
+    @ivar factory: A callable which returns a ClientFactory suitable for
+    making SMTP connections.
     """
     
     factory = SMTPManagedRelayerFactory
     
     PORT = 25
 
-    def __init__(self, queue, smartHostAddr=None, maxConnections=1, 
-                 maxMessagesPerConnection=10):
-        """initialize
-        
+    def __init__(self, queue, maxConnections=2, maxMessagesPerConnection=10):
+        """
         @type queue: Any implementor of C{IQueue}
         @param queue: The object used to queue messages on their way to
         delivery.
 
-        @type smartHostAddr: C{(str, int)}
-        @param smartHostAddr: The address for the relay to use, or None to
-        lookup MX records and deliver messages appropriately.
-        
         @type maxConnections: C{int}
         @param maxConnections: The maximum number of SMTP connections to
         allow to be opened at any given time.
-        
+
         @type maxMessagesPerConnection: C{int}
         @param maxMessagesPerConnection: The maximum number of messages a
         relayer will be given responsibility for.
@@ -241,12 +267,12 @@ class SmartHostSMTPRelayingManager:
         """
         self.maxConnections = maxConnections
         self.maxMessagesPerConnection = maxMessagesPerConnection
-        self.smartHostAddr = smartHostAddr
         self.managed = {} # SMTP clients we're managing
         self.queue = queue
+        self.fArgs = ()
+        self.fKwArgs = {}
 
-        if self.smartHostAddr is None:
-            self.mxcalc = MXCalculator()
+        self.mxcalc = MXCalculator()
 
     def _finish(self, relay, message):
         self.managed[relay].remove(os.path.basename(message))
@@ -274,7 +300,7 @@ class SmartHostSMTPRelayingManager:
         fp, outgoingMessage = self.queue.createNewMessage()
         pickle.dump([from_, to], fp)
         fp.close()
-        for line in string.split(bounceMessage, '\n')[:-1]:
+        for line in bounceMessage.splitlines():
              outgoingMessage.lineReceived(line)
         outgoingMessage.eomReceived()
         self._finish(relay, self.queue.getPath(message))
@@ -319,29 +345,8 @@ class SmartHostSMTPRelayingManager:
         if  not self.queue.hasWaiting():
             return
 
-        if self.smartHostAddr is not None:
-            self._checkState()
-        else:
-            self._checkStateMX()
+        self._checkStateMX()
     
-    def _checkState(self):
-        nextMessages = self.queue.getWaiting()
-        nextMessages = nextMessages[:self.maxMessagesPerConnection]
-        toRelay = []
-        for message in nextMessages:
-            toRelay.append(self.queue.getPath(message))
-            self.queue.setRelaying(message)
-
-        factory = self.factory(toRelay, self)
-        self.managed[factory] = nextMessages
-        
-        try:
-            self._cbExchange(
-                self.smartHostAddr[0], self.smartHostAddr[1], factory
-            )
-        except:
-            log.err()
-
     def _checkStateMX(self):
         nextMessages = self.queue.getWaiting()
         nextMessages.reverse()
@@ -362,7 +367,7 @@ class SmartHostSMTPRelayingManager:
                 break
         
         for (domain, msgs) in exchanges.iteritems():
-            factory = self.factory(msgs, self)
+            factory = self.factory(self, msgs, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
             self.mxcalc.getMX(domain
             ).addCallback(lambda mx: str(mx.exchange),
@@ -453,7 +458,7 @@ class MXCalculator:
 
     def _cbMX(self, answers):
         if not answers:
-            return failure.Failure(IOError("No MX found"))
+            raise IOError("No MX found")
         for answer in answers:
             if answer not in self.badMXs:
                 return answer

@@ -466,7 +466,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     
     def testCapabilityWithAuth(self):
         caps = {}
-        self.server.challengers['CRAM-MD5'] = smtp.CramMD5ChallengeResponse
+        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
         def getCaps():
             def gotCaps(c):
                 caps.update(c)
@@ -932,14 +932,14 @@ class TestRealm:
         return imap4.IAccount, self.theAccount, lambda: None
 
 class TestChecker:
-    credentialInterfaces = (cred.credentials.IUsernamePassword,)
+    credentialInterfaces = (cred.credentials.IUsernameHashedPassword,)
 
     users = {
         'testuser': 'secret'
     }
 
     def requestAvatarId(self, credentials):
-        if components.implements(credentials, cred.credentials.IUsernamePassword):
+        if components.implements(credentials, cred.credentials.IUsernameHashedPassword):
             if credentials.username in self.users:
                 return defer.maybeDeferred(
                     credentials.checkPassword, self.users[credentials.username]
@@ -961,7 +961,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         portal.registerChecker(TestChecker())
         self.server.portal = portal
 
-        self.server.challengers['CRAM-MD5'] = smtp.CramMD5ChallengeResponse
+        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
 
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
 

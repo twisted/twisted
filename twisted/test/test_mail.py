@@ -32,6 +32,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.python import components
 from twisted.python import failure
+from twisted.python import util
 
 from twisted import mail
 import twisted.mail.mail
@@ -39,6 +40,7 @@ import twisted.mail.maildir
 import twisted.mail.relay
 import twisted.mail.relaymanager
 import twisted.mail.protocols
+import twisted.mail.alias
 
 from twisted import cred
 import twisted.cred.credentials
@@ -313,7 +315,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 class ServiceDomainTestCase(unittest.TestCase):
     def setUp(self):
         self.S = mail.mail.MailService('test.mail')
-        self.D = mail.protocols.DomainMixin()
+        self.D = mail.protocols.DomainDeliveryBase(self.S, None)
         self.D.service = self.S
         self.D.protocolName = 'TEST'
         self.D.host = 'hostname'
@@ -335,14 +337,14 @@ class ServiceDomainTestCase(unittest.TestCase):
          fp = StringIO.StringIO(hdr)
          m = rfc822.Message(fp)
          self.assertEquals(len(m.items()), 1)
-         self.failUnless(m.has_key('Received'))
+         self.failUnless('Received' in m)
 
     def testValidateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')
         self.failUnless(
-            unittest.deferredResult(
+            callable(unittest.deferredResult(
                 defer.maybeDeferred(self.D.validateTo, user)
-            ) is user
+            ))
         )
         user = smtp.User('resu@test.domain', 'helo', None, 'wherever@whatever')
         self.assertEquals(
@@ -483,7 +485,7 @@ class RelayTestCase(unittest.TestCase):
             user.protocol.transport = empty()
             user.protocol.transport.getPeer = lambda: peer
             
-            self.failUnless(domain.exists(user) is user)
+            self.failUnless(callable(domain.exists(user)))
         
         for peer in dontRelay:
             user = empty()
@@ -493,13 +495,6 @@ class RelayTestCase(unittest.TestCase):
             user.dest = 'who@cares'
             
             self.assertRaises(smtp.SMTPBadRcpt, domain.exists, user)
-
-class EmptyInit:
-    def __init__(self, *args, **kw):
-        pass
-
-class TestRelayer(mail.relay.RelayerMixin, EmptyInit):
-    relayerMixinBase = EmptyInit
 
 class RelayerTestCase(unittest.TestCase):
     def setUp(self):
@@ -517,7 +512,8 @@ class RelayerTestCase(unittest.TestCase):
             f.seek(0, 0)
             self.messageFiles.append(name)
 
-        self.R = TestRelayer(self.messageFiles)
+        self.R = mail.relay.RelayerMixin()
+        self.R.loadMessages(self.messageFiles)
     
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -556,15 +552,12 @@ class Manager:
     def notifyDone(self, factory):
         self.done.append(factory)
 
-class TestManagedRelayer(mail.relaymanager.ManagedRelayerMixin, EmptyInit):
-    managedRelayMixinBase = EmptyInit
-
 class ManagedRelayerTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = Manager()
         self.messages = range(0, 20, 2)
         self.factory = object()
-        self.relay = TestManagedRelayer(None, self.manager)
+        self.relay = mail.relaymanager.ManagedRelayerMixin(self.manager)
         self.relay.messages = self.messages[:]
         self.relay.names = self.messages[:]
         self.relay.factory = self.factory
@@ -780,6 +773,7 @@ class LiveFireExercise(unittest.TestCase):
 
     def testLocalDelivery(self):
         service = mail.mail.MailService('test.mail')
+        service.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(service, 'domainDir')
         domain.addUser('user', 'password')
         service.domains['test.domain'] = domain
@@ -817,6 +811,8 @@ class LiveFireExercise(unittest.TestCase):
             reactor.iterate(0.01)
             i += 1
         
+        self.failUnless(done)
+        
         mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
         msg = mbox.getMessage(0).read()
         self.failIfEqual(msg.find('This is the message'), -1)
@@ -826,6 +822,7 @@ class LiveFireExercise(unittest.TestCase):
     def testRelayDelivery(self):
         # Here is the service we will connect to and send mail from
         insServ = mail.mail.MailService('test.insertion')
+        insServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(insServ, 'insertionDomain')
         insServ.domains['insertion.domain'] = domain
         insServ.portals['insertion.domain'] = cred.portal.Portal(domain)
@@ -833,6 +830,7 @@ class LiveFireExercise(unittest.TestCase):
         insServ.setQueue(mail.relaymanager.Queue('insertionQueue'))
         insServ.domains.setDefaultDomain(mail.relay.DomainQueuer(insServ))
         manager = mail.relaymanager.SmartHostSMTPRelayingManager(insServ.queue)
+        manager.fArgs += ('test.identity.hostname',)
         helper = mail.relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper A', None)
         # Yoink!  Now the internet obeys OUR every whim!
         manager.mxcalc = mail.relaymanager.MXCalculator(self.resolver)
@@ -846,6 +844,7 @@ class LiveFireExercise(unittest.TestCase):
         # Here is the service the previous one will connect to for final
         # delivery
         destServ = mail.mail.MailService('test.destination')
+        destServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(destServ, 'destinationDomain')
         domain.addUser('user', 'password')
         destServ.domains['destination.domain'] = domain
@@ -882,9 +881,8 @@ class LiveFireExercise(unittest.TestCase):
         while len(done) == 0 and i < 1000:
             reactor.iterate(0.01)
             i += 1
-
-        # The server should kick us off when we send QUIT        
-        self.failUnless(client.lostConn)
+        
+        self.failUnless(done)
 
         # First part of the delivery is done.  Poke the queue manually now
         # so we don't have to wait for the queue to be flushed.
@@ -899,3 +897,196 @@ class LiveFireExercise(unittest.TestCase):
         
         self.insServer.stopListening()
         self.destServer.stopListening()
+
+aliasFile = StringIO.StringIO("""\
+# Here's a comment
+   # woop another one
+testuser:                   address1,address2, address3,
+    continuation@address, |/bin/process/this
+
+usertwo:thisaddress,thataddress, lastaddress
+lastuser:       :/includable, /filename, |/program, address
+""")
+
+class LineBufferMessage:
+    def __init__(self):
+        self.lines = []
+        self.eom = False
+        self.lost = False
+
+    def lineReceived(self, line):
+        self.lines.append(line)
+    
+    def eomReceived(self):
+        self.eom = True
+        return defer.succeed('<Whatever>')
+    
+    def connectionLost(self):
+        self.lost = True
+
+class AliasTestCase(unittest.TestCase):
+    lines = [
+        'First line',
+        'Next line',
+        '',
+        'After a blank line',
+        'Last line'
+    ]
+
+    def testHandle(self):
+        result = {}
+        lines = [
+            'user:  another@host\n',
+            'nextuser:  |/bin/program\n',
+            'user:  me@again\n',
+            'moreusers: :/etc/include/filename\n',
+            'multiuser: first@host, second@host,last@anotherhost',
+        ]
+        
+        for l in lines:
+            mail.alias.handle(result, l, 'TestCase', None)
+        
+        self.assertEquals(result['user'], ['another@host', 'me@again'])
+        self.assertEquals(result['nextuser'], ['|/bin/program'])
+        self.assertEquals(result['moreusers'], [':/etc/include/filename'])
+        self.assertEquals(result['multiuser'], ['first@host', 'second@host', 'last@anotherhost'])
+
+    def testFileLoader(self):
+        domains = {'': object()}
+        result = mail.alias.loadAliasFile(domains, fp=aliasFile)
+        
+        self.assertEquals(len(result), 3)
+        
+        group = result['testuser']
+        s = str(group)
+        for a in ('address1', 'address2', 'address3', 'continuation@address', '/bin/process/this'):
+            self.failIfEqual(s.find(a), -1)
+        self.assertEquals(len(group), 5)
+
+        group = result['usertwo']
+        s = str(group)
+        for a in ('thisaddress', 'thataddress', 'lastaddress'):
+            self.failIfEqual(s.find(a), -1)
+        self.assertEquals(len(group), 3)
+
+        group = result['lastuser']
+        s = str(group)
+        self.failUnlessEqual(s.find('/includable'), -1)
+        for a in ('/filename', 'program', 'address'):
+            self.failIfEqual(s.find(a), -1, '%s not found' % a)
+        self.assertEquals(len(group), 3)
+
+    def testMultiWrapper(self):
+        msgs = LineBufferMessage(), LineBufferMessage(), LineBufferMessage()
+        msg = mail.alias.MultiWrapper(msgs)
+        
+        for L in self.lines:
+            msg.lineReceived(L)
+        unittest.deferredResult(msg.eomReceived())
+        
+        for m in msgs:
+            self.failUnless(m.eom)
+            self.failIf(m.lost)
+            self.assertEquals(self.lines, m.lines)
+
+    def testFileAlias(self):
+        tmpfile = self.mktemp()
+        a = mail.alias.FileAlias(tmpfile, None, None)
+        m = a.createMessageReceiver()
+        
+        for l in self.lines:
+            m.lineReceived(l)
+        unittest.deferredResult(m.eomReceived())
+        
+        lines = file(tmpfile).readlines()
+        self.assertEquals([L[:-1] for L in lines], self.lines)
+
+    def testProcessAlias(self):
+        path = util.sibpath(__file__, 'process.alias.sh')
+        a = mail.alias.ProcessAlias(path, None, None)
+        m = a.createMessageReceiver()
+        
+        for l in self.lines:
+            m.lineReceived(l)
+        unittest.deferredResult(m.eomReceived())
+        
+        lines = file('process.alias.out').readlines()
+        self.assertEquals([L[:-1] for L in lines], self.lines)
+
+    def testAliasResolution(self):
+        aliases = {}
+        domain = {'': TestDomain(aliases, ['user1', 'user2', 'user3'])}
+        A1 = mail.alias.AliasGroup(['user1', '|process', '/file'], domain, 'alias1')
+        A2 = mail.alias.AliasGroup(['user2', 'user3'], domain, 'alias2')
+        A3 = mail.alias.AddressAlias('alias1', domain, 'alias3')
+        aliases.update({
+            'alias1': A1,
+            'alias2': A2,
+            'alias3': A3,
+        })
+        
+        r1 = map(str, A1.resolve(aliases))
+        r1.sort()
+        expected = map(str, [
+            mail.alias.AddressAlias('user1', None, None),
+            mail.alias.ProcessAlias('process', None, None),
+            mail.alias.FileAlias('/file', None, None)
+        ])
+        expected.sort() 
+        self.assertEquals(r1, expected)
+
+        r2 = map(str, A2.resolve(aliases))
+        r2.sort()
+        expected = map(str, [
+            mail.alias.AddressAlias('user2', None, None),
+            mail.alias.AddressAlias('user3', None, None)
+        ])
+        expected.sort()
+        self.assertEquals(r2, expected)
+
+        r3 = map(str, A3.resolve(aliases))
+        expected = map(str, [A3])
+        self.assertEquals(r3, expected)
+
+    def testCyclicAlias(self):
+        aliases = {}
+        domain = {'': TestDomain(aliases, [])}
+        A1 = mail.alias.AddressAlias('alias2', domain, 'alias1')
+        A2 = mail.alias.AddressAlias('alias3', domain, 'alias2')
+        A3 = mail.alias.AddressAlias('alias1', domain, 'alias3')
+        aliases.update({
+            'alias1': A1,
+            'alias2': A2,
+            'alias3': A3
+        })
+
+        self.assertEquals(aliases['alias1'].resolve(aliases), [])
+        self.assertEquals(aliases['alias2'].resolve(aliases), [])
+        self.assertEquals(aliases['alias3'].resolve(aliases), [])
+        
+        A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
+        aliases['alias4'] = A4
+        
+        self.assertEquals(
+            map(str, A4.resolve(aliases)),
+            map(str, [mail.alias.ProcessAlias('process', None, None)])
+        )
+
+class TestDomain:
+    def __init__(self, aliases, users):
+        self.aliases = aliases
+        self.users = users
+
+    def exists(self, user, memo=None):
+        user = user.dest.local
+        if user in self.users:
+            return lambda: None
+        try:
+            a = self.aliases[user]
+        except:
+            raise smtp.SMTPBadRcpt(user)            
+        else:
+            aliases = a.resolve(self.aliases, memo)
+            if not aliases:
+                raise smtp.SMTPBadRcpt(user)
+            return lambda: alias.MultiWrapper([a.createMessageReceiver() for a in aliases])

@@ -18,8 +18,6 @@
 """Support for relaying mail for twisted.mail"""
 
 from twisted.protocols import smtp
-from twisted.mail import mail
-from twisted.internet import defer
 from twisted.python import log
 
 import os
@@ -29,35 +27,34 @@ try:
 except ImportError:
     import pickle
 
-
 class DomainQueuer:
-    """An SMTP domain which add messages to a queue."""
+    """An SMTP domain which add messages to a queue intended for relaying."""
 
-    def __init__(self, service):
+    def __init__(self, service, authenticated=False):
         self.service = service
+        self.authed = authenticated
 
     def exists(self, user):
         """Check whether we will relay
 
         Call overridable willRelay method
         """
-        if self.willRelay(user.protocol):
+        if self.willRelay(user.dest, user.protocol):
             # The most cursor form of verification of the addresses
             orig = filter(None, str(user.orig).split('@', 1))
             dest = filter(None, str(user.dest).split('@', 1))
             if len(orig) == 2 and len(dest) == 2:
-                log.msg('Succeeding with ' + str(user.orig) + ' ' + str(user.dest))
-                return user
+                return lambda: self.startMessage(user)
         raise smtp.SMTPBadRcpt(user)
-    
-    def willRelay(self, protocol):
+
+    def willRelay(self, address, protocol):
         """Check whether we agree to relay
 
         The default is to relay for all connections over UNIX
         sockets and all connections from localhost.
         """
         peer = protocol.transport.getPeer()
-        return peer[0] == 'UNIX' or peer[1] == '127.0.0.1'
+        return self.authed or peer[0] == 'UNIX' or peer[1] == '127.0.0.1'
 
     def startMessage(self, user):
         """Add envelope to queue and returns ISMTPMessage."""
@@ -76,8 +73,7 @@ class RelayerMixin:
     # It opens about a -hundred- -billion- files
     # and -leaves- them open!
 
-    def __init__(self, messagePaths):
-        self.relayerMixinBase.__init__(self, smtp.DNSNAME)
+    def loadMessages(self, messagePaths):
         self.messages = []
         self.names = []
         for message in messagePaths:
@@ -119,7 +115,11 @@ class RelayerMixin:
         del self.names[0]
 
 class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
-    relayerMixinBase = smtp.SMTPClient
+    def __init__(self, messagePaths, *args, **kw):
+        smtp.SMTPClient.__init__(self, *args, **kw)
+        self.loadMessages(messagePaths)
 
 class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
-    relayerMixinBase = smtp.ESMTPClient
+    def __init__(self, messagePaths, *args, **kw):
+        smtp.ESMTPClient.__init__(self, *args, **kw)
+        self.loadMessages(messagePaths)

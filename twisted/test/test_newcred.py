@@ -1,3 +1,18 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
 Now with 30% more starch.
@@ -6,6 +21,13 @@ Now with 30% more starch.
 from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
+from twisted.python import util
+from twisted.internet import defer
+
+try:
+    from crypt import crypt
+except ImportError:
+    crypt = None
 
 class ITestable(components.Interface):
     pass
@@ -54,7 +76,11 @@ class NewCredTest(unittest.TestCase):
         p.registerChecker(up)
 
     def testListCheckers(self):
-        self.assertEquals(self.portal.listCredentialsInterfaces(), [credentials.IUsernamePassword])
+        expected = [credentials.IUsernamePassword]
+        got = self.portal.listCredentialsInterfaces()
+        expected.sort()
+        got.sort()
+        self.assertEquals(got, expected)
     
     def testBasicLogin(self):
         l = []; f = []
@@ -82,3 +108,105 @@ class NewCredTest(unittest.TestCase):
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
         self.failUnlessEqual(error.UnauthorizedLogin, l[0])
+
+
+class CramMD5CredentialsTestCase(unittest.TestCase):
+    def testIdempotentChallenge(self):
+        c = credentials.CramMD5Credentials()
+        chal = c.getChallenge()
+        self.assertEquals(chal, c.getChallenge())
+    
+    def testCheckPassword(self):
+        c = credentials.CramMD5Credentials()
+        chal = c.getChallenge()
+        c.response = util.keyed_md5('secret', chal)
+        self.failUnless(c.checkPassword('secret'))
+
+    def testWrongPassword(self):
+        c = credentials.CramMD5Credentials()
+        self.failIf(c.checkPassword('secret'))
+
+class OnDiskDatabaseTestCase(unittest.TestCase):
+    users = [
+        ('user1', 'pass1'),
+        ('user2', 'pass2'),
+        ('user3', 'pass3'),
+    ]
+
+
+    def testUserLookup(self):
+        dbfile = self.mktemp()
+        db = checkers.OnDiskUsernamePasswordDatabase(dbfile)
+        f = file(dbfile, 'w')
+        for (u, p) in self.users:
+            f.write('%s:%s\n' % (u, p))
+        f.close()
+        
+        for (u, p) in self.users:
+            self.failUnlessRaises(KeyError, db.getUser, u.upper())
+            self.assertEquals(db.getUser(u), (u, p))
+    
+    def testCaseInSensitivity(self):
+        dbfile = self.mktemp()
+        db = checkers.OnDiskUsernamePasswordDatabase(dbfile, caseSensitive=0)
+        f = file(dbfile, 'w')
+        for (u, p) in self.users:
+            f.write('%s:%s\n' % (u, p))
+        f.close()
+        
+        for (u, p) in self.users:
+            self.assertEquals(db.getUser(u.upper()), (u, p))
+
+    def testRequestAvatarId(self):
+        dbfile = self.mktemp()
+        db = checkers.OnDiskUsernamePasswordDatabase(dbfile, caseSensitive=0)
+        f = file(dbfile, 'w')
+        for (u, p) in self.users:
+            f.write('%s:%s\n' % (u, p))
+        f.close()
+
+        for (u, p) in self.users:
+            self.assertEquals(
+                unittest.deferredResult(db.requestAvatarId(
+                    credentials.UsernamePassword(u, p))),
+                u
+            )
+
+        for (u, p) in self.users:
+            self.assertEquals(
+                unittest.deferredResult(db.requestAvatarId(
+                    credentials.UsernameHashedPassword(u, p))),
+                u
+            )
+
+    def testHashedPasswords(self):
+        def hash(u, p, s):
+            return crypt(p, s)
+
+        dbfile = self.mktemp()
+        db = checkers.OnDiskUsernamePasswordDatabase(dbfile, hash=hash)
+        f = file(dbfile, 'w')
+        for (u, p) in self.users:
+            f.write('%s:%s\n' % (u, p))
+        f.close()
+        
+        for (u, p) in self.users:
+            self.assertEquals(
+                unittest.deferredResult(db.requestAvatarId(
+                    credentials.UsernamePassword(u, p))),
+                u
+            )
+        
+        r = TestRealm()
+        port = portal.Portal(r)
+        port.registerChecker(db)
+        
+        for (u, p) in self.users:
+            d = port.login(ITestable, None,
+                credentials.UsernameHashedPassword(u, crypt(p, u[:2])))
+            d.addErrback(lambda r: r.trap(error.UnhandledCredentials))
+            self.assertEquals(unittest.deferredResult(d),
+                error.UnhandledCredentials)
+
+    if crypt is None:
+        testHashedPasswords.skip = "crypt module not available"

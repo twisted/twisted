@@ -855,7 +855,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             challenge = chal.getChallenge()
         except Exception, e:
             self.sendBadResponse(tag, 'Server error: ' + str(e))
-            chal.abort()
         else:
             coded = base64.encodestring(challenge)[:-1]
             self._pendingLiteral = defer.Deferred()
@@ -867,10 +866,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             uncoded = base64.decodestring(result)
         except binascii.Error:
-            chal.abort()
             raise error.Unauthorized("Malformed Response - not base64")
 
-        chal.setResponse(uncoded)
+        parts = uncoded.split(None, 1)
+        if len(parts) != 2:
+            raise error.Unauthorized("Malformed Response - wrong number of parts")
+        chal.username = parts[0]
+        chal.response = parts[1]
         self.portal.login(chal, None, IAccount).addCallbacks(
             self.__cbAuthResp,
             self.__ebAuthResp,
@@ -892,9 +894,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, 'Server error')
             log.err(failure)
     
-    def __ebAuthChunk(self, auth, failure, tag):
+    def __ebAuthChunk(self, failure, tag):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
-        auth.abort()
 
     def do_STARTTLS(self, tag):
         if self.startedTLS:
