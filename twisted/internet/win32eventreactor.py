@@ -190,19 +190,14 @@ class Win32Reactor(default.PosixReactorBase):
             return 1
 
     def _runAction(self, action, fd):
-            try:
-                closed = action()
-            except:
-                closed = sys.exc_info()[1]
-                log.deferr()
+        try:
+            closed = action()
+        except:
+            closed = sys.exc_info()[1]
+            log.deferr()
 
-            if closed:
-                self.removeReader(fd)
-                self.removeWriter(fd)
-                try:
-                    fd.connectionLost(failure.Failure(closed))
-                except:
-                    log.deferr()
+        if closed:
+            self._disconnectSelectable(fd, closed, action == fd.doRead)
 
     doIteration = doWaitForMultipleEvents
 

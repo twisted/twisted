@@ -65,12 +65,7 @@ class TwistedSocketNotifier(QSocketNotifier):
             log.msg('Error in %s.doRead()' % w)
             log.deferr()
         if why:
-            self.reactor.removeReader(w)
-            self.reactor.removeWriter(w)
-            try:
-                w.connectionLost(failure.Failure(why))
-            except:
-                log.deferr()
+            self.reactor._disconnectSelectable(w, why, True)
         self.reactor.simulate()
 
     def write(self, sock):

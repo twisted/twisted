@@ -280,7 +280,8 @@ class Connection(abstract.FileDescriptor):
         # This used to close() the socket, but that doesn't *really* close if
         # there's another reference to it in the TCP/IP stack, e.g. if it was
         # was inherited by a subprocess. And we really do want to close the
-        # connection. So we use shutdown() instead.
+        # connection. So we use shutdown() instead, and then close() in order
+        # to release the filedescriptor.
         try:
             self.socket.shutdown(2)
         except socket.error:
@@ -290,6 +291,19 @@ class Connection(abstract.FileDescriptor):
         except socket.error:
             pass
 
+    def _closeReadConnection(self):
+        self.socket.shutdown(0)
+    
+    def _closeWriteConnection(self):
+        self.socket.shutdown(1)
+
+    def readConnectionLost(self, reason):
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            p.readConnectionLost()
+        else:
+            self.connectionLost(reason)
+    
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
         """
@@ -683,7 +697,7 @@ class Port(base.BasePort):
             return self.deferred
 
     stopListening = loseConnection
-
+    
     def connectionLost(self, reason):
         """Cleans up my socket.
         """

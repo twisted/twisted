@@ -703,6 +703,16 @@ class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
     """
 
 
+class IHalfCloseableDescriptor(Interface):
+    """A descriptor that can be half-closed."""
+
+    def writeConnectionLost(reason):
+        """Indicates write connection was lost."""
+
+    def readConnectionLost(reason):
+        """Indicates read connection was lost."""
+
+
 class ISystemHandle(Interface):
     """An object that wraps a networking OS-specific handle."""
 
@@ -844,6 +854,37 @@ class IProtocol(Interface):
         stops blocking and a socket has been received.  If you need to
         send any greeting or initial message, do it here.
         """
+
+
+class IHalfCloseableProtocol(Interface):
+    """Implemented to indicate they want notification of half-closes.
+
+    TCP supports the notion of half-closing the connection, e.g.
+    closing the write side but still not stopping reading. A protocol
+    that implements this interface will be notified of such events,
+    instead of having connectionLost called.
+    """
+
+    def readConnectionLost():
+        """Notification of the read connection being closed.
+
+        This indicates peer did half-close of write side. It is now
+        the responsiblity of the this protocol to call
+        loseConnection().  In addition, the protocol MUST make sure a
+        reference to it still exists (i.e. by doing a callLater with
+        one of its methods, etc.)  as the reactor will only have a
+        reference to it if it is writing.
+
+        If the protocol does not do so, it might get garbage collected
+        without the connectionLost method ever being called.
+        """
+
+    def writeConnectionLost():
+        """Notification of the write connection being closed.
+
+        This will never be called for TCP connections as TCP does not
+        support notification of this type of half-close.
+        """    
 
 
 class IProtocolFactory(Interface):

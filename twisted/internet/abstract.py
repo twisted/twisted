@@ -33,13 +33,15 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     producer = None
     disconnected = 0
     disconnecting = 0
+    _writeDisconnecting = False
+    _writeDisconnected = False
     dataBuffer = ""
     offset = 0
     
     SEND_LIMIT = 128*1024
 
     implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
-               interfaces.IConsumer, interfaces.ITransport)
+               interfaces.IConsumer, interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
 
     def __init__(self, reactor=None):
         if not reactor:
@@ -125,6 +127,11 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
                 # But if I was previously asked to let the connection die, do
                 # so.
                 return self._postLoseConnection()
+            elif self._writeDisconnecting:
+                # I was previously asked to to half-close the connection.
+                self._closeWriteConnection()
+                self._writeDisconnected = True
+                return result
         return result
 
     def _postLoseConnection(self):
@@ -135,6 +142,22 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         # default implementation, telling reactor we're finished
         return main.CONNECTION_DONE
 
+    def _closeWriteConnection(self):
+        # override in subclasses
+        pass
+    
+    def _closeReadConnection(self):
+        # override in subclasses
+        pass
+
+    def writeConnectionLost(self, reason):
+        # in current code should never be called
+        self.connectionLost(reason)
+
+    def readConnectionLost(self, reason):
+        # override in subclasses
+        self.connectionLost(reason)
+    
     def write(self, data):
         """Reliably write some data.
 
@@ -144,7 +167,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         """
         if isinstance(data, unicode): # no, really, I mean it
             raise TypeError("Data must be not be unicode")
-        if not self.connected:
+        if not self.connected or self._writeDisconnected:
             return
         if data:
             self._tempDataBuffer.append(data)
@@ -156,7 +179,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
             self.startWriting()
 
     def writeSequence(self, iovec):
-        if not self.connected or not iovec:
+        if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)
         for i in iovec:
@@ -180,10 +203,24 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         when it's finished, or the connection will never close.
         """
         if self.connected:
-            self.stopReading()
-            self.startWriting()
-            self.disconnecting = 1
+            if self._writeDisconnected:
+                # doWrite won't trigger the connection close anymore
+                self.stopReading()
+                self.stopWriting()
+                self.connectionLost(main.CONNECTION_DONE)
+            else:
+                self.stopReading()
+                self.startWriting()
+                self.disconnecting = 1
 
+    def halfCloseConnection(self, read=False, write=False):
+        if read and write:
+            self.loseConnection()
+        elif read:
+            self._closeReadConnection()
+        elif write:
+            self._writeDisconnecting = True
+    
     def stopReading(self):
         """Stop waiting for read availability.
 

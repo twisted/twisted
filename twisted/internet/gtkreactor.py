@@ -124,8 +124,8 @@ class GtkReactor(default.PosixReactorBase):
         # The g_io_add_watch() API is more suited to this task. I don't think
         # pygtk exposes it, though.
         why = None
+        didRead = None
         try:
-            didRead = None
             if condition & gtk.GDK.INPUT_READ:
                 why = source.doRead()
                 didRead = source.doRead
@@ -140,10 +140,8 @@ class GtkReactor(default.PosixReactorBase):
             log.deferr()
 
         if why:
-            self.removeReader(source)
-            self.removeWriter(source)
-            source.connectionLost(failure.Failure(why))
-
+            self._disconnectSelectable(source, why, didRead == source.doRead)
+    
     def callback(self, source, condition):
         log.callWithLogger(source, self._readAndWrite, source, condition)
         self.simulate() # fire Twisted timers

@@ -140,27 +140,25 @@ class PollReactor(default.PosixReactorBase):
             error.ConnectionLost: failure.Failure(error.ConnectionLost())
         }):
         why = None
+        inRead = False
         if event & POLL_DISCONNECTED and not (event & POLLIN):
             why = main.CONNECTION_LOST
         else:
             try:
                 if event & POLLIN:
                     why = selectable.doRead()
+                    inRead = True
                 if not why and event & POLLOUT:
                     why = selectable.doWrite()
+                    inRead = False
                 if not selectable.fileno() == fd:
                     why = main.ConnectionFdescWentAway('Filedescriptor went away')
+                    inRead = False
             except:
                 log.deferr()
                 why = sys.exc_info()[1]
         if why:
-            self.removeReader(selectable)
-            self.removeWriter(selectable)
-            f = faildict.get(why.__class__)
-            if f:
-                selectable.connectionLost(f)
-            else:
-                selectable.connectionLost(failure.Failure(why))
+            self._disconnectSelectable(selectable, why, inRead)
 
 
 def install():

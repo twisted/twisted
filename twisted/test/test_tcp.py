@@ -7,12 +7,13 @@ from __future__ import nested_scopes
 """Generic TCP tests."""
 
 import socket, time
+from zope.interface import implements
 from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor, defer
 from twisted.internet import error
 from twisted.internet.address import IPv4Address
-
+from twisted.internet.interfaces import IHalfCloseableProtocol
 
 class ClosingProtocol(protocol.Protocol):
 
@@ -35,10 +36,14 @@ class MyProtocol(protocol.Protocol):
     made = 0
     closed = 0
     failed = 0
-
+    data = ""
+    
     def connectionMade(self):
         self.made = 1
-        
+
+    def dataReceived(self, data):
+        self.data += data
+    
     def connectionLost(self, reason):
         self.closed = 1
 
@@ -90,7 +95,7 @@ class ListeningTestCase(PortCleanerUpper):
 
     def testListen(self):
         f = MyServerFactory()
-        p1 = reactor.listenTCP(0, f, interface="127.0.0.1") 
+        p1 = reactor.listenTCP(0, f, interface="127.0.0.1")
         p1.stopListening()
 
     def testStopListening(self):
@@ -698,6 +703,124 @@ class LargeBufferTestCase(PortCleanerUpper):
                         "client didn't receive all the data it expected (%d != %d)" %
                         (clientF.len, self.datalen))
         p.stopListening()
+
+
+class MyHCProtocol(MyProtocol):
+
+    implements(IHalfCloseableProtocol)
+    
+    readHalfClosed = False
+
+    def readConnectionLost(self):
+        self.readHalfClosed = True
+
+
+class MyHCFactory(protocol.ServerFactory):
+
+    called = 0
+
+    def buildProtocol(self, addr):
+        self.called += 1
+        p = MyHCProtocol()
+        self.protocol = p
+        return p
+
+    
+class HalfCloseTestCase(unittest.TestCase):
+    """Test half-closing connections."""
+
+    def setUp(self):
+        self.f = f = MyHCFactory()
+        self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        reactor.iterate()
+        reactor.iterate()
+        # XXX we don't test server side yet since we don't do it yet
+        d = protocol.ClientCreator(reactor, MyProtocol).connectTCP(
+            p.getHost().host, p.getHost().port)
+        self.client = unittest.deferredResult(d)
+
+    def tearDown(self):
+        self.assertEquals(self.client.closed, 0)
+        self.client.transport.loseConnection()
+        self.p.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(self.client.closed, 1)
+        # because we did half-close, the server also needs to
+        # closed explicitly.
+        self.assertEquals(self.f.protocol.closed, 0)
+        self.f.protocol.transport.loseConnection()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(self.f.protocol.closed, 1)
+    
+    def testCloseWriteCloser(self):
+        client = self.client
+        f = self.f
+        client.transport.write("hello")
+        w = client.transport.write
+        client.transport.halfCloseConnection(write=True)
+        reactor.iterate()
+        reactor.iterate()
+        client.transport.write(" world")
+        w("lalala fooled you")
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(f.protocol.data, "hello")
+        self.assertEquals(f.protocol.closed, 0)
+        self.assertEquals(f.protocol.readHalfClosed, True)
+    
+    def testCloseReadCloser(self):
+        # this test is likely sensitive to transport buffering algorithm
+        client = self.client
+        f = self.f
+        client.transport.write("hello")
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(f.protocol.data, "hello")
+        f.protocol.transport.halfCloseConnection(read=True)
+        reactor.iterate()
+        client.transport.write(" world")
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(f.protocol.data, "hello")
+
+
+class HalfClose2TestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.f = f = MyServerFactory()
+        self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        reactor.iterate()
+        reactor.iterate()
+        # XXX we don't test server side yet since we don't do it yet
+        d = protocol.ClientCreator(reactor, MyProtocol).connectTCP(
+            p.getHost().host, p.getHost().port)
+        self.client = unittest.deferredResult(d)
+
+    def tearDown(self):
+        self.client.transport.loseConnection()
+        self.p.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+
+    def testNoNotification(self):
+        client = self.client
+        f = self.f
+        client.transport.write("hello")
+        w = client.transport.write
+        client.transport.halfCloseConnection(write=True)
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(f.protocol.data, "hello")
+        self.assertEquals(f.protocol.closed, True)
+
 
 try:
     import resource

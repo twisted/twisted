@@ -168,12 +168,12 @@ class Gtk2Reactor(default.PosixReactorBase):
         error.ConnectionLost: failure.Failure(error.ConnectionLost()),
         }):
         why = None
+        didRead = None
         if condition & POLL_DISCONNECTED and \
                not (condition & gobject.IO_IN):
             why = main.CONNECTION_LOST
         else:
             try:
-                didRead = None
                 if condition & gobject.IO_IN:
                     why = source.doRead()
                     didRead = source.doRead
@@ -188,14 +188,8 @@ class Gtk2Reactor(default.PosixReactorBase):
                 log.deferr()
 
         if why:
-            self.removeReader(source)
-            self.removeWriter(source)
-            f = faildict.get(why.__class__)
-            if f:
-                source.connectionLost(f)
-            else:
-                source.connectionLost(failure.Failure(why))
-
+            self._disconnectSelectable(source, why, didRead == source.doRead)
+    
     def callback(self, source, condition):
         log.callWithLogger(source, self._doReadOrWrite, source, condition)
         self.simulate() # fire Twisted timers

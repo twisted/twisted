@@ -23,6 +23,7 @@ from zope.interface import implements, classImplements, Interface
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast, IReactorCleanup
+from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import main, error, protocol, interfaces
 from twisted.internet import tcp, udp, defer
 
@@ -127,6 +128,26 @@ class PosixReactorBase(ReactorBase):
             else:
                 log.msg('Main loop terminated.')
 
+    def _disconnectSelectable(self, selectable, why, isRead, faildict={
+        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+        error.ConnectionLost: failure.Failure(error.ConnectionLost())
+        }):
+        """Utility function for disconnecting a selectable.
+
+        Supports half-close notification.
+        """
+        self.removeReader(selectable)
+        f = faildict.get(why.__class__)
+        if f:
+            if (isRead and why.__class__ ==  error.ConnectionDone 
+                and IHalfCloseableDescriptor.providedBy(selectable)):
+                selectable.readConnectionLost(f)
+            else:
+                self.removeWriter(selectable)
+                selectable.connectionLost(f)
+        else:
+            self.removeWriter(selectable)
+            selectable.connectionLost(failure.Failure(why))
 
     def installWaker(self):
         """Install a `waker' to allow threads and signals to wake up the IO thread.
@@ -496,10 +517,7 @@ class SelectReactor(PosixReactorBase):
 
     doIteration = doSelect
 
-    def _doReadOrWrite(self, selectable, method, dict, faildict={
-        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
-        error.ConnectionLost: failure.Failure(error.ConnectionLost())
-        }):
+    def _doReadOrWrite(self, selectable, method, dict):
         try:
             why = getattr(selectable, method)()
             handfn = getattr(selectable, 'fileno', None)
@@ -511,14 +529,8 @@ class SelectReactor(PosixReactorBase):
             why = sys.exc_info()[1]
             log.err()
         if why:
-            self.removeReader(selectable)
-            self.removeWriter(selectable)
-            f = faildict.get(why.__class__)
-            if f:
-                selectable.connectionLost(f)
-            else:
-                selectable.connectionLost(failure.Failure(why))
-
+            self._disconnectSelectable(selectable, why, method=="doRead")
+    
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
