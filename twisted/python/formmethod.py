@@ -38,10 +38,6 @@ class InputError(FormException):
     An error occurred with some input.
     """
 
-    def __init__(self, name, *args, **kwargs):
-        self.name = name # the name of the Argument that had the error
-        FormException.__init__(self, *args, **kwargs)
-
 
 class Argument:
     """Base class for form arguments."""
