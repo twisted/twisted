@@ -245,7 +245,7 @@ class ReactorBase:
         try:
             address = socket.gethostbyname(name)
         except socket.error:
-            return defer.fail(failure.Failure(error.DNSLookupError("address not found")))
+            return defer.fail(failure.Failure(error.DNSLookupError("address %r not found" % name)))
         else:
             return defer.succeed(address)
 
