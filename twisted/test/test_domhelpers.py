@@ -31,8 +31,8 @@ class DomHelpersTest(TestCase):
         actual=domhelpers.getElementsByTagName(doc1, 'foo')[0].nodeName
         expected='foo'
         self.assertEquals(actual, expected)
-        el=doc1.documentElement
-        actual=domhelpers.getElementsByTagName(el, 'foo')[0].nodeName
+        el1=doc1.documentElement
+        actual=domhelpers.getElementsByTagName(el1, 'foo')[0].nodeName
         self.assertEqual(actual, expected)
 
         doc2_xml='<a><foo in="a"/><b><foo in="b"/></b><c><foo in="c"/></c><foo in="d"/><foo in="ef"/><g><foo in="g"/><h><foo in="h"/></h></g></a>'
@@ -41,8 +41,9 @@ class DomHelpersTest(TestCase):
         actual=''.join([node.getAttribute('in') for node in tag_list])
         expected='abcdefgh'
         self.assertEquals(actual, expected)
-        el=doc2.documentElement
-        actual=domhelpers.getElementsByTagName(el, 'foo')[0].nodeName
+        el2=doc2.documentElement
+        tag_list=domhelpers.getElementsByTagName(el2, 'foo')
+        actual=''.join([node.getAttribute('in') for node in tag_list])
         self.assertEqual(actual, expected)
 
         doc3_xml='''
@@ -67,8 +68,9 @@ class DomHelpersTest(TestCase):
         actual=''.join([node.getAttribute('in') for node in tag_list])
         expected='abdgheicfj'
         self.assertEquals(actual, expected)
-        el=doc3.documentElement
-        actual=domhelpers.getElementsByTagName(el, 'foo')[0].nodeName
+        el3=doc3.documentElement
+        tag_list=domhelpers.getElementsByTagName(el3, 'foo')
+        actual=''.join([node.getAttribute('in') for node in tag_list])
         self.assertEqual(actual, expected)
 
         doc4_xml='<foo><bar></bar><baz><foo/></baz></foo>'
@@ -77,8 +79,7 @@ class DomHelpersTest(TestCase):
         root=doc4.documentElement
         expected=[root, root.lastChild().firstChild()]
         self.assertEquals(actual, expected)
-        el=doc4.documentElement
-        actual=domhelpers.getElementsByTagName(el, 'foo')[0].nodeName
+        actual=domhelpers.getElementsByTagName(root, 'foo')
         self.assertEqual(actual, expected)
 
 
