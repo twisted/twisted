@@ -1,7 +1,6 @@
 import os, sys
 
 import distutils
-from distutils.core import Extension
 
 from twisted import copyright
 from twisted.python import dist, util

@@ -14,7 +14,8 @@ def setup(**kw):
         if 'ext_modules' not in kw:
             kw['ext_modules'] = [True] # distutils is so lame
 
-        dE = kw.pop('detectExtensions')
+        dE = kw['detectExtensions']
+        del kw['detectExtensions']
         def my_build_ext(d):
             bet = build_ext_twisted(d)
             bet.detectExtensions = types.MethodType(dE, bet, build_ext_twisted)
