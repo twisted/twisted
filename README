@@ -1,13 +1,16 @@
-Twisted 0.13.0
+Twisted 0.14.0
 
 Quote of the Release:
 
-    "You wrote a 'manifesto'?"
-    "I don't see what all the fuss is about, it's standard mad scientist
-    protocol; all I did was threaten to unleash giant mutant gerbils upon
-    Washington D.C. unless the U.S. government agrees to my demands."
-    
-        -- Narbonic, http://www.narbonic.com
+<glyph> funny.  I'm looking at twistedmatrix.com right now and the most recent
+version is still 0.13.0
+<radix> :P
+<radix> glyph: find a QOTR
+
+
+For information on what's new in Twisted 0.14.0, see the ChangeLog file
+that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
+
 
 What is this?
 
@@ -35,33 +38,6 @@ What is this?
     - Perspective Broker
   
   For more information, visit http://www.twistedmatrix.com.
-
-What's new in 0.13.0?
-
-  Updates to the config interface, and twisted.enterprise database support.
-  
-  Delayed docs in doc/delayeds.html now give correct information.
-  
-  web.guard now attaches/detaches to perspectives like PB does.
-  
-  Lots of bug fixes.
-  
-  Experimental stuff:
-  
-    - twisted.forum, a database-based web forum.
-  
-    - twisted.metrics, a database-backed performance and stats system.
-  
-    - wxPython event loop support.
-    
-    - Initial, experimental support for connectTCP and connectSSL, allowing
-      client protocols such as IRC bots to (re)connect to remote servers
-      automatically.
-  
-  Incompatible changes:
-  
-    - in twisted.web.guard, changed order of identitySession and
-      perspectiveSession in some of the constructors for consistency.
 
 
 What can I do with it?
