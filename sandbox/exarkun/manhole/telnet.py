@@ -193,6 +193,13 @@ class Telnet(protocol.Protocol):
 
     # Options default to disabled.
 
+    class _OptionState:
+        class _Perspective:
+            state = stateq = False
+        def __init__(self):
+            self.us = _Perspective()
+            self.him = _Perspective()
+
     def do(self, option):
         """Request an option be enabled.
         """
@@ -214,60 +221,65 @@ class Telnet(protocol.Protocol):
         self.write(IAC + WONT + option)
 
     def getOptionState(self, opt):
-        return self.options.get(opt, ('no', False, 'no', False))
+        return self.options.get(opt, _OptionState())
 
-    def setOptionState(self, opt, n, v):
-        old = self.getOptionState(opt)
-        self.options[opt] = old[:n] + (v,) + old[n + 1:]
-
-    def _dowill(self, option, s, sq):
+    def _dodontwillwont(self, option, s, pfx):
         state = self.getOptionState(option)
-        if state[s] == 'no':
-            if self._shouldAllowEnable(option):
-                self.setOptionState(option, s, 'yes')
-                self.do(option)
-            else:
-                self.dont(option)
-        elif state[s] == 'yes':
-            pass
-        elif state[s] == 'wantno':
-            if state[sq]:
-                # This is an error state.  The peer is defective.
-                self.setOptionState(option, s, 'yes')
-                self.setOptionStatE(option, sq, False)
-            else:
-                # This is an error state.  The peer is defective.
-                self.setOptionState(option, s, 'no')
-        elif state[s] == 'wantyes':
-            if state[sq]:
-                self.setOptionState(option, s, 'wantno')
-                self.setOptionState(option, sq, False)
-                self.dont(option)
-            else:
-                self.setOptionState(option, s, 'yes')
+        view = getattr(state, s)
+        getattr(self, '_' + pfx + '_' + view.state)(option, view)
+
+    def _dowill(self, option, s):
+        self._dodontwillwont(option, s, 'dowill')
+
+    def _dowill_no(self, option, state)
+        if self._shouldAllowEnable(option):
+            state.state = 'yes'
+            self.do(option)
         else:
-            raise ValueError("Illegal state")
-
-    def _dontwont(self, option, s, sq):
-        state = self.getOptionState(option)
-        if state[s] == 'no':
-            pass
-        elif state[s] == 'yes':
-            self.setOptionState(option, s, 'no')
             self.dont(option)
-        elif state[s] == 'wantno':
-            if self.state[sq]:
-                self.setOptionState(option, s, 'wantyes')
-                self.setOptionState(option, sq, False)
-                self.do(option)
-            else:
-                self.setOptionState(option, s, 'no')
-        elif state[s] == 'wantyes':
-            self.setOptionState(option, s, 'no')
-            if state[sq]:
-                self.setOptionState(option, sq, False)
+
+    def _dowill_yes(self, option, state):
+        pass
+
+    def _dowill_wantno(self, option, state):
+        if state.stateq:
+            # This is an error state.  The peer is defective.
+            state.state = 'yes'
+            state.stateq = False
         else:
-            raise ValueError("Illegal state")
+            # This is an error state.  The peer is defective.
+            state.state = 'no'
+
+    def _dowill_wantyes(self, option, state):
+        if if state.stateq:
+            state.state = 'wantno'
+            state.stateq = False
+            self.dont(option)
+        else:
+            state.state = 'yes'
+
+    def _dontwont(self, option, s):
+        self._dodontwillwont(option, s, 'dontwont')
+
+    def _dontwont_no(self, option, state):
+        pass
+
+    def _dontwont_yes(self, option, state):
+        self.setOptionState(option, s, 'no')
+        self.dont(option)
+
+    def _dontwont_wantno(self, option, state):
+        if self.state[sq]:
+            state.state = 'wantyes'
+            state.stateq = False
+            self.do(option)
+        else:
+            state.state = 'no'
+
+    def _dontwont_wantyes(self, option, state):
+        state.state = 'no'
+        if state[sq]:
+            state.stateq = False
 
     def telnet_WILL(self, option):
         self._dowill(option, HIM, HIMQ)
