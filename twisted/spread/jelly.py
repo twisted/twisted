@@ -417,6 +417,9 @@ class _Jellier:
                     raise NotImplementedError("Don't know the type: %s" % objType)
                 return self.preserve(obj, sxp)
         else:
+            if objType is types.InstanceType:
+                raise InsecureJelly("Class not allowed for instance: %s %s" %
+                                    (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
                                 (objType, obj))
 
