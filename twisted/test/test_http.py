@@ -220,6 +220,7 @@ class PRequest:
 
     def getHeader(self, k):
         return self.received_headers.get(k, '')
+
     def setHeader(self, k, v):
         self.headers[k] = v
 
@@ -265,3 +266,57 @@ class ChunkingTestCase(unittest.TestCase):
             except ValueError:
                 pass
         self.assertEquals(result, self.strings)
+
+
+
+class HeaderTestCase(unittest.TestCase):
+
+    def runRequest(self, httpRequest, requestClass):
+        httpRequest = httpRequest.replace("\n", "\r\n")
+        b = StringIOWithoutClosing()
+        a = http.HTTPChannel()
+        a.requestFactory = requestClass
+        a.makeConnection(protocol.FileWrapper(b))
+        # one byte at a time, to stress it.
+        for byte in httpRequest:
+            a.dataReceived(byte)
+        a.connectionLost()
+        self.assertEquals(self.didRequest, 1)
+        del self.didRequest
+    
+    def testHeaders(self):
+        httpRequest = """\
+GET / HTTP/1.0
+Foo: bar
+baz: 1 2 3
+
+"""
+        testcase = self
+        
+        class MyRequest(http.Request):
+            def process(self):
+                testcase.assertEquals(self.getHeader('foo'), 'bar')
+                testcase.assertEquals(self.getHeader('Foo'), 'bar')
+                testcase.assertEquals(self.getHeader('bAz'), '1 2 3')
+                testcase.didRequest = 1
+                self.finish()
+        
+        self.runRequest(httpRequest, MyRequest)
+
+    def testCookies(self):
+        httpRequest = '''\
+GET / HTTP/1.0
+Cookie: rabbit="eat carrot"; ninja=secret
+
+'''
+        testcase = self
+        
+        class MyRequest(http.Request):
+            def process(self):
+                testcase.assertEquals(self.getCookie('rabbit'), '"eat carrot"')
+                testcase.assertEquals(self.getCookie('ninja'), 'secret')
+                testcase.didRequest = 1
+                self.finish()
+
+        self.runRequest(httpRequest, MyRequest)
+
