@@ -161,7 +161,6 @@ class PerspectiveTestCase(unittest.TestCase):
     def testConstruction(self):
         perspective.Perspective("test perspective")
         perspective.Perspective("test perspective", "testIdentityName")
-        perspective.Perspective(u"test perspective", u"testIdentityName")
 
     def testConstruction_invalidPerspectiveName(self):
         self.assertRaises(TypeError, perspective.Perspective,
@@ -182,9 +181,6 @@ class PerspectiveTestCase(unittest.TestCase):
         self.perspective.setIdentityName("saneIdentityName")
         self.assertEqual(self.perspective.identityName,
                          "saneIdentityName")
-        self.perspective.setIdentityName(u"saneIdentityName")
-        self.assertEqual(self.perspective.identityName,
-                         u"saneIdentityName")
 
     def testsetIdentityName_invalid(self):
         self.assertRaises(TypeError,
@@ -224,12 +220,6 @@ class PerspectiveTestCase(unittest.TestCase):
         self.ident = ident = self.perspective.makeIdentity("password")
         # simple password verification
         pwrq = ident.verifyPlainPassword("password")
-        pwrq.addCallbacks(self._testmakeIdentity_1, self._testmakeIdentity_1fail)
-
-    def testmakeIdentityUnicode(self):
-        self.ident = ident = self.perspective.makeIdentity(u"password")
-        # simple password verification
-        pwrq = ident.verifyPlainPassword(u"password")
         pwrq.addCallbacks(self._testmakeIdentity_1, self._testmakeIdentity_1fail)
 
     def _testmakeIdentity_1fail(self, msg):

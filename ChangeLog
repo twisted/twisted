@@ -1,10 +1,3 @@
-2003-06-16  Brian Warner  <warner@lothar.com>
-
-	* twisted/cred/perspective.py: accept unicode strings as
-	perspective names, identity names, and passwords. Thanks to
-	RodrigoB for the patch.
-	* twisted/test/test_cred.py: add tests for unicode perspectives
-
 2003-06-16  Donovan Preston  <dp@twistedmatrix.com>
 
 	* twisted/web/woven/{controller,view,widgets}.py: Cleaned up the
