@@ -15,13 +15,16 @@ This makes sure you only run one resolver per process.
 # TODO
 #
 # Check TTL of responses is 255
+#
+# Make ServiceSubscriptions pickleable?!
 
-import random, struct
+import random
 
 from twisted.internet import reactor, defer, protocol
 from twisted.protocols import dns
 from twisted.python import failure
 from twisted.python.components import Interface
+from twisted.persisted.styles import Ephemeral
 
 
 MDNS_ADDRESS = "224.0.0.251"
@@ -46,7 +49,7 @@ class IServiceSubscription(Interface):
         """Return list of tuples (name, host, port)."""
 
 
-class ServiceSubscription:
+class ServiceSubscription(Ephemeral):
     """
     Startup behaviour:
     1. Send out multicast asking for 'domains' (what's that going to mean)?
@@ -64,27 +67,49 @@ class ServiceSubscription:
         self.resolver = resolver
         self.subscribers = []
         self.addresses = {} # map name to (domainname, port)
-        self.resolver.protocol.write([dns.Query(service, dns.PTR, dns.IN)])
-        # XXX schedule stage new lookups at intervals
+        self.intervals = self._generateIntervals()
+        self._sendQuery()
+
+    def _sendQuery(self):
+        """Send out the DNS query for this service."""
+        # XXX add Known Answers, first should be set to ask for unicast
+        self.resolver.protocol.write([dns.Query(self.service, dns.PTR, dns.IN)])
+        self._scheduledQuery = reactor.callLater(self.intervals.next(),
+                                                 self._sendQuery)
+    
+    def _generateIntervals(self):
+        """Intervals of querying for the records."""
+        for i in (1, 3, 7, 15, 31, 63, 128):
+            yield i
+        while True:
+            yield 256
     
     def unsubscribe(self, subscriber):
         self.subscribers.remove(subscriber)
         if not self.subscribers:
+            self._scheduledQuery.cancel()
             self.resolver._removeSubscription(self.service)
 
     def subscribe(self, subscriber):
         self.subscribers.append(subscriber)
 
+    def gotPTR(self, record):
+        """Called by resolver with PTR for our service type."""
+        name = str(record.payload.name)
+        if not self.addresses.has_key(name):
+            self.resolver.query(dns.Query(name, dns.SRV, dns.IN))
+        
     def gotSRV(self, name, record):
         """Called by resolver with SRV for our service type."""
         # XXX deal with TTLs
-        # XXX supress duplicates
+        if self.addresses.has_key(name):
+            return         # XXX deal with TTLs
         self.addresses[name] = str(record.target), record.port
         for s in self.subscribers:
             s.serviceAdded(name, str(record.target), record.port)
 
 
-class mDNSResolver:
+class mDNSResolver(Ephemeral):
     """Resolve mDNS queries.
 
     This implements the continous resolving method, so it also knows
@@ -98,7 +123,8 @@ class mDNSResolver:
     def __init__(self):
         self.protocol = mDNSDatagramProtocol(self)
         self.subscriptions = {} # map service name to ServiceSubscription
-        self.cachedDomains = {} # map .local domain name to IP
+        self.cachedDomains = {} # map domain name to IP
+        self.domainExpires = {} # map domain name to DelayedCall
         self.queries = {} # map tuple (dns type, name) to [list of Deferreds, list timeouts]
     
     # external API
@@ -147,7 +173,7 @@ class mDNSResolver:
         if not timeouts:
             del self.queries[(query.type, str(query.name))]
             for d in l[0]:
-                d.errback(failure.Failure(defer.TimeoutError(query)))
+                d.errback(failure.Failure(dns.DNSQueryTimeoutError(query)))
         elif self.protocol.transport:
             l[1] = timeouts[1:]
             reactor.callLater(timeouts[0], self._queryTimeout, query)
@@ -157,7 +183,7 @@ class mDNSResolver:
         for r in message.answers:
             if r.type == dns.A and str(r.name) == domain:
                 return r.payload.dottedQuad()
-        return failure.Failure(defer.TimeoutError(domain))
+        return failure.Failure(dns.DNSQueryTimeoutError(domain))
     
     def resolve(self, domain):
         """Do a A record lookup for domain.
@@ -173,7 +199,7 @@ class mDNSResolver:
     # internal methods
     
     def messageReceived(self, message, address):
-        #print message.queries, message.answers
+        print message.queries, message.answers
         for r in message.answers:
             pattern = (r.type, str(r.name))
             if self.queries.has_key(pattern):
@@ -183,7 +209,7 @@ class mDNSResolver:
             if r.type == dns.PTR:
                 service = r.name.name
                 if self.subscriptions.has_key(service):
-                    self.query(dns.Query(r.payload.name.name, dns.SRV, dns.IN))
+                    self.subscriptions[service].gotPTR(r)
             elif r.type == dns.SRV:
                 name = r.name.name
                 for service, subscription in self.subscriptions.items():
@@ -195,12 +221,21 @@ class mDNSResolver:
                         reactor.callLater(0, subscription.gotSRV, name[:-len(service) - 1], r.payload)
                         break
             elif r.type == dns.A:
-                # XXX need to deal with TTL
-                self.cachedDomains[str(r.name)] = r.payload.dottedQuad()
-
+                name = str(r.name)
+                if self.domainExpires.has_key(name):
+                    self.domainExpires[name].delay(r.payload.ttl)
+                else:
+                    self.cachedDomains[name] = r.payload.dottedQuad()
+                    self.domainExpires[name] = reactor.callLater(r.payload.ttl, self._expireDomain, name)
+    
     def _removeSubscription(self, service):
         """Called by ServiceSubscription to remove itself."""
         del self.subscriptions[service]
+
+    def _expireDomain(self, name):
+        """Called when cached domain expires."""
+        del self.cachedDomains[name]
+        del self.domainExpires[name]
 
 
 class mDNSDatagramProtocol(protocol.DatagramProtocol):
