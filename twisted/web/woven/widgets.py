@@ -225,12 +225,7 @@ class Widget(mvc.View):
         return self.attributes[item]
 
     def setError(self, request, message):
-        become = self.errorFactory(self.model, message)
-        become.add(self)
-        oldNode = self.node
-        newNode = become.generateDOM(request, self.node)
-        oldNode.parentNode.replaceChild(newNode, oldNode)
-        return newNode
+        self.become = self.errorFactory(self.model, message)
 
     def initialize(self):
         pass
