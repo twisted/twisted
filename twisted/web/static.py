@@ -263,6 +263,9 @@ class File(resource.Resource, styles.Versioned):
         if self.encoding is not None:
             p, ext = os.path.splitext(p)
         self.defaultType = defaultType
+        if ignoredExts in (0, 1):
+            import warnings
+            warnings.warn("ignoredExts should receive a list, not a boolean")
         if (ignoredExts == 1) or (ignoredExts == 0) or (ignoredExts == () and allowExt):
             self.ignoredExts = ['*']
         else:
