@@ -1,4 +1,4 @@
-Twisted 0.19.0rc2
+Twisted 0.19.0rc3
 
 Quote of the Release:
 
@@ -9,7 +9,7 @@ Quote of the Release:
   control.
 <exarkun> Twisted: The Framework That's Cutting Up Your Brain
 
-For information on what's new in Twisted 0.19.0rc2, see the ChangeLog file
+For information on what's new in Twisted 0.19.0rc3, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 
@@ -19,7 +19,7 @@ RELEASE CANDIDATE
   release: there may be a number of RCs before 0.19.0 is officially released.
   Until then, don't expect this to be bug-free. :-)
 
-  Known Issues with rc2:
+  Known Issues with rc3:
     * Twisted Sister unit tests don't pass, and even cause the runtests process
       to eventually totally freeze.
     * FTP unit tests *still* fail, with an error about "test_ftp.py" not being
@@ -64,9 +64,9 @@ What can I do with it?
 
   To install Twisted, just make sure the Twisted-$VERSION/ directory
   is in the "PYTHONPATH" environment variable. For example, if you extracted
-  Twisted-0.19.0rc2.tar.gz to /home/bob/, then you would have something like:
+  Twisted-0.19.0rc3.tar.gz to /home/bob/, then you would have something like:
 
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.19.0rc2/
+    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.19.0rc3/
   
   in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc. If you use Windows NT,
   2k, or XP, then set your environment variables by right-clicking on My
