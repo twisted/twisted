@@ -27,13 +27,17 @@ class ConvertOptions(usage.Options):
          "'pickle', 'xml', or 'source'."],
         ['typeout', 't', 'source',
          "The output format to use; this can be 'pickle', 'xml', or 'source'."],
-        ['decrypt', 'd', None, "The specified tap/aos/xml file is encrypted."],
-        ['encrypt', 'e', None, "Encrypt file before writing"]]
+        ]
+
+    optFlags = [
+        ['decrypt', 'd', "The specified tap/aos/xml file is encrypted."],
+        ['encrypt', 'e', "Encrypt file before writing"]
+        ]
     
     def postOptions(self):
         if self['in'] is None:
-            self.opt_help()
-            raise usage.UsageError("You must specify the input filename.")
+            raise usage.UsageError("%s\nYou must specify the input filename."
+                                   % self)
         if self["typein"] == "guess":
             try:
                 self["typein"] = app.guessType(self["in"])
