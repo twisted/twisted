@@ -9,14 +9,16 @@
 <h2>Abstraction Levels</h2>
 
 <p>When implementing interfaces to the operating system or
-the network:</p>
+the network, provide two interfaces:</p>
 
 <ul>
-<li>Don't hide platform specific or library specific functionality.
+<li>One that doesn't hide platform specific or library specific 
+functionality.
 For example, you can use file descriptors on Unix, and Win32 events on
 Windows.
 </li>
-<li>Provide a high level interface hiding platform specific details.
+<li>One that provides a high level interface hiding platform specific 
+details.
 E.g. process running uses same API on Unix and Windows, for all that
 the implementation is very different.
 </li>
