@@ -15,7 +15,7 @@ class Widget(View):
     def __init__(self, model):
         self.attributes = {}
         View.__init__(self, model)
-        self.error = None
+        self.become = None
         self.children = []
         self.node = None
         self.id=""
@@ -33,10 +33,6 @@ class Widget(View):
         for a portion of that model. This method returns the portion I am
         responsible for.
         """
-        # this should be spelled
-        # eval ("self.model" + "." + self.id)
-        #return getattr(self.model, self.id)
-
         # This is safe because id is only specified in the TEMPLATE, never
         # in the request submitted by the user.
         # if a hacker hacks your templates, they could make this do bad
@@ -58,8 +54,7 @@ class Widget(View):
         """
         self.node = node
 
-    def cloneNode(self):
-        node = self.node.cloneNode(1)
+    def cleanNode(self, node):
         # Do your part:
         # Prevent infinite recursion
         try:
@@ -73,22 +68,23 @@ class Widget(View):
         except KeyError: pass
         return node
 
-    def render(self, request):
-        if self.node is None:
+    def generateDOM(self, request, node):
+        if self.tagName and str(node.tagName) != self.tagName:
             node = document.createElement(self.tagName)
         else:
-            node = self.cloneNode()
+            node = self.cleanNode(node)
         for key, value in self.attributes.items():
             node.setAttribute(key, value)
         for item in self.children:
-            if hasattr(item, 'render'):
-                item = item.render(request)
+            if hasattr(item, 'generateDOM'):
+                item = item.generateDOM(request, node)
             node.appendChild(item)
-        if self.error is None:
+        if self.become is None:
             return node
-        err = Error(self.model, message = self.error)
-        err.add(self)
-        return err.render(request)
+        become = self.become
+        self.become = None
+        become.add(self)
+        return become.generateDOM(request, node)
 
     def __setitem__(self, item, value):
         self.attributes[item] = value
@@ -97,7 +93,7 @@ class Widget(View):
         return self.attributes[item]
 
     def setError(self, message):
-        self.error = message
+        self.become = Error(self.model, message)
 
     def initialize(self):
         pass
@@ -110,10 +106,10 @@ class Text(Widget):
             Widget.__init__(self, Model())
         self.text = text
     
-    def render(self, request):
+    def generateDOM(self, request, node):
         if isinstance(self.text, Model):
-            self.node.appendChild(document.createTextNode(str(self.getData())))
-            return self.node
+            node.appendChild(document.createTextNode(str(self.getData())))
+            return node
         else:            
             return document.createTextNode(self.text)
 
@@ -136,11 +132,11 @@ class Input(Widget):
         self.id=id
         self['name'] = id
 
-    def render(self, request):
+    def generateDOM(self, request, node):
         mVal = self.getData()
         if mVal:
             self['value'] = mVal
-        return Widget.render(self, request)
+        return Widget.generateDOM(self, request, node)
 
 class CheckBox(Input):
     def initialize(self):
@@ -174,14 +170,14 @@ class Anchor(Widget):
     def setLink(self, href):
         self['href'] = href
     
-    def render(self, request):
-        node = Widget.render(self, request)
+    def generateDOM(self, request, node):
+        node = Widget.generateDOM(self, request, node)
         node.appendChild(d.createTextNode(self.text))
         return node
 
 class List(Widget):
     """
-    I am a widget which knows how to render a python list.
+    I am a widget which knows how to generateDOM for a python list.
     
     A List should be specified in the template HTML as so:
     
@@ -191,11 +187,12 @@ class List(Widget):
     
     Where blah is the name of a list on the model; eg self.model.blah = ['foo', 'bar']
     """
-    tagName = 'ul'
-    def render(self, request):
-        node = Widget.render(self, request)
+    tagName = None
+    def generateDOM(self, request, node):
+        node = Widget.generateDOM(self, request, node)
         # xxx with this implementation all elements of the list must use the same view widget
-        listItem = domhelpers.get(node, 'listItem').cloneNode(1)
+        listItem = domhelpers.get(node, 'listItem')
+        listItem.removeAttribute('model')
         domhelpers.clearNode(node)
         for itemNum in range(len(self.getData())):
             # theory: by appending copies of the li node

@@ -76,7 +76,10 @@ from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
 from twisted.web import domwidgets
 from twisted.python.defer import Deferred
+from twisted.python import failure
 from twisted.internet import reactor
+from twisted.python.mvc import View, IView, Controller
+from twisted.python import log
 
 from server import NOT_DONE_YET
 
@@ -109,6 +112,27 @@ class MethodLookup:
         if self._bytag.has_key(str(node.nodeName)):
             return self._bytag[str(node.nodeName)]
         return None
+
+# If no widget/handler was found in the container controller or view, these modules will be searched.
+import domhandlers, domwidgets
+
+class DefaultHandler(Controller):
+    def handle(self, request):
+        """
+        By default, we don't do anything
+        """
+        return (None, None)
+
+    def setId(self, id):
+        self.id = id
+
+
+class DefaultWidget(domwidgets.Widget):
+    def generateDOM(self, request, node):
+        return None
+
+    def setId(self, id):
+        self.id = id
 
 
 class DOMTemplate(Resource):
@@ -149,12 +173,6 @@ class DOMTemplate(Resource):
         return []
         
     def render(self, request):        
-        args = request.args
-        if args.has_key('submit'):
-            controller = self.controllerFactory(self.model, self)
-            if controller:
-                controller.submit(request, args)
-        
         template = self.getTemplate(request)
         if template:
             self.d = minidom.parseString(template)
@@ -170,13 +188,6 @@ class DOMTemplate(Resource):
         # So we can return NOT_DONE_YET
         return NOT_DONE_YET
     
-    def controllerFactory(self, model, view):
-        """
-        Override this if you want a controller to be instanciated when a form is
-        submitted.
-        """
-        pass
-
     def getTemplate(self, request):
         """
         Override this if you want to have your subclass look up it's template
@@ -217,34 +228,15 @@ class DOMTemplate(Resource):
         Handle the root node, and send the page if there are no
         outstanding callbacks when it returns.
         """
-        for node in document.childNodes:
-            self.handleNode(request, node)
-        if not self.outstandingCallbacks:
-            return self.sendPage(request)
-
-    def sendPage(self, request):
-        """
-        Convert the DOM tree to XML and send it to the browser.
-        """
-        page = str(self.d.toxml())
-        request.write(page)
-        request.finish()
-
-    def handleNode(self, request, node):
-        """
-        Handle a single node by looking up a method for it, calling the method
-        and dispatching the result.
-        
-        Also, handle all childNodes of this node using recursion.
-        """
-        result = None
-        if node.nodeName and node.nodeName[0] != '#':
-            method = self.templateMethods.getMethodForNode(node)
-            if method:
-                result = apply(method, (request, node))
-                node = self.dispatchResult(request, node, result)
-
-        self.recurseChildren(request, node)
+        try:
+            for node in document.childNodes:
+                self.handleNode(request, node)
+            if not self.outstandingCallbacks:
+                return self.sendPage(request)
+        except:
+            f = failure.Failure()
+            request.write(widgets.formatFailure(f))
+            request.finish()
     
     def dispatchResult(self, request, node, result):
         """
@@ -315,66 +307,39 @@ class DOMTemplate(Resource):
                 newnode = self.d.importNode(newnode, 1)
             oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
-
-    def substitute(self, request, node, subs):
-        """
-        Look through the given node's children for strings, and
-        attempt to do string substitution with the given parameter.
-        """
-        for child in node.childNodes:
-            if child.nodeValue:
-                child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
-            self.substitute(request, child, subs)
-
-# DOMView: The DOMTemplate for MVC
-
-from twisted.python.mvc import View, IView, Controller
-
-# If no widget/handler was found in the container controller or view, these modules will be searched.
-import domhandlers, domwidgets
-
-class DefaultHandler(Controller):
-    def handle(self, request):
-        """
-        By default, we don't do anything
-        """
-        return (None, None)
-
-    def setId(self, id):
-        self.id = id
-
-
-class DefaultWidget(domwidgets.Widget):
-    def render(self, request):
-        return None
-
-    def setId(self, id):
-        self.id = id
-
-
-class DOMView(DOMTemplate, View):
-    # uuugly, thank you zope...
-    __implements__ = (DOMTemplate.__implements__, View.__implements__, IView)
     
     def handleNode(self, request, node):
         if not hasattr(node, 'getAttribute'): return node
+        if node.nodeName and node.nodeName[0] == '#': return node
         
         controllerName = node.getAttribute('controller')
         viewName = node.getAttribute('view')
         id = node.getAttribute('model')
+        if id is None: id = node.getAttribute('id')
         
         defaultHandlerFactory = lambda x: DefaultHandler(x)
         defaultWidgetFactory = lambda x: DefaultWidget(x)
         controllerFactory, viewFactory = (defaultHandlerFactory, defaultWidgetFactory)
+
+        # Look up a handler
         if controllerName:
             if hasattr(self, 'controller'):
-                controllerFactory = getattr(self.controller, controllerName, defaultHandlerFactory)
+                controllerFactory = getattr(self.controller, 'factory_' + controllerName, defaultHandlerFactory)
             if controllerFactory is defaultHandlerFactory:
                 controllerFactory = getattr(domhandlers, controllerName)
-        if viewName:
-            viewFactory = getattr(self, viewName, defaultWidgetFactory)
-            if viewFactory is defaultWidgetFactory:
-                viewFactory = getattr(domwidgets, viewName)
+
+        # Look up either a widget factory, or a dom-mutating method
+        viewMethod = None
+        viewMethod = self.templateMethods.getMethodForNode(node)
+        if viewMethod:
+            log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the model attribute, and prefix your methods with domview_*.")
+        else:
+            if viewName:
+                viewFactory = getattr(self, 'factory_' + viewName, defaultWidgetFactory)
+                if viewFactory is defaultWidgetFactory:
+                    viewMethod = getattr(self, 'domview_' + viewName, None)
+                    if viewMethod is None:
+                        viewFactory = getattr(domwidgets, viewName)
 
         controller = controllerFactory(self.model)
         view = viewFactory(self.model)
@@ -392,16 +357,20 @@ class DOMView(DOMTemplate, View):
         if success is not None:
             results = getattr(self, 'handlerResults', {})
             resultList = results.get(success, [])
-            resultList.append((controller, data))
+            resultList.append((controller, data, node))
             results[success] = resultList
             setattr(self, 'handlerResults', results)
-        
-        result = view.render(request)
+        else:
+            if viewMethod is None:
+                viewMethod = view.generateDOM
+            self.mutateDOM(request, node, viewMethod)
+            self.recurseChildren(request, node)
+
+    def mutateDOM(self, request, node, viewMethod):
+        result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
         if returnNode:
             node = returnNode
-
-        self.recurseChildren(request, node)
 
     def sendPage(self, request):
         """
@@ -418,13 +387,22 @@ class DOMView(DOMTemplate, View):
             successes = handlerResults.get(1, None)
             if successes:
                 self.handleSuccesses(request, successes)
-        DOMTemplate.sendPage(self, request)
-    
+
+        page = str(self.d.toxml())
+        request.write(page)
+        request.finish()
+        return page
+
     def handleFailures(self, request, failures):
-        for controller, data in failures:
+        for controller, data, node in failures:
             controller.handleInvalid(data, request)
+            self.mutateDOM(request, node, controller.view.generateDOM)
         return 0
 
     def handleSuccesses(self, request, successes):
-        for controller, data in successes:
+        for controller, data, node in successes:
             controller.handleValid(data, request)
+            self.mutateDOM(request, node, controller.view.generateDOM)
+
+# DOMView is now deprecated since the functionality was merged into domtemplate
+DOMView = DOMTemplate
