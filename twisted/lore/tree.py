@@ -35,13 +35,16 @@ def addMtime(document, fullpath):
     for node in domhelpers.findElementsWithAttribute(document, "class","mtime"):
         node.appendChild(microdom.Text(time.ctime(os.path.getmtime(fullpath))))
 
+def _getAPI(node):
+    base = ""
+    if node.hasAttribute("base"):
+        base = node.getAttribute("base") + "."
+    return base+node.childNodes[0].nodeValue
+
 def fixAPI(document, url):
     # API references
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
-        base = ""
-        if node.hasAttribute("base"):
-            base = node.getAttribute("base") + "."
-        fullname = base+node.childNodes[0].nodeValue
+        fullname = _getAPI(node)
         node2 = microdom.Element('a', {'href': url%fullname, 'title': fullname})
         node2.childNodes = node.childNodes
         node.childNodes = [node2]
@@ -49,10 +52,7 @@ def fixAPI(document, url):
 def expandAPI(document):
     seenAPI = {}
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
-        base = ""
-        if node.hasAttribute("base"):
-            base = node.getAttribute("base") + "."
-        api = base+node.childNodes[0].nodeValue
+        api = _getAPI(node)
         if seenAPI.get(api) or node.hasAttribute('noexpand'):
             continue
         node.childNodes[0].nodevalue = api
