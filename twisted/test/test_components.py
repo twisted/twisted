@@ -17,7 +17,7 @@
 """Test cases for Twisted component architecture."""
 
 from twisted.trial import unittest
-import components
+from twisted.python import components
 
 class IAdder(components.Interface):
     """A sample interface that adds stuff."""
