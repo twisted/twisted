@@ -127,6 +127,8 @@ class ContactsList:
         # HIDEOUSLY inefficient
         online = self.xml.get_widget("OnlineContactsTree")
         offline = self.xml.get_widget("OfflineContactsList")
+        online.freeze()
+        offline.freeze()
         online.clear()
         offline.clear()
         self.countOnline = 0
@@ -141,6 +143,8 @@ class ContactsList:
             offline.append([person.name, person.client.accountName,
                             'Aliasing Not Implemented', 'Groups Not Implemented'])
         self.xml.get_widget("OnlineCount").set_text("Online: %d" % self.countOnline)
+        online.thaw()
+        offline.thaw()
 
 
 
@@ -266,10 +270,11 @@ class GroupConversation(InputOutputWindow):
 
     def refreshMemberList(self):
         pl = self.xml.get_widget("ParticipantList")
+        pl.freeze()
         pl.clear()
         for member in self.members:
             pl.append([member])
-
+        pl.thaw()
     def on_HideButton_clicked(self, b):
         self.membersHidden = not self.membersHidden
         self.xml.get_widget("GroupHPaned").set_position(self.membersHidden and -1 or 20000)
