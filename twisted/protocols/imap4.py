@@ -332,11 +332,12 @@ class Command:
     _OK_RESPONSES = ('UIDVALIDITY', 'READ-WRITE', 'READ-ONLY', 'UIDNEXT', 'PERMANENTFLAGS')
     defer = None
     
-    def __init__(self, command, args=None, continuation=None, wantResponse=()):
+    def __init__(self, command, args=None, wantResponse=(),
+                 continuation=None, *contArgs, **contKw):
         self.command = command
         self.args = args
-        self.continuation = continuation
         self.wantResponse = wantResponse
+        self.continuation = lambda x: continuation(x, *contArgs, **contKw)
         self.lines = []
 
     def format(self, tag):
@@ -362,16 +363,35 @@ class Command:
 
 class LOGINCredentials(cred.credentials.UsernamePassword):
     def __init__(self):
+        self.challenges = ['Password\0', 'User Name\0']
+        self.responses = ['password', 'username']
         cred.credentials.UsernamePassword.__init__(self, None, None)
 
-    def __setattr__(self, name, value):
-        if name == 'response':
-            name = 'password'
-        self.__dict__[name] = value
+    def getChallenge(self):
+        return self.challenges.pop()
+    
+    def setResponse(self, response):
+        setattr(self, self.responses.pop(), response)
+    
+    def moreChallenges(self):
+        return bool(self.challenges)
+
+class PLAINCredentials(cred.credentials.UsernamePassword):
+    def __init__(self):
+        cred.credentials.UsernamePassword.__init__(self, None, None)
 
     def getChallenge(self):
         return ''
     
+    def setResponse(self, response):
+        parts = response[:-1].split('\0', 1)
+        if len(parts) != 2:
+            raise IllegalClientResponse("Malformed Response - wrong number of parts")
+        self.username, self.password = parts
+
+    def moreChallenges(self):
+        return False
+
 class IMAP4Exception(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
@@ -550,9 +570,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
 
     def parse_pending(self, line):
-        self._pendingLiteral.callback(line)
+        d = self._pendingLiteral
         self._pendingLiteral = None
         self.parseState = 'command'
+        d.callback(line)
 
     def dispatchCommand(self, tag, cmd, rest, uid=None):
         f = self.lookupCommand(cmd)
@@ -883,6 +904,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, 'Temporary authentication failure')
             return
 
+        self._setupChallenge(chal, tag)
+    
+    def _setupChallenge(self, chal, tag):
         try:
             challenge = chal.getChallenge()
         except Exception, e:
@@ -893,7 +917,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self._pendingLiteral = defer.Deferred()
             self.sendContinuationRequest(coded)
             self._pendingLiteral.addCallback(self.__cbAuthChunk, chal, tag)
-            self._pendingLiteral.addErrback(self.__ebAuthChunk, chal, tag)
+            self._pendingLiteral.addErrback(self.__ebAuthChunk, tag)
 
     def __cbAuthChunk(self, result, chal, tag):
         try:
@@ -901,16 +925,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except binascii.Error:
             raise IllegalClientResponse("Malformed Response - not base64")
 
-        parts = uncoded.split(None, 1)
-        if len(parts) != 2:
-            raise IllegalClientResponse("Malformed Response - wrong number of parts")
-        chal.username = parts[0]
-        chal.response = parts[1]
-        self.portal.login(chal, None, IAccount).addCallbacks(
-            self.__cbAuthResp,
-            self.__ebAuthResp,
-            (tag,), None, (tag,), None
-        )
+        chal.setResponse(uncoded)
+        if chal.moreChallenges():
+            self._setupChallenge(chal, tag)
+        else:
+            self.portal.login(chal, None, IAccount).addCallbacks(
+                self.__cbAuthResp,
+                self.__ebAuthResp,
+                (tag,), None, (tag,), None
+            )
 
     def __cbAuthResp(self, (iface, avatar, logout), tag):
         assert iface is IAccount, "IAccount is the only supported interface"
@@ -922,9 +945,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     
     def __ebAuthResp(self, failure, tag):
         if failure.check(cred.error.UnauthorizedLogin):
-            self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+            self.sendNegativeResponse(tag, 'Authentication failed: unauthorized')
+        elif failure.check(cred.error.UnhandledCredentials):
+            self.sendNegativeResponse(tag, 'Authentication failed: server misconfigured')
         else:
-            self.sendBadResponse(tag, 'Server error')
+            self.sendBadResponse(tag, 'Server error: login failed unexpectedly')
             log.err(failure)
     
     def __ebAuthChunk(self, failure, tag):
@@ -937,9 +962,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
             self.startedTLS = True
+            self.challengers = self.challengers.copy()
             if 'LOGIN' not in self.challengers:
-                self.challengers = self.challengers.copy()
                 self.challengers['LOGIN'] = LOGINCredentials
+            if 'PLAIN' not in self.challengers:
+                self.challengers['PLAIN'] = PLAINCredentials
         else:
             self.sendNegativeResponse(tag, 'TLS not available')
 
@@ -980,7 +1007,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbLogin(self, (iface, avatar, logout), tag):
         if iface is not IAccount:
-            self.sendBadResponse(tag, 'Server error')
+            self.sendBadResponse(tag, 'Server error: login returned unexpected value')
             log.err("__cbLogin called with %r, IAccount expected" % (iface,))
         else:
             self.account = avatar
@@ -1834,7 +1861,7 @@ class IMAP4Client(basic.LineReceiver):
             else:
                 cmd = self.tags[self.waiting]
                 if tag == '+':
-                    cmd.continuation.callback(rest)
+                    cmd.continuation(rest)
                 else:
                     cmd.lines.append(rest)
         else:
@@ -2010,25 +2037,20 @@ class IMAP4Client(basic.LineReceiver):
                         return d
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
 
-        continuation = defer.Deferred()
-        continuation.addCallback(self.__cbContinueAuth, scheme, secret)
-        d = self.sendCommand(Command('AUTHENTICATE', scheme, continuation))
-        d.addCallback(self.__cbAuth)
+        d = self.sendCommand(Command('AUTHENTICATE', scheme, (), self.__cbContinueAuth, scheme, secret))
         return d
 
     def __cbContinueAuth(self, rest, scheme, secret):
         try:
             chal = base64.decodestring(rest + '\n')
         except binascii.Error:
-            # XXX - Uh
+            self.sendLine('*')
+            raise IllegalServerResponse(rest)
             self.transport.loseConnection()
         else:
             auth = self.authenticators[scheme]
             chal = auth.challengeResponse(secret, chal)
-            self.sendLine(base64.encodestring(chal))
-
-    def __cbAuth(self, *args, **kw):
-        return None
+            self.sendLine(base64.encodestring(chal).strip())
 
     def __cbAuthTLS(self, caps, secret):
         auths = caps.get('AUTH', ())
@@ -2038,10 +2060,7 @@ class IMAP4Client(basic.LineReceiver):
         else:
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
         
-        continuation = defer.Deferred()
-        continuation.addCallback(self.__cbContinueAuth, scheme, secret)
-        d = self.sendCommand(Command('AUTHENTICATE', scheme, continuation))
-        d.addCallback(self.__cbAuth)
+        d = self.sendCommand(Command('AUTHENTICATE', scheme, (), self.__cbContinueAuth, scheme, secret))
         return d
 
     def login(self, username, password):
@@ -2439,7 +2458,7 @@ class IMAP4Client(basic.LineReceiver):
         cmd = 'STATUS'
         args = "%s (%s)" % (mailbox.encode('imap4-utf-7'), ' '.join(names))
         resp = ('STATUS',)
-        d = self.sendCommand(Command(cmd, args, resp))
+        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbStatus)
         return d
 
@@ -2493,27 +2512,16 @@ class IMAP4Client(basic.LineReceiver):
             mailbox.encode('imap4-utf-7'), ' '.join(flags),
             date, L
         )
-        continuation = defer.Deferred()
-        continuation.addCallback(self.__cbContinueAppend, message)
-        continuation.addCallback(self.__cbFinishAppend)
-        continuation.addErrback(self.__ebContinueAppend)
-        d = self.sendCommand(Command('APPEND', cmd, continuation))
-        d.addCallback(self.__cbAppend)
+        d = self.sendCommand(Command('APPEND', cmd, (), self.__cbContinueAppend, message))
         return d
 
     def __cbContinueAppend(self, lines, message):
         s = basic.FileSender()
-        return s.beginFileTransfer(message, self.transport, lambda x: x)
+        return s.beginFileTransfer(message, self.transport, None
+            ).addCallback(self.__cbFinishAppend)
 
     def __cbFinishAppend(self, foo):
         self.sendLine('')
-
-    def __ebContinueAppend(self, failure):
-        log.err()
-        return failure
-
-    def __cbAppend(self, result):
-        return None
 
     def check(self):
         """Tell the server to perform a checkpoint
@@ -3607,7 +3615,22 @@ class LOGINAuthenticator:
         return "LOGIN"
     
     def challengeResponse(self, secret, chal):
-        return '%s %s' % (self.user, secret)
+        if chal == 'User Name\0':
+            return self.user
+        elif chal == 'Password\0':
+            return secret
+
+class PLAINAuthenticator:
+    __implements__ = (IClientAuthentication,)
+    
+    def __init__(self, user):
+        self.user = user
+    
+    def getName(self):
+        return "PLAIN"
+    
+    def challengeResponse(self, secret, chal):
+        return '%s\0%s\0' % (self.user, secret)
 
 class MailboxException(IMAP4Exception): pass
 

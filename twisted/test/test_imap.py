@@ -1007,18 +1007,13 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             return self.client.login('testuser', 'password-test')
         def append():
             message = file(infile)
-            continuation = defer.Deferred()
-            continuation.addCallback(self.client._IMAP4Client__cbContinueAppend, message)
-            continuation.addCallback(self.client._IMAP4Client__cbFinishAppend)
-            continuation.addErrback(self.client._IMAP4Client__ebContinueAppend)
             return self.client.sendCommand(
                 imap4.Command(
                     'APPEND',
                     'PARTIAL/SUBTHING (\\SEEN) "Right now" {%d}' % os.path.getsize(infile),
-                    continuation
+                    (), self.client._IMAP4Client__cbContinueAppend, message
                 )
-            ).addCallback(self.client._IMAP4Client__cbAppend)
-        
+            )
         d = self.connected.addCallback(strip(login))
         d.addCallbacks(strip(append), self._ebGeneral)
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
@@ -1111,19 +1106,17 @@ class TestRealm:
         return imap4.IAccount, self.theAccount, lambda: None
 
 class TestChecker:
-    credentialInterfaces = (cred.credentials.IUsernameHashedPassword,)
+    credentialInterfaces = (cred.credentials.IUsernameHashedPassword, cred.credentials.IUsernamePassword)
 
     users = {
         'testuser': 'secret'
     }
 
     def requestAvatarId(self, credentials):
-        if components.implements(credentials, cred.credentials.IUsernameHashedPassword):
-            if credentials.username in self.users:
-                return defer.maybeDeferred(
-                    credentials.checkPassword, self.users[credentials.username]
-            ).addCallback(self._cbCheck, credentials.username)
-        raise NotImplementedError
+        if credentials.username in self.users:
+            return defer.maybeDeferred(
+                credentials.checkPassword, self.users[credentials.username]
+        ).addCallback(self._cbCheck, credentials.username)
 
     def _cbCheck(self, result, username):
         if result:
@@ -1140,15 +1133,14 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         portal.registerChecker(TestChecker())
         self.server.portal = portal
 
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
-
-        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
-
-        self.client.registerAuthenticator(cAuth)
         self.authenticated = 0
         self.account = realm.theAccount
 
     def testCramMD5(self):
+        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+        self.client.registerAuthenticator(cAuth)
+
         def auth():
             return self.client.authenticate('secret')
         def authed():
@@ -1163,6 +1155,86 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEquals(self.server.account, self.account)
     
     def testFailedCramMD5(self):
+        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        def misauth():
+            return self.client.authenticate('not the secret')
+        def authed():
+            self.authenticated = 1
+        def misauthed():
+            self.authenticated = -1
+        
+        d = self.connected.addCallback(strip(misauth))
+        d.addCallbacks(strip(authed), strip(misauthed))
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+
+        self.assertEquals(self.authenticated, -1)
+        self.assertEquals(self.server.account, None)
+
+    def testLOGIN(self):
+        self.server.challengers['LOGIN'] = imap4.LOGINCredentials
+        cAuth = imap4.LOGINAuthenticator('testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        def auth():
+            return self.client.authenticate('secret')
+        def authed():
+            self.authenticated = 1
+        
+        d = self.connected.addCallback(strip(auth))
+        d.addCallbacks(strip(authed), self._ebGeneral)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals(self.authenticated, 1)
+        self.assertEquals(self.server.account, self.account)
+    
+    def testFailedLOGIN(self):
+        self.server.challengers['LOGIN'] = imap4.LOGINCredentials
+        cAuth = imap4.LOGINAuthenticator('testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        def misauth():
+            return self.client.authenticate('not the secret')
+        def authed():
+            self.authenticated = 1
+        def misauthed():
+            self.authenticated = -1
+        
+        d = self.connected.addCallback(strip(misauth))
+        d.addCallbacks(strip(authed), strip(misauthed))
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+
+        self.assertEquals(self.authenticated, -1)
+        self.assertEquals(self.server.account, None)
+
+    def testPLAIN(self):
+        self.server.challengers['PLAIN'] = imap4.PLAINCredentials
+        cAuth = imap4.PLAINAuthenticator('testuser')
+        self.client.registerAuthenticator(cAuth)
+        
+        def auth():
+            return self.client.authenticate('secret')
+        def authed():
+            self.authenticated = 1
+        
+        d = self.connected.addCallback(strip(auth))
+        d.addCallbacks(strip(authed), self._ebGeneral)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals(self.authenticated, 1)
+        self.assertEquals(self.server.account, self.account)
+    
+    def testFailedPLAIN(self):
+        self.server.challengers['PLAIN'] = imap4.PLAINCredentials
+        cAuth = imap4.PLAINAuthenticator('testuser')
+        self.client.registerAuthenticator(cAuth)
+
         def misauth():
             return self.client.authenticate('not the secret')
         def authed():

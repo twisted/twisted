@@ -25,10 +25,10 @@ class IUsernameHashedPassword(ICredentials):
     """I encapsulate a username and a hashed password.
     
     This credential is used when a hashed password is received from the
-    party requesting authentication.  CredentialCheckers which check
-    this kind of credential must store the passwords in plaintext form
-    so that they can be hashed in a manner appropriate for the particular
-    credentials class.
+    party requesting authentication.  CredentialCheckers which check this
+    kind of credential must store the passwords in plaintext (or as
+    password-equivalent hashes) form so that they can be hashed in a manner
+    appropriate for the particular credentials class.
     
     @type username: C{str} or C{Deferred}
     @ivar username: The username associated with these credentials.
@@ -102,6 +102,12 @@ class CramMD5Credentials:
         t = time.time()
         self.challenge = '<%d.%d@%s>' % (r, t, self.host)
         return self.challenge
+
+    def setResponse(self, response):
+        self.username, self.response = response.split(None, 1)
+
+    def moreChallenges(self):
+        return False
 
     def checkPassword(self, password):
         verify = hmac.HMAC(password, self.challenge).hexdigest()
