@@ -32,8 +32,8 @@ class CGIDirectory(resource.Resource):
             return CGIScript(fn)
         return error.NoResource()
 
-    def render(self):
-        return error.NoResource.render()
+    def render(self, request):
+        return error.NoResource().render(request)
 
 class CGIScript(resource.Resource):
     """I represent a CGI script.
