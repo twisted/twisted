@@ -211,7 +211,7 @@ class LoopbackTestCase(PortCleanerUpper):
         socket.getservbyname = lambda s, p,n=self.n: s == 'http' and p == 'tcp' and n or 10
         self.ports.append(port)
         try:
-            reactor.connectTCP('localhost', 'http', MyClientFactory())
+            c = reactor.connectTCP('localhost', 'http', MyClientFactory())
         except:
             socket.getservbyname = serv
             raise
@@ -221,6 +221,7 @@ class LoopbackTestCase(PortCleanerUpper):
         reactor.iterate()
         
         port.stopListening()
+        c.disconnect()
         socket.getservbyname = serv
         assert s.called
 
@@ -461,6 +462,7 @@ class LocalRemoteAddressTestCase(PortCleanerUpper):
         self.assertEquals(p1.getHost(), p2.transport.getPeer())
 
         p1.stopListening()
+        p2.transport.loseConnection()
     
 
 class WriterProtocol(protocol.Protocol):
@@ -527,6 +529,7 @@ class WriteDataTestCase(PortCleanerUpper):
                             "Goodbye", " cruel", " world", "\n"])
         self.failUnless(clientF.data == expected,
                         "client didn't receive all the data it expected")
+        p.stopListening()
 
 class ConnectionLosingProtocol(protocol.Protocol):
     def connectionMade(self):
@@ -561,6 +564,7 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
         while (self.totalConnections < self.numberRounds and 
                time.time() < timeLimit):
             reactor.iterate(0.01)
+        reactor.iterate(0.01)
 
         self.failUnlessEqual(self.totalConnections, self.numberRounds)
 
