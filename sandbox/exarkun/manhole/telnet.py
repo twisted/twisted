@@ -4,6 +4,7 @@ import struct
 from twisted.application import internet
 from twisted.internet import protocol
 from twisted.protocols import telnet
+from twisted.python import components
 
 MODE = '\x01'
 EDIT = 1
@@ -91,6 +92,9 @@ class ITelnetListener(components.Interface):
         pass
 
 class TelnetListener:
+    def __init__(self, proto):
+        self.proto = proto
+
     def connectionMade(self):
         pass
 
@@ -252,7 +256,7 @@ class Telnet(protocol.Protocol):
     def _dowill(self, option, s):
         self._dodontwillwont(option, s, 'dowill')
 
-    def _dowill_no(self, option, state)
+    def _dowill_no(self, option, state):
         if self._shouldAllowEnable(option):
             state.state = 'yes'
             self.do(option)
@@ -272,7 +276,7 @@ class Telnet(protocol.Protocol):
             state.state = 'no'
 
     def _dowill_wantyes(self, option, state):
-        if if state.stateq:
+        if state.stateq:
             state.state = 'wantno'
             state.stateq = False
             self.dont(option)
@@ -327,7 +331,7 @@ class Telnet2(Telnet):
         self.handler = self.handlerFactory(self, *self.handlerArgs, **self.handlerKwArgs)
         self.handler.connectionMade()
 
-    def applicationByteReceived(self, byte):
+    def applicationByteReceived(self, bytes):
         self.handler.dataReceived(bytes)
 
     def connectionLost(self, reason):
