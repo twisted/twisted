@@ -44,7 +44,16 @@ class DefaultWidget(widgets.Widget):
 
 
 class WView(template.DOMTemplate):
-    def getNodeController(self, request, node, model):
+    def getNodeModel(self, submodel):
+        if submodel:
+            modelGetter = DefaultWidget(self.model)
+            modelGetter.setSubmodel(submodel)
+            model = modelGetter.getData()
+        else:
+            model = None
+        return model
+
+    def getNodeController(self, request, node, submodel):
         controllerName = node.getAttribute('controller')
         
         # Look up an InputHandler
@@ -63,13 +72,14 @@ class WView(template.DOMTemplate):
         else:
             # If no "controller" attribute was specified on the node, see if 
             # there is a IController adapter registerred for the model.
+            model = self.getNodeModel(submodel)
             controllerFactory = components.getAdapterClassWithInheritance(
                                 model.__class__, 
                                 mvc.IController, 
                                 controllerFactory)
         return controllerFactory(self.model)
     
-    def getNodeView(self, request, node, model):
+    def getNodeView(self, request, node, submodel):
         view = None   
         viewName = node.getAttribute('view')
 
@@ -92,6 +102,7 @@ class WView(template.DOMTemplate):
         else:
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
+            model = self.getNodeModel(submodel)
             view = components.getAdapterClassWithInheritance(
                                 model.__class__, 
                                 mvc.IView, 
@@ -116,16 +127,9 @@ class WView(template.DOMTemplate):
             submodel = submodel_prefix
         else:
             submodel = ""
-        
-        if submodel:
-            modelGetter = DefaultWidget(self.model)
-            modelGetter.setSubmodel(submodel)
-            model = modelGetter.getData()
-        else:
-            model = None
-        
-        controller = self.getNodeController(request, node, model)
-        result = self.getNodeView(request, node, model)
+                
+        controller = self.getNodeController(request, node, submodel)
+        result = self.getNodeView(request, node, submodel)
         
         controller.setView(result)
         if not getattr(controller, 'submodel', None):
