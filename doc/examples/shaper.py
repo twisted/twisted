@@ -33,8 +33,6 @@ class WebClientBucket(htb.Bucket):
 webFilter = htb.FilterByHost(serverFilter)
 webFilter.bucketFactory = shaper.WebClientBucket
 
-from twisted.internet import app
-
 servertype = "web" # "chargen"
 
 if servertype == "web":
