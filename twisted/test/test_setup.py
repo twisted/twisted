@@ -27,10 +27,11 @@ class CheckingPackagesTestCase(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.curDir)
 
-    def testListen(self):
+    def testPackages(self):
+        """Making sure all packages are in setup"""
         l = []
         os.chdir(os.path.dirname(setup.__file__))
-        os.path.walk('twisted', 
+        os.path.walk('twisted',
                      lambda l,d,n:not d.endswith('CVS') and l.append(d),
                      l)
         l = [x.replace(os.sep, '.') for x in l]
