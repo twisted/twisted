@@ -23,7 +23,7 @@ import sys
 from pyunit import unittest
 
 from twisted.internet import reactor, protocol, defer
-from twisted.names import client, server
+from twisted.names import client, server, common
 from twisted.protocols import dns
 from twisted.python import log
 
@@ -42,9 +42,14 @@ def getPayload(message):
     return [answer.payload for answer in message.answers]
 
 
-class NoFileAuthority:
+class NoFileAuthority(common.ResolverBase):
     def __init__(self, soa, records):
+        common.ResolverBase.__init__(self)
         self.soa, self.records = soa, records
+
+    def _lookup(self, name, cls, type, timeout = 10):
+        if type == dns.SOA: return defer.succeed(self.soa[1])
+        return defer.succeed([r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type])
 
 soa_record = dns.Record_SOA(
                     mname = 'test-domain.com',
@@ -106,7 +111,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         
         self.listenerTCP = reactor.listenTCP(PORT, self.factory)
         
-        p = dns.DNSClientProtocol(self.factory)
+        p = dns.DNSDatagramProtocol(self.factory)
         self.listenerUDP = reactor.listenUDP(PORT, p)
         
         self.resolver = client.Resolver(servers=[('127.0.0.1', PORT)])
