@@ -7,7 +7,7 @@ from twisted.python import reflect, log, failure, components
 from twisted.internet import interfaces
 
 # system imports
-import sys, time, string, traceback, types, os, glob, pdb
+import sys, time, string, traceback, types, os, glob, inspect, pdb
 try:
     import gc # not available in jython
 except ImportError:
@@ -61,7 +61,7 @@ class TestCase:
     assertRaises = failUnlessRaises
     assert_ = failUnless
     failIfEquals = failIfEqual
-    
+
     def assertApproximates(self, first, second, tolerance, msg=None):
         if abs(first - second) > tolerance:
             raise AssertionError, (msg or "%s ~== %s" % (first, second))
@@ -77,12 +77,12 @@ def isTestCase(testCase):
 class TestSuite:
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
-    
+
     def __init__(self):
         self.testClasses = {}
         self.numTests = 0
         self.couldNotImport = {}
-    
+
     def getMethods(self, klass, prefix):
         testMethodNames = [ name for name in dir(klass)
                             if name[:len(prefix)] == prefix ]
@@ -185,14 +185,14 @@ class TestSuite:
         # one.
         if gc:
             gc.collect()
-        
+
         for e in log.flushErrors():
             ok = 0
             output.reportError(testClass, method, e)
 
         if ok:
             output.reportSuccess(testClass, method)
-        
+
     def run(self, output, seed = None):
         output.start(self.numTests)
         testClasses = self.testClasses.keys()
@@ -225,7 +225,7 @@ class Reporter:
         self.numTests = 0
         self.expectedTests = 0
         self.debugger = 0
-    
+
     def start(self, expectedTests):
         self.expectedTests = expectedTests
         self.startTime = time.time()
@@ -274,7 +274,7 @@ class MinimalReporter(Reporter):
         self.fp = fp
 
     def stop(self):
-        Reporter.stop(self) 
+        Reporter.stop(self)
         t =  (self.getRunningTime(), self.expectedTests, self.numTests,
                len(self.imports), len(self.errors), len(self.failures),
                len(self.skips))
@@ -283,7 +283,7 @@ class MinimalReporter(Reporter):
 class TextReporter(Reporter):
     SEPARATOR = '-' * 79
     DOUBLE_SEPARATOR = '=' * 79
-    
+
     def __init__(self, stream=sys.stdout):
         self.stream = stream
         Reporter.__init__(self)
@@ -309,7 +309,7 @@ class TextReporter(Reporter):
             tb = error.getBriefTraceback()
         else:
             tb = string.join(apply(traceback.format_exception, error))
-            
+
         ret = ("%s\n%s: %s (%s)\n%s\n%s" %
                (self.DOUBLE_SEPARATOR,
                 flavor, method.__name__, reflect.qual(testClass),
@@ -344,7 +344,7 @@ class TextReporter(Reporter):
         else:
             status = 'OK'
         return '%s%s' % (status, summary)
-            
+
     def stop(self):
         Reporter.stop(self)
         self.writeln()
@@ -361,7 +361,7 @@ class TextReporter(Reporter):
         if self.imports:
             self.writeln()
             for name, exc in self.imports:
-                self.writeln('Could not import %s: %s' 
+                self.writeln('Could not import %s: %s'
                              % (name, exc.args[0]))
             self.writeln()
 
@@ -399,7 +399,7 @@ class TreeReporter(TextReporter):
     MAGENTA = 35
     CYAN = 36
     WHITE = 37
-    
+
     def __init__(self, stream=sys.stdout):
         TextReporter.__init__(self, stream)
         self.lastModule = None
@@ -412,7 +412,15 @@ class TreeReporter(TextReporter):
         if testCase != self.lastClass:
             self.writeln('  %s' % testCase.__name__)
             self.lastClass = testCase
-        self.currentLine = '    %s ... ' % method.__name__
+
+        docstr = inspect.getdoc(method)
+        if docstr:
+            # inspect trims whitespace on the left; the lstrip here is
+            # for those odd folks who start docstrings with a blank line.
+            what = docstr.lstrip().split('\n', 1)[0]
+        else:
+            what = method.__name__
+        self.currentLine = '    %s ... ' % (what,)
         self.write(self.currentLine)
 
     def color(self, text, color):
@@ -454,7 +462,7 @@ def _getDeferredResult(d, timeout=None):
 def deferredResult(d, timeout=None):
     """Waits for a Deferred to arrive, then returns or throws an exception,
     based on the result.
-    """    
+    """
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
         raise result
