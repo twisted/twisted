@@ -240,9 +240,9 @@ class ThreadedIterator:
        main thread data is not available, then a particular 
        exception.
     """
-    def __init__(self):
+    def __init__(self, extend = 0):
         class _Tunnel:
-            def __init__(self, source):
+            def __init__(self, source, extend ):
                 """
                     This is the setup, the source argument is the iterator
                     being wrapped, which exists in another thread.
@@ -251,6 +251,7 @@ class ThreadedIterator:
                 self.isFinished = 0
                 self.failure    = None
                 self.buff       = []
+                self.extend     = extend
             def process(self):
                 """
                     This is called in the 'source' thread, and 
@@ -265,7 +266,10 @@ class ThreadedIterator:
                 try:
                     while 1:
                         val = self.source.next()
-                        self.buff.append(val)    # lists are thread safe
+                        if self.extend:
+                            self.buff.extend(val)
+                        else:
+                            self.buff.append(val)
                 except StopIteration:
                     callFromThread(self.stop)
                 except: 
@@ -284,7 +288,7 @@ class ThreadedIterator:
                 if self.failure:
                     raise self.failure
                 raise Cooperate()
-        tunnel = _Tunnel(self)
+        tunnel = _Tunnel(self, extend)
         self._tunnel = tunnel
 
     def __iter__(self): 
@@ -300,7 +304,7 @@ class ThreadedIterator:
 
 class QueryIterator(ThreadedIterator):
     def __init__(self, pool, sql, fetchall=0):
-        ThreadedIterator.__init__(self)
+        ThreadedIterator.__init__(self, extend = 1 )
         self.curs = None
         self.sql  = sql
         self.pool = pool
@@ -312,10 +316,14 @@ class QueryIterator(ThreadedIterator):
         self.curs.execute(self.sql)
  
     def next(self):
-        if self.fetchall:
-            res = self.curs.fetchall()
-        else:
-            res = self.curs.fetchmany()
+        res = None
+        if self.curs:
+            if self.fetchall:
+                res = self.curs.fetchall()
+                self.curs = None
+            else:
+                res = self.curs.fetchmany()
         if not(res): 
+            self.curs = None
             raise StopIteration
         return res
