@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# note: in order to run this script you need the programs 'pngtopnm' and 'pnmtops'
+# both of which are available (in debian) as part of the 'netpbm' package (as of 2004-05-27)
+
 set -e
 if test "x$1" = "x" ; then
 	url=http://twistedmatrix.com/documents/TwistedDocs/current/api/%s.html
