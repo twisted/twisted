@@ -32,6 +32,8 @@ except ImportError:
 
 # twisted imports
 from twisted.python.components import Interface
+from twisted.python import components
+from zope.interface import implements
 
 
 class Journal:
@@ -156,7 +158,7 @@ class Wrappable:
 
 class WrapperCommand:
     
-    __implements__ = ICommand
+    implements(ICommand)
 
     def __init__(self, methodName, obj, args=(), kwargs={}):
         self.obj = obj
@@ -177,6 +179,8 @@ class WrapperCommand:
         d = self.__dict__.copy()
         del d["obj"]
         return d
+
+components.backwardsCompatImplements(WrapperCommand)
 
 
 def command(methodName, cmdClass=WrapperCommand):
@@ -206,7 +210,7 @@ def command(methodName, cmdClass=WrapperCommand):
 
 class ServiceWrapperCommand:
 
-    __implements__ = ICommand
+    implements(ICommand)
 
     def __init__(self, methodName, args=(), kwargs={}):
         self.methodName = methodName
@@ -224,6 +228,8 @@ class ServiceWrapperCommand:
             return cmp(self.__dict__, other.__dict__)
         else:
             return 0
+
+components.backwardsCompatImplements(ServiceWrapperCommand)
 
 
 def serviceCommand(methodName, cmdClass=ServiceWrapperCommand):
