@@ -199,6 +199,7 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     printf("    wf returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -248,6 +249,7 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     printf("    rf returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -353,6 +355,7 @@ static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
     printf("    rf returned %d, err %ld\n", res, err);
 #endif
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     return Py_BuildValue("ll", err, bytes);
@@ -446,6 +449,7 @@ static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
     printf("    st returned %d, err %ld\n", res, err);
 #endif
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     return Py_BuildValue("ll", err, bytes);
@@ -499,6 +503,7 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
     printf("    ae returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -545,6 +550,7 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     printf("    ce returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -584,6 +590,7 @@ static PyObject *iocpcore_PostQueuedCompletionStatus(iocpcore* self, PyObject *a
     printf("    pqcs returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
