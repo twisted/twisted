@@ -1580,7 +1580,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 sign = "+"
             else:
                 sign = "-"
-            odate = odate + sign + str(((abs(ttup[9]) / 3600) * 100 + (abs(ttup[9]) % 3600) / 60)).zfill(4)
+            odate = odate + sign + string.zfill(str(((abs(ttup[9]) / 3600) * 100 + (abs(ttup[9]) % 3600) / 60)), 4)
 
         self.transport.write('INTERNALDATE ' + _quote(odate))
 
