@@ -210,10 +210,11 @@ class FormProcessor(resource.Resource):
                         return self.callback(self.modelFactory(result))
                     def _ebModel(err):
                         if err.trap(formmethod.FormException):
-                            return self.errorModelFactory(request.args, outDict, err.value)
+                            mf = self.errorModelFactory(request.args, outDict, err.value)
+                            return self.errback(mf)
                         raise err
                     outObj.addCallback(_cbModel).addErrback(_ebModel)
-                    return tapestry._ChildJuggler(outObj)
+                    return tapestry._ChildJuggler(outObj).render(request)
                 else:
                     return self.callback(self.modelFactory(outObj)).render(request)
 
