@@ -187,8 +187,6 @@ def getPluginFileList(debugInspection=None, showProgress=None):
                 progress = progress + incr
                 showProgress(progress)
 
-    if not result:
-        raise IOError("Couldn't find a plugins file!")
     showProgress(1.0)
     return result
 
