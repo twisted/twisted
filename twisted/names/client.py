@@ -303,20 +303,20 @@ class DNSClientFactory(protocol.ClientFactory):
         return p
 
 
-def createResolver(servers = None, resolvconf = None, hosts = None):
+def createResolver(servers = None, resolvconf = None, hostsfile = None):
     import resolve, cache, hosts, root
     if platform.getType() == 'posix':
         if resolvconf is None:
             resolvconf = '/etc/resolv.conf'
-        if hosts is None:
-            hosts = '/etc/hosts'
+        if hostsfile is None:
+            hostsfile = '/etc/hosts'
         theResolver = Resolver(resolvconf, servers)
-        hostResolver = hosts.Resolver(hosts)
+        hostResolver = hosts.Resolver(hostsfile)
     else:
-        if hosts is None:
-            hosts = r'c:\windows\hosts'
+        if hostsfile is None:
+            hostsfile = r'c:\windows\hosts'
         bootstrap = ThreadedResolver()
-        hostResolver = hosts.Resolver(hosts)
+        hostResolver = hosts.Resolver(hostsfile)
         theResolver = root.bootstrap(bootstrap)
 
     L = [hostResolver, cache.CacheResolver(), theResolver]
