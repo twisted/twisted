@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.68 2003/03/15 12:28:30 tv Exp $
+# $Id: default.py,v 1.69 2003/03/18 20:52:46 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -452,25 +452,23 @@ class SelectReactor(PosixReactorBase):
                 # This for pausing input when we're not ready for more.
                 log.logOwner.own(selectable)
                 try:
+                    why = getattr(selectable, method)()
+                    handfn = getattr(selectable, 'fileno', None)
+                    if not handfn:
+                        why = _NO_FILENO
+                    elif handfn() == -1:
+                        why = _NO_FILEDESC
+                except:
+                    why = sys.exc_value
+                    log.deferr()
+                if why:
+                    self.removeReader(selectable)
+                    self.removeWriter(selectable)
                     try:
-                        why = getattr(selectable, method)()
-                        handfn = getattr(selectable, 'fileno', None)
-                        if not handfn:
-                            why = _NO_FILENO
-                        elif handfn() == -1:
-                            why = _NO_FILEDESC
+                        selectable.connectionLost(failure.Failure(why))
                     except:
                         log.deferr()
-                        why = sys.exc_value
-                    if why:
-                        self.removeReader(selectable)
-                        self.removeWriter(selectable)
-                        try:
-                            selectable.connectionLost(failure.Failure(why))
-                        except:
-                            log.deferr()
-                finally:
-                    log.logOwner.disown(selectable)
+                log.logOwner.disown(selectable)
 
     doIteration = doSelect
 
