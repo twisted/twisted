@@ -195,8 +195,8 @@ class File(resource.Resource, styles.Versioned):
     persistenceVersion = 6
 
     def upgradeToVersion6(self):
+        self.ignoredExts = []
         if self.allowExt:
-            self.ignoredExts = []
             self.ignoreExt("*")
         del self.allowExt
 
