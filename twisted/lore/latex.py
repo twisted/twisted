@@ -171,10 +171,14 @@ class LatexSpitter(BaseLatexSpitter):
         target = os.path.join(self.currDir, os.path.basename(target)+'.eps')
         f(fileName, target)
         target = os.path.basename(target)
+        # using this makes images fit in slides, but probably screws up
+        # on documents - someone ought to get it so it works everywhere...
+        #self.writer('\\begin{center}\\includegraphics[%%\nwidth=1.0\n\\textwidth,'
+        #            'height=1.0\\textheight,\nkeepaspectratio]{%s}\\end{center}\n' % target)
         self.writer('\\begin{center}\\includegraphics{%s}\\end{center}\n' % target)
-
+        
     def convert_png(self, src, target):
-        r = os.system("pngtopnm %s | pnmtops > %s" % (src, target))
+        r = os.system('pngtopnm "%s" | pnmtops -noturn > "%s"' % (src, target))
         if r != 0:
             raise OSError(r)
 
