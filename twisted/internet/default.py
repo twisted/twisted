@@ -157,9 +157,7 @@ class PosixReactorBase(ReactorBase):
             return wprocess.Process(self, processProtocol, executable,
                                     args, env, path)
         else:
-            raise NotImplementedError, "process only available in this " \
-                  "reactor on POSIX, use win32eventreactor on Windows"
-
+            raise NotImplementedError, "process only available on Windows or POSIX"
 
     # IReactorUDP
 
