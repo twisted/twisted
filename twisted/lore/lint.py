@@ -66,9 +66,8 @@ class TagChecker:
 
     def check_style(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'style'):
-            if domhelpers.getNodeText(node) == '':
-                continue
-            self._reportError(filename, node, 'hand hacked style')
+            if domhelpers.getNodeText(node) != '':
+                self._reportError(filename, node, 'hand hacked style')
 
     def check_title(self, dom, filename):
         nodes = domhelpers.findNodesNamed(dom, 'title')
