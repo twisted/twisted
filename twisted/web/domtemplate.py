@@ -74,6 +74,7 @@ from xml.dom import minidom
 
 from twisted.web.resource import Resource
 from twisted.web.widgets import Widget, Presentation
+from twisted.web import domwidgets
 from twisted.python.defer import Deferred
 from twisted.internet import reactor
 
@@ -255,6 +256,8 @@ class DOMTemplate(Resource):
             return self.processWidget(request, result, node)
         elif isinstance(result, minidom.Node):
             return self.processNode(request, result, node)
+        elif isinstance(result, domwidgets.Widget):
+            return self.processNode(result.render(request))
         elif isinstance(result, Deferred):
             self.outstandingCallbacks += 1
             result.addCallbacks(self.callback, callbackArgs=(request, node))
