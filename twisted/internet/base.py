@@ -84,7 +84,8 @@ class DelayedCall:
             self.resetter(self)
 
     def __lt__(self, other):
-        return self.time < other.time
+        # Order reversed for efficiency concerns, see below
+        return self.time >= other.time
 
     def __str__(self):
         try:
@@ -331,7 +332,7 @@ class ReactorBase:
 
     def timeout(self):
         if self._pendingTimedCalls:
-            t = self._pendingTimedCalls[0].time - time()
+            t = self._pendingTimedCalls[-1].time - time()
             if t < 0:
                 t = 0
             mt = _nmin(t, self._delayeds.timeout())
@@ -350,8 +351,8 @@ class ReactorBase:
                 except:
                     log.deferr()
         now = time()
-        while self._pendingTimedCalls and (self._pendingTimedCalls[0].time <= now):
-            call = self._pendingTimedCalls.pop(0)
+        while self._pendingTimedCalls and (self._pendingTimedCalls[-1].time <= now):
+            call = self._pendingTimedCalls.pop()
             try:
                 call.called = 1
                 call.func(*call.args, **call.kw)
