@@ -61,8 +61,9 @@ class POP3(basic.LineReceiver):
         self.successResponse()
 
     def do_STAT(self):
-        print self.mbox.listMessages()
-        self.successResponse('%d 0' % reduce(operator.add, self.mbox.listMessages(), 0))
+        msg = self.mbox.listMessages()
+        total = reduce(operator.add, msg, 0)
+        self.successResponse('%d %d' % (len(msg), total))
 
     def do_LIST(self, i=None):
         messages = self.mbox.listMessages()
