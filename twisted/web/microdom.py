@@ -76,23 +76,32 @@ def getElementsByTagNameNoCase(iNode, name):
     return matches
 
 # order is important
-ESCAPE_CHARS = (('&', '&amp;'),
-                 ('<', '&lt;'),
-                 ('>', '&gt;'),
-                 ('"', '&quot;'),
-                 ("'", '&apos;'))
+HTML_ESCAPE_CHARS = (('&', '&amp;'),
+                    ('<', '&lt;'),
+                    ('>', '&gt;'),
+                    ('"', '&quot;'))
 
-def unescape(text):
+XML_ESCAPE_CHARS = HTML_ESCAPE_CHARS + (("'", '&apos;'),)
+
+def unescape(text, chars=XML_ESCAPE_CHARS):
     "Perform the exact opposite of 'escape'."
-    for s, h in ESCAPE_CHARS:
+    for s, h in chars:
         text = text.replace(h, s)
     return text
 
-def escape(text):
-    "Escape a few HTML special chars with HTML entities."
-    for s, h in ESCAPE_CHARS:
+def escape(text, chars=XML_ESCAPE_CHARS):
+    "Escape a few XML special chars with XML entities."
+    for s, h in chars:
         text = text.replace(s, h)
     return text
+
+def escapehtml(text):
+    "Like escape, but with the HTML special-character set"
+    return escape(text, chars=HTML_ESCAPE_CHARS)
+
+def unescapehtml(text):
+    return unescape(text, chars=HTML_ESCAPE_CHARS)
+
 
 class MismatchedTags(Exception):
 

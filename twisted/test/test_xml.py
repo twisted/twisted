@@ -380,3 +380,14 @@ class MicroDOMTest(TestCase):
     def testDict(self):
         n = microdom.Element("p")
         d = {n : 1} # will fail if Element is unhashable
+
+    def textEscaping(self):
+        raw="&'some \"stuff\"', <what up?>"
+        unrawxml="&amp;&apos;some &quot;stuff&quot;&apos;, &lt;what up?&gt;"
+        unrawhtml="&amp;'some &quot;stuff&quot;', &lt;what up?&gt;"
+        esc1=microdom.escape(input)
+        esc2=microdom.escapehtml(input)
+        self.assertEquals(esc1, unrawxml)
+        self.assertEquals(esc2, unrawhtml)
+        self.assertEquals(microdom.unescape(esc1), input)
+        self.assertEquals(microdom.unescapehtml(esc2), input)
