@@ -31,6 +31,7 @@ def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
 
 class Article:
     def __init__(self, head, body):
+        self.body = body
         head = map(lambda x: string.split(x, ': ', 1), string.split(head, '\r\n'))
         self.headers = {}
         for i in head:
@@ -41,7 +42,21 @@ class Article:
             else:
                 self.headers[string.lower(i[0])] = tuple(i)
 
-        self.body = body
+        if not self.getHeader('Message-ID'):
+            s = str(time.time()) + self.body
+            id = hexdigest(md5.md5(s)) + '@' + socket.gethostname()
+            self.putHeader('Message-ID', '<%s>' % id)
+
+        if not self.getHeader('Bytes'):
+            self.putHeader('Bytes', str(len(self.body)))
+        
+        if not self.getHeader('Lines'):
+            self.putHeader('Lines', str(string.count(self.body, '\n')))
+        
+        if not self.getHeader('Date'):
+            self.putHeader('Date', time.ctime(time.time()))
+
+
     
     def getHeader(self, header):
         if self.headers.has_key(string.lower(header)):
@@ -51,6 +66,7 @@ class Article:
 
     def putHeader(self, header, value):
         self.headers[string.lower(header)] = (header, value)
+
 
     def textHeaders(self):
         headers = []
@@ -209,41 +225,6 @@ class PickleStorage(NewsStorage):
         return defer.succeed(['alt.test'])
 
     def postRequest(self, message):
-        cleave = string.find(message, '\r\n\r\n')
-        headers, article = message[:cleave], message[cleave + 1:]
-
-        a = Article(headers, article)
-        groups = string.split(a.getHeader('Newsgroups'))
-        xref = []
-
-        for group in groups:
-            if self.db.has_key(group):
-                if len(self.db[group].keys()):
-                    index = max(self.db[group].keys()) + 1
-                else:
-                    index = 1
-                xref.append((group, str(index)))
-                self.db[group][index] = a
-
-        if len(xref) == 0:
-            return defer.fail(None)
-        
-        if not a.getHeader('Message-ID'):
-            s = str(time.time()) + a.body
-            id = hexdigest(md5.md5(s)) + '@' + socket.gethostname()
-            a.putHeader('Message-ID', '<%s>' % id)
-
-        if not a.getHeader('Bytes'):
-            a.putHeader('Bytes', str(len(a.body)))
-        
-        if not a.getHeader('Lines'):
-            a.putHeader('Lines', str(string.count(a.body, '\n')))
-        
-        if not a.getHeader('Date'):
-            a.putHeader('Date', time.ctime(time.time()))
-
-        a.putHeader('Xref', '%s %s' % (string.split(socket.gethostname())[0], string.join(map(lambda x: string.join(x, ':'), xref), '')))
-
         self.flush()
         return defer.succeed(None)
     
@@ -342,3 +323,245 @@ class PickleStorage(NewsStorage):
                     for i in groups:
                         self.db[i] = {}
                 self.flush()
+
+
+class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
+    """
+    A NewsStorage implementation using Twisted's asynchronous DB-API
+    """
+
+    schema = """
+
+    CREATE TABLE groups (
+        group_id      SERIAL,
+        name          VARCHAR(80) NOT NULL,
+        
+        flags         INTEGER DEFAULT 0 NOT NULL
+    );
+
+    CREATE UNIQUE INDEX group_id_index ON groups (group_id);
+    CREATE UNIQUE INDEX name_id_index ON groups (name);
+
+    CREATE TABLE articles (
+        article_id    SERIAL,
+        message_id    TEXT,
+        
+        header        TEXT,
+        body          TEXT
+    );
+
+    CREATE UNIQUE INDEX article_id_index ON articles (article_id);
+    CREATE UNIQUE INDEX article_message_index ON articles (message_id);
+
+    CREATE TABLE postings (
+        group_id      INTEGER,
+        article_id    INTEGER,
+        article_index INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX posting_group_index ON postings (group_id);
+    CREATE UNIQUE INDEX posting_article_index ON postings (article_id);
+
+    CREATE TABLE subscriptions (
+        group_id    INTEGER
+    );
+    
+    CREATE TABLE overview (
+        header      TEXT
+    );
+    """
+
+
+    def listRequest(self):
+        sql = """
+            SELECT name FROM groups ORDER BY name
+        """
+        return self.runQuery(sql)
+
+
+    def subscriptionRequest(self):
+        sql = """
+            SELECT groups.name FROM groups,subscriptions WHERE groups.group_id = subscriptions.group_id
+        """
+        return self.runQuery(sql)
+
+
+    def postRequest(self, message):
+        cleave = string.find(message, '\r\n\r\n')
+        headers, article = message[:cleave], message[cleave + 1:]
+        article = Article(headers, article)
+        return self.runInteraction(self._doPost, article)
+
+
+    def _doPost(self, transaction, article):
+        # Get the group ids
+        groups = article.getHeader('Newsgroups').split()
+        sql = """
+            SELECT name, group_id FROM groups
+            WHERE name IN (%s)
+        """ % (', '.join([("'%s'" % (adbapi.safe(group),)) for group in groups]),)
+
+        transaction.execute(sql)
+        result = transaction.fetchall()
+        
+        # No relevant groups, bye bye!
+        if not len(result):
+            return 0
+        
+        # Got some groups, now find the indices this article will have in each
+        sql = """
+            SELECT group_id, MAX(article_index) + 1 FROM postings
+            WHERE group_id IN (%s)
+            GROUP BY group_id
+        """ % (', '.join([("%d" % (id,)) for (group, id) in results]),)
+
+        transaction.execute(sql)
+        indices = transaction.fetchall()
+
+        # XXX - This condition is an error, log it
+        if not len(indices):
+            return 0
+        
+        # Associate indices with group names
+        gidToName = dict([(b, a) for (a, b) in result])
+        gidToIndex = dict(indices)
+        
+        nameIndex = []
+        for i in gidToName:
+            nameIndex.append(gidToName[i], gidToIndex[i])
+            
+        
+        # Build xrefs
+        xrefs = socket.gethostname().split()[0]
+        xrefs = xrefs + ' '.join([('%s:%d' % (group, id)) for (group, id) in nameIndex])
+        article.putHeader('Xref', xref)
+        
+        # Hey!  The article is ready to be posted!  God damn f'in finally.
+        sql = """
+            INSERT INTO articles (message_id, header, body)
+            VALUES ('%s', '%s', '%s')
+        """ % (
+            adbapi.safe(article.getHeader('Message-ID')),
+            adbapi.safe(article.textHeaders()),
+            adbapi.safe(article.body)
+        )
+        
+        transaction.execute(sql)
+        
+        # Now update the posting to reflect the groups to which this belongs
+        for gid in gidToName:
+            sql = """
+                INSERT INTO postings (group_id, article_id, article_index)
+                VALUES (%d, (SELECT last_value FROM articles_article_id_sequence), %d)
+            """ % (gid, gidToIndex[gid])
+            transaction.execute(sql)
+        
+        return len(nameIndex)
+
+
+    def overviewRequest(self):
+        sql = """
+            SELECT header FROM overview
+        """
+        q = self.runQuery(sql)
+        q.addCallback(lambda result: [header[0] for header in result])
+        return q
+
+
+    def xoverRequest(self, group, low, high):
+        sql = """
+            SELECT articles.article_id, articles.header FROM articles,postings,groups
+            WHERE postings.group_id = groups.group_id AND groups.name = '%s'
+            AND postings.article_id = articles.article_id
+            AND postings.article_index >= %d
+            AND postings.article_index <= %d
+        """ % (adbapi.safe(group), low, high)
+
+        q = self.runQuery(sql)
+        q.addCallback(lambda results: [Article(header, None).overview() for (id, header) in results])
+        return q
+
+
+    def xhdrRequest(self, group, low, high, header):
+        sql = """
+            SELECT postings.article_index, articles.header FROM articles,postings,groups
+            WHERE postings.group_id = groups.group_id AND groups.name = '%s'
+            AND postings.article_id = articles.article_id
+            AND postings.article_index >= %d
+            AND postings.article_index <= %d
+        """ % (adbapi.safe(group), low, high)
+
+        q = self.runQuery(sql)
+        q.addCallback(lambda results: [(index, Article(header, None).getHeader(header)) for (index, header) in results])
+        return q
+
+
+    def listGroupRequest(self, group):
+        sql = """
+            SELECT postings.article_index FROM postings,groups
+            WHERE postings.group_id = groups.group_id
+            AND groups.name = '%s'
+        """ % (adbapi.safe(group),)
+        
+        q = self.runQuery(sql)
+        q.addCallback(lambda results: (group, [res[0] for res in results]))
+        return q
+
+
+    def groupRequest(self, group):
+        sql = """
+            SELECT groups.name, COUNT(postings.article_index),
+                   MAX(postings.article_index), MIN(postings.article_index),
+                   groups.flags FROM groups,postings
+            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
+        """ % (adbapi.safe(group),)
+        
+        q = self.runQuery(sql)
+        q.addCallback(lambda results: tuple(results[0]))
+
+
+    def articleExistsRequest(self, id):
+        sql = """
+            SELECT COUNT(message_id) FROM articles
+            WHERE message_id = '%s'
+        """ % (id,)
+        
+        q = self.runQuery(sql)
+        q.addCallback(lambda result: bool(result[0][0]))
+        return q
+
+    
+    def articleRequest(self, group, index):
+        sql = """
+            SELECT articles.header, articles.body FROM groups,postings,articles
+            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
+            AND postings.article_index = %d
+        """ % (adbapi.safe(group), index)
+        
+        q = self.runQuery(sql)
+        q.addCallback(lambda result: result[0][0] + '\r\n' + result[0][1])
+        return q
+
+
+    def headRequest(self, group, index):
+        sql = """
+            SELECT articles.header FROM groups,postings,articles
+            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
+            AND postings.article_index = %d
+        """ % (adbapi.safe(group), index)
+        
+        q = self.runQuery(sql)
+        q.addCallback(lambda result: result[0][0])
+        return q
+
+
+    def bodyRequest(self, group, index):
+        sql = """
+            SELECT articles.body FROM groups,postings,articles
+            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
+            AND postings.article_index = %d
+        """ % (adbapi.safe(group), index)
+        
+        q = self.runQuery(sql)
+        q.addCallback(lambda result: result[0][0])
+        return q
