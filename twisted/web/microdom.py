@@ -381,10 +381,10 @@ class MicroDOMParser(XMLParser):
             self.documents.append(el)
 
 
-def parse(readable):
+def parse(readable, *args, **kwargs):
     if not hasattr(readable, "read"):
         readable = open(readable)
-    mdp = MicroDOMParser()
+    mdp = MicroDOMParser(*args, **kwargs)
     mdp.filename = getattr(readable, "name", "<xmlfile />")
     mdp.makeConnection(None)
     r = readable.read(1024)
