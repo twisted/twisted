@@ -5,6 +5,12 @@ from twisted.internet import tcp
 from twisted import copyright
 
 
+normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
+boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
+errorFont = gtk.load_font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
+
+
+
 def cbutton(name, callback):
     b = gtk.GtkButton(name)
     b.connect('clicked', callback)
@@ -41,10 +47,10 @@ class GetString(gtk.GtkWindow):
 class Login(gtk.GtkWindow):
     def __init__(self, callback,
                  referenced = None,
-                 initialUser = "glyph",
-                 initialPassword = "glyph",
+                 initialUser = "guest",
+                 initialPassword = "guest",
                  initialHostname = "localhost",
-                 initialService  = "words",
+                 initialService  = "",
                  initialPortno   = pb.portno):
         gtk.GtkWindow.__init__(self,gtk.WINDOW_TOPLEVEL)
         version_label = gtk.GtkLabel("Twisted v%s" % copyright.version)
