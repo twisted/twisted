@@ -81,7 +81,7 @@ class LoginDialog(GladeKeeper):
     # login button activated
 
     fields = ['host','port','identityName','password',
-              'serviceName','perspectiveName']
+              'perspectiveName']
 
     _widgets = ("hostEntry", "portEntry", "identityNameEntry", "passwordEntry",
                 "perspectiveNameEntry", "statusBar",
