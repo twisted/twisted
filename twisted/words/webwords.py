@@ -47,7 +47,7 @@ class AccountCreationWidget(widgets.Form, styles.Versioned):
             ident = identity.Identity(u, app)
             ident.setPassword(p)
             app.authorizer.addIdentity(ident)
-            part = self.service.createParticipant(u)
+            part = self.service.createPerspective(u)
             part.setIdentity(ident)
             ident.addKeyForPerspective(part)
             if part:
@@ -61,7 +61,7 @@ class ParticipantInfoWidget(widgets.Widget):
         self.name = name
         self.title = "Info for Participant %s" % name
         self.service = svc
-        self.part = svc.participants[name]
+        self.part = svc.perspectives[name]
 
     def display(self, request):
         return ['''
@@ -92,7 +92,7 @@ class ParticipantListWidget(widgets.Gadget, widgets.Widget, styles.Versioned):
     def display(self, request):
         """Get HTML for a directory of participants.
         """
-        keys = self.service.participants.keys()
+        keys = self.service.perspectives.keys()
         keys.sort()
         return [html.linkList(map(lambda key, request=request:
                                   (key, key), keys))]
@@ -100,7 +100,7 @@ class ParticipantListWidget(widgets.Gadget, widgets.Widget, styles.Versioned):
     def getWidget(self, name, request):
         """Get info for a particular participant.
         """
-        if name in self.service.participants.keys():
+        if name in self.service.perspectives.keys():
             return ParticipantInfoWidget(name, self.service)
         else:
             return error.NoResource("That participant does not exist.")

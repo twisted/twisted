@@ -22,8 +22,10 @@ Test cases for twisted.protocols.pop3 module.
 from pyunit import unittest
 from twisted import mail
 import twisted.mail.protocols
-import twisted.protocols.pop3, twisted.protocols.protocol
+import twisted.protocols.pop3
+import twisted.internet.protocol
 from twisted import protocols
+from twisted import internet
 from twisted.protocols import pop3
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
@@ -119,7 +121,7 @@ Someone set up us the bomb!\015
 ''' % len(message)
 
     def setUp(self):
-        self.factory = protocols.protocol.Factory()
+        self.factory = internet.protocol.Factory()
         self.factory.domains = {}
         self.factory.domains['baz.com'] = DummyDomain()
         self.factory.domains['baz.com'].addUser('hello')
@@ -127,7 +129,7 @@ Someone set up us the bomb!\015
 
     def testMessages(self):
         self.output = StringIOWithoutClosing()
-        self.transport = protocols.protocol.FileWrapper(self.output)
+        self.transport = internet.protocol.FileWrapper(self.output)
         protocol =  MyVirtualPOP3()
         protocol.makeConnection(self.transport)
         protocol.service = self.factory

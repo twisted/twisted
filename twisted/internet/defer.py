@@ -54,6 +54,21 @@ def fail(result=_nothing):
     d.errback(result)
     return d
 
+def execute(callable, *args, **kw):
+    """Create a deferred from a callable and arguments.
+
+    Call the given function with the given arguments.  Return a deferred which
+    has been fired with its callback as the result of that invocation or its
+    errback with a Failure for the exception thrown.
+    """
+    try:
+        result = apply(callable, args, kw)
+    except:
+        return fail()
+    else:
+        return succeed(result)
+        
+
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
 
@@ -224,11 +239,6 @@ class Deferred:
             except:
                 self.result = failure.Failure()
                 self.isError = 1
-                # if this was the last pair of callbacks, we must make sure
-                # that the error was logged, otherwise we'll never hear about
-                # it.
-                if not cb:
-                    logError(self.result)
 
 
     def arm(self):
@@ -251,6 +261,18 @@ class Deferred:
     armAndErrback = errback
     armAndCallback = callback
     armAndChain = chainDeferred
+
+    def __del__(self):
+        """Print tracebacks and die.
+        
+        If the *last* (and I do mean *last*) callback leaves me in an error
+        state, print a traceback (if said errback is a Failure).
+        """
+        if (self.called and
+            self.isError and
+            isinstance(self.result, failure.Failure) and
+            self.result.frames):
+            log.err(self.result)
 
 
 class DeferredList(Deferred):

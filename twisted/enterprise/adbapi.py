@@ -21,7 +21,7 @@ import traceback
 
 from twisted.spread import pb
 from twisted.internet import task, main, defer
-from twisted.internet.threadtask import ThreadDispatcher
+from twisted.internet import threads
 from twisted.python import reflect, log, failure
 
 class Transaction:
@@ -63,7 +63,6 @@ class ConnectionPool(pb.Referenceable):
             del connkw['cp_max']
         else:
             max = 5
-        self.dispatcher = ThreadDispatcher(min, max)
         main.callDuringShutdown(self.close)
 
     def __getstate__(self):
@@ -74,7 +73,6 @@ class ConnectionPool(pb.Referenceable):
     def __setstate__(self, state):
         self.__dict__ = state
         apply(self.__init__, (self.dbapiName, )+self.connargs, self.connkw)
-        main.callDuringShutdown(self.dispatcher.stop)
 
     def connect(self):
         tid = self.threadID()
@@ -110,10 +108,12 @@ class ConnectionPool(pb.Referenceable):
         return result
 
     def query(self, callback, errback, *args, **kw):
-        self.dispatcher.runInThread(callback, errback, self._runQuery, args, kw)
+        threads.deferToThread(self._runQuery, args, kw).addCallbacks(
+            callback, errback)
 
     def operation(self, callback, errback, *args, **kw):
-        self.dispatcher.runInThread(callback, errback, self._runOperation, args, kw)
+        threads.deferToThread(self._runOperation, args, kw).addCallbacks(
+            callback, errback)
 
     def synchronousOperation(self, *args, **kw):
         self._runOperation(args, kw)
@@ -133,7 +133,9 @@ class ConnectionPool(pb.Referenceable):
         the transaction was committed; if 'errback', it was rolled back.  This
         does not apply in databases which do not support transactions.
         """
-        apply(self.dispatcher.runInThread, (callback, errback, self._runInteraction, interaction) + args, kw)
+        apply(threads.deferToThread,
+              (self._runInteraction, interaction) + args, kw).addCallbacks(
+            callback, errback)
 
     def runOperation(self, *args, **kw):
         d = defer.Deferred()
@@ -160,7 +162,6 @@ class ConnectionPool(pb.Referenceable):
             return result
 
     def close(self):
-        self.dispatcher.stop()
         for connection in self.connections.values():
             connection.close()
 

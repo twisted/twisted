@@ -23,7 +23,7 @@ from twisted.python import threadable, failure
 
 # make sure thread pool is shutdown
 import atexit
-atexit.register(reactor.suggestThreadPoolSize, 0)
+#atexit.register(reactor.suggestThreadPoolSize, 0)
 
 
 class Counter:    

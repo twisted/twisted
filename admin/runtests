@@ -76,18 +76,22 @@ class TestProgram:
             reactor = "default"
         self._installReactor(reactor)
         self._installHooks()
-        
-        if not text_mode:
-            try:
-                self.value = self.runGUI()
-            except GuiGoError, e:
-                print e
-                print "Falling back to text mode."
-                pass
-            else:
-                return
+        try:
+            if not text_mode:
+                try:
+                    self.value = self.runGUI()
+                except GuiGoError, e:
+                    print e
+                    print "Falling back to text mode."
+                    pass
+                else:
+                    return
 
-        self.value = self.runText()
+            self.value = self.runText()
+        finally:
+            from twisted.internet import reactor
+            # reactor.stop() # <-- won't be able to run during/after phases!
+            reactor.suggestThreadPoolSize(0)
 
     def _installHooks(self):
         """Override default behaviours in order to facilitate testing."""
@@ -128,7 +132,7 @@ class TestProgram:
         runner = unittest.TextTestRunner(verbosity = self.verbosity)
         result = runner.run(test)
 
-        success = result.wasSuccessful() and (not loader.load_errors)
+        success = result.wasSuccessful() # and (not loader.load_errors)
 
         if loader.load_errors:
             print "The following test modules had errors when loading:\n"

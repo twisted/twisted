@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_spread -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -57,3 +58,31 @@ class LocalAsRemote:
 
     def remoteMethod(self, name):
         return LocalMethod(self, name)
+
+from twisted.python.components import Interface, implements
+from twisted.python.reflect import prefixedMethodNames
+
+class LocalAsyncForwarder:
+    """A class useful for forwarding a locally-defined interface.
+    """
+
+    def __init__(self, forwarded, interfaceClass, failWhenNotImplemented=0):
+        assert implements(forwarded, interfaceClass)
+        self.forwarded = forwarded
+        self.interfaceClass = interfaceClass
+        self.failWhenNotImplemented = failWhenNotImplemented
+
+    def _callMethod(self, method, *args, **kw):
+        return apply(getattr(self.forwarded, method), args, kw)
+
+    def callRemote(self, method, *args, **kw):
+        if hasattr(self.interfaceClass, method):
+            result = apply(defer.execute, (self._callMethod,method)+args, kw)
+            return result
+        elif self.failWhenNotImplemented:
+            return defer.fail(
+                Failure(NotImplementedError,
+                        "No Such Method in Interface: %s" % method))
+        else:
+            return defer.succeed(None)
+

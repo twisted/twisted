@@ -166,6 +166,8 @@ class Conversation(InputOutputWindow):
     def getTitle(self):
         return "Conversation - %s (%s)" % (self.person.name, self.person.client.accountName)
 
+    # Chat Interface Implementation
+
     def sendText(self, text):
         metadata = None
         if text[:4] == "/me ":
@@ -176,6 +178,8 @@ class Conversation(InputOutputWindow):
     def showMessage(self, text, metadata=None):
         _msgDisplay(self.output, self.person.name, text, self.personColor,
                     (metadata and metadata.get("style", None) == "emote"))
+
+    # Internal
 
     def _cbTextSent(self, result, text, metadata=None):
         _msgDisplay(self.output, self.person.client.name, text, self.myColor,
@@ -200,6 +204,32 @@ class GroupConversation(InputOutputWindow):
             b = gtk.GtkButton(method.__name__)
             b.connect("clicked", self._doGroupAction, method)
             groupBox.add(b)
+        self.setTopic("No Topic Yet", "No Topic Author Yet")
+
+    # GTK Event Handlers
+
+    def on_HideButton_clicked(self, b):
+        self.membersHidden = not self.membersHidden
+        self.xml.get_widget("GroupHPaned").set_position(self.membersHidden and -1 or 20000)
+
+    def on_LeaveButton_clicked(self, b):
+        self.win.destroy()
+        self.group.leave()
+
+    def on_AddContactButton_clicked(self, b):
+        lw = self.xml.get_widget("ParticipantList")
+
+        if lw.selection:
+            self.group.client.addContact(self.members[lw.selection[0]])
+
+    def on_TopicEntry_focus_out_event(self, w, e):
+        self.xml.get_widget("TopicEntry").set_text(self._topic)
+
+    def on_TopicEntry_activate(self, e):
+        print "ACTIVATING TOPIC!!"
+        self.group.setTopic(e.get_text())
+        # self.xml.get_widget("TopicEntry").set_editable(0)
+        self.xml.get_widget("GroupInput").grab_focus()
 
     def on_ParticipantList_unselect_row(self, w, row, column, event):
         print 'row unselected'
@@ -244,6 +274,7 @@ class GroupConversation(InputOutputWindow):
     def getTitle(self):
         return "Group Conversation - " + self.group.name
 
+    # Chat Interface Implementation
     def sendText(self, text):
         metadata = None
         if text[:4] == "/me ":
@@ -251,39 +282,18 @@ class GroupConversation(InputOutputWindow):
             metadata = {"style": "emote"}
         self.group.sendGroupMessage(text, metadata).addCallback(self._cbTextSent, text, metadata=metadata)
 
-    def _cacheColorHash(self, name):
-        if self._colorcache.has_key(name):
-            return self._colorcache[name]
-        else:
-            alloc_color = self.output.get_colormap().alloc
-            c = alloc_color('#%s' % colorhash(name))
-            self._colorcache[name] = c
-            return c
-
     def showGroupMessage(self, sender, text, metadata=None):
         _msgDisplay(self.output, sender, text, self._cacheColorHash(sender),
                     (metadata and metadata.get("style", None) == "emote"))
 
-    def _cbTextSent(self, result, text, metadata=None):
-        _msgDisplay(self.output, self.group.client.name, text, self.myColor,
-                    (metadata and metadata.get("style", None) == "emote"))
 
-    def tabComplete(self, word):
-        """InputOutputWindow calls me when tab is pressed."""
-        if not word:
-            return []
-        potentialMatches = []
-        for nick in self.members:
-            if string.lower(nick[:len(word)]) == string.lower(word):
-                potentialMatches.append(nick + ": ") #colon is a nick-specific thing
-        return potentialMatches
-
-        
     def setGroupMembers(self, members):
         self.members = members
         self.refreshMemberList()
 
     def setTopic(self, topic, author):
+        self._topic = topic
+        self._topicAuthor = author
         self.xml.get_widget("TopicEntry").set_text(topic)
         self.xml.get_widget("AuthorLabel").set_text(author)
 
@@ -303,6 +313,26 @@ class GroupConversation(InputOutputWindow):
         self.output.insert_defaults("> %s left <\n" % member)
         self.refreshMemberList()
 
+
+
+    # Tab Completion
+
+    def tabComplete(self, word):
+        """InputOutputWindow calls me when tab is pressed."""
+        if not word:
+            return []
+        potentialMatches = []
+        for nick in self.members:
+            if string.lower(nick[:len(word)]) == string.lower(word):
+                potentialMatches.append(nick + ": ") #colon is a nick-specific thing
+        return potentialMatches
+
+    # Internal
+        
+    def _cbTextSent(self, result, text, metadata=None):
+        _msgDisplay(self.output, self.group.client.name, text, self.myColor,
+                    (metadata and metadata.get("style", None) == "emote"))
+
     def refreshMemberList(self):
         pl = self.xml.get_widget("ParticipantList")
         pl.freeze()
@@ -311,29 +341,20 @@ class GroupConversation(InputOutputWindow):
         for member in self.members:
             pl.append([member])
         pl.thaw()
-
         
-    def on_HideButton_clicked(self, b):
-        self.membersHidden = not self.membersHidden
-        self.xml.get_widget("GroupHPaned").set_position(self.membersHidden and -1 or 20000)
+    def _cacheColorHash(self, name):
+        if self._colorcache.has_key(name):
+            return self._colorcache[name]
+        else:
+            alloc_color = self.output.get_colormap().alloc
+            c = alloc_color('#%s' % colorhash(name))
+            self._colorcache[name] = c
+            return c
 
-    def on_LeaveButton_clicked(self, b):
-        self.win.destroy()
-        self.group.leave()
 
-    def on_AddContactButton_clicked(self, b):
-        lw = self.xml.get_widget("ParticipantList")
-
-        if lw.selection:
-            self.group.client.addContact(self.members[lw.selection[0]])
-
-    def on_TopicEntry_activate(self, e):
-        print "ACTIVATING TOPIC!!"
-        self.group.setTopic(e.get_text())
 
 
 class GtkChatClientUI:
-    # IM-GUI Utility functions
     def __init__(self,xml):
         self.conversations = {}         # cache of all direct windows
         self.groupConversations = {}    # cache of all group windows
@@ -390,7 +411,3 @@ class GtkChatClientUI:
             g = Class(name, account, self)
             self.groupCache[name, account] = g
         return g
-
-    ### --- End IM-Gui utility functions
-
-

@@ -243,17 +243,6 @@ class IRCAccount(basesupport.AbstractAccount):
         self.port = port
         self._isOnline = 0
 
-    def __setstate__(self, d):
-        self.__dict__ = d
-        self.port = int(self.port)
-
-    def __getstate__(self):
-        self._isOnline = 0
-        return self.__dict__
-
-    def isOnline(self):
-        return self.isOnline
-
     def startLogOn(self, chatui):
         reactor.clientTCP(self.host, self.port, IRCProto(self, chatui))
 

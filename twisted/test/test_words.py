@@ -32,16 +32,16 @@ class WordsTestCase(unittest.TestCase):
         sean = s.getPerspectiveNamed("sean")
         glyph.addContact("sean")
         t = glyph.transcribeConversationWith('sean')
-        glyph.attached(DummyWordsClientInterface(), None)
-        sean.attached(DummyWordsClientInterface(), None)
+        glyph.attached(DummyWordsClient(), None)
+        sean.attached(DummyWordsClient(), None)
         glyph.directMessage("sean", "ping")
         sean.directMessage("glyph", "pong")
         self.failUnlessEqual(len(t.chat), 2)
-        t.end()
+        t.endTranscript()
         glyph.directMessage("sean", "(DUP!)")
         self.failUnlessEqual(len(t.chat), 2)
 
-class DummyWordsClientInterface(util.LocalAsRemote):
+class DummyWordsClient(util.LocalAsRemote):
     """A client to a perspective on the twisted.words service.
 
     I attach to that participant with Participant.attached(),

@@ -1,3 +1,5 @@
+# -*- Python -*-
+
 ## Twisted Modules List
 
 ## Coil modules
@@ -51,6 +53,8 @@ register("Twisted Names",
          "twisted.coil.plugins.names",
          description="DNS services for Twisted.",
          type='coil')
+
+# TAP Builder modules
 
 register("Twisted Web Automated TAP builder",
          "twisted.tap.web",
@@ -135,6 +139,23 @@ register("Twisted News Automated TAP Builder",
          type='tap',
          tapname="news")
 
+register("Twisted Issues Automated TAP Builder",
+         "twisted.issues.issuetap",
+         type="tap",
+         tapname="issues")
+
+# Bot Plugins
+
+register("Bot-Creating Bot",
+         "twisted.words.botbot",
+         type="twisted.words.bot",
+         botType="botbot")
+
+register("Twisted Issues Interface Bot",
+         "twisted.issues.robot",
+         type="twisted.words.bot",
+         botType="issues")
+
 register("Zoot TAP Builder",
          "twisted.zoot.zoottap",
          description="Zoot TAP builder module",
@@ -152,3 +173,4 @@ register("Zoot Ponger TAP Builder",
          description="Zoot Ponger TAP builder module",
          type='tap',
          tapname="ponger")
+

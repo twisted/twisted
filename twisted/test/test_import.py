@@ -46,7 +46,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.internet import abstract
         from twisted.internet import process
         from twisted.internet import task
-        from twisted.internet import threadtask
+        # from twisted.internet import threadtask
         from twisted.internet import udp
         from twisted.internet import protocol
         from twisted.internet import defer

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.19 2002/07/20 13:30:38 glyph Exp $
+# $Id: tendril.py,v 1.20 2002/07/24 19:04:54 glyph Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -41,7 +41,7 @@ _LOGALL = False
 
 
 
-class ProxiedParticipant(wordsService.WordsClientInterface,
+class ProxiedParticipant(wordsService.WordsClient,
                          styles.Ephemeral):
     """I'm the client of a participant who is connected through Tendril.
     """
@@ -63,7 +63,7 @@ class ProxiedParticipant(wordsService.WordsClientInterface,
                                   sender, message, metadata)
 
 
-class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
+class TendrilClient(irc.IRCClient, wordsService.WordsClient):
     """I connect to the IRC server and broker traffic.
     """
 
@@ -78,7 +78,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.19 $'[11:-2]
+    versionNum = '$Revision: 1.20 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (

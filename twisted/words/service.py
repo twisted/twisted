@@ -22,7 +22,7 @@ import types, time
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.python import log, roots
+from twisted.python import log, roots, components
 from twisted.persisted import styles
 from twisted import copyright
 from twisted.cred import authorizer
@@ -83,7 +83,7 @@ class WrongStatusError(WordsError):
         return s
 
 
-class WordsClientInterface:
+class IWordsClient(components.Interface):
     """A client to a perspective on the twisted.words service.
 
     I attach to that participant with Participant.attached(),
@@ -133,6 +133,23 @@ class WordsClientInterface:
         """Tells me a member has left a group.
         """
 
+class WordsClient:
+    __implements__ = IWordsClient
+    """A stubbed version of IWordsClient.
+
+    Useful for partial implementations.
+    """
+
+    def receiveContactList(self, contactList): pass
+    def notifyStatusChanged(self, name, status): pass
+    def receiveGroupMembers(self, names, group): pass
+    def setGroupMetadata(self, metadata, name): pass
+    def receiveDirectMessage(self, sender, message, metadata=None): pass
+    def receiveGroupMessage(self, sender, group, message, metadata=None): pass
+    def memberJoined(self, member, group): pass
+    def memberLeft(self, member, group): pass
+
+
 class Transcript:
     """I am a transcript of a conversation between multiple parties.
     """
@@ -142,7 +159,7 @@ class Transcript:
         self.name = name
     def logMessage(self, voiceName, message, metadata):
         self.chat.append((time.time(), voiceName, message, metadata))
-    def end(self):
+    def endTranscript(self):
         self.voice.stopTranscribing(self.name)
 
 class Participant(pb.Perspective, styles.Versioned):
@@ -155,8 +172,11 @@ class Participant(pb.Perspective, styles.Versioned):
         self.groups = []
         self.client = None
         self.loggedNames = {}
-        
-    persistenceVersion = 1 # XXX persistence upgrade for logging!!
+
+    persistenceVersion = 2
+
+    def upgradeToVersion2(self):
+        self.loggedNames = {}
 
     def __getstate__(self):
         state = styles.Versioned.__getstate__(self)
@@ -250,8 +270,9 @@ class Participant(pb.Perspective, styles.Versioned):
         if self.client:
             for group in self.groups:
                 if group.name == groupName:
-                    self.client.callRemote('receiveGroupMembers', map(lambda m: m.name,
-                                                                      group.members),
+                    self.client.callRemote('receiveGroupMembers',
+                                           map(lambda m: m.name,
+                                               group.members),
                                            group.name)
             raise NotInGroupError(groupName)
 
@@ -264,37 +285,18 @@ class Participant(pb.Perspective, styles.Versioned):
     def receiveDirectMessage(self, sender, message, metadata):        
         if self.client:
             if self.loggedNames.has_key(sender.name):
-                self.loggedNames[sender.name].logMessage(sender.name, message, metadata)
-                
-            if metadata:
-                d = self.client.callRemote('receiveDirectMessage', sender.name, message,
-                                           metadata)
-                #If the client doesn't support metadata, call this function
-                #again with no metadata, so none is sent
-                #
-                #note on the 'if d:' - the IRC service is in-process and
-                #won't return a Deferred, but rather it returns None.
-                #silently ignore it. (This is really evil and terrible.)
-                if d:
-                    d.addErrback(self.receiveDirectMessage,
-                                 sender.name, message, None)
-            else:
-                self.client.callRemote('receiveDirectMessage', sender.name, message)
+                self.loggedNames[sender.name].logMessage(sender.name, message,
+                                                         metadata)
+            self.client.callRemote('receiveDirectMessage', sender.name,
+                                   message, metadata)
         else:
             raise WrongStatusError(self.status, self.name)
 
 
     def receiveGroupMessage(self, sender, group, message, metadata):
         if sender is not self and self.client:
-            if metadata:
-                d = self.client.callRemote('receiveGroupMessage',sender.name, group.name,
-                                                    message, metadata)
-                if d:
-                    d.addErrback(self.receiveGroupMessage,
-                                 sender, group, message, None)
-            else:
-                self.client.callRemote('receiveGroupMessage',sender.name, group.name,
-                                                message)
+            self.client.callRemote('receiveGroupMessage',sender.name, group.name,
+                                   message, metadata)
 
     def memberJoined(self, member, group):
         if self.client:
@@ -418,9 +420,10 @@ class Service(pb.Service, styles.Versioned):
     def __init__(self, name, app):
         pb.Service.__init__(self, name, app)
         self.groups = {}
+        self.bots = []
 
     ## Persistence versioning.
-    persistenceVersion = 3
+    persistenceVersion = 4
 
     def upgradeToVersion1(self):
         from twisted.internet.app import theApplication
@@ -430,6 +433,9 @@ class Service(pb.Service, styles.Versioned):
     def upgradeToVersion3(self):
         self.perspectives = self.participants
         del self.participants
+
+    def upgradeToVersion4(self):
+        self.bots = []
 
     ## Service functionality.
 
@@ -445,6 +451,13 @@ class Service(pb.Service, styles.Versioned):
             raise KeyError("Pariticpant already exists: %s." % name)
         log.msg("Creating New Participant: %s" % name)
         return pb.Service.createPerspective(self, name)
+
+    def addBot(self, name, bot):
+        p = self.createPerspective(name)
+        bot.setupBot(p) # XXX this method needs a better name
+        from twisted.spread.util import LocalAsyncForwarder
+        p.attached(LocalAsyncForwarder(bot, IWordsClient, 1), None)
+        self.bots.append(bot)
 
     createParticipant = createPerspective
 

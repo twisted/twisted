@@ -194,7 +194,7 @@ def autoConnectMethods(*objs):
 
 
 def openGlade(*args, **kwargs):
-    print "opening glade file"
+    # print "opening glade file"
     r = apply(GladeXML, args, kwargs)
     if r._o:
         return r

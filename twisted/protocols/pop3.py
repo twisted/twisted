@@ -20,7 +20,7 @@
 
 from twisted.protocols import basic
 import os, time, string, operator, stat, md5, binascii
-import protocol
+from twisted.internet import protocol
 
 class POP3Error(Exception):
     pass

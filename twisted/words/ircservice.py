@@ -34,7 +34,7 @@ from twisted import copyright
 # sibling imports
 import service
 
-class IRCChatter(irc.IRC, service.WordsClientInterface):
+class IRCChatter(irc.IRC, service.WordsClient):
     nickname = '*'
     passwd = None
     participant = None

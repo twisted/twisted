@@ -20,8 +20,9 @@ Test cases for twisted.smtp module.
 """
 
 from pyunit import unittest
-import twisted.protocols.protocol, twisted.protocols.smtp
+import twisted.internet.protocol, twisted.protocols.smtp
 from twisted import protocols
+from twisted import internet
 from twisted.protocols import loopback, smtp
 from twisted.internet import defer, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
@@ -73,11 +74,11 @@ Someone set up us the bomb!\015
     mbox = {'foo': ['Subject: urgent\n\nSomeone set up us the bomb!\n']}
 
     def setUp(self):
-        self.factory = protocols.protocol.Factory()
+        self.factory = internet.protocol.Factory()
         self.factory.domains = {}
         self.factory.domains['baz.com'] = DummyDomain(['foo'])
         self.output = StringIOWithoutClosing()
-        self.transport = protocols.protocol.FileWrapper(self.output)
+        self.transport = internet.protocol.FileWrapper(self.output)
 
     def testMessages(self):
         from twisted.mail import protocols
@@ -128,7 +129,7 @@ class MySMTPClient(protocols.smtp.SMTPClient):
 class LoopbackSMTPTestCase(unittest.TestCase):
 
     def testMessages(self):
-        factory = protocols.protocol.Factory()
+        factory = internet.protocol.Factory()
         factory.domains = {}
         factory.domains['foo.bar'] = DummyDomain(['moshez'])
         from twisted.mail.protocols import DomainSMTP

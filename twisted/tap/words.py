@@ -19,21 +19,45 @@
 I am a support module for creating chat servers with mktap.
 """
 
-from twisted.python import usage
+from twisted.python import usage, plugin
 from twisted.spread import pb
+from twisted.spread.util import LocalAsyncForwarder
 from twisted.words import service, ircservice, webwords
 from twisted.web import server
 
-import sys
+import sys, string
+
+botTypeList = plugin.getPlugIns("twisted.words.bot")
+botTypes = {}
+for bott in botTypeList:
+    botTypes[bott.botType] = bott
 
 class Options(usage.Options):
     synopsis = "Usage: mktap words [options]"
     optParameters = [["irc", "i", "6667", "Port to run the IRC server on."],
-                  ["port", "p", str(pb.portno),
-                   "Port to run the Words service on."],
-                  ["web", "w", "8080",
-                   "Port to run the web interface on."]]
+                     ["port", "p", str(pb.portno),
+                      "Port to run the Words service on."],
+                     ["web", "w", "8080",
+                      "Port to run the web interface on."]]
+    bots = None
+    def opt_bot(self, option):
+        """Specify a bot-plugin to load; this should be in the format
+        'plugin:nickname'.
+        """
+        if self.bots is None:
+            self.bots = []
+        botplugnm, botnickname = string.split(option, ":")
+        self.bots.append((botnickname, botTypes[botplugnm].load()))
 
+    users = None
+    def opt_user(self, option):
+        """Specify a user/password combination to add to the authorizer and
+        chat service immediately.
+        """
+        if self.users is None:
+            self.users = []
+        self.users.append(option.split(":"))
+    opt_bot.__doc__ = opt_bot.__doc__ + ("plugin types are: %s" % string.join(botTypes.keys(), ' '))
     longdesc = "Makes a twisted.words service and support servers."
 
 def updateApplication(app, config):
@@ -41,6 +65,13 @@ def updateApplication(app, config):
     bkr = pb.BrokerFactory(pb.AuthRoot(app))
     irc = ircservice.IRCGateway(svc)
     adm = server.Site(webwords.WordsGadget(svc))
+
+    if config.bots:
+        for nickname, plug in config.bots:
+            svc.addBot(nickname, plug.createBot())
+    if config.users:
+        for username, pw in config.users:
+            svc.createPerspective(username).makeIdentity(pw)
 
     app.listenTCP(int(config.opts['port']), bkr)
     app.listenTCP(int(config.opts['irc']), irc)
