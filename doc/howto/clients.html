@@ -10,15 +10,12 @@
   <body>
     <h1>Writing Clients</h1>
     
-    <p>'''Contents'''[[TableOfContents]]</p>
-    
     <h2>Overview</h2>
     <p>Twisted is a framework designed to be very flexible, and let you write powerful clients.  The cost of this flexibility is a few layers in the way to writing your client.</p>
     
-    <p>At the base, the place where you actually implement the protocol parsing and handling, is the Protocol class. This class will usually be decended from twisted.protocols.protocol.Protocol. Most protocol handlers inherit either from this class or from one of its convenience children. An instance of the protocol class will be instantiated when you connect to the server, and will go away when the connection is finished.  This means that persistent configuration is not saved in the Protocol.</p>
+    <p>At the base, the place where you actually implement the protocol parsing and handling, is the Protocol class. This class will usually be decended from <code class="API">twisted.protocols.protocol.Protocol</code>. Most protocol handlers inherit either from this class or from one of its convenience children. An instance of the protocol class will be instantiated when you connect to the server, and will go away when the connection is finished.  This means that persistent configuration is not saved in the Protocol.</p>
     
-    <p>The persistent configuration is kept in a Factory class, which usually inherits</p>
-    <p>from twisted.internet.protocol.ClientFactory. The default factory class just instantiate the Protocol, and then sets on it an attribute called "factory" which points to itself. This let the Protocol access, and possibly modify, the persistent configuration.</p>
+    <p>The persistent configuration is kept in a Factory class, which usually inherits from <code class="API">twisted.internet.protocol.ClientFactory</code>. The default factory class just instantiate the Protocol, and then sets on it an attribute called "factory" which points to itself. This let the Protocol access, and possibly modify, the persistent configuration.</p>
     
     <h2>Protocol</h2>
     
@@ -92,10 +89,10 @@ class LogBotFactory(protocol.ClientFactory):
         connector.connect()
     </pre>
     
-    <p>That last line is the most important.  The connector passed as the first argument is the interface between a connection and a protocol.  When the connection fails and the factory receives the clientConnectionLost event, the factory can call connector.connect() to start the connection over again from scratch.</p>
+    <p>That last line is the most important.  The connector passed as the first argument is the interface between a connection and a protocol.  When the connection fails and the factory receives the clientConnectionLost event, the factory can call <code class="python">connector.connect()</code> to start the connection over again from scratch.</p>
     
     <h3>Persistent Data in the Factory</h3>
-    <p>Since the Protocol instance is recreated each time the connection is made, the client needs some way to keep track of data that should be persisted.  In the case of ircLogBot.py: (LogBot.log just logs the data to the file object stored in LogBot.file)</p>
+    <p>Since the Protocol instance is recreated each time the connection is made, the client needs some way to keep track of data that should be persisted.  In the case of ircLogBot.py: (<code class="python">LogBot.log()</code> just logs the data to the file object stored in <code class="python">LogBot.file</code>)</p>
     <pre class="python">
 from twisted.internet import protocol
 from twisted.protocols import irc
