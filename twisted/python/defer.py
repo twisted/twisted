@@ -133,6 +133,10 @@ class Deferred:
                 except:
                     result = failure.Failure()
                     isError = 1
+                    # if this was the last pair of callbacks, we must make sure
+                    # that the error was logged, otherwise we'll never hear about it.
+                    if item == self.callbacks[-1]:
+                        logError(result)
         else:
             self.cbResult = result
 
