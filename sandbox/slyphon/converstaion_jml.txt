@@ -1,0 +1,738 @@
+<jml> I like trac.
+<jml> we should use it
+<slyphon> jml: i need your help
+--> chaka (~chaka@ns2.toolshed51.com) has joined #twisted
+<slyphon> jml: i am going to do some refactoring on trial
+<jml> slyphon: awesome
+<jml> slyphon: I've been wanting to do that for some time.
+<jml> slyphon: honour to serve. how can I help.
+<slyphon> jml: so i could really use your input 
+<slyphon> heh;
+<slyphon> can you explain the concept of the runners to me?
+<slyphon> or rathedr
+<slyphon> wait
+<slyphon> please detail the major chunks that make up trial and what each individual chunk does
+<jml> slyphon: ok. gimme a moment.
+<slyphon> sure
+<jml> I'm on a new install, so I have to checkout twisted and set up my .emacs
+<slyphon> no problem
+<jml> but, while that's happening, let's talk vision
+<jml> I'd like stuff like atop.test.unittest to be much easier.
+<jml> and, if possible, for trial to relate to the reactor in a simpler fashion.
+<jml> slyphon: what are your goals?
+<slyphon> we share some common goals
+<slyphon> i'd like to make trial understand componentized
+<jml> slyphon: in what sense?
+<slyphon> ITestCase
+--> norfolk (~alan@ip68-96-11-53.hr.hr.cox.net) has joined #twisted
+<slyphon> no issubclass() no istestcase()
+<jml> slyphon: I considered doing ITestCase when I first wrote trial. People said it wasn't necessary
+<slyphon> because the major point is that a class that runs as a testcase must provide an interface
+<slyphon> yeah
+<jml> slyphon: but now I agree with you.
+<slyphon> that's what they told me
+<slyphon> but screw them
+<slyphon> one sec
+<jml> slyphon: backwards compatibility is a consideration though
+<slyphon> yeah
+<slyphon> that's a big consideration
+<slyphon> i convinced glyph that ITestCase is a good idea
+<jml> slyphon: can you summarise the discussion?
+<slyphon> my gf is on the phone, will you be around in 20 min?
+<jml> slyphon: yes.
+<slyphon> ok, i'll talk to you than
+<slyphon> then
+<slyphon> :)
+
+-------
+
+<jml> yo
+<slyphon> hey
+<slyphon> whew
+<slyphon> i'm glad you're still here
+<slyphon> i had to drive everyone back into DC
+<slyphon> and talk to my gf
+<slyphon> but now, i've got a nice block of time to actually get something _done_
+<slyphon> ;)
+<slyphon> so, trial
+<slyphon> if you've got a minute
+<jml> yeah, I've got a minute or two :)
+<slyphon> YAY :D
+<slyphon> okay
+<slyphon> so
+<jml> we were talking about components
+<slyphon> first thing, as a design decision, yes, i want to make TestCase __implement__ ITestCase
+<jml> can you, at some stage, summarise the discussion you had with glyph wrt components and trial?
+<slyphon> well
+<slyphon> the basic consensus i had with glyph was that the runner stuff needed to be revamped, because nobody really understands what it does...
+<slyphon> ...
+<slyphon> ...and that there would be an IBenchmark
+<jml> :)
+<slyphon> IProfile, and ITest
+<slyphon> interface
+<jml> yeah.
+<slyphon> that way you could do ITest().allYourTests()
+<slyphon> IBenchmark().allYourBenchmarks()
+<slyphon> etc.
+<slyphon> to give the developer more control over what gets run how and when 
+<slyphon> also, it would allow you to benchmark already-existing code and tests without worrying about how the methods were named
+<slyphon> which is kind of irritating, yet understandable
+<jml> well, the naming thing is a tradeoff between control and convenience
+<slyphon> yes
+<slyphon> which we agreed upon
+<jml> so, ITest(myTestObject).allYourTests() ?
+<slyphon> yet, we can make allYourTests() default to return all methods named test_ and if someone wants to change that the machinery is there to make it easy
+<slyphon> yes
+<slyphon> or
+<jml> how do you make it default?
+<slyphon> ITest(ITestCase(obj)).allYourTests()
+<slyphon> you make it a default by making a default adapter
+<slyphon> i think
+<jml> I see.
+<slyphon> i am _very_ concerned with backwards compatability
+<jml> so, the user would write a class that would implement ITestCase. What's ITest?
+<jml> slyphon: I'm not :)
+<slyphon> heh
+<slyphon> :D
+<slyphon> well, the user wouldn't see much of a change if they wanted to use trial.unittest
+<slyphon> because t.unittest.TestCase would implement ITestCase
+<slyphon> so the difference would be pretty transparent
+<jml> slyphon: yeah. I think we should be backwards compat. I just don't feel strongly about it at all.
+<slyphon> yeah
+<slyphon> i agree
+<jml> slyphon: so, what's ITest when it's at home?
+<slyphon> ITest would return all test_ methods, or if overridden all methods of a class that should be considered test methods
+<slyphon> which brings me to a point of confusion
+<slyphon> because i've hacked some edge cases where i messed with the test classes or methods (i can't remember the exact case) and wound up with "foo is not a test method" errors
+<slyphon> which i don't really understand
+<jml> slyphon: the runners are essentially adapters, I guess.
+--> psy (~joe@adsl-1-046.QLD.dft.com.au) has joined #twisted
+<jml> although, it's slightly more complex :)
+<slyphon> adapters in the IBenchmark, etc way?
+<jml> yeah
+<slyphon> ah
+<slyphon> what's a "Singleton" runner?
+<jml> TestClassRunner should really be an adapter to ITest
+<jml> slyphon: runs a single method.
+<slyphon> yes
+<slyphon> OH
+<slyphon> :)
+<slyphon> that confused the hell out of me
+<jml> slyphon: not singleton as in the pattern
+<jml> slyphon: sorry man
+<slyphon> what would be cool would be to make the ITest().allYourMehtods() return an /iterator/
+<slyphon> :)
+<jml> slyphon: yes
+<slyphon> that way you don't have to worry about counting methods
+<jml> but, the thing is, what would the interface for IBench be?
+<jml> slyphon: counting methods is for progress bars.
+<slyphon> oh
+<slyphon> oh
+<slyphon> hmm
+<slyphon> hadn't thought of that
+<slyphon> IBenchmark would probably be just "return all methods that you want to be timed" during execution
+<slyphon> and it would return an iterator over a bunch of methods
+<jml> ok. so, it'd have one method. just like ITest
+<slyphon> yeah
+<slyphon> make it really simple
+<jml> ok, so what does ITestCase define?
+<slyphon> umm
+<jml> setUp, tearDown?
+<slyphon> yeah, it also defined raiseIf
+<slyphon> failUnless
+<slyphon> etc
+<slyphon> which was because i needed to change those for some of the functional tests in quotient
+<jml> slyphon: that's unnecessary. they should not be TestCase methods.
+<jml> oh
+<slyphon> i had some weird requirements about skipping the rest of a sequence
+<jml> why?
+--> zbir (~zbir@m41105e42.tmodns.net) has joined #twisted
+<slyphon> because the tests _had_ to run in a specified order
+<jml> slyphon: they still don't need to be TestCase methods.
+<slyphon> hmm
+<slyphon> what would they be then?
+<slyphon> i agree
+--> SamB (naesten@ts001d0655.wdc-dc.xod.concentric.net) has joined #twisted
+<jml> slyphon: whack em in a module
+<slyphon> IUnittest
+<slyphon> ?
+<jml> nah.
+<slyphon> yeah
+<slyphon> you're right
+<slyphon> soooo...
+<jml> twisted.trial.judges.failUnlessEqual
+<slyphon> heh
+<jml> slyphon: I don't know if ITestCase is well-thought out.
+<slyphon> probably not...
+<slyphon> but
+<slyphon> the idea was really to make the "is this a test case" stuff in the script easier
+<jml> for sure.
+<jml> it might only be a tag.
+<slyphon> yeah
+<slyphon> hmm
+<jml> but, I think perhaps we might want IBenchCase, ITestCase etc
+<jml> i'm not sure.
+<slyphon> yeah, neither am i
+<slyphon> the difference was that i wanted ITestCase to cover the other possibilities, i think
+<slyphon> the whole thing that's a bit weird to me is dealing with the TestSuite
+<slyphon> how you can add just random methods to it
+<slyphon> or classes
+<jml> TestSuite.. TestSuite.. what's that again.
+<slyphon> or modules
+<slyphon> or packages
+* jml looks stuff up
+<slyphon> heh
+* slyphon does the same
+<jml> slyphon: what's confusing about it?
+<slyphon> what is its purpose?
+<jml> slyphon: the script gets a bunch of params, they get added to the test suite. then it gets run.
+<jml> slyphon: it's purpose is collation
+<slyphon> ah 
+<slyphon> yes, one of the things i need to do is sit down and write a design document
+<slyphon> just to try to understand what all the use cases are
+<jml> slyphon: well, nothing so formal
+<slyphon> yeah
+<slyphon> well, 
+<slyphon> a "design document" (quotes added) would be more appropriate
+<slyphon> ;)
+<jml> :)
+<jml> TestSuite might not be needed
+<slyphon> hmm
+<slyphon> how
+<slyphon> that would be slick
+<slyphon> I want to wind up with a design that will cut 50% of the code out of trial
+<jml> also, I reckon we ditch the progress bar requirement. No UI uses it.
+<jml> slyphon: me too.
+<slyphon> heh
+<jml> slyphon: YAGNI.
+<slyphon> some people were suggesting that i build a gtk ui for it
+<slyphon> i was like, FUCK NO!
+<jml> slyphon: that's irrelevant.
+<slyphon> YOU BUILD IT
+<slyphon> yeah
+<slyphon> trial needs a gtk ui like a fish needs a bicycle
+<jml> slyphon: also, buildbot is an important consideration.
+<slyphon> yes
+<slyphon> i've been talking with warner
+--> chaka (~chaka@ns2.toolshed51.com) has joined #twisted
+<slyphon> he wants there to be a Problem object that can get passed via jelly
+<slyphon> that takes the relevant locals information and can pass it off to buildbot
+<slyphon> also
+<dreid> *blink*
+<dreid> i didn't see the "there" at first
+<jml> aside: to benchmark stuff, you'd need, essentially, a list of methods to benchmark, and a process that takes a method to benchmark, and actually benchmarks it.
+<slyphon> which is pretty trivial
+<slyphon> time.time, startmethod(), time.time - originalTime
+<jml> slyphon: well, the Tester class is the thing that takes a method and tests it
+* slyphon nods
+<slyphon> dreid: :)
+<jml> slyphon: it's actually not going out and killing people in its triviallity
+<slyphon> explain
+<slyphon> please ;)
+<jml> slyphon: look at unittest.Tester. It's 100 lines of code
+<slyphon> oh, you were talking about tester
+<slyphon> i thought you were talking about benchmark's triviality
+<slyphon> yeah
+<slyphon> Tester is gonna need some refactoring
+<slyphon> it seems a bit too "busy"
+<jml> slyphon: well, I'm thinking that a lot of that is intrinsic complexity
+<slyphon> intrinsic in what sense?
+<slyphon> because of the rest of the design, you mean?
+<jml> slyphon: because of tests raising different kinds of exceptions.
+<slyphon> ah
+<slyphon> hmm
+<jml> and the reactor
+<slyphon> yyeah
+<slyphon> warner and i had a _long_ talk about the reactor state
+<jml> sure, if we had a Bencher and a Profiler, there'd be a lot of stuff in common
+<jml> slyphon: I wish I were there.
+<jml> dreid: I still don't get it :(
+<slyphon> :) we both agreed that the 
+<slyphon> framework should just VOMIT if the reactor was left in an unclean state
+<dreid> jml: i thought warner wanted to be a Problem object that can be passed via jelly
+<slyphon> HA!
+<jml> dreid: right :)
+<dreid> jml: so yeah ... it left me in a state of amused confusion
+<jml> slyphon: why did you agree?
+<jml> slyphon: as in, why should it vomit?
+<slyphon> well, it was a question of running asynchronous tests
+<slyphon> if you set up a callLater, and there's a code path that allows you to exit out the side without cleaning up that call later, you can get weird failures
+<slyphon> on unrelated methods
+<slyphon> which can be hard to track down
+<slyphon> i.e. the http logging "optimization" that just leaves timed calls lying around
+<slyphon> which is a major PITA
+<jml> slyphon: so, by vomit, you mean, fail and exit
+<slyphon> yes
+<jml> brb
+<slyphon> immediately
+<slyphon> ok
+--> z3p (~z3p@pcp04401522pcs.nrockv01.md.comcast.net) has joined #twisted
+<slyphon> perhaps ITestCase should have 3 methods
+<slyphon> allYourTests, allYourProfiles, allYourBenchmarks
+<jml> back
+<jml> slyphon: I was thinking about that
+<slyphon> yah, that seems more natural
+<jml> hmm.
+<slyphon> itamar was talking some crazy shit about how he wants to be able to adapt the /classes/ to ITestCase
+<slyphon> not the /instances/
+<slyphon> so he would be able to use PyUnit tests with trial
+<slyphon> which i told glyph and he looked at me as if /I/ was crazy
+<slyphon> which is quite a compliment coming from glyph
+<slyphon> ;)
+<jml> slyphon: one of the problems with trial atm is that it gets all the methods _from_ classes right at the beginning and only instantiates those classes when they are about to be tested
+<slyphon> yes
+<jml> slyphon: I don't think we need to do that.
+<slyphon> that's the thing i was talking about before
+<slyphon> with "is not a test method"
+<jml> ahh, right.
+<slyphon> soo, i think that would be handled by the ITestCase thing
+<jml> we only really need to have a list of classes at the beginning, and then get the methods as we are about to test them.
+<slyphon> yeah
+<slyphon> which is an iterator over a list of methods
+<slyphon> and the list could be a list of modules, classes, and methods
+<slyphon> lemme rephrase that
+<jml> ok.
+<slyphon> TestSuite could be replaced by a list of stuff that would have for meth in ITestCase(foo).allYourTests(): run meth() called on it
+<slyphon> so then
+<slyphon> you register an adapter on ModuleType, ClassType, object and method that do The Right Thing
+<slyphon> (like return testcase classes, etc)
+<jml> words right out of my mouth
+<slyphon> :)
+<slyphon> i'm so glad that we're agreeing on this
+<slyphon> so many people were telling me YAGNI! at the top of their lungs
+<slyphon> i was thinking "FUCK YOU!" _I'M_ implementing it 
+<jml> slyphon: it's not a matter of YAGNI at all. It's refactoring mercilessly
+<slyphon> yes
+<slyphon> YES!
+<slyphon> WITH A CHAINSAW!
+<slyphon> OF JUSTICE!
+<jml> slyphon: SO!
+<slyphon> yes
+<jml> slyphon: what of the case of setup/teardown ?
+<slyphon> hmm
+<slyphon> in what sense?
+<slyphon> oh
+<slyphon> shit
+<slyphon> hmm
+<jml> slyphon: well, we may want different ones for different "test" types (bench, profile, dbtest) etc
+<slyphon> yes
+<slyphon> hmm
+<-- Jerub (~stephen@CPE-138-130-223-236.qld.bigpond.net.au) has left #twisted
+<slyphon> that's why i was thinking of ITestCase, IBenchmark, IProfile
+<slyphon> because then you get IBenchmark.setUp()
+<jml> slyphon: then let's do that.
+<slyphon> yes
+<jml> slyphon: but how would the adapter work?
+<slyphon> your adapter class would make sure that the correct method got called
+<slyphon> self.original.setUp() or some such
+<slyphon> (in the simple case)
+<slyphon> hmm
+<jml> slyphon: I'm not quite sure I follow. Let's say we have a class that has tests and benchmarks,
+<slyphon> yes
+<slyphon> so that would implement ITestCase
+<jml> slyphon: and IBenchmark?
+<slyphon> then, you would register an adapter of that class to IBenchmark
+<jml> ok
+<jml> now I get it
+<slyphon> and that adapter would handle the calls to .setUp .tearDown, etc
+<slyphon> yeah
+<slyphon> it makes a lot of sense, when you think about it
+<jml> IBenchMark.setUp === self.original.benchSetUp
+<slyphon> yeah
+<slyphon> or whatever
+<jml> yeah. whatever :)
+<slyphon> that would probably be a good standard
+<slyphon> profileSetUp
+<slyphon> but
+<jml> so, ITestCase is a tag, and that's it.
+<slyphon> your adapter class should probably contain a slightly different implementation
+<slyphon> yes
+<slyphon> afaict
+<slyphon> it just lets you pick out the TestCase classes out of a module
+<slyphon> hmm
+<slyphon> yeah
+<slyphon> because there may be instances where you don't /want/ to run unittests using a certain class, only IBenchmark
+<jml> and then, for each of IBenchmark, ITest, IProfile, we have some code that actually benchmarks, tests, profiles
+<slyphon> yes
+<jml> how would that be structured?
+<slyphon> where there could be cases, where there's only one of those you want to do, that would implement both ItestCase and ITest
+<slyphon> well
+<slyphon> in the simplest case
+<slyphon> you'd have a class that defined prefixed methods
+<slyphon> test_ bench_ profile_
+<slyphon> the adapter to IBenchmark().allYourMethods() would return all 'bench_' prefixed methods of self.original
+<slyphon> just as an example implementation
+<slyphon> so BigTestCaseClass has test_foo bench_foo and profile_baz
+<slyphon> ITest(BigTestCaseClass).allYourMethods() returns test_foo
+<jml> yeah, I've got all this so far
+<slyphon> ok, so what have i not explained that you're thinking of?
+<slyphon> well
+<jml> then nasty user comes along and says "trial profile BigTestCaseClass"
+<slyphon> hmm
+<slyphon> so we do IProfile(ITestCase(BigTestCaseClass)).allYourMethods() which returns only profile_baz
+<slyphon> or nothing if no profile methods are to be returned
+<jml> yeah, I was wondering about the code that actually does the profiling. does that need to be structure in any way.
+<slyphon> i.e. we laugh at him
+<slyphon> hmm
+<slyphon> i'm not really sure
+<slyphon> i'd need to talk to JP and Glyph
+<slyphon> we should make it so users could pick either the Hotshot profiler or the old-skool one
+<jml> slyphon: my guess is 'not really, but it'd be kind of nice'
+<slyphon> yeah
+<slyphon> well, our framework doesn't really give a shit
+<slyphon> the _user_ picks how profiling should work
+<slyphon> which is the genius
+<-- chmod has quit (Read error: 110 (Connection timed out))
+<jml> now. one final issue.
+<slyphon> ok
+<jml> how to handle test failures and errors.
+<slyphon> hmm
+<-- teratorn has quit ("Leaving")
+<slyphon> this is one thing warner had a bunch to say about
+<jml>  / results in general
+<jml> slyphon: good.
+<jml> slyphon: he's the one person who's had a non-trivial use case :)
+<slyphon> indeed :D
+<slyphon> shit, i took some notes from our conversation
+<slyphon>  add multiple exception types
+<slyphon> # single failure per test case
+<slyphon> #     list of all errors between starting test and failing tests
+<slyphon> #
+<slyphon> # intermittent
+<slyphon> the intermittent part was what i mentioned before about "test for clean reactor state"
+<jml> It's gonna take me a moment to parse this
+<slyphon> which consisted of a test leaving behind timed calls, open sockets, and installed signal handlers
+<jml> in fact, can you elaborate on the whole thing?
+<slyphon> yes
+<slyphon> indeed
+<slyphon> this was a 20 minute conversation
+<slyphon> and warner did most of the high-speed talking :)
+<slyphon> trial needs to keep track of all failures that occur during a test run in a list
+<slyphon> was the idea
+<jml> I fully agree.
+<slyphon> me too
+<jml> or an iterator ;)
+<slyphon> :)
+<slyphon> "add multiple exception types" i kinda forget exactly what he meant
+<slyphon> but it had to do with TODO, EXPECTED_FAILURE /i think/
+<slyphon>  /maybe/
+<slyphon> i'll ask him tomorrow and let you know
+<jml> thanks.
+<slyphon> sure ;)
+<slyphon> and that was about it
+<jml> regardless, the skip, todo stuff needs to be handled better.
+<slyphon> hmm
+--> hypatia (~mary@titus.home.puzzling.org) has joined #twisted
+<slyphon> yes
+<jml> although, allYourTests somewhat voids them
+<slyphon> i have some ideas about that from the intricate backflips i've done in quotient
+<slyphon> how's that?
+<slyphon> voids which?
+<slyphon> we could do allYourTodos too :)
+<jml> although: well, if a test is 'todo', you exclude it from allYourTests manually.
+<jml> s/although://
+<slyphon> s/todo/skip/??
+<-- zbir has quit (Connection timed out)
+<jml> slyphon: I'm not sure. I never liked the idea of either very much.
+<slyphon> they're a bit ungainly
+<slyphon> i've taken to having a big block of commented out "todo" attributes on every function at the bottom of a class when i want to run the tests and skip a bunch of arbitrary stuff
+<slyphon> s/"todo"/"skip"
+<jml> todo is for "I've got a test that demonstrates a bug that I can't/won't fix"
+<slyphon> heh
+<slyphon> yeah
+<slyphon> and it doesn't turn buildbot red
+<slyphon> it's kind of like "Yeah, yeah, don't get all excited"
+<jml> skip is for "I don't want to run this test on windows"
+<slyphon> HAHAHA
+<slyphon> PenguinOfDoom has been hacking IOCP like a madman, so hopefully (hopefully) that won't be an issue too much longer
+<slyphon> .allYourWin32Tests might be nice too
+--> jmob (~jmob@bgp01358335bgs.albqrq01.nm.comcast.net) has joined #twisted
+<jml> slyphon: it's still a problem.
+<jml> slyphon: no, that would be terrible.
+<slyphon> indeed
+<slyphon> heh :)
+<jml> .allYourMacOSTests
+<slyphon> HAHA
+<jml> .allYourBeOSTests
+<jml> .allYourAmigaOSTests
+<slyphon> screw amiga users
+<jml> .allYourSCOTests
+<slyphon> they deserve what they get
+<slyphon> HA!
+<slyphon> yeah
+<jml> .allYourSolarisTests
+<slyphon> screw that
+<slyphon> that will be up to the implementor to ensure
+<jml> yeah. well, raising skip is a nice enough way of dealing with the problem
+<slyphon> hmm
+<slyphon> but then the test skips on linux too
+<jml> if not hasattr(os, 'symlink'): raise Skip, "Don't got no symlinks"
+<jml> for example
+<slyphon> yeah
+<slyphon> but again, that's not my concern
+<slyphon> we keep the interface and framework simple and clean
+<slyphon> s/my/our
+<slyphon> ;)
+<jml> slyphon: well, that is a concern, because it relates to reporting on the tests
+<slyphon> true
+<slyphon> but it should be the test writer's concern
+<slyphon> that's not the fault of the framework
+<slyphon> it would be nice, however if the framework provided  utility functions for determining that
+<jml> slyphon: umm
+<slyphon> like isWin32() would raise SkipTest or some such, no?
+<slyphon> or am i not understanding?
+<jml> on phone
+<slyphon> ok
+<slyphon> i'm gonna get some orange juice :)
+<moshez> slyphon: squish
+* moshez squishes
+<moshez> lalalala squishing
+<slyphon> yay squishfulness!
+* slyphon dances around moshez's neck and shoulders
+<moshez> shoulders!
+<jml> slyphon: a test that just can't be run, for whatever reason (although usually platform silliness), can raise SkipTest
+<slyphon> moshez: your lack of presence is noticed by all
+<moshez> :(
+<slyphon> and sorely missed
+<slyphon> :(
+<slyphon> moshez: you should be on irc more
+<moshez> I will attempt to be more presenceful
+<slyphon> yay!
+<slyphon> jml: yes
+<moshez> but I am workful these days
+<slyphon> jml: that's kind of my thinkikng
+<slyphon> moshez: EXCUSES!
+<moshez> so the europeans among you will enjoy my EPfulness
+<slyphon> :)
+<moshez> because I can afford it
+<slyphon> yay!
+<jml> slyphon: so your saying that's not a framework problem, it's a client problem?
+<slyphon> though i am not european
+<moshez> it's this whole system of money and stuff
+<moshez> be european
+<dreid> moshez: money sucks
+<slyphon> jml: in the sense that client == user of framework, yes
+<moshez> dredid: not having any sucks more
+<slyphon> jml: lesson: don't write shitty tests
+<jml> slyphon: no, I mean like the command line trial script, or buildbot
+<slyphon> oh
+<slyphon> oh oh oh
+<slyphon> hmm
+<slyphon> yes
+<slyphon> the tests should be smart enough to recognize what platform they're running on
+--> chmod (~trey@wsip-68-15-127-146.ok.ok.cox.net) has joined #twisted
+<slyphon> we cannot forsee all the wacky shit that will fail here there and elsewhere
+<jml> slyphon: the test author should ensure that, yes.
+<jml> I reckon Todo should be an exception too
+<jml> brb
+<slyphon> ok
+<Yosomono>  bah mozilla imap is totally screwed
+<moshez> Yosomono
+<Yosomono> they fixed the bug in 1.6 with 1.7b
+<slyphon> Yosomono: dude, IMAP is totally screwed
+<Yosomono> but now there is a NEW bug
+<moshez> Yosomono: still no word on charmed finale
+<Yosomono> I just got a notice I have 1937 new mails!
+<Yosomono> :P
+<moshez> froop
+<moshez> Yoso: I froor at you
+<Yosomono> moshez: no spoilage? suck.
+<slyphon> oy
+<moshez> and at your hands
+<Yosomono> moshez: my hands are busy typing! they have no time for frooring
+<slyphon> we need more lessness in australian timezone difference
+<jml> slyphon: right
+<moshez> Yosomono: why!
+<slyphon> jml: so, 
+<jml> slyphon: yes. it is stupidly 1800 here. almost time for me to go home.
+<Yosomono> moshez: work takes precedence!
+<slyphon> heh
+<moshez> Yosomono: ok
+<slyphon> jml: yeah it's 01:54 here
+<jml> slyphon: so, Todo should be an exception too.
+<slyphon> yes, it would probably be helpful
+<slyphon> i need to talk with warner about extending that
+<slyphon> as in
+<moshez> I miss warner :(
+<jml> slyphon: cos the method attribute thing seems a little silly to me
+<slyphon> what other failure types do we need
+<slyphon> hmm
+<slyphon> it's silly, but...
+<slyphon> hmm
+<slyphon> i dunno if raise Todo would really work 
+<jml> whyever not?
+<slyphon> because it would be a path out of code
+<moshez> why wouldn't it
+<slyphon> dunno!
+<slyphon> you tell me
+<moshez> hrmm
+<slyphon> it sometimes succeeds
+<slyphon> !
+<moshez> ???
+<slyphon> skip always skips
+<jml> slyphon: no.
+<slyphon> no?
+<slyphon> hmm
+<slyphon> moshez: write more tests for your code
+<jml> slyphon: well, yes.
+<slyphon> jml: where would you raise Todo?
+<slyphon> begining?
+<slyphon> middle?
+<jml> slyphon: it just means that people shouldn't use them stupidly.
+<slyphon> end?
+<jml> slyphon: yeah, beginning.
+<slyphon> well, perhaps
+<slyphon> yeah, but you want to see if the code works sometimes
+<slyphon> it just marks tests as "in testing"
+<jml> slyphon: this is why I hate todo :)
+<slyphon> todo is useful as all hell
+<slyphon> but yes
+<slyphon> it is easy to abuse
+<jml> slyphon: todo acknowledges that people don't fix code immediately.
+<slyphon> it would be nice not to have to set an /attribute/ on the /method/
+<slyphon> hmm
+<slyphon> sometimes you can't
+<jml> slyphon: just have a helper method ala transacted
+<slyphon> there are situations hwere todo is appropriate where skip is not
+<slyphon> jml: elaborate, please
+<slyphon> todo(methodname)?
+<jml> slyphon: yea
+<jml> h
+<slyphon> hmm
+<slyphon> or how about inside the class?
+<slyphon> doh
+<slyphon> method
+<slyphon> just call self.todo()
+<slyphon> which could change the reporting machinery dynamically
+<jml> I'm not sure I follow
+<slyphon> well
+<slyphon> the framework knows what method is being run
+<slyphon> first, you check to see if the method has 'todo' set
+<slyphon> hmm
+<slyphon> that changes the run's state
+<slyphon> at the beginning
+<slyphon> it says, "if this particular method fails, report an ExpectedFailure"
+<slyphon> there's no reason why that should be have to set /before/ the test runs
+<jml> so we're back to raising exceptions :)
+<slyphon> hmm
+<slyphon> not necessarily
+<jml> slyphon: but not necessarily not also
+<slyphon> because an exception will cause the current code path to terminate
+<slyphon> or rather
+<slyphon> if you call raise SoAndSo it's like calling return
+<slyphon> well
+<slyphon> not calling return
+<slyphon> but saying 'return'
+<jml> ooh
+<jml> what about..
+<slyphon> but calling a method would set the global state of the run to 
+<slyphon> go ahead
+<jml> expected( failUnless( bool ) )
+<slyphon> hmm
+<slyphon> i like that
+<slyphon> oh!
+<slyphon> OH OH OH
+<slyphon> have you looked at my navtags code at all
+<slyphon> ?
+<jml> slyphon: no. where is it?
+<slyphon> quotient.web.navtags
+<slyphon> i made failUnless and all that stuff adaptable
+<jml> expected would raise an ExpectedFailure on failure, I guess.
+<slyphon> so you don't have to use "self"
+<slyphon> self.failUnless
+<slyphon> it's a little crazy
+<jml> divmod still in CVS?
+<slyphon> no
+<slyphon> svn
+<slyphon> today, i think
+<slyphon> dammit
+<jml> ooh. nevow is still in cvs though :(
+<slyphon> i haven't even checked it out
+<slyphon> yeah
+<slyphon> that's donovan's gig ;)
+<slyphon> we were all taking care of erlang today
+<slyphon> beating the kernel with a large rock
+<jml> got a svn url?
+<slyphon> umm
+<slyphon> shit
+<slyphon> no
+<slyphon> :(
+<slyphon> lemme see if i can figure it out
+<slyphon> ok
+<slyphon> oh
+<slyphon> hmm
+<slyphon> i think for you it's svn co svn://divmod.org/svn/Quotient/trunk Quotient
+<jml> so, expected(..) would raise ExpectedFailure on failure, and UnexpectedSuccess on success?
+<slyphon> yeah
+<slyphon> in theory
+<slyphon> but
+<slyphon> hmm
+<slyphon> that /would/ be good for explicitly saying which call was expected to fail
+<slyphon> instead of the /whole test method/
+<slyphon> which is a bit too general
+<slyphon> then again
+<jml> which call?
+<slyphon> like, inside the test method
+<slyphon> which particular line was expected to cause a failure
+<jml> oh. well, that would appear in the stack trace
+<slyphon> hmm
+<slyphon> yeah
+<slyphon> but in terms of _reading_ the code and making it explicit
+<jml> and so would be exactly like the unardorned failUnless
+<slyphon> how so?
+<jml> slyphon: well, what's different about it?
+<slyphon> lemme look ;)
+<slyphon> i'm kinda running on fumes here
+<dreid> [23:09:36] <Kenshin> 7 hours on the openoffice compile so far
+<dreid> and that's why i don't use gentoo anymore.
+--- tav is now known as tav|offline
+<slyphon> well
+--- tav|offline is now known as tav
+<slyphon> the difference is it wouldn't raise any exception of it's own
+<slyphon> the difference would be in the reporting of the exception
+<jml> slyphon: why wouldn't it raise an exception of its own?
+<slyphon> that's a good question
+<slyphon> ahhhh
+<slyphon> i see what you're saying
+<slyphon> it would raise a Todo
+<jml> slyphon: surely it would trap the assertion failure, and rethrow its own
+<slyphon> buuuuuuuuut
+<jml> slyphon: or ExpectedFailure, or whatever
+<slyphon> there's a problem with that
+<jml> slyphon: which is?
+<slyphon> welllll
+<slyphon> if we change it to do what warner suggested
+<slyphon> where we show /all/ errors 
+<slyphon> it won't be
+<slyphon> but as it is right now
+<slyphon> all you'd see is the Todo exception in the traceback
+<slyphon> which is less than helpful
+<jml> slyphon: hmm. if only we could adapt exceptions
+<slyphon> the reporting thing is still something i haven't really looked at
+<slyphon> why not?
+<slyphon> Zope does it
+<slyphon> ExceptionType
+<jml> I'm being forced to go.
+<slyphon> ok
+<slyphon> i need to sleep anyway
+<jml> hold that thought.
+<slyphon> :)
+<slyphon> i'm saving this log
+<jml> me too
+<slyphon> we'll talk tomorrow some more
+<slyphon> and i'll kick around some of these ideas in code
+<slyphon> and we'll pair a bit
+<jml> slyphon: aye
+<slyphon> ;)
+<jml> slyphon: that'd be bonza.
+<slyphon> fa-shizzle, mah-nizzle
+<jml> I still want to voip someone
+<slyphon> :)
+<slyphon> you may have an opportunity tomorrow (if i can get my stupid sound-card working)
+<slyphon> ping me when you get on irc
+<jml> slyphon: will do.
+<slyphon> :D
+<slyphon> thanks!
+<jml> see you
+<-- jml has quit ("Leaving")
+<dreid> hah! his build failed!
