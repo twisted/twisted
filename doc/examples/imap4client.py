@@ -115,7 +115,7 @@ def ebConnection(reason):
 # Callback after authentication has succeeded
 def cbAuthentication(result, proto):
     # List a bunch of mailboxes
-    return proto.list("", ""
+    return proto.list("", "*"
         ).addCallback(cbMailboxList, proto
         )
 
