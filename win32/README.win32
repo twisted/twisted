@@ -2,11 +2,12 @@ OVERVIEW
 --------
 
 Some requirements must be met to build the "Official" win32
-Twisted.  The Official build produces two files with the following
+Twisted.  The Official build produces four files with the following
 features:
 
-- One of the two builds contains documentation, and makes shortcuts to
-it; the other does not.
+- Two of the four builds contain documentation, and make shortcuts to
+it; the others do not.
+- Two of the four builds are for Python 2.2, the other two are for Python 2.3.
 - There is a shortcut in the start menu for the Twisted Command Prompt
 which is a standard Windows command prompt with PATH and environment
 variables set up to invoke the Twisted commands the same way you would
