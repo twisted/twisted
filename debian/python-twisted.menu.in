@@ -15,3 +15,9 @@ needs=x11\
 section="Apps/Net"\
 title="Twisted Application Generator (@VERSION@)"\
 command="/usr/bin/tkmktap@VERSION@"
+
+?package(python@VERSION@-twisted):\
+needs=x11\
+section="Apps/Net"\
+title="Twisted Daemon (@VERSION@)"\
+command="/usr/bin/tktwistd@VERSION@"
