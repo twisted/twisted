@@ -1068,3 +1068,79 @@ class HandCraftedTestCase(unittest.TestCase):
         c.dataReceived('* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
         c.dataReceived('0004 OK FETCH\r\n')
         self.failUnless(unittest.deferredResult(d))
+
+class FakeyMessage:
+    def __init__(self, headers, body):
+        self.headers = headers
+        self.body = body
+    
+    def rfc822(self):
+        return '\n'.join([': '.join(x) for x in self.headers.items()]) + '\n' + self.body
+
+class FakeyMailbox(SimpleMailbox):
+    messages = [
+        FakeyMessage({"Subject": "First Message"}, "Here is body text"),
+        FakeyMessage({"Subject": "Second Message", "From": "Me"}, "Body Body Body"),
+        FakeyMessage({"Date": 'Wed, 17 Jul 1996 02:23:25 -0700 (PDT)'}, "Woo Woo"),
+    ]
+
+    messageUIDs = {
+        0x1234: 0,
+        0x1235: 1,
+        0x1256: 2,
+    }
+    
+    def __init__(self, expected, response):
+        self.e = expected
+        self.r = response
+    
+    def search(self, query, uid):
+        self.assertEquals((query, uid), self.e)
+        return 
+
+class FakeyServer(imap4.IMAP4Server):
+    state = 'select'
+    timeout = None
+    
+    def sendServerGreeting(self):
+        pass
+
+class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
+    result = None
+    search_result = [1, 4, 5, 7]
+
+    def search(self, query, uid):
+        self.assertEquals(imap4.parseNestedParens(self.query), query)
+        self.assertEquals(self.uid, uid)
+        return self.search_result
+    
+    def setUp(self):
+        self.server = imap4.IMAP4Server()
+        self.server.state = 'select'
+        self.server.mbox = self
+        self.connected = defer.Deferred()
+        self.client = SimpleClient(self.connected)
+    
+    def testFetch(self):
+        self.query = imap4.Or(
+            imap4.Query(header=('subject', 'substring')),
+            imap4.Query(larger=1024, smaller=4096),
+        )
+        self.uid = 0
+        
+        def search():
+            return self.client.search(self.query)
+        def result(R):
+            self.result = R
+
+        self.connected.addCallback(strip(search)
+        ).addCallback(result
+        ).addCallback(self._cbStopClient
+        ).addErrback(self._ebGeneral)
+
+        loopback.loopback(self.server, self.client)
+        
+        # Ensure no short-circuiting wierdness is going on
+        self.failIf(self.result is self.search_result)
+        
+        self.assertEquals(self.result, self.search_result)
