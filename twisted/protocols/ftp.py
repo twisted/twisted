@@ -685,10 +685,15 @@ class UnexpectedResponse(FTPError):
     pass
 
 class FTPCommand:
-    def __init__(self, text=None):
+    def __init__(self, text=None, public=0):
         self.text = text
         self.deferred = Deferred()
         self.ready = 1
+        self.public = public
+
+    def fail(self, failure):
+        if self.public:
+            self.deferred.errback(failure)
 
 
 # Used in FTPClient.retrieve
@@ -740,7 +745,7 @@ class FTPClient(basic.LineReceiver):
         self.transport.loseConnection()
         while self.actionQueue:
             ftpCommand = self.popCommandQueue()
-            ftpCommand.deferred.errback(Failure(ConnectionLost('FTP connection lost', error)))
+            ftpCommand.fail(Failure(ConnectionLost('FTP connection lost', error)))
         return error
 
     def sendLine(self, line):
@@ -775,7 +780,7 @@ class FTPClient(basic.LineReceiver):
         for command in ('USER ' + self.username, 
                         'PASS ' + self.password,
                         'TYPE I',):
-            self.queueStringCommand(command).addErrback(self.fail)
+            self.queueStringCommand(command, public=0).addErrback(self.fail)
         
     def queueCommand(self, ftpCommand):
         """Add an FTPCommand object to the queue.
@@ -813,6 +818,8 @@ class FTPClient(basic.LineReceiver):
             def connectionFailed(self):
                 self.object.connectionFailed()
                 self.deferred.errback(Failure(FTPError('Connection failed')))
+
+        cmd = FTPCommand(command, public=1)
         
         if self.passive:
             protocol = ProtocolWrapper(protocol)
@@ -843,8 +850,6 @@ class FTPClient(basic.LineReceiver):
             self.queueCommand(pasvCmd)
             pasvCmd.deferred.addCallbacks(doPassive, self.fail)
 
-            cmd = FTPCommand(command)
-            
             # Ensure the connection is always closed
             cmd.deferred.addBoth(lambda x, m=_mutable: m[0].disconnect() or x)
 
@@ -875,7 +880,6 @@ class FTPClient(basic.LineReceiver):
             portCmd.loseConnection = lambda result: result
             portCmd.fail = lambda error: error
             
-            cmd = FTPCommand(command)
             # Ensure that the connection always gets closed
             cmd.deferred.addErrback(lambda e, pc=portCmd: pc.fail(e) or e)
 
@@ -969,12 +973,12 @@ class FTPClient(basic.LineReceiver):
             path = ''
         return self.retrieve('NLST ' + self.escapePath(path), protocol)
 
-    def queueStringCommand(self, command):
+    def queueStringCommand(self, command, public=1):
         """Queues a string to be issued as an FTP command
         
         Returns a Deferred that will be called when the response to the command
         has been received."""
-        ftpCommand = FTPCommand(command)
+        ftpCommand = FTPCommand(command, public)
         self.queueCommand(ftpCommand)
         return ftpCommand.deferred
 
