@@ -1,6 +1,7 @@
 
 from twisted.internet.app import Application
-from login import createSite
+from twisted.web.server import Site
+from login import createResource
 
 application = Application("login")
-application.listenTCP(8081, createSite())
+application.listenTCP(8081, Site(createResource()))

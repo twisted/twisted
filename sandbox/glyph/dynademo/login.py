@@ -78,7 +78,7 @@ from twisted.cred.checkers import AllowAnonymousAccess, FilePasswordDB
 from twisted.python.util import sibpath
 from twisted.web.server import Site
 
-def createSite():
+def createResource():
     """Tying it all together.
     """
     # Create a Portal which acts as a gateway to our Realm.
@@ -87,6 +87,6 @@ def createSite():
     p.registerChecker(AllowAnonymousAccess(), IAnonymous)
     # Allow users registered in the password file.
     p.registerChecker(FilePasswordDB(sibpath(__file__, "passwords.txt")))
-    # Create the site.
-    s = Site(guard.SessionWrapper(guard.UsernamePasswordWrapper(p)))
-    return s
+    # Create the resource.
+    r = guard.SessionWrapper(guard.UsernamePasswordWrapper(p))
+    return r
