@@ -155,7 +155,6 @@ class DOMTemplate(Resource, View):
         self.controller = self
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
-        self.handlerResults = {1: [], 0: []}
         
         self.outstandingCallbacks = 0
 
@@ -180,7 +179,8 @@ class DOMTemplate(Resource, View):
         """
         return []
         
-    def render(self, request):        
+    def render(self, request):
+        self.handlerResults = {1: [], 0: []}
         template = self.getTemplate(request)
         if template:
             self.d = minidom.parseString(template)

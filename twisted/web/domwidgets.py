@@ -73,6 +73,9 @@ class Widget(View):
 
     def add(self, item):
         self.children.append(item)
+        
+    def insert(self, index, item):
+        self.children.insert(index, item)
 
     def setNode(self, node):
         """
@@ -206,6 +209,12 @@ class InputText(Input):
 class Button(Input):
     def initialize(self):
         self['type'] = 'button'
+
+class Select(Input):
+    tagName = 'select'
+
+class Option(Input):
+    tagName = 'option'
 
 class Anchor(Widget):
     tagName = 'a'
