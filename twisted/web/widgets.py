@@ -1,10 +1,12 @@
 
 # System Imports
 import string, time, types, traceback, copy, pprint, sys, os, string
+import linecache
+import re
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.python import defer, rebuild, reflect
+from twisted.python import defer, rebuild, reflect, failure
 from twisted.protocols import http
 
 # Sibling Imports
@@ -20,6 +22,102 @@ FORGET_IT = 99
 
 def listify(x):
     return [x]
+def _ellipsize(x):
+    y = repr(x)
+    if len(y) > 1024:
+        return y[:1024]+"..."
+    return y
+
+def htmlrepr(x):
+    return htmlReprTypes.get(type(x), htmlUnknown)(x)
+
+def htmlUnknown(x):
+    return '<CODE>'+html.escape(repr(x))+'</code>'
+
+def htmlDict(d):
+    io = StringIO()
+    w = io.write
+    w('<table bgcolor="#cccc99"><tr><th colspan="2" align="left">Dictionary %d</th></tr>' % id(d))
+    for k, v in d.items():
+        if k == '__builtins__':
+            v = 'builtin dictionary'
+        w('\n<tr bgcolor="#ffff99"><td valign="top"><b>%s<b></td>\n<td>%s</td></tr>\n' % (htmlrepr(k), htmlrepr(v)))
+    w('</table>')
+    return io.getvalue()
+
+def htmlList(l):
+    io = StringIO()
+    w = io.write
+    w('<table bgcolor="#7777cc"><tr><th colspan="2" align="left">List %d</th></tr>' % id(l))
+    for i in l:
+        w('<tr bgcolor="#9999ff"><td>%s</td></tr>\n' % htmlrepr(i))
+    w('</table>\n')
+    return io.getvalue()
+
+def htmlInst(i):
+    if hasattr(i, "__html__"):
+        s = i.__html__()
+    else:
+        s = '<CODE>'+html.escape(repr(i))+'</code>'
+    return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance</td></tr>
+              <tr bgcolor="#ff9999"><td>%s</td></tr>
+              </table>
+              ''' % (i.__class__, s)
+
+def htmlString(s):
+    return html.escape(repr(s))
+
+htmlReprTypes = {types.DictType: htmlDict,
+                 types.ListType: htmlList,
+                 types.InstanceType: htmlInst,
+                 types.StringType: htmlString}
+
+def formatFailure(myFailure):
+    if not isinstance(myFailure, failure.Failure):
+        return html.PRE(str(myFailure))
+    myFailure.printBriefTraceback()
+    io = StringIO()
+    w = io.write
+    w("<table>")
+    w('<th colspan="3">Traceback<br>%s: %s</th>' % (myFailure.type, myFailure.value))
+    line = 0
+    for method, filename, lineno, localVars, globalVars in myFailure.frames[1:]:
+        # Cheat to make tracebacks shorter.
+        if filename == '<string>':
+            continue
+        # file, line number
+        w('<tr bgcolor="#%s"><td colspan="2" valign="top">%s, line %s in <b>%s</b><br><table width="100%%">' % (["bbbbbb", "cccccc"][line % 2], filename, lineno, method))
+        snippet = ''
+        for snipLineNo in range(lineno-2, lineno+2):
+            snipLine = linecache.getline(filename, snipLineNo)
+            snippet = snippet + snipLine
+            snipLine = string.replace(
+                string.replace(html.escape(string.rstrip(snipLine)),
+                               '  ','&nbsp;'),
+                '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
+                                      
+            
+            if snipLineNo == lineno:
+                color = 'bgcolor="#ffffff"'
+            else:
+                color = ''
+            w('<tr %s><td>%s</td><td><code>%s</code></td></tr>' % (color, snipLineNo,snipLine))
+        w('</table></td></tr>')
+        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
+        # local vars
+        for nm, varList in ('Locals', localVars), ('Globals', globalVars):
+            w('<td valign="top"><table><tr><th align="left" colspan="2">'
+              '%s'
+              '</th></tr>' % nm)
+            for name, var in varList:
+                if re.search(r'\W'+name+r'\W', snippet):
+                    w('<tr><td valign="top"><b>%s</b></td>'
+                      '<td>%s</td></tr>' % (name, htmlrepr(var)))
+            w('</table></td>')
+        w('</td>')
+        w('</tr>')
+        line = line + 1
+    return io.getvalue()
 
 class Widget:
     """A component of a web page.
@@ -30,7 +128,7 @@ class Widget:
         I must return a list of strings and twisted.python.defer.Deferred
         instances.
         """
-        raise NotImplementedError("twisted.web.widgets.Widget.display")
+        raise NotImplementedError("%s.display" % str(self.__class__))
 
 class StreamWidget(Widget):
     """A 'streamable' component of a webpage.
@@ -44,16 +142,32 @@ class StreamWidget(Widget):
     def display(self, request):
         """Produce a list containing a single string.
         """
-        io = StringIO()
+        l = []
         try:
-            result = self.stream(io.write, request)
+            result = self.stream(l.append, request)
             if result is not None:
                 return result
-            return [io.getvalue()]
+            return l
         except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            return [html.PRE(io.getvalue())]
+            return [formatFailure(failure.Failure())]
+
+class WidgetMixin(Widget):
+    """A mix-in wrapper for a Widget.
+
+    This mixin can be used to wrap functionality in any other widget with a
+    method of your choosing.  It is designed to be used for mix-in classes that
+    can be mixed in to Form, StreamWidget, Presentation, etc, to augment the
+    data available to the 'display' methods of those classes, usually by adding
+    it to a Session.
+    """
+    
+    def display(self):
+        raise NotImplementedError("%s.display" % self.__class__)
+
+    def displayMixedWidget(self, request):
+        for base in reflect.allBases(self.__class__):
+            if issubclass(base, Widget) and not issubclass(base, WidgetMixin):
+                return base.display(self, request)
 
 class Presentation(Widget):
     """I am a widget which formats a template with interspersed python expressions.
@@ -86,8 +200,8 @@ class Presentation(Widget):
         """Perform any tasks which must be done before presenting the page.
         """
 
-    def formatTraceback(self, traceback):
-        return [html.PRE(traceback)]
+    def formatTraceback(self, tb):
+        return [html.PRE(tb)]
 
     def streamCall(self, call, *args, **kw):
         """Utility: Call a method like StreamWidget's 'stream'.
@@ -116,13 +230,14 @@ class Presentation(Widget):
                 except:
                     io = StringIO()
                     io.write("Traceback evaluating code in %s: %s\n\n" % (str(self.__class__), elem))
-                    traceback.print_exc(file = io)
-                    tm.append(html.PRE(io.getvalue()))
+                    tm.append(formatFailure(failure.Failure()))
                 else:
                     if isinstance(x, types.ListType):
                         tm.extend(x)
                     elif isinstance(x, Widget):
                         val = x.display(request)
+                        if not isinstance(val, types.ListType):
+                            raise Exception("%s.display did not return a list, it returned %s!" % (x.__class__, repr(val)))
                         tm.extend(val)
                     else:
                         # Only two allowed types here should be deferred and
@@ -406,7 +521,6 @@ class Form(StreamWidget):
     def shouldProcess(self, request):
         args = request.args
         fid = self.getFormID()
-        print 'TESTING FORM SHOULD PROCESS',args, self.__class__, fid
         return (args and # there are arguments to the request
                 args.has_key('__formtype__') and # this is a widgets.Form request
                 args['__formtype__'][0] == str(self.__class__) and # it is for a form of my type
@@ -585,6 +699,8 @@ class RenderSession:
             elif type(item) is types.TupleType and len(item) > 0:
                 if isinstance(item[0], self.Sentinel):
                     return
+            elif isinstance(item, failure.Failure):
+                self.request.write(formatFailure(item))
             else:
                 self.beforeBody = 0
                 unknown = html.PRE(repr(item))
@@ -650,7 +766,7 @@ class WidgetPage(Page):
     template = '''
     <HTML>
     <STYLE>
-    %%%%stylesheet%%%%
+    %%%%self.stylesheet%%%%
     </style>
     <HEAD>
     <TITLE>%%%%self.title%%%%</title>

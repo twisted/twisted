@@ -20,12 +20,12 @@ class ForumUser(pb.Perspective):
         self.service = theService
 
     def attached(self, reference, identity):
-        pb.Perspective.attached(self, reference, identity)
         self.service.addUser()
+        return pb.Perspective.attached(self, reference, identity)
 
     def detached(self, reference, identity):
-        pb.Perspective.detached(self, reference, identity)
         self.service.removeUser()
+        return pb.Perspective.detached(self, reference, identity)
 
 class ForumService(pb.Service):
 
@@ -38,8 +38,8 @@ class ForumService(pb.Service):
         global theService
         theService = self
         
-    def getPerspectiveRequest(self, name):
-        return self.manager.getPerspectiveRequest(name)
+    def loadPerspective(self, name):
+        return self.manager.loadPerspective(name)
 
     def addUser(self):
         self.usersOnline += 1

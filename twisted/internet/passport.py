@@ -23,7 +23,7 @@ import md5
 import random
 
 # Twisted Imports
-from twisted.python import defer, log
+from twisted.python import defer, log, failure
 
 class Unauthorized(Exception):
     """An exception that is raised when unauthorized actions are attempted.
@@ -50,6 +50,25 @@ class Service:
         self.serviceName = serviceName
         self.perspectives = {}
         self.setApplication(application)
+
+    def cachePerspective(self, perspective):
+        """Cache a perspective loaded from an external data source.
+
+        Perspectives that were 'loaded' from memory will not be uncached.
+        """
+        if self.perspectives.has_key(perspective.perspectiveName):
+            return
+        self.perspectives[perspective.perspectiveName] = perspective
+        perspective._service_cached = 1
+
+    def uncachePerspective(self, perspective):
+        """Uncache a perspective loaded from an external data source.
+
+        Perspectives that were 'loaded' from memory will not be uncached.
+        """
+        if self.perspectives.has_key(perspective.perspectiveName):
+            if perspective._service_cached:
+                del self.perspectives[perspective.perspectiveName]
 
     def setApplication(self, application):
         if self.application is not application:
@@ -80,15 +99,25 @@ class Service:
         """
         return self.perspectives[name]
 
+    def loadPerspective(self, name):
+        """Load a perspective from an external data-source.
+
+        If no such data-source exists, return None.  Implement this if you want
+        to load your perspectives from somewhere else (e.g. LDAP or a
+        database).  It is not recommended to call this directly, since
+        getPerspectiveRequest provides management of caching perspectives.
+        """
+        return defer.fail("No such perspective %s" % name)
+
     def getPerspectiveRequest(self, name):
         """Return a Deferred which is a request for a perspective on this service.
         """
-        req = defer.Deferred()
         try:
-            req.callback(self.getPerspectiveNamed(name))
-        except Exception, e:
-            req.errback(e)
-        return req
+            p = self.getPerspectiveNamed(name)
+        except KeyError:
+            return self.loadPerspective(name)
+        else:
+            return defer.succeed(p)
 
     def getServiceName(self):
         """The name of this service.
@@ -108,6 +137,8 @@ class Perspective:
     perform upon a service, and the state associated with that
     user for that service.
     """
+
+    _service_cached = 0 # Has my service cached me from a loaded store, or do I live in memory usually?
 
     def __init__(self, perspectiveName, identityName="Nobody"):
         """Create me.
@@ -167,6 +198,8 @@ class Perspective:
         return (self.service.application.authorizer.
                 getIdentityRequest(self.identityName))
 
+    _attachedCount = 0
+
     def attached(self, reference, identity):
         """Called when a remote reference is 'attached' to me.
 
@@ -180,6 +213,11 @@ class Perspective:
         by default I return 'self'.
         """
         log.msg('attached [%s]' % str(self.__class__))
+        self._attachedCount = self._attachedCount + 1
+        if self._attachedCount == 1:
+            self.service.cachePerspective(self)
+        else:
+            log.msg(" (multiple references attached: %s)" % self._attachedCount)
         return self
 
     def detached(self, reference, identity):
@@ -193,6 +231,14 @@ class Perspective:
         this perspective.
         """
         log.msg('detached [%s]' % str(self.__class__))
+        self._attachedCount = self._attachedCount - 1
+        if self._attachedCount <= 0:
+            self.service.uncachePerspective(self)
+            if self._attachedCount < 0:
+                log.msg(" (Weird stuff: attached count = %s)" % self._attachedCount)
+        else:
+            log.msg(" (multiple references attached: %s)" % self._attachedCount)
+        return self
 
 
 # ugh, load order
@@ -255,6 +301,16 @@ class Identity:
         future.
         """
         self.keyring[(serviceName, perspectiveName)] = 1
+
+    def requestPerspectiveForService(self, serviceName):
+        """Get the first available perspective for a given service.
+        """
+        keys = self.keyring.keys()
+        keys.sort()
+        for serviceN, perspectiveN in keys:
+            if serviceN == serviceName:
+                return self.requestPerspectiveForKey(serviceName, perspectiveN)
+        return defer.fail("No such perspective.")
 
     def requestPerspectiveForKey(self, serviceName, perspectiveName):
         """Get a perspective request (a Deferred) for the given key.

@@ -57,6 +57,8 @@ class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
     <ul>
     <li>Funky Form:
     %%%%self.funkyForm()%%%%
+    <li>Exception Handling:
+    %%%%self.raiseHell()%%%%
     </ul>
     '''
 
@@ -70,6 +72,20 @@ class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
         widgets.Presentation.__init__(self)
 
     funkyForm = FunkyForm
+
+    def deepest(self):
+        # Get ready!!
+        raise "Hell", "This exception is unexpected."
+
+    def goDeeper(self):
+        print 'one level deeper'
+        test = self.funkyForm
+        self.deepest()
+
+    def raiseHell(self):
+        x = 1
+        y = 2
+        z = "some string"; self.goDeeper()
 
 
 coil.registerClass(Test)

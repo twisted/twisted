@@ -9,7 +9,7 @@ from twisted.forum import gadgets, service
 
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="twisted")
 auth = dbpassport.DatabaseAuthorizer(dbpool)
 
 # Create Twisted application object
@@ -19,7 +19,7 @@ application = main.Application("forum", authorizer=auth)
 forumService = service.ForumService("posting", application, dbpool, "Forum Test Site")
 
 # Create posting board object
-gdgt = gadgets.GuardedForum(forumService)
+gdgt = gadgets.ForumsGadget(forumService)
 
 # Accept incoming connections!
 s = server.Site(gdgt)
@@ -27,12 +27,12 @@ s.app = application
 application.listenOn(8485, s)
 
 
-reg = gadgets.RegisterUser(application, forumService)
+reg = gadgets.RegisterUser(forumService)
 regsite = server.Site(reg)
 application.listenOn(8488, regsite)
 
 
-create = gadgets.NewForumForm(application, forumService)
+create = gadgets.NewForumForm(forumService)
 csite = server.Site(create)
 application.listenOn(8489, csite)
 

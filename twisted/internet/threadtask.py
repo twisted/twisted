@@ -22,7 +22,7 @@ import sys
 import task, main
 
 # Twisted Import
-from twisted.python import threadpool, threadable, log
+from twisted.python import threadpool, threadable, log, failure
 
 threadable.init(1)
 
@@ -49,9 +49,7 @@ class ThreadDispatcher(threadpool.ThreadPool):
         try:
             result = apply(func, args, kwargs)
         except:
-            e = sys.exc_info()[1]
-            # errback(e)
-            task.schedule(errback, e)
+            task.schedule(errback, failure.Failure())
         else:
             task.schedule(callback, result)
     

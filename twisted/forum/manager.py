@@ -109,7 +109,7 @@ CREATE TABLE forum_permissions
         d = self.runQuery(sql, self.gotForums, self.gotError)
         return d
 
-    def getPerspectiveRequest(self, name):
+    def loadPerspective(self, name):
         return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % adbapi.safe(name), self._finishPerspective, self._errorPerspective)
 
     def _finishPerspective(self, result):
@@ -120,7 +120,7 @@ CREATE TABLE forum_permissions
         print "Error generating forum perspective! %s" % error
 
     def gotError(self, error):
-        print "ERROR: couldn't load forums.", error
+        print "ERROR: couldn't load forums."
         
     def gotForums(self, data):
         for (id, name) in data:

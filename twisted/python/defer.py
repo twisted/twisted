@@ -21,11 +21,25 @@ import traceback
 import types
 from cStringIO import StringIO
 
-# Twisted Imports
-from twisted.python import log
+# Sibling Imports
+import log
+import failure
 
 class AlreadyArmedError(Exception):
     pass
+
+def logError(err):
+    if isinstance(err, failure.Failure):
+        err.printTraceback(log)
+    else:
+        log.msg(str(err))
+    return err
+
+def succeed(result):
+    return Deferred().callback(result)
+
+def fail(result):
+    return Deferred().errback(result)
 
 class Deferred:
     """This is a callback which will be put off until later.
@@ -34,13 +48,14 @@ class Deferred:
     armed = 0
     #self.called: 0 = "not called"; 1 = "answered", 2 = "errored"
     called = 0
+    default = 0
 
     def __init__(self):
         self.callbacks = []
 
-    def addCallbacks(self, callback, errback,
+    def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
-                     errbackArgs=None, errbackKeywords=None):
+                     errbackArgs=None, errbackKeywords=None, asDefaults=0):
         """Add a pair of callbacks (success and error) to this Deferred.
 
         These will be executed when the 'master' callback is run.
@@ -48,10 +63,17 @@ class Deferred:
         if self.armed:
             raise AlreadyArmedError("You cannot add callbacks after a deferred"
                                     "has already been armed.")
-        self.callbacks.append(((callback, callbackArgs, callbackKeywords),
-                              (errback, errbackArgs, errbackKeywords)))
+        cbs = ((callback, callbackArgs, callbackKeywords),
+               (errback or logError, errbackArgs, errbackKeywords))
+        if self.default:
+            self.callbacks[-1] = cbs
+        else:
+            self.callbacks.append(cbs)
+        self.default = asDefaults
         return self
 
+    def addCallback(self, callback, *args, **kw):
+        return self.addCallbacks(callback, callbackArgs=args, callbackKeywords = kw)
 
     def callback(self, result):
         """Run all success callbacks that have been added to this Deferred.
@@ -63,6 +85,7 @@ class Deferred:
         If this deferred has not been armed yet, nothing will happen.
         """
         self._runCallbacks(result, 0)
+        return self
 
 
     def errback(self, error):
@@ -75,6 +98,7 @@ class Deferred:
         If this deferred has not been armed yet, nothing will happen.
         """
         self._runCallbacks(error, 1)
+        return self
 
 
     def _runCallbacks(self, result, isError):
@@ -94,11 +118,7 @@ class Deferred:
                     if type(result) != types.StringType:
                         isError = 0
                 except:
-                    io = StringIO()
-                    traceback.print_exc(file=io)
-                    gv = io.getvalue()
-                    print 'Deferred Error', gv
-                    result = gv
+                    result = failure.Failure()
                     isError = 1
         else:
             self.cbResult = result

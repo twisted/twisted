@@ -24,8 +24,11 @@ import traceback
 
 # Twisted Imports
 
-from twisted.python import threadable, log, delay
-
+from twisted.python import threadable
+from twisted.python import log
+from twisted.python import delay
+from twisted.python import defer
+from twisted.python import failure
 
 class ThreadedScheduler:
     """I am a thread-aware delayed scheduler of for synchronous event loops.
@@ -192,7 +195,7 @@ class Task:
                 apply(func, args, kw)
             except:
                 log.msg( 'Exception in Task' )
-                traceback.print_exc(file=log.logfile)
+                failure.Failure().printTraceback()
                 return 0
             else:
                 self.progress = self.progress + 1

@@ -34,7 +34,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         self.perspectiveCreators = {}
         adbapi.Augmentation.__init__(self, dbpool)
         
-    def addIdentity(self, identity, callback=None, errback=None):
+    def addIdentity(self, identity):
         """Create an identity.
         """
         print "Creating identity", identity
@@ -47,7 +47,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
             s.append("INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" %
                      (adbapi.safe(username), adbapi.safe(pname), adbapi.safe(svcname)) )
         sql = string.join(s, '; \n')
-        return self.runOperation(sql).addCallbacks(callback, errback)
+        return self.runOperation(sql)
 
 
     def getIdentityRequest(self, name):

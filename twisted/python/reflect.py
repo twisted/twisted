@@ -295,6 +295,19 @@ def prefixedMethodNames(classObj, prefix):
     addMethodNamesToDict(classObj, dct, prefix)
     return dct.keys()
 
+def allBases(classObj):
+    """A list of all bases of a particular class object.
+    """
+    l = []
+    accumulateBases(classObj, l)
+    return l
+
+def accumulateBases(classObj, l):
+    for base in classObj.__bases__:
+        l.append(base)
+    for base in classObj.__bases__:
+        accumulateBases(base, l)
+
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
     addMethodNamesToDict(classObj, dict, prefix, baseClass=None) -> dict

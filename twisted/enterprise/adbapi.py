@@ -128,7 +128,6 @@ class ConnectionPool(pb.Referenceable):
         except:
             print 'Exception in SQL interaction!  rolling back...'
             trans._connection.rollback()
-            traceback.print_exc()            
             raise
         else:
             trans._cursor.close()

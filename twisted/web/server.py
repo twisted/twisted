@@ -42,7 +42,7 @@ NOT_DONE_YET = 1
 from twisted.spread import pb
 from twisted.internet import passport, main
 from twisted.protocols import http, protocol
-from twisted.python import log, reflect, roots
+from twisted.python import log, reflect, roots, failure
 from twisted import copyright
 from twisted.manhole import coil
 
@@ -293,13 +293,12 @@ class Request(pb.Copyable, http.HTTP):
                                         % (self.method))
                 body = epage.render(self)
         except:
-            io = StringIO.StringIO()
-            traceback.print_exc(file=io)
+            import widgets
+            f = failure.Failure()
             body = ("<HTML><BODY><br>web.Server Traceback \n\n"
                     "%s\n\n</body></html>\n"
-                    % (html.PRE(io.getvalue()),))
-            log.msg( "Traceback Follows:" )
-            log.msg(io.getvalue())
+                    % widgets.formatFailure(f))
+            failure.Failure().printTraceback()
             self.setResponseCode(http.INTERNAL_SERVER_ERROR)
             self.setHeader('content-type',"text/html")
 
