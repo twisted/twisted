@@ -38,44 +38,46 @@ use it from ActionScript, JavaScript, Java, C++, whatever.
 
 A DOMTemplate subclass must do two things: indicate which
 template it wants to use, and indicate which elements it is
-interested in. The template will be looked up using acquisition
-at runtime:
+interested in.
+
+------------------------------------------------------
 
 class Test(DOMTemplate):
-	templateFile = "Test.html"
-	
-	def getTemplateMethods(self):
-		return [{'class': 'Test', 'method': self.test}]
-	
-	def test(self, request, node):
-		'''
-		The test method will be called with the request and the
-		DOM node that the test method was associated with.
-		'''
-		# self.d has been bound to the main DOM "document" object 
-		newNode = self.d.createTextNode("Testing, 1,2,3")
-		
-		# Replace the test node's children with our single new text node
-		node.childNodes = [newNode]
-		
-And here's the HTML file to use with the example:
-
+    template = '''
 <html><head><title>Foo</title></head><body>
 
 <div class="Test">
-This test text will be replaced
+This test node will be replaced
 </div>
 
 </body></html>
+'''
+    
+    def getTemplateMethods(self):
+        return [{'class': 'Test', 'method': self.test}]
+    
+    def test(self, request, node):
+        '''
+        The test method will be called with the request and the
+        DOM node that the test method was associated with.
+        '''
+        # self.d has been bound to the main DOM "document" object 
+        newNode = self.d.createTextNode("Testing, 1,2,3")
+        
+        # Replace the test node with our single new text node
+        return newNode
 """
 
 from cStringIO import StringIO
 import string, os, stat
+from xml.dom import minidom
 
 from twisted.web.resource import Resource
-from twisted.web.widgets import Presentation
+from twisted.web.widgets import Widget, Presentation
+from twisted.python.defer import Deferred
+from twisted.internet import reactor
 
-from xml.dom.minidom import *
+from server import NOT_DONE_YET
 
 class MethodLookup:
     def __init__(self):
@@ -108,13 +110,16 @@ class MethodLookup:
 
 class DOMTemplate(Resource):
     templateFile = ''
+    template = ''
     _cachedTemplate = None
 
-    def __init__(self, model):
+    def __init__(self, model = None):
         Resource.__init__(self)
         self.model = model
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
+        
+        self.outstandingCallbacks = 0
 
     def setTemplateMethods(self, tm):
         for m in tm:
@@ -137,19 +142,27 @@ class DOMTemplate(Resource):
         """
         return []
         
-    def render(self, request):
-        if not self.templateFile:
-            raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
-        
+    def render(self, request):        
         args = request.args
         if args.has_key('submit'):
             controller = self.controllerFactory(self.model, self)
             if controller:
                 controller.submit(request, args)
-            
-        self.d = self.lookupTemplate(request)
-        self.processNode(request, self.d)
-        return str(self.d.toxml())
+        
+        template = self.getTemplate(request)
+        if template:
+            self.d = minidom.parseString(template)
+        else:
+            if not self.templateFile:
+                raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
+            self.d = self.lookupTemplate(request)
+        # Schedule processing of the document for later...
+        reactor.callLater(0, self.handleDocument, request, self.d)
+        #self.handleNode(request, self.d)
+        #return str(self.d.toxml())
+        
+        # So we can return NOT_DONE_YET
+        return NOT_DONE_YET
     
     def controllerFactory(self, model, view):
         """
@@ -158,7 +171,20 @@ class DOMTemplate(Resource):
         """
         pass
 
+    def getTemplate(self, request):
+        """
+        Override this if you want to have your subclass look up it's template
+        using a different method.
+        """
+        return self.template
+        
     def lookupTemplate(self, request):
+        """
+        Use acquisition to look up the template named by self.templateFile,
+        located anywhere above this object in the heirarchy, and use it
+        as the template. The first time the template is used it is cached
+        for speed.
+        """
         # look up an object named by our template data member
         templateRef = request.pathRef().locate(self.templateFile)
         # Build a reference to the template on disk
@@ -171,7 +197,7 @@ class DOMTemplate(Resource):
         # No? Compile and save it
         if (not os.path.exists(compiledTemplatePath) or 
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
-            compiledTemplate = parse(templatePath)
+            compiledTemplate = minidom.parse(templatePath)
             parent = templateRef.parentRef().getObject()
             parent.putChild(compiledTemplateName, compiledTemplate)
         else:
@@ -180,16 +206,83 @@ class DOMTemplate(Resource):
             compiledTemplate = unp.load()
         return compiledTemplate
     
-    def processNode(self, request, node):
+    def handleDocument(self, request, document):
+        """
+        Handle the root node, and send the page if there are no
+        outstanding callbacks when it returns.
+        """
+        self.handleNode(request, document)
+        if not self.outstandingCallbacks:
+            self.sendPage(request)
+
+    def sendPage(self, request):
+        """
+        Convert the DOM tree to XML and send it to the browser.
+        """
+        print "sending page"
+        page = str(self.d.toxml())
+        request.write(page)
+        request.finish()
+
+    def handleNode(self, request, node):
+        """
+        Handle a single node by looking up a method for it, calling the method
+        and dispatching the result.
+        
+        Also, handle all childNodes of this node using recursion.
+        """
+        result = None
+        deferrer = None
         if node.nodeName and node.nodeName[0] != '#':
-            nodeHandler = self.templateMethods.getMethodForNode(node)
-            if nodeHandler:
-                widget = apply(nodeHandler, (request, node))
-                if widget:
-                    self.processWidget(request, widget, node)
+            method = self.templateMethods.getMethodForNode(node)
+            if method:
+                result = apply(method, (request, node))
+                node = self.dispatchResult(request, node, result)
+
+        self.recurseChildren(request, node)
+    
+    def dispatchResult(self, request, node, result):
+        """
+        Check a given result from handling a node and hand it to a process* 
+        method which will convert the result into a node and insert it 
+        into the DOM tree. Return the new node.
+        """
+        if isinstance(result, Widget):
+            return self.processWidget(request, widget, node)
+        elif isinstance(result, minidom.Node):
+            return self.processNode(request, result, node)
+        elif isinstance(result, Deferred):
+            self.outstandingCallbacks += 1
+            result.addCallbacks(self.callback, callbackArgs=(request, node))
+            result.arm()
+            # Got to wait until the callback comes in
+            return None
+        elif isinstance(result, str):
+            return self.processString(request, string, node)
+
+    def recurseChildren(self, request, node):
+        """
+        If this node has children, handle them.
+        """
+        if not node: return
         if type(node.childNodes) == type(""): return
         for child in node.childNodes:
-            self.processNode(request, child)
+            self.handleNode(request, child)
+
+    def callback(self, result, request, node):
+        """
+        Deal with a callback from a deferred, dispatching the result
+        and recursing children.
+        """
+        self.outstandingCallbacks -= 1
+        print "callback called", self.outstandingCallbacks
+        node = self.dispatchResult(request, node, result)
+        print node
+        self.recurseChildren(request, node)
+        print "yo"
+        if not self.outstandingCallbacks:
+            self.sendPage(request)
+        print "done"
 
     def processWidget(self, request, widget, node):
         """
@@ -203,19 +296,20 @@ class DOMTemplate(Resource):
             pr.tmpl = displayed
             strList = pr.display(request)
             html = string.join(displayed)
+        return self.processString(request, html, node)
+
+    def processString(self, request, string, node):
         try:
-            node.childNodes = []
             child = parseString(html)
-            for childNode in child.childNodes:
-                try:
-                    node.appendChild(childNode)
-                except Exception, e:
-                    # barfed on the node, skip it...
-                    pass
         except Exception, e:
-            print "damn, error parsing", e
+            print "damn, error parsing, probably invalid xml", e
             child = self.d.createTextNode(html)
-            node.appendChild(child)
+        return self.processNode(request, child, node)
+
+    def processNode(self, request, newnode, oldnode):
+        if newnode is not oldnode:
+            f.parentNode.replaceChild(newnode, oldnode)
+        return newnode
 
     def substitute(self, request, node, subs):
         """
@@ -230,10 +324,10 @@ class DOMTemplate(Resource):
     def locateNodes(self, nodeList, key, value):
         """
         Find subnodes in the given node where the given attribute
-        as the given value.
+        has the given value.
         """
         returnList = []
-        if not type(nodeList) is type([]) and not isinstance(nodeList, NodeList):
+        if not type(nodeList) is type([]) and not isinstance(nodeList, minidom.NodeList):
             return self.locateNodes(nodeList.childNodes, key, value)
         
         for childNode in nodeList:
@@ -243,7 +337,3 @@ class DOMTemplate(Resource):
                 returnList.append(childNode)
             returnList.extend(self.locateNodes(childNode, key, value))
         return returnList
-
-
-
-
