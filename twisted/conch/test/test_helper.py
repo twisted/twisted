@@ -1,9 +1,12 @@
+# -*- test-case-name: twisted.conch.test.test_helper -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-import helper
-from insults import ServerProtocol, ClientProtocol
-from insults import G0, G1, G2, G3
-from insults import IRM
-from insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
+from twisted.conch.insults import helper
+from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
+from twisted.conch.insults.insults import G0, G1, G2, G3
+from twisted.conch.insults.insults import IRM
+from twisted.conch.insults.insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
 
 from twisted.trial import unittest
 
@@ -76,7 +79,7 @@ class BufferTestCase(unittest.TestCase):
         s = "hello, world."
         self.term.write(s)
         self.term.cursorBackward(len(s))
-        self.term.setModes([IRM])
+        self.term.resetModes([IRM])
         self.term.write("H")
         self.assertEquals(
             str(self.term),
@@ -87,6 +90,7 @@ class BufferTestCase(unittest.TestCase):
         s = "ello, world."
         self.term.write(s)
         self.term.cursorBackward(len(s))
+        self.term.setModes([IRM])
         self.term.write("H")
         self.assertEquals(
             str(self.term),

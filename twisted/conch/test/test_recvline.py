@@ -1,11 +1,19 @@
+# -*- test-case-name: twisted.conch.test.test_recvline -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-import sys, os
+import sys, os, tty
+from pprint import pformat
 
-import insults, recvline
+from zope.interface import implements
+
+from twisted.conch.insults import insults
+from twisted.conch import recvline
 
 from twisted.python import log, reflect
-from twisted.internet import defer
+from twisted.internet import defer, error
 from twisted.trial import unittest
+from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
 
 class Arrows(unittest.TestCase):
@@ -181,7 +189,7 @@ class Arrows(unittest.TestCase):
         for ch in 'xyz':
             kR(ch)
 
-        kR(self.pt.INSERT)
+        # kR(self.pt.INSERT)
 
         kR(self.pt.LEFT_ARROW)
         kR('A')
@@ -197,6 +205,8 @@ class Arrows(unittest.TestCase):
         for ch in 'xyz':
             kR(ch)
 
+        kR(self.pt.INSERT)
+
         kR(self.pt.LEFT_ARROW)
         kR('A')
         self.assertEquals(self.p.currentLineBuffer(), ('xyA', ''))
@@ -206,12 +216,13 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('xyB', ''))
 
 
-import telnet, helper
+from twisted.conch import telnet
+from twisted.conch.insults import helper
 from twisted.protocols import loopback
 
 class EchoServer(recvline.HistoricRecvLine):
     def lineReceived(self, line):
-        self.transport.write(line + '\n' + self.ps[self.pn])
+        self.terminal.write(line + '\n' + self.ps[self.pn])
 
 # An insults API for this would be nice.
 left = "\x1b[D"
@@ -299,18 +310,21 @@ class TestTransport(transport.SSHClientTransport):
     def write(self, bytes):
         return self.__connection.write(bytes)
 
-from ssh import TerminalUser, TerminalSession, TerminalSessionTransport, ConchFactory
-from demolib import TerminalForwardingProtocol
+from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
 from twisted.python import components
 
 class TestSessionTransport(TerminalSessionTransport):
     def protocolFactory(self):
-        return TerminalForwardingProtocol(self.avatar.conn.transport.factory.serverProtocol)
+        print 'Hello, I am creating a serverProtocol, woopie.'
+        return self.avatar.conn.transport.factory.serverProtocol()
 
 class TestSession(TerminalSession):
     transportFactory = TestSessionTransport
 
-components.registerAdapter(TestSession, TerminalUser, session.ISession)
+class TestUser(TerminalUser):
+    pass
+
+components.registerAdapter(TestSession, TestUser, session.ISession)
 
 class LoopbackRelay(loopback.LoopbackRelay):
     def logPrefix(self):
@@ -322,16 +336,30 @@ class _BaseMixin:
 
     def _test(self, s, lines):
         self._testwrite(s)
-        self._emptyBuffers()
-        self.assertEquals(
-            str(self.recvlineClient),
-            '\n'.join(lines) +
-            '\n' * (self.HEIGHT - len(lines)))
+        def asserts(ignored):
+            receivedLines = str(self.recvlineClient).splitlines()
+            expectedLines = lines + ([''] * (self.HEIGHT - len(lines) - 1))
+            self.assertEquals(len(receivedLines), len(expectedLines))
+            for i in range(len(receivedLines)):
+                self.assertEquals(
+                    receivedLines[i], expectedLines[i],
+                    str(receivedLines[max(0, i-1):i+1]) +
+                    " != " +
+                    str(expectedLines[max(0, i-1):i+1]))
+
+        return defer.maybeDeferred(self._emptyBuffers).addCallback(asserts)
 
 class _SSHMixin(_BaseMixin):
     def setUp(self):
         u, p = 'testuser', 'testpass'
-        sshFactory = ConchFactory([checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+        rlm = TerminalRealm()
+        rlm.userFactory = TestUser
+        rlm.chainedProtocolFactory = lambda: insultsServer
+
+        ptl = portal.Portal(
+            rlm,
+            [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+        sshFactory = ConchFactory(ptl)
         sshFactory.serverProtocol = self.serverProtocol
         sshFactory.startFactory()
 
@@ -394,104 +422,149 @@ class _TelnetMixin(_BaseMixin):
         self.clientTransport.clearBuffer()
         self.serverTransport.clearBuffer()
 
-import demo_stdio
+from twisted.conch import stdio
 from twisted.test.test_process import SignalMixin
+
+class NotifyingTerminalBuffer(helper.TerminalBuffer):
+    didConnect = False
+
+    def __init__(self):
+        self.onConnection = defer.Deferred()
+        self.onDisconnection = defer.Deferred()
+
+    def write(self, bytes):
+        # When we receive the first '>>>' prompt, begin the test.
+        result = helper.TerminalBuffer.write(self, bytes)
+        if not self.didConnect and str(self).find('>>>') != -1:
+            self.didConnect = True
+            self.onConnection.callback(None)
+        return result
+
+    def connectionLost(self, reason):
+        self.onDisconnection.errback(reason)
 
 class _StdioMixin(_BaseMixin, SignalMixin):
     def setUp(self):
-        from twisted.internet import reactor
-        recvlineClient = helper.TerminalBuffer()
-        insultsClient = insults.ClientProtocol(lambda: recvlineClient)
-        processClient = demo_stdio.TerminalProcessProtocol(insultsClient)
+        # A memory-only terminal emulator, into which the server will
+        # write things and make other state changes.  What ends up
+        # here is basically what a user would have seen on their
+        # screen.
+        testTerminal = NotifyingTerminalBuffer()
 
+        # An insults client protocol which will translate bytes
+        # received from the child process into keystroke commands for
+        # an ITerminalProtocol.
+        insultsClient = insults.ClientProtocol(lambda: testTerminal)
+
+        # A process protocol which will translate stdout and stderr
+        # received from the child process to dataReceived calls and
+        # error reporting on an insults client protocol.
+        processClient = stdio.TerminalProcessProtocol(insultsClient)
+
+        # Run twisted/conch/stdio.py with the name of a class
+        # implementing ITerminalProtocol.  This class will be used to
+        # handle bytes we send to the child process.
         exe = sys.executable
-        module = demo_stdio.__file__
+        module = stdio.__file__
         args = ["python2.3", module, reflect.qual(self.serverProtocol)]
-        env = {"PYTHONPATH": os.environ.get("PYTHONPATH", "")}
+        env = {"PYTHONPATH": os.pathsep.join(("..", os.environ.get("PYTHONPATH", "")))}
+
+        from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
                                                env=env, usePTY=True)
 
-        if processClient.onConnection is not None:
-            unittest.deferredResult(processClient.onConnection)
-
-        self.recvlineClient = recvlineClient
+        self.recvlineClient = self.testTerminal = testTerminal
         self.processClient = processClient
         self.clientTransport = clientTransport
 
+        # Wait for the process protocol and test terminal to become
+        # connected before proceeding.  The former should always
+        # happen first, but it doesn't hurt to be safe.
+        return defer.gatherResults(filter(None, [
+            processClient.onConnection,
+            testTerminal.onConnection]))
+
     def tearDown(self):
+        # Kill the child process.  We're done with it.
         try:
             self.clientTransport.signalProcess("KILL")
         except OSError:
             pass
+        def trap(failure):
+            failure.trap(error.ProcessTerminated)
+            self.assertEquals(failure.value.exitCode, None)
+            self.assertEquals(failure.value.status, 9)
+        return self.testTerminal.onDisconnection.addErrback(trap)
 
     def _testwrite(self, bytes):
-        self.processClient.write(bytes)
+        self.clientTransport.write(bytes)
 
     def _emptyBuffers(self):
-        # Duuh... I dunno
         from twisted.internet import reactor
-        for i in range(1000):
-            reactor.iterate()
+        for i in range(100):
+            reactor.iterate(0.01)
 
 class RecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
     def testSimple(self):
-        self._test(
+        return self._test(
             "first line",
             [">>> first line"])
 
     def testLeftArrow(self):
-        self._test(
-            'first line' + left * 4 + "xxxx\n",
+        return self._test(
+            insert + 'first line' + left * 4 + "xxxx\n",
             [">>> first xxxx",
              "first xxxx",
              ">>>"])
 
     def testRightArrow(self):
-        self._test(
-            'right line' + left * 4 + right * 2 + "xx\n",
+        return self._test(
+            insert + 'right line' + left * 4 + right * 2 + "xx\n",
             [">>> right lixx",
              "right lixx",
             ">>>"])
 
     def testBackspace(self):
-        self._test(
+        return self._test(
             "second line" + backspace * 4 + "xxxx\n",
             [">>> second xxxx",
              "second xxxx",
              ">>>"])
 
     def testDelete(self):
-        self._test(
+        return self._test(
             "delete xxxx" + left * 4 + delete * 4 + "line\n",
             [">>> delete line",
              "delete line",
              ">>>"])
 
     def testInsert(self):
-        self._test(
-            "third ine" + left * 3 + insert + "l\n",
+        return self._test(
+            # "third ine" + left * 3 + insert + "l\n",
+            "third ine" + left * 3 + "l\n",
             [">>> third line",
              "third line",
              ">>>"])
 
     def testTypeover(self):
-        self._test(
-            "fourth xine" + left * 4 + insert * 2 + "l\n",
+        return self._test(
+            # "fourth xine" + left * 4 + insert * 2 + "l\n",
+            "fourth xine" + left * 4 + insert + "l\n",
             [">>> fourth line",
              "fourth line",
              ">>>"])
 
     def testHome(self):
-        self._test(
-            "blah line" + home + "home\n",
+        return self._test(
+            insert + "blah line" + home + "home\n",
             [">>> home line",
              "home line",
              ">>>"])
 
     def testEnd(self):
-        self._test(
+        return self._test(
             "end " + left * 4 + end + "line\n",
             [">>> end line",
              "end line",
@@ -510,14 +583,14 @@ class HistoricRecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
     def testUpArrow(self):
-        self._test(
+        return self._test(
             "first line\n" + up,
             [">>> first line",
              "first line",
              ">>> first line"])
 
     def testDownArrow(self):
-        self._test(
+        return self._test(
             "first line\nsecond line\n" + up * 2 + down,
             [">>> first line",
              "first line",

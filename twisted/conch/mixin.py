@@ -1,3 +1,16 @@
+# -*- test-case-name: twisted.conch.test.test_mixin -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""Experimental optimization
+
+This module provides a single mixin class which allows protocols to
+collapse numerous small writes into a single larger one.
+
+API Stability: Unstable
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+"""
 
 from twisted.internet import reactor
 

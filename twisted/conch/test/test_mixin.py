@@ -1,3 +1,6 @@
+# -*- twisted.conch.test.test_mixin -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 import time
 
@@ -6,7 +9,7 @@ from twisted.internet import reactor, protocol
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
-import mixin
+from twisted.conch import mixin
 
 class BufferingTest(unittest.TestCase):
     def testBuffering(self):

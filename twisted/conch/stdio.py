@@ -1,11 +1,21 @@
+# -*- test-case-name: twisted.conch.test.test_manhole -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""Asynchronous local terminal input handling
+
+API Stability: Unstable
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+"""
 
 import tty, sys, termios
 
 from twisted.internet import reactor, stdio, protocol, defer
-from twisted.python import failure, reflect
+from twisted.python import failure, reflect, log
 
-from insults import ServerProtocol
-from stdio import ConsoleManhole
+from twisted.conch.insults.insults import ServerProtocol
+from twisted.conch.manhole import ColoredManhole
 
 class UnexpectedOutputError(Exception):
     pass
@@ -32,10 +42,20 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
             self.proto.connectionLost(failure.Failure(UnexpectedOutputError(bytes)))
             self.proto = None
 
-    def connectionLost(self, reason):
+    def childConnectionLost(self, childFD):
+        if self.proto is not None:
+            self.proto.childConnectionLost(childFD)
+
+    def processEnded(self, reason):
         if self.proto is not None:
             self.proto.connectionLost(reason)
             self.proto = None
+
+class ConsoleManhole(ColoredManhole):
+    def handle_QUIT(self):
+        self.transport.loseConnection()
+        from twisted.internet import reactor
+        reactor.stop()
 
 def runWithProtocol(klass):
     oldSettings = termios.tcgetattr(sys.stdin.fileno())
@@ -49,6 +69,8 @@ def runWithProtocol(klass):
         print
 
 def main(argv=None):
+    log.startLogging(file('child.log', 'w'))
+
     if argv is None:
         argv = sys.argv[1:]
     if argv:

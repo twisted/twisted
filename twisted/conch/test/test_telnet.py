@@ -1,5 +1,8 @@
+# -*- test-case-name: twisted.conch.test.test_telnet -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-import telnet
+from twisted.conch import telnet
 
 from twisted.trial import unittest, util
 from twisted.test import proto_helpers

@@ -1,11 +1,12 @@
+# -*- test-case-name: twisted.conch.test.test_manhole -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 import time
 
 from twisted.trial import unittest
-
-from test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin
-
-import manhole
+from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin
+from twisted.conch import manhole
 
 ctrlc = '\x03'
 ctrlq = '\x04'
@@ -81,6 +82,7 @@ class ManholeLoopbackMixin:
             "cancelled line" + ctrld,
             [""])
 
+    # XXX This test has a race condition.
     def testDeferred(self):
         self._test(
             "from twisted.internet import defer, reactor\n"
@@ -89,18 +91,19 @@ class ManholeLoopbackMixin:
             "\treactor.callLater(n, d.callback, 'Hi!')\n"
             "\treturn d\n"
             "\n"
-            "deferLater(0.1)\n",
+            "deferLater(3.0)\n"
+            "print 'incomplete line",
             [">>> from twisted.internet import defer, reactor",
              ">>> def deferLater(n):",
              "...     d = defer.Deferred()",
              "...     reactor.callLater(n, d.callback, 'Hi!')",
              "...     return d",
              "...",
-             ">>> deferLater(0.1)",
+             ">>> deferLater(3.0)",
              "<Deferred #0>",
-             ">>>"])
+             ">>> print 'incomplete line"])
 
-        time.sleep(0.2)
+        time.sleep(5)
         from twisted.internet import reactor
         reactor.iterate()
 
@@ -112,10 +115,10 @@ class ManholeLoopbackMixin:
              "...     reactor.callLater(n, d.callback, 'Hi!')",
              "...     return d",
              "...",
-             ">>> deferLater(0.1)",
+             ">>> deferLater(3.0)",
              "<Deferred #0>",
              "Deferred #0 called back: 'Hi!'",
-             ">>>"])
+             ">>> print 'incomplete line"])
 
 class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixin):
     pass

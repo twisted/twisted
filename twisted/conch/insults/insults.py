@@ -1,5 +1,17 @@
+# -*- test-case-name: twisted.conch.test.test_insults -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""VT102 terminal manipulation
+
+API Stability: Unstable
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+"""
 
 import string
+
+from zope.interface import implements
 
 from twisted.internet import protocol, defer, interfaces as iinternet
 from twisted.python import components
@@ -40,10 +52,11 @@ class ITerminalProtocol(components.Interface):
         """
 
 class TerminalProtocol(object):
-    __implements__ = (ITerminalProtocol,)
+    implements(ITerminalProtocol)
 
-    def makeConnection(self, transport):
-        self.transport = transport
+    def makeConnection(self, terminal):
+        # assert ITerminalTransport.providedBy(transport), "TerminalProtocol.makeConnection must be passed an ITerminalTransport implementor"
+        self.terminal = terminal
         self.connectionMade()
 
     def connectionMade(self):
@@ -237,6 +250,14 @@ class ITerminalTransport(iinternet.ITransport):
         """Reset the terminal to its initial state.
         """
 
+    def unhandledControlSequence(self, seq):
+        """Called when an unsupported control sequence is received.
+
+        @type seq: C{str}
+        @param seq: The whole control sequence which could not be interpreted.
+        """
+
+
 CSI = '\x1b'
 CST = {'~': 'tilde'}
 
@@ -245,7 +266,26 @@ CST = {'~': 'tilde'}
 
 # ANSI-Specified Modes
 KEYBOARD_ACTION = KAM = 2
+
+
+# Insertion-Replacement Mode (IRM)
+
+# ESC  [   4   h
+# 033 133 064 150
+
+# Set selects insert mode and turns INSERT on. New display characters move old
+# display characters to the right. Characters moved past the right margin are
+# lost.
+
+# ESC  [   4   l
+# 033 133 064 154
+
+# Reset selects replace mode and turns INSERT off. New display characters
+# replace old display characters at cursor position. The old character is
+# erased.
+
 INSERTION_REPLACEMENT = IRM = 4
+
 LINEFEED_NEWLINE = LNM = 20
 
 # ANSI-Compatible Private Modes
@@ -293,11 +333,13 @@ def log(s):
     file('log', 'a').write(str(s) + '\n')
 
 class ServerProtocol(protocol.Protocol):
-    __implements__ = (ITerminalTransport,)
+    implements(ITerminalTransport)
 
     protocolFactory = None
-    protocol = None
+    terminalProtocol = None
 
+    # XXX TODO - These attributes are really part of the
+    # ITerminalTransport interface, I think.
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
                   'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
@@ -306,6 +348,7 @@ class ServerProtocol(protocol.Protocol):
 
     TAB = '\t'
     BACKSPACE = '\x7f'
+    ##
 
     lastWrite = ''
 
@@ -316,6 +359,16 @@ class ServerProtocol(protocol.Protocol):
     scrollRegion = None
 
     def __init__(self, protocolFactory=None, *a, **kw):
+        """
+        @param protocolFactory: A callable which will be invoked with
+        *a, **kw and should return an ITerminalProtocol implementor.
+        This will be invoked when a connection to this ServerProtocol
+        is established.
+
+        @param a: Any positional arguments to pass to protocolFactory.
+        @param kw: Any keyword arguments to pass to protocolFactory.
+        """
+        # assert protocolFactory is None or ITerminalProtocol.implementedBy(protocolFactory), "ServerProtocol.__init__ must be passed an ITerminalProtocol implementor"
         if protocolFactory is not None:
             self.protocolFactory = protocolFactory
         self.protocolArgs = a
@@ -325,8 +378,8 @@ class ServerProtocol(protocol.Protocol):
 
     def connectionMade(self):
         if self.protocolFactory is not None:
-            self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-            self.protocol.makeConnection(self)
+            self.terminalProtocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self.terminalProtocol.makeConnection(self)
 
     def dataReceived(self, data):
         for ch in data:
@@ -334,7 +387,7 @@ class ServerProtocol(protocol.Protocol):
                 if ch == '\x1b':
                     self.state = 'escaped'
                 else:
-                    self.protocol.keystrokeReceived(ch)
+                    self.terminalProtocol.keystrokeReceived(ch)
             elif self.state == 'escaped':
                 if ch == '[':
                     self.state = 'bracket-escaped'
@@ -364,17 +417,20 @@ class ServerProtocol(protocol.Protocol):
         buf = '\x1b[' + buf
         f = getattr(self.controlSequenceParser, CST.get(buf[-1], buf[-1]), None)
         if f is None:
-            self.protocol.unhandledControlSequence(buf)
+            self.unhandledControlSequence(buf)
         else:
-            f(self, self.protocol, buf[:-1])
+            f(self, self.terminalProtocol, buf[:-1])
+
+    def unhandledControlSequence(self, buf):
+        self.terminalProtocol.unhandledControlSequence(buf)
 
     def _handleLowFunctionControlSequence(self, ch):
         map = {'P': self.F1, 'Q': self.F2, 'R': self.F3, 'S': self.F4}
         keyID = map.get(ch)
         if keyID is not None:
-            self.protocol.keystrokeReceived(keyID)
+            self.terminalProtocol.keystrokeReceived(keyID)
         else:
-            self.protocol.unhandledControlSequence('\x1b[O' + ch)
+            self.terminalProtocol.unhandledControlSequence('\x1b[O' + ch)
 
     class ControlSequenceParser:
         def A(self, proto, handler, buf):
@@ -446,7 +502,7 @@ class ServerProtocol(protocol.Protocol):
 
     controlSequenceParser = ControlSequenceParser()
 
-    # ITerminal
+    # ITerminalTransport
     def cursorUp(self, n=1):
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
         self.write('\x1b[%dA' % (n,))
@@ -646,14 +702,15 @@ class ServerProtocol(protocol.Protocol):
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
-        self.protocol.connectionLost(reason)
-        self.protocol = None
-
+        try:
+            self.terminalProtocol.connectionLost(reason)
+        finally:
+            self.terminalProtocol = None
 
 class ClientProtocol(protocol.Protocol):
 
-    protocolFactory = None
-    protocol = None
+    terminalFactory = None
+    terminal = None
 
     state = 'data'
 
@@ -685,16 +742,32 @@ class ClientProtocol(protocol.Protocol):
         '1': CS_ALTERNATE,
         '2': CS_ALTERNATE_SPECIAL}
 
-    def __init__(self, protocolFactory=None, *a, **kw):
-        if protocolFactory is not None:
-            self.protocolFactory = protocolFactory
-        self.protocolArgs = a
-        self.protocolKwArgs = kw
+    def __init__(self, terminalFactory=None, *a, **kw):
+        """
+        @param terminalFactory: A callable which will be invoked with
+        *a, **kw and should return an ITerminalTransport provider.
+        This will be invoked when this ClientProtocol establishes a
+        connection.
+
+        @param a: Any positional arguments to pass to terminalFactory.
+        @param kw: Any keyword arguments to pass to terminalFactory.
+        """
+        # assert terminalFactory is None or ITerminalTransport.implementedBy(terminalFactory), "ClientProtocol.__init__ must be passed an ITerminalTransport implementor"
+        if terminalFactory is not None:
+            self.terminalFactory = terminalFactory
+        self.terminalArgs = a
+        self.terminalKwArgs = kw
 
     def connectionMade(self):
-        if self.protocolFactory is not None:
-            self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-            self.protocol.makeConnection(self)
+        if self.terminalFactory is not None:
+            self.terminal = self.terminalFactory(*self.terminalArgs, **self.terminalKwArgs)
+            self.terminal.makeConnection(self)
+
+    def connectionLost(self, reason):
+        try:
+            self.terminal.connectionLost(reason)
+        finally:
+            del self.terminal
 
     def dataReceived(self, bytes):
         for b in bytes:
@@ -702,22 +775,24 @@ class ClientProtocol(protocol.Protocol):
                 if b == '\x1b':
                     self.state = 'escaped'
                 elif b == '\x14':
-                    self.protocol.shiftOut()
+                    self.terminal.shiftOut()
                 elif b == '\x15':
-                    self.protocol.shiftIn()
+                    self.terminal.shiftIn()
+                elif b == '\x08':
+                    self.terminal.cursorBackward()
                 else:
-                    self.protocol.write(b)
+                    self.terminal.write(b)
             elif self.state == 'escaped':
                 fName = self._shorts.get(b)
                 if fName is not None:
                     self.state = 'data'
-                    getattr(self.protocol, fName)()
+                    getattr(self.terminal, fName)()
                 else:
                     state = self._longs.get(b)
                     if state is not None:
                         self.state = state
                     else:
-                        self.protocol.unhandledControlSequence('\x1b' + b)
+                        self.terminal.unhandledControlSequence('\x1b' + b)
                         self.state = 'data'
             elif self.state == 'bracket-escape':
                 if self._escBuf is None:
@@ -729,10 +804,10 @@ class ClientProtocol(protocol.Protocol):
                 else:
                     self._escBuf.append(b)
             elif self.state == 'select-g0':
-                self.protocol.selectCharacterSet(self._charsets.get(b, b), G0)
+                self.terminal.selectCharacterSet(self._charsets.get(b, b), G0)
                 self.state = 'data'
             elif self.state == 'select-g1':
-                self.protocol.selectCharacterSet(self._charsets.get(b, b), G1)
+                self.terminal.selectCharacterSet(self._charsets.get(b, b), G1)
                 self.state = 'data'
             elif self.state == 'select-height-width':
                 self._handleHeightWidth(b)
@@ -743,9 +818,9 @@ class ClientProtocol(protocol.Protocol):
     def _handleControlSequence(self, buf, terminal):
         f = getattr(self.controlSequenceParser, CST.get(terminal, terminal), None)
         if f is None:
-            self.protocol.unhandledControlSequence('\x1b[' + buf + terminal)
+            self.terminal.unhandledControlSequence('\x1b[' + buf + terminal)
         else:
-            f(self, self.protocol, buf)
+            f(self, self.terminal, buf)
 
     class ControlSequenceParser:
         def _makeSimple(ch, fName):
@@ -817,6 +892,9 @@ class ClientProtocol(protocol.Protocol):
             else:
                 handler.unhandledControlSequence('\x1b[' + buf + 'K')
 
+        def H(self, proto, handler, buf):
+            handler.cursorHome()
+
         def J(self, proto, handler, buf):
             if not buf:
                 handler.eraseToDisplayEnd()
@@ -884,15 +962,15 @@ class ClientProtocol(protocol.Protocol):
 
     def _handleHeightWidth(self, b):
         if b == '3':
-            self.protocol.doubleHeightLine(True)
+            self.terminal.doubleHeightLine(True)
         elif b == '4':
-            self.protocol.doubleHeightLine(False)
+            self.terminal.doubleHeightLine(False)
         elif b == '5':
-            self.protocol.singleWidthLine()
+            self.terminal.singleWidthLine()
         elif b == '6':
-            self.protocol.doubleWidthLine()
+            self.terminal.doubleWidthLine()
         else:
-            self.protocol.unhandledControlSequence('\x1b#' + b)
+            self.terminal.unhandledControlSequence('\x1b#' + b)
 
 
 __all__ = [

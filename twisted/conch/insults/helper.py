@@ -1,14 +1,32 @@
+# -*- test-case-name: twisted.conch.test.test_helper -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""Partial in-memory terminal emulator
+
+API Stability: Unstable
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+"""
+
+from zope.interface import implements
 
 from twisted.internet import protocol
 from twisted.python import log
 
-import insults
+from twisted.conch.insults import insults
 
 FOREGROUND = 30
 BACKGROUND = 40
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, N_COLORS = range(9)
 
 class CharacterAttribute:
+    """Represents the attributes of a single character.
+
+    Character set, intensity, underlinedness, blinkitude, video
+    reversal, as well as foreground and background colors made up a
+    character's attributes.
+    """
     def __init__(self, charset=insults.G0,
                  bold=False, underline=False,
                  blink=False, reverseVideo=False,
@@ -70,6 +88,17 @@ class CharacterAttribute:
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
+    implements(insults.ITerminalTransport)
+
+    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
+                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
+                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
+                  'F10', 'F11', 'F12'):
+        exec '%s = object()' % (keyID,)
+
+    TAB = '\t'
+    BACKSPACE = '\x7f'
+
     width = 80
     height = 24
 
@@ -97,10 +126,10 @@ class TerminalBuffer(protocol.Protocol):
         if b != '\r' and b != '\n':
             ch = (b, self._currentCharacterAttributes())
             if self.modes.get(insults.IRM):
-                self.lines[self.y][self.x] = ch
-            else:
                 self.lines[self.y][self.x:self.x] = [ch]
                 self.lines[self.y].pop()
+            else:
+                self.lines[self.y][self.x] = ch
             self.x += 1
 
     def _emptyLine(self, width):
@@ -290,6 +319,10 @@ class TerminalBuffer(protocol.Protocol):
             insults.G3: insults.CS_ALTERNATE_SPECIAL}
         self.eraseDisplay()
 
+    def unhandledControlSequence(self, buf):
+        print 'Could not handle', repr(buf)
+
     def __str__(self):
         return '\n'.join([''.join([ch for (ch, attr) in L]).rstrip() for L in self.lines])
 
+__all__ = ['CharacterAttribute', 'TerminalBuffer']

@@ -1,13 +1,34 @@
+# -*- test-case-name: twisted.conch.test.test_manhole -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""Line-input oriented interactive interpreter loop.
+
+Provides classes for handling Python source input and arbitrary output
+interactively from a Twisted application.  Also included is syntax coloring
+code with support for VT102 terminals, control code handling (^C, ^D, ^Q),
+and reasonable handling of Deferreds.
+
+API Stability: Unstable
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+"""
 
 import code, sys, StringIO, tokenize
 
-import insults, recvline
+from twisted.conch import recvline
 
 from twisted.internet import defer
 from twisted.python.htmlizer import TokenPrinter
 from twisted.python import log
 
 class FileWrapper:
+    """Minimal write-file-like object.
+
+    Writes are translated into addOutput calls on an object passed to
+    __init__.  Newlines are also converted from network to local style.
+    """
+
     softspace = 0
     state = 'normal'
 
@@ -24,6 +45,18 @@ class FileWrapper:
         self.write(''.join(lines))
 
 class ManholeInterpreter(code.InteractiveInterpreter):
+    """Interactive Interpreter with special output and Deferred support.
+
+    Aside from the features provided by L{code.InteractiveInterpreter}, this
+    class captures sys.stdout output and redirects it to the appropriate
+    location (the Manhole protocol instance).  It also treats Deferreds
+    which reach the top-level specially: each is formatted to the user with
+    a unique identifier and a new callback and errback added to it, each of
+    which will format the unique identifier and the result with which the
+    Deferred fires and then pass it on to the next participant in the
+    callback chain.
+    """
+
     numDeferreds = 0
     def __init__(self, handler, locals=None, filename="<console>"):
         code.InteractiveInterpreter.__init__(self, locals)
@@ -98,6 +131,15 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self.handler.addOutput(data, async)
 
 class Manhole(recvline.HistoricRecvLine):
+    """Mediator between a fancy line source and an interactive interpreter.
+
+    This accepts lines from its transport and passes them on to a
+    L{ManholeInterpreter}.  Control commands (^C, ^D, ^Q) are also handled
+    with something approximating their normal terminal-mode behavior.  It
+    can optionally be constructed with a dict which will be used as the
+    local namespace for any code executed.
+    """
+
     namespace = None
 
     def __init__(self, namespace=None):
@@ -113,40 +155,47 @@ class Manhole(recvline.HistoricRecvLine):
         self.keyHandlers['\x1c'] = self.handle_QUIT
 
     def handle_INT(self):
-        self.transport.nextLine()
-        self.transport.write("KeyboardInterrupt")
-        self.transport.nextLine()
-        self.transport.write(self.ps[self.pn])
+        self.terminal.nextLine()
+        self.terminal.write("KeyboardInterrupt")
+        self.terminal.nextLine()
+        self.terminal.write(self.ps[self.pn])
         self.lineBuffer = []
         self.lineBufferIndex = 0
 
     def handle_QUIT(self):
-        self.transport.loseConnection()
+        self.terminal.loseConnection()
 
     def _needsNewline(self):
-        w = self.transport.lastWrite
+        w = self.terminal.lastWrite
         return not w.endswith('\n') and not w.endswith('\x1bE')
 
     def addOutput(self, bytes, async=False):
         if async:
-            self.transport.eraseLine()
-            self.transport.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
+            self.terminal.eraseLine()
+            self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
 
-        self.transport.write(bytes)
+        self.terminal.write(bytes)
 
         if async:
             if self._needsNewline():
-                self.transport.nextLine()
-            self.transport.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+                self.terminal.nextLine()
+            self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
         self.pn = bool(more)
         if self._needsNewline():
-            self.transport.nextLine()
-        self.transport.write(self.ps[self.pn])
+            self.terminal.nextLine()
+        self.terminal.write(self.ps[self.pn])
 
 class VT102Writer:
+    """Colorizer for Python tokens.
+
+    A series of tokens are written to instances of this object.  Each is
+    colored in a particular way.  The final line of the result of this is
+    generally added to the output.
+    """
+
     typeToColor = {
         'identifier': '\x1b[31m',
         'keyword': '\x1b[32m',
@@ -169,7 +218,7 @@ class VT102Writer:
         if token and token != '\r':
             c = self.color(type)
             if c:
-                self.written.append(self.color(type))
+                self.written.append(c)
             self.written.append(token)
             if c:
                 self.written.append(self.normalColor)
@@ -179,6 +228,10 @@ class VT102Writer:
         return s.strip('\n').splitlines()[-1]
 
 def lastColorizedLine(source):
+    """Tokenize and colorize the given Python source.
+
+    Returns a VT102-format colorized version of the last line of C{source}.
+    """
     w = VT102Writer()
     p = TokenPrinter(w.write).printtoken
     s = StringIO.StringIO(source)
@@ -188,6 +241,9 @@ def lastColorizedLine(source):
     return str(w)
 
 class ColoredManhole(Manhole):
+    """A REPL which syntax colors input as users type it.
+    """
+
     def getSource(self):
         """Return a string containing the currently entered source.
 
@@ -208,7 +264,7 @@ class ColoredManhole(Manhole):
 
         if ch == ' ':
             # Don't bother to try to color whitespace
-            self.transport.write(ch)
+            self.terminal.write(ch)
             return
 
         source = self.getSource()
@@ -218,16 +274,16 @@ class ColoredManhole(Manhole):
             coloredLine = lastColorizedLine(source)
         except tokenize.TokenError:
             # We couldn't do it.  Strange.  Oh well, just add the character.
-            self.transport.write(ch)
+            self.terminal.write(ch)
         else:
             # Success!  Clear the source on this line.
-            self.transport.eraseLine()
-            self.transport.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]) - 1)
+            self.terminal.eraseLine()
+            self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]) - 1)
 
             # And write a new, colorized one.
-            self.transport.write(self.ps[self.pn] + coloredLine)
+            self.terminal.write(self.ps[self.pn] + coloredLine)
 
             # And move the cursor to where it belongs
             n = len(self.lineBuffer) - self.lineBufferIndex
             if n:
-                self.transport.cursorBackward(n)
+                self.terminal.cursorBackward(n)

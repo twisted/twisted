@@ -1,6 +1,11 @@
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """Telnet protocol implementation.
 
+API Stability: Unstable
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
 import struct
@@ -93,6 +98,58 @@ DONT =           chr(254) # Indicates the demand that the
 IAC =            chr(255) # Data Byte 255.  Introduces a
                           # telnet command.
 
+LINEMODE_MODE = chr(1)
+LINEMODE_EDIT = chr(1)
+LINEMODE_TRAPSIG = chr(2)
+LINEMODE_MODE_ACK = chr(4)
+LINEMODE_SOFT_TAB = chr(8)
+LINEMODE_LIT_ECHO = chr(16)
+LINEMODE_FORWARDMASK = chr(2)
+LINEMODE_SLC = chr(3)
+LINEMODE_SLC_SYNCH = chr(1)
+LINEMODE_SLC_BRK = chr(2)
+LINEMODE_SLC_IP = chr(3)
+LINEMODE_SLC_AO = chr(4)
+LINEMODE_SLC_AYT = chr(5)
+LINEMODE_SLC_EOR = chr(6)
+LINEMODE_SLC_ABORT = chr(7)
+LINEMODE_SLC_EOF = chr(8)
+LINEMODE_SLC_SUSP = chr(9)
+LINEMODE_SLC_EC = chr(10)
+LINEMODE_SLC_EL = chr(11)
+
+LINEMODE_SLC_EW = chr(12)
+LINEMODE_SLC_RP = chr(13)
+LINEMODE_SLC_LNEXT = chr(14)
+LINEMODE_SLC_XON = chr(15)
+LINEMODE_SLC_XOFF = chr(16)
+LINEMODE_SLC_FORW1 = chr(17)
+LINEMODE_SLC_FORW2 = chr(18)
+LINEMODE_SLC_MCL = chr(19)
+LINEMODE_SLC_MCR = chr(20)
+LINEMODE_SLC_MCWL = chr(21)
+LINEMODE_SLC_MCWR = chr(22)
+LINEMODE_SLC_MCBOL = chr(23)
+LINEMODE_SLC_MCEOL = chr(24)
+LINEMODE_SLC_INSRT = chr(25)
+LINEMODE_SLC_OVER = chr(26)
+LINEMODE_SLC_ECR = chr(27)
+LINEMODE_SLC_EWR = chr(28)
+LINEMODE_SLC_EBOL = chr(29)
+LINEMODE_SLC_EEOL = chr(30)
+
+LINEMODE_SLC_DEFAULT = chr(3)
+LINEMODE_SLC_VALUE = chr(2)
+LINEMODE_SLC_CANTCHANGE = chr(1)
+LINEMODE_SLC_NOSUPPORT = chr(0)
+LINEMODE_SLC_LEVELBITS = chr(3)
+
+LINEMODE_SLC_ACK = chr(128)
+LINEMODE_SLC_FLUSHIN = chr(64)
+LINEMODE_SLC_FLUSHOUT = chr(32)
+LINEMODE_EOF = chr(236)
+LINEMODE_SUSP = chr(237)
+LINEMODE_ABORT = chr(238)
 
 class ITelnetProtocol(iinternet.IProtocol):
     def unhandledCommand(self, command, argument):
@@ -252,7 +309,7 @@ class Telnet(protocol.Protocol):
 
     @ivar negotiationMap: A mapping of bytes to callables.  When
     a subnegotiation command is received, the command byte (the
-    first byte after SE) is looked up in this dictionary.  If
+    first byte after SB) is looked up in this dictionary.  If
     a callable is found, it is invoked with the argument of the
     subnegotiation.  Values should be added to this dictionary if
     subnegotiations are to be handled.  By default, no values are
@@ -669,6 +726,13 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
                 self.protocol.factory = factory
             self.protocol.makeConnection(self)
 
+    def connectionLost(self, reason):
+        Telnet.connectionLost(self, reason)
+        try:
+            self.protocol.connectionLost(reason)
+        finally:
+            del self.protocol
+
     def enableLocal(self, option):
         return self.protocol.enableLocal(option)
 
@@ -690,10 +754,9 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     def applicationDataReceived(self, bytes):
         self.protocol.dataReceived(bytes)
 
-    def connectionLost(self, reason):
-        Telnet.connectionLost(self, reason)
-        self.protocol.connectionLost(reason)
-        del self.protocol
+    def write(self, data):
+        ProtocolTransportMixin.write(self, data.replace('\xff','\xff\xff'))
+
 
 class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     protocol = None
@@ -705,6 +768,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 
     def connectionMade(self):
         self.transport.negotiationMap[NAWS] = self.telnet_NAWS
+        self.transport.negotiationMap[LINEMODE] = self.telnet_LINEMODE
 
         for opt in (LINEMODE, NAWS, SGA):
             self.transport.do(opt).addErrback(log.err)
@@ -714,8 +778,19 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         self.protocol.makeConnection(self)
 
+    def connectionLost(self, reason):
+        try:
+            self.protocol.connectionLost(reason)
+        finally:
+            del self.protocol
+
+    def dataReceived(self, data):
+        self.protocol.dataReceived(data)
+
     def enableLocal(self, opt):
         if opt == ECHO:
+            return True
+        elif opt == SGA:
             return True
         else:
             return False
@@ -732,14 +807,31 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             return False
 
     def telnet_NAWS(self, bytes):
+        # NAWS is client -> server *only*.  self.protocol will
+        # therefore be an ITerminalTransport, the `.protocol'
+        # attribute of which will be an ITerminalProtocol.  Maybe.
+        # You know what, XXX TODO clean this up.
         if len(bytes) == 4:
             width, height = struct.unpack('!HH', ''.join(bytes))
-            self.protocol.terminalSize(width, height)
+            self.protocol.terminalProtocol.terminalSize(width, height)
         else:
             log.msg("Wrong number of NAWS bytes")
 
-    def dataReceived(self, data):
-        self.protocol.dataReceived(data)
+
+    linemodeSubcommands = {
+        LINEMODE_SLC: 'SLC'}
+    def telnet_LINEMODE(self, bytes):
+        revmap = {}
+        linemodeSubcommand = bytes[0]
+        if 0:
+            # XXX TODO: This should be enabled to parse linemode subnegotiation.
+            getattr(self, 'linemode_' + self.linemodeSubcommands[linemodeSubcommand])(bytes[1:])
+
+    def linemode_SLC(self, bytes):
+        chunks = zip(*[iter(bytes)]*3)
+        for slcFunction, slcValue, slcWhat in chunks:
+            # Later, we should parse stuff.
+            'SLC', ord(slcFunction), ord(slcValue), ord(slcWhat)
 
 from twisted.protocols import basic
 
@@ -747,6 +839,10 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
     delimiter = '\n'
 
     state = 'Discard'
+
+    def connectionLost(self, reason):
+        basic.LineReceiver.connectionLost(self, reason)
+        TelnetProtocol.connectionLost(self, reason)
 
     def lineReceived(self, line):
         oldState = self.state
@@ -781,6 +877,15 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
     def connectionMade(self):
         self.transport.write("Username: ")
 
+    def connectionLost(self, reason):
+        StatefulTelnetProtocol.connectionLost(self, reason)
+        if self.protocol is not None:
+            try:
+                self.protocol.connectionLost(reason)
+                self.logout()
+            finally:
+                del self.protocol, self.logout
+
     def telnet_User(self, line):
         self.username = line
         self.transport.will(ECHO)
@@ -812,12 +917,6 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         self.transport.write("\nAuthentication failed\n")
         self.transport.write("Username: ")
         self.state = "User"
-
-    def connectionLost(self, reason):
-        if self.protocol is not None:
-            self.protocol.connectionLost(reason)
-            self.logout()
-            del self.protocol, self.logout
 
 __all__ = [
     # Exceptions
