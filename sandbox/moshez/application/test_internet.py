@@ -123,6 +123,22 @@ class TestInternet(unittest.TestCase):
         t1 = copy.copy(t)
         self.assert_(not hasattr(t1, '_connection'))
         t.stopService()
+        self.failIf(t.running)
+
+    def testStoppingServer(self):
+        factory = protocol.ServerFactory()
+        factory.protocol = wire.Echo
+        t = internet.UNIXServer('echo.skt', factory)
+        t.startService()
+        t.stopService()
+        self.failIf(t.running)
+        factory = protocol.ClientFactory()
+        l = []
+        factory.clientConnectionFailed = lambda *args: l.append(None)
+        reactor.connectUNIX('echo.skt', factory)
+        while not l:
+            reactor.iterate(0.1)
+        self.assertEqual(l, [None])
 
     def testTimer(self):
         l = []
@@ -131,4 +147,13 @@ class TestInternet(unittest.TestCase):
         while not l:
             reactor.iterate(0.1)
         t.stopService()
+        self.failIf(t.running)
         self.assertEqual(l, ["hello"])
+
+    def testEverythingThere(self):
+        for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
+            for side in 'Server Client'.split():
+                self.assert_(hasattr(internet, tran+side))
+                method = getattr(internet, tran+side).method
+                prefix = {'Server': 'listen', 'Client': 'connect'}[side]
+                self.assert_(hasattr(reactor, prefix+method))
