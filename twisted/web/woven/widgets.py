@@ -364,6 +364,18 @@ class Widget(view.View):
                               '(tagged %s="%s"'\
                               ' or pattern="%s") for node %s' % (name + "Of",
                                             sm, name, self.templateNode)
+                    # TODO: this is normally the default, and therefore you see
+                    # a huge ugly traceback rather than your page (and I note
+                    # that all of the traceback is *inside woven* where you
+                    # couldn't possibly care less) if you make a typo in your
+                    # template.  More sensible would be to make some flashing
+                    # red text and stick it into the template so that the rest
+                    # of the page could render properly most of the time.  This
+                    # would have the side effect of making errors with woven
+                    # look much more "harmless" than with other web toolkit
+                    # frameworks.  (We could even have a "production mode"
+                    # switch which did some introspection and automatically
+                    # selected a vanilla "pattern" node for you.)  --glyph
                     if default is _RAISE:
                         raise Exception(msg)
                     if DEBUG:

@@ -181,7 +181,7 @@ class POP3Client(basic.LineReceiver):
             self.mode = NONE
 
     def handle_WELCOME(self, line):
-        code, data = string.split(line)
+        code, data = line.split(' ', 1)
         if code != '+OK':
             self.transport.loseConnection()
         else:

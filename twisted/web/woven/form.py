@@ -12,29 +12,7 @@ from twisted.web import domhelpers, resource
 # Sibling Imports
 from twisted.web.woven import model, view, controller, widgets, input, interfaces
 
-from twisted.web.microdom import parseString
-
-class lmx:
-    createElement = widgets.document.createElement
-    def __init__(self, node):
-        self.node = node
-    def __getattr__(self, name):
-        if name[0] == '_':
-            raise AttributeError("no private attrs")
-        return lambda **kw: self.add(name,**kw)
-    def __setitem__(self, key, val):
-        self.node.setAttribute(key, val)
-    def text(self, txt):
-        nn = widgets.document.createTextNode(txt)
-        self.node.appendChild(nn)
-        return self
-    def add(self, tagName, **kw):
-        newNode = self.createElement(tagName)
-        self.node.appendChild(newNode)
-        xf = lmx(newNode)
-        for k, v in kw.items():
-            xf[k]=v
-        return xf
+from twisted.web.microdom import parseString, lmx
 
 class FormFillerWidget(widgets.Widget):
 

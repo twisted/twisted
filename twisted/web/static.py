@@ -146,7 +146,39 @@ def _upgradeRegistry(registry):
 def loadMimeTypes():
     """Ugg, does this even need to exist anymore?  Stupid stdlib"""
     import mimetypes
-    return mimetypes.types_map
+    # let's try a few of the usual suspects...
+    contentTypes = {
+        ".css": "text/css",
+        ".exe": "application/x-executable",
+        ".flac": "audio/x-flac",
+        ".gif": "image/gif",
+        ".gtar": "application/x-gtar",
+        ".html": "text/html",
+        ".htm": "text/html",
+        ".java": "text/plain",
+        ".jpeg": "image/jpeg",
+        ".jpg": "image/jpeg",
+        ".lisp": "text/x-lisp",
+        ".mp3":  "audio/mpeg",
+        ".oz": "text/x-oz",
+        ".ogg": "application/x-ogg",
+        ".pdf": "application/x-pdf",
+        ".png": "image/png",
+        ".py": "text/x-python",
+        ".swf": "application/x-shockwave-flash",
+        ".tar": "application/x-tar",
+        ".tgz": "application/x-gtar",
+        ".tif": "image/tiff",
+        ".tiff": "image/tiff",
+        ".txt": "text/plain",
+        ".xul": "application/vnd.mozilla.xul+xml",
+        ".zip": "application/x-zip",
+        }
+    upd = contentTypes.update
+    if os.path.exists("/etc/mime.types"):
+        upd(mimetypes.read_mime_types("/etc/mime.types"))
+    
+    return contentTypes
 
 
 class File(resource.Resource, styles.Versioned):
@@ -159,34 +191,6 @@ class File(resource.Resource, styles.Versioned):
     __implements__ = resource.IResource
 
     contentTypes = loadMimeTypes()
-    if not contentTypes: # Lozar!
-        contentTypes = {
-            ".css": "text/css",
-            ".exe": "application/x-executable",
-            ".flac": "audio/x-flac",
-            ".gif": "image/gif",
-            ".gtar": "application/x-gtar",
-            ".html": "text/html",
-            ".htm": "text/html",
-            ".java": "text/plain",
-            ".jpeg": "image/jpeg",
-            ".jpg": "image/jpeg",
-            ".lisp": "text/x-lisp",
-            ".mp3":  "audio/mpeg",
-            ".oz": "text/x-oz",
-            ".ogg": "application/x-ogg",
-            ".pdf": "application/x-pdf",
-            ".png": "image/png",
-            ".py": "text/x-python",
-            ".swf": "application/x-shockwave-flash",
-            ".tar": "application/x-tar",
-            ".tgz": "application/x-gtar",
-            ".tif": "image/tiff",
-            ".tiff": "image/tiff",
-            ".txt": "text/plain",
-            ".xul": "application/vnd.mozilla.xul+xml",
-            ".zip": "application/x-zip",
-        }
 
     contentEncodings = {
         ".gz" : "application/x-gzip",

@@ -89,6 +89,7 @@ class Freezer:
         wants to be saved.
         """
         self.cleaning = True
+        savers = {}
         try:
             while self.dirtySet:
                 l = self.dirtySet.items()
@@ -98,15 +99,27 @@ class Freezer:
                     if not ent:
                         continue
                     for saver in ent[1]:
-                        if doSave:
-                            # print 'saving',obj
-                            saver.save(obj)
-                        else:
-                            # print 'deleting',obj
-                            saver.delete(obj)
+                        savers[saver] = 1
+                        try:
+                            if doSave:
+                                # print 'saving',obj
+                                saver.save(obj)
+                            else:
+                                # print 'deleting',obj
+                                saver.delete(obj)
+                        except:
+                            # TODO: more error handling
+                            # backout transactions? restore state of objects?
+                            # what else?
+                            log.err()
         finally:
             self.cleaning = False
-
+            for saver in savers.keys():
+                try:
+                    saver.cleaned()
+                except:
+                    log.err()
+            
 
 try:
     theFreezer

@@ -125,6 +125,10 @@ class Repository:
         self.cache(oid, i, 0)
         return i
 
+    def cleaned(self):
+        """The freezer finished cleaning, and some of my objects were cleaned.
+        """
+
     def loadRef(self, pRef):
         """
         Synonymous with ref.__call__().

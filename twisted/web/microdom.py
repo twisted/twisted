@@ -44,7 +44,7 @@ import html
 
 # create NodeList class
 from types import ListType as NodeList
-
+from types import StringType
 
 class MismatchedTags(Exception):
 
@@ -406,3 +406,27 @@ def parseString(st):
     return doc
 
 
+# Utility
+
+class lmx:
+    def __init__(self, node):
+        if isinstance(node, StringType):
+            node = Element(node)
+        self.node = node
+    def __getattr__(self, name):
+        if name[0] == '_':
+            raise AttributeError("no private attrs")
+        return lambda **kw: self.add(name,**kw)
+    def __setitem__(self, key, val):
+        self.node.setAttribute(key, val)
+    def text(self, txt):
+        nn = Text(txt)
+        self.node.appendChild(nn)
+        return self
+    def add(self, tagName, **kw):
+        newNode = Element(tagName)
+        self.node.appendChild(newNode)
+        xf = lmx(newNode)
+        for k, v in kw.items():
+            xf[k]=v
+        return xf
