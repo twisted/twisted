@@ -27,6 +27,7 @@ Flags:
  -t -- always use text-mode (otherwise try GUI first)
  -v -- text-mode will be more verbose
  -q -- text-mode will be quieter (doesn't print progress dots)
+ -Q -- text-mode will be even quieter
  --file -- path to a python file containing test cases
 """
 
@@ -51,7 +52,8 @@ class TestProgram:
         if argv is None:
             argv = ["runtests"]
 
-        opts, args = getopt.getopt(argv[1:], "tvq", ["file=","module="])
+        self.startupVerbosity = 1
+        opts, args = getopt.getopt(argv[1:], "tvqQ", ["file=","module="])
         if ('-t', '') in opts:
             text_mode = 'always'
         else:
@@ -61,6 +63,9 @@ class TestProgram:
             self.verbosity = 2
         elif ('-q', '') in opts:
             self.verbosity = 0
+        elif ('-Q', '') in opts:
+            self.verbosity = 0
+            self.startupVerbosity = 0
         else:
             self.verbosity = 1
 
@@ -81,9 +86,9 @@ class TestProgram:
                 try:
                     self.value = self.runGUI()
                 except GuiGoError, e:
-                    print e
-                    print "Falling back to text mode."
-                    pass
+                    if self.startupVerbosity:
+                        print e
+                        print "Falling back to text mode."
                 else:
                     return
 
@@ -121,7 +126,8 @@ class TestProgram:
             namedModule(reactorTypes[reactor]).install()
 
         from twisted.internet import reactor
-        print 'reactor class: %s' % reactor.__class__
+        if self.startupVerbosity:
+            print 'reactor class: %s' % reactor.__class__
 
     def runText(self):
         from pyunit import unittest
