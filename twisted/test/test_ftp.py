@@ -165,7 +165,6 @@ class ConnectedFTPServer(object):
         ds = ftp.DTP()
         ds.pi = self.s
         ds.pi.dtpInstance = ds
-        ds.pi.dtpPort = ('i','',0)
 
         ds.factory = ftp.DTPFactory(self.s)
         self.s.dtpFactory = ds.factory
