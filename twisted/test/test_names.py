@@ -88,6 +88,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
                         dns.Record_MG('mail.group.someplace'),
                         dns.Record_MR('mail.redirect.or.whatever'),
                         dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
+                        dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
                         soa_record
                     ],
                     'http.tcp.test-domain.com': [
@@ -246,4 +247,11 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         self.namesTest(
             self.resolver.lookupService('http.tcp.test-domain.com'),
             [dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')]
+        )
+
+    def testAFSDB(self):
+        """Test DNS 'AFSDB' record queries"""
+        self.namesTest(
+            self.resolver.lookupAFSDatabase('test-domain.com'),
+            [dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com')]
         )

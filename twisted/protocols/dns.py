@@ -43,6 +43,7 @@ QUERY_TYPES = {
     9:  'MR',    10: 'NULL',  11: 'WKS',  12:  'PTR',
     13: 'HINFO', 14: 'MINFO', 15: 'MX',   16:  'TXT',
 
+    18: 'AFSDB', 
     # 17 through 32?  Eh, I'll get to 'em.
 
     33: 'SRV',
@@ -566,10 +567,41 @@ class Record_SRV:                # EXPERIMENTAL
         )
 
 
+class Record_AFSDB:
+    __implements__ = (IEncodable,)
+    TYPE = AFSDB
+    
+    def __init__(self, subtype = 0, hostname = ''):
+        self.subtype = int(subtype)
+        self.hostname = Name(hostname)
+    
+    
+    def encode(self, strio, compDict = None):
+        strio.write(struct.pack('!H', self.subtype))
+        self.hostname.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        r = struct.unpack('!H', readPrecisely(strio, struct.calcsize('!H')))
+        self.subtype, = r
+        self.hostname.decode(strio)
+    
+    
+    def __eq__(self, other):
+        if isinstance(other, Record_AFSDB):
+            return (self.subtype == other.subtype and
+                    str(self.hostname) == str(other.hostname))
+        return 0
+    
+    
+    def __str__(self):
+        return '<AFSB subtype=%d %s>' % (self.subtype, self.hostname)
+
+
 class Record_HINFO:
     __implements__ = (IEncodable,)
-
     TYPE = HINFO
+
     def __init__(self, cpu = '', os = ''):
         self.cpu, self.os = cpu, os
 

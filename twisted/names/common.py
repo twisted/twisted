@@ -93,7 +93,10 @@ class ResolverBase:
 
     def lookupText(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.TXT, timeout)
-    
+
+    def lookupAFSDatabase(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.AFSDB, timeout)
+
     def lookupAllRecords(self, name, timeout = 10):
         return defer.DeferredList([
             self._lookup(name, dns.IN, type, timeout).addErrback(
@@ -120,6 +123,7 @@ typeToMethod = {
     dns.MX:    'lookupMailExchange',
     dns.TXT:   'lookupText',
     
+    dns.AFSDB: 'lookupAFSDatabase',
     dns.SRV:   'lookupService',
     
     dns.ALL_RECORDS:  'lookupAllRecords',
