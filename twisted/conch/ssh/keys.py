@@ -94,7 +94,10 @@ def getPrivateKeyObject(filename = None, data = '', password = ''):
         keyData = des_cbc3_decrypt(b64Data, decKey, iv)
     else:
         keyData = base64.decodestring(''.join(data[1:-1]))
-    decodedKey = asn1.parse(keyData)
+    try:
+        decodedKey = asn1.parse(keyData)
+    except Exception, e:
+        raise BadKeyError, 'something wrong with decode'
     if type(decodedKey[0]) == type([]):
         decodedKey = decodedKey[0] # this happens with encrypted keys
     if kind == 'RSA':

@@ -188,6 +188,10 @@ class SSHUserAuthClient(service.SSHService):
         if self.lastAuth == 'publickey':
             # this is ok
             privateKey = self.getPrivateKey()
+            if not privateKey:
+                self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
+                # this should fail, we'll move on
+                return
             publicKey = self.lastPublicKey
             keyType =  keys.objectType(privateKey)
             b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
