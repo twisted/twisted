@@ -19,7 +19,7 @@
 """Resource limiting policies."""
 
 # system imports
-import sys, operator
+import sys, operator, time
 
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
@@ -388,4 +388,42 @@ class TimeoutFactory(WrappingFactory):
                              timeoutPeriod=self.timeoutPeriod)    
 
 
+class TimeoutMixin:
+    """Mixin for protocols which wish to timeout connections
+
+    @cvar timeOut: The number of seconds after which to timeout the connection.
+    """
+    timeOut = None
+
+    __timeoutCall = None
+    __lastReceived = None
+
+    def connectionMade(self):
+        if self.timeOut is not None:
+            self.__lastReceived = time.time()
+            self.__timeoutCall = reactor.callLater(self.timeOut, self.__timedOut)
+
+    def connectionLost(self, reason):
+        if self.__timeoutCall:
+            self.__timeoutCall.cancel()
+            self.__timeoutCall = None
+
+    def dataReceived(self, data):
+        self.__lastReceived = time.time()
+
+    def __timedOut(self):
+        self.__timeoutCall = None
+
+        now = time.time()
+        if now - self.__lastReceived > self.timeOut:
+            self.timeoutConnection()
+        else:
+            when = self.__lastReceived - now + self.timeOut
+            self.__timeoutCall = reactor.callLater(when, self.__timedOut)
+
+    def timeoutConnection(self):
+        """Called when the connection times out.
+        Override to define behavior other than dropping the connection.
+        """
+        self.transport.loseConnection()
 
