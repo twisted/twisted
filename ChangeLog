@@ -15,7 +15,7 @@
 	lets the write pipe drain, then the PTY is closed in
 	connectionLost.
 
-2003-04-12  Paul Swartz  <z3p@twistedmatrix.com
+2003-04-12  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted/plugins.tml, twisted/tap/ssh.py, twisted/tap/conch.py: moved
 	the conch server from 'mktap ssh' to 'mktap conch'.
