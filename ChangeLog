@@ -1,3 +1,9 @@
+2003-04-15  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* admin/accepttests, admin/accepttests.py: Acceptance tests
+	turned into a Python module with no unguarded top-level code,
+	to make running acceptance tests selectively possible.
+
 2003-04-14  Brian Warner  <warner@lothar.com>
 
 	* twisted/python/threadable.py (init): 
@@ -14,6 +20,7 @@
 	to verify that code path too
 
 2003-04-14  Jonathan Lange  <jml@ids.org.au>
+
 	* twisted/web/woven/controller.py (Controller): now, if getChild
 	cannot find the requested child, it will ask getDynamicChild -- a
 	method like getChild, but designed to be overriden by users.
