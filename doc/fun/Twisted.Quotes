@@ -3953,3 +3953,12 @@ tracker will rule the earth as a living god someday.
 <Acapnotic> dash: how are the cookies connected to glyph's internet again?
 <dash> Acapnotic: wires
 %
+<Erwin> it provides some thin abstractinos around Python objects so
+        you don't have to screw around with refcounting, but nothing much
+<exarkun> abstractinos!
+<exarkun> the elementary particle of abstraction
+<exarkun> excite them to high enough energy and they release their
+          gluons, resulting in a refactor!
+<exarkun> but don't excite them too much, or you'll end up with all
+          abstraction and no implementation!
+%
