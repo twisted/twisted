@@ -1,8 +1,3 @@
-2002-12-13  Jp Calderone  <exarkun@twistedmatrix.com>
-
-	* twisted/python/plugin.py: Added deferredGetPlugIns(), a
-	non-blocking version of getPlugIns()
-
 2002-12-13  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/enterprise/util.py: support numeric type
