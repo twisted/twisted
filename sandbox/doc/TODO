@@ -2,11 +2,10 @@
 
 Existing docs: 
 
- - the defer.xhtml howto needs to become the "more on deferreds" howto, with
-   simple deferred info moving to async.xhtml
+ - defer.xhtml needs to be turned into the complete reference to /using/
+   returned Deferreds.
 
-New docs:
+ - gendefer.xhtml needs to be turned into the complete reference to /making/
+   Deferreds (it's in a much worse state than defer.xhtml)
 
- - the async.xhtml discussion of what Deferreds can't do calls for an answer to
-   the question "well... if /Deferreds/ don't make my function non-blocking,
-   how /can/ I make them non-blocking?" guide.
+ - the deferred tutorial (by slyphun) should be mined for the above if possible

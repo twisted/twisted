@@ -79,3 +79,61 @@ essentially the same,  -->
 reference counting not playing well with copy-on-write and problems with
 shared state.  Consequently, an event-driven framework is the best overall
 option for a Python networking framework.</p>
+
+--- Example of blocking code ---
+<h3>Dealing with Blocking Code</h3>
+
+<p>When coding I/O based programs - networking code, databases,
+file access - there are many APIs that are blocking, and many
+methods where the common idiom is to block until a result is
+gotten.</p>
+
+<pre class="python">
+class Getter:
+    def getData(self, x):
+        # imagine I/O blocking code here
+        print "blocking"
+        import time
+        time.sleep(4)
+        return x * 3
+
+g = Getter()
+print g.getData(3)
+</pre>
+
+--- Example of non-blocking code ---
+<h3>Don't Call Us, We'll Call You</h3>
+
+<p>Twisted cannot support blocking calls in most of its code, since it is
+single threaded, and event based.  The solution for this issue is to refactor
+the code, so that instead of blocking until data is available, we return
+immediately, and use a callback to notify the requester once the data
+eventually arrives.</p>
+
+<pre class="python">
+from twisted.internet import reactor
+
+class Getter:
+    def getData(self, x, callback):
+        # this won't block
+        reactor.callLater(2, callback, x * 3)
+
+def printData(d):
+    print d
+
+g = Getter()
+g.getData(3, printData)
+
+# startup the event loop, exiting after 4 seconds
+reactor.callLater(4, reactor.stop);
+reactor.run()
+</pre>
+
+<p>There are several things missing in this simple example.  There is no way
+to know if the data never comes back; no mechanism for handling errors.  The
+example does not handle multiple callback functions, nor does it give a
+method to merge arguments before and after execution.  Further, there is no
+way to distinguish between different calls to gotData from different
+producer objects. <code>Deferred</code> solves these problems, by creating 
+a single, unified way to handle callbacks and errors from deferred
+execution.</p>
