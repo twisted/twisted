@@ -12,6 +12,8 @@ class DemoRecvLineHandler(recvline.HistoricRecvLineHandler):
         return 0, self.height - 1
 
     def lineReceived(self, line):
+        if line == "quit":
+            self.proto.disconnect()
         x, y = self.promptLocation()
         for n, line in enumerate(self.historyLines[:-5:-1]):
             self.proto.cursorPosition(x, y - n - 1)

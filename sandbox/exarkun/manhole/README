@@ -7,8 +7,11 @@ vt102 or vt102-like terminal.
 
   demo_recvline.py is a trivial line editor.  It has very basic history
 support. It supports printable characters, left, right, up, and down arrows,
-backspace, and delete.  Enter will add the line above the prompt in a small
-scroll region.
+backspace, and delete.  Insert will toggle between insert and typeover mode.
+Home will move the cursor to the beginning of the current line.  End will
+move the cursor to the end of the current line.  Enter will add the line
+above the prompt in a small scroll region.  "quit" will reset the terminal
+and disconnect.
 
   demo_drawing.py lets you spew random things onto the terminal.  It
 supports all four arrow keys and spacebar to switch between "drawing"
