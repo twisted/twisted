@@ -34,8 +34,8 @@ class MyModel(model.Model):
         self.random=random
 
 class MyView(view.View):        
-    def __init__(self, model):
-        view.View.__init__(self, model)
+    def __init__(self, model, *args, **kwargs):
+        view.View.__init__(self, model, *args, **kwargs)
         self.model.addView(self)
         # pretend self.foo is what the user now sees on their screen
         self.foo = self.model.foo
