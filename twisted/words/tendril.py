@@ -15,7 +15,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted import copyright
 from twisted.internet import passport
 from twisted.persisted import styles
 from twisted.protocols import irc
@@ -68,7 +67,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.6 $'[11:-2]
+    versionNum = '$Revision: 1.7 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -280,7 +279,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
         else:
             try:
-                self._getParticipant(nick).leaveGroup(group)
+                self._getParticipant(kicked).leaveGroup(group)
             except wordsService.NotInGroupError:
                 pass
 
@@ -547,9 +546,37 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         Or, if it's in our errorGroup, recognize some debugging commands.
         """
         if not (group == self.errorGroup):
+            channel = groupToChannelName(group)
             if not self.isThisMine(sender):
-                self.say(groupToChannelName(group),
-                         "<%s> %s" % (sender, message))
+                # Test for Special case:
+                # got CTCP, probably through words.ircservice
+                #      (you SUCK!)
+                # ACTION is the only case we'll support here.
+                if message[:8] == irc.X_DELIM + 'ACTION ':
+                    c = irc.ctcpExtract(message)
+                    for tag, data in c['extended']:
+                        if tag == 'ACTION':
+                            self.say(channel, "* %s %s" % (sender, data))
+                        else:
+                            # Not an action.  Repackage the chunk,
+                            msg = "%(X)s%(tag)s %(data)s%(X)s" % {
+                                'X': irc.X_DELIM,
+                                'tag': tag,
+                                'data': data
+                                }
+                            # ctcpQuote it to render it harmless,
+                            msg = irc.ctcpQuote(msg)
+                            # and let it continue on.
+                            c['normal'].append(msg)
+
+                    for msg in c['normal']:
+                        self.say(channel, "<%s> %s" % (sender, msg))
+                    return
+
+                elif irc.X_DELIM in message:
+                    message = irc.ctcpQuote(message)
+
+                self.say(channel, "<%s> %s" % (sender, message))
         else:
             # A message in our errorGroup.
             if message == "participants":
