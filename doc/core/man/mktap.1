@@ -11,6 +11,15 @@ mktap \- create twisted.servers
 .PP
 The \fB\--help\fR prints out a usage message to standard output.
 .TP
+\fB\--debug\fR, \fB\-d\fR
+Show debug information for plugin loading.
+.TP
+\fB\--progress\fR, \fB\-p\fR
+Show progress information for plugin loading.
+.TP
+\fB\--encrypted\fR, \fB\-e\fR
+Encrypt file before writing (will make the extension of the resultant file begin with 'e').
+.TP
 \fB\--uid\fR, \fB\-u\fR \fI<uid>\fR
 Application belongs to this uid, and should run with its permissions.
 .TP
@@ -26,12 +35,15 @@ Use the specified name as the process name when the application is run with
 \fItwistd(1)\fR.  This option also causes some initialization code to be
 duplicated when \fItwistd(1)\fR is run.
 .TP
-\fB\--xml\fR, \fB\-x\fR
-Output as a .tax XML file rather than a pickle.
-.TP
-\fB\--source\fR, \fB\-s\fR
-Output as a .tas (AOT Python source) file rather than a pickle.
-.TP
+\fB\--type\fR, \fB\-t\fR \fI<type>\fR
+Specify the output file type. Available types are:
+.IP
+pickle - (default) Output as a python pickle file.
+.br
+xml    - Output as a .tax XML file.
+.br
+source - Output as a .tas (AOT Python source) file.
+.P
 \fIapptype\fR
 Can be 'web', 'portforward', 'toc', 'coil', 'words', \
 'manhole', 'im', 'news', 'socks', 'telnet', 'parent', 'sibling', \
