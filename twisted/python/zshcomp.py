@@ -355,6 +355,15 @@ def firstLine(s):
 def escape(str):
     return commands.mkarg(str)[1:]
 
+def siteFunctionsPath():
+    try:
+        import commands, os.path
+        output = commands.getoutput("zsh -f -c 'echo ${(M)fpath:#/*/site-functions}'")
+        if os.path.isdir(output):
+            return output
+    except:
+        pass
+
 def makeCompFunctionFiles(out_path):
     for cmd_name, module_name, class_name in generateFor:
         m = __import__('%s' % module_name, None, None, (class_name))
