@@ -548,6 +548,8 @@ class SMTP(basic.LineReceiver):
                 self.mode = COMMAND
                 return
         self.sendCode(354, 'Continue')
+        fmt = 'Receiving message for delivery: from=%s to=%s'
+        log.msg(fmt % (origin, map(str, recipients)))
 
     def connectionLost(self, reason):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
@@ -616,8 +618,7 @@ class SMTP(basic.LineReceiver):
 
     def _messageHandled(self, _):
         self.sendCode(250, 'Delivery in progress')
-        fmt = 'Accepted message for delivery: from=%s to=%s'
-        log.msg(fmt % (self.__from, self.__to))
+        log.msg('Accepted message for delivery')
 
     def _messageNotHandled(self, failure):
         if failure.check(SMTPServerError):
