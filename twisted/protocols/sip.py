@@ -1082,10 +1082,13 @@ class InMemoryRegistry:
         
     def _expireRegistration(self, username):
         try:
-            del self.users[username]
+            dc, url = self.users[username]
         except KeyError:
             pass
-
+        else:
+            dc.cancel()
+            del self.users[username]
+    
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         if domainURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")

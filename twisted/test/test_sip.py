@@ -607,7 +607,7 @@ Content-Length: 0\r
 
 okResponse = """\
 SIP/2.0 200 OK\r
-Via: SIP/2.0/UDP 192.168.1.100:50609\r
+Via: SIP/2.0/UDP 192.168.1.100:50609;received=127.0.0.1;rport=5632\r
 To: <sip:exarkun@intarweb.us:50609>\r
 From: <sip:exarkun@intarweb.us:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
@@ -637,9 +637,14 @@ class AuthorizationTestCase(unittest.TestCase):
         r = TestRealm()
         p = cred.portal.Portal(r)
         c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        c.addUser('exarkun', 'password')
+        c.addUser('exarkun@intarweb.us', 'password')
         p.registerChecker(c)
         self.proxy.portal = p
+
+    def tearDown(self):
+        for d, uri in self.registry.users.values():
+            d.cancel()
+        del self.proxy
     
     def testChallenge(self):
         self.proxy.datagramReceived(registerRequest, ("127.0.0.1", 5632))
