@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.30 $"[11:-2]
+__version__ = "$Revision: 1.31 $"[11:-2]
 
 import types
 import weakref
@@ -112,23 +112,14 @@ class Model:
                         self.views.remove(view)
         return retVal
 
-    def __eq__(self, other):
-        if other is None: return 0
+    def __cmp__(self, other):
+        if other is None: return -1
         for elem in self.__dict__.keys():
-            if elem is "views": continue
+            if elem in ["views", 'suvbiews', 'modelStack', 'parent']: continue
             if getattr(self, elem) != getattr(other, elem, None):
-                return 0
+                return -1
         else:
-            return 1
-
-    def __ne__(self, other):
-        if other is None: return 1
-        for elem in self.__dict__.keys():
-            if elem is "views": continue
-            if getattr(self, elem) == getattr(other, elem, None):
-                return 0
-        else:
-            return 1
+            return 0
 
     protected_names = ['initialize', 'addView', 'addSubview', 'removeView', 'notify', 'getSubmodel', 'setSubmodel', 'getData', 'setData']
     allowed_names = []
