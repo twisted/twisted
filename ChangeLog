@@ -1,3 +1,10 @@
+2002-09-09  Andrew Bennetts  <spiv@twistedmatrix.com>
+
+	* twisted.inetd: An inetd(8) replacement.  TCP support should be
+	complete, but UDP and Sun-RPC support is still buggy.  This was
+	mainly written as a proof-of-concept for how to do a forking
+	super-server with Twisted, but is already usable.
+
 2002-08-30  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.99.1rc4. There was a bug in the acquisition 
