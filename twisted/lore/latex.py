@@ -76,6 +76,9 @@ class LatexSpitter(XMLParser):
         m = getattr(self, "end_"+name, None)
         m and m(name)
 
+    def gotDoctype(self, dt):
+        pass
+
     def start_img(self, _, attributes):
         fileName = os.path.join(self.currDir, attributes['src'])
         target, ext = os.path.splitext(fileName)
