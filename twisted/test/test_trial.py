@@ -64,7 +64,7 @@ class UserError(Exception):
 
 class TestUserMethod(unittest.TestCase):
     def setUp(self):
-        self.janitor = util.Janitor()
+        self.janitor = util._Janitor()
 
     def errorfulMethod(self):
         raise UserError, 'i am a user error'
@@ -89,7 +89,8 @@ class TestUserMethod(unittest.TestCase):
         failUnlessRaises(runner.UserMethodError, umw)
         failUnless(umw.errors[0].check(UserError))
         failUnless(umw.endTime > umw.startTime)
-    
+
+class WaitReentrancyTest(unittest.TestCase):
     def _returnedDeferredThenWait(self):
         def threadedOperation():
             time.sleep(0.1)

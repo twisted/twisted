@@ -18,7 +18,7 @@
 #  The program flow goes like this:
 #
 #  The twisted.scripts.trial module parses command line options, creates a
-#  TestSuite and passes it the Janitor and Reporter objects. It then adds
+#  TestSuite and passes it the _Janitor and Reporter objects. It then adds
 #  the modules, classes, and methods that the user requested that the suite
 #  search for test cases. Then the script calls .runTests() on the suite.
 #
@@ -721,7 +721,7 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
 
             try:
                 # capture all a TestMethod run's log events (warner's request)
-                observer = util.TrialLogObserver().install()
+                observer = util._TrialLogObserver().install()
 
                 # Run the setUp method
                 setUp = UserMethodWrapper(self.setUp, janitor)
@@ -742,8 +742,8 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 # Run the test method
                 reporter.startTest(self)
                 try:
-                    sys.stdout = util.StdioProxy(sys.stdout)
-                    sys.stderr = util.StdioProxy(sys.stderr)
+                    sys.stdout = util._StdioProxy(sys.stdout)
+                    sys.stderr = util._StdioProxy(sys.stderr)
                     orig = UserMethodWrapper(self.original, janitor,
                                              raiseOnErr=False,
                                              timeout=self.timeout)

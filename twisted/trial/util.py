@@ -123,7 +123,7 @@ DIRTY_REACTOR_MSG = "THIS WILL BECOME AN ERROR SOON! reactor left in unclean sta
 PENDING_TIMED_CALLS_MSG = "pendingTimedCalls still pending (consider setting twisted.internet.base.DelayedCall.debug = True):"
 
 
-class Janitor(object):
+class _Janitor(object):
     zi.implements(itrial.IJanitor)
     logErrCheck = postCase = True
     cleanPending = cleanThreads = cleanReactor = postMethod = True
@@ -338,14 +338,14 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     if not useWaitError:
         if isinstance(r, failure.Failure):
             r.raiseException()
-        Janitor.do_logErrCheck()
+        _Janitor.do_logErrCheck()
     else:
         flist = []
         if isinstance(r, failure.Failure):
             flist.append(r)
         
         try:
-            Janitor.do_logErrCheck()
+            _Janitor.do_logErrCheck()
         except MultiError, e:
             flist.extend(e.failures)
 
@@ -427,20 +427,20 @@ def classesToTestWithTrial(*cls):
         #zi.directlyProvides(c, itrial.ITestCaseFactory)
 
 
-class StdioProxy(util.SubclassableCStringIO):
+class _StdioProxy(util.SubclassableCStringIO):
     def __init__(self, original):
-        super(StdioProxy, self).__init__()
+        super(_StdioProxy, self).__init__()
         self.original = original
 
     def __iter__(self):
         return self.original.__iter__()
 
     def write(self, s):
-        super(StdioProxy, self).write(s)
+        super(_StdioProxy, self).write(s)
         return self.original.write(s)
 
     def writelines(self, list):
-        super(StdioProxy, self).writelines(list)
+        super(_StdioProxy, self).writelines(list)
         return self.original.writelines(list)
 
     def flush(self):
@@ -474,7 +474,7 @@ class StdioProxy(util.SubclassableCStringIO):
         return self.original.truncate(size)
 
         
-class TrialLogObserver(object):
+class _TrialLogObserver(object):
     def __init__(self):
         self.events = []
 

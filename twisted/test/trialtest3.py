@@ -383,7 +383,7 @@ class TestTests(unittest.TestCase):
 
     def testMethods(self):
         for klass in (self.Tests, self.TestLeetTimeout, self.TestSkipClassAttr, self.TestTodoClassAttr):
-            suite = runner.TestSuite(BogusReporter(), util.Janitor())
+            suite = runner.TestSuite(BogusReporter(), util._Janitor())
             suite.addTestClass(klass)
             suite.run()
 
@@ -403,7 +403,7 @@ class TestBenchmark(unittest.TestCase):
             self.recordStat(statdatum)
 
     def testBenchmark(self):
-        suite = runner.TestSuite(BogusReporter(), util.Janitor(), benchmark=True)
+        suite = runner.TestSuite(BogusReporter(), util._Janitor(), benchmark=True)
         suite.addTestClass(self.Benchmark)
         suite.run()
 

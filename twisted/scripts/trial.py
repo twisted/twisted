@@ -550,7 +550,7 @@ def _getReporter(config):
     return reporter
 
 def _getJanitor(config=None):
-    j = util.Janitor()
+    j = util._Janitor()
     return j
 
 def _getSuite(config):
