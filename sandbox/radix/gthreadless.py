@@ -54,13 +54,13 @@ class GreenletWrapper(object):
         if callable(original):
             def outerWrapper(*a, **kw):
                 assert greenlet.getcurrent() is not greenlet.main
-                def innerWrapper():
-                    # result = greenlet.greenlet(original).switch(*a, **kw)
-                    result = original(*a, **kw)
-                    if isinstance(result, defer.Deferred):   
-                        return blockOn(result)
-                    return result
-                return greenlet.greenlet(innerWrapper).switch()
+                def innerWrapper(result):
+                    return blockOn(result)
+                # result = greenlet.greenlet(original).switch(*a, **kw)
+                result = original(*a, **kw)
+                if isinstance(result, defer.Deferred):   
+                    return greenlet.greenlet(innerWrapper).switch(result)
+                return result
             return outerWrapper
         return original
 
