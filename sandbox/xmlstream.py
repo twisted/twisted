@@ -5,6 +5,7 @@ from twisted.web import microdom, domhelpers
 class BadStream(Exception):
      pass
 
+
 class XMLStream(microdom.MicroDOMParser):
 
     first = 1
@@ -43,6 +44,7 @@ class XMLStream(microdom.MicroDOMParser):
     def writeElement(self, element):
         element.writexml(self)
 
+
 class JabberBasic(XMLStream):
 
     def gotElement(self, element):
@@ -53,10 +55,12 @@ class JabberBasic(XMLStream):
     def gotUnknownElement(self, element):
         pass # degrade gracefully
 
+
 def _getElementNamedOrNone(self, element, name):
     return (microdom.getElementsByTagName(element, name) or [None])[0]
 
-class JabberCoreMixin:
+
+class JabberMessageMixin:
 
     def gotElement_message(self, message):
         type = message.attributes.get('type')
@@ -80,6 +84,15 @@ class JabberCoreMixin:
         subject = _getElementNamedOrNone(message, 'subject')
         thread = _getElementNamedOrNone(message, 'thread')
         self.gotMessageDefault(type, from, to, id, subject, body, thread)
+
+    def gotMessageError(self, from_, to, id, code, text):
+        raise NotImplementedError
+
+    def gotMessageDefault(self, type, from_, to, id, subject, body, thread):
+        raise NotImplementedError
+
+
+class JabberPresenceMixin:
 
     def gotElement_presence(self, element):
         type = message.attributes.get('type')
@@ -105,146 +118,56 @@ class JabberCoreMixin:
         return self.gotPresenceNotification(from_, to, id, show, status,
                                             priority)
 
-    def gotPresence_unavailable(self, type, from_, to, id, message):
-        pass #
-
-    def gotPresence_subscribe(self, type, from_, to, id, message):
-        pass #
-
-    def gotPresence_subscribed(self, type, from_, to, id, message):
-        pass #
-
-    def gotPresence_unavailable(self, element, type):
-        pass # implement
-
-"""
-The Presence Element
-
-   The <presence/> is used to express an entity's current availability
-   status (offline or online, along with various sub-states of the
-   latter) and communicate that status to other entities. It is also used
-   to negotiate and manage subscriptions to the presence of other
-   entities.
-
-   A presence chunk MAY possess the following attributes:
-     * to - Specifies the intended recipient of the presence chunk (if
-       any).
-     * from - Specifies the sender of the presence chunk.
-     * id - A unique identifier for the purpose of tracking presence. The
-       sender of the presence chunk sets this attribute, which may be
-       returned in any replies.
-     * type - Describes the availability state, subscription request,
-       presence request, or error. No 'type' attribute, or inclusion of a
-       type not specified here, implies that the resource is available.
-       The type SHOULD be one of the following:
-          + unavailable - Signals that the entity is no longer available
-            for communication.
-          + subscribe - The sender wishes to subscribe to the recipient's
-            presence.
-          + subscribed - The sender has allowed the recipient to receive
-            their presence.
-          + unsubscribe - A notification that an entity is unsubscribing
-            from another entity's presence.
-          + unsubscribed - The subscription request has been denied or a
-            previously-granted subscription has been cancelled.
-          + probe - A request for an entity's current presence.
-          + error - An error has occurred regarding processing or
-            delivery of a previously-sent presence chunk.
-
-   A presence chunk may contain zero or one of each of the following
-   child elements:
-     * show - Describes the availability status of an entity or specific
-       resource. The value SHOULD be one of the following (values other
-       than these four are typically ignored; additional availability
-       types could be defined through a properly-namespaced element of
-       the presence chunk):
-          + away - Entity or resource is temporarily away.
-          + chat - Entity or resource is free to chat.
-          + xa - Entity or resource is away for an extended period (xa =
-            "eXtended Away").
-          + dnd - Entity or resource is busy (dnd = "Do Not Disturb").
-     * status - An optional natural-language description of availability
-       status. Normally used in conjunction with the show element to
-       provide a detailed description of an availability state (e.g., "In
-       a meeting").
-     * priority - A non-negative integer representing the priority level
-       of the connected resource, with zero as the lowest priority.
-     * error - If the presence is of type="error", the <presence/> chunk
-       MUST include an <error/> child, which in turn MUST have a 'code'
-       attribute corresponding to one of the standard error codes and MAY
-       also contain PCDATA corresponding to a natural-language
-       description of the error.
-
-   A presence chunk MAY also contain any properly-namespaced child
-   element (other than the common data elements, stream elements, or
-   defined children thereof).
-
-The IQ Element
-
-   Info/Query, or IQ, is a simple request-response mechanism. Just as
-   HTTP is a request-response medium, the iq element enables an entity to
-   make a request of, and receive a response from, another entity. The
-   data content of the request and response is defined by the namespace
-   declaration of a direct child element of the iq element.
-
-   Most IQ interactions follow a common pattern of structured data
-   exchange such as get/result or set/result:
-
-Requesting               Responding
-  Entity                   Entity
-----------               ----------
-    |                        |
-    |    <iq type="get">     |
-    | ---------------------> |
-    |                        |
-    |   <iq type="result">   |
-    | <--------------------- |
-    |                        |
-    |    <iq type="set">     |
-    | ---------------------> |
-    |                        |
-    |   <iq type="result">   |
-    | <--------------------- |
-    |                        |
-
-
-
-   An IQ chunk MAY possess the following attributes:
-     * to - Specifies the intended recipient of the IQ chunk.
-     * from - Specifies the sender of the IQ chunk.
-     * id - An optional unique identifier for the purpose of tracking the
-       request-response interaction. The sender of the IQ chunk sets this
-       attribute, which may be returned in any replies.
-     * type - The required 'type' attribute specifies a distinct step
-       within a request-response interaction. The value SHOULD be one of
-       the following (all other values are ignored):
-          + get - The chunk is a request for information.
-          + set - The chunk contains data intended to provide required
-            data, set new values, or replace existing values.
-          + result - The chunk is a response to a successful get or set
-            request.
-          + error - An error has occurred regarding processing or
-            delivery of a previously-sent get or set.
-
-   In the strictest terms, the iq element contains no children since it
-   is a vessel for XML in another namespace. An IQ chunk MAY contain any
-   properly-namespaced child element (other than the common data
-   elements, stream elements, or defined children thereof).
-
-   If the IQ is of type="error", the <iq/> chunk MUST include an <error/>
-   child, which in turn MUST have a 'code' attribute corresponding to one
-   of the standard error codes and MAY also contain PCDATA corresponding
-   to a natural-language description of the error.
-"""
-
-    def gotMessageError(self, from_, to, id, code, text):
-        raise NotImplementedError
-
     def gotPresenceError(self, from_, to, id, code, text):
-        raise NotImplementedError
-
-    def gotMessageDefault(self, type, from_, to, id, subject, body, thread):
         raise NotImplementedError
 
     def gotPresenceNotification(self, from_, to, id, show, status, priority):
         raise NotImplementedError
+
+    def gotPresence_unavailable(self, type, from_, to, id, message):
+        pass # implement
+
+    def gotPresence_subscribe(self, type, from_, to, id, message):
+        pass # implement
+
+    def gotPresence_subscribed(self, type, from_, to, id, message):
+        pass # implement
+
+    def gotPresence_probe(self, type, from_, to, id, message):
+        pass # implement
+
+
+class JabberIQMixin:
+
+    def gotElement_iq(self, element):
+        type = element.attributes['type']
+        m = getattr(self, 'gotIQ_'+type, None)
+        if not m:
+            return # unrecognized types must be ignored as per spec
+        id = element.attributes.get('id')
+        from_ = element.attributes.get('from')
+        to = element.attributes.get('to')
+        m(type, from_, to, id, element)
+
+    def gotIQ_error(self, type, from_, to, id, element):
+        error = _getElementNamedOrNone(message, 'error')
+        code = error.attributes['code']
+        text = domhelpers.getNodeText(error)
+        self.gotIQError(from_, to, id, code, text)
+
+    def gotIQ_get(self, type, from_, to, id, element):
+        pass # implemented in implementation-dependent manner
+
+    def gotIQ_set(self, type, from_, to, id, element):
+        pass # implemented in implementation-dependent manner
+
+    def gotIQ_result(self, type, from_, to, id, element):
+        pass # implemented in implementation-dependent manner
+
+    def gotIQError(self, from_, to, id, code, text):
+        raise NotImplementedError
+
+
+class JabberCoreMixin(JabberMessageMixin, JabberPresenceMixin, JabberIQMixin):
+    pass
+
