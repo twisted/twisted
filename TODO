@@ -10,16 +10,16 @@ this file directly.
 
 --- TO DO:
 
-000 Documentation.  Let's not let this project become Zope.  Anybody with free
-    time, please document API calls, write tutorials, and generally figure out
-    how this stuff works.
+000 Documentation.  We have sadly let this project become as arcane as Zope was
+    in its early days.  Anybody with free time, please document API calls,
+    write tutorials, and generally figure out how this stuff works.
 
     Specifically weak documentation subsections include:
       * How to write a complex service for PB
       * Identities/Perspectives/Services (Passport & how to use it)
       * Document "how to schedule" (deferred, timeouts and so on)
 
-001 [[Glyph]] Asynchronous Authentication Service.  PB (and similiar) servers
+001 *{Glyph}* Asynchronous Authentication Service.  PB (and similiar) servers
     ought to be able to defer their authentication at least to another PB
     service.  This means that the Authenticator interface has to be revamped to
     use callbacks instead of return values.
@@ -48,7 +48,7 @@ this file directly.
     so I'd like to have both eventually.  I would really like to have the
     Jython Faucet back up and running again.
 
-006 [[Sean Riley]] "Enterprise".  Similiar to WebWare's MiddleKit, it would be
+006 *{Sean Riley}* "Enterprise".  Similiar to WebWare's MiddleKit, it would be
     nice to have a library for object-relational interaction.  Better yet that
     such interaction could be event-based rather than dependant upon blocking
     DB APIs.  This is a nastier problem than it sounds like.
@@ -100,7 +100,7 @@ this file directly.
 
 018.1 Support for running twisted servers as WinNT services, with a GUI.
 
-018.2 twisted.internet support for the win32 event loop as
+018.2 *{Andrew Bennetts}* twisted.internet support for the win32 event loop as
       provided by win32all.
 
 018.3 GUI startup and system tray icon for twistd process on non-NT machines.
@@ -172,6 +172,6 @@ this file directly.
 037 twisted.web cookie-based sessions need to be redone in a more secure fashion.
     See http://cookies.lcs.mit.edu/pubs.html for details.
 
-038 Integrate mbac's client FTP protocol.
+038 *{?}* Integrate mbac's client FTP protocol.
 
 039 Remote log viewing and management PB service in lumberjack package.
