@@ -1,3 +1,7 @@
+2003-07-23  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_enterprise.py: more tests
+
 2003-07-21  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/internet/base.py: implement callWhenRunning

@@ -22,13 +22,15 @@ from twisted.trial import unittest
 import os
 import random
 
-from twisted.trial.util import deferredResult
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.reflector import *
 from twisted.enterprise.xmlreflector import XMLReflector
 from twisted.enterprise.sqlreflector import SQLReflector
 from twisted.enterprise.adbapi import ConnectionPool
 from twisted.enterprise import util
+from twisted.internet import defer
+from twisted.trial.util import deferredResult, deferredError
+from twisted.python import log
 
 try: import gadfly
 except: gadfly = None
@@ -86,6 +88,12 @@ CREATE TABLE childTable (
   stuff          varchar(64),
   gogogo         integer,
   data           varchar(64)
+)
+"""
+
+simple_table_schema = """
+CREATE TABLE simple (
+  x integer
 )
 """
 
@@ -298,6 +306,8 @@ class SQLReflectorTestCase(ReflectorTestCase):
     DB_USER = 'twisted_test'
     DB_PASS = 'twisted_test'
 
+    can_rollback = 1
+
     reflectorClass = SQLReflector
 
     def createReflector(self):
@@ -305,37 +315,109 @@ class SQLReflectorTestCase(ReflectorTestCase):
         self.dbpool = self.makePool()
         deferredResult(self.dbpool.runOperation(main_table_schema))
         deferredResult(self.dbpool.runOperation(child_table_schema))
+        deferredResult(self.dbpool.runOperation(simple_table_schema))
         return self.reflectorClass(self.dbpool, [TestRow, ChildRow])
 
     def destroyReflector(self):
         deferredResult(self.dbpool.runOperation('DROP TABLE testTable'))
         deferredResult(self.dbpool.runOperation('DROP TABLE childTable'))
+        deferredResult(self.dbpool.runOperation('DROP TABLE simple'))
         self.dbpool.close()
         self.stopDB()
+
+    def testPool(self):
+        # make sure failures are raised correctly
+        deferredError(self.dbpool.runQuery("select * from NOTABLE"))
+        deferredError(self.dbpool.runOperation("delete from * from NOTABLE"))
+        deferredError(self.dbpool.runInteraction(self.bad_interaction))
+        log.flushErrors()
+
+        # verify simple table is empty
+        sql = "select count(1) from simple"
+        row = deferredResult(self.dbpool.runQuery(sql))
+        self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
+
+        # add some rows to simple table (runOperation)
+        for i in range(self.count):
+            sql = "insert into simple(x) values(%d)" % i
+            deferredResult(self.dbpool.runOperation(sql))
+
+        # make sure they were added (runQuery)
+        sql = "select x from simple order by x";
+        rows = deferredResult(self.dbpool.runQuery(sql))
+        self.failUnless(len(rows) == self.count, "Wrong number of rows")
+        for i in range(self.count):
+            self.failUnless(len(rows[i]) == 1, "Wrong size row")
+            self.failUnless(rows[i][0] == i, "Values not returned.")
+
+        # runInteraction
+        deferredResult(self.dbpool.runInteraction(self.interaction))
+
+        # DELETE ME when connection pool is fixed
+        if self.dbpool.max == 1:
+            return
+
+        # give the pool a workout
+        ds = []
+        for i in range(self.count):
+            sql = "select x from simple where x = %d" % i
+            ds.append(self.dbpool.runQuery(sql))
+        dlist = defer.DeferredList(ds, fireOnOneErrback=1)
+        result = deferredResult(dlist)
+        for i in range(self.count):
+            self.failUnless(result[i][1][0][0] == i, "Value not returned")
+
+        # now delete everything
+        ds = []
+        for i in range(self.count):
+            sql = "delete from simple where x = %d" % i
+            ds.append(self.dbpool.runOperation(sql))
+        dlist = defer.DeferredList(ds, fireOnOneErrback=1)
+        deferredResult(dlist)
+
+        # verify simple table is empty
+        sql = "select count(1) from simple"
+        row = deferredResult(self.dbpool.runQuery(sql))
+        self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
+
+    def interaction(self, transaction):
+        transaction.execute("select x from simple order by x")
+        for i in range(self.count):
+            row = transaction.fetchone()
+            self.failUnless(len(row) == 1, "Wrong size row")
+            self.failUnless(row[0] == i, "Value not returned.")
+        # should test this, but gadfly throws an exception instead
+        #self.failUnless(transaction.fetchone() is None, "Too many rows")
+
+    def bad_interaction(self, transaction):
+        if self.can_rollback:
+            transaction.execute("insert into simple(x) values(0)")
+
+        transaction.execute("select * from NOTABLE")
 
     def startDB(self): pass
     def stopDB(self): pass
 
 
-class SinglePool(ConnectionPool):
-    """A pool for just one connection at a time.
-    Remove this when ConnectionPool is fixed.
-    """
-
-    def __init__(self, connection):
-        self.connection = connection
-
-    def connect(self):
-        return self.connection
-
-    def close(self):
-        self.connection.close()
-        del self.connection
-
-
 class NoSlashSQLReflector(SQLReflector):
     def escape_string(self, text):
         return text.replace("'", "''")
+
+
+# DELETE ME when connection pool is fixed
+class SingleConnectionPool(ConnectionPool):
+    connection = None
+
+    def connect(self):
+        if self.connection is None:
+            self.connection = apply(self.dbapi.connect,
+                                    self.connargs, self.connkw)
+        return self.connection
+
+    def finalClose(self):
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
 
 
 class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -346,6 +428,7 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
     nullsOK = 0
     DB_DIR = "./gadflyDB"
     reflectorClass = NoSlashSQLReflector
+    can_rollback = 0
 
     def startDB(self):
         if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
@@ -359,7 +442,8 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
         conn.close()
 
     def makePool(self):
-        return SinglePool(gadfly.gadfly(self.DB_NAME, self.DB_DIR))
+        return SingleConnectionPool('gadfly', self.DB_NAME,
+                                    self.DB_DIR, cp_max=1)
 
 
 class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -375,7 +459,7 @@ class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
         if os.path.exists(self.database): os.unlink(self.database)
 
     def makePool(self):
-        return SinglePool(sqlite.connect(database=self.database))
+        return SingleConnectionPool('sqlite', database=self.database, cp_max=1)
 
 
 class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -384,7 +468,8 @@ class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
 
     def makePool(self):
         return ConnectionPool('pyPgSQL.PgSQL', database=self.DB_NAME,
-                              user=self.DB_USER, password=self.DB_PASS)
+                              user=self.DB_USER, password=self.DB_PASS,
+                              cp_min=0)
 
 
 class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -392,6 +477,7 @@ class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
     """
 
     trailingSpacesOK = 0
+    can_rollback = 0
 
     def makePool(self):
         return ConnectionPool('MySQLdb', db=self.DB_NAME,
@@ -410,6 +496,8 @@ class QuotingTestCase(unittest.TestCase):
 
 
 if gadfly is None: GadflyTestCase.skip = 1
+elif not getattr(gadfly, 'connect', None): gadfly.connect = gadfly.gadfly
+
 if sqlite is None: SQLiteTestCase.skip = 1
 
 if PgSQL is None: PostgresTestCase.skip = 1
