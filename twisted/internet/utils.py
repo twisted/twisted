@@ -18,6 +18,7 @@
 """Utility methods."""
 
 from twisted.internet import protocol, reactor, defer
+from twisted.python import failure
 import cStringIO
 
 
