@@ -15,16 +15,25 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Internet Relay Chat Protocol implementation
+"""Internet Relay Chat Protocol for client and server.
 
-References:
- * RFC 1459: Internet Relay Chat Protocol
+Stability: semi-stable.
 
- * RFC 2812: Internet Relay Chat: Client Protocol
+Future plans: The way the IRCClient class works here encourages people
+to implement IRC clients by subclassing the ephemeral protocol class,
+and it tends to end up with way more state than it should for an object
+which will be destroyed as soon as the TCP transport drops.  Someone
+oughta do something about that, ya know?
 
- * The Client-To-Client-Protocol
-   http://www.irchelp.org/irchelp/rfc/ctcpspec.html
+@author: U{Kevin Turner<mailto:acapnotic@twistedmatrix.com>}
+
+@see: RFC 1459: Internet Relay Chat Protocol
+@see: RFC 2812: Internet Relay Chat: Client Protocol
+@see: U{The Client-To-Client-Protocol
+    <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
+
+__version__ = '$Revision: 1.58 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -37,13 +46,11 @@ import errno
 import os
 import random
 import re
-import shutil
 import stat
 import string
 import struct
 import sys
 import time
-import tempfile
 import types
 import traceback
 
@@ -181,12 +188,37 @@ class IRCClient(basic.LineReceiver):
     this class also contains reasonable implementations of many common
     CTCP methods.
 
-    TODO:
-     * Login for IRCnets which require a PASS
-     * Limit the length of messages sent (because the IRC server probably
+    @ivar nickname: Nickname the client will use.
+    @ivar password: Password used to log on to the server.  May be C{None}.
+    @ivar realname: Supplied to the server during login as the \"Real name\"
+        or \"ircname\".
+
+    @ivar userinfo: Sent in reply to a X{USERINFO} CTCP query.  If C{None}, no
+        USERINFO reply will be sent.
+            \"This is used to transmit a string which is settable by
+            the user (and never should be set by the client).\"
+    @ivar fingerReply: Sent in reply to a X{FINGER} CTCP query.  If C{None}, no
+        FINGER reply will be sent.
+    @type fingerReply: Callable or String
+
+    @ivar versionName: CTCP VERSION reply, client name.  If C{None}, no VERSION
+        reply will be sent.
+    @ivar versionNum: CTCP VERSION reply, client version,
+    @ivar versionEnv: CTCP VERSION reply, environment the client is running in.
+
+    @ivar sourceURL: CTCP SOURCE reply, a URL where the source code of this
+        client may be found.  If C{None}, no SOURCE reply will be sent.
+
+    @ivar lineRate: Minimum delay between lines sent to the server.  If
+        C{None}, no delay will be imposed.
+    @type lineRate: Number of Seconds.
+
+    TODO
+    ====
+     - Limit the length of messages sent (because the IRC server probably
        does).
-     * Add flood protection/rate limiting for my CTCP replies.
-     * NickServ cooperation.  (a mix-in?)
+     - Add flood protection/rate limiting for my CTCP replies.
+     - NickServ cooperation.  (a mix-in?)
     """
 
     nickname = 'irc'
@@ -201,9 +233,7 @@ class IRCClient(basic.LineReceiver):
     versionNum = None
     versionEnv = None
 
-    sourceHost = "twistedmatrix.com"
-    sourceDir = "/downloads"
-    sourceFiles = None
+    sourceURL = "http://twistedmatrix.com/downloads/"
 
     dcc_destdir = '.'
     dcc_sessions = None
@@ -212,11 +242,9 @@ class IRCClient(basic.LineReceiver):
     # ourself to the server.
     performLogin = 1
 
-    # Delay between sending lines, default to no throttling
-    # to retain traditional behavior
     lineRate = None
-    queue = None
-    sendDelay = 0
+    _queue = None
+    _queueEmptying = None
 
     __pychecker__ = 'unusednames=params,prefix,channel'
 
@@ -225,18 +253,18 @@ class IRCClient(basic.LineReceiver):
         if self.lineRate is None:
             basic.LineReceiver.sendLine(self, lowQuote(line))
         else:
-            self.queue.append(line)
-            if len(self.queue) == 1:
-                delay, self.sendDelay = self.sendDelay, 0
-                reactor.callLater(delay, self._sendLine)
-
+            self._queue.append(line)
+            if not self._queueEmptying:
+                self._queueEmptying = reactor.callLater(self.lineRate,
+                                                        self._sendLine)
 
     def _sendLine(self):
-        basic.LineReceiver.sendLine(self, lowQuote(self.queue.pop(0)))
-        if len(self.queue):
-            reactor.callLater(self.lineRate, self._sendLine)
+        if self._queue:
+            basic.LineReceiver.sendLine(self, lowQuote(self._queue.pop(0)))
+            self._queueEmptying = reactor.callLater(self.lineRate,
+                                                    self._sendLine)
         else:
-            self.sendDelay = self.lineRate
+            self._queueEmptying = None
 
 
     ### Interface level client->user output methods
@@ -541,17 +569,12 @@ class IRCClient(basic.LineReceiver):
                                % (user, data))
         if self.sourceHost:
             nick = string.split(user,"!")[0]
-            if self.sourceFiles:
-                sourceFiles = string.join(self.sourceFiles, ' ')
-            else:
-                sourceFiles = ''
-            self.ctcpMakeReply(nick, [('SOURCE', "%s:%s:%s" %
-                                       (self.sourceHost,
-                                        self.sourceDir,
-                                        sourceFiles,
-                                        )),
-                                      ('SOURCE', None)
-                                      ])
+            # The CTCP document (Zeuge, Rollo, Mesander 1994) says that SOURCE
+            # replies should be responded to with the location of an anonymous
+            # FTP server in host:directory:file format.  I'm taking the liberty
+            # of bringing it into the 21st century by sending a URL instead.
+            self.ctcpMakeReply(nick, [('SOURCE', self.sourceURL),
+                                      ('SOURCE', None)])
 
     def ctcpQuery_USERINFO(self, user, channel, data):
         if data is not None:
@@ -774,7 +797,7 @@ class IRCClient(basic.LineReceiver):
     ### Protocool methods
 
     def connectionMade(self):
-        self.queue = []
+        self._queue = []
         if self.performLogin:
             self.register(self.nickname)
 
