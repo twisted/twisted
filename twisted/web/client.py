@@ -140,6 +140,12 @@ class HTTPPageDownloader(HTTPPageGetter):
         if self.transmittingPage:
             self.factory.pageEnd()
             self.transmittingPage = 0
+        if self.failed:
+            self.factory.noPage(
+                failure.Failure(
+                    error.Error(
+                        self.status, self.message, None)))
+            self.transport.loseConnection()
 
 
 class HTTPClientFactory(protocol.ClientFactory):
