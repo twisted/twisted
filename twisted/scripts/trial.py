@@ -593,7 +593,7 @@ def _getSuite(config):
 
 
 def _setUpTestdir():
-    testdir = osp.normapth(osp.abspath("_trial_temp"))
+    testdir = osp.normpath(osp.abspath("_trial_temp"))
     if osp.exists(testdir):
        try:
            shutil.rmtree(testdir)
