@@ -383,7 +383,7 @@ class GenerateDocs(Transaction):
 
 
 
-def CreateTarballs(opts):
+class CreateTarballs(opts):
 
     def doIt(self, opts):
         print "CreateTarballs"
