@@ -32,7 +32,7 @@ class InputHandler(Controller):
         """
         Return the data associated with this handler from the request, if any
         """
-        input = request.args.get(self.id, None)
+        input = request.args.get(self.submodel, None)
         if input:
             return input
 
@@ -60,10 +60,10 @@ class InputHandler(Controller):
         -- set the model?
         """
         data = str(data)
-        assert ';' not in self.id, "Semicolon is not legal in handler ids."
+        assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
         if data != self.view.getData():
-            exec "self.model." + self.id + " = " + `data`
-            self.model.notify({self.id: data})
+            exec "self.model." + self.submodel + " = " + `data`
+            self.model.notify({self.submodel: data})
 
     def handleInvalid(self, request, data):
         """
@@ -74,7 +74,7 @@ class InputHandler(Controller):
 
 class SingleValueInputHandler(InputHandler):
     def getInput(self, request):
-        input = request.args.get(self.id, None)
+        input = request.args.get(self.submodel, None)
         if input:
             return input[0]
 
