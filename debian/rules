@@ -13,6 +13,8 @@ export DH_COMPAT=1
 build: build-stamp
 build-stamp:
 	dh_testdir
+	/usr/bin/python setup.py build
+	#strip build/lib*/twisted/spread/*.so
 	touch build-stamp
 
 clean:
@@ -43,12 +45,12 @@ install-stamp: build-stamp
 	touch install-stamp
 
 binary-arch: build install
-	/usr/bin/python setup.py build
 
 binary-indep: build install
 #	dh_testversion
 	dh_testdir
 	dh_testroot
+	dh_strip
 	dh_compress
 	dh_installchangelogs
 	dh_fixperms
