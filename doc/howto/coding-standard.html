@@ -111,7 +111,12 @@ parent.Foo = Foo
 
 <p>Every package should be added to the list in
 <code class="shell">setup.py</code>.</p>
-     
+
+    <p>Packages must not depend circularly upon each other.  To simplify
+    maintaining this state, packages must also not import each other
+    circularly.  While this applies to all packages within Twisted, one
+    <code>twisted.python</code> deserves particular attention, as it may
+    not depend on any other Twisted package.</p>
 
     <h2>Docstrings</h2>
 
