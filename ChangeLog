@@ -1,3 +1,18 @@
+2003-07-24  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/cReactor/cDelayedCall.c: implement .active and
+	.getTime methods
+
+	* twisted/test/test_internet.py (InterfaceTestCase.wake): remove
+	reactor.initThreads() call. This is a private method which is
+	triggered internally by the current reactor when threadable.init
+	is called. It does not need to be called independently, and not
+	all reactors implement this particular method.
+
+	* twisted/test/test_threads.py: shuffle test cases, add timeouts
+	to avoid hanging tests. Added (disabled) test to trigger cReactor
+	hang (but unfortunately it fails under the default reactor)
+
 2003-07-23  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/internet/threads.py: avoid top-level reactor import
