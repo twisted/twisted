@@ -392,7 +392,7 @@ class FTP(basic.LineReceiver, DTPFactory):
                     self.reply('noauth')
             else:
                 if (self.factory.userdict.has_key(self.user)) and \
-                   (self.factory.userdict[self.user]["passwd"] == self.passwd):
+                   (self.factory.userdict[self.user]["passwd"] == params):
                     self.passwd = params
                     self.reply('userok', self.user)
                 else:
