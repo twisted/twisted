@@ -19,6 +19,9 @@ This makes sure you only run one resolver per process.
 # Make ServiceSubscriptions pickleable?!
 #
 # Publishing!!!!
+#
+# host names are unicode
+# compare host names case-insensitively
 
 import random
 
@@ -192,10 +195,11 @@ class mDNSResolver(Ephemeral):
         if timeouts is None:
             timeouts = self.timeouts
         d = defer.Deferred()
-        if self.queries.has_key((query.type, str(query.name))):
-            self.queries[(query.type, str(query.name))][0].append(d)
+        name = str(query.name)
+        if self.queries.has_key((query.type, name)):
+            self.queries[(query.type, name)][0].append(d)
         else:
-            self.queries[(query.type, str(query.name))] = [[d], timeouts[1:]]
+            self.queries[(query.type, name)] = [[d], timeouts[1:]]
             reactor.callLater(timeouts[0], self._queryTimeout, query)
             self.protocol.write(queries=[query])
         return d
