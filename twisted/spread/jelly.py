@@ -367,7 +367,8 @@ class _Jellier:
                     raise NotImplementedError("Don't know the type: %s" % objType)
                 return self.preserve(obj, sxp)
         else:
-            raise InsecureJelly("Type not allowed: %s" % objType)
+            raise InsecureJelly("Type not allowed for object: %s %s" %
+                                (objType, obj))
 
     def unpersistable(self, reason, sxp=None):
         '''(internal)
