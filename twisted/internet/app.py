@@ -262,11 +262,11 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
     
     def addDelayed(self, delayed):
         """
-        Adds a twisted.python.delay.Delayed object for execution in my event loop.
+        Adds an object implementing delay.IDelayed for execution in my event loop.
 
         The timeout for select() will be calculated based on the sum of
-        all Delayed instances attached to me, using their 'ticktime'
-        attribute.  In this manner, delayed instances should have their
+        all Delayed instances attached to me, using their 'timeout'
+        method.  In this manner, delayed instances should have their
         various callbacks called approximately when they're supposed to
         be (based on when they were registered).
 
@@ -275,8 +275,8 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         However, 'simulation time' for each Delayed instance will be
         monotonically increased on a regular basis.
 
-        See the documentation for twisted.python.delay.Delayed for
-        details.
+        See the documentation for twisted.python.delay.Delayed and IDelayed
+        for details.
         """
         self.delayeds.append(delayed)
         if main.running and self.running:

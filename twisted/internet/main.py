@@ -263,7 +263,9 @@ def addShutdown(function):
     shutdowns.append(function)
 
 def addDelayed(delayed):
-    """Add a Delayed object to the event loop.
+    """Add an object implementing the IDelayed interface to the event loop.
+    
+    See twisted.python.delay.IDelayed for more details.
     """
     delayeds.append(delayed)
 
