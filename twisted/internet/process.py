@@ -235,14 +235,17 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             except:
                 # If there are errors, bail and try to write something
                 # descriptive to stderr.
-                stderr = os.fdopen(2,'w')
-                stderr.write("Upon execvpe %s %s in environment %s\n:" %
-                             (command, str(args),
-                              "id %s" % id(environment)))
-                traceback.print_exc(file=stderr)
-                stderr.flush()
-                for fd in range(3):
-                    os.close(fd)
+                try:
+                    stderr = os.fdopen(2,'w')
+                    stderr.write("Upon execvpe %s %s in environment %s\n:" %
+                                 (command, str(args),
+                                  "id %s" % id(environment)))
+                    traceback.print_exc(file=stderr)
+                    stderr.flush()
+                    for fd in range(3):
+                        os.close(fd)
+                except:
+                    pass # make *sure* the child terminates
             os._exit(1)
         if settingUID:
             os.setregid(currgid, curegid)
@@ -516,7 +519,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         (Unfortunately, this is a slightly experimental approach, since
         UNIX has no way to be really sure that your process is going to
         go away w/o blocking.  I don't want to block.)
-        """    
+        """
         try:
             pid, status = os.waitpid(self.pid, os.WNOHANG)
         except OSError, e:
@@ -567,6 +570,11 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         return self.fd
 
     def maybeCallProcessEnded(self):
+        # two things must happen before we call the ProcessProtocol's
+        # processEnded method. 1: the child process must die and be reaped
+        # (which calls our own processEnded method). 2: the child must close
+        # their stdout, causing the pty to close, causing our connectionLost
+        # method to be called.
         if self.lostProcess == 2:
             try:
                 exitCode = sig = None
