@@ -18,7 +18,8 @@ to use, and hopefully will be widely adopted outside of the Twisted internals.
     <h2>The Portal</h2>
 <p>This is the ineffable mystery at the core of login.  There is one 
 concrete implementation of Portal, and no interface - it does a very 
-simple task.  A Portal associates one (1) Realm with a collection of 
+simple task.  A <code class="API" base="twisted.cred.portal">Portal</code>
+associates one (1) Realm with a collection of 
 CredentialChecker instances.  (More on those later.)</p>
 
 <p>The closest analogue of this in Old Cred was the Authorizer.</p>
@@ -27,9 +28,10 @@ CredentialChecker instances.  (More on those later.)</p>
 something, you will need a reference to a Portal, and to nothing else.  
 This has only 2 methods -</p>
 
-	<code class="API">login(credentials, mind, *interfaces)</code>
+<ul>
+<li><code class="API" base="twisted.cred.portal.Portal">login</code><code>(credentials, mind, *interfaces)</code>
 
-<p>The docstring is quite expansive (see twisted.cred.portal), but in 
+<p>The docstring is quite expansive (see <code class="API">twisted.cred.portal</code>), but in 
 brief, this is what you call when you need to call in order to connect 
 a user to the system.  The result is a deferred which fires a tuple of:</p>
     <ul>
@@ -39,10 +41,11 @@ tuple)</li>
     <li>logout, a 0-argument callable which disconnects the connection that was 
 established by this call to login</li>
     </ul>
-
-	<code class="API">registerChecker(checker, *credentialInterfaces)</code>
+</li>
+<li><code class="API" base="twisted.cred.portal.Portal">registerChecker</code><code>(checker, *credentialInterfaces)</code>
 
 <p>which adds a CredentialChecker to the portal.</p>
+</li></ul>
 
     <h2>The Mind</h2>
 <p>Masters of Perspective Broker already know this object as the ill-named 
@@ -75,7 +78,9 @@ and it's not used in simple usages of cred, so feel free to pass None
 until you find yourself requiring something like this.)</p>
 
     <h2>The CredentialChecker</h2>
-<p>This is an object which resolves some Credentials to an avatar ID.  
+<p>This is an object implementing <code class="API"
+base="twisted.cred.checkers">ICredentialChecker</code> which resolves some
+Credentials to an avatar ID.  
 Some examples of CredentialChecker implementations would be: 
 InMemoryUsernamePassword, ApacheStyleHTAccessFile, 
 UNIXPasswordDatabase, SSHPublicKeyDatabase.  A credential checker 
@@ -109,19 +114,22 @@ cred - another planned refactoring is to move
 twisted.internet.app.ApplicationService into its own module and more 
 heavily emphasize its use in start-up and shut-down.</p>
 
-IRealm is another one-method interface:
+<p><code class="API" base="twisted.cred.portal">IRealm</code> is another one-method interface:</p>
 
-	<code class="API">requestAvatar(avatarId, mind, *interfaces)</code>
+<ul>
+<li><code class="API" base="twisted.cred.portal.IRealm">requestAvatar</code><code>(avatarId, mind, *interfaces)</code>
 
 <p>This method will typically be called from 'Portal.login'.  The avatarId 
 is the one returned by a CredentialChecker.</p>
 
 <p>The important thing to realize about this method is that if it is being 
-called, _the user has already authenticated_.  Therefore, if possible, 
+called, <em>the user has already authenticated</em>.  Therefore, if possible, 
 the Realm should create a new user if one does not already exist 
 whenever possible.  Of course, sometimes this will be impossible 
 without more information, and that is the case that the interfaces 
 argument is for.</p>
+</li>
+</ul>
 
 <p>Since requestAvatar should be called from a Deferred callback, it may 
 return a Deferred or a synchronous result.</p>
@@ -136,14 +144,14 @@ guard, there has been no need for such a thing yet.</p>
     <h2>The Avatar</h2>
 <p>This object has the dubious distinction of appearing nowhere in the 
 code; in fact, very few things will ever touch an actual Avatar, and it 
-is not clear that it will have an interface.  However, _aspects_ of an 
+is not clear that it will have an interface.  However, <em>aspects</em> of an 
 avatar are returned in deferreds from the above methods, which is to 
 say, things that implement particular interfaces which communicate with 
 various protocols that may access your Realm.</p>
 
 <p>This is (hopefully, obviously) similar to a 'Perspective'.  However, an 
-Avatar separates 2 concerns which were muddied previously - _access_ to 
-a realm and _storage of user data_ within a realm.  The avatar itself 
+Avatar separates 2 concerns which were muddied previously - <em>access</em> to 
+a realm and <em>storage of user data</em> within a realm.  The avatar itself 
 stores the data, and the aspects interface to it.  The avatar itself 
 may of course implement its own aspects, but it is suggested in most 
 cases to register adapters that do this.  (Perspective Broker will keep 
