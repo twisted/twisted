@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.141 2003/09/22 02:17:45 exarkun Exp $
+$Id: setup.py,v 1.142 2003/09/23 14:16:01 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -151,6 +151,8 @@ int main(int argc, char **argv)
         else:
             define_macros = []
 
+        print "Checking if C extensions can be compiled, don't be alarmed if a few compile errors are printed."
+        
         if not self._compile_helper("#define X 1\n"):
             print "Compiler not found, skipping C extensions."
             self.extensions = []
