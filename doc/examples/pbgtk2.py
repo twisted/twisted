@@ -83,16 +83,16 @@ class LoginDialog:
         client_factory = pb.PBClientFactory()
         reactor.connectTCP(host, port, client_factory)
         creds = UsernamePassword(userName, password)
-        client_factory.login(creds).addCallbacks(self.cbGotPerspective, self.ebFailedLogin)
+        client_factory.login(creds).addCallbacks(self._cbGotPerspective, self._ebFailedLogin)
         
         self.statusMsg("Contacting server...")
 
-    def cbGotPerspective(self, perspective):
+    def _cbGotPerspective(self, perspective):
         self.statusMsg("Connected to server.")
         self.deferredResult.callback(perspective)
         self._loginDialog.destroy()
 
-    def ebFailedLogin(self, reason):
+    def _ebFailedLogin(self, reason):
         if isinstance(reason, failure.Failure):
             text = str(reason.value)
         else:
