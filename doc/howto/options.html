@@ -158,6 +158,42 @@ print
     <p>Like <code>optFlags</code>, <code>optParameters</code> works
     smoothly with inheritance.</p>
 
+    <h2>Option Subcommands</h2>
+    
+    <p>It is useful, on occassion, to group a set of options together based
+    on the logical "action" to which they belong.  For this, the
+    <code>usage.Options</code> class allows you to define a set of
+    "subcommands", each of which can provide its own
+    <code>usage.Options</code> instance to handle its particular
+    options.</p>
+    
+    <p>Here is an example for an Options class that might parse
+    options like those the cvs program takes</p>
+<pre class="python">
+from twisted.python import usage
+
+class ImportOptions(usage.Options):
+    optParameters = [['module', 'm', None], ['vendor', 'v', None], ['release', 'r', None]]
+
+class CheckoutOptions(usage.Options):
+    optParameters = [['module', 'm', None], ['tag', 'r', None]]
+
+class Options(usage.Options):
+    subCommands = [['import', None, ImportOptions], ['checkout', None, CheckoutOptions]]
+    
+    optParameters = [['compression', 'z', 0], ['repository', 'r', None]]
+</pre>
+    
+    <p>The <code>subCommands</code> attribute of <code>Options</code>
+    directs the parser to the two other <code>Options</code> subclasses
+    when the strings "import" or "checkout" are present on the command
+    line.  All options after the given command string are passed to the
+    specified Options subclass for further parsing.  Only one subcommand
+    may be specified at a time.  After parsing has completed, the Options
+    instance has two new attributes - <code>subCommand</code> and <code>
+    subOptions</code> - which hold the command string and the Options
+    instance used to parse the remaining options.
+
     <h2>Generic Code For Options</h2>
 
     <p>Sometimes, just setting an attribute on the basis of the
