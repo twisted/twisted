@@ -593,7 +593,7 @@ class MicroDOMParser(XMLParser):
                     }
 
 
-    def __init__(self, beExtremelyLenient=0, caseInsensitive=1, preserveCase=0):
+    def __init__(self, beExtremelyLenient=0, caseInsensitive=1, preserveCase=0, soonClosers=soonClosers, laterClosers=laterClosers):
         self.elementstack = []
         d = {'xmlns': 'xmlns', '':''}
         dr = _reverseDict(d)
@@ -603,6 +603,8 @@ class MicroDOMParser(XMLParser):
         self.beExtremelyLenient = beExtremelyLenient
         self.caseInsensitive = caseInsensitive
         self.preserveCase = preserveCase or not caseInsensitive
+        self.soonClosers = soonClosers
+        self.laterClosers = laterClosers
         # self.indentlevel = 0
 
     def shouldPreserveSpace(self):
