@@ -126,11 +126,11 @@ def run(argv=sys.argv):
         invoke(r'%s\bin\zip.exe' % options['cyghome'], args)
 
     # first run - no docs
-    try:
-        os.unlink('dist/%s' % twisteddist)
-        os.unlink('dist/%s' % twisteddistnodocs)
-    except EnvironmentError:
-        pass
+    for f in (twisteddist, twisteddistnodocs):
+        try:
+            os.unlink('dist/%s' % f)
+        except EnvironmentError:
+            pass
     try:
         os.unlink('doc/win32doc.zip')
     except EnvironmentError:
