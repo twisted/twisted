@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.9 2002/11/10 05:39:19 z3p Exp $
+# $Id: conch.py,v 1.10 2002/11/10 07:36:51 spiv Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -154,7 +154,10 @@ class SSHClientTransport(transport.SSHClientTransport):
         except IOError:
             return 0
         for line in known_hosts.xreadlines():
-            hosts, hostKeyType, encodedKey = line.split()
+            try:
+                hosts, hostKeyType, encodedKey = line.split()
+            except ValueError: # old 4-field known_hosts entry (ssh1?)
+                continue
             if not host in hosts.split(','): # incorrect host
                 continue
             if not hostKeyType == keyType: # incorrect type of key
