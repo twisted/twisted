@@ -120,7 +120,7 @@ class File(resource.Resource, styles.Versioned):
             self.indexNames = [self.indexName]
             del self.indexName
 
-    def __init__(self, path):
+    def __init__(self, path, defaultType="text/html"):
         """Create a file with the given path.
         """
         resource.Resource.__init__(self)
@@ -132,7 +132,8 @@ class File(resource.Resource, styles.Versioned):
         # if there was an encoding, get the next suffix
         if self.encoding is not None:
             p, ext = os.path.splitext(p)
-        self.type = self.contentTypes.get(string.lower(ext))
+        self.defaultType = defaultType
+        self.type = self.contentTypes.get(string.lower(ext), defaultType)
         self.processors = {}
 
 
@@ -159,7 +160,7 @@ class File(resource.Resource, styles.Versioned):
         processor = self.processors.get(ext)
         if processor:
             return processor(newpath)
-        f = File(newpath)
+        f = File(newpath, self.defaultType)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
         return f
