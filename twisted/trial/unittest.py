@@ -19,6 +19,14 @@ log.startKeepingErrors()
 class SkipTest(Exception):
     pass
 
+class FailTest(AssertionError):
+    """Raised to indicate the current test has failed to pass."""
+    pass
+
+# Set this to True if you want to disambiguate between test failures and
+# other assertions.  If you are in the habit of using the "assert" statement
+# in your tests, you probably want to leave this false.
+ASSERTION_IS_ERROR = 0
 
 class TestCase:
     def setUp(self):
@@ -28,15 +36,15 @@ class TestCase:
         pass
 
     def fail(self, message=None):
-        raise AssertionError, message
+        raise FailTest, message
 
     def failIf(self, condition, message=None):
         if condition:
-            raise AssertionError, message
+            raise FailTest, message
 
     def failUnless(self, condition, message=None):
         if not condition:
-            raise AssertionError, message
+            raise FailTest, message
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
         try:
@@ -44,17 +52,17 @@ class TestCase:
         except exception:
             return
         except:
-            raise AssertionError, '%s raised instead of %s' % (sys.exc_info()[0], exception.__name__)
+            raise FailTest, '%s raised instead of %s' % (sys.exc_info()[0], exception.__name__)
         else:
-            raise AssertionError, '%s not raised' % exception.__name__
+            raise FailTest, '%s not raised' % exception.__name__
 
     def failUnlessEqual(self, first, second, msg=None):
         if not first == second:
-            raise AssertionError, (msg or '%r != %r' % (first, second))
+            raise FailTest, (msg or '%r != %r' % (first, second))
 
     def failIfEqual(self, first, second, msg=None):
         if not first != second:
-            raise AssertionError, (msg or '%r == %r' % (first, second))
+            raise FailTest, (msg or '%r == %r' % (first, second))
 
     assertEqual = assertEquals = failUnlessEqual
     assertNotEqual = assertNotEquals = failIfEqual
@@ -64,8 +72,13 @@ class TestCase:
 
     def assertApproximates(self, first, second, tolerance, msg=None):
         if abs(first - second) > tolerance:
-            raise AssertionError, (msg or "%s ~== %s" % (first, second))
+            raise FailTest, (msg or "%s ~== %s" % (first, second))
 
+# Methods in this list will be omitted from a failed test's traceback if
+# they are the final frame.
+_failureConditionals = [
+    'fail', 'failIf', 'failUnless', 'failUnlessRaises', 'failUnlessEqual',
+    'failIfEqual', 'assertApproximates']
 
 def isTestClass(testClass):
     return issubclass(testClass, TestCase)
@@ -122,10 +135,15 @@ class TestSuite:
 
     def runOneTest(self, testClass, testCase, method, output):
         ok = 0
+        if not ASSERTION_IS_ERROR:
+            failingExceptionType = AssertionError
+        else:
+            failingExceptionType = FailTest
+            
         try:
             testCase.setUp()
             method(testCase)
-        except AssertionError, e:
+        except failingExceptionType, e:
             output.reportFailure(testClass, method, sys.exc_info())
         except KeyboardInterrupt:
             raise
@@ -138,7 +156,7 @@ class TestSuite:
 
         try:
             testCase.tearDown()
-        except AssertionError, e:
+        except failingExceptionType, e:
             if ok:
                 output.reportFailure(testClass, method, sys.exc_info())
             ok = 0
@@ -169,7 +187,7 @@ class TestSuite:
                 if hasattr(reactor, 'threadpool'):
                     reactor.threadpool.stop()
                     reactor.threadpool = None
-        except AssertionError, e:
+        except failingExceptionType, e:
             if ok:
                 output.reportFailure(testClass, method, sys.exc_info())
             ok = 0
@@ -215,6 +233,41 @@ class TestSuite:
             output.reportImportError(name, exc)
 
         output.stop()
+
+def extract_tb(tb, limit=None):
+    """Extract a list of frames from a traceback, without unittest internals.
+
+    Functionally identical to L{traceback.extract_tb}, but cropped to just
+    the test case itself, excluding frames that are part of the Trial
+    testing framework.
+    """
+    l = traceback.extract_tb(tb, limit)
+    myfile = __file__.replace('.pyc','.py')
+    # filename, line, funcname, sourcetext
+    if (l[0][0] == myfile) and (l[0][2] == 'runOneTest'):
+        del l[0]
+    if (l[-1][0] == myfile) and (l[-1][2] in _failureConditionals):
+        del l[-1]
+    return l
+
+def format_exception(eType, eValue, tb, limit=None):
+    """A formatted traceback and exception, without exposing the framework.
+
+    I am identical in function to L{traceback.format_exception},
+    but I screen out frames from the traceback that are part of
+    the testing framework itself, leaving only the code being tested.
+    """
+    # Only mess with tracebacks if they are from an explicitly failed
+    # test.
+    if eType != FailTest:
+        return traceback.format_exception(eType, eValue, tb, limit)
+
+    tb_list = extract_tb(tb, limit)
+
+    l = ["Traceback (most recent call last):\n"]
+    l.extend(traceback.format_list(tb_list))
+    l.extend(traceback.format_exception_only(eType, eValue))
+    return l
 
 class Reporter:
     def __init__(self):
@@ -308,7 +361,7 @@ class TextReporter(Reporter):
         if isinstance(error, failure.Failure):
             tb = error.getBriefTraceback()
         else:
-            tb = string.join(apply(traceback.format_exception, error))
+            tb = string.join(apply(format_exception, error))
 
         ret = ("%s\n%s: %s (%s)\n%s\n%s" %
                (self.DOUBLE_SEPARATOR,
@@ -472,10 +525,15 @@ def deferredResult(d, timeout=None):
 def deferredError(d, timeout=None):
     """Waits for deferred to fail, and it returns the Failure.
 
-    If the deferred succeeds, raises an AssertionError.
+    If the deferred succeeds, raises FailTest.
     """
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
         return result
     else:
-        raise AssertionError, "Deferred did not fail: %r" % result
+        raise FailTest, "Deferred did not fail: %r" % result
+
+
+# Local Variables:
+# test-case-name: "twisted.test.test_trial"
+# End:
