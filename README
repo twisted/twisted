@@ -72,7 +72,12 @@ Requirements
   Serial: PySerial (http://pyserial.sf.net)
   SSH: PyCrypto (http://pycrypto.sf.net)
        PyPAM (optional - http://www.tummy.com/Software/PyPam/index.html)
-       initgroups, TGmp, PyShadow (optional)
+       initgroups (optional - 
+            http://www.twistedmatrix.com/users/z3p/files/initgroups-0.1.tar.gz)
+        TGmp (optional -
+            http://www.twistedmatrix.com/users/z3p/files/tgmp-1.0.tar.gz) 
+        PyShadow (optional -
+            http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.1.tar.gz)
 
 
 Unit Tests
