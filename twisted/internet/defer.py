@@ -23,6 +23,8 @@ API Stability: stable
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
+from __future__ import nested_scopes
+
 # Twisted imports
 from twisted.python import log, failure
 
@@ -264,14 +266,14 @@ class Deferred:
 
         @param seconds: How long to wait (from now) before firing the
         timeoutFunc.
-        
+
         @param timeoutFunc: will receive the Deferred and *args, **kw as its
         arguments.  The default timeoutFunc will call the errback with a
         L{TimeoutError}.
         """
 
         assert not self.timeoutCall, "Don't call setTimeout twice on the same Deferred."
-        
+
         from twisted.internet import reactor
         self.timeoutCall = reactor.callLater(
             seconds,
