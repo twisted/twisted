@@ -20,6 +20,11 @@ Test case for twisted.protocols.imap4
 
 from __future__ import nested_scopes
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 import os, types
 
 from twisted.protocols import imap4, loopback
@@ -918,3 +923,45 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         
         E = self.client.events
         self.assertEquals(E, [['newMessages', 20, None], ['newMessages', None, 10]])
+
+class StringTransport:
+    disconnecting = 0
+
+    def __init__(self):
+        self.io = StringIO()
+    
+    def write(self, data):
+        self.io.write(data)
+    
+    def writeSequence(self, data):
+        self.io.write(''.join(data))
+    
+    def loseConnection(self):
+        pass
+    
+    def getPeer(self):
+        return ('StringIO', repr(self.io))
+    
+    def getHost(self):
+        return ('StringIO', repr(self.io))
+    
+
+class HandCraftedTestCase(unittest.TestCase):
+    def testTrailingLiteral(self):
+        transport = StringTransport()
+        c = imap4.IMAP4Client()
+        c.makeConnection(transport)
+        c.lineReceived('* OK SERVER BANNER')
+
+        d = c.login('blah', 'blah')
+        c.dataReceived('0001 OK CAPABILITY\r\n0002 OK LOGIN\r\n')
+        self.failUnless(unittest.deferredResult(d))
+        
+        d = c.select('inbox')
+        c.lineReceived('0003 OK SELECT')
+        self.failUnless(unittest.deferredResult(d))
+        
+        d = c.fetchMessage('1')
+        c.dataReceived('* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
+        c.dataReceived('0004 OK FETCH\r\n')
+        self.failUnless(unittest.deferredResult(d))

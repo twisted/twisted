@@ -192,7 +192,7 @@ class IMAP4Server(basic.LineReceiver):
             self._pendingLiteral = None
             rest.seek(0, 0)
             callback(rest)
-            self.setLineMode(passon)
+            self.setLineMode(passon.lstrip('\r\n'))
 
     def lineReceived(self, line):
         # print 'S: ' + line.replace('\r', '\\r')
@@ -929,7 +929,7 @@ class IMAP4Client(basic.LineReceiver):
             self._pendingSize = None
             rest.seek(0, 0)
             self._parts.append(rest.read())
-            self.setLineMode(passon)
+            self.setLineMode(passon.lstrip('\r\n'))
 
     def lineReceived(self, line):
         # print 'C: ' + line
