@@ -222,6 +222,7 @@ else:
             #from TwistedEmacs
             names[i] = names[i][j:]
 
+    old_out_dir = "html"
     #if -o was specified, we need to change it to point to a tmp dir
     #otherwise add our own -o option
     try:
