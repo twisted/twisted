@@ -17,16 +17,25 @@
 """Protocol support for twisted.mail."""
 
 # twisted imports
-from twisted.protocols import pop3, smtp
-from twisted.internet import protocol, defer
+from twisted.protocols import pop3
+from twisted.protocols import smtp
+from twisted.internet import protocol
+from twisted.internet import defer
 
-# system imports
-import string
+from twisted import cred
+import twisted.cred.error
+import twisted.cred.credentials
 
 class DomainSMTP(smtp.SMTP):
     """SMTP server that uses twisted.mail service's domains."""
     
+    service = None
+    
     def validateTo(self, user):
+        """Determine whether or not a given user exists.
+        
+        @return: True if the user exists, false otherwise.
+        """
         if not self.service.domains.has_key(user.dest.domain):
             return defer.fail(smtp.SMTPBadRcpt(user))
         return self.service.domains[user.dest.domain].exists(user)
@@ -54,30 +63,40 @@ class SMTPFactory(smtp.SMTPFactory):
 class VirtualPOP3(pop3.POP3):
     """Virtual hosting POP3."""
 
+    service = None
+
     domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
                           # to indicate user@host. '@' doesn't work
                           # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
-        user, domain = self.lookupDomain(user, digest)
-        mbox = domain.authenticateUserAPOP(user, self.magic, digest, domain)
-        if mbox is None:
-            raise pop3.POP3Error("bad authentication")
-        return mbox
+        # Override the default lookup scheme to allow virtual domains
+        user, domain = self.lookupDomain(user)
+        try:
+            portal = self.service.lookupPortal(domain)
+        except KeyError:
+            return defer.fail(cred.error.UnauthorizedLogin())
+        else:
+            return portal.login(
+                pop3.APOPCredential(user, self.magic, digest),
+                None,
+                pop3.IMailbox
+            )
 
     def authenticateUserPASS(self, user, password):
-        domain = self.service.domains['']
-        mbox = domain.authenticateUserPASS(user, password)
-        if mbox is None:
-            raise pop3.POP3Error("bad authentication")
-        return mbox
+        portal = self.service.defaultPortal()
+        return portal.login(
+            cred.credentials.UserPassword(user, password),
+            None,
+            pop3.IMailbox
+        )
 
-    def lookupDomain(self, user, digest):
+    def lookupDomain(self, user):
         try:
-            user, domain = string.split(user, self.domainSpecifier, 1)
+            user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
             domain = ''
-        if not self.service.domains.has_key(domain):
+        if domain not in self.service.domains:
              raise pop3.POP3Error("no such domain %s" % domain)
         return user, self.service.domains[domain]
 

@@ -377,7 +377,7 @@ class POP3Client(basic.LineReceiver):
         self.apop(user, digest)
 
     def apop(self, user, digest):
-        self.sendLong('APOP', ' '.join(user, digest))
+        self.sendLong('APOP', ' '.join((user, digest)))
     def retr(self, i):
         self.sendLong('RETR', i)
     def dele(self, i):

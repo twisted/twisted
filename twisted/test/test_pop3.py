@@ -35,6 +35,10 @@ import StringIO, string
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 
     magic = '<moshez>'
+    
+    def authenticateUserAPOP(self, user, digest):
+        user, domain = self.lookupDomain(user)
+        return self.service.domains['baz.com'].authenticateUserAPOP(user, digest, self.magic, domain)
 
 class DummyDomain:
 
@@ -47,12 +51,8 @@ class DummyDomain:
    def addMessage(self, name, message):
        self.users[name].append(message)
 
-   def authenticateUserAPOP(self, name, magic, digest, domain):
-       #print
-       #print 'USERS AM ', self.users
-       #print 'NAME AM ', name
-       #print
-       return ListMailbox(self.users[name])
+   def authenticateUserAPOP(self, name, digest, magic, domain):
+       return None, ListMailbox(self.users[name]), lambda: None
 
 
 class ListMailbox:
@@ -88,7 +88,8 @@ class MyPOP3Downloader(pop3.POP3Client):
         code = parts[0]
         data = (parts[1:] or ['NONE'])[0]
         if code != '+OK':
-            raise AssertionError, 'code is '+code
+            print parts
+            raise AssertionError, 'code is ' + code
         self.lines = []
         self.retr(1)
 
@@ -161,7 +162,7 @@ class DummyPOP3(pop3.POP3):
     magic = '<moshez>'
 
     def authenticateUserAPOP(self, user, password):
-        return DummyMailbox()
+        return None, DummyMailbox(), lambda: None
 
 class DummyMailbox(pop3.Mailbox):
 
