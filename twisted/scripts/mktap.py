@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.34 2003/04/27 04:09:15 itamarst Exp $
+# $Id: mktap.py,v 1.35 2003/05/16 06:47:43 glyph Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -189,7 +189,7 @@ def run():
     except:
         import traceback
         print 'An error unexpected occurred:'
-        print ''.join(traceback.format_exception(*sys.exc_info())[-3:])
+        traceback.print_exc()
         sys.exit(2)
 
     mod = getModule(options.tapLookup, options.subCommand)
