@@ -605,34 +605,33 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            if version != "HTTP/0.9":
-                l = []
-                l.append('%s %s %s\r\n' % (version, self.code,
-                                           self.code_message))
-                # if we don't have a content length, we send data in
-                # chunked mode, so that we can support pipelining in
-                # persistent connections.
-                if ((version == "HTTP/1.1") and
-                    (self.headers.get('content-length', None) is None) and
-                    (self.code not in NO_BODY_CODES)):
-                    l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
-                    self.chunked = 1
-                if self.lastModified is not None:
-                    if self.headers.has_key('last-modified'):
-                        log.msg("Warning: last-modified specified both in"
-                                " header list and lastModified attribute.")
-                    else:
-                        self.setHeader('last-modified',
-                                       datetimeToString(self.lastModified))
-                if self.etag is not None:
-                    self.setHeader('ETag', self.etag)
-                for name, value in self.headers.items():
-                    l.append("%s: %s\r\n" % (name.capitalize(), value))
-                for cookie in self.cookies:
-                    l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
-                l.append("\r\n")
+            l = []
+            l.append('%s %s %s\r\n' % (version, self.code,
+                                       self.code_message))
+            # if we don't have a content length, we send data in
+            # chunked mode, so that we can support pipelining in
+            # persistent connections.
+            if ((version == "HTTP/1.1") and
+                (self.headers.get('content-length', None) is None) and
+                (self.code not in NO_BODY_CODES)):
+                l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+                self.chunked = 1
+            if self.lastModified is not None:
+                if self.headers.has_key('last-modified'):
+                    log.msg("Warning: last-modified specified both in"
+                            " header list and lastModified attribute.")
+                else:
+                    self.setHeader('last-modified',
+                                   datetimeToString(self.lastModified))
+            if self.etag is not None:
+                self.setHeader('ETag', self.etag)
+            for name, value in self.headers.items():
+                l.append("%s: %s\r\n" % (name.capitalize(), value))
+            for cookie in self.cookies:
+                l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
+            l.append("\r\n")
 
-                self.transport.writeSequence(l)
+            self.transport.writeSequence(l)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == "HEAD":
@@ -902,8 +901,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 return
             self.__first_line = 0
             parts = line.split()
-            if len(parts)<3:
-                parts.append('HTTP/0.9') # isn't backwards compat great!
             if len(parts) != 3:
                 self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
                 self.transport.loseConnection()
@@ -912,9 +909,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._command = command
             self._path = request
             self._version = version
-            if version == 'HTTP/0.9':
-                self.allHeadersReceived()
-                self.allContentReceived()
         elif line == '':
             if self.__header:
                 self.headerReceived(self.__header)

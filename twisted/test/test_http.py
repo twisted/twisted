@@ -165,7 +165,7 @@ GET /
 '''
     requests = string.replace(requests, '\n', '\r\n')
 
-    expected_response = "'''\012None\012'''\012"
+    expected_response = "HTTP/1.1 400 Bad Request\r\n\r\n"
 
 
 class HTTPLoopbackTestCase(unittest.TestCase):
