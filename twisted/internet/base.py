@@ -62,9 +62,22 @@ class DelayedCall(styles.Ephemeral):
         self.cancelled = self.called = 0
 
     def getTime(self):
+        """Return the time at which this call will fire
+        
+        @rtype: C{float}
+        @return: The number of seconds after the epoch at which this call is
+        scheduled to be made.
+        """
         return self.time
     
     def cancel(self):
+        """Unschedule this call
+        
+        @raise AlreadyCancelled: Raised if this call has already been
+        unscheduled.
+        
+        @raise AlreadyCalled: Raised if this call has already been made.
+        """
         if self.cancelled:
             raise error.AlreadyCancelled
         elif self.called:
@@ -74,6 +87,15 @@ class DelayedCall(styles.Ephemeral):
             self.cancelled = 1
 
     def reset(self, secondsFromNow):
+        """Reschedule this call for a different time
+        
+        @type secondsFromNow: C{float}
+        @param secondsFromNow: The number of seconds from the time of the
+        C{reset} call at which this call will be scheduled.
+        
+        @raise AlreadyCancelled: Raised if this call has been cancelled.
+        @raise AlreadyCalled: Raised if this call has already been made.
+        """
         if self.cancelled:
             raise error.AlreadyCancelled
         elif self.called:
@@ -83,6 +105,15 @@ class DelayedCall(styles.Ephemeral):
             self.resetter(self)
 
     def delay(self, secondsLater):
+        """Reschedule this call for a later time
+        
+        @type secondsLater: C{float}
+        @param secondsLater: The number of seconds after the originally
+        scheduled time for which to reschedule this call.
+
+        @raise AlreadyCancelled: Raised if this call has been cancelled.
+        @raise AlreadyCalled: Raised if this call has already been made.
+        """
         if self.cancelled:
             raise error.AlreadyCancelled
         elif self.called:
@@ -92,6 +123,12 @@ class DelayedCall(styles.Ephemeral):
             self.resetter(self)
 
     def active(self):
+        """Determine whether this call is still pending
+        
+        @rtype: C{bool}
+        @return: True if this call has not yet been made or cancelled,
+        False otherwise.
+        """
         return not (self.cancelled or self.called)
 
     def __lt__(self, other):
