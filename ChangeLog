@@ -1,3 +1,7 @@
+2003-06-24  Brian Warner  <warner@lothar.com>
+
+	* doc/howto/upgrading.html: Explain Versioned and rebuild()
+
 2003-06-23  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/scripts/trial.py twisted/trial/reporter.py
