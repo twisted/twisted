@@ -35,6 +35,9 @@ class WController(mvc.Controller, resource.Resource):
         resource.Resource.__init__(self)
     
     def setUp(self, request):
+        """
+        @param request: A L{twisted.web.server.Request}.
+        """
         pass
 
     def render(self, request):
@@ -48,6 +51,16 @@ class WController(mvc.Controller, resource.Resource):
 
 
 def registerControllerForModel(controller, model):
+    """
+    Registers `controller' as an adapter of `model' for IController, and
+    optionally registers it for IResource, if it implements it.
+    
+    @param controller: A class that implements L{mvc.IController}, usually a
+           L{WController} subclass. Optionally it can implement
+           L{resource.IResource}.
+    @param model: Any class, but probably a L{twisted.web.woven.model.WModel}
+           subclass.
+    """
     components.registerAdapter(controller, model, mvc.IController)
     if components.implements(controller, resource.IResource):
         components.registerAdapter(controller, model, resource.IResource)
