@@ -635,7 +635,7 @@ class Base(protocol.DatagramProtocol):
         for m in self.messages:
             self._fixupNAT(m, addr)
             if self.debug:
-                log.msg("Received %r from %r" % (m, addr))
+                log.msg("Received %r from %r" % (m.toString(), addr))
             if isinstance(m, Request):
                 self.handle_request(m, addr)
             else:
