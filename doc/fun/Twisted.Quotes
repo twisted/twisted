@@ -3022,6 +3022,9 @@ ensues
 * radix fakes it
 <glyph> radix: hooray for faking
 %
+<jml> will you take me, to build and to dist, in windows and in unix, till uninstall do we part?
+<jml> If any man here objects, let him speak now or ... "error: command 'cl.exe' failed: No such file or directory"
+%
 <dash> moshez: why's that better?
 <moshez> dash: um, because it doesn't necessitate Elijah
 <moshez> so it's more portable
