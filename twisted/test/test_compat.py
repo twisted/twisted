@@ -101,8 +101,7 @@ class CompatTestCase(unittest.TestCase):
         
     def testIsinstance(self):
         isinstance = compat.isinstance
-        # is this really supposed to be injected into types?
-        from types import StringTypes
+        from compat import StringTypes
         self.assert_(isinstance(u'hi', StringTypes))
         self.assert_(isinstance(self, unittest.TestCase))
         # I'm pretty sure it's impossible to implement this
