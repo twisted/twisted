@@ -281,14 +281,9 @@ class SQLiteConnector(DBTestConnector):
         except: return False
         return True
 
-    def startDB(self):
-        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
-        self.database = os.path.join(self.DB_DIR, self.DB_NAME)
-        if os.path.exists(self.database): os.unlink(self.database)
-
     def getPoolArgs(self):
         args = ('sqlite',)
-        kw = {'database': self.database, 'cp_max': 1}
+        kw = {'database': ':memory', 'cp_max': 1}
         return args, kw
 
 class PyPgSQLConnector(DBTestConnector):
