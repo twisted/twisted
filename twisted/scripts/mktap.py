@@ -133,7 +133,7 @@ class FirstPassOptions(usage.Options):
         for (name, module) in tapLookup.iteritems():
             if IServiceMaker.providedBy(module):
                 sc.append((
-                    name, None, lambda m=module: m.options, module.description))
+                    name, None, lambda m=module: m.options(), module.description))
             else:
                 sc.append((
                     name, None, lambda obj=module: obj.load().Options(),
