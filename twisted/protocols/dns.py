@@ -586,7 +586,7 @@ class Record_A6:
     
     def __init__(self, prefix = 0, address = '::', name = ''):
         self.prefix = prefix
-        self.bytes = int(ceil(self.prefix / 8.0))
+        self.bytes = int(ceil((128 - self.prefix) / 8.0))
         self.address = socket.inet_pton(socket.AF_INET6, address)
         self.name = Name(name)
     
@@ -600,7 +600,7 @@ class Record_A6:
     
     def decode(self, strio, length = None):
         self.prefix = struct.unpack('!B', readPrecisely(strio, 1))[0]
-        self.bytes = int(ceil(self.prefix / 8.0))
+        self.bytes = int(ceil((128 - self.prefix) / 8.0))
         self.address = readPrecisely(strio, self.bytes)
         self.name.decode(strio)
     
