@@ -202,6 +202,8 @@ def parsePOSTData(request):
         return getEntireStream(request.stream).addCallback(parser)
     return defer.succeed(None)
 
+class StopTraversal(object):
+    pass
 
 class Request(http.Request):
     implements(iweb.IRequest)
@@ -311,7 +313,7 @@ class Request(http.Request):
         ).addCallback(
             self._handleSegment, path, newctx
         )
-        
+
     def _handleSegment(self, result, path, pageContext):
         """Handle the result of a locateChild call done in _getChild."""
         
@@ -331,6 +333,13 @@ class Request(http.Request):
                 lambda actualRes: self._handleSegment(
                     (actualRes, newpath), path, pageContext))
 
+        if newpath is StopTraversal:
+            if newres is pageContext.tag:
+                return pageContext
+            else:
+                raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
+            
+        
         newres = iweb.IResource(newres)
         
         if newres is pageContext.tag:

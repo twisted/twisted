@@ -105,9 +105,9 @@ class CGIScript(resource.LeafResource):
         #if ip is not None:
         #    env['REMOTE_ADDR'] = ip
 
-        pp = self.postpath
-        if pp:
-            env["PATH_INFO"] = "/"+string.join(pp, '/')
+        postpath = iweb.IRemainingSegments(ctx)
+        if postpath:
+            env["PATH_INFO"] = "/" + string.join(postpath, '/')
 
         qindex = string.find(request.uri, '?')
         if qindex != -1:

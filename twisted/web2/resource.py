@@ -127,9 +127,5 @@ class PostableResource(Resource):
         
         
 class LeafResource(Resource):
-    def __init__(self):
-        self.postpath = []
-
     def locateChild(self, request, segments):
-        self.postpath = list(segments)
-        return self, ()
+        return self, server.StopTraversal
