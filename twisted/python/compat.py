@@ -36,7 +36,7 @@ import types
 try:
     types.StringTypes
 except AttributeError:
-    types.StringTypes = (types.StringType,)
+    types.StringTypes = (types.StringType, types.UnicodeType)
 
 
 try:
