@@ -1,3 +1,11 @@
+2003-01-29  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/internet/abstract.py (FileDescriptor.__init__): 1.36
+	Ephemeral.
+
+	* twisted/internet/tcp.py (Port.__getstate__): 1.100 As an
+	Ephemeral, this needs no __getstate__.
+
 2003-01-27  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/spread/ui/gtk2util.py (login): Perspective Broker login

@@ -26,12 +26,13 @@ import types, string
 
 # Twisted Imports
 from twisted.python import log, reflect
+from twisted.persisted import styles
 
 # Sibling Imports
 import interfaces
 
 
-class FileDescriptor(log.Logger):
+class FileDescriptor(log.Logger, styles.Ephemeral):
     """An object which can be operated on by select().
 
     This is an abstract superclass of all objects which may be notified when
@@ -123,7 +124,7 @@ class FileDescriptor(log.Logger):
         """
         # default implementation, telling reactor we're finished
         return main.CONNECTION_DONE
-    
+
     def write(self, data):
         """Reliably write some data.
 

@@ -421,17 +421,6 @@ class Port(abstract.FileDescriptor):
         s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         return s
 
-    def __getstate__(self):
-        """(internal) get my state for persistence
-        """
-        dct = self.__dict__.copy()
-        try: del dct['socket']
-        except: pass
-        try: del dct['fileno']
-        except: pass
-
-        return dct
-
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
 
