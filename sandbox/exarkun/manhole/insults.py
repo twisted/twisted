@@ -142,6 +142,14 @@ class ITerminalTransport(iinternet.ITransport):
         which should be one of G0 or G1.
         """
 
+    def shiftIn(self):
+        """Activate the G0 character set.
+        """
+
+    def shiftOut(self):
+        """Activate the G1 character set.
+        """
+
     def singleShift2(self):
         """Shift to the G2 character set for a single character.
         """
@@ -546,6 +554,12 @@ class ServerProtocol(protocol.Protocol):
         else:
             raise ValueError("Invalid `charSet' argument to selectCharacterSet")
         self.write('\x1b' + which + charSet)
+
+    def shiftIn(self):
+        self.write('\x15')
+
+    def shiftOut(self):
+        self.write('\x14')
 
     def singleShift2(self):
         self.write('\x1bN')
