@@ -80,8 +80,9 @@ Someone set up us the bomb!\015
         self.transport = protocols.protocol.FileWrapper(self.output)
 
     def testMessages(self):
-        protocol =  protocols.smtp.DomainSMTP()
-        protocol.factory = self.factory
+        from twisted.mail import protocols
+        protocol =  protocols.DomainSMTP()
+        protocol.service = self.factory
         protocol.makeConnection(self.transport)
         protocol.lineReceived('HELO yyy.com')
         for message in self.messages:
@@ -130,8 +131,9 @@ class LoopbackSMTPTestCase(unittest.TestCase):
         factory = protocols.protocol.Factory()
         factory.domains = {}
         factory.domains['foo.bar'] = DummyDomain(['moshez'])
-        protocol =  protocols.smtp.DomainSMTP()
-        protocol.factory = factory
+        from twisted.mail.protocols import DomainSMTP
+        protocol =  DomainSMTP()
+        protocol.service = factory
         clientProtocol = MySMTPClient()
         loopback.loopbackTCP(protocol, clientProtocol)
 

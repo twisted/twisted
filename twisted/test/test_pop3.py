@@ -21,6 +21,7 @@ Test cases for twisted.protocols.pop3 module.
 
 from pyunit import unittest
 from twisted import mail
+import twisted.mail.protocols
 import twisted.protocols.pop3, twisted.protocols.protocol
 from twisted import protocols
 from twisted.protocols import pop3, protocol
@@ -28,7 +29,7 @@ from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.protocols import loopback
 import StringIO, string
 
-class MyVirtualPOP3(protocols.pop3.VirtualPOP3):
+class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 
     magic = '<moshez>'
 
@@ -67,10 +68,10 @@ class ListMailbox:
     def sync(self):
         pass
 
-class MyPOP3Downloader(protocols.pop3.POP3Client):
+class MyPOP3Downloader(pop3.POP3Client):
 
     def handle_WELCOME(self, line):
-        protocols.pop3.POP3Client.handle_WELCOME(self, line)
+        pop3.POP3Client.handle_WELCOME(self, line)
         self.apop('hello@baz.com', 'world')
 
     def handle_APOP(self, line):
@@ -128,7 +129,7 @@ Someone set up us the bomb!\015
         self.transport = protocols.protocol.FileWrapper(self.output)
         protocol =  MyVirtualPOP3()
         protocol.makeConnection(self.transport)
-        protocol.factory = self.factory
+        protocol.service = self.factory
         protocol.lineReceived('APOP hello@baz.com world')
         protocol.lineReceived('UIDL')
         protocol.lineReceived('RETR 1')
@@ -140,7 +141,7 @@ Someone set up us the bomb!\015
 
     def testLoopback(self):
         protocol =  MyVirtualPOP3()
-        protocol.factory = self.factory
+        protocol.service = self.factory
         clientProtocol = MyPOP3Downloader()
         loopback.loopback(protocol, clientProtocol)
         self.failUnlessEqual(clientProtocol.message, self.message)

@@ -19,26 +19,16 @@
 """
 
 # Twisted imports
-from twisted.protocols import protocol, pop3, smtp
+from twisted.protocols import smtp
 from twisted.cred import service
 from twisted.python import defer, components
+
+# Sibling imports
+import protocols
 
 # System imports
 import types
 import os
-
-
-def createDomainsFactory(protocol_handler, domains):
-    '''create a factory with a given protocol handler and a domains attribute
-
-    Return a Factory with a Protocol given as the first argument,
-    and a 'domains' attribute given as the second.
-    The 'domains' argument should have a [] operator and .has_key method.
-    '''
-    ret = protocol.Factory()
-    ret.protocol = protocol_handler
-    ret.domains = domains
-    return ret
 
 
 class DomainWithDefaultDict:
@@ -109,10 +99,10 @@ class MailService(service.Service):
         self.domains = DomainWithDefaultDict({}, BounceDomain())
 
     def getPOP3Factory(self):
-        return createDomainsFactory(pop3.VirtualPOP3, self.domains)
+        return protocols.POP3Factory(self)
 
     def getSMTPFactory(self):
-        return createDomainsFactory(smtp.DomainSMTP, self.domains)
+        return protocols.SMTPFactory(self)
 
     def setQueue(self, queue):
         """Set the queue for outgoing emails."""

@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -229,22 +228,3 @@ class POP3Client(basic.LineReceiver):
         self.sendShort('PASS', pass_)
     def quit(self):
         self.sendShort('QUIT', '')
-
-
-class VirtualPOP3(POP3):
-
-    domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
-                          # to indicate user@host. '@' doesn't work
-                          # with NS, e.g.
-    def authenticateUserAPOP(self, user, digest):
-        try:
-            user, domain = string.split(user, self.domainSpecifier, 1)
-        except ValueError:
-            domain = ''
-        if not self.factory.domains.has_key(domain):
-             raise POP3Error("no such domain %s" % domain)
-        domain = self.factory.domains[domain]
-        mbox = domain.authenticateUserAPOP(user, self.magic, digest, domain)
-        if mbox is None:
-            raise POP3Error("bad authentication")
-        return mbox

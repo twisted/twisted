@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -199,22 +198,6 @@ class SMTP(basic.LineReceiver):
 
     def startMessage(self, recipients):
         return []
-
-
-
-class DomainSMTP(SMTP):
-
-    def validateTo(self, user, success, failure):
-        if not self.factory.domains.has_key(user.domain):
-            failure(user)
-            return
-        self.factory.domains[user.domain].exists(user, success, failure)
-
-    def startMessage(self, users):
-        ret = []
-        for user in users:
-            ret.append(self.factory.domains[user.domain].startMessage(user))
-        return ret
 
 
 class SMTPClient(basic.LineReceiver):
