@@ -90,5 +90,8 @@ class XMLRPCTestCase(unittest.TestCase):
         log.flushErrors(RuntimeError, ValueError)
 
 
-if not xmlrpclib:
-    del XMLRPCTestCase
+class XMLRPCTestCase2(XMLRPCTestCase):
+    """Test with proxy that doesn't add a slash."""
+    
+    def proxy(self):
+        return xmlrpc.Proxy("http://localhost:%d" % self.port)

@@ -210,8 +210,9 @@ class QueryFactory(protocol.ClientFactory):
     clientConnectionFailed = clientConnectionLost
 
     def badStatus(self, status, message):
-        self.deferred.errback(IOError(status, message))
+        self.deferred.errback(ValueError(status, message))
         self.deferred = None
+
 
 class Proxy:
     """A Proxy for making remote XML-RPC calls.
@@ -225,6 +226,8 @@ class Proxy:
     def __init__(self, url):
         parts = urlparse.urlparse(url)
         self.url = urlparse.urlunparse(('', '')+parts[2:])
+        if self.url == "":
+            self.url = "/"
         if ':' in parts[1]:
             self.host, self.port = parts[1].split(':')
             self.port = int(self.port)
