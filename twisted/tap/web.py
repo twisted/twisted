@@ -125,7 +125,7 @@ twisted.web.test in it."""
 
 
     def opt_allow_ignore_ext(self):
-        """Specify wether or not a request for 'foo' should return 'foo.ext'"""
+        """Specify whether or not a request for 'foo' should return 'foo.ext'"""
         if not isinstance(self.opts['root'], static.File):
             raise usage.UsageError("You can only use --allow_ignore_ext "
                                    "after --path.")
