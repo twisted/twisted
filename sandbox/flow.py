@@ -380,8 +380,8 @@ class _Stack:
              waitInterval  a useful item to slow the flow
         """
         self._stack   = []
-        self.root_context = _Context(context)
-        self.context = self.root_context
+        self.context = _Context(context)
+        self.context.root = self.context
         self._stack.append((self.context, self._onFlushContext, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
  
@@ -402,7 +402,7 @@ class _Stack:
             flow.push(data, link.stage, link.next)
 
     def pushContext(self):
-        cntx = _Context(self.context, self.root_context)
+        cntx = _Context(self.context)
         self.context = cntx
         self.push(cntx, self._onFlushContext)
 
@@ -458,7 +458,10 @@ class _Context:
     def __init__(self, parent = None, root = None):
         self._parent = parent
         self._flush  = []
-        self.root = None
+        try:
+            self.root = parent.root
+        except:
+            self.root = self
     def __getattr__(self, attr):
         return getattr(self._parent, attr)
 
