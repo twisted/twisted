@@ -134,8 +134,8 @@ ftp_reply = {
     'needacct':         '532 Need an account for storing files',
     'nodir':            '550 %s: No such file or directory.',
     'noperm':           '550 %s: Permission denied.',
-    'exceedquota',      '552 requested file action aborted, exceeded file storage allocation',
-    'badfilename',      '553 requested action not taken, file name not allowed'
+    'exceedquota':      '552 requested file action aborted, exceeded file storage allocation',
+    'badfilename':      '553 requested action not taken, file name not allowed'
     }
 
 
