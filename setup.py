@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.8 2001/09/14 00:39:47 jh Exp $
+$Id: setup.py,v 1.9 2001/09/14 01:22:48 jh Exp $
 """
 
 import distutils, os, sys
@@ -79,7 +79,7 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
 if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
     setup_args['platforms'] = "win32 posix"
 
-if sys.platform == 'posix':
+if os.name == 'posix':
     import glob
     setup_args['scripts'] = filter(os.path.isfile, glob.glob('bin/*'))
 
