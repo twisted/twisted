@@ -16,7 +16,7 @@
 <code class="API">twisted.internet.app.Application</code>.
 This class usually holds all persistent configuration of
 a running server -- ports to bind to, places where connections
-to must be kept or attempted, periodic actions to do and most
+to must be kept or attempted, periodic actions to do and almost
 everything else.</p>
 
 <p>Other HOWTOs describe how to write custom code for
@@ -41,14 +41,14 @@ several serialization formats.</p>
     this format is the fastest to load and save.</dd>
 
 <dt>TAX</dt>
-<dd>Twisted contains the
-    <code class="API">twisted.persisted.marmalade</code> module
+<dd>Twisted contains
+    <code class="API">twisted.persisted.marmalade</code>, a module that
     supports serializing and deserializing from a format which follows
     the XML standard. This format is human readable and editable.</dd>
 
 <dt>TAS</dt>
-<dd>Twisted contains the
-    <code class="API">twisted.persisted.aot</code> module
+<dd>Twisted contains
+    <code class="API">twisted.persisted.aot</code>, a module that
     supports serializing into Python source. This has the advantage
     of using Python's own parser and being able to later manually
     add Python code to the file.</dd>
@@ -82,7 +82,7 @@ between all three Application formats.</p>
 
 <h2>twistd</h2>
 
-<p>Having <code>Application</code> in a variety of formats, aesthetically
+<p>Having an <code>Application</code> in a variety of formats, aesthetically
 pleasing as it may be, does not actually cause anything to happen.
 For that, we need a program which takes a <q>dead</q> Application and brings
 life to it. For UNIX systems (and, until there are are alternatives,
@@ -120,9 +120,9 @@ For Twisted-based server application developers who want to deploy on
 Debian, Twisted supplies the <code>tap2deb</code> program. This program
 wraps a Twisted Application file (of any of the supported formats -- Python,
 source, xml or pickle)
-in a Debian archive, including correct installation and removal scripts
+in a Debian package, including correct installation and removal scripts
 and <code>init.d</code> scripts. This frees the installer from manually
-stopping or starting the service, will make sure it goes properly up
+stopping or starting the service, and will make sure it goes properly up
 on startup and down on shutdown and that it obeys the init levels.
 </p>
 
