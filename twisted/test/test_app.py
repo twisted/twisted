@@ -20,6 +20,8 @@ Test cases for twisted.internet.app.
 
 from twisted.trial import unittest, util
 from twisted.internet import app, protocol, error
+from twisted.internet.defer import succeed, fail, SUCCESS, FAILURE
+from twisted.python import log
 import warnings
 
 class AppTestCase(unittest.TestCase):
@@ -87,3 +89,66 @@ class ServiceTestCase(unittest.TestCase):
     testRegisterService = util.suppressWarnings(testRegisterService,
                                                 ('twisted.internet.app is deprecated',
                                                  DeprecationWarning))
+
+class StopError(Exception): pass
+
+class StoppingService(app.ApplicationService):
+
+    def __init__(self, name, succeed):
+        app.ApplicationService.__init__(self, name)
+        self.succeed = succeed
+
+    def stopService(self):
+        if self.succeed:
+            return succeed("yay!")
+        else:
+            return fail(StopError('boo'))
+
+class StoppingServiceII(app.ApplicationService):
+    def stopService(self):
+        # The default stopService returns None.
+        return None # return app.ApplicationService.stopService(self)
+
+class MultiServiceTestCase(unittest.TestCase):
+    def setUp(self):
+        self.callbackRan = 0
+
+    def testDeferredStopService(self):
+        ms = app.MultiService("MultiService")
+        self.s1 = StoppingService("testService", 0)
+        self.s2 = StoppingService("testService2", 1)
+        ms.addService(self.s1)
+        ms.addService(self.s2)
+        ms.stopService().addCallback(self.woohoo)
+
+    def woohoo(self, res):
+        self.callbackRan = 1
+        self.assertEqual(res[self.s1][0], 0)
+        self.assertEqual(res[self.s2][0], 1)
+
+    def testStopServiceNone(self):
+        """MultiService.stopService returns Deferred when service returns None.
+        """
+        ms = app.MultiService("MultiService")
+        self.s1 = StoppingServiceII("testService")
+        ms.addService(self.s1)
+        d = ms.stopService()
+        d.addCallback(self.cb_nonetest)
+
+    def cb_nonetest(self, res):
+        self.callbackRan = 1
+        self.assertEqual((SUCCESS, None), res[self.s1])
+
+    def testEmptyStopService(self):
+        """MutliService.stopService returns Deferred when empty."""
+        ms = app.MultiService("MultiService")
+        d = ms.stopService()
+        d.addCallback(self.cb_emptytest)
+
+    def cb_emptytest(self, res):
+        self.callbackRan = 1
+        self.assertEqual(len(res), 0)
+
+    def tearDown(self):
+        log.flushErrors (StopError)
+        self.failUnless(self.callbackRan, "Callback was never run.")
