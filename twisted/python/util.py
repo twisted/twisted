@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_util -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -23,15 +24,13 @@ from UserDict import UserDict
 class OrderedDict(UserDict):
     """A UserDict that preserves insert order whenever possible."""
     def __init__(self, d=None):
+        # UserDict.__init__ calls self.update(d).
+        self._order = []
         UserDict.__init__(self, d)
-        if d is not None:
-            self._order = d.keys()
-        else:
-            self._order = []
 
     def __repr__(self):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
-        
+
     def __setitem__(self, key, value):
         if not self.has_key(key):
             self._order.append(key)
@@ -177,17 +176,17 @@ def keyed_md5(secret, challenge):
     """Create the keyed MD5 string for the given secret and challenge."""
     opad = 0x5C
     ipad = 0x36
-    
+
     import md5
-    
+
     if len(secret) < 64:
         secret = secret + (64 - len(secret)) * '\0'
     elif len(secret) > 64:
         # Is this supposed to be zero-padded to 64 bytes?  I don't know :(
         secret = md5.new(secret).digest()
-    
+
     return md5.new(
-        str_xor(secret, opad) + 
+        str_xor(secret, opad) +
         md5.new(
             str_xor(secret, ipad) + challenge
         ).digest()
