@@ -191,7 +191,9 @@ class Model:
     
     def getSubmodel(self, name):
         if name[0] != '_' and name not in self.protected_names:
-            return getattr(self, name, None)
+            if hasattr(self, name):
+                return getattr(self, name)
+            raise AttributeError, "The submodel %s was requested from the model %s, but does not exist" % (name, self)
 
     def setSubmodel(self, name, value):
         if name[0] != '_' and name not in self.protected_names:
