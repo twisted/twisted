@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.41 2002/07/07 03:58:05 krz Exp $
+$Id: setup.py,v 1.42 2002/07/12 05:54:21 krz Exp $
 """
 
 import distutils, os, sys, string
@@ -223,6 +223,7 @@ class build_ext_twisted(build_ext):
                                         "twisted/internet/cReactor/cReactorTransport.c",
                                         "twisted/internet/cReactor/cReactorBuffer.c",
                                         "twisted/internet/cReactor/cReactorUtil.c",
+                                        "twisted/internet/cReactor/cReactorThread.c",
                                     ],
                                     define_macros=define_macros) )
         else:
