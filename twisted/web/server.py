@@ -334,7 +334,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             return self.session.getComponent(sessionInterface)
         return self.session
 
-    def prePathURL(self):
+    def _prePathURL(self, prepath):
         port = self.getHost().port
         if self.isSecure():
             default = 443
@@ -348,7 +348,10 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             self.isSecure() and 's' or '',
             self.getRequestHostname(),
             hostport,
-            string.join(self.prepath, '/')), "/:")
+            string.join(prepath, '/')), "/:")
+
+    def prePathURL(self):
+        return self._prePathURL(self.prepath)
 
     def URLPath(self):
         from twisted.python import urlpath
@@ -359,9 +362,8 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         Remember the currently-processed part of the URL for later
         recalling.
         """
-        url = self.prePathURL()
-        # remove one segment
-        self.appRootURL = url[:url.rindex("/")]
+        url = self._prePathURL(self.prepath[:-1])
+        self.appRootURL = url
 
     def getRootURL(self):
         """

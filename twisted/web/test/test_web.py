@@ -341,26 +341,38 @@ class RootResource(resource.Resource):
         return ''
 
 class RememberURLTest(unittest.TestCase):
+    def createServer(self, r):
+        chan = DummyChannel()
+        chan.transport = DummyChannel.Baz()
+        chan.site = server.Site(r)
+        return chan
 
-    def setUp(self):
-        d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+    def testSimple(self):
         r = resource.Resource()
         r.isLeaf=0
         rr = RootResource()
         r.putChild('foo', rr)
         rr.putChild('', rr)
         rr.putChild('bar', resource.Resource())
-        d.site = server.Site(r)
-        self.d = d
-
-    def testSimple(self):
+        chan = self.createServer(r)
         for url in ['/foo/', '/foo/bar', '/foo/bar/baz', '/foo/bar/']:
-            request = server.Request(self.d, 1)
+            request = server.Request(chan, 1)
             request.setHost('example.com', 81)
             request.gotLength(0)
             request.requestReceived('GET', url, 'HTTP/1.0')
             self.assertEqual(request.getRootURL(), "http://example.com/foo")
+
+    def testRoot(self):
+        rr = RootResource()
+        rr.putChild('', rr)
+        rr.putChild('bar', resource.Resource())
+        chan = self.createServer(rr)
+        for url in ['/', '/bar', '/bar/baz', '/bar/']:
+            request = server.Request(chan, 1)
+            request.setHost('example.com', 81)
+            request.gotLength(0)
+            request.requestReceived('GET', url, 'HTTP/1.0')
+            self.assertEqual(request.getRootURL(), "http://example.com/")
 
 
 class NewRenderResource(resource.Resource):
