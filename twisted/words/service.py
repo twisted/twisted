@@ -297,6 +297,11 @@ class Participant(pb.Perspective, styles.Versioned):
             self.client.callRemote('setGroupMetadata', dict_, groupName)
 
     def perspective_setGroupMetadata(self, dict_, groupName):
+        #pre-processing
+        if dict_.has_key('topic'):
+            #don't want topic-spoofing, now
+            dict_["topic_author"] = self.name
+
         for group in self.groups:
             if group.name == groupName:
                 group.setMetadata(dict_)
