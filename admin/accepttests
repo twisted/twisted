@@ -196,9 +196,9 @@ def runMailTest():
         scmd('rm -rf dump2')
     os.mkdir("dump2")
     cmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster "
-        " --pop 18110")
+        " --pop3 18110")
     cmd("mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2"
-         "      --smtp 18026 --pop 18111")
+         "      --smtp 18026 --pop3 18111")
     twistdf("mail")
     import smtplib, poplib
     s = smtplib.SMTP('127.0.0.1', 18026)
