@@ -30,22 +30,21 @@ from twisted.python import log
 
 import common, connection
 
-class SSHLocalForwardingFactory(protocol.Factory):
-    def __init__(self, connection, hostport):
+class SSHListenForwardingFactory(protocol.Factory):
+    def __init__(self, connection, hostport, klass):
         self.conn = connection
         self.hostport = hostport # tuple
+        self.klass = klass
 
     def buildProtocol(self, addr):
-        channel = SSHLocalForwardingChannel(conn = self.conn)
+        channel = self.klass(conn = self.conn)
         client = SSHForwardingClient(channel)
         channel.client = client
         channelOpenData = packOpen_direct_tcpip(self.hostport, addr)
         self.conn.openChannel(channel, channelOpenData)
         return client
 
-class SSHLocalForwardingChannel(connection.SSHChannel):
-
-    name = 'direct-tcpip'
+class SSHListenForwardingChannel(connection.SSHChannel):
 
     def channelOpen(self, specificData):
         log.msg('opened forwarding channel %s' % self.id)
@@ -66,7 +65,15 @@ class SSHLocalForwardingChannel(connection.SSHChannel):
             self.client.transport.loseConnection()
             del self.client
 
-class SSHRemoteForwardingChannel(connection.SSHChannel):
+class SSHListenClientForwardingChannel(SSHListenForwardingChannel):
+
+    name = 'direct-tcpip'
+
+class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
+
+    name = 'forwarded-tcpip'
+
+class SSHConnectForwardingChannel(connection.SSHChannel):
 
     def __init__(self, hostport, *args, **kw):
         connection.SSHChannel.__init__(self, *args, **kw)
@@ -123,7 +130,9 @@ def packOpen_direct_tcpip((connHost, connPort), (origHost, origPort)):
     orig = common.NS(origHost) + struct.pack('>L', origPort)
     return conn + orig
 
-def unpackOpen_forwarded_tcpip(data):
+packOpen_forwarded_tcpip = packOpen_direct_tcpip
+
+def unpackOpen_direct_tcpip(data):
     """Unpack the data to a usable format.
     """
     connHost, rest = common.getNS(data)
@@ -131,6 +140,8 @@ def unpackOpen_forwarded_tcpip(data):
     origHost, rest = common.getNS(rest[4:])
     origPort = int(struct.unpack('>L', rest[:4])[0])
     return (connHost, connPort), (origHost, origPort)
+
+unpackOpen_forwarded_tcpip = unpackOpen_direct_tcpip
     
 def packGlobal_tcpip_forward((host, port)):
     return common.NS(host) + struct.pack('>L', port)

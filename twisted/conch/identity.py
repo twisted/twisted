@@ -76,21 +76,6 @@ class ConchIdentity(identity.Identity):
         """
         self.clients[serviceName] = clientClass
 
-    def getUserGroupID(self):
-        """return a tuple of (uid, gid) for this user.
-        """
-        raise NotImplementedError
-
-    def getHomeDir(self):
-        """return the home directory for this user.
-        """
-        raise NotImplementedError
-
-    def getShell(self):
-        """return the shell for this user.
-        """
-        raise NotImplementedError
-
 class OpenSSHConchIdentity(ConchIdentity):
 
     # XXX fail slower for security reasons
@@ -100,7 +85,13 @@ class OpenSSHConchIdentity(ConchIdentity):
             return defer.fail(error.ConchError('not valid user'))
         for file in ['authorized_keys', 'authorized_keys2']:
             if os.path.exists(home+file):
+                gid = os.getegid()
+                uid = os.geteuid()
+                os.setegid(0)
+                os.seteuid(0)
                 lines = open(home+file).readlines()
+                os.setegid(gid)
+                os.seteuid(uid)
                 for l in lines:
                     try:
                         if base64.decodestring(l.split()[1])==pubKeyString:
@@ -122,30 +113,20 @@ class OpenSSHConchIdentity(ConchIdentity):
                     return defer.fail(error.ConchError('bad password'))
 
         if shadow:
+            gid = os.getegid()
+            uid = os.geteuid()
+            os.setegid(0)
+            os.seteuid(0)
             try:
                 shadowPass = shadow.getspnam(self.name)[1]
             except KeyError:
+                os.setegid(gid)
+                os.seteuid(uid)
                 return defer.fail(error.ConchError('no such user'))
+            os.setegid(gid)
+            os.seteuid(uid)
             if verifyCryptedPassword(shadowPass, password):
                 return defer.succeed('')
             return defer.fail(error.ConchError('bad password'))
 
         return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
-
-    def getUserGroupID(self):
-        if pwd:
-           return pwd.getpwnam(self.name)[2:4]
-
-        raise NotImplementedError, 'cannot get uid/gid without pwd'
-
-    def getHomeDir(self):
-        if pwd:
-            return pwd.getpwnam(self.name)[5]
-
-        raise NotImplementedError, 'cannot get home directory without pwd'
-
-    def getShell(self):
-        if pwd:
-            return pwd.getpwnam(self.name)[6]
-
-        raise NotImplementedError, 'cannot get shell without pwd'

@@ -332,7 +332,7 @@ class SSHServerTransport(SSHTransportBase):
             h.update(NS(self.ourVersionString))
             h.update(NS(self.clientKexInitPayload))
             h.update(NS(self.ourKexInitPayload))
-            h.update(NS(self.factory.publicKey[self.keyAlg]))
+            h.update(NS(self.factory.publicKeys[self.keyAlg]))
             h.update(MP(clientDHPubKey))
             h.update(MP(f))
             h.update(sharedSecret)

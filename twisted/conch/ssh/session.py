@@ -23,12 +23,12 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct
+import struct, fcntl, tty, os
 
 from twisted.internet import protocol, reactor
 from twisted.python import log
 
-import common
+import common, ttymodes
 from connection import SSHChannel # weird circular import
 
 class SSHSession(SSHChannel):
@@ -53,18 +53,30 @@ class SSHSession(SSHChannel):
         if not self.environ.has_key('TERM'): # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
-        user = self.transport.authenticatedUser
-        uid, gid = user.getUserGroupID()
-        homeDir = user.getHomeDir()
-        shell = user.getShell()
+        user = self.conn.transport.authenticatedUser
+        #homeDir = user.getHomeDir()
+        #self.environ['USER'] = user.name
+        #self.environ['HOME'] = homeDir
+        #self.environ['SHELL'] = shell
+        peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
+        hostP = (self.conn.transport.transport.getHost()[2],)
+        self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
         try:
             self.client = SSHSessionClient()
-            pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client),  \
-              shell, ["-"], self.environ, homeDir, uid, gid, usePTY = 1)
+            try:
+                pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
+                  'login', ['login','-p', '-f', user.name], self.environ,  
+                   usePTY = 1)
+            except Exception, e:
+                log.msg('failed to get pty first')
+                log.msg('reason:')
+                log.deferr()
+                return 0
+            log.msg( 'fileno: %i' % pty.fileno())
             fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
-            if self.modes:
-                attr = tty.tcgetattr(pty.fd)
+            if 0:#self.modes:
+                attr = tty.tcgetattr(pty.fileno())
                 for mode, val in self.modes:
                     if not ttymodes.TTYMODES.has_key(mode): continue
                     ttymode = ttymodes.TTYMODES[mode]
@@ -83,12 +95,12 @@ class SSHSession(SSHChannel):
                         if not hasattr(tty, ttymode): continue
                         ttyval = getattr(tty, ttymode)
                         attr[tty.CC][ttyval] = chr(val)
-                tty.tcsetattr(pty.fd, tty.TCSANOW, attr)
-        except OSError, ImportError:
+                tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
+        except OSError, e:
             log.msg('failed to get pty')
+            log.msg('reason: %s' % e)
             return 0
         else:
-            log.msg('starting shell %s'%shell)
             self.pty = pty
             return 1
 
@@ -177,7 +189,8 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
 class SSHSessionClient(protocol.Protocol):
 
     def dataReceived(self, data):
-        self.transport.write(data)
+        if self.transport:
+            self.transport.write(data)
 
 # methods factored out to make live easier on server writers
 def parseRequest_pty_req(data):

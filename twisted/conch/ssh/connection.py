@@ -23,12 +23,12 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct, tty
+import struct, types
 
 from twisted.internet import protocol, reactor, defer
 from twisted.python import log
 from twisted.conch import error
-import service, common, ttymodes
+import service, common
 
 class SSHConnection(service.SSHService):
     name = 'ssh-connection'
@@ -44,6 +44,7 @@ class SSHConnection(service.SSHService):
                             # global requests
         self.remoteForwards = {} # list of ports we should accept from server
                             # (client only)
+        self.listeners = {} # dict mapping (internface, port) -> listener
 
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
@@ -54,7 +55,7 @@ class SSHConnection(service.SSHService):
         ret = self.gotGlobalRequest(requestType, rest)
         if ret:
             reply = MSG_REQUEST_SUCCESS
-            if type(ret)in(types.TupleType, types.ListType):
+            if type(ret) in (types.TupleType, types.ListType):
                 data = ret[1]
         else:
             reply = MSG_REQUEST_FAILURE
@@ -90,7 +91,7 @@ class SSHConnection(service.SSHService):
             reason, textualInfo = channel
             self.transport.sendPacket(MSG_CHANNEL_OPEN_FAILURE, 
                                 struct.pack('>2L', senderChannel, reason)+ \
-                               common.NS(textualINFO)+common.NS(''))
+                               common.NS(textualInfo)+common.NS(''))
 
     def ssh_CHANNEL_OPEN_CONFIRMATION(self, packet):
         localChannel, remoteChannel, windowSize, maxPacket = struct.unpack('>4L', packet[: 16])
@@ -127,8 +128,6 @@ class SSHConnection(service.SSHService):
             data = data[: channel.localWindowLeft]
         channel.localWindowLeft-=len(data)
         if channel.localWindowLeft < channel.localWindowSize/2:
-            log.msg('adjusting lwindow %s %s'%(channel.localWindowLeft, 
-                                                channel.localWindowSize))
             self.adjustWindow(channel, channel.localWindowSize- \
                                channel.localWindowLeft)
             #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
@@ -272,15 +271,20 @@ class SSHConnection(service.SSHService):
             remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
             if self.remoteForwards.has_key(remoteHP[1]):
                 connectHP = self.remoteForwards[remoteHP[1]]
-                return forwarding.SSHRemoteForwardingChannel(connectHP,
+                return forwarding.SSHConnectForwardingChannel(connectHP,
                                                     remoteWindow = windowSize,
                                                     remoteMaxPacket = maxPacket,
                                                     conn = self)
             else:
                 return OPEN_CONNECT_FAILED, "don't know about that port"
-
+        elif channelType == 'direct-tcpip':
+            remoteHP, origHP = forwarding.unpackOpen_direct_tcpip(data)
+            return forwarding.SSHConnectForwardingChannel(remoteHP,
+                                                remoteWindow = windowSize,
+                                                remoteMaxPacket = maxPacket,
+                                                conn = self)
         else:
-            return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know %s"%channelTypes
+            return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know %s"%channelType
 
     def gotGlobalRequest(self, requestType, data):
         """
@@ -291,7 +295,6 @@ class SSHConnection(service.SSHService):
             - 1, <data>: request accepted with request specific data
             - 0: request denied
         """
-        return 0 # all before doesn't work yet so ignore
         if self.transport.isClient:
             return 0 # no such luck
         elif requestType == 'tcpip-forward':
@@ -300,8 +303,10 @@ class SSHConnection(service.SSHService):
                 return 0 # fix this later, for now don't even try
             from twisted.internet import reactor
             listener = reactor.listenTCP(portToBind, 
-                                         SSHForwarderFactory(self), 
-                                         interface = hostToBind)
+                            forwarding.SSHListenForwardingFactory(self,
+                                (hostToBind, portToBind),
+                                forwarding.SSHListenServerForwardingChannel), 
+                            interface = hostToBind)
             self.listeners[(hostToBind, portToBind)] = listener
             if portToBind == 0:
                 portToBind = listener.getHost()[2] # the port
@@ -309,8 +314,7 @@ class SSHConnection(service.SSHService):
             else:
                 return 1
         elif requestType == 'cancel-tcpip-forward':
-            hostToBind, portToBindPacked = common.getNS(data)
-            portToBind = int(struct.unpack('>L', portToBindPacked)[0])
+            hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
             listener = self.listeners.get((hostToBind, portToBind), None)
             if not listener:
                 return 0
@@ -342,7 +346,6 @@ class SSHChannel:
         log.msg('other side refused channel %s\nreason: %s'%(self.id, reason))
 
     def addWindowBytes(self, bytes):
-        log.msg('adding bytes to rwindow %s %s'%(bytes, self.remoteWindowLeft))
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
         if self.buf:
             self.write('')
@@ -375,10 +378,8 @@ class SSHChannel:
         if len(data) > self.remoteWindowLeft:
             data, self.buf = data[: self.remoteWindowLeft],  \
                             data[self.remoteWindowLeft:]
-            log.msg('waiting for %s more window'%len(self.buf))
         if not data: return
         while len(data) > self.remoteMaxPacket:
-            log.msg('way too much data')
             self.conn.sendData(self, data[: self.remoteMaxPacket])
             data = data[self.remoteMaxPacket:]
             self.remoteWindowLeft-=self.remoteMaxPacket
