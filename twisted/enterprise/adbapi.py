@@ -28,10 +28,16 @@ class Transaction:
     I am a lightweight wrapper for a database 'cursor' object.  I relay
     attribute access to the DB cursor.
     """
+    _cursor = None
 
     def __init__(self, pool, connection):
         self._connection = connection
-        cursor = self._cursor = connection.cursor()
+        self.reopen()
+
+    def reopen(self):
+        if self._cursor is not None:
+            self._cursor.close()
+        self._cursor = self._connection.cursor()
         
     def __getattr__(self, name):
         return getattr(self._cursor, name)
