@@ -57,7 +57,7 @@ class SSHChannel(log.Logger):
 
         @type reason: C{error.ConchError}
         """
-        log.msg('other side refused open\nreason: %s'%(self.id, reason))
+        log.msg('other side refused open\nreason: %s'% reason)
 
     def addWindowBytes(self, bytes):
         """
