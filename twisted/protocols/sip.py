@@ -31,6 +31,7 @@ from twisted.python.components import Interface
 
 from twisted import cred
 import twisted.cred.credentials
+import twisted.cred.error
 
 # sibling imports
 import basic
@@ -421,6 +422,8 @@ class MessagesParser(basic.LineReceiver):
     acceptRequests = 1
     state = "firstline" # or "headers", "body" or "invalid"
     
+    debug = 0
+    
     def __init__(self, messageReceivedCallback):
         self.messageReceived = messageReceivedCallback
         self.reset()
@@ -562,7 +565,8 @@ class Base(protocol.DatagramProtocol):
         self.parser.dataReceived(data)
         self.parser.dataDone()
         for m in self.messages:
-            log.msg("Received %s from %s" % (m, addr))
+            if self.debug:
+                log.msg("Received %r from %r" % (m, addr))
             if isinstance(m, Request):
                 self.handle_request(m, addr)
             else:
@@ -598,6 +602,8 @@ class Base(protocol.DatagramProtocol):
         log.msg("Sending %s to %s" % (message, destURL))
         if destURL.transport not in ("udp", None):
             raise RuntimeError, "only UDP currently supported"
+        if self.debug:
+            log.msg("Sending %r to %r" % (message.toString(), destURL))
         self.transport.write(message.toString(), (destURL.host, destURL.port or self.PORT))
 
     def handle_request(self, message, addr):
@@ -950,6 +956,7 @@ class RegisterProxy(Proxy):
         self.register(message, host, port)
     
     def _ebLogin(self, failure, message, host, port):
+        failure.trap(cred.error.UnauthorizedLogin)
         self.unauthorized(message, host, port)
 
     def register(self, message, host, port):
