@@ -22,6 +22,8 @@ I am the support module for making a ftp server with mktap.
 from twisted.protocols import ftp
 from twisted.python import usage
 from twisted.application import internet
+from twisted.cred import error, portal, checkers, credentials
+
 import os.path
 
 
@@ -32,38 +34,35 @@ class Options(usage.Options):
     optParameters = [
         ["port", "p", "2121",                 "set the port number"],
         ["root", "r", "/usr/local/ftp",       "define the root of the ftp-site."],
-        ["useranonymous", "", "anonymous",    "Name of the anonymous user."]
+        ["userAnonymous", "", "anonymous",    "Name of the anonymous user."]
     ]
-    optFlags = [["anonymous", "a","allow anonymous logins"],
-                ["thirdparty", "3", "allow third-party connections"],
-                ["otp", "","activate One-Time Passwords"]]
 
     longdesc = ''
 
 
-def addUser(factory, username, password):
-    factory.userdict[username] = {}
-    if factory.otp:
-        from twisted.python import otp
-        factory.userdict[username]["otp"] = otp.OTP(password, hash=otp.md5)
-    else:
-        factory.userdict[username]["passwd"] = password
+#def addUser(factory, username, password):
+#    factory.userdict[username] = {}
+#    if factory.otp:
+#        from twisted.python import otp
+#        factory.userdict[username]["otp"] = otp.OTP(password, hash=otp.md5)
+#    else:
+#        factory.userdict[username]["passwd"] = password
 
 def makeService(config):
-    t = ftp.FTPFactory()
-    # setting the config
-    t.anonymous = config['anonymous']
-    t.thirdparty = config['thirdparty']
-    t.root = config['root']
-    t.useranonymous = config['useranonymous']
-    t.otp = config['otp']
-    t.userdict = {}
+    f = ftp.FTPFactory()
 
-    # adding a default user
-    addUser(t, "twisted", "twisted")
+    r = ftp.FTPRealm()
+    r.tld = config['root']
+    p = portal.Portal(r)
+    p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
 
+    f.tld = config['root']
+    f.userAnonymous = config['userAnonymous']
+    f.portal = p
+    f.protocol = ftp.FTP
+    
     try:
         portno = int(config['port'])
     except KeyError:
         portno = 2121
-    return internet.TCPServer(portno, t)
+    return internet.TCPServer(portno, f)
