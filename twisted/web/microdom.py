@@ -208,6 +208,9 @@ class Element(Node):
         self._filename = filename
         self._markpos = markpos
 
+    def getElementsByTagName(self, name):
+        return [n for n in self.childNodes if n.nodeName == name]
+    
     def hasAttributes(self):
         return 1
     
