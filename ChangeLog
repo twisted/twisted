@@ -2821,3 +2821,7 @@
 	* First go at database for twisted.bugs. I hate RDBMS. I hate web.
 
 --- 0.13.0 Release ---
+
+# Local Variables:
+# add-log-time-format: add-log-iso8601-time-string
+# End:
