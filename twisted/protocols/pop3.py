@@ -334,9 +334,13 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         ).addErrback(self._ebUnexpected)
 
     def do_STAT(self):
+        i = 0
+        sum = 0
         msg = self.mbox.listMessages()
-        total = reduce(operator.add, msg, 0)
-        self.successResponse('%d %d' % (len(msg), total))
+        for e in msg:
+            i += 1
+            sum += e
+        self.successResponse('%d %d' % (i, sum))
 
     def do_LIST(self, i=None):
         messages = self.mbox.listMessages()
