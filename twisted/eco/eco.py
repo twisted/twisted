@@ -2,6 +2,14 @@ import sexpy
 import operator
 import types
 
+globalValues = {"nil" : []}
+globalFunctions = {}
+
+def ValueEnvironment():
+    return (None, globalValues)
+def FunctionEnvironment():
+    return (None, globalFunctions)
+
 def consify(sexp):
     if sexp and isinstance(sexp, types.ListType):
         qar = sexp[0]
@@ -12,28 +20,7 @@ def consify(sexp):
 
 def eval(string):
     c = consify(sexpy.fromString(string))
-    return evalExp(c, (None, {}))
-
-def lookup(exp, env):
-    val = None
-    while 1:
-        val = env[1].get(exp)
-        if val:
-            return val
-        env = env[0]
-        if not env:
-            raise AttributeError("variable '%s' not found" % exp)
-
-
-def extendEnv(oldEnv, bindings):
-    d = {}
-    while bindings:
-        k = car(car(bindings))
-        v = cadr(car(bindings))
-        bindings = cdr(bindings)
-        d[k.string] = evalExp(v, oldEnv)
-    return (oldEnv, d)
-
+    return Evaluator().evalExp(c)
 
 def lisp_map(fun, list):
     if list:
@@ -112,54 +99,75 @@ def func_list(*exp):
 def func_subtract(exp, env):
     return reduce(operator.add, exp)
 
-def eval_apply(exp, env):
-    evaledList = []
-    args = cdr(exp)
-    while args:
-        evaledList.append(evalExp(car(args), env))
-        args = cdr(args)
-    funkyDict = {"+": func_add, "-": func_subtract}
-    fname = 'func_'+car(exp).string
-    return apply((globals().get(fname) or funkyDict.get(car(exp).string)), evaledList)
 
-def evalExp(exp, env):
-    if isinstance(exp, sexpy.Atom):
-        return lookup(exp, env)
-    elif isinstance(exp, types.ListType):
-        if exp == []:
-            return exp
-        n = exp[0].string
-        special_form = globals().get("eval_" + n)
-        if special_form:
-            return special_form(cdr(exp), env)
+class Evaluator:
+    def __init__(self):
+        self.vals = ValueEnvironment()
+        self.funs = FunctionEnvironment()
+        
+    def extendEnv(self, oldEnv, bindings):
+        while bindings:
+            k = car(car(bindings))
+            v = cadr(car(bindings))
+            bindings = cdr(bindings)
+            d[k.string] = self.evalExp(v)
+        return (oldEnv, d)
+    
+    def lookup(self, exp, env):
+        val = None
+        while 1:
+            val = env[1].get(exp)
+            if val:
+                return val
+            env = env[0]
+            if not env:
+                raise AttributeError("'%s' not found" % exp)
+
+    def eval_apply(self, exp):
+        evaledList = []
+        args = cdr(exp)
+        while args:
+            evaledList.append(self.evalExp(car(args)))
+            args = cdr(args)
+            funkyDict = {"+": func_add, "-": func_subtract}
+            fname = 'func_'+car(exp).string
+        return apply((globals().get(fname) or funkyDict.get(car(exp).string)), evaledList)
+
+    def evalExp(self, exp):
+        if isinstance(exp, sexpy.Atom):
+            return self.lookup(exp, self.vals)
+        elif isinstance(exp, types.ListType):
+            if exp == []:
+                return exp
+            n = exp[0].string
+            special_form = getattr(self, "eval_" + n, None)
+            if special_form:
+                return special_form(cdr(exp))
+            else:
+                return self.eval_apply(exp)
         else:
-            # macro = globals().get("macro_" + n)
-            # if macro:
-            #   return evalExp(macroexpand(macro), env)
-            return eval_apply(exp, env)
-    else:
-        return exp
+            return exp
 
-def eval_if(exp, env):
-    test = car(exp)
-    then = cadr(exp)
-    els  = caddr(exp)
-    if evalExp(test, env):
-        return evalExp(then, env)
-    else:
-        return evalExp(els, env)
+    def eval_if(self, exp):
+        test = car(exp)
+        then = cadr(exp)
+        els  = caddr(exp)
+        if self.evalExp(test):
+            return self.evalExp(then)
+        else:
+            return self.evalExp(els)
+        
 
-
-def eval_let(exp, env):
-    newEnv = extendEnv(env, car(exp))
-    exp = cdr(exp)
-    while exp:
-        rv = evalExp(car(exp), newEnv)
+    def eval_let(self, exp):
+        self.vals = extendEnv(self.vals, car(exp))
         exp = cdr(exp)
-    return rv
+        while exp:
+            rv = self.evalExp(car(exp))
+            exp = cdr(exp)
+        return rv
 
-#def eval_function(exp, env):
-#    return lookup_function(car(exp))
+    def eval_function(self, exp):
+        return self.lookup(car(exp), self.funs)
     
 #def eval_def(exp, env):
     
