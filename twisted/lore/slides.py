@@ -56,12 +56,12 @@ print "Hello, World!"
 from __future__ import nested_scopes
 
 from twisted.lore import default
-from twisted.web import domhelpers
+from twisted.web import domhelpers, microdom
 # These should be factored out
 from twisted.lore.latex import BaseLatexSpitter, processFile, getLatexText
 from twisted.lore.tree import getHeaders
 
-import os
+import os, os.path
 from cStringIO import StringIO
 
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
@@ -159,7 +159,96 @@ def convertFile(filename, outputter, template, ext=".mgp"):
     fout.close()
 
 
+# HTML DOM tree stuff
+
+def splitIntoSlides(document):
+    body = domhelpers.findNodesNamed(document, 'body')[0]
+    slides = []
+    slide = []
+    title = '(unset)'
+    for child in body.childNodes:
+        if isinstance(child, microdom.Element) and child.tagName == 'h2':
+            if slide:
+                slides.append((title, slide))
+                slide = []
+            title = domhelpers.getNodeText(child)
+        else:
+            slide.append(child)
+    slides.append((title, slide))
+    return slides
+
+def insertPrevNextLinks(slides, filename, ext):
+    for slide in slides:
+        for name, offset in (("previous", -1), ("next", +1)):
+            if (slide.pos > 0 and name == "previous") or \
+               (slide.pos < len(slides)-1 and name == "next"):
+                for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
+                    node.appendChild(microdom.Text(slides[slide.pos+offset].title))
+                    node.setAttribute('href', '%s-%d%s' 
+                                      % (filename[0], slide.pos+offset, ext))
+            else:
+                for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
+                    pos = 0
+                    for child in node.parentNode.childNodes:
+                        if child is node:
+                            del node.parentNode.childNodes[pos]
+                            break
+                        pos += 1
+
+
+class HTMLSlide:
+    def __init__(self, dom, title, pos):
+        self.dom = dom
+        self.title = title
+        self.pos = pos
+
+
+def munge(document, template, linkrel, d, fullpath, ext, url):
+    # FIXME: This has *way* to much duplicated crap in common with tree.munge
+    from tree import removeH1, expandAPI, fixAPI, fontifyPython, \
+                     addPyListings, addHTMLListings, setTitle
+    #fixRelativeLinks(template, linkrel)
+    removeH1(document)
+    expandAPI(document)
+    fixAPI(document, url)
+    fontifyPython(document)
+    addPyListings(document, d)
+    addHTMLListings(document, d)
+    #fixLinks(document, ext)
+    #putInToC(template, generateToC(document))
+    template = template.cloneNode(1)
+
+    # Insert the slides into the template
+    slides = []
+    pos = 0
+    for title, slide in splitIntoSlides(document):
+        t = template.cloneNode(1)
+        setTitle(t, [microdom.Text(title)])
+        tmplbody = domhelpers.findElementsWithAttribute(t, "class", "body")[0]
+        tmplbody.childNodes = slide
+        tmplbody.setAttribute("class", "content")
+        # FIXME: Next/Prev links
+        # FIXME: Perhaps there should be a "Template" class?  (setTitle/setBody
+        #        could be methods...)
+        slides.append(HTMLSlide(t, title, pos))
+        pos += 1
+
+    insertPrevNextLinks(slides, os.path.splitext(os.path.basename(fullpath)), ext)
+    
+    return slides
+
+
+def doFile(fn, linkrel, ext, url, templ):
+    from tree import parseFileAndReport
+    doc = parseFileAndReport(fn)
+    slides = munge(doc, templ, linkrel, os.path.dirname(fn), fn, ext, url)
+    for slide, index in zip(slides, range(len(slides))):
+        slide.dom.writexml(open(os.path.splitext(fn)[0]+'-'+str(index)+ext, 'wb'))
+
+
 class SlidesProcessingFunctionFactory(default.ProcessingFunctionFactory):
+    doFile = [doFile]
+
     def generate_mgp(self, d):
         template = d.get('template', 'template.mgp')
         df = lambda file, linkrel: convertFile(file, MagicpointOutput, template, ext=".mgp")

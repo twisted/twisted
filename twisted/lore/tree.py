@@ -184,6 +184,13 @@ def fixRelativeLinks(document, linkrel):
             if not href.startswith('http'):
                 node.setAttribute(attr, linkrel+node.getAttribute(attr))
 
+def setTitle(template, title):
+    for nodeList in (domhelpers.findNodesNamed(template, "title"),
+                     domhelpers.findElementsWithAttribute(template, "class",
+                                                          'title')):
+        if nodeList:
+            nodeList[0].childNodes.extend(title)
+
 def munge(document, template, linkrel, d, fullpath, ext, url):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
@@ -195,15 +202,13 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     addHTMLListings(document, d)
     fixLinks(document, ext)
     putInToC(template, generateToC(document))
-    footnotes(document)
-    notes(document)
+    #footnotes(document)
+    #notes(document)
 
+    # Insert the document into the template
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
-    for nodeList in (domhelpers.findNodesNamed(template, "title"),
-                     domhelpers.findElementsWithAttribute(template, "class",
-                                                          'title')):
-        if nodeList:
-            nodeList[0].childNodes.extend(title)
+    setTitle(template, title)
+
     body = domhelpers.findNodesNamed(document, "body")[0]
     tmplbody = domhelpers.findElementsWithAttribute(template, "class",
                                                               "body")[0]
