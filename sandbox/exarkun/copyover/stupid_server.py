@@ -2,10 +2,8 @@ import os, sys
 from socket import * # har har har
 from tempfile import TemporaryFile
 sys.path.insert(0, "../../pahan/sendmsg")
-from sendmsg import sendmsg
+from sendmsg import sendmsg, SCM_RIGHTS
 from struct import pack
-
-SCM_RIGHTS = 0x01
 
 tf1 = TemporaryFile()
 tf1.write("I hope it breaks and you die")
