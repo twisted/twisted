@@ -120,6 +120,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
+    mUID = 0
 
     def getFlags(self):
         return self.flags
@@ -160,8 +161,18 @@ class SimpleMailbox:
         return defer.succeed(r)
     
     def addMessage(self, message, flags, date = None):
-        self.messages.append((message, flags, date))
+        self.messages.append((message, flags, date, self.mUID))
+        self.mUID += 1
         return defer.succeed(None)
+    
+    def expunge(self):
+        delete = []
+        for i in self.messages:
+            if '\\Deleted' in i[1]:
+                delete.append(i)
+        for i in delete:
+            self.messages.remove(i)
+        return [i[3] for i in delete]
 
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
@@ -543,7 +554,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
             len(mb.messages)
         )
         self.assertEquals(
-            [(message, (), 'This Date String Is Illegal')],
+            [(message, (), 'This Date String Is Illegal', 0)],
             mb.messages
         )
 
@@ -563,4 +574,59 @@ class IMAP4ServerTestCase(unittest.TestCase):
         loopback.loopback(self.server, self.client)
         
         # Okay, that was fun
-    
+
+    def testClose(self):
+        m = SimpleMailbox()
+        m.messages = [
+            ('Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
+            ('Message 2', ('AnotherFlag',), None, 1),
+            ('Message 3', ('\\Deleted',), None, 2),
+        ]
+        SimpleServer.theAccount.addMailbox('mailbox', m)
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def select():
+            return self.client.select('mailbox')
+        def close():
+            return self.client.close()
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(select), self._ebGeneral)
+        d.addCallbacks(strip(close), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(len(m.messages), 1)
+        self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+
+    def testExpunge(self):
+        m = SimpleMailbox()
+        m.messages = [
+            ('Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
+            ('Message 2', ('AnotherFlag',), None, 1),
+            ('Message 3', ('\\Deleted',), None, 2),
+        ]
+        SimpleServer.theAccount.addMailbox('mailbox', m)
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def select():
+            return self.client.select('mailbox')
+        def expunge():
+            return self.client.expunge()
+        def expunged(results):
+            self.results = results
+        
+        self.results = None
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(select), self._ebGeneral)
+        d.addCallbacks(strip(expunge), self._ebGeneral)
+        d.addCallbacks(expunged, self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(len(m.messages), 1)
+        self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+        
+        self.assertEquals(self.results, [0, 2])
+        
+            

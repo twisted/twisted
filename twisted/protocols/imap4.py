@@ -137,7 +137,7 @@ class IMAP4Server(basic.LineReceiver):
         self._respond('NO', tag, message)
     
     def sendUntaggedResponse(self, message):
-        self._respond(message, None, '')
+        self._respond(message, None, None)
 
     def sendContinuationRequest(self, msg = 'Ready for additional command text'):
         self.sendLine('+ ' + msg)
@@ -153,7 +153,10 @@ class IMAP4Server(basic.LineReceiver):
     def _respond(self, state, tag, message):
         if not tag:
             tag = '*'
-        self.sendLine(' '.join((tag, state, message)))
+        if not message:
+            self.sendLine(' '.join((tag, state)))
+        else:
+            self.sendLine(' '.join((tag, state, message)))
 
     def unauth_CAPABILITY(self, tag, args):
         caps = 'IMAP4rev1'
@@ -471,6 +474,62 @@ class IMAP4Server(basic.LineReceiver):
         when the deferred's callback (or errback) is invoked.
         """
         return None
+
+    def select_CLOSE(self, tag, args):
+        if self.mbox.isWriteable():
+            d = self.mbox.expunge()
+            if isinstance(d, defer.Deferred):
+                d.addCallbacks(
+                    self._cbClose,
+                    self._ebClose,
+                    callbackArgs=(tag,),
+                    errbackArgs=(tag,)
+                )
+            else:
+                self._cbClose(d, tag)
+        else:
+            self.sendPositiveResponse(tag, 'CLOSE completed')
+            self.account.release(self.mbox)
+            self.mbox = None
+            self.state = 'auth'
+
+    def _cbClose(self, result, tag):
+        self.sendPositiveResponse(tag, 'CLOSE completed')
+        self.account.release(self.mbox)
+        self.mbox = None
+        self.state = 'auth'
+
+    def _ebClose(self, failure, tag):
+        self.sendBadResponse(tag, 'CLOSE failed: ' + str(failure))
+    
+    def select_EXPUNGE(self, tag, args):
+        if self.mbox.isWriteable():
+            d = self.mbox.expunge()
+            if isinstance(d, defer.Deferred):
+                d.addCallbacks(
+                    self._cbExpunge,
+                    self._ebExpunge,
+                    callbackArgs=(tag,),
+                    errbackArgs=(tag,)
+                )
+            else:
+                self._cbExpunge(d, tag)
+        else:
+            self.sendPositiveResponse(tag, 'CLOSE completed')
+            self.account.release(self.mbox)
+            self.mbox = None
+            self.state = 'auth'
+
+    def _cbExpunge(self, result, tag):
+        for e in result:
+            self.sendUntaggedResponse('%d EXPUNGE' % e)
+        self.sendPositiveResponse(tag, 'EXPUNGE completed')
+        self.account.release(self.mbox)
+        self.mbox = None
+        self.state = 'auth'
+
+    def _ebExpunge(self, failure, tag):
+        self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure))
 
 
 class UnhandledResponse(IMAP4Exception): pass
@@ -1031,7 +1090,7 @@ class IMAP4Client(basic.LineReceiver):
     def check(self):
         """Tell the server to perform a checkpoint
         
-        This command is allowed in the Authenticated and Selected states.
+        This command is allowed in the Selected state.
         
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked when this command
@@ -1039,6 +1098,50 @@ class IMAP4Client(basic.LineReceiver):
         """
         return self.sendCommand('CHECK')
     
+    def close(self):
+        """Return the connection to the Authenticated state.
+        
+        This command is allowed in the Selected state.
+        
+        Issuing this command will also remove all messages flagged \\Deleted
+        from the selected mailbox if it is opened in read-write mode,
+        otherwise it indicates success by no messages are removed.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked when the command
+        completes successfully or whose errback is invoked if it fails.
+        """
+        return self.sendCommand('CLOSE')
+    
+    def expunge(self):
+        """Return the connection to the Authenticate state.
+        
+        This command is allowed in the Selected state.
+        
+        Issuing this command will perform the same actions as issuing the
+        close command, but will also generate an 'expunge' response for
+        every message deleted.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a list of the
+        'expunge' responses when this command is successful or whose errback
+        is invoked otherwise.
+        """
+        d = self.sendCommand('EXPUNGE')
+        d.addCallback(self._cbExpunge)
+        return d
+    
+    def _cbExpunge(self, (lines, last)):
+        ids = []
+        for line in lines:
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                if parts[1] == 'EXPUNGE':
+                    try:
+                        ids.append(int(parts[0]))
+                    except ValueError:
+                        raise IllegalServerResponse, line
+        return ids
 
 
 class MismatchedNesting(Exception):
@@ -1386,4 +1489,13 @@ class IMailbox(components.Interface):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the message
         is added successfully and whose errback is invoked otherwise.
+        """
+
+    def expunge(self):
+        """Remove all messages flagged \\Deleted.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback should be invoked with a list of
+        message sequence numbers which were deleted and whose errback should
+        be invoked if there is an error.
         """
