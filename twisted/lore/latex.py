@@ -27,10 +27,19 @@ import tree
 escapingRE = re.compile(r'([#$%&_{}^~\\])')
 lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
+def _escapeMatch(match):
+    c = match.group()
+    if c == '\\':
+        return '$\\backslash$'
+    elif c == '~':
+        return '\\~{}'
+    elif c == '^':
+        return '\\verb#^#'
+    else:
+        return '\\' + c
+
 def latexEscape(text):
-    text = escapingRE.sub(lambda x: (x.group()=='\\' and '$\\backslash$') or
-                                    (x.group()=='~' and '\\~{}') or
-                                    '\\'+x.group(), text)
+    text = escapingRE.sub(_escapeMatch, text)
     return text.replace('\n', ' ')
 
 entities = { 'amp': '\&', 'gt': '>', 'lt': '<', 'quot': '"',
