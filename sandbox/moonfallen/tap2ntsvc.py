@@ -132,6 +132,7 @@ def run(argv = sys.argv):
     o['script'] = '%s.py' % svc_appended
     o['commandline'] = ' '.join(argv)
     o['dirname'] = svc_appended
+    o['options-repr'] = repr(o)
     
     try:
         os.mkdir(svc_appended)
@@ -149,6 +150,9 @@ Could not create directory %s because: %s" % (o['dirname'], e.strerr))
     generated = {o['script'] : script_template,
                  'setup.py' : setup_template,
                  'setup.cfg' : cfg_template,
+                 'README.txt' : readme_template,
+                 'do_inno_script.py' : do_inno_script_template,
+                 'do_inno.py' : do_inno_template,
                  }
     for k in generated:
         genFile(k, generated[k], o)
@@ -168,15 +172,11 @@ Could not copy file %s because: %s" % (o['conffile'], e.strerr))
         sys.path.insert(0, os.getcwd())
         import setup
         setup.run('setup.py -q py2exe'.split())
-        genFile("README.txt", readme_template, o)
 
         if not o['skip-inno-script']:
-            o['options-repr']=repr(o)
-            genFile("do_inno_script.py", do_inno_script_template, o)
             execfile("do_inno_script.py")
 
             if not o['skip-inno']:
-                genFile("do_inno.py", do_inno_template, o)
                 execfile("do_inno.py")
                 final = os.path.abspath("%s\\%s-setup-%s.exe" %
                                         (svc_appended,
