@@ -491,8 +491,7 @@ class _TrialLogObserver(object):
         iface = d.get('iface', None)
         if iface is not None and iface is ITrialDebug:
             return
-        self.events.append(d)
-        
+        self.events.append(dict([(str(k),str(v)) for k, v in d.iteritems()]))
     def install(self):
         log.addObserver(self)
         return self

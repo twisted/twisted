@@ -247,7 +247,12 @@ class ITestMethod(ITimed):
                             @type failures: list of failure.Failures""")
 
     logevents = zi.Attribute("""@ivar logevents: log.msg and log.err events captured during the run of this method
-                                @type logevents: list of dicts""")
+                                @type logevents: list of dicts of strings
+
+                                Log events are stringified (with str()) in
+                                order to prevent bad interactions with the
+                                garbage collector.
+                                """)
 
     stdout = zi.Attribute("""@ivar stdout: the test method's writes to stdout
                              @type stdout: types.StringType""")
