@@ -46,26 +46,15 @@ su jh; ~jh/bin/stop; ~jh/bin/start; exit
  * Restart the pb server:
 su pb; cd ~/Working; kill `cat twistd.pid`; twistd -f manhole-shutdown.tap; mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap; exit
 
+ * Upload to Sourceforge
+$SOMEWHERE/admin/release-twisted -n <sf username> -v <version> --sourceforge --release=/twisted/Releases
+
  * If everything's cool, edit WebSite/twistedmatrix.com/news.html, index, and products/download.html
  * cvs commit those
  * go to 
 su - pb
 cd /var/www/WebSite/twistedmatrix.com
 $WORKING/Twisted.CVS/Twisted/admin/generate-domdocs --docsdir . --template template.tpl -e None
-
- * For final versions only
- * Alright, now for the hell that is sourceforge release-procedure:
-   * lftp upload.sf.net
-   * cd incoming; lcd /twisted/Releases; put *.zip *.gz *.bzip2
-   * go to http://sourceforge.net, log in, go to twisted project page, admin, edit/release files.
-   * for each package, click "Add Release", type in the version number for "Release Name", "Create This Release", 
-     there should be a checklist of all the files in incoming, click the three
-     relevent files for each package (ie, if you're in package TwistedDocs, click TwistedDocs-<version>.{zip,tar.gz,tar.bz2}),
-     and then "Add Files and/or Refresh View".
-   * OK, so the files for that package are added, now you have to "Edit Files in this release" (ugh, what a pain)
-   * You can only do one file at a time, you have to specify the architecture (platform idependant for each one), and the
-     file type (.zip, bz2, gz), and click on "Update/Refresh" for each file.
-   * Now, repeat for the other two packages. Hooray, you're done. Wasn't that easy? :\
 
  * OK! All released up. Now, for the announcements:
    * Freshmeat
