@@ -13,10 +13,15 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+#
+# to run test, use 'trial test_flow.py'
+#
 
 from __future__ import nested_scopes
 import flow
-import unittest
+from twisted.trial import unittest
+from twisted.python import failure
 
 class producer:
     """ iterator version of the following generator... 
@@ -48,7 +53,6 @@ class producer:
         return (self.lst.result, self.nam.result)
     def next(self):
         return self.state()
-
 
 class consumer:
     """ iterator version of the following generator...
@@ -84,6 +88,25 @@ class consumer:
     def next(self):
         return self.state()
 
+class badgen:
+    """ a bad generator...
+
+    def badgen():
+        yield 'x'
+        err =  3/ 0
+    """    
+    def __iter__(self):
+        self.state = self.yield_x
+        return self
+    def yield_x(self):
+        self.state = self.yield_done
+        return 'x'
+    def yield_done(self):
+        err = 3 / 0
+        raise StopIteration
+    def next(self):
+        return self.state()
+
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         f = flow.Flow([1,2,3])
@@ -101,12 +124,36 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(['Title',(1,'one'),(2,'two'),(3,'three')],f.results)
 
     def testDeferred(self):
-        from twisted.internet import reactor
-        def res(x):
-            self.assertEqual(['Title', (1,'one'),(2,'two'),(3,'three')], x)
-        f = flow.DeferredFlow(consumer())
-        f.addCallback(res)
-        reactor.iterate()
+        res = ['Title', (1,'one'),(2,'two'),(3,'three')]
+        d = flow.DeferredFlow(consumer())
+        self.assertEquals(unittest.deferredResult(d),res)
+
+    def testFailure(self):
+        #
+        # By default, the first time an error is encountered, it is
+        # wrapped as a Failure and send to the errback
+        #
+        #    Failure(ZeroDivisionError)
+        #
+        d = flow.DeferredFlow(badgen())
+        r = unittest.deferredError(d) 
+        self.failUnless(isinstance(r, failure.Failure))
+        self.failUnless(isinstance(r.value, ZeroDivisionError))
+
+    def testFailureAsResult(self):
+        #
+        # If failures are to be expected, then they can be
+        # returned in the list of results.
+        #
+        #
+        #   ['x',Failure(ZeroDivisionError)]
+        #
+        d = flow.DeferredFlow(badgen(), failureAsResult = 1)
+        r = unittest.deferredResult(d)
+        self.assertEqual(len(r),2)   
+        self.assertEqual(r[0],'x')   
+        self.failUnless(isinstance(r[1], failure.Failure))
+        self.failUnless(isinstance(r[1].value,ZeroDivisionError))
 
     def testThreaded(self):
         class CountIterator(flow.ThreadedIterator):
@@ -121,13 +168,5 @@ class FlowTest(unittest.TestCase):
                     raise flow.StopIteration
                 self.count -= 1
                 return val
-        def res(x): self.assertEqual([5,4,3,2,1], x)
-        from twisted.internet import reactor
-        f = flow.DeferredFlow(CountIterator(5))
-        f.addCallback(res)
-        reactor.callLater(2,reactor.stop)
-        reactor.run()
-
-if '__main__' == __name__:
-    unittest.main()
-
+        d = flow.DeferredFlow(CountIterator(5))
+        self.assertEquals(unittest.deferredResult(d),[5,4,3,2,1])

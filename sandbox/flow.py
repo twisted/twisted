@@ -93,7 +93,11 @@ class Generator(FlowCommand):
                     exception was thrown in the nested generator.
     """      
     def __init__(self, iterable):
-        self._next  = iter(iterable).next
+        try:
+            self._next  = iter(iterable).next
+        except TypeError:
+            iterable = iterable()
+            self._next = iter(iterable).next
         self.result = None
         self.stop   = 1
     def isFailure(self):
@@ -146,6 +150,9 @@ class Flow:
             head._generate()
             if head.stop:
                 self._stack.pop()
+                if head.result is not None:
+                    if self._addResult(head.result):
+                        return
             else:
                 result = head.result
                 if isinstance(result, FlowCommand):
@@ -159,13 +166,17 @@ class Flow:
                     else:
                         if self._addResult(result):
                             return
-    def execute(self):
+    def execute(self, raiseFailure = 1):
         """ continually execute, using sleep for Cooperate """
         from time import sleep
         while 1:
             timeout = self._execute()
             if timeout is None: break
             sleep(timeout)
+        if raiseFailure:
+            for result in self.results:
+                if isinstance(result, failure.Failure):
+                    result.trap()
 
 from twisted.internet import defer
 class DeferredFlow(Flow, defer.Deferred):
@@ -178,36 +189,29 @@ class DeferredFlow(Flow, defer.Deferred):
         Since more than one (possibly failing) result could be returned,
         this uses the same semantics as DeferredList
     """
-    def __init__(self, iterable, delay = 0, 
-                 fireOnOneCallback=0, fireOnOneErrback=0):
+    def __init__(self, iterable, delay = 0, failureAsResult = 0 ):
         """initialize a DeferredFlow
-        @param iterable:          top level iterator / generator
-        @param delay:             delay when scheduling reactor.callLater
-        @param fireOnOneCallback: a flag indicating that the first good 
-                                  yielded result should be sent via Callback
-        @param fireOnOneErrback:  a flag indicating that the first failing
-                                  yield result should be sent via Errback
+        @param iterable:        top level iterator / generator
+        @param delay:           delay when scheduling reactor.callLater
+        @param failureAsResult  if true, then failures will be added to 
+                                the result list provided to the callback,
+                                otherwise the first failure results in 
+                                the errback being called with the failure.
         """
         from twisted.internet import reactor
         defer.Deferred.__init__(self)
         Flow.__init__(self,iterable)
-        self.fireOnOneCallback = fireOnOneCallback
-        self.fireOnOneErrback  = fireOnOneErrback
+        self.failureAsResult = failureAsResult
         reactor.callLater(delay, self._execute)
     def execute(self): 
         raise TypeError("Deferred Flow is auto-executing") 
     def _addResult(self, result):
-        """ emulate DeferredList behavior, short circut if event is fired """
-        if not self.called:
-            if self.fireOnOneCallback:
-                if not isinstance(result, failure.Failure):
-                    self.callback((result,len(self.results)))
-                    return 1
-            if self.fireOnOneErrback:
-                if isinstance(result, failure.Failure):
-                    self.errback(fail.Failure((result,len(self.results))))
-                    return 1
-            self.results.append(result)
+        """ by default, call the errback and exit on first failure """
+        if not self.failureAsResult:
+            if isinstance(result, failure.Failure):
+                self.errback(result)
+                return 1
+        self.results.append(result)
     def _execute(self):
         timeout = Flow._execute(self)
         if timeout is None:
