@@ -43,7 +43,7 @@ class MarkingRealm:
             return resource.IResource, self.nonauthenticated, lambda:None
 
 def guardResource(resource, *checkers):
-    myPortal = portal.Portal(MarkingRealm(SimpleResource()))
+    myPortal = portal.Portal(MarkingRealm(resource))
     for checker in checkers:
         myPortal.registerChecker(checker)
     return SessionWrapper(UsernamePasswordWrapper(myPortal))
