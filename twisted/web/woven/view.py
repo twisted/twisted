@@ -110,7 +110,7 @@ class View:
         A view must be told what its model is, and may be told what its
         controller is, but can also look up its controller if none specified.
         """
-        if not components.implements(m, interfaces.IModel):
+        if not interfaces.IModel.providedBy(m):
             m = model.adaptToIModel(m, None, None)
         self.model = self.mainModel = m
         # It's the responsibility of the calling code to make sure
