@@ -85,27 +85,35 @@ cdef class _CMixin:
 
     cdef char* _c_buffer
     cdef size_t _c_buflen
+    cdef CProtocol cprotocol
+    cdef int _c_socketfd
 
-    cdef setBuffer(self, char* buffer, size_t buflen):
+    def __init__(self):
+        """Call after tcp.Connection.__init__ is called."""
+        if isinstance(self.protocol, CProtocol):
+            self.cprotocol = self.protocol
+            self._c_socketfd = self.fileno()
+        else:
+            self.cprotocol = 0
+            
+    cdef void setBuffer(self, char* buffer, size_t buflen):
         self._c_buffer = buffer
         self._c_buflen = buflen
     
     def doRead(self):
         """doRead for tcp.Connection that knows about cProtocol."""
         cdef int result
-        cdef CProtocol protocol
-        if isinstance(self.protocol, CProtocol): # XXX speed this up!
-            protocol = self.protocol
+        if self.cprotocol:
             if self._c_buflen == 0:
-                protocol.cbufferFull()
+                self.cprotocol.cbufferFull()
                 return
-            result = read(self.fileno(), self._c_buffer, self._c_buflen)
+            result = read(self._c_socketfd, self._c_buffer, self._c_buflen)
             if result == 0:
                 return main.CONNECTION_DONE
             elif result > 0:
                 self._c_buffer = self._c_buffer + result
                 self._c_buflen = self._c_buflen - result
-                protocol.cdataReceived(self._c_buffer - result, result)
+                self.cprotocol.cdataReceived(self._c_buffer - result, result)
             else:
                 if result == EWOULDBLOCK:
                     return

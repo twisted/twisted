@@ -15,19 +15,6 @@ class Py(LineReceiver):
     def connectionLost(self, reason):
         print self.count
 
-class C(tcp.CProtocol):
-
-    def connectionMade(self):
-        tcp.CProtocol.connectionMade(self)
-        print "hello"
-
-    def dataReceived(self, data):
-        print "should not be called"
-    
-    def connectionLost(self, reason):
-        tcp.CProtocol.connectionLost(self, reason)
-        print "bye"
-
 
 def main(py):
     factory = protocol.ServerFactory()
@@ -35,7 +22,7 @@ def main(py):
         factory.protocol = Py
     else:
         import creactor # monkey patch, lalala
-        factory.buildProtocol = lambda _: C()
+        factory.buildProtocol = lambda _: tcp.CProtocol()
     reactor.listenTCP(1234, factory)
     reactor.run()
 
