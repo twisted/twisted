@@ -1,7 +1,7 @@
-# -*- test-case-name: twisted.test.test_trial -*-
+# -*- test-case-name: twisted.trial.test.test_trial -*-
 
-# -#*- test-case-name: twisted.test.trialtest3.TestTests -*-
-# -@*- test-case-name: twisted.test.trialtest3 -*-
+# -#*- test-case-name: twisted.trial.test.trialtest3.TestTests -*-
+# -@*- test-case-name: twisted.trial.test.trialtest3 -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -740,7 +740,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
         elif f.check(KeyboardInterrupt):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
         elif f.check(unittest.SkipTest):
-            if len(f.value.args) > 1:
+            if len(f.value.args) > 0:
                 reason = f.value.args[0]
             else:
                 warnings.warn(("Do not raise unittest.SkipTest with no "
