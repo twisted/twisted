@@ -1,9 +1,7 @@
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-import sys, os
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import jid
@@ -55,7 +53,19 @@ class JIDParsingTest(unittest.TestCase):
             assert 0
         except jid.InvalidFormat:
             assert 1
+
+    def testPrep(self):
+        # case map of user
+        self.assertEquals(jid.prep("UsEr", "host", "resource"),
+                          ("user", "host", "resource"))
             
+        # case map of host
+        self.assertEquals(jid.prep("user", "hoST", "resource"),
+                          ("user", "host", "resource"))
+
+        # no case map of resource
+        self.assertNotEquals(jid.prep("user", "host", "Resource"),
+                             ("user", "host", "resource"))
 
 class JIDClassTest(unittest.TestCase):
     def testBasic(self):

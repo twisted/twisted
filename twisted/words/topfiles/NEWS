@@ -3,3 +3,5 @@
  - Add QUIT notification for IRC
  - Fix message wrapping
  - Misc Jabber fixes
+ - Add stringprep support for Jabber IDs
+   This only works properly on 2.3.2 or higher
