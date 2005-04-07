@@ -390,3 +390,64 @@ class TestTimeout(unittest.TestCase):
         self.assertEquals(p.timeOut, 1)
         
         p.connectionLost()
+
+
+class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
+    """Tests for policies.LimitTotalConnectionsFactory"""
+    def testConnectionCounting(self):
+        # Make a basic factory
+        factory = policies.LimitTotalConnectionsFactory()
+        factory.protocol = protocol.Protocol
+        
+        # connectionCount starts at zero
+        self.assertEqual(0, factory.connectionCount)
+
+        # connectionCount increments as connections are made
+        p1 = factory.buildProtocol(None)
+        self.assertEqual(1, factory.connectionCount)
+        p2 = factory.buildProtocol(None)
+        self.assertEqual(2, factory.connectionCount)
+        
+        # and decrements as they are lost
+        p1.connectionLost(None)
+        self.assertEqual(1, factory.connectionCount)
+        p2.connectionLost(None)
+        self.assertEqual(0, factory.connectionCount)
+
+    def testConnectionLimiting(self):
+        # Make a basic factory with a connection limit of 1
+        factory = policies.LimitTotalConnectionsFactory()
+        factory.protocol = protocol.Protocol
+        factory.connectionLimit = 1
+
+        # Make a connection
+        p = factory.buildProtocol(None)
+        self.assertNotEqual(None, p)
+        self.assertEqual(1, factory.connectionCount)
+        
+        # Try to make a second connection, which will exceed the connection
+        # limit.  This should return None, because overflowProtocol is None.
+        self.assertEqual(None, factory.buildProtocol(None))
+        self.assertEqual(1, factory.connectionCount)
+        
+        # Define an overflow protocol
+        class OverflowProtocol(protocol.Protocol):
+            def connectionMade(self):
+                factory.overflowed = True
+        factory.overflowProtocol = OverflowProtocol
+        factory.overflowed = False
+        
+        # Try to make a second connection again, now that we have an overflow
+        # protocol.  Note that overflow connections count towards the connection
+        # count.
+        op = factory.buildProtocol(None)
+        op.makeConnection(None) # to trigger connectionMade
+        self.assertEqual(True, factory.overflowed)
+        self.assertEqual(2, factory.connectionCount)
+        
+        # Close the connections.
+        p.connectionLost(None)
+        self.assertEqual(1, factory.connectionCount)
+        op.connectionLost(None)
+        self.assertEqual(0, factory.connectionCount)
+

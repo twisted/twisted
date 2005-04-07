@@ -8,6 +8,7 @@ An FTP protocol implementation
 
 Maintainer: U{Jonathan D. Simms<mailto:slyphon@twistedmatrix.com>}
 
+API stability: FTPClient is stable, FTP and FTPFactory (server) is unstable.
 """
 
 # System Imports
@@ -444,7 +445,14 @@ def cleanPath(path):
     log.debug('cleaned path: %s' % path)
     return path
 
-class FTP(object, basic.LineReceiver, policies.TimeoutMixin):      
+class FTPOverflowProtocol(basic.LineReceiver):
+    """FTP mini-protocol for when there are too many connections."""
+    def connectionMade(self):
+        self.sendLine(RESPONSE[TOO_MANY_CONNECTIONS])
+        self.transport.loseConnection()
+
+
+class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     """Protocol Interpreter for the File Transfer Protocol
     
     @ivar shell: The connected avatar
@@ -464,10 +472,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     # how long the DTP waits for a connection
     dtpTimeout = 10
 
-    # if this instance is the upper limit of instances allowed, then 
-    # reply with appropriate error message and drop the connection
-    instanceNum = 0
-
     portal      = None
     shell       = None     # the avatar
     user        = None     # the username of the client connected
@@ -481,14 +485,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def connectionMade(self):
-        log.debug('ftp-pi connectionMade: instance %s' % self.instanceNum)
+        log.debug('ftp-pi connectionMade: instance %s' % self)
 
-        # TODO: add tests for this!
-        if (self.factory.maxProtocolInstances is not None and 
-                self.instanceNum >= self.factory.maxProtocolInstances): 
-            self.reply(TOO_MANY_CONNECTIONS)
-            self.transport.loseConnection()
-            return
         self.reply(WELCOME_MSG)                     
         self.peerHost = self.transport.getPeer()
         self.setTimeout(self.timeOut)
@@ -516,7 +514,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory:
             self.cleanupDTP()
         self.setTimeout(None)
-        self.factory.currentInstanceNum -= 1
         if hasattr(self.shell, 'logout') and self.shell.logout is not None:
             self.shell.logout()
             
@@ -983,47 +980,35 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 components.backwardsCompatImplements(FTP)
 
 
-class FTPFactory(protocol.Factory):
+class FTPFactory(policies.LimitTotalConnectionsFactory):
     """A factory for producing ftp protocol instances
-    @ivar maxProtocolInstances: the maximum number of FTP protocol instances
-        this factory will create. When the maximum number is reached, a protocol
-        instance will be spawned that will give the "Too many connections" message
-        to the client and then close the connection.
-    @ivar timeOut: the protocol interpreter's idle timeout time in seconds, default is 600 seconds
+
+    @ivar timeOut: the protocol interpreter's idle timeout time in seconds,
+        default is 600 seconds.
     """
     protocol = FTP
+    overflowProtocol = FTPOverflowProtocol
     allowAnonymous = True
-    userAnonymous = 'anonymous'        
+    userAnonymous = 'anonymous'
     timeOut = 600
 
-    maxProtocolInstances = None
-    currentInstanceNum = 0
-
-    def __init__(self, portal=None, userAnonymous='anonymous', 
-                       maxProtocolInstances=None):
+    def __init__(self, portal=None, userAnonymous='anonymous'):
         self.portal = portal
         self.userAnonymous = 'anonymous'
         self.instances = []
-        self.maxProtocolInstances = maxProtocolInstances
-        reactor._pi = self
 
     def buildProtocol(self, addr):
-        log.debug('%s of %s max ftp instances: ' % (self.currentInstanceNum, self.maxProtocolInstances))
-        pi            = protocol.Factory.buildProtocol(self, addr)
-        pi.protocol   = self.protocol
-        pi.portal     = self.portal
-        pi.timeOut    = FTPFactory.timeOut
-        pi.factory    = self
-        if self.maxProtocolInstances is not None:
-            self.currentInstanceNum += 1
-            pi.instanceNum = self.currentInstanceNum
-        self.instances.append(pi)
-        return pi
+        p = policies.LimitTotalConnectionsFactory.buildProtocol(self, addr)
+        if p is not None:
+            p.wrappedProtocol.portal = self.portal
+            p.wrappedProtocol.timeOut = self.timeOut
+        return p
 
     def stopFactory(self):
         # make sure ftp instance's timeouts are set to None
         # to avoid reactor complaints
         [p.setTimeout(None) for p in self.instances if p.timeOut is not None]
+        policies.LimitTotalConnectionsFactory.stopFactory(self)
         
 # -- Cred Objects --
 

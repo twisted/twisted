@@ -28,7 +28,7 @@ class ProtocolWrapper(Protocol):
 
     def __init__(self, factory, wrappedProtocol):
         self.wrappedProtocol = wrappedProtocol
-        self.factory = factory
+        self.factory = wrappedProtocol.factory = factory
 
     def makeConnection(self, transport):
         for iface in providedBy(transport):
@@ -297,6 +297,46 @@ class LimitConnectionsByPeer(WrappingFactory):
         self.peerConnections[peerHost] -= 1
         if self.peerConnections[peerHost] == 0:
             del self.peerConnections[peerHost]
+
+
+class LimitTotalConnectionsFactory(ServerFactory):
+    """Factory that limits the number of simultaneous connections.
+
+    @type connectionCount: C{int}
+    @ivar connectionCount: number of current connections.
+    @type connectionLimit: C{int} or C{None}
+    @cvar connectionLimit: maximum number of connections.
+    @type overflowProtocol: L{Protocol} or C{None}
+    @cvar overflowProtocol: Protocol to use for new connections when
+        connectionLimit is exceeded.  If C{None} (the default value), excess
+        connections will be closed immediately.
+    
+    API Stability: Unstable
+    """
+    connectionCount = 0
+    connectionLimit = None
+    overflowProtocol = None
+    
+    def buildProtocol(self, addr):
+        if (self.connectionLimit is None or
+            self.connectionCount < self.connectionLimit):
+                # Build the normal protocol
+                protocol = ProtocolWrapper(self, self.protocol())
+        elif self.overflowProtocol is None:
+            # Just drop the connection
+            return None
+        else:
+            # Too many connections, so build the overflow protocol
+            protocol = ProtocolWrapper(self, self.overflowProtocol())
+
+        self.connectionCount += 1
+        return protocol
+            
+    def registerProtocol(self, p):
+        pass
+
+    def unregisterProtocol(self, p):
+        self.connectionCount -= 1
 
 
 class TimeoutProtocol(ProtocolWrapper):

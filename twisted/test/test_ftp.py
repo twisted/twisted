@@ -395,8 +395,17 @@ class SaneTestFTPServer(unittest.TestCase):
         portal.realm.tld = self.directory
         self.factory = ftp.FTPFactory(portal=portal)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+
+        # Hook the server's buildProtocol to make the protocol instance
+        # accessible to tests.
+        buildProtocol = self.factory.buildProtocol
+        def _rememberProtocolInstance(addr):
+            protocol = buildProtocol(addr)
+            self.serverProtocol = protocol.wrappedProtocol
+            return protocol
+        self.factory.buildProtocol = _rememberProtocolInstance
         
-        # Connect to it
+        # Connect a client to it
         portNum = self.port.getHost().port
         clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
         self.client = wait(clientCreator.connectTCP("127.0.0.1", portNum))
@@ -531,14 +540,13 @@ class SaneTestFTPServer(unittest.TestCase):
         host, port = ftp.decodeHostPort(responseLines[-1][4:])
 
         # Make sure the server is listening on the port it claims to be
-        server = self.factory.instances[0]
-        self.assertEqual(port, server.dtpPort.getHost().port)
+        self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
 
         # Hack: clean up the DTP port directly
-        d = server.dtpPort.stopListening()
+        d = self.serverProtocol.dtpPort.stopListening()
         if d is not None:
             wait(d)
-        server.dtpFactory = None
+        self.serverProtocol.dtpFactory = None
 
     def testSYST(self):
         self.testAnonymousLogin()
@@ -610,6 +618,8 @@ class SaneTestFTPServer(unittest.TestCase):
         d = self.port.stopListening()
         if d is not None:
             wait(d)
+
+        del self.serverProtocol
         
         # Clean up temporary directory
         shutil.rmtree(self.directory)
