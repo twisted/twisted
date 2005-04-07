@@ -105,9 +105,9 @@ class IOPump:
         return (self.client, self.server, self.pump, self.flush)
 
 def getPortal():
-    port = portal.Portal(ftp.FTPRealm())
-    port.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
-    return port
+    anonPortal = portal.Portal(ftp.FTPRealm())
+    anonPortal.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
+    return anonPortal
 
 class ServerFactoryForTest(protocol.Factory):
     def __init__(self, portal):
@@ -436,8 +436,53 @@ class SaneTestFTPServer(unittest.TestCase):
             self.fail('ftp.CommandFailed not raised for %s, got %r' 
                       % (command, responseLines))
 
+    def testAnonymousLogin(self):
+        responseLines = wait(self.client.queueStringCommand('USER anonymous'))
+        self.assertEquals(
+            ['331 Guest login ok, type your email address as password.'], 
+            responseLines
+        )
+
+        responseLines = wait(self.client.queueStringCommand(
+            'PASS test@twistedmatrix.com')
+        )
+        self.assertEquals(
+            ['230 Anonymous login ok, access restrictions apply.'], 
+            responseLines
+        )
+
+    def testAnonymousLoginDenied(self):
+        # Reconfigure the server to disallow anonymous access, and to have an
+        # IUsernamePassword checker that always rejects.
+        self.factory.allowAnonymous = False
+        denyAlwaysChecker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        self.factory.portal.registerChecker(denyAlwaysChecker, 
+                                            credentials.IUsernamePassword)
+        
+        # Same response code as allowAnonymous=True, but different text.
+        responseLines = wait(self.client.queueStringCommand('USER anonymous'))
+        self.assertEquals(
+            ['331 Password required for anonymous.'], responseLines
+        )
+
+        # It will be denied.  No-one can login.
+        d = self.client.queueStringCommand('PASS test@twistedmatrix.com')
+        try:
+            wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ['530 Sorry, Authentication failed.'], e.args[0])
+
+        # It's not just saying that.  You aren't logged in.
+        d = self.client.queueStringCommand('PWD')
+        try:
+            wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ['530 Please login with USER and PASS.'], e.args[0])
+
     def testRETRBeforePORT(self):
-        self.client.queueLogin('anonymous', 'anonymous')
+        self.testAnonymousLogin()
         d = self.client.queueStringCommand('RETR foo')
         try:
             responseLines = wait(d)
@@ -451,7 +496,7 @@ class SaneTestFTPServer(unittest.TestCase):
                       % (command, responseLines))
 
     def testBadCommandArgs(self):
-        self.client.queueLogin('anonymous', 'anonymous')
+        self.testAnonymousLogin()
         d = self.client.queueStringCommand('MODE z')
         try:
             responseLines = wait(d)
@@ -479,7 +524,7 @@ class SaneTestFTPServer(unittest.TestCase):
 
     def testPASV(self):
         # Login
-        self.client.queueLogin('anonymous', 'anonymous')
+        self.testAnonymousLogin()
 
         # Issue a PASV command, and extract the host and port from the response
         responseLines = wait(self.client.queueStringCommand('PASV'))
@@ -496,7 +541,7 @@ class SaneTestFTPServer(unittest.TestCase):
         server.dtpFactory = None
 
     def testSYST(self):
-        self.client.queueLogin('anonymous', 'anonymous')
+        self.testAnonymousLogin()
         responseLines = wait(self.client.queueStringCommand('SYST'))
         self.assertEqual(["215 UNIX Type: L8"], responseLines)
 
@@ -512,7 +557,7 @@ class SaneTestFTPServer(unittest.TestCase):
 
     def testLIST(self):
         # Login
-        self.client.queueLogin('anonymous', 'anonymous')
+        self.testAnonymousLogin()
 
         # Download a listing
         downloader = self._makePassiveConnection()
@@ -600,26 +645,6 @@ class TestDTPTesting(FTPTestCase):
 
 
 class TestAnonymousAvatar(FTPTestCase):
-    def testAnonymousLogin(self):
-        c, s, pump, send = self.cnx.getCSTuple()
-
-        pump.flush()
-        got = c.lines[-2:]
-        wanted = ftp.RESPONSE[ftp.WELCOME_MSG].split('\r\n')
-        self.assertEquals(wanted, got, "wanted: %s\n\ngot: %s" % (wanted,got))
-
-        c.sendLine('USER anonymous')
-        pump.flush()
-        self.assertEquals(c.lines[-1], ftp.RESPONSE[ftp.GUEST_NAME_OK_NEED_EMAIL])
-
-        c.sendLine('PASS w00t@twistedmatrix.com')
-        pump.flush()
-        wanted = ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED]
-        got = c.lines[-1]
-        self.assertEquals(wanted, got, "wanted: %s\n\ngot: %s" % (wanted,got))
-
-    testAnonymousLogin.skip = 'this test needs to be refactored' 
-    
     def doAnonymousLogin(self,c,s,pump):
         c, s, pump, send = self.cnx.getCSTuple()
         pump.flush()
