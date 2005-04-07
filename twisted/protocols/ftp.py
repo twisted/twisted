@@ -1480,6 +1480,8 @@ class FTPRealm:
         self.logout = logout
 
     def requestAvatar(self, avatarId, mind, *interfaces):
+        # XXX: shouldn't this verify that avatarId is credentials.Anonymous()?
+        #        - spiv, 2005-04-07
         if IFTPShell in interfaces:
             if self.tld is None:
                 raise TLDNotSetInRealmError("you must set FTPRealm's tld to a non-None value before creating avatars!!!")
