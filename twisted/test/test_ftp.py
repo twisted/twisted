@@ -35,90 +35,11 @@ class NonClosingStringIO(StringIO):
 StringIOWithoutClosing = NonClosingStringIO
 
 
-class CustomFileWrapper(protocol.FileWrapper):
-    def write(self, data):
-        protocol.FileWrapper.write(self, data)
-        #self._checkProducer()
-
-    #def loseConnection(self):
-        #self.closed = 1
-
-
-class CustomLogObserver(log.FileLogObserver):
-    '''a log observer that prints more than the default'''
-    def emit(self, eventDict):
-       pass
-
-
-class IOPump:
-    """Utility to pump data between clients and servers for protocol testing.
-
-    Perhaps this is a utility worthy of being in protocol.py?
-    """
-    def __init__(self, client, server, clientIO, serverIO):
-        self.client = client
-        self.server = server
-        self.clientIO = clientIO
-        self.serverIO = serverIO
-
-    def flush(self):
-        "Pump until there is no more input or output."
-        reactor.iterate()
-        while self.pump():
-            reactor.iterate()
-        reactor.iterate()
-
-    def pumpAndCount(self):
-        numMessages = 0
-        while True:
-            result = self.pump()
-            if result == 0:
-                return numMessages
-            else:
-                numMessages += result
-       
-    def pump(self):
-        """Move data back and forth.
-
-        Returns whether any data was moved.
-        """
-        self.clientIO.seek(0)
-        self.serverIO.seek(0)
-        cData = self.clientIO.read()
-        sData = self.serverIO.read()
-        self.clientIO.seek(0)
-        self.serverIO.seek(0)
-        self.clientIO.truncate()
-        self.serverIO.truncate()
-        self.client.transport._checkProducer()
-        self.server.transport._checkProducer()
-        for byte in cData:
-            self.server.dataReceived(byte)
-        for byte in sData:
-            self.client.dataReceived(byte)
-        if cData or sData:
-            return 1
-        else:
-            return 0
-    
-    def getTuple(self):
-        return (self.client, self.server, self.pump, self.flush)
-
 def getPortal():
     anonPortal = portal.Portal(ftp.FTPRealm())
     anonPortal.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
     return anonPortal
 
-class ServerFactoryForTest(protocol.Factory):
-    def __init__(self, portal):
-        self.protocol = ftp.FTP
-        self.allowAnonymous = True
-        self.userAnonymous = 'anonymous'
-        self.timeOut = 30
-        self.dtpTimeout = 10
-        self.maxProtocolInstances = 100
-        self.instances = []
-        self.portal = portal
     
 class Dummy(basic.LineReceiver):
     logname = None
@@ -134,205 +55,6 @@ class Dummy(basic.LineReceiver):
     def lineLengthExceeded(self, line):
         pass
 
-class ConnectedFTPServer(object):
-    c    = None
-    s    = None
-    iop  = None
-    dc   = None
-    ds   = None
-    diop = None
-    
-    def __init__(self):
-        self.deferred = defer.Deferred()
-        s = ftp.FTP()
-        c = Dummy()
-        c.logname = 'ftp-pi'
-        self.cio, self.sio = NonClosingStringIO(), NonClosingStringIO()
-        s.factory = ServerFactoryForTest(getPortal())
-        s.factory.timeOut = None
-        s.factory.dtpTimeout = None
-
-        c.factory = protocol.ClientFactory()
-        c.factory.protocol = Dummy
-
-        c.makeConnection(CustomFileWrapper(self.cio))
-        s.makeConnection(CustomFileWrapper(self.sio))
-
-        iop = IOPump(c, s, self.cio, self.sio)
-        self.c, self.s, self.iop = c, s, iop
-
-    def hookUpDTP(self):
-        """Establish a data connection, and return: (dummy client protocol
-        instance, dummy server protocol instance, io pump)
-        """
-        log.debug('hooking up dtp')
-
-        self.s._createDTP(ftp.PASV, testHack=True)
-        from twisted.internet.protocol import ClientCreator
-        self.dataClientIO, dataServerIO = NonClosingStringIO(), NonClosingStringIO()
-        port = self.s.dtpPort.getHost().port
-        clientCreator = ClientCreator(reactor, CustomFileWrapper, dataServerIO)
-        clientConnection = wait(clientCreator.connectTCP('127.0.0.1', port))
-
-        dc = Dummy()
-        dc.logname = 'ftp-dtp'
-        dc.factory = protocol.ClientFactory()
-        dc.factory.protocol = Dummy
-        dc.setRawMode()
-        del dc.lines
-        dc.makeConnection(CustomFileWrapper(self.dataClientIO))
-
-        iop = IOPump(dc, ds, self.dataClientIO, dataServerIO)
-        self.dc, self.ds, self.diop = dc, ds, iop
-        log.debug('flushing pi buffer')
-        self.iop.flush()
-        log.debug('hooked up dtp')
-
-    def getDtpCSTuple(self):
-        if not self.s.shell:
-            self.loadAvatar()
-
-        if not self.dc:
-            self.hookUpDTP()
-        return (self.dc, self.ds, self.diop)
-
-    def getCSTuple(self):
-        return (self.c, self.s, self.iop, self.srvReceive)
-
-    def srvReceive(self, *args):
-        for msg in args:
-            self.s.lineReceived(msg)
-            self.iop.flush()
-
-    def loadAvatar(self):
-        log.debug('BogusAvatar.loadAvatar')
-        shell = BogusAvatar()
-        shell.tld = '/home/foo'
-        shell.debug = True
-        shell.clientwd = '/'
-        shell.user = 'anonymous'
-        shell.uid = 1000
-        shell.gid = 1000
-        self.s.shell = shell
-        self.s.user = 'anonymous'
-        return shell
-
-
-bogusfiles = [
-{'type': 'f',
- 'name': 'foo.txt', 
- 'size': 1586, 
- 'date': '20030102125902',
- 'listrep': '-rwxr-xr-x 1 anonymous anonymous 1586 Jan 02 12:59 foo.txt\r\n'
-},
-{'type': 'f',
- 'name': 'bar.tar.gz',
- 'size': 4872,
- 'date': '2003 11 22 01 55 22',
- 'listrep': '-rwxr-xr-x 1 anonymous anonymous 4872 Nov 22 01:55 bar.tar.gz\r\n'
-} ]
-
-bogusDirs = {
- 'name': '/home/foo',
- 'subdirs': 
-        [ {'name': '/home/foo/dir1',
-           'subdirs': []},  
-          {'name': '/home/foo/dir2',
-           'subdirs': []}
-        ]
-}
-
-class BogusAvatar(object):
-    implements(ftp.IFTPShell)
-
-    filesize = None
-    
-    def __init__(self):
-        self.user     = None        # user name
-        self.uid      = None        # uid of anonymous user for shell
-        self.gid      = None        # gid of anonymous user for shell
-        self.clientwd = None
-        self.tld      = None
-        self.debug    = True 
-
-    def pwd(self):
-        pass
-
-    def cwd(self, path):
-        pass
-
-    def cdup(self):
-        pass
-
-    def dele(self, path):
-        pass
-
-    def mkd(self, path):
-        pass
-
-    def rmd(self, path):
-        pass
-
-    def retr(self, path=None):
-        log.debug('BogusAvatar.retr')
-
-        if path == 'ASCII':
-            text = """this is a line with a dos terminator\r\n
-this is a line with a unix terminator\n"""
-        else:
-            self.path = path
-            
-            if self.filesize is not None:   # self.filesize is used in the sanity check
-                size = self.filesize
-            else:
-                size = bogusfiles[0]['size']
-
-            endln = ['\r','\n']
-            text = []
-            for n in xrange(size/26):
-                line = [chr(x) for x in xrange(97,123)]
-                line.extend(endln)
-                text.extend(line)
-            
-            del text[(size - 2):]
-            text.extend(endln)
-        
-        sio = NonClosingStringIO(''.join(text))
-        self.finalFileSize = len(sio.getvalue())
-        log.msg("BogusAvatar.retr: file size = %d" % self.finalFileSize)
-        sio.seek(0)
-        self.sentfile = sio
-        return (sio, self.finalFileSize)
-
-    def stor(self, params):
-        pass
-
-    def list(self, path):
-        sio = NonClosingStringIO()
-        for f in bogusfiles:
-            sio.write(f['listrep'])
-        sio.seek(0)
-        self.sentlist = sio
-        return (sio, len(sio.getvalue()))
-
-    def mdtm(self, path):
-        pass
-
-    def size(self, path):
-        pass
-
-    def nlist(self, path):
-        pass
-
-class FTPTestCase(unittest.TestCase):
-    def setUp(self):
-        self.cnx = ConnectedFTPServer()
-        
-    def tearDown(self):
-        delayeds = reactor.getDelayedCalls()
-        for d in delayeds:
-            d.cancel()
-        self.cnx = None
 
 class TestUtilityFunctions(unittest.TestCase):
     def testCleanPath(self):
@@ -346,30 +68,6 @@ class TestUtilityFunctions(unittest.TestCase):
             log.msg(cp)
 
     testCleanPath.skip = 'this test needs more work'
-
-class TestFTPFactory(FTPTestCase):
-    def testBuildProtocol(self):
-        ftpf = ftp.FTPFactory(maxProtocolInstances=1)
-        cinum = ftpf.currentInstanceNum
-        p = ftpf.buildProtocol(('i', None, 30000))
-        self.failUnless(components.implements(ftpf, interfaces.IProtocolFactory), 
-                "FTPFactory does not implement interfaces.IProtocolFactory")
-        self.failUnless(components.implements(p, interfaces.IProtocol),
-                "protocol instance does not implement interfaces.IProtocol")
-
-        self.failUnlessEqual(p.protocol, ftpf.protocol)
-        self.failUnlessEqual(p.protocol, ftp.FTP)
-
-        self.failUnlessEqual(p.portal, ftpf.portal)
-        self.failUnlessEqual(p.timeOut, ftp.FTPFactory.timeOut)
-        self.failUnlessEqual(p.factory, ftpf)
-
-        self.failUnlessEqual(ftpf.currentInstanceNum, cinum + 1)
-        self.failUnlessEqual(p.instanceNum, ftpf.currentInstanceNum)
-        self.failUnlessEqual(len(ftpf.instances), 1)
-        self.failUnlessEqual(ftpf.instances[0], p)
-
-    testBuildProtocol.skip = "add test for maxProtocolInstances=None"
 
 
 class _BufferingProtocol(protocol.Protocol):
@@ -612,6 +310,24 @@ class SaneTestFTPServer(unittest.TestCase):
         wait(defer.gatherResults([d, downloader.d]))
         self.assertEqual('', downloader.buffer)
 
+    def testManyLargeDownloads(self):
+        # Login
+        self.testAnonymousLogin()
+
+        # Replace the ftp shell's retr method with a test hack.
+        def fakeRetr(path):
+            # return a dummy file, with size set according to path name.
+            size = int(path[:-4])
+            return (StringIO('x' * size), size)
+        self.serverProtocol.shell.retr = fakeRetr
+        
+        # Download a range of different size files
+        for size in range(100000, 110000, 500):
+            downloader = self._makePassiveConnection()
+            d = self.client.queueStringCommand('RETR %d.txt' % size)
+            wait(defer.gatherResults([d, downloader.d]))
+            self.assertEqual('x' * size, downloader.buffer)
+    
     def tearDown(self):
         # Clean up sockets
         self.client.transport.loseConnection()
@@ -623,35 +339,6 @@ class SaneTestFTPServer(unittest.TestCase):
         
         # Clean up temporary directory
         shutil.rmtree(self.directory)
-
-
-class TestDTPTesting(FTPTestCase):
-    skip = 'This is crack.'
-    def testDTPTestingSanityCheck(self):
-        filesizes = [(n*100) for n in xrange(100,110)]
-        for fs in filesizes:
-            self.tearDown()
-            self.setUp()
-            self.runtest(fs)
-
-    def runtest(self, filesize):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        avatar = self.cnx.loadAvatar()
-        avatar.filesize = filesize
-        sr.binary = True                            # set transfer mode to binary
-        self.cnx.hookUpDTP()
-        dc, ds, diop = self.cnx.getDtpCSTuple()
-        sr.ftp_RETR('')
-        iop.flush()
-        diop.flush()
-        log.debug('dc.rawData size: %d' % len(dc.rawData))
-        rxLines = ''.join(dc.rawData)
-        lenRxLines = len(rxLines)
-        sizes = 'filesize before txmit: %d, filesize after txmit: %d' % (avatar.finalFileSize, lenRxLines)
-        percent = 'percent actually received %f' % ((float(lenRxLines) / float(avatar.finalFileSize))*100)
-        log.debug(sizes)
-        log.debug(percent)
-        self.assertEquals(lenRxLines, avatar.finalFileSize)
 
 
 # -- Client Tests -----------------------------------------------------------
