@@ -516,10 +516,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def lineReceived(self, line):
         """Process the input from the client"""
         self.resetTimeout()
-        line = line.strip()  # XXX: WTF?
         log.debug(repr(line))
         line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
-        line = line.encode() # XXX: WTF?
         try:
             cmdAndArgs = line.split(' ', 1)
             if len(cmdAndArgs) == 1:
