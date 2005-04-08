@@ -279,15 +279,6 @@ def debugDeferred(self, *_):
     log.debug('debugDeferred(): %s' % str(_))
  
 
-def _getFPName(fp):
-    """returns a file object's name attr if it has one,
-    otherwise it returns "<string>"
-    """
-    if hasattr(fp, 'name'):
-        return fp.name
-    # stringIO objects have no .name attr
-    return getattr(fp, 'name', '<string>')
-
 class IDTPParent(components.Interface):
     """An interface for protocols that wish to use a DTP sub-protocol and
     factory. 
