@@ -278,6 +278,7 @@ class DTPFileSender(basic.FileSender):
 def debugDeferred(self, *_):
     log.debug('debugDeferred(): %s' % str(_))
  
+
 def _getFPName(fp):
     """returns a file object's name attr if it has one,
     otherwise it returns "<string>"
@@ -349,9 +350,8 @@ class DTP(object, protocol.Protocol):
         """sends a file object out the wire
         @param fpSizeTuple a tuple of a file object and that file's size
         """
-        filename = _getFPName(self.pi.fp)
-
-        log.debug('sendfile sending %s' % filename)
+        log.debug('sendfile sending %s' 
+                  % getattr(self.pi.fp, 'name', '<string>'))
 
         # XXX: this should just be a basic.FileSender()
         fs = DTPFileSender()
@@ -583,7 +583,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.blocked = None                                                     # reset blocked to allow new commands
         while commands and self.blocked is None:                                # while no other method has set self.blocked
             cmd, args = commands.pop(0)                                         # pop a command off the queue
-            self.processCommand(cmd, *args)                                     # and process it
+            self.processCommand(cmd, args)                                      # and process it
         if self.blocked is not None:                                            # if someone has blocked during the time we were processing
             self.blocked.extend(commands)                                       # add our commands that we dequeued back into the queue
 
@@ -738,51 +738,31 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.debug('ftp_PASS params: %s' % params)
 
         if params == '':
-            raise CmdArgSyntaxError('you must specify a password with PASS')
+            raise CmdSyntaxError('PASS requires an argument')
         
-        self.passwd = params.split()[0]        # parse password 
+        if not self.portal:
+            # if cred has been set up correctly, this shouldn't happen
+            raise AuthorizationError('internal server error')
 
-        # if this is an anonymous login
         if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
-            self.passwd = params
-            if self.portal:
-                self.portal.login(
-                        credentials.Anonymous(), 
-                        None, 
-                        IFTPShell
-                    ).addCallbacks(self._cbAnonLogin, self._ebLogin
-                    )
-            else:
-                # if cred has been set up correctly, this shouldn't happen
-                raise AuthorizationError('internal server error')
-
-        # otherwise this is a user login
+            # anonymous login
+            creds = credentials.Anonymous()
+            reply = GUEST_LOGGED_IN_PROCEED
         else:
-            if self.portal:
-                self.portal.login(
-                        credentials.UsernamePassword(self.user, self.passwd),
-                        None,
-                        IFTPShell
-                    ).addCallbacks(self._cbLogin, self._ebLogin
-                    )
-            else:
-                raise AuthorizationError('internal server error')
+            # user login
+            creds = credentials.UsernamePassword(self.user, params)
+            reply = USR_LOGGED_IN_PROCEED
 
-    def _cbAnonLogin(self, (interface, avatar, logout)):
-        """sets up anonymous login avatar"""
-        assert interface is IFTPShell
-        peer = self.transport.getPeer()
-#       log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
-        self.shell = avatar
-        self.logout = logout
-        self.reply(GUEST_LOGGED_IN_PROCEED)
+        if self.portal:
+            d = self.portal.login(creds, None, IFTPShell)
+            d.addCallbacks(self._cbLogin, self._ebLogin, callbackArgs=(reply,))
 
-    def _cbLogin(self, (interface, avatar, logout)):
-        """sets up authorized user login avatar"""
+    def _cbLogin(self, (interface, avatar, logout), reply):
+        """sets up user login avatar"""
         assert interface is IFTPShell
         self.shell = avatar
         self.logout = logout
-        self.reply(USR_LOGGED_IN_PROCEED)
+        self.reply(reply)
 
     def _ebLogin(self, failure):
         r = failure.trap(cred_error.UnauthorizedLogin, TLDNotSetInRealmError)

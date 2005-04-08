@@ -147,6 +147,14 @@ class SaneTestFTPServer(unittest.TestCase):
             ['500 Syntax error: USER requires an argument.'],
             self._waitForCommandFailure(d))
     
+    def testNoParamsForPASS(self):
+        """Issuing PASS without a password is a syntax error."""
+        wait(self.client.queueStringCommand('USER foo'))
+        d = self.client.queueStringCommand('PASS')
+        self.failUnlessEqual(
+            ['500 Syntax error: PASS requires an argument.'],
+            self._waitForCommandFailure(d))
+    
     def testAnonymousLogin(self):
         responseLines = wait(self.client.queueStringCommand('USER anonymous'))
         self.assertEquals(
