@@ -585,14 +585,11 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is not None:                                            # if someone has blocked during the time we were processing
             self.blocked.extend(commands)                                       # add our commands that we dequeued back into the queue
 
-    def _createDTP(self, mode, host=None, port=None, testHack=False):
+    def _createDTP(self, mode, host=None, port=None):
         self.setTimeout(None)     # don't timeOut when setting up DTP
         log.debug('_createDTP')
         if not self.dtpFactory:
-            if testHack:
-                phost = self.transport.getPeer()
-            else:
-                phost = self.transport.getPeer().host
+            phost = self.transport.getPeer().host
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
             self.dtpFactory.setTimeout(self.dtpTimeout)
         if mode == PASV:    
