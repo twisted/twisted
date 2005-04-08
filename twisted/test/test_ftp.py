@@ -108,6 +108,15 @@ class SaneTestFTPServer(unittest.TestCase):
         clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
         self.client = wait(clientCreator.connectTCP("127.0.0.1", portNum))
 
+    def _waitForCommandFailure(self, deferred):
+        try:
+            responseLines = wait(deferred)
+        except ftp.CommandFailed, e:
+            return e.args[0]
+        else:
+            self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                      % (command, responseLines))
+
     def testNotLoggedInReply(self):
         """When not logged in, all commands other than USER and PASS should
         get NOT_LOGGED_IN errors.
@@ -118,43 +127,25 @@ class SaneTestFTPServer(unittest.TestCase):
         # Issue commands, check responses
         for command in commandList:
             deferred = self.client.queueStringCommand(command)
-            try:
-                responseLines = wait(deferred)
-            except ftp.CommandFailed, e:
-                response = e.args[0][-1]
-                self.failUnless(response.startswith("530"),
-                                "Response didn't start with 530: %r"
-                                % (response,))
-            else:
-                self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                          % (command, responseLines))
+            failureResponseLines = self._waitForCommandFailure(deferred)
+            self.failUnless(failureResponseLines[-1].startswith("530"),
+                            "Response didn't start with 530: %r"
+                            % (failureResponseLines[-1],))
 
     def testPASSBeforeUSER(self):
         """Issuing PASS before USER should give an error."""
         d = self.client.queueStringCommand('PASS foo')
-        try:
-            responseLines = wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ["503 Incorrect sequence of commands: "
-                 "USER required before PASS"], 
-                e.args[0])
-        else:
-            self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                      % (command, responseLines))
+        self.failUnlessEqual(
+            ["503 Incorrect sequence of commands: "
+             "USER required before PASS"], 
+            self._waitForCommandFailure(d))
 
     def testNoParamsForUSER(self):
         """Issuing USER without a username is a syntax error."""
         d = self.client.queueStringCommand('USER')
-        try:
-            responseLines = wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ['500 Syntax error: USER requires an argument.'],
-                e.args[0])
-        else:
-            self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                      % (command, responseLines))
+        self.failUnlessEqual(
+            ['500 Syntax error: USER requires an argument.'],
+            self._waitForCommandFailure(d))
     
     def testAnonymousLogin(self):
         responseLines = wait(self.client.queueStringCommand('USER anonymous'))
@@ -187,56 +178,35 @@ class SaneTestFTPServer(unittest.TestCase):
 
         # It will be denied.  No-one can login.
         d = self.client.queueStringCommand('PASS test@twistedmatrix.com')
-        try:
-            wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ['530 Sorry, Authentication failed.'], e.args[0])
+        self.failUnlessEqual(
+            ['530 Sorry, Authentication failed.'], 
+            self._waitForCommandFailure(d))
 
         # It's not just saying that.  You aren't logged in.
         d = self.client.queueStringCommand('PWD')
-        try:
-            wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ['530 Please login with USER and PASS.'], e.args[0])
+        self.failUnlessEqual(
+            ['530 Please login with USER and PASS.'],
+            self._waitForCommandFailure(d))
 
     def testRETRBeforePORT(self):
         self.testAnonymousLogin()
         d = self.client.queueStringCommand('RETR foo')
-        try:
-            responseLines = wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ["503 Incorrect sequence of commands: "
-                 "PORT or PASV required before RETR"], 
-                e.args[0])
-        else:
-            self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                      % (command, responseLines))
+        self.failUnlessEqual(
+            ["503 Incorrect sequence of commands: "
+             "PORT or PASV required before RETR"], 
+            self._waitForCommandFailure(d))
 
     def testBadCommandArgs(self):
         self.testAnonymousLogin()
         d = self.client.queueStringCommand('MODE z')
-        try:
-            responseLines = wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ["504 Not implemented for parameter 'z'."],
-                e.args[0])
-        else:
-            self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                      % (command, responseLines))
+        self.failUnlessEqual(
+            ["504 Not implemented for parameter 'z'."],
+            self._waitForCommandFailure(d))
+
         d = self.client.queueStringCommand('STRU I')
-        try:
-            responseLines = wait(d)
-        except ftp.CommandFailed, e:
-            self.failUnlessEqual(
-                ["504 Not implemented for parameter 'I'."],
-                e.args[0])
-        else:
-            self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                      % (command, responseLines))
+        self.failUnlessEqual(
+            ["504 Not implemented for parameter 'I'."],
+            self._waitForCommandFailure(d))
 
     def testDecodeHostPort(self):
         self.assertEquals(ftp.decodeHostPort('25,234,129,22,100,23'), 
