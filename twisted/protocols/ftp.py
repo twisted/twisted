@@ -41,8 +41,6 @@ from twisted.cred import error as cred_error, portal, checkers, credentials
 PASV = 1
 PORT = 2
 
-ENDLN = str('\015\012')
-
 # response codes
 
 RESTART_MARKER_REPLY                    = "100"
@@ -115,8 +113,8 @@ RESPONSE = {
     CMD_OK:                             '200 Command OK',
     TYPE_SET_OK:                        '200 Type set to %s.',
     ENTERING_PORT_MODE:                 '200 PORT OK',
-    CMD_NOT_IMPLMNTD_SUPERFLUOUS:       '202 command not implemented, superfluous at this site',
-    SYS_STATUS_OR_HELP_REPLY:           '211 system status reply',
+    CMD_NOT_IMPLMNTD_SUPERFLUOUS:       '202 Command not implemented, superfluous at this site',
+    SYS_STATUS_OR_HELP_REPLY:           '211 System status reply',
     DIR_STATUS:                         '212 %s',
     FILE_STATUS:                        '213 %s',
     HELP_MSG:                           '214 help: %s',
@@ -146,9 +144,9 @@ RESPONSE = {
     CNX_CLOSED_TXFR_ABORTED:            '426 Transfer aborted.  Data connection closed.',
 
     # -- 500's --
-    SYNTAX_ERR:                         "500 '%s': syntax error, command not understood.",
+    SYNTAX_ERR:                         "500 Syntax error: %s.",
     SYNTAX_ERR_IN_ARGS:                 '501 syntax error in argument(s) %s.',
-    CMD_NOT_IMPLMNTD:                   "502 command '%s' not implemented",
+    CMD_NOT_IMPLMNTD:                   "502 Command '%s' not implemented",
     BAD_CMD_SEQ:                        '503 Incorrect sequence of commands: %s',
     CMD_NOT_IMPLMNTD_FOR_PARAM:         "504 Not implemented for parameter '%s'.",
     NOT_LOGGED_IN:                      '530 Please login with USER and PASS.',
@@ -157,10 +155,10 @@ RESPONSE = {
     FILE_NOT_FOUND:                     '550 %s: No such file or directory.',
     PERMISSION_DENIED:                  '550 %s: Permission denied.',
     ANON_USER_DENIED:                   '550 Anonymous users are forbidden to change the filesystem', 
-    IS_NOT_A_DIR:                       '550 cannot rmd, %s is not a directory',
-    REQ_ACTN_NOT_TAKEN:                 '550 requested action not taken: %s',
-    EXCEEDED_STORAGE_ALLOC:             '552 requested file action aborted, exceeded file storage allocation',
-    FILENAME_NOT_ALLOWED:               '553 requested action not taken, file name not allowed'
+    IS_NOT_A_DIR:                       '550 Cannot rmd, %s is not a directory',
+    REQ_ACTN_NOT_TAKEN:                 '550 Requested action not taken: %s',
+    EXCEEDED_STORAGE_ALLOC:             '552 Requested file action aborted, exceeded file storage allocation',
+    FILENAME_NOT_ALLOWED:               '553 Requested action not taken, file name not allowed'
 }
 
    
@@ -171,6 +169,7 @@ class FTPCmdError(Exception):
     errorCode = None
     errorMessage = None
     def __init__(self, msg):
+        Exception.__init__(self, msg)
         self.errorMessage = msg
 
 class TLDNotSetInRealmError(Exception):
@@ -486,25 +485,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         log.debug('ftp-pi connectionMade: instance %s' % self)
-
         self.reply(WELCOME_MSG)                     
         self.peerHost = self.transport.getPeer()
         self.setTimeout(self.timeOut)
-#        self.__testingautologin()
-
-    def __testingautologin(self):
-        import warnings; warnings.warn("""
-
-            --> DEBUGGING CODE ACTIVE!!! <--
-""")
-        reactor._pi = self
-        #lr = self.lineReceived
-        #lr('USER anonymous')
-        #lr('PASS f@d.com')
-        #lr('PASV')
-        #lr('LIST')
-        #lr('RETR .vim/vimrc')
-        #lr('RETR Session.vim')
 
     def connectionLost(self, reason):
         log.msg("Oops! lost connection\n %s" % reason)
@@ -520,37 +503,29 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def timeoutConnection(self):
         log.msg('FTP timed out')
         self.transport.loseConnection()
-        #if self.dtpFactory is not None and self.dtpFactory.deferred is not None:
-            #d, self.dtpFactory.deferred = self.dtpFactory.deferred, None
-            #d.errback(FTPTimeoutError('cleaning up dtp!'))
-
-    def setTimeout(self, seconds):
-        log.msg('ftp.setTimeout to %s seconds' % str(seconds))
-        policies.TimeoutMixin.setTimeout(self, seconds)
-
 
     def reply(self, key, s=''):                                               
         """format a RESPONSE and send it out over the wire"""
         if string.find(RESPONSE[key], '%s') > -1:
-            log.debug(RESPONSE[key] % s + ENDLN)
-            self.transport.write(RESPONSE[key] % s + ENDLN)
+            log.debug(RESPONSE[key] % s)
+            self.sendLine(RESPONSE[key] % s)
         else:
-            log.debug(RESPONSE[key] + ENDLN)
-            self.transport.write(RESPONSE[key] + ENDLN)
+            log.debug(RESPONSE[key])
+            self.sendLine(RESPONSE[key])
 
     def lineReceived(self, line):
         """Process the input from the client"""
         self.resetTimeout()
-        line = line.strip()
+        line = line.strip()  # XXX: WTF?
         log.debug(repr(line))
         line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
-        line = line.encode() 
+        line = line.encode() # XXX: WTF?
         try:
-            cmdAndArgs = line.split(' ',1)
+            cmdAndArgs = line.split(' ', 1)
+            if len(cmdAndArgs) == 1:
+                cmdAndArgs.append('')
             log.debug('processing command %s' % cmdAndArgs)
             self.processCommand(*cmdAndArgs)
-        except CmdSyntaxError, e:
-            self.reply(e.errorCode, command.upper())
         except OperationFailedError, e:
             log.debug(e)
             self.reply(e.errorCode, '')
@@ -561,13 +536,13 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
             raise
 
-    def processCommand(self, cmd, *args):
-        log.debug('FTP.processCommand: cmd = %s, args = %s' % (cmd,args))
+    def processCommand(self, cmd, params):
+        log.debug('FTP.processCommand: cmd = %s, params = %s' % (cmd,params))
 
         # all DTP commands block, so queue new requests
         if self.blocked != None:
             log.debug('FTP is queueing command: %s' % cmd)
-            self.blocked.append((cmd,args))
+            self.blocked.append((cmd, params))
             return
 
         cmd = cmd.upper()
@@ -590,7 +565,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 # a bit hackish, but manually blocks this command 
                 # until we've set up the DTP protocol instance
                 # _unblock will run this first command and subsequent
-                self.blocked = [(cmd,args)]
+                self.blocked = [(cmd, params)]
                 log.debug('during dtp setup, blocked = %s' % self.blocked)
                 return
 
@@ -598,7 +573,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         method = getattr(self, "ftp_%s" % cmd, None)
         log.debug('FTP.processCommand: method = %s' % method)
         if method:
-            return method(*args)                                                
+            return method(params)
+                            
         raise CmdNotImplementedError(cmd)                 # if we didn't find cmd, raise an error and alert client
 
     def _unblock(self, *_):
@@ -732,9 +708,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             again.  All transfer parameters are unchanged and any file transfer
             in progress is completed under the old access control parameters.
         """
-        if params=='':
-            raise CmdSyntaxError('no parameters')
-        self.user = string.split(params)[0]
+        if params == '':
+            raise CmdSyntaxError('USER requires an argument')
+        self.user = params
         log.debug('ftp_USER params: %s' % params)
         if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
             self.reply(GUEST_NAME_OK_NEED_EMAIL)
@@ -744,7 +720,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     # TODO: add max auth try before timeout from ip...
     # TODO: need to implement minimal ABOR command
 
-    def ftp_PASS(self, params=''):
+    def ftp_PASS(self, params):
         """Authorize the USER and the submitted password
 
         from the rfc:
@@ -830,10 +806,10 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         else:
             raise CmdSyntaxError(p)
 
-    def ftp_SYST(self, params=None):
+    def ftp_SYST(self, params):
         self.reply(NAME_SYS_TYPE)
 
-    def ftp_LIST(self, params=''):
+    def ftp_LIST(self, params):
         """ This command causes a list to be sent from the server to the
         passive DTP.  If the pathname specifies a directory or other
         group of files, the server should transfer a list of files
@@ -853,7 +829,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
         self._doDTPCommand('RETR')
 
-    def ftp_NLST(self, params=''):
+    def ftp_NLST(self, params):
         self.fp, self.fpsize = self.shell.nlst(cleanPath(params))
         if self.dtpInstance and self.dtpInstance.isConnected:
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
@@ -862,22 +838,22 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self._doDTPCommand('RETR')
         
     
-    def ftp_SIZE(self, params=''):
+    def ftp_SIZE(self, params):
         log.debug('ftp_SIZE: %s' % params)
         filesize = self.shell.size(cleanPath(params))
         self.reply(FILE_STATUS, filesize)
 
-    def ftp_MDTM(self, params=''):
+    def ftp_MDTM(self, params):
         log.debug('ftp_MDTM: %s' % params)
         dtm = self.shell.mdtm(cleanPath(params))
         self.reply(FILE_STATUS, dtm)
  
-    def ftp_PWD(self, params=''):
+    def ftp_PWD(self, params):
         """ Print working directory command
         """
         self.reply(PWD_REPLY, self.shell.pwd())
 
-    def ftp_PASV(self):
+    def ftp_PASV(self, params):
         """Request for a passive connection
 
         reply is in format 227 =h1,h2,h3,h4,p1,p2
@@ -901,6 +877,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         # summary: this method is a special case, so keep that in mind
         #
         log.debug('ftp_PASV') 
+        if params != '':
+            raise CmdArgSyntaxError('PASV takes no arguments, got: ' + params)
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
         if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
@@ -961,19 +939,19 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
         self._doDTPCommand('RETR')
 
-    def ftp_STRU(self, params=""):
+    def ftp_STRU(self, params):
         p = params.upper()
         if params == 'F':
             return self.reply(CMD_OK)
         raise CmdNotImplementedForArgError(params)
 
-    def ftp_MODE(self, params=""):
+    def ftp_MODE(self, params):
         p = params.upper()
         if params == 'S':
             return self.reply(CMD_OK)
         raise CmdNotImplementedForArgError(params)
 
-    def ftp_QUIT(self, params=''):
+    def ftp_QUIT(self, params):
         self.transport.loseConnection()
         log.debug("Client Quit")
 

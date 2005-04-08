@@ -143,6 +143,19 @@ class SaneTestFTPServer(unittest.TestCase):
             self.fail('ftp.CommandFailed not raised for %s, got %r' 
                       % (command, responseLines))
 
+    def testNoParamsForUSER(self):
+        """Issuing USER without a username is a syntax error."""
+        d = self.client.queueStringCommand('USER')
+        try:
+            responseLines = wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ['500 Syntax error: USER requires an argument.'],
+                e.args[0])
+        else:
+            self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                      % (command, responseLines))
+    
     def testAnonymousLogin(self):
         responseLines = wait(self.client.queueStringCommand('USER anonymous'))
         self.assertEquals(
