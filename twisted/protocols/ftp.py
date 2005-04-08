@@ -753,9 +753,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             creds = credentials.UsernamePassword(self.user, params)
             reply = USR_LOGGED_IN_PROCEED
 
-        if self.portal:
-            d = self.portal.login(creds, None, IFTPShell)
-            d.addCallbacks(self._cbLogin, self._ebLogin, callbackArgs=(reply,))
+        d = self.portal.login(creds, None, IFTPShell)
+        d.addCallbacks(self._cbLogin, self._ebLogin, callbackArgs=(reply,))
 
     def _cbLogin(self, (interface, avatar, logout), reply):
         """sets up user login avatar"""
