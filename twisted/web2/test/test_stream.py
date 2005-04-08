@@ -295,6 +295,17 @@ class ProcessStreamerTest(unittest.TestCase):
             return d2
         return d.addCallback(verify).addCallback(lambda _: log.flushErrors(ZeroDivisionError))
 
+    def test_processclosedinput(self):
+        p = self.runCode("import sys; sys.stdout.write(sys.stdin.read(3));" +
+                         "sys.stdin.close(); sys.stdout.write('def')",
+                         "abc123")
+        l = []
+        d = stream.readStream(p.outStream, l.append)
+        def verify(_):
+            assertEquals("".join(l), "abcdef")
+        d2 = p.run()
+        return d.addCallback(verify).addCallback(lambda _: d2)
+
 
 class AdapterTestCase(unittest.TestCase):
 

@@ -710,7 +710,6 @@ class StreamProducer:
             return
         
         if isinstance(data, Deferred):
-            # FIXME: what about errback?
             self.deferred = data.addCallbacks(self._doWrite, self.stopProducing)
         else:
             self._doWrite(data)
@@ -743,7 +742,10 @@ class StreamProducer:
         if self.consumer is not None:
             self.consumer.unregisterProducer()
         if self.finishedCallback is not None:
-            self.finishedCallback.errback(failure)
+            if failure is not None:
+                self.finishedCallback.errback(failure)
+            else:
+                self.finishedCallback.callback(None)
             self.finishedCallback = None
         self.paused = True
         if self.stream is not None:
@@ -762,6 +764,11 @@ class _ProcessStreamerProtocol(protocol.ProcessProtocol):
     
     def connectionMade(self):
         p = StreamProducer(self.inputStream)
+        # if the process stopped reading from the input stream,
+        # this is not an error condition, so it oughtn't result
+        # in a ConnectionLost() from the input stream:
+        p.stopProducing = lambda err=None: StreamProducer.stopProducing(p, err)
+        
         d = p.beginProducing(self.transport)
         d.addCallbacks(lambda _: self.transport.closeStdin(),
                        self._inputError)
