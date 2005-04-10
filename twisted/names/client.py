@@ -16,6 +16,7 @@ better caching, respect timeouts
 
 from __future__ import nested_scopes
 
+import warnings
 import socket
 import os
 import errno
@@ -338,7 +339,13 @@ class AXFRController:
             self.deferred.callback(self.records)
 
 
-from twisted.internet.base import ThreadedResolver
+from twisted.internet.base import ThreadedResolver as _ThreadedResolverImpl
+
+class ThreadedResolver(_ThreadedResolverImpl):
+    def __init__(self):
+        from twisted.internet import reactor
+        _ThreadedResolverImpl.__init__(self, reactor)
+        # warnings.warn("twisted.names.client.ThreadedResolver is deprecated, use XXX instead.")
 
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):
@@ -369,7 +376,8 @@ def createResolver(servers = None, resolvconf = None, hosts = None):
     else:
         if hosts is None:
             hosts = r'c:\windows\hosts'
-        bootstrap = ThreadedResolver()
+        from twisted.internet import reactor
+        bootstrap = _ThreadedResolverImpl(reactor)
         hostResolver = hostsModule.Resolver(hosts)
         theResolver = root.bootstrap(bootstrap)
 
