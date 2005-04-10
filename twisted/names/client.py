@@ -342,8 +342,9 @@ class AXFRController:
 from twisted.internet.base import ThreadedResolver as _ThreadedResolverImpl
 
 class ThreadedResolver(_ThreadedResolverImpl):
-    def __init__(self):
-        from twisted.internet import reactor
+    def __init__(self, reactor=None):
+        if reactor is None:
+            from twisted.internet import reactor
         _ThreadedResolverImpl.__init__(self, reactor)
         # warnings.warn("twisted.names.client.ThreadedResolver is deprecated, use XXX instead.")
 
