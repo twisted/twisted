@@ -8,12 +8,19 @@
 
 <h2>Getting Started</h2>
 
-<p>The purpose of this guide is to describe one of the ways to configure a
-Twisted server application, which is helpful when you want to pregenerate
-simple configurations. Client applications are not likely to use the
-infrastructure described in this document, and a simpler alternative exists
-for servers, covered in the <a href="application.xhtml">Application
-howto</a>. This guide exists as a supplement to the Application howto.</p>
+<p>The purpose of this guide is to describe one of the ways to
+configure and deploy a Twisted server application after you've
+finished writing it. Using mktap for deployment may be helpful when
+you want to pre-generate simple configurations. Client applications
+are not likely to use the infrastructure described in this document,
+and a simpler, usually better, alternative exists for servers, covered
+in the <a href="application.xhtml">Application howto</a>. This guide
+exists as a supplement to the Application howto.</p>
+
+<p>In general, writing a mktap plugin is the last thing you do when
+developing a project, and is only necessary if you choose to use
+mktap.</p>
+
 
 <h2>Plugins and Application objects</h2>
 
