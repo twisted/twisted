@@ -1,10 +1,32 @@
-### WORK IN PROGRESS - DOES NOT WORK
+import re, tempfile
+from zope.interface import implements
+import urllib
 
 from twisted.internet import defer
-from twisted.web2.stream import FileStream, BufferedStream
+from twisted.web2.stream import IStream, FileStream, BufferedStream, readStream
+from twisted.web2 import http_headers
 from cStringIO import StringIO
-import re
 
+# This functionality of allowing non-deferreds to be yielded
+# perhaps ought to be part of defgen
+def wait(d):
+    if isinstance(d, defer.Deferred):
+        return defer.waitForDeferred(d)
+    return _fakewait(d)
+
+class _fakewait(defer.waitForDeferred):
+    def __init__(self, val):
+        print "_fakewait", val
+        self.d = self
+        self.result = val
+        
+    def addCallbacks(self, success, fail):
+        success(self.result)
+
+    
+###################################
+#####  Multipart MIME Reader  #####
+###################################
 
 class MimeFormatError(Exception):
     pass
@@ -14,7 +36,7 @@ class MimeFormatError(Exception):
 # really the only way to handle the header.  (Quotes can be in the
 # filename, unescaped)
 cd_regexp = re.compile(
-    'content-disposition: *form-data; *name="([^"]*)"(; *filename="(.*)")?$',
+    ' *form-data; *name="([^"]*)"(; *filename="(.*)")?$',
     re.IGNORECASE)
 
 def parseContentDispositionFormData(value):
@@ -22,149 +44,301 @@ def parseContentDispositionFormData(value):
     if not match:
         # Error parsing. 
         raise ValueError("Unknown content-disposition format.")
-    name=cd_regexp.group(0)
-    filename=cd_regexp.group(2)
+    name=match.group(1)
+    filename=match.group(2)
     return name, filename
 
+
 #@defer.deferredGenerator
-def parseMultipartFormData(stream, boundary, maxSize=):
-    stream = BufferedStream(stream)
+def _readHeaders(stream):
+    """Read the MIME headers. Assumes we've just finished reading in the
+    boundary string."""
 
-    #@defer.deferredGenerator
-    def readDataTillBoundary(write, boundary):
-        """Read in data from stream and call write on each chunk.
-        Stops after reading in the boundary string.
-        """
-        lastData = ''
-        
-        while 1:
-            data = lastData
-            newdata = stream.read()
-            if isinstance(newdata, defer.Deferred):
-                newdata = defer.waitForDeferred(newdata)
-                yield newdata; newdata = newdata.getResult()
-                
-            if not newdata:
-                raise MimeFormatError("Unexpected EOF")
-            data += newdata
-            
-            off = data.find(boundary)
-            
-            if off == -1:
-                # No boundary
-                off = data.rfind(boundary[0], max(0, len(data)-len(boundary)))
-                if off != -1:
-                    # But, we could have a partial result, store it for next time
-                    write(data[:off])
-                    data = data[off:]
-                else:
-                    write(data)
-                    data = ''
-                
-                # Loop back around
-            else:
-                # Found boundary
-                write(data[:off])
-                stream.pushback(data[off+len(boundary):])
-                return
-    readDataTillBoundary = defer.deferredGenerator(readDataTillBoundary)
+    ctype = fieldname = filename = None
+    headers = []
     
-    
-    #@defer.deferredGenerator
-    def readHeaders():
-        """Read the MIME headers. Assumes we've just finished reading in the boundary string."""
-        
-        ctype = None
-        fieldname = None
-        filename = None
-        
-        # Now read headers
-        while 1:
-            line = stream.readline(maxLength=1024)
-            if isinstance(line, defer.Deferred):
-                line = defer.waitForDeferred(line)
-                yield line; line = line.getResult()
-            
-            if line == "":
-                if ctype is None:
-                    ctype == http_headers.MimeType('application', 'octet-stream')
-                if fieldname is None:
-                    raise MimeFormatError('Content-disposition invalid or omitted.')
-                
-                # End of headers, return (field name, content-type, filename)
-                yield fieldname, ctype, filename; return 
-            
-            parts = line.split(':', 1)
-            if len(parts) != 2:
-                raise MimeFormatError("Header did not have a :")
-            name, value = parts
-            name = name.lower()
-
-            if name == "content-type":
-                ctype = http_headers.parseContentType(tokenize(value, foldCase=False))
-            elif name == "content-disposition":
-                fieldname, filename = parseContentDispositionFormData(value)
-            else:
-                # Unknown header -- ignore
-                pass
-    readHeaders = defer.deferredGenerator(readHeaders)
-    
-    def raiseError(data):
-        if data:
-            raise MimeFormatError("Extra data before first boundary: %r"% data)
-
-    def discard(data):
-        pass
-    
-    boundary = "--"+boundary
-    
-    d = readDataTillBoundary(write=raiseError, boundary=boundary)
-    d = defer.waitForDeferred(d)
-    yield d; d.getResult()
-    
-    boundary = "\r\n"+boundary
-    
+    # Now read headers
     while 1:
-        # read post-boundary line data
         line = stream.readline(maxLength=1024)
-        if isinstance(line, defer.Deferred):
-            line = defer.waitForDeferred(line)
-            yield line; line = line.getResult()
+        line = wait(line); yield line; line = line.getResult()
+        print "GOT", line
+        if line == "":
+            break # End of headers
+        
+        parts = line.split(':', 1)
+        if len(parts) != 2:
+            raise MimeFormatError("Header did not have a :")
+        name, value = parts
+        name = name.lower()
+        headers.append((name, value))
+        
+        if name == "content-type":
+            ctype = http_headers.parseContentType(http_headers.tokenize((value,), foldCase=False))
+        elif name == "content-disposition":
+            fieldname, filename = parseContentDispositionFormData(value)
+        
+    if ctype is None:
+        ctype == http_headers.MimeType('application', 'octet-stream')
+    if fieldname is None:
+        raise MimeFormatError('Content-disposition invalid or omitted.')
+
+    # End of headers, return (field name, content-type, filename)
+    yield fieldname, filename, ctype; return
+_readHeaders = defer.deferredGenerator(_readHeaders)
+
+
+#@defer.deferredGenerator
+class _BoundaryWatchingStream:
+    def __init__(self, stream, boundary):
+        self.stream = stream
+        self.boundary = boundary
+        self.data = ''
+        self.deferred = defer.Deferred()
+        
+    length = None # unknown
+    def read(self):
+        if self.stream is None:
+            if self.deferred is not None:
+                deferred = self.deferred
+                self.deferred = None
+                deferred.callback(None)
+            return None
+        newdata = self.stream.read()
+        if isinstance(newdata, defer.Deferred):
+            return newdata.addCallbacks(self._gotRead, self._gotError)
+        return self._gotRead(newdata)
+
+    def _gotRead(self, newdata):
+        if not newdata:
+            raise MimeFormatError("Unexpected EOF")
+        self.data += newdata
+        data = self.data
+        boundary = self.boundary
+        off = data.find(boundary)
+        
+        if off == -1:
+            # No full boundary, check for the first character
+            off = data.rfind(boundary[0], max(0, len(data)-len(boundary)))
+            if off != -1:
+                # We could have a partial boundary, store it for next time
+                self.data = data[off:]
+                return data[:off]
+            else:
+                self.data = ''
+                return data
+        else:
+            self.stream.pushback(data[off+len(boundary):])
+            self.stream = None
+            return data[:off]
+
+    def _gotError(self, err):
+        # Propogate error back to MultipartMimeStream also
+        if self.deferred is not None:
+            deferred = self.deferred
+            self.deferred = None
+            deferred.errback(err)
+        return err
+    
+    def close(self):
+        # Assume error will be raised again and handled by MMS?
+        readAndDiscard(self).addErrback(lambda _: None)
+        
+class MultipartMimeStream:
+    implements(IStream)
+    def __init__(self, stream, boundary):
+        self.stream = BufferedStream(stream)
+        self.boundary = "--"+boundary
+        self.first = True
+        
+    def read(self):
+        """
+        Return a deferred which will fire with a tuple of:
+        (fieldname, filename, ctype, dataStream)
+        or None when all done.
+        
+        Format errors will be sent to the errback.
+        
+        Returns None when all done.
+
+        IMPORTANT: you *must* exhaust dataStream returned by this call
+        before calling .read() again!
+        """
+        if self.first:
+            self.first = False
+            d = self._readFirstBoundary()
+        else:
+            d = self._readBoundaryLine()
+        d.addCallback(self._doReadHeaders)
+        d.addCallback(self._gotHeaders)
+        return d
+
+    def _readFirstBoundary(self):
+        print "_readFirstBoundary"
+        line = self.stream.readline(maxLength=1024)
+        line = wait(line); yield line; line = line.getResult()
+        if line != self.boundary:
+            raise MimeFormatError("Extra data before first boundary: %r"% data)
+        
+        self.boundary = "\r\n"+self.boundary
+        yield True; return
+    _readFirstBoundary = defer.deferredGenerator(_readFirstBoundary)
+
+    def _readBoundaryLine(self):
+        print "_readBoundaryLine"
+        line = self.stream.readline(maxLength=1024)
+        line = wait(line); yield line; line = line.getResult()
         
         if line == "--":
             # THE END!
-            return
+            yield False; return
         elif line != "":
-            print "EXTRA: %r" % line
             raise MimeFormatError("Unexpected data on same line as boundary.")
+        yield True; return
+    _readBoundaryLine = defer.deferredGenerator(_readBoundaryLine)
 
-        try:
-            x = defer.waitForDeferred(readHeaders())
-            yield x; x = x.getResult()
-            
-            # Parse data
-            fieldname, ctype, filename = x
-            buf = StringIO()
-            d = readDataTillBoundary(write=buf.write, boundary=boundary)
-            d = defer.waitForDeferred(d)
-            yield d; d.getResult()
-            if cdisp is None:
-                # Is a field
-                args[fieldname] = str(buf)
-            else:
-                # Is a file upload
-                files[fieldname] = (buf, ctype, filename)
-                
-        except ValueError, v:
-            raise MimeFormatError(v)
+    def _doReadHeaders(self, morefields):
+        print "_doReadHeaders", morefields
+        if not morefields:
+            return None
+        return _readHeaders(self.stream)
+    
+    def _gotHeaders(self, headers):
+        if headers is None:
+            return None
+        bws = _BoundaryWatchingStream(self.stream, self.boundary)
+        self.deferred = bws.deferred
+        ret=list(headers)
+        ret.append(bws)
+        return tuple(ret)
+
+
+def readIntoFile(stream, outFile, maxlen):
+    """Read the stream into a file, but not if it's longer than maxlen.
+    Returns Deferred which will be triggered on finish.
+    """
+    def done(_):
+        return _
+    def write(data):
+        curlen += len(data)
+        if curlen > maxlen:
+            raise MimeFormatError("Maximum length of %d bytes exceeded." %
+                                  maxlen)
         
+        outFile.write(data)
+    return readStream(stream, write).addBoth(done)
 
+#@defer.deferredGenerator
+def parseMultipartFormData(stream, boundary,
+                           maxMem=100*1024, maxFields=1024, maxSize=10*1024*1024):
+    mms = MultipartMimeStream(stream)
+    while numFields < maxFields:
+        datas = mms.read()
+        datas = wait(datas); yield datas; datas = datas.getResult()
+        if datas is None:
+            break
+        
+        # Parse data
+        fieldname, filename, ctype, stream = datas
+        if filename is None:
+            # Not a file
+            outfile = StringIO()
+            maxBuf = min(maxSize, maxMem)
+        else:
+            outfile = tempfile.NamedTemporaryFile()
+            maxBuf = maxSize
             
+        readIntoFile(stream, outfile, maxBuf)
+        
+        if cdisp is None:
+            # Is a normal form field
+            args[fieldname] = str(buf)
+            maxMem -= len(buf)
+            maxSize -= len(buf)
+        else:
+            # Is a file upload
+            maxSize -= outFile.tell()
+            outFile.seek(0)
+            files[fieldname] = (filename, ctype, outFile)
+        
+        numFields+=1
+        
     yield args, files
     return
-parse = defer.deferredGenerator(parse)
+
+###################################
+##### x-www-urlencoded reader #####
+###################################
+class Frobberator:
+    done=False
+
+    def __iter__(self):
+        return self
+    def next(self):
+        if self.done:
+            raise StopIteration
+        return self.value
+    wait=object()
+    
+class FrobberStream:
+    def __init__(self, frobber, stream, *args):
+        self.stream=stream
+        self.frobberator = Frobberator()
+        self.gen = frobber(self.frobberator, *args)
+        
+    def read(self):
+        try:
+            val = self.gen.next()
+            if val is Frobberator.wait:
+                newdata = self.stream.read()
+                if isinstance(newdata, defer.Deferred):
+                    return newdata.addCallback(self._gotRead)
+                else:
+                    return self._gotRead(newdata)
+            return val
+        except StopIteration:
+            return None
+        
+    def _gotRead(self, data):
+        if data is None:
+            self.frobberator.done=True
+        else:
+            self.frobberator.value=data
+        return self.read()
+        
+def parse_urlencoded(input, keep_blank_values=False, strict_parsing=False):
+    yield input.wait
+    lastdata = ''
+    still_going=1
+    
+    while still_going:
+        try:
+            data = input.next()
+            pairs = str(data).split('&')
+            pairs[0] = lastdata + pairs[0]
+            lastdata=pairs.pop()
+        except StopIteration:
+            pairs = [lastdata]
+            still_going=0
+            
+        for name_value in pairs:
+            nv = name_value.split('=', 1)
+            if len(nv) != 2:
+                if strict_parsing:
+                    raise ValueError, "bad query field: %s" % `name_value`
+                yield input.wait
+                continue
+            if len(nv[1]) or keep_blank_values:
+                name = urllib.unquote(nv[0].replace('+', ' '))
+                value = urllib.unquote(nv[1].replace('+', ' '))
+                yield name, value
+    
+        yield input.wait
+
+#FrobberStream(parse_urlencoded, stream, keep_blank_values)
+        
+#parse = defer.deferredGenerator(parse)
 
 if __name__ == '__main__':
-    d = parse(FileStream(open("upload.txt")), "---------------------------011013906415445")
+    d = parse(FileStream(open("upload.txt")), "----------0xKhTmLbOuNdArY")
     from twisted.python import log
     d.addErrback(log.err)
