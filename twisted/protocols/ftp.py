@@ -237,6 +237,9 @@ class PathBelowTLDError(FTPCmdError):
 class ClientDisconnectError(Exception):
     pass
 
+class PortConnectionError(Exception):
+    pass
+
 class BadCmdSequenceError(FTPCmdError):
     """raised when a client sends a series of commands in an illogical sequence"""
     errorCode = BAD_CMD_SEQ
@@ -394,7 +397,7 @@ class DTPFactory(protocol.ClientFactory):
         self.delayedCall = reactor.callLater(seconds, self.timeoutFactory)
 
     def clientConnectionFailed(self, connector, reason):
-        self.deferred.errback(reason)
+        self.deferred.errback(PortConnectionError(reason))
 
 components.backwardsCompatImplements(DTPFactory)
 
@@ -560,27 +563,32 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             phost = self.transport.getPeer().host
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
             self.dtpFactory.setTimeout(self.dtpTimeout)
+
+        d = self.dtpFactory.deferred        
+        d.addCallback(debugDeferred, 'dtpFactory deferred')
+
         if mode == PASV:    
             self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
         elif mode == PORT: 
             self.dtpPort = reactor.connectTCP(host, port, self.dtpFactory)
+            d.addCallback(lambda _: self.reply(ENTERING_PORT_MODE))
         else:
             assert False, ('_createDTP expected mode of PASV or PORT, got: ' + repr(mode))
 
-        d = self.dtpFactory.deferred        
-        d.addCallback(debugDeferred, 'dtpFactory deferred')
         d.addCallback(self._unblock)                            # VERY IMPORTANT: call _unblock when client connects
         d.addErrback(self._ebDTP)
 
     def _ebDTP(self, error):
+        log.msg('_ebDTP')
         log.msg(error)
         self.setTimeout(self.factory.timeOut)       # restart timeOut clock after DTP returns
         r = error.trap(defer.TimeoutError,          # this is called when DTP times out
                        BogusClientError,            # called if PI & DTP clients don't match
                        FTPTimeoutError,             # called when FTP connection times out
-                       ClientDisconnectError)       # called if client disconnects prematurely during DTP transfer
+                       ClientDisconnectError,       # called if client disconnects prematurely during DTP transfer
+                       PortConnectionError)         # called when the connection to a PORT fails
                        
-        if r == defer.TimeoutError:                     
+        if r in (defer.TimeoutError, PortConnectionError):
             self.reply(CANT_OPEN_DATA_CNX)
         elif r in (BogusClientError, FTPTimeoutError):
             self.reply(SVC_NOT_AVAIL_CLOSING_CTRL_CNX)
@@ -847,17 +855,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory:
             self.cleanupDTP()
 
-        try:
-            self._createDTP(PORT, *decodeHostPort(params))
-        except OSError, (e,):           # we're watching for a could not listen on port error
-            # XXX: Eh?  "could not listen on port error"?  PORT commands
-            #      connect to sockets, not make listening ports!  This code
-            #      makes no sense.
-            #        - spiv, 2005-04-02
-            log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
-            self.reply(CANT_OPEN_DATA_CNX)
-            return
-        self.reply(ENTERING_PORT_MODE)
+        self._createDTP(PORT, *decodeHostPort(params))
 
     def ftp_CWD(self, params):
         self.shell.cwd(cleanPath(params))

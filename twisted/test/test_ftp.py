@@ -124,8 +124,8 @@ class FTPServerTestCase(unittest.TestCase):
         except ftp.CommandFailed, e:
             return e.args[0]
         else:
-            self.fail('ftp.CommandFailed not raised for %s, got %r' 
-                      % (command, responseLines))
+            self.fail('ftp.CommandFailed not raised for command, got %r' 
+                      % (responseLines,))
 
     def _anonymousLogin(self):
         responseLines = wait(self.client.queueStringCommand('USER anonymous'))
@@ -365,6 +365,27 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
         wait(defer.DeferredList(l, fireOnOneErrback=True))
         return FTPServerPasvDataConnectionTestCase.tearDown(self)
 
+    def testPORTCannotConnect(self):
+        # Login
+        self._anonymousLogin()
+
+        # Listen on a port, and immediately stop listening as a way to find a
+        # port number that is definitely closed.
+        port = reactor.listenTCP(0, protocol.Factory(), interface='127.0.0.1')
+        portNum = port.getHost().port
+        d = port.stopListening()
+        if d is not None:
+            wait(d)
+
+        # Tell the server to connect to that port with a PORT command, and
+        # verify that it fails with the right error.
+        cmd = 'PORT ' + ftp.encodeHostPort('127.0.0.1', portNum)
+        d = self.client.queueStringCommand(cmd)
+        self.failUnlessEqual(
+            ["425 Can't open data connection."],
+            self._waitForCommandFailure(d)
+        )
+        
 
 # -- Client Tests -----------------------------------------------------------
 
