@@ -245,39 +245,14 @@ class AuthorizationError(FTPCmdError):
     """raised when client authentication fails"""
     errorCode = AUTH_FAILURE
 
-# -- DTP Protocol --
-
-class DTPFileSender(basic.FileSender):
-    def resumeProducing(self):
-        chunk = ''
-        if self.file:
-            chunk = self.file.read(self.CHUNK_SIZE)
-            log.debug('chunk: %s' % chunk)
-        if not chunk:
-            self.file = None
-            self.consumer.unregisterProducer()
-            log.debug("producer has unregistered?: %s" % (self.consumer.producer is None))
-            log.debug('self.deferred:', self.deferred)
-            if self.deferred:
-                self.deferred.callback(self.lastSent)
-                self.deferred = None
-            return
-        
-        if self.transform:
-            chunk = self.transform(chunk)
-        self.consumer.write(chunk)
-        self.lastSent = chunk[-1]
-
-    def stopProducing(self):
-        if self.deferred:
-            self.deferred.errback(ClientDisconnectError())
-            self.deferred = None
 
 # -- Utility Functions --
 
 def debugDeferred(self, *_):
     log.debug('debugDeferred(): %s' % str(_))
  
+
+# -- DTP Protocol --
 
 class IDTPParent(components.Interface):
     """An interface for protocols that wish to use a DTP sub-protocol and
@@ -344,8 +319,7 @@ class DTP(object, protocol.Protocol):
         log.debug('sendfile sending %s' 
                   % getattr(self.pi.fp, 'name', '<string>'))
 
-        # XXX: this should just be a basic.FileSender()
-        fs = DTPFileSender()
+        fs = basic.FileSender()
         if self.pi.binary:
             transform = None
         else:
@@ -369,7 +343,7 @@ class DTP(object, protocol.Protocol):
         self.pi.finishedFileTransfer()
         self.isConnected = False
 
-class DTPFactory(protocol.Factory): 
+class DTPFactory(protocol.ClientFactory): 
     implements(IDTPFactory)
     
     # -- configuration variables --
@@ -419,6 +393,9 @@ class DTPFactory(protocol.Factory):
         log.msg('DTPFactory.setTimeout set to %s seconds' % seconds)
         self.delayedCall = reactor.callLater(seconds, self.timeoutFactory)
 
+    def clientConnectionFailed(self, connector, reason):
+        self.deferred.errback(reason)
+
 components.backwardsCompatImplements(DTPFactory)
 
 # -- FTP-PI (Protocol Interpreter) --
@@ -456,7 +433,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     implements(IDTPParent)
     
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
-    blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
+    blockingCommands = ['RETR', 'STOR', 'LIST', 'NLST']
     reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
 
     # how long the DTP waits for a connection
@@ -844,18 +821,17 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.debug('ftp_PASV') 
         if params != '':
             raise CmdArgSyntaxError('PASV takes no arguments, got: ' + params)
-        if self.dtpFactory:                 # if we have a DTP port set up
-            self.cleanupDTP()               # lose it 
-        if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
-            # XXX: When would "if not self.dtpFactory" ever be false at this
-            #      point?  I suspect this if statement is redundant.  Otherwise,
-            #      the code and comments in this function are very confusing!
-            #        - spiv, 2005-04-02.
-            try:
-                self._createDTP(PASV)
-            except error.CannotListenError:
-                self.reply(CANT_OPEN_DATA_CNX)
-                return
+
+        # if we have a DTP port set up, lose it.
+        if self.dtpFactory:
+            self.cleanupDTP()
+
+        try:
+            self._createDTP(PASV)
+        except error.CannotListenError:
+            self.reply(CANT_OPEN_DATA_CNX)
+            return
+
         # Use the control connection's socket to determine a sensible local IP
         # address (asking the DTP port might give something useless like
         # 0.0.0.0).
@@ -866,24 +842,22 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def ftp_PORT(self, params):
         log.debug('ftp_PORT')
-        if self.dtpFactory:                 # if we have a DTP port set up
-            self.cleanupDTP()               # lose it 
-        if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
-            # XXX: When would "if not self.dtpFactory" ever be false at this
-            #      point?  I suspect this if statement is redundant.  Otherwise,
-            #      the code and comments in this function are very confusing!
-            #        - spiv, 2005-04-02.
-            try:
-                self._createDTP(PORT, decodeHostPort(params))
-            except OSError, (e,):           # we're watching for a could not listen on port error
-                # XXX: Eh?  "could not listen on port error"?  PORT commands
-                #      connect to sockets, not make listening ports!  This code
-                #      makes no sense.
-                #        - spiv, 2005-04-02
-                log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
-                self.reply(CANT_OPEN_DATA_CNX)
-                return
-        self.reply(PORT_MODE_OK)
+
+        # if we have a DTP port set up, lose it.
+        if self.dtpFactory:
+            self.cleanupDTP()
+
+        try:
+            self._createDTP(PORT, *decodeHostPort(params))
+        except OSError, (e,):           # we're watching for a could not listen on port error
+            # XXX: Eh?  "could not listen on port error"?  PORT commands
+            #      connect to sockets, not make listening ports!  This code
+            #      makes no sense.
+            #        - spiv, 2005-04-02
+            log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
+            self.reply(CANT_OPEN_DATA_CNX)
+            return
+        self.reply(ENTERING_PORT_MODE)
 
     def ftp_CWD(self, params):
         self.shell.cwd(cleanPath(params))

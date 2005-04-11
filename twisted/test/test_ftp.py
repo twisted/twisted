@@ -4,12 +4,10 @@
 
 """FTP tests.
 
-Server Test Maintainer: slyphon (Jonathan D. Simms)
-Client Test Maintainer: spiv
-
+Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 """
 
-from __future__ import  nested_scopes
+from __future__ import nested_scopes
 
 import sys, types, os.path, re
 from StringIO import StringIO
@@ -80,7 +78,7 @@ class _BufferingProtocol(protocol.Protocol):
         self.d.callback(None)
 
 
-class SaneTestFTPServer(unittest.TestCase):
+class FTPServerTestCase(unittest.TestCase):
     """Simple tests for an FTP server with the default settings."""
     
     def setUp(self):
@@ -107,6 +105,18 @@ class SaneTestFTPServer(unittest.TestCase):
         portNum = self.port.getHost().port
         clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
         self.client = wait(clientCreator.connectTCP("127.0.0.1", portNum))
+    
+    def tearDown(self):
+        # Clean up sockets
+        self.client.transport.loseConnection()
+        d = self.port.stopListening()
+        if d is not None:
+            wait(d)
+
+        del self.serverProtocol
+        
+        # Clean up temporary directory
+        shutil.rmtree(self.directory)
 
     def _waitForCommandFailure(self, deferred):
         try:
@@ -117,6 +127,23 @@ class SaneTestFTPServer(unittest.TestCase):
             self.fail('ftp.CommandFailed not raised for %s, got %r' 
                       % (command, responseLines))
 
+    def _anonymousLogin(self):
+        responseLines = wait(self.client.queueStringCommand('USER anonymous'))
+        self.assertEquals(
+            ['331 Guest login ok, type your email address as password.'], 
+            responseLines
+        )
+
+        responseLines = wait(self.client.queueStringCommand(
+            'PASS test@twistedmatrix.com')
+        )
+        self.assertEquals(
+            ['230 Anonymous login ok, access restrictions apply.'], 
+            responseLines
+        )
+
+
+class BasicFTPServerTestCase(FTPServerTestCase):
     def testNotLoggedInReply(self):
         """When not logged in, all commands other than USER and PASS should
         get NOT_LOGGED_IN errors.
@@ -156,19 +183,7 @@ class SaneTestFTPServer(unittest.TestCase):
             self._waitForCommandFailure(d))
     
     def testAnonymousLogin(self):
-        responseLines = wait(self.client.queueStringCommand('USER anonymous'))
-        self.assertEquals(
-            ['331 Guest login ok, type your email address as password.'], 
-            responseLines
-        )
-
-        responseLines = wait(self.client.queueStringCommand(
-            'PASS test@twistedmatrix.com')
-        )
-        self.assertEquals(
-            ['230 Anonymous login ok, access restrictions apply.'], 
-            responseLines
-        )
+        self._anonymousLogin()
 
     def testAnonymousLoginDenied(self):
         # Reconfigure the server to disallow anonymous access, and to have an
@@ -197,7 +212,7 @@ class SaneTestFTPServer(unittest.TestCase):
             self._waitForCommandFailure(d))
 
     def testRETRBeforePORT(self):
-        self.testAnonymousLogin()
+        self._anonymousLogin()
         d = self.client.queueStringCommand('RETR foo')
         self.failUnlessEqual(
             ["503 Incorrect sequence of commands: "
@@ -205,7 +220,7 @@ class SaneTestFTPServer(unittest.TestCase):
             self._waitForCommandFailure(d))
 
     def testBadCommandArgs(self):
-        self.testAnonymousLogin()
+        self._anonymousLogin()
         d = self.client.queueStringCommand('MODE z')
         self.failUnlessEqual(
             ["504 Not implemented for parameter 'z'."],
@@ -222,7 +237,7 @@ class SaneTestFTPServer(unittest.TestCase):
 
     def testPASV(self):
         # Login
-        self.testAnonymousLogin()
+        self._anonymousLogin()
 
         # Issue a PASV command, and extract the host and port from the response
         responseLines = wait(self.client.queueStringCommand('PASV'))
@@ -238,11 +253,14 @@ class SaneTestFTPServer(unittest.TestCase):
         self.serverProtocol.dtpFactory = None
 
     def testSYST(self):
-        self.testAnonymousLogin()
+        self._anonymousLogin()
         responseLines = wait(self.client.queueStringCommand('SYST'))
         self.assertEqual(["215 UNIX Type: L8"], responseLines)
 
-    def _makePassiveConnection(self):
+class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
+    def _makeDataConnection(self):
+        # Establish a passive data connection (i.e. client connecting to
+        # server).
         responseLines = wait(self.client.queueStringCommand('PASV'))
         host, port = ftp.decodeHostPort(responseLines[-1][4:])
         downloader = wait(
@@ -254,10 +272,10 @@ class SaneTestFTPServer(unittest.TestCase):
 
     def testLIST(self):
         # Login
-        self.testAnonymousLogin()
+        self._anonymousLogin()
 
         # Download a listing
-        downloader = self._makePassiveConnection()
+        downloader = self._makeDataConnection()
         d = self.client.queueStringCommand('LIST')
         wait(defer.gatherResults([d, downloader.d]))
 
@@ -269,7 +287,7 @@ class SaneTestFTPServer(unittest.TestCase):
         os.mkdir(os.path.join(self.directory, 'bar'))
 
         # Download a listing again
-        downloader = self._makePassiveConnection()
+        downloader = self._makeDataConnection()
         d = self.client.queueStringCommand('LIST')
         wait(defer.gatherResults([d, downloader.d]))
 
@@ -277,7 +295,7 @@ class SaneTestFTPServer(unittest.TestCase):
         self.assertEqual(2, len(downloader.buffer.rstrip('\n').split('\n')))
 
         # Download a names-only listing
-        downloader = self._makePassiveConnection()
+        downloader = self._makeDataConnection()
         d = self.client.queueStringCommand('NLST')
         wait(defer.gatherResults([d, downloader.d]))
         filenames = downloader.buffer.rstrip('\n').split('\n')
@@ -285,7 +303,7 @@ class SaneTestFTPServer(unittest.TestCase):
         self.assertEqual(['bar', 'foo'], filenames)
 
         # Download a listing of the 'foo' subdirectory
-        downloader = self._makePassiveConnection()
+        downloader = self._makeDataConnection()
         d = self.client.queueStringCommand('LIST foo')
         wait(defer.gatherResults([d, downloader.d]))
 
@@ -296,14 +314,14 @@ class SaneTestFTPServer(unittest.TestCase):
         wait(self.client.queueStringCommand('CWD foo'))
         
         # Download a listing from within 'foo', and again it should be empty
-        downloader = self._makePassiveConnection()
+        downloader = self._makeDataConnection()
         d = self.client.queueStringCommand('LIST')
         wait(defer.gatherResults([d, downloader.d]))
         self.assertEqual('', downloader.buffer)
 
     def testManyLargeDownloads(self):
         # Login
-        self.testAnonymousLogin()
+        self._anonymousLogin()
 
         # Replace the ftp shell's retr method with a test hack.
         def fakeRetr(path):
@@ -314,22 +332,38 @@ class SaneTestFTPServer(unittest.TestCase):
         
         # Download a range of different size files
         for size in range(100000, 110000, 500):
-            downloader = self._makePassiveConnection()
+            downloader = self._makeDataConnection()
             d = self.client.queueStringCommand('RETR %d.txt' % size)
             wait(defer.gatherResults([d, downloader.d]))
             self.assertEqual('x' * size, downloader.buffer)
-    
-    def tearDown(self):
-        # Clean up sockets
-        self.client.transport.loseConnection()
-        d = self.port.stopListening()
-        if d is not None:
-            wait(d)
 
-        del self.serverProtocol
-        
-        # Clean up temporary directory
-        shutil.rmtree(self.directory)
+
+class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
+    def setUp(self):
+        FTPServerPasvDataConnectionTestCase.setUp(self)
+        self.dataPorts = []
+
+    def _makeDataConnection(self):
+        # Establish an active data connection (i.e. server connecting to
+        # client).
+        deferred = defer.Deferred()
+        class DataFactory(protocol.ServerFactory):
+            protocol = _BufferingProtocol
+            def buildProtocol(self, addr):
+                p = protocol.ServerFactory.buildProtocol(self, addr)
+                reactor.callLater(0, deferred.callback, p)
+                return p
+        dataPort = reactor.listenTCP(0, DataFactory(), interface='127.0.0.1')
+        self.dataPorts.append(dataPort)
+        cmd = 'PORT ' + ftp.encodeHostPort('127.0.0.1', dataPort.getHost().port)
+        responseLines = wait(self.client.queueStringCommand(cmd))
+        downloader = wait(deferred)
+        return downloader
+
+    def tearDown(self):
+        l = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
+        wait(defer.DeferredList(l, fireOnOneErrback=True))
+        return FTPServerPasvDataConnectionTestCase.tearDown(self)
 
 
 # -- Client Tests -----------------------------------------------------------
