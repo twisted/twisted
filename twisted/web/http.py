@@ -356,7 +356,7 @@ class HTTPClient(basic.LineReceiver):
     """
     length = None
     firstLine = 1
-    __buffer = ''
+    __buffer = None
 
     def sendCommand(self, command, path):
         self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
@@ -387,6 +387,7 @@ class HTTPClient(basic.LineReceiver):
             if key.lower() == 'content-length':
                 self.length = int(val)
         else:
+            self.__buffer = []
             self.handleEndHeaders()
             self.setRawMode()
 
@@ -395,12 +396,12 @@ class HTTPClient(basic.LineReceiver):
 
     def handleResponseEnd(self):
         if self.__buffer != None:
-            b = self.__buffer
+            b = ''.join(self.__buffer)
             self.__buffer = None
             self.handleResponse(b)
     
     def handleResponsePart(self, data):
-        self.__buffer += data
+        self.__buffer.append(data)
 
     def connectionMade(self):
         pass
