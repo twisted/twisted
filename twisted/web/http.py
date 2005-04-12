@@ -796,7 +796,7 @@ class Request:
 
         modified_since = self.getHeader('if-modified-since')
         if modified_since:
-            modified_since = stringToDatetime(modified_since)
+            modified_since = stringToDatetime(modified_since.split(';', 1)[0])
             if modified_since >= when:
                 self.setResponseCode(NOT_MODIFIED)
                 return CACHED
