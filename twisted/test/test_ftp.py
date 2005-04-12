@@ -211,6 +211,15 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             ['530 Please login with USER and PASS.'],
             self._waitForCommandFailure(d))
 
+    def testUnknownCommand(self):
+        self._anonymousLogin()
+
+        d = self.client.queueStringCommand('GIBBERISH')
+        self.failUnlessEqual(
+            ["502 Command 'GIBBERISH' not implemented"],
+            self._waitForCommandFailure(d))
+        
+
     def testRETRBeforePORT(self):
         self._anonymousLogin()
         d = self.client.queueStringCommand('RETR foo')
