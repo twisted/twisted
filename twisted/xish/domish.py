@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_domish -*-
+# -*- test-case-name: twisted.xish.test.test_domish -*-
 #
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.

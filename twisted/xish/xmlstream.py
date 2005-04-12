@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_xmlstream -*-
+# -*- test-case-name: twisted.xish.test.test_xmlstream -*-
 #
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.

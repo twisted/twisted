@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_jabbercomponent -*-
+# -*- test-case-name: twisted.words.test.test_jabbercomponent -*-
 #
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
