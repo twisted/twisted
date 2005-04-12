@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_woven -*-
+# -*- test-case-name: twisted.web.test.test_woven -*-
 #
 # page.py
 

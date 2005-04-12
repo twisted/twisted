@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_woven -*-
+# -*- test-case-name: twisted.web.test.test_woven -*-
 
 __version__ = "$Revision: 1.13 $"[11:-2]
 
