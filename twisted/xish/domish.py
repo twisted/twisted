@@ -69,7 +69,7 @@ class _Serializer:
             if parent == None or defaultUri == parent.defaultUri:
                 write("<%s" % (name))
             else:
-                write("<%s xmlns='%s' " % (name, defaultUri))
+                write("<%s xmlns='%s'" % (name, defaultUri))
         else:
             prefix = self.getPrefix(uri)
             if parent == None or elem.defaultUri == parent.defaultUri:
@@ -147,7 +147,7 @@ class _ListSerializer:
             if parent == None or defaultUri == parent.defaultUri:
                 write("<%s" % (name))
             else:
-                write("<%s xmlns='%s' " % (name, defaultUri))
+                write("<%s xmlns='%s'" % (name, defaultUri))
         else:
             prefix = self.getPrefix(uri)
             if parent == None or elem.defaultUri == parent.defaultUri:
