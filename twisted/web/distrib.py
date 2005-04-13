@@ -21,7 +21,7 @@ from twisted.web import http
 from twisted.python import log
 from twisted.persisted import styles
 from twisted.web.woven import page
-from twisted.internet import address
+from twisted.internet import address, reactor
 
 # Sibling Imports
 import resource
@@ -50,8 +50,10 @@ class Request(pb.RemoteCopy, server.Request):
         for k in 'host', 'client':
             tup = state[k]
             addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
-            addr = {'TCP': lambda: address.IPv4Address(addrdesc, tup[1], tup[2], _bwHack='INET'),
-                        'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
+            addr = {'TCP': lambda: address.IPv4Address(addrdesc,
+                                                       tup[1], tup[2],
+                                                       _bwHack='INET'),
+                    'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
             state[k] = addr
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
@@ -137,7 +139,8 @@ class ResourceSubscription(resource.Resource):
         self.pending = []
 
     def notConnected(self, msg):
-        """I can't connect to a publisher; I'll now reply to all pending requests.
+        """I can't connect to a publisher; I'll now reply to all pending
+        requests.
         """
         log.msg("could not connect to distributed web service: %s" % msg)
         self.waiting = 0
@@ -162,7 +165,14 @@ class ResourceSubscription(resource.Resource):
             self.pending.append(request)
             if not self.waiting:
                 self.waiting = 1
-                pb.getObjectAt(self.host, self.port, 10).addCallbacks(self.connected, self.notConnected)
+                bf = pb.PBClientFactory()
+                timeout = 10
+                if self.host == "unix":
+                    reactor.connectUNIX(self.port, bf, timeout)
+                else:
+                    reactor.connectTCP(self.host, self.port, bf, timeout)
+                d = bf.getRootObject()
+                d.addCallbacks(self.connected, self.notConnected)
 
         else:
             i = Issue(request)
