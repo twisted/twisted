@@ -397,7 +397,7 @@ class QueryArgumentsTestCase(unittest.TestCase):
         try:
             from twisted.protocols import _c_urlarg
         except ImportError:
-            raise unittest.SkipTest
+            raise unittest.SkipTest("_c_urlarg module is not available")
         # work exactly like urllib.unquote, including stupid things
         # % followed by a non-hexdigit in the middle and in the end
         self.failUnlessEqual(urllib.unquote("%notreally%n"),
@@ -425,7 +425,7 @@ class QueryArgumentsTestCase(unittest.TestCase):
         try:
             from twisted.protocols import _c_urlarg
         except ImportError:
-            raise unittest.SkipTest
+            raise unittest.SkipTest("_c_urlarg module is not available")
         self.failUnlessEqual("!@#+b",
             _c_urlarg.unquote("+21+40+23+b", "+"))
 
