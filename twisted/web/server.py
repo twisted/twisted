@@ -35,7 +35,7 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol, defer, address
 from twisted.web import http
 from twisted.python import log, reflect, roots, failure, components
 from twisted import copyright
@@ -82,6 +82,13 @@ class UnsupportedMethod(Exception):
                  " supported methods, %s" % (why,))
             raise TypeError, s
 
+def _addressToTuple(addr):
+    if isinstance(addr, address.IPv4Address):
+        return ('INET', addr.host, addr.port)
+    elif isinstance(addr, address.UNIXAddress):
+        return ('UNIX', addr.name)
+    else:
+        return tuple(addr)
 
 class Request(pb.Copyable, http.Request, components.Componentized):
 
@@ -107,8 +114,8 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         x['remote'] = pb.ViewPoint(issuer, self)
 
         # Address objects aren't jellyable
-        x['host'] = tuple(x['host'])
-        x['client'] = tuple(x['client'])
+        x['host'] = _addressToTuple(x['host'])
+        x['client'] = _addressToTuple(x['client'])
 
         return x
 
