@@ -140,6 +140,20 @@ unpersistable_atom = "unpersistable"# u
 unjellyableRegistry = {}
 unjellyableFactoryRegistry = {}
 
+def _newInstance(cls, state):
+    """Make a new instance of a class without calling its __init__ method.
+    'state' will be used to update inst.__dict__ . Supports both new- and
+    old-style classes.
+    """
+    if not isinstance(cls, types.ClassType):
+        # new-style
+        inst = cls.__new__(cls)
+        inst.__dict__.update(state) # Copy 'instance' behaviour
+    else:
+        inst = instance(cls, state)
+    return inst
+
+
 def _maybeClass(classnamep):
     try:
         object
@@ -560,12 +574,12 @@ class _Unjellier:
             if not self.taster.isClassAllowed(clz):
                 raise InsecureJelly("Class %s not allowed." % jelType)
             if hasattr(clz, "__setstate__"):
-                ret = instance(clz, {})
+                ret = _newInstance(clz, {})
                 state = self.unjelly(obj[1])
                 ret.__setstate__(state)
             else:
                 state = self.unjelly(obj[1])
-                ret = instance(clz, state)
+                ret = _newInstance(clz, state)
             if hasattr(clz, 'postUnjelly'):
                 self.postCallbacks.append(ret.postUnjelly)
         return ret
@@ -697,12 +711,12 @@ class _Unjellier:
         if type(clz) is not types.ClassType:
             raise InsecureJelly("Instance found with non-class class.")
         if hasattr(clz, "__setstate__"):
-            inst = instance(clz, {})
+            inst = _newInstance(clz, {})
             state = self.unjelly(rest[1])
             inst.__setstate__(state)
         else:
             state = self.unjelly(rest[1])
-            inst = instance(clz, state)
+            inst = _newInstance(clz, state)
         if hasattr(clz, 'postUnjelly'):
             self.postCallbacks.append(inst.postUnjelly)
         return inst
