@@ -11,17 +11,6 @@
 <h1>Using Application</h1>
 
 
-<p>There are many ways in which your code will be called by various parts of
-the Twisted framework by the time you're done.  The initial one we're going to
-focus on here is a plug-in for the <code class="shell">mktap</code> utility.
-<code class="shell">mktap</code> produces complete, runnable
-<code base="twisted.application.service" class="API">Application</code>
-instances, so no additional work is necessary to make your code work with
-<code class="shell">twistd</code>.  First we will go through the process of
-creating a
-plug-in that Twisted can find, then we make it adhere to the <code
-class="shell">mktap</code> interface.  Finally we will load that plug-in with a
-server.</p>
 <h2>Motivation</h2>
 
 <p>Twisted can power anything connected to a network, from your corporate
