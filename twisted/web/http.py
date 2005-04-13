@@ -925,9 +925,9 @@ class Request:
         return self.password
 
     def getClient(self):
-        if self.client[0] not in ('INET', 'SSL'):
+        if self.client.type != 'TCP':
             return None
-        host = self.client[1]
+        host = self.client.host
         try:
             name, names, addresses = socket.gethostbyaddr(host)
         except socket.error:

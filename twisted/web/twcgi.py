@@ -69,7 +69,7 @@ class CGIScript(resource.Resource):
                "SERVER_NAME":       serverName,
                "GATEWAY_INTERFACE": "CGI/1.1",
                "SERVER_PROTOCOL":   request.clientproto,
-               "SERVER_PORT":       str(request.getHost()[2]),
+               "SERVER_PORT":       str(request.getHost().port),
                "REQUEST_METHOD":    request.method,
                "SCRIPT_NAME":       script_name, # XXX
                "SCRIPT_FILENAME":   self.filename,
