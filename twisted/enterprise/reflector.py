@@ -117,9 +117,7 @@ class Reflector:
         for keyName, keyType in rowClass.rowKeyColumns:
             keys.append( kw[keyName] )
         keyTuple = tuple(keys)
-        if self.rowCache.has_key(keyTuple):
-            return self.rowCache[keyTuple]
-        return None
+        return self.rowCache.get(keyTuple)
 
     def removeFromCache(self, rowObject):
         """NOTE: should this be recursive!??"""
