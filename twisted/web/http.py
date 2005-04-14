@@ -1155,7 +1155,6 @@ class HTTPFactory(protocol.ServerFactory):
     def _openLogFile(self, path):
         """Override in subclasses, e.g. to use twisted.python.logfile."""
         f = open(path, "a", 1)
-        f.seek(2, 0)
         return f
 
     def _escape(self, s):
