@@ -4,6 +4,7 @@ import urllib
 
 from twisted.internet import defer
 from twisted.web2.stream import IStream, FileStream, BufferedStream, readStream
+from twisted.web2.stream import generatorToStream
 from twisted.web2 import http_headers
 from cStringIO import StringIO
 
@@ -216,11 +217,12 @@ def readIntoFile(stream, outFile, maxlen):
     """Read the stream into a file, but not if it's longer than maxlen.
     Returns Deferred which will be triggered on finish.
     """
+    curlen = [0]
     def done(_):
         return _
     def write(data):
-        curlen += len(data)
-        if curlen > maxlen:
+        curlen[0] += len(data)
+        if curlen[0] > maxlen:
             raise MimeFormatError("Maximum length of %d bytes exceeded." %
                                   maxlen)
         
@@ -230,7 +232,11 @@ def readIntoFile(stream, outFile, maxlen):
 #@defer.deferredGenerator
 def parseMultipartFormData(stream, boundary,
                            maxMem=100*1024, maxFields=1024, maxSize=10*1024*1024):
-    mms = MultipartMimeStream(stream)
+    mms = MultipartMimeStream(stream, boundary)
+    numFields = 0
+    args = {}
+    files = {}
+    
     while numFields < maxFields:
         datas = mms.read()
         datas = wait(datas); yield datas; datas = datas.getResult()
@@ -249,96 +255,83 @@ def parseMultipartFormData(stream, boundary,
             
         readIntoFile(stream, outfile, maxBuf)
         
-        if cdisp is None:
+        if filename is None:
             # Is a normal form field
-            args[fieldname] = str(buf)
-            maxMem -= len(buf)
-            maxSize -= len(buf)
+            args[fieldname] = data = str(outfile)
+            maxMem -= len(data)
+            maxSize -= len(data)
         else:
             # Is a file upload
-            maxSize -= outFile.tell()
-            outFile.seek(0)
-            files[fieldname] = (filename, ctype, outFile)
+            maxSize -= outfile.tell()
+            outfile.seek(0)
+            files[fieldname] = (filename, ctype, outfile)
         
         numFields+=1
         
     yield args, files
     return
+parseMultipartFormData = defer.deferredGenerator(parseMultipartFormData)
 
 ###################################
 ##### x-www-urlencoded reader #####
 ###################################
-class Frobberator:
-    done=False
 
-    def __iter__(self):
-        return self
-    def next(self):
-        if self.done:
-            raise StopIteration
-        return self.value
-    wait=object()
-    
-class FrobberStream:
-    def __init__(self, frobber, stream, *args):
-        self.stream=stream
-        self.frobberator = Frobberator()
-        self.gen = frobber(self.frobberator, *args)
-        
-    def read(self):
-        try:
-            val = self.gen.next()
-            if val is Frobberator.wait:
-                newdata = self.stream.read()
-                if isinstance(newdata, defer.Deferred):
-                    return newdata.addCallback(self._gotRead)
-                else:
-                    return self._gotRead(newdata)
-            return val
-        except StopIteration:
-            return None
-        
-    def _gotRead(self, data):
-        if data is None:
-            self.frobberator.done=True
-        else:
-            self.frobberator.value=data
-        return self.read()
-        
-def parse_urlencoded(input, keep_blank_values=False, strict_parsing=False):
-    yield input.wait
+
+def parse_urlencoded_stream(input, maxMem=100*1024,
+                     keep_blank_values=False, strict_parsing=False):
     lastdata = ''
     still_going=1
     
     while still_going:
         try:
+            yield input.wait
             data = input.next()
-            pairs = str(data).split('&')
-            pairs[0] = lastdata + pairs[0]
-            lastdata=pairs.pop()
         except StopIteration:
             pairs = [lastdata]
             still_going=0
-            
+        else:
+            pairs = str(data).split('&')
+            pairs[0] = lastdata + pairs[0]
+            lastdata=pairs.pop()
+        
         for name_value in pairs:
             nv = name_value.split('=', 1)
             if len(nv) != 2:
                 if strict_parsing:
                     raise ValueError, "bad query field: %s" % `name_value`
-                yield input.wait
                 continue
             if len(nv[1]) or keep_blank_values:
                 name = urllib.unquote(nv[0].replace('+', ' '))
                 value = urllib.unquote(nv[1].replace('+', ' '))
                 yield name, value
-    
-        yield input.wait
+parse_urlencoded_stream = generatorToStream(parse_urlencoded_stream)
 
-#FrobberStream(parse_urlencoded, stream, keep_blank_values)
+def parse_urlencoded(stream, maxMem=100*1024,
+                     keep_blank_values=False, strict_parsing=False):
+    d = {}
+
+    s=parse_urlencoded_stream(stream, maxMem, keep_blank_values, strict_parsing)
+    
+    while 1:
+        datas = s.read()
+        datas = wait(datas); yield datas; datas = datas.getResult()
+        if datas is None:
+            break
+        name, value = datas
         
-#parse = defer.deferredGenerator(parse)
+        if name in d:
+            d[name].append(value)
+        else:
+            d[name] = [value]
+    yield d; return
+parse_urlencoded = defer.deferredGenerator(parse_urlencoded)
+
 
 if __name__ == '__main__':
-    d = parse(FileStream(open("upload.txt")), "----------0xKhTmLbOuNdArY")
+    d = parseMultipartFormData(
+        FileStream(open("upload.txt")), "----------0xKhTmLbOuNdArY")
     from twisted.python import log
     d.addErrback(log.err)
+    def pr(s):
+        print s
+    d.addCallback(pr)

@@ -44,6 +44,9 @@ try:
 except ImportError:
     mmap = None
 
+##############################
+####      Interfaces      ####
+##############################
 
 class IStream(Interface):
     """A stream of arbitrary data."""
@@ -127,7 +130,11 @@ class SimpleStream:
             b.length -= point
         b.start += point
         return (self, b)
-        
+
+##############################
+####      FileStream      ####
+##############################
+    
 # maximum mmap size
 MMAP_LIMIT = 4*1024*1024
 # minimum mmap size
@@ -222,6 +229,9 @@ class FileStream(SimpleStream):
 
 components.registerAdapter(FileStream, file, IByteStream)
 
+##############################
+####     MemoryStream     ####
+##############################
 
 class MemoryStream(SimpleStream):
     """A stream that reads data from a buffer object."""
@@ -257,6 +267,9 @@ class MemoryStream(SimpleStream):
 components.registerAdapter(MemoryStream, str, IByteStream)
 components.registerAdapter(MemoryStream, types.BufferType, IByteStream)
 
+##############################
+####    CompoundStream    ####
+##############################
 
 class CompoundStream:
     """A stream which is composed of many other streams.
@@ -359,6 +372,9 @@ class CompoundStream:
         self.length = 0
 
 
+##############################
+####      readStream      ####
+##############################
 
 class _StreamReader:
     """Process a stream's data using callbacks for data and stream finish."""
@@ -445,7 +461,10 @@ def connectStream(inputStream, factory):
         lambda _: p.connectionLost(ti_error.ConnectionDone()), lambda _: p.connectionLost(_))
     return out
 
-    
+##############################
+####     fallbackSplit    ####
+##############################
+
 def fallbackSplit(stream, point):
     after = PostTruncaterStream(stream, point)
     before = TruncaterStream(stream, point, after)
@@ -571,6 +590,9 @@ class PostTruncaterStream:
             # Idle, store closed info.
             self.truncaterClosed = truncater
 
+########################################
+#### ProducerStream/StreamProducer  ####
+########################################
             
 class ProducerStream:
     """Turns producers into a IByteStream.
@@ -753,6 +775,9 @@ class StreamProducer:
             
         self.finishedCallback = self.deferred = self.consumer = self.stream = None
 
+##############################
+####    ProcessStreamer   ####
+##############################
 
 class _ProcessStreamerProtocol(protocol.ProcessProtocol):
 
@@ -828,6 +853,99 @@ class ProcessStreamer:
         """Return the PID of the process."""
         return self._protocol.transport.pid
 
+##############################
+####   generatorToStream  ####
+##############################
+
+class _StreamIterator:
+    done=False
+
+    def __iter__(self):
+        return self
+    def next(self):
+        if self.done:
+            raise StopIteration
+        return self.value
+    wait=object()
+
+class _IteratorStream:
+    def __init__(self, fun, stream, args, kwargs):
+        self._stream=stream
+        self._streamIterator = _StreamIterator()
+        self._gen = fun(self._streamIterator, *args, **kwargs)
+        
+    def read(self):
+        try:
+            val = self._gen.next()
+        except StopIteration:
+            return None
+        else:
+            if val is _StreamIterator.wait:
+                newdata = self._stream.read()
+                if isinstance(newdata, defer.Deferred):
+                    return newdata.addCallback(self._gotRead)
+                else:
+                    return self._gotRead(newdata)
+            return val
+        
+    def _gotRead(self, data):
+        if data is None:
+            self._streamIterator.done=True
+        else:
+            self._streamIterator.value=data
+        return self.read()
+
+    def close(self):
+        self._stream.close()
+        del self._gen, self._stream, self._streamIterator
+        
+def generatorToStream(fun):
+    """Converts a generator function into a stream.
+    
+    The function should take an iterator as its first argument,
+    which will be converted *from* a stream by this wrapper, and
+    yield items which are turned *into* the results from the
+    stream's 'read' call.
+    
+    One important point: before every call to input.next(), you
+    *MUST* do a "yield input.wait" first. Yielding this magic value
+    takes care of ensuring that the input is not a deferred before
+    you see it.
+    
+    >>> from twisted.web2 import stream
+    >>> from string import maketrans
+    >>> alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    >>>
+    >>> def encrypt(input, key):
+    ...     code = alphabet[key:] + alphabet[:key]
+    ...     translator = maketrans(alphabet+alphabet.upper(), code+code.upper())
+    ...     yield input.wait
+    ...     for s in input:
+    ...         yield str(s).translate(translator)
+    ...         yield input.wait
+    ...
+    >>> encrypt = stream.generatorToStream(encrypt)
+    >>>
+    >>> plaintextStream = stream.MemoryStream('SampleSampleSample')
+    >>> encryptedStream = encrypt(plaintextStream, 13)
+    >>> encryptedStream.read()
+    'FnzcyrFnzcyrFnzcyr'
+    >>>
+    >>> plaintextStream = stream.MemoryStream('SampleSampleSample')
+    >>> encryptedStream = encrypt(plaintextStream, 13)
+    >>> evenMoreEncryptedStream = encrypt(encryptedStream, 13)
+    >>> evenMoreEncryptedStream.read()
+    'SampleSampleSample'
+    
+    """
+    def generatorToStream_inner(stream, *args, **kwargs):
+        return _IteratorStream(fun, stream, args, kwargs)
+    return generatorToStream_inner
+
+
+##############################
+####    BufferedStream    ####
+##############################
 
 class BufferedStream(object):
     """A stream which buffers its data to provide operations like
@@ -870,13 +988,17 @@ class BufferedStream(object):
         return self._readUntil(gotdata)
     
         
-    def readline(self, delimiter='\r\n'):
+    def readline(self, delimiter='\r\n', maxLength=None):
         """Read a line of data from the string, bounded by delimiter"""
         def gotdata():
             data = self.data.split(delimiter, 1)
             if len(data) == 2:
                 self.data=data[1]
+                if maxLength and len(data[0]) > maxLength:
+                    raise LineTooLongException(data[0])
                 return data[0]
+            if maxLength and len(self.data) > maxLength:
+                raise LineTooLongException(self.data)
         return self._readUntil(gotdata)
 
     def pushback(self, pushed):
@@ -913,7 +1035,11 @@ class BufferedStream(object):
         
         return pre, post
 
+        
+
+
 __all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream',
            'readAndDiscard', 'fallbackSplit', 'ProducerStream', 'StreamProducer',
-           'BufferedStream', 'readStream', 'ProcessStreamer', 'readIntoFile']
+           'BufferedStream', 'readStream', 'ProcessStreamer', 'readIntoFile',
+           'generatorToStream']
 
