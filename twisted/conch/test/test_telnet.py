@@ -2,12 +2,17 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from zope.interface import implements
+from twisted.python.components import backwardsCompatImplements
+
 from twisted.conch import telnet
 
 from twisted.trial import unittest, util
 from twisted.test import proto_helpers
 
 class TestProtocol:
+    implements(telnet.ITelnetProtocol)
+
     localEnableable = ()
     remoteEnableable = ()
 
@@ -55,6 +60,7 @@ class TestProtocol:
 
     def disableRemote(self, option):
         self.disabledRemote.append(option)
+backwardsCompatImplements(TestProtocol)
 
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):

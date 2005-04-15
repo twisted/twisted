@@ -37,12 +37,16 @@ class TerminalSessionTransport:
         self.chainedProtocol = chainedProtocol
 
         session = self.proto.session
-        self.proto.makeConnection(_Glue(write=self.chainedProtocol.dataReceived,
-                                        loseConnection=lambda: avatar.conn.sendClose(session),
-                                        name="SSH Proto Transport"))
-        self.chainedProtocol.makeConnection(_Glue(write=self.proto.write,
-                                                  loseConnection=self.proto.loseConnection,
-                                                  name="Chained Proto Transport"))
+
+        self.proto.makeConnection(
+            _Glue(write=self.chainedProtocol.dataReceived,
+                  loseConnection=lambda: avatar.conn.sendClose(session),
+                  name="SSH Proto Transport"))
+
+        self.chainedProtocol.makeConnection(
+            _Glue(write=self.proto.write,
+                  loseConnection=self.proto.loseConnection,
+                  name="Chained Proto Transport"))
 
         # XXX TODO
         # chainedProtocol is supposed to be an ITerminalTransport,

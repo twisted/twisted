@@ -60,8 +60,8 @@ class _Attribute(object):
         self.children = []
 
     def __getitem__(self, item):
-        assert isinstance(item, (tuple, _Attribute, str))
-        if isinstance(item, tuple):
+        assert isinstance(item, (list, tuple, _Attribute, str))
+        if isinstance(item, (list, tuple)):
             self.children.extend(item)
         else:
             self.children.append(item)
@@ -71,11 +71,11 @@ class _Attribute(object):
         if attrs is None:
             attrs = helper.CharacterAttribute()
         for ch in self.children:
-            if isinstance(ch, str):
+            if isinstance(ch, _Attribute):
+                ch.serialize(write, attrs.copy())
+            else:
                 write(attrs.toVT102())
                 write(ch)
-            else:
-                ch.serialize(write, attrs.copy())
 
 class _NormalAttr(_Attribute):
     def serialize(self, write, attrs):

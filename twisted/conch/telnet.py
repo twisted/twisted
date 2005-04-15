@@ -10,9 +10,12 @@ API Stability: Unstable
 
 import struct
 
+from zope.interface import implements
+from twisted.python.components import backwardsCompatImplements
+
 from twisted.application import internet
 from twisted.internet import protocol, interfaces as iinternet, defer
-from twisted.python import components, log
+from twisted.python import log
 
 MODE = chr(1)
 EDIT = 1
@@ -275,6 +278,8 @@ class AlreadyNegotiating(NegotiationError):
     pass
 
 class TelnetProtocol(protocol.Protocol):
+    implements(ITelnetProtocol)
+
     def unhandledCommand(self, command, argument):
         pass
 
@@ -292,7 +297,7 @@ class TelnetProtocol(protocol.Protocol):
 
     def disableRemote(self, option):
         pass
-
+backwardsCompatImplements(TelnetProtocol)
 
 
 class Telnet(protocol.Protocol):
@@ -692,9 +697,10 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     transport is connected, or None before the connection is
     established and after it is lost.
 
-    @ivar protocolFactory: A callable which returns protocol
-    instances.  This will be invoked when a connection is
-    established.  It is passed *protocolArgs and **protocolKwArgs.
+    @ivar protocolFactory: A callable which returns protocol instances
+    which provide ITelnetProtocol.  This will be invoked when a
+    connection is established.  It is passed *protocolArgs and
+    **protocolKwArgs.
 
     @ivar protocolArgs: A tuple of additional arguments to
     pass to protocolFactory.
@@ -718,6 +724,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     def connectionMade(self):
         if self.protocolFactory is not None:
             self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            assert ITelnetProtocol.providedBy(self.protocol)
             try:
                 factory = self.factory
             except AttributeError:
@@ -728,10 +735,11 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
 
     def connectionLost(self, reason):
         Telnet.connectionLost(self, reason)
-        try:
-            self.protocol.connectionLost(reason)
-        finally:
-            del self.protocol
+        if self.protocol is not None:
+            try:
+                self.protocol.connectionLost(reason)
+            finally:
+                del self.protocol
 
     def enableLocal(self, option):
         return self.protocol.enableLocal(option)
@@ -759,6 +767,8 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
 
 
 class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
+    implements()
+
     protocol = None
 
     def __init__(self, protocolFactory, *args, **kw):
@@ -787,10 +797,11 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.protocol.makeConnection(self)
 
     def connectionLost(self, reason):
-        try:
-            self.protocol.connectionLost(reason)
-        finally:
-            del self.protocol
+        if self.protocol is not None:
+            try:
+                self.protocol.connectionLost(reason)
+            finally:
+                del self.protocol
 
     def dataReceived(self, data):
         self.protocol.dataReceived(data)
@@ -840,6 +851,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         for slcFunction, slcValue, slcWhat in chunks:
             # Later, we should parse stuff.
             'SLC', ord(slcFunction), ord(slcValue), ord(slcWhat)
+backwardsCompatImplements(TelnetBootstrapProtocol)
 
 from twisted.protocols import basic
 

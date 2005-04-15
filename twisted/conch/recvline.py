@@ -175,7 +175,8 @@ class RecvLine(insults.TerminalProtocol):
         self.terminal.resetModes([insults.IRM])
 
     def terminalSize(self, width, height):
-        # XXX - Clear the previous input line, redraw it at the new cursor position
+        # XXX - Clear the previous input line, redraw it at the new
+        # cursor position
         self.terminal.eraseDisplay()
         self.terminal.cursorHome()
         self.width = width

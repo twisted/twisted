@@ -22,6 +22,7 @@ class Arrows(unittest.TestCase):
         self.pt = insults.ServerProtocol()
         self.p = recvline.HistoricRecvLine()
         self.pt.protocolFactory = lambda: self.p
+        self.pt.factory = self
         self.pt.makeConnection(self.underlyingTransport)
         # self.p.makeConnection(self.pt)
 
@@ -263,6 +264,7 @@ else:
             self.conn.sendRequest(self, 'shell', '')
 
             self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self._protocolInstance.factory = self
             self._protocolInstance.makeConnection(self)
 
         def dataReceived(self, data):
@@ -399,15 +401,26 @@ class _SSHMixin(_BaseMixin):
             log.callWithContext({'system': 'serverTransport'}, self.serverTransport.clearBuffer)
             log.callWithContext({'system': 'clientTransport'}, self.clientTransport.clearBuffer)
 
+from twisted.conch.test import test_telnet
+
+class TestInsultsClientProtocol(insults.ClientProtocol,
+                                test_telnet.TestProtocol):
+    pass
+
+
+class TestInsultsServerProtocol(insults.ServerProtocol,
+                                test_telnet.TestProtocol):
+    pass
+
 class _TelnetMixin(_BaseMixin):
     def setUp(self):
         recvlineServer = self.serverProtocol()
-        insultsServer = insults.ServerProtocol(lambda: recvlineServer)
+        insultsServer = TestInsultsServerProtocol(lambda: recvlineServer)
         telnetServer = telnet.TelnetTransport(lambda: insultsServer)
         clientTransport = LoopbackRelay(telnetServer)
 
         recvlineClient = helper.TerminalBuffer()
-        insultsClient = insults.ClientProtocol(lambda: recvlineClient)
+        insultsClient = TestInsultsClientProtocol(lambda: recvlineClient)
         telnetClient = telnet.TelnetTransport(lambda: insultsClient)
         serverTransport = LoopbackRelay(telnetClient)
 

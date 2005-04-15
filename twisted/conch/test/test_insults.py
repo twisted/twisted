@@ -77,6 +77,7 @@ def testByte%(groupName)s(self):
     transport = StringTransport()
     proto = Mock()
     parser = self.protocolFactory(lambda: proto)
+    parser.factory = self
     parser.makeConnection(transport)
 
     bytes = self.TEST_BYTES
@@ -184,6 +185,7 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         self.transport = StringTransport()
         self.proto = Mock()
         self.parser = ClientProtocol(lambda: self.proto)
+        self.parser.factory = self
         self.parser.makeConnection(self.transport)
         result = self.assertCall(occurrences(self.proto).pop(0), "makeConnection", (self.parser,))
         self.failIf(occurrences(result))

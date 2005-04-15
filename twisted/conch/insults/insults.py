@@ -332,18 +332,20 @@ class Vector:
 def log(s):
     file('log', 'a').write(str(s) + '\n')
 
+# XXX TODO - These attributes are really part of the
+# ITerminalTransport interface, I think.
+_KEY_NAMES = ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
+              'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
+              'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
+              'F10', 'F11', 'F12', 'ALT')
+
 class ServerProtocol(protocol.Protocol):
     implements(ITerminalTransport)
 
     protocolFactory = None
     terminalProtocol = None
 
-    # XXX TODO - These attributes are really part of the
-    # ITerminalTransport interface, I think.
-    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
-                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12', 'ALT'):
+    for keyID in _KEY_NAMES:
         exec '%s = object()' % (keyID,)
 
     TAB = '\t'
@@ -357,6 +359,9 @@ class ServerProtocol(protocol.Protocol):
     termSize = Vector(80, 24)
     cursorPos = Vector(0, 0)
     scrollRegion = None
+
+    # Factory who instantiated me
+    factory = None
 
     def __init__(self, protocolFactory=None, *a, **kw):
         """
@@ -751,6 +756,9 @@ class ClientProtocol(protocol.Protocol):
         '1': CS_ALTERNATE,
         '2': CS_ALTERNATE_SPECIAL}
 
+    # Factory who instantiated me
+    factory = None
+
     def __init__(self, terminalFactory=None, *a, **kw):
         """
         @param terminalFactory: A callable which will be invoked with
@@ -770,13 +778,15 @@ class ClientProtocol(protocol.Protocol):
     def connectionMade(self):
         if self.terminalFactory is not None:
             self.terminal = self.terminalFactory(*self.terminalArgs, **self.terminalKwArgs)
+            self.terminal.factory = self.factory
             self.terminal.makeConnection(self)
 
     def connectionLost(self, reason):
-        try:
-            self.terminal.connectionLost(reason)
-        finally:
-            del self.terminal
+        if self.terminal is not None:
+            try:
+                self.terminal.connectionLost(reason)
+            finally:
+                del self.terminal
 
     def dataReceived(self, bytes):
         for b in bytes:
