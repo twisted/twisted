@@ -776,6 +776,14 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             self.transport.will(opt).addErrback(log.err)
 
         self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+
+        try:
+            factory = self.factory
+        except AttributeError:
+            pass
+        else:
+            self.protocol.factory = factory
+
         self.protocol.makeConnection(self)
 
     def connectionLost(self, reason):

@@ -379,6 +379,14 @@ class ServerProtocol(protocol.Protocol):
     def connectionMade(self):
         if self.protocolFactory is not None:
             self.terminalProtocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+
+            try:
+                factory = self.factory
+            except AttributeError:
+                pass
+            else:
+                self.terminalProtocol.factory = factory
+
             self.terminalProtocol.makeConnection(self)
 
     def dataReceived(self, data):
@@ -702,10 +710,11 @@ class ServerProtocol(protocol.Protocol):
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
-        try:
-            self.terminalProtocol.connectionLost(reason)
-        finally:
-            self.terminalProtocol = None
+        if self.terminalProtocol is not None:
+            try:
+                self.terminalProtocol.connectionLost(reason)
+            finally:
+                self.terminalProtocol = None
 
 class ClientProtocol(protocol.Protocol):
 
