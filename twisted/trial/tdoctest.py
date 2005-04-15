@@ -287,11 +287,11 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
 
         reporter = self.getReporter()
         dtf = doctest.DocTestFinder()
-        tests = None
+        tests = []
         for obj in self.original:
             if isinstance(obj, types.StringType):
                 obj = reflect.namedAny(obj)
-            tests = dtf.find(obj)
+            tests.extend(dtf.find(obj))
         
         if randomize:
             random.shuffle(tests)
