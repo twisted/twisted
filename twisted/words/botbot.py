@@ -58,7 +58,7 @@ class BotBot(WordsClient):
     def loadBotList(self):
         botTypes = {}
 
-        botTypeList = newplugin.getPlugIns(IBotBot)
+        botTypeList = newplugin.getPlugins(IBotBot)
         for bott in botTypeList:
             botTypes[bott.botType] = bott
 

@@ -156,7 +156,7 @@ class MktapBuilder(Builder):
         self.file.write('_mktap_subcmds=(\n')
         from twisted import plugin as newplugin
         from twisted.scripts.mktap import IServiceMaker
-        plugins = newplugin.getPlugIns(IServiceMaker)
+        plugins = newplugin.getPlugins(IServiceMaker)
 
         for p in plugins:
             self.file.write('"%s:%s"\n' % (p.tapname, p.description))
@@ -175,7 +175,7 @@ service="$words[1]"
 
 case $service in\n""")
 
-        plugins = newplugin.getPlugIns(IServiceMaker)
+        plugins = newplugin.getPlugins(IServiceMaker)
         for p in plugins:
             self.file.write(p.tapname + ")\n")
             gen = ArgumentsGenerator(p.tapname, p.options, self.file)

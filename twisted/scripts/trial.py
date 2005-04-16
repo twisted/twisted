@@ -129,7 +129,7 @@ class Options(usage.Options):
 
     def _loadReporters(self):
         self.pluginFlags, self.optToQual = [], {}
-        self.plugins = plugin.getPlugIns(itrial.IReporter)
+        self.plugins = plugin.getPlugins(itrial.IReporter)
         for p in self.plugins:
             self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
             qual = "%s.%s" % (p.module, p.klass)

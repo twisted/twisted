@@ -108,7 +108,7 @@ class PluginTestCase(unittest.TestCase):
         self._testWithCacheness(self._testCache)
 
     def _testPlugins(self):
-        plugins = list(plugin.getPlugIns(plugin.ITestPlugin2))
+        plugins = list(plugin.getPlugins(plugin.ITestPlugin2))
 
         self.assertEquals(len(plugins), 2)
 
@@ -139,7 +139,7 @@ class PluginTestCase(unittest.TestCase):
                 self.failIf(hasattr(sys.modules['twisted.plugins'], 'pluginextra'),
                             "plugins package still has pluginextra module")
 
-                plgs = list(plugin.getPlugIns(plugin.ITestPlugin))
+                plgs = list(plugin.getPlugins(plugin.ITestPlugin))
 
                 self.assertEquals(
                     len(plgs), 2,
@@ -172,7 +172,7 @@ class PluginTestCase(unittest.TestCase):
         try:
             writeFile.write(begintest)
             writeFile.flush()
-            plgs = list(plugin.getPlugIns(plugin.ITestPlugin))
+            plgs = list(plugin.getPlugins(plugin.ITestPlugin))
             # Sanity check
             self.assertEquals(
                 len(plgs), 2,
@@ -186,7 +186,7 @@ class PluginTestCase(unittest.TestCase):
             self._unimportPythonModule(sys.modules['twisted.plugins.pluginextra'])
 
             # Make sure additions are noticed
-            plgs = list(plugin.getPlugIns(plugin.ITestPlugin))
+            plgs = list(plugin.getPlugins(plugin.ITestPlugin))
 
             self.assertEquals(len(plgs), 3, "Unexpected plugins found: %r" % (
                     [p.__name__ for p in plgs]))

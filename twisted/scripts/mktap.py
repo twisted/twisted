@@ -71,7 +71,7 @@ def loadPlugins(debug = None, progress = None):
             shortTapName = plug.module.split('.')[-1]
         tapLookup[shortTapName] = plug
 
-    plugins = newplugin.getPlugIns(IServiceMaker)
+    plugins = newplugin.getPlugins(IServiceMaker)
     for plug in plugins:
         tapLookup[plug.tapname] = plug
 

@@ -64,7 +64,7 @@ def getProcessor(input, output, config):
             module = plug.load()
             break
     else:
-        plugins = newplugin.getPlugIns(IProcessor)
+        plugins = newplugin.getPlugins(IProcessor)
         for plug in plugins:
             if plug.name == input:
                 module = reflect.namedModule(plug.moduleName)

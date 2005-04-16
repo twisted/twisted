@@ -41,7 +41,7 @@ class IPlugin(Interface):
     """Interface that must be implemented by all plugins.
 
     Only objects which implement this interface will be considered for
-    return by C{getPlugIns}.  To be useful, plugins should also
+    return by C{getPlugins}.  To be useful, plugins should also
     implement some other application-specific interface.
     """
 
@@ -189,18 +189,18 @@ def getCache(module):
     return topcache
 
 import twisted.plugins
-def getPlugIns(interface, module=twisted.plugins):
+def getPlugins(interface, package=twisted.plugins):
     """Retrieve all plugins implementing the given interface beneath the given module.
 
     @param interface: An interface class.  Only plugins which
     implement this interface will be returned.
 
-    @param module: A package beneath which plugins are installed.  For
+    @param package: A package beneath which plugins are installed.  For
     most uses, the default value is correct.
 
     @return: An iterator of plugins.
     """
-    allDropins = getCache(module)
+    allDropins = getCache(package)
     for dropin in allDropins.itervalues():
         for plugin in dropin.plugins:
             try:
@@ -211,5 +211,9 @@ def getPlugIns(interface, module=twisted.plugins):
                 if adapted is not None:
                     yield adapted
 
+                    
+# Old, backwards compatible name.  Don't use this.
+getPlugIns = getPlugins
 
-__all__ = ['getPlugIns']
+
+__all__ = ['getPlugins']
