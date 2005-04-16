@@ -752,13 +752,18 @@ def setUpDNS(self):
             break
     self.resolver = client.Resolver(servers=[('127.0.0.1', portNumber)])
 
+
 def tearDownDNS(self):
-    self.port.stopListening()
-    self.udpPort.stopListening()
+    dl = []
+    dl.append(defer.maybeDeferred(self.port.stopListening))
+    dl.append(defer.maybeDeferred(self.udpPort.stopListening))
+    if self.resolver.protocol.transport is not None:
+        dl.append(defer.maybeDeferred(self.resolver.protocol.transport.stopListening))
     try:
         self.resolver._parseCall.cancel()
     except:
         pass
+    return defer.DeferredList(dl)
 
 class MXTestCase(unittest.TestCase):
     def setUp(self):
@@ -766,7 +771,7 @@ class MXTestCase(unittest.TestCase):
         self.mx = mail.relaymanager.MXCalculator(self.resolver)
 
     def tearDown(self):
-        tearDownDNS(self)
+        return tearDownDNS(self)
 
     def testSimpleSuccess(self):
         self.auth.addresses['test.domain'] = ['the.email.test.domain']
@@ -774,7 +779,7 @@ class MXTestCase(unittest.TestCase):
 
     def _cbSimpleSuccess(self, mx):
         self.assertEquals(mx.preference, 0)
-        self.assertEquals(str(mx.exchange), 'the.email.test.domain')
+        self.assertEquals(str(mx.name), 'the.email.test.domain')
 
     def testSimpleFailure(self):
         self.mx.fallbackToDomain = False
@@ -792,33 +797,33 @@ class MXTestCase(unittest.TestCase):
             )
     
     def _cbManyRecordsSuccessfulLookup(self, mx):
-        self.failUnless(str(mx.exchange).split('.', 1)[0] in ('mx1', 'mx2', 'mx3'))
-        self.mx.markBad(str(mx.exchange))
+        self.failUnless(str(mx.name).split('.', 1)[0] in ('mx1', 'mx2', 'mx3'))
+        self.mx.markBad(str(mx.name))
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsDifferentResult, mx
             )
     
     def _cbManyRecordsDifferentResult(self, nextMX, mx):
-        self.assertNotEqual(str(mx.exchange), str(nextMX.exchange))
-        self.mx.markBad(str(nextMX.exchange))
+        self.assertNotEqual(str(mx.name), str(nextMX.name))
+        self.mx.markBad(str(nextMX.name))
 
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsLastResult, mx, nextMX
             )
     
     def _cbManyRecordsLastResult(self, lastMX, mx, nextMX):
-        self.assertNotEqual(str(mx.exchange), str(lastMX.exchange))
-        self.assertNotEqual(str(nextMX.exchange), str(lastMX.exchange))
+        self.assertNotEqual(str(mx.name), str(lastMX.name))
+        self.assertNotEqual(str(nextMX.name), str(lastMX.name))
 
-        self.mx.markBad(str(lastMX.exchange))
-        self.mx.markGood(str(nextMX.exchange))
+        self.mx.markBad(str(lastMX.name))
+        self.mx.markGood(str(nextMX.name))
         
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsRepeatSpecificResult, nextMX
             )
     
     def _cbManyRecordsRepeatSpecificResult(self, againMX, nextMX):
-        self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
+        self.assertEqual(str(againMX.name), str(nextMX.name))
 
 class LiveFireExercise(unittest.TestCase):
     if interfaces.IReactorUDP(reactor, default=None) is None:
@@ -832,10 +837,10 @@ class LiveFireExercise(unittest.TestCase):
         ]
 
     def tearDown(self):
-        tearDownDNS(self)
         for d in self.tmpdirs:
             if os.path.exists(d):
                 shutil.rmtree(d)
+        return tearDownDNS(self)
 
     def testLocalDelivery(self):
         service = mail.mail.MailService()

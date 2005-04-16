@@ -386,7 +386,7 @@ class SmartHostSMTPRelayingManager:
             factory = self.factory(msgs, self, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
             self.mxcalc.getMX(domain
-            ).addCallback(lambda mx: str(mx.exchange),
+            ).addCallback(lambda mx: str(mx.name),
             ).addCallback(self._cbExchange, self.PORT, factory
             ).addErrback(self._ebExchange, factory, domain
             )
@@ -459,7 +459,7 @@ class MXCalculator:
             raise IOError("No MX found for %r" % (domain,))
         answers = util.dsu(answers, lambda e: e.preference)
         for answer in answers:
-            host = str(answer.exchange)
+            host = str(answer.name)
             if host not in self.badMXs:
                 return answer
             t = time.time() - self.badMXs[host]
@@ -476,6 +476,6 @@ class MXCalculator:
             # Alright, I admit, this is a bit icky.
             from twisted.names import dns
             return self.resolver.getHostByName(domain
-                ).addCallback(lambda h: dns.Record_MX(exchange=h)
+                ).addCallback(lambda h: dns.Record_MX(name=h)
                 )
         return failure

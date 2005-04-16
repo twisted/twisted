@@ -1065,7 +1065,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         while 1:
             self.id += randomSource() % (2 ** 10)
             self.id %= 2 ** 16
-            if not self.liveMessages.has_key(self.id):
+            if self.id not in self.liveMessages:
                 break
         return self.id
 
@@ -1091,16 +1091,17 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
     def datagramReceived(self, data, addr):
         m = Message()
         m.fromStr(data)
-        if self.liveMessages.has_key(m.id):
-            d = self.liveMessages[m.id]
+        if m.id in self.liveMessages:
+            d, canceller = self.liveMessages[m.id]
             del self.liveMessages[m.id]
+            canceller.cancel()
             # XXX we shouldn't need this hack of catching exceptioon on callback()
             try:
                 d.callback(m)
             except:
                 log.err()
         else:
-            if not self.resends.has_key(m.id):
+            if m.id not in self.resends:
                 self.controller.messageReceived(m, self, addr)
 
 
@@ -1129,10 +1130,15 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
             self.resends[id] = 1
         m = Message(id, recDes=1)
         m.queries = queries
-        d = self.liveMessages[id] = defer.Deferred()
-        d.setTimeout(timeout, self._clearFailed, id)
+
+        from twisted.internet import reactor
+
+        resultDeferred = defer.Deferred()        
+        cancelCall = reactor.callLater(timeout, self._clearFailed, resultDeferred, id)
+        self.liveMessages[id] = (resultDeferred, cancelCall)
+
         self.writeMessage(m, address)
-        return d
+        return resultDeferred
 
     def _clearFailed(self, deferred, id):
         try:
