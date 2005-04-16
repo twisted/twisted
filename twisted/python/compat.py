@@ -118,7 +118,6 @@ def inet_ntop(af, addr):
             bestBase = curBase
             bestLen = curLen
         parts = [hex(x)[2:] for x in parts]
-        print parts
         if bestBase is not None:
             parts[bestBase:bestBase + bestLen] = ['']
         if parts[0] == '':
