@@ -6,11 +6,15 @@ from zope.interface import implements
 from twisted.web2 import http, http_headers, iweb, server
 from twisted.web2 import resource, responsecode, stream
 from twisted.trial import unittest, util, assertions
-from twisted.internet import defer
+from twisted.internet import defer, address
 
 class TestChanRequest:
     implements(iweb.IChanRequest)
 
+    hostInfo = address.IPv4Address('TCP', 'host', 80), False
+    remoteHost = address.IPv4Address('TCP', 'remotehost', 34567)
+
+    
     def __init__(self, site, method, prepath, uri,
                  headers=None, version=(1,1)):
         self.site = site
@@ -58,7 +62,12 @@ class TestChanRequest:
     def unregisterProducer(self):
         pass
 
+    def getHostInfo(self):
+        return self.hostInfo
 
+    def getRemoteHost(self):
+        return self.remoteHost
+    
 class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
