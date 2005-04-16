@@ -435,7 +435,8 @@ class CompoundStreamTest:
 
 	"""
 
-__doctests__ = ['twisted.web2.test.test_stream.CompoundStreamTest']
+
+__doctests__ = ['twisted.web2.test.test_stream.CompoundStreamTest', 'twisted.web2.stream.generatorToStream']
 # TODO: 
 # CompoundStreamTest
 # more tests for ProducerStreamTest

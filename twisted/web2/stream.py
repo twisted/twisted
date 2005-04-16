@@ -869,6 +869,8 @@ class _StreamIterator:
     wait=object()
 
 class _IteratorStream:
+    length = None
+    
     def __init__(self, fun, stream, args, kwargs):
         self._stream=stream
         self._streamIterator = _StreamIterator()
@@ -898,7 +900,10 @@ class _IteratorStream:
     def close(self):
         self._stream.close()
         del self._gen, self._stream, self._streamIterator
-        
+
+    def split(self):
+        return fallbackSplit(self)
+    
 def generatorToStream(fun):
     """Converts a generator function into a stream.
     
@@ -968,7 +973,7 @@ class BufferedStream(object):
                 newdata = defer.waitForDeferred(newdata)
                 yield newdata; newdata = newdata.getResult()
             
-            if not newdata:
+            if newdata is None:
                 # End Of File
                 newdata = self.data
                 self.data = ''

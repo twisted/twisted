@@ -32,10 +32,21 @@ from twisted.web2 import responsecode
 from twisted.web2 import http_headers
 from twisted.web2 import iweb
 from twisted.web2 import stream
+from twisted.web2.stream import IByteStream
 
 PERSIST_NO_PIPELINE = 2
 
-
+_cachedHostNames = {}
+def _cachedGetHostByAddr(hostaddr):
+    hostname = _cachedHostNames.get(hostaddr)
+    if hostname is None:
+        try:
+            hostname = socket.gethostbyaddr(hostaddr)[0]
+        except socket.herror:
+            hostname = hostaddr
+        _cachedHostNames[hostaddr]=hostname
+    return hostname
+    
 def toChunk(data):
     """Convert string to a chunk.
     
@@ -88,7 +99,8 @@ class Response(object):
             self.headers=headers
         else:
             self.headers = http_headers.Headers()
-        self.stream = stream
+        if stream is not None:
+            self.stream = IByteStream(stream)
 
 def NotModifiedResponse(oldResponse=None):
     if oldResponse is not None:
@@ -338,7 +350,8 @@ class Request(object):
         # if this is a "HEAD" request, or a special response code,
         # don't return any data.
         if self.method == "HEAD" or response.code in NO_BODY_CODES:
-            response.stream.close()
+            if response.stream is not None:
+                response.stream.close()
             self._finished(None)
             return
             
@@ -723,6 +736,16 @@ class HTTPChannelRequest:
             else:
                 self._cleanup()
 
+    def getHostInfo(self):
+        t=self.channel.transport
+        secure = interfaces.ISSLTransport(t, default=None) is not None
+        host = t.getHost()
+        host.host = _cachedGetHostByAddr(host.host)
+        return host, secure
+
+    def getRemoteHost(self):
+        return self.channel.transport.getPeer()
+    
     ##### End Request Callbacks #####
 
     def _abortWithError(self, errorcode, text=''):

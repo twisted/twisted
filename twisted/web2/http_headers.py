@@ -565,7 +565,7 @@ def generateIfRange(dateOrETag):
 ####
 class ETag:
     def __init__(self, tag, weak=False):
-        self.tag = tag
+        self.tag = str(tag)
         self.weak = weak
 
     def match(self, other, strongCompare):

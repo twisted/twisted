@@ -8,7 +8,6 @@
  - Close connection if resource doesn't read entire input stream
 
  - sendfile (initial sketch in stream.py, but needs work in twisted, too)
- - Gzip Transfer-Encoding.
  - Add parsers/generators for the rest of the headers:
   - Cache-Control, Pragma, Trailer, Upgrade, Via, Warning
   - Authorization, WWW-Authenticate
@@ -19,16 +18,10 @@
  - Create default log observers for the log.msg's that we send.
  - Resource API for prerender checking (I've forgotten what I mean by this?)
  - Other useful filters: content-encoding, caching, others?
- - API for adding response filters from resources
 
-- Convert twcgi, proxy?, vhost
-- add wsgi application support
+- Convert proxy?
 - Client library *LATER*
 - Internal request submission API
 
-- Compatibility Layer
- - Handle setETag and setLastModified RFC-compliantly, even though they are
-   the wrong interface (need to have both before being able to respond properly)
- - 
 
 

@@ -9,6 +9,7 @@
 # System Imports
 from twisted.python import components
 from zope.interface import implements
+import urlparse
 
 from twisted.web2 import iweb, http, http_headers, server, responsecode
 from twisted.web2.responsecode import *
@@ -97,13 +98,16 @@ class Resource(object):
     
     def http_GET(self, ctx):
         """Ensures there is no incoming body data, and calls render."""
-        request = iweb.IRequest(ctx)
+        req = iweb.IRequest(ctx)
         if self.addSlash and iweb.ICurrentSegments(ctx)[-1] != '':
-            # FIXME! return redirect
-            #return request.redirect(request.URLPath().child(''))
-            return 555
+            # If this is a directory-ish resource...
+            return http.Response(
+                responsecode.MOVED_PERMANENTLY,
+                {'location': urlparse.urlunparse((
+                    req.scheme, req.host, req.path+'/',
+                    req.params, req.queryargstring, ''))})
             
-        if request.stream.length != 0:
+        if req.stream.length != 0:
             return REQUEST_ENTITY_TOO_LARGE
         return self.render(ctx)
 

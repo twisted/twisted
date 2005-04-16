@@ -30,7 +30,7 @@ from twisted import copyright
 from twisted.web2 import http, iweb
 from twisted.web2.responsecode import *
 from twisted.web2 import http_headers, context, error, stream
-from twisted.web2 import rangefilter
+from twisted.web2 import rangefilter, gzipfilter
 from twisted.web2 import version as web2_version
 from twisted.web2.error import defaultErrorHandler
 from twisted import __version__ as twisted_version
@@ -54,8 +54,6 @@ def preconditionfilter(request, response):
 
 def doTrace(request):
     request = iweb.IRequest(request)
-    response = http.Response(OK)
-    response.headers.setHeader('content-type', http_headers.MimeType('message', 'http'))
     txt = "%s %s HTTP/%d.%d\r\n" % (request.method, request.uri,
                                     request.clientproto[0], request.clientproto[1])
 
@@ -65,9 +63,10 @@ def doTrace(request):
             l.append("%s: %s\r\n" % (name, value))
     txt += ''.join(l)
 
-    import stream
-    response.stream = stream.MemoryStream(txt)
-    return response
+    return http.Response(
+        OK,
+        {'content-type': http_headers.MimeType('message', 'http')}, 
+        txt)
 
 def getEntireStream(stream):
     data = StringIO.StringIO()
@@ -141,6 +140,8 @@ class Request(http.Request):
     host
     path
     params
+    queryargstring
+    
     args
     
     prepath
@@ -156,7 +157,8 @@ class Request(http.Request):
     
     site = None
     _initialprepath = None
-    responseFilters = [rangefilter.rangefilter, defaultErrorHandler, defaultHeadersFilter]
+    responseFilters = [gzipfilter.gzipfilter, rangefilter.rangefilter, preconditionfilter,
+                       defaultErrorHandler, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):
         if kw.has_key('site'):
@@ -165,15 +167,22 @@ class Request(http.Request):
         if kw.has_key('prepathuri'):
             self._initialprepath = kw['prepathuri']
             del kw['prepathuri']
-        
+
+        # Copy response filters from the class
+        self.responseFilters = self.responseFilters[:]
+
         http.Request.__init__(self, *args, **kw)
-        
+
+    def addResponseFilter(self, f):
+        self.responseFilters.insert(0, f)
+        pass
+    
     def _parseURL(self):
         (self.scheme, self.host, self.path,
-         self.params, argstring, fragment) = urlparse.urlparse(self.uri)
+         self.params, self.queryargstring, fragment) = urlparse.urlparse(self.uri)
         
-        self.args = cgi.parse_qs(argstring, True)
-
+        self.args = cgi.parse_qs(self.queryargstring, True)
+        
         path = map(unquote, self.path[1:].split('/'))
         if self._initialprepath:
             # We were given an initial prepath -- this is for supporting
@@ -193,14 +202,20 @@ class Request(http.Request):
         
 
     def _calculateHost(self):
-        if self.host:
-            return
-        host = self.headers.getHeader('host')
-        if not host:
-            if self.clientproto >= (1,1):
-                raise http.HTTPError(BAD_REQUEST)
-            host = self.chanRequest.channel.transport.getHost().host
-        self.host = host
+        hostinfo = self.chanRequest.getHostInfo()
+        if not self.host:
+            host = self.headers.getHeader('host')
+            if not host:
+                if self.clientproto >= (1,1):
+                    raise http.HTTPError(BAD_REQUEST)
+                host = hostinfo[0].host
+                port = hostinfo[0].port
+                if port != 80:
+                    host = host + ':' + str(port)
+            self.host = host
+        
+        if not self.scheme:
+            self.scheme = ('http', 'https')[hostinfo[1]]
 
     def process(self):
         "Process a request."
@@ -327,11 +342,11 @@ class Request(http.Request):
         body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         
-        response = http.Response()
-        response.code = INTERNAL_SERVER_ERROR
-        response.headers.setHeader('content-type', http_headers.MimeType('text','html'))
-        response.headers.setHeader('content-length', len(body))
-        response.stream = stream.MemoryStream(body)
+        response = http.Response(
+            INTERNAL_SERVER_ERROR,
+            {'content-type': http_headers.MimeType('text','html'),
+             'content-length': len(body)},
+            body)
         self.writeResponse(response)
 
     def _cbFinishRender(self, result, ctx):

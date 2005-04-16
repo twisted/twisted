@@ -232,6 +232,11 @@ def readIntoFile(stream, outFile, maxlen):
 #@defer.deferredGenerator
 def parseMultipartFormData(stream, boundary,
                            maxMem=100*1024, maxFields=1024, maxSize=10*1024*1024):
+    stream, afterstream = stream.split(maxSize)
+    if afterstream.length is not None and afterstream.length > 0:
+        raise MimeFormatError("Maximum length of %d bytes exceeded." %
+                              maxSize)
+    
     mms = MultipartMimeStream(stream, boundary)
     numFields = 0
     args = {}
@@ -290,6 +295,10 @@ def parse_urlencoded_stream(input, maxMem=100*1024,
             pairs = [lastdata]
             still_going=0
         else:
+            maxMem -= len(data)
+            if maxMem < 0:
+                raise MimeFormatError("Maximum length of %d bytes exceeded." %
+                                      maxlen)
             pairs = str(data).split('&')
             pairs[0] = lastdata + pairs[0]
             lastdata=pairs.pop()

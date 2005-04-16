@@ -451,8 +451,9 @@ class EntityHeaderParsingTests(HeaderParsingTestBase):
         self.invalidParseTest("Content-Length", ("asdf",))
         
     def testContentLocation(self):
-        self.runRoundtripTest("Location", (("http://www.w3.org/pub/WWW/People.htm",
-                                           "http://www.w3.org/pub/WWW/People.htm"),))
+        self.runRoundtripTest("Content-Location",
+                              (("http://www.w3.org/pub/WWW/People.htm",
+                                "http://www.w3.org/pub/WWW/People.htm"),))
 
     def testContentMD5(self):
         self.runRoundtripTest("Content-MD5", (("Q2hlY2sgSW50ZWdyaXR5IQ==", "Check Integrity!"),))

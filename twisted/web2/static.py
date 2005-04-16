@@ -33,11 +33,15 @@ class Data(resource.Resource):
     def __init__(self, data, type):
         self.data = data
         self.type = type
+        self.created_time = time.time()
     
     def render(self, ctx):
-        response = http.Response()
+        response = http.Response(responsecode.OK, stream=self.data)
         response.headers.setRawHeaders("content-type", (self.type, ))
-        response.stream = stream.MemoryStream(self.data)
+        response.headers.setHeader('etag',
+            http_headers.ETag("%X-%X" % (self.created_time, hash(self.data)),
+                              weak=(time.time() - st.st_mtime <= 1)))
+        
         return response
 
 def addSlash(request):

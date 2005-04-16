@@ -351,6 +351,23 @@ class IChanRequest(Interface):
     def unregisterProducer():
         """Unregister a producer."""
         pass
-    
+
+    def getHostInfo():
+        """Returns a tuple of (address, socket user connected to,
+        boolean, was it secure).  Note that this should not necsessarily
+        always return the actual local socket information from
+        twisted. E.g. in a CGI, it should use the variables coming
+        from the invoking script.
+        """
+
+    def getRemoteHost():
+        """Returns an address of the remote host.
+
+        Like getHostInfo, this information may come from the real
+        socket, or may come from additional information, depending on
+        the transport.
+        """
+        
+
     persistent = Attribute("""Whether this request supports HTTP connection persistence. May be set to False. Should not be set to other values.""")
 

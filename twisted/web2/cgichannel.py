@@ -1,5 +1,5 @@
 import time, sys
-from twisted.internet import protocol
+from twisted.internet import protocol, address
 from twisted.internet import reactor
 from twisted.web2 import http, http_headers, server, responsecode
 import os
@@ -158,18 +158,14 @@ class CGIChannelRequest(protocol.Protocol):
         if http_vers[0] != 'http' or http_vers[1] > 1:
             _abortWithError(responsecode.INTERNAL_SERVER_ERROR, "Twisted.web CGITransport: Unknown HTTP version: " % vars['SERVER_PROTOCOL'])
 
-        if vars.get("HTTPS"): # apache extension?
-            protocol = "https"
-        else:
-            protocol = "http"
-            
-        port = vars['SERVER_PORT']
-        if ((protocol == "http" and port == 80) or
-            (protocol == "https" and port == 443)):
-            optport = ''
-        else:
-            optport = ':%s' % port
-
+        secure = vars.get("HTTPS") # apache extension?
+        port = vars.get('SERVER_PORT') or 80
+        server_host = vars.get('SERVER_NAME') or vars.get('SERVER_ADDR') or 'localhost'
+        
+        self.hostinfo = address.IPv4Address('TCP', server_host, port), bool(secure)
+        self.remoteinfo = address.IPv4Address(
+            'TCP', vars.get('REMOTE_ADDR'), vars.get('REMOTE_PORT')
+        
         uri = vars.get('REQUEST_URI') # apache extension?
         if not uri:
             qstr = vars.get('QUERY_STRING', '')
@@ -218,6 +214,12 @@ class CGIChannelRequest(protocol.Protocol):
         self.finished = True
         self.transport.loseConnection()
 
+    def getHostInfo(self):
+        return self.hostinfo
+
+    def getRemoteHost(self):
+        return self.remoteinfo
+        
     def abortConnection(self, closeWrite=True):
         self.transport.loseConnection()
     

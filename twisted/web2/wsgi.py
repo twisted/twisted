@@ -57,28 +57,33 @@ def __callFromThread(queue, f, a, kw):
 
 class InputStream(object):
     def __init__(self, newstream):
+        # Called in IO thread
         self.stream = stream.BufferedStream(newstream)
         
     def read(self, size=None):
+        # Called in application thread
         return callInReactor(self.stream.readExactly, size)
 
     def readline(self):
+        # Called in application thread
         return callInReactor(self.stream.readline, '\n')+'\n'
     
     def readlines(self, hint):
+        # Called in application thread
         data = self.read()
         return [s+'\n' for s in data.split('\n')]
 
 class ErrorStream(object):
     def flush(self):
+        # Called in application thread
         return
 
     def write(self, s):
-        from twisted.internet import reactor
+        # Called in application thread
         log.msg("WSGI app error: "+s, isError=True)
 
     def writelines(self, seq):
-        from twisted.internet import reactor
+        # Called in application thread
         s = ''.join(seq)
         log.msg("WSGI app error: "+s, isError=True)
 
@@ -88,7 +93,7 @@ class WSGIHandler(object):
     def __init__(self, application, ctx):
         # Called in IO thread
         request = iweb.IRequest(ctx)
-        self.environment = createCGIEnvironment(ctx, request)
+        self.setupEnvironment(ctx, request)
         self.application = application
         self.request = request
         self.response = None
@@ -96,18 +101,19 @@ class WSGIHandler(object):
         # threadsafe event object to communicate paused state.
         self.unpaused = threading.Event()
 
-    def setupEnvironment(self):
-        # Called in application thread
-        env = self.environment
+    def setupEnvironment(self, ctx, request):
+        # Called in IO thread
+        env = createCGIEnvironment(ctx, request)
         env['wsgi.version']      = (1, 0)
         env['wsgi.url_scheme']   = env['REQUEST_SCHEME']
-        env['wsgi.input']        = InputStream(self.request.stream)
+        env['wsgi.input']        = InputStream(request.stream)
         env['wsgi.errors']       = ErrorStream()
         env['wsgi.multithread']  = True
         env['wsgi.multiprocess'] = True
         env['wsgi.run_once']     = False
         env['wsgi.file_wrapper'] = FileWrapper
-
+        self.environment = env
+        
     def startWSGIResponse(self, status, response_headers, exc_info=None):
         # Called in application thread
         if exc_info is not None:
@@ -128,7 +134,6 @@ class WSGIHandler(object):
     def run(self):
         # Called in application thread
         try:
-            self.setupEnvironment()
             result = self.application(self.environment, self.startWSGIResponse)
             self.handleResult(result)
         except:
@@ -159,7 +164,7 @@ class WSGIHandler(object):
         # Wait for unpaused to be true
         self.unpaused.wait()
         reactor.callFromThread(self.response.stream.write, output)
-
+        
 
     def handleResult(self, result):
         # Called in application thread
