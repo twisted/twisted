@@ -99,6 +99,8 @@ test_domain_com = NoFileAuthority(
         'cname.test-domain.com': [
             dns.Record_CNAME('test-domain.com')
         ],
+        'anothertest-domain.com': [
+            dns.Record_A('1.2.3.4')],
     }
 )
 
@@ -170,6 +172,7 @@ class ServerDNSTestCase(unittest.TestCase):
             raise self.response
 
         results = justPayload(self.response)
+        
         assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
         for rec in results:
             assert rec in r, "%s not in %s" % (rec, map(str, r))
@@ -363,6 +366,13 @@ class ServerDNSTestCase(unittest.TestCase):
         self.namesTest(
             self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
             results
+        )
+
+    def testSimilarZonesDontInterfere(self):
+        """Tests that unrelated zones don't mess with each other."""
+        self.namesTest(
+            self.resolver.lookupAddress("anothertest-domain.com"),
+            [dns.Record_A('1.2.3.4', ttl=19283784)]
         )
 
 class HelperTestCase(unittest.TestCase):
