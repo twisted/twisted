@@ -1,5 +1,3 @@
-##### FIXME: this file probably doesn't work.
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -40,58 +38,64 @@ headerNameTranslation = ''.join([c.isalnum() and c.upper() or '_' for c in map(c
 def createCGIEnvironment(ctx, request=None):
     if request is None:
         request = iweb.IRequest(ctx)
-    
-    script_name = '/' + os.sep.join(request.prepath)
-    python_path = os.pathsep.join(sys.path)
-    server_name = request.host.split(':')[0]
-    server_port = (request.host.split(':')+[''])[1]
 
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
-    env = dict(os.environ)
-    env.update({
-        "SERVER_SOFTWARE":   server.VERSION,
-        "SERVER_NAME":       server_name,
-        "SERVER_PORT":       server_port,
-        "GATEWAY_INTERFACE": "CGI/1.1",
-        "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
-        "REQUEST_METHOD":    request.method,
-        "PATH_INFO":         '', # Will get filled in later
-        "PATH_TRANSLATED":   '', # For our purposes, equal to PATH_INFO
-        "SCRIPT_NAME":       script_name,
-        "QUERY_STRING":      '', # Will get filled in later
-        "REMOTE_HOST":       '', # TODO
-        "REMOTE_ADDR":       '', # TODO
-        "REQUEST_URI":       request.uri,
-        "CONTENT_TYPE":      '', # TODO
-        "CONTENT_LENGTH":    str(request.stream.length),
-        # Anything below here is not part of the CGI specification.
-        "REQUEST_SCHEME":    request.scheme,
-        })
+    # http://cgi-spec.golux.com/draft-coar-cgi-v11-03-clean.html for a better one
+    hostinfo = request.chanRequest.getHostInfo()
+    remotehost = request.chanRequest.getRemoteHost()
+
+    python_path = os.pathsep.join(sys.path)
     
-    # Add PATH_INFO from the remaining segments in the context
-    postpath = iweb.IRemainingSegments(ctx)
-    if postpath:
-        env["PATH_TRANSLATED"] = env["PATH_INFO"] = "/" + '/'.join(postpath)
+    env = dict(os.environ)
+    # MUST provide:
+    if request.stream.length:
+        env["CONTENT_LENGTH"] = str(request.stream.length)
+    
+    ctype = request.headers.getRawHeaders('Content-Type')
+    if ctype:
+        env["CONTENT_TYPE"] = ctype[0]
+    
+    env["GATEWAY_INTERFACE"] = "CGI/1.1"
 
-    ## This doesn't work in compat.py right now, either.
-    #client = request.getClient()
-    #if client is not None:
-    #    env['REMOTE_HOST'] = client
-    #ip = request.getClientIP()
-    #if ip is not None:
-    #    env['REMOTE_ADDR'] = ip
-
-    qindex = request.uri.find('?')
-    if qindex != -1:
-        qs = env['QUERY_STRING'] = request.uri[qindex+1:]
-        if '=' in qs:
-            qargs = []
-        else:
-            qargs = [urllib.unquote(x) for x in qs.split('+')]
+    if request.postpath:
+        # Should we raise an exception if this contains "/" chars?
+        env["PATH_INFO"] = '/' + '/'.join(request.postpath)
+    # MUST always be present, even if no query
+    env["QUERY_STRING"] = request.querystring
+    
+    env["REMOTE_ADDR"] = remotehost.host
+    env["REQUEST_METHOD"] = request.method
+    # Should we raise an exception if this contains "/" chars?
+    env["SCRIPT_NAME"] = '/' + '/'.join(request.prepath)
+    
+    hostport = request.host.split(':')
+    server_port = (request.host.split(':')+[''])[1]
+    if len(hostport) == 1:
+        server_port = str(hostinfo[0].port)
     else:
-        env['QUERY_STRING'] = ''
-        qargs = []
-
+        server_port = str(hostport[1])
+    env["SERVER_NAME"] = hostport[0]
+    env["SERVER_PORT"] = server_port
+    
+    env["SERVER_PROTOCOL"] = "HTTP/%i.%i" % request.clientproto
+    env["SERVER_SOFTWARE"] = server.VERSION
+    
+    # SHOULD provide
+    # env["AUTH_TYPE"] # FIXME: add this
+    # env["REMOTE_HOST"] # possibly dns resolve?
+    
+    # MAY provide
+    # env["PATH_TRANSLATED"] # Completely worthless
+    # env["REMOTE_IDENT"] # Completely worthless
+    # env["REMOTE_USER"] # FIXME: add this
+    
+    # Unofficial, but useful and expected by applications nonetheless
+    env["REMOTE_PORT"] = str(remotehost.port)
+    env["REQUEST_SCHEME"] = request.scheme
+    env["REQUEST_URI"] = request.uri
+    env["HTTPS"] = ("off", "on")[hostinfo[1]]
+    env["SERVER_PORT_SECURE"] = ("0", "1")[hostinfo[1]]
+    
     # Propagate HTTP headers
     for title, header in request.headers.getAllRawHeaders():
         envname = title.translate(headerNameTranslation)
@@ -102,7 +106,12 @@ def createCGIEnvironment(ctx, request=None):
                          'authorization', 'proxy-authorization'):
             envname = "HTTP_" + envname
         env[envname] = ','.join(header)
-            
+
+    for k,v in env.items():
+        if type(k) is not str:
+            print "is not string:",k
+        if type(v) is not str:
+            print k, "is not string:",v
     return env
 
 
@@ -113,7 +122,7 @@ class CGIScript(resource.LeafResource):
     IPC with an external process with an unpleasant protocol.
     """
     
-    def __init__(self, filename, registry=None):
+    def __init__(self, filename):
         """Initialize, with the name of a CGI script file.
         """
         self.filename = filename
@@ -131,6 +140,11 @@ class CGIScript(resource.LeafResource):
             return http.Response(responsecode.LENGTH_REQUIRED)
         env = createCGIEnvironment(ctx, request=request)
         env['SCRIPT_FILENAME'] = self.filename
+        if '=' in request.querystring:
+            qargs = []
+        else:
+            qargs = [urllib.unquote(x) for x in request.querystring.split('+')]
+
         return self.runProcess(env, request, qargs)
 
     def http_POST(self, ctx):
@@ -156,6 +170,11 @@ class FilteredScript(CGIScript):
 
     filters = '/usr/bin/cat',
 
+    def __init__(self, filename, filters=None):
+        if filters is not None:
+            self.filters = filters
+        CGIScript.__init__(self, filename)
+        
     def runProcess(self, env, request, qargs=[]):
         d = defer.Deferred()
         proc = CGIProcessProtocol(request, d)
@@ -267,9 +286,6 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
         else:
             name = header.lower()[:breakpoint]
             text = header[breakpoint+2:]
-            if name == 'location':
-                if self.response.code == responsecode.OK:
-                    self.response.code = responsecode.FOUND
             if name == 'status':
                 try:
                      # "123 <description>" sometimes happens.
@@ -295,6 +311,18 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
         """
         Call our deferred (from CGIScript.render) with a response.
         """
+        # Fix up location stuff
+        loc = self.response.headers.getHeader('location')
+        if loc and self.response.code == responsecode.OK:
+            if loc[0] == '/':
+                # FIXME: Do internal redirect
+                raise RuntimeError("Sorry, internal redirects not implemented yet.")
+            else:
+                # NOTE: if a script wants to output its own redirect body,
+                # it must specify Status: 302 itself.
+                self.response.code = 302
+                self.response.stream = None
+            
         self.deferred.callback(self.response)
 
 

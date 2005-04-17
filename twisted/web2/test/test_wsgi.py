@@ -95,9 +95,10 @@ class TestWSGIEnvironment(BaseCase):
 
     def test_SERVER_PORT(self):
         """SERVER_PORT"""
-        self.assertEnv('http://host/', {'SERVER_PORT': ''})
+        self.assertEnv('http://host/', {'SERVER_PORT': '80'})
         self.assertEnv('http://host:523/', {'SERVER_PORT': '523'})
-        self.assertEnv('https://host/', {'SERVER_PORT': ''})
+        # Because this is via a test request, port is fixed at 80
+        self.assertEnv('https://host/', {'SERVER_PORT': '80'})
         self.assertEnv('https://host:523/', {'SERVER_PORT': '523'})
 
 if WSGI is None:
