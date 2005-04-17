@@ -30,7 +30,7 @@ from twisted import copyright
 from twisted.web2 import http, iweb
 from twisted.web2.responsecode import *
 from twisted.web2 import http_headers, context, error, stream
-from twisted.web2 import rangefilter, gzipfilter
+from twisted.web2 import rangefilter
 from twisted.web2 import version as web2_version
 from twisted.web2.error import defaultErrorHandler
 from twisted import __version__ as twisted_version
@@ -140,7 +140,7 @@ class Request(http.Request):
     host
     path
     params
-    queryargstring
+    querystring
     
     args
     
@@ -157,7 +157,7 @@ class Request(http.Request):
     
     site = None
     _initialprepath = None
-    responseFilters = [gzipfilter.gzipfilter, rangefilter.rangefilter, preconditionfilter,
+    responseFilters = [rangefilter.rangefilter, preconditionfilter,
                        defaultErrorHandler, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):
@@ -179,9 +179,9 @@ class Request(http.Request):
     
     def _parseURL(self):
         (self.scheme, self.host, self.path,
-         self.params, self.queryargstring, fragment) = urlparse.urlparse(self.uri)
+         self.params, self.querystring, fragment) = urlparse.urlparse(self.uri)
         
-        self.args = cgi.parse_qs(self.queryargstring, True)
+        self.args = cgi.parse_qs(self.querystring, True)
         
         path = map(unquote, self.path[1:].split('/'))
         if self._initialprepath:
