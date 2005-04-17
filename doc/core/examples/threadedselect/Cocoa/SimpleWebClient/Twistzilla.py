@@ -64,30 +64,16 @@ class MyAppDelegate(NibClassBuilder.AutoBaseClass):
         loop.
         """
         self.messageTextField.setStringValue_("http://www.twistedmatrix.com/")
-        reactor.interleave(self.reactorNotification_, installSignalHandlers=False)
-        reactor.addSystemEventTrigger('after', 'shutdown', self.reactorDone)
+        reactor.interleave(AppHelper.callAfter)
 
-    def iterateReactor_(self, iterateFunc):
-        try:
-            iterateFunc()
-        except:
-            log.err()
-    
-    def reactorDone(self):
-        NSApplication.sharedApplication().terminate_(self)
-        
     def applicationShouldTerminate_(self, sender):
         if reactor.running:
+            reactor.addSystemEventTrigger(
+                'after', 'shutdown', AppHelper.stopEventLoop)
             reactor.stop()
             return False
         return True
     
-    def reactorNotification_(self, iterateFunc):
-        pool = NSAutoreleasePool.alloc().init()
-        self.performSelectorOnMainThread_withObject_waitUntilDone_('iterateReactor:', iterateFunc, False)
-        del pool
-    
-
 if __name__ == '__main__':
     log.startLogging(sys.stdout)
     AppHelper.runEventLoop()

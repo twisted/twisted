@@ -1,4 +1,6 @@
+Requires PyObjC 1.3.1 (svn r1589 or later)
+
 To run the demo:
 
-python bundlebuilder.py build
-open build/Twistzilla.app
+python setup.py py2app
+open dist/Twistzilla.app
