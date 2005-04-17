@@ -6,8 +6,8 @@
 # import Nib loading functionality from AppKit
 from PyObjCTools import NibClassBuilder, AppHelper
 
-import twisted.internet.cfreactor
-reactor = twisted.internet.cfreactor.install()
+from twisted.internet.threadedselectreactor import install
+reactor = install()
 
 from twisted.internet import protocol
 from twisted.protocols import http
@@ -60,7 +60,26 @@ class MyAppDelegate(NibClassBuilder.AutoBaseClass):
         loop.
         """
         self.messageTextField.setStringValue_("http://www.twistedmatrix.com/")
-        reactor.run(installSignalHandlers=False)
+        reactor.interleave(self.reactorNotification_, installSignalHandlers=False)
+        reactor.addSystemEventTrigger('after', 'shutdown', self.reactorDone)
+
+    def iterateReactor_(self, iterateFunc):
+        iterateFunc()
+    
+    def reactorDone(self):
+        NSApplication.sharedApplication().terminate_(self)
+        
+    def applicationShouldTerminate_(self, sender):
+        if reactor.running:
+            reactor.stop()
+            return False
+        return True
+    
+    def reactorNotification_(self, iterateFunc):
+        pool = NSAutoreleasePool.alloc().init()
+        self.performSelectorOnMainThread_withObject_waitUntilDone_('iterateReactor:', iterateFunc, False)
+        del pool
+    
 
 if __name__ == '__main__':
     from twisted.python import log

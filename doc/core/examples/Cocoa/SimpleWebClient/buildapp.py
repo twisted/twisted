@@ -1,8 +1,14 @@
-from bundlebuilder import buildapp
+"""
+Script for building the example.
+
+Usage:
+    python setup.py py2app
+"""
+
+from distutils.core import setup
+import py2app
     
-buildapp(
-    name = 'Twistzilla',
-    mainprogram = "Twistzilla.py",
-    resources = ["English.lproj"],
-    nibname = "MainMenu",
+setup(
+    app = ['Twistzilla.py'],
+    data_files = ["English.lproj"],
 )
