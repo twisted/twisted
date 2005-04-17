@@ -24,6 +24,7 @@ reactorTypes = {
     'kqueue': 'twisted.internet.kqreactor',
     'iocp': 'twisted.internet.iocpreactor',
     'cfreactor': 'twisted.internet.cfreactor',
+    'threadedselect': 'twisted.internet.threadedselectreactor',
     }
 
 def installReactor(reactor):
