@@ -77,24 +77,32 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 class EchoProtocol(protocol.ProcessProtocol):
 
     s = "1234567" * 1001
+    n = 10
     finished = 0
 
+    def __init__(self, onEnded):
+        self.onEnded = onEnded
+        self.buffer = []
+        self.count = 0
+
     def connectionMade(self):
-        for i in range(10):
+        for i in range(self.n):
             self.transport.write(self.s)
-        self.buffer = ""
 
     def outReceived(self, data):
-        self.buffer += data
-        if len(self.buffer) == 70070:
+        self.buffer.append(data)
+        self.count += len(data)
+        if self.count == len(self.s) * self.n:
             self.transport.closeStdin()
 
     def processEnded(self, reason):
         self.finished = 1
         if not reason.check(error.ProcessDone):
-            self.failure = "process didn't terminate normally: %s" % reason
-            return
-        self.failure = None
+            self.failure = "process didn't terminate normally: " + str(reason)
+        else:
+            self.failure = None
+        self.onEnded.callback(self)
+
 
 class SignalProtocol(protocol.ProcessProtocol):
     def __init__(self, sig, testcase):
@@ -178,15 +186,19 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             pass
 
     def testEcho(self):
+        finished = defer.Deferred()
+        p = EchoProtocol(finished)
+
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
-        p = EchoProtocol()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
-        spinUntil(lambda :p.finished, 20)
-        self.failIf(p.failure, p.failure)
-        self.assert_(hasattr(p, 'buffer'))
-        self.assertEquals(len(p.buffer), len(p.s * 10))
 
+        def asserts(ignored):
+            self.failIf(p.failure, p.failure)
+            self.failUnless(hasattr(p, 'buffer'))
+            self.assertEquals(len(''.join(p.buffer)), len(p.s * p.n))
+
+        return finished.addCallback(asserts)
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
