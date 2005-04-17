@@ -10,6 +10,7 @@
 from __future__ import generators
 
 # Twisted imports
+from twisted.copyright import longversion
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol
@@ -68,7 +69,7 @@ class IMessageDelivery(components.Interface):
         is bound.
 
         @rtype: C{str}
-        @return: The full "Received" header string.
+        @return: The full \"Received\" header string.
         """
 
     def validateTo(self, user):
@@ -711,11 +712,18 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 'Requested action aborted: local error in processing'
             )
 
+    def _disconnect(self, msgs):
+        for msg in msgs:
+            try:
+                msg.connectionLost()
+            except:
+                log.msg("msg raised exception from connectionLost")
+                log.err()
+
     def do_DATA(self, rest):
         if self._from is None or (not self._to):
             self.sendCode(503, 'Must have valid receiver and originator')
             return
-        assert self.delivery
         self.mode = DATA
         helo, origin = self._helo, self._from
         recipients = self._to
@@ -724,31 +732,30 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._to = []
         self.datafailed = None
 
-        try:
-            self.__messages = [f() for (u, f) in recipients]
-        except SMTPServerError, e:
-            self.sendCode(e.code, e.resp)
-            self.mode = COMMAND
-            return
-        except:
-            log.err()
-            self.sendCode(550, "Internal server error")
-            self.mode = COMMAND
-            return
-
-        rcvdhdr = self.delivery.receivedHeader(
-            helo, origin, [u for (u, f) in recipients])
-
-        self.__inheader = self.__inbody = 0
-        if rcvdhdr:
+        msgs = []
+        for (user, msgFunc) in recipients:
             try:
-                for message in self.__messages:
-                    message.lineReceived(rcvdhdr)
+                msg = msgFunc()
+                rcvdhdr = self.receivedHeader(helo, origin, [user])
+                if rcvdhdr:
+                    msg.lineReceived(rcvdhdr)
+                msgs.append(msg)
             except SMTPServerError, e:
                 self.sendCode(e.code, e.resp)
                 self.mode = COMMAND
+                self._disconnect(msgs)
                 return
+            except:
+                log.err()
+                self.sendCode(550, "Internal server error")
+                self.mode = COMMAND
+                self._disconnect(msgs)
+                return
+        self.__messages = msgs
+
+        self.__inheader = self.__inbody = 0
         self.sendCode(354, 'Continue')
+
         if self.noisy:
             fmt = 'Receiving message for delivery: from=%s to=%s'
             log.msg(fmt % (origin, [str(u) for (u, f) in recipients]))
@@ -915,9 +922,23 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         @raise SMTPBadRcpt: Raised if messages to the address are
         not to be accepted.
         """
-        if self.delivery:
+        if self.delivery is not None:
             return self.delivery.validateTo(user)
         raise SMTPBadRcpt(user)
+
+    def receivedHeader(self, helo, origin, recipients):
+        if self.delivery is not None:
+            return self.delivery.receivedHeader(helo, origin, recipients)
+
+        heloStr = ""
+        if helo[0]:
+            heloStr = " helo=%s" % (helo[0],)
+        domain = self.transport.getHost().host
+        from_ = "from %s ([%s]%s)" % (helo[0], helo[1], heloStr)
+        by = "by %s with ESMTP (%s)" % (domain, longversion)
+        for_ = "for %s; %s" % (' '.join(map(str, recipients)),
+                               rfc822date())
+        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
 
     def startMessage(self, recipients):
         if self.delivery:

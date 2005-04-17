@@ -1,3 +1,8 @@
+NEXT_RELEASE:
+ - SMTP server:
+   - Now gives application-level code opportunity to set a different
+     Received header for each recipient of a multi-recipient message.
+
 0.1.0:
  - Tons of bugfixes in IMAP4, POP3, and SMTP protocols
  - Maildir append support
