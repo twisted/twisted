@@ -362,3 +362,73 @@ class BufferTestCase(unittest.TestCase):
             s1 + '\n' +
             s3 + '\n' +
             '\n' * (HEIGHT - 3))
+
+class ExpectTestCase(unittest.TestCase):
+    def setUp(self):
+        self.term = helper.ExpectableBuffer()
+        self.term.connectionMade()
+
+    def testSimpleString(self):
+        result = []
+        d = self.term.expect("hello world")
+        d.addCallback(result.append)
+
+        self.term.write("greeting puny earthlings\n")
+        self.failIf(result)
+        self.term.write("hello world\n")
+        self.failUnless(result)
+        self.assertEquals(result[0].group(), "hello world")
+
+    def testBrokenUpString(self):
+        result = []
+        d = self.term.expect("hello world")
+        d.addCallback(result.append)
+
+        self.failIf(result)
+        self.term.write("hello ")
+        self.failIf(result)
+        self.term.write("worl")
+        self.failIf(result)
+        self.term.write("d")
+        self.failUnless(result)
+        self.assertEquals(result[0].group(), "hello world")
+
+
+    def testMultiple(self):
+        result = []
+        d1 = self.term.expect("hello ")
+        d1.addCallback(result.append)
+        d2 = self.term.expect("world")
+        d2.addCallback(result.append)
+
+        self.failIf(result)
+        self.term.write("hello")
+        self.failIf(result)
+        self.term.write(" ")
+        self.assertEquals(len(result), 1)
+        self.term.write("world")
+        self.assertEquals(len(result), 2)
+        self.assertEquals(result[0].group(), "hello ")
+        self.assertEquals(result[1].group(), "world")
+
+    def testSynchronous(self):
+        self.term.write("hello world")
+
+        result = []
+        d = self.term.expect("hello world")
+        d.addCallback(result.append)
+        self.failUnless(result)
+        self.assertEquals(result[0].group(), "hello world")
+
+    def testMultipleSynchronous(self):
+        self.term.write("goodbye world")
+
+        result = []
+        d1 = self.term.expect("bye")
+        d1.addCallback(result.append)
+        d2 = self.term.expect("world")
+        d2.addCallback(result.append)
+
+        self.assertEquals(len(result), 2)
+        self.assertEquals(result[0].group(), "bye")
+        self.assertEquals(result[1].group(), "world")

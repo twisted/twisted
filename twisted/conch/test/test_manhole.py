@@ -20,7 +20,7 @@ class ManholeLoopbackMixin:
             "1 + 1\n",
             [">>> 1 + 1",
              "2",
-             ">>>"])
+             ">>> "])
 
     def testTripleQuoteLineContinuation(self):
         self._test(
@@ -28,7 +28,7 @@ class ManholeLoopbackMixin:
             [">>> '''",
              "... '''",
              "'\\n'",
-             ">>>"])
+             ">>> "])
 
     def testFunctionDefinition(self):
         self._test(
@@ -37,10 +37,10 @@ class ManholeLoopbackMixin:
             "foo(42)\n",
             [">>> def foo(bar):",
              "...     print bar",
-             "...",
+             "... ",
              ">>> foo(42)",
              "42",
-             ">>>"])
+             ">>> "])
 
     def testClassDefinition(self):
         self._test(
@@ -51,10 +51,10 @@ class ManholeLoopbackMixin:
             [">>> class Foo:",
              "...     def bar(self):",
              "...         print 'Hello, world!'",
-             "...",
+             "... ",
              ">>> Foo().bar()",
              "Hello, world!",
-             ">>>"])
+             ">>> "])
 
     def testException(self):
         self._test(
@@ -63,14 +63,14 @@ class ManholeLoopbackMixin:
              "Traceback (most recent call last):",
              '  File "<console>", line 1, in ?',
              "ZeroDivisionError: integer division or modulo by zero",
-             ">>>"])
+             ">>> "])
 
     def testControlC(self):
         self._test(
             "cancelled line" + ctrlc,
             [">>> cancelled line",
              "KeyboardInterrupt",
-             ">>>"])
+             ">>> "])
 
     def testControlQ(self):
         self._test(
@@ -98,7 +98,7 @@ class ManholeLoopbackMixin:
              "...     d = defer.Deferred()",
              "...     reactor.callLater(n, d.callback, 'Hi!')",
              "...     return d",
-             "...",
+             "... ",
              ">>> deferLater(3.0)",
              "<Deferred #0>",
              ">>> print 'incomplete line"])
@@ -114,7 +114,7 @@ class ManholeLoopbackMixin:
              "...     d = defer.Deferred()",
              "...     reactor.callLater(n, d.callback, 'Hi!')",
              "...     return d",
-             "...",
+             "... ",
              ">>> deferLater(3.0)",
              "<Deferred #0>",
              "Deferred #0 called back: 'Hi!'",

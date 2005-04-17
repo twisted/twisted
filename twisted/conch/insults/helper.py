@@ -9,9 +9,11 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
+import re
+
 from zope.interface import implements
 
-from twisted.internet import protocol
+from twisted.internet import defer, protocol
 from twisted.python import log
 
 from twisted.conch.insults import insults
@@ -103,6 +105,7 @@ class TerminalBuffer(protocol.Protocol):
     height = 24
 
     fill = ' '
+    void = object()
 
     def getCharacter(self, x, y):
         return self.lines[y][x]
@@ -133,7 +136,7 @@ class TerminalBuffer(protocol.Protocol):
             self.x += 1
 
     def _emptyLine(self, width):
-        return [(self.fill, self._currentCharacterAttributes()) for i in xrange(width)]
+        return [(self.void, self._currentCharacterAttributes()) for i in xrange(width)]
 
     def _scrollDown(self):
         self.y += 1
@@ -323,6 +326,47 @@ class TerminalBuffer(protocol.Protocol):
         print 'Could not handle', repr(buf)
 
     def __str__(self):
-        return '\n'.join([''.join([ch for (ch, attr) in L]).rstrip() for L in self.lines])
+        lines = []
+        for L in self.lines:
+            buf = []
+            length = 0
+            for (ch, attr) in L:
+                if ch is not self.void:
+                    buf.append(ch)
+                    length = len(buf)
+                else:
+                    buf.append(self.fill)
+            lines.append(''.join(buf[:length]))
+        return '\n'.join(lines)
 
-__all__ = ['CharacterAttribute', 'TerminalBuffer']
+class ExpectableBuffer(TerminalBuffer):
+    _mark = 0
+
+    def connectionMade(self):
+        TerminalBuffer.connectionMade(self)
+        self._expecting = []
+
+    def write(self, bytes):
+        TerminalBuffer.write(self, bytes)
+        self._checkExpected()
+
+    def _checkExpected(self):
+        s = str(self)[self._mark:]
+        while self._expecting:
+            expr, deferred = self._expecting[0]
+            for match in re.finditer(expr, s):
+                self._mark += match.end()
+                s = s[match.end():]
+                deferred.callback(match)
+                del self._expecting[0]
+                break
+            else:
+                return
+
+    def expect(self, expression):
+        d = defer.Deferred()
+        self._expecting.append((expression, d))
+        self._checkExpected()
+        return d
+
+__all__ = ['CharacterAttribute', 'TerminalBuffer', 'ExpectableBuffer']

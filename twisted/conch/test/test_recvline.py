@@ -541,28 +541,28 @@ class RecvlineLoopbackMixin:
             insert + 'first line' + left * 4 + "xxxx\n",
             [">>> first xxxx",
              "first xxxx",
-             ">>>"])
+             ">>> "])
 
     def testRightArrow(self):
         return self._test(
             insert + 'right line' + left * 4 + right * 2 + "xx\n",
             [">>> right lixx",
              "right lixx",
-            ">>>"])
+            ">>> "])
 
     def testBackspace(self):
         return self._test(
             "second line" + backspace * 4 + "xxxx\n",
             [">>> second xxxx",
              "second xxxx",
-             ">>>"])
+             ">>> "])
 
     def testDelete(self):
         return self._test(
             "delete xxxx" + left * 4 + delete * 4 + "line\n",
             [">>> delete line",
              "delete line",
-             ">>>"])
+             ">>> "])
 
     def testInsert(self):
         return self._test(
@@ -570,7 +570,7 @@ class RecvlineLoopbackMixin:
             "third ine" + left * 3 + "l\n",
             [">>> third line",
              "third line",
-             ">>>"])
+             ">>> "])
 
     def testTypeover(self):
         return self._test(
@@ -578,21 +578,21 @@ class RecvlineLoopbackMixin:
             "fourth xine" + left * 4 + insert + "l\n",
             [">>> fourth line",
              "fourth line",
-             ">>>"])
+             ">>> "])
 
     def testHome(self):
         return self._test(
             insert + "blah line" + home + "home\n",
             [">>> home line",
              "home line",
-             ">>>"])
+             ">>> "])
 
     def testEnd(self):
         return self._test(
             "end " + left * 4 + end + "line\n",
             [">>> end line",
              "end line",
-             ">>>"])
+             ">>> "])
 
 class RecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass
