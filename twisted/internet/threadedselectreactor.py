@@ -23,7 +23,7 @@ from zope.interface import implements
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import error
 from twisted.internet import posixbase
-from twisted.python import log, components
+from twisted.python import log, components, failure
 from twisted.persisted import styles
 from twisted.python.runtime import platformType
 
@@ -125,7 +125,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         except SystemExit:
             pass
         except:
-            self._sendToMain('Exception', sys.exc_info())
+            f = failure.Failure()
+            self._sendToMain('Failure', f)
         #print >>sys.stderr, "worker finished"
     
     def _doSelectInThread(self, timeout):
@@ -184,8 +185,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 _logrun(selectable, _drdw, selectable, method, dct)
         #print >>sys.stderr, "done _process_Notify"
 
-    def _process_Exception(self, exc_info):
-        raise exc_info[1]
+    def _process_Failure(self, f):
+        f.raiseException()
 
     _doIterationInThread = _doSelectInThread
 
