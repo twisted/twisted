@@ -146,7 +146,11 @@ class ConnectionPool:
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
 
         from twisted.internet import reactor
-        self.startID = reactor.callWhenRunning(self.start)
+        self.startID = reactor.callWhenRunning(self._start)
+
+    def _start(self):
+        self.startID = None
+        return self.start()
 
     def start(self):
         """Start the connection pool.
@@ -245,6 +249,7 @@ class ConnectionPool:
     def finalClose(self):
         """This should only be called by the shutdown trigger."""
 
+        self.shutdownID = None
         self.threadpool.stop()
         self.running = False
         for conn in self.connections.values():
