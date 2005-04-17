@@ -2,7 +2,10 @@
 # See LICENSE for details.
 
 
-# import needed classes/functions from Foundation
+# import needed classes/functions from Cocoa
+from Foundation import *
+from AppKit import *
+
 # import Nib loading functionality from AppKit
 from PyObjCTools import NibClassBuilder, AppHelper
 
@@ -10,7 +13,8 @@ from twisted.internet.threadedselectreactor import install
 reactor = install()
 
 from twisted.internet import protocol
-from twisted.protocols import http
+from twisted.web import http
+from twisted.python import log
 import sys, urlparse
 
 # create ObjC classes as defined in MainMenu.nib
@@ -64,7 +68,10 @@ class MyAppDelegate(NibClassBuilder.AutoBaseClass):
         reactor.addSystemEventTrigger('after', 'shutdown', self.reactorDone)
 
     def iterateReactor_(self, iterateFunc):
-        iterateFunc()
+        try:
+            iterateFunc()
+        except:
+            log.err()
     
     def reactorDone(self):
         NSApplication.sharedApplication().terminate_(self)
@@ -82,6 +89,5 @@ class MyAppDelegate(NibClassBuilder.AutoBaseClass):
     
 
 if __name__ == '__main__':
-    from twisted.python import log
     log.startLogging(sys.stdout)
     AppHelper.runEventLoop()
