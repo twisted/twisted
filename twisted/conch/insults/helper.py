@@ -354,7 +354,7 @@ class ExpectableBuffer(TerminalBuffer):
         s = str(self)[self._mark:]
         while self._expecting:
             expr, deferred = self._expecting[0]
-            for match in re.finditer(expr, s):
+            for match in expr.finditer(s):
                 self._mark += match.end()
                 s = s[match.end():]
                 deferred.callback(match)
@@ -365,7 +365,7 @@ class ExpectableBuffer(TerminalBuffer):
 
     def expect(self, expression):
         d = defer.Deferred()
-        self._expecting.append((expression, d))
+        self._expecting.append((re.compile(expression), d))
         self._checkExpected()
         return d
 
