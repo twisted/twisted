@@ -550,8 +550,8 @@ class _Unjellier:
                 inst.__class__ = regClass
                 method = inst.unjellyFor
             elif isinstance(regClass, type):
-                # object.__new__ does not call regClass.__init__
-                inst = object.__new__(regClass)
+                # regClass.__new__ does not call regClass.__init__
+                inst = regClass.__new__(regClass)
                 method = inst.unjellyFor
             else:
                 method = regClass # this is how it ought to be done
