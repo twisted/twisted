@@ -23,6 +23,7 @@ from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
 from twisted.internet import tcp, udp
+from twisted.internet import fdesc
 
 from twisted.python import log, threadable, failure, components
 from twisted.persisted import styles
@@ -96,7 +97,6 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         self.w.close()
         self.reactor.waker = None
 
-
 class _UnixWaker(log.Logger, styles.Ephemeral):
     """This class provides a simple interface to wake up the event loop.
 
@@ -111,12 +111,15 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
         i, o = os.pipe()
         self.i = os.fdopen(i,'r')
         self.o = os.fdopen(o,'w')
+        fdesc.setNonBlocking(self.i)
         self.fileno = self.i.fileno
 
     def doRead(self):
         """Read one byte from the pipe.
         """
-        self.i.read(1)
+        def _ignore(data):
+            pass
+        fdesc.readFromFD(self.fileno(), _ignore)
 
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
