@@ -23,7 +23,6 @@ from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
 from twisted.internet import tcp, udp
-from twisted.internet import fdesc
 
 from twisted.python import log, threadable, failure, components, util
 from twisted.persisted import styles
@@ -44,6 +43,7 @@ except ImportError:
     unixEnabled = False
 
 if platformType == 'posix':
+    from twisted.internet import fdesc
     import process
 
 if platformType == "win32":
