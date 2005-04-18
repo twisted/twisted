@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 from twisted.trial import unittest
-from twisted.internet import reactor
+from twisted.internet import reactor, interfaces
 from twisted.python import util
 from twisted.web import static, twcgi, server, resource, client
 
@@ -34,3 +34,6 @@ class CGI(unittest.TestCase):
     testReadInput.timeout = 5
     def _testReadInput_1(self, res):
         self.failUnlessEqual(res, "readinput ok\n")
+
+if not interfaces.IReactorProcess.providedBy(reactor):
+    CGI.skip = "CGI tests require a functional reactor.spawnProcess()"
