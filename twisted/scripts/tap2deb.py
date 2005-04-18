@@ -55,7 +55,7 @@ def run():
     deb_file = config['debfile'] or 'twisted-'+protocol
     version = config['set-version']
     maintainer = config['maintainer']
-    description = config['description'] or ('A TCP server for %(protocol)s' %
+    description = config['description'] or ('A Twisted-based server for %(protocol)s' %
                                             vars())
     long_description = config['long_description'] or 'Automatically created by tap2deb'
     twistd_option = type_dict[config['type']]
