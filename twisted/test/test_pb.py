@@ -301,6 +301,40 @@ class Observer(pb.Referenceable):
         self.notified = self.notified + 1
         other.callRemote('unobserve',self)
 
+class NewStyleCopy(pb.Copyable, pb.RemoteCopy, object):
+    def __init__(self, s):
+        self.s = s
+pb.setUnjellyableForClass(NewStyleCopy, NewStyleCopy)
+class Echoer(pb.Root):
+    def remote_echo(self, st):
+        return st
+
+class NewStyleTestCase(unittest.TestCase):
+    ref = None
+    
+    def tearDown(self):
+        if self.ref:
+            self.ref.broker.transport.loseConnection()
+        return self.server.stopListening()
+
+    def testNewStyle(self):
+        self.server = reactor.listenTCP(0, pb.PBServerFactory(Echoer()))
+        f = pb.PBClientFactory()
+        reactor.connectTCP("localhost", self.server.getHost().port, f)
+        d = f.getRootObject()
+        d.addCallback(self._testNewStyle_1)
+        return d
+    def _testNewStyle_1(self, ref):
+        self.ref = ref
+        orig = NewStyleCopy("value")
+        d = ref.callRemote("echo", orig)
+        d.addCallback(self._testNewStyle_2, orig)
+        return d
+    def _testNewStyle_2(self, res, orig):
+        self.failUnless(isinstance(res, NewStyleCopy))
+        self.failUnlessEqual(res.s, "value")
+        self.failIf(res is orig) # no cheating :)
+
 
 class BrokerTestCase(unittest.TestCase):
     thunkResult = None
@@ -393,7 +427,6 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         pump.pump()
         assert self.thunkResult.check() == 1, "check failed"
-
 
     def testObserve(self):
         c, s, pump = connectedServerAndClient()
