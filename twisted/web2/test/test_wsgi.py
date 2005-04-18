@@ -1,3 +1,4 @@
+from __future__ import generators
 
 import time
 from twisted.web2.test.test_server import BaseCase
