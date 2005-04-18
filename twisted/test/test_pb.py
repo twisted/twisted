@@ -305,6 +305,21 @@ class NewStyleCopy(pb.Copyable, pb.RemoteCopy, object):
     def __init__(self, s):
         self.s = s
 pb.setUnjellyableForClass(NewStyleCopy, NewStyleCopy)
+
+class NewStyleCopy2(pb.Copyable, pb.RemoteCopy, object):
+    allocated = 0
+    initialized = 0
+    value = 1
+    def __new__(self):
+        NewStyleCopy2.allocated += 1
+        inst = object.__new__(self)
+        inst.value = 2
+        return inst
+    def __init__(self):
+        NewStyleCopy2.initialized += 1
+
+pb.setUnjellyableForClass(NewStyleCopy2, NewStyleCopy2)
+
 class Echoer(pb.Root):
     def remote_echo(self, st):
         return st
@@ -333,6 +348,30 @@ class NewStyleTestCase(unittest.TestCase):
     def _testNewStyle_2(self, res, orig):
         self.failUnless(isinstance(res, NewStyleCopy))
         self.failUnlessEqual(res.s, "value")
+        self.failIf(res is orig) # no cheating :)
+
+    def testAlloc(self):
+        self.server = reactor.listenTCP(0, pb.PBServerFactory(Echoer()))
+        f = pb.PBClientFactory()
+        reactor.connectTCP("localhost", self.server.getHost().port, f)
+        d = f.getRootObject()
+        d.addCallback(self._testAlloc_1)
+        return d
+    def _testAlloc_1(self, ref):
+        self.ref = ref
+        orig = NewStyleCopy2()
+        self.failUnlessEqual(NewStyleCopy2.allocated, 1)
+        self.failUnlessEqual(NewStyleCopy2.initialized, 1)
+        d = ref.callRemote("echo", orig)
+        # sending the object creates a second one on the far side
+        d.addCallback(self._testAlloc_2, orig)
+        return d
+    def _testAlloc_2(self, res, orig):
+        # receiving the response creates a third one on the way back
+        self.failUnless(isinstance(res, NewStyleCopy2))
+        self.failUnlessEqual(res.value, 2)
+        self.failUnlessEqual(NewStyleCopy2.allocated, 3)
+        self.failUnlessEqual(NewStyleCopy2.initialized, 1)
         self.failIf(res is orig) # no cheating :)
 
 
