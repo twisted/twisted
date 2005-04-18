@@ -47,13 +47,6 @@ def _cachedGetHostByAddr(hostaddr):
         _cachedHostNames[hostaddr]=hostname
     return hostname
     
-def toChunk(data):
-    """Convert string to a chunk.
-    
-    @returns: a tuple of strings representing the chunked encoding of data"""
-    return ("%X\r\n" % len(data), data, "\r\n")
-    
-
 def parseVersion(strversion):
     """Parse version strings of the form Protocol '/' Major '.' Minor. E.g. 'HTTP/1.1'.
     Returns (protocol, major, minor).
@@ -687,7 +680,7 @@ class HTTPChannelRequest:
         if not data:
             return
         elif self.chunkedOut:
-            self.transport.writeSequence(toChunk(data))
+            self.transport.writeSequence(("%X\r\n" % len(data), data, "\r\n"))
         else:
             self.transport.write(data)
         
@@ -820,6 +813,9 @@ class HTTPChannelRequest:
 
     def connectionLost(self, reason):
         """connection was lost"""
+        if self.queued and self.producer:
+            self.producer.stopProducing()
+            self.producer = None
         if self.request:
             self.request.connectionLost(reason)
 
@@ -879,6 +875,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
     persistent = True
     
     _readLost = False
+    _writeLost = False
     
     _lingerTimer = None
     chanRequest = None
@@ -957,12 +954,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
     def _startNextRequest(self):
         # notify next request, if present, it can start writing
         del self.requests[0]
-        
-        if self.requests:
+
+        if self._writeLost:
+            self.transport.loseConnection()
+        elif self.requests:
             self.requests[0].noLongerQueued()
             
             # resume reading if allowed to
-            if(self.persistent != PERSIST_NO_PIPELINE and
+            if(not self._readLost and
+               self.persistent != PERSIST_NO_PIPELINE and
                len(self.requests) < self.maxPipeline):
                 self.resumeProducing()
         elif self._readLost:
@@ -1021,7 +1021,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
         # Okay, all data has been written
         # In 20 seconds, actually close the socket
         self._lingerTimer = reactor.callLater(20, self._lingerClose)
-
+        self._writeLost = True
+        
     def _lingerClose(self):
         self._lingerTimer = None
         self.transport.loseConnection()
@@ -1050,6 +1051,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
     def connectionLost(self, reason):
         self.factory.outstandingRequests-=1
 
+        self._writeLost = True
         self.readConnectionLost()
         self.setTimeout(None)
         
@@ -1092,93 +1094,6 @@ class HTTPFactory(protocol.ServerFactory):
             setattr(p, arg, value)
         return p
     
-
-# import cgi
-# import tempfile
-# try: # try importing the fast, C version
-#     from twisted.protocols._c_urlarg import unquote
-# except ImportError:
-#     from urllib import unquote
-
-# def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
-#     """like cgi.parse_qs, only with custom unquote function"""
-#     d = {}
-#     items = [s2 for s1 in qs.split("&") for s2 in s1.split(";")]
-#     for item in items:
-#         try:
-#             k, v = item.split("=", 1)
-#         except ValueError:
-#             if strict_parsing:
-#                 raise
-#             continue
-#         if v or keep_blank_values:
-#             k = unquote(k.replace("+", " "))
-#             v = unquote(v.replace("+", " "))
-#             if k in d:
-#                 d[k].append(v)
-#             else:
-#                 d[k] = [v]
-#     return d
-
-
-#     def gotLength(self, length):
-#         """Called when HTTP channel got length of content in this request.
-
-#         This method is not intended for users.
-#         """
-#         if length < 100000:
-#             self.content = StringIO()
-#         else:
-#             self.content = tempfile.TemporaryFile()
-
-#     def handleContentChunk(self, data):
-#         """Write a chunk of data.
-
-#         This method is not intended for users.
-#         """
-#         self.content.write(data)
-
-
-#         # Argument processing
-#         args = self.args
-#         ctype = self.getHeader('content-type')
-#         if self.method == "POST" and ctype:
-#             mfd = 'multipart/form-data'
-#             key, pdict = cgi.parse_header(ctype)
-#             if key == 'application/x-www-form-urlencoded':
-#                 args.update(
-#                     parse_qs(self.content.read(), 1))
-#             elif key == mfd:
-#                 args.update(
-#                     cgi.parse_multipart(self.content, pdict))
-#             else:
-#                 pass
-
-
-#     def handleContentComplete(self):
-#         """Called by channel when all data has been received.
-
-#         This method is not intended for users.
-#         """
-#         self.args = {}
-#         self.stack = []
-
-#         x = self.uri.split('?')
-
-#         if len(x) == 1:
-#             self.path = self.uri
-#         else:
-#             if len(x) != 2:
-#                 log.msg("May ignore parts of this invalid URI: %s"
-#                         % repr(self.uri))
-#             self.path, argstring = x[0], x[1]
-#             self.args = parse_qs(argstring, 1)
-
-#         # cache the client and server information, we'll need this later to be
-#         # serialized and sent with the request so CGIs will work remotely
-#         self.client = self.channel.transport.getPeer()
-#         self.host = self.channel.transport.getHost()
-
 
 #     def log(self, request):
 #         line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
@@ -1227,67 +1142,6 @@ class HTTPFactory(protocol.ServerFactory):
 #             pass
 #         self._authorize()
 #         return self.password
-
-#     def redirect(self, url):
-#         """Utility function that does a redirect.
-
-#         The request should have finish() called after this.
-#         """
-#         self.setResponseCode(FOUND)
-#         self.out_headers.setHeader("location", url)
-    
-#     def setLastModified(self, when):
-#         """Set the X{Last-Modified} time for the response to this request.
-
-#         If I am called more than once, I ignore attempts to set
-#         Last-Modified earlier, only replacing the Last-Modified time
-#         if it is to a later value.
-
-#         @param when: The last time the resource being returned was
-#             modified, in seconds since the epoch.
-#         @type when: number
-#         """
-#         # time.time() may be a float, but the HTTP-date strings are
-#         # only good for whole seconds.
-#         when = long(math.ceil(when))
-#         lastModified = self.out_headers.getHeader('Last-Modified')
-#         if not lastModified or (lastModified < when):
-#             self.out_headers.setHeader('Last-Modified', when)
-
-
-
-
-
-# # FIXME: these last 3 methods don't belong here.
-
-#     def setHost(self, host, port, ssl=0):
-#         """Change the host and port the request thinks it's using.
-
-#         This method is useful for working with reverse HTTP proxies (e.g.
-#         both Squid and Apache's mod_proxy can do this), when the address
-#         the HTTP client is using is different than the one we're listening on.
-
-#         For example, Apache may be listening on https://www.example.com, and then
-#         forwarding requests to http://localhost:8080, but we don't want HTML produced
-#         by Twisted to say 'http://localhost:8080', they should say 'https://www.example.com',
-#         so we do::
-
-#            request.setHost('www.example.com', 443, ssl=1)
-
-#         This method is experimental.
-#         """
-#         self._forceSSL = ssl
-#         self.in_headers.setHeader("host", host)
-#         self.host = address.IPv4Address("TCP", host, port)
-
-#     def getClientIP(self):
-#         if isinstance(self.client, address.IPv4Address):
-#             return self.client.host
-#         else:
-#             return None
-
-#     def isSecure(self):
-#         return self._forceSSL or components.implements(self.chanRequest.transport, interfaces.ISSLTransport)
 
 
 from twisted.web2 import compat
