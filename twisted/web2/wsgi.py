@@ -89,6 +89,7 @@ class ErrorStream(object):
 
 class WSGIHandler(object):
     headersSent = False
+    stopped = False
     
     def __init__(self, application, ctx):
         # Called in IO thread
@@ -132,19 +133,30 @@ class WSGIHandler(object):
 
 
     def run(self):
+        from twisted.internet import reactor
         # Called in application thread
         try:
             result = self.application(self.environment, self.startWSGIResponse)
-            self.handleResult(result)
+            if self.response is None:
+                raise RuntimeError(
+                    "Application didn't call startResponse before returning!")
         except:
-            log.err()
+            reactor.callFromThread(self.__error, failure.Failure())
+            return
 
+        self.handleResult(result)
 
     def __callback(self):
         # Called in IO thread
         self.responseDeferred.callback(self.response)
         self.responseDeferred = None
-        
+
+    def __error(self, f):
+        # Called in IO thread
+        import sys
+        self.responseDeferred.errback(f)
+        self.responseDeferred = None
+            
     def write(self, output):
         # Called in application thread
         from twisted.internet import reactor
@@ -181,10 +193,19 @@ class WSGIHandler(object):
                     os.fdopen(os.dup(result.filelike.fileno())))
                 reactor.callFromThread(self.__callback)
                 return
+
+            try:
+                for data in result:
+                    if self.stopped:
+                        return
+                    self.write(data)
+            except:
+                if not self.headersSent:
+                    reactor.callFromThread(self.__error, failure.Failure())
+                else:
+                    reactor.callFromThread(self.response.stream.finish, failure.Failure())
+                return
             
-            for data in result:
-                self.write(data)
-                
             if not self.headersSent:
                 self.headersSent = True
                 reactor.callFromThread(self.__callback)
@@ -203,7 +224,9 @@ class WSGIHandler(object):
         # Called in IO thread
         self.unpaused.clear()
         
-
+    def stopProducing(self):
+        self.stopped = True
+        
 class FileWrapper:
     """Wrapper to convert file-like objects to iterables"""
 

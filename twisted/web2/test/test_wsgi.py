@@ -4,11 +4,15 @@ from twisted.web2.test.test_server import BaseCase
 from twisted.web2 import resource
 from twisted.trial import util
 from twisted.internet import reactor, interfaces
+from twisted.python import log
 
 if interfaces.IReactorThreads(reactor, None) is not None:
     from twisted.web2.wsgi import WSGIResource as WSGI
 else:
     WSGI = None
+
+class TestError(Exception):
+    pass
 
 class TestContainer(BaseCase):
     wait_timeout = 10.0
@@ -59,6 +63,52 @@ class TestContainer(BaseCase):
         self.assertResponse(
             (WSGI(application), 'http://host/'),
             (314, {}, ''))
+
+    def test_errorfulResource(self):
+        def application(environ, start_response):
+            raise TestError("This is an expected error")
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (500, {}, None))
+        log.flushErrors(TestError)
+
+    def test_errorfulIterator(self):
+        def iterator():
+            raise TestError("This is an expected error")
+        
+        def application(environ, start_response):
+            start_response("200 OK", {})
+            return iterator()
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (500, {}, None))
+        log.flushErrors(TestError)
+
+    def test_errorfulIterator2(self):
+        def iterator():
+            yield "Foo"
+            yield "Bar"
+            raise TestError("This is also expected")
+        
+        def application(environ, start_response):
+            start_response("200 OK", {})
+            return iterator()
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (200, {}, None), failure=True)
+        log.flushErrors(TestError)
+        
+    def test_didntCallStartResponse(self):
+        def application(environ, start_response):
+            return ["Foo"]
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (500, {}, None))
+        log.flushErrors(RuntimeError)
 
 class TestWSGIEnvironment(BaseCase):
     """

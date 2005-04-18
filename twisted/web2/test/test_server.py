@@ -6,7 +6,7 @@ from zope.interface import implements
 from twisted.web2 import http, http_headers, iweb, server
 from twisted.web2 import resource, responsecode, stream
 from twisted.trial import unittest, util, assertions
-from twisted.internet import defer, address
+from twisted.internet import defer, address, error as ti_error
 
 class TestChanRequest:
     implements(iweb.IChanRequest)
@@ -48,14 +48,14 @@ class TestChanRequest:
     def write(self, data):
         self.data += data
 
-    def finish(self):
-        result = self.code, self.responseHeaders, self.data
+    def finish(self, failed=False):
+        result = self.code, self.responseHeaders, self.data, failed
         self.finished = True
         self.deferredFinish.callback(result)
 
     def abortConnection(self):
-        pass
-
+        self.finish(failed=True)
+        
     def registerProducer(self, producer, streaming):
         pass
 
@@ -87,7 +87,6 @@ class BaseTestResource(resource.Resource):
     def responseStream(self):
         return stream.MemoryStream(self.responseText)
 
-
 class BaseCase(unittest.TestCase):
     """
     Base class for test cases that involve testing the result
@@ -115,7 +114,7 @@ class BaseCase(unittest.TestCase):
         cr.request.process()
         return cr.deferredFinish
 
-    def assertResponse(self, request_data, expected_response):
+    def assertResponse(self, request_data, expected_response, failure=False):
         """
         @type request_data: C{tuple}
         @type expected_response: C{tuple}
@@ -127,16 +126,17 @@ class BaseCase(unittest.TestCase):
                                   (responseCode, headers, htmlData)
         """
         d = self.getResponseFor(*request_data)
-        d.addCallback(self._cbGotResponse, expected_response)
+        d.addCallback(self._cbGotResponse, expected_response, failure)
         util.wait(d, timeout=self.wait_timeout)
 
-    def _cbGotResponse(self, (code, headers, data), expected_response):
+    def _cbGotResponse(self, (code, headers, data, failed), expected_response, expectedfailure=False):
         expected_code, expected_headers, expected_data = expected_response
         self.assertEquals(code, expected_code)
         if expected_data is not None:
             self.assertEquals(data, expected_data)
         for key, value in expected_headers.iteritems():
             self.assertEquals(headers.getHeader(key), value)
+        self.assertEquals(failed, expectedfailure)
 
 
 class SampleWebTest(BaseCase):

@@ -324,7 +324,7 @@ class Request(http.Request):
             # Otherwise, it was a random exception, so give a
             # ICanHandleException implementer a chance to render the page.
             def _processingFailed_inner(ctx, reason):
-                handler = iweb.ICanHandleException(ctx)
+                handler = iweb.ICanHandleException(ctx, default=self)
                 return handler.renderHTTP_exception(ctx, reason)
             d = defer.maybeDeferred(_processingFailed_inner, ctx, reason)
         
@@ -374,6 +374,19 @@ class Request(http.Request):
 
         raise TypeError("html is not a resource or a response")
 
+    def renderHTTP_exception(self, ctx, reason):
+        log.msg("Exception rendering:", isErr=1)
+        log.err(reason)
+        
+        body = ("<html><head><title>Internal Server Error</title></head>"
+                "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. More information is available in the server log.</body></html>")
+        
+        return http.Response(
+            INTERNAL_SERVER_ERROR,
+            {'content-type': http_headers.MimeType('text','html'),
+             'content-length': len(body)},
+            body)
+
 class Site(http.HTTPFactory):
     def __init__(self, resource, **kwargs):
         """Initialize.
@@ -387,7 +400,7 @@ class Site(http.HTTPFactory):
         http.HTTPFactory.__init__(self, **kwargs)
         self.context = context.SiteContext()
         self.resource = iweb.IResource(resource)
-
+            
     def remember(self, obj, inter=None):
         """Remember the given object for the given interfaces (or all interfaces
         obj implements) in the site's context.
