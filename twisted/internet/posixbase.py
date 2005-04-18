@@ -112,6 +112,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
         self.i = os.fdopen(i,'r')
         self.o = os.fdopen(o,'w')
         fdesc.setNonBlocking(self.i)
+        fdesc.setNonBlocking(self.o)
         self.fileno = self.i.fileno
 
     def doRead(self):
