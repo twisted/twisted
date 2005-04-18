@@ -74,6 +74,17 @@ class TestContainer(BaseCase):
             (500, {}, None))
         log.flushErrors(TestError)
 
+    def test_errorfulResource2(self):
+        def application(environ, start_response):
+            write = start_response("200 OK", {})
+            write("Foo")
+            raise TestError("This is an expected error")
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (200, {}, "Foo"), failure=True)
+        log.flushErrors(TestError)
+
     def test_errorfulIterator(self):
         def iterator():
             raise TestError("This is an expected error")
@@ -99,9 +110,9 @@ class TestContainer(BaseCase):
         
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {}, None), failure=True)
+            (200, {}, "FooBar"), failure=True)
         log.flushErrors(TestError)
-        
+
     def test_didntCallStartResponse(self):
         def application(environ, start_response):
             return ["Foo"]

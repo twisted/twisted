@@ -137,11 +137,12 @@ class WSGIHandler(object):
         # Called in application thread
         try:
             result = self.application(self.environment, self.startWSGIResponse)
+            self.handleResult(result)
         except:
-            reactor.callFromThread(self.__error, failure.Failure())
-            return
-
-        self.handleResult(result)
+            if not self.headersSent:
+                reactor.callFromThread(self.__error, failure.Failure())
+            else:
+                reactor.callFromThread(self.response.stream.finish, failure.Failure())
 
     def __callback(self):
         # Called in IO thread
@@ -197,17 +198,10 @@ class WSGIHandler(object):
                 reactor.callFromThread(self.__callback)
                 return
 
-            try:
-                for data in result:
-                    if self.stopped:
-                        return
-                    self.write(data)
-            except:
-                if not self.headersSent:
-                    reactor.callFromThread(self.__error, failure.Failure())
-                else:
-                    reactor.callFromThread(self.response.stream.finish, failure.Failure())
-                return
+            for data in result:
+                if self.stopped:
+                    return
+                self.write(data)
             
             if not self.headersSent:
                 self.headersSent = True
