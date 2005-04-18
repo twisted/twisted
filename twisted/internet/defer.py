@@ -17,7 +17,7 @@ import warnings
 
 # Twisted imports
 from twisted.python import log, failure
-from twisted.python.util import unsignedID
+from twisted.python.util import unsignedID, func_metamerge
 
 class AlreadyCalledError(Exception):
     pass
@@ -646,7 +646,9 @@ def deferredGenerator(f):
     """
     See L{waitForDeferred}.
     """
-    return lambda *args, **kwargs: _deferGenerator(f(*args, **kwargs))
+    def unwindGenerator(*args, **kwargs):
+        return _deferGenerator(f(*args, **kwargs))
+    return func_metamerge(f, unwindGenerator)
 
 
 class _ConcurrencyPrimitive(object):

@@ -762,11 +762,23 @@ def unsignedID(obj):
          rval += _HUGEINT
      return rval
 
+def func_metamerge(f, g):
+    """
+    Merge function metadata from f -> g and return g
+    """
+    try:
+        g.__doc__ = f.__doc__
+        g.__dict__.update(f.__dict__)
+        g.__name__ = f.__name__
+    except (TypeError, AttributeError):
+        pass
+    return g
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
-    "unsignedID"
+    "unsignedID", "func_metamerge",
 ]
