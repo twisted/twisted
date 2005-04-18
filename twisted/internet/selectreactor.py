@@ -34,9 +34,9 @@ writes = {}
 
 def win32select(r, w, e, timeout=None):
     """Win32 select wrapper."""
-    if not r and not w:
+    if not (r or w):
         # windows select() exits immediately when no sockets
-        if timeout == None:
+        if timeout is None:
             timeout = 0.01
         else:
             timeout = min(timeout, 0.001)
@@ -44,10 +44,10 @@ def win32select(r, w, e, timeout=None):
         return [], [], []
     # windows doesn't process 'signals' inside select(), so we set a max
     # time or ctrl-c will never be recognized
-    if timeout == None or timeout > 0.5:
+    if timeout is None or timeout > 0.5:
         timeout = 0.5
     r, w, e = select.select(r, w, w, timeout)
-    return r, w+e, []
+    return r, w + e, []
 
 if platformType == "win32":
     _select = win32select

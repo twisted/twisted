@@ -25,7 +25,7 @@ from twisted.internet import error
 from twisted.internet import tcp, udp
 from twisted.internet import fdesc
 
-from twisted.python import log, threadable, failure, components
+from twisted.python import log, threadable, failure, components, util
 from twisted.persisted import styles
 from twisted.python.runtime import platformType, platform
 
@@ -104,43 +104,40 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
     """
     disconnected = 0
 
+    i = None
+    o = None
+
     def __init__(self, reactor):
         """Initialize.
         """
         self.reactor = reactor
-        i, o = os.pipe()
-        self.i = os.fdopen(i,'r')
-        self.o = os.fdopen(o,'w')
+        self.i, self.o = os.pipe()
         fdesc.setNonBlocking(self.i)
         fdesc.setNonBlocking(self.o)
-        self.fileno = self.i.fileno
+        self.fileno = lambda: self.i
 
     def doRead(self):
-        """Read one byte from the pipe.
+        """Read some bytes from the pipe.
         """
-        def _ignore(data):
-            pass
-        fdesc.readFromFD(self.fileno(), _ignore)
+        fdesc.readFromFD(self.fileno(), lambda data: None)
 
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
         """
-        if hasattr(self, "o"):
-            self.o.write('x')
-            self.o.flush()
+        if self.o is not None:
+            util.untilConcludes(os.write, self.o, 'x')
 
     def connectionLost(self, reason):
         """Close both ends of my pipe.
         """
         if not hasattr(self, "o"):
             return
-        try:
-            self.i.close()
-            self.o.close()
-        except IOError:
-            pass
-        del self.i
-        del self.o
+        for fd in self.i, self.o:
+            try:
+                os.close(fd)
+            except IOError:
+                pass
+        del self.i, self.o
         self.reactor.waker = None
 
 

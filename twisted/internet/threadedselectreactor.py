@@ -30,27 +30,7 @@ from twisted.python.runtime import platformType
 import select
 from errno import EINTR, EBADF
 
-def win32select(r, w, e, timeout=None):
-    """Win32 select wrapper."""
-    if not (r or w):
-        # windows select() exits immediately when no sockets
-        if timeout is None:
-            timeout = 0.01
-        else:
-            timeout = min(timeout, 0.001)
-        sleep(timeout)
-        return [], [], []
-    # windows doesn't process 'signals' inside select(), so we set a max
-    # time or ctrl-c will never be recognized
-    if timeout is None or timeout > 0.5:
-        timeout = 0.5
-    r, w, e = select.select(r, w, w, timeout)
-    return r, w + e, []
-
-if platformType == "win32":
-    _select = win32select
-else:
-    _select = select.select
+from twisted.internet.selectreactor import _select
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
