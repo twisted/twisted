@@ -137,9 +137,6 @@ class WSGIHandler(object):
         # Called in application thread
         try:
             result = self.application(self.environment, self.startWSGIResponse)
-            if self.response is None:
-                raise RuntimeError(
-                    "Application didn't call startResponse before returning!")
         except:
             reactor.callFromThread(self.__error, failure.Failure())
             return
@@ -160,6 +157,9 @@ class WSGIHandler(object):
     def write(self, output):
         # Called in application thread
         from twisted.internet import reactor
+        if self.response is None:
+            raise RuntimeError(
+                "Application didn't call startResponse before writing data!")
         if not self.headersSent:
             self.response.stream=stream.ProducerStream()
             self.headersSent = True
@@ -185,6 +185,9 @@ class WSGIHandler(object):
             if (isinstance(result, FileWrapper) and 
                    hasattr(result.filelike, 'fileno') and
                    not self.headersSent):
+                if self.response is None:
+                    raise RuntimeError(
+                        "Application didn't call startResponse before writing data!")
                 self.headersSent = True
                 # Make FileStream and output it. We make a new file
                 # object from the fd, just in case the original one

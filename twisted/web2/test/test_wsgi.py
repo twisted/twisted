@@ -111,6 +111,15 @@ class TestContainer(BaseCase):
             (500, {}, None))
         log.flushErrors(RuntimeError)
 
+    def test_calledStartResponseLate(self):
+        def application(environ, start_response):
+            start_response("200 OK", {})
+            yield "Foo"
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (200, {}, "Foo"))
+
 class TestWSGIEnvironment(BaseCase):
     """
     Test that the WSGI container does everything we expect it to do
