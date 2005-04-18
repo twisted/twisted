@@ -182,6 +182,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         content = self.request.content.read()
         if content:
             self.transport.write(content)
+        self.transport.closeStdin()
 
     def errReceived(self, error):
         self.errortext = self.errortext + error
