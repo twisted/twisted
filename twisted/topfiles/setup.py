@@ -42,9 +42,6 @@ def detectExtensions(builder):
         Extension("twisted.spread.cBanana",
                   ["twisted/spread/cBanana.c"],
                   define_macros=builder.define_macros),
-        Extension('twisted.internet.iovec', sources=['twisted/internet/iovec/iovec.c']),
-        Extension('twisted.internet.cdefer', ['twisted/internet/cdefer/cdefer.c']),
-        Extension('twisted.internet.crecv', ['twisted/internet/crecv/crecv.c']),
         ]
 
     # urllib.unquote accelerator

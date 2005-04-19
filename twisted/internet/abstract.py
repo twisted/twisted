@@ -35,6 +35,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     disconnecting = 0
     _writeDisconnecting = False
     _writeDisconnected = False
+    dataBuffer = ""
     offset = 0
     
     SEND_LIMIT = 128*1024
@@ -79,22 +80,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
 
         raise NotImplementedError("%s does not implement writeSomeData" %
                                   reflect.qual(self.__class__))
-
-    def writeSomeDatas(self, datas):
-        written=0
-        for dat in datas:
-            if not dat:
-                continue
-            l = self.writeSomeData(dat)
-            if l < 0 or isinstance(l, Exception):
-                if written > 0:
-                    return written
-                return l
-            if l == 0:
-                return written
-            written+=l
-        return written
-
+    
     def doRead(self):
         raise NotImplementedError("%s does not implement doRead" %
                                   reflect.qual(self.__class__))
@@ -107,31 +93,30 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         there; a result of 0 implies no write was done, and a result of None
         indicates that a write was done.
         """
+        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
+            # If there is currently less than SEND_LIMIT bytes left to send
+            # in the string, extend it with the array data.
+            self.dataBuffer = buffer(self.dataBuffer, self.offset) + "".join(self._tempDataBuffer)
+            self.offset = 0
+            self._tempDataBuffer = []
+            self._tempDataLen = 0
+            
         # Send as much data as you can.
-        l = self.writeSomeDatas(self._tempDataBuffer)
+        if self.offset:
+            l = self.writeSomeData(buffer(self.dataBuffer, self.offset))
+        else:
+            l = self.writeSomeData(self.dataBuffer)
         if l < 0 or isinstance(l, Exception):
             return l
-        if l == 0:
+        if l == 0 and self.dataBuffer:
             result = 0
         else:
             result = None
-            self._tempDataLen -= l
-            for n in xrange(len(self._tempDataBuffer)):
-                ll = len(self._tempDataBuffer[n])
-                if l > ll:
-                    l-=ll
-                elif l == ll:
-                    del self._tempDataBuffer[0:n+1]
-                    break
-                else:
-                    del self._tempDataBuffer[0:n]
-                    self._tempDataBuffer[0] = buffer(self._tempDataBuffer[0], l)
-                    break
-            else:
-                raise Exception("WTF?!?!")
-
+        self.offset += l
         # If there is nothing left to send,
-        if not self._tempDataLen:
+        if self.offset == len(self.dataBuffer) and not self._tempDataLen:
+            self.dataBuffer = ""
+            self.offset = 0
             # stop writing.
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
@@ -186,7 +171,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
             self._tempDataBuffer.append(data)
             self._tempDataLen += len(data)
             if self.producer is not None:
-                if self._tempDataLen > self.bufferSize:
+                if len(self.dataBuffer) + self._tempDataLen > self.bufferSize:
                     self.producerPaused = 1
                     self.producer.pauseProducing()
             self.startWriting()
@@ -198,7 +183,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         for i in iovec:
             self._tempDataLen += len(i)
         if self.producer is not None:
-            if self._tempDataLen > self.bufferSize:
+            if len(self.dataBuffer) + self._tempDataLen > self.bufferSize:
                 self.producerPaused = 1
                 self.producer.pauseProducing()
         self.startWriting()

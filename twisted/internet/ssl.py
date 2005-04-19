@@ -160,6 +160,7 @@ components.backwardsCompatImplements(Server)
 
 class Port(tcp.Port):
     """I am an SSL port."""
+    _socketShutdownMethod = 'sock_shutdown'
     
     transport = Server
 
@@ -167,10 +168,16 @@ class Port(tcp.Port):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
 
+    def createInternetSocket(self):
+        """(internal) create an SSL socket
+        """
+        sock = tcp.Port.createInternetSocket(self)
+        return SSL.Connection(self.ctxFactory.getContext(), sock)
+
     def _preMakeConnection(self, transport):
-        # *Don't* call startTLS here, don't need to stop&start reading.
-        transport._startTLS(self.ctxFactory)
-        transport.socket.set_accept_state()
+        # *Don't* call startTLS here
+        # The transport already has the SSL.Connection object from above
+        transport._startTLS()
         return tcp.Port._preMakeConnection(self, transport)
 
 
