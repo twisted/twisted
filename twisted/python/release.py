@@ -23,15 +23,15 @@ class CommandFailed(OSError):
 
 # utilities
 
-def sh(command, null=True):#, sensitive=0):
+def sh(command, null=True, prompt=False):
     """
-    I'll try to execute `command', and if `sensitive' is true, I'll
+    I'll try to execute `command', and if `prompt' is true, I'll
     ask before running it.  If the command returns something other
     than 0, I'll raise CommandFailed(command).
     """
     print "--$", command
 
-    if True:#debug:# or sensitive:
+    if prompt:
         if raw_input("run ?? ").startswith('n'):
             return
     if null:

@@ -133,7 +133,8 @@ def tar(tdir):
 
 def tagTemp(opts):
     sh('svn cp %s %s -m "Tagging preliminary %s"'
-       % (trunkurl, opts['temptagurl'], opts['core-version']))
+       % (trunkurl, opts['temptagurl'], opts['core-version']),
+       prompt=True)
 
 def exportTemp(opts):
     if os.path.exists('Twisted.exp'):
@@ -337,7 +338,8 @@ makeBallXish = makeMakeBall('xish')
 
 def finalizeTag(opts):
     sh('svn mv -m "Finalizing release of %s" %s %s'
-       % (opts['core-version'], opts['temptagurl'], opts['tagurl']))
+       % (opts['core-version'], opts['temptagurl'], opts['tagurl']),
+       prompt=True)
 
 if __name__=='__main__':
     main()
