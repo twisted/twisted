@@ -3,7 +3,6 @@
 # See LICENSE for details.
 
 
-
 """Various asynchronous TCP/IP classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
@@ -27,6 +26,18 @@ try:
 except ImportError:
     fcntl = None
 from zope.interface import implements, classImplements
+
+#try:
+#    import iovec
+#    print >> sys.stderr, "Using iovec"
+#except ImportError:
+iovec = None
+
+#try:
+#    import crecv
+#    print >> sys.stderr, "Using crecv"
+#except ImportError:
+crecv = None
 
 try:
     from OpenSSL import SSL
@@ -108,7 +119,7 @@ class _TLSMixin(_SocketCloser):
             self.writeBlockedOnRead = 0
             self._resetReadWrite()
         try:
-            return Connection.doRead(self)
+            return Connection.doRead_slow(self)
         except SSL.ZeroReturnError:
             return main.CONNECTION_DONE
         except SSL.WantReadError:
@@ -140,6 +151,7 @@ class _TLSMixin(_SocketCloser):
             self._resetReadWrite()
         return Connection.doWrite(self)
 
+
     def writeSomeData(self, data):
         try:
             return Connection.writeSomeData(self, data)
@@ -162,7 +174,7 @@ class _TLSMixin(_SocketCloser):
         except SSL.Error:
             log.err()
             return main.CONNECTION_LOST
-
+    
     def _postLoseConnection(self):
         """Gets called after loseConnection(), after buffered data is sent.
 
@@ -272,6 +284,12 @@ class _TLSMixin(_SocketCloser):
         else:
             self.stopReading()
 
+    def writeSomeDatas(self, datas):
+        if not datas:
+            return self.writeSomeData('')
+        
+        return abstract.FileDescriptor.writeSomeDatas(self, datas)
+
 class Connection(abstract.FileDescriptor, _SocketCloser):
     """I am the superclass of all socket-based FileDescriptors.
 
@@ -289,49 +307,49 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
         self.socket.setblocking(0)
         self.fileno = skt.fileno
         self.protocol = protocol
-
+        self._readBuffer = '\0'*self.bufferSize
+        
     if SSL:
 
         def startTLS(self, ctx):
+            print "startTLS"
             assert not self.TLS
             error=False
-            if self.dataBuffer or self._tempDataBuffer:
-                self.dataBuffer += "".join(self._tempDataBuffer)
-                self._tempDataBuffer = []
-                self._tempDataLen = 0
-                written = self.writeSomeData(buffer(self.dataBuffer, self.offset))
-                offset = self.offset
-                dataLen = len(self.dataBuffer)
-                self.offset = 0
-                self.dataBuffer = ""
-                if isinstance(written, Exception) or (offset + written != dataLen):
+            if self._tempDataBuffer:
+                dataLen = self._tempDataLen
+                written = self.writeSomeDatas(self._tempDataBuffer)
+                self._tempDataLen=0
+                del self._tempDataBuffer[:]
+                if isinstance(written, Exception) or (written != dataLen):
                     error=True
 
 
             self.stopReading()
             self.stopWriting()
-            self._startTLS()
-            self.socket = SSL.Connection(ctx.getContext(), self.socket)
-            self.fileno = self.socket.fileno
+            self._startTLS(ctx)
             self.startReading()
             if error:
                 warnings.warn("startTLS with unwritten buffered data currently doesn't work right. See issue #686. Closing connection.", category=RuntimeWarning, stacklevel=2)
                 self.loseConnection()
                 return
 
-        def _startTLS(self):
+        def _startTLS(self, ctx):
+            print "_startTLS"
             self.TLS = 1
             klass = self.__class__
             class TLSConnection(_TLSMixin, klass):
                 implements(interfaces.ISSLTransport)
             components.backwardsCompatImplements(TLSConnection)
             self.__class__ = TLSConnection
+            self.rawsocket = self.socket
+            self.socket = SSL.Connection(ctx.getContext(), self.socket)
+            self.fileno = self.socket.fileno
 
     def getHandle(self):
         """Return the socket for this connection."""
         return self.socket
     
-    def doRead(self):
+    def doRead_slow(self):
         """Calls self.protocol.dataReceived with all available data.
 
         This reads up to self.bufferSize bytes of data from its socket, then
@@ -349,7 +367,45 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
         if not data:
             return main.CONNECTION_DONE
         return self.protocol.dataReceived(data)
+    
+    if crecv is None:
+        doRead = doRead_slow
+    else:
+        def doRead(self):
+            """Calls self.protocol.dataReceived with all available data.
+            
+            This reads up to self.bufferSize bytes of data from its socket, then
+            calls self.dataReceived(data) to process it.  If the connection is not
+            lost through an error in the physical recv(), this function will return
+            the result of the dataReceived call.
+            """
+            _readBuffer=self._readBuffer
+            self._readBuffer=None
+            try:
+                from crecv import recvinto
+                data = recvinto(self.socket.fileno(), self.bufferSize, _readBuffer)
+            except socket.error, se:
+                self._readBuffer=_readBuffer
+                if se.args[0] == EWOULDBLOCK:
+                    return
+                else:
+                    return main.CONNECTION_LOST
+            self._readBuffer=_readBuffer
+            if not data:
+                return main.CONNECTION_DONE
+            return self.protocol.dataReceived(data)
 
+    if iovec is not None:
+        def writeSomeDatas(self, datas):
+            res, errno = iovec.writev(self.socket.fileno(), datas, self.SEND_LIMIT)
+            if res >= 0:
+                return res
+            if errno == EINTR:
+                return self.writeSomeDatas(datas)
+            if errno == EWOULDBLOCK or errno == ENOBUFS:
+                return 0
+            return main.CONNECTION_LOST
+            
     def writeSomeData(self, data):
         """Connection.writeSomeData(data) -> #of bytes written | CONNECTION_LOST
         This writes as much data as possible to the socket and returns either

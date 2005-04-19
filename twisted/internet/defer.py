@@ -144,6 +144,9 @@ def timeout(deferred):
 def passthru(arg):
     return arg
 
+def isDeferred(d):
+    return isinstance(d, Deferred)
+
 def setDebugging(on):
     """Enable or disable Deferred debugging.
 
@@ -428,6 +431,16 @@ class DebugInfo:
             if debugInfo != '':
                 log.msg("(debug: " + debugInfo + ")", isError=True)
             log.err(self.failResult)
+
+try:
+    import cdefer
+    Deferred = cdefer.Deferred
+    setDebugging=cdefer.setDebugging
+    isDeferred=cdefer.isDeferred
+    print >> sys.stderr, "Using C Deferred"
+    pass
+except ImportError:
+    pass
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
