@@ -42,6 +42,15 @@ class TestVhost(BaseCase):
             (self.root, 'http://foo/'),
             (200, {}, 'foo'))
 
+    def testNoDefault(self):
+        root = vhost.NameVirtualHost()
+        
+        # Test lack of host specified
+        self.assertResponse(
+            (root, 'http://frob/'),
+            (404, {}, None))
+
+        
     def testNameVirtualHostWithChildren(self):
         """ Test that children of a defined NVH are handled appropriately
         """

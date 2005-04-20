@@ -62,21 +62,19 @@ class NameVirtualHost(resource.Resource):
 
         hostHeader = iweb.IRequest(ctx).host
         
-        if hostHeader == None:
-            return self.default or responsecode.NOT_FOUND
-        else:
-            host = hostHeader.split(':')[0].lower()
+        host = hostHeader.split(':')[0].lower()
+        
+        if self.supportNested:
+            """ If supportNested is True domain prefixes (the stuff up to the first '.')
+            will be chopped off until it's reduced to the tld or a valid domain is 
+            found.
+            """
             
-            if self.supportNested:
-                """ If supportNested is True domain prefixes (the stuff up to the first '.')
-                    will be chopped off until it's reduced to the tld or a valid domain is 
-                    found.
-                """
+            while not self.hosts.has_key(host) and len(host.split('.')) > 1:
+                host = '.'.join(host.split('.')[1:])
 
-                while not self.hosts.has_key(host) and len(host.split('.')) > 1:
-                    host = '.'.join(host.split('.')[1:])
-
-        return (self.hosts.get(host, self.default) or responsecode.NOT_FOUND), segments
+        # Default being None is okay, it'll turn into a 404
+        return self.hosts.get(host, self.default), segments
 
 class VHostURIRewrite(resource.Resource):
     """ I do request mangling to insure that children know what host they are being 
