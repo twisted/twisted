@@ -211,6 +211,9 @@ def install():
     main.installReactor(r)
 
 
+def _cmdLineQuote(s):
+    return '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
 class Process(abstract.FileDescriptor):
     """A process that integrates with the Twisted event loop.
 
@@ -280,8 +283,8 @@ class Process(abstract.FileDescriptor):
         env.update(environment or {})
 
         # create the process
-        cmdline = "%s %s" % (command, string.join(args[1:], ' '))
-        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, env, path, StartupInfo)
+        cmdline = ' '.join([_cmdLineQuote(a) for a in args[1:]])
+        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(command, cmdline, None, None, 1, 0, env, path, StartupInfo)
 
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)
