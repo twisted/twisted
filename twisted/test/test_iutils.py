@@ -23,24 +23,27 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
     output = None
     value = None
 
-    def makeSourceFile(self, source):
+    def makeSourceFile(self, sourceLines):
         script = self.mktemp()
         scriptFile = file(script, 'wt')
-        scriptFile.write(source)
+        scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         scriptFile.close()
         return script
 
     def testOutput(self):
-        scriptFile = self.makeSourceFile('print "hello world"\n')
+        scriptFile = self.makeSourceFile([
+            'print "hello world"'
+            ])
         d = utils.getProcessOutput(sys.executable, [scriptFile])
         return d.addCallback(self.assertEquals, "hello world\n")
 
     def testOutputWithErrorIgnored(self):
         # make sure stderr raises an error normally
         exe = sys.executable
-        scriptFile = self.makeSourceFile(
-            'import sys\n'
-            'sys.stderr.write("hello world\\n")\n')
+        scriptFile = self.makeSourceFile([
+            'import sys',
+            'sys.stderr.write("hello world\\n")'
+            ])
 
         d = utils.getProcessOutput(exe, [scriptFile], errortoo=0)
         return assertions.assertFailure(d, IOError)
@@ -48,33 +51,36 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
     def testOutputWithErrorCollected(self):
         # make sure stderr raises an error normally
         exe = sys.executable
-        scriptFile = self.makeSourceFile(
-            'import sys\n'
-            'sys.stderr.write("hello world\\n")\n')
+        scriptFile = self.makeSourceFile([
+            'import sys',
+            'sys.stderr.write("hello world\\n")'
+            ])
 
         d = utils.getProcessOutput(exe, [scriptFile], errortoo=1)
-        return d.addCallback(self.assertEquals, "hello world\n")
+        return d.addCallback(self.assertEquals, "hello world" + os.linesep)
 
     def testValue(self):
         exe = sys.executable
-        scriptFile = self.makeSourceFile(
-            "import sys\n"
-            "sys.exit(1)\n")
+        scriptFile = self.makeSourceFile([
+            "import sys",
+            "sys.exit(1)"
+            ])
 
         d = utils.getProcessValue(exe, [scriptFile])
         return d.addCallback(self.assertEquals, 1)
 
     def testOutputAndValue(self):
         exe = sys.executable
-        scriptFile = self.makeSourceFile(
-            "import sys\n"
-            "sys.stdout.write('hello world!\\n')\n"
-            "sys.stderr.write('goodbye world!\\n')\n"
-            "sys.exit(1)")
+        scriptFile = self.makeSourceFile([
+            "import sys",
+            "sys.stdout.write('hello world!\\n')",
+            "sys.stderr.write('goodbye world!\\n')",
+            "sys.exit(1)"
+            ])
 
         def gotOutputAndValue((out, err, code)):
-            self.assertEquals(out, "hello world!\n")
-            self.assertEquals(err, "goodbye world!\n")
+            self.assertEquals(out, "hello world!" + os.linesep)
+            self.assertEquals(err, "goodbye world!" + os.linesep)
             self.assertEquals(code, 1)
         d = utils.getProcessOutputAndValue(exe, [scriptFile])
         return d.addCallback(gotOutputAndValue)
@@ -84,18 +90,19 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
         # SIGHUP might not work in, e.g., a buildbot slave run under the
         # 'nohup' command.
         exe = sys.executable
-        scriptFile = self.makeSourceFile(
-            "import sys, os, signal\n"
-            "sys.stdout.write('stdout bytes\\n')\n"
-            "sys.stderr.write('stderr bytes\\n')\n"
-            "sys.stdout.flush()\n"
-            "sys.stderr.flush()\n"
-            "os.kill(os.getpid(), signal.SIGKILL)\n")
+        scriptFile = self.makeSourceFile([
+            "import sys, os, signal",
+            "sys.stdout.write('stdout bytes\\n')",
+            "sys.stderr.write('stderr bytes\\n')",
+            "sys.stdout.flush()",
+            "sys.stderr.flush()",
+            "os.kill(os.getpid(), signal.SIGKILL)"
+            ])
 
         def gotOutputAndValue(err):
             (out, err, sig) = err.value # XXX Sigh wtf
-            self.assertEquals(out, "stdout bytes\n")
-            self.assertEquals(err, "stderr bytes\n")
+            self.assertEquals(out, "stdout bytes" + os.linesep)
+            self.assertEquals(err, "stderr bytes" + os.linesep)
             self.assertEquals(sig, signal.SIGKILL)
 
         d = utils.getProcessOutputAndValue(exe, [scriptFile])
