@@ -86,6 +86,14 @@ class CGIScript(resource.Resource):
         if pp:
             env["PATH_INFO"] = "/"+string.join(pp, '/')
 
+        if hasattr(request, "content"):
+            # request.content is either a StringIO or a TemporaryFile, and
+            # the file pointer is sitting at the beginning (seek(0,0))
+            request.content.seek(0,2)
+            length = request.content.tell()
+            request.content.seek(0,0)
+            env['CONTENT_LENGTH'] = str(length)
+
         qindex = string.find(request.uri, '?')
         if qindex != -1:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
