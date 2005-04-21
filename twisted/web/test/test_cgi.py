@@ -5,7 +5,8 @@ import sys, os
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
 from twisted.python import util
-from twisted.web import static, twcgi, server, resource, client
+from twisted.web import static, twcgi, server, resource
+from twisted.web import client
 
 DUMMY_CGI = '''\
 print "Header: OK"
@@ -19,7 +20,7 @@ READINPUT_CGI = '''\
 
 import os, sys
 
-body_length = int(os.environ['CONTENT_LENGTH'])
+body_length = int(os.environ.get('CONTENT_LENGTH',0))
 indata = sys.stdin.read(body_length)
 print "Header: OK"
 print
@@ -41,6 +42,7 @@ print "readallinput ok"
 
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
+    filters = sys.executable,  # web2's version
 
 class CGI(unittest.TestCase):
     def startServer(self, cgi):
@@ -70,7 +72,7 @@ class CGI(unittest.TestCase):
         self.failUnlessEqual(res, "cgi output\n")
 
 
-    def testReadInput(self):
+    def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
         cgiFile = file(cgiFilename, 'wt')
         cgiFile.write(READINPUT_CGI)
@@ -78,6 +80,22 @@ class CGI(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum)
+        d.addCallback(self._testReadEmptyInput_1)
+        return d
+    testReadEmptyInput.timeout = 5
+    def _testReadEmptyInput_1(self, res):
+        self.failUnlessEqual(res, "readinput ok\n")
+
+    def testReadInput(self):
+        cgiFilename = os.path.abspath(self.mktemp())
+        cgiFile = file(cgiFilename, 'wt')
+        cgiFile.write(READINPUT_CGI)
+        cgiFile.close()
+
+        portnum = self.startServer(cgiFilename)
+        d = client.getPage("http://localhost:%d/cgi" % portnum,
+                           method="POST",
+                           postdata="Here is your stdin")
         d.addCallback(self._testReadInput_1)
         return d
     testReadInput.timeout = 5
@@ -92,7 +110,9 @@ class CGI(unittest.TestCase):
         cgiFile.close()
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum)
+        d = client.getPage("http://localhost:%d/cgi" % portnum,
+                           method="POST",
+                           postdata="Here is your stdin")
         d.addCallback(self._testRealAllInput_1)
         return d
     testRealAllInput.timeout = 5
