@@ -557,7 +557,7 @@ class TestClassAndMethodBase(TestRunnerBase):
         try:
             self._signalStateMgr.save()
 
-            reporter.startClass(self._testCase.__name__) # fix! this sucks!
+            reporter.startClass(self._testCase)
 
             # --- setUpClass -----------------------------------------------
 
@@ -624,7 +624,7 @@ class TestClassAndMethodBase(TestRunnerBase):
             except util.MultiError, e:
                 reporter.cleanupErrors(e.failures)
             self._signalStateMgr.restore()
-            reporter.endClass(self._testCase.__name__) # fix! this sucks!
+            reporter.endClass(self._testCase)
             self.endTime = time.time()
         
 

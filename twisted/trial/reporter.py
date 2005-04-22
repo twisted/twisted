@@ -203,7 +203,7 @@ class Reporter(object):
     def startModule(self, name):
         pass
 
-    def startClass(self, name):
+    def startClass(self, klass):
         pass
 
     def endModule(self, module):
@@ -359,8 +359,9 @@ class TreeReporter(VerboseTextReporter):
 
     def startClass(self, klass):
         clsName = itrial.IClassName(klass)
-        if clsName not in self.seenClasses:
-            self.seenClasses[clsName] = 1
+        qualifiedClsName = reflect.qual(klass)
+        if qualifiedClsName not in self.seenClasses:
+            self.seenClasses[qualifiedClsName] = 1
             self.write('    %s\n' % clsName)
 
     def cleanupErrors(self, errs):
