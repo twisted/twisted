@@ -564,7 +564,8 @@ class TestClassAndMethodBase(TestRunnerBase):
             setUpClass = UserMethodWrapper(self.setUpClass, janitor,
                                            suppress=self.suppress)
             try:
-                setUpClass()
+                if not getattr(tci, 'skip', None):
+                    setUpClass()
             except UserMethodError:
                 for error in setUpClass.errors:
                     if error.check(unittest.SkipTest):
@@ -609,7 +610,8 @@ class TestClassAndMethodBase(TestRunnerBase):
             tearDownClass = UserMethodWrapper(self.tearDownClass, janitor,
                                    suppress=self.suppress)
             try:
-                tearDownClass()
+                if not getattr(tci, 'skip', None):
+                    tearDownClass()
             except UserMethodError:
                 for error in tearDownClass.errors:
                     if error.check(KeyboardInterrupt):
