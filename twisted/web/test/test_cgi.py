@@ -103,7 +103,7 @@ class CGI(unittest.TestCase):
         self.failUnlessEqual(res, "readinput ok\n")
 
 
-    def testRealAllInput(self):
+    def testReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
         cgiFile = file(cgiFilename, 'wt')
         cgiFile.write(READALLINPUT_CGI)
@@ -113,10 +113,10 @@ class CGI(unittest.TestCase):
         d = client.getPage("http://localhost:%d/cgi" % portnum,
                            method="POST",
                            postdata="Here is your stdin")
-        d.addCallback(self._testRealAllInput_1)
+        d.addCallback(self._testReadAllInput_1)
         return d
-    testRealAllInput.timeout = 5
-    def _testRealAllInput_1(self, res):
+    testReadAllInput.timeout = 5
+    def _testReadAllInput_1(self, res):
         self.failUnlessEqual(res, "readallinput ok\n")
 
 if not interfaces.IReactorProcess.providedBy(reactor):
