@@ -92,7 +92,7 @@ class ConnectionPool:
 
         @param cp_max: the maximum number of connections in pool (default 5)
 
-        @param cp_noisy: generate information log message during
+        @param cp_noisy: generate informational log messages during
                          operation (default False)
 
         @param cp_openfun: a callback invoked after every connect()
@@ -104,8 +104,8 @@ class ConnectionPool:
         @param cp_reconnect: detect connections which have failed
                              and reconnect (default False). Failed
                              connections may result in ConnectionLost
-                             exceptions, which indicate the query should
-                             be re-sent.
+                             exceptions, which indicate the query may
+                             need to be re-sent.
 
         @param cp_good_sql: an sql query which should always succeed
                             and change no state (default 'select 1')
@@ -261,6 +261,8 @@ class ConnectionPool:
 
         This method blocks and should be run in a thread from the internal
         threadpool. Don't call this method directly from non-threaded code.
+        Using this method outside the external threadpool may exceed the
+        maximum number of connections in the pool.
 
         @return: a database connection from the pool.
         """
