@@ -34,7 +34,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
         scriptFile = self.makeSourceFile([
             'print "hello world"'
             ])
-        d = utils.getProcessOutput(sys.executable, [scriptFile])
+        d = utils.getProcessOutput(sys.executable, ['-u', scriptFile])
         return d.addCallback(self.assertEquals, "hello world\n")
 
     def testOutputWithErrorIgnored(self):
@@ -45,7 +45,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             'sys.stderr.write("hello world\\n")'
             ])
 
-        d = utils.getProcessOutput(exe, [scriptFile], errortoo=0)
+        d = utils.getProcessOutput(exe, ['-u', scriptFile], errortoo=0)
         return assertions.assertFailure(d, IOError)
 
     def testOutputWithErrorCollected(self):
@@ -56,7 +56,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             'sys.stderr.write("hello world\\n")'
             ])
 
-        d = utils.getProcessOutput(exe, [scriptFile], errortoo=1)
+        d = utils.getProcessOutput(exe, ['-u', scriptFile], errortoo=1)
         return d.addCallback(self.assertEquals, "hello world" + os.linesep)
 
     def testValue(self):
@@ -66,7 +66,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             "sys.exit(1)"
             ])
 
-        d = utils.getProcessValue(exe, [scriptFile])
+        d = utils.getProcessValue(exe, ['-u', scriptFile])
         return d.addCallback(self.assertEquals, 1)
 
     def testOutputAndValue(self):
@@ -82,7 +82,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             self.assertEquals(out, "hello world!" + os.linesep)
             self.assertEquals(err, "goodbye world!" + os.linesep)
             self.assertEquals(code, 1)
-        d = utils.getProcessOutputAndValue(exe, [scriptFile])
+        d = utils.getProcessOutputAndValue(exe, ['-u', scriptFile])
         return d.addCallback(gotOutputAndValue)
 
     def testOutputSignal(self):
@@ -105,7 +105,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             self.assertEquals(err, "stderr bytes" + os.linesep)
             self.assertEquals(sig, signal.SIGKILL)
 
-        d = utils.getProcessOutputAndValue(exe, [scriptFile])
+        d = utils.getProcessOutputAndValue(exe, ['-u', scriptFile])
         return d.addErrback(gotOutputAndValue)
 
 if interfaces.IReactorProcess(reactor, None) is None:
