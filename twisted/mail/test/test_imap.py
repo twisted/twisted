@@ -2315,7 +2315,7 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testStartTLS(self):
         success = []
         self.connected.addCallback(lambda _: self.client.startTLS())
-        self.connected.addCallback(lambda _: self.failUnless('TLS' in self.client.transport.__class__.__name__))
+        self.connected.addCallback(lambda _: self.assertEquals(-1, self.client.transport.__class__.__name__.find('TLS')))
         self.connected.addCallback(self._cbStopClient)
         self.connected.addCallback(success.append)
         self.connected.addErrback(self._ebGeneral)
