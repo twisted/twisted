@@ -2297,6 +2297,48 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # It is, afterall, a no-op.
         return lines
 
+    def startTLS(self, contextFactory=None):
+        """
+        Initiates a 'STARTTLS' request and negotiates the TLS / SSL
+        Handshake.
+
+        @param contextFactory: The TLS / SSL Context Factory to
+        leverage.  If the contextFactory is None the IMAP4Client will
+        either use the current TLS / SSL Context Factory or attempt to
+        create a new one.
+
+        @type contextFactory: C{ssl.ClientContextFactory}
+
+        @return: A Deferred which fires when the transport has been
+        security according to the given contextFactory, or which fails
+        if the transport cannot be secured.
+        """
+        assert not self.startedTLS, "Client and Server are currently communicating via TLS"
+
+        if contextFactory is None:
+            contextFactory = self._getContextFactory()
+
+        if contextFactory is None:
+            return defer.fail(IMAP4Exception(
+                "IMAP4Client requires a TLS context to "
+                "initiate the STARTTLS handshake"))
+
+        if 'STARTTLS' not in self._capCache:
+            return defer.fail(IMAP4Exception(
+                "Server does not support secure communication "
+                "via TLS / SSL"))
+
+        tls = interfaces.ITLSTransport(self.transport, None)
+        if tls is None:
+            return defer.fail(IMAP4Exception(
+                "IMAP4Client transport does not implement "
+                "interfaces.ITLSTransport"))
+
+        d = self.sendCommand(Command('STARTTLS'))
+        d.addCallback(self._startedTLS, contextFactory)
+        d.addCallback(lambda _: self.getCapabilities())
+        return d
+
 
     def authenticate(self, secret):
         """Attempt to enter the authenticated state with the server
@@ -2318,22 +2360,27 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         auths = caps.get('AUTH', ())
         for scheme in auths:
             if scheme.upper() in self.authenticators:
-                break
-        else:
-            if 'STARTTLS' in caps:
-                tls = interfaces.ITLSTransport(self.transport, default=None)
-                if tls is not None:
-                    ctx = self._getContextFactory()
-                    if ctx:
-                        d = self.sendCommand(Command('STARTTLS'))
-                        d.addCallback(self._startedTLS, ctx)
-                        d.addCallback(lambda _: self.getCapabilities())
-                        d.addCallback(self.__cbAuthTLS, secret)
-                        return d
-            raise NoSupportedAuthentication(auths, self.authenticators.keys())
+                cmd = Command('AUTHENTICATE', scheme, (),
+                              self.__cbContinueAuth, scheme,
+                              secret)
+                return self.sendCommand(cmd)
 
-        d = self.sendCommand(Command('AUTHENTICATE', scheme, (), self.__cbContinueAuth, scheme, secret))
-        return d
+        if self.startedTLS:
+            return defer.fail(NoSupportedAuthentication(
+                auths, self.authenticators.keys()))
+        else:
+            def ebStartTLS(err):
+                err.trap(IMAP4Exception)
+                # We couldn't negotiate TLS for some reason
+                return defer.fail(NoSupportedAuthentication(
+                    auths, self.authenticators.keys()))
+
+            d = self.startTLS()
+            d.addErrback(ebStartTLS)
+            d.addCallback(lambda _: self.getCapabilities())
+            d.addCallback(self.__cbAuthTLS, secret)
+            return d
+
 
     def __cbContinueAuth(self, rest, scheme, secret):
         try:
@@ -2351,12 +2398,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         auths = caps.get('AUTH', ())
         for scheme in auths:
             if scheme.upper() in self.authenticators:
-                break
-        else:
-            raise NoSupportedAuthentication(auths, self.authenticators.keys())
+                cmd = Command('AUTHENTICATE', scheme, (),
+                              self.__cbContinueAuth, scheme,
+                              secret)
+                return self.sendCommand(cmd)
+        raise NoSupportedAuthentication(auths, self.authenticators.keys())
 
-        d = self.sendCommand(Command('AUTHENTICATE', scheme, (), self.__cbContinueAuth, scheme, secret))
-        return d
 
     def login(self, username, password):
         """Authenticate with the server using a username and password
@@ -2364,6 +2411,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         This command is allowed in the Non-Authenticated state.  If the
         server supports the STARTTLS capability and our transport supports
         TLS, TLS is negotiated before the login command is issued.
+
+        A more secure way to log in is to use C{startTLS} or
+        C{authenticate} or both.
 
         @type username: C{str}
         @param username: The username to log in with
@@ -2412,20 +2462,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # If our transport is not already using TLS, we might want to try to switch to TLS.
         nontlsTransport = interfaces.ISSLTransport(self.transport, default=None) is None
 
-        if tryTLS and tlsableTransport and nontlsTransport:
-            ctx = self._getContextFactory()
-            if ctx:
-                d = self.sendCommand(Command('STARTTLS'))
-                d.addCallback(self._startedTLS, ctx)
-                d.addCallbacks(
-                    self.__cbLoginTLS,
-                    self.__ebLoginTLS,
-                    callbackArgs=(username, password),
+        if not self.startedTLS and tryTLS and tlsableTransport and nontlsTransport:
+            d = self.startTLS()
+
+            d.addCallbacks(
+                self.__cbLoginTLS,
+                self.__ebLoginTLS,
+                callbackArgs=(username, password),
                 )
-                return d
-            else:
-                log.err("Server wants us to use TLS, but we don't have "
-                        "a Context Factory!")
+            return d
         else:
             if nontlsTransport:
                 log.msg("Server has no TLS support. logging in over cleartext!")
@@ -2433,7 +2478,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             return self.sendCommand(Command('LOGIN', args))
 
     def _startedTLS(self, result, context):
-        self.context = context
         self.transport.startTLS(context)
         self._capCache = None
         self.startedTLS = True

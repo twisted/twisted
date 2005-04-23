@@ -2312,6 +2312,32 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.loopback()
         self.assertEquals(len(success), 1)
 
+    def testStartTLS(self):
+        success = []
+        self.connected.addCallback(lambda _: self.client.startTLS())
+        self.connected.addCallback(lambda _: self.failUnless('TLS' in self.client.transport.__class__.__name__))
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addCallback(success.append)
+        self.connected.addErrback(self._ebGeneral)
+
+        self.loopback()
+        self.failUnless(success)
+
+    def testFailedStartTLS(self):
+        failure = []
+        def breakServerTLS(ign):
+            self.server.canStartTLS = False
+
+        self.connected.addCallback(breakServerTLS)
+        self.connected.addCallback(lambda ign: self.client.startTLS())
+        self.connected.addErrback(lambda err: failure.append(err.trap(imap4.IMAP4Exception)))
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        self.loopback()
+        self.failUnless(failure)
+        self.assertIdentical(failure[0], imap4.IMAP4Exception)
+        
 class SlowMailbox(SimpleMailbox):
     howSlow = 2
 
