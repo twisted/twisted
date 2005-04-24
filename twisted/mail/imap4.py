@@ -2310,7 +2310,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type contextFactory: C{ssl.ClientContextFactory}
 
         @return: A Deferred which fires when the transport has been
-        security according to the given contextFactory, or which fails
+        secured according to the given contextFactory, or which fails
         if the transport cannot be secured.
         """
         assert not self.startedTLS, "Client and Server are currently communicating via TLS"
