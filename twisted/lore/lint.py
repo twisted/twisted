@@ -87,6 +87,10 @@ class DefaultTagChecker(TagChecker):
 
     def check_80_columns(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'pre'):
+            # the ps/pdf output is in a font that cuts off at 80 characters,
+            # so this is enforced to make sure the interesting parts (which
+            # are likely to be on the right-hand edge) stay on the printed
+            # page.
             for line in domhelpers.gatherTextNodes(node, 1).split('\n'):
                 if len(line.rstrip()) > 80:
                     self._reportError(filename, node, 
