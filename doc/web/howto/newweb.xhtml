@@ -41,7 +41,7 @@ The <code>http.Response</code> object is a self-contained representation of the 
 <h2>Header object (<code>http_header.py</code>)</h2>
 Parsing and generating correct HTTP headers is not always as trivial as you might like. The goal here is to have the framework parse and generate the headers for you, from a structured representation.
 <p />
-The only public interface in this module is "Header". It has methods <code>getHeader</code>/<code>setHeader</code> which deal with parsed representations, as well as methods <code>getRawHeaders</code>/<code>setRawHeaders</code> which deal with unparsed representations. Headers are automatically converted between the two representations on demand, using the machinery in the rest of the file. There's also <code>removeHeader</code> and <code>hasHeader</code>, to fill out the set.
+The only public interface in this module is <q>Header</q>. It has methods <code>getHeader</code>/<code>setHeader</code> which deal with parsed representations, as well as methods <code>getRawHeaders</code>/<code>setRawHeaders</code> which deal with unparsed representations. Headers are automatically converted between the two representations on demand, using the machinery in the rest of the file. There's also <code>removeHeader</code> and <code>hasHeader</code>, to fill out the set.
 <p />
 Here's a list of the HTTP headers and their expected parsed formats:
 
