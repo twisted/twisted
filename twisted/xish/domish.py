@@ -26,84 +26,6 @@ def _splitPrefix(name):
 # mean they're always _USED_)
 G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }    
 
-class _Serializer:
-    """ Internal class which serializes an Element tree into a buffer """
-    def __init__(self, prefixes = None):
-        self.cio = StringIO.StringIO()
-        self.prefixes = prefixes or {}
-        self.prefixes.update(G_PREFIXES)
-        self.prefixCounter = 0
-
-    def getValue(self):
-        return self.cio.getvalue()
-
-    def getPrefix(self, uri):
-        if not self.prefixes.has_key(uri):
-            self.prefixes[uri] = "xn%d" % (self.prefixCounter)
-            self.prefixCounter = self.prefixCounter + 1
-        return self.prefixes[uri]
-
-    def serialize(self, elem, closeElement = 1):
-        # Optimization shortcuts
-        write = self.cio.write
-
-        # Shortcut, check to see if elem is actually a chunk o' serialized XML
-        if isinstance(elem, SerializedXML):
-            write(elem.encode("utf-8"))
-            return
-
-        # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, types.StringTypes):
-            write(escapeToXml(elem).encode("utf-8")) 
-            return
-
-        # Further optimizations
-        parent = elem.parent
-        name = elem.name
-        uri = elem.uri
-        defaultUri = elem.defaultUri
-
-        
-        # Seralize element name
-        if defaultUri == uri:
-            if parent == None or defaultUri == parent.defaultUri:
-                write("<%s" % (name))
-            else:
-                write("<%s xmlns='%s'" % (name, defaultUri))
-        else:
-            prefix = self.getPrefix(uri)
-            if parent == None or elem.defaultUri == parent.defaultUri:
-                write("<%s:%s xmlns:%s='%s'" % (prefix, name, prefix, uri))
-            else:
-               write("<%s:%s xmlns:%s='%s' xmlns='%s'" % (prefix, name, prefix, uri, defaultUri))
-
-        # Serialize attributes
-        for k,v in elem.attributes.items():
-            # If the attribute name is a list, it's a qualified attribute
-            if isinstance(k, types.TupleType):
-                write((" %s:%s='%s'" % (self.getPrefix(k[0]), k[1], escapeToXml(v, 1))).encode("utf-8"))
-            else:
-                write((" %s='%s'" % ( k, escapeToXml(v, 1))).encode("utf-8"))
-
-        # Shortcut out if this is only going to return
-        # the element (i.e. no children)
-        if closeElement == 0:
-            write(">")
-            return
-
-        # Serialize children
-        if len(elem.children) > 0:
-            write(">")
-            for c in elem.children:
-                self.serialize(c)
-            # Add closing tag
-            if defaultUri == uri:
-                write("</%s>" % (name))
-            else:
-                write("</%s:%s>" % (self.getPrefix(uri), name))
-        else:
-            write("/>")
-
 class _ListSerializer:
     """ Internal class which serializes an Element tree into a buffer """
     def __init__(self, prefixes = None):
@@ -183,7 +105,7 @@ class _ListSerializer:
             write("/>")
 
 
-SerializerClass = _Serializer
+SerializerClass = _ListSerializer
 
 def escapeToXml(text, isattrib = 0):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.

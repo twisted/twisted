@@ -197,14 +197,6 @@ class SerializerTests:
         self.assertEquals(e.toXml(),
                           u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
 
-class DomishTestSerializer(unittest.TestCase, SerializerTests):
-    def setUpClass(self):
-        self.__serializerClass = domish.SerializerClass
-        domish.SerializerClass = domish._Serializer
-
-    def tearDownClass(self):
-        domish.SerializerClass = self.__serializerClass
-
 class DomishTestListSerializer(unittest.TestCase, SerializerTests):
     def setUpClass(self):
         self.__serializerClass = domish.SerializerClass
