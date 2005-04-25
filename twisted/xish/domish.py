@@ -7,11 +7,6 @@ from __future__ import generators
 
 import types
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
         respective parts """
