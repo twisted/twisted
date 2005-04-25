@@ -61,7 +61,7 @@ class IQ(domish.Element):
             self["to"] = to
         self._xmlstream.addOnetimeObserver("/iq[@id='%s']" % self["id"], \
                                                              self._resultEvent)
-        self._xmlstream.send(self.toXml())
+        self._xmlstream.send(self)
 
     def _resultEvent(self, iq):
         self.callbacks.callback(iq)
