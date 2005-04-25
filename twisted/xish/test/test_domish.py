@@ -191,13 +191,11 @@ class SerializerTests:
         self.assertEquals(e.toXml(), "<foo><abc123></foo>")
 
     def testUnicodeSerialization(self):
-        for s in (domish._Serializer, domish._ListSerializer):
-            domish.SerializerClass = s
-            e = domish.Element(("testns", "foo"))
-            e["test"] = u"my value\u0221e"
-            e.addContent(u"A degree symbol...\u00B0")
-            self.assertEquals(e.toXml(),
-                              u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
+        e = domish.Element(("testns", "foo"))
+        e["test"] = u"my value\u0221e"
+        e.addContent(u"A degree symbol...\u00B0")
+        self.assertEquals(e.toXml(),
+                          u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
 
 class DomishTestSerializer(unittest.TestCase, SerializerTests):
     def setUpClass(self):
