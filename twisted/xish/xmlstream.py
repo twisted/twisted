@@ -178,9 +178,6 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         if isinstance(obj, domish.Element):
             obj = obj.toXml()
             
-        if instance(obj, unicode):
-            obj = obj.encode('utf-8')
-            
         if self.rawDataOutFn:
             self.rawDataOutFn(obj)
             
