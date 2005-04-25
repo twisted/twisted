@@ -190,12 +190,17 @@ class SerializerTests:
         # responsiblity to ensure that the data inserted is valid
         self.assertEquals(e.toXml(), "<foo><abc123></foo>")
 
+    def testRawXMLWithUnicodeSerialization(self):
+        e = domish.Element(("testns", "foo"))
+        e.addRawXml(u"<degree>\u00B0</degree>")
+        self.assertEquals(e.toXml(), u"<foo><degree>\u00B0</degree></foo>")
+
     def testUnicodeSerialization(self):
         e = domish.Element(("testns", "foo"))
         e["test"] = u"my value\u0221e"
         e.addContent(u"A degree symbol...\u00B0")
         self.assertEquals(e.toXml(),
-                          u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
+                          u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>")
 
 class DomishTestListSerializer(unittest.TestCase, SerializerTests):
     def setUpClass(self):

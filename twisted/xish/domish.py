@@ -30,8 +30,7 @@ class _ListSerializer:
         self.prefixCounter = 0
 
     def getValue(self):
-        d = "".join(self.writelist)
-        return d.encode("utf-8")
+        return u"".join(self.writelist)
 
     def getPrefix(self, uri):
         if not self.prefixes.has_key(uri):
@@ -149,7 +148,7 @@ def generateElementsNamed(list, name):
             yield n
 
 
-class SerializedXML(str):
+class SerializedXML(unicode):
     """ Marker class for pre-serialized XML in the DOM. """
     pass
 
