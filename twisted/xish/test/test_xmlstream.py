@@ -27,8 +27,8 @@ class XmlStreamTest(unittest.TestCase):
         self.streamEnded = False
         self.outlist = []
         self.xmlstream = xmlstream.XmlStream(AuthStandin(self))
-        self.xmlstream.send = self.outlist.append
         self.xmlstream.transport = self
+        self.xmlstream.transport.write = self.outlist.append
 
     # Auxilary methods 
     def loseConnection(self):
