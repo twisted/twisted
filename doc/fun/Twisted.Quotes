@@ -5154,7 +5154,7 @@ to write Java.
 %
 <chrchr> exarkun: Note that all kryptonite locks are vulnerable to hacksaws.
 <exarkun> chrchr: That's why I have another lock too.
-<exarkun> chrchr: How many theives carry around _two_ hacksaws?
+<exarkun> chrchr: How many thieves carry around _two_ hacksaws?
 %
 $ php sucks.php
 
@@ -5163,6 +5163,13 @@ PHP EQUALITY -- An experiment:
 0 == "0": TRUE.
 "" == "0": FALSE.
 'none' == 0: TRUE.
+%
+Kragen Sitaker: sub f{grep{(1x$_)!~/^(11+)\1+$/}2..pop}
+Itamar: that looks scary
+Kragen Sitaker: the haskell version is just as short and nearly as opaque
+Kragen Sitaker: but even more inefficient!
+%
+<exarkun> it's not drugs, it's ubuntu
 %
 <arg> i think a significant percentage of twisted apps begin as the logbot example
 <chrchr> Twisted is a fantastic framework for building logbots.
@@ -5207,9 +5214,18 @@ PHP EQUALITY -- An experiment:
           people to assign bugs to...
 <hypatia> Of course, it always ends up being exarkun anyway.
 %
+<arg> i know a guy whos last words were "brb, bout to go h@x this streetlight"
+<arg>  knew
+%
 <glyph> saph: loving relationships don't involve windows.
 <saph> glyph: they do if there is a safe word involved
 <PenguinOfDoom> "GENERAL PROTECTION FAULT IN MODULE KERNEL32.DLL SYSTEM CRASHED ERASING DATA NOW" "Firetruck! Firetruck!"
+%
+<zooko> https://yumyum.zooko.com:19144/pub/emacsirc.png
+<zooko> ^-- screenshot of my beautiful Ubuntu desktop
+<teratorn> why must i accept your phony ssl certificate?
+<zooko> you don't have to if you don't want to.
+<zooko> In fact, I recommend that you reject it.  Because it could be a Man In The Middle attempting to show you a phony screenshot of my xemacs session.
 %
 <Yosomono> aron: So how are you different from the fascists again?
 <aron> I look shity in borwn shorts
