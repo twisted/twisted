@@ -69,6 +69,12 @@ class ADBAPITestBase:
                 self.fail('no exception')
             except:
                 pass
+                
+            try:
+                self.wait(self.dbpool.runWithConnection(self.bad_withConnection))
+                self.fail('no exception')
+            except:
+                pass
             log.flushErrors()
 
         # verify simple table is empty
@@ -98,6 +104,13 @@ class ADBAPITestBase:
         # runInteraction
         res = self.wait(self.dbpool.runInteraction(self.interaction))
         self.assertEquals(res, "done")
+
+        # withConnection
+        res = self.wait(self.dbpool.runWithConnection(self.withConnection))
+        self.assertEquals(res, "done")
+
+        # Test a withConnection cannot be closed
+        res = self.wait(self.dbpool.runWithConnection(self.close_withConnection))
 
         # give the pool a workout
         ds = []
@@ -157,6 +170,31 @@ class ADBAPITestBase:
             transaction.execute("insert into simple(x) values(0)")
 
         transaction.execute("select * from NOTABLE")
+
+    def withConnection(self, conn):
+        curs = conn.cursor()
+        try:
+            curs.execute("select x from simple order by x")
+            for i in range(self.num_iterations):
+                row = curs.fetchone()
+                self.failUnless(len(row) == 1, "Wrong size row")
+                self.failUnless(row[0] == i, "Value not returned.")
+            # should test this, but gadfly throws an exception instead
+            #self.failUnless(transaction.fetchone() is None, "Too many rows")
+        finally:
+            curs.close()
+        return "done"
+        
+    def close_withConnection(self, conn):
+        conn.close()
+        
+    def bad_withConnection(self, conn):
+        curs = conn.cursor()
+        try:
+            curs.execute("select * from NOTABLE")
+        finally:
+            curs.close()
+        
 
 ADBAPITestBase.timeout = 30.0
 
