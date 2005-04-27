@@ -59,6 +59,45 @@ class LogObserver:
 
 statdatum = {"foo": "bar", "baz": "spam"}
 
+class TestSkip(common.RegistryBaseMixin, unittest.TestCase):
+    """
+    Test that setUp is not run when class is set to skip
+    """
+
+    def testSkippedClasses(self):
+        class SkipperTester(unittest.TestCase):
+
+            skip = 'yes'
+
+            errorStr = ''
+
+            def setUpClass(self):
+                '''
+                The class is set to skip, this should not be run
+                '''
+                SkipperTester.errorStr += "setUpClass should be skipped because the class has skip = 'yes'\n"
+
+            def tearDownClass(self):
+                '''
+                This method should also not run.
+                '''
+                SkipperTester.errorStr += "tearDownClass should be skipped because the class has skip = 'yes'\n"
+
+            def testSkip(self):
+                '''
+                The class is set to skip, this should not be run
+                '''
+                SkipperTester.errorStr += "testSkip should be skipped because the class has skip = 'yes'\n"
+
+        from twisted import trial
+        from twisted.trial.test.common import BogusReporter
+
+        suite = self._getSuite(newSuite=True, benchmark=False)
+        suite.addTestClass(SkipperTester)
+        suite.run()
+        self.failIf(SkipperTester.errorStr, SkipperTester.errorStr)
+
+
 class TestBenchmark(object):
 
     class Benchmark(common.BaseTest, unittest.TestCase):

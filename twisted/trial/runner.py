@@ -101,7 +101,15 @@ class TestSuite(Timed):
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
         self.janitor = itrial.IJanitor(janitor)
+        
+
+        # XXX NO NO NO NO NO NO NO NO NO NO GOD DAMNIT NO YOU CANNOT DO THIS
+        # IT IS NOT ALLOWED DO NOT CALL WAIT() ANYWHERE EVER FOR ANY REASON
+        # *EVER*
         util.wait(self.reporter.setUpReporter())
+
+
+
         self.benchmark = benchmark
         self.startTime, self.endTime = None, None
         self.numTests = 0
@@ -564,7 +572,8 @@ class TestClassAndMethodBase(TestRunnerBase):
             setUpClass = UserMethodWrapper(self.setUpClass, janitor,
                                            suppress=self.suppress)
             try:
-                setUpClass()
+                if not getattr(tci, 'skip', None):
+                    setUpClass()
             except UserMethodError:
                 for error in setUpClass.errors:
                     if error.check(unittest.SkipTest):
@@ -609,7 +618,8 @@ class TestClassAndMethodBase(TestRunnerBase):
             tearDownClass = UserMethodWrapper(self.tearDownClass, janitor,
                                    suppress=self.suppress)
             try:
-                tearDownClass()
+                if not getattr(tci, 'skip', None):
+                    tearDownClass()
             except UserMethodError:
                 for error in tearDownClass.errors:
                     if error.check(KeyboardInterrupt):
