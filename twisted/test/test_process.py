@@ -80,27 +80,31 @@ class EchoProtocol(protocol.ProcessProtocol):
     n = 10
     finished = 0
 
+    failure = None
+
     def __init__(self, onEnded):
         self.onEnded = onEnded
-        self.buffer = []
         self.count = 0
 
     def connectionMade(self):
         for i in range(self.n):
             self.transport.write(self.s)
+        self.buffer = self.s * self.n
 
     def outReceived(self, data):
-        self.buffer.append(data)
-        self.count += len(data)
-        if self.count == len(self.s) * self.n:
+        if buffer(self.buffer, self.count, len(data)) != data:
+            self.failure = ("wrong bytes received", data, self.count)
             self.transport.closeStdin()
+        else:
+            self.count += len(data)
+            if self.count == len(self.buffer):
+                self.transport.closeStdin()
+            print 'received', len(data), 'bytes, now at', self.count
 
     def processEnded(self, reason):
         self.finished = 1
         if not reason.check(error.ProcessDone):
             self.failure = "process didn't terminate normally: " + str(reason)
-        else:
-            self.failure = None
         self.onEnded.callback(self)
 
 
@@ -199,6 +203,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             self.assertEquals(len(''.join(p.buffer)), len(p.s * p.n))
 
         return finished.addCallback(asserts)
+    testEcho.timeout = 60
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
