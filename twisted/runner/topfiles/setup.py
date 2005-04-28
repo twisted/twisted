@@ -2,7 +2,12 @@ import sys
 
 from distutils.core import Extension
 
-from twisted.python import dist
+try:
+    from twisted.python import dist
+except ImportError:
+    raise SystemExit("twisted.python.dist module not found.  Make sure you "
+                     "have installed the Twisted core package before "
+                     "attempting to install any other Twisted projects.")
 
 def detectExtensions(builder):
     if builder._check_header("rpc/rpc.h"):
