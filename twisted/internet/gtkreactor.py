@@ -107,7 +107,7 @@ class GtkReactor(posixbase.PosixReactorBase):
 
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.simulate()
+        gtk.timeout_add(0, self.simulate)
         gtk.mainloop()
 
     def _readAndWrite(self, source, condition):
