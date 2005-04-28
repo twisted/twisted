@@ -92,14 +92,13 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.buffer = self.s * self.n
 
     def outReceived(self, data):
-        if buffer(self.buffer, self.count, len(data)) != data:
+        if buffer(self.buffer, self.count, len(data)) != buffer(data):
             self.failure = ("wrong bytes received", data, self.count)
             self.transport.closeStdin()
         else:
             self.count += len(data)
             if self.count == len(self.buffer):
                 self.transport.closeStdin()
-            print 'received', len(data), 'bytes, now at', self.count
 
     def processEnded(self, reason):
         self.finished = 1
