@@ -47,7 +47,7 @@ class StandardIOWriter(abstract.FileDescriptor):
         except OSError, ose:
             if ose.errno == errno.EPIPE:
                 return CONNECTION_LOST
-            if ose.errno == errno.EAGAIN:
+            if ose.errno == errno.EAGAIN or ose.errno == errno.EINTR:
                 return 0
             raise
 
