@@ -158,7 +158,10 @@ class TestWaitInterrupt(unittest.TestCase):
             # reactor would normally block SIGINT for its own purposes and
             # not allow a KeyboardInterrupt to happen at all!
 
-            reactor.callInThread(reactor.sigInt)
+            if interfaces.IReactorThreads.providedBy(reactor):
+                reactor.callInThread(reactor.sigInt)
+            else:
+                reactor.callLater(0, reactor.sigInt)
             return defer.Deferred()
 
         d = defer.Deferred()
