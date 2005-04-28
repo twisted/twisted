@@ -201,7 +201,11 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             self.failUnless(hasattr(p, 'buffer'))
             self.assertEquals(len(''.join(p.buffer)), len(p.s * p.n))
 
-        return finished.addCallback(asserts)
+        def takedownProcess(err):
+            p.transport.closeStdin()
+            return err
+
+        return finished.addCallback(asserts).addErrback(takedownProcess)
     testEcho.timeout = 60
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
@@ -748,7 +752,6 @@ if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(re
     TestTwoProcessesNonPosix.skip = skipMessage
 
 if runtime.platform.getType() == 'win32':
-    ProcessTestCase.testEcho.im_func.todo = "goes into infinite loop in win32eventreactor :("
     UtilTestCase.todo = "do not assume that platform retains 'executable' mode"
 
 if not interfaces.IReactorProcess(reactor, None):
