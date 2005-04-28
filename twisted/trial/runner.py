@@ -220,13 +220,6 @@ class TestSuite(Timed):
 
         util.wait(d) # so that the shutdown event completes
 
-    def _setUpSigchldHandler(self):
-        # set up SIGCHLD signal handler so that parents of spawned processes
-        # will be notified when their child processes end
-        from twisted.internet import reactor
-        if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
-            self.sigchldHandler = signal.signal(signal.SIGCHLD,
-                                                reactor._handleSigchld)
     def _initLogging(self):
         log.startKeepingErrors()
 
@@ -239,14 +232,17 @@ class TestSuite(Timed):
         
         self._initLogging()
 
+        # Kick-start things
+        from twisted.internet import reactor
+        reactor.callLater(0, reactor.crash)
+        reactor.run()
+
         # randomize tests if requested
         r = None
         if seed is not None:
             r = random.Random(seed)
             r.shuffle(tests)
             self.reporter.write('Running tests shuffled with seed %d' % seed)
-
-        self._setUpSigchldHandler()
 
         try:
             # this is where the test run starts

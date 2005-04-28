@@ -246,37 +246,41 @@ class _Wait(object):
         try:
             assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
 
-            def _dbg(msg):
-                log.msg(iface=itrial.ITrialDebug, timeout=msg)
-
-            end = start = time.time()
-
             itimeout = itrial.ITimeout(timeout)
 
-            resultSet = []
-            interrupted = []
-            def noticeInterrupt(failure):
-                failure.trap(KeyboardInterrupt)
-                interrupted.append(failure)
-                return failure
-            d.addErrback(noticeInterrupt)
-            d.addBoth(resultSet.append)
+            results = []
+            def append(any):
+                results.append(any)
+            d.addBoth(append)
 
-            # TODO: refactor following to use spinWhile
+            if results:
+                return results[0]
+
+            d.addBoth(lambda ign: reactor.crash())
 
             if itimeout.duration is None:
-                while not resultSet:
-                    reactor.iterate(0.01)
+                timeoutCall = None
             else:
-                end += float(itimeout.duration)
-                while not resultSet:
-                    if itimeout.duration >= 0.0 and time.time() > end:
-                        e = itimeout.excClass(itimeout.excArg)
-                        raise e
-                    reactor.iterate(0.01)
-            if interrupted:
-                interrupted[0].raiseException()
-            return resultSet[0]
+                timeoutCall = reactor.callLater(itimeout.duration, reactor.crash)
+
+            reactor.stop = reactor.crash
+            try:
+                reactor.run()
+            finally:
+                del reactor.stop
+
+            if timeoutCall is not None:
+                if timeoutCall.active():
+                    timeoutCall.cancel()
+                else:
+                    
+                    raise itimeout.excClass(itimeout.excArg)
+
+            if results:
+                return results[0]
+
+            raise KeyboardInterrupt()
+
         finally:
             cls._active -= 1
 

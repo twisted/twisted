@@ -7,7 +7,7 @@ from twisted.trial import unittest, util, runner
 # this is ok, the module has been designed for this usage
 from twisted.trial.assertions import *
 
-import os, time
+import os, time, signal
 
 class UserError(Exception):
     pass
@@ -143,12 +143,23 @@ class TestMktemp(unittest.TestCase):
 
 
 class TestWaitInterrupt(unittest.TestCase):
+
     def testKeyboardInterrupt(self):
         # Test the KeyboardInterrupt is *not* caught by wait -- we
         # want to allow users to Ctrl-C test runs.  And the use of the
         # useWaitError should not matter in this case.
         def raiseKeyInt(ignored):
-            raise KeyboardInterrupt, "Simulate user hitting Ctrl-C"
+
+            # XXX Abstraction violation, I suppose.  However: signals are
+            # unreliable, so using them to simulate a KeyboardInterrupt
+            # would be sketchy too; os.kill() is not available on Windows,
+            # so we can't use that and let this run on Win32; raising
+            # KeyboardInterrupt itself is wholely unrealistic, as the
+            # reactor would normally block SIGINT for its own purposes and
+            # not allow a KeyboardInterrupt to happen at all!
+
+            reactor.callInThread(reactor.sigInt)
+            return defer.Deferred()
 
         d = defer.Deferred()
         d.addCallback(raiseKeyInt)
