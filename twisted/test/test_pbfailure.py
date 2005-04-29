@@ -4,7 +4,7 @@
 
 from twisted.trial import unittest
 
-from twisted.spread import pb
+from twisted.spread import pb, flavors, jelly
 from twisted.internet import reactor, defer
 from twisted.python import log, failure
 
@@ -15,6 +15,16 @@ class PoopError(Exception): pass
 class FailError(Exception): pass
 class DieError(Exception): pass
 class TimeoutError(Exception): pass
+
+
+#class JellyError(flavors.Jellyable, pb.Error): pass
+class JellyError(flavors.Jellyable, pb.Error, pb.RemoteCopy): pass
+class SecurityError(pb.Error, pb.RemoteCopy): pass
+
+pb.setUnjellyableForClass(JellyError, JellyError)
+pb.setUnjellyableForClass(SecurityError, SecurityError)
+pb.globalSecurity.allowInstancesOf(SecurityError)
+
 
 ####
 # server-side
@@ -28,6 +38,12 @@ class SimpleRoot(pb.Root):
 
     def remote_die(self):
         raise DieError("*gack*")
+
+    def remote_jelly(self):
+        raise JellyError("I'm jellyable!")
+
+    def remote_security(self):
+        raise SecurityError("I'm secure!")
 
 
 class PBFailureTest(unittest.TestCase):
@@ -68,7 +84,8 @@ class PBFailureTest(unittest.TestCase):
         return d
 
     def addFailingCallbacks(self, remoteCall, expectedResult):
-        for m in (self.failurePoop, self.failureFail, self.failureDie, self.failureNoSuch, lambda x: x):
+        for m in (self.failurePoop, self.failureFail, self.failureDie, self.failureNoSuch,
+                  self.failureJelly, self.failureSecurity, lambda x: x):
             remoteCall.addCallbacks(self.success, m, callbackArgs=(expectedResult,))
         return remoteCall
 
@@ -82,7 +99,8 @@ class PBFailureTest(unittest.TestCase):
         return ignored
 
     def connected(self, persp):
-        methods = (('poop', 42), ('fail', 420), ('die', 4200), ('nosuch', 42000))
+        methods = (('poop', 42), ('fail', 420), ('die', 4200), ('nosuch', 42000),
+                   ('jelly', 43), ('security', 430))
         return defer.gatherResults([
             self.addFailingCallbacks(persp.callRemote(meth), result) for (meth, result) in methods])
 
@@ -109,6 +127,18 @@ class PBFailureTest(unittest.TestCase):
         fail.trap(pb.NoSuchMethod)
         self.compare(fail.traceback, "Traceback unavailable\n")
         return 42000
+
+    def failureJelly(self, fail):
+        fail.trap(JellyError)
+        self.failIf(isinstance(fail.type, str))
+        self.failUnless(isinstance(fail.value, fail.type))
+        return 43
+
+    def failureSecurity(self, fail):
+        fail.trap(SecurityError)
+        self.failIf(isinstance(fail.type, str))
+        self.failUnless(isinstance(fail.value, fail.type))
+        return 430
 
 
 class PBFailureTestUnsafe(PBFailureTest):

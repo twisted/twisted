@@ -69,7 +69,7 @@ import types
 import warnings
 
 # Twisted Imports
-from twisted.python import log, failure, components
+from twisted.python import log, failure, components, reflect
 from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.cred.portal import Portal
@@ -91,6 +91,7 @@ from flavors import Root, IPBRoot
 from flavors import ViewPoint
 from flavors import Viewable
 from flavors import Copyable
+from flavors import Jellyable
 from flavors import Cacheable
 from flavors import RemoteCopy
 from flavors import RemoteCache
@@ -886,7 +887,16 @@ class Broker(banana.Banana):
             netResult = object.remoteMessageReceived(self, message, netArgs, netKw)
         except Error, e:
             if answerRequired:
-                self._sendError(CopyableFailure(e), requestID)
+                # If the error is Jellyable or explicitly allowed via our
+                # security options, send it back and let the code on the
+                # other end deal with unjellying.  If it isn't Jellyable,
+                # wrap it in a CopyableFailure, which ensures it can be
+                # unjellied on the other end.  We have to do this because
+                # all errors must be sent back.
+                if isinstance(e, Jellyable) or self.security.isClassAllowed(e.__class__):
+                    self._sendError(e, requestID)
+                else:
+                    self._sendError(CopyableFailure(e), requestID)
         except:
             if answerRequired:
                 log.msg("Peer will receive following PB traceback:", isError=True)
