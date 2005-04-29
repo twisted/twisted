@@ -1,7 +1,6 @@
 - More Tests!
  - Check if closing input stream does right thing (should close connection after response is written)
 
-
 - Low level protocol:
  - Proper POST support (need psudeo-MIME parser)
  - Authentication (basic and digest)
@@ -16,7 +15,6 @@
 
 - Application server:
  - Create default log observers for the log.msg's that we send.
- - Resource API for prerender checking (I've forgotten what I mean by this?)
  - Other useful filters: content-encoding, caching, others?
 
 - Convert proxy?

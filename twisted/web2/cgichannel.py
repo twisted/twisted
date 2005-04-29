@@ -158,7 +158,7 @@ class CGIChannelRequest(protocol.Protocol):
         if http_vers[0] != 'http' or http_vers[1] > 1:
             _abortWithError(responsecode.INTERNAL_SERVER_ERROR, "Twisted.web CGITransport: Unknown HTTP version: " % vars['SERVER_PROTOCOL'])
 
-        secure = vars.get("HTTPS") # apache extension?
+        secure = vars.get("HTTPS") in ("1", "on") # apache extension?
         port = vars.get('SERVER_PORT') or 80
         server_host = vars.get('SERVER_NAME') or vars.get('SERVER_ADDR') or 'localhost'
         

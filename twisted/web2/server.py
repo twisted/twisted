@@ -38,7 +38,7 @@ from twisted import __version__ as twisted_version
 VERSION = "Twisted/%s TwistedWeb/%s" % (twisted_version, web2_version)
 _errorMarker = object()
 
-def defaultHeadersFilter(request, response):
+def defaultHeadersFilter(request, response, ctx):
     if not response.headers.hasHeader('server'):
         response.headers.setHeader('server', VERSION)
     if not response.headers.hasHeader('date'):
@@ -46,7 +46,7 @@ def defaultHeadersFilter(request, response):
     return response
 defaultHeadersFilter.handleErrors = True
 
-def preconditionfilter(request, response):
+def preconditionfilter(request, response, ctx):
     newresponse = http.checkPreconditions(request, response)
     if newresponse is not None:
         return newresponse
@@ -173,9 +173,11 @@ class Request(http.Request):
 
         http.Request.__init__(self, *args, **kw)
 
-    def addResponseFilter(self, f):
-        self.responseFilters.insert(0, f)
-        pass
+    def addResponseFilter(self, f, atEnd=False):
+        if atEnd:
+            self.responseFilters.append(f)
+        else:
+            self.responseFilters.insert(0, f)
     
     def _parseURL(self):
         (self.scheme, self.host, self.path,
@@ -353,7 +355,7 @@ class Request(http.Request):
         def filterit(response, f):
             if (hasattr(f, 'handleErrors') or
                 (response.code >= 200 and response.code < 300 and response.code != 204)):
-                return f(self, response)
+                return f(self, response, ctx)
             else:
                 return response
 

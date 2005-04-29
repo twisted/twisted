@@ -232,10 +232,11 @@ def readIntoFile(stream, outFile, maxlen):
 #@defer.deferredGenerator
 def parseMultipartFormData(stream, boundary,
                            maxMem=100*1024, maxFields=1024, maxSize=10*1024*1024):
-    stream, afterstream = stream.split(maxSize)
-    if afterstream.length is not None and afterstream.length > 0:
-        raise MimeFormatError("Maximum length of %d bytes exceeded." %
-                              maxSize)
+    # If the stream length is known to be too large upfront, abort immediately
+    
+    if stream.length is not None and stream.length > maxSize:
+        raise MessageTooLongError("Maximum length of %d bytes exceeded." %
+                                  maxSize)
     
     mms = MultipartMimeStream(stream, boundary)
     numFields = 0

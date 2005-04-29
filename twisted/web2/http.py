@@ -300,11 +300,9 @@ class Request(object):
 
     def _sendContinue(self):
         self.chanRequest.writeIntermediateResponse(responsecode.CONTINUE)
-    
+
     def _finished(self, x):
         """We are finished writing data."""
-        # log request
-        log.msg(interface=iweb.IRequest, request=self)
         self.chanRequest.finish()
 
     def _error(self, reason):
@@ -1094,20 +1092,6 @@ class HTTPFactory(protocol.ServerFactory):
             setattr(p, arg, value)
         return p
     
-
-#     def log(self, request):
-#         line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
-#             "foo", #request.getClientIP(),
-#             # request.getUser() or "-", # the remote user is almost never important
-#             time.time(), #_logDateTime,
-#             '%s %s %s' % (request.method, request.uri, request.clientproto),
-#             request.code,
-#             request.sentLength or "-",
-#             request.in_headers.getHeader("referer") or "-",
-#             request.in_headers.getHeader("user-agent") or "-")
-#         self.logFile.write(line)
-
-
 #     def _authorize(self):
 #         # Authorization, (mostly) per the RFC
 #         try:

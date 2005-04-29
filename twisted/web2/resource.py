@@ -136,3 +136,32 @@ class PostableResource(Resource):
 class LeafResource(Resource):
     def locateChild(self, request, segments):
         return self, server.StopTraversal
+
+class WrapperResource:
+    """A helper class for resources which just change some state
+    before passing the request on to a contained resource."""
+    implements(iweb.IResource)
+    
+    def __init__(self, res):
+        self.res=res
+
+    def hook(self, ctx):
+        """Override this method in order to do something before
+        passing control on to the wrapped resource. Must either return
+        None or a Deferred which is waited upon, but whose result is
+        ignored.
+        """
+        raise NotImplementedError
+    
+    def locateChild(self, ctx, segments):
+        x = self.hook(ctx)
+        if x is not None:
+            return x.addCallback(lambda data: self.res, segments)
+        return self.res, segments
+
+    def renderHTTP(self, ctx):
+        x = self.hook(ctx)
+        if x is not None:
+            return x.addCallback(lambda data: self.res)
+        return self.res
+    
