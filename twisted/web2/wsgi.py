@@ -90,6 +90,7 @@ class ErrorStream(object):
 class WSGIHandler(object):
     headersSent = False
     stopped = False
+    stream = None
     
     def __init__(self, application, ctx):
         # Called in IO thread
@@ -142,7 +143,7 @@ class WSGIHandler(object):
             if not self.headersSent:
                 reactor.callFromThread(self.__error, failure.Failure())
             else:
-                reactor.callFromThread(self.response.stream.finish, failure.Failure())
+                reactor.callFromThread(self.stream.finish, failure.Failure())
 
     def __callback(self):
         # Called in IO thread
@@ -162,21 +163,21 @@ class WSGIHandler(object):
             raise RuntimeError(
                 "Application didn't call startResponse before writing data!")
         if not self.headersSent:
-            self.response.stream=stream.ProducerStream()
+            self.stream=self.response.stream=stream.ProducerStream()
             self.headersSent = True
             
             # After this, we cannot touch self.response from this
             # thread any more
             def _start():
                 # Called in IO thread
-                self.response.stream.registerProducer(self, True)
+                self.stream.registerProducer(self, True)
                 self.__callback()
                 # Notify application thread to start writing
                 self.unpaused.set()
             reactor.callFromThread(_start)
         # Wait for unpaused to be true
         self.unpaused.wait()
-        reactor.callFromThread(self.response.stream.write, output)
+        reactor.callFromThread(self.stream.write, output)
         
 
     def handleResult(self, result):
@@ -207,7 +208,7 @@ class WSGIHandler(object):
                 self.headersSent = True
                 reactor.callFromThread(self.__callback)
             else:
-                reactor.callFromThread(self.response.stream.finish)
+                reactor.callFromThread(self.stream.finish)
                 
         finally:
             if hasattr(result,'close'):
