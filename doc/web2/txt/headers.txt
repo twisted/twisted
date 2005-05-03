@@ -1,6 +1,6 @@
 Known headers
 -------------
-These headers are defined in RFC2616_, and, for their official definitions, refer to that document. This document descibes how they appear after being parsed by web2. 
+These headers are defined in `RFC 2616`_, and, for their official definitions, refer to that document. This document descibes how they appear after being parsed by web2. 
 
 Entity headers:
 
@@ -17,15 +17,15 @@ Entity headers:
  - Content-Range: tuple of (rangetype, start, end, realLength)
      e.g. ``('bytes', 0, 499, 1234)``
  - Content-Type: MimeType
-     e.g. MimeType('text', 'html', [('charset','iso-8859-4')])
+     e.g. ``MimeType('text', 'html', [('charset','iso-8859-4')])``
  - Expires: seconds since Epoch
-     e.g. 1000000000
+     e.g. ``1000000000``
  - Last-Modified: seconds since Epoch
-     e.g. 1000000000
+     e.g. ``1000000000``
 
 Request headers (client to server):
 
- - Accept: dictionary of MimeType_ -> float 0.0 to 1.0
+ - Accept: dictionary of MimeType -> float 0.0 to 1.0
      e.g. ``{MimeType('text', 'html'): 1.0, MimeType('image', 'jpg'): 0.4}``
  - Accept-Charset: dict of string charset -> float 0.0 to 1.0
      e.g. ``{'utf-8': 1.0, 'iso-8859-1': 0.9, '*': 0.7}``
