@@ -20,7 +20,7 @@ from twisted.persisted import styles
 # Sibling Imports
 import interfaces, main
 
-class FileDescriptor(log.Logger, styles.Ephemeral):
+class FileDescriptor(log.Logger, styles.Ephemeral, object):
     """An object which can be operated on by select().
 
     This is an abstract superclass of all objects which may be notified when
