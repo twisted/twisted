@@ -672,9 +672,9 @@ class Port(base.BasePort, _SocketCloser):
     transport = Server
     sessionno = 0
     interface = ''
-    backlog = 5
+    backlog = 50
 
-    def __init__(self, port, factory, backlog=5, interface='', reactor=None):
+    def __init__(self, port, factory, backlog=50, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
         """
         base.BasePort.__init__(self, reactor=reactor)

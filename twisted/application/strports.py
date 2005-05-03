@@ -34,15 +34,15 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 from __future__ import generators
 
-def _parseTCP(factory, port, interface="", backlog=5):
+def _parseTCP(factory, port, interface="", backlog=50):
     return (int(port), factory), {'interface': interface,
                                   'backlog': int(backlog)}
 
-def _parseUNIX(factory, address, mode='666', backlog=5):
+def _parseUNIX(factory, address, mode='666', backlog=50):
     return (address, factory), {'mode': int(mode, 8), 'backlog': int(backlog)}
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
-              sslmethod=None, interface='', backlog=5):
+              sslmethod=None, interface='', backlog=50):
     from twisted.internet import ssl
     if certKey is None:
         certKey = privateKey

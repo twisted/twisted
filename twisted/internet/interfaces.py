@@ -222,7 +222,7 @@ class IReactorSSL(Interface):
         @returns: an L{IConnector}.
         """
 
-    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -260,7 +260,7 @@ class IReactorUNIX(Interface):
         @returns: an L{IConnector}.
         """
 
-    def listenUNIX(self, address, factory, backlog=5, mode=0666, wantPID=0):
+    def listenUNIX(self, address, factory, backlog=50, mode=0666, wantPID=0):
         """Listen on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.

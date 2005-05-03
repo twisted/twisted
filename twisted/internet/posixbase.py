@@ -325,7 +325,7 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
 
-    def listenUNIX(self, address, factory, backlog=5, mode=0666, wantPID=0):
+    def listenUNIX(self, address, factory, backlog=50, mode=0666, wantPID=0):
         """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
         assert unixEnabled, "UNIX support is not present"
@@ -385,7 +385,7 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
 
-    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
         """@see: twisted.internet.interfaces.IReactorSSL.listenSSL
         """
         assert sslEnabled, "SSL support is not present"

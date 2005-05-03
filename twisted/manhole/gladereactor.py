@@ -27,7 +27,7 @@ class GladeReactor(sup):
     """GTK+-2 event loop reactor with GUI.
     """
 
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         from _inspectro import LoggingFactory
         factory = LoggingFactory(factory)
         return sup.listenTCP(self, port, factory, backlog, interface)
@@ -37,7 +37,7 @@ class GladeReactor(sup):
         factory = LoggingFactory(factory)
         return sup.connectTCP(self, host, port, factory, timeout, bindAddress)
 
-    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
         from _inspectro import LoggingFactory
         factory = LoggingFactory(factory)
         return sup.listenSSL(self, port, factory, contextFactory, backlog, interface)
@@ -52,7 +52,7 @@ class GladeReactor(sup):
         factory = LoggingFactory(factory)
         return sup.connectUNIX(self, address, factory, timeout)
 
-    def listenUNIX(self, address, factory, backlog=5, mode=0666):
+    def listenUNIX(self, address, factory, backlog=50, mode=0666):
         from _inspectro import LoggingFactory
         factory = LoggingFactory(factory)
         return sup.listenUNIX(self, address, factory, backlog, mode)

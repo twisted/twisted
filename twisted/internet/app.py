@@ -542,7 +542,7 @@ class Application(log.Logger, styles.Versioned,
         else:
             raise error.NotListeningError, (portType, args, kw)
 
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         """
@@ -568,7 +568,7 @@ class Application(log.Logger, styles.Versioned,
         else:
             raise error.NotListeningError, (interface, port)
 
-    def listenUNIX(self, filename, factory, backlog=5, mode=0666):
+    def listenUNIX(self, filename, factory, backlog=50, mode=0666):
         """
         Connects a given protocol factory to the UNIX socket with the given filename.
         """
@@ -619,7 +619,7 @@ class Application(log.Logger, styles.Versioned,
         else:
             raise error.NotListeningError, (interface, port)
 
-    def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, ctxFactory, backlog=50, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context

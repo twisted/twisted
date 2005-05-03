@@ -164,7 +164,7 @@ class Port(tcp.Port):
     
     transport = Server
 
-    def __init__(self, port, factory, ctxFactory, backlog=5, interface='', reactor=None):
+    def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
 

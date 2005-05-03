@@ -42,7 +42,7 @@ class Port(tcp.Port):
 
     transport = Server
 
-    def __init__(self, fileName, factory, backlog=5, mode=0666, reactor=None, wantPID = 0):
+    def __init__(self, fileName, factory, backlog=50, mode=0666, reactor=None, wantPID = 0):
         tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
         self.mode = mode
         self.wantPID = wantPID

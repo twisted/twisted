@@ -37,7 +37,7 @@ class IOldApplication(components.Interface):
         will be started listening.
         """
 
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         """Add a service that connects a given protocol factory to the port.
 
         @param port: a port number on which to listen
@@ -49,7 +49,7 @@ class IOldApplication(components.Interface):
         @param interface: the hostname to bind to, defaults to '' (all)
         """
 
-    def listenUNIX(self, filename, factory, backlog=5, mode=0666):
+    def listenUNIX(self, filename, factory, backlog=50, mode=0666):
         """Add a service that listens on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -65,7 +65,7 @@ class IOldApplication(components.Interface):
         """Add a service that connects a given DatagramProtocol to the port.
         """
 
-    def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, ctxFactory, backlog=50, interface=''):
         """Add a service that connects a given protocol factory to the port.
 
         The connection is a SSL one, using contexts created by the context
@@ -246,12 +246,12 @@ class _ServiceNetwork:
         s.privileged = 1
         s.setServiceParent(self.app)
 
-    def listenTCP(self, port, factory, backlog=5, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface=''):
         s = internet.TCPServer(port, factory, backlog, interface)
         s.privileged = 1
         s.setServiceParent(self.app)
 
-    def listenUNIX(self, filename, factory, backlog=5, mode=0666):
+    def listenUNIX(self, filename, factory, backlog=50, mode=0666):
         s = internet.UNIXServer(filename, factory, backlog, mode)
         s.privileged = 1
         s.setServiceParent(self.app)
@@ -261,7 +261,7 @@ class _ServiceNetwork:
         s.privileged = 1
         s.setServiceParent(self.app)
 
-    def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, ctxFactory, backlog=50, interface=''):
         s = internet.SSLServer(port, factory, ctxFactory, backlog, interface)
         s.privileged = 1
         s.setServiceParent(self.app)
