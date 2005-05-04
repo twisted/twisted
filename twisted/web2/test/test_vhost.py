@@ -4,6 +4,7 @@ from twisted.web2 import vhost
 from twisted.web2 import http, responsecode
 from twisted.web2 import iweb
 from twisted.web2 import stream
+from twisted.web2 import http_headers
 
 class HostResource(BaseTestResource):
     addSlash=True
@@ -12,13 +13,7 @@ class HostResource(BaseTestResource):
 
     def render(self, ctx):
         h = iweb.IRequest(ctx).host
-        return http.Response(responsecode.OK, stream=stream.MemoryStream(h))
-
-class PathResource(BaseTestResource):
-    def render(self, ctx):  
-        r = iweb.IRequest(ctx)
-        response = '/'.join([r.host,] + r.prepath)
-        return http.Response(responsecode.OK, stream=stream.MemoryStream(response))
+        return http.Response(responsecode.OK, stream=h)
 
 class TestVhost(BaseCase):
     root = vhost.NameVirtualHost(default=HostResource())
@@ -50,7 +45,6 @@ class TestVhost(BaseCase):
             (root, 'http://frob/'),
             (404, {}, None))
 
-        
     def testNameVirtualHostWithChildren(self):
         """ Test that children of a defined NVH are handled appropriately
         """
@@ -72,14 +66,20 @@ class TestVhost(BaseCase):
             (self.root, 'http://is.nested/'),
             (200, {}, 'is.nested'))
     
+class PathResource(resource.LeafResource):
+    def render(self, ctx):  
+        r = iweb.IRequest(ctx)
+        response = r.scheme+'://'+'/'.join([r.host,] + r.prepath + r.postpath)
+        return http.Response(responsecode.OK, stream=response)
+
+class TestURIRewrite(BaseCase):
     def testVHostURIRewrite(self):
-        """Test that the hostname is properly rewritten to defined domain
+        """Test that the hostname, path, and scheme are properly rewritten to defined domain
         """
-        
-        vur = vhost.VHostURIRewrite('http://www.apachesucks.org/', HostResource())
+        vur = vhost.VHostURIRewrite('https://www.apachesucks.org/some/path/', PathResource())
         self.assertResponse(
             (vur, 'http://localhost/'),
-            (200, {}, 'www.apachesucks.org'))
+            (200, {}, 'https://www.apachesucks.org/some/path/'))
 
     def testVHostURIRewriteWithChildren(self):
         """ Test that the hostname is properly rewritten and that children are located
@@ -90,19 +90,19 @@ class TestVhost(BaseCase):
 
         self.assertResponse(
             (vur, 'http://localhost/foo'),
-            (200, {}, 'www.apachesucks.org/foo'))
+            (200, {}, 'http://www.apachesucks.org/foo'))
 
     def testVHostURIRewriteAsChild(self):
         """ Test that a VHostURIRewrite can exist anywhere in the resource tree
         """
 
         root = HostResource(children=[('bar', HostResource(children=[ 
-                ('vhost.rpy', vhost.VHostURIRewrite('http://www.apachesucks.org/', HostResource(
-                    children=[('foo', PathResource())])))]))])
+                ('vhost.rpy', vhost.VHostURIRewrite('http://www.apachesucks.org/', PathResource()
+                                                    ))]))])
 
         self.assertResponse(
             (root, 'http://localhost/bar/vhost.rpy/foo'),
-            (200, {}, 'www.apachesucks.org/bar/foo'))
+            (200, {}, 'http://www.apachesucks.org/foo'))
 
     def testVHostURIRewriteWithSibling(self):
         """ Test that two VHostURIRewrite objects can exist on the same level of the 
@@ -110,14 +110,44 @@ class TestVhost(BaseCase):
         """
     
         root = HostResource(children=[
-                ('vhost1', vhost.VHostURIRewrite('http://foo.bar/', HostResource())), 
-                ('vhost2', vhost.VHostURIRewrite('http://baz.bax/', HostResource()))]) 
+                ('vhost1', vhost.VHostURIRewrite('http://foo.bar/', PathResource())), 
+                ('vhost2', vhost.VHostURIRewrite('http://baz.bax/', PathResource()))]) 
 
         self.assertResponse(
             (root, 'http://localhost/vhost1/'),
-            (200, {}, 'foo.bar'))
+            (200, {}, 'http://foo.bar/'))
 
         self.assertResponse(
             (root, 'http://localhost/vhost2/'),
-            (200, {}, 'baz.bax'))
+            (200, {}, 'http://baz.bax/'))
 
+def raw(d):
+    headers=http_headers.Headers()
+    for k,v in d.iteritems():
+        headers.setRawHeaders(k, [v])
+    return headers
+
+class TestAutoVHostRewrite(BaseCase):
+    def setUp(self):
+        self.root = vhost.AutoVHostURIRewrite(PathResource())
+
+    def testFullyRewrite(self):
+        self.assertResponse(
+            (self.root, 'http://localhost/quux', raw({'x-forwarded-host':'foo.bar',
+                                              'x-forwarded-for':'1.2.3.4',
+                                              'x-app-location':'/baz/',
+                                              'x-app-scheme':'https'})),
+            (200, {}, 'https://foo.bar/baz/quux'))
+
+    def testLackingHeaders(self):
+        self.assertResponse(
+            (self.root, 'http://localhost/', {}),
+            (400, {}, None))
+
+    def testMinimalHeaders(self):
+        self.assertResponse(
+            (self.root, 'http://localhost/', raw({'x-forwarded-host':'foo.bar',
+                                              'x-forwarded-for':'1.2.3.4'})),
+            (200, {}, 'http://foo.bar/'))
+    
+    

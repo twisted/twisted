@@ -10,6 +10,9 @@
 
 # System Imports
 import string
+import urlparse
+from zope.interface import implements
+import urllib 
 
 # Sibling Imports
 import resource
@@ -76,44 +79,108 @@ class NameVirtualHost(resource.Resource):
         # Default being None is okay, it'll turn into a 404
         return self.hosts.get(host, self.default), segments
 
-class VHostURIRewrite(resource.Resource):
+
+class AutoVHostURIRewrite:
+    """ I do request mangling to insure that children know what host they are being 
+        accessed from behind apache2.
+
+        Usage:
+        -Twisted-
+            root = MyResource()
+            vur = vhost.AutoVHostURIRewrite(root)
+            
+        -Apache2-
+        <Location /whatever/>
+          ProxyPass http://localhost:8538/
+          RequestHeader set X-App-Location /whatever/
+        </Location>
+
+        If the trailing / is ommitted in the second argument to ProxyPass VHostURIRewrite
+        will return a 404 response code.
+
+        If proxying HTTPS, add:
+          RequestHeader set X-App-Scheme https
+        to the apache config.
+
+    """
+    implements(iweb.IResource)
+
+    def __init__(self, resource):
+        self.resource=resource
+        
+    def renderHTTP(self, ctx):
+        return http.Response(responsecode.NOT_FOUND)
+
+    def locateChild(self, ctx, segments):
+        req = iweb.IRequest(ctx)
+        scheme = req.headers.getRawHeaders('x-app-scheme')
+        host = req.headers.getRawHeaders('x-forwarded-host')
+        app_location = req.headers.getRawHeaders('x-app-location')
+        remote_ip = req.headers.getRawHeaders('x-forwarded-for')
+        if not (host and remote_ip):
+            # some header unspecified => Error
+            raise http.HTTPError(responsecode.BAD_REQUEST)
+        host = host[0]
+        remote_ip = remote_ip[0]
+        if app_location:
+            app_location = app_location[0]
+        else:
+            app_location = '/'
+        if scheme:
+            scheme = scheme[0]
+        else:
+            scheme='http'
+        
+        req.host = host
+        req.scheme = scheme
+        # FIXME: remote_ip ?
+        req.prepath = app_location[1:].split('/')[:-1]
+        req.path = '/'+('/'.join([urllib.quote(s, '') for s in (req.prepath + segments)]))
+        
+        return self.resource, segments
+        
+class VHostURIRewrite:
     """ I do request mangling to insure that children know what host they are being 
         accessed from behind mod_proxy.
 
         Usage:
         -Twisted-
             root = MyResource()
-            vur = vhost.VHostURIRewrite(uri='http://hostname:port/', resource=root)
+            vur = vhost.VHostURIRewrite(uri='http://hostname:port/path', resource=root)
             server.Site(vur)
             
         -Apache-
             <VirtualHost hostname:port>
-                ProxyPass / http://localhost:8080/
+                ProxyPass /path/ http://localhost:8080/
                 Servername hostname
             </VirtualHost>
 
         If the trailing / is ommitted in the second argument to ProxyPass VHostURIRewrite
         will return a 404 response code.
         
-        uri must be a fully specified uri complete with scheme://hostname/
+        uri must be a fully specified uri complete with scheme://hostname/path/
     """
 
-    addSlash = True
+    implements(iweb.IResource)
 
     def __init__(self, uri, resource):
-        self.uri = uri
-        self.host = uri.split('/')[2]
-
         self.resource = resource
-
-    def render(self, ctx):
+        
+        (self.scheme, self.host, self.path,
+         params, querystring, fragment) = urlparse.urlparse(uri)
+        if params or querystring or fragment:
+            raise ValueError("Must not specify params, query args, or fragment to VHostURIRewrite")
+        self.path = map(urllib.unquote, self.path[1:].split('/'))[:-1]
+        
+    def renderHTTP(self, ctx):
         return http.Response(responsecode.NOT_FOUND)
 
     def locateChild(self, ctx, segments):
         req = iweb.IRequest(ctx)
-        req.headers.setHeader('host', self.host)
+        req.scheme = self.scheme
         req.host = self.host
-        req.path = '/'+'/'.join(segments)
-        req.prepath = req.prepath[:-1]
-
-        return self.resource.locateChild(ctx, segments)
+        req.prepath=self.path[:]
+        req.path = '/'+('/'.join([urllib.quote(s, '') for s in (req.prepath + segments)]))
+        # print req.prepath, segments, req.postpath, req.path
+        
+        return self.resource, segments

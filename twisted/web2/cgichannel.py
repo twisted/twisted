@@ -9,8 +9,9 @@ import os
 from twisted.internet import process, error, interfaces, fdesc
 from twisted.python import log
 from zope.interface import implements
+
 class StdIOThatDoesntSuckAsBad(object):
-    implements(interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer)
+    implements(interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
     _reader = None
     _writer = None
     disconnected = False
@@ -144,16 +145,15 @@ class StdIOThatDoesntSuckAsBad(object):
         if self._reader is not None:
             self._reader.resumeProducing()
 
-class CGIChannelRequest(protocol.Protocol):
-    finished = False
-    cgi_vers = (1, 0)
+class BaseCGIChannelRequest(protocol.Protocol):
+    implements(interfaces.IHalfCloseableProtocol)
     
-    def __init__(self, vars, site):
+    finished = False
+    requestFactory = http.Request
+    request = None
+    
+    def makeRequest(self, vars):
         headers = http_headers.Headers()
-        cgi_vers = http.parseVersion(vars['GATEWAY_INTERFACE'])
-        if cgi_vers[0] != 'cgi' or cgi_vers[1] != 1:
-            _abortWithError(responsecode.INTERNAL_SERVER_ERROR, "Twisted.web CGITransport: Unknown CGI version %s" % vars['GATEWAY_INTERFACE'])
-
         http_vers = http.parseVersion(vars['SERVER_PROTOCOL'])
         if http_vers[0] != 'http' or http_vers[1] > 1:
             _abortWithError(responsecode.INTERNAL_SERVER_ERROR, "Twisted.web CGITransport: Unknown HTTP version: " % vars['SERVER_PROTOCOL'])
@@ -164,7 +164,7 @@ class CGIChannelRequest(protocol.Protocol):
         
         self.hostinfo = address.IPv4Address('TCP', server_host, port), bool(secure)
         self.remoteinfo = address.IPv4Address(
-            'TCP', vars.get('REMOTE_ADDR'), vars.get('REMOTE_PORT')
+            'TCP', vars.get('REMOTE_ADDR'), vars.get('REMOTE_PORT'))
         
         uri = vars.get('REQUEST_URI') # apache extension?
         if not uri:
@@ -176,34 +176,20 @@ class CGIChannelRequest(protocol.Protocol):
         for name,val in vars.iteritems():
             if name.startswith('HTTP_'):
                 name = name[5:].replace('_', '-')
-            elif name == 'CONTENT_LENGTH':
-                pass
             elif name == 'CONTENT_TYPE':
                 name = 'Content-Type'
+            else:
+                continue
             headers.setRawHeaders(name, (val,))
             
         self._dataRemaining = int(vars.get('CONTENT_LENGTH', '0'))
         headers.setHeader('Content-Length', self._dataRemaining)
-        
-        self.request = server.Request(self, vars['REQUEST_METHOD'], uri, http_vers[1:2], headers, site=site, prepathuri=vars['SCRIPT_NAME'])
-
+        self.request = self.requestFactory(self, vars['REQUEST_METHOD'], uri, http_vers[1:3], headers, prepathuri=vars['SCRIPT_NAME'])
         
     def writeIntermediateResponse(self, code, headers=None):
         """Ignore, CGI doesn't support."""
         pass
     
-    def writeHeaders(self, code, headers):
-        l = []
-        code_message = responsecode.RESPONSES.get(code, "Unknown Status")
-        
-        l.append("Status: %s %s\n" % (code, code_message))
-        if headers is not None:
-            for name, valuelist in headers.getAllRawHeaders():
-                for value in valuelist:
-                    l.append("%s: %s\n" % (name, value))
-        l.append('\n')
-        self.transport.writeSequence(l)
-
     def write(self, data):
         self.transport.write(data)
     
@@ -229,7 +215,36 @@ class CGIChannelRequest(protocol.Protocol):
     def unregisterProducer(self):
         self.transport.unregisterProducer()
 
+    def writeConnectionLost(self):
+        self.loseConnection()
+        
+    def readConnectionLost(self):
+        if self._dataRemaining > 0:
+            # content-length was wrong, abort
+            self.loseConnection()
+    
+class CGIChannelRequest(BaseCGIChannelRequest):
+    cgi_vers = (1, 0)
+    
+    def __init__(self, requestFactory, vars):
+        self.requestFactory=requestFactory
+        cgi_vers = http.parseVersion(vars['GATEWAY_INTERFACE'])
+        if cgi_vers[0] != 'cgi' or cgi_vers[1] != 1:
+            _abortWithError(responsecode.INTERNAL_SERVER_ERROR, "Twisted.web CGITransport: Unknown CGI version %s" % vars['GATEWAY_INTERFACE'])
+        self.makeRequest(vars)
+        
 
+    def writeHeaders(self, code, headers):
+        l = []
+        code_message = responsecode.RESPONSES.get(code, "Unknown Status")
+        
+        l.append("Status: %s %s\n" % (code, code_message))
+        if headers is not None:
+            for name, valuelist in headers.getAllRawHeaders():
+                for value in valuelist:
+                    l.append("%s: %s\n" % (name, value))
+        l.append('\n')
+        self.transport.writeSequence(l)
     
     def dataReceived(self, data):
         if self._dataRemaining <= 0:
@@ -254,7 +269,7 @@ class CGIChannelRequest(protocol.Protocol):
 def startCGI(site):
     """Call this as the last thing in your CGI python script in order to
     hook up your site object with the incoming request."""
-    StdIOThatDoesntSuckAsBad(CGIChannelRequest(os.environ, site))
+    StdIOThatDoesntSuckAsBad(CGIChannelRequest(site, os.environ))
     reactor.run()
 
 if __name__ == '__main__':

@@ -103,7 +103,8 @@ class BaseCase(unittest.TestCase):
 
     def getResponseFor(self, root, uri, headers={},
                        method=None, version=None, prepath=''):
-        headers = http_headers.Headers(headers)
+        if not isinstance(headers, http_headers.Headers):
+            headers = http_headers.Headers(headers)
         if not headers.hasHeader('content-length'):
             headers.setHeader('content-length', 0)
         if method is None:
@@ -172,6 +173,35 @@ class SampleWebTest(BaseCase):
             (self.root, 'http://host/invalidChild'),
             (404, {}, None))
 
+class URLParsingTest(BaseCase):
+    class TestResource(resource.LeafResource):
+        def render(self, ctx):
+            req=iweb.IRequest(ctx)
+            return http.Response(stream="Host:%s, Path:%s"%(req.host, req.path))
+            
+    def setUp(self):
+        self.root = self.TestResource()
+
+    def test_normal(self):
+        self.assertResponse(
+            (self.root, '/path', {'Host':'host'}),
+            (200, {}, 'Host:host, Path:/path'))
+
+    def test_fullurl(self):
+        self.assertResponse(
+            (self.root, 'http://host/path'),
+            (200, {}, 'Host:host, Path:/path'))
+
+    def test_strangepath(self):
+        # Ensure that the double slashes don't confuse it
+        self.assertResponse(
+            (self.root, '//path', {'Host':'host'}),
+            (200, {}, 'Host:host, Path://path'))
+
+    def test_strangepathfull(self):
+        self.assertResponse(
+            (self.root, 'http://host//path'),
+            (200, {}, 'Host:host, Path://path'))
 
 class TestDeferredRendering(BaseCase):
     class ResourceWithDeferreds(BaseTestResource):

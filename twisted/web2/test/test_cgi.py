@@ -5,7 +5,7 @@ import sys, os
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
 from twisted.python import util
-from twisted.web2 import static, twcgi, server, resource
+from twisted.web2 import static, twcgi, server, resource, http
 from twisted.web import client
 
 DUMMY_CGI = '''\
@@ -50,7 +50,7 @@ class CGI(unittest.TestCase):
         cgipath = util.sibpath(__file__, cgi)
         root.putChild("cgi", PythonScript(cgipath))
         site = server.Site(root)
-        self.p = reactor.listenTCP(0, site)
+        self.p = reactor.listenTCP(0, http.HTTPFactory(site))
         return self.p.getHost().port
 
     def tearDown(self):

@@ -35,7 +35,7 @@ For proxying a subdirectory::
 
 Or, for serving an entire HTTPS virtual host::
 
-  <VirtualHost myhostname.com:443>
+  <VirtualHost myip:443>
   ProxyPass / http://localhost:8538/
   ServerName example.com
   RequestHeader set X-App-Location /
@@ -64,7 +64,7 @@ Apache 1 doesn't provide the X-Forwarded-Host or X-Forwarded-For, or the ability
 
 Setup apache as follows::
 
-  <VirtualHost myhostname.com>
+  <VirtualHost myip>
   ProxyPass /foo/ http://localhost:8538/
   ServerName example.com
   </VirtualHost>
@@ -76,7 +76,7 @@ And twisted like so::
   # For example, serve the /tmp directory
   toplevel = static.File("/tmp")
   # Add the rewriter.
-  toplevel = vhost.VHostURIRewrite(toplevel, "http://myhostname.com/foo/")
+  toplevel = vhost.VHostURIRewrite("http://myhostname.com/foo/", toplevel)
   site = server.Site(toplevel)
   
   # Start up the server

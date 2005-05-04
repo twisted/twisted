@@ -180,8 +180,19 @@ class Request(http.Request):
             self.responseFilters.insert(0, f)
     
     def _parseURL(self):
-        (self.scheme, self.host, self.path,
-         self.params, self.querystring, fragment) = urlparse.urlparse(self.uri)
+        if self.uri[0] == '/':
+            # Can't use urlparse for request_uri because it's parsing a relative
+            # URI, not an abs_path, and thus gets '//foo' wrong.
+            self.scheme = self.host = self.path = self.params = self.querystring = ''
+            if '?' in self.uri:
+                self.path, self.querystring = self.uri.split('?', 1)
+            else:
+                self.path = self.uri
+            if ';' in self.path:
+                self.path, self.params = self.path.split(';', 1)
+        else:
+            (self.scheme, self.host, self.path,
+             self.params, self.querystring, fragment) = urlparse.urlparse(self.uri)
         
         self.args = cgi.parse_qs(self.querystring, True)
         
@@ -201,7 +212,7 @@ class Request(http.Request):
         else:
             self.prepath = []
             self.postpath = path
-        
+        #print "_parseURL", self.uri, self.scheme, self.host, self.path, self.params, self.querystring
 
     def _calculateHost(self):
         hostinfo = self.chanRequest.getHostInfo()
@@ -276,35 +287,39 @@ class Request(http.Request):
         if result is _errorMarker:
             # The error page handler has already handled this, abort.
             return result
-        
-        newres, newpath = result
-        # If the child resource is None then display a error page
-        if newres is None:
-            raise http.HTTPError(NOT_FOUND)
 
-        # If we got a deferred then we need to call back later, once the
-        # child is actually available.
-        if isinstance(newres, defer.Deferred):
-            return newres.addCallback(
-                lambda actualRes: self._handleSegment(
-                    (actualRes, newpath), path, pageContext))
+        try:
+            newres, newpath = result
+            # If the child resource is None then display a error page
+            if newres is None:
+                raise http.HTTPError(NOT_FOUND)
 
-        if newpath is StopTraversal:
-            # We need to rethink how to do this.
-            #if newres is pageContext.tag:
-                return pageContext
-            #else:
-            #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
-            
-        newres = iweb.IResource(newres)
-        if newres is pageContext.tag:
-            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
-            assert len(newpath) < len(path), "Infinite loop impending..."
-            
-        # We found a Resource... update the request.prepath and postpath
-        for x in xrange(len(path) - len(newpath)):
-            self.prepath.append(self.postpath.pop(0))
+            # If we got a deferred then we need to call back later, once the
+            # child is actually available.
+            if isinstance(newres, defer.Deferred):
+                return newres.addCallback(
+                    lambda actualRes: self._handleSegment(
+                        (actualRes, newpath), path, pageContext))
 
+            if newpath is StopTraversal:
+                # We need to rethink how to do this.
+                #if newres is pageContext.tag:
+                    return pageContext
+                #else:
+                #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
+
+            newres = iweb.IResource(newres)
+            if newres is pageContext.tag:
+                assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
+                assert len(newpath) < len(path), "Infinite loop impending..."
+
+            # We found a Resource... update the request.prepath and postpath
+            for x in xrange(len(path) - len(newpath)):
+                self.prepath.append(self.postpath.pop(0))
+        except:
+            # Handle errors here in the appropriate pageContext
+            return self._processingFailed(failure.Failure(), pageContext)
+        # But don't add an errback to this
         return self._getChild(pageContext, newres, newpath)
 
 
@@ -359,7 +374,7 @@ class Request(http.Request):
             else:
                 return response
 
-        response = iweb.IResponse(result)
+        response = iweb.IResponse(result, None)
         if response:
             d = defer.succeed(response)
             for f in self.responseFilters:
@@ -389,20 +404,16 @@ class Request(http.Request):
              'content-length': len(body)},
             body)
 
-class Site(http.HTTPFactory):
-    def __init__(self, resource, **kwargs):
+class Site:
+    def __init__(self, resource):
         """Initialize.
         """
-        if not 'requestFactory' in kwargs:
-            kwargs['requestFactory'] = Request
-        requestFactory = kwargs['requestFactory']
-        
-        kwargs['requestFactory'] = lambda *args, **kwargs: requestFactory(site=self, *args, **kwargs)
-        
-        http.HTTPFactory.__init__(self, **kwargs)
         self.context = context.SiteContext()
         self.resource = iweb.IResource(resource)
-            
+
+    def __call__(self, *args, **kwargs):
+        return Request(site=self, *args, **kwargs)
+    
     def remember(self, obj, inter=None):
         """Remember the given object for the given interfaces (or all interfaces
         obj implements) in the site's context.

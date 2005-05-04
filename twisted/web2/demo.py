@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -17,7 +18,7 @@ def simple_app(environ, start_response):
     response_headers = [('Content-type','text/html; charset=ISO-8859-1')]
     start_response(status, response_headers)
     data = environ['wsgi.input'].read()
-    environ['wsgi.errors'].write("This is an error message\n")
+    environ['wsgi.errors'].write("This is an example wsgi error message\n")
     # return environ['wsgi.file_wrapper'](open('/etc/hostconfig'))
     # open("upload.txt", 'w').write(data)
     s = '<pre>'
@@ -25,7 +26,7 @@ def simple_app(environ, start_response):
     items.sort()
     for k,v in items:
         s += repr(k)+': '+repr(v)+'\n'
-    import time; time.sleep(5)
+    #import time; time.sleep(5)
     return [s, '<p><form method="POST" enctype="multipart/form-data"><input name="fo&quot;o" />\nData:<pre><input type="file" name="file"/><br/><input type="submit" /><br /></form>', data, '</pre>']
 
 
@@ -50,7 +51,7 @@ class Test(resource.Resource):
 Hello!  This is a twisted.web2 demo.
 <ul>
 <li><a href="file">Static File</a></li>
-<li><a href="dir/">Static dir listing (needs nevow atm)</a></li>
+<li><a href="dir/">Static dir listing</a></li>
 <li><a href="foo">Resource that takes time to render</a></li>
 <li><a href="wsgi">WSGI app</a></li>
 <li><a href="cgi">CGI app</a></li>
@@ -69,17 +70,36 @@ Hello!  This is a twisted.web2 demo.
 if __name__ == '__builtin__':
     # Running from twistd -y
     from twisted.application import service, strports
-    from twisted.web2 import server
+    from twisted.web2 import server, scgichannel, vhost
     from twisted.internet.ssl import DefaultOpenSSLContextFactory
     from twisted.python import util
 
-    res = Test()
-    res = log.LogWrapperResource(res)
-    site = server.Site(res)
+    test = Test()
+    res = log.LogWrapperResource(test)
     log.DefaultCommonAccessLoggingObserver().start()
+    site = server.Site(res)
     
     application = service.Application("demo")
-    s = strports.service('tcp:8080:backlog=50', site)
+    # Normal HTTP port
+    s = strports.service('tcp:8080', http.HTTPFactory(site))
     s.setServiceParent(application)
-    s = strports.service('ssl:8081:backlog=50:privateKey=doc/core/examples/server.pem', site)
+
+    # HTTPS port
+    s = strports.service('ssl:8081:privateKey=doc/core/examples/server.pem', http.HTTPFactory(site))
     s.setServiceParent(application)
+
+    # SCGI port
+    s = strports.service('tcp:3000', scgichannel.SCGIFactory(site))
+    s.setServiceParent(application)
+
+    # HTTP-behind-apache
+    s = strports.service(
+        'tcp:8538:interface=127.0.0.1',
+        http.HTTPFactory(server.Site(
+            vhost.VHostURIRewrite('http://localhost/app/', test))))
+    s.setServiceParent(application)
+
+if __name__ == '__main__':
+    from twisted.web2 import cgichannel, server
+    test = Test()
+    cgichannel.startCGI(server.Site(test))

@@ -70,6 +70,8 @@ def _logfilter(request, response, ctx):
     response.stream=_LogByteCounter(response.stream, _log)
     return response
 
+_logfilter.handleErrors=True
+
 class LogWrapperResource(resource.WrapperResource):
     def hook(self, ctx):
         # Insert logger

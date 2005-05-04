@@ -1078,10 +1078,11 @@ class HTTPFactory(protocol.ServerFactory):
 
     outstandingRequests = 0
     
-    def __init__(self, maxRequests=600, **kwargs):
+    def __init__(self, requestFactory, maxRequests=600, **kwargs):
         self.maxRequests=maxRequests
         self.protocolArgs = kwargs
-
+        self.protocolArgs['requestFactory']=requestFactory
+        
     def buildProtocol(self, addr):
         if self.outstandingRequests >= self.maxRequests:
             return OverloadedServerProtocol()

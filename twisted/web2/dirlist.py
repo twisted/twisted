@@ -7,16 +7,14 @@
 import os
 import urllib
 import stat
+import time
 
 # twisted imports
-from twisted.web2 import iweb
-
-from nevow import rend, loaders
-from nevow.tags import *
+from twisted.web2 import iweb, resource, http
 
 def formatFileSize(size):
     if size < 1024:
-        return '%ib' % size
+        return '%i' % size
     elif size < (1024**2):
         return '%iK' % (size / 1024)
     elif size < (1024**3):
@@ -24,7 +22,7 @@ def formatFileSize(size):
     else:
         return '%iG' % (size / (1024**3))
 
-class DirectoryLister(rend.Page):
+class DirectoryLister(resource.Resource):
     def __init__(self, pathname, dirs=None,
                  contentTypes={},
                  contentEncodings={},
@@ -35,11 +33,9 @@ class DirectoryLister(rend.Page):
         # dirs allows usage of the File to specify what gets listed
         self.dirs = dirs
         self.path = pathname
-        rend.Page.__init__(self)
+        resource.Resource.__init__(self)
 
     def data_listing(self, context, data):
-        from twisted.web2.static import getTypeAndEncoding
-
         if self.dirs is None:
             directory = os.listdir(self.path)
             directory.sort()
@@ -60,30 +56,26 @@ class DirectoryLister(rend.Page):
                 files.append({
                     'link': url,
                     'linktext': path + "/",
-                    'type': '[Directory]',
-                    'filesize': '',
-                    'encoding': '',
+                    'size': '',
+                    'type': '-',
+                    'lastmod': time.strftime("%Y-%b-%d %H:%M", time.localtime(st.st_mtime))
                     })
             else:
+                from twisted.web2.static import getTypeAndEncoding
                 mimetype, encoding = getTypeAndEncoding(
                     path,
                     self.contentTypes, self.contentEncodings, self.defaultType)
+                
                 filesize = st.st_size
                 files.append({
                     'link': url,
                     'linktext': path,
-                    'type': '[%s]' % mimetype,
-                    'filesize': formatFileSize(filesize),
-                    'encoding': (encoding and '[%s]' % encoding or '')})
+                    'size': formatFileSize(filesize),
+                    'type': mimetype,
+                    'lastmod': time.strftime("%Y-%b-%d %H:%M", time.localtime(st.st_mtime))
+                    })
 
         return files
-
-    def data_header(self, context, data):
-        request = context.locate(iweb.IRequest)
-        return "Directory listing for %s" % urllib.unquote(request.uri)
-
-    def render_tableLink(self, context, data):
-        return a(href=data['link'])[data['linktext']]
 
     def __repr__(self):  
         return '<DirectoryLister of %r>' % self.path
@@ -91,11 +83,12 @@ class DirectoryLister(rend.Page):
     __str__ = __repr__
 
 
-    docFactory = loaders.stan(html[
-      head[
-        title(data=directive('header'))[str],
-        style['''
-          th, .even td, .odd td { padding-right: 0.5em; }
+    def render(self, ctx):
+        request = ctx.locate(iweb.IRequest)
+        title = "Directory listing for %s" % urllib.unquote(request.path)
+    
+        s= """<html><head><title>%s</title><style>
+          th, .even td, .odd td { padding-right: 0.5em; font-family: monospace}
           .even-dir { background-color: #efe0ef }
           .even { background-color: #eee }
           .odd-dir {background-color: #f0d0ef }
@@ -104,35 +97,20 @@ class DirectoryLister(rend.Page):
           .listing {
               margin-left: auto;
               margin-right: auto;
-              width: 50%;
+              width: 50%%;
               padding: 0.1em;
               }
 
           body { border: 0; padding: 0; margin: 0; background-color: #efefef;}
           h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin white dashed;}
-          ''']
-      ],
-      body[div(_class='directory-listing')[
-        h1(data=directive('header'))[str],
-        table(render=rend.sequence, data=directive('listing'))[
-           tr(pattern="header")[
-             th["Filename"],
-             th["Size"],
-             th["Content type"],
-             th["Content encoding"],
-           ],
-           tr(_class="even", pattern="item")[
-             td[a(render=directive("tableLink"))],
-             td(data=directive("filesize"))[str],
-             td(data=directive("type"))[str],
-             td(data=directive("encoding"))[str],
-           ],
-           tr(_class="odd", pattern="item")[
-             td[a(render=directive("tableLink"))],
-             td(data=directive("filesize"))[str],
-             td(data=directive("type"))[str],
-             td(data=directive("encoding"))[str],
-           ]
-        ]
-      ]]
-    ])
+</style></head><body><div class="directory-listing"><h1>%s</h1>""" % (title,title)
+        s+="<table>"
+        s+="<tr><th>Filename</th><th>Size</th><th>Last Modified</th><th>File Type</th></tr>"
+        even = False
+        for row in self.data_listing(ctx, None):
+            s+='<tr class="%s">' % (even and 'even' or 'odd',)
+            s+='<td><a href="%(link)s">%(linktext)s</a></td><td align="right">%(size)s</td><td>%(lastmod)s</td><td>%(type)s</td></tr>' % row
+            even = not even
+                
+        s+="</table></div></body></html>"
+        return http.Response(200, {}, s)
