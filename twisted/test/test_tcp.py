@@ -154,7 +154,8 @@ class LoopbackTestCase(PortCleanerUpper):
         clientF = MyClientFactory()
         reactor.connectTCP("127.0.0.1", self.n, clientF)
 
-        spinWhile(lambda :(not clientF.protocol or not clientF.protocol.closed))
+        spinWhile(lambda :(not clientF.protocol or
+                           not clientF.protocol.closed))
 
         self.assert_(clientF.protocol.made)
         self.assert_(port.disconnected)
@@ -172,7 +173,8 @@ class LoopbackTestCase(PortCleanerUpper):
         clientF = MyClientFactory()
         reactor.connectTCP("127.0.0.1", self.n, clientF)
 
-        spinUntil(lambda :(f.called > 0 and getattr(clientF, 'protocol', None) is not None))
+        spinUntil(lambda :(f.called > 0 and
+                           getattr(clientF, 'protocol', None) is not None))
 
         for p in clientF.protocol, f.protocol:
             transport = p.transport
@@ -195,7 +197,8 @@ class LoopbackTestCase(PortCleanerUpper):
         clientF = MyClientFactory()
         reactor.connectTCP("127.0.0.1", self.n, clientF)
 
-        spinUntil(lambda :(f.called > 0 and getattr(clientF, 'protocol', None) is not None))
+        spinUntil(lambda :(f.called > 0 and
+                           getattr(clientF, 'protocol', None) is not None))
 
         for p in clientF.protocol, f.protocol:
             transport = p.transport
@@ -222,7 +225,8 @@ class LoopbackTestCase(PortCleanerUpper):
 
     def testConnectByServiceFail(self):
         try:
-            reactor.connectTCP("127.0.0.1", "thisbetternotexist", MyClientFactory())
+            reactor.connectTCP("127.0.0.1", "thisbetternotexist",
+                               MyClientFactory())
         except error.ServiceNameUnknownError:
             return
         self.assert_(False, "connectTCP didn't raise ServiceNameUnknownError")
@@ -233,7 +237,8 @@ class LoopbackTestCase(PortCleanerUpper):
             s = MyServerFactory()
             port = reactor.listenTCP(0, s, interface="127.0.0.1")
             self.n = port.getHost().port
-            socket.getservbyname = lambda s, p,n=self.n: s == 'http' and p == 'tcp' and n or 10
+            socket.getservbyname = (lambda s, p,n=self.n:
+                                    s == 'http' and p == 'tcp' and n or 10)
             self.ports.append(port)
             cf = MyClientFactory()
             try:
@@ -423,7 +428,8 @@ class ConnectorTestCase(PortCleanerUpper):
 
 
 class CannotBindTestCase(PortCleanerUpper):
-    """Tests for correct behavior when a reactor cannot bind to the required TCP port."""
+    """Tests for correct behavior when a reactor cannot bind to the required
+    TCP port."""
 
     def testCannotBind(self):
         f = MyServerFactory()
@@ -437,7 +443,8 @@ class CannotBindTestCase(PortCleanerUpper):
         self.assertEquals(dest.port, n)
         
         # make sure new listen raises error
-        self.assertRaises(error.CannotListenError, reactor.listenTCP, n, f, interface='127.0.0.1')
+        self.assertRaises(error.CannotListenError,
+                          reactor.listenTCP, n, f, interface='127.0.0.1')
 
         self.cleanPorts(*self.ports)
 
@@ -447,7 +454,8 @@ class CannotBindTestCase(PortCleanerUpper):
         self.ports.append(p)
         
         factory = MyClientFactory()
-        reactor.connectTCP("127.0.0.1", p.getHost().port, factory, bindAddress=("127.0.0.1", 0))
+        reactor.connectTCP("127.0.0.1", p.getHost().port, factory,
+                           bindAddress=("127.0.0.1", 0))
 
         spinUntil(lambda :factory.protocol is not None)
         
@@ -455,7 +463,8 @@ class CannotBindTestCase(PortCleanerUpper):
 
         port = factory.protocol.transport.getHost().port
         f2 = MyClientFactory()
-        reactor.connectTCP("127.0.0.1", p.getHost().port, f2, bindAddress=("127.0.0.1", port))
+        reactor.connectTCP("127.0.0.1", p.getHost().port, f2,
+                           bindAddress=("127.0.0.1", port))
 
 
         spinUntil(lambda :f2.failed)
@@ -615,8 +624,8 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
         self.totalConnections = 0
 
     def tearDown(self):
-        # Wait until all the protocols on the server-side of this test have been
-        # disconnected, to avoid leaving junk in the reactor.
+        # Wait until all the protocols on the server-side of this test have
+        # been disconnected, to avoid leaving junk in the reactor.
         for d in self.serverConns:
             util.wait(d)
 
@@ -645,10 +654,13 @@ class AProtocol(protocol.Protocol):
     def connectionMade(self):
         reactor.callLater(0.1, self.transport.loseConnection)
         self.factory.testcase.assertEquals(self.transport.getHost(),
-                          IPv4Address("TCP", self.transport.getHost().host, self.transport.getHost().port))
+                          IPv4Address("TCP", self.transport.getHost().host,
+                                      self.transport.getHost().port))
         self.factory.testcase.assertEquals(self.transport.getPeer(),
-                          IPv4Address("TCP", self.transport.getPeer().host, self.transport.getPeer().port))
-        self.factory.testcase.assertEquals(self.transport.getPeer(), self.factory.ipv4addr)
+                          IPv4Address("TCP", self.transport.getPeer().host,
+                                      self.transport.getPeer().port))
+        self.factory.testcase.assertEquals(self.transport.getPeer(),
+                                           self.factory.ipv4addr)
         self.factory.testcase.ran = 1
 
 class AClientFactory(protocol.ClientFactory):
@@ -697,13 +709,16 @@ class AddressTestCase(PortCleanerUpper):
     def testBuildProtocol(self):
         portno = self.getFreePort()
 
-        p = reactor.listenTCP(0, AServerFactory(self, IPv4Address('TCP', '127.0.0.1', portno)))
+        f = AServerFactory(self, IPv4Address('TCP', '127.0.0.1', portno))
+        p = reactor.listenTCP(0, f)
         self.ports.append(p)
         spinUntil(lambda :p.connected)
 
-        acf = AClientFactory(self, IPv4Address("TCP", "127.0.0.1", p.getHost().port))
+        acf = AClientFactory(self, IPv4Address("TCP", "127.0.0.1",
+                                               p.getHost().port))
 
-        reactor.connectTCP("127.0.0.1", p.getHost().port, acf, bindAddress=("127.0.0.1", portno))
+        reactor.connectTCP("127.0.0.1", p.getHost().port, acf,
+                           bindAddress=("127.0.0.1", portno))
 
         spinUntil(lambda :acf.protocol is not None)
         self.ports.append(acf.protocol.transport)
@@ -937,4 +952,5 @@ try:
 except ImportError:
     pass
 else:
-    ProperlyCloseFilesTestCase.numberRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
+    numRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
+    ProperlyCloseFilesTestCase.numberRounds = numRounds
