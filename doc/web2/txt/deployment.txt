@@ -85,7 +85,45 @@ And twisted like so::
   s = strports.service('tcp:8538:interface=127.0.0.1', http.HTTPFactory(site))
   s.setServiceParent(application)
 
-Because you must provide the full url in the web2 configuration, that also means you cannot forward multiple locations to the same twisted port (e.g. both http and https). Instead, set up multiple ports, each with their own VHostURIRewrite wrapper.
+Because vhost.VHostURIRewrite can exist anywhere in the resource tree, as a result if you have multiple applications running on a single twisted port by making them siblings of a root resource and referencing their full path in the ProxyPass directive.
+
+Setup apache as follows::
+
+  <VirtualHost foo.myhostname.com>
+  ProxyPass / http://localhost:8538/foo/
+  ServerName example.com
+  </VirtualHost>
+
+  <VirtualHost bar.myhostname.com>
+  ProxyPass / http://localhost:8538/bar/
+  ServerName example.com
+  </VirtualHost>
+
+And twisted like so::
+
+  from twisted.web2 import server, http, resource, static, vhost
+
+  # For example, server the /tmp/foo directory
+  foo_toplevel = static.File("/tmp/foo")
+  # And the /tmp/bar directory
+  bar_toplevel = static.File("/tmp/bar")
+  # Add the rewriters:
+  foo_toplevel = vhost.VHostURIRewrite("http://foo.myhostname.com/", 
+					foo_toplevel)
+  bar_toplevel = vhost.VHostURIRewrite("http://bar.myhostname.com/",
+					bar_toplevel)
+
+  toplevel = resource.Resource()
+  toplevel.putChild('foo', foo_toplevel)
+  toplevel.putChild('bar', bar_toplevel)
+  site = server.Site(toplevel)
+  
+  # Start up the server
+  from twisted.application import service, strports
+  application = service.Application("demoserver")
+  s = strports.service('tcp:8538:interface=127.0.0.1', http.HTTPFactory(site))
+  s.setServiceParent(application)
+
 
 SCGI
 ----
