@@ -4,7 +4,7 @@ from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-this example is analagous to a function calling .errback(failure)
+this example is analogous to a function calling .errback(failure)
 """
 
 
