@@ -75,24 +75,6 @@ class ICanHandleException(components.Interface):
         """Return stan representing the exception, to be printed in the page,
         not replacing the page."""
 
-class IRemainingSegments(components.Interface):
-    # Shared interface with inevow.IRemainingSegments
-    """During the URL traversal process, requesting this from the context
-    will result in a tuple of the segments remaining to be processed.
-    
-    Equivalent to request.postpath in twisted.web
-    """
-
-class ICurrentSegments(components.Interface):
-    # Shared interface with inevow.ICurrentSegments
-    """Requesting this from the context will result in a tuple of path segments
-    which have been consumed to reach the current Page instance during
-    the URL traversal process.
-
-    Equivalent to request.prepath in twisted.web
-    """
-
-
 
 # http.py interfaces
 class IResponse(Interface):

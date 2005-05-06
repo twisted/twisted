@@ -52,7 +52,8 @@ class Resource(object):
     def child_(self, ctx):
         """I'm how requests for '' (urls ending in /) get handled :)
         """
-        if self.addSlash and len(iweb.IRemainingSegments(ctx)) == 1:
+        req = iweb.IRequest(ctx)
+        if self.addSlash and len(req.postpath) == 1:
             return self
         return None
         
@@ -99,7 +100,7 @@ class Resource(object):
     def http_GET(self, ctx):
         """Ensures there is no incoming body data, and calls render."""
         req = iweb.IRequest(ctx)
-        if self.addSlash and iweb.ICurrentSegments(ctx)[-1] != '':
+        if self.addSlash and req.prepath[-1] != '':
             # If this is a directory-ish resource...
             return http.Response(
                 responsecode.MOVED_PERMANENTLY,

@@ -2,9 +2,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-##### FIXME: this file probably doesn't work.
-
-
 """I am a virtual hosts implementation.
 """
 

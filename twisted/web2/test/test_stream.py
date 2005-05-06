@@ -433,7 +433,7 @@ class CompoundStreamTest:
     >>> m.length # streams after the failed one got closed
     0
 
-	"""
+    """
 
 
 __doctests__ = ['twisted.web2.test.test_stream.CompoundStreamTest', 'twisted.web2.stream.generatorToStream']

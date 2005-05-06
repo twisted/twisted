@@ -267,8 +267,6 @@ class Request(http.Request):
         
         # Create a context object to represent this new resource
         newctx = context.PageContext(tag=res, parent=ctx)
-        newctx.remember(tuple(self.prepath), iweb.ICurrentSegments)
-        newctx.remember(tuple(self.postpath), iweb.IRemainingSegments)
 
         if not path:
             return defer.succeed(newctx)
