@@ -2,7 +2,6 @@
 SCP=bash admin/aapscp
 HERE=`os.getcwd()`
 :python
-    from __future__ import generators
     import winreg
     from aapwin import getValueFromReg, pathdb
 
@@ -45,24 +44,21 @@ HERE=`os.getcwd()`
 # get the version of twisted from the tree being built, not sys.path
 Version=`getBuildingTwistedVersion()`
 
+ZIVersion=3.0.1
+
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values
 :variant PyVersion
-    py2.2
-        pyversion=2.2
-        pyversion10=22
-        pyhome=`_no.pathdb["python22"]`
-        pyexe=$(pyhome)\python.exe
     py2.3
         pyversion=2.3
         pyversion10=23
         pyhome=`_no.pathdb["python23"]`
-        pyexe=$(pyhome)\python.exe
     py2.4
         pyversion=2.4
         pyversion10=24
         pyhome=`_no.pathdb["python24"]`
-        pyexe=$(pyhome)\python.exe
+
+pyexe=$(pyhome)\python.exe
 
 :variant DoDocs
     nodocs
@@ -92,8 +88,26 @@ TwSources += twisted/lore/template.mgp
 :attr {publish=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(setupbase)-$(Version).win32-py$(pyversion).exe} dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
 
 # only run setup.py when needed
-build/scripts-$(pyversion) build/lib.win32-$(pyversion): $TwSources
-    :sys $(pyexe) setup.py all -q build --compiler=mingw32 install --root=win32dist
+build/scripts-$(pyversion) build/lib.win32-$(pyversion):  \
+                                                $TwSources 
+                                                ZopeInterface-$ZIVersion
+    :mkdir {f} build/scripts-$(pyversion)
+    :copy win32/twisted_postinstall.py  build/scripts-$(pyversion)/.
+    :sys $(pyexe) setup.py all  build --compiler=mingw32 \
+                                install --root=win32dist --no-compile
+    @1
+    :pushdir ZopeInterface-$(ZIVersion)
+    @try:
+        :sys $(pyexe) setup.py build --compiler=mingw32 \
+                               install --root=../win32dist --no-compile
+    @finally:
+        :popdir
+
+ZopeInterface-$(ZIVersion).tgz:
+    err = "Please download the ZopeInterface $ZIVersion tarball"
+    @assert os.path.exists(target), err
+ZopeInterface-$ZIVersion: ZopeInterface-$(ZIVersion).tgz
+    :sys tar xvfz ZopeInterface-$(ZIVersion).tgz
 
 # build with inno
 ExeDeps=py$(pyversion)-$(DoDocs).iss
@@ -109,9 +123,9 @@ dist/Twisted-$(Version).win32-py$(pyversion).exe: doc/twisteddoc.zip $(ExeDeps)
 dist/Twisted_NoDocs-$(Version).win32-py$(pyversion).exe: $(ExeDeps)
     :sys "$(iscc)" py$(pyversion)-nodocs.iss
 
-
-# fetch docs from latest release (this better be there)
-:attr {fetch=http://twisted.sf.net/TwistedDocs-$(Version).tar.bz2} doc/TwistedDocs-$(Version).tar.bz2
+## we don't do docs any more
+## # fetch docs from latest release (this better be there)
+## :attr {fetch=http://twisted.sf.net/TwistedDocs-$(Version).tar.bz2} doc/TwistedDocs-$(Version).tar.bz2
 
 # uncompress and rezip doc
 doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
@@ -123,9 +137,9 @@ doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
 
 # generate iss files
 py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template twisted/copyright.py
-    @docs=(_top.DoDocs == 'withdocs')
+    @docs = (_top.DoDocs == 'withdocs')
     # file2string is fucked, don't use
-    @tmpl=file('win32/pyx.x-foo.iss.template').read()
-    @iss=_top.geniss(tmpl, docs)
+    @tmpl = file('win32/pyx.x-foo.iss.template').read()
+    @iss = _top.geniss(tmpl, docs)
     @file(target, 'w').write(iss)
 

@@ -15,11 +15,11 @@ def getValueFromReg(key, valuename, default, hive=winreg.HKLM):
 
 def getPythonHomeForVersion(ver):
     """Return the home directory for a Python version specified as 'M.m'"""
-    res=getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
-                        ver, None, r'C:\pythonxx')
-    if res==r'C:\pythonxx':
-        res=getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
-                            ver, None, r'C:\pythonxx', hive=winreg.HKCU)
+    res = getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
+                          ver, None, r'C:\pythonxx')
+    if res == r'C:\pythonxx':
+        res = getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
+                              ver, None, r'C:\pythonxx', hive=winreg.HKCU)
     return res
 
 def fileFromTemplate(filenametmpl, filenameout, dictionary):
@@ -27,24 +27,23 @@ def fileFromTemplate(filenametmpl, filenameout, dictionary):
     python %()s sequences.  Apply dictionary to it and write filenameout
     with the result.
     """
-    tmplf=file(filenametmpl, 'r')
-    tmpl=tmplf.read()
+    tmplf = file(filenametmpl, 'r')
+    tmpl = tmplf.read()
     tmplf.close()
 
-    out=tmpl % dictionary
-    outf=file(filenameout, 'w')
+    out = tmpl % dictionary
+    outf = file(filenameout, 'w')
     outf.write(out)
     outf.close()
 
 
-innohome=getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 4_is1',
+innohome = getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 4_is1',
                           "Inno Setup: App Path",
                           r'C:\Program Files\Inno Setup 4')
 
 
 pathdb = dict(innohome=innohome,
               iscc=os.path.join(innohome, "ISCC.exe"),
-              python22=getPythonHomeForVersion('2.2'),
               python23=getPythonHomeForVersion('2.3'),
               python24=getPythonHomeForVersion('2.4'),
               )

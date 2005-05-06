@@ -7,7 +7,7 @@ features:
 
 - Two of the four builds contain documentation, and make shortcuts to
 it; the others do not.
-- Two of the four builds are for Python 2.2, the other two are for Python 2.3.
+- Two of the four builds are for Python 2.4, the other two are for Python 2.3.
 - There is a shortcut in the start menu for the Twisted Command Prompt
 which is a standard Windows command prompt with PATH and environment
 variables set up to invoke the Twisted commands the same way you would
@@ -50,7 +50,7 @@ $ python setup.py build_py build_scripts install --skip-build
 
 OFFICIAL
 --------
-The Official Twisted is built with native Python 2.2 (latest), not the
+The Official Twisted is built with native Python 2.3 (latest), not the
 Cygwin version of Python, however it is built with the help of Cygwin
 packages.
 
@@ -58,6 +58,8 @@ packages.
 * A-A-P ***
 This is what actually does the building.
 http://www.a-a-p.org/download.html
+After installing it, make sure the file aap.bat is in your system PATH, using
+(for example) the environment variable applet.
 
 
 * winreg ***
@@ -70,6 +72,10 @@ You will need Cygwin, with the gcc-mingw package installed.  Get
 Cygwin at:
 
 http://cygwin.com
+
+DO NOT INSTALL CYGWIN PYTHON!
+DO NOT INSTALL CYGWIN PYTHON!
+(Install Native Windows Python.)
 
 
 * Inno Setup ***
@@ -86,6 +92,10 @@ described above will suffice.
 
 * Issue the build command ***
 
-$ aap -f win32/build.aap
+Bring up a Cygwin prompt.  Change directories to the root of your Twisted
+source tree.  It should contain the directory "win32/".
+Now run the following:
+
+$ aap.bat -f win32/build.aap
 
 The four distributable files will be in dist/ when this is done.

@@ -3,6 +3,7 @@ rem Pass me the location of Python (e.g. c:\python22)
 
 set PATH=%1;%PATH%
 set PATH
+set PATHEXT=%PATHEXT%;.py;.pyc;.pyo;.pyw
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
 echo Commands available in twisted: twistd mktap manhole tapconvert ckeygen trial coil lore websetroot
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
