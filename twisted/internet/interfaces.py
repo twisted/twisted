@@ -535,6 +535,12 @@ class IReactorCore(Interface):
         This is most useful in applications where the UI is being drawn "as
         fast as possible", such as games. All pending L{IDelayedCall}s will
         be called.
+
+        The reactor must have been started (via the run() method) prior to
+        any invocations of this method.  It must also be stopped manually
+        after the last call to this method (via the stop() method).  This
+        method is not re-entrant: you must not call it recursively; in
+        particular, you must not call it while the reactor is running.
         """
 
     def fireSystemEvent(self, eventType):
