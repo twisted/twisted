@@ -716,8 +716,8 @@ class StatusMixin:
 
 
 class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
-    zi.implements(itrial.ITestMethod, itrial.IMethodInfo, itrial.ITimeout)
-    parent = todo = timeout = None
+    zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
+    parent = None
 
     def __init__(self, original):
         super(TestMethod, self).__init__(original)

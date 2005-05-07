@@ -191,26 +191,6 @@ class TestTests(unittest.TestCase):
         testTimeout5_skip.timeout = 0.1
         testTimeout5_skip.skip = "i will get it right, eventually"
 
-        def testTimeout6_timeout(self):
-            return defer.Deferred()
-        testTimeout6_timeout.timeout = (0.0, TIMEOUT_MSG, RuntimeError)
-        testTimeout6_timeout.t_duration, testTimeout6_timeout.t_excArg, testTimeout6_timeout.t_excClass = testTimeout6_timeout.timeout
-
-        def testTimeout7_timeout(self):
-            return defer.Deferred()
-        testTimeout7_timeout.timeout = (0.0, TIMEOUT_MSG)
-        testTimeout7_timeout.t_duration = 0.0
-        testTimeout7_timeout.t_excArg = TIMEOUT_MSG
-        testTimeout7_timeout.t_excClass = adapters.TimeoutBase.excClass
-
-        def testTimeout8_timeout(self):
-            return defer.Deferred()
-        testTimeout8_timeout.timeout = (0.0,)
-        testTimeout8_timeout.t_duration = 0.0
-        testTimeout8_timeout.t_excClass = adapters.TimeoutBase.excClass
-        testTimeout8_timeout.t_excArg = adapters.TimeoutBase._defaultExcArg % 0.0
-
-        
         def testNewStyleTodo1_exfail(self):
             raise RuntimeError, "expected failure"
         testNewStyleTodo1_exfail.todo = (RuntimeError, "this is an expected failure")
@@ -230,21 +210,6 @@ class TestTests(unittest.TestCase):
             except:
                 log.err()
         testNewStyleTodoLoggedErr_exfail.todo = (ZeroDivisionError, "need to learn that I can't divide by 0")
-
-    class TestLeetTimeout(unittest.TestCase):
-        def testMethodAttributeHasPrecedence_timeout(self):
-            return defer.Deferred()
-        testMethodAttributeHasPrecedence_timeout.timeout = (0.1, TIMEOUT_MSG, StandardError)
-        testMethodAttributeHasPrecedence_timeout.t_duration = 0.1
-        testMethodAttributeHasPrecedence_timeout.t_excArg = TIMEOUT_MSG
-        testMethodAttributeHasPrecedence_timeout.t_excClass = StandardError
-
-        def testClassIsDefault_timeoutClassAttr(self):
-            return defer.Deferred()
-    TestLeetTimeout.timeout = (0.5, CLASS_TIMEOUT_MSG, RuntimeError)
-    TestLeetTimeout.t_excArg = CLASS_TIMEOUT_MSG
-    TestLeetTimeout.t_duration = 0.5
-    TestLeetTimeout.t_excClass = RuntimeError
 
     class TestSkipClassAttr(unittest.TestCase):
         def testMethodSkipPrecedence_skipAttr(self):
@@ -389,7 +354,6 @@ class TestTests(unittest.TestCase):
     def testMethods(self):
         from twisted.trial.test.common import BogusReporter
         for klass in (self.Tests,
-                      self.TestLeetTimeout,
                       self.TestSkipClassAttr,
                       self.TestTodoClassAttr):
             suite = runner.TestSuite(BogusReporter(), util._Janitor())

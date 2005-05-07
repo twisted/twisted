@@ -217,7 +217,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addTestClass(timeoutAttr.TestClassTimeoutAttribute)
         self.suite.run()
         assert_(self.tm.errors)
-        assert_(isinstance(self.tm.errors[0].value, timeoutAttr.ClassTimeout))
+        self.tm.errors[0].trap(defer.TimeoutError)
 
     def testCorrectNumberTestReporting(self):
         """make sure trial reports the correct number of tests run (issue 770)"""

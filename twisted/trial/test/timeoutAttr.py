@@ -8,9 +8,6 @@ from twisted.trial import unittest
 from twisted.trial.test import common
 from twisted.internet import defer
 
-class ClassTimeout(Exception):
-    pass
-
 class TestClassTimeoutAttribute(common.BaseTest, unittest.TestCase):
     def setUp(self):
         self.d = defer.Deferred()
@@ -19,5 +16,4 @@ class TestClassTimeoutAttribute(common.BaseTest, unittest.TestCase):
         self.methodCalled = True
         return self.d
 
-TestClassTimeoutAttribute.timeout = 0.2, "the class attribute has reigned supreme", ClassTimeout
-
+TestClassTimeoutAttribute.timeout = 0.2

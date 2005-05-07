@@ -82,55 +82,6 @@ class StringTodo(TodoBase):
         self.types = None
         self.msg = original
 
-class TimeoutBase(NewSkoolAdapter, tputil.FancyStrMixin):
-    showAttributes = ('duration', 'excArg', 'excClass')
-    duration = excArg = None
-    excClass = defer.TimeoutError
-    _defaultTimeout, _defaultExcArg = 4.0, "deferred timed out after %s sec"
-
-    def __init__(self, original):
-        super(TimeoutBase, self).__init__(original)
-##         if original is None:
-##             self.duration = self._defaultTimeout
-##             self.excArg = self._defaultExcArg % self.duration
-
-    def __str__(self):
-        return tputil.FancyStrMixin.__str__(self)
-    __repr__ = __str__
-
-
-class TupleTimeout(TimeoutBase):
-    _excArg = None
-
-    def __init__(self, original):
-        super(TupleTimeout, self).__init__(original)
-        self._set(*original)
-
-    def _set(self, duration=None, excArg=None, excClass=None):
-        for attr, param in [('duration', duration),
-                            ('excClass', excClass),
-                            ('excArg', excArg)]:
-            if param is not None:
-                setattr(self, attr, param)
-
-    def _getExcArg(self):
-        excArg = self._excArg
-        if excArg is None:
-            excArg = self._defaultExcArg % self.duration
-        return excArg
-
-    def _setExcArg(self, val):
-        self._excArg = val
-
-    excArg = property(_getExcArg, _setExcArg)
-
-
-class NumericTimeout(TimeoutBase):
-    def __init__(self, original):
-        self.duration = original
-        super(NumericTimeout, self).__init__(original)
-
-
 # -- helpful internal adapters --
 
 def getModuleNameFromModuleType(obj):

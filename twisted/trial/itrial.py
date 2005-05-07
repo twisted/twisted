@@ -124,16 +124,6 @@ class ITodo(zi.Interface):
     def __add__(other):
         """returns .msg + other, for string concatenation"""
 
-class ITimeout(zi.Interface):
-    """I represent the timeout option
-    """
-    duration = zi.Attribute("a float representing how long, in seconds, the "
-                            "framework should wait before timing out")
-    excClass = zi.Attribute("the exception to raise if the timeout duration "
-                            "is exceeded")
-    excArg = zi.Attribute(
-        "the argument to excClass that the timeout will raise")
-
 class ITestCase(zi.Interface):
     # when adapting a test method, this interface will give the proper
     # setUp and tearDown methods
@@ -288,7 +278,9 @@ class ITestMethod(ITimed):
 
     suppress = zi.Attribute("""XXX: ADD DOCUMENTATION""")
 
-    timeout = zi.Attribute("""XXX: ADD DOCUMENTATION""")
+    timeout = zi.Attribute(
+        "an integer indicating the maximum number of seconds to "
+        "wait for Deferreds return from this method to fire.")
 
     failures = zi.Attribute(
         """@ivar failures: a list of all failures that occurred during the

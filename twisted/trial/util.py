@@ -246,8 +246,6 @@ class _Wait(object):
         try:
             assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
 
-            itimeout = itrial.ITimeout(timeout)
-
             results = []
             def append(any):
                 results.append(any)
@@ -258,10 +256,10 @@ class _Wait(object):
 
             d.addBoth(lambda ign: reactor.crash())
 
-            if itimeout.duration is None:
+            if timeout is None:
                 timeoutCall = None
             else:
-                timeoutCall = reactor.callLater(itimeout.duration, reactor.crash)
+                timeoutCall = reactor.callLater(timeout, reactor.crash)
 
             reactor.stop = reactor.crash
             try:
@@ -274,7 +272,7 @@ class _Wait(object):
                     timeoutCall.cancel()
                 else:
                     
-                    raise itimeout.excClass(itimeout.excArg)
+                    raise defer.TimeoutError()
 
             if results:
                 return results[0]
