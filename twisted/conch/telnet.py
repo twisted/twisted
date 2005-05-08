@@ -556,7 +556,7 @@ class Telnet(protocol.Protocol):
     def will_yes_true(self, state, option):
         # This is a bogus state.  It is here for completeness.  It will
         # never be entered.
-        assert False, "will_yes_true can never be entered"
+        assert False, "will_yes_true can never be entered, but was called with %r, %r" % (state, option)
 
     willMap = {('no', False): will_no_false,   ('no', True): will_no_true,
                ('yes', False): will_yes_false, ('yes', True): will_yes_true}
@@ -625,7 +625,7 @@ class Telnet(protocol.Protocol):
     def do_yes_true(self, state, option):
         # This is a bogus state.  It is here for completeness.  It will never be
         # entered.
-        assert False, "do_yes_true can never be entered"
+        assert False, "do_yes_true can never be entered, but was called with %r, %r" % (state, option)
 
     doMap = {('no', False): do_no_false,   ('no', True): do_no_true,
              ('yes', False): do_yes_false, ('yes', True): do_yes_true}
@@ -642,7 +642,7 @@ class Telnet(protocol.Protocol):
     def dont_no_true(self, state, option):
         # This is a bogus state.  It is here for completeness.  It will never be
         # entered.
-        assert False, "dont_no_true can never be entered"
+        assert False, "dont_no_true can never be entered, but was called with %r, %r" % (state, option)
 
 
     def dont_yes_false(self, state, option):
