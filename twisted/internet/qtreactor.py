@@ -102,7 +102,7 @@ class QTReactor(posixbase.PosixReactorBase):
     _crashCall = None
 
     def __init__(self, app=None):
-        self.running = 1
+        self.running = 0
         posixbase.PosixReactorBase.__init__(self)
         if app is None:
             app = QApplication([])
