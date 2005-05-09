@@ -4,7 +4,10 @@
 
 from twisted.trial import unittest
 from twisted.trial.util import spinUntil
-from twisted.internet import reactor, protocol, error, app, abstract, interfaces
+from twisted.internet import reactor, protocol, error, app, abstract
+from twisted.internet import interfaces
+from twisted.internet.utils import getProcessOutput
+
 try:
     from twisted.internet import ssl
 except ImportError:
@@ -15,6 +18,7 @@ if ssl and not ssl.supported:
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
 from twisted.python import util, log
 
+import os
 import sys
 import time
 import types
@@ -489,6 +493,53 @@ class DelayedTestCase(unittest.TestCase):
         self.assertEquals(dcall.active(), 1)
         reactor.iterate()
         self.assertEquals(dcall.active(), 0)
+
+resolve_helper = """
+import %(reactor)s
+%(reactor)s.install()
+from twisted.internet import reactor
+
+class Foo:
+    def __init__(self):
+        reactor.callLater(1, self.start)
+        self.timer = reactor.callLater(3, self.failed)
+    def start(self):
+        reactor.resolve('localhost').addBoth(self.done)
+    def done(self, res):
+        print 'done', res
+        reactor.stop()
+    def failed(self):
+        print 'failed'
+        self.timer = None
+        reactor.stop()
+f = Foo()
+reactor.run()
+"""
+
+class Resolve(unittest.TestCase):
+    # this uses t.i.util.getProcessOutput, and maybe it wants to live in
+    # test_iutils.py instead of here
+    def testChildResolve(self):
+        # I've seen problems with reactor.run under gtk2reactor. Spawn a
+        # child which just does reactor.resolve after a second of delay, and
+        # fail if it does not complete in a timely fashion.
+        helper = os.path.abspath(self.mktemp())
+        helperf = open(helper, 'wt')
+        reactorname = reactor.__module__
+        helperf.write(resolve_helper % {'reactor': reactorname})
+        helperf.close()
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        d = getProcessOutput(sys.executable, (helper,), env, errortoo=1)
+        d.addCallback(self._testChildResolve_1)
+        return d
+    testChildResolve.timeout = 10
+    def _testChildResolve_1(self, res):
+        if res.startswith("failed\n"):
+            print "The child process timed out. Output is:"
+            print res
+            self.fail("The child process timed out.")
+        self.failUnlessEqual(res, "done 127.0.0.1\n")
 
 
 class Counter:
