@@ -66,6 +66,7 @@ fakeOut("gnome.ui")
 fakeOut("pygtk")
 fakeOut("gtk")
 fakeOut("wxPython.wx")
+sys.modules["zope.interface._zope_interface_coptimizations"] = None
 
 ## HACK: This is a nasty one! Replace TypeType with (TypeType,
 ## InterfaceClass), and dir with something that makes Interfaces look like 
