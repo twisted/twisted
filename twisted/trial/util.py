@@ -183,14 +183,18 @@ class _Janitor(object):
     do_cleanThreads = classmethod(do_cleanThreads)
 
     def do_cleanReactor(cls):
+        s = []
         from twisted.internet import reactor
-        s = None
-        junk = reactor.removeAll()
-        if junk:
-            s = DIRTY_REACTOR_MSG + repr([repr(obj) for obj in junk])
-        if s is not None:
+        removedSelectables = reactor.removeAll()
+        if removedSelectables:
+            s.append(DIRTY_REACTOR_MSG)
+            for sel in removedSelectables:
+                if interfaces.IProcessTransport.providedBy(sel):
+                    sel.signalProcess('KILL')
+                s.append(repr(sel))
+        if s:
             # raise DirtyReactorError, s
-            raise JanitorError(failure.Failure(DirtyReactorWarning(s)))
+            raise JanitorError(failure.Failure(DirtyReactorWarning(' '.join(s))))
     do_cleanReactor = classmethod(do_cleanReactor)
 
     def doGcCollect(cls):
