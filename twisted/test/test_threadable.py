@@ -26,12 +26,13 @@ class TestObject:
 threadable.synchronize(TestObject)
 
 class SynchronizationTestCase(unittest.TestCase):
-    def setUpClass(self):
-        self.checkInterval = sys.getcheckinterval()
-        sys.setcheckinterval(7)
+    if hasattr(sys, 'getcheckinterval'):
+        def setUpClass(self):
+            self.checkInterval = sys.getcheckinterval()
+            sys.setcheckinterval(7)
 
-    def tearDownClass(self):
-        sys.setcheckinterval(self.checkInterval)
+        def tearDownClass(self):
+            sys.setcheckinterval(self.checkInterval)
 
     def testThreadedSynchronization(self):
         o = TestObject()
@@ -64,14 +65,14 @@ class SynchronizationTestCase(unittest.TestCase):
 
 class SerializationTestCase(unittest.TestCase):
     def testPickling(self):
-        lock = threading.RLock()
+        lock = threadable.XLock()
         lockType = type(lock)
         lockPickle = pickle.dumps(lock)
         newLock = pickle.loads(lockPickle)
         self.failUnless(isinstance(newLock, lockType))
 
     def testUnpickling(self):
-        lockPickle = '\x80\x02ctwisted.python.threadable\nunpickle_lock\nq\x00)Rq\x01.'
+        lockPickle = 'ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n.'
         lock = pickle.loads(lockPickle)
         newPickle = pickle.dumps(lock, 2)
         newLock = pickle.loads(newPickle)

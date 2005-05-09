@@ -11,7 +11,6 @@ functionality so that I don't have to special-case it in all programs.
 """
 
 import traceback
-import copy_reg
 import sys
 
 from twisted.python import hook
@@ -24,20 +23,18 @@ class DummyLock(object):
     def __reduce__(self):
         return (unpickle_lock, ())
 
-def pickle_lock(lock):
-    return unpickle_lock, ()
-
 def unpickle_lock():
     if threadingmodule is not None:
-        return threadingmodule.RLock()
+        return XLock()
     else:
         return DummyLock()
+unpickle_lock.__safe_for_unpickling__ = True
 
 def _synchPre(self, *a, **b):
     if '_threadable_lock' not in self.__dict__:
         _synchLockCreator.acquire()
         if '_threadable_lock' not in self.__dict__:
-            self.__dict__['_threadable_lock'] = threadingmodule.RLock()
+            self.__dict__['_threadable_lock'] = XLock()
         _synchLockCreator.release()
     self._threadable_lock.acquire()
 
@@ -62,15 +59,18 @@ def init(with_threads=1):
 
     Don't bother calling this.  If it needs to happen, it will happen.
     """
-    global threaded, _synchLockCreator
+    global threaded, _synchLockCreator, XLock
 
     if with_threads:
         if not threaded:
             if threadmodule is not None:
                 threaded = True
-                # log.msg('Enabling Multithreading.')
-                _synchLockCreator = threadingmodule.RLock()
-                copy_reg.pickle(threadingmodule._RLock, pickle_lock)
+
+                class XLock(threadingmodule._RLock, object):
+                    def __reduce__(self):
+                        return (unpickle_lock, ())
+
+                _synchLockCreator = XLock()
             else:
                 raise RuntimeError("Cannot initialize threading, platform lacks thread support")
     else:
@@ -111,4 +111,4 @@ except ImportError:
 else:
     init(True)
 
-__all__ = ['isInIOThread', 'registerAsIOThread', 'getThreadID']
+__all__ = ['isInIOThread', 'registerAsIOThread', 'getThreadID', 'XLock']
