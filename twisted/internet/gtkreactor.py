@@ -91,7 +91,7 @@ class GtkReactor(posixbase.PosixReactorBase):
         # nothing to do, must delay
         if delay == 0:
             return # shouldn't delay, so just return
-        self.doIterationTimer = gtk.timeout_add(delay * 1000,
+        self.doIterationTimer = gtk.timeout_add(int(delay * 1000),
                                                 self.doIterationTimeout)
         # This will either wake up from IO or from a timeout.
         gtk.mainiteration(1) # block
@@ -155,7 +155,7 @@ class GtkReactor(posixbase.PosixReactorBase):
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
-        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+        _simtag = gtk.timeout_add(int(timeout * 1010), self.simulate) # grumble
 
 components.backwardsCompatImplements(GtkReactor)
 
@@ -184,7 +184,7 @@ class PortableGtkReactor(selectreactor.SelectReactor):
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
-        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+        _simtag = gtk.timeout_add((timeout * 1010), self.simulate) # grumble
 
 
 def install():
