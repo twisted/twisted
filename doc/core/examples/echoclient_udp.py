@@ -3,10 +3,10 @@
 # See LICENSE for details.
 
 
-from twisted.internet.protocol import ConnectedDatagramProtocol
+from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
-class ConnectedEchoClientDatagramProtocol(ConnectedDatagramProtocol):
+class EchoClientDatagramProtocol(DatagramProtocol):
     strings = [
         "Hello, world!",
         "What a fine day it is.",
@@ -14,6 +14,7 @@ class ConnectedEchoClientDatagramProtocol(ConnectedDatagramProtocol):
     ]
     
     def startProtocol(self):
+        self.transport.connect('127.0.0.1', 8000)
         self.sendDatagram()
     
     def sendDatagram(self):
@@ -23,13 +24,13 @@ class ConnectedEchoClientDatagramProtocol(ConnectedDatagramProtocol):
         else:
             reactor.stop()
 
-    def datagramReceived(self, datagram):
+    def datagramReceived(self, datagram, host):
         print 'Datagram received: ', repr(datagram)
         self.sendDatagram()
 
 def main():
-    protocol = ConnectedEchoClientDatagramProtocol()
-    reactor.connectUDP('localhost', 8000, protocol)
+    protocol = EchoClientDatagramProtocol()
+    t = reactor.listenUDP(0, protocol)
     reactor.run()
 
 if __name__ == '__main__':
