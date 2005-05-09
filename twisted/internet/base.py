@@ -233,6 +233,8 @@ class ReactorBase:
     del _implList
 
     installed = 0
+    usingThreads = 0
+    resolver = BlockingResolver()
 
     __name__ = "twisted.internet.reactor"
 
@@ -245,18 +247,11 @@ class ReactorBase:
         self.running = 0
         self.waker = None
 
-        if platform.supportsThreads():
-            self.resolver = ThreadedResolver(self)
-        else:
-            self.resolver = BlockingResolver()
-
-
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
 
-        self.usingThreads = 0
         if platform.supportsThreads():
-            threadable.whenThreaded(self._initThreads)
+            self._initThreads()
 
     # override in subclasses
 
@@ -554,8 +549,8 @@ class ReactorBase:
         threadpool = None
 
         def _initThreads(self):
-            import thread
             self.usingThreads = 1
+            self.resolver = ThreadedResolver(self)
             self.installWaker()
 
         def callFromThread(self, f, *args, **kw):

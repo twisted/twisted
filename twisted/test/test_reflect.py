@@ -105,7 +105,7 @@ class LookupsTestCaseII(unittest.TestCase):
         # If the namedAny causes a module to be imported, errors in the
         # import should not be masked.
         self.assertRaises(
-            ZeroDivisionError, 
+            ZeroDivisionError,
             reflect.namedAny, "twisted.test.reflect_helper_ZDE")
         self.assertRaises(
             ValueError,
@@ -138,31 +138,31 @@ class ObjectGrep(unittest.TestCase):
         o = object()
         d1 = {None: o}
         d2 = {o: None}
-        
+
         self.assertIn("[None]", reflect.objgrep(d1, o, reflect.isSame))
         self.assertIn("{None}", reflect.objgrep(d2, o, reflect.isSame))
-    
+
     def testList(self):
         o = object()
         L = [None, o]
-        
+
         self.assertIn("[1]", reflect.objgrep(L, o, reflect.isSame))
-    
+
     def testTuple(self):
         o = object()
         T = (o, None)
-        
+
         self.assertIn("[0]", reflect.objgrep(T, o, reflect.isSame))
-    
+
     def testInstance(self):
         class Dummy:
             pass
         o = object()
         d = Dummy()
         d.o = o
-        
+
         self.assertIn(".o", reflect.objgrep(d, o, reflect.isSame))
-    
+
     def testWeakref(self):
         class Dummy:
             pass
@@ -177,7 +177,7 @@ class ObjectGrep(unittest.TestCase):
                 pass
         o = Dummy()
         m = o.dummy
-        
+
         self.assertIn(".im_self", reflect.objgrep(m, m.im_self, reflect.isSame))
         self.assertIn(".im_class", reflect.objgrep(m, m.im_class, reflect.isSame))
         self.assertIn(".im_func", reflect.objgrep(m, m.im_func, reflect.isSame))
@@ -186,7 +186,7 @@ class ObjectGrep(unittest.TestCase):
         class Dummy:
             def method(self):
                 pass
-        
+
         o = Dummy()
         D1 = {(): "baz", None: "Quux", o: "Foosh"}
         L = [None, (), D1, 3]
@@ -196,21 +196,90 @@ class ObjectGrep(unittest.TestCase):
         i.attr = D2
         m = i.method
         w = weakref.ref(m)
-        
+
         self.assertIn("().im_self.attr[2][0][2]{'Foosh'}", reflect.objgrep(w, o, reflect.isSame))
 
 class GetClass(unittest.TestCase):
-	def testOld(self):
-		class OldClass:
-			pass
-		old = OldClass()
-		self.assertIn(reflect.getClass(OldClass).__name__, ('class', 'classobj'))
-		self.assertEquals(reflect.getClass(old).__name__, 'OldClass')
+    def testOld(self):
+        class OldClass:
+            pass
+        old = OldClass()
+        self.assertIn(reflect.getClass(OldClass).__name__, ('class', 'classobj'))
+        self.assertEquals(reflect.getClass(old).__name__, 'OldClass')
 
-	def testNew(self):
-		class NewClass(object):
-			pass
-		new = NewClass()
-		self.assertEquals(reflect.getClass(NewClass).__name__, 'type')
-		self.assertEquals(reflect.getClass(new).__name__, 'NewClass')
-		
+    def testNew(self):
+        class NewClass(object):
+            pass
+        new = NewClass()
+        self.assertEquals(reflect.getClass(NewClass).__name__, 'type')
+        self.assertEquals(reflect.getClass(new).__name__, 'NewClass')
+
+class Breakable(object):
+
+    breakRepr = False
+    breakStr = False
+
+    def __str__(self):
+        if self.breakStr:
+            raise self
+        else:
+            return '<Breakable>'
+
+    def __repr__(self):
+        if self.breakRepr:
+            raise self
+        else:
+            return 'Breakable()'
+
+class BrokenType(Breakable, type):
+    breakName = False
+    def get___name__(self):
+        if self.breakName:
+            raise RuntimeError("no name")
+        return 'BrokenType'
+    __name__ = property(get___name__)
+
+class BTBase(Breakable):
+    __metaclass__ = BrokenType
+    breakRepr = True
+    breakStr = True
+
+
+class NoClassAttr(object):
+    __class__ = property(lambda x: x.not_class)
+
+class SafeRepr(unittest.TestCase):
+
+    def testWorkingRepr(self):
+        x = [1,2,3]
+        self.assertEquals(reflect.safe_repr(x), repr(x))
+
+    def testBrokenRepr(self):
+        b = Breakable()
+        b.breakRepr = True
+        reflect.safe_repr(b)
+
+    def testBrokenStr(self):
+        b = Breakable()
+        b.breakStr = True
+        reflect.safe_repr(b)
+
+    def testBrokenClassRepr(self):
+        class X(BTBase):
+            breakRepr = True
+        reflect.safe_repr(X)
+        reflect.safe_repr(X())
+
+    def testBrokenClassStr(self):
+        class X(BTBase):
+            breakStr = True
+        reflect.safe_repr(X)
+        reflect.safe_repr(X())
+
+    def testBroken__Class__Attr(self):
+        reflect.safe_repr(NoClassAttr())
+
+    def testBroken__Class__Name__Attr(self):
+        class X(BTBase):
+            breakName = True
+        reflect.safe_repr(X())

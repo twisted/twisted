@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.python.threadable -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -11,180 +11,38 @@ functionality so that I don't have to special-case it in all programs.
 """
 
 import traceback
+import copy_reg
 import sys
 
-class ThreadableError(Exception): pass
+from twisted.python import hook
 
-class _Waiter:
-    def __init__(self):
-        self.callbacks = {}
-        self.results = {}
-        self.conditions = {}
-
-    def registerCallback(self, key, callback=None, errback=None):
-        self.callbacks[key] = errback, callback
-
-    def hasCallback(self, key):
-        return self.callbacks.has_key(key)
-
-    def preWait(self, key):
-        pass
-
-    def block(self):
-        pass
-
-    def wait(self, key):
-        self.conditions[key] = 1
-        while not self.results.has_key(key):
-            # This call will ostensibly eventually populate this
-            # dictionary.
-            self.block()
-        r, is_ok = self.results[key]
-        del self.results[key]
-        if is_ok:
-            return r
-        else:
-            raise r
-
-
-    def runCallback(self, key, value, ok):
-        call_or_err = self.callbacks.get(key)
-        if not call_or_err:
-            return 0
-        callback = call_or_err[ok]
-        if callback is None:
-            del self.callbacks[key]
-            return 1
-
-        try:
-            callback(value)
-            del self.callbacks[key]
-            return 1
-        except:
-            log.deferr()
-            del self.callbacks[key]
-            return 2
-
-    def unwait(self, key, value, ok):
-        if not self.runCallback(key, value, ok):
-            self.results[key] = (value, ok)
-            if self.conditions.has_key(key):
-                del self.conditions[key]
-
-    def unwait_all(self):
-        for k in self.conditions.keys():
-            self.unwait(k, ThreadableError("Shut Down."), 0)
-
-
-class _ThreadedWaiter(_Waiter):
-    synchronized = ['registerCallback',
-                    'hasCallback',
-                    'preWait',
-                    'unwait']
-
-    def __init__(self):
-        _Waiter.__init__(self)
-
-    def preWait(self, key):
-        global ioThread
-        if threadmodule.get_ident() == ioThread:
-            return _Waiter.preWait(self, key)
-        cond = self.conditions[key] = threadingmodule.Condition()
-        cond.acquire()
-
-    def wait(self, key):
-        global ioThread
-        if threadmodule.get_ident() == ioThread:
-            return _Waiter.wait(self, key)
-        cond = self.conditions[key]
-        cond.wait()
-        # ...
-        r, is_ok = self.results[key]
-        del self.conditions[key]
-        del self.results[key]
-        cond.release()
-
-        if is_ok:
-            return r
-        else:
-            raise r
-
-
-    def unwait(self, key, value, ok):
-        if not self.runCallback(key, value, ok):
-            cond = self.conditions.get(key)
-            if cond is None:
-                self.results[key] = (value,ok)
-            else:
-                cond.acquire()
-                self.results[key] = (value, ok)
-                cond.notify()
-                cond.release()
-
-class _XLock:
+class DummyLock(object):
     """
-    Exclusive lock class.  The advantage of this over threading.RLock
-    is that it's picklable (kinda...).  The goal is to one day not be
-    dependent upon threading, and to have this work for any old
-    'thread'
+    Hack to allow locks to be unpickled on an unthreaded system.
     """
-    
-    def __init__(self):
-        assert threaded,\
-               "Locks may not be allocated in an unthreaded environment!"
 
-        self.block = threadmodule.allocate_lock()
-        self.count = 0
-        self.owner = 0
+    def __reduce__(self):
+        return (unpickle_lock, ())
 
-    def __setstate__(self, state):
-        self.__init__()
+def pickle_lock(lock):
+    return unpickle_lock, ()
 
-    def __getstate__(self):
-        return None
-
-    def withThisLocked(self, func, *args, **kw):
-        self.acquire()
-        try:
-            return apply(func,args,kw)
-        finally:
-            self.release()
-
-    def acquire(self):
-        current = threadmodule.get_ident()
-        if self.owner == current:
-            self.count = self.count + 1
-            return 1
-        self.block.acquire()
-        self.owner = current
-        self.count = 1
-
-    def release(self):
-        current = threadmodule.get_ident()
-        if self.owner != current:
-            raise "Release of unacquired lock."
-
-        self.count = self.count - 1
-
-        if self.count == 0:
-            self.owner = None
-            self.block.release()
-
-##def _synch_init(self, *a, **b):
-##    self.lock = XLock()
+def unpickle_lock():
+    if threadingmodule is not None:
+        return threadingmodule.RLock()
+    else:
+        return DummyLock()
 
 def _synchPre(self, *a, **b):
-    if not self.__dict__.has_key('_threadable_lock'):
+    if '_threadable_lock' not in self.__dict__:
         _synchLockCreator.acquire()
-        if not self.__dict__.has_key('_threadable_lock'):
-            self.__dict__['_threadable_lock'] = XLock()
+        if '_threadable_lock' not in self.__dict__:
+            self.__dict__['_threadable_lock'] = threadingmodule.RLock()
         _synchLockCreator.release()
     self._threadable_lock.acquire()
 
 def _synchPost(self, *a, **b):
     self._threadable_lock.release()
-
-_to_be_synched = []
 
 def synchronize(*klasses):
     """Make all methods listed in each class' synchronized attribute synchronized.
@@ -193,84 +51,64 @@ def synchronize(*klasses):
     names of methods that must be synchronized. If we are running in threaded
     mode these methods will be wrapped with a lock.
     """
-    global _to_be_synched
-    if not threaded:
-        map(_to_be_synched.append, klasses)
-        return
-
-    if threaded:
-        import hook
+    if threadmodule is not None:
         for klass in klasses:
-##            hook.addPre(klass, '__init__', _synch_init)
             for methodName in klass.synchronized:
                 hook.addPre(klass, methodName, _synchPre)
                 hook.addPost(klass, methodName, _synchPost)
 
-threaded = None
-ioThread = None
-threadCallbacks = []
-
-def whenThreaded(cb):
-    if threaded:
-        cb()
-    else:
-        threadCallbacks.append(cb)
-
 def init(with_threads=1):
-    """Initialize threading. Should be run once, at the beginning of program.
+    """Initialize threading.
+
+    Don't bother calling this.  If it needs to happen, it will happen.
     """
-    global threaded, _to_be_synched, Waiter
-    global threadingmodule, threadmodule, XLock, _synchLockCreator
-    if threaded == with_threads:
-        return
-    elif threaded:
-        raise RuntimeError("threads cannot be disabled, once enabled")
+    global threaded, _synchLockCreator
+
     if with_threads:
-        log.msg('Enabling Multithreading.')
-        threaded = with_threads
-        import thread, threading
-        threadmodule = thread
-        threadingmodule = threading
-        Waiter = _ThreadedWaiter
-        XLock = _XLock
-        _synchLockCreator = XLock()
-        synchronize(*_to_be_synched)
-        _to_be_synched = []
-        for cb in threadCallbacks:
-            cb()
+        if not threaded:
+            if threadmodule is not None:
+                threaded = True
+                # log.msg('Enabling Multithreading.')
+                _synchLockCreator = threadingmodule.RLock()
+                copy_reg.pickle(threadingmodule._RLock, pickle_lock)
+            else:
+                raise RuntimeError("Cannot initialize threading, platform lacks thread support")
     else:
-        Waiter = _Waiter
-        # Hack to allow XLocks to be unpickled on an unthreaded system.
-        class DummyXLock:
+        if threaded:
+            raise RuntimeError("Cannot uninitialize threads")
+        else:
             pass
-        XLock = DummyXLock
+
+_dummyID = object()
+def getThreadID():
+    if threadmodule is None:
+        return _dummyID
+    return threadmodule.get_ident()
 
 
 def isInIOThread():
     """Are we in the thread responsable for I/O requests (the event loop)?
     """
-    global threaded
-    global ioThread
-    if threaded:
-        if (ioThread == threadmodule.get_ident()):
-            return 1
-        else:
-            return 0
-    return 1
+    return ioThread == getThreadID()
 
 
 def registerAsIOThread():
     """Mark the current thread as responsable for I/O requests.
     """
-    global threaded
     global ioThread
-    if threaded:
-        import thread
-        ioThread = thread.get_ident()
+    ioThread = getThreadID()
 
 
-synchronize(_ThreadedWaiter)
-init(0)
+ioThread = None
+threaded = False
 
-# sibling imports
-import log
+try:
+    import thread as threadmodule
+    import threading as threadingmodule
+except ImportError:
+    threadmodule = None
+    threadingmodule = None
+else:
+    init(True)
+
+__all__ = ['isInIOThread', 'registerAsIOThread', 'getThreadID']

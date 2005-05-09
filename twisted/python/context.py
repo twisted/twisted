@@ -14,6 +14,12 @@ retrieve 'value'.
 This is thread-safe.
 """
 
+try:
+    from threading import local
+except ImportError:
+    local = None
+
+from twisted.python import threadable
 
 defaultContextDict = {}
 
@@ -36,23 +42,41 @@ class ContextTracker:
         return self.contexts[-1].get(key, default)
 
 
-class ThreadedContextTracker:
+class _ThreadedContextTracker:
     def __init__(self):
-        import thread
-        self.threadId = thread.get_ident
+        self.threadId = threadable.getThreadID
         self.contextPerThread = {}
 
     def currentContext(self):
         tkey = self.threadId()
-        if not self.contextPerThread.has_key(tkey):
-            self.contextPerThread[tkey] = ContextTracker()
-        return self.contextPerThread[tkey]
+        try:
+            return self.contextPerThread[tkey]
+        except KeyError:
+            ct = self.contextPerThread[tkey] = ContextTracker()
+            return ct
 
     def callWithContext(self, ctx, func, *args, **kw):
         return self.currentContext().callWithContext(ctx, func, *args, **kw)
 
     def getContext(self, key, default=None):
         return self.currentContext().getContext(key, default)
+
+
+class _TLSContextTracker(_ThreadedContextTracker):
+    def __init__(self):
+        self.storage = local()
+
+    def currentContext(self):
+        try:
+            return self.storage.ct
+        except AttributeError:
+            ct = self.storage.ct = ContextTracker()
+            return ct
+
+if local is None:
+    ThreadedContextTracker = _ThreadedContextTracker
+else:
+    ThreadedContextTracker = _TLSContextTracker
 
 def installContextTracker(ctr):
     global theContextTracker
@@ -63,13 +87,4 @@ def installContextTracker(ctr):
     call = theContextTracker.callWithContext
     get = theContextTracker.getContext
 
-def initThreads():
-    newContextTracker = ThreadedContextTracker()
-    newContextTracker.contextPerThread[newContextTracker.threadId()] = theContextTracker
-    installContextTracker(newContextTracker)
-
-installContextTracker(ContextTracker())
-
-import threadable
-threadable.whenThreaded(initThreads)
-
+installContextTracker(ThreadedContextTracker())

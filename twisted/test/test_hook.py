@@ -95,56 +95,56 @@ class HookTestCase(unittest.TestCase):
         """make sure that the base class's hook is called reliably
         """
         base = BaseClass()
-        assert base.calledBase == 0
-        assert base.calledBasePre == 0
+        self.assertEquals(base.calledBase, 0)
+        self.assertEquals(base.calledBasePre, 0)
         base.func(1,2)
-        assert base.calledBase == 1
-        assert base.calledBasePre == 0
+        self.assertEquals(base.calledBase, 1)
+        self.assertEquals(base.calledBasePre, 0)
         hook.addPre(BaseClass, "func", basePre)
         base.func(1, b=2)
-        assert base.calledBase == 2
-        assert base.calledBasePre == 1
+        self.assertEquals(base.calledBase, 2)
+        self.assertEquals(base.calledBasePre, 1)
         hook.addPost(BaseClass, "func", basePost)
         base.func(1, b=2)
-        assert base.calledBasePost == 1
-        assert base.calledBase == 3
-        assert base.calledBasePre == 2
+        self.assertEquals(base.calledBasePost, 1)
+        self.assertEquals(base.calledBase, 3)
+        self.assertEquals(base.calledBasePre, 2)
         hook.removePre(BaseClass, "func", basePre)
         hook.removePost(BaseClass, "func", basePost)
         base.func(1, b=2)
-        assert base.calledBasePost == 1
-        assert base.calledBase == 4
-        assert base.calledBasePre == 2
+        self.assertEquals(base.calledBasePost, 1)
+        self.assertEquals(base.calledBase, 4)
+        self.assertEquals(base.calledBasePre, 2)
 
     def testSubHook(self):
         """test interactions between base-class hooks and subclass hooks
         """
         sub = SubClass()
-        assert sub.calledSub == 0
-        assert sub.calledBase == 0
+        self.assertEquals(sub.calledSub, 0)
+        self.assertEquals(sub.calledBase, 0)
         sub.func(1, b=2)
-        assert sub.calledSub == 1
-        assert sub.calledBase == 1
+        self.assertEquals(sub.calledSub, 1)
+        self.assertEquals(sub.calledBase, 1)
         hook.addPre(SubClass, 'func', subPre)
-        assert sub.calledSub == 1
-        assert sub.calledBase == 1
-        assert sub.calledSubPre == 0
-        assert sub.calledBasePre == 0
+        self.assertEquals(sub.calledSub, 1)
+        self.assertEquals(sub.calledBase, 1)
+        self.assertEquals(sub.calledSubPre, 0)
+        self.assertEquals(sub.calledBasePre, 0)
         sub.func(1, b=2)
-        assert sub.calledSub == 2
-        assert sub.calledBase == 2
-        assert sub.calledSubPre == 1
-        assert sub.calledBasePre == 0
+        self.assertEquals(sub.calledSub, 2)
+        self.assertEquals(sub.calledBase, 2)
+        self.assertEquals(sub.calledSubPre, 1)
+        self.assertEquals(sub.calledBasePre, 0)
         # let the pain begin
         hook.addPre(BaseClass, 'func', basePre)
         BaseClass.func(sub, 1, b=2)
         # sub.func(1, b=2)
-        assert sub.calledBase == 3
-        assert sub.calledBasePre == 1, str(sub.calledBasePre)
+        self.assertEquals(sub.calledBase, 3)
+        self.assertEquals(sub.calledBasePre, 1, str(sub.calledBasePre))
         sub.func(1, b=2)
-        assert sub.calledBasePre == 2
-        assert sub.calledBase == 4
-        assert sub.calledSubPre == 2
-        assert sub.calledSub == 3
+        self.assertEquals(sub.calledBasePre, 2)
+        self.assertEquals(sub.calledBase, 4)
+        self.assertEquals(sub.calledSubPre, 2)
+        self.assertEquals(sub.calledSub, 3)
 
 testCases = [HookTestCase]

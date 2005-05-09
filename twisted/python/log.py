@@ -14,14 +14,10 @@ except ImportError:
 
 import sys
 import time
-import threadable
-import failure
 import warnings
 
 # Sibling Imports
-from twisted.python import util
-
-import context
+from twisted.python import util, context
 
 
 class ILogContext:
@@ -221,16 +217,6 @@ except NameError:
     msg = theLogPublisher.msg
 
 
-def initThreads():
-    global msg
-    # after the log publisher is synchronized, grab its method again so we get
-    # the hooked version
-    msg = theLogPublisher.msg
-
-threadable.synchronize(LogPublisher)
-threadable.whenThreaded(initThreads)
-
-
 class FileLogObserver:
     """Log observer that writes to a file-like object.
     
@@ -398,8 +384,15 @@ class DefaultObserver:
         removeObserver(self._emit)
 
 
+# Some more sibling imports, at the bottom and unqualified to avoid
+# unresolvable circularity
+import threadable, failure
+threadable.synchronize(LogPublisher)
+
+
 try:
     defaultObserver
 except NameError:
     defaultObserver = DefaultObserver()
     defaultObserver.start()
+

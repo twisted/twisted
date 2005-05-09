@@ -143,18 +143,25 @@ def _removeHook(klass, name, phase, func):
 
 def _enhook(klass, name):
     "(private) causes a certain method name to be hooked on a class"
-    if hasattr(klass, ORIG(klass,name)):
+    if hasattr(klass, ORIG(klass, name)):
         return
 
-    newfunc = reflect.macro(
-        name, __name__, hooked_func,
-        # macro substitutions
-        originalName = ORIG(klass,name),
-        module = klass.__module__, klass = klass.__name__,
-        preName = PRE(klass, name), postName = POST(klass, name)
-    )
+    def newfunc(*args, **kw):
+        for preMethod in getattr(klass, PRE(klass, name)):
+            preMethod(*args, **kw)
+        try:
+            return getattr(klass, ORIG(klass, name))(*args, **kw)
+        finally:
+            for postMethod in getattr(klass, POST(klass, name)):
+                postMethod(*args, **kw)
+    try:
+        newfunc.func_name = name
+    except TypeError:
+        # Older python's don't let you do this
+        pass
+
     oldfunc = getattr(klass, name).im_func
-    setattr(klass, ORIG(klass,name), oldfunc)
+    setattr(klass, ORIG(klass, name), oldfunc)
     setattr(klass, PRE(klass, name), [])
     setattr(klass, POST(klass, name), [])
     setattr(klass, name, newfunc)
@@ -168,11 +175,3 @@ def _dehook(klass, name):
     delattr(klass, PRE(klass,name))
     delattr(klass, POST(klass,name))
     delattr(klass, ORIG(klass,name))
-
-# fin
-
-# Oh wait!
-
-# Sibling Imports
-import reflect
-

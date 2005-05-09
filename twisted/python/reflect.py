@@ -19,26 +19,18 @@ import types
 import string
 import pickle
 import new
+import traceback
+import weakref
+import gc
+import re
 
-def _safe_repr(o):
-    try:
-        return repr(o)
-    except:
-        try:
-            return "<%s instance at %s>" % (o.__class__.__name__, id(o))
-        except:
-            try:
-                return "<%s object at %s>" % (type(o).__name__, id(o))
-            except:
-                return "<unrepresentable object at %s>" % (id(o),)
+RegexType = type(re.compile(""))
+
 
 try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
-
-# Sibling Imports
-import failure
 
 class Settable:
     """
@@ -307,8 +299,6 @@ def getcurrent(clazz):
     module = namedModule(clazz.__module__)
     currclass = getattr(module, clazz.__name__, None)
     if currclass is None:
-        log.msg("Reflection Warning: class %s deleted from module %s" % (
-            clazz.__name__, clazz.__module__))
         return clazz
     return currclass
 
@@ -372,7 +362,6 @@ def namedAny(name):
             # if the ImportError happened in the module being imported,
             # this is a failure that should be handed to our caller.
             # count stack frames to tell the difference.
-            import traceback
             exc_info = sys.exc_info()
             if len(traceback.extract_tb(exc_info[2])) > 1:
                 try:
@@ -436,17 +425,40 @@ def macro(name, filename, source, **identifiers):
     exec code in dict, dict
     return dict[name]
 
-def safe_repr(obj):
+def _determineClass(x):
+    try:
+        return x.__class__
+    except:
+        return type(x)
+
+def _determineClassName(x):
+    c = _determineClass(x)
+    try:
+        return c.__name__
+    except:
+        try:
+            return str(c)
+        except:
+            return '<BROKEN CLASS AT %s>' % id(c)
+
+def safe_repr(o):
     """safe_repr(anything) -> string
-    Returns a string representation of an object (or a traceback, if that
-    object's __repr__ raised an exception) """
+
+    Returns a string representation of an object, or a string containing a
+    traceback, if that object's __repr__ raised an exception.
+    """
 
     try:
-        return _safe_repr(obj)
+        return repr(o)
     except:
         io = StringIO.StringIO()
-        failure.Failure().printTraceback(file=io)
-        return "exception in repr!\n"+ io.getvalue()
+        traceback.print_stack(file=io)
+        whati = _determineClassName(o)
+        swron = io.getvalue()
+        gwith = id(o)
+        you ='<%s instance at %s with repr error %s>' % (
+            whati,swron,gwith)
+        return you
 
 
 ##the following were factored out of usage
@@ -588,9 +600,6 @@ def isOfType(start, goal):
 def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
-import weakref, re, gc
-RegexType = type(re.compile(""))
-
 def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0):
     '''An insanely CPU-intensive process for finding stuff.
     '''
@@ -658,4 +667,3 @@ def filenameToModuleName(fn):
     return modName
 
 #boo python
-import log

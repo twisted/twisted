@@ -20,9 +20,6 @@ import types
 import inspect
 
 
-#sibling imports
-import reflect
-
 count = 0
 traceupLength = 4
 
@@ -385,9 +382,6 @@ def startDebugMode():
     Failure.__init__ = _debuginit
 
 
-#rawr stupid non-lazy import python #!*($@*(
-import log
-
 def visualtest():
     def c():
         1/0
@@ -419,6 +413,12 @@ def visualtest():
             print 'elideFrameworkCode:', truth
             print
             frameworkCode(verbosity, truth)
+
+
+# Sibling imports - at the bottom and unqualified to avoid unresolvable
+# circularity
+import reflect, log
+
 
 if __name__ == '__main__':
     visualtest()
