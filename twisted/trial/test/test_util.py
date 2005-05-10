@@ -58,14 +58,12 @@ class WaitReentrancyTest(unittest.TestCase):
 
     def _cbDoWait(self, result):
         assertEquals(result, "Beginning")
-        d = defer.Deferred()
-        self.laterCall = reactor.callLater(0.1, d.callback, "End")
+        d = defer.succeed("End")
         assertEquals(unittest.wait(d), "End")
 
     def testReturnedDeferredThenWait(self):
         d = self._returnedDeferredThenWait()
         assertRaises(util.WaitIsNotReentrantError, unittest.wait, d)
-        self.laterCall.cancel()
 
     def _reentrantWait(self):
         def threadedOperation(n):
