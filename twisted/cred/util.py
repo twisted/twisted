@@ -20,8 +20,6 @@ import md5
 import random
 
 from twisted.cred.error import Unauthorized
-from twisted.cred.credentials import IUsernameHashedPassword
-from twisted.python.components import implements, backwardsCompatImplements
 
 def respond(challenge, password):
     """Respond to a challenge.
@@ -44,14 +42,3 @@ def challenge():
         crap = crap + chr(random.randint(65,90))
     crap = md5.new(crap).digest()
     return crap
-
-class Preauthenticated:
-    implements(IUsernameHashedPassword)
-
-    def __init__(self, username):
-        self.username = username
-
-    def checkPassword(self, password):
-        return True
-backwardsCompatImplements(Preauthenticated)
-
