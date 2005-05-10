@@ -86,7 +86,7 @@ import __builtin__
 __builtin__.dir = epydir
 
 # initial twisted
-from twisted.python import reflect
+from twisted.python import reflect, util
 from twisted.internet import reactor
 # epydoc
 import epydoc
@@ -95,6 +95,29 @@ from epydoc.cli import cli
 from epydoc.html import HTMLFormatter
 from epydoc import uid
 import epydoc.html
+
+# HACK: unsplit moduleMovedForSplit
+def moduleMovedForSplit(origModuleName, newModuleName, moduleDesc,
+                        projectName, projectURL, globDict):
+    modoc = """
+%(moduleDesc)s
+
+This module is DEPRECATED. It has been split off into a third party
+package, Twisted %(projectName)s. Please see %(projectURL)s.
+
+This is just a place-holder that imports from the third-party %(projectName)s
+package for backwards compatibility. To use it, you need to install
+that package.
+
+This module has moved to %(newModuleName)s.
+
+""" % {'moduleDesc': moduleDesc,
+       'projectName': projectName,
+       'projectURL': projectURL,
+       'newModuleName': newModuleName}
+
+    globDict['__doc__'] = modoc
+util.moduleMovedForSplit = moduleMovedForSplit
 
 # HACK: Force everything to be public.
 
@@ -130,6 +153,13 @@ def cls(self):
     else:
         return cls_orig(self)
 uid.ObjectUID.cls = cls
+module_orig = uid.ObjectUID.module
+def module(self):
+    if isinstance(self._obj, Method):
+        return uid.ObjectUID(self._obj.interface).module()
+    else:
+        return module_orig(self)
+uid.ObjectUID.module = module
 make_uid_orig = uid.make_uid
 def make_uid(obj, base_uid=None, shortname=None):
     if isinstance(obj, Method):
@@ -215,16 +245,6 @@ epydoc.html.HTMLFormatter = TwistedHTMLFormatter
 
 from epydoc import objdoc
 
-orig_add = objdoc.DocMap._add
-
-def _add(self, objID):
-    m = objID.module()
-    if m and m.name() not in modnames: # see below for where modnames is defined
-        return
-    return orig_add(self, objID)
-
-objdoc.DocMap._add = _add
-
 # HACK: objdoc directly imports make_uid, so our monkeypatch to make_uid needs
 # to happen here too:
 objdoc.make_uid = make_uid
@@ -248,14 +268,25 @@ inspect.getargspec = getargspec
 
 # HACK: Make FuncDoc DTRT with Methods
 _init_signature_orig = objdoc.FuncDoc._init_signature
+# This one is for epydoc CVS
 def _init_signature(self, func):
     if isinstance(func, Method):
-	docstring = objdoc._getdoc(func)
-	self._init_signature_from_argspec(*inspect.getargspec(func))
-	return docstring
+        docstring = objdoc._getdoc(func)
+        self._init_signature_from_argspec(*inspect.getargspec(func))
+        return docstring
     else:
-	return _init_signature_orig(self, func)
+        return _init_signature_orig(self, func)
 objdoc.FuncDoc._init_signature = _init_signature
+
+# This one is for epydoc 2.1
+_init_builtin_signature_orig = objdoc.FuncDoc._init_builtin_signature
+def _init_builtin_signature(self, func):
+    if isinstance(func, Method):
+        _init_signature_orig(self, func)
+        return False
+    else:
+        return _init_builtin_signature_orig(self, func)
+objdoc.FuncDoc._init_builtin_signature = _init_builtin_signature
 
 # HACK: Another "only doc what we tell you". We don't want epydoc to
 # automatically recurse into subdirectories: "twisted"'s presence was
@@ -305,9 +336,13 @@ imports.find_modules = find_modules
 # Now, set up the list of modules for epydoc to document
 modnames = []
 def addMod(arg, path, files):
+    if 'test' in files:
+        files.remove('test')
+    if 'topfiles' in files:
+        files.remove('topfiles')
     for fn in files:
         file = os.path.join(path, fn).replace('%s__init__'%os.sep, '')
-        if file[-3:] == '.py' and not file.count('%stest%s' % (os.sep,os.sep)):
+        if file[-3:] == '.py':
             modName = file[:-3].replace(os.sep,'.')
             try:
                 #print 'pre-loading', modName
