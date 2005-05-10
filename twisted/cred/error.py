@@ -64,3 +64,15 @@ class LoginDenied(LoginFailed):
     too frequently, a quota having been fully used, or the overall server
     load being too high.
     """
+
+#mostly for vhost scenarios
+
+class NoSuchDomain(UnauthorizedLogin):
+    """The realm does not handle the requested authorization domain."""
+
+class NoSuchUser(UnauthorizedLogin):
+    """The username provided does not exist within this domain."""
+
+class BadCredentials(UnauthorizedLogin):
+    """The user and domain requested exists, but authorization failed."""
+
