@@ -274,13 +274,12 @@ Threads in Twisted</a>.</p>
 <h3>I get <q>exceptions.ValueError: signal only works in main thread</q> when I
 try to run my Twisted program!  What's wrong?</h3>
 
-<p>The default reactor, by default, will install signal handlers to catch
-events like Ctrl-C, SIGTERM, and so on.  However, you can't install signal
-handlers from non-main threads in Python, which means that
-<code>reactor.run()</code> will cause an
-error.  Pass the <code>installSignalHandlers=0</code> keyword argument to
-<code>reactor.run</code> (or <code>Application.run</code>) to work around
-this.</p>
+<p>The default reactor, by default, will install signal handlers to
+catch events like Ctrl-C, SIGTERM, and so on.  However, you can't
+install signal handlers from non-main threads in Python, which means
+that <code>reactor.run()</code> will cause an error.  Pass the
+<code>installSignalHandlers=0</code> keyword argument to
+<code>reactor.run</code> to work around this.</p>
 
 
 <h3>I'm trying to stop my program with <code>sys.exit()</code>, but Twisted
