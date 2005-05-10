@@ -4,7 +4,10 @@
 # See LICENSE for details.
 
 
-"""This module is DEPRECATED."""
+"""A twisted web component framework.
+
+This module is DEPRECATED.
+"""
 
 import warnings
 warnings.warn("This module is deprecated, please use Woven instead.", DeprecationWarning)
@@ -35,16 +38,6 @@ from server import NOT_DONE_YET
 True = (1==1)
 False = not True
 
-"""A twisted web component framework.
-
-This code is mainly old stuff which is being kept around for historical
-reasons.  It is being very gradually deprecated in favor of twisted.web.woven;
-however, woven is still maturing and does not yet have equivalent functionality
-in all areas.  (Though in some ways, it's already much more featureful.)  This
-module will be removed when woven has reached feature- and documentation-parity
-with it, and all Twisted functionality that uses it has been rewritten.
-
-"""
 
 # magic value that sez a widget needs to take over the whole page.
 
