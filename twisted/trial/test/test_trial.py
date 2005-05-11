@@ -213,6 +213,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assert_(self.tm.errors)
         assert_(isinstance(self.tm.errors[0].value, defer.TimeoutError))
         self.assertMethodsCalled(*allMethods)
+        assertSubstring("FAILED (errors=1)", self.reporter.out)
 
     def testPyUnitSupport(self):
         self.suite.addTestClass(pyunit.PyUnitTest)
