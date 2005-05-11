@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_trial -*-
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol
 from twisted.trial.test.common import BaseTest
 
 """
@@ -90,8 +90,3 @@ class SocketOpenTest(BaseTest, unittest.TestCase):
         f.protocol = protocol.Protocol
         reactor.listenTCP(0, f)
 
-class TimingOutDeferred(BaseTest, unittest.TestCase):
-    def test_deferredThatNeverFires(self):
-        self.methodCalled = True
-        d = defer.Deferred()
-        return d
