@@ -283,7 +283,7 @@ class Process(abstract.FileDescriptor):
         env.update(environment or {})
 
         # create the process
-        cmdline = ' '.join([_cmdLineQuote(a) for a in args[1:]])
+        cmdline = ' '.join([_cmdLineQuote(a) for a in args])
         self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(command, cmdline, None, None, 1, 0, env, path, StartupInfo)
 
         # close handles which only the child will use
