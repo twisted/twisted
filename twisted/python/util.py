@@ -753,14 +753,14 @@ def untilConcludes(f, *a, **kw):
 # above where positive values from id() leave off.
 _HUGEINT = (sys.maxint + 1L) * 2L
 def unsignedID(obj):
-     """
-     Return the id of an object as an unsigned number so that its hex
-     representation makes sense
-     """
-     rval = id(obj)
-     if rval < 0:
-         rval += _HUGEINT
-     return rval
+    """
+    Return the id of an object as an unsigned number so that its hex
+    representation makes sense
+    """
+    rval = id(obj)
+    if rval < 0:
+        rval += _HUGEINT
+    return rval
 
 def func_metamerge(f, g):
     """

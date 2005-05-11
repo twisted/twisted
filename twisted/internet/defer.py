@@ -727,43 +727,43 @@ class DeferredLock(_ConcurrencyPrimitive):
             d.callback(self)
 
 class DeferredSemaphore(_ConcurrencyPrimitive):
-     """A semaphore for event driven systems.
+    """A semaphore for event driven systems.
 
-     API stability: Unstable
-     """
+    API stability: Unstable
+    """
 
-     def __init__(self, tokens):
-         _ConcurrencyPrimitive.__init__(self)
-         self.tokens = tokens
-         self.limit = tokens
+    def __init__(self, tokens):
+        _ConcurrencyPrimitive.__init__(self)
+        self.tokens = tokens
+        self.limit = tokens
 
-     def acquire(self):
-         """Attempt to acquire the token.
+    def acquire(self):
+        """Attempt to acquire the token.
 
-         @return: a Deferred which fires on token acquisition.
-         """
-         assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
-         d = Deferred()
-         if not self.tokens:
-             self.waiting.append(d)
-         else:
-             self.tokens = self.tokens - 1
-             d.callback(self)
-         return d
+        @return: a Deferred which fires on token acquisition.
+        """
+        assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
+        d = Deferred()
+        if not self.tokens:
+            self.waiting.append(d)
+        else:
+            self.tokens = self.tokens - 1
+            d.callback(self)
+        return d
 
-     def release(self):
-         """Release the token.
+    def release(self):
+        """Release the token.
 
-         Should be called by whoever did the acquire() when the shared
-         resource is free.
-         """
-         assert self.tokens < self.limit, "Someone released me too many times: too many tokens!"
-         self.tokens = self.tokens + 1
-         if self.waiting:
-             # someone is waiting to acquire token
-             self.tokens = self.tokens - 1
-             d = self.waiting.pop(0)
-             d.callback(self)
+        Should be called by whoever did the acquire() when the shared
+        resource is free.
+        """
+        assert self.tokens < self.limit, "Someone released me too many times: too many tokens!"
+        self.tokens = self.tokens + 1
+        if self.waiting:
+            # someone is waiting to acquire token
+            self.tokens = self.tokens - 1
+            d = self.waiting.pop(0)
+            d.callback(self)
 
 class QueueOverflow(Exception):
     pass
@@ -773,58 +773,58 @@ class QueueUnderflow(Exception):
 
 
 class DeferredQueue(object):
-     """An event driven queue.
+    """An event driven queue.
 
-     API stability: Unstable
+    API stability: Unstable
 
-     Objects may be added as usual to this queue.  When an attempt is
-     made to retrieve an object when the queue is empty, a Deferred is
-     returned which will fire when an object becomes available.
+    Objects may be added as usual to this queue.  When an attempt is
+    made to retrieve an object when the queue is empty, a Deferred is
+    returned which will fire when an object becomes available.
 
-     @ivar size: The maximum number of objects to allow into the queue
-     at a time.  When an attempt to add a new object would exceed this
-     limit, QueueOverflow is raised synchronously.  None for no limit.
+    @ivar size: The maximum number of objects to allow into the queue
+    at a time.  When an attempt to add a new object would exceed this
+    limit, QueueOverflow is raised synchronously.  None for no limit.
 
-     @ivar backlog: The maximum number of Deferred gets to allow at
-     one time.  When an attempt is made to get an object which would
-     exceed this limit, QueueUnderflow is raised synchronously.  None
-     for no limit.
-     """
+    @ivar backlog: The maximum number of Deferred gets to allow at
+    one time.  When an attempt is made to get an object which would
+    exceed this limit, QueueUnderflow is raised synchronously.  None
+    for no limit.
+    """
 
-     def __init__(self, size=None, backlog=None):
-         self.waiting = []
-         self.pending = []
-         self.size = size
-         self.backlog = backlog
+    def __init__(self, size=None, backlog=None):
+        self.waiting = []
+        self.pending = []
+        self.size = size
+        self.backlog = backlog
 
-     def put(self, obj):
-         """Add an object to this queue.
+    def put(self, obj):
+        """Add an object to this queue.
 
-         @raise QueueOverflow: Too many objects are in this queue.
-         """
-         if self.waiting:
-             self.waiting.pop(0).callback(obj)
-         elif self.size is None or len(self.pending) < self.size:
-             self.pending.append(obj)
-         else:
-             raise QueueOverflow()
+        @raise QueueOverflow: Too many objects are in this queue.
+        """
+        if self.waiting:
+            self.waiting.pop(0).callback(obj)
+        elif self.size is None or len(self.pending) < self.size:
+            self.pending.append(obj)
+        else:
+            raise QueueOverflow()
 
-     def get(self):
-         """Attempt to retrieve and remove an object from the queue.
+    def get(self):
+        """Attempt to retrieve and remove an object from the queue.
 
-         @return: a Deferred which fires with the next object available in the queue.
+        @return: a Deferred which fires with the next object available in the queue.
 
-         @raise QueueUnderflow: Too many (more than C{backlog})
-         Deferreds are already waiting for an object from this queue.
-         """
-         if self.pending:
-             return succeed(self.pending.pop(0))
-         elif self.backlog is None or len(self.waiting) < self.backlog:
-             d = Deferred()
-             self.waiting.append(d)
-             return d
-         else:
-             raise QueueUnderflow()
+        @raise QueueUnderflow: Too many (more than C{backlog})
+        Deferreds are already waiting for an object from this queue.
+        """
+        if self.pending:
+            return succeed(self.pending.pop(0))
+        elif self.backlog is None or len(self.waiting) < self.backlog:
+            d = Deferred()
+            self.waiting.append(d)
+            return d
+        else:
+            raise QueueUnderflow()
 
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
