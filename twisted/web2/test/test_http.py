@@ -911,12 +911,20 @@ class TCPServerTest(unittest.TestCase):
         self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
 
+try:
+    from twisted.internet import ssl
+except ImportError:
+   # happens the first time the interpreter tries to import it
+   ssl = None
+if ssl and not ssl.supported:
+   # happens second and later times
+   ssl = None
+    
 certPath = util.sibpath(__file__, "server.pem")
-from twisted.internet.ssl import DefaultOpenSSLContextFactory
-sCTX = DefaultOpenSSLContextFactory(certPath, certPath)
 
 class SSLServerTest(unittest.TestCase):
     def setUp(self):
+        sCTX = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
         factory=SimpleFactory(requestFactory=SimpleRequest)
 
         factory.testcase = self
@@ -952,3 +960,5 @@ class SSLServerTest(unittest.TestCase):
 
 if interfaces.IReactorProcess(reactor, None) is None:
     TCPServerTest.skip = SSLServerTest.skip = "Required process support missing from reactor"
+elif ssl is None:
+    SSLServerTest.skip = "SSL not available, cannot test SSL."
