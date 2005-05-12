@@ -331,14 +331,17 @@ class UserMethodWrapper(MethodInfoBase):
     def __call__(self, *a, **kw):
         timeout = getattr(self, 'timeout', None)
         if timeout is None:
-            timeout = getattr(self.original, 'timeout', None)
-        
+            timeout = getattr(self.original, 'timeout', util.DEFAULT_TIMEOUT)
+
         self.startTime = time.time()
-            
+
+        def run():
+            return util.wait(
+                defer.maybeDeferred(self.original, *a, **kw),
+                timeout, useWaitError=True)
+
         try:
-            _runWithWarningFilters(self.suppress,
-                lambda :util.wait(defer.maybeDeferred(self.original, *a, **kw),
-                       timeout, useWaitError=True))
+            _runWithWarningFilters(self.suppress, run)
         except util.MultiError, e:
             for f in e.failures:
                 self.errors.append(f)

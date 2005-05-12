@@ -207,6 +207,14 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assert_(isinstance(self.tm.errors[0].value, util.PendingTimedCallsError))
         self.assertMethodsCalled(*allMethods)
 
+    def testTimingOutDeferred(self):
+        self.suite.addMethod(erroneous.TimingOutDeferred)
+        self.suite.run()
+        # assert_(self.tm.errors)
+        # assert_(isinstance(self.tm.errors[0].value, defer.TimeoutError))
+        # self.assertMethodsCalled(*allMethods)
+        assertSubstring("FAILED (errors=1, successes=3)", self.reporter.out)
+
     def testPyUnitSupport(self):
         self.suite.addTestClass(pyunit.PyUnitTest)
         self.suite.run()
