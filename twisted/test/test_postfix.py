@@ -58,7 +58,7 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
-            self.runReactor(1)
+            # self.runReactor(1)
             self.assertEquals(output.getvalue(), expected_output,
                               'For %r, expected %r but got %r' % (
                 input, expected_output, output.getvalue()
@@ -78,7 +78,7 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
-            self.runReactor(1)
+            # self.runReactor(1)
             self.assertEquals(output.getvalue(), expected_output,
                               'For %r, expected %r but got %r' % (
                 input, expected_output, output.getvalue()

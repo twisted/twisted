@@ -112,9 +112,7 @@ class PostfixTCPMapDeferringDictServerFactory(protocol.ServerFactory):
             self.data.update(data)
 
     def get(self, key):
-        d = defer.Deferred()
-        reactor.callLater(0, d.callback, self.data.get(key))
-        return d
+        return defer.succeed(self.data.get(key))
 
 if __name__ == '__main__':
     """Test app for PostfixTCPMapServer. Call with parameters
