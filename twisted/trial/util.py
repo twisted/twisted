@@ -271,7 +271,7 @@ class _Wait(object):
             def stop():
                 reactor.crash()
 
-            reactor.stop = crash
+            reactor.stop = stop
             try:
                 reactor.run()
             finally:
