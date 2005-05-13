@@ -84,20 +84,6 @@ class StringTodo(TodoBase):
 
 # -- helpful internal adapters --
 
-def getClassNameFromClass(obj):
-    print 'class name from class'
-    return obj.__name__
-
-def getClassNameFromMethodType(obj):
-    print 'class name from method type'
-    return obj.im_class.__name__
-
-def getFQClassName(obj):
-    return "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__)
-
-def getFQMethodName(obj):
-    return "%s.%s" % (itrial.IFQClassName(obj), obj.__name__)
-
 def getModuleFromMethodType(obj):
     return reflect.namedModule(obj.im_class.__module__)
 
@@ -138,7 +124,7 @@ from twisted.trial.reporter import UNEXPECTED_SUCCESS, WORDS
 def formatError(tm): # would need another adapter for tbformat='emacs'
     ret = [DOUBLE_SEPARATOR,
            '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
-                              itrial.IFQClassName(tm.klass))]
+                              reflect.qual(tm.klass))]
 
     for msg in tm.skip, itrial.ITodo(tm.todo).msg:
         if msg is not None:

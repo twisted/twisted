@@ -114,7 +114,7 @@ class TestBenchmark(object):
         suite.run()
 
         stats = pickle.load(file('test.stats', 'rb'))
-        failUnlessEqual(stats, {itrial.IFQMethodName(self.Benchmark.benchmarkValues): statdatum})
+        failUnlessEqual(stats, {reflect.qual(self.Benchmark.benchmarkValues): statdatum})
 
 
 
@@ -131,7 +131,7 @@ class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
         trial.benchmarking = False
         
         stats = pickle.load(file('test.stats', 'rb'))
-        failUnlessEqual(stats, {itrial.IFQMethodName(TestBenchmark.Benchmark.benchmarkValues): statdatum})
+        failUnlessEqual(stats, {reflect.qual(TestBenchmark.Benchmark.benchmarkValues): statdatum})
 
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')

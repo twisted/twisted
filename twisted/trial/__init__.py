@@ -75,13 +75,6 @@ def _setUpAdapters():
 (reporter.TestCaseStats, runner.TestCaseMethodRunner, itrial.ITestStats),
 (reporter.TestCaseStats, runner.PyUnitTestCaseRunner, itrial.ITestStats),
 
-# ---- Miscellaneous 'utility' adapters ---------------
-(adapters.getFQClassName, types.ClassType, itrial.IFQClassName),
-(adapters.getFQClassName, types.TypeType, itrial.IFQClassName),
-(adapters.getFQClassName, types.MethodType, itrial.IFQClassName),
-(lambda x: x, types.StringType, itrial.IFQClassName),
-(adapters.getFQMethodName, types.MethodType, itrial.IFQMethodName),
-
 # ---- Magic Attribute Adapters -----------------------
 (adapters.TupleTodo, types.TupleType, itrial.ITodo),
 (adapters.StringTodo, types.StringType, itrial.ITodo),

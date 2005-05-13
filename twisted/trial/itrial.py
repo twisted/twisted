@@ -529,11 +529,3 @@ class ITrialDebug(zi.Interface):
 class IFormattedFailure(zi.Interface):
     """returns a string representing a traceback, but without trial's
     internals"""
-
-class IFQClassName(zi.Interface):
-    """returns a string representing an object's 'owning' class'
-    fully-qualified name or in the case of a string, returns just the string
-    """
-
-class IFQMethodName(zi.Interface):
-    """returns a string representing an object's fully-qualified name"""
