@@ -540,6 +540,8 @@ class Resolve(unittest.TestCase):
             print res
             self.fail("The child process timed out.")
         self.failUnlessEqual(res, "done 127.0.0.1\n")
+if not interfaces.IReactorProcess(reactor, None):
+    Resolve.skip = "cannot run test: reactor doesn't support IReactorProcess"
 
 
 class Counter:
