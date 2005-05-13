@@ -258,14 +258,20 @@ class _Wait(object):
             if results:
                 return results[0]
 
-            d.addBoth(lambda ign: reactor.crash())
+            def crash(ign):
+                reactor.crash()
+
+            d.addBoth(crash)
 
             if timeout is None:
                 timeoutCall = None
             else:
                 timeoutCall = reactor.callLater(timeout, reactor.crash)
 
-            reactor.stop = reactor.crash
+            def stop():
+                reactor.crash()
+
+            reactor.stop = crash
             try:
                 reactor.run()
             finally:
@@ -275,7 +281,6 @@ class _Wait(object):
                 if timeoutCall.active():
                     timeoutCall.cancel()
                 else:
-                    
                     raise defer.TimeoutError()
 
             if results:
@@ -290,7 +295,7 @@ class _Wait(object):
 
 
 
-DEFAULT_TIMEOUT = 4.0 # sec
+DEFAULT_TIMEOUT = 120.0 # sec
 
 def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     """Waits (spins the reactor) for a Deferred to arrive, then returns or
