@@ -153,6 +153,8 @@ class TestStats(TestStatsBase):
                 return False
         if getattr(self.original, 'couldNotImport', False):
             return False
+        if self.original.interrupted:
+            return False
         return True
     allPassed = property(allPassed)
 
