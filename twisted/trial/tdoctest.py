@@ -121,7 +121,7 @@ class _DTRToITM(object, runner.StatusMixin):
 
     hasTbs = property(lambda self: (self.errors or self.failures))
 
-    def formatDoctestError(self):
+    def formatError(self):
         ret = [DOUBLE_SEPARATOR,
                '%s: %s (%s)\n' % (WORDS[self.status], self.name, adapters.trimFilename(self.filename, 4))]
 

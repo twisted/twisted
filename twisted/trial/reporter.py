@@ -68,7 +68,6 @@ def formatImportError(name, error):
     
     @rtype: str
     """
-    name, error = aTuple
     ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
     if isinstance(error, failure.Failure):
         what = itrial.IFormattedFailure(error)
