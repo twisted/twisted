@@ -105,7 +105,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addTestClass(erroneous.TestFailureInSetUp)
         self.suite.run()
         
-        output = self.tm,formatError().split('\n')
+        output = self.tm.formatErrors().split('\n')
         
         expect = [reporter.DOUBLE_SEPARATOR,
                   '[ERROR]: testMethod (twisted.trial.test.erroneous.TestFailureInSetUp)']
@@ -118,7 +118,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addMethod(common.FailfulTests.testFailure)
         self.suite.run()
 
-        output = self.tm.formatError().split('\n')
+        output = self.tm.formatErrors().split('\n')
         common.stringComparison(expectTestFailure, output)
 
     def testTrimFilename(self):
