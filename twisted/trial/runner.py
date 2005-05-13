@@ -909,9 +909,7 @@ class BenchmarkMethod(TestMethod):
     def run(self, testCaseInstance):
         # WHY IS THIS MONKEY PATCH HERE?
         def _recordStat(datum):
-            # again, idiot variable here to make line < 80 wide
-            name = itrial.IFQMethodName(self.original)
-            self.benchmarkStats.__setitem__(name, datum)
+            self.benchmarkStats[reflect.qual(self.original)] = datum
         testCaseInstance.recordStat = _recordStat
         self.original(testCaseInstance)
         
