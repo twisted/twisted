@@ -109,14 +109,8 @@ def getFQClassName(obj):
 def getFQMethodName(obj):
     return "%s.%s" % (itrial.IFQClassName(obj), obj.__name__)
 
-def getClassFromMethodType(obj):
-    return obj.im_class
-
 def getModuleFromMethodType(obj):
     return reflect.namedModule(obj.im_class.__module__)
-
-def getClassFromFQString(obj):
-    return reflect.namedAny(obj)
 
 # -- traceback formatting ---------------------
 

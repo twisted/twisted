@@ -298,7 +298,7 @@ class MethodInfoBase(Timed):
     def __init__(self, original):
         self.original = o = original
         self.name = o.__name__
-        self.klass = itrial.IClass(original)
+        self.klass  = original.im_class
         self.module = itrial.IModule(original)
         self.fullName = "%s.%s.%s" % (self.module, self.klass.__name__,
                                       self.name)
