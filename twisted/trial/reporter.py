@@ -358,7 +358,7 @@ class TreeReporter(VerboseTextReporter):
             self.write('  %s\n' % modName)
 
     def startClass(self, klass):
-        clsName = itrial.IClassName(klass)
+        clsName = klass.__name__
         qualifiedClsName = reflect.qual(klass)
         if qualifiedClsName not in self.seenClasses:
             self.seenClasses[qualifiedClsName] = 1

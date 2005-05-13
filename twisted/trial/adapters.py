@@ -85,9 +85,11 @@ class StringTodo(TodoBase):
 # -- helpful internal adapters --
 
 def getClassNameFromClass(obj):
+    print 'class name from class'
     return obj.__name__
 
 def getClassNameFromMethodType(obj):
+    print 'class name from method type'
     return obj.im_class.__name__
 
 def getFQClassName(obj):
