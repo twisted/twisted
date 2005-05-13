@@ -433,7 +433,6 @@ class TestModuleRunner(TestRunnerBase):
                                    _bogusCallable)
         self.tearDownModule = getattr(self.original, 'tearDownModule',
                                       _bogusCallable)
-        self.moudleName = itrial.IModuleName(self.original)
         self.skip = getattr(self.original, 'skip', None)
         self.todo = getattr(self.original, 'todo', None)
         self.timeout = getattr(self.original, 'timeout', None)

@@ -76,11 +76,6 @@ def _setUpAdapters():
 (reporter.TestCaseStats, runner.PyUnitTestCaseRunner, itrial.ITestStats),
 
 # ---- Miscellaneous 'utility' adapters ---------------
-(adapters.getModuleNameFromModuleType, types.ModuleType, itrial.IModuleName),
-(adapters.getModuleNameFromClassType, types.ClassType, itrial.IModuleName),
-(adapters.getModuleNameFromClassType, types.TypeType, itrial.IModuleName),
-(adapters.getModuleNameFromMethodType, types.MethodType, itrial.IModuleName),
-(adapters.getModuleNameFromFunctionType, types.FunctionType, itrial.IModuleName),
 (adapters.getClassNameFromClass, types.ClassType, itrial.IClassName),
 (adapters.getClassNameFromMethodType, types.MethodType, itrial.IClassName),
 (adapters.getClassNameFromClass, types.TypeType, itrial.IClassName),
@@ -90,7 +85,6 @@ def _setUpAdapters():
 (lambda x: x, types.StringType, itrial.IFQClassName),
 (adapters.getFQMethodName, types.MethodType, itrial.IFQMethodName),
 (lambda x: x, types.StringType, itrial.IClassName),
-(lambda x: x, types.StringType, itrial.IModuleName),
 
 # ---- Magic Attribute Adapters -----------------------
 (adapters.TupleTodo, types.TupleType, itrial.ITodo),

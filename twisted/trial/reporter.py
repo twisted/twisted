@@ -352,7 +352,7 @@ class TreeReporter(VerboseTextReporter):
         super(TreeReporter, self).write(self.currentLine)
 
     def startModule(self, module):
-        modName = itrial.IModuleName(module)
+        modName = module.__name__
         if modName not in self.seenModules:
             self.seenModules[modName] = 1
             self.write('  %s\n' % modName)

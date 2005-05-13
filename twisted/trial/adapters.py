@@ -85,16 +85,20 @@ class StringTodo(TodoBase):
 # -- helpful internal adapters --
 
 def getModuleNameFromModuleType(obj):
+    print 'module name from module type'
     return obj.__name__
 
 def getModuleNameFromClassType(obj):
+    print 'module name from class'
     # also for types.InstanceType
     return obj.__module__
 
 def getModuleNameFromMethodType(obj):
+    print 'module name from method'
     return obj.im_class.__module__
 
 def getModuleNameFromFunctionType(obj):
+    print 'module name from function type'
     return obj.func_globals['__name__']
         
 def getClassNameFromClass(obj):
@@ -104,7 +108,7 @@ def getClassNameFromMethodType(obj):
     return obj.im_class.__name__
 
 def getFQClassName(obj):
-    return "%s.%s" % (itrial.IModuleName(obj), itrial.IClassName(obj))
+    return "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__)
 
 def getFQMethodName(obj):
     return "%s.%s" % (itrial.IFQClassName(obj), obj.__name__)
