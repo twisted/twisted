@@ -105,7 +105,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addTestClass(erroneous.TestFailureInSetUp)
         self.suite.run()
         
-        output = self.tm.formatErrors().split('\n')
+        output = self.tm.formatError().split('\n')
         
         expect = [reporter.DOUBLE_SEPARATOR,
                   '[ERROR]: testMethod (twisted.trial.test.erroneous.TestFailureInSetUp)']
@@ -118,7 +118,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addMethod(common.FailfulTests.testFailure)
         self.suite.run()
 
-        output = self.tm.formatErrors().split('\n')
+        output = self.tm.formatError().split('\n')
         common.stringComparison(expectTestFailure, output)
 
     def testTrimFilename(self):
@@ -142,7 +142,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         itm = itrial.ITestMethod(self.suite.children[0].children[0])
 
-        output = adapters.formatDoctestError(itm).split('\n')
+        output = itm.formatError().split('\n')
 
         expect = [reporter.DOUBLE_SEPARATOR,
                   '[ERROR]: unexpectedException (...%s)' % (os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'),),
