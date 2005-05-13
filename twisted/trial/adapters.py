@@ -84,23 +84,6 @@ class StringTodo(TodoBase):
 
 # -- helpful internal adapters --
 
-def getModuleNameFromModuleType(obj):
-    print 'module name from module type'
-    return obj.__name__
-
-def getModuleNameFromClassType(obj):
-    print 'module name from class'
-    # also for types.InstanceType
-    return obj.__module__
-
-def getModuleNameFromMethodType(obj):
-    print 'module name from method'
-    return obj.im_class.__module__
-
-def getModuleNameFromFunctionType(obj):
-    print 'module name from function type'
-    return obj.func_globals['__name__']
-        
 def getClassNameFromClass(obj):
     return obj.__name__
 
