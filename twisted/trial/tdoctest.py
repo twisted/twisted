@@ -11,7 +11,7 @@ from pprint import pformat
 import os.path as osp
 
 from twisted.trial import itrial, runner, doctest, unittest, adapters
-from twisted.trial.reporter import DOUBLE_SEPARATOR, FAILURE, ERROR, SUCCESS
+from twisted.trial.reporter import DOUBLE_SEPARATOR, WORDS, FAILURE, ERROR, SUCCESS
 from twisted.python import reflect, failure, util as tputil, log
 
 import zope.interface as zi
