@@ -136,7 +136,7 @@ class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
         meth = TestBenchmark.Benchmark.benchmarkValues
         mod = 'twisted.trial.test.test_trial'
         meth = 'TestBenchmark.Benchmark.benchmarkValues'
-        failUnlessEqual(stats, {mod + '.' + meth})
+        failUnlessEqual(stats, {mod + '.' + meth: statdatum})
 
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')
