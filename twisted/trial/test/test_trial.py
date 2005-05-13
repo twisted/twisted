@@ -134,8 +134,9 @@ class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
         
         stats = pickle.load(file('test.stats', 'rb'))
         meth = TestBenchmark.Benchmark.benchmarkValues
-        mod = inspect.getmodule(meth).__name__
-        failUnlessEqual(stats, {mod: statdatum})
+        mod = 'twisted.trial.test.test_trial'
+        meth = 'TestBenchmark.Benchmark.benchmarkValues'
+        failUnlessEqual(stats, {mod + '.' + meth})
 
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')
