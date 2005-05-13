@@ -729,6 +729,10 @@ class AddressTestCase(PortCleanerUpper):
 
 
 class LargeBufferWriterProtocol(protocol.Protocol):
+
+    # Win32 sockets cannot handle single huge chunks of bytes.  Write one
+    # massive string to make sure Twisted deals with this fact.
+
     def connectionMade(self):
         # write 60MB
         self.transport.write('X'*self.factory.len)
