@@ -495,12 +495,6 @@ class ITestError(zi.Interface):
         status"""
 
 
-class IImportError(ITestError):
-    name = zi.Attribute(
-        '@ivar name: the name of the module for which exception occured')
-    exception = zi.Attribute('@ivar exception: either a twisted.python.failure.Failure or a 3-tuple exception')
-
-
 class IOldSkoolInfo(zi.Interface):
     """a compatability interface to provide information JellyReporter needs
     from ITestMethods"""
@@ -512,15 +506,6 @@ class IOldSkoolInfo(zi.Interface):
 class IFormattedFailure(zi.Interface):
     """a properly formatted traceback as a string
     @rtype: types.StringType
-    """
-
-class IErrorReport(zi.Interface):
-    """a fully formatted error report that appears in the summary of the report
-    @rtype: types.StringType
-    """
-
-class IImportErrorReport(IErrorReport):
-    """a fully formatted error report for import errors
     """
 
 class ITrialDebug(zi.Interface):

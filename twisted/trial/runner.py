@@ -65,7 +65,7 @@ from twisted.python import components, reflect, log, failure
 from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
-     ERROR, UNEXPECTED_SUCCESS, SUCCESS
+     ERROR, UNEXPECTED_SUCCESS, SUCCESS, DOUBLE_SEPARATOR, WORDS
 import zope.interface as zi
 
 
@@ -780,6 +780,25 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
     def hasTbs(self):
         return self.errors or self.failures
     hasTbs = property(hasTbs)
+
+    def formatError(self):
+        """format an error for report in the summary section of the output
+
+        @rtype: str
+        """
+        ret = [DOUBLE_SEPARATOR,
+               '%s: %s (%s)\n' % (WORDS[self.status], self.name,
+                                  reflect.qual(self.klass))]
+
+        for msg in self.skip, itrial.ITodo(self.todo).msg:
+            if msg is not None:
+                ret.append(str(msg) + '\n')
+
+        if self.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
+            return "%s\n%s" % ('\n'.join(ret),
+                                 itrial.IFormattedFailure(self.errors + self.failures))
+        return '\n'.join(ret)
+
 
     def _eb(self, f):
         log.msg(f.printTraceback())

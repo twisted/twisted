@@ -18,8 +18,10 @@ from twisted.trial import unittest, reporter, util, runner, itrial
 from twisted.trial.test import erroneous, pyunit, timeoutAttr, suppression, numOfTests, common
 
 # this is ok, the module has been designed for this usage
+# [no it's not, stupid. -exarkun]
 from twisted.trial.assertions import *
 
+import inspect
 from pprint import pprint
 import sys, os, os.path as osp, time, warnings
 from os.path import join as opj

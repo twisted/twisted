@@ -60,6 +60,25 @@ methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
 
 # ----------------------------------------------------------------------------
 
+def formatImportError(name, error):
+    """format an import error for report in the summary section of output
+
+    @param name: The name of the module which could not be imported
+    @param error: The exception which occurred on import
+    
+    @rtype: str
+    """
+    name, error = aTuple
+    ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
+    if isinstance(error, failure.Failure):
+        what = itrial.IFormattedFailure(error)
+    elif type(error) == types.TupleType:
+        what = error.args[0]
+    else:
+        what = "%s\n" % error
+    ret.append("Could not import %s: \n%s\n" % (name, what))
+    return ''.join(ret)
+
 
 def makeLoggingMethod(name, f):
     def loggingMethod(*a, **kw):
@@ -252,15 +271,15 @@ class Reporter(object):
 
     def _reportFailures(self, tstats):
         for meth in getattr(tstats, "get_%s" % SKIP)():
-            self.write(itrial.IErrorReport(meth))
+            self.write(meth.formatError())
 
         for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in getattr(tstats, "get_%s" % status)():
                 if meth.hasTbs:
-                    self.write(itrial.IErrorReport(meth))
+                    self.write(meth.formatError())
 
         for name, error in tstats.importErrors:
-            self.write(itrial.IImportErrorReport((name, error)))
+            self.write(formatImportError(name, error))
 
     def endSuite(self, suite):
         tstats = itrial.ITestStats(suite)

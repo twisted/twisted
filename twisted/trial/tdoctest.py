@@ -11,7 +11,7 @@ from pprint import pformat
 import os.path as osp
 
 from twisted.trial import itrial, runner, doctest, unittest, adapters
-from twisted.trial.reporter import  FAILURE, ERROR, SUCCESS
+from twisted.trial.reporter import DOUBLE_SEPARATOR, FAILURE, ERROR, SUCCESS
 from twisted.python import reflect, failure, util as tputil, log
 
 import zope.interface as zi
@@ -120,6 +120,14 @@ class _DTRToITM(object, runner.StatusMixin):
     _failures = _errors = None
 
     hasTbs = property(lambda self: (self.errors or self.failures))
+
+    def formatDoctestError(self):
+        ret = [DOUBLE_SEPARATOR,
+               '%s: %s (%s)\n' % (WORDS[self.status], self.name, adapters.trimFilename(self.filename, 4))]
+
+        return "%s\n%s" % ('\n'.join(ret),
+                           itrial.IFormattedFailure(self.errors + self.failures))
+
 
     def __init__(self, original):
         self.original = o = original

@@ -62,9 +62,6 @@ def _setUpAdapters():
 (adapters.formatMultipleFailureTracebacks, types.ListType, itrial.IFormattedFailure),
 (adapters.formatMultipleFailureTracebacks, types.TupleType, itrial.IFormattedFailure),
 (adapters.formatTestMethodFailures, itrial.ITestMethod, itrial.IFormattedFailure),
-(adapters.formatError, itrial.ITestMethod, itrial.IErrorReport),
-(adapters.formatImportError, types.TupleType, itrial.IImportErrorReport),
-(adapters.formatDoctestError, itrial.IDocTestMethod, itrial.IErrorReport),
 
 # ---- ITestStats  ------------------------------------
 (reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
