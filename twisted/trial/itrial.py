@@ -547,17 +547,3 @@ class IFQClassName(zi.Interface):
 
 class IFQMethodName(zi.Interface):
     """returns a string representing an object's fully-qualified name"""
-    
-class IClass(zi.Interface):
-    """returns the ClassType for the object
-    in the case of a MethodType, returns the method's class
-    in the case of a String, should return the fully-qualified class the
-    string describes
-    """
-
-class IModule(zi.Interface):
-    """returns the ModuleType for the object
-    in the case of a MethodType, returns the method's module
-    in the case of a String, should return the fully-qualified module the
-    string describes
-    """

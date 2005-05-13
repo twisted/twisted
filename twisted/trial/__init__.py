@@ -89,7 +89,6 @@ def _setUpAdapters():
 (adapters.getFQClassName, types.MethodType, itrial.IFQClassName),
 (lambda x: x, types.StringType, itrial.IFQClassName),
 (adapters.getFQMethodName, types.MethodType, itrial.IFQMethodName),
-(adapters.getModuleFromMethodType, types.MethodType, itrial.IModule),
 (lambda x: x, types.StringType, itrial.IClassName),
 (lambda x: x, types.StringType, itrial.IModuleName),
 

@@ -299,7 +299,7 @@ class MethodInfoBase(Timed):
         self.original = o = original
         self.name = o.__name__
         self.klass  = original.im_class
-        self.module = itrial.IModule(original)
+        self.module = reflect.namedModule(original.im_class.__module__)
         self.fullName = "%s.%s.%s" % (self.module, self.klass.__name__,
                                       self.name)
         self.docstr = (o.__doc__ or None)
