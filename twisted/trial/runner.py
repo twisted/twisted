@@ -97,9 +97,6 @@ class TestSuite(Timed):
     sortTests = 1
     debugger = False
     dryRun = False
-    
-    # Indicates whether the user has requested we cease (eg, hit ^C)
-    interrupted = False
 
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
@@ -274,7 +271,6 @@ class TestSuite(Timed):
                         print "\n%s\n%s\n\n%s\n" % \
                               (annoyingBorder, trialIsBroken, annoyingBorder)
             except KeyboardInterrupt:
-                self.interrupted = True
                 log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
 
             for name, exc in self.couldNotImport.iteritems():
