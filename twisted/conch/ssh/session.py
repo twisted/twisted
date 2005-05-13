@@ -116,6 +116,8 @@ class SSHSession(channel.SSHChannel):
     def eofReceived(self):
         if self.session:
             self.session.eofReceived()
+        elif self.client:
+            self.conn.sendClose(self)
 
     def closed(self):
         if self.session:
