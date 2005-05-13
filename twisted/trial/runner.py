@@ -300,7 +300,7 @@ class MethodInfoBase(Timed):
         self.name = o.__name__
         self.klass  = original.im_class
         self.module = reflect.namedModule(original.im_class.__module__)
-        self.fullName = "%s.%s.%s" % (self.module, self.klass.__name__,
+        self.fullName = "%s.%s.%s" % (self.module.__name__, self.klass.__name__,
                                       self.name)
         self.docstr = (o.__doc__ or None)
         self.startTime = 0.0
@@ -928,7 +928,7 @@ class BenchmarkMethod(TestMethod):
     def run(self, testCaseInstance):
         # WHY IS THIS MONKEY PATCH HERE?
         def _recordStat(datum):
-            self.benchmarkStats[reflect.qual(self.original)] = datum
+            self.benchmarkStats[self.fullName] = datum
         testCaseInstance.recordStat = _recordStat
         self.original(testCaseInstance)
         
