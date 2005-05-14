@@ -293,23 +293,14 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(calls, ['f1', 'f2', 'f3'])
 
     def testWakeUp(self):
-        """reactor.wakeUp should terminate reactor.iterate(5)
-        """
-
+        # Make sure other threads can wake up the reactor
+        d = Deferred()
         def wake():
-            time.sleep(0.5)
-            reactor.wakeUp()
-
-        start = time.time()
+            time.sleep(0.1)
+            # callFromThread will call wakeUp for us
+            reactor.callFromThread(d.callback, None)
         reactor.callInThread(wake)
-        reactor.iterate(5)
-
-        # it may wake up right away. Accept this, but it really depends upon
-        # a more formal specification of how reactor.iterate is supposed to
-        # behave
-        elapsed = time.time() - start
-        self.failUnless(elapsed > 0 and elapsed < 1,
-                        "woke up after %f, wanted 0..1" % elapsed)
+        return d
 
     if interfaces.IReactorThreads(reactor, None) is None:
         testWakeUp.skip = "Nothing to wake up for without thread support"
