@@ -51,7 +51,7 @@ def deferredResult(d, timeout=None):
     Waits for a Deferred to arrive, then returns or throws an exception,
     based on the result.
     """
-    result = _Wait.wait(d, timeout)
+    result = _wait(d, timeout)
     if isinstance(result, failure.Failure):
         raise result
     else:
@@ -63,7 +63,7 @@ def deferredError(d, timeout=None):
 
     If the deferred succeeds, raises FailTest.
     """
-    result = _Wait.wait(d, timeout)
+    result = _wait(d, timeout)
     if isinstance(result, failure.Failure):
         return result
     else:
@@ -236,63 +236,59 @@ REENTRANT_WAIT_ERROR_MSG = ("already waiting on a deferred, do not call wait() "
 class WaitIsNotReentrantError(Exception):
     pass
 
-class _Wait(object):
-    _active = 0
+def _wait(d, timeout=None, running=[]):
+    from twisted.trial import unittest, itrial
+    from twisted.internet import reactor
 
-    def wait(cls, d, timeout=None):
-        from twisted.trial import unittest, itrial
-        from twisted.internet import reactor
+    if running:
+        raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
+    running.append(None)
+    try:
+        assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
 
-        if cls._active >= 1:
-            raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
-        cls._active += 1
-
-        try:
-            assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
-
-            results = []
-            def append(any):
+        results = []
+        def append(any):
+             if results is not None:
                 results.append(any)
-            d.addBoth(append)
+        d.addBoth(append)
 
-            if results:
-                return results[0]
+        if results:
+            return results[0]
 
-            def crash(ign):
+        def crash(ign):
+            if results is not None:
                 reactor.crash()
 
-            d.addBoth(crash)
+        d.addBoth(crash)
 
-            if timeout is None:
-                timeoutCall = None
-            else:
-                timeoutCall = reactor.callLater(timeout, reactor.crash)
+        if timeout is None:
+            timeoutCall = None
+        else:
+            timeoutCall = reactor.callLater(timeout, reactor.crash)
 
-            def stop():
-                reactor.crash()
+        def stop():
+            reactor.crash()
 
-            reactor.stop = stop
-            try:
-                reactor.run()
-            finally:
-                del reactor.stop
-
-            if timeoutCall is not None:
-                if timeoutCall.active():
-                    timeoutCall.cancel()
-                else:
-                    raise defer.TimeoutError()
-
-            if results:
-                return results[0]
-
-            raise KeyboardInterrupt()
-
+        reactor.stop = stop
+        try:
+            reactor.run()
         finally:
-            cls._active -= 1
+            del reactor.stop
 
-    wait = classmethod(wait)
+        if timeoutCall is not None:
+            if timeoutCall.active():
+                timeoutCall.cancel()
+            else:
+                raise defer.TimeoutError()
 
+        if results:
+            return results[0]
+
+        raise KeyboardInterrupt()
+
+    finally:
+        results = None
+        running.pop()
 
 
 DEFAULT_TIMEOUT = 120.0 # sec
@@ -333,7 +329,7 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     @type useWaitError: boolean
     """
     try:
-        r = _Wait.wait(d, timeout)
+        r = _wait(d, timeout)
     except KeyboardInterrupt:
         raise
     except:
