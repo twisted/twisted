@@ -50,10 +50,6 @@ class NameVirtualHost(resource.Resource):
         """
         del self.hosts[name]
 
-    def _getResourceForRequest(self, ctx):
-        """(Internal) Get the appropriate resource for the request
-        """
-
     def locateChild(self, ctx, segments):
         """It's a NameVirtualHost, do you know where your children are?
         
