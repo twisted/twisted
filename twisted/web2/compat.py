@@ -75,11 +75,10 @@ class OldRequestAdapter(components.Componentized, object):
             return HeaderAdapter(headers)
 
         def _set(self, newheaders):
-            if not isinstance(newheaders, HeaderAdapter):
-                headers = http_headers.Headers()
-                for n,v in newheaders.items:
-                    headers.setRawHeaders(n, (v,))
-                newheaders = headers
+            headers = http_headers.Headers()
+            for n,v in newheaders.items():
+                headers.setRawHeaders(n, (v,))
+            newheaders = headers
             getattr(self, where).headers = newheaders
             
         return property(_get, _set)
