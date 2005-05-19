@@ -291,7 +291,8 @@ def _wait(d, timeout=None, running=[]):
         running.pop()
 
 
-DEFAULT_TIMEOUT = 120.0 # sec
+DEFAULT_TIMEOUT = object()
+DEFAULT_TIMEOUT_DURATION = 120.0
 
 def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     """Waits (spins the reactor) for a Deferred to arrive, then returns or
@@ -328,6 +329,8 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         reliably. (see issue 769) 
     @type useWaitError: boolean
     """
+    if timeout is DEFAULT_TIMEOUT:
+        timeout = DEFAULT_TIMEOUT_DURATION
     try:
         r = _wait(d, timeout)
     except KeyboardInterrupt:

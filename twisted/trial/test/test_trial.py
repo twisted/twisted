@@ -214,10 +214,13 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
     def testTimingOutDeferred(self):
         self.suite.addMethod(erroneous.TimingOutDeferred)
-        self.suite.run()
-        # assert_(self.tm.errors)
-        # assert_(isinstance(self.tm.errors[0].value, defer.TimeoutError))
-        # self.assertMethodsCalled(*allMethods)
+
+        origTimeout = util.DEFAULT_TIMEOUT_DURATION
+        util.DEFAULT_TIMEOUT_DURATION = 0.1
+        try:
+            self.suite.run()
+        finally:
+            util.DEFAULT_TIMEOUT_DURATION = origTimeout
         assertSubstring("FAILED (errors=1, successes=3)", self.reporter.out)
 
     def testPyUnitSupport(self):
