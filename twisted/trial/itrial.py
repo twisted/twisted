@@ -328,7 +328,7 @@ class IReporter(zi.Interface):
         @type debugger: bool""")
 
     stream = zi.Attribute("@ivar stream: the io-stream that this reporter will write to")
-    tbformat = zi.Attribute("@ivar tbformat: either 'plain' or 'emacs'")
+    tbformat = zi.Attribute("@ivar tbformat: either 'default', 'brief', or 'verbose'")
     args = zi.Attribute("@ivar args: additional string argument passed from the command line")
 
     def setUpReporter():
@@ -489,14 +489,6 @@ class IOldSkoolInfo(zi.Interface):
     resultType = zi.Attribute("ITestMethod.status")
     results = zi.Attribute("the appropriate results for the status of this test, a failure.Failure")
 
-class IFormattedFailure(zi.Interface):
-    """a properly formatted traceback as a string
-    @rtype: types.StringType
-    """
 
 class ITrialDebug(zi.Interface):
     """used internally as an argument to log.msg"""
-
-class IFormattedFailure(zi.Interface):
-    """returns a string representing a traceback, but without trial's
-    internals"""

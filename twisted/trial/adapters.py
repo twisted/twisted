@@ -89,33 +89,6 @@ def getModuleFromMethodType(obj):
 
 # -- traceback formatting ---------------------
 
-# many apologies for this, but getting around the component architecture to
-# restore this functionality in a sane way was impossible.  -glyph
-_tbformathack = {
-    'plain': 'default',
-    'emacs': 'brief',
-    }
-
-def formatFailureTraceback(fail):
-    from twisted import trial as hack
-    detailLevel = _tbformathack.get(hack.tbformat, 'default')
-    elideFrameworkCode = HIDE_TRIAL_INTERNALS
-    result = fail.getTraceback(detail=detailLevel, elideFrameworkCode=elideFrameworkCode)
-    if detailLevel == 'default':
-        # Apparently trial's tests doen't like the 'Traceback:' line.
-        result = '\n'.join(result.split('\n')[1:])
-    return result
-
-def formatMultipleFailureTracebacks(failList):
-    if failList:
-        s = '\n'.join(["\n%s" % itrial.IFormattedFailure(fail)
-                       for fail in failList])
-        return s
-    return ''
-
-def formatTestMethodFailures(testMethod):
-    return itrial.IFormattedFailure(testMethod.errors + testMethod.failures)
-
 def trimFilename(name, N):
     """extracts the last N path elements of a path and returns them
     as a string, preceeded by an elipsis and separated by os.sep

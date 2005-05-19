@@ -70,6 +70,17 @@ class ArgumentError(Exception):
     a runnable chunk of python
     """
 
+# Yea, this is stupid.  Leave it for for command-line compatibility for a
+# while, though.
+TBFORMAT_MAP = {
+    'plain': 'default',
+    'default': 'default',
+    'emacs': 'brief',
+    'brief': 'brief',
+    'cgitb': 'verbose',
+    'verbose': 'verbose'
+    }
+
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
@@ -304,9 +315,11 @@ class Options(usage.Options):
     def opt_tbformat(self, opt):
         """Specify the format to display tracebacks with. Valid formats are 'plain', 'emacs',
         and 'cgitb' which uses the nicely verbose stdlib cgitb.text function"""
-        if opt not in ('plain', 'emacs', 'cgitb'):
+        try:
+            self['tbformat'] = TBFORMAT_MAP[opt]
+        except KeyError:
             raise usage.UsageError("tbformat must be 'plain', 'emacs', or 'cgitb'.")
-        self['tbformat'] = opt
+
 
     extra = None
     def opt_extra(self, arg):
@@ -451,7 +464,7 @@ class Options(usage.Options):
                     self['random'] = long(time.time() * 100)
 
         if not self.has_key('tbformat'):
-            self['tbformat'] = 'plain'
+            self['tbformat'] = 'default'
 
         if self['psyco']:
             try:
@@ -498,16 +511,6 @@ def _setUpLogging(config):
 
 
 def _getReporter(config):
-    tbformat = config['tbformat']
-    from twisted import trial
-    trial.tbformat = tbformat
-    # ^ I could honestly not figure out how else to do this without spending a
-    # week.  I strongly suggest that future trial maintainers remove
-    # trial.adapters entirely: the use of components provides no utility that I
-    # can observe, ESPECIALLY the use of components to adapt Failures, where
-    # only one type is allowed, so the adapter registry serves only to remove
-    # the possibility of passing arguments.
-
     log.msg(iface=ITrialDebug, reporter="config['reporter']: %s" % (config['reporter'],))
     if config['reporter'] is not None:
         return config['reporter']
@@ -526,9 +529,12 @@ def _getSuite(config):
     reporterKlass = _getReporter(config)
     log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r" % (reporterKlass,))
     
-    suite = runner.TestSuite(reporterKlass(args=config['reporter-args'], realtime=config['rterrors']),
-                             _getJanitor(),
-                             benchmark=config['benchmark'])
+    suite = runner.TestSuite(reporterKlass(
+        tbformat=config['tbformat'],
+        args=config['reporter-args'],
+        realtime=config['rterrors']),
+        _getJanitor(),
+        benchmark=config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
     
     suite.dryRun = config['dry-run']

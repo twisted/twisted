@@ -57,12 +57,6 @@ def _setUpAdapters():
 (tdoctest.ModuleDocTestsRunner, types.ListType, itrial.ITestRunner),
 
 
-# ---- Error Reporting and Failure formatting ----------
-(adapters.formatFailureTraceback, failure.Failure, itrial.IFormattedFailure),
-(adapters.formatMultipleFailureTracebacks, types.ListType, itrial.IFormattedFailure),
-(adapters.formatMultipleFailureTracebacks, types.TupleType, itrial.IFormattedFailure),
-(adapters.formatTestMethodFailures, itrial.ITestMethod, itrial.IFormattedFailure),
-
 # ---- ITestStats  ------------------------------------
 (reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
 (reporter.TestStats, runner.TestModuleRunner, itrial.ITestStats),

@@ -781,25 +781,6 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
         return self.errors or self.failures
     hasTbs = property(hasTbs)
 
-    def formatError(self):
-        """format an error for report in the summary section of the output
-
-        @rtype: str
-        """
-        ret = [DOUBLE_SEPARATOR,
-               '%s: %s (%s)\n' % (WORDS[self.status], self.name,
-                                  reflect.qual(self.klass))]
-
-        for msg in self.skip, itrial.ITodo(self.todo).msg:
-            if msg is not None:
-                ret.append(str(msg) + '\n')
-
-        if self.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
-            return "%s\n%s" % ('\n'.join(ret),
-                                 itrial.IFormattedFailure(self.errors + self.failures))
-        return '\n'.join(ret)
-
-
     def _eb(self, f):
         log.msg(f.printTraceback())
         if isinstance(f.value, util.DirtyReactorWarning):
@@ -820,7 +801,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
                                "arguments! "
                                "Give a reason for skipping tests!"),
                               stacklevel=2)
-                reason = itrial.IFormattedFailure(f)
+                reason = f
             self._skipReason = reason
         else:
             self.errors.append(f)

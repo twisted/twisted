@@ -47,14 +47,14 @@ class BaseTest(object):
 bogus = lambda *a, **kw: None
 
 class BogusReporter(reporter.TreeReporter):
-    tbformat = 'plain'
+    tbformat = 'default'
     names = ('module', 'class', 'test')
 
     cleanerrs = importError = None
     setUpReporterCalled = tearDownReporterCalled = False
     
     def __init__(self):
-        super(BogusReporter, self).__init__(StringIO(), 'plain', None, False)
+        super(BogusReporter, self).__init__(StringIO(), 'default', None, False)
         self.startCtr = dict([(n, 0) for n in self.names])
         self.endCtr = self.startCtr.copy()
 
@@ -170,7 +170,7 @@ def stringComparison(expect, output):
     expect. expect and output are not altered
 
     @param output: a list of strings, '' is ignored 
-    @type output: types.ListType
+    @type output: list
 
     @param expect: a list of strings, None, or _sre.SRE_Pattern objects 
     (the object returned by re.compile()).

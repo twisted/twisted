@@ -40,7 +40,7 @@ def format_frames(frames, write, detail="default"):
     @type detail: string
     """
     if detail not in ('default', 'brief', 'verbose'):
-        raise ValueError, "Detail must be default, brief, or verbose."
+        raise ValueError, "Detail must be default, brief, or verbose. (not %r)" % (detail,)
     w = write
     if detail == "brief":
         for method, filename, lineno, localVars, globalVars in frames:

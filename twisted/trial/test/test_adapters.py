@@ -39,8 +39,10 @@ expectFailureInSetUp = [re.compile(r'.*twisted%(sep)sinternet%(sep)sdefer.py.*ma
                         re.compile(r'.*raise FoolishError.*'),
                         re.compile(r'.*erroneous.FoolishError: I am a broken setUp method')]
 
-expectTestFailure = [reporter.DOUBLE_SEPARATOR,
-                     '[FAIL]: testFailure (twisted.trial.test.common.FailfulTests)',
+expectTestFailure = [re.compile('.*'),
+                     re.compile('.*'),
+                     reporter.DOUBLE_SEPARATOR,
+                     '[FAIL]: twisted.trial.test.common.FailfulTests.testFailure',
                      None,
                      None,
                      re.compile(r'.*common.py.*in testFailure'),
@@ -48,78 +50,24 @@ expectTestFailure = [reporter.DOUBLE_SEPARATOR,
                      'twisted.trial.assertions.FailTest: %s' % (common.FAILURE_MSG,)]
 
 class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
-    def setUp(self):
-        from twisted import trial
-        self.oldtbformat = trial.tbformat
-        trial.tbformat = 'plain'
-        super(TestFailureFormatting, self).setUp()
-
-    def tearDown(self):
-        from twisted import trial
-        trial.tbformat = self.oldtbformat
-        super(TestFailureFormatting, self).tearDown()
-
-    def testNoExceptionCaughtHere(self):
-        #test formatting of a traceback without a failure.EXCEPTION_CAUGHT_HERE line
-        self.checkReporterSetup = False
-
-        f = gimmeAFailure()
-
-        output = adapters.formatFailureTraceback(f).split('\n')
-        common.stringComparison(expectGimmieAFailure, output)
-
-    def testExceptionCaughtHere(self):
-        #test formatting of a traceback with a failure.EXCEPTION_CAUGHT_HERE line
-        self.suite.addTestClass(erroneous.TestFailureInSetUp)
-        self.suite.run()
-
-        output = adapters.formatFailureTraceback(self.tm.errors[0]).split('\n')
-        
-        common.stringComparison(expectFailureInSetUp, output)
-
-    def testMultilpeFailureTracebacks(self):
-        self.checkReporterSetup = False
-        L = []
-
-        self.suite.addTestClass(erroneous.TestFailureInSetUp)
-        self.suite.run()
-        L.append(self.tm.errors[0])
-        L.append(gimmeAFailure())
-
-        output = adapters.formatMultipleFailureTracebacks(L).split('\n')
-
-        common.stringComparison(expectFailureInSetUp + expectGimmieAFailure, output)
-        assertEqual(adapters.formatMultipleFailureTracebacks([]), '')
-        
-    def testFormatTestMethodFailures(self):
-        self.suite.addTestClass(erroneous.TestFailureInSetUp)
-        self.suite.run()
-
-        self.tm.errors.append(gimmeAFailure())
-
-        output = adapters.formatTestMethodFailures(self.tm).split('\n')
-        
-        common.stringComparison(expectFailureInSetUp + expectGimmieAFailure, output)
-
     def testFormatErroredMethod(self):
         self.suite.addTestClass(erroneous.TestFailureInSetUp)
         self.suite.run()
         
-        output = self.tm.formatError().split('\n')
-        
-        expect = [reporter.DOUBLE_SEPARATOR,
-                  '[ERROR]: testMethod (twisted.trial.test.erroneous.TestFailureInSetUp)']
+        expect = [re.compile('.*'),
+                  re.compile('.*'),
+                  reporter.DOUBLE_SEPARATOR,
+                  '[ERROR]: twisted.trial.test.erroneous.TestFailureInSetUp.testMethod']
 
         expect.extend(expectFailureInSetUp)
 
-        common.stringComparison(expect, output)
+        common.stringComparison(expect, self.suite.reporter.out.splitlines())
 
     def testFormatFailedMethod(self):
         self.suite.addMethod(common.FailfulTests.testFailure)
         self.suite.run()
 
-        output = self.tm.formatError().split('\n')
-        common.stringComparison(expectTestFailure, output)
+        common.stringComparison(expectTestFailure, self.suite.reporter.out.splitlines())
 
     def testTrimFilename(self):
         self.checkReporterSetup = False
@@ -134,18 +82,17 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         assertEqual(out, s)
 
     def testDoctestError(self):
-        if sys.version_info[0:2] == (2,2):
-            raise unittest.SkipTest, 'doctest support only works on 2.3 or later'
+        if sys.version_info[0:2] < (2, 3):
+            raise unittest.SkipTest, 'doctest support only works in Python 2.3 or later'
         from twisted.trial.test import trialdoctest1
         self.suite.addDoctest(trialdoctest1.Counter.unexpectedException)
         self.suite.run()
 
-        itm = itrial.ITestMethod(self.suite.children[0].children[0])
+        output = self.suite.reporter.out.splitlines()
 
-        output = itm.formatError().split('\n')
-
-        expect = [reporter.DOUBLE_SEPARATOR,
-                  '[ERROR]: unexpectedException (...%s)' % (os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'),),
+        expect = [re.compile('.*'),
+                  reporter.DOUBLE_SEPARATOR,
+                  re.compile(r'\[ERROR\]: .*/' + re.escape(os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'))),
                   'docstring',
                   '---------',
                   '--> >>> 1/0',

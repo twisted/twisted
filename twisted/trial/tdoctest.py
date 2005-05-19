@@ -70,18 +70,6 @@ class ExampleToITestMethod(object):
         return a
 
 
-class DocTestFailure(failure.Failure):
-    zi.implements(itrial.IFormattedFailure)
-
-    doctestFailStr = ''
-
-    def __str__(self):
-        # yes, we're cheating a bit here
-        # this gets set in report_failure or report_unexpected_exception
-        return self.doctestFailStr
-    
-    __repr__ = __str__
-
 class AnError(Exception):
     pass
 
@@ -95,21 +83,6 @@ class AnError(Exception):
 # DocTestRunner as a kind of singleton runner that is adaptable to 
 # ITestMethod for convenience (because it only runs one theoretical TestMethod)
 
-# XXX: WARNING TO ALL
-#
-# the implemenation of the error reporting mechanism for doctests breaks
-# all sorts of abstractions, and will probably give you Herpes if examined
-# too closely, this will be fixed later
-#
-# the error reporting is handled by the adapter from DocTestRunner to
-# ITestMethod, it creates DocTestFailure, which is an object that implements
-# IFormattedFailure, therefore the reporter will (basically) do a 
-# print str(f) on it. The creation of this error is not handled in the 
-# report_failure or report_unexpected_exception methods because doctests
-# are wacky when it comes to using pdb, and debugging this mess is enough
-# of a pain as it is.
-
-
 class _DTRToITM(object, runner.StatusMixin):
     """real adapter from DocTestRunner to ITestMethod"""
     zi.implements(itrial.IDocTestMethod)
@@ -121,14 +94,6 @@ class _DTRToITM(object, runner.StatusMixin):
 
     hasTbs = property(lambda self: (self.errors or self.failures))
 
-    def formatError(self):
-        ret = [DOUBLE_SEPARATOR,
-               '%s: %s (%s)\n' % (WORDS[self.status], self.name, adapters.trimFilename(self.filename, 4))]
-
-        return "%s\n%s" % ('\n'.join(ret),
-                           itrial.IFormattedFailure(self.errors + self.failures))
-
-
     def __init__(self, original):
         self.original = o = original
         self.runs = 0
@@ -137,7 +102,7 @@ class _DTRToITM(object, runner.StatusMixin):
         # the originating module of this doctest
         self.module = reflect.filenameToModuleName(self.original._dtest.filename)
 
-        self.filename = o._dtest.filename
+        self.fullName = self.filename = o._dtest.filename
         self.lineno = o._dtest.lineno
         self.docstr= "doctest, file: %s lineno: %s" % (osp.split(self.filename)[1], self.lineno)
         self.name = o._dtest.name
@@ -164,8 +129,6 @@ class _DTRToITM(object, runner.StatusMixin):
     def failures(self):
         if self._failures is None:
             if self.original._dt_failures:
-                f = DocTestFailure(unittest.FailTest)
-                
                 L = []
                 for out, test, example, got in self.original._dt_failures:
                     L.extend(["docstring", "---------"])
@@ -175,8 +138,8 @@ class _DTRToITM(object, runner.StatusMixin):
                     L.append("----------------------")
                     L.extend(self.original._checker.output_difference(
                                    example, got, self.original.optionflags).split('\n'))
-                f.doctestFailStr = '\n'.join(L)
-                self._failures = [f]
+                doctestFailStr = '\n'.join(L)
+                self._failures = [doctestFailStr]
             else:
                 self._failures = []
         return self._failures
@@ -198,9 +161,8 @@ class _DTRToITM(object, runner.StatusMixin):
                 # exc_info tuples around for any longer than necessary
                 del self.original._dt_errors
 
-                f = DocTestFailure(AnError)
-                f.doctestFailStr = '\n'.join(L)
-                self._errors = [f]
+                doctestFailStr = '\n'.join(L)
+                self._errors = [doctestFailStr]
             else:
                 self._errors = []
         return self._errors

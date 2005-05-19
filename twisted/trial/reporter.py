@@ -60,25 +60,6 @@ methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
 
 # ----------------------------------------------------------------------------
 
-def formatImportError(name, error):
-    """format an import error for report in the summary section of output
-
-    @param name: The name of the module which could not be imported
-    @param error: The exception which occurred on import
-    
-    @rtype: str
-    """
-    ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
-    if isinstance(error, failure.Failure):
-        what = itrial.IFormattedFailure(error)
-    elif type(error) == types.TupleType:
-        what = error.args[0]
-    else:
-        what = "%s\n" % error
-    ret.append("Could not import %s: \n%s\n" % (name, what))
-    return ''.join(ret)
-
-
 def makeLoggingMethod(name, f):
     def loggingMethod(*a, **kw):
         print "%s.%s(*%r, **%r)" % (name, f.func_name, a, kw)
@@ -187,7 +168,7 @@ class Reporter(object):
     zi.implements(itrial.IReporter)
     debugger = None
 
-    def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
+    def __init__(self, stream=sys.stdout, tbformat='default', args=None,
                  realtime=False):
         self.stream = stream
         self.tbformat = tbformat
@@ -242,7 +223,7 @@ class Reporter(object):
 
     def cleanupErrors(self, errs):
         warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN,
-                                  itrial.IFormattedFailure(errs)),
+                                  self._formatFailureTraceback(errs)),
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
@@ -250,6 +231,52 @@ class Reporter(object):
         if self.realtime:
             for err in util.iterchain(method.errors, method.failures):
                 err.printTraceback(sys.stdout)
+
+
+    def _formatFailureTraceback(self, fail):
+        # Short term hack
+        if isinstance(fail, str):
+            return fail
+
+        detailLevel = self.tbformat
+        result = fail.getTraceback(detail=detailLevel, elideFrameworkCode=True)
+        if detailLevel == 'default':
+            # Apparently trial's tests doen't like the 'Traceback:' line.
+            result = '\n'.join(result.split('\n')[1:])
+        return result
+
+
+    def _formatImportError(self, name, error):
+        """format an import error for report in the summary section of output
+
+        @param name: The name of the module which could not be imported
+        @param error: The exception which occurred on import
+        
+        @rtype: str
+        """
+        ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
+        if isinstance(error, failure.Failure):
+            what = self._formatFailureTraceback(error)
+        elif type(error) == types.TupleType:
+            what = error.args[0]
+        else:
+            what = "%s\n" % error
+        ret.append("Could not import %s: \n%s\n" % (name, what))
+        return ''.join(ret)
+
+
+    def _formatFailedTest(self, name, status, failures, skipMsg=None, todoMsg=None):
+        ret = [DOUBLE_SEPARATOR, '%s: %s\n' % (WORDS[status], name)]
+
+        if skipMsg:
+            ret.append(self._formatFailureTraceback(skipMsg) + '\n')
+        if todoMsg:
+            ret.append(todoMsg + '\n')
+
+        if status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
+            ret.extend(map(self._formatFailureTraceback, failures))
+        return '\n'.join(ret)
+
 
     def _reportStatus(self, tsuite):
         tstats = itrial.ITestStats(tsuite)
@@ -267,17 +294,27 @@ class Reporter(object):
             status = PASSED
         self.write("%s%s\n", status, summary)
 
+
     def _reportFailures(self, tstats):
         for meth in getattr(tstats, "get_%s" % SKIP)():
-            self.write(meth.formatError())
+            self.write(self._formatFailedTest(
+                meth.fullName, meth.status,
+                meth.errors + meth.failures,
+                meth.skip,
+                itrial.ITodo(meth.todo).msg))
 
         for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in getattr(tstats, "get_%s" % status)():
                 if meth.hasTbs:
-                    self.write(meth.formatError())
+                    self.write(self._formatFailedTest(
+                        meth.fullName, meth.status,
+                        meth.errors + meth.failures,
+                        meth.skip,
+                        itrial.ITodo(meth.todo).msg))
 
         for name, error in tstats.importErrors:
-            self.write(formatImportError(name, error))
+            self.write(self._formatImportError(name, error))
+
 
     def endSuite(self, suite):
         tstats = itrial.ITestStats(suite)
@@ -302,7 +339,7 @@ class MinimalReporter(Reporter):
 
 
 class TextReporter(Reporter):
-    def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
+    def __init__(self, stream=sys.stdout, tbformat='default', args=None,
                  realtime=False):
         super(TextReporter, self).__init__(stream, tbformat, args, realtime)
         self.seenModules, self.seenClasses = {}, {}
@@ -349,7 +386,7 @@ class TreeReporter(VerboseTextReporter):
     CYAN = 36
     WHITE = 37
 
-    def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
+    def __init__(self, stream=sys.stdout, tbformat='default', args=None,
                  realtime=False):
         super(TreeReporter, self).__init__(stream, tbformat, args, realtime)
         self.words = {SKIP: ('[SKIPPED]', self.BLUE),
