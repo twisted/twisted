@@ -314,20 +314,6 @@ class ITestMethod(ITimed):
         """I run the test method"""
     # -----------------------------------------------------------
 
-class IReporterFactory(zi.Interface):
-    """I create reporters"""
-    def __call__(self, stream=sys.stdout, tbformat='plain', args=None):
-        """this translates to the Reporter class' __init__ method
-        @param stream: the io-stream that this reporter will write to.
-                       this is optional depending on the reporter, defaults to
-                       L{sys.stdout}
-        @param tbformat: either 'plain' or 'emacs'
-                         this is also dependent on the reporter, defaults to
-                         'plain'
-        @param args: argument to the command-line parameter --reporter-arg
-        @type args: types.StringType
-        """
-
 class IReporter(zi.Interface):
     """I report results from a run of a test suite.
 
@@ -341,9 +327,9 @@ class IReporter(zi.Interface):
         """@ivar debugger: Run the debugger when encountering a failing test.
         @type debugger: bool""")
 
-    stream = zi.Attribute("@ivar stream: L{twisted.trial.itrial.IReporterFactory}'s stream parameter")
-    tbformat = zi.Attribute("@ivar tbformat: L{twisted.trial.itrial.IReporterFactory}'s tbformat parameter")
-    args = zi.Attribute("@ivar args: L{twisted.trial.itrial.IReporterFactory}'s args parameter")
+    stream = zi.Attribute("@ivar stream: the io-stream that this reporter will write to")
+    tbformat = zi.Attribute("@ivar tbformat: either 'plain' or 'emacs'")
+    args = zi.Attribute("@ivar args: additional string argument passed from the command line")
 
     def setUpReporter():
         """performs reporter setup, for example, connecting to a remote service

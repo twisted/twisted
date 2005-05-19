@@ -185,7 +185,6 @@ class BrokenTestCaseWarning(Warning):
 
 class Reporter(object):
     zi.implements(itrial.IReporter)
-    zi.classProvides(itrial.IReporterFactory)
     debugger = None
 
     def __init__(self, stream=sys.stdout, tbformat='plain', args=None,
