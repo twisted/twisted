@@ -130,7 +130,6 @@ class _Janitor(object):
                 try:
                     getattr(self, "do_%s" % attr)()
                 except LoggedErrors, e:
-                    print '_dispatch, extending %s' % (e,)
                     errors.extend(e.failures)
                 except PendingTimedCallsError:
                     errors.append(failure.Failure())

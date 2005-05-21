@@ -230,7 +230,7 @@ class Reporter(object):
         method = itrial.ITestMethod(method)
         if self.realtime:
             for err in util.iterchain(method.errors, method.failures):
-                err.printTraceback(sys.stdout)
+                err.printTraceback(self.stream)
 
 
     def _formatFailureTraceback(self, fail):
