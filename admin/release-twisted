@@ -26,9 +26,6 @@ packaged_projects.remove('web2')
 
 repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 #repourl = 'file:///home/radix/Twisted.repo'
-trunkurl = repourl + '/trunk'
-
-debug = False
 
 ## NOTE: This script currently doesn't deal too well with building
 ## subprojects alone, at least in its dealings with SVN.
@@ -50,8 +47,9 @@ class Options(usage.Options):
         ['core-version', None, None,
          "(required) Twisted Core version"],
         ['commands', None, None,
-         "(optional) The individual steps to run; You should only use "
-         "this if something broke"],
+         "(optional) Comma-separated list of individual steps to run"],
+        ['release-source', None, '/trunk',
+         "SVN path to be released."]
         ]
     optParameters += [[x+'-version', None, None, x+" version"]
                         for x in dist.twisted_subprojects]
@@ -61,7 +59,7 @@ class Options(usage.Options):
          "Don't do anything permanent: finalize tags, upload tarballs, etc."]]
 
     def postOptions(self):
-
+        self['release-url'] = repourl + self['release-source']
         self['tagurl'] = '%s/tags/release-%s' % (repourl,
                                                  self['core-version'])
         self['temptagurl'] = '%s/tags/temp-%s' % (repourl,
@@ -133,7 +131,7 @@ def tar(tdir):
 
 def tagTemp(opts):
     sh('svn cp %s %s -m "Tagging preliminary %s"'
-       % (trunkurl, opts['temptagurl'], opts['core-version']),
+       % (opts['release-url'], opts['temptagurl'], opts['core-version']),
        prompt=True)
 
 def exportTemp(opts):
@@ -147,6 +145,7 @@ def makeDocCore(opts):
     os.chdir('Twisted.exp')
 
     for docdir in ['howto', 'howto/tutorial', 'howto/policy', 'upgrades',
+                   'examples',
                    'upgrades/2.0', # ugh
                    'specifications', 'vision', '']:
         lore(ver, os.path.join('doc/core', docdir))
