@@ -600,7 +600,7 @@ def isOfType(start, goal):
 def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
-def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0):
+def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0, maxDepth=None):
     '''An insanely CPU-intensive process for finding stuff.
     '''
     if paths is None:
@@ -612,26 +612,30 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
     if seen.has_key(id(start)):
         if seen[id(start)] is start:
             return
+    if maxDepth is not None:
+        if maxDepth == 0:
+            return
+        maxDepth -= 1
     seen[id(start)] = start
     if isinstance(start, types.DictionaryType):
         r = []
         for k, v in start.items():
-            objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen)
-            objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen)
+            objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen, showUnknowns, maxDepth)
+            objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, types.ListType) or isinstance(start, types.TupleType):
         for idx in xrange(len(start)):
-            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen)
+            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, types.MethodType):
-        objgrep(start.im_self, goal, eq, path+'.im_self', paths, seen)
-        objgrep(start.im_func, goal, eq, path+'.im_func', paths, seen)
-        objgrep(start.im_class, goal, eq, path+'.im_class', paths, seen)
+        objgrep(start.im_self, goal, eq, path+'.im_self', paths, seen, showUnknowns, maxDepth)
+        objgrep(start.im_func, goal, eq, path+'.im_func', paths, seen, showUnknowns, maxDepth)
+        objgrep(start.im_class, goal, eq, path+'.im_class', paths, seen, showUnknowns, maxDepth)
     elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
-            objgrep(v, goal, eq, path+'.'+k, paths, seen)
+            objgrep(v, goal, eq, path+'.'+k, paths, seen, showUnknowns, maxDepth)
         if isinstance(start, types.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen)
+            objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, weakref.ReferenceType):
-        objgrep(start(), goal, eq, path+'()', paths, seen)
+        objgrep(start(), goal, eq, path+'()', paths, seen, showUnknowns, maxDepth)
     elif (isinstance(start, types.StringTypes+
                     (types.IntType, types.FunctionType,
                      types.BuiltinMethodType, RegexType, types.FloatType,

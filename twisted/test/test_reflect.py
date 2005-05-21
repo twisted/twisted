@@ -199,6 +199,17 @@ class ObjectGrep(unittest.TestCase):
 
         self.assertIn("().im_self.attr[2][0][2]{'Foosh'}", reflect.objgrep(w, o, reflect.isSame))
 
+    def testDepthLimit(self):
+        a = []
+        b = [a]
+        c = [a, b]
+        d = [a, c]
+
+        self.assertEquals(['[0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
+        self.assertEquals(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
+        self.assertEquals(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
+
+
 class GetClass(unittest.TestCase):
     def testOld(self):
         class OldClass:
