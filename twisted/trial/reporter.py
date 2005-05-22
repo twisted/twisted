@@ -223,7 +223,7 @@ class Reporter(object):
 
     def cleanupErrors(self, errs):
         warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN,
-                                  '\n'.join(map(self._formatFailureTraceback, errs)),
+                                  '\n'.join(map(self._formatFailureTraceback, errs))),
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
