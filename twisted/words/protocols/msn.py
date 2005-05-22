@@ -130,8 +130,10 @@ CR = "\r"
 LF = "\n"
 
 def checkParamLen(num, expected, cmd, error=None):
-    if error == None: error = "Invalid Number of Parameters for %s" % cmd
-    if num != expected: raise MSNProtocolError, error
+    if error == None:
+        error = "Invalid Number of Parameters for %s" % cmd
+    if num != expected:
+        raise MSNProtocolError, error
 
 def _parseHeader(h, v):
     """
@@ -153,7 +155,8 @@ def _parseHeader(h, v):
             except ValueError:
                 fields[field.lower()] = ''
         return fields
-    else: return v
+    else:
+        return v
 
 def _parsePrimitiveHost(host):
     # Ho Ho Ho
@@ -212,12 +215,14 @@ class PassportNexus(HTTPClient):
         self.headers[h] = _parseHeader(h, value)
 
     def handleEndHeaders(self):
-        if self.connected: self.transport.loseConnection()
+        if self.connected:
+            self.transport.loseConnection()
         if not self.headers.has_key('passporturls') or not self.headers['passporturls'].has_key('dalogin'):
             self.deferred.errback(failure.Failure(failure.DefaultException("Invalid Nexus Reply")))
         self.deferred.callback('https://' + self.headers['passporturls']['dalogin'])
 
-    def handleResponse(self, r): pass
+    def handleResponse(self, r):
+        pass
 
 class PassportLogin(HTTPClient):
     """
@@ -248,23 +253,28 @@ class PassportLogin(HTTPClient):
         self.headers[h] = _parseHeader(h, value)
 
     def handleEndHeaders(self):
-        if self._finished: return
+        if self._finished:
+            return
         self._finished = 1 # I think we need this because of HTTPClient
-        if self.connected: self.transport.loseConnection()
+        if self.connected:
+            self.transport.loseConnection()
         authHeader = 'authentication-info'
         _interHeader = 'www-authenticate'
-        if self.headers.has_key(_interHeader): authHeader = _interHeader
+        if self.headers.has_key(_interHeader):
+            authHeader = _interHeader
         try:
             info = self.headers[authHeader]
             status = info['da-status']
             handler = getattr(self, 'login_%s' % (status,), None)
             if handler:
                 handler(info)
-            else: raise Exception()
+            else:
+                raise Exception()
         except Exception, e:
             self.deferred.errback(failure.Failure(e))
 
-    def handleResponse(self, r): pass
+    def handleResponse(self, r):
+        pass
 
     def login_success(self, info):
         ticket = info['from-pp']
@@ -401,11 +411,16 @@ class MSNContact:
         """
 
         t = phoneType.upper()
-        if t == HOME_PHONE: self.homePhone = value
-        elif t == WORK_PHONE: self.workPhone = value
-        elif t == MOBILE_PHONE: self.mobilePhone = value
-        elif t == HAS_PAGER: self.hasPager = value
-        else: raise ValueError, "Invalid Phone Type"
+        if t == HOME_PHONE:
+            self.homePhone = value
+        elif t == WORK_PHONE:
+            self.workPhone = value
+        elif t == MOBILE_PHONE:
+            self.mobilePhone = value
+        elif t == HAS_PAGER:
+            self.hasPager = value
+        else:
+            raise ValueError, "Invalid Phone Type"
 
     def addToList(self, listType):
         """
@@ -465,7 +480,8 @@ class MSNContactList:
         """
         try:
             del self.contacts[userHandle]
-        except KeyError: pass
+        except KeyError:
+            pass
 
     def getContact(self, userHandle):
         """
@@ -524,9 +540,11 @@ class MSNContactList:
         """
         try:
             del self.groups[id]
-        except KeyError: pass
+        except KeyError:
+            pass
         for c in self.contacts:
-            if id in c.groups: c.groups.remove(id)
+            if id in c.groups:
+                c.groups.remove(id)
 
 
 class MSNEventBase(LineReceiver):
@@ -564,7 +582,8 @@ class MSNEventBase(LineReceiver):
     def _nextTransactionID(self):
         """ return a usable transaction ID """
         self.currentID += 1
-        if self.currentID > 1000: self.currentID = 1
+        if self.currentID > 1000:
+            self.currentID = 1
         return self.currentID
 
     def _createIDMapping(self, data=None):
@@ -589,7 +608,8 @@ class MSNEventBase(LineReceiver):
             self.currentMessage.readPos += len(line+CR+LF)
             if line == "":
                 self.setRawMode()
-                if self.currentMessage.readPos == self.currentMessage.length: self.rawDataReceived("") # :(
+                if self.currentMessage.readPos == self.currentMessage.length:
+                    self.rawDataReceived("") # :(
                 return
             try:
                 header, value = line.split(':')
@@ -602,7 +622,8 @@ class MSNEventBase(LineReceiver):
         except ValueError:
             raise MSNProtocolError, "Invalid Message, %s" % repr(line)
 
-        if len(cmd) != 3: raise MSNProtocolError, "Invalid Command, %s" % repr(cmd)
+        if len(cmd) != 3:
+            raise MSNProtocolError, "Invalid Command, %s" % repr(cmd)
         if cmd.isdigit():
             if self.ids.has_key(params.split()[0]):
                 self.ids[id].errback(int(cmd))
@@ -614,8 +635,10 @@ class MSNEventBase(LineReceiver):
 
         handler = getattr(self, "handle_%s" % cmd.upper(), None)
         if handler:
-            try: handler(params.split())
-            except MSNProtocolError, why: self.gotBadLine(line, why)
+            try:
+                handler(params.split())
+            except MSNProtocolError, why:
+                self.gotBadLine(line, why)
         else:
             self.handle_UNKNOWN(cmd, params.split())
 
@@ -645,7 +668,8 @@ class MSNEventBase(LineReceiver):
         checkParamLen(len(params), 3, 'MSG')
         try:
             messageLen = int(params[2])
-        except ValueError: raise MSNProtocolError, "Invalid Parameter for MSG length argument"
+        except ValueError:
+            raise MSNProtocolError, "Invalid Parameter for MSG length argument"
         self.currentMessage = MSNMessage(length=messageLen, userHandle=params[0], screenName=unquote(params[1]))
 
     def handle_UNKNOWN(self, cmd, params):
@@ -700,7 +724,8 @@ class DispatchClient(MSNEventBase):
         self.sendLine("USR %s TWN I %s" % (self._nextTransactionID(), self.userHandle))
 
     def handle_XFR(self, params):
-        if len(params) < 4: raise MSNProtocolError, "Invalid number of parameters for XFR"
+        if len(params) < 4:
+            raise MSNProtocolError, "Invalid number of parameters for XFR"
         id, refType, addr = params[:3]
         # was addr a host:port pair?
         try:
@@ -749,7 +774,8 @@ class NotificationClient(MSNEventBase):
         self._state[1][key] = value
 
     def _remStateData(self, *args):
-        for key in args: del self._state[1][key]
+        for key in args:
+            del self._state[1][key]
 
     def connectionMade(self):
         MSNEventBase.connectionMade(self)
@@ -838,7 +864,8 @@ class NotificationClient(MSNEventBase):
     def handle_LST(self, params):
         # support no longer exists for manually
         # requesting lists - why do I feel cleaner now?
-        if self._getState() != 'SYNC': return
+        if self._getState() != 'SYNC':
+            return
         contact = MSNContact(userHandle=params[0], screenName=unquote(params[1]),
                              lists=int(params[2]))
         if contact.lists & FORWARD_LIST:
@@ -875,14 +902,20 @@ class NotificationClient(MSNEventBase):
     def handle_GTC(self, params):
         # check to see if this is in response to a SYN
         if self._getState() == 'SYNC':
-            if params[0].lower() == "a": self._getStateData('list').autoAdd = 0
-            elif params[0].lower() == "n": self._getStateData('list').autoAdd = 1
-            else: raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+            if params[0].lower() == "a":
+                self._getStateData('list').autoAdd = 0
+            elif params[0].lower() == "n":
+                self._getStateData('list').autoAdd = 1
+            else:
+                raise MSNProtocolError, "Invalid Paramater for GTC" # debug
         else:
             id = int(params[0])
-            if params[1].lower() == "a": self._fireCallback(id, 0)
-            elif params[1].lower() == "n": self._fireCallback(id, 1)
-            else: raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+            if params[1].lower() == "a":
+                self._fireCallback(id, 0)
+            elif params[1].lower() == "n":
+                self._fireCallback(id, 1)
+            else:
+                raise MSNProtocolError, "Invalid Paramater for GTC" # debug
 
     def handle_SYN(self, params):
         id = int(params[0])
@@ -952,7 +985,8 @@ class NotificationClient(MSNEventBase):
         userHandle = params[3]
         groupID = None
         if numParams == 6: # they sent a group id
-            if params[1].upper() != "FL": raise MSNProtocolError, "Only forward list can contain groups" # debug
+            if params[1].upper() != "FL":
+                raise MSNProtocolError, "Only forward list can contain groups" # debug
             groupID = int(params[5])
         if not self._fireCallback(id, listCodeToID[listType], userHandle, listVer, groupID):
             self.userAddedMe(userHandle, unquote(params[4]), listVer)
@@ -967,10 +1001,12 @@ class NotificationClient(MSNEventBase):
         userHandle = params[3]
         groupID = None
         if numParams == 5:
-            if params[1] != "FL": raise MSNProtocolError, "Only forward list can contain groups" # debug
+            if params[1] != "FL":
+                raise MSNProtocolError, "Only forward list can contain groups" # debug
             groupID = int(params[4])
         if not self._fireCallback(id, listCodeToID[listType], userHandle, listVer, groupID):
-            if listType.upper() == "RL": self.userRemovedMe(userHandle, listVer)
+            if listType.upper() == "RL":
+                self.userRemovedMe(userHandle, listVer)
 
     def handle_REA(self, params):
         checkParamLen(len(params), 4, 'REA')
@@ -1004,9 +1040,12 @@ class NotificationClient(MSNEventBase):
 
     def handle_OUT(self, params):
         checkParamLen(len(params), 1, 'OUT')
-        if params[0] == "OTH": self.multipleLogin()
-        elif params[0] == "SSD": self.serverGoingDown()
-        else: raise MSNProtocolError, "Invalid Parameters received for OUT" # debug
+        if params[0] == "OTH":
+            self.multipleLogin()
+        elif params[0] == "SSD":
+            self.serverGoingDown()
+        else:
+            raise MSNProtocolError, "Invalid Parameters received for OUT" # debug
 
     # callbacks
 
@@ -1026,8 +1065,10 @@ class NotificationClient(MSNEventBase):
         @type verified: int
         """
         self.factory.screenName = screenName
-        if not self.factory.contacts: listVersion = 0
-        else: listVersion = self.factory.contacts.version
+        if not self.factory.contacts:
+            listVersion = 0
+        else:
+            listVersion = self.factory.contacts.version
         self.syncList(listVersion).addCallback(self.listSynchronized)
 
     def loginFailure(self, message):
@@ -1155,7 +1196,8 @@ class NotificationClient(MSNEventBase):
         self.factory.contacts.version = listVersion
         c = self.factory.contacts.getContact(userHandle)
         c.removeFromList(REVERSE_LIST)
-        if c.lists == 0: self.factory.contacts.remContact(c.userHandle)
+        if c.lists == 0:
+            self.factory.contacts.remContact(c.userHandle)
 
     def gotSwitchboardInvitation(self, sessionID, host, port,
                                  key, userHandle, screenName):
@@ -1263,8 +1305,10 @@ class NotificationClient(MSNEventBase):
         """
 
         id, d = self._createIDMapping()
-        if privLevel: self.sendLine("BLP %s AL" % id)
-        else: self.sendLine("BLP %s BL" % id)
+        if privLevel:
+            self.sendLine("BLP %s AL" % id)
+        else:
+            self.sendLine("BLP %s BL" % id)
         return d
 
     def syncList(self, version):
@@ -1470,7 +1514,8 @@ class NotificationClient(MSNEventBase):
             c = self.factory.contacts.getContact(r[1])
             if not c:
                 c = MSNContact(userHandle=r[1])
-            if r[3]: c.groups.append(r[3])
+            if r[3]:
+                c.groups.append(r[3])
             c.addToList(r[0])
             return r
         return d.addCallback(_cb)
@@ -1517,10 +1562,12 @@ class NotificationClient(MSNEventBase):
             shouldRemove = 1
             if group: # they may not have been removed from the list
                 c.groups.remove(group)
-                if c.groups: shouldRemove = 0
+                if c.groups:
+                    shouldRemove = 0
             if shouldRemove:
                 c.removeFromList(r[0])
-                if c.lists == 0: l.remContact(c.userHandle)
+                if c.lists == 0:
+                    l.remContact(c.userHandle)
             return r
         return d.addCallback(_cb)
 
@@ -1668,7 +1715,8 @@ class SwitchboardClient(MSNEventBase):
 
     def _newInvitationCookie(self):
         self._iCookie += 1
-        if self._iCookie > 1000: self._iCookie = 1
+        if self._iCookie > 1000:
+            self._iCookie = 1
         return self._iCookie
 
     def _checkTyping(self, message, cTypes):
@@ -1679,7 +1727,8 @@ class SwitchboardClient(MSNEventBase):
 
     def _checkFileInvitation(self, message, info):
         """ helper method for checkMessage """
-        if not info.get('Application-Name', '').lower() == 'file transfer': return 0
+        if not info.get('Application-Name', '').lower() == 'file transfer':
+            return 0
         try:
             cookie = int(info['Invitation-Cookie'])
             fileName = info['Application-File']
@@ -1695,10 +1744,12 @@ class SwitchboardClient(MSNEventBase):
         try:
             cmd = info['Invitation-Command'].upper()
             cookie = int(info['Invitation-Cookie'])
-        except KeyError: return 0
+        except KeyError:
+            return 0
         accept = (cmd == 'ACCEPT') and 1 or 0
         requested = self.cookies['iCookies'].get(cookie)
-        if not requested: return 1
+        if not requested:
+            return 1
         requested[0].callback((accept, cookie, info))
         del self.cookies['iCookies'][cookie]
         return 1
@@ -1711,10 +1762,12 @@ class SwitchboardClient(MSNEventBase):
             aCookie = int(info['AuthCookie'])
             cmd = info['Invitation-Command'].upper()
             port = int(info['Port'])
-        except KeyError: return 0
+        except KeyError:
+            return 0
         accept = (cmd == 'ACCEPT') and 1 or 0
         requested = self.cookies['external'].get(iCookie)
-        if not requested: return 1 # we didn't ask for this
+        if not requested:
+            return 1 # we didn't ask for this
         requested[0].callback((accept, ip, port, aCookie, info))
         del self.cookies['external'][iCookie]
         return 1
@@ -1725,7 +1778,8 @@ class SwitchboardClient(MSNEventBase):
         (e.g. file transfer)
         """
         cTypes = [s.lstrip() for s in message.getHeader('Content-Type').split(';')]
-        if self._checkTyping(message, cTypes): return 0
+        if self._checkTyping(message, cTypes):
+            return 0
         if 'text/x-msmsgsinvite' in cTypes:
             # header like info is sent as part of the message body.
             info = {}
@@ -1733,8 +1787,10 @@ class SwitchboardClient(MSNEventBase):
                 try:
                     key, val = line.split(':')
                     info[key] = val.lstrip()
-                except ValueError: continue
-            if self._checkFileInvitation(message, info) or self._checkFileInfo(message, info) or self._checkFileResponse(message, info): return 0
+                except ValueError:
+                    continue
+            if self._checkFileInvitation(message, info) or self._checkFileInfo(message, info) or self._checkFileResponse(message, info):
+                return 0
         return 1
 
     # negotiation
@@ -1882,9 +1938,12 @@ class SwitchboardClient(MSNEventBase):
                  the return value is None.
         """
 
-        if message.ack not in ('A','N'): id, d = self._nextTransactionID(), None
-        else: id, d = self._createIDMapping()
-        if message.length == 0: message.length = message._calcMessageLen()
+        if message.ack not in ('A','N'):
+            id, d = self._nextTransactionID(), None
+        else:
+            id, d = self._createIDMapping()
+        if message.length == 0:
+            message.length = message._calcMessageLen()
         self.sendLine("MSG %s %s %s" % (id, message.ack, message.length))
         # apparently order matters with at least MIME-Version and Content-Type
         self.sendLine('MIME-Version: %s' % message.getHeader('MIME-Version'))
@@ -1969,7 +2028,8 @@ class SwitchboardClient(MSNEventBase):
         m.setHeader('Content-Type', 'text/x-msmsgsinvite; charset=UTF-8')
         m.message += 'Invitation-Command: %s\r\n' % (accept and 'ACCEPT' or 'CANCEL')
         m.message += 'Invitation-Cookie: %s\r\n' % str(iCookie)
-        if not accept: m.message += 'Cancel-Code: REJECT\r\n'
+        if not accept:
+            m.message += 'Cancel-Code: REJECT\r\n'
         m.message += 'Launch-Application: FALSE\r\n'
         m.message += 'Request-Data: IP-Address:\r\n'
         m.message += '\r\n'
@@ -2074,12 +2134,16 @@ class FileReceive(LineReceiver):
 
     def lineReceived(self, line):
         temp = line.split()
-        if len(temp) == 1: params = []
-        else: params = temp[1:]
+        if len(temp) == 1:
+            params = []
+        else:
+            params = temp[1:]
         cmd = temp[0]
         handler = getattr(self, "handle_%s" % cmd.upper(), None)
-        if handler: handler(params) # try/except
-        else: self.handle_UNKNOWN(cmd, params)
+        if handler:
+            handler(params) # try/except
+        else:
+            self.handle_UNKNOWN(cmd, params)
 
     def rawDataReceived(self, data):
         bufferLen = len(self.buffer)
@@ -2088,11 +2152,13 @@ class FileReceive(LineReceiver):
             self.buffer += data[:delim]
             if len(self.buffer) == 3:
                 self.segmentLength = self.parseHeader(self.buffer)
-                if not self.segmentLength: return # hrm
+                if not self.segmentLength:
+                    return # hrm
                 self.buffer = ""
                 self.state = 'INSEGMENT'
             extra = data[delim:]
-            if len(extra) > 0: self.rawDataReceived(extra)
+            if len(extra) > 0:
+                self.rawDataReceived(extra)
             return
 
         elif self.state == 'INSEGMENT':
@@ -2110,7 +2176,8 @@ class FileReceive(LineReceiver):
                     return
                 self.state = 'INHEADER'
                 extra = data[(self.segmentLength-bufferLen):]
-                if len(extra) > 0: self.rawDataReceived(extra)
+                if len(extra) > 0:
+                    self.rawDataReceived(extra)
                 return
 
     def handle_VER(self, params):
@@ -2182,12 +2249,16 @@ class FileSend(LineReceiver):
 
     def lineReceived(self, line):
         temp = line.split()
-        if len(temp) == 1: params = []
-        else: params = temp[1:]
+        if len(temp) == 1:
+            params = []
+        else:
+            params = temp[1:]
         cmd = temp[0]
         handler = getattr(self, "handle_%s" % cmd.upper(), None)
-        if handler: handler(params)
-        else: self.handle_UNKNOWN(cmd, params)
+        if handler:
+            handler(params)
+        else:
+            self.handle_UNKNOWN(cmd, params)
 
     def handle_VER(self, params):
         checkParamLen(len(params), 1, 'VER')
@@ -2217,7 +2288,8 @@ class FileSend(LineReceiver):
         self.completed = (self.bytesSent == self.fileSize)
         self.transport.loseConnection()
 
-    def handle_UNKNOWN(self, cmd, params): log.msg('received unknown command (%s), params: %s' % (cmd, params))
+    def handle_UNKNOWN(self, cmd, params):
+        log.msg('received unknown command (%s), params: %s' % (cmd, params))
 
     def makeHeader(self, size):
         """ make the appropriate header given a specific segment size. """
