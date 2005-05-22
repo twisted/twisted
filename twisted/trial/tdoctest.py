@@ -7,20 +7,12 @@
 
 import warnings, time, random, types, re, traceback
 
-from pprint import pformat
 import os.path as osp
 
-from twisted.trial import itrial, runner, doctest, unittest, adapters
-from twisted.trial.reporter import DOUBLE_SEPARATOR, WORDS, FAILURE, ERROR, SUCCESS
-from twisted.python import reflect, failure, util as tputil, log
+from twisted.trial import itrial, runner, doctest, adapters
+from twisted.python import reflect, util as tputil
 
 import zope.interface as zi
-
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 
 class Proxy(object):
     pass

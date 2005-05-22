@@ -11,7 +11,7 @@ from __future__ import generators
 import sys, types
 import warnings
 
-from twisted.python import reflect, failure, log, util as tputil
+from twisted.python import reflect, failure, log
 from twisted.python.compat import adict
 from twisted.internet import defer
 from twisted.trial import itrial, util
@@ -229,7 +229,7 @@ class Reporter(object):
     def endTest(self, method):
         method = itrial.ITestMethod(method)
         if self.realtime:
-            for err in util.iterchain(method.errors, method.failures):
+            for err in method.errors + method.failures:
                 err.printTraceback(self.stream)
 
 

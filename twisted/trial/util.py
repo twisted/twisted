@@ -7,8 +7,8 @@
 #
 from __future__ import generators
 
-import sys, traceback, warnings, new, inspect, types, time, signal
-from twisted.python import components, failure, util, log, reflect
+import traceback, warnings, time, signal, gc
+from twisted.python import failure, util, log
 from twisted.internet import defer, interfaces
 from twisted.trial import itrial
 import zope.interface as zi
@@ -18,8 +18,6 @@ import zope.interface as zi
 _failureConditionals = [
     'fail', 'failIf', 'failUnless', 'failUnlessRaises', 'failUnlessEqual',
     'failUnlessIdentical', 'failIfEqual', 'assertApproximates']
-
-
 
 # ---------------------------------
 
@@ -63,11 +61,11 @@ def deferredError(d, timeout=None):
 
     If the deferred succeeds, raises FailTest.
     """
+    from twisted.trial import unittest
     result = _wait(d, timeout)
     if isinstance(result, failure.Failure):
         return result
     else:
-        from twisted.trial import unittest
         raise unittest.FailTest, "Deferred did not fail: %r" % (result,)
 
 
@@ -197,8 +195,7 @@ class _Janitor(object):
     do_cleanReactor = classmethod(do_cleanReactor)
 
     def doGcCollect(cls):
-         if gc:
-             gc.collect()
+         gc.collect()
 
 
 def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
@@ -236,7 +233,6 @@ class WaitIsNotReentrantError(Exception):
     pass
 
 def _wait(d, timeout=None, running=[]):
-    from twisted.trial import unittest, itrial
     from twisted.internet import reactor
 
     if running:
@@ -383,6 +379,7 @@ def format_exception(eType, eValue, tb, limit=None):
     but I screen out frames from the traceback that are part of
     the testing framework itself, leaving only the code being tested.
     """
+    from twisted.trial import unittest
     result = [x.strip()+'\n' for x in
               failure.Failure(eValue,eType,tb).getBriefTraceback().split('\n')]
     return result
@@ -532,16 +529,6 @@ def suppress(action='ignore', **kwarg):
     level by specifying .suppress = []
     """
     return ((action,), kwarg)
-
-# -- backwards compatibility code for 2.2 ---
-
-try:
-    from itertools import chain as iterchain
-except ImportError:
-    def iterchain(*iterables):
-        for it in iterables:
-            for element in it:
-                yield element
 
 __all__ = ["MultiError", "LoggedErrors", 'WaitError', 'JanitorError', 'DirtyReactorWarning',
            'DirtyReactorError', 'PendingTimedCallsError', 'WaitIsNotReentrantError',

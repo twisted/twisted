@@ -6,11 +6,9 @@
 # Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
 
 import types, os, os.path as osp
-from cStringIO import StringIO
 
 from twisted.trial import itrial, reporter
-from twisted.python import util as tputil, failure, reflect
-from twisted.internet import defer
+from twisted.python import reflect
 
 import zope.interface as zi
 

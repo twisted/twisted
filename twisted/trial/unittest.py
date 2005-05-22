@@ -358,12 +358,11 @@ L{twisted.trial.itrial}.
 # system imports
 import os, errno, warnings
 
-from twisted.internet import defer
-from twisted.trial.util import deferredResult, deferredError, wait
 from twisted.trial import itrial
 
 # get assert* methods, fail* methods, FailTest and SkipTest
 from twisted.trial.assertions import *
+from twisted.trial.util import deferredResult, deferredError, wait
 
 import zope.interface as zi
 
@@ -506,3 +505,6 @@ class TestCase(object):
         for i in xrange(timesOrSeconds):
             reactor.iterate()
 
+__all__ = [
+    'TestCase', 'deferredResult', 'deferredError', 'wait'
+    ]

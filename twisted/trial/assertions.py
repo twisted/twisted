@@ -8,7 +8,6 @@ The easiest way to use these functions is to do the following from your tests:
 from twisted.trial.assertions import *
 """
 
-import twisted.python.util
 from twisted.python import failure
 import sys
 

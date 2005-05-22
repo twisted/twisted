@@ -56,8 +56,8 @@
 from __future__ import generators
 
 
-import os, glob, types, warnings, time, sys, cPickle as pickle, signal, inspect
-import os.path as osp, fnmatch, random
+import os, glob, types, warnings, time, sys, cPickle as pickle, inspect
+import fnmatch, random
 from os.path import join as opj
 
 from twisted.internet import defer, interfaces
@@ -65,7 +65,7 @@ from twisted.python import components, reflect, log, failure
 from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
-     ERROR, UNEXPECTED_SUCCESS, SUCCESS, DOUBLE_SEPARATOR, WORDS
+     ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
 
 
@@ -749,7 +749,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
         # define a Todo object that will allow for greater
         # flexibility/complexity.
 
-        for f in util.iterchain(self.failures, self.errors):
+        for f in self.failures + self.errors:
             if not itrial.ITodo(self.todo).isExpected(f):
                 return ERROR
         return EXPECTED_FAILURE
