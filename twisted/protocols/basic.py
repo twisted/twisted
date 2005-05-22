@@ -167,8 +167,24 @@ class LineOnlyReceiver(protocol.Protocol):
         return error.ConnectionLost('Line length exceeded')
     
 
+class _PauseableMixin:
+    paused = False
 
-class LineReceiver(protocol.Protocol):
+    def pauseProducing(self):
+        self.paused = True
+        self.transport.pauseProducing()
+
+    def resumeProducing(self):
+        self.paused = False
+        self.transport.resumeProducing()
+        self.dataReceived('')
+
+    def stopProducing(self):
+        self.paused = True
+        self.transport.stopProducing()
+
+
+class LineReceiver(protocol.Protocol, _PauseableMixin):
     """A protocol that receives lines and/or raw data, depending on mode.
     
     In line mode, each line that's received becomes a callback to
@@ -188,7 +204,6 @@ class LineReceiver(protocol.Protocol):
     __buffer = ''
     delimiter = '\r\n'
     MAX_LENGTH = 16384
-    paused = False
     
     def clearLineBuffer(self):
         """Clear buffered data."""
@@ -279,21 +294,8 @@ class LineReceiver(protocol.Protocol):
         """
         return self.transport.loseConnection()
 
-    def pauseProducing(self):
-        self.paused = True
-        self.transport.pauseProducing()
 
-    def resumeProducing(self):
-        self.paused = False
-        self.dataReceived('')
-        self.transport.resumeProducing()
-
-    def stopProducing(self):
-        self.paused = True
-        self.transport.stopProducing()
-
-
-class Int32StringReceiver(protocol.Protocol):
+class Int32StringReceiver(protocol.Protocol, _PauseableMixin):
     """A receiver for int32-prefixed strings.
 
     An int32 string is a string prefixed by 4 bytes, the 32-bit length of
@@ -314,7 +316,7 @@ class Int32StringReceiver(protocol.Protocol):
         """Convert int32 prefixed strings into calls to stringReceived.
         """
         self.recvd = self.recvd + recd
-        while len(self.recvd) > 3:
+        while len(self.recvd) > 3 and not self.paused:
             length ,= struct.unpack("!i",self.recvd[:4])
             if length > self.MAX_LENGTH:
                 self.transport.loseConnection()
@@ -331,7 +333,7 @@ class Int32StringReceiver(protocol.Protocol):
         self.transport.write(struct.pack("!i",len(data))+data)
 
 
-class Int16StringReceiver(protocol.Protocol):
+class Int16StringReceiver(protocol.Protocol, _PauseableMixin):
     """A receiver for int16-prefixed strings.
 
     An int16 string is a string prefixed by 2 bytes, the 16-bit length of
@@ -351,7 +353,7 @@ class Int16StringReceiver(protocol.Protocol):
         """Convert int16 prefixed strings into calls to stringReceived.
         """
         self.recvd = self.recvd + recd
-        while len(self.recvd) > 1:
+        while len(self.recvd) > 1 and not self.paused:
             length = (ord(self.recvd[0]) * 256) + ord(self.recvd[1])
             if len(self.recvd) < length+2:
                 break

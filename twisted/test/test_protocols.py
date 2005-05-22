@@ -298,6 +298,83 @@ class Int32TestCase(unittest.TestCase, LPTestCaseMixin):
                 r.dataReceived(c)
         self.assertEquals(r.received, self.strings)
 
+
+class OnlyProducerTransport(object):
+    # Transport which isn't really a transport, just looks like one to
+    # someone not looking very hard.
+
+    paused = False
+    disconnecting = False
+
+    def __init__(self):
+        self.data = []
+
+    def pauseProducing(self):
+        self.paused = True
+
+    def resumeProducing(self):
+        self.paused = False
+
+    def write(self, bytes):
+        self.data.append(bytes)
+
+
+class ConsumingProtocol(basic.LineReceiver):
+    # Protocol that really, really doesn't want any more bytes.
+
+    def lineReceived(self, line):
+        self.transport.write(line)
+        self.pauseProducing()
+
+
+class ProducerTestCase(unittest.TestCase):
+    def testPauseResume(self):
+        p = ConsumingProtocol()
+        t = OnlyProducerTransport()
+        p.makeConnection(t)
+
+        p.dataReceived('hello, ')
+        self.failIf(t.data)
+        self.failIf(t.paused)
+        self.failIf(p.paused)
+
+        p.dataReceived('world\r\n')
+
+        self.assertEquals(t.data, ['hello, world'])
+        self.failUnless(t.paused)
+        self.failUnless(p.paused)
+
+        p.resumeProducing()
+
+        self.failIf(t.paused)
+        self.failIf(p.paused)
+
+        p.dataReceived('hello\r\nworld\r\n')
+
+        self.assertEquals(t.data, ['hello, world', 'hello'])
+        self.failUnless(t.paused)
+        self.failUnless(p.paused)
+
+        p.resumeProducing()
+        p.dataReceived('goodbye\r\n')
+
+        self.assertEquals(t.data, ['hello, world', 'hello', 'world'])
+        self.failUnless(t.paused)
+        self.failUnless(p.paused)
+
+        p.resumeProducing()
+
+        self.assertEquals(t.data, ['hello, world', 'hello', 'world', 'goodbye'])
+        self.failUnless(t.paused)
+        self.failUnless(p.paused)
+
+        p.resumeProducing()
+
+        self.assertEquals(t.data, ['hello, world', 'hello', 'world', 'goodbye'])
+        self.failIf(t.paused)
+        self.failIf(p.paused)
+
+
 class Portforwarding(unittest.TestCase):
     def testPortforward(self):
         serverProtocol = wire.Echo()
