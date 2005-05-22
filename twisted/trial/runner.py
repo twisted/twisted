@@ -410,12 +410,6 @@ def _runWithWarningFilters(filterlist, f, *a, **kw):
     try:
         if filterlist is not None:
             for args, kwargs in filterlist:
-                # these two idiot variables are here to make the line < 80wide
-                err1 = "first element must be a sequence"
-                err2 = "second element must be a dict"
-                assert (isinstance(args, types.TupleType) or 
-                        isinstance(args, types.ListType)), err1
-                assert isinstance(kwargs, types.DictType), err2
                 warnings.filterwarnings(*args, **kwargs)
         return f(*a, **kw)
     finally:
@@ -783,7 +777,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
 
     def _eb(self, f):
         log.msg(f.printTraceback())
-        if isinstance(f.value, util.DirtyReactorWarning):
+        if f.check(util.DirtyReactorWarning):
             # This will eventually become an error, but for now
             # we delegate the responsibility of warning the user
             # to the reporter so that we can test for this
