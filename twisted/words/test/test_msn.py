@@ -262,16 +262,21 @@ class MessageHandlingTests(unittest.TestCase):
         self.client.checkMessage(m)
         self.failUnless((self.client.state == 'TYPING'), msg='Failed to detect typing notification')
 
-    def testFileInvitation(self):
+    def testFileInvitation(self, lazyClient=False):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgsinvite; charset=UTF-8')
         m.message += 'Application-Name: File Transfer\r\n'
+        if not lazyClient:
+            m.message += 'Application-GUID: {5D3E02AB-6190-11d3-BBBB-00C04F795683}\r\n'
         m.message += 'Invitation-Command: Invite\r\n'
         m.message += 'Invitation-Cookie: 1234\r\n'
         m.message += 'Application-File: foobar.ext\r\n'
         m.message += 'Application-FileSize: 31337\r\n\r\n'
         self.client.checkMessage(m)
         self.failUnless((self.client.state == 'INVITATION'), msg='Failed to detect file transfer invitation')
+
+    def testFileInvitationMissingGUID(self):
+        return self.testFileInvitation(True)
 
     def testFileResponse(self):
         d = Deferred()

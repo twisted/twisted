@@ -1727,7 +1727,16 @@ class SwitchboardClient(MSNEventBase):
 
     def _checkFileInvitation(self, message, info):
         """ helper method for checkMessage """
-        if not info.get('Application-Name', '').lower() == 'file transfer':
+        guid = info.get('Application-GUID', '').lower()
+        name = info.get('Application-Name', '').lower()
+
+        # Both fields are required, but we'll let some lazy clients get away
+        # with only sending a name, if it is easy for us to recognize the
+        # name (the name is localized, so this check might fail for lazy,
+        # non-english clients, but I'm not about to include "file transfer"
+        # in 80 different languages here).
+
+        if name != "file transfer" and guid != classNameToGUID["file transfer"]:
             return 0
         try:
             cookie = int(info['Invitation-Cookie'])
@@ -1994,7 +2003,7 @@ class SwitchboardClient(MSNEventBase):
         m = MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgsinvite; charset=UTF-8')
         m.message += 'Application-Name: File Transfer\r\n'
-        m.message += 'Application-GUID: {5D3E02AB-6190-11d3-BBBB-00C04F795683}\r\n'
+        m.message += 'Application-GUID: %s\r\n' % (classNameToGUID["file transfer"],)
         m.message += 'Invitation-Command: INVITE\r\n'
         m.message += 'Invitation-Cookie: %s\r\n' % str(cookie)
         m.message += 'Application-File: %s\r\n' % fileName
@@ -2416,3 +2425,13 @@ for id,code in listIDToCode.items():
     listCodeToID[code] = id
 
 del id, code
+
+# Mapping of class GUIDs to simple english names
+guidToClassName = {
+    "{5D3E02AB-6190-11d3-BBBB-00C04F795683}": "file transfer",
+    }
+
+# Reverse of the above
+classNameToGUID = {}
+for guid, name in guidToClassName.iteritems():
+    classNameToGUID[name] = guid
