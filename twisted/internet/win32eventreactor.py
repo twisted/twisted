@@ -299,18 +299,13 @@ class Process(abstract.FileDescriptor):
         self.protocol.makeConnection(self)
 
         self.reactor.addEvent(self.hProcess, self, 'inConnectionLost')
-        t=threading.Thread(target=self.doWrite,
-                           name="win32er.Process.doWrite pid=%d" % dwPid)
-        t.setDaemon(True)
-        t.start()
-        t=threading.Thread(target=self.doReadOut,
-                           name="win32er.Process.doReadOut pid=%d" % dwPid)
-        t.setDaemon(True)
-        t.start()
-        threading.Thread(target=self.doReadErr,
-                         name="win32er.Process.doReadErr pid=%d" % dwPid)
-        t.setDaemon(True)
-        t.start()
+
+        for meth in self.doWrite, self.doReadOut, self.doReadErr:
+            t = threading.Thread(
+                target=meth,
+                name="win32er.Process.%s pid=%d" % (meth.__name__, dwPid))
+            t.setDaemon(True)
+            t.start()
 
     def signalProcess(self, signalID):
         if signalID in ("INT", "TERM", "KILL"):
