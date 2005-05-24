@@ -61,7 +61,7 @@ import win32gui
 # Twisted imports
 from twisted.internet import abstract, posixbase, main, error
 from twisted.python import log, threadable, failure, components
-from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
+from twisted.internet.interfaces import IReactorFDSet, IReactorProcess, IProcessTransport
 
 # System imports
 import os
@@ -238,6 +238,7 @@ class Process(abstract.FileDescriptor):
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 
     """
+    implements(IProcessTransport)
 
     buffer = ''
 
@@ -425,6 +426,7 @@ class Process(abstract.FileDescriptor):
                 self.reactor.callFromThread(self.errConnectionLost)
                 return
 
+components.backwardsCompatImplements(Process)
 
 
 __all__ = ["Win32Reactor", "install"]
