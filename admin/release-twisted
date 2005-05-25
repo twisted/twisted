@@ -40,6 +40,19 @@ repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 # 4. Can't generate a sumo with a new release of package X with
 #    non-trunk versions of subprojects. big issue here.
 
+# 4.: How do we fix? Perhaps we can use versions from --xxx-version
+# and add a check to see if those versions exist in SVN yet? argg,
+# except I don't think there *is* a way to really check that in our
+# repo.
+
+# OK I know this sucks but HOW ABOUT THIS When making a SUMO ball, you
+# say "give me project X from dir A and project Y from dir B!  Damn
+# but that will be a very verbose way of doing things. Well, maybe not
+# really in practice, if we map it somehow like
+
+# {A: ['core'],
+#  B: ['conch', 'words', 'etc']}
+
 # Parameterising the release-tag would fix #1 and #3.
 
 class Options(usage.Options):
@@ -234,6 +247,14 @@ def makeBallSumo(opts):
     ver = time.strftime('%Y-%m-%d')
     basever = opts['core-version']
     tdir = "TwistedSumo-%s" % (ver,)
+    # # # OMFG this is going to be horrible but we need to pull in
+    # # # subprojects from various SVN branches here. It needs to know
+    # # # how to pull all the relevant files from each individual
+    # # # project. i.e., get words from release-2.0.0 means
+    # # # r-2/twisted/words *AND*
+    # # # r-2/twisted/plugins/twisted_words.py. I will probably have
+    # # # to parse setup.py of that project to figure out what plugins
+    # # # to include. !!!!!!!!!!
     if not os.path.exists('Twisted.exp'):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
     zig = glob.glob('ZopeInterface-*.tgz')
