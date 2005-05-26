@@ -36,11 +36,25 @@ def fileFromTemplate(filenametmpl, filenameout, dictionary):
     outf.write(out)
     outf.close()
 
+def lookupInnoHome():
+    """Try either version 5 or version 4"""
+    fallback = r'C:\Program Files\Inno Setup 5'
+    regkey = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+    _four = 'Inno Setup 4_is1'
+    _five = 'Inno Setup 5_is1'
+    _innohome = getValueFromReg(r'%s\%s' % (regkey, _five),
+                                "Inno Setup: App Path",
+                                None)
+    if _innohome is None:
+        _innohome = getValueFromReg(r'%s\%s' % (regkey, _four),
+                                    "Inno Setup: App Path",
+                                    None)
+    if _innohome is None: 
+        return fallback
+    else:
+        return _innohome
 
-innohome = getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 4_is1',
-                          "Inno Setup: App Path",
-                          r'C:\Program Files\Inno Setup 4')
-
+innohome = lookupInnoHome()
 
 pathdb = dict(innohome=innohome,
               iscc=os.path.join(innohome, "ISCC.exe"),
