@@ -1,0 +1,24 @@
+1. Wait for an official release of some kind
+2. Download the Sumo Tarball of that release.
+3. Unpack this tarball.
+4. In the unpacked root directory,
+    svn co svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk/win32
+5. aap -f win32/build.aap
+6. Rename twisted.pth -> twisted.pth_ so twisted is not in the python path
+7. Install dist/Twisted*2.3*.exe
+8. Run Twisted Command Prompt
+9. Run mktap, twistd with no args. Observe no errors.
+10. Repeat steps 7, 8, 9 for dist/Twisted*2.4*.exe
+11. Rename twisted.pth_ -> twisted.pth
+12. Upload dist/*.exe to twistedmatrix.com:/twisted/Releases/Twisted/2.0
+13. Make sure uploaded files are mode 664, group cvs-twisted
+14. Check out up-to-date WebSite from 
+    svn+ssh://svn.twistedmatrix.com/svn/WebSite/trunk
+15. In WebSite, make edits to:
+    twistedmatrix.com/projects/data/core.proj (core .exe and sumo .exe)
+    You need to update:
+    a) Versions (2 places in each exe)
+    b) md5sums (1 place each exe)
+    c) Release dates (1 place each exe)
+17. Commit WebSite
+18. Repeat at step 1.
