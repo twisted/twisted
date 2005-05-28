@@ -5265,3 +5265,10 @@ Kragen Sitaker: but even more inefficient!
 %
 <exarkun> I bet francis bacon would go well with orange juice waffles
 %
+<dreid> heh ... worst name for an interface ever ... ITem
+<warner> oh, I don't know, I bet INterface would be worse
+<warner> implements(INYerFace)
+<dreid> IStabber(dreid).stab('warner')
+<warner> registerAdapter(lambda victim: dreid, type('warner'), IStabee)
+<warner> heh. the PEP246 equivalent of "nyah nyah, no tagbacks!"
+%
