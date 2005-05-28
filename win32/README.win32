@@ -27,6 +27,10 @@ This method is only necessary if you are trying to install Twisted
 from e.g. the Subversion repository, and you don't want to acquire all the
 tools necessary to do the Official build.
 
+* Install either Python 2.3 or Python 2.4
+
+* Install ZopeInterface 3.0.1 or later for Python
+
 * With MSVC ***
 Without Cygwin installed, you need MSVC installed for the cl.exe
 compiler, which is the default on windows.  Just issue the command:
@@ -53,6 +57,13 @@ OFFICIAL
 The Official Twisted is built with native Python 2.3 (latest), not the
 Cygwin version of Python, however it is built with the help of Cygwin
 packages.
+
+* Python 2.3 AND Python 2.4 ***
+You need both.
+
+
+* ZopeInterface 3.0.1
+Download and install it for both versions of Python.
 
 
 * A-A-P ***
@@ -81,7 +92,7 @@ DO NOT INSTALL CYGWIN PYTHON!
 * Inno Setup ***
 This creates nice self-installers with uninstall functionality:
 http://www.jrsoftware.org/isinfo.php
-You need version 4.0.8 or above.  (4.2.2 or later preferred.)
+You need version 4.0.8 or above.  (5.0.8 or later preferred.)
 
 
 * Bootstrap Twisted ***
@@ -99,3 +110,16 @@ Now run the following:
 $ aap.bat -f win32/build.aap
 
 The four distributable files will be in dist/ when this is done.
+
+
+
+TROUBLESHOOTING
+---------------
+If you have trouble building the official build, try the following:
+1. Remove "C:\winnt\aap.bat" or "C:\windows\aap.bat" which will have incorrect
+contents.
+2. Make sure that your system PATH includes C:\Program Files\AAP\Exec
+3. Make sure your cygwin .bash_profile isn't clobbering this system PATH
+4. Make sure you don't have Cygwin's Python package installed. 
+5. Make sure both Python 2.3 and Python 2.4 are installed.
+6. If you're doing an official release, see maintainer-notes.txt.
