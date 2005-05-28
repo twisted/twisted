@@ -85,7 +85,7 @@ class Response(object):
     
     def __init__(self, code=None, headers=None, stream=None):
         if code is not None:
-            self.code=code
+            self.code=int(code)
         if headers is not None:
             if isinstance(headers, dict):
                 headers = http_headers.Headers(headers)
@@ -393,7 +393,7 @@ class HTTPChannelRequest:
         if len(parts) != 3:
             if len(parts) == 1:
                 parts.append('/')
-            if len(parts) == 2:
+            if len(parts) == 2 and parts[1][0] == '/':
                 parts.append('HTTP/0.9')
             else:
                 self._abortWithError(responsecode.BAD_REQUEST, 'Bad request line: %s' % initialLine)

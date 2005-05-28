@@ -17,16 +17,24 @@ class IResource(Interface):
     def locateChild(self, ctx, segments):
         """Locate another object which can be adapted to IResource.
 
-        @return: A 2-tuple of (resource, remaining-path-segments).
-                 Optionally, remaining-path-segments can be
-                 L{server.StopTraversal}, which instructs the server
-                 to stop looking for children and leave the rest of
-                 the path string alone.
+        @return: A 2-tuple of (resource, remaining-path-segments),
+                 or a deferred which will fire the above.
+                 
+                 Causes the object publishing machinery to continue on
+                 with specified resource and segments, calling the
+                 appropriate method on the specified resource.
+                 
+                 If you return (self, L{server.StopTraversal}), this
+                 instructs web2 to immediately stop the lookup stage,
+                 and switch to the rendering stage, leaving the
+                 remaining path alone for your render function to
+                 handle.
         """
 
     def renderHTTP(self, ctx):
-        """Return an IResponse or a deferred which will fire an IResponse. This response
-        will be written to the web browser which initiated the request.
+        """Return an IResponse or a deferred which will fire an
+        IResponse. This response will be written to the web browser
+        which initiated the request.
         """
 
 # Is there a better way to do this than this funky extra class?
