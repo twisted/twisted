@@ -82,6 +82,7 @@ class HTTPPageGetter(http.HTTPClient):
         l = self.headers.get('location')
         if not l:
             self.handleStatusDefault()
+            return
         url = l[0]
         if self.followRedirect:
             scheme, host, port, path = \
