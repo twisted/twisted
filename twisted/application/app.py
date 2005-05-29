@@ -203,7 +203,7 @@ class ServerOptions(usage.Options):
                      ['file','f','twistd.tap',
                       "read the given .tap file"],
                      ['python','y', None,
-                      "read an application from within a Python file"],
+                      "read an application from within a Python file (implies -o)"],
                      ['xml', 'x', None,
                       "Read an application from a .tax file "
                       "(Marmalade format)."],
@@ -260,7 +260,10 @@ class ServerOptions(usage.Options):
     def parseOptions(self, options=None):
         usage.Options.parseOptions(self, options or sys.argv[1:] or ["--help"])
 
-
+    def postOptions(self):
+        if self['python']:
+            self['no_save'] = True
+        
 def run(runApp, ServerOptions):
     config = ServerOptions()
     try:

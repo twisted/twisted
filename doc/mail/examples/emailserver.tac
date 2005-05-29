@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 # You can run this module directly with:
-#    twistd -noy emailserver.tac
+#    twistd -ny emailserver.tac
 
 
 """

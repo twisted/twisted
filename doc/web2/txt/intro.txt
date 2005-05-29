@@ -42,7 +42,7 @@ Simple application
   s = strports.service('tcp:8080', http.HTTPFactory(site))
   s.setServiceParent(application)
 
-Save this program as ``example1.py``, and then run it via ``twistd -noy example1.py``. ``twistd`` is the Twisted runner; it knows how to execute applications by looking for the magic ``application`` variable declared at top-level. You can also run your server daemonized, via ``twistd -oy example1.py``. You can then access your server via the url "http://localhost:8080/". For more deployment options, see the deployment_ chapter.
+Save this program as ``example1.py``, and then run it via ``twistd -ny example1.py``. ``twistd`` is the Twisted runner; it knows how to execute applications by looking for the magic ``application`` variable declared at top-level. You can also run your server daemonized, via ``twistd -oy example1.py``. You can then access your server via the url "http://localhost:8080/". For more deployment options, see the deployment_ chapter.
 
 What this is doing
 ~~~~~~~~~~~~~~~~~~

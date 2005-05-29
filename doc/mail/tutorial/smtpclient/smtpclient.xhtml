@@ -64,13 +64,13 @@ href="smtpclient-1.tac">smtpclient-1.tac</a> using the
 <code>twistd</code> command line:</p>
 
 <blockquote><code>
-twistd -noy smtpclient-1.tac
+twistd -ny smtpclient-1.tac
 </code></blockquote>
 
 <p>we are rewarded with the following output:</p>
 
 <blockquote><pre class="shell">
-exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-1.tac
+exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-1.tac
 2005/03/27 18:31 EST [-] Log opened.
 2005/03/27 18:31 EST [-] twistd 2.0.0 (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 18:31 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -144,7 +144,7 @@ connection with the protocol instance and gets out of the way.</p>
 disappointing:</p>
 
 <blockquote><code><pre class="shell">
-exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-2.tac
+exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-2.tac
 2005/03/27 18:55 EST [-] Log opened.
 2005/03/27 18:55 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 18:55 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -204,7 +204,7 @@ href="smtpclient-3.tac">smtpclient-3.tac</a> and see what this change
 gets us:</p>
 
 <blockquote><code><pre class="shell">
-exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-3.tac
+exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-3.tac
 2005/03/27 19:10 EST [-] Log opened.
 2005/03/27 19:10 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 19:10 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -266,7 +266,7 @@ smtpClientFactory.protocol = protocol.Protocol
 again traceback free:</p>
 
 <blockquote><code><pre class="shell">
-exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-4.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-4.tac
 2005/03/27 19:29 EST [-] Log opened.
 2005/03/27 19:29 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 19:29 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -329,7 +329,7 @@ behaves as an SMTP client.  What happens when we try to run this
 version?</p>
 
 <blockquote><code><pre class="shell">
-exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-5.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-5.tac
 2005/03/27 19:42 EST [-] Log opened.
 2005/03/27 19:42 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 19:42 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -411,7 +411,7 @@ smtpClientFactory = SMTPClientFactory()
 <strong>still</strong> isn't quite traceback-free.</p>
 
 <blockquote><code><pre class="shell">
-exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-6.tac
 2005/03/29 21:17 EST [-] Log opened.
 2005/03/29 21:17 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/29 21:17 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -585,7 +585,7 @@ version of the example, we see that the program actually terminates
 after sending the message, without user-intervention:</p>
 
 <blockquote><code><pre class="shell">
-exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-8.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-8.tac
 2005/04/01 19:52 EST [-] Log opened.
 2005/04/01 19:52 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/04/01 19:52 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
