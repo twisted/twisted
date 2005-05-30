@@ -7,7 +7,8 @@ Deploying as a standalone HTTP/HTTPS server is by far the simplest. Unless you h
 
 Standalone HTTP
 ---------------
-For completeness, here is a simple standalone HTTP server again:
+For completeness, here is a simple standalone HTTP server again::
+
   from twisted.web2 import server, http, static
   
   # For example, serve the /tmp directory
@@ -21,7 +22,7 @@ For completeness, here is a simple standalone HTTP server again:
   s.setServiceParent(application)
 
 HTTP behind Apache2
-------------------
+-------------------
 If you use HTTP proxying, you must inform twisted.web2 of the real URL it is being accessed by, or else any URLs it generates will be incorrect. You can do this via the AutoVHostURIRewrite resource when using apache2 as the main server.
 
 On the apache side, configure as follows. Apache automatically sends the original host in the X-Forwarded-Host header, and the original remote IP address in the X-Forwarded-For header. You must additionally send along the original path, and the original scheme.
@@ -43,6 +44,7 @@ Or, for serving an entire HTTPS virtual host::
   </VirtualHost>
 
 Now, on the twisted.web2 side::
+
   from twisted.web2 import server, http, static, vhost
   
   # For example, serve the /tmp directory
@@ -132,6 +134,7 @@ SCGI is an alternative to HTTP proxying. SCGI should work instead of HTTP proxyi
 FIXME:Someone who has installed mod_scgi in apache should write a bit on it.
 
 Configure Twisted as follows::
+
   # For example, serve the /tmp directory
   toplevel = static.File("/tmp")
   site = server.Site(toplevel)

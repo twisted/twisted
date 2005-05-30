@@ -9,8 +9,8 @@ dl p.first {
 
 body {
   background-color: white;
-  color: #222;
   font-family: "Book Antiqua", Georgia, Palatino, Times, "Times New Roman", serif;
+  font: normal 13px verdana,arial,'Bitstream Vera Sans',helvetica,sans-serif;
   line-height: 145%;
 }
 
