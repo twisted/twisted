@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_lockfile -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2005 Divmod, Inc.
 # See LICENSE for details.
 
 
@@ -8,118 +8,137 @@
 Currently in a state of flux, API is unstable.
 """
 
-from twisted.internet import defer
-import os, errno, time
+__metaclass__ = type
 
-def createLock(lockedFile, schedule, retryCount = 10, retryTime = 5, usePID = 0):
-    filename = lockedFile + ".lock"
-    d = defer.Deferred()
-    _tryCreateLock(d, filename, retryCount, 0, retryTime, usePID, schedule)
-    return d
+import errno, os
 
-class DidNotGetLock(Exception): 
-    def __init__(self, reason = ''):
-        self.reason = reason
-        Exception.__init__(self)
-        
-    def __repr__(self):
-        return "DidNotGetLock(%s)" % self.reason
+from time import time as _uniquefloat
 
-    __str__ = __repr__
+def unique():
+    return str(long(_uniquefloat() * 1000))
 
-class LockFile:
-
-    def __init__(self, filename, writePID):
-        from twisted.internet import task
-        pid = os.getpid()
-        t = (time.time()%1)*10
-        host = os.uname()[1]
-        uniq = os.path.join(os.path.dirname(filename), 
-                            ".lk%05d%x%s" % (pid, t, host))
-        if writePID:
-            data = str(os.getpid())
-        else:
-            data = "a"
-        open(uniq,'w').write(data)
-        uniqStat = list(os.stat(uniq))
-        del uniqStat[3]
+try:
+    from os import symlink
+    from os import readlink
+    from os import remove as rmlink
+    from os import rename as mvlink
+except:
+    # XXX Implement an atomic thingamajig for win32
+    import shutil
+    def symlink(value, filename):
+        newlinkname = filename+"."+unique()+'.newlink'
+        newvalname = os.path.join(newlinkname,"symlink")
+        os.mkdir(newlinkname)
+        f = open(newvalname,'wb')
+        f.write(value)
+        f.flush()
+        f.close()
         try:
-            os.link(uniq, filename)
+            os.rename(newlinkname, filename)
+        except:
+            os.remove(newvalname)
+            os.rmdir(newlinkname)
+            raise
+
+    def readlink(filename):
+        return open(os.path.join(filename,'symlink'),'rb').read()
+
+    def rmlink(filename):
+        shutil.rmtree(filename)
+
+    def mvlink(src, dest):
+        try:
+            shutil.rmtree(dest)
         except:
             pass
-        fileStat = list(os.stat(filename))
-        del fileStat[3]
-        os.remove(uniq)
-        if fileStat != uniqStat:
-            raise DidNotGetLock('files are not the same')
-        self.filename = filename
-        self.writePID = writePID
-        self.touchLoop = task.LoopingCall(self.touch)
-        self.touchLoop.start(60)
+        os.rename(src,dest)
 
-    def touch(self):
+
+class FilesystemLock:
+    """A mutex.
+
+    This relies on the filesystem property that creating
+    a symlink is an atomic operation and that it will
+    fail if the symlink already exists.  Deleting the
+    symlink will release the lock.
+
+    @ivar name: The name of the file associated with this lock.
+    @ivar clean: Indicates whether this lock was released cleanly by its
+    last owner.  Only meaningful after C{lock} has been called and returns
+    True.
+    """
+
+    clean = None
+    locked = False
+
+    def __init__(self, name):
+        self.name = name
+
+    def lock(self):
+        """Acquire this lock.
+
+        @rtype: C{bool}
+        @return: True if the lock is acquired, false otherwise.
+
+        @raise: Any exception os.symlink() may raise, other than
+        EEXIST.
+        """
         try:
-            f = open(self.filename, 'w+', 0)
-            f.seek(0)
-            if self.writePID:
-                f.write(str(os.getpid()))
+            pid = readlink(self.name)
+        except (OSError, IOError), e:
+            if e.errno != errno.ENOENT:
+                raise
+            self.clean = True
+        else:
+            if not hasattr(os, 'kill'):
+                return False
+            try:
+                os.kill(int(pid), 0)
+            except (OSError, IOError), e:
+                if e.errno != errno.ESRCH:
+                    raise
+                rmlink(self.name)
+                self.clean = False
             else:
-                f.write("a")
-            f.close() # keep the lock fresh
-        except (OSError, IOError):
-            pass
+                return False
 
-    def remove(self):
-        self.touchLoop.stop()
-        os.remove(self.filename)
-        
+        symlink(str(os.getpid()), self.name)
+        self.locked = True
+        return True
 
-def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID, schedule):
-    if retryTime > 60: retryTime = 60
+    def unlock(self):
+        """Release this lock.
+
+        This deletes the directory with the given name.
+
+        @raise: Any exception os.readlink() may raise, or
+        ValueError if the lock is not owned by this process.
+        """
+        pid = readlink(self.name)
+        if int(pid) != os.getpid():
+            raise ValueError("Lock %r not owned by this process" % (self.name,))
+        rmlink(self.name)
+        self.locked = False
+
+
+def isLocked(name):
+    """Determine if the lock of the given name is held or not.
+
+    @type name: C{str}
+    @param name: The filesystem path to the lock to test
+
+    @rtype: C{bool}
+    @return: True if the lock is held, False otherwise.
+    """
+    l = FilesystemLock(name)
+    result = None
     try:
-        l = LockFile(filename, usePID)
-    except DidNotGetLock:
-        s = os.stat(filename)
-        if (time.time() - s.st_mtime) > 300: # older than 5 minutes
-            os.remove(filename)
-            return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID, schedule)
-        if usePID:
-            try:
-                pid = int(open(filename).read())
-            except ValueError:
-                os.remove(filename)
-                return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID, schedule)
-            try:
-                os.kill(pid, 0)
-            except OSError, why:
-                if why[0] == errno.ESRCH:
-                    os.remove(filename)
-                    return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID, schedule)
-    else:
-        return d.callback(l)
-    retryCurrent +=1 
-    if retryCount == retryCurrent:
-        return d.errback(DidNotGetLock('too many retries'))
+        result = l.lock()
+    finally:
+        if result:
+            l.unlock()
+    return not result
 
-    schedule(retryTime, _tryCreateLock, d, filename, retryCount, retryCurrent, retryTime + 5, usePID, schedule)
 
-def checkLock(lockedFile, usePID=0):
-    filename = lockedFile + ".lock"
-    if not os.path.exists(filename):
-        return 0
-    s = os.stat(filename)
-    if (time.time() - s.st_mtime) > 300: # older than 5 minutes
-        return 0
-    if usePID:
-        try:
-            pid = int(open(filename).read())
-        except ValueError:
-            return 0
-        try:
-            os.kill(pid, 0)
-        except OSError, why:
-            if why[0] == errno.ESRCH: # dead pid
-                return 0
-    return 1
+__all__ = ['FilesystemLock', 'isLocked']
 
-__all__ = ["createLock", "checkLock"]

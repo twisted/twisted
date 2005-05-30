@@ -3,12 +3,13 @@
 # See LICENSE for details.
 
 
-from twisted.internet import interfaces, reactor, protocol, error, address, defer
+import stat, os, sys
+
+from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
 from twisted.python import components, lockfile, failure
 from twisted.protocols import loopback
-from twisted.trial import unittest
+from twisted.trial import unittest, assertions
 from twisted.trial.util import spinWhile, spinUntil, wait
-import stat, os
 
 
 class MyProtocol(protocol.Protocol):
@@ -30,6 +31,7 @@ class TestClientFactory(protocol.ClientFactory):
         self.testcase = testcase
         self.name = name
 
+
     def buildProtocol(self, addr):
         self.testcase.assertEquals(address.UNIXAddress(self.name), addr)
         self.protocol = MyProtocol()
@@ -49,6 +51,14 @@ class Factory(protocol.Factory):
         self.testcase.assertEquals(None, addr)
         self.protocol = p = MyProtocol()
         return p
+
+
+class FailedConnectionClientFactory(protocol.ClientFactory):
+    def __init__(self, onFail):
+        self.onFail = onFail
+
+    def clientConnectionFailed(self, connector, reason):
+        self.onFail.errback(reason)
 
 
 class PortCleanerUpper(unittest.TestCase):
@@ -94,6 +104,7 @@ class UnixSocketTestCase(PortCleanerUpper):
 
         self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
 
+
     def testMode(self):
         filename = self.mktemp()
         f = Factory(self, filename)
@@ -103,11 +114,12 @@ class UnixSocketTestCase(PortCleanerUpper):
         c = reactor.connectUNIX(filename, tcf)
         self._addPorts(l, c.transport)
 
+
     def testPIDFile(self):
         filename = self.mktemp()
         f = Factory(self, filename)
         l = reactor.listenUNIX(filename, f, mode = 0600, wantPID=1)
-        self.assert_(lockfile.checkLock(filename))
+        self.failUnless(lockfile.isLocked(filename + ".lock"))
         tcf = TestClientFactory(self, filename)
         c = reactor.connectUNIX(filename, tcf, checkPID=1)
 
@@ -117,7 +129,51 @@ class UnixSocketTestCase(PortCleanerUpper):
         self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
         self.cleanPorts(*self.ports)
 
-        self.assert_(not lockfile.checkLock(filename))
+        self.failIf(lockfile.isLocked(filename + ".lock"))
+
+
+    def testSocketLocking(self):
+        filename = self.mktemp()
+        f = Factory(self, filename)
+        l = reactor.listenUNIX(filename, f, wantPID=True)
+
+        self.assertRaises(
+            error.CannotListenError,
+            reactor.listenUNIX, filename, f, wantPID=True)
+
+        def stoppedListening(ign):
+            l = reactor.listenUNIX(filename, f, wantPID=True)
+            return l.stopListening()
+
+        return l.stopListening().addCallback(stoppedListening)
+
+
+    def _uncleanSocketTest(self, callback):
+        self.filename = os.path.abspath(self.mktemp())
+        source = ("from twisted.internet import protocol, reactor\n"
+                  "reactor.listenUNIX(%r, protocol.ServerFactory(), wantPID=True)\n") % (self.filename,)
+        env = {'PYTHONPATH': os.pathsep.join(sys.path)}
+
+        d = utils.getProcessOutput(sys.executable, ("-c", source), env=env)
+        d.addCallback(callback)
+        return d
+
+
+    def testUncleanServerSocketLocking(self):
+        def ranStupidChild(ign):
+            # If this next call succeeds, our lock handling is correct.
+            p = reactor.listenUNIX(self.filename, Factory(self, self.filename), wantPID=True)
+            return p.stopListening()
+        return self._uncleanSocketTest(ranStupidChild)
+
+
+    def testUncleanSocketLockingFromThePerspectiveOfAClientConnectingToTheDeadServerSocket(self):
+        def ranStupidChild(ign):
+            d = defer.Deferred()
+            f = FailedConnectionClientFactory(d)
+            c = reactor.connectUNIX(self.filename, f, checkPID=True)
+            return assertions.assertFailure(d, error.BadFileError)
+        return self._uncleanSocketTest(ranStupidChild)
 
 
     def testRepr(self):

@@ -1,31 +1,49 @@
-from twisted.trial import unittest, util
+# Copyright (c) 2005 Divmod, Inc.
+# See LICENSE for details.
 
-import os
-if os.name == 'posix':
-    from twisted.internet import reactor
-    from twisted.python import lockfile
-    import os.path
+from twisted.trial import unittest
+from twisted.python import lockfile
 
-    class LockFileTest(unittest.TestCase):
+class LockingTestCase(unittest.TestCase):
+    def testBasics(self):
+        lockf = self.mktemp()
+        lock = lockfile.FilesystemLock(lockf)
+        self.failUnless(lock.lock())
+        self.failUnless(lock.clean)
+        lock.unlock()
+        self.failUnless(lock.lock())
+        self.failUnless(lock.clean)
+        lock.unlock()
 
-        def testCreate(self):
-            d = lockfile.createLock('test', reactor.callLater, usePID=1)
-            lf = util.wait(d)
-            self.assertEquals(lf.filename, "test.lock")
-            self.assert_(os.path.exists("test.lock"))
-            data = int(open("test.lock").read())
-            self.assertEquals(data, os.getpid())
-            self.assert_(lockfile.checkLock('test'))
-            lf.remove()
-            self.assert_(not os.path.exists("test.lock"))
-            self.assert_(not lockfile.checkLock('test'))
 
-        def testWaiting(self):
-            open("test2.lock","w").write('')
-            d = lockfile.createLock('test2', reactor.callLater, retryTime=2)
-            self.lockFile = []
-            d.addCallback(lambda x,s=self:s.lockFile.append(x))
-            reactor.callLater(0,lambda:os.remove("test2.lock"))
-            util.wait(d)
-            self.assert_(self.lockFile)
-            self.lockFile[0].remove()
+    def testProtection(self):
+        lockf = self.mktemp()
+        lock = lockfile.FilesystemLock(lockf)
+        self.failUnless(lock.lock())
+        self.failUnless(lock.clean)
+        self.failIf(lock.lock())
+        lock.unlock()
+
+
+    def testBigLoop(self):
+        lockf = self.mktemp()
+        lock = lockfile.FilesystemLock(lockf)
+        self.failUnless(lock.lock())
+        for i in xrange(500):
+            self.failIf(lock.lock())
+        lock.unlock()
+
+
+    def testIsLocked(self):
+        lockf = self.mktemp()
+        self.failIf(lockfile.isLocked(lockf))
+        lock = lockfile.FilesystemLock(lockf)
+        self.failUnless(lock.lock())
+        self.failUnless(lockfile.isLocked(lockf))
+        lock.unlock()
+        self.failIf(lockfile.isLocked(lockf))
+
+    # A multiprocess test would be good here, for the sake of
+    # completeness.  However, it is fairly safe to rely on the
+    # filesystem to provide the semantics we require.
+

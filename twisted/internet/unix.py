@@ -41,12 +41,12 @@ class Port(tcp.Port):
     socketType = socket.SOCK_STREAM
 
     transport = Server
+    lockFile = None
 
     def __init__(self, fileName, factory, backlog=50, mode=0666, reactor=None, wantPID = 0):
         tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
         self.mode = mode
         self.wantPID = wantPID
-        self.lockFile = None
 
     def __repr__(self):
         if hasattr(self, 'socket'):
@@ -66,20 +66,17 @@ class Port(tcp.Port):
         """
         log.msg("%s starting on %r" % (self.factory.__class__, repr(self.port)))
         if self.wantPID:
-            lf = []
-            error = []
-            #d = defer.Deferred()
-            d = lockfile.createLock(self.port, self.reactor.callLater, retryCount=1, usePID=1)
-            d.addCallback(lambda f,l=lf:l.append(f))
-            d.addErrback(lambda f,e=error:e.append(f))
-            #log.msg('calling lockfile')
-            #log.msg('lockfile returned')
-            log.msg(repr(error))
-            log.msg(repr(lf))
-            if error:
-                raise CannotListenError, (None, self.port, error[0].value)
+            self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
+            if not self.lockFile.lock():
+                raise CannotListenError, (None, self.port, "Cannot acquire lock")
             else:
-                self.lockFile = lf[0]
+                if not self.lockFile.clean:
+                    if stat.S_ISSOCK(os.stat(self.port).st_mode):
+                        try:
+                            os.remove(self.port)
+                        except:
+                            pass
+
         self.factory.doStart()
         try:
             skt = self.createInternetSocket()
@@ -100,10 +97,10 @@ class Port(tcp.Port):
             self.startReading()
 
     def connectionLost(self, reason):
-        tcp.Port.connectionLost(self, reason)
         os.unlink(self.port)
-        if self.lockFile:
-            self.lockFile.remove()
+        if self.lockFile is not None:
+            self.lockFile.unlock()
+        tcp.Port.connectionLost(self, reason)
 
     def getHost(self):
         """Returns a UNIXAddress.
@@ -121,8 +118,8 @@ class Client(tcp.BaseClient):
     def __init__(self, filename, connector, reactor=None, checkPID = 0):
         self.connector = connector
         self.realAddress = self.addr = filename
-        if checkPID and not lockfile.checkLock(filename):
-            self._finishInit(None, None, lockfile.DidNotGetLock(), reactor)
+        if checkPID and not lockfile.isLocked(filename + ".lock"):
+            self._finishInit(None, None, error.BadFileError(filename), reactor)
         self._finishInit(self.doConnect, self.createInternetSocket(),
                          None, reactor)
 
@@ -295,23 +292,3 @@ class ConnectedDatagramPort(DatagramPort):
         return address.UNIXAddress(self.remoteaddr)
 
 components.backwardsCompatImplements(ConnectedDatagramPort)
-
-
-def _checkPIDFile(pidname):
-    try:
-        pid = int(open(pidfile).read())
-    except ValueError:
-        log.msg('pid file %s contains non-numeric' % pidfile)
-        raise
-    else:
-        try:
-            os.kill(pid, 0)
-        except OSError, why:
-            if why[0] == errno.ESRCH:
-                # pid doesn't exist
-                log.msg('removing stale pidfile %s' % pidfile)
-                os.remove(pidfile)
-            else:
-                log.msg("can't check PID %i from file %s: %s" %
-                        (pid, pidfile, why[1]))
-            raise
