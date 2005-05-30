@@ -29,7 +29,7 @@ class TestClientFactory(protocol.ClientFactory):
     def __init__(self, testcase, name):
         self.testcase = testcase
         self.name = name
-    
+
     def buildProtocol(self, addr):
         self.testcase.assertEquals(address.UNIXAddress(self.name), addr)
         self.protocol = MyProtocol()
@@ -41,7 +41,7 @@ class Factory(protocol.Factory):
     def __init__(self, testcase, name):
         self.testcase = testcase
         self.name = name
-    
+
     def stopFactory(self):
         self.stopped = True
 
@@ -89,7 +89,7 @@ class UnixSocketTestCase(PortCleanerUpper):
         tcf = TestClientFactory(self, filename)
         c = reactor.connectUNIX(filename, tcf)
 
-        spinUntil(lambda :getattr(f.protocol, 'made', None) and 
+        spinUntil(lambda :getattr(f.protocol, 'made', None) and
                           getattr(tcf.protocol, 'made', None))
 
         self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
@@ -110,14 +110,26 @@ class UnixSocketTestCase(PortCleanerUpper):
         self.assert_(lockfile.checkLock(filename))
         tcf = TestClientFactory(self, filename)
         c = reactor.connectUNIX(filename, tcf, checkPID=1)
-        
-        spinUntil(lambda :getattr(f.protocol, 'made', None) and 
+
+        spinUntil(lambda :getattr(f.protocol, 'made', None) and
                           getattr(tcf.protocol, 'made', None))
 
         self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
         self.cleanPorts(*self.ports)
 
         self.assert_(not lockfile.checkLock(filename))
+
+
+    def testRepr(self):
+        filename = self.mktemp()
+        f = Factory(self, filename)
+        p = reactor.listenUNIX(filename, f)
+        self.failIf(str(p).find(filename) == -1)
+
+        def stoppedListening(ign):
+            self.failIf(str(p).find(filename) != -1)
+
+        return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
     started = stopped = False
@@ -156,10 +168,10 @@ class DatagramUnixSocketTestCase(PortCleanerUpper):
         cp = ClientProto()
         s = reactor.listenUNIXDatagram(serveraddr, sp)
         c = reactor.connectUNIXDatagram(serveraddr, cp, bindAddress = clientaddr)
-            
-        
+
+
         spinUntil(lambda:sp.started and cp.started)
-        
+
         cp.transport.write("hi")
 
         spinUntil(lambda:sp.gotwhat == "hi" and cp.gotback == "hi back")
@@ -181,6 +193,18 @@ class DatagramUnixSocketTestCase(PortCleanerUpper):
         s.stopListening()
         os.unlink(addr)
     # test connecting to bound and connected (somewhere else) address
+
+    def testRepr(self):
+        filename = self.mktemp()
+        f = ServerProto()
+        p = reactor.listenUNIXDatagram(filename, f)
+        self.failIf(str(p).find(filename) == -1)
+
+        def stoppedListening(ign):
+            self.failIf(str(p).find(filename) != -1)
+
+        return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
+
 
 if not interfaces.IReactorUNIX(reactor, None):
     UnixSocketTestCase.skip = "This reactor does not support UNIX domain sockets"

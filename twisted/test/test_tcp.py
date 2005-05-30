@@ -122,12 +122,14 @@ class ListeningTestCase(PortCleanerUpper):
         p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
         p1.stopListening()
 
-    def testNamedInterface(self):
+    def testPortRepr(self):
         f = MyServerFactory()
-        # use named interface instead of 127.0.0.1
-        p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
-        # might raise exception if reactor can't handle named interfaces
-        p1.stopListening()
+        p = reactor.listenTCP(0, f)
+        portNo = str(p.getHost().port)
+        self.failIf(repr(p).find(portNo) == -1)
+        def stoppedListening(ign):
+            self.failIf(repr(p).find(portNo) != -1)
+        return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
 
 
 def callWithSpew(f):

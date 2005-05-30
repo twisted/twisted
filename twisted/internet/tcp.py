@@ -674,6 +674,10 @@ class Port(base.BasePort, _SocketCloser):
     interface = ''
     backlog = 50
 
+    # Actual port number being listened on, only set to a non-None
+    # value when we are actually listening.
+    _realPortNumber = None
+
     def __init__(self, port, factory, backlog=50, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
         """
@@ -684,8 +688,11 @@ class Port(base.BasePort, _SocketCloser):
         self.interface = interface
 
     def __repr__(self):
-        return "<%s of %s on %s>" % (self.__class__, self.factory.__class__,
-                                     self.getHost().port)
+        if self._realPortNumber is not None:
+            return "<%s of %s on %s>" % (self.__class__, self.factory.__class__,
+                                         self._realPortNumber)
+        else:
+            return "<%s of %s (not listening)>" % (self.__class__, self.factory.__class__)
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
@@ -699,23 +706,32 @@ class Port(base.BasePort, _SocketCloser):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        log.msg("%s starting on %s"%(self.factory.__class__, self.port))
         try:
             skt = self.createInternetSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
             raise CannotListenError, (self.interface, self.port, le)
+
+        # Make sure that if we listened on port 0, we update that to
+        # reflect what the OS actually assigned us.
+        self._realPortNumber = skt.getsockname()[1]
+
+        log.msg("%s starting on %s" % (self.factory.__class__, self._realPortNumber))
+
+        # The order of the next 6 lines is kind of bizarre.  If no one
+        # can explain it, perhaps we should re-arrange them.
         self.factory.doStart()
         skt.listen(self.backlog)
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
         self.numberAccepts = 100
+
         self.startReading()
 
     def _buildAddr(self, (host, port)):
         return address._ServerFactoryIPv4Address('TCP', host, port)
-    
+
     def doRead(self):
         """Called when my socket is ready for reading.
 
@@ -783,11 +799,12 @@ class Port(base.BasePort, _SocketCloser):
             return self.deferred
 
     stopListening = loseConnection
-    
+
     def connectionLost(self, reason):
         """Cleans up my socket.
         """
-        log.msg('(Port %r Closed)' % self.port)
+        log.msg('(Port %s Closed)' % self._realPortNumber)
+        self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
         self.connected = 0
         self._closeSocket()

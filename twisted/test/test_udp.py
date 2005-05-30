@@ -262,6 +262,16 @@ class UDPTestCase(unittest.TestCase):
         reactor.iterate()
 
 
+    def testPortRepr(self):
+        client = GoodClient()
+        p = reactor.listenUDP(0, client)
+        portNo = str(p.getHost().port)
+        self.failIf(repr(p).find(portNo) == -1)
+        def stoppedListening(ign):
+            self.failIf(repr(p).find(portNo) != -1)
+        return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
+
+
 class MulticastTestCase(unittest.TestCase):
 
     def _resultSet(self, result, l):

@@ -47,9 +47,12 @@ class Port(tcp.Port):
         self.mode = mode
         self.wantPID = wantPID
         self.lockFile = None
-         
+
     def __repr__(self):
-        return '<%s on %r>' % (self.factory.__class__, self.port)
+        if hasattr(self, 'socket'):
+            return '<%s on %r>' % (self.factory.__class__, self.port)
+        else:
+            return '<%s (not listening)>' % (self.factory.__class__,)
 
     def _buildAddr(self, name):
         assert not name
@@ -156,6 +159,14 @@ class DatagramPort(udp.Port):
         udp.Port.__init__(self, addr, proto, maxPacketSize=maxPacketSize, reactor=reactor)
         self.mode = mode
 
+
+    def __repr__(self):
+        if hasattr(self, 'socket'):
+            return '<%s on %r>' % (self.protocol.__class__, self.port)
+        else:
+            return '<%s (not listening)>' % (self.protocol.__class__,)
+
+
     def _bindSocket(self):
         log.msg("%s starting on %s"%(self.protocol.__class__, repr(self.port)))
         try:
@@ -204,6 +215,9 @@ class DatagramPort(udp.Port):
         self.socket.close()
         del self.socket
         del self.fileno
+        if hasattr(self, "d"):
+            self.d.callback(None)
+            del self.d
 
     def setLogStr(self):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"

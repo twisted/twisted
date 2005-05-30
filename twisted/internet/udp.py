@@ -50,6 +50,10 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
 
+    # Actual port number being listened on, only set to a non-None
+    # value when we are actually listening.
+    _realPortNumber = None
+
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """Initialize with a numeric port to listen on.
         """
@@ -62,9 +66,8 @@ class Port(base.BasePort):
         self._connectedAddr = None
 
     def __repr__(self):
-        if hasattr(self, 'socket'):
-            return "<%s on %s>" % (self.protocol.__class__, 
-                                            getattr(self.getHost(), 'port', ''))
+        if self._realPortNumber is not None:
+            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
         else:
             return "<%s not connected>" % (self.protocol.__class__,)
 
@@ -82,12 +85,18 @@ class Port(base.BasePort):
         self._connectToProtocol()
 
     def _bindSocket(self):
-        log.msg("%s starting on %s"%(self.protocol.__class__, self.port))
         try:
             skt = self.createInternetSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
             raise error.CannotListenError, (self.interface, self.port, le)
+
+        # Make sure that if we listened on port 0, we update that to
+        # reflect what the OS actually assigned us.
+        self._realPortNumber = skt.getsockname()[1]
+
+        log.msg("%s starting on %s"%(self.protocol.__class__, self._realPortNumber))
+
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
@@ -188,7 +197,8 @@ class Port(base.BasePort):
     def connectionLost(self, reason=None):
         """Cleans up my socket.
         """
-        log.msg('(Port %s Closed)' % self.port)
+        log.msg('(Port %s Closed)' % self._realPortNumber)
+        self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
         if hasattr(self, "protocol"):
             # we won't have attribute in ConnectedPort, in cases
