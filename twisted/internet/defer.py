@@ -152,6 +152,11 @@ def setDebugging(on):
     """
     Deferred.debug=bool(on)
 
+def getDebugging():
+    """Determine whether Deferred debugging is enabled.
+    """
+    return Deferred.debug
+
 class Deferred:
     """This is a callback which will be put off until later.
 
@@ -298,10 +303,14 @@ class Deferred:
     def _startRunCallbacks(self, result):
         if self.called:
             if self.debug:
+                if self._debugInfo is None:
+                    self._debugInfo = DebugInfo()
                 extra = "\n" + self._debugInfo._getDebugTracebacks()
                 raise AlreadyCalledError(extra)
             raise AlreadyCalledError
         if self.debug:
+            if self._debugInfo is None:
+                self._debugInfo = DebugInfo()
             self._debugInfo.invoker = traceback.format_stack()[:-2]
         self.called = True
         self.result = result

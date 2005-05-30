@@ -160,7 +160,7 @@ class DeferredTestCase(unittest.TestCase):
 
         result = []
         dl.addCallback(result.append)
-        
+
         d1.errback(GenericError('Bang'))
         self.failUnlessEqual('Bang', errorTrap[0].value.args[0])
         self.failUnlessEqual(1, len(result))
@@ -175,7 +175,7 @@ class DeferredTestCase(unittest.TestCase):
 
         result = []
         dl.addCallback(result.append)
-        
+
         d1.errback(GenericError('Bang'))
         self.failUnlessEqual([], errorTrap)
         self.failUnlessEqual(1, len(result))
@@ -186,7 +186,7 @@ class DeferredTestCase(unittest.TestCase):
         d1 = defer.Deferred()
         d2 = defer.Deferred()
         d1.errback(GenericError('Bang'))
-        
+
         # *Then* build the DeferredList, with fireOnOneErrback=True
         dl = defer.DeferredList([d1, d2], fireOnOneErrback=True)
         result = []
@@ -201,7 +201,7 @@ class DeferredTestCase(unittest.TestCase):
         d2 = defer.Deferred()
         d1.errback(GenericError('Bang'))
         d2.callback(2)
-        
+
         # *Then* build the DeferredList
         dl = defer.DeferredList([d1, d2])
 
@@ -264,7 +264,7 @@ class DeferredTestCase(unittest.TestCase):
             lambda _: failure.Failure(ZeroDivisionError())).addErrback(l.append)
         d.callback(1)
         self.assert_(isinstance(l[0].value, ZeroDivisionError))
-        
+
     def testUnpauseBeforeCallback(self):
         d = defer.Deferred()
         d.pause()
@@ -297,14 +297,14 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(len(l), 1)
         # get rid of error
         dl[1].addErrback(lambda e: 1)
-    
+
     def testMaybeDeferred(self):
         S, E = [], []
         d = defer.maybeDeferred((lambda x: x + 5), 10)
         d.addCallbacks(S.append, E.append)
         self.assertEquals(E, [])
         self.assertEquals(S, [15])
-        
+
         S, E = [], []
         try:
             '10' + 5
@@ -315,12 +315,12 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(S, [])
         self.assertEquals(len(E), 1)
         self.assertEquals(str(E[0].value), expected)
-        
+
         d = defer.Deferred()
         reactor.callLater(0.2, d.callback, 'Success')
         r = unittest.deferredResult(defer.maybeDeferred(lambda: d))
         self.assertEquals(r, 'Success')
-        
+
         d = defer.Deferred()
         reactor.callLater(0.2, d.errback, failure.Failure(RuntimeError()))
         r = unittest.deferredError(defer.maybeDeferred(lambda: d))
@@ -328,9 +328,11 @@ class DeferredTestCase(unittest.TestCase):
 
 class AlreadyCalledTestCase(unittest.TestCase):
     def setUp(self):
+        self._deferredWasDebugging = defer.Deferred.debug
         defer.setDebugging(True)
+
     def tearDown(self):
-        defer.setDebugging(False)
+        defer.setDebugging(self._deferredWasDebugging)
 
     def _callback(self, *args, **kw):
         pass
@@ -450,6 +452,22 @@ class AlreadyCalledTestCase(unittest.TestCase):
             self.fail("second callback failed to raise AlreadyCalledError")
 
 
+    def testSwitchDebugging(self):
+        # Make sure Deferreds can deal with debug state flipping
+        # around randomly.  This is covering a particular fixed bug.
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        d.addBoth(lambda ign: None)
+        defer.setDebugging(True)
+        d.callback(None)
+
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        d.callback(None)
+        defer.setDebugging(True)
+        d.addBoth(lambda ign: None)
+
+
 class LogTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -458,7 +476,7 @@ class LogTestCase(unittest.TestCase):
 
     def tearDown(self):
         log.removeObserver(self.c.append)
-    
+
     def testErrorLog(self):
         c = self.c
         defer.Deferred().addCallback(lambda x: 1/0).callback(1)
@@ -607,7 +625,7 @@ class OtherPrimitives(unittest.TestCase):
         for i in range(N):
             queue.put(i)
         self.assertEquals(gotten, range(N))
-        
+
         queue = defer.DeferredQueue(size=0)
         self.assertRaises(defer.QueueOverflow, queue.put, None)
 
