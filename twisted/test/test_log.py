@@ -119,6 +119,6 @@ class LogPublisherTestCase(unittest.TestCase):
 
     def testSingleUnicode(self):
         self.assertRaises(
-            UnicodeEncodeError,
+            UnicodeError,
             self.lp.msg, u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
         self.assertEquals(len(self.out), 0)

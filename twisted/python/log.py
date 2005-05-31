@@ -19,6 +19,12 @@ import warnings
 # Sibling Imports
 from twisted.python import util, context
 
+# Backwards compat
+try:
+    UnicodeEncodeError # Introduced sometime after Python 2.2.3
+except NameError:
+    UnicodeEncodeError = UnicodeError
+
 
 class ILogContext:
     """Actually, this interface is just a synoym for the dictionary interface,
@@ -222,6 +228,7 @@ class LogPublisher:
                 o = self.observers.pop(i)
                 msg("Log observer %s failed, removing from observer list." % (o,))
                 err()
+
 
 try:
     theLogPublisher
