@@ -4,7 +4,7 @@
 #
 
 from twisted.web import microdom, domhelpers
-from twisted.python import text
+from twisted.python import text, procutils
 import os, os.path, re, string
 from cStringIO import StringIO
 
@@ -103,11 +103,7 @@ class BaseLatexSpitter:
 class LatexSpitter(BaseLatexSpitter):
 
     baseLevel = 0
-    try:
-        diaHack = not not os.popen('which dia').read()
-    except:
-        # That's a no, then.
-        diaHack = 0
+    diaHack = bool(procutils.which("dia"))
 
     def writeNodeData(self, node):
         buf = StringIO()
