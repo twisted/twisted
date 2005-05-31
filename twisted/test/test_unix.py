@@ -154,7 +154,7 @@ class UnixSocketTestCase(PortCleanerUpper):
                   "reactor.listenUNIX(%r, protocol.ServerFactory(), wantPID=True)\n") % (self.filename,)
         env = {'PYTHONPATH': os.pathsep.join(sys.path)}
 
-        d = utils.getProcessOutput(sys.executable, ("-c", source), env=env)
+        d = utils.getProcessOutput(sys.executable, ("-u", "-c", source), env=env)
         d.addCallback(callback)
         return d
 
