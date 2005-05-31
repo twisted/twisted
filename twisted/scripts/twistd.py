@@ -51,6 +51,10 @@ class ServerOptions(app.ServerOptions):
         print copyright.copyright
         sys.exit()
 
+    def postOptions(self):
+        app.ServerOptions.postOptions(self)
+        self['pidfile'] = os.path.abspath(self['pidfile'])
+
 
 def checkPID(pidfile):
     if os.path.exists(pidfile):
