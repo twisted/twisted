@@ -3,6 +3,8 @@
 
 #
 
+import sys
+
 from twisted.trial import unittest
 
 from twisted.python import log
@@ -72,3 +74,51 @@ class LogTest(unittest.TestCase):
         self.assertEquals(len(L2), 3)
         self.assertEquals(L1[2]['message'], ("Howdy, y'all.",))
         self.assertEquals(L2[2]['message'], ("Howdy, y'all.",))
+
+
+class FakeFile(list):
+    def write(self, bytes):
+        self.append(bytes)
+
+    def flush(self):
+        pass
+
+
+class LogPublisherTestCase(unittest.TestCase):
+    def setUpClass(self):
+        # Fuck you Python.
+        reload(sys)
+        self._origEncoding = sys.getdefaultencoding()
+        sys.setdefaultencoding('ascii')
+
+    def tearDownClass(self):
+        sys.setdefaultencoding(self._origEncoding)
+        # Fuck you very much.
+        del sys.setdefaultencoding
+
+    def setUp(self):
+        self.out = FakeFile()
+        self.lp = log.LogPublisher()
+        self.flo = log.FileLogObserver(self.out)
+        self.lp.addObserver(self.flo.emit)
+
+    def tearDown(self):
+        for chunk in self.out:
+            self.failUnless(isinstance(chunk, str), "%r was not a string" % (chunk,))
+
+    def testSingleString(self):
+        self.lp.msg("Hello, world.")
+        self.assertEquals(len(self.out), 1)
+
+    def testMultipleString(self):
+        # Test some stupid behavior that will be deprecated real soon.
+        # If you are reading this and trying to learn how the logging
+        # system works, *do not use this feature*.
+        self.lp.msg("Hello, ", "world.")
+        self.assertEquals(len(self.out), 1)
+
+    def testSingleUnicode(self):
+        self.assertRaises(
+            UnicodeEncodeError,
+            self.lp.msg, u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
+        self.assertEquals(len(self.out), 0)

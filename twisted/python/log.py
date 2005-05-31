@@ -192,7 +192,20 @@ class LogPublisher:
         self.observers.remove(other)
 
     def msg(self, *message, **kw):
-        """Log a new message."""
+        """Log a new message.
+
+        For example::
+
+        | log.msg('Hello, world.')
+
+        In particular, you MUST avoid the forms::
+
+        | log.msg(u'Hello, world.')
+        | log.msg('Hello ', 'world.')
+
+        These forms work (sometimes) by accident and will be disabled
+        entirely in the future.
+        """
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
         actualEventDict['message'] = message
@@ -202,6 +215,8 @@ class LogPublisher:
                 self.observers[i](actualEventDict)
             except KeyboardInterrupt:
                 # Don't swallow keyboard interrupt!
+                raise
+            except UnicodeEncodeError:
                 raise
             except:
                 o = self.observers.pop(i)
@@ -219,7 +234,7 @@ except NameError:
 
 class FileLogObserver:
     """Log observer that writes to a file-like object.
-    
+
     @ivar timeFormat: Format string passed to strftime()
     """
     timeFormat = "%Y/%m/%d %H:%M %Z"
@@ -249,7 +264,7 @@ class FileLogObserver:
                 return
         else:
             text = ' '.join(map(str, edm))
-        
+
         timeStr = time.strftime(self.timeFormat, time.localtime(eventDict['time']))
         fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
         msgStr = " [%(system)s] %(text)s\n" % fmtDict
