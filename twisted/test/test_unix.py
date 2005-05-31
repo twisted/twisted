@@ -149,20 +149,18 @@ class UnixSocketTestCase(PortCleanerUpper):
 
 
     def _uncleanSocketTest(self, callback):
-        self.filename = os.path.abspath(self.mktemp())
+        self.filename = self.mktemp()
         source = ("from twisted.internet import protocol, reactor\n"
                   "reactor.listenUNIX(%r, protocol.ServerFactory(), wantPID=True)\n") % (self.filename,)
         env = {'PYTHONPATH': os.pathsep.join(sys.path)}
 
-        d = utils.getProcessOutput(sys.executable, ("-u", "-c", source), env=env, errortoo=True)
+        d = utils.getProcessOutput(sys.executable, ("-u", "-c", source), env=env)
         d.addCallback(callback)
         return d
 
 
     def testUncleanServerSocketLocking(self):
         def ranStupidChild(ign):
-            print 'RAN STUPID CHILD GOT OUTPUT FROM PYTHON:'
-            print ign
             # If this next call succeeds, our lock handling is correct.
             p = reactor.listenUNIX(self.filename, Factory(self, self.filename), wantPID=True)
             return p.stopListening()
@@ -171,8 +169,6 @@ class UnixSocketTestCase(PortCleanerUpper):
 
     def testUncleanSocketLockingFromThePerspectiveOfAClientConnectingToTheDeadServerSocket(self):
         def ranStupidChild(ign):
-            print 'OTHER RAN STUPID CHILD GOT OUTPUT FROM PYTHON:'
-            print ign
             d = defer.Deferred()
             f = FailedConnectionClientFactory(d)
             c = reactor.connectUNIX(self.filename, f, checkPID=True)

@@ -71,11 +71,16 @@ class Port(tcp.Port):
                 raise CannotListenError, (None, self.port, "Cannot acquire lock")
             else:
                 if not self.lockFile.clean:
-                    if stat.S_ISSOCK(os.stat(self.port).st_mode):
-                        try:
+                    try:
+                        # This is a best-attempt at cleaning up
+                        # left-over unix sockets on the filesystem.
+                        # If it fails, there's not much else we can
+                        # do.  The bind() below will fail with an
+                        # exception that actually propegates.
+                        if stat.S_ISSOCK(os.stat(self.port).st_mode):
                             os.remove(self.port)
-                        except:
-                            pass
+                    except:
+                        pass
 
         self.factory.doStart()
         try:
