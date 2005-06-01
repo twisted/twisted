@@ -6,8 +6,9 @@ import UserDict, math
 from cStringIO import StringIO
 
 from twisted.web2 import http_headers, iweb, stream, responsecode
-from twisted.internet import defer
+from twisted.internet import defer, address
 from twisted.python import components
+from twisted.spread import pb
 
 from zope.interface import implements
 
@@ -50,7 +51,15 @@ def makeOldRequestAdapter(original):
         original._oldRequest = OldRequestAdapter(original)
     return original._oldRequest
 
-class OldRequestAdapter(components.Componentized, object):
+def _addressToTuple(addr):
+    if isinstance(addr, address.IPv4Address):
+        return ('INET', addr.host, addr.port)
+    elif isinstance(addr, address.UNIXAddress):
+        return ('UNIX', addr.name)
+    else:
+        return tuple(addr)
+
+class OldRequestAdapter(pb.Copyable, components.Componentized, object):
     """Adapt old requests to new request
     """
     implements(iweb.IOldRequest)
@@ -115,7 +124,30 @@ class OldRequestAdapter(components.Componentized, object):
         # This deferred will be fired by the first call to write on OldRequestAdapter
         # and will cause the headers to be output.
         self.deferredResponse = defer.Deferred()
+
+    def getStateToCopyFor(self, issuer):
+        # This is for distrib compatibility
+        x = {}
+
+        # We fake the __class__ because the Publisher shouldn't have to
+        # know about web2 at all.
+        x['__class__'] = 'twisted.web.server.Request'
+
+        x['prepath'] = self.prepath
+        x['postpath'] = self.postpath
+        x['method'] = self.method
+        x['uri'] = self.uri
         
+        x['clientproto'] = self.clientproto
+        self.content.seek(0, 0)
+        x['content_data'] = self.content.read()
+        x['remote'] = pb.ViewPoint(issuer, self)
+
+        x['host'] = _addressToTuple(self.request.chanRequest.channel.transport.getHost())
+        x['client'] = _addressToTuple(self.request.chanRequest.channel.transport.getPeer())
+
+        return x
+
     def registerProducer(self, producer, streaming):
         self.response.stream.registerProducer(producer, streaming)
         
@@ -302,6 +334,56 @@ class OldRequestAdapter(components.Componentized, object):
             return self.session.getComponent(sessionInterface)
         return self.session
 
+# this stuff is pretty much verbatim from twisted.web.distrib
+# this way we don't depend on twisted.web.distrib
+
+class _ReferenceableProducerWrapper(pb.Referenceable):
+    def __init__(self, producer):
+        self.producer = producer
+
+    def remote_resumeProducing(self):
+        self.producer.resumeProducing()
+
+    def remote_pauseProducing(self):
+        self.producer.pauseProducing()
+
+    def remote_stopProducing(self):
+        self.producer.stopProducing()
+        
+class OldRequestCopier(pb.RemoteCopy, OldRequestAdapter):
+    def setCopyableState(self, state):
+        for k in 'host', 'client':
+            tup = state[k]
+            addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
+            addr = {'TCP': lambda: address.IPv4Address(addrdesc,
+                                                       tup[1], tup[2],
+                                                       _bwHack='INET'),
+                    'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
+
+            state[k] = addr
+
+        pb.RemoteCopy.setCopyableState(self, state)
+
+        remote_methods = ['write', 'finish', 'setHeader', 'addCookie',
+                          'setETag', 'setResponseCode', 'setLastModified']
+
+        for rm in remote_methods:
+            setattr(self, rm, self.remote.remoteMethod(rm))
+            
+        self.content = StringIO(self.content_data)
+
+    def registerProducer(self, producer, streaming):
+        self.remote.callRemote("registerProducer",
+                               _ReferenceableProducerWrapper(producer),
+                               streaming).addErrback(self.fail)
+
+    def unregisterProducer(self):
+        self.remote.callRemote("unregisterProducer").addErrback(self.fail)
+
+    def fail(self, failure):
+        log.err(failure)
+
+pb.setCopierForClass(OldRequestAdapter, OldRequestCopier)
 
 
 class OldNevowResourceAdapter(object):
