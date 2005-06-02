@@ -137,7 +137,7 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
         x['postpath'] = self.postpath
         x['method'] = self.method
         x['uri'] = self.uri
-        
+
         x['clientproto'] = self.clientproto
         self.content.seek(0, 0)
         x['content_data'] = self.content.read()
@@ -334,57 +334,6 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
             return self.session.getComponent(sessionInterface)
         return self.session
 
-# this stuff is pretty much verbatim from twisted.web.distrib
-# this way we don't depend on twisted.web.distrib
-
-class _ReferenceableProducerWrapper(pb.Referenceable):
-    def __init__(self, producer):
-        self.producer = producer
-
-    def remote_resumeProducing(self):
-        self.producer.resumeProducing()
-
-    def remote_pauseProducing(self):
-        self.producer.pauseProducing()
-
-    def remote_stopProducing(self):
-        self.producer.stopProducing()
-        
-class OldRequestCopier(pb.RemoteCopy, OldRequestAdapter):
-    def setCopyableState(self, state):
-        for k in 'host', 'client':
-            tup = state[k]
-            addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
-            addr = {'TCP': lambda: address.IPv4Address(addrdesc,
-                                                       tup[1], tup[2],
-                                                       _bwHack='INET'),
-                    'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
-
-            state[k] = addr
-
-        pb.RemoteCopy.setCopyableState(self, state)
-
-        remote_methods = ['write', 'finish', 'setHeader', 'addCookie',
-                          'setETag', 'setResponseCode', 'setLastModified']
-
-        for rm in remote_methods:
-            setattr(self, rm, self.remote.remoteMethod(rm))
-            
-        self.content = StringIO(self.content_data)
-
-    def registerProducer(self, producer, streaming):
-        self.remote.callRemote("registerProducer",
-                               _ReferenceableProducerWrapper(producer),
-                               streaming).addErrback(self.fail)
-
-    def unregisterProducer(self):
-        self.remote.callRemote("unregisterProducer").addErrback(self.fail)
-
-    def fail(self, failure):
-        log.err(failure)
-
-pb.setCopierForClass(OldRequestAdapter, OldRequestCopier)
-
 
 class OldNevowResourceAdapter(object):
     implements(iweb.IResource)
@@ -474,3 +423,16 @@ class OldResourceAdapter(object):
         result = defer.maybeDeferred(self.original.render, request).addCallback(
             self._handle_NOT_DONE_YET, request)
         return result
+
+
+# At the moment I have decided it's not unreasonable for distrib compatibility
+# to require twisted.web to be installed.  I'll probably try and fix this
+# later.  But until then, if twisted.web is installed add a copier for
+# OldRequestAdapter. -- dreid
+
+try:
+    from twisted.web import distrib
+except ImportError:
+    pass
+else:
+    pb.setCopierForClass(OldRequestAdapter, distrib.Request)
