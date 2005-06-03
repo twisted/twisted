@@ -25,8 +25,10 @@ class AlreadyCalledError(Exception):
 class AlreadyArmedError(Exception):
     pass
 
-class TimeoutError(Exception):
+class CancelledError(Exception):
     pass
+# Backwards compatibility
+TimeoutError = CancelledError
 
 def logError(err):
     log.err(err)
@@ -139,7 +141,7 @@ def maybeDeferred(f, *args, **kw):
     return deferred
 
 def timeout(deferred):
-    deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
+    deferred.cancel()
 
 def passthru(arg):
     return arg
@@ -171,19 +173,25 @@ class Deferred:
 
     For more information about Deferreds, see doc/howto/defer.html or
     U{http://www.twistedmatrix.com/documents/howto/defer}
+
+    When creating a Deferred, you may provide a canceller function,
+    which will be called by d.cancel() to let you do any cleanup necessary
+    if the user decides not to wait for the deferred to complete.
     """
     called = 0
     default = 0
     paused = 0
     timeoutCall = None
     _debugInfo = None
+    _suppressAlreadyCalled = 0
 
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
     debug = False
 
-    def __init__(self):
+    def __init__(self, canceller=None):
         self.callbacks = []
+        self.canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
@@ -283,12 +291,14 @@ class Deferred:
 
     def pause(self):
         """Stop processing on a Deferred until L{unpause}() is called.
+        You probably don't ever have a reason to call this function.
         """
         self.paused = self.paused + 1
 
 
     def unpause(self):
         """Process all callbacks made since L{pause}() was called.
+        You probably don't ever have a reason to call this function.
         """
         self.paused = self.paused - 1
         if self.paused:
@@ -296,12 +306,53 @@ class Deferred:
         if self.called:
             self._runCallbacks()
 
+    def cancel(self):
+        """Cancel this deferred.
+
+        If the deferred is waiting on another deferred, forward the
+        cancellation to the other deferred.
+
+        If the deferred has not yet been errback'd/callback'd, call
+        the canceller function provided to the constructor. If that
+        function does not do a callback/errback, or if no canceller
+        function was provided, errback with CancelledError.
+
+        Otherwise, raise AlreadyCalledError.
+        """
+        canceller = self.canceller
+        if not self.called:
+            if canceller:
+                canceller(self)
+            else:
+                # Eat the callback that will eventually be fired
+                # since there was no real canceller.
+                self._suppressAlreadyCalled = 1
+
+            if not self.called:
+                # The canceller didn't do an errback of its own
+                try:
+                    raise CancelledError
+                except:
+                    self.errback(failure.Failure())
+        elif isinstance(self.result, Deferred):
+            # Waiting for another deferred -- cancel it instead
+            self.result.cancel()
+        else:
+            # Called and not waiting for another deferred
+            raise AlreadyCalledError
+
     def _continue(self, result):
         self.result = result
         self.unpause()
 
     def _startRunCallbacks(self, result):
+        # Canceller is no longer relevant
+        self.canceller = None
+
         if self.called:
+            if self._suppressAlreadyCalled:
+                self._suppressAlreadyCalled = 0
+                return
             if self.debug:
                 if self._debugInfo is None:
                     self._debugInfo = DebugInfo()
@@ -372,7 +423,8 @@ class Deferred:
 
         @param timeoutFunc: will receive the Deferred and *args, **kw as its
         arguments.  The default timeoutFunc will call the errback with a
-        L{TimeoutError}.
+        L{CancelledError}.
+
         """
         warnings.warn(
             "Deferred.setTimeout is deprecated.  Look for timeout "
@@ -708,12 +760,15 @@ class DeferredLock(_ConcurrencyPrimitive):
 
     locked = 0
 
+    def _cancelAcquire(self, d):
+        self.waiting.remove(d)
+
     def acquire(self):
         """Attempt to acquire the lock.
 
         @return: a Deferred which fires on lock acquisition.
         """
-        d = Deferred()
+        d = Deferred(canceller=self._cancelAcquire)
         if self.locked:
             self.waiting.append(d)
         else:
@@ -746,13 +801,16 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
         self.tokens = tokens
         self.limit = tokens
 
+    def _cancelAcquire(self, d):
+        self.waiting.remove(d)
+
     def acquire(self):
         """Attempt to acquire the token.
 
         @return: a Deferred which fires on token acquisition.
         """
         assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
-        d = Deferred()
+        d = Deferred(canceller=self._cancelAcquire)
         if not self.tokens:
             self.waiting.append(d)
         else:
@@ -806,6 +864,9 @@ class DeferredQueue(object):
         self.size = size
         self.backlog = backlog
 
+    def _cancelGet(self, d):
+        self.waiting.remove(d)
+
     def put(self, obj):
         """Add an object to this queue.
 
@@ -829,7 +890,7 @@ class DeferredQueue(object):
         if self.pending:
             return succeed(self.pending.pop(0))
         elif self.backlog is None or len(self.waiting) < self.backlog:
-            d = Deferred()
+            d = Deferred(canceller=self._cancelGet)
             self.waiting.append(d)
             return d
         else:
@@ -837,7 +898,7 @@ class DeferredQueue(object):
 
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError", "gatherResults",
+           "AlreadyCalledError", "TimeoutError", "CancelledError", "gatherResults",
            "maybeDeferred", "waitForDeferred", "deferredGenerator",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
           ]
