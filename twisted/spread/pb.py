@@ -471,8 +471,9 @@ class CopyableFailure(failure.Failure, Copyable):
         return state
 
 class CopiedFailure(RemoteCopy, failure.Failure):
-    def printTraceback(self, file=None):
-        if not file: file = log.logfile
+    def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
+        if file is None:
+            file = log.logfile
         file.write("Traceback from remote host -- ")
         file.write(self.traceback)
 

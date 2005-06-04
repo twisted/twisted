@@ -46,9 +46,7 @@ class SimpleRoot(pb.Root):
         raise SecurityError("I'm secure!")
 
 
-class PBFailureTest(unittest.TestCase):
-
-    compare = unittest.TestCase.assertEquals
+class PBConnTestCase(unittest.TestCase):
     unsafeTracebacks = 0
 
     def setUp(self):
@@ -77,11 +75,33 @@ class PBFailureTest(unittest.TestCase):
         self.clientConnector.disconnect()
         return defer.succeed(None)
 
+
+
+class PBFailureTest(PBConnTestCase):
+    compare = unittest.TestCase.assertEquals
+
     def testPBFailures(self):
         d = self.clientFactory.getRootObject()
         d.addCallback(self.connected)
         d.addCallback(self.cleanupLoggedErrors)
         return d
+
+
+    def testCopiedFailureLogging(self):
+        d = self.clientFactory.getRootObject()
+
+        def connected(rootObj):
+            return rootObj.callRemote('die')
+        d.addCallback(connected)
+
+        def exception(failure):
+            log.err(failure)
+            errs = log.flushErrors(DieError)
+            self.assertEquals(len(errs), 2)
+        d.addErrback(exception)
+
+        return d
+
 
     def addFailingCallbacks(self, remoteCall, expectedResult):
         for m in (self.failurePoop, self.failureFail, self.failureDie, self.failureNoSuch,
