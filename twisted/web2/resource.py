@@ -104,9 +104,7 @@ class Resource(object):
             # If this is a directory-ish resource...
             return http.Response(
                 responsecode.MOVED_PERMANENTLY,
-                {'location': urlparse.urlunparse((
-                    req.scheme, req.host, req.path+'/',
-                    req.params, req.querystring, ''))})
+                {'location': req.unparseURL(path=req.path+'/')})
             
         if req.stream.length != 0:
             return REQUEST_ENTITY_TOO_LARGE

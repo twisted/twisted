@@ -3,7 +3,7 @@ from twisted.internet import protocol, address
 from twisted.internet import reactor
 from twisted.web2 import http, http_headers, server, responsecode
 import os
-
+import urllib
 
 # Move this to twisted core soonish
 from twisted.internet import process, error, interfaces, fdesc
@@ -164,7 +164,7 @@ class BaseCGIChannelRequest(protocol.Protocol):
         
         self.hostinfo = address.IPv4Address('TCP', server_host, port), bool(secure)
         self.remoteinfo = address.IPv4Address(
-            'TCP', vars.get('REMOTE_ADDR'), vars.get('REMOTE_PORT'))
+            'TCP', vars.get('REMOTE_ADDR', ''), vars.get('REMOTE_PORT', 0))
         
         uri = vars.get('REQUEST_URI') # apache extension?
         if not uri:

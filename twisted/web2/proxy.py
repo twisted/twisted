@@ -1,4 +1,4 @@
-##### FIXME: this file probably doesn't work.
+raise ImportError("FIXME: this file probably doesn't work.")
 
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.

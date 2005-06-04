@@ -402,13 +402,15 @@ class _StreamReader:
             self._gotData(result)
 
     def _gotError(self, failure):
-        self.result.errback(failure)
-        del self.result
+        result = self.result
+        del self.result, self.gotDataCallback, self.stream
+        result.errback(failure)
     
     def _gotData(self, data):
         if data is None:
-            self.result.callback(None)
-            del self.result
+            result = self.result
+            del self.result, self.gotDataCallback, self.stream
+            result.callback(None)
             return
         try:
             self.gotDataCallback(data)

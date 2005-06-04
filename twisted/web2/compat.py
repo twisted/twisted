@@ -113,8 +113,14 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
     # stack = # WTF is stack?
     prepath = _getsetFrom('request', 'prepath')
     postpath = _getsetFrom('request', 'postpath')
-    # client = ####
-    # host = ####
+
+    def _getClient(self):
+        return "WTF"
+    client = property(_getClient)
+    
+    def _getHost(self):
+        return address.IPv4Address("TCP", self.request.host, self.request.port)
+    host = property(_getHost)
     
     def __init__(self, request):
         from twisted.web2 import http
@@ -197,7 +203,7 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
         return dict(self.headers.iteritems())
 
     def getRequestHostname(self):
-        return self.request.host.split(':')[0]
+        return self.request.host
 
 
     def getCookie(self, key):
@@ -214,30 +220,38 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
         self.response.headers.setHeader('Set-Cookie', self.request.headers.getHeader('Set-Cookie', ())+(cookie,))
 
     def notifyFinish(self):
-        return self.request.notifyFinish()
+        ### FIXME
+        return None
+#        return self.request.notifyFinish()
     
-### TODO:
     def getHost(self):
-        # FIXME, need a real API to acccess this.
-        return self.request.chanRequest.channel.transport.getHost()
-
-    def setHost(self, host, port, ssl=0):
-        pass
+        return self.host
     
-    def getClientIP(self):
-        return "127.0.0.1"
+    def setHost(self, host, port, ssl=0):
+        self.request.host = host
+        self.request.port = port
+        self.request.scheme = ssl and 'https' or 'http'
 
     def isSecure(self):
-        return False
+        return self.request.scheme == 'https'
+    
+    def getClientIP(self):
+        if isinstance(self.request.chanRequest.getRemoteHost(), address.IPv4Address):
+            return self.client.host
+        else:
+            return None
+        return self.request.chanRequest.getRemoteHost()
+        return "127.0.0.1"
 
+    def getClient(self):
+        return "127.0.0.1"
+
+### FIXME:
     def getUser(self):
         return ""
 
     def getPassword(self):
         return ""
-
-    def getClient(self):
-        return "127.0.0.1"
 
 # Identical to original methods -- hopefully these don't have to change
     def sibLink(self, name):

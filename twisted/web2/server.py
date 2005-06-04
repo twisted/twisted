@@ -38,6 +38,7 @@ from twisted import __version__ as twisted_version
 VERSION = "Twisted/%s TwistedWeb/%s" % (twisted_version, web2_version)
 _errorMarker = object()
 
+
 def defaultHeadersFilter(request, response, ctx):
     if not response.headers.hasHeader('server'):
         response.headers.setHeader('server', VERSION)
@@ -138,6 +139,7 @@ class Request(http.Request):
     site 
     scheme
     host
+    port
     path
     params
     querystring
@@ -178,11 +180,36 @@ class Request(http.Request):
             self.responseFilters.append(f)
         else:
             self.responseFilters.insert(0, f)
-    
+
+    def unparseURL(self, scheme=None, host=None, port=None,
+                   path=None, params=None, querystring=None, fragment=None):
+        """Turn the request path into a url string. For any pieces of
+        the url that are not specified, use the value from the
+        request. The arguments have the same meaning as the same named
+        attributes of Request."""
+        
+        if scheme is None: scheme = self.scheme
+        if host is None: host = self.host
+        if port is None: port = self.port
+        if path is None: path = self.path
+        if params is None: params = self.params
+        if querystring is None: query = self.querystring
+        if fragment is None: fragment = ''
+        
+        if port == http.defaultPortForScheme.get(scheme, 0):
+            hostport = host
+        else:
+            hostport = host + ':' + port
+        
+        return urlparse.urlunparse((
+            scheme, hostport, path,
+            params, querystring, fragment))
+        
     def _parseURL(self):
         if self.uri[0] == '/':
-            # Can't use urlparse for request_uri because it's parsing a relative
-            # URI, not an abs_path, and thus gets '//foo' wrong.
+            # Can't use urlparse for request_uri because urlparse
+            # wants to be given an absolute or relative URI, not just
+            # an abs_path, and thus gets '//foo' wrong.
             self.scheme = self.host = self.path = self.params = self.querystring = ''
             if '?' in self.uri:
                 self.path, self.querystring = self.uri.split('?', 1)
@@ -191,9 +218,10 @@ class Request(http.Request):
             if ';' in self.path:
                 self.path, self.params = self.path.split(';', 1)
         else:
+            # It is an absolute uri, use standard urlparse
             (self.scheme, self.host, self.path,
              self.params, self.querystring, fragment) = urlparse.urlparse(self.uri)
-        
+
         self.args = cgi.parse_qs(self.querystring, True)
         
         path = map(unquote, self.path[1:].split('/'))
@@ -212,23 +240,29 @@ class Request(http.Request):
         else:
             self.prepath = []
             self.postpath = path
-        #print "_parseURL", self.uri, self.scheme, self.host, self.path, self.params, self.querystring
+        #print "_parseURL", self.uri, self.scheme, self.host, self.port, self.path, self.params, self.querystring
 
-    def _calculateHost(self):
-        hostinfo = self.chanRequest.getHostInfo()
-        if not self.host:
+    def _fixupURLParts(self):
+        hostaddr, secure = self.chanRequest.getHostInfo()
+        if not self.scheme:
+            self.scheme = ('http', 'https')[secure]
+            
+        if self.host:
+            self.host, self.port = http.splitHostPort(self.scheme, self.host)
+        else:
+            # If GET line wasn't an absolute URL
             host = self.headers.getHeader('host')
-            if not host:
+            if host:
+                self.host, self.port = http.splitHostPort(self.scheme, host)
+            else:
+                # When no hostname specified anywhere, either raise an
+                # error, or use the interface hostname, depending on
+                # protocol version
                 if self.clientproto >= (1,1):
                     raise http.HTTPError(BAD_REQUEST)
-                host = hostinfo[0].host
-                port = hostinfo[0].port
-                if port != 80:
-                    host = host + ':' + str(port)
-            self.host = host
-        
-        if not self.scheme:
-            self.scheme = ('http', 'https')[hostinfo[1]]
+                self.host = hostaddr.host
+                self.port = hostaddr.port
+
 
     def process(self):
         "Process a request."
@@ -241,7 +275,7 @@ class Request(http.Request):
                 self._cbFinishRender(resp, requestContext).addErrback(self._processingFailed, requestContext)
                 return
             self._parseURL()
-            self._calculateHost()
+            self._fixupURLParts()
         except:
             failedDeferred = self._processingFailed(failure.Failure(), requestContext)
             failedDeferred.addCallback(self._renderAndFinish)
@@ -254,6 +288,11 @@ class Request(http.Request):
         deferredContext.addCallback(self._renderAndFinish)
 
     def preprocessRequest(self):
+        """Do any request processing that doesn't follow the normal
+        resource lookup procedure. "OPTIONS *" is handled here, for
+        example. This would also be the place to do any CONNECT
+        processing."""
+        
         if self.method == "OPTIONS" and self.uri == "*":
             response = http.Response(OK)
             response.headers.setHeader('Allow', ('GET', 'HEAD', 'OPTIONS', 'TRACE'))

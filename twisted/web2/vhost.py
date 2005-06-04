@@ -56,9 +56,7 @@ class NameVirtualHost(resource.Resource):
         This uses locateChild magic so you don't have to mutate the request.
         """
 
-        hostHeader = iweb.IRequest(ctx).host
-        
-        host = hostHeader.split(':')[0].lower()
+        host = iweb.IRequest(ctx).host.lower()
         
         if self.supportNested:
             """ If supportNested is True domain prefixes (the stuff up to the first '.')
@@ -124,7 +122,7 @@ class AutoVHostURIRewrite:
         else:
             scheme='http'
         
-        req.host = host
+        req.host, req.port = http.splitHostPort(scheme, host)
         req.scheme = scheme
         # FIXME: remote_ip ?
         req.prepath = app_location[1:].split('/')[:-1]
@@ -164,6 +162,7 @@ class VHostURIRewrite:
         if params or querystring or fragment:
             raise ValueError("Must not specify params, query args, or fragment to VHostURIRewrite")
         self.path = map(urllib.unquote, self.path[1:].split('/'))[:-1]
+        self.host, self.port = http.splitHostPort(self.scheme, self.host)
         
     def renderHTTP(self, ctx):
         return http.Response(responsecode.NOT_FOUND)
@@ -172,6 +171,7 @@ class VHostURIRewrite:
         req = iweb.IRequest(ctx)
         req.scheme = self.scheme
         req.host = self.host
+        req.port = self.port
         req.prepath=self.path[:]
         req.path = '/'+('/'.join([urllib.quote(s, '') for s in (req.prepath + segments)]))
         # print req.prepath, segments, req.postpath, req.path

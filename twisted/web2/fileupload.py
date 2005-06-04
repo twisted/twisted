@@ -17,7 +17,7 @@ def wait(d):
 
 class _fakewait(defer.waitForDeferred):
     def __init__(self, val):
-        print "_fakewait", val
+        #print "_fakewait", val
         self.d = self
         self.result = val
         
@@ -37,7 +37,7 @@ class MimeFormatError(Exception):
 # really the only way to handle the header.  (Quotes can be in the
 # filename, unescaped)
 cd_regexp = re.compile(
-    ' *form-data; *name="([^"]*)"(; *filename="(.*)")?$',
+    ' *form-data; *name="([^"]*)"(?:; *filename="(.*)")?$',
     re.IGNORECASE)
 
 def parseContentDispositionFormData(value):
@@ -62,7 +62,7 @@ def _readHeaders(stream):
     while 1:
         line = stream.readline(maxLength=1024)
         line = wait(line); yield line; line = line.getResult()
-        print "GOT", line
+        #print "GOT", line
         if line == "":
             break # End of headers
         
@@ -88,7 +88,6 @@ def _readHeaders(stream):
 _readHeaders = defer.deferredGenerator(_readHeaders)
 
 
-#@defer.deferredGenerator
 class _BoundaryWatchingStream:
     def __init__(self, stream, boundary):
         self.stream = stream
@@ -112,7 +111,8 @@ class _BoundaryWatchingStream:
     def _gotRead(self, newdata):
         if not newdata:
             raise MimeFormatError("Unexpected EOF")
-        self.data += newdata
+        # BLECH, converting buffer back into string.
+        self.data += str(newdata)
         data = self.data
         boundary = self.boundary
         off = data.find(boundary)
@@ -174,18 +174,18 @@ class MultipartMimeStream:
         return d
 
     def _readFirstBoundary(self):
-        print "_readFirstBoundary"
+        #print "_readFirstBoundary"
         line = self.stream.readline(maxLength=1024)
         line = wait(line); yield line; line = line.getResult()
         if line != self.boundary:
-            raise MimeFormatError("Extra data before first boundary: %r"% data)
+            raise MimeFormatError("Extra data before first boundary: %r"% line)
         
         self.boundary = "\r\n"+self.boundary
         yield True; return
     _readFirstBoundary = defer.deferredGenerator(_readFirstBoundary)
 
     def _readBoundaryLine(self):
-        print "_readBoundaryLine"
+        #print "_readBoundaryLine"
         line = self.stream.readline(maxLength=1024)
         line = wait(line); yield line; line = line.getResult()
         
@@ -198,7 +198,7 @@ class MultipartMimeStream:
     _readBoundaryLine = defer.deferredGenerator(_readBoundaryLine)
 
     def _doReadHeaders(self, morefields):
-        print "_doReadHeaders", morefields
+        #print "_doReadHeaders", morefields
         if not morefields:
             return None
         return _readHeaders(self.stream)
@@ -258,12 +258,11 @@ def parseMultipartFormData(stream, boundary,
         else:
             outfile = tempfile.NamedTemporaryFile()
             maxBuf = maxSize
-            
-        readIntoFile(stream, outfile, maxBuf)
-        
+        x = wait(readIntoFile(stream, outfile, maxBuf)); yield x; x=x.getResult()
         if filename is None:
             # Is a normal form field
-            args[fieldname] = data = str(outfile)
+            outfile.seek(0)
+            args[fieldname] = data = outfile.read()
             maxMem -= len(data)
             maxSize -= len(data)
         else:
@@ -299,7 +298,7 @@ def parse_urlencoded_stream(input, maxMem=100*1024,
             maxMem -= len(data)
             if maxMem < 0:
                 raise MimeFormatError("Maximum length of %d bytes exceeded." %
-                                      maxlen)
+                                      maxMem)
             pairs = str(data).split('&')
             pairs[0] = lastdata + pairs[0]
             lastdata=pairs.pop()

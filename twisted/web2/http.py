@@ -46,7 +46,24 @@ def _cachedGetHostByAddr(hostaddr):
             hostname = hostaddr
         _cachedHostNames[hostaddr]=hostname
     return hostname
+
+defaultPortForScheme = {'http': 80, 'https':443, 'ftp':21}
+
+def splitHostPort(scheme, hostport):
+    """Split the host in "host:port" format into host and port fields. 
+    If port was not specified, use the default for the given scheme, if
+    known. Returns a tuple of (hostname, portnumber)."""
     
+    # Split hostport into host and port
+    hostport = hostport.split(':', 1)
+    try:
+        if len(hostport) == 2:
+            return hostport[0], int(hostport[1])
+    except ValueError:
+        pass
+    return hostport[0], defaultPortForScheme.get(scheme, 0)
+
+
 def parseVersion(strversion):
     """Parse version strings of the form Protocol '/' Major '.' Minor. E.g. 'HTTP/1.1'.
     Returns (protocol, major, minor).

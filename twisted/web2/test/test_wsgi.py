@@ -147,12 +147,12 @@ class TestWSGIEnvironment(BaseCase):
             return ['%s=%r;' % (k, environ.get(k, '')) for k in varnames]
         return _app
 
-    def assertEnv(self, uri, env):
+    def assertEnv(self, uri, env, version=None):
         keys = env.keys()
         keys.sort()
         envstring = ''.join(['%s=%r;' % (k, v) for k, v in env.items()])
         self.assertResponse(
-            (WSGI(self.envApp(*keys)), uri),
+            (WSGI(self.envApp(*keys)), uri, None, None, version),
             (200, {}, envstring))
 
     def test_wsgi_url_scheme(self):
@@ -168,9 +168,9 @@ class TestWSGIEnvironment(BaseCase):
         """SERVER_PORT"""
         self.assertEnv('http://host/', {'SERVER_PORT': '80'})
         self.assertEnv('http://host:523/', {'SERVER_PORT': '523'})
-        # Because this is via a test request, port is fixed at 80
-        self.assertEnv('https://host/', {'SERVER_PORT': '80'})
+        self.assertEnv('https://host/', {'SERVER_PORT': '443'})
         self.assertEnv('https://host:523/', {'SERVER_PORT': '523'})
+        self.assertEnv('/foo', {'SERVER_PORT': '80'}, version=(1,0))
 
 if WSGI is None:
     for cls in (TestContainer, TestWSGIEnvironment):

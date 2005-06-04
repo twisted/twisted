@@ -41,7 +41,6 @@ def createCGIEnvironment(ctx, request=None):
 
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
     # http://cgi-spec.golux.com/draft-coar-cgi-v11-03-clean.html for a better one
-    hostinfo = request.chanRequest.getHostInfo()
     remotehost = request.chanRequest.getRemoteHost()
 
     python_path = os.pathsep.join(sys.path)
@@ -68,14 +67,8 @@ def createCGIEnvironment(ctx, request=None):
     # Should we raise an exception if this contains "/" chars?
     env["SCRIPT_NAME"] = '/' + '/'.join(request.prepath)
     
-    hostport = request.host.split(':')
-    server_port = (request.host.split(':')+[''])[1]
-    if len(hostport) == 1:
-        server_port = str(hostinfo[0].port)
-    else:
-        server_port = str(hostport[1])
-    env["SERVER_NAME"] = hostport[0]
-    env["SERVER_PORT"] = server_port
+    env["SERVER_NAME"] = request.host
+    env["SERVER_PORT"] = str(request.port)
     
     env["SERVER_PROTOCOL"] = "HTTP/%i.%i" % request.clientproto
     env["SERVER_SOFTWARE"] = server.VERSION
@@ -93,8 +86,8 @@ def createCGIEnvironment(ctx, request=None):
     env["REMOTE_PORT"] = str(remotehost.port)
     env["REQUEST_SCHEME"] = request.scheme
     env["REQUEST_URI"] = request.uri
-    env["HTTPS"] = ("off", "on")[hostinfo[1]]
-    env["SERVER_PORT_SECURE"] = ("0", "1")[hostinfo[1]]
+    env["HTTPS"] = ("off", "on")[request.scheme=="https"]
+    env["SERVER_PORT_SECURE"] = ("0", "1")[request.scheme=="https"]
     
     # Propagate HTTP headers
     for title, header in request.headers.getAllRawHeaders():

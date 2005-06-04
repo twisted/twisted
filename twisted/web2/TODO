@@ -17,8 +17,8 @@
  - Create default log observers for the log.msg's that we send.
  - Other useful filters: content-encoding, caching, others?
 
-- Convert proxy?
 - Client library *LATER*
+  - Convert proxy, distrib
 - Internal request submission API
 
 
