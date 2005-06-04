@@ -5,6 +5,7 @@ from twisted.internet import reactor
 from twisted.trial import unittest, util
 
 from twisted.internet.defer import waitForDeferred, deferredGenerator, Deferred
+from twisted.internet import defer
 
 def getThing():
     d = Deferred()
@@ -65,3 +66,26 @@ class DefGenTests(unittest.TestCase):
         _genDeferred = deferredGenerator(_genDeferred)
 
         self.assertRaises(TypeError, util.wait, _genDeferred())
+
+    def testStackUsage(self):
+        # Make sure we don't blow the stack when yielding immediately
+        # available values
+        def _loop():
+            for x in range(5000):
+                # Test with yielding a deferred
+                x = waitForDeferred(defer.succeed(1)); yield x; x=x.getResult()
+            yield 0
+                
+        _loop = deferredGenerator(_loop)
+        self.assertEquals(util.wait(_loop()), 0)
+
+    def testStackUsage2(self):
+        def _loop():
+            for x in range(5000):
+                # Test with yielding a random value
+                yield 1
+            yield 0
+        
+        _loop = deferredGenerator(_loop)
+        self.assertEquals(util.wait(_loop()), 0)
+

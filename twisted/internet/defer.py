@@ -673,35 +673,50 @@ def _deferGenerator(g, deferred=None, result=None):
     """
     See L{waitForDeferred}.
     """
-    if deferred is None:
-        deferred = Deferred()
-    try:
-        result = g.next()
-    except StopIteration:
-        deferred.callback(result)
-        return deferred
-    except:
-        deferred.errback()
-        return deferred
+    while 1:
+        if deferred is None:
+            deferred = Deferred()
+        try:
+            result = g.next()
+        except StopIteration:
+            deferred.callback(result)
+            return deferred
+        except:
+            deferred.errback()
+            return deferred
 
-    # Deferred.callback(Deferred) raises an error; we catch this case
-    # early here and give a nicer error message to the user in case
-    # they yield a Deferred. Perhaps eventually these semantics may
-    # change.
-    if isinstance(result, Deferred):
-        return fail(TypeError("Yield waitForDeferred(d), not d!"))
+        # Deferred.callback(Deferred) raises an error; we catch this case
+        # early here and give a nicer error message to the user in case
+        # they yield a Deferred. Perhaps eventually these semantics may
+        # change.
+        if isinstance(result, Deferred):
+            return fail(TypeError("Yield waitForDeferred(d), not d!"))
 
-    if isinstance(result, waitForDeferred):
-        def gotResult(r):
-            result.result = r
-            _deferGenerator(g, deferred, r)
-        def gotError(f):
-            result.failure = f
-            _deferGenerator(g, deferred, f)
-        result.d.addCallbacks(gotResult, gotError)
-    else:
-        _deferGenerator(g, deferred, result)
-    return deferred
+        if isinstance(result, waitForDeferred):
+            waiting=[True, None]
+            # Pass vars in so they don't get changed going around the loop
+            def gotResult(r, waiting=waiting, result=result):
+                result.result = r
+                if waiting[0]:
+                    waiting[0]=False
+                    waiting[1]=r
+                else:
+                    _deferGenerator(g, deferred, r)
+            def gotError(f, waiting=waiting, result=result):
+                result.failure = f
+                if waiting[0]:
+                    waiting[0]=False
+                    waiting[1]=f
+                else:
+                    _deferGenerator(g, deferred, f)
+            result.d.addCallbacks(gotResult, gotError)
+            if waiting[0]:
+                # Haven't called back yet, set flag so that we get reinvoked
+                # and return from the loop
+                waiting[0]=False
+                return deferred
+            else:
+                result = waiting[1]
 
 def deferredGenerator(f):
     """
