@@ -27,7 +27,7 @@ from twisted.python import log, components, failure
 from twisted import copyright
 
 # Sibling Imports
-from twisted.web2 import http, iweb
+from twisted.web2 import http, iweb, fileupload
 from twisted.web2.responsecode import *
 from twisted.web2 import http_headers, context, error, stream
 from twisted.web2 import rangefilter
@@ -86,27 +86,6 @@ def getEntireStream(stream):
     return _getData()
     
 def parsePOSTData(request):
-    def _gotURLEncodedData(data):
-        #print "_gotURLEncodedData"
-        request.args.update(cgi.parse_qs(data.read(), 1))
-        
-    def _gotMultipartData(data):
-        #print "_gotMultipartData"
-        try:
-            data.reset()
-            d=cgi.parse_multipart(data, dict(ctype.params))
-            data.reset()
-            #print "_gotMultipartData:",d, dict(ctype.params), data.read()
-            request.args.update(d)
-        except KeyError, e:
-            if e.args[0] == 'content-disposition':
-                # Parse_multipart can't cope with missing
-                # content-dispostion headers in multipart/form-data
-                # parts, so we catch the exception and tell the client
-                # it was a bad request.
-                raise HTTPError(responsecode.BAD_REQUEST)
-            raise
-
     if request.stream.length == 0:
         return defer.succeed(None)
     
@@ -114,16 +93,36 @@ def parsePOSTData(request):
     ctype = request.headers.getHeader('content-type')
     if ctype is None:
         return defer.succeed(None)
+
+    def updateArgs(data):
+        args = data
+        request.args.update(args)
+
+    def updateArgsAndFiles(data):
+        args, files = data
+        request.args.update(args)
+        request.files.update(files)
+
+    def error(f):
+        f.trap(fileupload.MimeFormatError)
+        raise HTTPError(responsecode.BAD_REQUEST)
     
     if ctype.mediaType == 'application' and ctype.mediaSubtype == 'x-www-form-urlencoded':
-        parser = _gotURLEncodedData
+        d = fileupload.parse_urlencoded(request.stream)
+        d.addCallbacks(updateArgs, error)
+        return d
     elif ctype.mediaType == 'multipart' and ctype.mediaSubtype == 'form-data':
-        parser = _gotMultipartData
-        
-    if parser:
-        return getEntireStream(request.stream).addCallback(parser)
-    return defer.succeed(None)
-
+        for f in ctype.params:
+            if f[0]=='boundary':
+                boundary=f[1]
+                break
+        else:
+            return failure.Failure(fileupload.MimeFormatError("Boundary not specified in Content-Type."))
+        d = fileupload.parseMultipartFormData(request.stream, boundary)
+        d.addCallbacks(updateArgsAndFiles, error)
+        return d
+    else:
+        raise HTTPError(responsecode.BAD_REQUEST)
 
 class StopTraversal(object):
     """
@@ -145,6 +144,7 @@ class Request(http.Request):
     querystring
     
     args
+    files
     
     prepath
     postpath
@@ -172,7 +172,7 @@ class Request(http.Request):
 
         # Copy response filters from the class
         self.responseFilters = self.responseFilters[:]
-
+        self.files = {}
         http.Request.__init__(self, *args, **kw)
 
     def addResponseFilter(self, f, atEnd=False):

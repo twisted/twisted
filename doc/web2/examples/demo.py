@@ -7,7 +7,7 @@
 import os.path
 import cgi as pycgi
 
-from twisted.web2 import log
+from twisted.web2 import log, iweb
 from twisted.web2 import static, wsgi, resource, responsecode, twcgi
 from twisted.web2 import resource, stream, http, http_headers
 from twisted.internet import reactor
@@ -44,6 +44,30 @@ class Sleepy(resource.Resource):
         # the default headers
         return http.Response(stream=s)
 
+### Form posting
+class FormPost(resource.PostableResource):
+    def render(self, ctx):
+        req = iweb.IRequest(ctx)
+        
+        return http.Response(responsecode.OK,
+                             {'content-type': http_headers.MimeType('text', 'html')},
+                             """
+        Form1, x-www-form-urlencoded:
+        <form method="POST" enctype="x-www-form-urlencoded">
+        <input name="foo">
+        <input name="bar" type="checkbox">
+        <input type="submit">
+        </form>
+        <p>
+        Form2, multipart/form-data:
+        <form method="POST" enctype="multipart/form-data">
+        <input name="foo">
+        <input name="bar" type="file">
+        <input type="submit">        
+        </form>
+        <p>
+        Arg dict: %r, Files: %r""" % (req.args, req.files))
+    
 ### Toplevel resource. This is a more normal resource.
 class Toplevel(resource.Resource):
     # addSlash=True to make sure it's treated as a directory-like resource
@@ -63,6 +87,7 @@ Hello!  This is a twisted.web2 demo.
 <li><a href="sleepy">Resource that takes time to render</a></li>
 <li><a href="wsgi">WSGI app</a></li>
 <li><a href="cgi">CGI app</a></li>
+<li><a href="forms">Forms</a></li>
 </ul>
 
 </body>
@@ -79,7 +104,7 @@ Hello!  This is a twisted.web2 demo.
     child_sleepy = Sleepy()
     child_wsgi = wsgi.WSGIResource(simple_wsgi_app)
     child_cgi = twcgi.FilteredScript(pycgi.__file__, filters=["/usr/bin/python"])
-
+    child_forms = FormPost()
 
 ######## Demonstrate a bunch of different deployment options ########
 ### You likely only want one of these for your app.
@@ -127,5 +152,5 @@ if __name__ == '__builtin__':
 # This bit gets run when you run this script as a CGI from another webserver.
 if __name__ == '__main__':
     from twisted.web2 import cgichannel, server
-    test = Test()
-    cgichannel.startCGI(server.Site(test))
+    toplevel = Toplevel()
+    cgichannel.startCGI(server.Site(toplevel))

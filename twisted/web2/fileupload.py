@@ -1,7 +1,6 @@
-
 from __future__ import generators
 
-import re, tempfile
+import re
 from zope.interface import implements
 import urllib
 
@@ -10,6 +9,11 @@ from twisted.web2.stream import IStream, FileStream, BufferedStream, readStream
 from twisted.web2.stream import generatorToStream
 from twisted.web2 import http_headers
 from cStringIO import StringIO
+
+try:
+    from tempfile import NamedTemporaryFile as TemporaryFile
+except:
+    from tempfile import TemporaryFile
 
 # This functionality of allowing non-deferreds to be yielded
 # perhaps ought to be part of defgen
@@ -64,9 +68,7 @@ def _readHeaders(stream):
     # Now read headers
     while 1:
         line = stream.readline(maxLength=1024)
-        line = wait(line)
-        yield line
-        line = line.getResult()
+        line = wait(line); yield line; line = line.getResult()
         #print "GOT", line
         if line == "":
             break # End of headers
@@ -182,9 +184,7 @@ class MultipartMimeStream:
     def _readFirstBoundary(self):
         #print "_readFirstBoundary"
         line = self.stream.readline(maxLength=1024)
-        line = wait(line)
-        yield line
-        line = line.getResult()
+        line = wait(line); yield line; line = line.getResult()
         if line != self.boundary:
             raise MimeFormatError("Extra data before first boundary: %r"% line)
         
@@ -196,9 +196,7 @@ class MultipartMimeStream:
     def _readBoundaryLine(self):
         #print "_readBoundaryLine"
         line = self.stream.readline(maxLength=1024)
-        line = wait(line)
-        yield line
-        line = line.getResult()
+        line = wait(line); yield line; line = line.getResult()
         
         if line == "--":
             # THE END!
@@ -248,7 +246,7 @@ def parseMultipartFormData(stream, boundary,
     # If the stream length is known to be too large upfront, abort immediately
     
     if stream.length is not None and stream.length > maxSize:
-        raise MessageTooLongError("Maximum length of %d bytes exceeded." %
+        raise MimeFormatError("Maximum length of %d bytes exceeded." %
                                   maxSize)
     
     mms = MultipartMimeStream(stream, boundary)
@@ -256,13 +254,15 @@ def parseMultipartFormData(stream, boundary,
     args = {}
     files = {}
     
-    while numFields < maxFields:
+    while 1:
         datas = mms.read()
-        datas = wait(datas)
-        yield datas
-        datas = datas.getResult()
+        datas = wait(datas); yield datas; datas = datas.getResult()
         if datas is None:
             break
+        
+        numFields+=1
+        if numFields == maxFields:
+            raise MimeFormatError("Maximum number of fields %d exceeded"%maxFields)
         
         # Parse data
         fieldname, filename, ctype, stream = datas
@@ -271,11 +271,9 @@ def parseMultipartFormData(stream, boundary,
             outfile = StringIO()
             maxBuf = min(maxSize, maxMem)
         else:
-            outfile = tempfile.NamedTemporaryFile()
+            outfile = TemporaryFile()
             maxBuf = maxSize
-        x = wait(readIntoFile(stream, outfile, maxBuf))
-        yield x
-        x = x.getResult()
+        x = wait(readIntoFile(stream, outfile, maxBuf)); yield x; x=x.getResult()
         if filename is None:
             # Is a normal form field
             outfile.seek(0)
@@ -288,7 +286,6 @@ def parseMultipartFormData(stream, boundary,
             outfile.seek(0)
             files[fieldname] = (filename, ctype, outfile)
         
-        numFields+=1
         
     yield args, files
     return
@@ -324,7 +321,7 @@ def parse_urlencoded_stream(input, maxMem=100*1024,
             nv = name_value.split('=', 1)
             if len(nv) != 2:
                 if strict_parsing:
-                    raise ValueError, "bad query field: %s" % `name_value`
+                    raise MimeFormatError("bad query field: %s") % `name_value`
                 continue
             if len(nv[1]) or keep_blank_values:
                 name = urllib.unquote(nv[0].replace('+', ' '))
@@ -332,20 +329,23 @@ def parse_urlencoded_stream(input, maxMem=100*1024,
                 yield name, value
 parse_urlencoded_stream = generatorToStream(parse_urlencoded_stream)
 
-def parse_urlencoded(stream, maxMem=100*1024,
+def parse_urlencoded(stream, maxMem=100*1024, maxFields=1024,
                      keep_blank_values=False, strict_parsing=False):
     d = {}
+    numFields = 0
 
     s=parse_urlencoded_stream(stream, maxMem, keep_blank_values, strict_parsing)
     
     while 1:
         datas = s.read()
-        datas = wait(datas)
-        yield datas
-        datas = datas.getResult()
+        datas = wait(datas); yield datas; datas = datas.getResult()
         if datas is None:
             break
         name, value = datas
+        
+        numFields += 1
+        if numFields == maxFields:
+            raise MimeFormatError("Maximum number of fields %d exceeded"%maxFields)
         
         if name in d:
             d[name].append(value)
