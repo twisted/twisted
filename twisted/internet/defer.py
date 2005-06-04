@@ -698,22 +698,22 @@ def _deferGenerator(g, deferred=None, result=None):
             def gotResult(r, waiting=waiting, result=result):
                 result.result = r
                 if waiting[0]:
-                    waiting[0]=False
-                    waiting[1]=r
+                    waiting[0] = False
+                    waiting[1] = r
                 else:
                     _deferGenerator(g, deferred, r)
             def gotError(f, waiting=waiting, result=result):
                 result.failure = f
                 if waiting[0]:
-                    waiting[0]=False
-                    waiting[1]=f
+                    waiting[0] = False
+                    waiting[1] = f
                 else:
                     _deferGenerator(g, deferred, f)
             result.d.addCallbacks(gotResult, gotError)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
-                waiting[0]=False
+                waiting[0] = False
                 return deferred
             else:
                 result = waiting[1]

@@ -1,3 +1,6 @@
+
+from __future__ import generators
+
 import re, tempfile
 from zope.interface import implements
 import urllib
@@ -61,7 +64,9 @@ def _readHeaders(stream):
     # Now read headers
     while 1:
         line = stream.readline(maxLength=1024)
-        line = wait(line); yield line; line = line.getResult()
+        line = wait(line)
+        yield line
+        line = line.getResult()
         #print "GOT", line
         if line == "":
             break # End of headers
@@ -84,7 +89,8 @@ def _readHeaders(stream):
         raise MimeFormatError('Content-disposition invalid or omitted.')
 
     # End of headers, return (field name, content-type, filename)
-    yield fieldname, filename, ctype; return
+    yield fieldname, filename, ctype
+    return
 _readHeaders = defer.deferredGenerator(_readHeaders)
 
 
@@ -176,25 +182,32 @@ class MultipartMimeStream:
     def _readFirstBoundary(self):
         #print "_readFirstBoundary"
         line = self.stream.readline(maxLength=1024)
-        line = wait(line); yield line; line = line.getResult()
+        line = wait(line)
+        yield line
+        line = line.getResult()
         if line != self.boundary:
             raise MimeFormatError("Extra data before first boundary: %r"% line)
         
         self.boundary = "\r\n"+self.boundary
-        yield True; return
+        yield True
+        return
     _readFirstBoundary = defer.deferredGenerator(_readFirstBoundary)
 
     def _readBoundaryLine(self):
         #print "_readBoundaryLine"
         line = self.stream.readline(maxLength=1024)
-        line = wait(line); yield line; line = line.getResult()
+        line = wait(line)
+        yield line
+        line = line.getResult()
         
         if line == "--":
             # THE END!
-            yield False; return
+            yield False
+            return
         elif line != "":
             raise MimeFormatError("Unexpected data on same line as boundary.")
-        yield True; return
+        yield True
+        return
     _readBoundaryLine = defer.deferredGenerator(_readBoundaryLine)
 
     def _doReadHeaders(self, morefields):
@@ -245,7 +258,9 @@ def parseMultipartFormData(stream, boundary,
     
     while numFields < maxFields:
         datas = mms.read()
-        datas = wait(datas); yield datas; datas = datas.getResult()
+        datas = wait(datas)
+        yield datas
+        datas = datas.getResult()
         if datas is None:
             break
         
@@ -258,7 +273,9 @@ def parseMultipartFormData(stream, boundary,
         else:
             outfile = tempfile.NamedTemporaryFile()
             maxBuf = maxSize
-        x = wait(readIntoFile(stream, outfile, maxBuf)); yield x; x=x.getResult()
+        x = wait(readIntoFile(stream, outfile, maxBuf))
+        yield x
+        x = x.getResult()
         if filename is None:
             # Is a normal form field
             outfile.seek(0)
@@ -323,7 +340,9 @@ def parse_urlencoded(stream, maxMem=100*1024,
     
     while 1:
         datas = s.read()
-        datas = wait(datas); yield datas; datas = datas.getResult()
+        datas = wait(datas)
+        yield datas
+        datas = datas.getResult()
         if datas is None:
             break
         name, value = datas
@@ -332,7 +351,8 @@ def parse_urlencoded(stream, maxMem=100*1024,
             d[name].append(value)
         else:
             d[name] = [value]
-    yield d; return
+    yield d
+    return
 parse_urlencoded = defer.deferredGenerator(parse_urlencoded)
 
 

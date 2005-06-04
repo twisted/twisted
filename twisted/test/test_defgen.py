@@ -60,7 +60,7 @@ class DefGenTests(unittest.TestCase):
         self.assertEquals(util.wait(_genNothing()), None)
 
     def testDeferredYielding(self):
-        # See the comment _deferGenerator about d.callback(Deferred).        
+        # See the comment _deferGenerator about d.callback(Deferred).
         def _genDeferred():
             yield getThing()
         _genDeferred = deferredGenerator(_genDeferred)
@@ -73,9 +73,11 @@ class DefGenTests(unittest.TestCase):
         def _loop():
             for x in range(5000):
                 # Test with yielding a deferred
-                x = waitForDeferred(defer.succeed(1)); yield x; x=x.getResult()
+                x = waitForDeferred(defer.succeed(1))
+                yield x
+                x = x.getResult()
             yield 0
-                
+
         _loop = deferredGenerator(_loop)
         self.assertEquals(util.wait(_loop()), 0)
 
@@ -85,7 +87,7 @@ class DefGenTests(unittest.TestCase):
                 # Test with yielding a random value
                 yield 1
             yield 0
-        
+
         _loop = deferredGenerator(_loop)
         self.assertEquals(util.wait(_loop()), 0)
 
