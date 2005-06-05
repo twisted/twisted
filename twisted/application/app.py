@@ -48,7 +48,7 @@ may provide it in a separate package.
         log.deferr()
         sys.exit('\n' + s + '\n')
 
-    p = profile.Profile(lineevents=1) # lineevents=1 for hotshot2kcachegrind compatability
+    p = profile.Profile()
     p.runcall(reactor.run)
     if config['savestats']:
         p.dump_stats(config['profile'])
