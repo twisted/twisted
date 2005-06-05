@@ -401,7 +401,7 @@ class OldNevowResourceAdapter(object):
 
 
 class OldResourceAdapter(object):
-    __implements__ = iweb.IOldNevowResource,
+    implements(iweb.IOldNevowResource)
 
     def __init__(self, original):
         self.original = original
@@ -415,11 +415,16 @@ class OldResourceAdapter(object):
         if self.original.isLeaf:
             return self, server.StopTraversal
         name = segments[0]
-        request.prepath.append(request.postpath.pop(0))
-        res = self.original.getChildWithDefault(name, request)
-        request.postpath.insert(0, request.prepath.pop())
-        if isinstance(res, defer.Deferred):
-            return res.addCallback(lambda res: (res, segments[1:]))
+        if name == '':
+            res = self
+        else:
+            request.prepath.append(request.postpath.pop(0))
+            res = self.original.getChildWithDefault(name, request)
+            request.postpath.insert(0, request.prepath.pop())
+            
+            if isinstance(res, defer.Deferred):
+                return res.addCallback(lambda res: (res, segments[1:]))
+            
         return res, segments[1:]
 
     def _handle_NOT_DONE_YET(self, data, request):
