@@ -135,10 +135,6 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
         # This is for distrib compatibility
         x = {}
 
-        # We fake the __class__ because the Publisher shouldn't have to
-        # know about web2 at all.
-        x['__class__'] = 'twisted.web.server.Request'
-
         x['prepath'] = self.prepath
         x['postpath'] = self.postpath
         x['method'] = self.method
@@ -153,6 +149,11 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
         x['client'] = _addressToTuple(self.request.chanRequest.channel.transport.getPeer())
 
         return x
+
+    def getTypeToCopy(self):
+        # lie to PB so the ResourcePublisher doesn't have to know web2 exists
+        # which is good because web2 doesn't exist.
+        return 'twisted.web.server.Request'
 
     def registerProducer(self, producer, streaming):
         self.response.stream.registerProducer(producer, streaming)
@@ -442,16 +443,3 @@ class OldResourceAdapter(object):
         result = defer.maybeDeferred(self.original.render, request).addCallback(
             self._handle_NOT_DONE_YET, request)
         return result
-
-
-# At the moment I have decided it's not unreasonable for distrib compatibility
-# to require twisted.web to be installed.  I'll probably try and fix this
-# later.  But until then, if twisted.web is installed add a copier for
-# OldRequestAdapter. -- dreid
-
-try:
-    from twisted.web import distrib
-except ImportError:
-    pass
-else:
-    pb.setCopierForClass(OldRequestAdapter, distrib.Request)
