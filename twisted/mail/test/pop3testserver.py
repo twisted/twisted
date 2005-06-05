@@ -1,4 +1,6 @@
-#!/usr/local/bin/python
+#!/usr/bin/python
+# -*- test-case-name: twisted.mail.test.test_pop3client -*-
+
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
 from twisted.internet import reactor
@@ -132,7 +134,7 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(resp)
 
-        elif fine("PASS"):
+        elif find("PASS"):
             resp = None
             try:
                 pwd = line.split(" ")[1]
