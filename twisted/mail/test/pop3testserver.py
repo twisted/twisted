@@ -98,6 +98,9 @@ class POP3TestServer(basic.LineReceiver):
 
     def lineReceived(self, line):
         """Error Conditions"""
+        uline = line.upper()
+        find = lambda s: uline.find(s) != -1
+
         if TIMEOUT_RESPONSE:
             # Do not respond to clients request
             return
@@ -106,16 +109,16 @@ class POP3TestServer(basic.LineReceiver):
             self.transport.loseConnection()
             return
 
-        elif "CAPA" in line.upper():
+        elif find("CAPA"):
             if INVALID_CAPABILITY_RESPONSE:
                 self.sendLine(INVALID_RESPONSE)
             else:
                 self.sendCapabilities()
 
-        elif "STLS" in line.upper() and SSL_SUPPORT:
+        elif find("STLS") and SSL_SUPPORT:
             self.startTLS()
 
-        elif "USER" in line.upper():
+        elif find("USER"):
             if INVALID_LOGIN_RESPONSE:
                 self.sendLine(INVALID_RESPONSE)
                 return
@@ -129,7 +132,7 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(resp)
 
-        elif "PASS" in line.upper():
+        elif fine("PASS"):
             resp = None
             try:
                 pwd = line.split(" ")[1]
@@ -146,7 +149,7 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(resp)
 
-        elif "QUIT" in line.upper():
+        elif find("QUIT"):
             self.loggedIn = False
             self.sendLine(LOGOUT_COMPLETE)
             self.disconnect()
@@ -157,20 +160,20 @@ class POP3TestServer(basic.LineReceiver):
         elif not self.loggedIn:
             self.sendLine(NOT_LOGGED_IN)
 
-        elif "NOOP" in line.upper():
+        elif find("NOOP"):
             self.sendLine(VALID_RESPONSE)
 
-        elif "STAT" in line.upper():
+        elif find("STAT"):
             if TIMEOUT_DEFERRED:
                 return
             self.sendLine(STAT)
 
-        elif "LIST" in line.upper():
+        elif find("LIST"):
             if TIMEOUT_DEFERRED:
                 return
             self.sendLine(LIST)
 
-        elif "UIDL" in line.upper():
+        elif find("UIDL"):
             if TIMEOUT_DEFERRED:
                 return
             elif not UIDL_SUPPORT:
