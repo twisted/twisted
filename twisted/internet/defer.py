@@ -743,6 +743,9 @@ class _ConcurrencyPrimitive(object):
         lock or semaphore is acquired, the callable will be invoked
         with those arguments.
 
+        The callable may return a Deferred; if it does, the lock or 
+        semaphore won't be released until that Deferred fires.
+
         @return Deferred of function result.
         """
         if len(args) < 2:
