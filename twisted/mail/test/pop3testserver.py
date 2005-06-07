@@ -4,7 +4,7 @@
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
 from twisted.internet import reactor
-import sys
+import sys, time
 
 USER = "test"
 PASS = "twisted"
@@ -86,7 +86,7 @@ class POP3TestServer(basic.LineReceiver):
 
     def connectionMade(self):
         if DENY_CONNECTION:
-            self.transport.loseConnection()
+            self.disconnect()
             return
 
         if SLOW_GREETING:
@@ -100,6 +100,9 @@ class POP3TestServer(basic.LineReceiver):
 
     def lineReceived(self, line):
         """Error Conditions"""
+
+        print time.time(), 'RECEIVED A LINE', repr(line)
+
         uline = line.upper()
         find = lambda s: uline.find(s) != -1
 
@@ -108,7 +111,7 @@ class POP3TestServer(basic.LineReceiver):
             return
 
         if DROP_CONNECTION:
-            self.transport.loseConnection()
+            self.disconnect()
             return
 
         elif find("CAPA"):
@@ -192,7 +195,7 @@ class POP3TestServer(basic.LineReceiver):
             self.sendLine('+OK Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
         else:
-            self.sendLine('+OK TLS not available')
+            self.sendLine('-ERR TLS not available')
 
     def disconnect(self):
         self.transport.loseConnection()
