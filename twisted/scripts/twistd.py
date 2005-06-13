@@ -53,10 +53,13 @@ class ServerOptions(app.ServerOptions):
 
     def postOptions(self):
         app.ServerOptions.postOptions(self)
-        self['pidfile'] = os.path.abspath(self['pidfile'])
+        if self['pidfile']:
+            self['pidfile'] = os.path.abspath(self['pidfile'])
 
 
 def checkPID(pidfile):
+    if not pidfile:
+        return
     if os.path.exists(pidfile):
         try:
             pid = int(open(pidfile).read())
@@ -81,6 +84,8 @@ directory, or use the --pidfile and --logfile parameters to avoid clashes.
 """ %  pid)
 
 def removePID(pidfile):
+    if not pidfile:
+        return
     try:
         os.unlink(pidfile)
     except OSError, e:
@@ -157,7 +162,8 @@ def setupEnvironment(config):
     os.chdir(config['rundir'])
     if not config['nodaemon']:
         daemonize()
-    open(config['pidfile'],'wb').write(str(os.getpid()))
+    if config['pidfile']:
+        open(config['pidfile'],'wb').write(str(os.getpid()))
 
 def startApplication(config, application):
     process = service.IProcess(application, None)
