@@ -175,6 +175,14 @@ class TestSuite(Timed):
             self.addModule(module)
 
     def _packageRecurse(self, arg, dirname, names):
+
+        # Only recurse into packages
+        for ext in 'py', 'so', 'pyd', 'dll':
+            if os.path.exists(os.path.join(dirname, os.extsep.join(('__init__', ext)))):
+                break
+        else:
+            return
+
         testModuleNames = fnmatch.filter(names, self.moduleGlob)
         testModules = [ reflect.filenameToModuleName(opj(dirname, name))
                         for name in testModuleNames ]
