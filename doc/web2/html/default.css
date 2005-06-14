@@ -121,42 +121,6 @@ pre {
  padding: .25em;
  overflow: auto;
 }
-.computeroutput, .traceback, .pykeyword, .pystring, .pycomment, .pyfunction, .pyclass {
-  background-color: white;
-}
-
-.pykeyword, .pyfunction, .pyclass {
-  font-weight: bold;
-}
-
-.computeroutput {
-  color: teal;
-}
-
-.traceback {
-  color: red;
-}
-
-.pykeyword {
-  color: navy;
-}
-
-.pystring {
-  color: olive;
-}
-
-.pycomment {
-  color: green;
-  font-style: italic;
-}
-
-.pyfunction {
-  color: teal;
-}
-
-.pyclass {
-  color: blue;
-}
 
 /* ----- home page ----- */
 #wrapper {
@@ -206,8 +170,6 @@ pre {
     font-size: 14px; margin-right: 25px;
 }
 
-.right { z-index: 99; position: absolute; right: 30px; }
-
 .docTitle { font-size: 20px; color: gray; }
 
 .directoryHeader { font-weight: bold;}
@@ -216,3 +178,61 @@ pre {
 
 .title { display: none; }
 
+
+
+/** For python source code colorizing */
+.py-src-comment
+{
+  font-style: italic;
+  color: red;
+}
+
+.py-src-keyword
+{
+  color: #3333CC;
+  font-weight: bold;
+}
+
+.py-src-parameter
+{
+  color: #000066;
+  font-weight: bold;
+}
+
+.py-src-identifier
+{
+  color: #CC0000
+}
+
+.py-src-string
+{
+  
+  color: green;
+}
+
+.py-src-endmarker
+{
+  display: block; /* IE hack; prevents following line from being sucked into the py-listing box. */
+}
+
+.py-listing, .html-listing, .listing 
+{
+  margin: 1ex;
+  border: thin solid black;
+  background-color: #eee;
+}
+
+.py-listing pre, .html-listing pre, .listing pre
+{
+  margin: 0px;
+  border: none;
+  border-bottom: thin solid black;
+}
+
+.py-listing .python 
+{
+  margin-top: 0;
+  margin-bottom: 0;
+  border: none;
+  border-bottom: thin solid black;
+  }

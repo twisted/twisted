@@ -27,19 +27,20 @@ Here are the attributes on the incoming Request object likely to be of interest:
 2) ``.headers`` - A ``twisted.web2.http_headers.Headers`` instance.
 3) ``.stream`` - The incoming data stream, an implementor of twisted.web2.stream.IByteStream.
 
-Then there's the attributes that make up a url:
+Then there's the attributes that make up a url. Note that all of these, including scheme, host, and port, may be specified by the client:
 
 4) ``.scheme`` - the request scheme the user used, e.g. "http" or "https".
-5) ``.host`` - the hostname and port the client sent the request to, e.g. "localhost:8080"
-6) ``.path`` - the complete path, as a string
-7) ``.params`` - The url "parameters". This is an obscure part of the url spec that you're unlikely to ever have a use for.
-8) ``.querystring`` - The query arguments as a string.
-9) ``.args`` - The parsed form arguments, as a dictionary, including POST arguments if applicable. This is in the form of a dictionary of lists. The string "?a=1&c=1&c=2" will get turned into {'a':['1'], 'c':['1', '2']}.
+5) ``.host`` - the hostname the client sent the request to, e.g. "localhost"
+6) ``.port`` - the port the client sent the request to, e.g. "80"
+7) ``.path`` - the complete path, as a string
+8) ``.params`` - The url "parameters". This is an obscure part of the url spec that you're unlikely to ever have a use for.
+9) ``.querystring`` - The query arguments as a string.
+10) ``.args`` - The parsed form arguments, as a dictionary, including POST arguments if applicable. This is in the form of a dictionary of lists. The string "?a=1&c=1&c=2" will get turned into {'a':['1'], 'c':['1', '2']}.
 
 Then, the pieces of the parsed url as its being traversed:
 
-10) ``.prepath`` - A list of url segments that have already been processed by a locateChild method.
-11) ``.postpath`` - A list of url segments yet to be processed.
+11) ``.prepath`` - A list of url segments that have already been processed by a locateChild method.
+12) ``.postpath`` - A list of url segments yet to be processed.
 
 Resources
 ---------

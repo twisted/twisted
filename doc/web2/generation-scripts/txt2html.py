@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+from StringIO import StringIO
 
 from nevow import flat, tags as T
 
@@ -36,8 +37,28 @@ except:
 
 try:
     from docutils.core import publish_string
+    from docutils.parsers import rst
+    from docutils import nodes
 except ImportError:
     error("Error during import: Docutils is required.",99)
+
+try:
+    from twisted.python import htmlizer
+except ImportError:
+    error("Error during import: twisted.python.htmlizer is required", 99)
+
+def python(name, arguments, options, content, lineno,
+                    content_offset, block_text, state, state_machine ):
+    inp = StringIO('\n'.join(content))
+    outp = StringIO()
+    htmlizer.filter(inp, outp, writer=htmlizer.SmallerHTMLWriter)
+    html = outp.getvalue()
+    raw = nodes.raw('',html, format = 'html')
+    return [raw]
+    # to avoid having to use <pre>..
+python.content = 1
+
+rst.directives.register_directive( 'python', python)
 
 TEMPLATE = \
 '''~~~~~~~~~~
@@ -87,7 +108,7 @@ def navBar(name,flathier):
     return flat.flatten(
         [T.a(name="top",id="top"),
         T.div(_class="navbar")[
-            T.span(_class="docTitle")[hier.title[LANGUAGE]],
+            T.span(_class="docTitle")[hier.title[LANGUAGE]],T.br,
             T.span(_class="right")[
                 prev and [conf["prev"], ": ",
                 T.a(href=[prev[0],".html"])["[", prev[1][0],"]",]] or "",

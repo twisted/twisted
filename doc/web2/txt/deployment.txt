@@ -7,8 +7,9 @@ Deploying as a standalone HTTP/HTTPS server is by far the simplest. Unless you h
 
 Standalone HTTP
 ---------------
-For completeness, here is a simple standalone HTTP server again::
+For completeness, here is a simple standalone HTTP server again 
 
+.. python::
   from twisted.web2 import server, http, static
   
   # For example, serve the /tmp directory
@@ -43,8 +44,9 @@ Or, for serving an entire HTTPS virtual host::
   RequestHeader set X-App-Scheme https
   </VirtualHost>
 
-Now, on the twisted.web2 side::
+Now, on the twisted.web2 side
 
+.. python::
   from twisted.web2 import server, http, static, vhost
   
   # For example, serve the /tmp directory
@@ -71,8 +73,9 @@ Setup apache as follows::
   ServerName example.com
   </VirtualHost>
   
-And twisted like so::
+And twisted like so
 
+.. python::
   from twisted.web2 import server, http, static, vhost
   
   # For example, serve the /tmp directory
@@ -101,8 +104,9 @@ Setup apache as follows::
   ServerName example.com
   </VirtualHost>
 
-And twisted like so::
+And twisted like so
 
+.. python::
   from twisted.web2 import server, http, resource, static, vhost
 
   # For example, server the /tmp/foo directory
@@ -133,8 +137,9 @@ SCGI is an alternative to HTTP proxying. SCGI should work instead of HTTP proxyi
 
 FIXME:Someone who has installed mod_scgi in apache should write a bit on it.
 
-Configure Twisted as follows::
+Configure Twisted as follows
 
+.. python::
   # For example, serve the /tmp directory
   toplevel = static.File("/tmp")
   site = server.Site(toplevel)
@@ -149,8 +154,9 @@ CGI
 ---
 CGI is the worst possible deployment environment, yet in some cases it may be all that is possible. It allows only a single request to be served from a process, so any kind of in-memory storage is impossible. Also, the overhead of starting up a new python interpreter for every request can get quite high. You should only consider using it if your hosting provider does not allow you to keep a process running.
 
-However, if it's your only choice, you can deploy a twisted.web2 app using it. Unlike the other examples, where we create a .tac file for running with twistd, in this case, a standalone python script is necessary::
+However, if it's your only choice, you can deploy a twisted.web2 app using it. Unlike the other examples, where we create a .tac file for running with twistd, in this case, a standalone python script is necessary
 
+.. python::
   #!/usr/bin/env python
   from twisted.web2 import cgichannel, server, static
   toplevel = static.File("/tmp")
