@@ -173,6 +173,7 @@ class Request(http.Request):
         # Copy response filters from the class
         self.responseFilters = self.responseFilters[:]
         self.files = {}
+        self.resources = []
         http.Request.__init__(self, *args, **kw)
 
     def addResponseFilter(self, f, atEnd=False):
@@ -222,7 +223,8 @@ class Request(http.Request):
             (self.scheme, self.host, self.path,
              self.params, self.querystring, fragment) = urlparse.urlparse(self.uri)
 
-        self.args = cgi.parse_qs(self.querystring, True)
+        if self.querystring:
+            self.args = cgi.parse_qs(self.querystring, True)
         
         path = map(unquote, self.path[1:].split('/'))
         if self._initialprepath:
@@ -240,7 +242,7 @@ class Request(http.Request):
         else:
             self.prepath = []
             self.postpath = path
-        #print "_parseURL", self.uri, self.scheme, self.host, self.port, self.path, self.params, self.querystring
+        #print "_parseURL", self.uri, (self.uri, self.scheme, self.host, self.path, self.params, self.querystring)
 
     def _fixupURLParts(self):
         hostaddr, secure = self.chanRequest.getHostInfo()
@@ -266,26 +268,24 @@ class Request(http.Request):
 
     def process(self):
         "Process a request."
-        requestContext = context.RequestContext(tag=self, parent=self.site.context)
+        self._requestContext = context.RequestContext(tag=self, parent=self.site.context)
         
         try:
             self.checkExpect()
             resp = self.preprocessRequest()
             if resp is not None:
-                self._cbFinishRender(resp, requestContext).addErrback(self._processingFailed, requestContext)
+                self._cbFinishRender(resp).addErrback(self._processingFailed)
                 return
             self._parseURL()
             self._fixupURLParts()
         except:
-            failedDeferred = self._processingFailed(failure.Failure(), requestContext)
-            failedDeferred.addCallback(self._renderAndFinish)
+            failedDeferred = self._processingFailed(failure.Failure())
             return
         
-        deferredContext = self._getChild(requestContext,
-                                         self.site.resource,
-                                         self.postpath)
-        deferredContext.addErrback(self._processingFailed, requestContext)
-        deferredContext.addCallback(self._renderAndFinish)
+        d = self._getChild(self.site.resource, self.postpath)
+        d.addCallback(lambda res, ctx: res.renderHTTP(ctx), self._requestContext)
+        d.addCallback(self._cbFinishRender)
+        d.addErrback(self._processingFailed)
 
     def preprocessRequest(self):
         """Do any request processing that doesn't follow the normal
@@ -295,99 +295,75 @@ class Request(http.Request):
         
         if self.method == "OPTIONS" and self.uri == "*":
             response = http.Response(OK)
-            response.headers.setHeader('Allow', ('GET', 'HEAD', 'OPTIONS', 'TRACE'))
+            response.headers.setHeader('allow', ('GET', 'HEAD', 'OPTIONS', 'TRACE'))
             return response
         # This is where CONNECT would go if we wanted it
         return None
     
-    def _getChild(self, ctx, res, path):
+    def _getChild(self, res, path):
         """Create a PageContext for res, call res.locateChild, and pass the
         result on to _handleSegment."""
-        
-        # Create a context object to represent this new resource
-        newctx = context.PageContext(tag=res, parent=ctx)
+
+        self.resources.append(res)
 
         if not path:
-            return defer.succeed(newctx)
+            return defer.succeed(res)
 
         return defer.maybeDeferred(
-            res.locateChild, newctx, path
-        ).addErrback(
-            self._processingFailed, newctx
+            res.locateChild, self._requestContext, path
         ).addCallback(
-            self._handleSegment, path, newctx
+            self._handleSegment, res, path
         )
 
-    def _handleSegment(self, result, path, pageContext):
+    def _handleSegment(self, result, res, path):
         """Handle the result of a locateChild call done in _getChild."""
-        
-        if result is _errorMarker:
-            # The error page handler has already handled this, abort.
-            return result
+        newres, newpath = result
+        # If the child resource is None then display a error page
+        if newres is None:
+            raise http.HTTPError(NOT_FOUND)
 
-        try:
-            newres, newpath = result
-            # If the child resource is None then display a error page
-            if newres is None:
-                raise http.HTTPError(NOT_FOUND)
+        # If we got a deferred then we need to call back later, once the
+        # child is actually available.
+        if isinstance(newres, defer.Deferred):
+            return newres.addCallback(
+                lambda actualRes: self._handleSegment(
+                    (actualRes, newpath), res, path))
 
-            # If we got a deferred then we need to call back later, once the
-            # child is actually available.
-            if isinstance(newres, defer.Deferred):
-                return newres.addCallback(
-                    lambda actualRes: self._handleSegment(
-                        (actualRes, newpath), path, pageContext))
+        if newpath is StopTraversal:
+            # We need to rethink how to do this.
+            #if newres is res:
+                return res
+            #else:
+            #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
 
-            if newpath is StopTraversal:
-                # We need to rethink how to do this.
-                #if newres is pageContext.tag:
-                    return pageContext
-                #else:
-                #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
+        newres = iweb.IResource(newres)
+        if newres is res:
+            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
+            assert len(newpath) < len(path), "Infinite loop impending..."
 
-            newres = iweb.IResource(newres)
-            if newres is pageContext.tag:
-                assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
-                assert len(newpath) < len(path), "Infinite loop impending..."
+        # We found a Resource... update the request.prepath and postpath
+        for x in xrange(len(path) - len(newpath)):
+            self.prepath.append(self.postpath.pop(0))
 
-            # We found a Resource... update the request.prepath and postpath
-            for x in xrange(len(path) - len(newpath)):
-                self.prepath.append(self.postpath.pop(0))
-        except:
-            # Handle errors here in the appropriate pageContext
-            return self._processingFailed(failure.Failure(), pageContext)
-        # But don't add an errback to this
-        return self._getChild(pageContext, newres, newpath)
+        return self._getChild(newres, newpath)
 
-
-    def _renderAndFinish(self, pageContext):
-        if pageContext is _errorMarker:
-            # If the location step raised an exception, the error
-            # handler has already rendered the error page.
-            return pageContext
-        
-        d = defer.maybeDeferred(pageContext.tag.renderHTTP, pageContext)
-        d.addCallback(self._cbFinishRender, pageContext)
-        d.addErrback(self._processingFailed, pageContext)
-        
-    def _processingFailed(self, reason, ctx):
+    def _processingFailed(self, reason):
         if reason.check(http.HTTPError) is not None:
             # If the exception was an HTTPError, leave it alone
             d = defer.succeed(reason.value.response)
         else:
             # Otherwise, it was a random exception, so give a
             # ICanHandleException implementer a chance to render the page.
-            def _processingFailed_inner(ctx, reason):
-                handler = iweb.ICanHandleException(ctx, default=self)
-                return handler.renderHTTP_exception(ctx, reason)
-            d = defer.maybeDeferred(_processingFailed_inner, ctx, reason)
+            def _processingFailed_inner(reason):
+                handler = iweb.ICanHandleException(self._requestContext, default=self)
+                return handler.renderHTTP_exception(self._requestContext, reason)
+            d = defer.maybeDeferred(_processingFailed_inner, reason)
         
-        d.addCallback(self._cbFinishRender, ctx)
-        d.addErrback(self._processingReallyFailed, ctx, reason)
-        d.addBoth(lambda result: _errorMarker)
+        d.addCallback(self._cbFinishRender)
+        d.addErrback(self._processingReallyFailed, reason)
         return d
     
-    def _processingReallyFailed(self, reason, ctx, origReason):
+    def _processingReallyFailed(self, reason, origReason):
         log.msg("Exception rendering error page:", isErr=1)
         log.err(reason)
         log.msg("Original exception:", isErr=1)
@@ -403,27 +379,28 @@ class Request(http.Request):
             body)
         self.writeResponse(response)
 
-    def _cbFinishRender(self, result, ctx):
+    def _cbFinishRender(self, result):
         def filterit(response, f):
             if (hasattr(f, 'handleErrors') or
                 (response.code >= 200 and response.code < 300 and response.code != 204)):
-                return f(self, response, ctx)
+                return f(self, response, self._requestContext)
             else:
                 return response
 
         response = iweb.IResponse(result, None)
         if response:
-            d = defer.succeed(response)
+            d = defer.Deferred()
             for f in self.responseFilters:
                 d.addCallback(filterit, f)
             d.addCallback(self.writeResponse)
+            d.callback(response)
             return d
 
         resource = iweb.IResource(result, None)
         if resource:
-            pageContext = context.PageContext(tag=resource, parent=ctx)
-            d = defer.maybeDeferred(resource.renderHTTP, pageContext)
-            d.addCallback(self._cbFinishRender, pageContext)
+            self.resources.append(resource)
+            d = defer.maybeDeferred(resource.renderHTTP, self._requestContext)
+            d.addCallback(self._cbFinishRender)
             return d
 
         raise TypeError("html is not a resource or a response")

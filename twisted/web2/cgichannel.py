@@ -177,13 +177,13 @@ class BaseCGIChannelRequest(protocol.Protocol):
             if name.startswith('HTTP_'):
                 name = name[5:].replace('_', '-')
             elif name == 'CONTENT_TYPE':
-                name = 'Content-Type'
+                name = 'content-type'
             else:
                 continue
             headers.setRawHeaders(name, (val,))
             
         self._dataRemaining = int(vars.get('CONTENT_LENGTH', '0'))
-        headers.setHeader('Content-Length', self._dataRemaining)
+        headers.setHeader('content-length', self._dataRemaining)
         self.request = self.requestFactory(self, vars['REQUEST_METHOD'], uri, http_vers[1:3], headers, prepathuri=vars['SCRIPT_NAME'])
         
     def writeIntermediateResponse(self, code, headers=None):

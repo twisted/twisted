@@ -113,7 +113,7 @@ class Resource(object):
     def http_OPTIONS(self, ctx):
         """Sends back OPTIONS response."""
         response = http.Response(OK)
-        response.headers.setHeader('Allow', self.allowedMethods)
+        response.headers.setHeader('allow', self.allowedMethods)
         return response
 
     def http_TRACE(self, ctx):

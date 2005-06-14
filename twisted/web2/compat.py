@@ -193,11 +193,11 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
     def setLastModified(self, when):
         # Never returns CACHED -- can it and still be compliant?
         when = long(math.ceil(when))
-        self.response.headers.setHeader('Last-Modified', when)
+        self.response.headers.setHeader('last-modified', when)
         return None
 
     def setETag(self, etag):
-        self.response.headers.setRawHeaders('ETag', [etag])
+        self.response.headers.setRawHeaders('etag', [etag])
         return None
 
     def getAllHeaders(self):
@@ -208,7 +208,7 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
 
 
     def getCookie(self, key):
-        for cookie in self.request.headers.getHeader('Cookie', ()):
+        for cookie in self.request.headers.getHeader('cookie', ()):
             if cookie.name == key:
                 return cookie.value
             
@@ -218,7 +218,7 @@ class OldRequestAdapter(pb.Copyable, components.Componentized, object):
         if expires is None and max_age is not None:
             expires=max_age-time.time()
         cookie = http_headers.Cookie(k,v, expires=expires, domain=domain, path=path, comment=comment, secure=secure)
-        self.response.headers.setHeader('Set-Cookie', self.request.headers.getHeader('Set-Cookie', ())+(cookie,))
+        self.response.headers.setHeader('set-cookie', self.request.headers.getHeader('set-cookie', ())+(cookie,))
 
     def notifyFinish(self):
         ### FIXME

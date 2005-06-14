@@ -277,7 +277,7 @@ class Request(object):
         
         self.headers = headers
         
-        if '100-continue' in self.headers.getHeader('Expect', ()):
+        if '100-continue' in self.headers.getHeader('expect', ()):
             doStartReading = self._sendContinue
         else:
             doStartReading = None
@@ -287,7 +287,7 @@ class Request(object):
     def checkExpect(self):
         """Ensure there are no expectations that cannot be met.
         Checks Expect header against self.known_expects."""
-        expects = self.headers.getHeader('Expect', ())
+        expects = self.headers.getHeader('expect', ())
         for expect in expects:
             if expect not in self.known_expects:
                 raise HTTPError(responsecode.EXPECTATION_FAILED)
@@ -576,30 +576,30 @@ class HTTPChannelRequest:
         # to have a non-authenticating transparent proxy in front of an
         # authenticating proxy. An authenticating proxy can eat them itself.
         # 'Proxy-Connection' is an undocumented HTTP 1.0 abomination.
-        connHeaderNames = ['Connection', 'Keep-Alive', 'TE', 'Trailers',
-                           'Transfer-Encoding', 'Upgrade', 'Proxy-Connection']
+        connHeaderNames = ['connection', 'keep-alive', 'te', 'trailers',
+                           'transfer-encoding', 'upgrade', 'proxy-connection']
         reqHeaders = self.reqHeaders
         connHeaders = http_headers.Headers()
         
-        move('Connection')
+        move('connection')
         if self.version < (1,1):
             # Remove all headers mentioned in Connection, because a HTTP 1.0
             # proxy might have erroneously forwarded it from a 1.1 client.
-            for name in connHeaders.getHeader('Connection', ()):
+            for name in connHeaders.getHeader('connection', ()):
                 if reqHeaders.hasHeader(name):
                     reqHeaders.removeHeader(name)
         else:
             # Otherwise, just add the headers listed to the list of those to move
-            connHeaderNames.extend(connHeaders.getHeader('Connection', ()))
+            connHeaderNames.extend(connHeaders.getHeader('connection', ()))
         
         for headername in connHeaderNames:
             move(headername)
         
         # Content-Length is both a connection header (defining length of
         # transmission, and a content header (defining length of content).
-        h = reqHeaders.getRawHeaders('Content-Length', None)
+        h = reqHeaders.getRawHeaders('content-length', None)
         if h is not None:
-            connHeaders.setRawHeaders('Content-Length', h)
+            connHeaders.setRawHeaders('content-length', h)
         
         return connHeaders
 
@@ -617,7 +617,7 @@ class HTTPChannelRequest:
 
         # Okay, now implement section 4.4 Message Length to determine
         # how to find the end of the incoming HTTP message.
-        transferEncoding = connHeaders.getHeader('Transfer-Encoding')
+        transferEncoding = connHeaders.getHeader('transfer-encoding')
         
         if transferEncoding:
             if transferEncoding[-1] == 'chunked':
@@ -639,7 +639,7 @@ class HTTPChannelRequest:
         else:
             # No transfer-coding.
             # If no Content-Length either, assume no content.
-            self.length = connHeaders.getHeader('Content-Length', 0)
+            self.length = connHeaders.getHeader('content-length', 0)
             self.chunkedIn = 0
     
 ############## HTTPChannelRequest *RESPONSE* methods #############
@@ -673,7 +673,7 @@ class HTTPChannelRequest:
         if addConnectionHeaders:
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support persistent connections.
-            if (headers.getHeader('Content-Length') is None and
+            if (headers.getHeader('content-length') is None and
                 self.command != "HEAD" and code not in NO_BODY_CODES):
                 if self.version >= (1,1):
                     l.append("%s: %s\r\n" % ('Transfer-Encoding', 'chunked'))
@@ -759,7 +759,7 @@ class HTTPChannelRequest:
     def _abortWithError(self, errorcode, text=''):
         """Handle low level protocol errors."""
         headers = http_headers.Headers()
-        headers.setHeader('Content-Length', len(text)+1)
+        headers.setHeader('content-length', len(text)+1)
         
         self.abortConnection(closeWrite=False)
         self.writeHeaders(errorcode, headers)
