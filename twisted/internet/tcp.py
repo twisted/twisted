@@ -93,7 +93,7 @@ class _SocketCloser:
         except socket.error:
             pass
 
-class _TLSMixin(_SocketCloser):
+class _TLSMixin:
     _socketShutdownMethod = 'sock_shutdown'
 
     writeBlockedOnRead = 0
@@ -231,11 +231,7 @@ class _TLSMixin(_SocketCloser):
         result = self._sendCloseAlert()
         
         if result is main.CONNECTION_DONE:
-            self.socket.sock_shutdown(1)
-            p = interfaces.IHalfCloseableProtocol(self.protocol, None)
-            if p:
-                p.writeConnectionLost()
-            return None
+            return Connection._closeWriteConnection(self)
         
         return result
 
@@ -369,7 +365,10 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
                 return main.CONNECTION_LOST
 
     def _closeWriteConnection(self):
-        self.socket.shutdown(1)
+        try:
+            getattr(self.socket, self._socketShutdownMethod)(1)
+        except socket.error:
+            pass
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:

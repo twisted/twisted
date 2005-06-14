@@ -883,8 +883,7 @@ class HalfCloseTestCase(PortCleanerUpper):
         spinUntil(lambda :self.client.readHalfClosed)
 
         self.assertEquals(f.protocol.readHalfClosed, False)
-
-
+        
 
 class HalfClose2TestCase(unittest.TestCase):
 
@@ -918,6 +917,13 @@ class HalfClose2TestCase(unittest.TestCase):
         self.assertEquals(f.protocol.data, "hello")
         self.assertEquals(f.protocol.closed, True)
 
+    def testShutdownException(self):
+        client = self.client
+        f = self.f
+        f.protocol.transport.loseConnection()
+        client.transport.write("X")
+        client.transport.loseWriteConnection()
+        spinUntil(lambda :f.protocol.closed, True)
 
 class HalfClose3TestCase(PortCleanerUpper):
     """Test half-closing connections where notification code has bugs."""
