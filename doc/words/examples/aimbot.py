@@ -7,8 +7,7 @@
 """AIM echo bot."""
 
 from twisted.protocols import toc
-from twisted.internet import reactor
-from twisted.internet import base
+from twisted.internet import reactor, protocol
 import twisted.im.tocsupport as ts
 
 # account info
@@ -56,7 +55,7 @@ class aimBot(toc.TOCClient):
 
         self.say(username, reply)
 
-bot = base.BCFactory( aimBot(screenname, password) )
-reactor.connectTCP("toc.oscar.aol.com", 9898, bot)
+cc = protocol.ClientCreator(reactor, aimBot, screenname, password)
+cc.connectTCP("toc.oscar.aol.com", 9898)
 
 reactor.run()
