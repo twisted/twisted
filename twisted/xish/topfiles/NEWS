@@ -1,3 +1,10 @@
+x.x.x:
+ - Fixed serialization in _ListSerializer
+ - Removed unneeded extra whitespace generated in serialization
+ - Removed _Serializer in favour of _ListSerializer
+ - Use unicode objects for representing serialized XML, instead of utf-8
+   encoded str objects.
+
 0.1.0:
 
  - bugfixes
