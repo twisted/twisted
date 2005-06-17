@@ -9,6 +9,11 @@ hier = \
 {"headers":("Headers",None)},
 {"resource-apis":("Resource, Response, and Request APIs",None)},
 {"object-traversal":("Object Traversal", None)},
+{"examples":("Examples",
+    (
+    {"examples/demo": ("Demo application", None)},
+    )
+)},
 #{"other":("Other",
 #    (
 #    {"blah":("Blah",
