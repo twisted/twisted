@@ -48,3 +48,4 @@ The core resource API is described by ``twisted.web2.iweb.IResource``
 
 A resource (``twisted.web2.resource.Resource``) will generally be the superclass of the classes you define. As you saw in the intro document, it supports two operations: rendering and locating a child resource.
 
+.. _Headers: headers.html
