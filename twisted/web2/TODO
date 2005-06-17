@@ -1,8 +1,7 @@
 - More Tests!
- - Check if closing input stream does right thing (should close connection after response is written)
+z - Check if closing input stream does right thing (should close connection after response is written)
 
 - Low level protocol:
- - Proper POST support (need psudeo-MIME parser)
  - Authentication (basic and digest)
  - Close connection if resource doesn't read entire input stream
 
@@ -14,7 +13,6 @@
  - Cookies
 
 - Application server:
- - Create default log observers for the log.msg's that we send.
  - Other useful filters: content-encoding, caching, others?
 
 - Client library *LATER*
