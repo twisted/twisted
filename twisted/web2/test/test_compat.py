@@ -30,7 +30,7 @@ try:
             return self.message
     
 except ImportError:
-    OldWebCompat.skip = "can't run w/o twisted.web"
+    resource = None
 
 class OldWebCompat(BaseCase):
     try:
@@ -69,3 +69,5 @@ class OldWebCompat(BaseCase):
                              'I am a child of an OldWebResource'))
 
         
+if not resource:
+    OldWebCompat.skip = "can't run w/o twisted.web"

@@ -6,7 +6,11 @@ from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
 from twisted.python import util
 from twisted.web2 import static, twcgi, server, resource, http
-from twisted.web import client
+try:
+    from twisted.web import client
+except ImportError:
+    # No twisted.web installed, and no web2 client yet.
+    client = None
 
 DUMMY_CGI = '''\
 print "Header: OK"
@@ -121,3 +125,6 @@ class CGI(unittest.TestCase):
 
 if not interfaces.IReactorProcess.providedBy(reactor):
     CGI.skip = "CGI tests require a functional reactor.spawnProcess()"
+
+if not client:
+    CGI.skip = "CGI tests require a twisted.web at the moment."

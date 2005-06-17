@@ -225,6 +225,8 @@ class Request(http.Request):
 
         if self.querystring:
             self.args = cgi.parse_qs(self.querystring, True)
+        else:
+            self.args = {}
         
         path = map(unquote, self.path[1:].split('/'))
         if self._initialprepath:
