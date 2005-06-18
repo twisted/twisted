@@ -19,9 +19,8 @@ ReverseProxy is used on the server end.
 """
 
 # twisted imports
-from twisted.protocols import http
 from twisted.internet import reactor, protocol
-from twisted.web import resource, server
+from twisted.web import resource, server, http
 
 # system imports
 import urlparse
