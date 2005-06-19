@@ -12,7 +12,8 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from twisted.conch import error, credentials, interfaces 
+from twisted.conch import error, interfaces
+from twisted.cred import credentials
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
 from common import NS, getNS, MP
@@ -131,14 +132,17 @@ class SSHUserAuthServer(service.SSHService):
         hasSig = ord(packet[0])
         algName, blob, rest = getNS(packet[1:], 2)
         pubKey = keys.getPublicKeyObject(data = blob)
-        b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
-            NS(self.user) + NS(self.nextService) + NS('publickey') + \
-            chr(hasSig) +  NS(keys.objectType(pubKey)) + NS(blob)
-        signature = hasSig and getNS(rest)[0] or None
-        c = credentials.SSHPrivateKey(self.user, blob, b, signature)
+        if algName != keys.objectType(pubKey):
+            return defer.failure(error.UnauthorizedLogin())
         if hasSig:
+            b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
+                NS(self.user) + NS(self.nextService) + NS('publickey') + \
+                chr(hasSig) +  NS(algName) + NS(blob)
+            signature = getNS(rest)[0]
+            c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
             return self.portal.login(c, None, interfaces.IConchUser)
         else:
+            c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
             return self.portal.login(c, None, interfaces.IConchUser).addErrback(
                                                         self._ebCheckKey,
                                                         packet[1:])
@@ -207,7 +211,7 @@ class SSHUserAuthClient(service.SSHService):
     name = 'ssh-userauth'
     protocolMessages = None # set later
 
-    preferredOrder = ['publickey', 'password', 'keyboard-interactive']
+    preferredOrder = ['publickey', 'keyboard-interactive', 'password']
 
     def __init__(self, user, instance):
         self.user = user

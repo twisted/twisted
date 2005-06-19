@@ -4,9 +4,9 @@
 # See LICENSE for details.
 
 
-from twisted.internet import defer
+from twisted.internet import reactor, threads, defer
 from twisted.python import components, failure, log
-from twisted.cred import error, credentials
+from twisted.cred import error, credentials, pamauth
 from zope import interface
 
 class ICredentialsChecker(components.Interface):
@@ -203,6 +203,20 @@ class FilePasswordDB:
                     ).addCallback(self._cbPasswordMatch, u)
 
 components.backwardsCompatImplements(FilePasswordDB)
+
+class PluggableAuthenticationModulesChecker:
+    interface.implements(ICredentialsChecker)
+    credentialInterfaces = credentials.IPluggableAuthenticationModules,
+    
+    def requestAvatarId(self, credentials):
+        if not pamauth:
+            return defer.fail(UnauthorizedLogin())
+        d = pamauth.pamAuthenticate('ssh', credentials.username,
+                                    credentials.pamConversion)
+        d.addCallback(lambda x: credentials.username)
+        return d
+
+components.backwardsCompatImplements(PluggableAuthenticationModulesChecker)
 
 # For backwards compatibility
 # Allow access as the old name.

@@ -13,9 +13,14 @@ I am a support module for making SSH servers with mktap.
 
 from twisted.conch import checkers, unix
 from twisted.conch.openssh_compat import factory
-from twisted.cred import portal
+from twisted.cred import portal, checkers as credcheckers
 from twisted.python import usage
 from twisted.application import strports
+
+try:
+    from twisted.cred import pamauth
+except ImportError:
+    pamauth = None
 
 
 class Options(usage.Options):
@@ -36,8 +41,8 @@ def makeService(config):
     t.portal = portal.Portal(unix.UnixSSHRealm())
     t.portal.registerChecker(checkers.UNIXPasswordDatabase())
     t.portal.registerChecker(checkers.SSHPublicKeyDatabase())
-    if checkers.pamauth:
-        t.portal.registerChecker(checkers.PluggableAuthenticationModulesChecker())
+    if pamauth:
+        t.portal.registerChecker(credcheckers.PluggableAuthenticationModulesChecker())
     t.dataRoot = config['data']
     t.moduliRoot = config['moduli'] or config['data']
     port = config['port']

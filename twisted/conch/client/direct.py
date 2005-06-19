@@ -21,6 +21,7 @@ class SSHClientFactory(protocol.ClientFactory):
         self.userAuthObject = userAuthObject
 
     def clientConnectionLost(self, connector, reason):
+        log.msg('client connection lost: %i' % self.options['reconnect'])
         if self.options['reconnect']:
             connector.connect()
 
