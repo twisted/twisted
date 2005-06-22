@@ -199,13 +199,12 @@ def loadValueFromFile(filename, variable, passphrase=None):
     else:
         mode = 'r'
     fileObj = open(filename, mode)
+    d = {'__file__': filename}
     if passphrase:
-        d = {'__file__': filename}
         data = fileObj.read()
         data = _decrypt(passphrase, data)
         exec data in d, d
     else:
-        d = {}
         exec fileObj in d, d
     value = d[variable]
     return value
