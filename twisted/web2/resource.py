@@ -9,10 +9,8 @@
 # System Imports
 from twisted.python import components
 from zope.interface import implements
-import urlparse
 
-from twisted.web2 import iweb, http, http_headers, server, responsecode
-from twisted.web2.responsecode import *
+from twisted.web2 import iweb, http, server, responsecode
 
 class Resource(object):
     """I define a web-accessible resource.
@@ -25,7 +23,7 @@ class Resource(object):
     implements(iweb.IResource)
 
     addSlash = False
-    allowedMethods = ('GET', 'HEAD', 'OPTIONS', 'TRACE')
+    allowedMethods = None
     
     # Concrete HTTP interface
 
@@ -83,7 +81,11 @@ class Resource(object):
         """
         m = getattr(self, 'http_' + iweb.IRequest(ctx).method, None)
         if not m:
-            # FIXME: duplication between 'allowedMethods' and method impls...
+            if self.allowedMethods is None:
+                # Update allowed methods
+                self.allowedMethods = [name[5:] for name in dir(self)
+                                       if name.startswith('http_')]
+            
             response = http.Response(responsecode.NOT_ALLOWED)
             response.headers.setHeader('allow', self.allowedMethods)
             return response
@@ -107,12 +109,16 @@ class Resource(object):
                 {'location': req.unparseURL(path=req.path+'/')})
             
         if req.stream.length != 0:
-            return REQUEST_ENTITY_TOO_LARGE
+            return responsecode.REQUEST_ENTITY_TOO_LARGE
         return self.render(ctx)
 
     def http_OPTIONS(self, ctx):
         """Sends back OPTIONS response."""
-        response = http.Response(OK)
+        if self.allowedMethods is None:
+            # Update allowed methods
+            self.allowedMethods = [name[5:] for name in dir(self)
+                                   if name.startswith('http_')]
+        response = http.Response(responsecode.OK)
         response.headers.setHeader('allow', self.allowedMethods)
         return response
 
@@ -164,3 +170,5 @@ class WrapperResource:
             return x.addCallback(lambda data: self.res)
         return self.res
     
+
+__all__ = ['Resource', 'LeafResource', 'PostableResource', 'WrapperResource']

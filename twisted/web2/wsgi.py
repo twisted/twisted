@@ -10,7 +10,6 @@ from twisted.internet import defer
 from twisted.python import log, failure
 from twisted.web2 import http
 from twisted.web2 import iweb
-from twisted.web2 import responsecode
 from twisted.web2 import server
 from twisted.web2 import stream
 from twisted.web2.twcgi import createCGIEnvironment
@@ -100,8 +99,6 @@ class WSGIHandler(object):
         self.request = request
         self.response = None
         self.responseDeferred = defer.Deferred()
-        # threadsafe event object to communicate paused state.
-        self.unpaused = threading.Event()
 
     def setupEnvironment(self, ctx, request):
         # Called in IO thread
@@ -152,7 +149,6 @@ class WSGIHandler(object):
 
     def __error(self, f):
         # Called in IO thread
-        import sys
         self.responseDeferred.errback(f)
         self.responseDeferred = None
             
@@ -166,6 +162,9 @@ class WSGIHandler(object):
             self.stream=self.response.stream=stream.ProducerStream()
             self.headersSent = True
             
+            # threadsafe event object to communicate paused state.
+            self.unpaused = threading.Event()
+            
             # After this, we cannot touch self.response from this
             # thread any more
             def _start():
@@ -178,8 +177,31 @@ class WSGIHandler(object):
         # Wait for unpaused to be true
         self.unpaused.wait()
         reactor.callFromThread(self.stream.write, output)
-        
 
+    def writeAll(self, result):
+        # Called in application thread
+        from twisted.internet import reactor
+        if not self.headersSent:
+            if self.response is None:
+                raise RuntimeError(
+                    "Application didn't call startResponse before writing data!")
+            l = 0
+            for item in result:
+                l += len(item)
+            self.response.stream=stream.ProducerStream(length=l)
+            self.response.stream.buffer = list(result)
+            self.response.stream.finish()
+            reactor.callFromThread(self.__callback)
+        else:
+            # Has already been started, cannot replace the stream
+            def _write():
+                # Called in IO thread
+                for s in result:
+                    self.stream.write(s)
+                self.stream.finish()
+            reactor.callFromThread(_write)
+            
+            
     def handleResult(self, result):
         # Called in application thread
         try:
@@ -199,12 +221,25 @@ class WSGIHandler(object):
                 reactor.callFromThread(self.__callback)
                 return
 
+            if type(result) in (list,tuple):
+                # If it's a list or tuple (exactly, not subtype!),
+                # then send the entire thing down to Twisted at once,
+                # and free up this thread to do other work.
+                self.writeAll(result)
+                return
+            
+            # Otherwise, this thread has to keep running to provide the
+            # data.
             for data in result:
                 if self.stopped:
                     return
                 self.write(data)
             
             if not self.headersSent:
+                if self.response is None:
+                    raise RuntimeError(
+                        "Application didn't call startResponse, and didn't send any data!")
+                
                 self.headersSent = True
                 reactor.callFromThread(self.__callback)
             else:
@@ -242,3 +277,5 @@ class FileWrapper:
         if data:
             return data
         raise StopIteration
+
+__all__ = ['WSGIResource']

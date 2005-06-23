@@ -8,31 +8,23 @@ infrastructure.
 """
 
 # System Imports
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+import cStringIO as StringIO
 
-import operator, cgi, time, urlparse
-from urllib import quote
-try:
-    from twisted.protocols._c_urlarg import unquote
-except ImportError:
-    from urllib import unquote
+import cgi, time, urlparse
+from urllib import unquote
 
 from zope.interface import implements
 # Twisted Imports
-from twisted.internet import reactor, defer
-from twisted.python import log, components, failure
-from twisted import copyright
+from twisted.internet import defer
+from twisted.python import log, failure
 
 # Sibling Imports
-from twisted.web2 import http, iweb, fileupload
-from twisted.web2.responsecode import *
-from twisted.web2 import http_headers, context, error, stream
+from twisted.web2 import http, iweb, fileupload, responsecode
+from twisted.web2 import http_headers, context
 from twisted.web2 import rangefilter
+from twisted.web2 import error
+
 from twisted.web2 import version as web2_version
-from twisted.web2.error import defaultErrorHandler
 from twisted import __version__ as twisted_version
 
 VERSION = "Twisted/%s TwistedWeb/%s" % (twisted_version, web2_version)
@@ -65,7 +57,7 @@ def doTrace(request):
     txt += ''.join(l)
 
     return http.Response(
-        OK,
+        responsecode.OK,
         {'content-type': http_headers.MimeType('message', 'http')}, 
         txt)
 
@@ -105,7 +97,7 @@ def parsePOSTData(request):
 
     def error(f):
         f.trap(fileupload.MimeFormatError)
-        raise HTTPError(responsecode.BAD_REQUEST)
+        raise http.HTTPError(responsecode.BAD_REQUEST)
     
     if ctype.mediaType == 'application' and ctype.mediaSubtype == 'x-www-form-urlencoded':
         d = fileupload.parse_urlencoded(request.stream)
@@ -122,7 +114,7 @@ def parsePOSTData(request):
         d.addCallbacks(updateArgsAndFiles, error)
         return d
     else:
-        raise HTTPError(responsecode.BAD_REQUEST)
+        raise http.HTTPError(responsecode.BAD_REQUEST)
 
 class StopTraversal(object):
     """
@@ -160,7 +152,7 @@ class Request(http.Request):
     site = None
     _initialprepath = None
     responseFilters = [rangefilter.rangefilter, preconditionfilter,
-                       defaultErrorHandler, defaultHeadersFilter]
+                       error.defaultErrorHandler, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):
         if kw.has_key('site'):
@@ -200,7 +192,7 @@ class Request(http.Request):
         if port == http.defaultPortForScheme.get(scheme, 0):
             hostport = host
         else:
-            hostport = host + ':' + port
+            hostport = host + ':' + str(port)
         
         return urlparse.urlunparse((
             scheme, hostport, path,
@@ -263,7 +255,7 @@ class Request(http.Request):
                 # error, or use the interface hostname, depending on
                 # protocol version
                 if self.clientproto >= (1,1):
-                    raise http.HTTPError(BAD_REQUEST)
+                    raise http.HTTPError(responsecode.BAD_REQUEST)
                 self.host = hostaddr.host
                 self.port = hostaddr.port
 
@@ -296,7 +288,7 @@ class Request(http.Request):
         processing."""
         
         if self.method == "OPTIONS" and self.uri == "*":
-            response = http.Response(OK)
+            response = http.Response(responsecode.OK)
             response.headers.setHeader('allow', ('GET', 'HEAD', 'OPTIONS', 'TRACE'))
             return response
         # This is where CONNECT would go if we wanted it
@@ -322,7 +314,7 @@ class Request(http.Request):
         newres, newpath = result
         # If the child resource is None then display a error page
         if newres is None:
-            raise http.HTTPError(NOT_FOUND)
+            raise http.HTTPError(responsecode.NOT_FOUND)
 
         # If we got a deferred then we need to call back later, once the
         # child is actually available.
@@ -375,7 +367,7 @@ class Request(http.Request):
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         
         response = http.Response(
-            INTERNAL_SERVER_ERROR,
+            responsecode.INTERNAL_SERVER_ERROR,
             {'content-type': http_headers.MimeType('text','html'),
              'content-length': len(body)},
             body)
@@ -415,7 +407,7 @@ class Request(http.Request):
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. More information is available in the server log.</body></html>")
         
         return http.Response(
-            INTERNAL_SERVER_ERROR,
+            responsecode.INTERNAL_SERVER_ERROR,
             {'content-type': http_headers.MimeType('text','html'),
              'content-length': len(body)},
             body)
@@ -438,3 +430,5 @@ class Site:
         remembered here will be available throughout the site.
         """
         self.context.remember(obj, inter)
+
+__all__ = ['Request', 'Site', 'StopTraversal', 'VERSION', 'defaultHeadersFilter', 'doTrace', 'parsePOSTData', 'preconditionfilter']

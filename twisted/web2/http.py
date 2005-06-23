@@ -13,18 +13,14 @@ Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 
 # system imports
 from cStringIO import StringIO
-import base64, binascii
 import socket
-import math
 import time
-import calendar
 import warnings
-import os
 
 # twisted imports
-from twisted.internet import interfaces, protocol, address, reactor
+from twisted.internet import interfaces, protocol, reactor
 from twisted.protocols import policies, basic
-from twisted.python import log, components, util
+from twisted.python import log, components
 from zope.interface import implements
 
 # sibling imports
@@ -1158,4 +1154,6 @@ except:
     pass
 else:
     components.registerAdapter(compat.OldResourceAdapter, resource.IResource, iweb.IOldNevowResource)
+
+__all__ = ['HTTPFactory', 'HTTPError', 'NotModifiedResponse', 'Request', 'Response', 'checkIfRange', 'checkPreconditions', 'defaultPortForScheme', 'parseVersion', 'splitHostPort']
 

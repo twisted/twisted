@@ -2,7 +2,7 @@ from __future__ import generators
 
 from urllib import quote, string
 
-import UserDict, math
+import UserDict, math, time
 from cStringIO import StringIO
 
 from twisted.web2 import http_headers, iweb, stream, responsecode
@@ -443,3 +443,5 @@ class OldResourceAdapter(object):
         result = defer.maybeDeferred(self.original.render, request).addCallback(
             self._handle_NOT_DONE_YET, request)
         return result
+
+__all__ = []

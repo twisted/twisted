@@ -1020,7 +1020,7 @@ class Headers:
             # print v
             h=None
         
-        self._headers[name]=h
+        self._headers[name] = h
         return h
 
     def _toRaw(self, name):

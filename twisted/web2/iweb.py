@@ -361,3 +361,4 @@ class IChanRequest(Interface):
 
     persistent = Attribute("""Whether this request supports HTTP connection persistence. May be set to False. Should not be set to other values.""")
 
+__all__ = ['ICanHandleException', 'IChanRequest', 'IChanRequestCallbacks', 'IOldNevowResource', 'IOldRequest', 'IRequest', 'IResource', 'IResponse']

@@ -13,7 +13,7 @@ from twisted.web2 import http_headers, resource
 from twisted.web2 import http, iweb, stream, responsecode
 
 # Twisted Imports
-from twisted.python import components, filepath
+from twisted.python import filepath
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from zope.interface import implements
@@ -40,7 +40,7 @@ class Data(resource.Resource):
         response.headers.setRawHeaders("content-type", (self.type, ))
         response.headers.setHeader('etag',
             http_headers.ETag("%X-%X" % (self.created_time, hash(self.data)),
-                              weak=(time.time() - st.st_mtime <= 1)))
+                              weak=(time.time() - self.created_time <= 1)))
         
         return response
 
@@ -218,7 +218,10 @@ class File(resource.Resource):
             return response.NOT_FOUND
 
         if self.fp.isdir():
-            return self.redirectWithSlash(request)
+            # If this is a directory, redirect
+            return http.Response(
+                responsecode.MOVED_PERMANENTLY,
+                {'location': request.unparseURL(path=request.path+'/')})
 
         if self.type:
             response.headers.setRawHeaders('content-type', (self.type,))
@@ -258,9 +261,6 @@ class File(resource.Resource):
         response.stream = stream.FileStream(f, 0, size)
         return response
 
-    def redirectWithSlash(self, request):
-        return error.redirect(addSlash(request))
-
     def listNames(self):
         if not self.fp.isdir():
             return []
@@ -272,22 +272,23 @@ class File(resource.Resource):
         return self.__class__(path, self.defaultType, self.ignoredExts,
                               self.processors, self.indexNames[:])
 
-"""I contain AsIsProcessor, which serves files 'As Is'
-   Inspired by Apache's mod_asis
-"""
-
-class ASISProcessor:
-    implements(iweb.IResource)
-    
-    def __init__(self, path):
-        self.path = path
-
-    def renderHTTP(self, request):
-        request.startedWriting = 1
-        return File(self.path)
-
-    def locateChild(self, request):
-        return FourOhFour(), ()
+# FIXME: hi there I am a broken class
+# """I contain AsIsProcessor, which serves files 'As Is'
+#    Inspired by Apache's mod_asis
+# """
+# 
+# class ASISProcessor:
+#     implements(iweb.IResource)
+#     
+#     def __init__(self, path):
+#         self.path = path
+# 
+#     def renderHTTP(self, request):
+#         request.startedWriting = 1
+#         return File(self.path)
+# 
+#     def locateChild(self, request):
+#         return None, ()
 
 # Test code
 if __name__ == '__builtin__':

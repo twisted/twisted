@@ -6,7 +6,7 @@ import urllib
 
 from twisted.internet import defer
 from twisted.web2.stream import IStream, FileStream, BufferedStream, readStream
-from twisted.web2.stream import generatorToStream
+from twisted.web2.stream import generatorToStream, readAndDiscard
 from twisted.web2 import http_headers
 from cStringIO import StringIO
 
@@ -364,3 +364,5 @@ if __name__ == '__main__':
     def pr(s):
         print s
     d.addCallback(pr)
+
+__all__ = ['parseMultipartFormData', 'parse_urlencoded', 'parse_urlencoded_stream', 'MultipartMimeStream', 'MimeFormatError']

@@ -121,3 +121,4 @@ class SCGIClientProtocolFactory(protocol.ClientFactory):
         response = http.Response(code=responsecode.BAD_GATEWAY, stream=str(reason.value))
         self.deferred.callback(response)
         
+__all__ = ['SCGIClientResource']

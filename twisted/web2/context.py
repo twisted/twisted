@@ -33,9 +33,6 @@ class WebContext(object):
     isAttrib = property(lambda self: False)
     inURL = property(lambda self: False)
     precompile = property(lambda self: False)
-    def with(self, tag):
-        warnings.warn("use WovenContext(parent, tag) instead", DeprecationWarning, stacklevel=2)
-        return WovenContext(self, tag)
     
     def arg(self, get, default=None):
         """Placeholder until I can find Jerub's implementation of this
@@ -242,15 +239,4 @@ class RequestContext(FactoryContext):
 components.registerAdapter(lambda ctx: ctx.tag, RequestContext, iweb.IRequest)
 components.registerAdapter(lambda ctx: iweb.IOldRequest(ctx.tag), RequestContext, iweb.IOldRequest)
 
-class PageContext(FactoryContext):
-    """A PageContext has adapters for the following interfaces:
-
-    IRenderer
-    IRendererFactory
-    IData
-    """
-    def __init__(self, *args, **kw):
-        FactoryContext.__init__(self, *args, **kw)
-        if self.tag is not None and hasattr(self.tag, 'toremember'):
-            for i in self.tag.toremember:
-                self.remember(*i)
+__all__ = ['WebContext', 'SiteContext', 'RequestContext', 'FactoryContext']

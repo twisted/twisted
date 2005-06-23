@@ -6,7 +6,6 @@
 """
 
 # System Imports
-import string
 import urlparse
 from zope.interface import implements
 import urllib 
@@ -177,3 +176,5 @@ class VHostURIRewrite:
         # print req.prepath, segments, req.postpath, req.path
         
         return self.resource, segments
+
+__all__ = ['VHostURIRewrite', 'AutoVHostURIRewrite', 'NameVirtualHost']

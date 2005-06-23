@@ -12,18 +12,15 @@ Things which are still not working properly:
 """
 
 # System Imports
-import string
 import os
 import sys
 import urllib
 
 # Twisted Imports
 from twisted.internet import defer, protocol, reactor
-from twisted.spread import pb
 from twisted.python import log, filepath
 
 # Sibling Imports
-import error
 import http
 import iweb
 import resource
@@ -50,7 +47,7 @@ def createCGIEnvironment(ctx, request=None):
     if request.stream.length:
         env["CONTENT_LENGTH"] = str(request.stream.length)
     
-    ctype = request.headers.getRawHeaders('Content-Type')
+    ctype = request.headers.getRawHeaders('content-type')
     if ctype:
         env["CONTENT_TYPE"] = ctype[0]
     
@@ -341,3 +338,5 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         errormsg = 'CGI directories do not support directory listing'
         return http.Response(responsecode.FORBIDDEN)
 
+
+__all__ = ['createCGIEnvironment', 'CGIDirectory', 'CGIScript', 'FilteredScript', 'PHP3Script', 'PHPScript']

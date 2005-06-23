@@ -114,3 +114,5 @@ class DirectoryLister(resource.Resource):
                 
         s+="</table></div></body></html>"
         return http.Response(200, {}, s)
+
+__all__ = ['DirectoryLister']

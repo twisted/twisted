@@ -31,7 +31,7 @@ class TestContainer(BaseCase):
 
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {}, '<html><h1>Some HTML</h1></html>'))
+            (200, {"Content-Length": None}, '<html><h1>Some HTML</h1></html>'))
 
     def test_getBlockingResource(self):
         """Test that blocking WSGI applications render properly.
@@ -49,7 +49,7 @@ class TestContainer(BaseCase):
 
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {}, '<h1>A little bit of HTML</h1><p>Hello!</p>'))
+            (200, {"Content-Length": None}, '<h1>A little bit of HTML</h1><p>Hello!</p>'))
 
     def test_responseCode(self):
         """
@@ -63,7 +63,7 @@ class TestContainer(BaseCase):
 
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (314, {}, ''))
+            (314, {"Content-Length": 0}, ''))
 
     def test_errorfulResource(self):
         def application(environ, start_response):
@@ -82,7 +82,7 @@ class TestContainer(BaseCase):
         
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {}, "Foo"), failure=True)
+            (200, {"Content-Length": None}, "Foo"), failure=True)
         log.flushErrors(TestError)
 
     def test_errorfulIterator(self):
@@ -110,7 +110,7 @@ class TestContainer(BaseCase):
         
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {}, "FooBar"), failure=True)
+            (200, {"Content-Length": None}, "FooBar"), failure=True)
         log.flushErrors(TestError)
 
     def test_didntCallStartResponse(self):
@@ -129,8 +129,17 @@ class TestContainer(BaseCase):
         
         self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {}, "Foo"))
+            (200, {"Content-Length": None}, "Foo"))
 
+    def test_returnList(self):
+        def application(environ, start_response):
+            write = start_response("200 OK", {})
+            return ["Foo", "Bar"]
+        
+        self.assertResponse(
+            (WSGI(application), 'http://host/'),
+            (200, {"Content-Length": 6}, "FooBar"))
+        
 class TestWSGIEnvironment(BaseCase):
     """
     Test that the WSGI container does everything we expect it to do

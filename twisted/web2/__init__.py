@@ -5,7 +5,7 @@
 
 """
 
-Twisted Web: a Twisted Web Server.
+Twisted Web2: a better Twisted Web Server.
 
 """
 __version__ = 'SVN-Trunk'

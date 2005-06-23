@@ -1,5 +1,5 @@
 - More Tests!
-z - Check if closing input stream does right thing (should close connection after response is written)
+ - Check if closing input stream does right thing (should close connection after response is written)
 
 - Low level protocol:
  - Authentication (basic and digest)
@@ -18,6 +18,6 @@ z - Check if closing input stream does right thing (should close connection afte
 - Client library *LATER*
   - Convert proxy, distrib
 - Internal request submission API
-
+- FastCGI client/server
 
 

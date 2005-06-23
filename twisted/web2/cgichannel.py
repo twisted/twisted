@@ -1,4 +1,4 @@
-import time, sys
+import warnings
 from twisted.internet import protocol, address
 from twisted.internet import reactor
 from twisted.web2 import http, http_headers, server, responsecode
@@ -7,7 +7,7 @@ import urllib
 
 # Move this to twisted core soonish
 from twisted.internet import process, error, interfaces, fdesc
-from twisted.python import log
+from twisted.python import log, failure
 from zope.interface import implements
 
 class StdIOThatDoesntSuckAsBad(object):
@@ -268,16 +268,25 @@ class CGIChannelRequest(BaseCGIChannelRequest):
 
 def startCGI(site):
     """Call this as the last thing in your CGI python script in order to
-    hook up your site object with the incoming request."""
+    hook up your site object with the incoming request.
+
+    E.g.:
+    >>> from twisted.web2 import cgichannel, server
+    >>> if __name__ == '__main__':
+    ...     cgichannel.startCGI(server.Site(myToplevelResource))
+    
+    """
     StdIOThatDoesntSuckAsBad(CGIChannelRequest(site, os.environ))
     reactor.run()
 
 if __name__ == '__main__':
     import pdb, signal, sys
-    from twisted.python import util
+#    from twisted.python import util
 #    sys.settrace(util.spewer)
     signal.signal(signal.SIGQUIT, lambda *args: pdb.set_trace())
     
     from twisted.web2 import demo
     res = demo.Test()
     startCGI(server.Site(res))
+
+__all__ = ['startCGI']

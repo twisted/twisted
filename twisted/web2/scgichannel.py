@@ -85,3 +85,4 @@ class SCGIFactory(protocol.ServerFactory):
         p.requestFactory=self.requestFactory
         return p
     
+__all__ = ['SCGIChannelRequest', 'SCGIFactory']

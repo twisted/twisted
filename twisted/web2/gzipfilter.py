@@ -75,3 +75,5 @@ def gzipfilter(request, response, ctx):
         response.headers.setHeader('content-encoding', ['deflate'])
     
     return response
+
+__all__ = ['gzipfilter']

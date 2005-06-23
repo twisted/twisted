@@ -96,4 +96,4 @@ def defaultErrorHandler(request, response, ctx):
 defaultErrorHandler.handleErrors = True
 
 
-__all__ = 'defaultErrorHandler',
+__all__ = ['defaultErrorHandler',]
