@@ -108,33 +108,11 @@ class DeferredTestCase(unittest.TestCase):
         dl.addCallbacks(cb)
         self.failUnlessEqual(result, [[]])
 
-        defr1 = defer.Deferred()
-        dl.addDeferred(defr1)
-        defr1.callback(1)
-        self.failUnlessEqual(result, [[(1, 1)]])
-
-        defr2 = defer.Deferred()
-        dl.addDeferred(defr2)
-        defr2.callback(2)
-        self.failUnlessEqual(result, [[(1, 1), (1, 2)]])
-
         result[:] = []
         dl = defer.DeferredList([], fireOnOneCallback=1)
         dl.addCallbacks(cb)
-
-        defr1 = defer.Deferred()
-        dl.addDeferred(defr1)
-        defr1.callback('a')
-        self.failUnlessEqual(result, [('a', 0)])
-
-        defr2 = defer.Deferred()
-        dl.addDeferred(defr2)
-        defr2.callback('b')
-        self.failUnlessEqual(result, [('a', 0)])
-    testEmptyDeferredList = util.suppressWarnings(testEmptyDeferredList,
-                                                  ('DeferredList.addDeferred',
-                                                   DeprecationWarning))
-
+        self.failUnlessEqual(result, [])
+        
     def testDeferredListFireOnOneError(self):
         defr1 = defer.Deferred()
         defr2 = defer.Deferred()

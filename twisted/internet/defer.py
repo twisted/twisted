@@ -22,9 +22,6 @@ from twisted.python.util import unsignedID, func_metamerge
 class AlreadyCalledError(Exception):
     pass
 
-class AlreadyArmedError(Exception):
-    pass
-
 class CancelledError(Exception):
     pass
 # Backwards compatibility
@@ -109,35 +106,18 @@ def maybeDeferred(f, *args, **kw):
     API Stability: Unstable
     """
     deferred = None
-    if isinstance(f, Deferred) or f is None:
-        warnings.warn("First argument to maybeDeferred() should no longer be a Deferred or None.  Just pass the function and the arguments.", DeprecationWarning, stacklevel=2)
-        deferred = f or Deferred()
-        f = args[0]
-        args = args[1:]
 
     try:
         result = f(*args, **kw)
     except:
-        if deferred is None:
-            return fail(failure.Failure())
-        else:
-            deferred.errback(failure.Failure())
+        return fail(failure.Failure())
     else:
         if isinstance(result, Deferred):
-            if deferred is None:
-                return result
-            else:
-                result.chainDeferred(deferred)
+            return result
         elif isinstance(result, failure.Failure):
-            if deferred is None:
-                return fail(result)
-            else:
-                deferred.errback(result)
+            return fail(result)
         else:
-            if deferred is None:
-                return succeed(result)
-            else:
-                deferred.callback(result)
+            return succeed(result)
     return deferred
 
 def timeout(deferred):
@@ -179,7 +159,6 @@ class Deferred:
     if the user decides not to wait for the deferred to complete.
     """
     called = 0
-    default = 0
     paused = 0
     timeoutCall = None
     _debugInfo = None
@@ -198,7 +177,7 @@ class Deferred:
 
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
-                     errbackArgs=None, errbackKeywords=None, asDefaults=0):
+                     errbackArgs=None, errbackKeywords=None):
         """Add a pair of callbacks (success and error) to this Deferred.
 
         These will be executed when the 'master' callback is run.
@@ -207,15 +186,8 @@ class Deferred:
         assert errback == None or callable(errback)
         cbs = ((callback, callbackArgs, callbackKeywords),
                (errback or (passthru), errbackArgs, errbackKeywords))
-        if self.default:
-            self.callbacks[-1] = cbs
-        else:
-            self.callbacks.append(cbs)
-        if asDefaults:
-            # what the heck is this crappy argument for?
-            warnings.warn("The 'asDefaults' argument will be going away soon. Has anyone ever actually used it?", DeprecationWarning, stacklevel=2)
-
-        self.default = asDefaults
+        self.callbacks.append(cbs)
+            
         if self.called:
             self._runCallbacks()
         return self
@@ -410,11 +382,6 @@ class Deferred:
             if self._debugInfo is not None:
                 self._debugInfo.failResult = None
 
-    def arm(self):
-        """This method is deprecated.
-        """
-        warnings.warn("Deferred.arm is deprecated, and does nothing. You should stop calling it.", DeprecationWarning, stacklevel=2)
-
     def setTimeout(self, seconds, timeoutFunc=timeout, *args, **kw):
         """Set a timeout function to be triggered if I am not called.
 
@@ -440,18 +407,6 @@ class Deferred:
             seconds,
             lambda: self.called or timeoutFunc(self, *args, **kw))
         return self.timeoutCall
-
-    def armAndErrback(self, fail=None):
-        warnings.warn("Deferred.armAndErrback is deprecated. You should be calling .errback instead.", DeprecationWarning, stacklevel=2)
-        return self.errback(fail)
-
-    def armAndCallback(self, result):
-        warnings.warn("Deferred.armAndErrback is deprecated. You should be calling .callback instead.", DeprecationWarning, stacklevel=2)
-        return self.callback(result)
-
-    def armAndChain(self, d):
-        warnings.warn("Deferred.armAndChain is deprecated. You should be calling .chainDeferred instead.", DeprecationWarning, stacklevel=2)
-        return self.chainDeferred(d)
 
     def __str__(self):
         cname = self.__class__.__name__
@@ -544,16 +499,6 @@ class DeferredList(Deferred):
                                   errbackArgs=(index,FAILURE))
             index = index + 1
 
-    def addDeferred(self, deferred):
-        """DEPRECATED"""
-        warnings.warn('DeferredList.addDeferred is deprecated.',
-                      DeprecationWarning, stacklevel=2)
-        self.resultList.append(None)
-        index = len(self.resultList) - 1
-        deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
-                              callbackArgs=(index,SUCCESS),
-                              errbackArgs=(index,FAILURE))
-
     def _cbDeferred(self, result, index, succeeded):
         """(internal) Callback for when one of my deferreds fires.
         """
@@ -580,7 +525,7 @@ def _parseDListResult(l, fireOnOneErrback=0):
             assert success
     return [x[1] for x in l]
 
-def gatherResults(deferredList, fireOnOneErrback=0):
+def gatherResults(deferredList):
     """Returns list with result of given Deferreds.
 
     This builds on C{DeferredList} but is useful since you don't
@@ -588,8 +533,6 @@ def gatherResults(deferredList, fireOnOneErrback=0):
 
     @type deferredList:  C{list} of L{Deferred}s
     """
-    if fireOnOneErrback:
-        raise "This function was previously totally, totally broken.  Please fix your code to behave as documented."
     d = DeferredList(deferredList, fireOnOneErrback=1)
     d.addCallback(_parseDListResult)
     return d
