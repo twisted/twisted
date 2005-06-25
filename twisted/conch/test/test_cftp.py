@@ -293,7 +293,9 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
                     '-v -b %s 127.0.0.1') % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
         log.msg('running %s %s' % (sys.executable, cmds))
-        d = getProcessOutputAndValue(sys.executable, cmds, env=os.environ)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        d = getProcessOutputAndValue(sys.executable, cmds, env=env)
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
@@ -379,7 +381,9 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
                     '-v -b %s 127.0.0.1') % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
         log.msg('running %s %s' % (sys.executable, cmds))
-        d = getProcessOutputAndValue(sys.executable, cmds, env=os.environ)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        d = getProcessOutputAndValue(sys.executable, cmds, env=env)
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
@@ -399,7 +403,7 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
 exit
 """
         res = self._getBatchOutput(cmds)
-        self.failIf(res.find('sftp_test') == -1)
+        self.failIf(res.find('sftp_test') == -1, "sftp_test not in %r" % (res,))
         self.conn.transport.loseConnection()
         util.spinWhile(lambda:not self.conn.transport.transport.connected)
         self.stopServer()
