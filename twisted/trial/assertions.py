@@ -1,20 +1,21 @@
-#
 # -*- test-case-name: twisted.trial.test.test_trial -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-The easiest way to use these functions is to do the following from your tests:
-from twisted.trial.assertions import *
+Assertion functions useful for unit tests.
 """
 
-from twisted.python import failure
 import sys
 
+from twisted.python import failure
+
 class SkipTest(Exception):
-    """Raise this (with a reason) to skip the current test. You may also set
+    """
+    Raise this (with a reason) to skip the current test. You may also set
     method.skip to a reason string to skip it, or set class.skip to skip the
-    entire TestCase."""
+    entire TestCase.
+    """
 
 class FailTest(AssertionError):
     """Raised to indicate the current test has failed to pass."""
