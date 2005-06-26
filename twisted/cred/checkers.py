@@ -4,13 +4,16 @@
 
 from __future__ import generators
 
-import os
-
 from zope import interface
-
-from twisted.internet import defer
+from twisted.internet import reactor, threads, defer
 from twisted.python import components, failure, log
 from twisted.cred import error, credentials
+import os
+
+try:
+    from twisted.cred import pamauth
+except ImportError: # PyPAM is missing
+    pamauth = None
 
 class ICredentialsChecker(components.Interface):
     """I check sub-interfaces of ICredentials.
@@ -238,6 +241,21 @@ class FilePasswordDB:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
 components.backwardsCompatImplements(FilePasswordDB)
+
+class PluggableAuthenticationModulesChecker:
+    interface.implements(ICredentialsChecker)
+    credentialInterfaces = credentials.IPluggableAuthenticationModules,
+    service = 'Twisted'
+    
+    def requestAvatarId(self, credentials):
+        if not pamauth:
+            return defer.fail(UnauthorizedLogin())
+        d = pamauth.pamAuthenticate(self.service, credentials.username,
+                                    credentials.pamConversion)
+        d.addCallback(lambda x: credentials.username)
+        return d
+
+components.backwardsCompatImplements(PluggableAuthenticationModulesChecker)
 
 # For backwards compatibility
 # Allow access as the old name.

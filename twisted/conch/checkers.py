@@ -20,11 +20,10 @@ except ImportError:
 from twisted.conch import error
 from twisted.conch.ssh import keys
 from twisted.cred.checkers import ICredentialsChecker
-from twisted.cred.credentials import IUsernamePassword
+from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey, IPluggableAuthenticationModules
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import components, failure, reflect, log
-from credentials import ISSHPrivateKey, IPluggableAuthenticationModules
 from zope import interface
 
 def verifyCryptedPassword(crypted, pw):
@@ -132,20 +131,6 @@ class SSHPublicKeyDatabase:
         return f
 
 components.backwardsCompatImplements(SSHPublicKeyDatabase)
-
-class PluggableAuthenticationModulesChecker:
-    interface.implements(ICredentialsChecker)
-    credentialInterfaces = IPluggableAuthenticationModules,
-
-    def requestAvatarId(self, credentials):
-        if not pamauth:
-            return defer.fail(UnauthorizedLogin())
-        d = pamauth.pamAuthenticate('ssh', credentials.username,
-                                       credentials.pamConversion)
-        d.addCallback(lambda x: credentials.username)
-        return d
-
-components.backwardsCompatImplements(PluggableAuthenticationModulesChecker)
 
 class SSHProtocolChecker:
     interface.implements(ICredentialsChecker)

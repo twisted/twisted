@@ -15,7 +15,7 @@ from twisted.internet import threads, defer
 import sys, time, getpass, threading, os
 
 def pamAuthenticateThread(service, user, conv):
-    def _conv(p, items, foo):
+    def _conv(items):
         try:
             d = conv(items)
         except:
@@ -37,6 +37,11 @@ def pamAuthenticateThread(service, user, conv):
         else:
             raise done[1].type, done[1].value
 
+    return callIntoPAM(service, user, _conv)
+
+def callIntoPAM(service, user, conv):
+    """A testing hook.
+    """
     pam = PAM.pam()
     pam.start(service)
     pam.set_item(PAM.PAM_USER, user)
@@ -48,14 +53,10 @@ def pamAuthenticateThread(service, user, conv):
     try:
         pam.authenticate() # these will raise
         pam.acct_mgmt()
-    except:
-        os.setegid(gid)
-        os.seteuid(uid)
-        raise
-    else:
-        os.setegid(gid)
-        os.seteuid(uid)
         return 1
+    finally:
+        os.setegid(gid)
+        os.seteuid(uid)
 
 def defConv(items):
     resp = []
