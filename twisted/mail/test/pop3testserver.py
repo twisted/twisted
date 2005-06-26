@@ -101,8 +101,6 @@ class POP3TestServer(basic.LineReceiver):
     def lineReceived(self, line):
         """Error Conditions"""
 
-        print time.time(), 'RECEIVED A LINE', repr(line)
-
         uline = line.upper()
         find = lambda s: uline.find(s) != -1
 

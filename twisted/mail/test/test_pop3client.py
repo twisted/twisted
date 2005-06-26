@@ -6,7 +6,7 @@ from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
 from twisted.mail.pop3 import InsecureAuthenticationDisallowed
 from twisted.mail.pop3 import ServerErrorResponse
 from twisted.protocols import loopback
-from twisted.internet import defer, error
+from twisted.internet import reactor, defer, error, protocol
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
@@ -410,21 +410,55 @@ class POP3HelperMixin:
         loopback.loopbackTCP(self.server, self.client, noisy=False)
 
 
-class POP3TLSTestCase(POP3HelperMixin, unittest.TestCase):
-    serverCTX = ServerTLSContext and ServerTLSContext()
-    clientCTX = ClientTLSContext and ClientTLSContext()
+class TLSServerFactory(protocol.ServerFactory):
+    class protocol(basic.LineReceiver):
+        context = None
+        output = []
+        def connectionMade(self):
+            self.factory.input = []
+            self.output = self.output[:]
+            map(self.sendLine, self.output.pop(0))
+        def lineReceived(self, line):
+            self.factory.input.append(line)
+            map(self.sendLine, self.output.pop(0))
+            if line == 'STLS':
+                self.transport.startTLS(self.context)
 
+
+class POP3TLSTestCase(unittest.TestCase):
     def testStartTLS(self):
-        def login():
-            return self.client.startTLS()
+        sf = TLSServerFactory()
+        sf.protocol.output = [
+            ['+OK'], # Server greeting
+            ['+OK', 'STLS', '.'], # CAPA response
+            ['+OK'], # STLS response
+            ['+OK', '.'], # Second CAPA response
+            ['+OK'] # QUIT response
+            ]
+        sf.protocol.context = ServerTLSContext()
+        port = reactor.listenTCP(0, sf)
 
-        def quit():
-            return self.client.quit()
+        cp = SimpleClient(defer.Deferred(), ClientTLSContext())
+        cf = protocol.ClientFactory()
+        cf.protocol = lambda: cp
 
-        methods = [login, quit]
-        map(self.connected.addCallback, map(strip, methods))
-        self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        conn = reactor.connectTCP(port.getHost().host, port.getHost().port, cf)
+
+        cp.deferred.addCallback(lambda ign: cp.startTLS())
+        cp.deferred.addCallback(lambda ign: cp.quit())
+
+        def asserts(ign):
+            self.assertEquals(
+                sf.input,
+                ['CAPA', 'STLS', 'CAPA', 'QUIT'])
+        cp.deferred.addCallback(asserts)
+
+        def cleanup(result):
+            conn.disconnect()
+            return defer.maybeDeferred(port.stopListening).addCallback(lambda ign: result)
+
+        cp.deferred.addBoth(cleanup)
+        return cp.deferred
 
 
 class POP3TimeoutTestCase(POP3HelperMixin, unittest.TestCase):
