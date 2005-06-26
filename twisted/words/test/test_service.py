@@ -1,4 +1,6 @@
 
+from __future__ import generators
+
 import time
 
 from zope.interface import implements
