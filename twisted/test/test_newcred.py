@@ -5,8 +5,9 @@
 Now with 30% more starch.
 """
 
-import hmac
+from __future__ import generators
 
+import hmac
 from zope import interface
 
 from twisted.trial import unittest
