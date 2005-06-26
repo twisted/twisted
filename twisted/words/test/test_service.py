@@ -466,7 +466,7 @@ class IRCProtocolTestCase(unittest.TestCase):
         # XXX Sigh.  irc.parsemsg() is not as correct as one might hope.
         self.assertEquals(response[3][2], ['useruser', '#somechannel', 'This is a test topic.'])
         self.assertEquals(response[4][1], '333')
-        self.assertEquals(response[4][2], ['useruser', '#somechannel', 'some_fellow 77777777'])
+        self.assertEquals(response[4][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
 
         user.transport.clear()
 
@@ -477,7 +477,7 @@ class IRCProtocolTestCase(unittest.TestCase):
         self.assertEquals(response[0][1], '332')
         self.assertEquals(response[0][2], ['useruser', '#somechannel', 'This is a test topic.'])
         self.assertEquals(response[1][1], '333')
-        self.assertEquals(response[1][2], ['useruser', '#somechannel', 'some_fellow 77777777'])
+        self.assertEquals(response[1][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
     testGetTopic = dG(testGetTopic)
 
 
@@ -521,7 +521,7 @@ class IRCProtocolTestCase(unittest.TestCase):
         self.assertEquals(response[0][1], '332')
         self.assertEquals(response[0][2], ['otheruser', '#somechannel', 'This is the new topic.'])
         self.assertEquals(response[1][1], '333')
-        self.assertEquals(response[1][2], ['otheruser', '#somechannel', 'otheruser 12345'])
+        self.assertEquals(response[1][2], ['otheruser', '#somechannel', 'otheruser', '12345'])
 
         other.transport.clear()
         other.write('TOPIC #asdlkjasd\r\n')
