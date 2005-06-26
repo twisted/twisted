@@ -9,21 +9,8 @@ from twisted.plugin import IPlugin
 from twisted.scripts.mktap import _tapHelper
 from twisted.application import service, compat
 from twisted.python.reflect import namedAny
-from twisted.words import botbot
+from twisted.words import iwords
 
-class _ancientTAPHelper(_tapHelper):
-    def makeService(self, options):
-        ser = service.MultiService()
-        oldapp = compat.IOldApplication(ser)
-        oldapp.name = "Twisted Words"
-        namedAny(self.module).updateApplication(oldapp, options)
-        return ser
-
-TwistedWords = _ancientTAPHelper(
-    "Twisted Words",
-    "twisted.words.tap",
-    "A chat service.",
-    "words")
 
 TwistedTOC = _tapHelper(
     "Twisted TOC Server",
@@ -31,13 +18,29 @@ TwistedTOC = _tapHelper(
     "An AIM TOC service.",
     "toc")
 
-class WordsBot:
-    classProvides(IPlugin, botbot.IBotBot)
+NewTwistedWords = _tapHelper(
+    "New Twisted Words",
+    "twisted.words.tap",
+    "A modern words server",
+    "words")
 
-    name = "Bot-Creating Bot"
-    botType = "botbot"
+class RelayChatInterface(object):
+    classProvides(IPlugin, iwords.IProtocolPlugin)
 
-    def createBot():
-        return botbot.createBot()
-    createBot = staticmethod(createBot)
-backwardsCompatImplements(WordsBot)
+    name = 'irc'
+
+    def getFactory(cls, realm, portal):
+        from twisted.words import service
+        return service.IRCFactory(realm, portal)
+    getFactory = classmethod(getFactory)
+
+class PBChatInterface(object):
+    classProvides(IPlugin, iwords.IProtocolPlugin)
+
+    name = 'pb'
+
+    def getFactory(cls, realm, portal):
+        from twisted.spread import pb
+        return pb.PBServerFactory(portal, True)
+    getFactory = classmethod(getFactory)
+

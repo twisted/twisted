@@ -119,3 +119,7 @@ class LoopingCall:
         return 'LoopingCall<%r>(%s, *%s, **%s)' % (
             self.interval, func, reflect.safe_repr(self.a),
             reflect.safe_repr(self.kw))
+
+__all__ = [
+    'LoopingCall',
+    ]

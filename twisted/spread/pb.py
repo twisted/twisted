@@ -1741,8 +1741,10 @@ class _PortalAuthChallenger(Referenceable):
         return d
 
     def _loggedIn(self, (interface, perspective, logout)):
+        if not IJellyable.providedBy(perspective):
+            perspective = AsReferenceable(perspective, "perspective")
         self.portalWrapper.broker.notifyOnDisconnect(logout)
-        return AsReferenceable(perspective, "perspective")
+        return perspective
 
     # IUsernameHashedPassword:
     def checkPassword(self, password):

@@ -1,586 +1,1186 @@
-# -*- test-case-name: twisted.words.test.test_words -*-
-
+# -*- test-case-name: twisted.words.test.test_service -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+A module that needs a better name.
 
+Implements new cred things for words.
 
+How does this thing work?
+
+1) Network connection on some port expecting to speak some protocol
+2) Protocol-specific authentication, resulting in some kind of credentials object
+3) twisted.cred.portal login using those credentials for the interface
+   IUser and with something implementing IChatClient as the mind
+4) successful login results in an IUser avatar the protocol can
+   call methods on, and state added to the realm such that the mind
+   will have methods called on it as is necessary
+5) protocol specific actions lead to calls onto the avatar; remote
+   events lead to calls onto the mind
+6) protocol specific hangup, realm is notified, user is removed
+   from active play, the end.
 """
 
-Twisted Words Service objects.  Chat and messaging for Twisted.
+from time import time, ctime
 
-Twisted words is a general-purpose chat and instant messaging system designed
-to be a suitable replacement both for Instant Messenger systems and
-conferencing systems like IRC.
-
-Currently it provides presence notification, web-based account creation, and a
-simple group-chat abstraction.
-
-Stability: incendiary
-
-Maintainer: Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
-
-Future Plans: Woah boy.  This module is incredibly unstable.  It has an
-incredible deficiency of features.  There are also several features which are
-pretty controvertial.  As far as stability goes, it is lucky that the current
-interfaces are really simple: at least the uppermost external ones will almost
-certainly be preserved, but there is a lot of plumbing work.
-
-First of all the fact that users must have accounts generated through a web
-interface to sign in is a serious annoyance, especially to people who are
-familiar with IRC's semantics.  The following features are proposed to
-mitigate this annoyance:
-
-  - account creation through the various client interfaces available to Words
-    users.
-
-  - guest accounts, so that users who join for an hour once don't pollute the
-    authentication database with huge amounts of cruft.
-
-  - 'mood' metadata for users.  Since you can't change nicks, you need a way to
-    do the equivalent thing on IRC where people will sign in multiple times and
-    have foo_work and foo_home
-
-There is no plan to make it possible to log-in without an account.  This is
-simply a broken behavior of IRC; all possible convenience features that mimic
-this should be integrated, but authentication is an important part of chat.
-
-There are also certain things that are just missing.
-
-  - restricted group operations.  Typical IRC-style stuff, except you don't
-    ever see the @.  Permimssions should be grantable in a capability style,
-    rather than with a single bit.
-
-  - server-to-server communication.  As much as possible this should be
-    decentralized and not have the notion of 'hub' servers; rooms have
-    'physical' locality.  This is really hard to integrate with IRC client
-    protocol stuff, so it may end up that this feature requires a rewrite of
-    Twisted Words so that servers that present an IRC gateway are treated as
-    leaf nodes, and the recommended mode of operation is for the user to run a
-    lightweight proxy locally.
-
-  - a serious logging, monitoring, and routing framework
-
-Then there's a whole bunch of things that would be nice to have.
-
-  - public key authentication
-
-  - robust wire-level security
-
-  - integrated consensus web authoring tools
-
-  - management tools and guidelines for community leaders
-
-  - interface to operator functionality through 'bot' interface with
-    per-channel personality configuration
-
-  - graphical extensions to clients to allow formatted text (but detect
-    obviously annoying or abusive formatting)
-
-  - rate limiting, simple DoS protection, firewall integration
-
-  - basically everything OPN wants to be able to do, but better
-
-"""
-
-# System Imports
-import types, time
 from zope.interface import implements
 
-# Twisted Imports
+from twisted.words import iwords, ewords
+
+from twisted.python.components import registerAdapter, backwardsCompatImplements
+from twisted.cred import portal, credentials
 from twisted.spread import pb
-from twisted.python import log, roots, components
-from twisted.persisted import styles
+from twisted.web import resource
+from twisted.words.protocols import irc
+from twisted.internet import defer, protocol
+from twisted.python import log, failure, reflect
 from twisted import copyright
-from twisted.cred import authorizer
 
-# Status "enumeration"
 
-OFFLINE = 0
-ONLINE  = 1
-AWAY = 2
+class Group(object):
+    implements(iwords.IGroup)
 
-statuses = ["Offline","Online","Away"]
-
-class WordsError(pb.Error, KeyError):
-    pass
-
-class NotInCollectionError(WordsError):
-    pass
-
-class NotInGroupError(NotInCollectionError):
-    def __init__(self, groupName, pName=None):
-        WordsError.__init__(self, groupName, pName)
-        self.group = groupName
-        self.pName = pName
-
-    def __str__(self):
-        if self.pName:
-            pName = "'%s' is" % (self.pName,)
-        else:
-            pName = "You are"
-        s = ("%s not in group '%s'." % (pName, self.group))
-        return s
-
-class UserNonexistantError(NotInCollectionError):
-    def __init__(self, pName):
-        WordsError.__init__(self, pName)
-        self.pName = pName
-
-    def __str__(self):
-        return "'%s' does not exist." % (self.pName,)
-
-class WrongStatusError(WordsError):
-    def __init__(self, status, pName=None):
-        WordsError.__init__(self, status, pName)
-        self.status = status
-        self.pName = pName
-
-    def __str__(self):
-        if self.pName:
-            pName = "'%s'" % (self.pName,)
-        else:
-            pName = "User"
-
-        if self.status in statuses:
-            status = self.status
-        else:
-            status = 'unknown? (%s)' % self.status
-        s = ("%s status is '%s'." % (pName, status))
-        return s
-
-
-class IWordsClient(components.Interface):
-    """A client to a perspective on the twisted.words service.
-
-    I attach to that participant with Participant.attached(),
-    and detatch with Participant.detached().
-    """
-
-    def receiveContactList(self, contactList):
-        """Receive a list of contacts and their status.
-
-        The list is composed of 2-tuples, of the form
-        (contactName, contactStatus)
-        """
-
-    def notifyStatusChanged(self, name, status):
-        """Notify me of a change in status of one of my contacts.
-        """
-
-    def receiveGroupMembers(self, names, group):
-        """Receive a list of members in a group.
-
-        'names' is a list of participant names in the group named 'group'.
-        """
-
-    def setGroupMetadata(self, metadata, name):
-        """Some metadata on a group has been set.
-
-        XXX: Should this be receiveGroupMetadata(name, metedata)?
-        """
-
-    def receiveDirectMessage(self, sender, message, metadata=None):
-        """Receive a message from someone named 'sender'.
-        'metadata' is a dict of special flags. So far 'style': 'emote'
-        is defined. Note that 'metadata' *must* be optional.
-        """
-
-    def receiveGroupMessage(self, sender, group, message, metadata=None):
-        """Receive a message from 'sender' directed to a group.
-        'metadata' is a dict of special flags. So far 'style': 'emote'
-        is defined. Note that 'metadata' *must* be optional.
-        """
-
-    def memberJoined(self, member, group):
-        """Tells me a member has joined a group.
-        """
-
-    def memberLeft(self, member, group):
-        """Tells me a member has left a group.
-        """
-
-class WordsClient:
-    implements(IWordsClient)
-    """A stubbed version of L{IWordsClient}.
-
-    Useful for partial implementations.
-    """
-
-    def receiveContactList(self, contactList): pass
-    def notifyStatusChanged(self, name, status): pass
-    def receiveGroupMembers(self, names, group): pass
-    def setGroupMetadata(self, metadata, name): pass
-    def receiveDirectMessage(self, sender, message, metadata=None): pass
-    def receiveGroupMessage(self, sender, group, message, metadata=None): pass
-    def memberJoined(self, member, group): pass
-    def memberLeft(self, member, group): pass
-
-components.backwardsCompatImplements(WordsClient)
-
-class Transcript:
-    """I am a transcript of a conversation between multiple parties.
-    """
-    def __init__(self, voice, name):
-        self.chat = []
-        self.voice = voice
-        self.name = name
-    def logMessage(self, voiceName, message, metadata):
-        self.chat.append((time.time(), voiceName, message, metadata))
-    def endTranscript(self):
-        self.voice.stopTranscribing(self.name)
-
-class IWordsPolicy(components.Interface):
-    def getNameFor(self, participant):
-        """Give a name for a participant, based on the current policy."""
-    def lookUpParticipant(self, nick):
-        """ Get a Participant, given a name."""
-
-class NormalPolicy:
-    implements(IWordsPolicy)
-
-    def __init__(self, participant):
-        self.participant = participant
-    def getNameFor(self, participant):
-        return participant.name
-
-    def lookUpParticipant(self, nick):
-        return self.participant.service.getPerspectiveNamed(nick)
-
-components.backwardsCompatImplements(NormalPolicy)
-
-class Participant(pb.Perspective, styles.Versioned):
-    def __init__(self, name):
-        pb.Perspective.__init__(self, name)
-        self.name = name
-        self.status = OFFLINE
-        self.contacts = []
-        self.reverseContacts = []
-        self.groups = []
-        self.client = None
-        self.loggedNames = {}
-
-        self.policy = NormalPolicy(self)
-    persistenceVersion = 2
-
-    def upgradeToVersion2(self):
-        self.loggedNames = {}
-
-    def __getstate__(self):
-        state = styles.Versioned.__getstate__(self)
-        # Assumptions:
-        # * self.client is a RemoteReference, or otherwise represents
-        #   a transient presence.
-        if isinstance(state["client"], styles.Ephemeral):
-            state["client"] = None
-            # * Because we have no client, we are not online.
-            state["status"] = OFFLINE
-            # * Because we are not online, we are in no groups.
-            state["groups"] = []
-
-        return state
-
-    def attached(self, client, identity):
-        """Attach a client which implements L{IWordsClient} to me.
-        """
-        if ((self.client is not None)
-            and self.client.__class__ != styles.Ephemeral):
-            self.detached(client, identity)
-        log.msg("attached: %s" % self.name)
-        self.client = client
-        client.callRemote('receiveContactList', map(lambda contact: (contact.name,
-                                                                     contact.status),
-                                                    self.contacts))
-        self.changeStatus(ONLINE)
-        return self
-
-    def transcribeConversationWith(self, voiceName):
-        t  = Transcript(self, voiceName)
-        self.loggedNames[voiceName] = t
-        return t
-
-    def stopTranscribing(self, voiceName):
-        del self.loggedNames[voiceName]
-
-    def changeStatus(self, newStatus):
-        self.status = newStatus
-        for contact in self.reverseContacts:
-            contact.notifyStatusChanged(self)
-
-    def notifyStatusChanged(self, contact):
-        if self.client:
-            self.client.callRemote('notifyStatusChanged', contact.name, contact.status)
-
-    def detached(self, client, identity):
-        log.msg("detached: %s" % self.name)
-        self.client = None
-        for group in self.groups[:]:
-            try:
-                self.leaveGroup(group.name)
-            except NotInGroupError:
-                pass
-        self.changeStatus(OFFLINE)
-
-    def addContact(self, contactName):
-        # XXX This should use a database or something.  Doing it synchronously
-        # like this won't work.
-        contact = self.service.getPerspectiveNamed(contactName)
-        self.contacts.append(contact)
-        contact.reverseContacts.append(self)
-        self.notifyStatusChanged(contact)
-
-    def removeContact(self, contactName):
-        for contact in self.contacts:
-            if contact.name == contactName:
-                self.contacts.remove(contact)
-                contact.reverseContacts.remove(self)
-                return
-        raise NotInCollectionError("No such contact '%s'."
-                                   % (contactName,))
-
-    def joinGroup(self, name):
-        group = self.service.getGroup(name)
-        if group in self.groups:
-            # We're in that group.  Don't make a fuss.
-            return
-        group.addMember(self)
-        self.groups.append(group)
-
-    def leaveGroup(self, name):
-        for group in self.groups:
-            if group.name == name:
-                self.groups.remove(group)
-                group.removeMember(self)
-                return
-        raise NotInGroupError(name)
-
-    def getGroupMembers(self, groupName):
-        if self.client:
-            for group in self.groups:
-                if group.name == groupName:
-                    self.client.callRemote('receiveGroupMembers',
-                                           map(lambda m: m.name,
-                                               group.members),
-                                           group.name)
-                    return
-            raise NotInGroupError(groupName)
-
-    def getGroupMetadata(self, groupName):
-        if self.client:
-            for group in self.groups:
-                if group.name == groupName:
-                    self.client.callRemote('setGroupMetadata', group.metadata, group.name)
-
-    def receiveDirectMessage(self, sender, message, metadata):
-        if self.client:
-            # is this wrong?
-            # nick = self.policy.getNameFor(sender)
-            nick = sender.name
-            if self.loggedNames.has_key(nick):
-                self.loggedNames[nick].logMessage(sender.name, message,
-                                                         metadata)
-            self.client.callRemote('receiveDirectMessage', nick,
-                                   message, metadata)
-        else:
-            raise WrongStatusError(self.status, self.name)
-
-
-    def receiveGroupMessage(self, sender, group, message, metadata):
-        if sender is not self and self.client:
-            self.client.callRemote('receiveGroupMessage',sender.name, group.name,
-                                   message, metadata)
-
-    def memberJoined(self, member, group):
-        if self.client:
-            self.client.callRemote('memberJoined', member.name, group.name)
-
-    def memberLeft(self, member, group):
-        if self.client:
-            self.client.callRemote('memberLeft', member.name, group.name)
-
-    def directMessage(self, recipientName, message, metadata=None):
-        recipient = self.policy.lookUpParticipant(recipientName)
-        recipient.receiveDirectMessage(self, message, metadata or {})
-        if self.loggedNames.has_key(recipientName):
-            self.loggedNames[recipientName].logMessage(self.name, message, metadata)
-
-
-    def groupMessage(self, groupName, message, metadata=None):
-        for group in self.groups:
-            if group.name == groupName:
-                group.sendMessage(self, message, metadata or {})
-                return
-        raise NotInGroupError(groupName)
-
-    def setGroupMetadata(self, dict_, groupName):
-        if self.client:
-            self.client.callRemote('setGroupMetadata', dict_, groupName)
-
-    def perspective_setGroupMetadata(self, dict_, groupName):
-        #pre-processing
-        if dict_.has_key('topic'):
-            #don't want topic-spoofing, now
-            dict_["topic_author"] = self.name
-
-        for group in self.groups:
-            if group.name == groupName:
-                group.setMetadata(dict_)
-
-    # Establish client protocol for PB.
-    perspective_changeStatus = changeStatus
-    perspective_joinGroup = joinGroup
-    perspective_directMessage = directMessage
-    perspective_addContact = addContact
-    perspective_removeContact = removeContact
-    perspective_groupMessage = groupMessage
-    perspective_leaveGroup = leaveGroup
-    perspective_getGroupMembers = getGroupMembers
-
-    def __repr__(self):
-        if self.identityName != "Nobody":
-            id_s = '(id:%s)' % (self.identityName, )
-        else:
-            id_s = ''
-        s = ("<%s '%s'%s on %s at %x>"
-             % (self.__class__, self.name, id_s,
-                self.service.serviceName, id(self)))
-        return s
-
-class Group(styles.Versioned):
-    """
-    This class represents a group of people engaged in a chat session
-    with one another.
-
-    @type name:            C{string}
-    @ivar name:            The name of the group
-    @type members:         C{list}
-    @ivar members:         The members of the group
-    @type metadata:        C{dictionary}
-    @ivar metadata:        Metadata that describes the group.  Common
-                           keys are:
-                             - C{'topic'}: The topic string for the group.
-                             - C{'topic_author'}: The name of the user who
-                               last set the topic.
-    """
     def __init__(self, name):
         self.name = name
-        self.members = []
-        self.metadata = {'topic': 'Welcome to %s!' % self.name,
-                         'topic_author': 'admin'}
+        self.users = {}
+        self.meta = {
+            "topic": "",
+            "topic_author": "",
+            }
 
-    def __getstate__(self):
-        state = styles.Versioned.__getstate__(self)
-        state['members'] = []
-        return state
 
-    def addMember(self, participant):
-        if participant in self.members:
-            return
-        for member in self.members:
-            member.memberJoined(participant, self)
-        participant.setGroupMetadata(self.metadata, self.name)
-        self.members.append(participant)
+    def _ebUserCall(self, err, p):
+        return failure.Failure(Exception(p, err))
 
-    def removeMember(self, participant):
+
+    def _cbUserCall(self, results):
+        for (success, result) in results:
+            if not success:
+                user, err = result.value # XXX
+                self.remove(user, err.getErrorMessage())
+
+
+    def add(self, user):
+        assert iwords.IChatClient.providedBy(user), "%r is not a chat client" % (user,)
+        if user.name not in self.users:
+            additions = []
+            self.users[user.name] = user
+            for p in self.users.itervalues():
+                if p is not user:
+                    d = defer.maybeDeferred(p.userJoined, self, user)
+                    d.addErrback(self._ebUserCall, p=p)
+                    additions.append(d)
+            defer.DeferredList(additions).addCallback(self._cbUserCall)
+        return defer.succeed(None)
+
+
+    def remove(self, user, reason=None):
+        assert reason is None or isinstance(reason, unicode)
         try:
-            self.members.remove(participant)
-        except ValueError:
-            raise NotInGroupError(self.name, participant.name)
+            del self.users[user.name]
+        except KeyError:
+            pass
         else:
-            for member in self.members:
-                member.memberLeft(participant, self)
-
-    def sendMessage(self, sender, message, metadata):
-        for member in self.members:
-            member.receiveGroupMessage(sender, self, message, metadata)
-
-    def setMetadata(self, dict_):
-        self.metadata.update(dict_)
-        for member in self.members:
-            member.setGroupMetadata(dict_, self.name)
-
-    def __repr__(self):
-        s = "<%s '%s' at %x>" % (self.__class__, self.name, id(self))
-        return s
+            removals = []
+            for p in self.users.itervalues():
+                if p is not user:
+                    d = defer.maybeDeferred(p.userLeft, self, user, reason)
+                    d.addErrback(self._ebUserCall, p=p)
+                    removals.append(d)
+            defer.DeferredList(removals).addCallback(self._cbUserCall)
+        return defer.succeed(None)
 
 
-    ##Persistence Versioning
-
-    persistenceVersion = 1
-
-    def upgradeToVersion1(self):
-        self.metadata = {'topic': self.topic}
-        del self.topic
-        self.metadata['topic_author'] = 'admin'
+    def size(self):
+        return defer.succeed(len(self.users))
 
 
-class Service(pb.Service, styles.Versioned):
-    """I am a chat service.
-    """
+    def receive(self, sender, recipient, message):
+        assert recipient is self
+        receives = []
+        for p in self.users.itervalues():
+            if p is not sender:
+                d = defer.maybeDeferred(p.receive, sender, self, message)
+                d.addErrback(self._ebUserCall, p=p)
+                receives.append(d)
+        defer.DeferredList(receives).addCallback(self._cbUserCall)
+        return defer.succeed(None)
 
-    perspectiveClass = Participant
 
-    def __init__(self, name, parent=None, auth=None):
-        pb.Service.__init__(self, name, parent, auth)
-        self.groups = {}
-        self.bots = []
+    def setMetadata(self, meta):
+        self.meta = meta
+        sets = []
+        for p in self.users.itervalues():
+            d = defer.maybeDeferred(p.groupMetaUpdate, self, meta)
+            d.addErrback(self._ebUserCall, p=p)
+            sets.append(d)
+        defer.DeferredList(sets).addCallback(self._cbUserCall)
+        return defer.succeed(None)
 
-    ## Persistence versioning.
-    persistenceVersion = 4
 
-    def upgradeToVersion1(self):
-        from twisted.internet.app import theApplication
-        styles.requireUpgrade(theApplication)
-        pb.Service.__init__(self, 'twisted.words', theApplication)
+    def iterusers(self):
+        # XXX Deferred?
+        return iter(self.users.values())
+backwardsCompatImplements(Group)
 
-    def upgradeToVersion3(self):
-        self.perspectives = self.participants
-        del self.participants
 
-    def upgradeToVersion4(self):
-        self.bots = []
 
-    ## Service functionality.
+class User(object):
+    implements(iwords.IUser)
+
+    realm = None
+    mind = None
+
+    def __init__(self, name):
+        self.name = name
+        self.groups = []
+        self.lastMessage = time()
+
+
+    def loggedIn(self, realm, mind):
+        self.realm = realm
+        self.mind = mind
+        self.signOn = time()
+
+
+    def join(self, group):
+        def cbJoin(result):
+            self.groups.append(group)
+            return result
+        return group.add(self.mind).addCallback(cbJoin)
+
+
+    def leave(self, group, reason=None):
+        def cbLeave(result):
+            self.groups.remove(group)
+            return result
+        return group.remove(self.mind, reason).addCallback(cbLeave)
+
+
+    def send(self, recipient, message):
+        self.lastMessage = time()
+        return recipient.receive(self.mind, recipient, message)
+
+
+    def itergroups(self):
+        return iter(self.groups)
+
+
+    def logout(self):
+        for g in self.groups[:]:
+            self.leave(g)
+backwardsCompatImplements(User)
+
+
+NICKSERV = 'NickServ!NickServ@services'
+class IRCUser(irc.IRC):
+    implements(iwords.IChatClient)
+
+    # A list of IGroups in which I am participating
+    groups = None
+
+    # A no-argument callable I should invoke when I go away
+    logout = None
+
+    # An IUser we use to interact with the chat service
+    avatar = None
+
+    # To whence I belong
+    realm = None
+
+    # How to handle unicode (TODO: Make this customizable on a per-user basis)
+    encoding = 'utf-8'
+
+    # Twisted callbacks
+    def connectionMade(self):
+        self.irc_PRIVMSG = self.irc_NICKSERV_PRIVMSG
+
+
+    def connectionLost(self, reason):
+        if self.logout is not None:
+            self.logout()
+            self.avatar = None
+
+
+    # Make sendMessage a bit more useful to us
+    def sendMessage(self, command, *parameter_list, **kw):
+        if not kw.has_key('prefix'):
+            kw['prefix'] = self.hostname
+        if not kw.has_key('to'):
+            kw['to'] = self.name.encode(self.encoding)
+
+        arglist = [self, command, kw['to']] + list(parameter_list)
+        irc.IRC.sendMessage(*arglist, **kw)
+
+
+    # IChatClient implementation
+    def userJoined(self, group, user):
+        self.join(
+            "%s!%s@%s" % (user.name, user.name, self.hostname),
+            '#' + group.name)
+
+
+    def userLeft(self, group, user, reason=None):
+        assert reason is None or isinstance(reason, unicode)
+        self.part(
+            "%s!%s@%s" % (user.name, user.name, self.hostname),
+            '#' + group.name,
+            (reason or u"leaving").encode(self.encoding, 'replace'))
+
+
+    def receive(self, sender, recipient, message):
+        #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
+
+        # omg???????????
+        if iwords.IGroup.providedBy(recipient):
+            recipientName = '#' + recipient.name
+        else:
+            recipientName = recipient.name
+
+        text = message.get('text', '<an unrepresentable message>')
+        for L in text.splitlines():
+            self.privmsg(
+                '%s!%s@%s' % (sender.name, sender.name, self.hostname),
+                recipientName,
+                L)
+
+
+    def groupMetaUpdate(self, group, meta):
+        if 'topic' in meta:
+            topic = meta['topic']
+            author = meta.get('topic_author', '')
+            self.topic(
+                self.name,
+                '#' + group.name,
+                topic,
+                '%s!%s@%s' % (author, author, self.hostname)
+                )
+
+    # irc.IRC callbacks - starting with login related stuff.
+    nickname = None
+    password = None
+
+    def irc_PASS(self, prefix, params):
+        """Password message -- Register a password.
+
+        Parameters: <password>
+
+        [REQUIRED]
+
+        Note that IRC requires the client send this *before* NICK
+        and USER.
+        """
+        self.password = params[-1]
+
+
+    def irc_NICK(self, prefix, params):
+        """Nick message -- Set your nickname.
+
+        Parameters: <nickname>
+
+        [REQUIRED]
+        """
+        try:
+            nickname = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.privmsg(
+                NICKSERV,
+                nickname,
+                'Your nickname is cannot be decoded.  Please use ASCII or UTF-8.')
+            self.transport.loseConnection()
+            return
+
+        if self.password is None:
+            self.nickname = nickname
+            self.privmsg(
+                NICKSERV,
+                nickname,
+                'Password?')
+        else:
+            password = self.password
+            self.password = None
+            self.logInAs(nickname, password)
+
+
+    def irc_USER(self, prefix, params):
+        """User message -- Set your realname.
+
+        Parameters: <user> <mode> <unused> <realname>
+        """
+        # Note: who gives a crap about this?  The IUser has the real
+        # information we care about.  Save it anyway, I guess, just
+        # for fun.
+        self.realname = params[-1]
+
+
+    def irc_NICKSERV_PRIVMSG(self, prefix, params):
+        """Send a (private) message.
+
+        Parameters: <msgtarget> <text to be sent>
+        """
+        target = params[0]
+        password = params[-1]
+
+        if self.nickname is None:
+            # XXX Send an error response here
+            self.transport.loseConnection()
+        elif target.lower() != "nickserv":
+            self.privmsg(
+                NICKSERV,
+                self.nickname,
+                "Denied.  Please send me (NickServ) your password.")
+        else:
+            nickname = self.nickname
+            self.nickname = None
+            self.logInAs(nickname, password)
+
+
+    def logInAs(self, nickname, password):
+        d = self.factory.portal.login(
+            credentials.UsernamePassword(nickname, password),
+            self,
+            iwords.IUser)
+        d.addCallbacks(self._cbLogin, self._ebLogin, errbackArgs=(nickname,))
+
+
+    _welcomeMessages = [
+        (irc.RPL_WELCOME,
+         ":connected to Twisted IRC"),
+        (irc.RPL_YOURHOST,
+         ":Your host is %(serviceName)s, running version %(serviceVersion)s"),
+        (irc.RPL_CREATED,
+         ":This server was created on %(creationDate)s"),
+
+        # "Bummer.  This server returned a worthless 004 numeric.
+        #  I'll have to guess at all the values"
+        #    -- epic
+        (irc.RPL_MYINFO,
+         # w and n are the currently supported channel and user modes
+         # -- specify this better
+         "%(serviceName)s %(serviceVersion)s w n"),
+        ]
+
+
+    def _cbLogin(self, (iface, avatar, logout)):
+        assert iface is iwords.IUser, "Realm is buggy, got %r" % (iface,)
+
+        # Let them send messages to the world
+        del self.irc_PRIVMSG
+
+        self.avatar = avatar
+        self.logout = logout
+        self.realm = avatar.realm
+        self.hostname = self.realm.name
+
+        info = {
+            "serviceName": self.hostname,
+            "serviceVersion": copyright.version,
+            "creationDate": ctime(), # XXX
+            }
+        for code, text in self._welcomeMessages:
+            self.sendMessage(code, text % info)
+
+
+    def _ebLogin(self, err, nickname):
+        if err.check(ewords.AlreadyLoggedIn):
+            self.privmsg(
+                NICKSERV,
+                nickname,
+                "Already logged in.  No pod people allowed!")
+        else:
+            self.privmsg(
+                NICKSERV,
+                nickname,
+                "Login failed.  Goodbye.")
+        self.transport.loseConnection()
+
+
+    # Great, now that's out of the way, here's some of the interesting
+    # bits
+    def irc_PING(self, prefix, params):
+        """Ping message
+
+        Parameters: <server1> [ <server2> ]
+        """
+        if self.realm is not None:
+            self.sendMessage('PONG', self.hostname)
+
+
+    def irc_QUIT(self, prefix, params):
+        """Quit
+
+        Parameters: [ <Quit Message> ]
+        """
+        self.transport.loseConnection()
+
+
+    def _channelMode(self, group, modes=None, *args):
+        if modes:
+            self.sendMessage(
+                irc.ERR_UNKNOWNMODE,
+                ":Unknown MODE flag.")
+        else:
+            self.channelMode(self.name, '#' + group.name, '+')
+
+
+    def _userMode(self, user, modes=None):
+        if modes:
+            self.sendMessage(
+                irc.ERR_UNKNOWNMODE,
+                ":Unknown MODE flag.")
+        elif user is self.avatar:
+            self.sendMessage(
+                irc.RPL_UMODEIS,
+                "+")
+        else:
+            self.sendMessage(
+                irc.ERR_USERSDONTMATCH,
+                ":You can't look at someone else's modes.")
+
+
+    def irc_MODE(self, prefix, params):
+        """User mode message
+
+        Parameters: <nickname>
+        *( ( "+" / "-" ) *( "i" / "w" / "o" / "O" / "r" ) )
+
+        """
+        try:
+            channelOrUser = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.ERR_NOSUCHNICK, params[0],
+                ":No such nickname (could not decode your unicode!)")
+            return
+
+        if channelOrUser.startswith('#'):
+            def ebGroup(err):
+                err.trap(ewords.NoSuchGroup)
+                self.sendMessage(
+                    irc.ERR_NOSUCHCHANNEL, params[0],
+                    ":That channel doesn't exist.")
+            d = self.realm.lookupGroup(channelOrUser[1:])
+            d.addCallbacks(
+                self._channelMode,
+                ebGroup,
+                callbackArgs=tuple(params[1:]))
+        else:
+            def ebUser(err):
+                self.sendMessage(
+                    irc.ERR_NOSUCHNICK,
+                    ":No such nickname.")
+
+            d = self.realm.lookupUser(channelOrUser)
+            d.addCallbacks(
+                self._userMode,
+                ebUser,
+                callbackArgs=tuple(params[1:]))
+
+
+    def irc_USERHOST(self, prefix, params):
+        """Userhost message
+
+        Parameters: <nickname> *( SPACE <nickname> )
+
+        [Optional]
+        """
+        pass
+
+
+    def irc_PRIVMSG(self, prefix, params):
+        """Send a (private) message.
+
+        Parameters: <msgtarget> <text to be sent>
+        """
+        try:
+            targetName = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.ERR_NOSUCHNICK, targetName,
+                ":No such nick/channel (could not decode your unicode!)")
+            return
+
+        messageText = params[-1]
+        if targetName.startswith('#'):
+            target = self.realm.lookupGroup(targetName[1:])
+        else:
+            target = self.realm.lookupUser(targetName).addCallback(lambda user: user.mind)
+
+        def cbTarget(targ):
+            if targ is not None:
+                return self.avatar.send(targ, {"text": messageText})
+
+        def ebTarget(err):
+            self.sendMessage(
+                irc.ERR_NOSUCHNICK, targetName,
+                ":No such nick/channel.")
+
+        target.addCallbacks(cbTarget, ebTarget)
+
+
+    def irc_JOIN(self, prefix, params):
+        """Join message
+
+        Parameters: ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] )
+        """
+        try:
+            groupName = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.IRC_NOSUCHCHANNEL, params[0],
+                ":No such channel (could not decode your unicode!)")
+            return
+
+        if groupName.startswith('#'):
+            groupName = groupName[1:]
+
+        def cbGroup(group):
+            def cbJoin(ign):
+                self.userJoined(group, self)
+                self.names(
+                    self.name,
+                    '#' + group.name,
+                    [user.name for user in group.iterusers()])
+                self._sendTopic(group)
+            return self.avatar.join(group).addCallback(cbJoin)
+
+        def ebGroup(err):
+            self.sendMessage(
+                irc.ERR_NOSUCHCHANNEL, '#' + groupName,
+                ":No such channel.")
+
+        self.realm.getGroup(groupName).addCallbacks(cbGroup, ebGroup)
+
+
+    def irc_PART(self, prefix, params):
+        """Part message
+
+        Parameters: <channel> *( "," <channel> ) [ <Part Message> ]
+        """
+        try:
+            groupName = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.ERR_NOTONCHANNEL, params[0],
+                ":Could not decode your unicode!")
+            return
+
+        if groupName.startswith('#'):
+            groupName = groupName[1:]
+
+        if len(params) > 1:
+            reason = params[1].decode('utf-8')
+        else:
+            reason = None
+
+        def cbGroup(group):
+            def cbLeave(result):
+                self.userLeft(group, self, reason)
+            return self.avatar.leave(group, reason).addCallback(cbLeave)
+
+        def ebGroup(err):
+            err.trap(ewords.NoSuchGroup)
+            self.sendMessage(
+                irc.ERR_NOTONCHANNEL,
+                '#' + groupName,
+                ":" + err.getErrorMessage())
+
+        self.realm.lookupGroup(groupName).addCallbacks(cbGroup, ebGroup)
+
+
+    def irc_NAMES(self, prefix, params):
+        """Names message
+
+        Parameters: [ <channel> *( "," <channel> ) [ <target> ] ]
+        """
+        #<< NAMES #python
+        #>> :benford.openprojects.net 353 glyph = #python :Orban ... @glyph ... Zymurgy skreech
+        #>> :benford.openprojects.net 366 glyph #python :End of /NAMES list.
+        try:
+            channel = params[-1].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.ERR_NOSUCHCHANNEL, params[-1],
+                ":No such channel (could not decode your unicode!)")
+            return
+
+        if channel.startswith('#'):
+            channel = channel[1:]
+
+        def cbGroup(group):
+            self.names(
+                self.name,
+                '#' + group.name,
+                [user.name for user in group.iterusers()])
+
+        def ebGroup(err):
+            err.trap(ewords.NoSuchGroup)
+            # No group?  Fine, no names!
+            self.names(
+                self.name,
+                '#' + group.name,
+                [])
+
+        self.realm.lookupGroup(channel).addCallbacks(cbGroup, ebGroup)
+
+
+    def irc_TOPIC(self, prefix, params):
+        """Topic message
+
+        Parameters: <channel> [ <topic> ]
+        """
+        try:
+            channel = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.ERR_NOSUCHCHANNEL,
+                ":That channel doesn't exist (could not decode your unicode!)")
+            return
+
+        if channel.startswith('#'):
+            channel = channel[1:]
+
+        if len(params) > 1:
+            self._setTopic(channel, params[1])
+        else:
+            self._getTopic(channel)
+
+
+    def _sendTopic(self, group):
+        topic = group.meta.get("topic")
+        author = group.meta.get("topic_author") or "<noone>"
+        date = group.meta.get("topic_date", 0)
+        self.topic(self.name, '#' + group.name, topic)
+        self.topicAuthor(self.name, '#' + group.name, author, date)
+
+
+    def _getTopic(self, channel):
+        #<< TOPIC #python
+        #>> :benford.openprojects.net 332 glyph #python :<churchr> I really did. I sprained all my toes.
+        #>> :benford.openprojects.net 333 glyph #python itamar|nyc 994713482
+        def ebGroup(err):
+            err.trap(ewords.NoSuchGroup)
+            self.sendMessage(
+                irc.ERR_NOSUCHCHANNEL, '=', channel,
+                ":That channel doesn't exist.")
+
+        self.realm.lookupGroup(channel).addCallbacks(self._sendTopic, ebGroup)
+
+
+    def _setTopic(self, channel, topic):
+        #<< TOPIC #divunal :foo
+        #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #divunal :foo
+
+        def cbGroup(group):
+            newMeta = group.meta.copy()
+            newMeta['topic'] = topic
+            newMeta['topic_author'] = self.name
+            newMeta['topic_date'] = int(time())
+
+            def ebSet(err):
+                self.sendMessage(
+                    ERR_CHANOPRIVSNEEDED,
+                    "#" + group.name,
+                    ":You need to be a channel operator to do that.")
+
+            return group.setMetadata(newMeta).addErrback(ebSet)
+
+        def ebGroup(err):
+            err.trap(ewords.NoSuchGroup)
+            self.sendMessage(
+                irc.ERR_NOSUCHCHANNEL, '=', channel,
+                ":That channel doesn't exist.")
+
+        self.realm.lookupGroup(channel).addCallbacks(cbGroup, ebGroup)
+
+
+    def list(self, channels):
+        """Send a group of LIST response lines
+
+        @type channel: C{list} of C{(str, int, str)}
+        @param channel: Information about the channels being sent:
+        their name, the number of participants, and their topic.
+        """
+        for (name, size, topic) in channels:
+            self.sendMessage(irc.RPL_LIST, name, str(size), ":" + topic)
+        self.sendMessage(irc.RPL_LISTEND, ":End of /LIST")
+
+
+    def irc_LIST(self, prefix, params):
+        """List query
+
+        Return information about the indicated channels, or about all
+        channels if none are specified.
+
+        Parameters: [ <channel> *( "," <channel> ) [ <target> ] ]
+        """
+        #<< list #python
+        #>> :orwell.freenode.net 321 exarkun Channel :Users  Name
+        #>> :orwell.freenode.net 322 exarkun #python 358 :The Python programming language
+        #>> :orwell.freenode.net 323 exarkun :End of /LIST
+        if params:
+            # Return information about indicated channels
+            try:
+                channels = params[0].decode(self.encoding).split(',')
+            except UnicodeDecodeError:
+                self.sendMessage(
+                    irc.ERR_NOSUCHCHANNEL, params[0],
+                    ":No such channel (could not decode your unicode!)")
+                return
+
+            groups = []
+            for ch in channels:
+                if ch.startswith('#'):
+                    ch = ch[1:]
+                groups.append(self.realm.lookupGroup(ch))
+
+            groups = defer.DeferredList(groups, consumeErrors=True)
+            groups.addCallback(lambda gs: [r for (s, r) in gs if s])
+        else:
+            # Return information about all channels
+            groups = self.realm.itergroups()
+
+        def cbGroups(groups):
+            def gotSize(size, group):
+                return group.name, size, group.meta.get('topic')
+            d = defer.DeferredList([
+                group.size().addCallback(gotSize, group) for group in groups])
+            d.addCallback(lambda results: self.list([r for (s, r) in results if s]))
+            return d
+        groups.addCallback(cbGroups)
+
+
+    def _channelWho(self, group):
+        self.who(self.name, '#' + group.name,
+            [(m.name, self.hostname, self.realm.name, m.name, "H", 0, m.name) for m in group.iterusers()])
+
+
+    def _userWho(self, user):
+        self.sendMessage(irc.RPL_ENDOFWHO,
+                         ":User /WHO not implemented")
+
+
+    def irc_WHO(self, prefix, params):
+        """Who query
+
+        Parameters: [ <mask> [ "o" ] ]
+        """
+        #<< who #python
+        #>> :x.opn 352 glyph #python aquarius pc-62-31-193-114-du.blueyonder.co.uk y.opn Aquarius H :3 Aquarius
+        # ...
+        #>> :x.opn 352 glyph #python foobar europa.tranquility.net z.opn skreech H :0 skreech
+        #>> :x.opn 315 glyph #python :End of /WHO list.
+        ### also
+        #<< who glyph
+        #>> :x.opn 352 glyph #python glyph adsl-64-123-27-108.dsl.austtx.swbell.net x.opn glyph H :0 glyph
+        #>> :x.opn 315 glyph glyph :End of /WHO list.
+        if not params:
+            self.sendMessage(irc.RPL_ENDOFWHO, ":/WHO not supported.")
+            return
+
+        try:
+            channelOrUser = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.RPL_ENDOFWHO, params[0],
+                ":End of /WHO list (could not decode your unicode!)")
+            return
+
+        if channelOrUser.startswith('#'):
+            def ebGroup(err):
+                err.trap(ewords.NoSuchGroup)
+                self.sendMessage(
+                    irc.RPL_ENDOFWHO, channelOrUser,
+                    ":End of /WHO list.")
+            d = self.realm.lookupGroup(channelOrUser[1:])
+            d.addCallbacks(self._channelWho, ebGroup)
+        else:
+            def ebUser(err):
+                err.trap(ewords.NoSuchUser)
+                self.sendMessage(
+                    irc.RPL_ENDOFWHO, channelOrUser,
+                    ":End of /WHO list.")
+            d = self.realm.lookupUser(channelOrUser)
+            d.addCallbacks(self._userWho, ebUser)
+
+
+
+    def irc_WHOIS(self, prefix, params):
+        """Whois query
+
+        Parameters: [ <target> ] <mask> *( "," <mask> )
+        """
+        def cbUser(user):
+            self.whois(
+                self.name,
+                user.name, user.name, self.realm.name,
+                user.name, self.realm.name, 'Hi mom!', False,
+                int(time() - user.lastMessage), user.signOn,
+                ['#' + group.name for group in user.itergroups()])
+
+        def ebUser(err):
+            err.trap(ewords.NoSuchUser)
+            self.sendMessage(
+                irc.ERR_NOSUCHNICK,
+                params[0],
+                ":No such nick/channel")
+
+        try:
+            user = params[0].decode(self.encoding)
+        except UnicodeDecodeError:
+            self.sendMessage(
+                irc.ERR_NOSUCHNICK,
+                params[0],
+                ":No such nick/channel")
+            return
+
+        self.realm.lookupUser(user).addCallbacks(cbUser, ebUser)
+
+
+    # Unsupported commands, here for legacy compatibility
+    def irc_OPER(self, prefix, params):
+        """Oper message
+
+        Parameters: <name> <password>
+        """
+        self.sendMessage(irc.ERR_NOOPERHOST, ":O-lines not applicable")
+backwardsCompatImplements(IRCUser)
+
+
+class IRCFactory(protocol.ServerFactory):
+    protocol = IRCUser
+
+    def __init__(self, realm, portal):
+        self.realm = realm
+        self.portal = portal
+
+
+class PBMind(pb.Referenceable):
+    def __init__(self):
+        pass
+
+    def jellyFor(self, jellier):
+        return reflect.qual(PBMind), jellier.invoker.registerReference(self)
+
+    def remote_userJoined(self, user, group):
+        pass
+
+    def remote_userLeft(self, user, group, reason):
+        pass
+
+    def remote_receive(self, sender, recipient, message):
+        pass
+
+    def remote_groupMetaUpdate(self, group, meta):
+        pass
+
+
+class PBMindReference(pb.RemoteReference):
+    implements(iwords.IChatClient)
+
+    def receive(self, sender, recipient, message):
+        if iwords.IGroup.providedBy(recipient):
+            rec = PBGroup(self.realm, self.avatar, recipient)
+        else:
+            rec = PBUser(self.realm, self.avatar, recipient)
+        return self.callRemote(
+            'receive',
+            PBUser(self.realm, self.avatar, sender),
+            rec,
+            message)
+
+    def groupMetaUpdate(self, group, meta):
+        return self.callRemote(
+            'groupMetaUpdate',
+            PBGroup(self.realm, self.avatar, group),
+            meta)
+
+    def userJoined(self, group, user):
+        return self.callRemote(
+            'userJoined',
+            PBGroup(self.realm, self.avatar, group),
+            PBUser(self.realm, self.avatar, user))
+
+    def userLeft(self, group, user, reason=None):
+        assert reason is None or isinstance(reason, unicode)
+        return self.callRemote(
+            'userLeft',
+            PBGroup(self.realm, self.avatar, group),
+            PBUser(self.realm, self.avatar, user),
+            reason)
+backwardsCompatImplements(PBMindReference)
+pb.setUnjellyableForClass(PBMind, PBMindReference)
+
+
+class PBGroup(pb.Referenceable):
+    def __init__(self, realm, avatar, group):
+        self.realm = realm
+        self.avatar = avatar
+        self.group = group
+
+
+    def processUniqueID(self):
+        return hash((self.realm.name, self.avatar.name, self.group.name))
+
+
+    def jellyFor(self, jellier):
+        return reflect.qual(self.__class__), self.group.name.encode('utf-8'), jellier.invoker.registerReference(self)
+
+
+    def remote_leave(self, reason=None):
+        return self.avatar.leave(self.group, reason)
+
+
+    def remote_send(self, message):
+        return self.avatar.send(self.group, message)
+
+
+class PBGroupReference(pb.RemoteReference):
+    implements(iwords.IGroup)
+
+    def unjellyFor(self, unjellier, unjellyList):
+        clsName, name, ref = unjellyList
+        self.name = name.decode('utf-8')
+        return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
+
+    def leave(self, reason=None):
+        return self.callRemote("leave", reason)
+
+    def send(self, message):
+        return self.callRemote("send", message)
+backwardsCompatImplements(PBGroupReference)
+pb.setUnjellyableForClass(PBGroup, PBGroupReference)
+
+class PBUser(pb.Referenceable):
+    def __init__(self, realm, avatar, user):
+        self.realm = realm
+        self.avatar = avatar
+        self.user = user
+
+    def processUniqueID(self):
+        return hash((self.realm.name, self.avatar.name, self.user.name))
+
+
+class ChatAvatar(pb.Referenceable):
+    implements(iwords.IChatClient)
+
+    def __init__(self, avatar):
+        self.avatar = avatar
+
+
+    def jellyFor(self, jellier):
+        return reflect.qual(self.__class__), jellier.invoker.registerReference(self)
+
+
+    def remote_join(self, groupName):
+        assert isinstance(groupName, unicode)
+        def cbGroup(group):
+            def cbJoin(ignored):
+                return PBGroup(self.avatar.realm, self.avatar, group)
+            d = self.avatar.join(group)
+            d.addCallback(cbJoin)
+            return d
+        d = self.avatar.realm.getGroup(groupName)
+        d.addCallback(cbGroup)
+        return d
+registerAdapter(ChatAvatar, iwords.IUser, pb.IPerspective)
+backwardsCompatImplements(ChatAvatar)
+
+class AvatarReference(pb.RemoteReference):
+    def join(self, groupName):
+        return self.callRemote('join', groupName)
+
+    def quit(self):
+        d = defer.Deferred()
+        self.broker.notifyOnDisconnect(lambda: d.callback(None))
+        self.broker.transport.loseConnection()
+        return d
+
+pb.setUnjellyableForClass(ChatAvatar, AvatarReference)
+
+
+class WordsRealm(object):
+    implements(portal.IRealm, iwords.IChatService)
+
+    def __init__(self, name):
+        self.name = name
+
+
+    def userFactory(self, name):
+        return User(name)
+
+
+    def groupFactory(self, name):
+        return Group(name)
+
+
+    def logoutFactory(self, avatar, facet):
+        def logout():
+            # XXX Deferred support here
+            getattr(facet, 'logout', lambda: None)()
+            avatar.realm = avatar.mind = None
+        return logout
+
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        def gotAvatar(avatar):
+            if avatar.realm is not None:
+                raise ewords.AlreadyLoggedIn()
+            for iface in interfaces:
+                facet = iface(avatar, None)
+                if facet is not None:
+                    avatar.loggedIn(self, mind)
+                    mind.name = avatarId
+                    mind.realm = self
+                    mind.avatar = avatar
+                    return iface, facet, self.logoutFactory(avatar, facet)
+            raise NotImplementedError(self, interfaces)
+        return self.getUser(avatarId).addCallback(gotAvatar)
+
+
+    # IChatService, mostly.
+    createGroupOnRequest = False
+    createUserOnRequest = True
+
+    def lookupGroup(self, name):
+        raise NotImplementedError
+
+
+    def lookupGroup(self, group):
+        raise NotImplementedError
+
+
+    def addUser(self, user):
+        """Add the given user to this service.
+
+        This is an internal method intented to be overridden by
+        L{WordsRealm} subclasses, not called by external code.
+
+        @type user: L{IUser}
+
+        @rtype: L{twisted.internet.defer.Deferred}
+        @return: A Deferred which fires with C{None} when the user is
+        added, or which fails with
+        L{twisted.words.ewords.DuplicateUser} if a user with the
+        same name exists already.
+        """
+        raise NotImplementedError
+
+
+    def addGroup(self, group):
+        """Add the given group to this service.
+
+        @type group: L{IGroup}
+
+        @rtype: L{twisted.internet.defer.Deferred}
+        @return: A Deferred which fires with C{None} when the group is
+        added, or which fails with
+        L{twisted.words.ewords.DuplicateGroup} if a group with the
+        same name exists already.
+        """
+        raise NotImplementedError
+
 
     def getGroup(self, name):
-        group = self.groups.get(name)
-        if not group:
-            group = Group(name)
-            self.groups[name] = group
-        return group
+        assert isinstance(name, unicode)
+        if self.createGroupOnRequest:
+            def ebGroup(err):
+                err.trap(ewords.DuplicateGroup)
+                return self.lookupGroup(name)
+            return self.createGroup(name).addErrback(ebGroup)
+        return self.lookupGroup(name)
 
-    def createPerspective(self, name):
-        if self.perspectives.has_key(name):
-            raise KeyError("Participant already exists: %s." % name)
-        log.msg("Creating New Participant: %s" % name)
-        return pb.Service.createPerspective(self, name)
 
-    def getPerspectiveNamed(self, name):
+    def getUser(self, name):
+        assert isinstance(name, unicode)
+        if self.createUserOnRequest:
+            def ebUser(err):
+                err.trap(ewords.DuplicateUser)
+                return self.lookupUser(name)
+            return self.createUser(name).addErrback(ebUser)
+        return self.lookupUser(name)
+
+
+    def createUser(self, name):
+        assert isinstance(name, unicode)
+        def cbLookup(user):
+            return failure.Failure(ewords.DuplicateUser(name))
+        def ebLookup(err):
+            err.trap(ewords.NoSuchUser)
+            return self.userFactory(name)
+
+        name = name.lower()
+        d = self.lookupUser(name)
+        d.addCallbacks(cbLookup, ebLookup)
+        d.addCallback(self.addUser)
+        return d
+
+
+    def createGroup(self, name):
+        assert isinstance(name, unicode)
+        def cbLookup(group):
+            return failure.Failure(ewords.DuplicateGroup(name))
+        def ebLookup(err):
+            err.trap(ewords.NoSuchGroup)
+            return self.groupFactory(name)
+
+        name = name.lower()
+        d = self.lookupGroup(name)
+        d.addCallbacks(cbLookup, ebLookup)
+        d.addCallback(self.addGroup)
+        return d
+backwardsCompatImplements(WordsRealm)
+
+
+class InMemoryWordsRealm(WordsRealm):
+    def __init__(self, *a, **kw):
+        super(InMemoryWordsRealm, self).__init__(*a, **kw)
+        self.users = {}
+        self.groups = {}
+
+
+    def itergroups(self):
+        return defer.succeed(self.groups.itervalues())
+
+
+    def addUser(self, user):
+        if user.name in self.users:
+            return defer.fail(failure.Failure(ewords.DuplicateUser()))
+        self.users[user.name] = user
+        return defer.succeed(user)
+
+
+    def addGroup(self, group):
+        if group.name in self.users:
+            return defer.fail(failure.Failure(ewords.DuplicateGroup()))
+        self.groups[group.name] = group
+        return defer.succeed(group)
+
+
+    def lookupUser(self, name):
+        assert isinstance(name, unicode)
+        name = name.lower()
         try:
-            return pb.Service.getPerspectiveNamed(self, name)
+            user = self.users[name]
         except KeyError:
-            raise UserNonexistantError(name)
+            return defer.fail(failure.Failure(ewords.NoSuchUser(name)))
+        else:
+            return defer.succeed(user)
 
-    def addBot(self, name, bot):
+
+    def lookupGroup(self, name):
+        assert isinstance(name, unicode)
+        name = name.lower()
         try:
-            p = self.getPerspectiveNamed(name)
-        except UserNonexistantError:
-            p = self.createPerspective(name)
+            group = self.groups[name]
+        except KeyError:
+            return defer.fail(failure.Failure(ewords.NoSuchGroup(name)))
+        else:
+            return defer.succeed(group)
 
-        bot.setupBot(p) # XXX this method needs a better name
-        from twisted.spread.util import LocalAsyncForwarder
-        p.attached(LocalAsyncForwarder(bot, IWordsClient, 1), None)
-        self.bots.append(bot)
+__all__ = [
+    'Group', 'User',
 
-    def deleteBot(self, bot):
-        bot.voice.detached(bot, None)
-        self.bots.remove(bot)
-        del self.perspectives[bot.voice.perspectiveName]
-
-    createParticipant = createPerspective
-
-    def __str__(self):
-        s = "<%s in app '%s' at %x>" % (self.serviceName,
-                                        self.application.name,
-                                        id(self))
-        return s
+    'WordsRealm', 'InMemoryWordsRealm',
+    ]

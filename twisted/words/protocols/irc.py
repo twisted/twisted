@@ -77,13 +77,13 @@ def parsemsg(s):
     if not s:
         raise IRCBadMessage("Empty line.")
     if s[0] == ':':
-        prefix, s = string.split(s[1:], ' ', 1)
-    if string.find(s,' :') != -1:
-        s, trailing = string.split(s, ' :', 1)
-        args = string.split(s)
+        prefix, s = s[1:].split(' ', 1)
+    if s.find(' :') != -1:
+        s, trailing = s.split(' :', 1)
+        args = s.split()
         args.append(trailing)
     else:
-        args = string.split(s)
+        args = s.split()
     command = args.pop(0)
     return prefix, command, args
 
@@ -117,15 +117,20 @@ class IRC(protocol.Protocol):
     buffer = ""
     hostname = None
 
+    encoding = None
+
     def connectionMade(self):
-        log.msg("irc connection made")
         self.channels = []
         if self.hostname is None:
             self.hostname = socket.getfqdn()
 
+
     def sendLine(self, line):
-        log.msg('send: %s' % line)
+        if self.encoding is not None:
+            if isinstance(line, unicode):
+                line = line.encode(self.encoding)
         self.transport.write("%s%s%s" % (line, CR, LF))
+
 
     def sendMessage(self, command, *parameter_list, **prefix):
         """Send a line formatted as an IRC message.
@@ -152,6 +157,7 @@ class IRC(protocol.Protocol):
         if len(parameter_list) > 15:
             log.msg("Message has %d parameters (RFC allows 15):\n%s" %
                     (len(parameter_list), line))
+
 
     def dataReceived(self, data):
         """This hack is to support mIRC, which sends LF only,
@@ -195,24 +201,26 @@ class IRC(protocol.Protocol):
 
     def irc_unknown(self, prefix, command, params):
         """Implement me!"""
-        raise NotImplementedError
+        raise NotImplementedError(command, prefix, params)
+
 
     # Helper methods
     def privmsg(self, sender, recip, message):
         """Send a message to a channel or user
 
-        @type sender: C{str}
+        @type sender: C{str} or C{unicode}
         @param sender: Who is sending this message.  Should be of the form
         username!ident@hostmask (unless you know better!).
 
-        @type recip: C{str}
+        @type recip: C{str} or C{unicode}
         @param recip: The recipient of this message.  If a channel, it
         must start with a channel prefix.
 
-        @type message: C{str}
+        @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendLine(":%s PRIVMSG %s :%s" % (sender, recip, message))
+        self.sendLine(":%s PRIVMSG %s :%s" % (sender, recip, lowQuote(message)))
+
 
     def notice(self, sender, recip, message):
         """Send a \"notice\" to a channel or user.
@@ -221,99 +229,262 @@ class IRC(protocol.Protocol):
         Robots are supposed to send notices and not respond to them.  Clients
         typically display notices differently from privmsgs.
 
-        @type sender: C{str}
+        @type sender: C{str} or C{unicode}
         @param sender: Who is sending this message.  Should be of the form
         username!ident@hostmask (unless you know better!).
 
-        @type recip: C{str}
+        @type recip: C{str} or C{unicode}
         @param recip: The recipient of this message.  If a channel, it
         must start with a channel prefix.
 
-        @type message: C{str}
+        @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
         self.sendLine(":%s NOTICE %s :%s" % (sender, recip, message))
 
+
     def action(self, sender, recip, message):
         """Send an action to a channel or user.
 
-        @type sender: C{str}
+        @type sender: C{str} or C{unicode}
         @param sender: Who is sending this message.  Should be of the form
         username!ident@hostmask (unless you know better!).
 
-        @type recip: C{str}
+        @type recip: C{str} or C{unicode}
         @param recip: The recipient of this message.  If a channel, it
         must start with a channel prefix.
 
-        @type message: C{str}
+        @type message: C{str} or C{unicode}
         @param message: The action being sent.
         """
         self.sendLine(":%s ACTION %s :%s" % (sender, recip, message))
 
+
     def topic(self, user, channel, topic, author=None):
         """Send the topic to a user.
 
-        @type user: C{str}
+        @type user: C{str} or C{unicode}
         @param user: The user receiving the topic.  Only their nick name, not
         the full hostmask.
 
-        @type channel: C{str}
+        @type channel: C{str} or C{unicode}
         @param channel: The channel for which this is the topic.
 
-        @type topic: C{str}
-        @param topic: The topic string.
+        @type topic: C{str} or C{unicode} or C{None}
+        @param topic: The topic string, unquoted, or None if there is
+        no topic.
 
-        @type author: C{str}
+        @type author: C{str} or C{unicode}
         @param author: If the topic is being changed, the full username and hostmask
         of the person changing it.
         """
         if author is None:
-            self.sendLine(":%s %s %s %s :%s" % (
-                self.hostname, RPL_TOPIC, user, channel, topic))
+            if topic is None:
+                self.sendLine(':%s %s %s %s :%s' % (
+                    self.hostname, RPL_NOTOPIC, user, channel, 'No topic is set.'))
+            else:
+                self.sendLine(":%s %s %s %s :%s" % (
+                    self.hostname, RPL_TOPIC, user, channel, lowQuote(topic)))
         else:
-            self.sendLine(":%s TOPIC %s :%s" % (author, channel, topic))
+            self.sendLine(":%s TOPIC %s :%s" % (author, channel, lowQuote(topic)))
+
+
+    def topicAuthor(self, user, channel, author, date):
+        """
+        Send the author of and time at which a topic was set for the given
+        channel.
+
+        This sends a 333 reply message, which is not part of the IRC RFC.
+
+        @type user: C{str} or C{unicode}
+        @param user: The user receiving the topic.  Only their nick name, not
+        the full hostmask.
+
+        @type channel: C{str} or C{unicode}
+        @param channel: The channel for which this information is relevant.
+
+        @type author: C{str} or C{unicode}
+        @param author: The nickname (without hostmask) of the user who last
+        set the topic.
+
+        @type date: C{int}
+        @param date: A POSIX timestamp (number of seconds since the epoch)
+        at which the topic was last set.
+        """
+        self.sendLine(':%s %d %s %s %s %d' % (
+            self.hostname, 333, user, channel, author, date))
+
 
     def names(self, user, channel, names):
         """Send the names of a channel's participants to a user.
 
-        @type user: C{str}
-        @param user: The user receiving the topic.  Only their nick name, not
-        the full hostmask.
+        @type user: C{str} or C{unicode}
+        @param user: The user receiving the name list.  Only their nick
+        name, not the full hostmask.
 
-        @type channel: C{str}
-        @param channel: The channel for which this is the topic.
+        @type channel: C{str} or C{unicode}
+        @param channel: The channel for which this is the namelist.
 
-        @type names: C{list} of C{str}
+        @type names: C{list} of C{str} or C{unicode}
         @param names: The names to send.
         """
-        self.sendLine(":%s %s %s = %s :%s" % (
-            self.hostname, RPL_NAMREPLY, user, channel, ' '.join(names)))
+        # XXX If unicode is given, these limits are not quite correct
+        prefixLength = len(channel) + len(user) + 10
+        namesLength = 512 - prefixLength
+
+        L = []
+        count = 0
+        for n in names:
+            if count + len(n) + 1 > namesLength:
+                self.sendLine(":%s %s %s = %s :%s" % (
+                    self.hostname, RPL_NAMREPLY, user, channel, ' '.join(L)))
+                L = [n]
+                count = len(n)
+            else:
+                L.append(n)
+                count += len(n) + 1
+        if L:
+            self.sendLine(":%s %s %s = %s :%s" % (
+                self.hostname, RPL_NAMREPLY, user, channel, ' '.join(L)))
         self.sendLine(":%s %s %s %s :End of /NAMES list" % (
             self.hostname, RPL_ENDOFNAMES, user, channel))
+
+
+    def who(self, user, channel, memberInfo):
+        """
+        Send a list of users participating in a channel.
+
+        @type user: C{str} or C{unicode}
+        @param user: The user receiving this member information.  Only their
+        nick name, not the full hostmask.
+
+        @type channel: C{str} or C{unicode}
+        @param channel: The channel for which this is the member
+        information.
+
+        @type memberInfo: C{list} of C{tuples}
+        @param memberInfo: For each member of the given channel, a 7-tuple
+        containing their username, their hostmask, the server to which they
+        are connected, their nickname, the letter "H" or "G" (wtf do these
+        mean?), the hopcount from C{user} to this member, and this member's
+        real name.
+        """
+        for info in memberInfo:
+            (username, hostmask, server, nickname, flag, hops, realName) = info
+            assert flag in ("H", "G")
+            self.sendLine(":%s %s %s %s %s %s %s %s %s :%d %s" % (
+                self.hostname, RPL_WHOREPLY, user, channel,
+                username, hostmask, server, nickname, flag, hops, realName))
+
+        self.sendLine(":%s %s %s %s :End of /WHO list." % (
+            self.hostname, RPL_ENDOFWHO, user, channel))
+
+
+    def whois(self, user, nick, username, hostname, realName, server, serverInfo, oper, idle, signOn, channels):
+        """
+        Send information about the state of a particular user.
+
+        @type user: C{str} or C{unicode}
+        @param user: The user receiving this information.  Only their nick
+        name, not the full hostmask.
+
+        @type nick: C{str} or C{unicode}
+        @param nick: The nickname of the user this information describes.
+
+        @type username: C{str} or C{unicode}
+        @param username: The user's username (eg, ident response)
+
+        @type hostname: C{str}
+        @param hostname: The user's hostmask
+
+        @type realName: C{str} or C{unicode}
+        @param realName: The user's real name
+
+        @type server: C{str} or C{unicode}
+        @param server: The name of the server to which the user is connected
+
+        @type serverInfo: C{str} or C{unicode}
+        @param serverInfo: A descriptive string about that server
+
+        @type oper: C{bool}
+        @param oper: Indicates whether the user is an IRC operator
+
+        @type idle: C{int}
+        @param idle: The number of seconds since the user last sent a message
+
+        @type signOn: C{int}
+        @param signOn: A POSIX timestamp (number of seconds since the epoch)
+        indicating the time the user signed on
+
+        @type channels: C{list} of C{str} or C{unicode}
+        @param channels: A list of the channels which the user is participating in
+        """
+        self.sendLine(":%s %s %s %s %s %s * :%s" % (
+            self.hostname, RPL_WHOISUSER, user, nick, username, hostname, realName))
+        self.sendLine(":%s %s %s %s %s :%s" % (
+            self.hostname, RPL_WHOISSERVER, user, nick, server, serverInfo))
+        if oper:
+            self.sendLine(":%s %s %s %s :is an IRC operator" % (
+                self.hostname, RPL_WHOISOPER, user, nick))
+        self.sendLine(":%s %s %s %s %d %d :seconds idle, signon time" % (
+            self.hostname, RPL_WHOISIDLE, user, nick, idle, signOn))
+        self.sendLine(":%s %s %s %s :%s" % (
+            self.hostname, RPL_WHOISCHANNELS, user, nick, ' '.join(channels)))
+        self.sendLine(":%s %s %s %s :End of WHOIS list." % (
+            self.hostname, RPL_ENDOFWHOIS, user, nick))
+
 
     def join(self, who, where):
         """Send a join message.
 
-        @type who: C{str}
+        @type who: C{str} or C{unicode}
         @param who: The name of the user joining.  Should be of the form
         username!ident@hostmask (unless you know better!).
 
-        @type where: C{str}
+        @type where: C{str} or C{unicode}
         @param where: The channel the user is joining.
         """
         self.sendLine(":%s JOIN %s" % (who, where))
 
-    def part(self, who, where):
+
+    def part(self, who, where, reason=None):
         """Send a part message.
 
-        @type who: C{str}
+        @type who: C{str} or C{unicode}
         @param who: The name of the user joining.  Should be of the form
         username!ident@hostmask (unless you know better!).
 
-        @type where: C{str}
+        @type where: C{str} or C{unicode}
         @param where: The channel the user is joining.
+
+        @type reason: C{str} or C{unicode}
+        @param reason: A string describing the misery which caused
+        this poor soul to depart.
         """
-        self.sendLine(":%s PART %s" % (who, where))
+        if reason:
+            self.sendLine(":%s PART %s :%s" % (who, where, reason))
+        else:
+            self.sendLine(":%s PART %s" % (who, where))
+
+
+    def channelMode(self, user, channel, mode, *args):
+        """
+        Send information about the mode of a channel.
+
+        @type user: C{str} or C{unicode}
+        @param user: The user receiving the name list.  Only their nick
+        name, not the full hostmask.
+
+        @type channel: C{str} or C{unicode}
+        @param channel: The channel for which this is the namelist.
+
+        @type mode: C{str}
+        @param mode: A string describing this channel's modes.
+
+        @param args: Any additional arguments required by the modes.
+        """
+        self.sendLine(":%s %s %s %s %s %s" % (
+            self.hostname, RPL_CHANNELMODEIS, user, channel, mode, ' '.join(args)))
 
 
 class IRCClient(basic.LineReceiver):

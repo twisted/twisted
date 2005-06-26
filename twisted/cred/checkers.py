@@ -3,11 +3,13 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import os
+
+from zope import interface
 
 from twisted.internet import defer
 from twisted.python import components, failure, log
 from twisted.cred import error, credentials
-from zope import interface
 
 class ICredentialsChecker(components.Interface):
     """I check sub-interfaces of ICredentials.
@@ -84,7 +86,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
                 self.users[credentials.username]).addCallback(
                 self._cbPasswordMatch, credentials.username)
         else:
-            return failure.Failure(error.UnauthorizedLogin())
+            return defer.fail(error.UnauthorizedLogin())
 
 components.backwardsCompatImplements(InMemoryUsernamePasswordDatabaseDontUse)
 
@@ -103,8 +105,12 @@ class FilePasswordDB:
 
     interface.implements(ICredentialsChecker)
 
+    cache = False
+    _credCache = None
+    _cacheTimestamp = 0
+
     def __init__(self, filename, delim=':', usernameField=0, passwordField=1,
-                 caseSensitive=True, hash=None):
+                 caseSensitive=True, hash=None, cache=False):
         """
         @type filename: C{str}
         @param filename: The name of the file from which to read username and
@@ -117,20 +123,27 @@ class FilePasswordDB:
         @param usernameField: The index of the username after splitting a
         line on the delimiter.
 
-        @type caseSensitive: C{bool}
-        @param caseSensitive: If true, consider the case of the username when
-        performing a lookup.  Ignore it otherwise.
-
         @type passwordField: C{int}
         @param passwordField: The index of the password after splitting a
         line on the delimiter.
 
-        @type hash: Three-argument callable.
+        @type caseSensitive: C{bool}
+        @param caseSensitive: If true, consider the case of the username when
+        performing a lookup.  Ignore it otherwise.
+
+        @type hash: Three-argument callable or C{None}
         @param hash: A function used to transform the plaintext password
-        received over the network to a format suitable for comparison against
-        the version stored on disk.  The arguments to the callable are the
-        username, the network-supplied password, and the in-file version of
-        the password.
+        received over the network to a format suitable for comparison
+        against the version stored on disk.  The arguments to the callable
+        are the username, the network-supplied password, and the in-file
+        version of the password.  If the return value compares equal to the
+        version stored on disk, the credentials are accepted.
+
+        @type cache: C{bool}
+        @param cache: If true, maintain an in-memory cache of the
+        contents of the password file.  On lookups, the mtime of the
+        file will be checked, and the file will only be re-parsed if
+        the mtime is newer than when the cache was generated.
         """
         self.filename = filename
         self.delim = delim
@@ -138,6 +151,7 @@ class FilePasswordDB:
         self.pfield = passwordField
         self.caseSensitive = caseSensitive
         self.hash = hash
+        self.cache = cache
 
         if self.hash is None:
             # The passwords are stored plaintext.  We can support both
@@ -154,21 +168,30 @@ class FilePasswordDB:
             )
 
 
+    def __getstate__(self):
+        d = dict(vars(self))
+        for k in '_credCache', '_cacheTimestamp':
+            try:
+                del d[k]
+            except KeyError:
+                pass
+        return d
+
+
     def _cbPasswordMatch(self, matched, username):
         if matched:
             return username
         else:
             return failure.Failure(error.UnauthorizedLogin())
 
-    def getUser(self, username):
+
+    def _loadCredentials(self):
         try:
             f = file(self.filename)
         except:
             log.err()
             raise error.UnauthorizedLogin()
         else:
-            if not self.caseSensitive:
-                username = username.lower()
             for line in f:
                 line = line.rstrip()
                 parts = line.split(self.delim)
@@ -176,32 +199,43 @@ class FilePasswordDB:
                 if self.ufield >= len(parts) or self.pfield >= len(parts):
                     continue
                 if self.caseSensitive:
-                    if parts[self.ufield] != username:
-                        continue
-                elif parts[self.ufield].lower() != username:
-                    continue
+                    yield parts[self.ufield], parts[self.pfield]
+                else:
+                    yield parts[self.ufield].lower(), parts[self.pfield]
 
-                return parts[self.ufield], parts[self.pfield]
-            raise KeyError(username)
+
+    def getUser(self, username):
+        if not self.caseSensitive:
+            username = username.lower()
+
+        if self.cache:
+            if self._credCache is None or os.path.getmtime(self.filename) > self._cacheTimestamp:
+                self._cacheTimestamp = os.path.getmtime(self.filename)
+                self._credCache = dict(self._loadCredentials())
+            return username, self._credCache[username]
+        else:
+            for u, p in self._loadCredentials():
+                if u == username:
+                    return u, p
+            raise KeyError(u)
 
 
     def requestAvatarId(self, c):
         try:
             u, p = self.getUser(c.username)
         except KeyError:
-            return failure.Failure(error.UnauthorizedLogin())
+            return defer.fail(error.UnauthorizedLogin())
         else:
             up = credentials.IUsernamePassword(c, default=None)
             if self.hash:
                 if up is not None:
                     h = self.hash(up.username, up.password, p)
                     if h == p:
-                        return u
-                return failure.Failure(error.UnauthorizedLogin())
+                        return defer.succeed(u)
+                return defer.fail(error.UnauthorizedLogin())
             else:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
-
 components.backwardsCompatImplements(FilePasswordDB)
 
 # For backwards compatibility

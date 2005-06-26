@@ -1,73 +1,73 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-
 """
-I am a support module for creating chat servers with mktap.
+Shiny new words service maker
 """
 
-from twisted.python import usage, plugin
-from twisted.spread import pb
-from twisted.spread.util import LocalAsyncForwarder
-from twisted.words import service, ircservice, webwords
-from twisted.web import server
-from twisted.cred.authorizer import DefaultAuthorizer
+import sys, socket
 
-import sys, string
+from twisted.application import strports
+from twisted.application.service import MultiService
+from twisted.python import usage
+from twisted import plugin
 
-botTypeList = plugin.getPlugIns("twisted.words.bot")
-botTypes = {}
-for bott in botTypeList:
-    botTypes[bott.botType] = bott
+from twisted.words import iwords, service
+from twisted.cred import checkers, portal
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap words [options]"
-    optParameters = [["irc", "i", "6667", "Port to run the IRC server on."],
-                     ["irchost", "h", '', "Host to bind IRC server to."],
-                     ["wordshost", "b", '', "Host to bind Words service to."],
-                     ["webhost", "s", '', "Host to bind web interface to."],
-                     ["port", "p", str(pb.portno),
-                      "Port to run the Words service on."],
-                     ["web", "w", "8080",
-                      "Port to run the web interface on."]]
-    zsh_actions = {"irchost" : "_hosts", "wordshost" : "_hosts",
-                   "webhost" : "_hosts", "user" : "_users"}
-    bots = None
-    def opt_bot(self, option):
-        """Specify a bot-plugin to load; this should be in the format
-        'plugin:nickname'.
+    optParameters = [
+        ('passwd', None, None,
+         'Name of a passwd-style password file. (REQUIRED)'),
+        ('hostname', None, socket.gethostname(),
+         'Name of this server; purely an informative')]
+
+    interfacePlugins = {}
+    plg = None
+    for plg in plugin.getPlugins(iwords.IProtocolPlugin):
+        assert plg.name not in interfacePlugins
+        interfacePlugins[plg.name] = plg
+        optParameters.append((
+            plg.name + '-port',
+            None, None,
+            'strports description of the port to bind for the  ' + plg.name + ' server'))
+    del plg
+
+    def __init__(self, *a, **kw):
+        usage.Options.__init__(self, *a, **kw)
+        self['groups'] = []
+
+
+    def opt_group(self, name):
+        """Specify a group which should exist
         """
-        if self.bots is None:
-            self.bots = []
-        botplugnm, botnickname = string.split(option, ":")
-        self.bots.append((botnickname, botTypes[botplugnm].load()))
+        self['groups'].append(name.decode(sys.stdin.encoding))
 
-    users = None
-    def opt_user(self, option):
-        """Specify a user/password combination to add to the authorizer and
-        chat service immediately.
-        """
-        if self.users is None:
-            self.users = []
-        self.users.append(option.split(":"))
-    opt_bot.__doc__ = opt_bot.__doc__ + ("plugin types are: %s" % string.join(botTypes.keys(), ' '))
-    longdesc = "Makes a twisted.words service and support servers."
 
-def updateApplication(app, config):
-    auth = DefaultAuthorizer(app)
-    svc = service.Service("twisted.words", app, auth)
-    bkr = pb.BrokerFactory(pb.AuthRoot(auth))
-    irc = ircservice.IRCGateway(svc)
-    adm = server.Site(webwords.WordsGadget(svc))
+    def postOptions(self):
+        if not self['passwd']:
+            raise usage.UsageError("You must supply a password file")
 
-    if config.bots:
-        for nickname, plug in config.bots:
-            svc.addBot(nickname, plug.createBot())
-    if config.users:
-        for username, pw in config.users:
-            svc.createPerspective(username).makeIdentity(pw)
 
-    app.listenTCP(int(config['port']), bkr, interface=config['wordshost'])
-    app.listenTCP(int(config['irc']), irc, interface=config['irchost'])
-    app.listenTCP(int(config['web']), adm, interface=config['webhost'])
+def makeService(config):
+    if config['passwd']:
+        checker = checkers.FilePasswordDB(config['passwd'], cache=True)
+
+    wordsRealm = service.InMemoryWordsRealm(config['hostname'])
+    wordsPortal = portal.Portal(wordsRealm, [checker])
+
+    msvc = MultiService()
+
+    # XXX Attribute lookup on config is kind of bad - hrm.
+    for plgName in config.interfacePlugins:
+        port = config.get(plgName + '-port')
+        if port is not None:
+            factory = config.interfacePlugins[plgName].getFactory(wordsRealm, wordsPortal)
+            svc = strports.service(port, factory)
+            svc.setServiceParent(msvc)
+
+    # This is bogus.  createGroup is async.  makeService must be
+    # allowed to return a Deferred or some crap.
+    for g in config['groups']:
+        wordsRealm.createGroup(g)
+
+    return msvc
