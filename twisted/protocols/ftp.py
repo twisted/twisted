@@ -2,7 +2,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 An FTP protocol implementation
 
@@ -15,25 +14,17 @@ API stability: FTPClient is stable, FTP and FTPFactory (server) is unstable.
 import os
 import time
 import string
-import types
 import re
 from cStringIO import StringIO
-from math import floor
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.internet import abstract, reactor, protocol, error, defer
-from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, \
-                                        IFinishableConsumer, IListeningPort, \
-                                        IConnector
+from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
-from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, \
-                                      ConsumerToProtocolAdapter
 
-from twisted import application, internet, python
-from twisted.python import failure, log, components
+from twisted.python import log, components, failure
 
-from twisted.cred import error as cred_error, portal, checkers, credentials
+from twisted.cred import error as cred_error, portal, credentials
 
 # constants
 
@@ -303,7 +294,7 @@ class DTP(object, protocol.Protocol):
         if self.factory.peerCheck and peer != self.pi.peerHost.host:
             # DANGER Will Robinson! Bailing!
             log.debug('dtp ip did not match ftp ip')
-            d.errback(BogusClientError("%s != %s" % (peer, self.pi.peerHost.host)))   
+            self.factory.deferred.errback(BogusClientError("%s != %s" % (peer, self.pi.peerHost.host)))   
             return
 
         log.debug('firing dtpFactory deferred')
@@ -607,9 +598,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
         log.msg(self.dtpPort)
         dtpPort, self.dtpPort = self.dtpPort, None
-        if IListeningPort.providedBy(dtpPort):
+        if interfaces.IListeningPort.providedBy(dtpPort):
             dtpPort.stopListening()
-        elif IConnector.providedBy(dtpPort):
+        elif interfaces.IConnector.providedBy(dtpPort):
             dtpPort.disconnect()
         else:
             assert False, "dtpPort should be an IListeningPort or IConnector, instead is %r" % (dtpPort,)
@@ -1072,7 +1063,7 @@ class IFTPShell(components.Interface):
 
 
 try:
-    from pwd import getpwuid
+    from pwd import getpwuid, getpwnam
     from grp import getgrgid
 except ImportError:
     # not a POSIX platform
@@ -1080,7 +1071,9 @@ except ImportError:
         return str(uid)
     def getgrgid(gid):
         return str(gid)
-
+    def getpwnam(name):
+        raise NotImplementedError("POSIX required")
+                                    
 def _callWithDefault(default, _f, *_a, **_kw):
     try:
         return _f(*_a, **_kw)
@@ -1166,7 +1159,7 @@ class FTPAnonymousShell(object):
         log.msg('getUserUIDAndGID')
         pw_name, pw_passwd, pw_uid, pw_gid, pw_dir = range(5)
         try:
-            p = pwd.getpwnam(self.user)
+            p = getpwnam(self.user)
             self.uid, self.gid = p[pw_uid], p[pw_gid]
             log.debug("set (uid,gid) for file-permissions checking to (%s,%s)" % (self.uid,self.gid))
         except KeyError, (e,):
@@ -1396,12 +1389,6 @@ components.backwardsCompatImplements(FTPRealm)
 
 # --- FTP CLIENT  -------------------------------------------------------------
 
-from twisted.internet.defer import Deferred, DeferredList, FAILURE
-from twisted.python.failure import Failure
-from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, \
-                                      ConsumerToProtocolAdapter
-from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, IFinishableConsumer
-
 ####
 # And now for the client...
 
@@ -1435,7 +1422,7 @@ class UnexpectedData(FTPError):
 class FTPCommand:
     def __init__(self, text=None, public=0):
         self.text = text
-        self.deferred = Deferred()
+        self.deferred = defer.Deferred()
         self.ready = 1
         self.public = public
 
@@ -1444,7 +1431,7 @@ class FTPCommand:
             self.deferred.errback(failure)
 
 
-class ProtocolWrapper(Protocol):
+class ProtocolWrapper(protocol.Protocol):
     def __init__(self, original, deferred):
         self.original = original
         self.deferred = deferred
@@ -1458,15 +1445,15 @@ class ProtocolWrapper(Protocol):
         self.deferred.callback(None)
 
 
-class SenderProtocol(Protocol):
-    implements(IFinishableConsumer)
+class SenderProtocol(protocol.Protocol):
+    implements(interfaces.IFinishableConsumer)
 
     def __init__(self):
         # Fired upon connection
-        self.connectedDeferred = Deferred()
+        self.connectedDeferred = defer.Deferred()
 
         # Fired upon disconnection
-        self.deferred = Deferred()
+        self.deferred = defer.Deferred()
 
     #Protocol stuff
     def dataReceived(self, data):
@@ -1476,7 +1463,7 @@ class SenderProtocol(Protocol):
         )
 
     def makeConnection(self, transport):
-        Protocol.makeConnection(self, transport)
+        protocol.Protocol.makeConnection(self, transport)
         self.connectedDeferred.callback(self)
         
     def connectionLost(self, reason):
@@ -1517,7 +1504,7 @@ def encodeHostPort(host, port):
     return ','.join(numbers)
 
 
-class FTPDataPortFactory(ServerFactory):
+class FTPDataPortFactory(protocol.ServerFactory):
     """Factory for data connections that use the PORT command
     
     (i.e. "active" transfers)
@@ -1539,7 +1526,7 @@ class FTPClientBasic(basic.LineReceiver):
     def __init__(self):
         self.actionQueue = []
         self.greeting = None
-        self.nextDeferred = Deferred().addCallback(self._cb_greeting)
+        self.nextDeferred = defer.Deferred().addCallback(self._cb_greeting)
         self.nextDeferred.addErrback(self.fail)
         self.response = []
         self._failed = 0
@@ -1555,7 +1542,7 @@ class FTPClientBasic(basic.LineReceiver):
             return error
         self._failed = 1
         for ftpCommand in self.actionQueue:
-            ftpCommand.fail(Failure(ConnectionLost('FTP connection lost', error)))
+            ftpCommand.fail(failure.Failure(ConnectionLost('FTP connection lost', error)))
         return error
 
     def _cb_greeting(self, greeting):
@@ -1669,11 +1656,11 @@ class FTPClientBasic(basic.LineReceiver):
             self.nextDeferred.callback(response)
         elif code[0] in ('4', '5'):
             # Failure
-            self.nextDeferred.errback(Failure(CommandFailed(response)))
+            self.nextDeferred.errback(failure.Failure(CommandFailed(response)))
         else:
             # This shouldn't happen unless something screwed up.
             log.msg('Server sent invalid response code %s' % (code,))
-            self.nextDeferred.errback(Failure(BadResponse(response)))
+            self.nextDeferred.errback(failure.Failure(BadResponse(response)))
             
         # Run the next command
         self.sendNextCommand()
@@ -1681,7 +1668,24 @@ class FTPClientBasic(basic.LineReceiver):
     def connectionLost(self, reason):
         self._fail(reason)
 
-    
+
+
+class _PassiveConnectionFactory(protocol.ClientFactory):
+    noisy = False
+
+    def __init__(self, protoInstance):
+        self.protoInstance = protoInstance
+
+    def buildProtocol(self, ignored):
+        self.protoInstance.factory = self
+        return self.protoInstance
+
+    def clientConnectionFailed(self, connector, reason):
+        e = FTPError('Connection Failed', reason)
+        self.protoInstance.deferred.errback(e)
+
+
+
 class FTPClient(FTPClientBasic):
     """A Twisted FTP Client
 
@@ -1727,8 +1731,8 @@ class FTPClient(FTPClientBasic):
 
         @returns: L{Deferred}.
         """
-        protocol = IProtocol(protocol)
-        wrapper = ProtocolWrapper(protocol, Deferred())
+        protocol = interfaces.IProtocol(protocol)
+        wrapper = ProtocolWrapper(protocol, defer.Deferred())
         return self._openDataConnection(commands, wrapper)
 
     def queueLogin(self, username, password):
@@ -1760,7 +1764,7 @@ class FTPClient(FTPClientBasic):
         This method returns a DeferredList.
         """
         cmds = [FTPCommand(command, public=1) for command in commands]
-        cmdsDeferred = DeferredList([cmd.deferred for cmd in cmds], 
+        cmdsDeferred = defer.DeferredList([cmd.deferred for cmd in cmds], 
                                     fireOnOneErrback=True, consumeErrors=True)
 
         if self.passive:
@@ -1771,16 +1775,7 @@ class FTPClient(FTPClientBasic):
                 """Connect to the port specified in the response to PASV"""
                 host, port = decodeHostPort(response[-1][4:])
 
-                class _Factory(ClientFactory):
-                    noisy = 0
-                    def buildProtocol(self, ignored):
-                        self.protocol.factory = self
-                        return self.protocol
-                    def clientConnectionFailed(self, connector, reason):
-                        e = FTPError('Connection Failed', reason)
-                        self.protocol.deferred.errback(e)
-                f = _Factory()
-                f.protocol = protocol
+                f = _PassiveConnectionFactory(protocol)
                 _mutable[0] = reactor.connectTCP(host, port, f)
 
             pasvCmd = FTPCommand('PASV')
@@ -1788,7 +1783,7 @@ class FTPClient(FTPClientBasic):
             pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
             results = [cmdsDeferred, pasvCmd.deferred, protocol.deferred]
-            d = DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
+            d = defer.DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
 
             # Ensure the connection is always closed
             def close(x, m=_mutable):
@@ -1823,7 +1818,7 @@ class FTPClient(FTPClientBasic):
             cmdsDeferred.addErrback(lambda e, pc=portCmd: pc.fail(e) or e)
 
             results = [cmdsDeferred, portCmd.deferred, portCmd.transferDeferred]
-            d = DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
+            d = defer.DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
                               
         for cmd in cmds:
             self.queueCommand(cmd)
