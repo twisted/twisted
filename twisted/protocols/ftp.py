@@ -428,7 +428,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST', 'NLST']
-    reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
 
     # how long the DTP waits for a connection
     dtpTimeout = 10
@@ -479,7 +478,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         """Process the input from the client"""
         self.resetTimeout()
         log.debug(repr(line))
-        line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
         try:
             cmdAndArgs = line.split(' ', 1)
             if len(cmdAndArgs) == 1:
