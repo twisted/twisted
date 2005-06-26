@@ -13,7 +13,6 @@ API stability: FTPClient is stable, FTP and FTPFactory (server) is unstable.
 # System Imports
 import os
 import time
-import string
 import re
 from cStringIO import StringIO
 from zope.interface import implements
@@ -465,14 +464,11 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.msg('FTP timed out')
         self.transport.loseConnection()
 
-    def reply(self, key, s=''):
+    def reply(self, fmt, *args):
         """format a RESPONSE and send it out over the wire"""
-        if string.find(RESPONSE[key], '%s') > -1:
-            log.debug(RESPONSE[key] % s)
-            self.sendLine(RESPONSE[key] % s)
-        else:
-            log.debug(RESPONSE[key])
-            self.sendLine(RESPONSE[key])
+        msg = RESPONSE[key] % args
+        log.debug(msg)
+        self.sendLine(msg)
 
     def lineReceived(self, line):
         """Process the input from the client"""
@@ -1624,7 +1620,7 @@ class FTPClientBasic(basic.LineReceiver):
         # Add this line to the current response
         if self.debug:
             log.msg('--> %s' % line)
-        line = string.rstrip(line)
+        line = line.rstrip()
         self.response.append(line)
 
         code = line[0:3]
@@ -1850,14 +1846,14 @@ class FTPClient(FTPClientBasic):
         portCmd.fail = listenerFail
 
         # Construct crufty FTP magic numbers that represent host & port
-        host = self.transport.getHost()[1]
-        port = listener.getHost()[2]
+        host = self.transport.getHost().host
+        port = listener.getHost().port
         portCmd.text = 'PORT ' + encodeHostPort(host, port)
 
     def escapePath(self, path):
         """Returns a FTP escaped path (replace newlines with nulls)"""
         # Escape newline characters
-        return string.replace(path, '\n', '\0')
+        return path.replace('\n', '\0')
 
     def retrieveFile(self, path, protocol, offset=0):
         """Retrieve a file from the given path
