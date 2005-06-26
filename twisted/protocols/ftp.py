@@ -466,7 +466,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def reply(self, fmt, *args):
         """format a RESPONSE and send it out over the wire"""
-        msg = RESPONSE[key] % args
+        msg = RESPONSE[fmt] % args
         log.debug(msg)
         self.sendLine(msg)
 
