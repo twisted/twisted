@@ -492,9 +492,8 @@ class FTPClientTests(unittest.TestCase):
         try:
             f = protocol.Factory()
             f.noisy = 0
-            f.protocol = protocol.Protocol
             port = reactor.listenTCP(0, f, interface="127.0.0.1")
-            n = port.getHost().port
+            portNum = port.getHost().port
             # This test data derived from a bug report by ranty on #twisted
             responses = ['220 ready, dude (vsFTPd 1.0.0: beat me, break me)',
                          # USER anonymous
@@ -505,43 +504,37 @@ class FTPClientTests(unittest.TestCase):
                          '200 Binary it is, then.',
                          # PASV
                          '227 Entering Passive Mode (127,0,0,1,%d,%d)' %
-                         (n>>8, n&0xff),
+                         (portNum >> 8, portNum & 0xff),
                          # RETR /file/that/doesnt/exist
                          '550 Failed to open file.']
+            f.buildProtocol = lambda addr: PrintLines(responses)
 
-            b = StringIOWithoutClosing()
             client = ftp.FTPClient(passive=1)
-            client.makeConnection(protocol.FileWrapper(b))
-            self.writeResponses(client, responses)
+            cc = protocol.ClientCreator(reactor, ftp.FTPClient, passive=1)
+            client = wait(cc.connectTCP('127.0.0.1', portNum))
             p = protocol.Protocol()
             d = client.retrieveFile('/file/that/doesnt/exist', p)
+
+            # This callback should not be called
             d.addCallback(lambda r, self=self:
                             self.fail('Callback incorrectly called: %r' % r))
-            d.addBoth(lambda ignored,r=reactor: r.crash())
+            def p(failure):
+                # Yow!  Nested DeferredLists!
+                failure.trap(defer.FirstError)
+                failure.value.subFailure.trap(defer.FirstError)
+                subsubFailure = failure.value.subFailure.value.subFailure
+                subsubFailure.trap(ftp.CommandFailed)
+                # If we got through all that, we got the right failure.
 
-            id = reactor.callLater(2, self.timeout)
-            reactor.run()
+            d.addErrback(p)
+
+            wait(d)
             log.flushErrors(ftp.FTPError)
-            try:
-                id.cancel()
-            except:
-                pass
         finally:
-            try:
-                d = port.stopListening()
-                if d is not None:
-                    wait(d)
-            except:
-                pass
+            d = port.stopListening()
+            if d is not None:
+                wait(d)
     
-    def timeout(self):
-        reactor.crash()
-        self.fail('Timed out')
-
-    def writeResponses(self, protocol, responses):
-        for response in responses:
-            reactor.callLater(0.1, protocol.lineReceived, response)
-
     def testErrbacksUponDisconnect(self):
         ftpClient = ftp.FTPClient()
         d = ftpClient.list('some path', Dummy())
