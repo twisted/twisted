@@ -119,15 +119,43 @@ class DeferredTestCase(unittest.TestCase):
         defr3 = defer.Deferred()
         dl = defer.DeferredList([defr1, defr2, defr3], fireOnOneErrback=1)
         result = []
+        dl.addErrback(result.append)
+
+        # consume errors after they pass through the DeferredList (to avoid
+        # 'Unhandled error in Deferred'.
         def catch(err):
             return None
-        dl.addErrback(result.append)
-        defr1.callback("1")
         defr2.addErrback(catch)
-        defr2.errback(GenericError("2"))
-        self.failUnlessEqual([str(result[0].value[0].value),
-                              str(result[0].value[1])],
-                             ["2", "1"])
+
+        # fire one Deferred's callback, no result yet
+        defr1.callback("1")
+        self.failUnlessEqual(result, [])
+
+        # fire one Deferred's errback -- now we have a result
+        defr2.errback(GenericError("from def2"))
+        self.failUnlessEqual(len(result), 1)
+
+        # extract the result from the list
+        failure = result[0]
+
+        # the type of the failure is a FirstError
+        self.failUnless(issubclass(failure.type, defer.FirstError), 
+            'issubclass(failure.type, defer.FirstError) failed: '
+            'failure.type is %r' % (failure.type,)
+        )
+
+        # FirstErrors act like tuples for backwards compatibility :(
+        firstError = failure.value
+        self.failUnlessEqual(firstError[0], firstError.subFailure)
+        self.failUnlessEqual(firstError[1], firstError.index)
+
+        # check that the GenericError("2") from the deferred at index 1
+        # (defr2) is intact inside failure.value
+        self.failUnlessEqual(firstError.subFailure.type, GenericError)
+        self.failUnlessEqual(firstError.subFailure.value.args, ("from def2",))
+        self.failUnlessEqual(firstError.index, 1)
+
+        
 
     def testDeferredListDontConsumeErrors(self):
         d1 = defer.Deferred()

@@ -445,6 +445,37 @@ class DebugInfo:
                 log.msg("(debug: " + debugInfo + ")", isError=True)
             log.err(self.failResult)
 
+class FirstError(Exception):
+    """First error to occur in a DeferredList if fireOnOneErrback is set.
+    
+    @ivar subFailure: the L{Failure} that occurred.
+    @ivar index: the index of the Deferred in the DeferredList where it
+    happened.
+    """
+    def __init__(self, failure, index):
+        self.subFailure = failure
+        self.index = index
+
+    def __getitem__(self, index):
+        warnings.warn("FirstError.__getitem__ is deprecated.  "
+                      "Use attributes instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return [self.subFailure, self.index][index]
+
+    def __getslice__(self, start, stop):
+        warnings.warn("FirstError.__getslice__ is deprecated.  "
+                      "Use attributes instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return [self.subFailure, self.index][start:stop]
+
+    def __eq__(self, other):
+        if isinstance(other, tuple):
+            return tuple(self) == other
+        elif isinstance(other, FirstError):
+            return (self.subFailure == other.subFailure and 
+                    self.index == other.index)
+        return False
+
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
 
@@ -509,7 +540,7 @@ class DeferredList(Deferred):
             if succeeded == SUCCESS and self.fireOnOneCallback:
                 self.callback((result, index))
             elif succeeded == FAILURE and self.fireOnOneErrback:
-                self.errback(failure.Failure((result, index)))
+                self.errback(failure.Failure(FirstError(result, index)))
             elif self.finishedCount == len(self.resultList):
                 self.callback(self.resultList)
 
