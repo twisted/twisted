@@ -6,14 +6,7 @@
 
 """Component architecture for Twisted, based on Zope3 components.
 
-IMPORTANT: In old code the meaning of 'implementing' was too vague. In
-this version we will switch to the Zope3 meaning (objects provide
-interfaces, if a class implements interfaces that means its
-*instances* provide them).  However, some deprecated methods
-(e.g. twisted.python.components.implements()) are confusing because
-they actually check if object *provides* an interface. Don't use them.
-
-Using the Zope3 API directly is thus strongly recommended. Everything
+Using the Zope3 API directly is strongly recommended. Everything
 you need is in the top-level of the zope.interface package, e.g.:
 
    from zope.interface import Interface, implements
@@ -34,6 +27,13 @@ global adapter registry).
 
 Backwards Compatability:
 
+IMPORTANT: In old code the meaning of 'implementing' was too vague. In
+this version we will switch to the Zope3 meaning (objects provide
+interfaces, if a class implements interfaces that means its
+*instances* provide them).  However, some deprecated methods
+(e.g. twisted.python.components.implements()) are confusing because
+they actually check if object *provides* an interface. Don't use them.
+
 Possible bugs in your code may happen because you rely on
 __implements__ existing and/or have only that and assumes that means
 the component system knows it implements interfaces. This compat layer
@@ -53,7 +53,7 @@ old APIs. These are slow and will whine a lot. Use zope.interface.
 """
 
 # twisted imports
-from twisted.python import reflect, util, context
+from twisted.python import reflect, util
 from twisted.persisted import styles
 
 # system imports
@@ -209,6 +209,7 @@ def getAdapter(obj, interfaceClass, default=_Nothing,
     IFoo(o), since getAdapter is tied to a specific Twisted registry
     and thus won't interoperate well.
     """
+    warnings.warn("components.getAdapter() is deprecated.", ComponentsDeprecationWarning, stacklevel=2)
     if hasattr(obj, '__class__'):
         fixClassImplements(obj.__class__)
     self = globalRegistry
@@ -294,10 +295,14 @@ class MetaInterface(interface.InterfaceClass):
             raise RuntimeError, "registry argument will be ignored"
         # getComponents backwards compat
         if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__") and persist != False:
-            warnings.warn("please use __conform__ instead of getComponent: %s" % type(adaptable), ComponentsDeprecationWarning)
+            warnings.warn("please use __conform__ instead of getComponent in %s" % type(adaptable), ComponentsDeprecationWarning)
             result = adaptable.getComponent(self)
             if result != None:
                 return result
+
+        if persist != None:
+            warnings.warn("Adapter persistence (e.g. IFoo(bar, persist=True)) is deprecated.", ComponentsDeprecationWarning, stacklevel=2)
+        
         # check for weakref persisted adapters
         if persist != False:
             pkey = (id(adaptable), self)
