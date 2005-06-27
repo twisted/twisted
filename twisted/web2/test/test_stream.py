@@ -113,6 +113,9 @@ class MMapFileStreamTest(SimpleStreamTests, unittest.TestCase):
         assertRaises(TypeError, stream.mmapwrapper)
         assertRaises(TypeError, stream.mmapwrapper, offset = 0)
         assertRaises(TypeError, stream.mmapwrapper, offset = None)
+
+    if not stream.mmap:
+        test_mmapwrapper.skip = 'mmap not supported here'
             
 class MemoryStreamTest(SimpleStreamTests, unittest.TestCase):
     def makeStream(self, *args, **kw):
