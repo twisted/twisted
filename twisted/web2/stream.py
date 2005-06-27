@@ -152,8 +152,9 @@ def mmapwrapper(*args, **kwargs):
     """
     
     offset = kwargs.get('offset', None)
-    if offset == 0:
-        del kwargs['offset']
+    if offset in [None, 0]:
+        if 'offset' in kwargs:
+            del kwargs['offset']
     else:
         raise mmap.error("mmap: Python sucks and does not support offset.")
     return mmap.mmap(*args, **kwargs)

@@ -108,6 +108,11 @@ class MMapFileStreamTest(SimpleStreamTests, unittest.TestCase):
         f.write(self.text)
         f.seek(0, 0)
         self.f=f
+
+    def test_mmapwrapper(self):
+        assertRaises(TypeError, stream.mmapwrapper)
+        assertRaises(TypeError, stream.mmapwrapper, offset = 0)
+        assertRaises(TypeError, stream.mmapwrapper, offset = None)
             
 class MemoryStreamTest(SimpleStreamTests, unittest.TestCase):
     def makeStream(self, *args, **kw):
