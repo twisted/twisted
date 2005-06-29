@@ -215,7 +215,7 @@ class File(resource.Resource):
                                                           self.defaultType)
 
         if not self.fp.exists():
-            return response.NOT_FOUND
+            return responsecode.NOT_FOUND
 
         if self.fp.isdir():
             # If this is a directory, redirect
