@@ -664,7 +664,7 @@ class TestInternet2(unittest.TestCase):
         t1 = copy.copy(t)
         self.assertIdentical(t1._connection, None)
         t.stopService()
-        self.assertIdentical(1._connection, None)
+        self.assertIdentical(t._connection, None)
         self.failIf(t.running)
 
     def testStoppingServer(self):
