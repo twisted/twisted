@@ -292,6 +292,28 @@ class InterfaceTestCase(unittest.TestCase):
         reactor.iterate()
         self.assertEquals(calls, ['f1', 'f2', 'f3'])
 
+    def testDelayedCallStringification(self):
+        # Mostly just make sure str() isn't going to raise anything for
+        # DelayedCalls within reason.
+        dc = reactor.callLater(0, lambda x, y: None, 'x', y=10)
+        str(dc)
+        dc.reset(5)
+        str(dc)
+        dc.cancel()
+        str(dc)
+
+        dc = reactor.callLater(0, lambda: None, x=[({'hello': u'world'}, 10j), reactor], *range(10))
+        str(dc)
+        dc.cancel()
+        str(dc)
+
+        def calledBack(ignored):
+            str(dc)
+        d = Deferred().addCallback(calledBack)
+        dc = reactor.callLater(0, d.callback, None)
+        str(dc)
+        return d
+
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor
         d = Deferred()

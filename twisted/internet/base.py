@@ -142,16 +142,27 @@ class DelayedCall(styles.Ephemeral):
     def __str__(self):
         if self._str is not None:
             return self._str
-        if hasattr(self.func, 'func_name'):
-            func = self.func.func_name
-            if hasattr(self.func, 'im_class'):
-                func = self.func.im_class.__name__ + '.' + func
+        if hasattr(self, 'func'):
+            if hasattr(self.func, 'func_name'):
+                func = self.func.func_name
+                if hasattr(self.func, 'im_class'):
+                    func = self.func.im_class.__name__ + '.' + func
+            else:
+                func = reflect.safe_repr(self.func)
         else:
-            func = reflect.safe_repr(self.func)
+            func = None
 
-        L = ["<DelayedCall %s [%ss] called=%s cancelled=%s %s%s" % (
-                id(self), self.time - seconds(), self.called, self.cancelled, func,
-                reflect.safe_repr(self.args))]
+        L = ["<DelayedCall %s [%ss] called=%s cancelled=%s" % (
+                id(self), self.time - seconds(), self.called, self.cancelled)]
+        if func is not None:
+            L.extend((" ", func, "("))
+            if self.args:
+                L.append(", ".join([reflect.safe_repr(e) for e in self.args]))
+                if self.kw:
+                    L.append(", ")
+            if self.kw:
+                L.append(", ".join(['%s=%s' % (k, reflect.safe_repr(v)) for (k, v) in self.kw.iteritems()]))
+            L.append(")")
 
         if self.debug:
             L.append("\n\ntraceback at creation: \n\n%s" % ('    '.join(self.creator)))
