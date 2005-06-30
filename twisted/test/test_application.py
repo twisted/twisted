@@ -649,19 +649,22 @@ class TestInternet2(unittest.TestCase):
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
         t.startService()
-        self.assert_(hasattr(t, '_port'))
+        self.failIfIdentical(t._port, None)
         t1 = copy.copy(t)
-        self.assert_(not hasattr(t1, '_port'))
+        self.assertIdentical(t1._port, None)
         t.stopService()
+        self.assertIdentical(t._port, None)
+        self.failIf(t.running)
 
         factory = protocol.ClientFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXClient('echo.skt', factory)
         t.startService()
-        self.assert_(hasattr(t, '_connection'))
+        self.failIfIdentical(t._connection, None)
         t1 = copy.copy(t)
-        self.assert_(not hasattr(t1, '_connection'))
+        self.assertIdentical(t1._connection, None)
         t.stopService()
+        self.assertIdentical(1._connection, None)
         self.failIf(t.running)
 
     def testStoppingServer(self):

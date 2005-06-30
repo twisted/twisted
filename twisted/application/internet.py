@@ -56,6 +56,8 @@ class _AbstractServer(_VolatileDataService):
     volatile = ['_port']
     method = None
 
+    _port = None
+
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
@@ -66,16 +68,17 @@ class _AbstractServer(_VolatileDataService):
 
     def startService(self):
         service.Service.startService(self)
-        if not hasattr(self,'_port'):
+        if self._port is None:
             self._port = self._getPort()
 
     def stopService(self):
         service.Service.stopService(self)
         # TODO: if startup failed, should shutdown skip stopListening?
         # _port won't exist
-        d = self._port.stopListening()
-        del self._port
-        return d
+        if self._port is not None:
+            d = self._port.stopListening()
+            del self._port
+            return d
 
     def _getPort(self):
         from twisted.internet import reactor
@@ -85,6 +88,8 @@ class _AbstractClient(_VolatileDataService):
 
     volatile = ['_connection']
     method = None
+
+    _connection = None
 
     def __init__(self, *args, **kwargs):
         self.args = args
@@ -96,7 +101,9 @@ class _AbstractClient(_VolatileDataService):
 
     def stopService(self):
         service.Service.stopService(self)
-        #self._connection.disconnect()  #TODO: needs testing
+        if self._connection is not None:
+            self._connection.disconnect()
+            del self._connection
 
     def _getConnection(self):
         from twisted.internet import reactor
