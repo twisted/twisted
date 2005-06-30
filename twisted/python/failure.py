@@ -232,7 +232,7 @@ class Failure:
 
         @type errorTypes: list of L{Exception} classes or
                           fully-qualified class names.
-	@returns: the matching L{Exception} type, or None if no match.
+        @returns: the matching L{Exception} type, or None if no match.
         """
         for error in errorTypes:
             err = error
