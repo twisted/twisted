@@ -2841,7 +2841,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         @type message: Any file-like object
         @param message: The message to add, in RFC822 format.  Newlines
-        in this file should be \r\n-style.
+        in this file should be \\r\\n-style.
 
         @type flags: Any iterable of C{str}
         @param flags: The flags to associated with this message.
