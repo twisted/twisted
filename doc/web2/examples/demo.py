@@ -113,7 +113,7 @@ Hello!  This is a twisted.web2 demo.
 # This part gets run when you run this file via: "twistd -noy demo.py"
 if __name__ == '__builtin__':
     from twisted.application import service, strports
-    from twisted.web2 import server, scgichannel, vhost
+    from twisted.web2 import server, vhost, channel
     from twisted.internet.ssl import DefaultOpenSSLContextFactory
     from twisted.python import util
 
@@ -129,28 +129,32 @@ if __name__ == '__builtin__':
     application = service.Application("demo")
     
     # Serve it via standard HTTP on port 8080
-    s = strports.service('tcp:8080', http.HTTPFactory(site))
+    s = strports.service('tcp:8080', channel.HTTPFactory(site))
     s.setServiceParent(application)
 
     # Serve it via HTTPs on port 8081
-    s = strports.service('ssl:8081:privateKey=doc/core/examples/server.pem', http.HTTPFactory(site))
+    s = strports.service('ssl:8081:privateKey=doc/core/examples/server.pem', channel.HTTPFactory(site))
     s.setServiceParent(application)
 
     # Serve it via SCGI on port 3000
-    s = strports.service('tcp:3000', scgichannel.SCGIFactory(site))
+    s = strports.service('tcp:3000', channel.SCGIFactory(site))
+    s.setServiceParent(application)
+
+    # Serve it via FastCGI on port 3001
+    s = strports.service('tcp:3001', channel.FastCGIFactory(site))
     s.setServiceParent(application)
 
     # Serve it via HTTP on port 8538, with a url rewriter for running behind apache1.
     # (See deployment documentation for apache setup)
     s = strports.service(
         'tcp:8538:interface=127.0.0.1',
-        http.HTTPFactory(server.Site(
+        channel.HTTPFactory(server.Site(
             vhost.VHostURIRewrite('http://localhost/app/', test))))
     s.setServiceParent(application)
 
 
 # This bit gets run when you run this script as a CGI from another webserver.
 if __name__ == '__main__':
-    from twisted.web2 import cgichannel, server
+    from twisted.web2 import channel, server
     toplevel = Toplevel()
-    cgichannel.startCGI(server.Site(toplevel))
+    channel.startCGI(server.Site(toplevel))

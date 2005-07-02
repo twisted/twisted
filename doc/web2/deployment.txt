@@ -10,7 +10,7 @@ Standalone HTTP
 For completeness, here is a simple standalone HTTP server again 
 
 .. python::
-  from twisted.web2 import server, http, static
+  from twisted.web2 import server, channel, static
   
   # For example, serve the /tmp directory
   toplevel = static.File("/tmp")
@@ -19,7 +19,7 @@ For completeness, here is a simple standalone HTTP server again
   # Start up the server
   from twisted.application import service, strports
   application = service.Application("demoserver")
-  s = strports.service('tcp:8080', http.HTTPFactory(site))
+  s = strports.service('tcp:8080', channel.HTTPFactory(site))
   s.setServiceParent(application)
 
 HTTP behind Apache2
@@ -47,7 +47,7 @@ Or, for serving an entire HTTPS virtual host::
 Now, on the twisted.web2 side
 
 .. python::
-  from twisted.web2 import server, http, static, vhost
+  from twisted.web2 import server, channel, static, vhost
   
   # For example, serve the /tmp directory
   toplevel = static.File("/tmp")
@@ -58,7 +58,7 @@ Now, on the twisted.web2 side
   # Start up the server
   from twisted.application import service, strports
   application = service.Application("demoserver")
-  s = strports.service('tcp:8538', http.HTTPFactory(site))
+  s = strports.service('tcp:8538', channel.HTTPFactory(site))
   s.setServiceParent(application)
 
 
@@ -76,7 +76,7 @@ Setup apache as follows::
 And twisted like so
 
 .. python::
-  from twisted.web2 import server, http, static, vhost
+  from twisted.web2 import server, channel, static, vhost
   
   # For example, serve the /tmp directory
   toplevel = static.File("/tmp")
@@ -87,7 +87,7 @@ And twisted like so
   # Start up the server
   from twisted.application import service, strports
   application = service.Application("demoserver")
-  s = strports.service('tcp:8538:interface=127.0.0.1', http.HTTPFactory(site))
+  s = strports.service('tcp:8538:interface=127.0.0.1', channel.HTTPFactory(site))
   s.setServiceParent(application)
 
 Because vhost.VHostURIRewrite can exist anywhere in the resource tree, as a result if you have multiple applications running on a single twisted port by making them siblings of a root resource and referencing their full path in the ProxyPass directive.
@@ -107,7 +107,7 @@ Setup apache as follows::
 And twisted like so
 
 .. python::
-  from twisted.web2 import server, http, resource, static, vhost
+  from twisted.web2 import server, channel, resource, static, vhost
 
   # For example, server the /tmp/foo directory
   foo_toplevel = static.File("/tmp/foo")
@@ -127,7 +127,7 @@ And twisted like so
   # Start up the server
   from twisted.application import service, strports
   application = service.Application("demoserver")
-  s = strports.service('tcp:8538:interface=127.0.0.1', http.HTTPFactory(site))
+  s = strports.service('tcp:8538:interface=127.0.0.1', channel.HTTPFactory(site))
   s.setServiceParent(application)
 
 
@@ -146,8 +146,8 @@ Configure Twisted as follows
 
   # Start up the server
   from twisted.application import service, strports
-  from twisted.web2 import scgichannel
-  s = strports.service('tcp:3000', scgichannel.SCGIFactory(site))
+  from twisted.web2 import channel
+  s = strports.service('tcp:3000', channel.SCGIFactory(site))
   s.setServiceParent(application)
 
 CGI
@@ -158,9 +158,9 @@ However, if it's your only choice, you can deploy a twisted.web2 app using it. U
 
 .. python::
   #!/usr/bin/env python
-  from twisted.web2 import cgichannel, server, static
+  from twisted.web2 import channel, server, static
   toplevel = static.File("/tmp")
   site = server.Site(toplevel)
-  cgichannel.startCGI(site)
+  channel.startCGI(site)
 
 .. _cgi2scgi: http://www.mems-exchange.org/software/scgi/scgi-1.2.tar.gz/scgi-1.2/cgi2scgi.c

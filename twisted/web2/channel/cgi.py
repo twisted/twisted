@@ -233,7 +233,6 @@ class CGIChannelRequest(BaseCGIChannelRequest):
             _abortWithError(responsecode.INTERNAL_SERVER_ERROR, "Twisted.web CGITransport: Unknown CGI version %s" % vars['GATEWAY_INTERFACE'])
         self.makeRequest(vars)
         
-
     def writeHeaders(self, code, headers):
         l = []
         code_message = responsecode.RESPONSES.get(code, "Unknown Status")
@@ -271,9 +270,9 @@ def startCGI(site):
     hook up your site object with the incoming request.
 
     E.g.:
-    >>> from twisted.web2 import cgichannel, server
+    >>> from twisted.web2 import channel, server
     >>> if __name__ == '__main__':
-    ...     cgichannel.startCGI(server.Site(myToplevelResource))
+    ...     channel.startCGI(server.Site(myToplevelResource))
     
     """
     StdIOThatDoesntSuckAsBad(CGIChannelRequest(site, os.environ))

@@ -1,5 +1,7 @@
 from twisted.internet import protocol
-from twisted.web2 import responsecode, cgichannel
+from twisted.web2 import responsecode
+from twisted.web2.channel import cgi as cgichannel
+
 
 class SCGIChannelRequest(cgichannel.BaseCGIChannelRequest):
     scgi_vers = "1"
@@ -85,4 +87,4 @@ class SCGIFactory(protocol.ServerFactory):
         p.requestFactory=self.requestFactory
         return p
     
-__all__ = ['SCGIChannelRequest', 'SCGIFactory']
+__all__ = ['SCGIFactory']

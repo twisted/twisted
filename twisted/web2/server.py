@@ -21,7 +21,7 @@ from twisted.python import log, failure
 # Sibling Imports
 from twisted.web2 import http, iweb, fileupload, responsecode
 from twisted.web2 import http_headers, context
-from twisted.web2 import rangefilter
+from twisted.web2.filter.range import rangefilter
 from twisted.web2 import error
 
 from twisted.web2 import version as web2_version
@@ -61,22 +61,6 @@ def doTrace(request):
         {'content-type': http_headers.MimeType('message', 'http')}, 
         txt)
 
-def getEntireStream(stream):
-    data = StringIO.StringIO()
-    
-    def _getData():
-        return defer.maybeDeferred(stream.read).addCallback(_gotData)
-
-    def _gotData(result):
-        if result is None:
-            data.reset()
-            return data
-        else:
-            data.write(result)
-            return _getData()
-        
-    return _getData()
-    
 def parsePOSTData(request):
     if request.stream.length == 0:
         return defer.succeed(None)
@@ -151,7 +135,7 @@ class Request(http.Request):
     
     site = None
     _initialprepath = None
-    responseFilters = [rangefilter.rangefilter, preconditionfilter,
+    responseFilters = [rangefilter, preconditionfilter,
                        error.defaultErrorHandler, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):

@@ -2,10 +2,7 @@
 
 import time, os
 
-import http
-import http_headers
-import responsecode
-import stream
+from twisted.web2 import http, http_headers, responsecode, stream
 
 # Some starts at writing a response filter to handle request ranges.
 
