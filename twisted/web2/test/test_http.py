@@ -4,7 +4,7 @@ import time, sys
 from twisted.trial import unittest
 from twisted.trial.util import wait, spinUntil
 from twisted.web2 import http, http_headers, responsecode, error, iweb, stream
-from twisted.web2 import channel
+from twisted.web2.channel.http import HTTPFactory
 
 from twisted.internet import reactor, protocol, address, interfaces, utils
 from twisted.internet import defer
@@ -340,9 +340,10 @@ class HTTPTests(unittest.TestCase):
             cxn.requests.append(TestRequest(*args))
             return cxn.requests[-1]
         
-        factory = channel.HTTPFactory(requestFactory=makeTestRequest, maxPipeline=maxPipeline,
-                                   inputTimeOut=inputTimeOut,
-                                   betweenRequestsTimeOut=betweenRequestsTimeOut)
+        factory = HTTPFactory(requestFactory=makeTestRequest,
+                              maxPipeline=maxPipeline,
+                              inputTimeOut=inputTimeOut,
+                              betweenRequestsTimeOut=betweenRequestsTimeOut)
         
         cxn.client = TestClient()
         cxn.server = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 2345))
@@ -852,11 +853,11 @@ class PipelinedErrorTestCase(ErrorTestCase):
         ErrorTestCase.checkError(self, cxn, code)
 
 
-class SimpleFactory(channel.HTTPFactory):
+class SimpleFactory(HTTPFactory):
     def buildProtocol(self, addr):
         # Do a bunch of crazy crap just so that the test case can know when the
         # connection is done.
-        p = channel.HTTPFactory.buildProtocol(self, addr)
+        p = HTTPFactory.buildProtocol(self, addr)
         cl = p.connectionLost
         def newCl(reason):
             self.testcase.connlost = True
