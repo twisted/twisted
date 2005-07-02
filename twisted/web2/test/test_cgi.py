@@ -5,8 +5,7 @@ import sys, os
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces
 from twisted.python import util
-from twisted.web2 import static, twcgi, server, resource
-from twisted.web2.channel.http import HTTPFactory
+from twisted.web2 import static, twcgi, server, resource, channel
 try:
     from twisted.web import client
 except ImportError:
@@ -56,7 +55,7 @@ class CGI(unittest.TestCase):
         cgipath = util.sibpath(__file__, cgi)
         root.putChild("cgi", PythonScript(cgipath))
         site = server.Site(root)
-        self.p = reactor.listenTCP(0, HTTPFactory(site))
+        self.p = reactor.listenTCP(0, channel.HTTPFactory(site))
         return self.p.getHost().port
 
     def tearDown(self):

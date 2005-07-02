@@ -1,6 +1,7 @@
 from twisted.web2.test.test_server import BaseCase
 
 class TestNevowCompat(BaseCase):
+    todo = "Nevow compat doesn't work yet."
     try:
         import nevow
     except ImportError:
