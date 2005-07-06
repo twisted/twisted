@@ -241,7 +241,7 @@ class IRCProtocolTestCase(unittest.TestCase):
         c = []
         for nick in self.STATIC_USERS:
             c.append(self.realm.createUser(nick))
-            self.checker.addUser(nick, nick + "_password")
+            self.checker.addUser(nick.encode('ascii'), nick + "_password")
         return DeferredList(c)
 
 
@@ -886,7 +886,7 @@ class PBProtocolTestCase(unittest.TestCase):
 
     def _loggedInAvatar(self, name, password, mind):
         creds = credentials.UsernamePassword(name, password)
-        self.checker.addUser(name, password)
+        self.checker.addUser(name.encode('ascii'), password)
         d = self.realm.createUser(name)
         d.addCallback(lambda ign: self.clientFactory.login(creds, mind))
         return d
