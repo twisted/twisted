@@ -88,7 +88,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
             return defer.maybeDeferred(
                 credentials.checkPassword,
                 self.users[credentials.username]).addCallback(
-                self._cbPasswordMatch, credentials.username)
+                self._cbPasswordMatch, str(credentials.username))
         else:
             return defer.fail(error.UnauthorizedLogin())
 
@@ -221,7 +221,7 @@ class FilePasswordDB:
             for u, p in self._loadCredentials():
                 if u == username:
                     return u, p
-            raise KeyError(u)
+            raise KeyError(username)
 
 
     def requestAvatarId(self, c):
