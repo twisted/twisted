@@ -35,6 +35,7 @@ class Options(usage.Options):
     def __init__(self, *a, **kw):
         usage.Options.__init__(self, *a, **kw)
         self['groups'] = []
+        self['checkers'] = None
 
 
     def opt_group(self, name):
@@ -43,17 +44,16 @@ class Options(usage.Options):
         self['groups'].append(name.decode(sys.stdin.encoding))
 
 
-    def postOptions(self):
-        if not self['passwd']:
-            raise usage.UsageError("You must supply a password file")
-
-
 def makeService(config):
     if config['passwd']:
-        checker = checkers.FilePasswordDB(config['passwd'], cache=True)
+        checkers = [checkers.FilePasswordDB(config['passwd'], cache=True)]
+    elif config['checkers']:
+        checkers = config['checkers']
+    else:
+        checkers = []
 
     wordsRealm = service.InMemoryWordsRealm(config['hostname'])
-    wordsPortal = portal.Portal(wordsRealm, [checker])
+    wordsPortal = portal.Portal(wordsRealm, checkers)
 
     msvc = MultiService()
 
