@@ -1003,6 +1003,8 @@ pb.setUnjellyableForClass(ChatAvatar, AvatarReference)
 class WordsRealm(object):
     implements(portal.IRealm, iwords.IChatService)
 
+    _encoding = 'utf-8'
+
     def __init__(self, name):
         self.name = name
 
@@ -1024,6 +1026,8 @@ class WordsRealm(object):
 
 
     def requestAvatar(self, avatarId, mind, *interfaces):
+        assert isinstance(avatarId, str)
+
         def gotAvatar(avatar):
             if avatar.realm is not None:
                 raise ewords.AlreadyLoggedIn()
@@ -1036,6 +1040,8 @@ class WordsRealm(object):
                     mind.avatar = avatar
                     return iface, facet, self.logoutFactory(avatar, facet)
             raise NotImplementedError(self, interfaces)
+
+        avatarId = avatarId.decode(self._encoding)
         return self.getUser(avatarId).addCallback(gotAvatar)
 
 
