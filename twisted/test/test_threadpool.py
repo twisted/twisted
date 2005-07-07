@@ -92,6 +92,20 @@ class RaceConditionTestCase(unittest.TestCase):
             self.event.set()
             raise RuntimeError, "test failed"
 
+    def testSingleThread(self):
+        # Ensure no threads running
+        self.assertEquals(self.threadpool.workers, 0)
+
+        for i in range(10):
+            self.threadpool.callInThread(self.event.set)
+            self.event.wait()
+            self.event.clear()
+        
+            # Ensure only a single thread running
+            self.assertEquals(self.threadpool.workers, 1)
+
+    testSingleThread.todo = "Threadpool spawns extra threads. :("
+    
 if interfaces.IReactorThreads(reactor, None) is None:
     for cls in ThreadPoolTestCase, RaceConditionTestCase:
         setattr(cls, 'skip', "No thread support, nothing to test here")
