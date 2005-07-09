@@ -87,7 +87,7 @@ class RaceConditionTestCase(unittest.TestCase):
         for i in range(3):
             self.threadpool.callInThread(self.event.wait)
         self.threadpool.callInThread(self.event.set)
-        time.sleep(2)
+        self.event.wait(timeout=2)
         if not self.event.isSet():
             self.event.set()
             raise RuntimeError, "test failed"
