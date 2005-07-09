@@ -123,7 +123,7 @@ class ThreadPool:
         try:
             result = apply(func, args, kwargs)
         except:
-            errback(sys.exc_value)
+            errback(sys.exc_info()[1])
         else:
             callback(result)
     
@@ -131,14 +131,16 @@ class ThreadPool:
         """Dispatch a function, returning the result to a callback function.
         
         The callback function will be called in the thread - make sure it is
-        thread-safe."""
+        thread-safe.
+        """
         self.callInThread(self._runWithCallback, callback, errback, func, args, kw)
 
     def _worker(self, o):
         ct = threading.currentThread()
         while 1:
-            if o is not None:
-                if o == WorkerStop: break
+            if o is WorkerStop:
+                break
+            elif o is not None:
                 self.working.append(ct)
                 ctx, function, args, kwargs = o
                 try:
