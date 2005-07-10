@@ -164,7 +164,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
                 return
         elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
             fd, action = events[handles[val - WAIT_OBJECT_0]]
-            closed = 0
             log.callWithLogger(fd, self._runAction, action, fd)
 
     def _runWrite(self, fd):
