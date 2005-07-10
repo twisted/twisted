@@ -27,7 +27,6 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure, text
-from twisted.cred import perspective
 from twisted.internet import interfaces
 
 from twisted import cred
@@ -4049,8 +4048,7 @@ class ReadOnlyMailbox(MailboxException):
 class IAccount(components.Interface):
     """Interface for Account classes
 
-    Implementors of this interface must also subclass
-    C{twisted.cred.perspective.Perspective} and should consider implementing
+    Implementors of this interface should consider implementing
     C{INamespacePresenter}.
     """
 
@@ -4239,7 +4237,7 @@ class INamespacePresenter(components.Interface):
         """
 
 
-class MemoryAccount(perspective.Perspective):
+class MemoryAccount(object):
     implements(IAccount, INamespacePresenter)
 
     mailboxes = None
@@ -4247,7 +4245,7 @@ class MemoryAccount(perspective.Perspective):
     top_id = 0
 
     def __init__(self, name):
-        perspective.Perspective.__init__(self, name, name)
+        self.name = name
         self.mailboxes = {}
         self.subscriptions = []
 
