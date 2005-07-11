@@ -102,8 +102,6 @@ def maybeDeferred(f, *args, **kw):
     @rtype: C{Deferred}
     @return: The result of the function call, wrapped in a C{Deferred} if
     necessary.
-
-    API Stability: Unstable
     """
     deferred = None
 
