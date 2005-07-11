@@ -898,13 +898,13 @@ class TCPServerTest(unittest.TestCase):
     def testBasicWorkingness(self):
         out,err,code = wait(
             utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port), "tcp")))
-        self.assertEquals(code, 0, "Error output:\n" % (err,))
+        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
         self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
     def testLingeringClose(self):
         out,err,code = wait(
             utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port), "tcp")))
-        self.assertEquals(code, 0, "Error output:\n" % (err,))
+        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
         self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
 
