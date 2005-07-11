@@ -315,6 +315,10 @@ class Process(abstract.FileDescriptor):
         """Write data to the process' stdin."""
         self.outQueue.put(data)
 
+    def writeSequence(self, seq):
+        """Write data to the process' stdin."""
+        self.outQueue.put("".join(seq))
+    
     def closeStdin(self):
         """Close the process' stdin."""
         self.outQueue.put(None)

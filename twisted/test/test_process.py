@@ -87,10 +87,13 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.count = 0
 
     def connectionMade(self):
-        for i in range(self.n):
+        assert self.n > 2
+        for i in range(self.n - 2):
             self.transport.write(self.s)
+        # test writeSequence
+        self.transport.writeSequence([self.s, self.s])
         self.buffer = self.s * self.n
-
+    
     def outReceived(self, data):
         if buffer(self.buffer, self.count, len(data)) != buffer(data):
             self.failure = ("wrong bytes received", data, self.count)
