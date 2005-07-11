@@ -292,6 +292,7 @@ def fullFuncName(func):
     return qualName
 
 def qual(clazz):
+    """Return full import path of a class."""
     return clazz.__module__ + '.' + clazz.__name__
 
 def getcurrent(clazz):
