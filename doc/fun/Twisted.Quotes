@@ -5268,6 +5268,36 @@ Kragen Sitaker: but even more inefficient!
 %
 <exarkun> I bet francis bacon would go well with orange juice waffles
 %
+<exarkun> (?:PARTOFSPEECH<adjective>(\w)(\w)+y) (?:SEMANTICWEB<noun,mammal,small>\1\w+)
+<warner> next you're going to tell me that those are actually valid Perl6 regular expressions
+<exarkun> yes, except PARTOFSPEECH is a unicode character with a glyph like a speaking mouth, and SEMANTICWEB is a unicode character with a glyph like cthulu
+%
+<MFen> you needed to kill -USR1 duh
+<MFen> n00b
+<PenguinOfDoom> Can I make a saving LOL? :(
+<PenguinOfDoom> USR1 made gnome-settings-daemon die 
+<MFen> dude that's because you didn't init 5 first n00b
+<MFen> btw, i'm making this crap up
+<PenguinOfDoom> btw, I'm planning the destruction of Fresno
+<MFen> can i provide you with maps?
+<saph> hooray
+%
+<MFen> Tv: how do you know when sarge is going to be released?
+<Tv> MFen: If it ain't out by debconf, there will be a public lynching ;)
+%
+<itamar> ""As a champion of the free-enterprise system in Congress, Chris Cox knows that a free economy is built on trust," Bush said at the White House as he introduced the third man in his tenure to lead the [SEC]."
+<itamar> apparently the guy is a fan of Ayn Rand
+<itamar> also a fan of large contributions from corporations
+<dash> of course
+<dash> that's what it just said he's a champion of, right?
+<dash> free-enterprise system in Congress
+%
+<winjer> but i made a point of learning as little as possible
+<winjer> i spent most of the time chasing women and smoking pot
+<saph> hooray
+<winjer> if i'd smoked less i might have caught some
+<saph> winjer: did you go to hampshire college or something
+%
 <dreid> heh ... worst name for an interface ever ... ITem
 <warner> oh, I don't know, I bet INterface would be worse
 <warner> implements(INYerFace)
@@ -5293,6 +5323,13 @@ Kragen Sitaker: but even more inefficient!
 %
 <Brend> Whoever chose the title "A Gentle Introduction to Haskell" is
         obviously accustomed to wrestling bears in piranha pits or something.
+%
+<dash> halfoff: what's the problem?
+<dreid> dash: his spider is dying.
+<dash> dreid: quiet you
+<halfoff> i have a mexican redknee tarantula that escaped for about a week i found it this morning very weak and slow moving is it molting or dying
+<dreid> dash: told you.
+<dash> dreid: SIGH
 %
 <seberino> dash: my zope class prof said real businesses don't do
            javascript since not professional so i happily neglected it
