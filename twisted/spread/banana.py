@@ -178,7 +178,7 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
                 else:
                     return
             else:
-                raise NotImplementedError(("Invalid Type Byte %s" % typebyte))
+                raise NotImplementedError(("Invalid Type Byte %r" % (typebyte,)))
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
                 item = listStack.pop()[1]
                 gotItem(item)
