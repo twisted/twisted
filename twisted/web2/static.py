@@ -14,8 +14,6 @@ from twisted.web2 import http, iweb, stream, responsecode
 
 # Twisted Imports
 from twisted.python import filepath
-from twisted.python.util import InsensitiveDict
-from twisted.python.runtime import platformType
 from zope.interface import implements
 
 dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request URL."
@@ -140,7 +138,11 @@ class File(resource.Resource):
         self.ignoredExts = list(ignoredExts)
         self.children = {}
         if processors is not None:
-            self.processors = processors
+            self.processors = dict([
+                (key.lower(), value)
+                for key, value in processors.items()
+                ])
+            
         if indexNames is not None:
             self.indexNames = indexNames
 
@@ -189,12 +191,7 @@ class File(resource.Resource):
         # Don't run processors on directories - if someone wants their own
         # customized directory rendering, subclass File instead.
         if fpath.isfile():
-            if platformType == "win32":
-                # don't want .RPY to be different than .rpy, since that
-                # would allow source disclosure.
-                processor = InsensitiveDict(self.processors).get(fpath.splitext()[1])
-            else:
-                processor = self.processors.get(fpath.splitext()[1])
+            processor = self.processors.get(fpath.splitext()[1].lower())
             if processor:
                 return (
                     processor(fpath.path),
