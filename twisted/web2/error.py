@@ -5,7 +5,7 @@
 Default error output filter for twisted.web2.
 """
 
-from twisted.web2 import stream
+from twisted.web2 import stream, http_headers
 from twisted.web2.responsecode import *
 
 # 300 - Should include entity with choices
@@ -91,7 +91,10 @@ def defaultErrorHandler(request, response, ctx):
     body = ("<html><head><title>%d %s</title></head>"
             "<body><h1>%s</h1>%s</body></html>") % (
         response.code, title, title, message)
+    
+    response.headers.setHeader("content-type", http_headers.MimeType('text', 'html'))
     response.stream = stream.MemoryStream(body)
+    
     return response
 defaultErrorHandler.handleErrors = True
 
