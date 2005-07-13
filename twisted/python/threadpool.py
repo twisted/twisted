@@ -99,10 +99,10 @@ class ThreadPool:
         return state
     
     def _startSomeWorkers(self):
-        if self.workers >= self.max:
-            return
-        # FIXME: Wait for any waiters to eat of the queue.
-        while self.workers < self.max and self.q.qsize() > 0:
+        while (
+            self.workers < self.max and # Don't create too many
+            len(self.waiters) < self.q.qsize() # but create enough
+            ):
             self.startAWorker()
 
     def dispatch(self, owner, func, *args, **kw):
