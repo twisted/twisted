@@ -112,9 +112,39 @@ class HeaderParsingTestBase(unittest.TestCase):
             self.assertEquals(parsed, None)
             
 class GeneralHeaderParsingTests(HeaderParsingTestBase):
-#     def testCacheControl(self):
-#         fail
-
+    def testCacheControl(self):
+        table = (
+            ("no-cache",
+             {'no-cache':None}),
+            ("no-cache, no-store, max-age=5, max-stale=3, min-fresh=5, no-transform, only-if-cached, blahblah-extension-thingy",
+             {'no-cache': None,
+              'no-store': None,
+              'max-age':5,
+              'max-stale':3,
+              'min-fresh':5,
+              'no-transform':None,
+              'only-if-cached':None,
+              'blahblah-extension-thingy':None}),
+            ("max-stale",
+             {'max-stale':None}),
+            ("public, private, no-cache, no-store, no-transform, must-revalidate, proxy-revalidate, max-age=5, s-maxage=10, blahblah-extension-thingy",
+             {'public':None,
+              'private':None,
+              'no-cache':None,
+              'no-store':None,
+              'no-transform':None,
+              'must-revalidate':None,
+              'proxy-revalidate':None,
+              'max-age':5,
+              's-maxage':10,
+              'blahblah-extension-thingy':None}),
+            ('private="Set-Cookie, Set-Cookie2", no-cache="PROXY-AUTHENTICATE"',
+             {'private': ['set-cookie', 'set-cookie2'],
+              'no-cache': ['proxy-authenticate']},
+             'private="Set-Cookie, Set-Cookie2", no-cache="Proxy-Authenticate"'),
+            )
+        self.runRoundtripTest("Cache-Control", table)
+        
     def testConnection(self):
         table = (
             ("close", ['close',]),

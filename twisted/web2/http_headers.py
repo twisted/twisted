@@ -496,6 +496,34 @@ def generateAcceptQvalue(keyvalue):
         return "%s" % keyvalue[0:1]
     else:
         return ("%s;q=%.3f" % keyvalue).rstrip('0').rstrip('.')
+    
+def parseCacheControl(kv):
+    k, v = parseKeyValue(kv)
+    if k == 'max-age' or k == 'min-fresh' or k == 's-maxage':
+        # Required integer argument
+        if v is None:
+            v = 0
+        else:
+            v = int(v)
+    elif k == 'max-stale':
+        # Optional integer argument
+        if v is not None:
+            v = int(v)
+    elif k == 'private' or k == 'no-cache':
+        # Optional list argument
+        if v is not None:
+            v = [field.strip().lower() for field in v.split(',')]
+    return k, v
+
+def generateCacheControl((k, v)):
+    if v is None:
+        return str(k)
+    else:
+        if k == 'no-cache' or k == 'private':
+            # quoted list of values
+            v = quoteString(generateList(
+                [header_case_mapping.get(name) or dashCapitalize(name) for name in v]))
+        return '%s=%s' % (k,v)
 
 def generateContentRange(tup):
     """tup is (type, start, end, len)
@@ -1147,7 +1175,7 @@ iteritems = lambda x: x.iteritems()
 
 
 parser_general_headers = {
-#    'Cache-Control':(tokenize,...)
+    'Cache-Control':(tokenize, listParser(parseCacheControl), ODict),
     'Connection':(tokenize,filterTokens),
     'Date':(last,parseDateTime),
 #    'Pragma':tokenize
@@ -1159,7 +1187,7 @@ parser_general_headers = {
 }
 
 generator_general_headers = {
-#    'Cache-Control':
+    'Cache-Control':(iteritems, listGenerator(generateCacheControl), singleHeader),
     'Connection':(generateList,singleHeader),
     'Date':(generateDateTime,singleHeader),
 #    'Pragma':
