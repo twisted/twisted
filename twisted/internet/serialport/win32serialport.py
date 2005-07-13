@@ -48,7 +48,6 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         self.writeInProgress = 0
         
         self.protocol = protocol
-        self.protocol.makeConnection(self)
         self._overlappedRead = win32file.OVERLAPPED()
         self._overlappedRead.hEvent = win32event.CreateEvent(None, 1, 0, None)
         self._overlappedWrite = win32file.OVERLAPPED()
@@ -56,6 +55,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         
         self.reactor.addEvent(self._overlappedRead.hEvent, self, 'serialReadEvent')
         self.reactor.addEvent(self._overlappedWrite.hEvent, self, 'serialWriteEvent')
+
+        self.protocol.makeConnection(self)
 
         flags, comstat = win32file.ClearCommError(self._serial.hComPort)
         rc, self.read_buf = win32file.ReadFile(self._serial.hComPort,
