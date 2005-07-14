@@ -5342,3 +5342,22 @@ Kragen Sitaker: but even more inefficient!
 <glyph> dash: Yeah, but you know me.  I'm happy with a ghastly un-life; a mockery of what it means to live
 <dash> glyph: You must be using "happy" in a figurative or metaphorical sense.
 %
+<ph3nyx> mfen: my gvim configuration under windows is wacky
+<MFen> ph3nyx: you should see mine. i keep it in version control :)
+<MFen> 172 lines
+* bear keeps his entire dev config in version control
+<KragenSitaker> i keep my entire living room in version control
+<MFen> yeah. i mean, i keep my desktop backgrounds in version control too, so maybe that's not a very strong point
+<ph3nyx> kragen: that's gotta be a pain in the ass for branching
+<ph3nyx> copying your living room isn't an O(1) operation, no matter what the SVN docs say
+<MFen> svn diff -r172:171.  "Dammit!  Who moved my chair."
+* bear chuckles
+<KragenSitaker> i tried keeping my entire front yard in it too, but it kept leaking gasoline from the lawnmower
+<KragenSitaker> turns out CVS was expanding a $Id$ in the wheel assembly that would puncture the gas tank
+<MFen> you need svn:flammable 1
+<MFen> heh
+<KragenSitaker> so I decided that was too dangerous and scaled back to my living room
+<KragenSitaker> now i just make occasional tar files of the whole house and back them up with rmsync
+<KragenSitaker> which is the version of rsync for matter
+<MFen> KragenSitaker: have you ever considered branching yourself?
+%
