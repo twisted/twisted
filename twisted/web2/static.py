@@ -269,6 +269,83 @@ class File(resource.Resource):
         return self.__class__(path, self.defaultType, self.ignoredExts,
                               self.processors, self.indexNames[:])
 
+
+import md5
+
+class FileSaver(resource.PostableResource):
+    allowedTypes = (http_headers.MimeType('text', 'plain'),
+                    http_headers.MimeType('text', 'html'),
+                    http_headers.MimeType('text', 'css'))
+    
+    def __init__(self, destination, expectedFields=[], allowedTypes=None, maxBytes=1000000, permissions=755):
+        self.destination = destination
+        self.allowedTypes = allowedTypes or self.allowedTypes
+        self.maxBytes = maxBytes
+        self.expectedFields = expectedFields
+        self.permissions = permissions
+
+    def makeUniqueName(self, filename):
+        """called when a unique filename is needed
+        """
+
+        u = md5.new(filename)
+        u.update(str(time.time()))
+        ext = os.path.splitext(filename)[1]
+        return os.path.join(self.destination, u.hexdigest() + ext)
+
+    def isWriteable(self, filename, mimetype, filestream):
+        """returns True if it's "safe" to write this file,
+        otherwise it raises an exception
+        """
+
+        if filestream.length > self.maxBytes:
+            raise IOError("%s: File exceeds maximum length (%d > %d)" % (filename,
+                                                                         filestream.length,
+                                                                         self.maxBytes))
+
+        if os.path.exists(filename):
+            # This should really never happen
+            raise IOError("%s: File already exists" % (filename,))
+ 
+        if mimetype not in self.allowedTypes:
+            raise IOError("%s: File type not allowed %s" % (filename, mimetype))
+
+        return True
+    
+    def writeFile(self, filename, mimetype, fileobject):
+        """does the I/O dirty work after it calls isWriteable to make
+        sure it's safe to write this file
+        """
+        outname = self.makeUniqueName(os.path.join(self.destination, filename))
+        filestream = stream.FileStream(fileobject)
+        
+        if self.isWriteable(outname, mimetype, filestream):
+            stream.readIntoFile(filestream, file(outname, 'w'))
+            os.chmod(outname, self.permissions)
+
+    def render(self, ctx):
+        content = ["<html><body>"]
+
+        req = iweb.IRequest(ctx)
+
+        if req.files:
+            for fieldName in req.files:
+                if fieldName in self.expectedFields:
+                    try:
+                        self.writeFile(*req.files[fieldName])
+                    except IOError, err:
+                        content.append(str(err) + "<br />")
+                else:
+                    content.append("%s is not a valid field" % fieldName)
+
+        else:
+            content.append("No files given")
+
+        content.append("</body></html>")
+
+        return http.Response(responsecode.OK, {}, stream='\n'.join(content))
+
+
 # FIXME: hi there I am a broken class
 # """I contain AsIsProcessor, which serves files 'As Is'
 #    Inspired by Apache's mod_asis

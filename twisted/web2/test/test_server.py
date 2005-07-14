@@ -5,7 +5,7 @@ A test harness for the twisted.web2 server.
 from zope.interface import implements
 from twisted.web2 import http, http_headers, iweb, server
 from twisted.web2 import resource, responsecode, stream
-from twisted.trial import unittest, util, assertions
+from twisted.trial import unittest, util
 from twisted.internet import defer, address, error as ti_error
 
 class TestChanRequest:
@@ -16,7 +16,7 @@ class TestChanRequest:
 
     
     def __init__(self, site, method, prepath, uri,
-                 headers=None, version=(1,1)):
+                 headers=None, version=(1,1), content=None):
         self.site = site
         self.method = method
         self.prepath = prepath
@@ -33,6 +33,11 @@ class TestChanRequest:
                                       self.headers,
                                       site=self.site,
                                       prepathuri=self.prepath)
+
+        if content is not None:
+            self.request.handleContentChunk(content)
+            self.request.handleContentComplete()
+            
         self.code = None
         self.responseHeaders = None
         self.data = ''
@@ -97,12 +102,12 @@ class BaseCase(unittest.TestCase):
     version = (1, 1)
     wait_timeout = 5.0
     
-    def chanrequest(self, root, uri, headers, method, version, prepath):
+    def chanrequest(self, root, uri, headers, method, version, prepath, content):
         site = server.Site(root)
-        return TestChanRequest(site, method, prepath, uri, headers, version)
+        return TestChanRequest(site, method, prepath, uri, headers, version, content)
 
     def getResponseFor(self, root, uri, headers={},
-                       method=None, version=None, prepath=''):
+                       method=None, version=None, prepath='', content=None):
         if not isinstance(headers, http_headers.Headers):
             headers = http_headers.Headers(headers)
         if not headers.hasHeader('content-length'):
@@ -111,7 +116,8 @@ class BaseCase(unittest.TestCase):
             method = self.method
         if version is None:
             version = self.version
-        cr = self.chanrequest(root, uri, headers, method, version, prepath)
+
+        cr = self.chanrequest(root, uri, headers, method, version, prepath, content)
         cr.request.process()
         return cr.deferredFinish
 
