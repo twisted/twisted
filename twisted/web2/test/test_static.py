@@ -40,7 +40,7 @@ Content-Type: %s\r
             self.assertEquals(code, expected_code)
 
             if expected_data is not None:
-                self.assertIn(expected_data, data)
+                assertions.failUnlessSubstring(expected_data, data)
 
             for key, value in expected_headers.iteritems():
                 self.assertEquals(headers.getHeader(key), value)
