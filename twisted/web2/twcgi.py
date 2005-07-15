@@ -223,7 +223,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
         def _finishedProducing(result):
             self.transport.closeChildFD(0)
         s = stream.StreamProducer(self.request.stream)
-        producingDeferred = s.beginProducing(self.transport.pipes[0])
+        producingDeferred = s.beginProducing(self.transport)
         producingDeferred.addCallback(_finishedProducing)
         producingDeferred.addErrback(_failedProducing)
 
