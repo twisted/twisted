@@ -1,3 +1,5 @@
+import tempfile, os
+
 from twisted.web2.test.test_server import BaseCase
 from twisted.web2 import static
 from twisted.web2 import http_headers
@@ -6,13 +8,17 @@ from twisted.web2 import stream
 from twisted.trial import util, assertions
 
 class TestFileSaver(BaseCase):
-    def setUp(self):
-
-        self.root = static.FileSaver('/tmp',
+    def setUpClass(self):
+        self.tempdir = tempfile.mkdtemp(prefix='TestFileSaver')
+        
+        self.root = static.FileSaver(self.tempdir,
                               expectedFields=['FileNameOne'],
                               maxBytes=10)
         self.root.addSlash = True
 
+    def tearDownClass(self):
+        os.rmdir(self.tempdir)
+        
     def uploadFile(self, fieldname, filename, mimetype, content, resrc=None, host='foo', path='/'):
         if not resrc:
             resrc = self.root
