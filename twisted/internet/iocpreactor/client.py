@@ -100,6 +100,14 @@ class SocketConnector(styles.Ephemeral, object):
     def handle_connected_disconnect(self):
         self.transport.loseConnection()
 
+    def handle_disconnected_disconnect(self):
+        pass
+
+    def handle_connecting_connect(self):
+        raise RuntimeError, "can't connect in this state"
+
+    handle_connected_connect = handle_connecting_connect
+
     def handle_disconnected_connect(self):
         self.state = "connecting"
         if not self.factoryStarted:
