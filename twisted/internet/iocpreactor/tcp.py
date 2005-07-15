@@ -5,10 +5,10 @@
 import types, socket, operator
 
 from twisted.internet.abstract import isIPAddress # would rather not import "abstract"
-from twisted.internet import defer, interfaces, address
+from twisted.internet import defer, interfaces, address, error
 from twisted.python import log
 
-import server, client, error
+import server, client
 import iocpdebug
 from zope.interface import implements
 

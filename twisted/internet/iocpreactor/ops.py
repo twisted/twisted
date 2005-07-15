@@ -5,10 +5,10 @@
 import struct, socket, os, errno
 #import time
 
+from twisted.internet import error
 from twisted.python import failure
 
 from _iocp import have_connectex
-import error
 
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 SO_UPDATE_CONNECT_CONTEXT = 0x7010

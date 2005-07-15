@@ -6,13 +6,12 @@ import socket
 
 from twisted.persisted import styles
 from twisted.internet.base import BaseConnector
-from twisted.internet import defer, interfaces
+from twisted.internet import defer, interfaces, error
 from twisted.python import failure
 
 from abstract import ConnectedSocket
 from ops import ConnectExOp
 from util import StateEventMachineType
-import error
 from zope.interface import implements
 
 

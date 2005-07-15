@@ -5,14 +5,13 @@
 from sets import Set
 import socket
 
-from twisted.internet import interfaces, address
+from twisted.internet import interfaces, address, error
 from twisted.persisted import styles
 from twisted.python import log, reflect
 
 from ops import AcceptExOp
 from abstract import ConnectedSocket
 from util import StateEventMachineType
-import error
 from zope.interface import implements
 
 class ServerSocket(ConnectedSocket):
