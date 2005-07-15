@@ -84,6 +84,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
     def testDoctestError(self):
         if sys.version_info[0:2] < (2, 3):
             raise unittest.SkipTest, 'doctest support only works in Python 2.3 or later'
+
         from twisted.trial.test import trialdoctest1
         self.suite.addDoctest(trialdoctest1.Counter.unexpectedException)
         self.suite.run()
@@ -92,7 +93,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         expect = [re.compile('.*'),
                   reporter.DOUBLE_SEPARATOR,
-                  re.compile(r'\[ERROR\]: .*/' + re.escape(os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'))),
+                  re.compile(r'\[ERROR\]: .*' + re.escape(os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'))),
                   'docstring',
                   '---------',
                   '--> >>> 1/0',
