@@ -9,7 +9,8 @@ from twisted.trial import util, assertions
 
 class TestFileSaver(BaseCase):
     def setUpClass(self):
-        self.tempdir = tempfile.mkdtemp(prefix='TestFileSaver')
+        self.tempdir = tempfile.mktemp()
+        os.mkdir(self.tempdir)
         
         self.root = static.FileSaver(self.tempdir,
                               expectedFields=['FileNameOne'],
