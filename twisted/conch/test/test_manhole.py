@@ -2,6 +2,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import generators
+
 import time
 
 from twisted.trial import unittest, assertions
