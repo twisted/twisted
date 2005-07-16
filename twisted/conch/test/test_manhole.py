@@ -205,5 +205,5 @@ class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
 class ManholeLoopbackStdio(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run manhole tests over stdio"
-
-    serverProtocol = stdio.ConsoleManhole
+    else:
+        serverProtocol = stdio.ConsoleManhole
