@@ -43,9 +43,12 @@ class TerminalSessionTransport:
                   loseConnection=lambda: avatar.conn.sendClose(session),
                   name="SSH Proto Transport"))
 
+        def loseConnection():
+            self.proto.loseConnection()
+
         self.chainedProtocol.makeConnection(
             _Glue(write=self.proto.write,
-                  loseConnection=self.proto.loseConnection,
+                  loseConnection=loseConnection,
                   name="Chained Proto Transport"))
 
         # XXX TODO

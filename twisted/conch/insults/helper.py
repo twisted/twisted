@@ -9,7 +9,7 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
-import re
+import re, string
 
 from zope.interface import implements
 
@@ -126,7 +126,7 @@ class TerminalBuffer(protocol.Protocol):
         elif b == '\n' or self.x >= self.width:
             self.x = 0
             self._scrollDown()
-        if b != '\r' and b != '\n':
+        if b in string.printable and b not in '\r\n':
             ch = (b, self._currentCharacterAttributes())
             if self.modes.get(insults.IRM):
                 self.lines[self.y][self.x:self.x] = [ch]
@@ -355,10 +355,10 @@ class ExpectableBuffer(TerminalBuffer):
         while self._expecting:
             expr, deferred = self._expecting[0]
             for match in expr.finditer(s):
+                del self._expecting[0]
                 self._mark += match.end()
                 s = s[match.end():]
                 deferred.callback(match)
-                del self._expecting[0]
                 break
             else:
                 return

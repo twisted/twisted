@@ -281,9 +281,10 @@ class HistoricRecvLine(RecvLine):
         return b[:self.historyPosition], b[self.historyPosition:]
 
     def _deliverBuffer(self, buf):
-        for ch in buf[:-1]:
-            self.characterReceived(ch, True)
-        self.characterReceived(buf[-1], False)
+        if buf:
+            for ch in buf[:-1]:
+                self.characterReceived(ch, True)
+            self.characterReceived(buf[-1], False)
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):

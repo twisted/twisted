@@ -53,7 +53,7 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
 
 class ConsoleManhole(ColoredManhole):
     def handle_QUIT(self):
-        self.terminal.loseConnection()
+        ColoredManhole.handle_QUIT(self)
         reactor.stop()
 
 def runWithProtocol(klass):

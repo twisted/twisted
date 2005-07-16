@@ -133,11 +133,15 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def write(self, data, async=False):
         self.handler.addOutput(data, async)
 
+CTRL_C = '\x03'
+CTRL_D = '\x04'
+CTRL_BACKSLASH = '\x1c'
+
 class Manhole(recvline.HistoricRecvLine):
     """Mediator between a fancy line source and an interactive interpreter.
 
     This accepts lines from its transport and passes them on to a
-    L{ManholeInterpreter}.  Control commands (^C, ^D, ^Q) are also handled
+    L{ManholeInterpreter}.  Control commands (^C, ^D, ^\) are also handled
     with something approximating their normal terminal-mode behavior.  It
     can optionally be constructed with a dict which will be used as the
     local namespace for any code executed.
@@ -153,9 +157,9 @@ class Manhole(recvline.HistoricRecvLine):
     def connectionMade(self):
         recvline.HistoricRecvLine.connectionMade(self)
         self.interpreter = ManholeInterpreter(self, self.namespace)
-        self.keyHandlers['\x03'] = self.handle_INT
-        self.keyHandlers['\x04'] = self.handle_QUIT
-        self.keyHandlers['\x1c'] = self.handle_QUIT
+        self.keyHandlers[CTRL_C] = self.handle_INT
+        self.keyHandlers[CTRL_D] = self.handle_EOF
+        self.keyHandlers[CTRL_BACKSLASH] = self.handle_QUIT
 
     def handle_INT(self):
         self.terminal.nextLine()
@@ -164,6 +168,12 @@ class Manhole(recvline.HistoricRecvLine):
         self.terminal.write(self.ps[self.pn])
         self.lineBuffer = []
         self.lineBufferIndex = 0
+
+    def handle_EOF(self):
+        if self.lineBuffer:
+            self.terminal.write('\a')
+        else:
+            self.handle_QUIT()
 
     def handle_QUIT(self):
         self.terminal.loseConnection()
@@ -185,11 +195,12 @@ class Manhole(recvline.HistoricRecvLine):
 
             self.terminal.write(self.ps[self.pn])
 
-            oldBuffer = self.lineBuffer
-            self.lineBuffer = []
-            self.lineBufferIndex = 0
+            if self.lineBuffer:
+                oldBuffer = self.lineBuffer
+                self.lineBuffer = []
+                self.lineBufferIndex = 0
 
-            self._deliverBuffer(oldBuffer)
+                self._deliverBuffer(oldBuffer)
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)

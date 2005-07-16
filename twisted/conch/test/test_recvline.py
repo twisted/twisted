@@ -11,7 +11,7 @@ from twisted.conch.insults import insults
 from twisted.conch import recvline
 
 from twisted.python import log, reflect, components
-from twisted.internet import defer, error
+from twisted.internet import defer, error, task
 from twisted.trial import unittest
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
@@ -267,6 +267,9 @@ else:
             self._protocolInstance.factory = self
             self._protocolInstance.makeConnection(self)
 
+        def closed(self):
+            self._protocolInstance.connectionLost(error.ConnectionDone())
+
         def dataReceived(self, data):
             self._protocolInstance.dataReceived(data)
 
@@ -320,7 +323,6 @@ else:
 
     class TestSessionTransport(TerminalSessionTransport):
         def protocolFactory(self):
-            print 'Hello, I am creating a serverProtocol, woopie.'
             return self.avatar.conn.transport.factory.serverProtocol()
 
     class TestSession(TerminalSession):
@@ -333,27 +335,68 @@ else:
 
 
 class LoopbackRelay(loopback.LoopbackRelay):
+    clearCall = None
+
     def logPrefix(self):
         return "LoopbackRelay(%r)" % (self.target.__class__.__name__,)
+
+    def write(self, bytes):
+        loopback.LoopbackRelay.write(self, bytes)
+        if self.clearCall is not None:
+            self.clearCall.cancel()
+
+        from twisted.internet import reactor
+        self.clearCall = reactor.callLater(0, self._clearBuffer)
+
+    def _clearBuffer(self):
+        self.clearCall = None
+        loopback.LoopbackRelay.clearBuffer(self)
+
+
+class NotifyingExpectableBuffer(helper.ExpectableBuffer):
+    def __init__(self):
+        self.onConnection = defer.Deferred()
+        self.onDisconnection = defer.Deferred()
+
+    def connectionMade(self):
+        helper.ExpectableBuffer.connectionMade(self)
+        self.onConnection.callback(self)
+
+    def connectionLost(self, reason):
+        self.onDisconnection.errback(reason)
+
 
 class _BaseMixin:
     WIDTH = 80
     HEIGHT = 24
 
+    def _assertBuffer(self, lines):
+        receivedLines = str(self.recvlineClient).splitlines()
+        expectedLines = lines + ([''] * (self.HEIGHT - len(lines) - 1))
+        self.assertEquals(len(receivedLines), len(expectedLines))
+        for i in range(len(receivedLines)):
+            self.assertEquals(
+                receivedLines[i], expectedLines[i],
+                str(receivedLines[max(0, i-1):i+1]) +
+                " != " +
+                str(expectedLines[max(0, i-1):i+1]))
+
     def _test(self, s, lines):
         self._testwrite(s)
         def asserts(ignored):
-            receivedLines = str(self.recvlineClient).splitlines()
-            expectedLines = lines + ([''] * (self.HEIGHT - len(lines) - 1))
-            self.assertEquals(len(receivedLines), len(expectedLines))
-            for i in range(len(receivedLines)):
-                self.assertEquals(
-                    receivedLines[i], expectedLines[i],
-                    str(receivedLines[max(0, i-1):i+1]) +
-                    " != " +
-                    str(expectedLines[max(0, i-1):i+1]))
-
+            self._assertBuffer(lines)
         return defer.maybeDeferred(self._emptyBuffers).addCallback(asserts)
+
+    def _trivialTest(self, input, output):
+        done = self.recvlineClient.expect("done")
+
+        self._testwrite(input)
+
+        def finished(ign):
+            self._assertBuffer(output)
+
+        return done.addCallback(finished)
+
 
 class _SSHMixin(_BaseMixin):
     def setUp(self):
@@ -377,7 +420,7 @@ class _SSHMixin(_BaseMixin):
         sshServer = sshFactory.buildProtocol(None)
         clientTransport = LoopbackRelay(sshServer)
 
-        recvlineClient = helper.TerminalBuffer()
+        recvlineClient = NotifyingExpectableBuffer()
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
         sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, self.WIDTH, self.HEIGHT)
         serverTransport = LoopbackRelay(sshClient)
@@ -391,15 +434,13 @@ class _SSHMixin(_BaseMixin):
         self.clientTransport = clientTransport
         self.serverTransport = serverTransport
 
-        self._emptyBuffers()
+        return recvlineClient.onConnection
 
     def _testwrite(self, bytes):
         self.sshClient.write(bytes)
 
     def _emptyBuffers(self):
-        while self.serverTransport.buffer or self.clientTransport.buffer:
-            log.callWithContext({'system': 'serverTransport'}, self.serverTransport.clearBuffer)
-            log.callWithContext({'system': 'clientTransport'}, self.clientTransport.clearBuffer)
+        pass
 
 from twisted.conch.test import test_telnet
 
@@ -419,7 +460,7 @@ class _TelnetMixin(_BaseMixin):
         telnetServer = telnet.TelnetTransport(lambda: insultsServer)
         clientTransport = LoopbackRelay(telnetServer)
 
-        recvlineClient = helper.TerminalBuffer()
+        recvlineClient = NotifyingExpectableBuffer()
         insultsClient = TestInsultsClientProtocol(lambda: recvlineClient)
         telnetClient = telnet.TelnetTransport(lambda: insultsClient)
         serverTransport = LoopbackRelay(telnetClient)
@@ -435,6 +476,8 @@ class _TelnetMixin(_BaseMixin):
         self.clientTransport = clientTransport
         self.serverTransport = serverTransport
 
+        return recvlineClient.onConnection
+
     def _testwrite(self, bytes):
         self.telnetClient.write(bytes)
 
@@ -449,31 +492,13 @@ except ImportError:
 
 from twisted.test.test_process import SignalMixin
 
-class NotifyingTerminalBuffer(helper.TerminalBuffer):
-    didConnect = False
-
-    def __init__(self):
-        self.onConnection = defer.Deferred()
-        self.onDisconnection = defer.Deferred()
-
-    def write(self, bytes):
-        # When we receive the first '>>>' prompt, begin the test.
-        result = helper.TerminalBuffer.write(self, bytes)
-        if not self.didConnect and str(self).find('>>>') != -1:
-            self.didConnect = True
-            self.onConnection.callback(None)
-        return result
-
-    def connectionLost(self, reason):
-        self.onDisconnection.errback(reason)
-
 class _StdioMixin(_BaseMixin, SignalMixin):
     def setUp(self):
         # A memory-only terminal emulator, into which the server will
         # write things and make other state changes.  What ends up
         # here is basically what a user would have seen on their
         # screen.
-        testTerminal = NotifyingTerminalBuffer()
+        testTerminal = NotifyingExpectableBuffer()
 
         # An insults client protocol which will translate bytes
         # received from the child process into keystroke commands for
@@ -506,7 +531,7 @@ class _StdioMixin(_BaseMixin, SignalMixin):
         # happen first, but it doesn't hurt to be safe.
         return defer.gatherResults(filter(None, [
             processClient.onConnection,
-            testTerminal.onConnection]))
+            testTerminal.expect(">>> ")]))
 
     def tearDown(self):
         # Kill the child process.  We're done with it.
@@ -532,67 +557,69 @@ class RecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
     def testSimple(self):
-        return self._test(
-            "first line",
-            [">>> first line"])
+        return self._trivialTest(
+            "first line\ndone",
+            [">>> first line",
+             "first line",
+             ">>> done"])
 
     def testLeftArrow(self):
-        return self._test(
-            insert + 'first line' + left * 4 + "xxxx\n",
+        return self._trivialTest(
+            insert + 'first line' + left * 4 + "xxxx\ndone",
             [">>> first xxxx",
              "first xxxx",
-             ">>> "])
+             ">>> done"])
 
     def testRightArrow(self):
-        return self._test(
-            insert + 'right line' + left * 4 + right * 2 + "xx\n",
+        return self._trivialTest(
+            insert + 'right line' + left * 4 + right * 2 + "xx\ndone",
             [">>> right lixx",
              "right lixx",
-            ">>> "])
+            ">>> done"])
 
     def testBackspace(self):
-        return self._test(
-            "second line" + backspace * 4 + "xxxx\n",
+        return self._trivialTest(
+            "second line" + backspace * 4 + "xxxx\ndone",
             [">>> second xxxx",
              "second xxxx",
-             ">>> "])
+             ">>> done"])
 
     def testDelete(self):
-        return self._test(
-            "delete xxxx" + left * 4 + delete * 4 + "line\n",
+        return self._trivialTest(
+            "delete xxxx" + left * 4 + delete * 4 + "line\ndone",
             [">>> delete line",
              "delete line",
-             ">>> "])
+             ">>> done"])
 
     def testInsert(self):
-        return self._test(
-            # "third ine" + left * 3 + insert + "l\n",
-            "third ine" + left * 3 + "l\n",
+        return self._trivialTest(
+            "third ine" + left * 3 + "l\ndone",
             [">>> third line",
              "third line",
-             ">>> "])
+             ">>> done"])
 
     def testTypeover(self):
-        return self._test(
-            # "fourth xine" + left * 4 + insert * 2 + "l\n",
-            "fourth xine" + left * 4 + insert + "l\n",
+        return self._trivialTest(
+            "fourth xine" + left * 4 + insert + "l\ndone",
             [">>> fourth line",
              "fourth line",
-             ">>> "])
+             ">>> done"])
 
     def testHome(self):
-        return self._test(
-            insert + "blah line" + home + "home\n",
+        return self._trivialTest(
+            insert + "blah line" + home + "home\ndone",
             [">>> home line",
              "home line",
-             ">>> "])
+             ">>> done"])
+
+        return done.addCallback(finished)
 
     def testEnd(self):
-        return self._test(
-            "end " + left * 4 + end + "line\n",
+        return self._trivialTest(
+            "end " + left * 4 + end + "line\ndone",
             [">>> end line",
              "end line",
-             ">>> "])
+             ">>> done"])
 
 class RecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass
@@ -609,20 +636,24 @@ class HistoricRecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
     def testUpArrow(self):
-        return self._test(
-            "first line\n" + up,
+        return self._trivialTest(
+            "first line\n" + up + "\ndone",
             [">>> first line",
              "first line",
-             ">>> first line"])
+             ">>> first line",
+             "first line",
+             ">>> done"])
 
     def testDownArrow(self):
-        return self._test(
-            "first line\nsecond line\n" + up * 2 + down,
+        return self._trivialTest(
+            "first line\nsecond line\n" + up * 2 + down + "\ndone",
             [">>> first line",
              "first line",
              ">>> second line",
              "second line",
-             ">>> second line"])
+             ">>> second line",
+             "second line",
+             ">>> done"])
 
 class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     pass
