@@ -6,7 +6,7 @@
 
 import time, sys
 
-from twisted.trial import unittest
+from twisted.trial import unittest, assertions
 
 from twisted.internet import reactor, interfaces, threads
 from twisted.python import failure, threadable
@@ -151,22 +151,15 @@ class DeferredResultTestCase(unittest.TestCase):
 
     def testDeferredResult(self):
         d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
-        d.addCallback(self._resultCallback)
-        t = reactor.callLater(1, self._timeout)
-        while not self.done:
-            reactor.iterate()
-        self.failUnless(self.gotResult, "timeout")
-        if t.active(): t.cancel()
+        return d.addCallback(self.assertEquals, 7)
 
     def testDeferredFailure(self):
-        def raiseError(): raise TypeError
+        class NewError(Exception):
+            pass
+        def raiseError():
+            raise NewError
         d = threads.deferToThread(raiseError)
-        d.addErrback(self._resultErrback)
-        t = reactor.callLater(1, self._timeout)
-        while not self.done:
-            reactor.iterate()
-        self.failUnless(self.gotResult, "timeout")
-        if t.active(): t.cancel()
+        return assertions.assertFailure(d, NewError)
 
     def testDeferredFailure2(self):
         # set up a condition that causes cReactor to hang. These conditions
