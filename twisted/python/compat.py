@@ -239,8 +239,11 @@ import operator
 try:
     operator.attrgetter
 except AttributeError:
-    def attrgetter(name):
-        return lambda obj: getattr(obj, name)
+    class attrgetter(object):
+        def __init__(self, name):
+            self.name = name
+        def __call__(self, obj):
+            return getattr(obj, self.name)
     operator.attrgetter = attrgetter
 
 
