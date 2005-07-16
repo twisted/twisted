@@ -8,10 +8,7 @@ from __future__ import nested_scopes, generators
 
 __version__ = '$Revision: 1.51 $'[11:-2]
 
-import os
-import sys
-import hmac
-import errno
+import os, sys, hmac, errno, new
 
 from UserDict import UserDict
 
