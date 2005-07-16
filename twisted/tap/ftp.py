@@ -22,27 +22,22 @@ class Options(usage.Options):
     optParameters = [
         ["port", "p", "2121",                 "set the port number"],
         ["root", "r", "/usr/local/ftp",       "define the root of the ftp-site."],
-        ["userAnonymous", "", "anonymous",    "Name of the anonymous user."]
+        ["userAnonymous", "", "anonymous",    "Name of the anonymous user."],
+        ["password-file", "", None,           "username:password-style credentials database"],
     ]
 
     longdesc = ''
 
 
-#def addUser(factory, username, password):
-#    factory.userdict[username] = {}
-#    if factory.otp:
-#        from twisted.python import otp
-#        factory.userdict[username]["otp"] = otp.OTP(password, hash=otp.md5)
-#    else:
-#        factory.userdict[username]["passwd"] = password
-
 def makeService(config):
     f = ftp.FTPFactory()
 
-    r = ftp.FTPRealm()
-    r.tld = config['root']
+    r = ftp.FTPRealm(config['root'])
     p = portal.Portal(r)
     p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
+
+    if config['password-file'] is not None:
+        p.registerChecker(checkers.FilePasswordDB(config['password-file'], cache=True))
 
     f.tld = config['root']
     f.userAnonymous = config['userAnonymous']

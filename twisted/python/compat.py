@@ -235,6 +235,13 @@ class tsafe(object):
                     self._lock.release()\n""" % (f, f)
 sys.modules['OpenSSL.tsafe'] = tsafe
 
+import operator
+try:
+    operator.attrgetter
+except AttributeError:
+    def attrgetter(name):
+        return lambda obj: getattr(obj, name)
+    operator.attrgetter = attrgetter
 
 
 # Compatibility with compatibility

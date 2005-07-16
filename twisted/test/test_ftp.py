@@ -19,8 +19,8 @@ from twisted import internet
 from twisted.trial import unittest
 from twisted.trial.util import wait
 from twisted.protocols import basic
-from twisted.internet import reactor, protocol, defer, interfaces
-from twisted.cred import error, portal, checkers, credentials
+from twisted.internet import reactor, protocol, defer, interfaces, error
+from twisted.cred import portal, checkers, credentials
 from twisted.python import log, components, failure
 from twisted.internet.address import IPv4Address
 
@@ -33,12 +33,8 @@ class NonClosingStringIO(StringIO):
 StringIOWithoutClosing = NonClosingStringIO
 
 
-def getPortal():
-    anonPortal = portal.Portal(ftp.FTPRealm())
-    anonPortal.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
-    return anonPortal
 
-    
+
 class Dummy(basic.LineReceiver):
     logname = None
     def __init__(self):
@@ -57,7 +53,7 @@ class Dummy(basic.LineReceiver):
 class TestUtilityFunctions(unittest.TestCase):
     def testCleanPath(self):
         import os.path as osp
-        evilPaths = [r"..\/*/foobar/ding//dong/\\**", 
+        evilPaths = [r"..\/*/foobar/ding//dong/\\**",
         r"../../\\**/*/fhet/*/..///\\//..///#$#221./*"]
         exorcisedPaths = ["..\/foobar/ding/dong","../../../#$#221."]
         for i in range(len(evilPaths)):
@@ -80,16 +76,16 @@ class _BufferingProtocol(protocol.Protocol):
 
 class FTPServerTestCase(unittest.TestCase):
     """Simple tests for an FTP server with the default settings."""
-    
+
     def setUp(self):
         # Create a directory
         self.directory = self.mktemp()
         os.mkdir(self.directory)
 
         # Start the server
-        portal = getPortal()
-        portal.realm.tld = self.directory
-        self.factory = ftp.FTPFactory(portal=portal)
+        p = portal.Portal(ftp.FTPRealm(self.directory))
+        p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
+        self.factory = ftp.FTPFactory(portal=p)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
 
         # Hook the server's buildProtocol to make the protocol instance
@@ -100,12 +96,12 @@ class FTPServerTestCase(unittest.TestCase):
             self.serverProtocol = protocol.wrappedProtocol
             return protocol
         self.factory.buildProtocol = _rememberProtocolInstance
-        
+
         # Connect a client to it
         portNum = self.port.getHost().port
         clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
         self.client = wait(clientCreator.connectTCP("127.0.0.1", portNum))
-    
+
     def tearDown(self):
         # Clean up sockets
         self.client.transport.loseConnection()
@@ -114,7 +110,7 @@ class FTPServerTestCase(unittest.TestCase):
             wait(d)
 
         del self.serverProtocol
-        
+
         # Clean up temporary directory
         shutil.rmtree(self.directory)
 
@@ -124,13 +120,13 @@ class FTPServerTestCase(unittest.TestCase):
         except ftp.CommandFailed, e:
             return e.args[0]
         else:
-            self.fail('ftp.CommandFailed not raised for command, got %r' 
+            self.fail('ftp.CommandFailed not raised for command, got %r'
                       % (responseLines,))
 
     def _anonymousLogin(self):
         responseLines = wait(self.client.queueStringCommand('USER anonymous'))
         self.assertEquals(
-            ['331 Guest login ok, type your email address as password.'], 
+            ['331 Guest login ok, type your email address as password.'],
             responseLines
         )
 
@@ -138,7 +134,7 @@ class FTPServerTestCase(unittest.TestCase):
             'PASS test@twistedmatrix.com')
         )
         self.assertEquals(
-            ['230 Anonymous login ok, access restrictions apply.'], 
+            ['230 Anonymous login ok, access restrictions apply.'],
             responseLines
         )
 
@@ -148,7 +144,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         """When not logged in, all commands other than USER and PASS should
         get NOT_LOGGED_IN errors.
         """
-        commandList = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV', 
+        commandList = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV',
                        'PWD', 'RETR', 'STRU', 'SYST', 'TYPE']
 
         # Issue commands, check responses
@@ -164,7 +160,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         d = self.client.queueStringCommand('PASS foo')
         self.failUnlessEqual(
             ["503 Incorrect sequence of commands: "
-             "USER required before PASS"], 
+             "USER required before PASS"],
             self._waitForCommandFailure(d))
 
     def testNoParamsForUSER(self):
@@ -173,7 +169,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.failUnlessEqual(
             ['500 Syntax error: USER requires an argument.'],
             self._waitForCommandFailure(d))
-    
+
     def testNoParamsForPASS(self):
         """Issuing PASS without a password is a syntax error."""
         wait(self.client.queueStringCommand('USER foo'))
@@ -181,7 +177,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.failUnlessEqual(
             ['500 Syntax error: PASS requires an argument.'],
             self._waitForCommandFailure(d))
-    
+
     def testAnonymousLogin(self):
         self._anonymousLogin()
 
@@ -190,9 +186,9 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         # IUsernamePassword checker that always rejects.
         self.factory.allowAnonymous = False
         denyAlwaysChecker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        self.factory.portal.registerChecker(denyAlwaysChecker, 
+        self.factory.portal.registerChecker(denyAlwaysChecker,
                                             credentials.IUsernamePassword)
-        
+
         # Same response code as allowAnonymous=True, but different text.
         responseLines = wait(self.client.queueStringCommand('USER anonymous'))
         self.assertEquals(
@@ -202,7 +198,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         # It will be denied.  No-one can login.
         d = self.client.queueStringCommand('PASS test@twistedmatrix.com')
         self.failUnlessEqual(
-            ['530 Sorry, Authentication failed.'], 
+            ['530 Sorry, Authentication failed.'],
             self._waitForCommandFailure(d))
 
         # It's not just saying that.  You aren't logged in.
@@ -218,14 +214,14 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.failUnlessEqual(
             ["502 Command 'GIBBERISH' not implemented"],
             self._waitForCommandFailure(d))
-        
+
 
     def testRETRBeforePORT(self):
         self._anonymousLogin()
         d = self.client.queueStringCommand('RETR foo')
         self.failUnlessEqual(
             ["503 Incorrect sequence of commands: "
-             "PORT or PASV required before RETR"], 
+             "PORT or PASV required before RETR"],
             self._waitForCommandFailure(d))
 
     def testBadCommandArgs(self):
@@ -241,7 +237,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             self._waitForCommandFailure(d))
 
     def testDecodeHostPort(self):
-        self.assertEquals(ftp.decodeHostPort('25,234,129,22,100,23'), 
+        self.assertEquals(ftp.decodeHostPort('25,234,129,22,100,23'),
                 ('25.234.129.22', 25623))
 
     def testPASV(self):
@@ -255,11 +251,9 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         # Make sure the server is listening on the port it claims to be
         self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
 
-        # Hack: clean up the DTP port directly
-        d = self.serverProtocol.dtpPort.stopListening()
-        if d is not None:
-            wait(d)
-        self.serverProtocol.dtpFactory = None
+        # Semi-reasonable way to force cleanup
+        self.serverProtocol.connectionLost(error.ConnectionDone())
+
 
     def testSYST(self):
         self._anonymousLogin()
@@ -273,7 +267,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         responseLines = wait(self.client.queueStringCommand('PASV'))
         host, port = ftp.decodeHostPort(responseLines[-1][4:])
         downloader = wait(
-            protocol.ClientCreator(reactor, 
+            protocol.ClientCreator(reactor,
                                    _BufferingProtocol).connectTCP('127.0.0.1',
                                                                   port)
         )
@@ -301,13 +295,13 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         wait(defer.gatherResults([d, downloader.d]))
 
         # Now we expect 2 lines because there are two files.
-        self.assertEqual(2, len(downloader.buffer.rstrip('\n').split('\n')))
+        self.assertEqual(2, len(downloader.buffer[:-2].split('\r\n')))
 
         # Download a names-only listing
         downloader = self._makeDataConnection()
-        d = self.client.queueStringCommand('NLST')
+        d = self.client.queueStringCommand('NLST ')
         wait(defer.gatherResults([d, downloader.d]))
-        filenames = downloader.buffer.rstrip('\n').split('\n')
+        filenames = downloader.buffer[:-2].split('\r\n')
         filenames.sort()
         self.assertEqual(['bar', 'foo'], filenames)
 
@@ -321,7 +315,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
 
         # Change the current working directory to 'foo'
         wait(self.client.queueStringCommand('CWD foo'))
-        
+
         # Download a listing from within 'foo', and again it should be empty
         downloader = self._makeDataConnection()
         d = self.client.queueStringCommand('LIST')
@@ -332,17 +326,15 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         # Login
         self._anonymousLogin()
 
-        # Replace the ftp shell's retr method with a test hack.
-        def fakeRetr(path):
-            # return a dummy file, with size set according to path name.
-            size = int(path[:-4])
-            return (StringIO('x' * size), size)
-        self.serverProtocol.shell.retr = fakeRetr
-        
+
         # Download a range of different size files
         for size in range(100000, 110000, 500):
+            fObj = file(os.path.join(self.directory, '%d.txt' % (size,)), 'wb')
+            fObj.write('x' * size)
+            fObj.close()
+
             downloader = self._makeDataConnection()
-            d = self.client.queueStringCommand('RETR %d.txt' % size)
+            d = self.client.queueStringCommand('RETR %d.txt' % (size,))
             wait(defer.gatherResults([d, downloader.d]))
             self.assertEqual('x' * size, downloader.buffer)
 
@@ -394,7 +386,7 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
             ["425 Can't open data connection."],
             self._waitForCommandFailure(d)
         )
-        
+
 
 # -- Client Tests -----------------------------------------------------------
 
@@ -534,7 +526,7 @@ class FTPClientTests(unittest.TestCase):
             d = port.stopListening()
             if d is not None:
                 wait(d)
-    
+
     def testErrbacksUponDisconnect(self):
         ftpClient = ftp.FTPClient()
         d = ftpClient.list('some path', Dummy())
@@ -546,3 +538,58 @@ class FTPClientTests(unittest.TestCase):
         from twisted.internet.main import CONNECTION_LOST
         ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
         self.failUnless(m, m)
+
+
+class PathHandling(unittest.TestCase):
+    def testNormalizer(self):
+        for inp, outp in [('a', ['a']),
+                          ('/a', ['a']),
+                          ('/', []),
+                          ('a/b/c', ['a', 'b', 'c']),
+                          ('/a/b/c', ['a', 'b', 'c']),
+                          ('/a/', ['a']),
+                          ('a/', ['a'])]:
+            self.assertEquals(ftp.toSegments([], inp), outp)
+
+        for inp, outp in [('b', ['a', 'b']),
+                          ('b/', ['a', 'b']),
+                          ('/b', ['b']),
+                          ('/b/', ['b']),
+                          ('b/c', ['a', 'b', 'c']),
+                          ('b/c/', ['a', 'b', 'c']),
+                          ('/b/c', ['b', 'c']),
+                          ('/b/c/', ['b', 'c'])]:
+            self.assertEquals(ftp.toSegments(['a'], inp), outp)
+
+        for inp, outp in [('//', []),
+                          ('//a', ['a']),
+                          ('a//', ['a']),
+                          ('a//b', ['a', 'b'])]:
+            self.assertEquals(ftp.toSegments([], inp), outp)
+
+        for inp, outp in [('//', []),
+                          ('//b', ['b']),
+                          ('b//c', ['a', 'b', 'c'])]:
+            self.assertEquals(ftp.toSegments(['a'], inp), outp)
+
+        for inp, outp in [('..', []),
+                          ('../', []),
+                          ('a/..', ['x']),
+                          ('/a/..', []),
+                          ('/a/b/..', ['a']),
+                          ('/a/b/../', ['a']),
+                          ('/a/b/../c', ['a', 'c']),
+                          ('/a/b/../c/', ['a', 'c']),
+                          ('/a/b/../../c', ['c']),
+                          ('/a/b/../../c/', ['c']),
+                          ('/a/b/../../c/..', []),
+                          ('/a/b/../../c/../', [])]:
+            self.assertEquals(ftp.toSegments(['x'], inp), outp)
+
+        for inp in ['..', '../', 'a/../..', 'a/../../',
+                    '/..', '/../', '/a/../..', '/a/../../',
+                    '/a/b/../../..']:
+            self.assertRaises(ftp.InvalidPath, ftp.toSegments, [], inp)
+
+        for inp in ['../..', '../../', '../a/../..']:
+            self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
