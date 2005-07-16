@@ -65,7 +65,6 @@ class UtilTestCase(unittest.TestCase):
             return p
         baz = util.mergeFunctionMetadata(foo, bar)
 
-        self.assertIdentical(bar, baz)
         self.assertIdentical(bar(1, 2, (3, 4), quux=10), p)
 
 
