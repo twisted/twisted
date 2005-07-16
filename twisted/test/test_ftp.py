@@ -540,7 +540,6 @@ class FTPClientTests(unittest.TestCase):
         d = ftpClient.list('some path', Dummy())
         m = []
         def _eb(failure):
-            print 'yay', repr(failure)
             m.append(failure)
             return None
         d.addErrback(_eb)
