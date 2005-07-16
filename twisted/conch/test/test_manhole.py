@@ -14,8 +14,6 @@ from twisted.conch import manhole
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
 
-    timeout = 10
-
     def wfd(self, d):
         return defer.waitForDeferred(d)
 
