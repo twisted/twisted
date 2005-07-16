@@ -56,6 +56,19 @@ class UtilTestCase(unittest.TestCase):
         finally:
             del util.id
 
+    def testFunctionMetaMerge(self):
+        o = object()
+        p = object()
+        def foo():
+            return o
+        def bar(x, y, (a, b), c=10, *d, **e):
+            return p
+        baz = util.mergeFunctionMetadata(foo, bar)
+
+        self.assertIdentical(bar, baz)
+        self.assertIdentical(bar(1, 2, (3, 4), quux=10), p)
+
+
 class OrderedDictTest(unittest.TestCase):
     def testOrderedDict(self):
         d = util.OrderedDict()
