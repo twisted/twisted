@@ -71,20 +71,20 @@ twistd -ny smtpclient-1.tac
 
 <blockquote><pre class="shell">
 exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-1.tac
-2005/03/27 18:31 EST [-] Log opened.
-2005/03/27 18:31 EST [-] twistd 2.0.0 (/usr/bin/python2.4 2.4.1) starting up
-2005/03/27 18:31 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/27 18:31 EST [-] Loading smtpclient-1.tac...
-2005/03/27 18:31 EST [-] Loaded.
+18:31 EST [-] Log opened.
+18:31 EST [-] twistd 2.0.0 (/usr/bin/python2.4 2.4.1) starting up
+18:31 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+18:31 EST [-] Loading smtpclient-1.tac...
+18:31 EST [-] Loaded.
 </pre></blockquote>
 
 <p>As we expected, not much is going on.  We can shutdown this server
 by issueing <code>^C</code>:</p>
 
 <blockquote><pre class="shell">
-2005/03/27 18:34 EST [-] Received SIGINT, shutting down.
-2005/03/27 18:34 EST [-] Main loop terminated.
-2005/03/27 18:34 EST [-] Server Shut Down.
+18:34 EST [-] Received SIGINT, shutting down.
+18:34 EST [-] Main loop terminated.
+18:34 EST [-] Server Shut Down.
 exarkun@boson:~/mail/tutorial/smtpclient$
 </pre></blockquote>
 
@@ -145,13 +145,14 @@ disappointing:</p>
 
 <blockquote><code><pre class="shell">
 exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-2.tac
-2005/03/27 18:55 EST [-] Log opened.
-2005/03/27 18:55 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/03/27 18:55 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/27 18:55 EST [-] Loading smtpclient-2.tac...
-2005/03/27 18:55 EST [-] Loaded.
-2005/03/27 18:55 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e46c&gt;
-2005/03/27 18:55 EST [-] Traceback (most recent call last):
+18:55 EST [-] Log opened.
+18:55 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+18:55 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+18:55 EST [-] Loading smtpclient-2.tac...
+18:55 EST [-] Loaded.
+18:55 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory
+              instance at 0xb791e46c&gt;
+18:55 EST [-] Traceback (most recent call last):
           File "twisted/scripts/twistd.py", line 187, in runApp
             app.runReactorWithLogging(config, oldstdout, oldstderr)
           File "twisted/application/app.py", line 128, in runReactorWithLogging
@@ -171,9 +172,9 @@ exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-2.tac
             return s.split(sep, maxsplit)
         exceptions.AttributeError: 'NoneType' object has no attribute 'split'
 
-2005/03/27 18:55 EST [-] Received SIGINT, shutting down.
-2005/03/27 18:55 EST [-] Main loop terminated.
-2005/03/27 18:55 EST [-] Server Shut Down.
+18:55 EST [-] Received SIGINT, shutting down.
+18:55 EST [-] Main loop terminated.
+18:55 EST [-] Server Shut Down.
 exarkun@boson:~/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
@@ -205,14 +206,15 @@ gets us:</p>
 
 <blockquote><code><pre class="shell">
 exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-3.tac
-2005/03/27 19:10 EST [-] Log opened.
-2005/03/27 19:10 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/03/27 19:10 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/27 19:10 EST [-] Loading smtpclient-3.tac...
-2005/03/27 19:10 EST [-] Loaded.
-2005/03/27 19:10 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e48c&gt;
-2005/03/27 19:10 EST [-] Enabling Multithreading.
-2005/03/27 19:10 EST [Uninitialized] Traceback (most recent call last):
+19:10 EST [-] Log opened.
+19:10 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+19:10 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+19:10 EST [-] Loading smtpclient-3.tac...
+19:10 EST [-] Loaded.
+19:10 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory
+              instance at 0xb791e48c&gt;
+19:10 EST [-] Enabling Multithreading.
+19:10 EST [Uninitialized] Traceback (most recent call last):
           File "twisted/python/log.py", line 56, in callWithLogger
             return callWithContext({"system": lp}, func, *args, **kw)
           File "twisted/python/log.py", line 41, in callWithContext
@@ -234,10 +236,12 @@ exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-3.tac
             p = self.protocol()
         exceptions.TypeError: 'NoneType' object is not callable
 
-2005/03/27 19:10 EST [Uninitialized] Stopping factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e48c&gt;
-2005/03/27 19:10 EST [-] Received SIGINT, shutting down.
-2005/03/27 19:10 EST [-] Main loop terminated.
-2005/03/27 19:10 EST [-] Server Shut Down.
+19:10 EST [Uninitialized] Stopping factory
+          &lt;twisted.internet.protocol.ClientFactory instance at
+          0xb791e48c&gt;
+19:10 EST [-] Received SIGINT, shutting down.
+19:10 EST [-] Main loop terminated.
+19:10 EST [-] Server Shut Down.
 exarkun@boson:~/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
@@ -267,17 +271,20 @@ again traceback free:</p>
 
 <blockquote><code><pre class="shell">
 exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-4.tac
-2005/03/27 19:29 EST [-] Log opened.
-2005/03/27 19:29 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/03/27 19:29 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/27 19:29 EST [-] Loading smtpclient-4.tac...
-2005/03/27 19:29 EST [-] Loaded.
-2005/03/27 19:29 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e4ac&gt;
-2005/03/27 19:29 EST [-] Enabling Multithreading.
-2005/03/27 19:29 EST [-] Received SIGINT, shutting down.
-2005/03/27 19:29 EST [Protocol,client] Stopping factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e4ac&gt;
-2005/03/27 19:29 EST [-] Main loop terminated.
-2005/03/27 19:29 EST [-] Server Shut Down.
+19:29 EST [-] Log opened.
+19:29 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+19:29 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+19:29 EST [-] Loading smtpclient-4.tac...
+19:29 EST [-] Loaded.
+19:29 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory
+              instance at 0xb791e4ac&gt;
+19:29 EST [-] Enabling Multithreading.
+19:29 EST [-] Received SIGINT, shutting down.
+19:29 EST [Protocol,client] Stopping factory
+          &lt;twisted.internet.protocol.ClientFactory instance at
+          0xb791e4ac&gt;
+19:29 EST [-] Main loop terminated.
+19:29 EST [-] Server Shut Down.
 exarkun@boson:~/doc/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
@@ -330,14 +337,15 @@ version?</p>
 
 <blockquote><code><pre class="shell">
 exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-5.tac
-2005/03/27 19:42 EST [-] Log opened.
-2005/03/27 19:42 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/03/27 19:42 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/27 19:42 EST [-] Loading smtpclient-5.tac...
-2005/03/27 19:42 EST [-] Loaded.
-2005/03/27 19:42 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e54c&gt;
-2005/03/27 19:42 EST [-] Enabling Multithreading.
-2005/03/27 19:42 EST [Uninitialized] Traceback (most recent call last):
+19:42 EST [-] Log opened.
+19:42 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+19:42 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+19:42 EST [-] Loading smtpclient-5.tac...
+19:42 EST [-] Loaded.
+19:42 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory
+              instance at 0xb791e54c&gt;
+19:42 EST [-] Enabling Multithreading.
+19:42 EST [Uninitialized] Traceback (most recent call last):
           File "twisted/python/log.py", line 56, in callWithLogger
             return callWithContext({"system": lp}, func, *args, **kw)
           File "twisted/python/log.py", line 41, in callWithContext
@@ -359,10 +367,12 @@ exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-5.tac
             p = self.protocol()
         exceptions.TypeError: __init__() takes at least 2 arguments (1 given)
 
-2005/03/27 19:42 EST [Uninitialized] Stopping factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e54c&gt;
-2005/03/27 19:43 EST [-] Received SIGINT, shutting down.
-2005/03/27 19:43 EST [-] Main loop terminated.
-2005/03/27 19:43 EST [-] Server Shut Down.
+19:42 EST [Uninitialized] Stopping factory
+          &lt;twisted.internet.protocol.ClientFactory instance at
+          0xb791e54c&gt;
+19:43 EST [-] Received SIGINT, shutting down.
+19:43 EST [-] Main loop terminated.
+19:43 EST [-] Server Shut Down.
 exarkun@boson:~/doc/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
@@ -412,14 +422,15 @@ smtpClientFactory = SMTPClientFactory()
 
 <blockquote><code><pre class="shell">
 exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-6.tac
-2005/03/29 21:17 EST [-] Log opened.
-2005/03/29 21:17 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/03/29 21:17 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/29 21:17 EST [-] Loading smtpclient-6.tac...
-2005/03/29 21:17 EST [-] Loaded.
-2005/03/29 21:17 EST [-] Starting factory &lt;__builtin__.SMTPClientFactory instance at 0xb77fd68c&gt;
-2005/03/29 21:17 EST [-] Enabling Multithreading.
-2005/03/29 21:17 EST [ESMTPClient,client] Traceback (most recent call last):
+21:17 EST [-] Log opened.
+21:17 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+21:17 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+21:17 EST [-] Loading smtpclient-6.tac...
+21:17 EST [-] Loaded.
+21:17 EST [-] Starting factory &lt;__builtin__.SMTPClientFactory instance
+              at 0xb77fd68c&gt;
+21:17 EST [-] Enabling Multithreading.
+21:17 EST [ESMTPClient,client] Traceback (most recent call last):
           File "twisted/python/log.py", line 56, in callWithLogger
             return callWithContext({"system": lp}, func, *args, **kw)
           File "twisted/python/log.py", line 41, in callWithContext
@@ -449,10 +460,11 @@ exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-6.tac
             raise NotImplementedError
         exceptions.NotImplementedError:
 
-2005/03/29 21:17 EST [ESMTPClient,client] Stopping factory &lt;__builtin__.SMTPClientFactory instance at 0xb77fd68c&gt;
-2005/03/29 21:17 EST [-] Received SIGINT, shutting down.
-2005/03/29 21:17 EST [-] Main loop terminated.
-2005/03/29 21:17 EST [-] Server Shut Down.
+21:17 EST [ESMTPClient,client] Stopping factory
+          &lt;__builtin__.SMTPClientFactory instance at 0xb77fd68c&gt;
+21:17 EST [-] Received SIGINT, shutting down.
+21:17 EST [-] Main loop terminated.
+21:17 EST [-] Server Shut Down.
 exarkun@boson:~/doc/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
@@ -586,17 +598,19 @@ after sending the message, without user-intervention:</p>
 
 <blockquote><code><pre class="shell">
 exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-8.tac
-2005/04/01 19:52 EST [-] Log opened.
-2005/04/01 19:52 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/04/01 19:52 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/04/01 19:52 EST [-] Loading smtpclient-8.tac...
-2005/04/01 19:52 EST [-] Loaded.
-2005/04/01 19:52 EST [-] Starting factory &lt;__builtin__.SMTPClientFactory instance at 0xb791beec&gt;
-2005/04/01 19:52 EST [-] Enabling Multithreading.
-2005/04/01 19:52 EST [SMTPTutorialClient,client] Sent 1 messages
-2005/04/01 19:52 EST [SMTPTutorialClient,client] Stopping factory &lt;__builtin__.SMTPClientFactory instance at 0xb791beec&gt;
-2005/04/01 19:52 EST [-] Main loop terminated.
-2005/04/01 19:52 EST [-] Server Shut Down.
+19:52 EST [-] Log opened.
+19:52 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+19:52 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+19:52 EST [-] Loading smtpclient-8.tac...
+19:52 EST [-] Loaded.
+19:52 EST [-] Starting factory &lt;__builtin__.SMTPClientFactory instance
+              at 0xb791beec&gt;
+19:52 EST [-] Enabling Multithreading.
+19:52 EST [SMTPTutorialClient,client] Sent 1 messages
+19:52 EST [SMTPTutorialClient,client] Stopping factory
+          &lt;__builtin__.SMTPClientFactory instance at 0xb791beec&gt;
+19:52 EST [-] Main loop terminated.
+19:52 EST [-] Server Shut Down.
 exarkun@boson:~/doc/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
