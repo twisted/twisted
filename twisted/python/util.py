@@ -761,7 +761,8 @@ def unsignedID(obj):
 
 def mergeFunctionMetadata(f, g):
     """
-    Merge function metadata from f -> g and return g
+    Overwrite C{g}'s docstring and name with values from C{f}.  Update
+    C{g}'s instance dictionary with C{f}'s.
     """
     try:
         g.__doc__ = f.__doc__
@@ -777,8 +778,8 @@ def mergeFunctionMetadata(f, g):
         try:
             g = new.function(
                 g.func_code, g.func_globals,
-                f.__name__, inspect.getargspec(f),
-                f.func_closure)
+                f.__name__, inspect.getargspec(g)[-1],
+                g.func_closure)
         except TypeError:
             pass
     return g

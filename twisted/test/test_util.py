@@ -64,8 +64,15 @@ class UtilTestCase(unittest.TestCase):
         def bar(x, y, (a, b), c=10, *d, **e):
             return p
         baz = util.mergeFunctionMetadata(foo, bar)
+        self.assertIdentical(baz(1, 2, (3, 4), quux=10), p)
 
-        self.assertIdentical(bar(1, 2, (3, 4), quux=10), p)
+        # Now one without a closure
+        def foo2(o=o):
+            return o
+        def bar2(x, y, (a, b), c=10, p=p, *d, **e):
+            return p
+        baz2 = util.mergeFunctionMetadata(foo2, bar2)
+        self.assertIdentical(baz2(1, 2, (3, 4), quux=10), p)
 
 
 class OrderedDictTest(unittest.TestCase):
