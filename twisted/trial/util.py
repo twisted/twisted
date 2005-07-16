@@ -22,14 +22,19 @@ _failureConditionals = [
 # ---------------------------------
 
 class SignalStateManager:
-    """keeps state of signal handlers and provides methods for restoration"""
+    """
+    keeps state of signal handlers and provides methods for restoration
+    """
+
+    exclude = ['SIGKILL', 'SIGSTOP', 'SIGRTMIN', 'SIGRTMAX']
+
     def __init__(self):
         self._store = {}
 
     def save(self):
         for signum in [getattr(signal, n) for n in dir(signal)
                        if n.startswith('SIG') and n[3] != '_'
-                       and n not in ("SIGKILL", "SIGSTOP")]:
+                       and n not in self.exclude]:
             self._store[signum] = signal.getsignal(signum)
 
     def restore(self):
