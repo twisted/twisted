@@ -540,10 +540,10 @@ class FTPClientTests(unittest.TestCase):
         d = ftpClient.list('some path', Dummy())
         m = []
         def _eb(failure):
+            print 'yay', repr(failure)
             m.append(failure)
             return None
         d.addErrback(_eb)
         from twisted.internet.main import CONNECTION_LOST
         ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
-        self.failUnless(1, len(m))
-
+        self.failUnless(m, m)

@@ -454,10 +454,11 @@ class FirstError(Exception):
         self.subFailure = failure
         self.index = index
 
-
     def __repr__(self):
         return 'FirstError(%r, %d)' % (self.subFailure, self.index)
 
+    def __str__(self):
+        return repr(self)
 
     def __getitem__(self, index):
         warnings.warn("FirstError.__getitem__ is deprecated.  "
