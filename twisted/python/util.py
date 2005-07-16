@@ -774,10 +774,13 @@ def mergeFunctionMetadata(f, g):
     try:
         g.__name__ = f.__name__
     except TypeError:
-        g = new.function(
-            g.func_code, g.func_globals,
-            f.__name__, inspect.getargspec(f),
-            f.func_closure)
+        try:
+            g = new.function(
+                g.func_code, g.func_globals,
+                f.__name__, inspect.getargspec(f),
+                f.func_closure)
+        except TypeError:
+            pass
     return g
 
 __all__ = [
