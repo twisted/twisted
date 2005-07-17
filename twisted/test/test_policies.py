@@ -8,10 +8,12 @@ from __future__ import nested_scopes
 from StringIO import StringIO
 
 from twisted.trial import unittest
+from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.test.test_task import Clock
 
 import time
 
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, address
 from twisted.protocols import policies
 
 
@@ -233,65 +235,100 @@ class ThrottlingTestCase(unittest.TestCase):
     testReadLimit.skip = "Inaccurate tests are worse than no tests."
     testWriteLimit.skip = "Inaccurate tests are worse than no tests."
 
+
 class TimeoutTestCase(unittest.TestCase):
-    def setUp(self):
-        self.failed = 0
+    def setUpClass(self):
+        self.clock = Clock()
+        self.clock.install()
+
+
+    def tearDownClass(self):
+        self.clock.uninstall()
+
+
+    def _serverSetup(self):
+        # Create a server factory, get a protocol from it, connect it to a
+        # transport, and return all three.
+        wrappedFactory = protocol.ServerFactory()
+        wrappedFactory.protocol = SimpleProtocol
+        factory = policies.TimeoutFactory(wrappedFactory, 3)
+        proto = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 12345))
+        transport = StringTransportWithDisconnection()
+        transport.protocol = proto
+        proto.makeConnection(transport)
+        return factory, proto, transport
+
 
     def testTimeout(self):
-        # Create a server which times out inactive connections
-        server = policies.TimeoutFactory(Server(), 3)
-        port = reactor.listenTCP(0, server, interface="127.0.0.1")
+        # Make sure that when a TimeoutFactory accepts a connection, it will
+        # time out that connection if no data is read or written within the
+        # timeout period.
 
-        # Create a client tha sends and receive nothing
-        client = SimpleProtocol()
-        f = SillyFactory(client)
-        reactor.connectTCP("127.0.0.1", port.getHost().port, f)
+        # Make the server-side connection
+        factory, proto, transport = self._serverSetup()
 
-        for i in range(10):
-            reactor.iterate()
-            self.assert_(client.connected)
+        # Let almost 3 time units pass
+        self.clock.pump(reactor, [0.0, 0.5, 1.0, 1.0, 0.4])
+        self.failIf(proto.wrappedProtocol.disconnected)
 
-        time.sleep(3.5)
-        for i in range(3):
-            reactor.iterate()
-        self.assert_(client.disconnected)
+        # Now let the timer elapse
+        self.clock.pump(reactor, [0.0, 0.2])
+        self.failUnless(proto.wrappedProtocol.disconnected)
 
-        # Clean up
-        return port.loseConnection()
 
-    def testThatSendingDataAvoidsTimeout(self):
-        # Create a server which times out inactive connections
-        server = policies.TimeoutFactory(Server(), 2)
-        port = reactor.listenTCP(0, server, interface="127.0.0.1")
+    def testSendAvoidsTimeout(self):
+        # Make sure that writing data to a transport from a protocol
+        # constructed by a TimeoutFactory resets the timeout countdown.
 
-        # Create a client that sends and receive nothing
-        client = SimpleSenderProtocol(self)
-        f = SillyFactory(client)
-        f.protocol = client
-        reactor.connectTCP("127.0.0.1", port.getHost().port, f)
-        reactor.callLater(3.5, client.finish)
-        reactor.run()
+        # Make the server-side connection
+        factory, proto, transport = self._serverSetup()
 
-        self.failUnlessEqual(self.failed, 0)
-        self.failUnlessEqual(client.data, 'foo'*4)
-        return port.loseConnection()
+        # Let half the countdown period elapse
+        self.clock.pump(reactor, [0.0, 0.5, 1.0])
+        self.failIf(proto.wrappedProtocol.disconnected)
 
-    def testThatReadingDataAvoidsTimeout(self):
-        # Create a server that sends occasionally
-        server = SillyFactory(SimpleSenderProtocol(self))
-        sport = reactor.listenTCP(0, server, interface='127.0.0.1')
+        # Send some data (proto is the /real/ proto's transport, so this is
+        # the write that gets called)
+        proto.write('bytes bytes bytes')
 
-        clientFactory = policies.WrappingFactory(SillyFactory(SimpleProtocol()))
-        cport = reactor.connectTCP('127.0.0.1', sport.getHost().port,
-                                   clientFactory)
+        # More time passes, putting us past the original timeout
+        self.clock.pump(reactor, [0.0, 1.0, 1.0])
+        self.failIf(proto.wrappedProtocol.disconnected)
 
-        reactor.iterate()
-        reactor.iterate()
-        reactor.callLater(5, server.p.finish)
-        reactor.run()
+        # Make sure writeSequence delays timeout as well
+        proto.writeSequence(['bytes'] * 3)
 
-        self.failUnlessEqual(self.failed, 0)
-        return sport.loseConnection()
+        # Tick tock
+        self.clock.pump(reactor, [0.0, 1.0, 1.0])
+        self.failIf(proto.wrappedProtocol.disconnected)
+
+        # Don't write anything more, just let the timeout expire
+        self.clock.pump(reactor, [0.0, 2.0])
+        self.failUnless(proto.wrappedProtocol.disconnected)
+
+
+    def testReceiveAvoidsTimeout(self):
+        # Make sure that receiving data also resets the timeout countdown.
+
+        # Make the server-side connection
+        factory, proto, transport = self._serverSetup()
+
+        # Let half the countdown period elapse
+        self.clock.pump(reactor, [0.0, 1.0, 0.5])
+        self.failIf(proto.wrappedProtocol.disconnected)
+
+        # Some bytes arrive, they should reset the counter
+        proto.dataReceived('bytes bytes bytes')
+
+        # We pass the original timeout
+        self.clock.pump(reactor, [0.0, 1.0, 1.0])
+        self.failIf(proto.wrappedProtocol.disconnected)
+
+        # Nothing more arrives though, the new timeout deadline is passed,
+        # the connection should be dropped.
+        self.clock.pump(reactor, [0.0, 1.0, 1.0])
+        self.failUnless(proto.wrappedProtocol.disconnected)
+
 
 class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
     timeOut  = 3

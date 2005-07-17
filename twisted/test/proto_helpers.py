@@ -9,6 +9,7 @@ except ImportError:
     from StringIO import StringIO
 
 from twisted.protocols import basic
+from twisted.internet import error
 
 class LineSendingProtocol(basic.LineReceiver):
     lostConn = False
@@ -68,3 +69,6 @@ class StringTransport:
         return ('StringIO', repr(self.io))
 
 
+class StringTransportWithDisconnection(StringTransport):
+    def loseConnection(self):
+        self.protocol.connectionLost(error.ConnectionDone("Bye."))

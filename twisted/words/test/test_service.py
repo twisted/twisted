@@ -14,12 +14,7 @@ from twisted.words.protocols import irc
 from twisted.spread import pb
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
 from twisted.internet.defer import deferredGenerator as dG, waitForDeferred as wFD
-from twisted.internet import address, error, reactor
-
-class StringTransportWithDisconnection(proto_helpers.StringTransport):
-    def loseConnection(self):
-        self.protocol.connectionLost(error.ConnectionDone("Bye."))
-
+from twisted.internet import address, reactor
 
 class RealmTestCase(unittest.TestCase):
     def _entityCreationTest(self, kind):
@@ -215,7 +210,7 @@ class TestPortal(object):
 class TestCaseUserAgg(object):
     def __init__(self, user, realm, factory, address=address.IPv4Address('TCP', '127.0.0.1', 54321)):
         self.user = user
-        self.transport = StringTransportWithDisconnection()
+        self.transport = proto_helpers.StringTransportWithDisconnection()
         self.protocol = factory.buildProtocol(address)
         self.transport.protocol = self.protocol
         self.user.mind = self.protocol

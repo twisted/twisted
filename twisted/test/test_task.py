@@ -14,6 +14,16 @@ class Clock(object):
     def __call__(self):
         return self.rightNow
 
+    def install(self):
+        # Violation is fun.
+        from twisted.internet import base
+        self.original = base.seconds
+        base.seconds = self
+
+    def uninstall(self):
+        from twisted.internet import base
+        base.seconds = self.original
+    
     def adjust(self, amount):
         self.rightNow += amount
 
@@ -32,15 +42,10 @@ class TestException(Exception):
 class LoopTestCase(unittest.TestCase):
     def setUpClass(self):
         self.clock = Clock()
-
-        # Violation is fun.
-        from twisted.internet import base
-        self.original = base.seconds
-        base.seconds = self.clock
+        self.clock.install()
 
     def tearDownClass(self):
-        from twisted.internet import base
-        base.seconds = self.original
+        self.clock.uninstall()
 
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
