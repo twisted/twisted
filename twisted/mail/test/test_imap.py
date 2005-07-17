@@ -26,6 +26,7 @@ from twisted.mail import smtp
 from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.internet import error
+from twisted.internet import reactor
 from twisted.trial import unittest
 from twisted.python import util
 from twisted.python import components
@@ -38,7 +39,7 @@ import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
 
-from twisted.test.proto_helpers import StringTransport
+from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -2344,8 +2345,6 @@ class SlowMailbox(SimpleMailbox):
     # Not a very nice implementation of fetch(), but it'll
     # do for the purposes of testing.
     def fetch(self, messages, uid):
-        from twisted.internet import reactor
-
         d = defer.Deferred()
         reactor.callLater(self.howSlow, d.callback, ())
         return d
@@ -2396,11 +2395,30 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         self.failUnless(self.stillConnected)
 
     def testIdleClientDoesDisconnect(self):
-        self.server.setTimeout(0.2)
+        from twisted.test.test_task import Clock
+        c = Clock()
+        c.install()
+        try:
+            # Hook up our server protocol
+            transport = StringTransportWithDisconnection()
+            transport.protocol = self.server
+            self.server.makeConnection(transport)
 
-        now = time.time()
-        self.loopback()
-        self.failUnless(time.time() - now < 0.4)
+            # Make sure we can notice when the connection goes away
+            lost = []
+            connLost = self.server.connectionLost
+            self.server.connectionLost = lambda reason: (lost.append(None), connLost(reason))[1]
+
+            # 2/3rds of the idle timeout elapses...
+            c.pump(reactor, [0.0] + [self.server.timeOut / 3.0] * 2)
+            self.failIf(lost, lost)
+
+            # Now some more
+            c.pump(reactor, [0.0, self.server.timeOut / 2.0])
+            self.failUnless(lost)
+        finally:
+            c.uninstall()
+
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
