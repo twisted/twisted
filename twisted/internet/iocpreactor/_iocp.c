@@ -812,6 +812,7 @@ init_iocp(void)
     if(!m) {
         return;
     }
+    Py_DECREF(m);
 
     s = socket(AF_INET, SOCK_STREAM, 0);
     ret = WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid1, sizeof(GUID),
