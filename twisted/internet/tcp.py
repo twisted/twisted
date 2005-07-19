@@ -212,8 +212,8 @@ class _TLSMixin:
                 if not (laststate & SSL.RECEIVED_SHUTDOWN):
                     self.socket.set_shutdown(SSL.SENT_SHUTDOWN)
             else:
-                warnings.warn("SSL connection shutdown possibly unreliable, "
-                              "please upgrade to ver 0.XX", category=UserWarning)
+                #warnings.warn("SSL connection shutdown possibly unreliable, "
+                #              "please upgrade to ver 0.XX", category=UserWarning)
                 self.socket.shutdown()
                 done = True
         except SSL.Error:
