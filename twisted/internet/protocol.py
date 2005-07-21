@@ -150,10 +150,12 @@ class _InstanceFactory(ClientFactory):
     
     def buildProtocol(self, addr):
         self.reactor.callLater(0, self.deferred.callback, self.instance)
+        del self.deferred
         return self.instance
 
     def clientConnectionFailed(self, connector, reason):
         self.reactor.callLater(0, self.deferred.errback, reason)
+        del self.deferred
 
 
 class ClientCreator:
