@@ -70,6 +70,7 @@ import Queue
 import string
 import time
 import sys
+import re
 from zope.interface import implements
 
 
@@ -209,9 +210,9 @@ def install():
     import main
     main.installReactor(r)
 
-
+_cmdLineQuoteRe = re.compile(r'(\\*)"')
 def _cmdLineQuote(s):
-    return '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    return '"' + _cmdLineQuoteRe.sub(r'\1\1\\"', s) + '"'
 
 class Process(abstract.FileDescriptor):
     """A process that integrates with the Twisted event loop.
