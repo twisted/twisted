@@ -335,7 +335,7 @@ def log(s):
 # XXX TODO - These attributes are really part of the
 # ITerminalTransport interface, I think.
 _KEY_NAMES = ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-              'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
+              'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN', 'NUMPAD_MIDDLE',
               'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
               'F10', 'F11', 'F12', 'ALT')
 
@@ -405,6 +405,8 @@ class ServerProtocol(protocol.Protocol):
                 if ch == '[':
                     self.state = 'bracket-escaped'
                     self.escBuf = []
+                elif ch == 'O':
+                    self.state = 'low-function-escaped'
                 else:
                     self.state = 'data'
                     self._handleShortControlSequence(ch)
@@ -469,6 +471,24 @@ class ServerProtocol(protocol.Protocol):
                 handler.keystrokeReceived(proto.LEFT_ARROW, None)
             else:
                 handler.unhandledControlSequence(buf + 'D')
+
+        def E(self, proto, handler, buf):
+            if buf == '\x1b[':
+                handler.keystrokeReceived(proto.NUMPAD_MIDDLE, None)
+            else:
+                handler.unhandledControlSequence(buf + 'E')
+
+        def F(self, proto, handler, buf):
+            if buf == '\x1b[':
+                handler.keystrokeReceived(proto.END, None)
+            else:
+                handler.unhandledControlSequence(buf + 'F')
+
+        def H(self, proto, handler, buf):
+            if buf == '\x1b[':
+                handler.keystrokeReceived(proto.HOME, None)
+            else:
+                handler.unhandledControlSequence(buf + 'H')
 
         def R(self, proto, handler, buf):
             if not proto._cursorReports:
