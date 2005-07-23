@@ -345,14 +345,25 @@ _KEY_NAMES = ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
               'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
               'F10', 'F11', 'F12', 'ALT')
 
+class _const(object):
+    """
+    @ivar name: A string naming this constant
+    """
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return '[' + self.name + ']'
+
+
+FUNCTION_KEYS = [
+    _const(_name) for _name in _KEY_NAMES]
+
 class ServerProtocol(protocol.Protocol):
     implements(ITerminalTransport)
 
     protocolFactory = None
     terminalProtocol = None
-
-    for keyID in _KEY_NAMES:
-        exec '%s = object()' % (keyID,)
 
     TAB = '\t'
     BACKSPACE = '\x7f'
@@ -752,6 +763,11 @@ class ServerProtocol(protocol.Protocol):
                 self.terminalProtocol.connectionLost(reason)
             finally:
                 self.terminalProtocol = None
+# Add symbolic names for function keys
+for name, const in zip(_KEY_NAMES, FUNCTION_KEYS):
+    setattr(ServerProtocol, name, const)
+
+
 
 class ClientProtocol(protocol.Protocol):
 
@@ -1029,12 +1045,7 @@ __all__ = [
     'ITerminalProtocol', 'ITerminalTransport',
 
     # Symbolic constants
-    'KEYBOARD_ACTION', 'KAM', 'INSERTION_REPLACEMENT', 'IRM',
-    'LINEFEED_NEWLINE', 'LNM',
-
-    'ERROR', 'CURSOR_KEY', 'ANSI_VT52', 'COLUMN', 'SCROLL', 'SCREEN',
-    'ORIGIN', 'AUTO_WRAP', 'AUTO_REPEAT', 'PRINTER_FORM_FEED',
-    'PRINTER_EXTENT',
+    'modes', 'privateModes', 'FUNCTION_KEYS',
 
     'CS_US', 'CS_UK', 'CS_DRAWING', 'CS_ALTERNATE', 'CS_ALTERNATE_SPECIAL',
     'G0', 'G1', 'G2', 'G3',
