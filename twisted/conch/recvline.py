@@ -168,11 +168,11 @@ class RecvLine(insults.TerminalProtocol):
 
     def setInsertMode(self):
         self.mode = 'insert'
-        self.terminal.setModes([insults.IRM])
+        self.terminal.setModes([insults.modes.IRM])
 
     def setTypeoverMode(self):
         self.mode = 'typeover'
-        self.terminal.resetModes([insults.IRM])
+        self.terminal.resetModes([insults.modes.IRM])
 
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new

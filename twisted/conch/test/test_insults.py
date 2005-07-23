@@ -10,8 +10,7 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
 from twisted.conch.insults.insults import CS_UK, CS_US, CS_DRAWING, CS_ALTERNATE, CS_ALTERNATE_SPECIAL
 from twisted.conch.insults.insults import G0, G1, G2, G3
-from twisted.conch.insults.insults import KAM, IRM, AUTO_WRAP, AUTO_REPEAT
-
+from twisted.conch.insults.insults import modes
 
 def _getattr(mock, name):
     return super(Mock, mock).__getattribute__(name)
@@ -308,15 +307,15 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
 
     def testModes(self):
         self.parser.dataReceived(
-            "\x1b[" + ';'.join(map(str, [IRM, AUTO_WRAP])) + "h")
+            "\x1b[" + ';'.join(map(str, [modes.KAM, modes.IRM, modes.LNM])) + "h")
         self.parser.dataReceived(
-            "\x1b[" + ';'.join(map(str, [AUTO_REPEAT, KAM])) + "l")
+            "\x1b[" + ';'.join(map(str, [modes.KAM, modes.IRM, modes.LNM])) + "l")
         occs = occurrences(self.proto)
 
-        result = self.assertCall(occs.pop(0), "setModes", ([IRM, AUTO_WRAP],))
+        result = self.assertCall(occs.pop(0), "setModes", ([modes.KAM, modes.IRM, modes.LNM],))
         self.failIf(occurrences(result))
 
-        result = self.assertCall(occs.pop(0), "resetModes", ([AUTO_REPEAT, KAM],))
+        result = self.assertCall(occs.pop(0), "resetModes", ([modes.KAM, modes.IRM, modes.LNM],))
         self.failIf(occurrences(result))
         self.failIf(occs)
 

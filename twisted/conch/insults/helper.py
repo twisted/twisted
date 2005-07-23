@@ -128,7 +128,7 @@ class TerminalBuffer(protocol.Protocol):
             self._scrollDown()
         if b in string.printable and b not in '\r\n':
             ch = (b, self._currentCharacterAttributes())
-            if self.modes.get(insults.IRM):
+            if self.modes.get(insults.modes.IRM):
                 self.lines[self.y][self.x:self.x] = [ch]
                 self.lines[self.y].pop()
             else:

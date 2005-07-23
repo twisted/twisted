@@ -261,45 +261,51 @@ class ITerminalTransport(iinternet.ITransport):
 CSI = '\x1b'
 CST = {'~': 'tilde'}
 
-# These are nominally public
-# XXX - Put them in a namespace or something
+class modes:
+    """ECMA 48 standardized modes
+    """
 
-# ANSI-Specified Modes
-KEYBOARD_ACTION = KAM = 2
+    # BREAKS YOPUR KEYBOARD MOFO
+    KEYBOARD_ACTION = KAM = 2
+
+    # When set, enables character insertion. New display characters
+    # move old display characters to the right. Characters moved past
+    # the right margin are lost.
+
+    # When reset, enables replacement mode (disables character
+    # insertion). New display characters replace old display
+    # characters at cursor position. The old character is erased.
+    INSERTION_REPLACEMENT = IRM = 4
+
+    # Set causes a received linefeed, form feed, or vertical tab to
+    # move cursor to first column of next line. RETURN transmits both
+    # a carriage return and linefeed. This selection is also called
+    # new line option.
+
+    # Reset causes a received linefeed, form feed, or vertical tab to
+    # move cursor to next line in current column. RETURN transmits a
+    # carriage return.
+    LINEFEED_NEWLINE = LNM = 20
 
 
-# Insertion-Replacement Mode (IRM)
+class privateModes:
+    """ANSI-Compatible Private Modes
+    """
+    ERROR = 0
+    CURSOR_KEY = 1
+    ANSI_VT52 = 2
+    COLUMN = 3
+    SCROLL = 4
+    SCREEN = 5
+    ORIGIN = 6
+    AUTO_WRAP = 7
+    AUTO_REPEAT = 8
+    PRINTER_FORM_FEED = 18
+    PRINTER_EXTENT = 19
 
-# ESC  [   4   h
-# 033 133 064 150
+    # Toggle cursor visibility (reset hides it)
+    CURSOR_MODE = 25
 
-# Set selects insert mode and turns INSERT on. New display characters move old
-# display characters to the right. Characters moved past the right margin are
-# lost.
-
-# ESC  [   4   l
-# 033 133 064 154
-
-# Reset selects replace mode and turns INSERT off. New display characters
-# replace old display characters at cursor position. The old character is
-# erased.
-
-INSERTION_REPLACEMENT = IRM = 4
-
-LINEFEED_NEWLINE = LNM = 20
-
-# ANSI-Compatible Private Modes
-ERROR = 0
-CURSOR_KEY = 1
-ANSI_VT52 = 2
-COLUMN = 3
-SCROLL = 4
-SCREEN = 5
-ORIGIN = 6
-AUTO_WRAP = 7
-AUTO_REPEAT = 8
-PRINTER_FORM_FEED = 18
-PRINTER_EXTENT = 19
 
 # Character sets
 CS_US = 'CS_US'
@@ -585,9 +591,15 @@ class ServerProtocol(protocol.Protocol):
         # XXX Support ANSI-Compatible private modes
         self.write('\x1b[%sh' % (';'.join(map(str, modes)),))
 
+    def setPrivateModes(self, modes):
+        self.write('\x1b[?%sh' % (';'.join(map(str, modes)),))
+
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
         self.write('\x1b[%sl' % (';'.join(map(str, modes)),))
+
+    def resetPrivateModes(self, modes):
+        self.write('\x1b[?%sl' % (';'.join(map(str, modes)),))
 
     def applicationKeypadMode(self):
         self.write('\x1b=')
