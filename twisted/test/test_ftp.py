@@ -50,20 +50,6 @@ class Dummy(basic.LineReceiver):
         pass
 
 
-class TestUtilityFunctions(unittest.TestCase):
-    def testCleanPath(self):
-        import os.path as osp
-        evilPaths = [r"..\/*/foobar/ding//dong/\\**",
-        r"../../\\**/*/fhet/*/..///\\//..///#$#221./*"]
-        exorcisedPaths = ["..\/foobar/ding/dong","../../../#$#221."]
-        for i in range(len(evilPaths)):
-            cp = ftp.cleanPath(evilPaths[i])
-            self.failUnlessEqual(cp, exorcisedPaths[i])
-            log.msg(cp)
-
-    testCleanPath.skip = 'this test needs more work'
-
-
 class _BufferingProtocol(protocol.Protocol):
     def connectionMade(self):
         self.buffer = ''
