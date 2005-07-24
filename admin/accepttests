@@ -1,4 +1,0 @@
-#!/usr/bin/python
-
-from accepttests import main
-main()
