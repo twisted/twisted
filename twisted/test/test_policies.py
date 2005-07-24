@@ -96,7 +96,7 @@ class ThrottlingTestCase(unittest.TestCase):
     def doIterations(self, count=5):
         for i in range(count):
             reactor.iterate()
-            
+
     def testLimit(self):
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
@@ -350,17 +350,21 @@ class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
 
 class TestTimeout(unittest.TestCase):
 
+    def setUpClass(self):
+        self.clock = Clock()
+        self.clock.install()
+
+    def tearDownClass(self):
+        self.clock.uninstall()
+
     def testTimeout(self):
         p = TimeoutTester()
         s = StringIOWithoutClosing()
         p.makeConnection(protocol.FileWrapper(s))
 
-        for i in range(10):
-            reactor.iterate()
+        self.clock.pump(reactor, [0, 0.5, 1.0, 1.0])
         self.failIf(p.timedOut)
-
-        time.sleep(3.5)
-        reactor.iterate()
+        self.clock.pump(reactor, [0, 1.0])
         self.failUnless(p.timedOut)
 
     def testNoTimeout(self):
@@ -368,21 +372,12 @@ class TestTimeout(unittest.TestCase):
         s = StringIOWithoutClosing()
         p.makeConnection(protocol.FileWrapper(s))
 
-        for i in range(10):
-            reactor.iterate()
+        self.clock.pump(reactor, [0, 0.5, 1.0, 1.0])
         self.failIf(p.timedOut)
-
-        time.sleep(2)
         p.dataReceived('hello there')
-        time.sleep(1.5)
-
-        for i in range(10):
-            reactor.iterate()
+        self.clock.pump(reactor, [0, 1.0, 1.0, 0.5])
         self.failIf(p.timedOut)
-
-        time.sleep(2)
-        for i in range(10):
-            reactor.iterate()
+        self.clock.pump(reactor, [0, 1.0])
         self.failUnless(p.timedOut)
 
     def testResetTimeout(self):
@@ -390,43 +385,38 @@ class TestTimeout(unittest.TestCase):
         p.timeOut = None
         s = StringIOWithoutClosing()
         p.makeConnection(protocol.FileWrapper(s))
-        
+
         p.setTimeout(1)
         self.assertEquals(p.timeOut, 1)
-        
-        for i in range(10):
-            reactor.iterate()
-        self.failIf(p.timedOut)
 
-        time.sleep(1.1)
-        reactor.iterate()
+        self.clock.pump(reactor, [0, 0.9])
+        self.failIf(p.timedOut)
+        self.clock.pump(reactor, [0, 0.2])
         self.failUnless(p.timedOut)
-        p.connectionLost()
-    
+
     def testCancelTimeout(self):
         p = TimeoutTester()
         p.timeOut = 5
         s = StringIOWithoutClosing()
         p.makeConnection(protocol.FileWrapper(s))
-        
+
         p.setTimeout(None)
         self.assertEquals(p.timeOut, None)
-        
-        for i in range(10):
-            reactor.iterate()
+
+        self.clock.pump(reactor, [0, 5, 5, 5])
         self.failIf(p.timedOut)
-        p.connectionLost()
 
     def testReturn(self):
         p = TimeoutTester()
         p.timeOut = 5
-        
+
         self.assertEquals(p.setTimeout(10), 5)
         self.assertEquals(p.setTimeout(None), 10)
         self.assertEquals(p.setTimeout(1), None)
         self.assertEquals(p.timeOut, 1)
-        
-        p.connectionLost()
+
+        # Clean up the DelayedCall
+        p.setTimeout(None)
 
 
 class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
@@ -435,7 +425,7 @@ class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
         # Make a basic factory
         factory = policies.LimitTotalConnectionsFactory()
         factory.protocol = protocol.Protocol
-        
+
         # connectionCount starts at zero
         self.assertEqual(0, factory.connectionCount)
 
@@ -444,7 +434,7 @@ class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
         self.assertEqual(1, factory.connectionCount)
         p2 = factory.buildProtocol(None)
         self.assertEqual(2, factory.connectionCount)
-        
+
         # and decrements as they are lost
         p1.connectionLost(None)
         self.assertEqual(1, factory.connectionCount)
@@ -461,19 +451,19 @@ class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
         p = factory.buildProtocol(None)
         self.assertNotEqual(None, p)
         self.assertEqual(1, factory.connectionCount)
-        
+
         # Try to make a second connection, which will exceed the connection
         # limit.  This should return None, because overflowProtocol is None.
         self.assertEqual(None, factory.buildProtocol(None))
         self.assertEqual(1, factory.connectionCount)
-        
+
         # Define an overflow protocol
         class OverflowProtocol(protocol.Protocol):
             def connectionMade(self):
                 factory.overflowed = True
         factory.overflowProtocol = OverflowProtocol
         factory.overflowed = False
-        
+
         # Try to make a second connection again, now that we have an overflow
         # protocol.  Note that overflow connections count towards the connection
         # count.
@@ -481,7 +471,7 @@ class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
         op.makeConnection(None) # to trigger connectionMade
         self.assertEqual(True, factory.overflowed)
         self.assertEqual(2, factory.connectionCount)
-        
+
         # Close the connections.
         p.connectionLost(None)
         self.assertEqual(1, factory.connectionCount)
