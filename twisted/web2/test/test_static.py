@@ -1,4 +1,4 @@
-import tempfile, os
+import os
 
 from twisted.web2.test.test_server import BaseCase
 from twisted.web2 import static
@@ -9,7 +9,7 @@ from twisted.trial import util, assertions
 
 class TestFileSaver(BaseCase):
     def setUpClass(self):
-        self.tempdir = tempfile.mktemp()
+        self.tempdir = self.mktemp()
         os.mkdir(self.tempdir)
         
         self.root = static.FileSaver(self.tempdir,

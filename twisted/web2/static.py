@@ -320,8 +320,7 @@ class FileSaver(resource.PostableResource):
         filestream = stream.FileStream(fileobject)
         
         if self.isWriteable(outname, mimetype, filestream):
-            stream.readIntoFile(filestream, file(outname, 'w'))
-            os.chmod(outname, self.permissions)
+            stream.readIntoFile(filestream, os.open(outname, 'w', self.permissions))
 
     def render(self, ctx):
         content = ["<html><body>"]
