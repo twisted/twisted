@@ -343,7 +343,9 @@ def log(s):
 _KEY_NAMES = ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
               'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN', 'NUMPAD_MIDDLE',
               'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-              'F10', 'F11', 'F12', 'ALT')
+              'F10', 'F11', 'F12',
+
+              'ALT', 'SHIFT', 'CONTROL')
 
 class _const(object):
     """
@@ -526,6 +528,12 @@ class ServerProtocol(protocol.Protocol):
                         d.callback((Pc - 1, Pl - 1))
             else:
                 handler.unhandledControlSequence(buf + 'R')
+
+        def Z(self, proto, handler, buf):
+            if buf == '\x1b[':
+                handler.keystrokeReceived(proto.TAB, proto.SHIFT)
+            else:
+                handler.unhandledControlSequence(buf + 'Z')
 
         def tilde(self, proto, handler, buf):
             map = {1: proto.HOME, 2: proto.INSERT, 3: proto.DELETE,
