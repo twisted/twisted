@@ -8,6 +8,8 @@ from twisted.internet import reactor, protocol, error, app, abstract
 from twisted.internet import interfaces
 from twisted.internet.utils import getProcessOutput
 
+from twisted.test.test_task import Clock
+
 try:
     from twisted.internet import ssl
 except ImportError:
@@ -225,45 +227,42 @@ class InterfaceTestCase(unittest.TestCase):
         del self._called
         del self._calledTime
 
-    def _resetcallback(self):
-        self._resetcallbackTime = time.time()
-
-    def _delaycallback(self):
-        self._delaycallbackTime = time.time()
 
     def testCallLaterDelayAndReset(self):
-        # this test will fail if the test host is busy and this script is
-        # delayed by more than about 100ms
-        self._resetcallbackTime = None
-        self._delaycallbackTime = None
-        ireset = reactor.callLater(0.4, self._resetcallback)
-        idelay = reactor.callLater(0.5, self._delaycallback)
-        start = time.time()
-        # chug a little before delaying
-        while time.time() - start < 0.2:
-            reactor.iterate(0.01)
-        ireset.reset(0.4) # move expiration from 0.4 to (now)0.2+0.4=0.6
-        idelay.delay(0.3) # move expiration from 0.5 to (orig)0.5+0.3=0.8
-        # both should be called sometime during this
-        while time.time() - start < 2:
-            reactor.iterate(0.01)
-        ireset_elapsed = self._resetcallbackTime - start
-        idelay_elapsed = self._delaycallbackTime - start
-        #self.assertApproximates(ireset_elapsed, 0.6, 0.4,
-        #                        "ireset fired at %f (wanted 0.6)" % \
-        #                        ireset_elapsed)
-        #self.assertApproximates(idelay_elapsed, 0.8, 0.4,
-        #                        "idelay fired at %f (wanted 0.8)" % \
-        #                        idelay_elapsed)
-        self.failUnless(idelay_elapsed >= ireset_elapsed,
-                        "got %f, %f" % (idelay_elapsed, ireset_elapsed))
-        self.failUnless(ireset_elapsed >= (0.6-0.05),
-                        "got %f (wanted 0.6)" % ireset_elapsed)
-        self.failUnless(idelay_elapsed >= (0.8-0.05),
-                        "got %f (wanted 0.8)" % idelay_elapsed)
+        clock = Clock()
+        clock.install()
+        try:
+            callbackTimes = [None, None]
+            
+            def resetCallback():
+                callbackTimes[0] = clock()
+            
+            def delayCallback():
+                callbackTimes[1] = clock()
 
-        del self._resetcallbackTime
-        del self._delaycallbackTime
+            ireset = reactor.callLater(2, resetCallback)
+            idelay = reactor.callLater(3, delayCallback)
+            
+            clock.pump(reactor, [0, 1])
+            
+            ireset.reset(2) # (now)1 + 2 = 3
+            idelay.delay(3) # (orig)3 + 3 = 6
+
+            clock.pump(reactor, [0, 1])
+
+            self.assertIdentical(callbackTimes[0], None)
+            self.assertIdentical(callbackTimes[0], None)
+
+            clock.pump(reactor, [0, 1])
+
+            self.assertEquals(callbackTimes[0], 3)
+            self.assertEquals(callbackTimes[1], None)
+
+            clock.pump(reactor, [0, 3])
+            self.assertEquals(callbackTimes[1], 6)
+        finally:
+            clock.uninstall()
+
 
     def testCallLaterTime(self):
         d = reactor.callLater(10, lambda: None)
