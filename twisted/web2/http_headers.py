@@ -278,7 +278,8 @@ def generateKeyValues(kvs):
             l.append('%s' % k)
         else:
             l.append('%s=%s' % (k,v))
-    return ';'.join(l)
+    return "; ".join(l)
+
 
 class MimeType:
     def __init__(self, mediaType, mediaSubtype, params=()):
@@ -473,6 +474,19 @@ def parseRetryAfter(header):
         # or datetime
         return parseDateTime(header)
 
+def parseWWWAuthenticate(header):
+    scheme, rest = split(header, Token(' '))
+    challenge = [parseKeyValue(arg) for arg in split(rest, Token(','))]
+    
+    return scheme[0], dict(challenge)
+
+def parseAuthorization(header):
+    scheme, rest = header.split(' ', 1)
+    if scheme.lower() == 'digest':
+        return parseWWWAuthenticate(tokenize(header))
+    else:
+        return scheme, rest
+
 #### Header generators
 def generateAccept(accept):
     mimeType,q = accept
@@ -590,6 +604,21 @@ def generateIfRange(dateOrETag):
     else:
         return generateDateTime(dateOrETag)
 
+def generateWWWAuthenticate(seq):
+    scheme, challenge = seq[0], dict(seq[1])
+    l = []
+    for k,v in challenge.iteritems():
+        l.append("%s=%s" % (k, quoteString(v)))
+
+    return ["%s %s" % (scheme, ", ".join(l))]
+
+def generateAuthorization(seq):
+    # seq[0] should be the scheme either digest or basic
+    if seq[0].lower() == 'digest':
+        return generateWWWAuthenticate(seq)
+    else:
+        return [' '.join(seq)]
+    
 ####
 class ETag:
     def __init__(self, tag, weak=False):
@@ -1053,10 +1082,11 @@ class Headers:
 
     def _toRaw(self, name):
         generator = self.generators.get(name, None)
+
         if generator is None:
             # print self.generators
             raise ValueError("No header generator for header '%s', either add one or use setHeaderRaw." % (name,))
-        
+
         h = self._headers[name]
         for g in generator:
             h = g(h)
@@ -1162,7 +1192,7 @@ class Headers:
     def _mutateRaise(self, *args):
         raise AttributeError("This header object is immutable as the headers have already been sent.")
 
-        
+
 """The following dicts are all mappings of header to list of operations
    to perform. The first operation should generally be 'tokenize' if the
    header can be parsed according to the normal tokenization rules. If
@@ -1203,7 +1233,7 @@ parser_request_headers = {
     'Accept-Charset': (tokenize, listParser(parseAcceptQvalue), ODict, addDefaultCharset),
     'Accept-Encoding':(tokenize, listParser(parseAcceptQvalue), ODict, addDefaultEncoding),
     'Accept-Language':(tokenize, listParser(parseAcceptQvalue), ODict),
-#    'Authorization':str # what is "credentials"
+    'Authorization': (parseAuthorization,),
     'Cookie':(parseCookie,),
     'Expect':(tokenize, listParser(parseExpect), ODict),
     'From':(last,),
@@ -1227,7 +1257,7 @@ generator_request_headers = {
     'Accept-Charset': (iteritems, listGenerator(generateAcceptQvalue),singleHeader),
     'Accept-Encoding': (iteritems, removeDefaultEncoding, listGenerator(generateAcceptQvalue),singleHeader),
     'Accept-Language': (iteritems, listGenerator(generateAcceptQvalue),singleHeader),
-#    'Authorization':str # what is "credentials"
+    'Authorization': (generateAuthorization,), # what is "credentials"
     'Cookie':(generateCookie,singleHeader),
     'Expect':(iteritems, listGenerator(generateExpect), singleHeader),
     'From':(str,singleHeader),
@@ -1256,7 +1286,7 @@ parser_response_headers = {
     'Set-Cookie':(parseSetCookie,),
     'Set-Cookie2':(tokenize, parseSetCookie2),
     'Vary':(tokenize, filterTokens),
-#    'WWW-Authenticate'
+    'WWW-Authenticate': (tokenize, parseWWWAuthenticate)
 }
 
 generator_response_headers = {
@@ -1270,7 +1300,7 @@ generator_response_headers = {
     'Set-Cookie':(generateSetCookie,),
     'Set-Cookie2':(generateSetCookie2,),
     'Vary':(generateList, singleHeader),
-#    'WWW-Authenticate'
+    'WWW-Authenticate':(generateWWWAuthenticate,)
 }
 
 parser_entity_headers = {
