@@ -277,7 +277,7 @@ class FileSaver(resource.PostableResource):
                     http_headers.MimeType('text', 'html'),
                     http_headers.MimeType('text', 'css'))
     
-    def __init__(self, destination, expectedFields=[], allowedTypes=None, maxBytes=1000000, permissions=755):
+    def __init__(self, destination, expectedFields=[], allowedTypes=None, maxBytes=1000000, permissions=0644):
         self.destination = destination
         self.allowedTypes = allowedTypes or self.allowedTypes
         self.maxBytes = maxBytes
@@ -297,7 +297,7 @@ class FileSaver(resource.PostableResource):
         """returns True if it's "safe" to write this file,
         otherwise it raises an exception
         """
-
+        
         if filestream.length > self.maxBytes:
             raise IOError("%s: File exceeds maximum length (%d > %d)" % (filename,
                                                                          filestream.length,
@@ -309,7 +309,7 @@ class FileSaver(resource.PostableResource):
  
         if mimetype not in self.allowedTypes:
             raise IOError("%s: File type not allowed %s" % (filename, mimetype))
-
+        
         return True
     
     def writeFile(self, filename, mimetype, fileobject):
@@ -318,9 +318,14 @@ class FileSaver(resource.PostableResource):
         """
         outname = self.makeUniqueName(os.path.join(self.destination, filename))
         filestream = stream.FileStream(fileobject)
-        
+
         if self.isWriteable(outname, mimetype, filestream):
-            stream.readIntoFile(filestream, os.open(outname, 'w', self.permissions))
+            fd = os.fdopen(os.open(outname, os.O_WRONLY | os.O_CREAT,
+                                   self.permissions), 'w', 0)
+
+            stream.readIntoFile(filestream, fd)
+
+        return outname
 
     def render(self, ctx):
         content = ["<html><body>"]
@@ -331,7 +336,9 @@ class FileSaver(resource.PostableResource):
             for fieldName in req.files:
                 if fieldName in self.expectedFields:
                     try:
-                        self.writeFile(*req.files[fieldName])
+                        outname = self.writeFile(*req.files[fieldName])
+                        content.append("Saved file %s<br />" % outname)
+                        
                     except IOError, err:
                         content.append(str(err) + "<br />")
                 else:

@@ -14,12 +14,9 @@ class TestFileSaver(BaseCase):
         
         self.root = static.FileSaver(self.tempdir,
                               expectedFields=['FileNameOne'],
-                              maxBytes=10)
+                              maxBytes=16)
         self.root.addSlash = True
 
-    def tearDownClass(self):
-        os.rmdir(self.tempdir)
-        
     def uploadFile(self, fieldname, filename, mimetype, content, resrc=None, host='foo', path='/'):
         if not resrc:
             resrc = self.root
@@ -54,6 +51,10 @@ Content-Type: %s\r
 
             self.assertEquals(failed, expectedFailure)
 
+    def fileNameFromResponse(self, response):
+        (code, headers, data, failure) = response
+        return data[data.find('Saved file')+11:data.find('<br />')]
+
     def assertInResponse(self, response, expected_response, failure=False):
         d = response
         d.addCallback(self._CbAssertInResponse, expected_response, failure)
@@ -61,7 +62,7 @@ Content-Type: %s\r
 
     def testEnforcesMaxBytes(self):
         self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
-                                         'text/html', 'X'*11),
+                                         'text/html', 'X'*32),
                               (200, {}, 'exceeds maximum length'))
 
     def testEnforcesMimeType(self):
@@ -73,4 +74,22 @@ Content-Type: %s\r
         self.assertInResponse(self.uploadFile('NotARealField', 'myfilename',
                                               'text/html', 'X'),
                               (200, {}, 'not a valid field'))
+
+    def testReportFileSave(self):
+        self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
+                                              'text/plain',
+                                              'X'),
+                              (200, {}, 'Saved file'))
+
+    def testCompareFileConents(self):
+        def gotFname(fname):
+            contents = file(fname, 'r').read()
+            self.assertEquals(contents, 'Test contents')
+        
+        return self.uploadFile('FileNameOne', 'myfilename', 'text/plain',
+                               'Test contents').addCallback(
+            self.fileNameFromResponse
+            ).addCallback(gotFname)
+
+        
 
