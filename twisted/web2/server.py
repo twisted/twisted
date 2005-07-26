@@ -67,6 +67,7 @@ def parsePOSTData(request):
     
     parser = None
     ctype = request.headers.getHeader('content-type')
+
     if ctype is None:
         return defer.succeed(None)
 
@@ -88,7 +89,7 @@ def parsePOSTData(request):
         d.addCallbacks(updateArgs, error)
         return d
     elif ctype.mediaType == 'multipart' and ctype.mediaSubtype == 'form-data':
-        for f in ctype.params:
+        for f in ctype.params.iteritems():
             if f[0]=='boundary':
                 boundary=f[1]
                 break

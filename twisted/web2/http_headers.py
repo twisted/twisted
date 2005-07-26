@@ -278,13 +278,17 @@ def generateKeyValues(kvs):
             l.append('%s' % k)
         else:
             l.append('%s=%s' % (k,v))
-    return ';'.join(l)
+    return ";".join(l)
+
 
 class MimeType:
-    def __init__(self, mediaType, mediaSubtype, params=()):
+    def __init__(self, mediaType, mediaSubtype, params=(), **kwargs):
         self.mediaType = mediaType
         self.mediaSubtype = mediaSubtype
-        self.params = params
+        self.params = dict(params)
+
+        if kwargs:
+            self.params.update(kwargs)
 
     def __eq__(self, other):
         return (isinstance(other, MimeType) and
@@ -299,7 +303,7 @@ class MimeType:
         return "MimeType(%r, %r, %r)" % (self.mediaType, self.mediaSubtype, self.params)
 
     def __hash__(self):
-        return hash(self.mediaType)^hash(self.mediaSubtype)^hash(self.params)
+        return hash(self.mediaType)^hash(self.mediaSubtype)^hash(tuple(self.params.iteritems()))
     
 ##### Specific header parsers.
 def parseAccept(field):
@@ -479,7 +483,7 @@ def generateAccept(accept):
 
     out="%s/%s"%(mimeType.mediaType, mimeType.mediaSubtype)
     if mimeType.params:
-        out+=';'+generateKeyValues(mimeType.params)
+        out+=';'+generateKeyValues(mimeType.params.iteritems())
     
     if q != 1.0:
         out+=(';q=%.3f' % (q,)).rstrip('0').rstrip('.')
@@ -581,7 +585,7 @@ def generateRetryAfter(when):
 def generateContentType(mimeType):
     out="%s/%s"%(mimeType.mediaType, mimeType.mediaSubtype)
     if mimeType.params:
-        out+=';'+generateKeyValues(mimeType.params)
+        out+=';'+generateKeyValues(mimeType.params.iteritems())
     return out
 
 def generateIfRange(dateOrETag):
