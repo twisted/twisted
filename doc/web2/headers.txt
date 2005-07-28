@@ -33,7 +33,8 @@ Request headers (client to server):
      e.g. ``{'deflate': 1.0, 'gzip': 1.0, identity: 0.0001}``
  - Accept-Language: dict of string language -> float 0.0 to 1.0
      e.g. ``{'en-us': 1.0, 'en': 0.5}``
- - Authorization: TODO
+ - Authorization: a list containing the scheme and a scheme dependent part
+     e.g. ``['basic', 'base64 encoded username:password']`` or ``['digest', {'realm': 'MyRealm', 'username': 'MyUserName'}]``
  - From: string. Useless, and unused, header.
      e.g. ``"email@a.b.c"``. 
  - Host: string. Use request.host instead of accessing this header directly.
@@ -71,7 +72,8 @@ Response headers:
  - Set-Cookie: list of Cookie instances
  - Set-Cookie2: list of Cookie instances
  - Vary: list of string header names
- - WWW-Authenticate: TODO
+ - WWW-Authenticate: list containing a scheme and dictionary containing challenge information
+     e.g. ``['basic', {'realm': 'MyRealm'}]`` or ``['digest', {'realm': 'MyRealm', 'qop': 'auth', 'nonce': 'mynonce'}]``
 
 General headers:
 

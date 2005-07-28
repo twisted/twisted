@@ -251,8 +251,17 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
             )
         self.runRoundtripTest("Accept-Language", table)
 
-#     def testAuthorization(self):
-#         fail
+    def testAuthorization(self):
+        table = (
+            ("Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+             ("basic", "dXNlcm5hbWU6cGFzc3dvcmQ="),
+             "basic dXNlcm5hbWU6cGFzc3dvcmQ="),
+            ('Digest nonce="bar", realm="foo", username="baz", response="bax"',
+             ['digest', {'nonce': 'bar', 'realm': 'foo', 'username': 'baz', 'response': 'bax'}],
+             'digest nonce="bar", realm="foo", username="baz", response="bax"')
+            )
+
+        self.runRoundtripTest("Authorization", table)
 
     def testCookie(self):
         table = (
@@ -410,6 +419,7 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
     def testUserAgent(self):
         self.runRoundtripTest("User-Agent", (("CERN-LineMode/2.15 libwww/2.17b3", "CERN-LineMode/2.15 libwww/2.17b3"),))
 
+
 class ResponseHeaderParsingTests(HeaderParsingTestBase):
     def testAcceptRanges(self):
         self.runRoundtripTest("Accept-Ranges", (("bytes", ["bytes"]), ("none", ["none"])))
@@ -451,8 +461,16 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
             )
         self.runRoundtripTest("Vary", table)
         
-#     def testWWWAuthenticate(self):
-#         fail
+    def testWWWAuthenticate(self):
+        table = (
+            ('Digest realm="foo", nonce="bAr", qop="auth"',
+             ['digest', {'realm': 'foo', 'nonce': 'bAr', 'qop': 'auth'}],
+             'digest realm="foo", nonce="bAr", qop="auth"'),
+            ('basic realm="foo"',
+             ['basic', {'realm': 'foo'}], 'basic realm="foo"'))
+         
+        self.runRoundtripTest("WWW-Authenticate", table)
+             
 
 class EntityHeaderParsingTests(HeaderParsingTestBase):
     def testAllow(self):
@@ -560,3 +578,24 @@ class DateTimeTest(unittest.TestCase):
             time2 = http_headers.parseDateTime(timestr)
             self.assertEquals(time, time2)
             
+
+class TestMimeType(unittest.TestCase):
+    def testEquality(self):
+        """Test that various uses of the constructer are equal
+        """
+
+        kwargMime = http_headers.MimeType('text', 'plain',
+                                          key='value',
+                                          param=None)
+        dictMime = http_headers.MimeType('text', 'plain',
+                                         {'param': None,
+                                          'key': 'value'})
+        tupleMime = http_headers.MimeType('text', 'plain',
+                                          (('param', None),
+                                           ('key', 'value')))
+
+        self.assertEquals(kwargMime, dictMime)
+        self.assertEquals(dictMime, tupleMime)
+        self.assertEquals(kwargMime, tupleMime)
+        
+                                         
