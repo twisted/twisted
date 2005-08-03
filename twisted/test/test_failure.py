@@ -83,3 +83,20 @@ class FailureTestCase(unittest.TestCase):
         self.assertEquals(innerline, '1/0')
 
     testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
+
+    def _getStringFailure(self):
+        try:
+            raise "bugger off"
+        except:
+            f = failure.Failure()
+        return f
+
+    def testStringExceptions(self):
+        # String exceptions used to totally bugged f.raiseException
+        f = self._getStringFailure()
+        try:
+            f.raiseException()
+        except:
+            self.assertEquals(sys.exc_info()[0], "bugger off")
+        else:
+            raise AssertionError("Should have raised")

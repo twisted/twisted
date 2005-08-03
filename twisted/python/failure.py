@@ -247,7 +247,7 @@ class Failure:
         raise the original exception, preserving traceback
         information if available.
         """
-        raise self.value.__class__, self.value, self.tb
+        raise self.type, self.value, self.tb
 
 
     def __repr__(self):
