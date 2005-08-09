@@ -237,6 +237,9 @@ class FilePath:
     def basename(self):
         return basename(self.path)
 
+    def dirname(self):
+        return dirname(self.path)
+
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         sib.open('w').write(content)
