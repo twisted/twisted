@@ -240,6 +240,9 @@ class FilePath:
     def dirname(self):
         return dirname(self.path)
 
+    def parent(self):
+        return self.clonePath(self.dirname())
+
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         sib.open('w').write(content)
