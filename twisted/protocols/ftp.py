@@ -1819,13 +1819,13 @@ class FTPClientBasic(basic.LineReceiver):
         line = line.rstrip()
         self.response.append(line)
 
-        code = line[0:3]
-
         # Bail out if this isn't the last line of a response
         # The last line of response starts with 3 digits followed by a space
         codeIsValid = re.match(r'\d{3} ', line)
         if not codeIsValid:
             return
+        
+        code = line[0:3]
 
         # Ignore marks
         if code[0] == '1':
