@@ -526,6 +526,67 @@ class FTPClientTests(unittest.TestCase):
         self.failUnless(m, m)
 
 
+class DummyTransport:
+    def write(self, bytes):
+        pass
+
+
+class FTPClientBasicTests(unittest.TestCase):
+
+    def testGreeting(self):
+        # The first response is captured as a greeting.
+        ftpClient = ftp.FTPClientBasic()
+        ftpClient.lineReceived('220 Imaginary FTP.')
+        self.failUnlessEqual(['220 Imaginary FTP.'], ftpClient.greeting)
+
+    def testMultilineResponse(self):
+        ftpClient = ftp.FTPClientBasic()
+        ftpClient.transport = DummyTransport()
+        ftpClient.lineReceived('220 Imaginary FTP.')
+
+        # Queue (and send) a dummy command, and set up a callback to capture the
+        # result
+        deferred = ftpClient.queueStringCommand('BLAH')
+        result = []
+        deferred.addCallback(result.append)
+        deferred.addErrback(self.fail)
+
+        # Send the first line of a multiline response.
+        ftpClient.lineReceived('210-First line.')
+        self.failUnlessEqual([], result)
+
+        # Send a second line, again prefixed with "nnn-".
+        ftpClient.lineReceived('123-Second line.')
+        self.failUnlessEqual([], result)
+
+        # Send a plain line of text, no prefix.
+        ftpClient.lineReceived('Just some text.')
+        self.failUnlessEqual([], result)
+
+        # Now send a short (less than 4 chars) line.
+        ftpClient.lineReceived('Hi')
+        self.failUnlessEqual([], result)
+
+        # Now send an empty line.
+        ftpClient.lineReceived('')
+        self.failUnlessEqual([], result)
+
+        # And a line with 3 digits in it, and nothing else.
+        ftpClient.lineReceived('321')
+        self.failUnlessEqual([], result)
+
+        # Now finish it.
+        ftpClient.lineReceived('210 Done.')
+        self.failUnlessEqual(
+            ['210-First line.',
+             '123-Second line.',
+             'Just some text.',
+             'Hi',
+             '',
+             '321',
+             '210 Done.'], result[0])
+
+
 class PathHandling(unittest.TestCase):
     def testNormalizer(self):
         for inp, outp in [('a', ['a']),

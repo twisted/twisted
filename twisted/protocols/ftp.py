@@ -1823,8 +1823,8 @@ class FTPClientBasic(basic.LineReceiver):
 
         # Bail out if this isn't the last line of a response
         # The last line of response starts with 3 digits followed by a space
-        codeIsValid = len(filter(lambda c: c in '0123456789', code)) == 3
-        if not (codeIsValid and line[3] == ' '):
+        codeIsValid = re.match(r'\d{3} ', line)
+        if not codeIsValid:
             return
 
         # Ignore marks
