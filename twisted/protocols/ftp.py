@@ -1802,14 +1802,38 @@ class FTPClientBasic(basic.LineReceiver):
             return None
 
     def queueLogin(self, username, password):
-        """Login: send the username, send the password."""
-        for command in ('USER ' + username,
-                        'PASS ' + password):
-            d = self.queueStringCommand(command, public=0)
+        """Login: send the username, send the password.
+        
+        If the password is C{None}, the PASS command won't be sent.  Also, if
+        the response to the USER command has a response code of 230 (User logged
+        in), then PASS won't be sent either.
+        """
+        # Prepare the USER command
+        deferreds = []
+        userDeferred = self.queueStringCommand('USER ' + username, public=0)
+        deferreds.append(userDeferred)
+        
+        # Prepare the PASS command (if a password is given)
+        if password is not None:
+            passwordCmd = FTPCommand('PASS ' + password, public=0)
+            self.queueCommand(passwordCmd)
+            deferreds.append(passwordCmd.deferred)
+
+            # Avoid sending PASS if the response to USER is 230.
+            # (ref: http://cr.yp.to/ftp/user.html#user)
+            def cancelPasswordIfNotNeeded(response):
+                if response[0].startswith('230'):
+                    # No password needed!
+                    self.actionQueue.remove(passwordCmd)
+                return response
+            userDeferred.addCallback(cancelPasswordIfNotNeeded)
+
+        # Error handling.
+        for deferred in deferreds:
             # If something goes wrong, call fail
-            d.addErrback(self.fail)
+            deferred.addErrback(self.fail)
             # But also swallow the error, so we don't cause spurious errors
-            d.addErrback(lambda x: None)
+            deferred.addErrback(lambda x: None)
 
     def lineReceived(self, line):
         """(Private) Parses the response messages from the FTP server."""

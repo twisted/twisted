@@ -530,6 +530,11 @@ class DummyTransport:
     def write(self, bytes):
         pass
 
+class BufferingTransport:
+    buffer = ''
+    def write(self, bytes):
+        self.buffer += bytes
+
 
 class FTPClientBasicTests(unittest.TestCase):
 
@@ -585,6 +590,45 @@ class FTPClientBasicTests(unittest.TestCase):
              '',
              '321',
              '210 Done.'], result[0])
+
+    def testNoPasswordGiven(self):
+        """Passing None as the password avoids sending the PASS command."""
+        # Create a client, and give it a greeting.
+        ftpClient = ftp.FTPClientBasic()
+        ftpClient.transport = BufferingTransport()
+        ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
+
+        # Queue a login with no password
+        ftpClient.queueLogin('bob', None)
+        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.buffer)
+
+        # Clear the test buffer, acknowledge the USER command.
+        ftpClient.transport.buffer = ''
+        ftpClient.lineReceived('200 Hello bob.')
+
+        # The client shouldn't have sent anything more (i.e. it shouldn't have
+        # sent a PASS command).
+        self.failUnlessEqual('', ftpClient.transport.buffer)
+
+    def testNoPasswordNeeded(self):
+        """Receiving a 230 response to USER prevents PASS from being sent."""
+        # Create a client, and give it a greeting.
+        ftpClient = ftp.FTPClientBasic()
+        ftpClient.transport = BufferingTransport()
+        ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
+
+        # Queue a login with no password
+        ftpClient.queueLogin('bob', 'secret')
+        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.buffer)
+
+        # Clear the test buffer, acknowledge the USER command with a 230
+        # response code.
+        ftpClient.transport.buffer = ''
+        ftpClient.lineReceived('230 Hello bob.  No password needed.')
+
+        # The client shouldn't have sent anything more (i.e. it shouldn't have
+        # sent a PASS command).
+        self.failUnlessEqual('', ftpClient.transport.buffer)
 
 
 class PathHandling(unittest.TestCase):
