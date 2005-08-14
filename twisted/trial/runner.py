@@ -830,6 +830,9 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
                 # capture all a TestMethod run's log events (warner's request)
                 observer = util._TrialLogObserver().install()
 
+                # Record the name of the running test on the TestCase instance
+                tci._trial_caseMethodName = self.original.func_name
+
                 # Run the setUp method
                 setUp = UserMethodWrapper(self.setUp, janitor,
                                           suppress=self.suppress)

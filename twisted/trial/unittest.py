@@ -445,7 +445,7 @@ class TestCase(object):
         #        tempfile.mkdtemp.
         cls = self.__class__
         base = os.path.join(cls.__module__, cls.__name__,
-                            getattr(self, 'caseMethodName', 'class'))
+                            getattr(self, '_trial_caseMethodName', 'class')[:32])
         try:
             os.makedirs(base)
         except OSError, e:
