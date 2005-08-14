@@ -29,11 +29,14 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThre
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer, threads
-from twisted.python import threadable, log, failure, reflect, components
+from twisted.python import log, failure, reflect, components
 from twisted.python.runtime import seconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
+# This import is for side-effects!  Even if you don't see any code using it
+# in this module, don't delete it.
+from twisted.python import threadable
 
 class DelayedCall(styles.Ephemeral):
 
@@ -576,8 +579,7 @@ class ReactorBase:
 
         def _initThreadPool(self):
             from twisted.python import threadpool
-            threadable.init(1)
-            self.threadpool = threadpool.ThreadPool(0, 10)
+            self.threadpool = threadpool.ThreadPool(0, 10, 'twisted.internet.reactor')
             self.threadpool.start()
             self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
 

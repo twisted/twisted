@@ -43,8 +43,9 @@ class ThreadPool:
     joined = 0
     started = 0
     workers = 0
+    name = None
     
-    def __init__(self, minthreads=5, maxthreads=20):
+    def __init__(self, minthreads=5, maxthreads=20, name=None):
         """Create a new threadpool.
 
         @param minthreads: minimum number of threads in the pool
@@ -56,6 +57,7 @@ class ThreadPool:
         self.q = Queue.Queue(0)
         self.min = minthreads
         self.max = maxthreads
+        self.name = name
         if runtime.platform.getType() != "java":
             self.waiters = []
             self.threads = []
@@ -75,7 +77,7 @@ class ThreadPool:
 
     def startAWorker(self):
         self.workers = self.workers + 1
-        name = "PoolThread-%s-%s" % (id(self), self.workers)
+        name = "PoolThread-%s-%s" % (self.name or id(self), self.workers)
         try:
             firstJob = self.q.get(0)
         except Queue.Empty:

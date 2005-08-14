@@ -121,11 +121,12 @@ class ConnectionPool:
     """I represent a pool of connections to a DB-API 2.0 compliant database.
     """
 
-    CP_ARGS = "min max noisy openfun reconnect good_sql".split()
+    CP_ARGS = "min max name noisy openfun reconnect good_sql".split()
 
     noisy = True # if true, generate informational log messages
     min = 3 # minimum number of connections in pool
     max = 5 # maximum number of connections in pool
+    name = None # Name to assign to thread pool for debugging
     openfun = None # A function to call on new connections
     reconnect = False # reconnect when connections fail
     good_sql = 'select 1' # a query which should always succeed
