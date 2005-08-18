@@ -31,7 +31,7 @@
       of new plugins installed after the program has started).</li>
     </ul>
 
-    <h1>Writing Extensible Programs</h1>
+    <h2>Writing Extensible Programs</h2>
 
     <p>Taking advantage of <code class="API">twisted.plugin</code> is
     a two step process:</p>
@@ -105,7 +105,7 @@ def displayAllKnownMaterials():
     to be used by this modelling system by implementing one or more
     plugins for the <code>IMaterial</code> interface.</p>
 
-    <h1>Extending an Existing Program</h1>
+    <h2>Extending an Existing Program</h2>
 
     <p>The above code demonstrates how an extensible program might be
     written using Twisted's plugin system.  How do we write plugins
@@ -139,7 +139,7 @@ brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     which has been added to <code>sys.path</code> (typically by adding
     it to the <code class="shell">PYTHONPATH</code> environment
     variable) contains a <em>directory</em> (not a Python package)
-    named <quote>twisted/plugins/</quote>, each <code
+    named <code class="shell">twisted/plugins/</code>, each <code
     class="shell">.py</code> file in that directory will be loaded as
     a source of plugins.  Second, each module in the installed version
     of Twisted's <code class="shell">twisted.plugins</code> package
@@ -150,7 +150,36 @@ brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     two pairs of output: one for a steel plate and one for a brass
     plate.</p>
 
-    <h1>Plugin Caching</h1>
+    <h2>Alternate Plugin Packages</h2>
+
+    <p><code class="API">getPlugins</code> takes one additional
+    argument not mentioned above.  If passed in, the 2nd argument
+    should be a module or package to be used instead of
+    <code>twisted.plugins</code> as the plugin meta-package.  If you
+    are writing a plugin for a Twisted interface, you should never
+    need to pass this argument.  However, if you have developed an
+    interface of your own, you may want to mandate that plugins for it
+    are installed in your own plugins package, rather than in
+    Twisted's.  In this case, you probably also want to support <code
+    class="shell">yourproject/plugins/</code> directories for ease of
+    development.  To do so, you should make the <code
+    class="shell">__init__.py</code> for that package contain at least
+    the following lines.</p>
+
+    <code class="python">
+import os, sys
+__path__ = [os.path.abspath(os.path.join(x, 'yourproject', 'plugins')) for x in sys.path]
+
+__all__ = []
+    </code>
+
+    <p>The key behavior here is that interfaces are essentially paired
+    with a particular plugin package.  If plugins are installed in a
+    different package than the one the code which relies on the
+    interface they provide, they will not be found when the
+    application goes to load them.</p>
+
+    <h2>Plugin Caching</h2>
 
     <p>In the course of using the Twisted plugin system, you may
     notice <code class="shell">dropin.cache</code> files appearing at
@@ -176,7 +205,7 @@ brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     canonical way to regenerate the cache is to run the following
     Python code:</p>
 
-    <code class="">
+    <code class="python">
 from twisted.plugin import IPlugin, getPlugin
 list(getPlugin(IPlugin))
     </code>
