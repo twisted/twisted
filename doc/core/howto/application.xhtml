@@ -1,240 +1,271 @@
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 <head>
-<title>Using Application</title>
+<title>Using the Twisted Application Framework</title>
 </head>
-
 <body>
-<h1>Using Application</h1>
 
+<h1>Using the Twisted Application Framework</h1>
 
-<h2>Motivation</h2>
+<h2>Introduction</h2>
 
-<p>Twisted can power anything connected to a network, from your corporate
-message-broadcasting network to your desktop IRC client.  This is great for
-integrating lots of different tools, but can make it very difficult to
-understand how to use the Twisted platform most effectively.</p>
+<h3>Audience</h3>
 
-<p>You've probably come to Twisted thinking of it as a library of code to help
-you write an application. It is much more useful to think of <em>your
-code</em> as the library. Twisted is a framework.  The difference between a
-framework and a library is that a developer's code will run a library's
-functions; whereas a framework runs the developer's functions.</p>
+The target audience of this document is a Twisted user who wants to deploy a
+significant amount of Twisted code in a re-usable, standard and easily
+configurable fashion.  A Twisted user who wishes to use the Application
+framework needs to be familiar with developing Twisted <a
+href="servers.xhtml">servers</a> and/or <a href="clients.xhtml">clients</a>.
 
-<p>The difference is subtle, but significant; there are a range of resources
-which have to be allocated and managed regarding start-up and shut-down of an
-process, such as spawning of threads and handling events. In the library
-model, you handle the management of these resources. If you use Twisted as a
-framework, though, it will manage these resources itself.</p>
-
-<p>If you were using Twisted as a library, you would probably write a Python
-script that:</p>
+<h3>Goals</h3>
 
 <ul>
-<li>installs the reactor you want (if you're not using the default);</li>
-<li>performs initialization &mdash; opens data files, starts
-<code>reactor.callLater</code> loops, etc.</li>
-<li>calls <code>reactor.run()</code>; and</li>
-<li>performs deinitialization.</li>
+  <li>To introduce the Twisted Application infrastructure.</li>
+  
+  <li>To explain how to deploy your Twisted application using <code>.tac</code>
+  files and <code>twistd</code></li>
+
+  <li>To outline the existing Twisted services.</li>
 </ul>
 
-<p>There are two problems with this methodology: it requires a lot of
-boiler-plate code; and it introduces inflexibility into the design. The usual
-way to solve this kind of problem is to write <em>configuration files</em>,
-and it is no different in Twisted.</p>
+<h2>Overview</h2>
 
-<p>At this point, the standard thing to do would be to write a long, tedious
-and subtly wrong manual describing the configuration language. Rest assured,
-like every other project, Twisted has those. But the language is secondary,
-and will be described later &mdash; more important are the configuration
-<em>objects</em>.</p>
+<p>The Twisted Application infrastructure takes care of running and stopping
+your application.  Using this infrastructure frees you from from having to
+write a large amount of boilerplate code by hooking your application into
+existing tools that manage daemonization, logging, <a
+href="choosing-reactor.xhtml">choosing a reactor</a> and more.</p>
 
-<h2>Services, Persistence and Security, Oh My!</h2>
+<p>The major tool that manages Twisted applications is a command-line utility
+called <code>twistd</code>.  <code>twistd</code> is cross platform, and is the
+recommended tool for running Twisted applications.  </p>
 
-<p>It is possible to think of any configuration language as designed to build
-a configuration object, which is then queried and acted upon by the program
-runtime.</p>
 
-<p>
-In Twisted, this is literally true internally &mdash; the
-master configuration object is
-<code>twisted.application.service.Application</code>.
-However, there is virtually nothing you can do with this
-object directly. This object is <code>Componentized</code> &mdash;
-it has different, orthogonal, aspects. You access these aspects
-by using <em>interfaces</em>. Interfaces, for our purposes,
-are just callables which return different aspects of the 
-<code>Application</code>.</p>
+<p>The core component of the Twisted Application infrastructure is the <code
+class="API">twisted.application.service.Application</code> object &mdash; an
+object which represents your application.  However, Application doesn't provide
+anything that you'd want to manipulate directly.  Instead, Application acts as
+a container of any <q>Services</q> (objects implementing <code class="API"
+base="twisted.application.service">IService</code>) that your application
+provides.  Most of your interaction with the Application infrastructure will be
+done through Services.</p>
 
-<p>There are four interfaces supported, three of which are defined in
-<code>twisted.application.service</code>:</p>
+<p>By <q>Service</q>, we mean anything in your application that can be started
+and stopped.  Typical services include web servers, FTP servers and SSH
+clients.  Your Application object can contain many services, and can even
+contain structured heirarchies of Services using <code class="API"
+base="twisted.application.service">IServiceCollection</code>s.</p>
 
-<ul>
-<li><code>IService</code>;</li>
-<li><code>IServiceCollection</code>;</li>
-<li><code>IProcess</code>; and</li>
-<li><code>twisted.persisted.sob.IPersistable</code>.</li>
-</ul>
-<p>Constructing an application is done by calling it with a single
-argument &mdash; its name. The name influences some things, among them
-the default file it will persist to (which is why it is mandatory).</p>
+<p>Here's a simple example of constructing an Application object which
+represents an echo server that runs on TCP port 7001.</p>
 
 <pre class="python">
-from twisted.application import service
-from twisted.persisted import sob
-application = service.Application("myapplication")
-s = service.IService(application)
-sc = service.IServiceCollection(application)
-proc = service.IProcess(application)
-per = sob.IPersistable(application)
+from twisted.application import internet, service
+from somemodule import EchoFactory
+
+port = 7001
+factory = EchoFactory()
+
+# this is the important bit
+application = service.Application("echo")  # create the Application
+echoService = internet.TCPServer(port, factory) # create the service
+# add the service to the application
+echoService.setServiceParent(application)
 </pre>
 
-<h2>Services</h2>
+<p>See <a href="servers.xhtml">Writing Servers</a> for an explanation of
+EchoFactory.</p>
 
-<p>The central framework classes that you will deal with, both as a Twisted
-developer and administrator, are services, which implement <code
-class="API">twisted.application.service.IService</code>. <code
-class="API">twisted.application.service.Application</code> creates the root of
-a tree of services that form a twisted application.  There is one <code
-class="python">Application</code> instance per Twisted process, and it is the
-top-level manager of resources and handler of events in the Twisted framework.
-(Unlike other frameworks, like <code>Qt</code> or <code>wxWindows</code>, in
-Twisted you do not derive from <code>Application</code>; rather you register
-event handlers for it to call by adding Services to it.)  To store
-configuration data, as well as other information, Twisted serializes <code
-class="python">Application</code> instances, storing all services that have
-been registered with them.  Since the whole <code
-class="python">Application</code> instance is serialized, Twisted
-<q>configuration</q> files are significantly more comprehensive than those for
-other systems. These files store everything related to a running <code
-class="python">Application</code> instance; in essence the full state of a
-running process.</p>
+<p>This example creates a simple heirarchy:
+<pre>
+   application
+   |
+   `- echoService
+</pre> More complicated heirarchies of services can be created using
+IServiceCollection.  You will most likely want to do this to manage Services
+which are dependent on other Services.  For example, a proxying Twisted
+application might want its server Service to only start up after the associated
+Client service. </p>
 
 
-<p>There are two interfaces relevant to services &mdash; <code>IService</code>
-and <code>IServiceCollection</code>. <code>IService</code> represents
-a <em>state-aware</em> container. That means the service is ready to be
-notified of application start-ups and shutdowns. Services can be named
-or unnamed. <code>IServiceCollection</code> holds other services. It
-is possible to get named services from it by name. All services can be
-gotten from it via either indexing or iteration.</p>
+<h2>Using application</h2>
 
-<p>Services can have a parent. Parents are set using
-<code>setServiceParent</code>. Services are detached from their parent with
-<code>disownServiceParent</code>. The parent must always be something that
-complies with the <code>IServiceCollection</code> interface.</p>
+<h3>twistd and tac</h3>
 
-<p>Most services will inherit from <code>Service</code>. This class
-will set an attribute <code>running</code> to a true value
-in <code>startService</code> and to a false value in <code>stopService</code>.
-This attribute will always be false in just-unpersisted <code>Service</code>s,
-without regards to its value at the time the <code>Service</code> was
-persisted.</p>
+<p><code>.tac</code> files are configuration and start-up files for your
+Twisted application. Rather than using a configuration language for the
+configuration files, <code>.tac</code> files are Python files which need to
+have one special property: <code>.tac</code> files contain a variable named
+<code>application</code> at the top level of their namespace. 'application' is
+a fixed name for your <code class="api"
+base="twisted.application.service">Application</code> object, used by the
+<code>twistd</code> program.</p>
 
-<p><code>MultiService</code> implements both <code>IService</code> and
-<code>IServiceCollection</code>. It is used to keep the services in
-a hierarchy.</p>
+<p>The following is a simple example of a <code>.tac</code> file:</p>
 
-<p>It is, of course, possible to write one's own services, but Twisted
-comes out of the box with several services which are useful in writing
-network applications. These are found in
-<code>twisted.application.internet</code>, including 
-<code class="API" base="twisted.application.internet">TCPServer</code>, 
-<code class="API" base="twisted.application.internet">TCPClient</code>, and
-<code class="API" base="twisted.application.internet">TimerService</code>. 
-</p>
+<a href="listings/application/service.tac" class="py-listing">service.tac</a>
 
-<p>To each <code>reactor.listenFoo</code> method corresponds a service
-named <code>FooServer</code>. The arguments to its constructor are the
-same as the arguments to the method. It calls the method on application
-start-up, and stops listening on application shut-down.</p>
+<p><code>twistd</code> is a program that runs Twisted applications using a
+<code>.tac</code> file. In its most simple form, it takes a single argument
+<code>-y</code> and a tac file name. For example, you can run the above server
+with the command <code class="command">twistd -y service.tac</code>.</p>
 
-<p>To each <code>reactor.connectFoo</code> methods corresponds a service
-named <code>FooClient</code>. The arguments to its constructor are the
-same as the arguments to the method. It calls the method on application
-start-up. It might, or might not, stop the connection on application
-shut-down. (This limitation will be removed at some point, and guaranteed
-disconnection will be implemented.)</p>
+<p>By default, <code>twistd</code> daemonizes and logs to a file called
+<code>twistd.log</code>. More usually, when debugging, you will want your
+application to run in the foreground and log to the command line. To run the
+above file like this, use the command <code class="command">twistd -noy
+service.tac</code></p>
 
-<p>The last service in <code>twisted.application.internet</code> is
-<code>TimerService</code>. The constructor takes a period, a callable
-and optionally arguments and keyword arguments. The service, when it
-is running, will make sure the callable will be called every time the
-period elapses.</p>
+<p>For more information, see the <code>twistd</code> man page.</p>
 
-<h2>String Ports</h2>
+<h3>Services provided by Twisted</h3>
 
-<p>In Twisted, a <code>ServerFactory</code> does not care what kind
-of virtual reliable circuit it listens too &mdash; SSL, UNIX domain
-sockets, TCP sockets or something else. However, the APIs for constructing
-the various <code>*Server</code> classes are different. When it is
-necessary for a less sophisticated user to direct construction of such
-a class, the <code>twisted.application.strports</code> module comes
-in handy. It contains a function <code>service</code> which accepts
-a <em>description</em> and a factory, and returns a service. The
-description is a string in a mini-language designed to specify
-ports. Full specifications are in the module docstrings.</p>
+<p>Twisted provides several services that you want to know about.</p>
 
-<h2>Configuration</h2>
+<p>Each of these services (except TimerService) has a corresponding
+<q>connect</q> or <q>listen</q> method on the reactor, and the constructors for
+the services take the same arguments as the reactor methods.  The
+<q>connect</q> methods are for clients and the <q>listen</q> methods are for
+servers.  For example, TCPServer corresponds to reactor.listenTCP and TCPClient
+corresponds to reactor.connectTCP.  </p>
 
-<p>At some point, the objects for the configuration actually have
-to be constructed. The easiest and simplest way to do it is to
-use Python as the configuration mini-language. This format is called
-<code>TAC</code> and traditionally files with this format have the extension
-<code>.tac</code>.</p>
+<dl>
+  <dt><code class="API"
+    base="twisted.application.internet">TCPServer</code>
+  </dt>
+    
+  <dt><code class="API"
+    base="twisted.application.internet">TCPClient</code>
+  </dt>
+      
+  <dd>
+    Services which allow you to make connections and listen for connections
+    on TCP ports.
+    <ul>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorTCP">listenTCP</code></li>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorTCP">connectTCP</code></li>
+    </ul>
+  </dd>
+  
+  <dt><code class="API"
+  base="twisted.application.internet">UNIXServer</code></dt>
 
-<p>TAC files need to be valid Python files, which construct a variable
-named <code>application</code>. This variable will be the configuration
-object. The full power of Python is available, of course.</p>
+  <dt><code class="API"
+  base="twisted.application.internet">UNIXClient</code></dt>
 
-<p>Here's an example:</p>
+  <dd>
+    Services which listen and make connections over UNIX sockets.
+    <ul>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUNIX">listenUNIX</code></li>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUNIX">connectUNIX</code></li>
+    </ul>
+  </dd>  
+
+  <dt><code class="API"
+  base="twisted.application.internet">SSLServer</code></dt>
+
+  <dt><code class="API"
+  base="twisted.application.internet">SSLClient</code></dt>
+
+  <dd>Services which allow you to make SSL connections and run SSL servers.
+    <ul>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorSSL">listenSSL</code></li>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorSSL">connectSSL</code></li>
+    </ul>
+  </dd>  
+
+  <dt><code class="API"
+  base="twisted.application.internet">UDPServer</code></dt>
+
+  <dt><code class="API"
+  base="twisted.application.internet">UDPClient</code></dt>
+
+  <dd>Services which allow you to send and receive data over UDP
+    <ul>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUDP">listenUDP</code></li>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUDP">connectUDP</code></li>
+    </ul>
+  </dd>
+
+  <dt><code class="API"
+  base="twisted.application.internet">UNIXDatagramServer</code></dt>
+
+  <dt><code class="API"
+  base="twisted.application.internet">UNIXDatagramClient</code></dt>
+
+  <dd>Services which send and receive data over UNIX datagram sockets.
+    <ul>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUDP">listenUNIXDatagram</code></li>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUDP">connectUNIXDatagram</code></li>
+    </ul>
+  </dd>
+
+  <dt><code class="API"
+  base="twisted.application.internet">MulticastServer</code></dt>
+
+  <dd>
+    A server for UDP socket methods that support multicast.
+    <ul>
+      <li><code class="API"
+      base="twisted.internet.interfaces.IReactorUDP">listenMulticast</code></li>
+    </ul>
+  </dd>
+  
+  <dt><code class="API"
+  base="twisted.application.internet">TimerService</code></dt>
+
+  <dd>
+    A service to periodically call a function.
+  </dd>
+  
+</dl>
+
+<h3>Service Collection</h3>
+
+<p><code class="API"
+base="twisted.application.service">IServiceCollection</code> objects contain
+<code class="API" base="twisted.application.service">IService</code> objects.
+IService objects can be added to IServiceCollection by calling
+[[.setServiceParent]] and detached by using [[.disownServiceParent]].  </p>
+
+<p>The standard implementation of IServiceCollection is <code class="API"
+base="twisted.application.service">MultiService</code>, which also implements
+IService.  MultiService is useful for creating a new Service which combines two
+or more existing Services.  For example, you could create a DNS Service as a
+MultiService which has a TCP and a UDP Service as children.</p>
 
 <pre class="python">
-# Import modules
-from twisted.application import service, internet
-from twisted.protocols import wire
-from twisted.internet import protocol
+from twisted.application import internet, service
+from twisted.names import server, dns
 
-# Construct the application
-application = service.Application("echo")
+def makeSimpleDNSService(hostsFile, port=53):
+    svc = service.MultiService()
+    tcpFactory = server.DNSServerFactory()
+    internet.TCPServer(port, tcpFactory).setServiceParent(svc)
+    udpFactory = dns.DNSDatagramProtocol(tcpFactory)
+    internet.UDPServer(port, udpFactory).setServiceParent(svc)
+    return svc
 
-# Get the IServiceCollection interface
-myService = service.IServiceCollection(application)
-
-# Create the protocol factory
-myFactory = protocol.ServerFactory()
-myFactory.protocol = wire.Echo
-
-# Create the (sole) server
-# Normally, the echo protocol lives on port 7, but since that
-# is a privileged port, for this example we'll use port 7001
-myServer = internet.TCPServer(7001, myFactory)
-
-# Tie the service to the application
-myServer.setServiceParent(myService)
+application = service.Application("DNSExample")
+dns1 = makeSimpleDNSService('hosts1')
+dns2 = makeSimpleDNSService('hosts2')
+dns1.setServiceParent(application)
+dns2.setServiceParent(application)
 </pre>
 
-<p>Note that <code>setServiceParent</code> will, in fact, automatically
-cast its argument to <code>IServiceCollection</code>. So, more succinctly,
-the above code can be written:</p>
- 
-<pre class="python">
-from twisted.application import service, internet
-from twisted.protocols import wire
-from twisted.internet import protocol
-application = service.Application("echo")
-myFactory = protocol.ServerFactory()
-myFactory.protocol = wire.Echo
-internet.TCPServer(7001, myFactory).setServiceParent(application)
-</pre>
+<p>To run this example, you will need to download <a href="...">hosts1</a> and
+<a href="...">hosts2</a> into the directory that you are running the file
+from. </p>
 
-<p>TAC files are run with <code>twistd -y</code> or
-<code>twistd --python</code>. The <code>twistd</code> manpage
-has more information, but a common way to run is
-<code>twistd -ny echo.tac</code>. This tells <code>twistd</code>
-to not daemonize.</p>
+</body>
 
-</body> </html>
+</html>
