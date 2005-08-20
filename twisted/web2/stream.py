@@ -1044,6 +1044,13 @@ class BufferedStream(object):
         return pre, post
 
         
+def substream(stream, start, end):
+    if start > end:
+        raise ValueError("start position must be less than end position %r"
+                         % ((start, end),))
+    stream = stream.split(start)[1]
+    return stream.split(end - start)[0]
+
 
 
 __all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream',

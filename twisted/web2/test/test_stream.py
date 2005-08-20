@@ -130,6 +130,58 @@ class MemoryStreamTest(SimpleStreamTests, unittest.TestCase):
         assertRaises(ValueError, self.makeStream, 0, 20)
 
 
+class TestSubstream(unittest.TestCase):
+    data = """I was angry with my friend:
+I told my wrath, my wrath did end.
+I was angry with my foe:
+I told it not, my wrath did grow.
+
+And I water'd it in fears,
+Night and morning with my tears;
+And I sunned it with smiles,
+And with soft deceitful wiles.
+
+And it grew both day and night,
+Till it bore an apple bright;
+And my foe beheld it shine,
+And he knew that is was mine,
+
+And into my garden stole
+When the night had veil'd the pole:
+In the morning glad I see
+My foe outstretch'd beneath the tree"""
+    
+    def setUp(self):
+        self.s = stream.MemoryStream(self.data)
+
+    def suckTheMarrow(self, s):
+        return ''.join(map(str, list(iter(s.read, None))))
+
+    def testStart(self):
+        s = stream.substream(self.s, 0, 11)
+        assertEquals('I was angry', self.suckTheMarrow(s))
+
+    def testNotStart(self):
+        s = stream.substream(self.s, 12, 26)
+        assertEquals('with my friend', self.suckTheMarrow(s))
+
+    def testReverseStartEnd(self):
+        assertRaises(ValueError, stream.substream, self.s, 26, 12)
+
+    def testEmptySubstream(self):
+        s = stream.substream(self.s, 11, 11)
+        assertEquals('', self.suckTheMarrow(s))
+
+    def testEnd(self):
+        size = len(self.data)
+        s = stream.substream(self.s, size-4, size)
+        assertEquals('tree', self.suckTheMarrow(s))
+
+    def testPastEnd(self):
+        size = len(self.data)
+        assertRaises(ValueError, stream.substream, self.s, size-4, size+8)
+        
+
 class TestStreamer:
     implements(stream.IStream, stream.IByteStream)
 
