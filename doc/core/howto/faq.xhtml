@@ -32,29 +32,19 @@ inside the distribution. And, remember, the source will be with
 you... always.</p>
 
 
-<h3>Why is Twisted so big?</h3>
+<h3>Why are there so many parts and subprojects? Isn't Twisted just
+Twisted?</h3>
 
-<p>Twisted is a lot of things, rolled into one big package. We're not sure if 
-it'll stay this way, yet, but for now, if you have only specific needs, we
-recommend grabbing the big Twisted tarball, and if you want, you can run the
-'setup.py' script with a modified config file to generate a package with only
-certain Twisted sub-packages. Twisted as a whole makes it into many operating 
-system distributions (FreeBSD, Debian and Gentoo, at least) so size shouldn't
-be an issue for the end developer or user. In addition, packaging Twisted
-as a whole makes sure the end users do not have to worry about versioning
-parts of Twisted and inter-version compatibility.</p>
-
-<p>If you are distributing Twisted to end-users, you can base your distribution
-on the <q>Nodocs</q> packages, which are signficantly smaller.</p>
-
-<h3>But won't Twisted bloat my program, since it's so big?</h3>
-
-<p>No. You only need to import the sub-packages which you want to use, meaning
-only those will be loaded into memory. So if you write a low-level network
-protocol, you'd only import twisted.internet, leaving out extraneous things
-like twisted.web, etc. Twisted itself is very careful with internal
-dependancies, so importing one subpackage is not likely to import the whole
-twisted package.</p>
+<p>
+As of version 2.0, Twisted was split up into many subprojects, because
+it was getting too much to handle in a monolithic release, and we
+believe breaking the project into smaller chunks will help people
+understand the things they need to understand (There used to be a FAQ
+entry here asking "Why is Twisted so big?"). More information is
+available in
+the <a href="http://twistedmatrix.com/products/splitfaq">Split
+FAQ</a>.
+</p>
 
 <h2>Stability</h2>
 
@@ -243,10 +233,13 @@ is this: it <em>is</em> firing -- but it's an error, not a success, and you
 have forgotten to add an <a href="glossary.xhtml#errback">errback</a>, so
 nothing happens.  Always add errbacks!</p>
 
-<p>The reason this happens is that unhandled errors in Deferreds get printed
-when the Deferred is garbage collected. Make sure your Deferred is garbage
-collected by deleting all references to it when you are done with it, e.g.
-after <code class="python">callback()</code> is called.</p> 
+<p>The reason Deferred can't automatically show your errors is because
+a Deferred can still have callbacks and errbacks added to it even
+after a result is available -- so we have no reasonable place to put a
+logging call that wouldn't result in spurious tracebacks
+that <em>are</em> handled later on. There is a facility for printing
+tracebacks when the Deferreds are garbage collected -- call
+defer.setDebugging(True) to enable it.</p>
 
 
 <h3>My exceptions and tracebacks aren't getting printed!</h3>
@@ -254,7 +247,8 @@ after <code class="python">callback()</code> is called.</p>
 <p>See previous question.</p>
 
 
-<h3>How do I use Deferreds to make my blocking code non-blocking?</h3><a name="deferreds-aren't-magic" />
+<h3>How do I use Deferreds to make my blocking code
+non-blocking?</h3><a name="deferreds-aren't-magic" />
 
 <p>You don't.  Deferreds don't magically turn a blocking function call into a
 non-blocking one.  A Deferred is just a simple object that represents a
