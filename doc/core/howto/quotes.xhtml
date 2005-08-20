@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<title>Setting up the TwistedQuotes application</title>
+
+</head>
+
+<body>
+
+<h1>Setting up the TwistedQuotes application</h1>
+
+<h2>Goal</h2>
+
+<p>This document describes how to set up the TwistedQuotes application used in
+a number of other documents, such as <a href="mktap.xhtml">mktap plugins</a>
+and <a href="design.xhtml">designing Twisted applications</a>.</p>
+
+<h2>Setting up the TwistedQuotes project directory</h2>
+
+<p>In order to run the Twisted Quotes example, you will need to do the
+following:</p>
+
+<ol>
+<li>Make a <tt>TwistedQuotes</tt> directory on your system</li>
+<li>Place the following files in the <tt>TwistedQuotes</tt> directory:
+    <ul>
+    <li><a href="listings/TwistedQuotes/__init__.py">__init__.py</a> (this
+        file marks it as a package, see <a
+        href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000000"
+        >this section</a> of the Python tutorial for more on packages);</li>
+    <li><a href="listings/TwistedQuotes/quoters.py">quoters.py</a>;</li>
+    <li><a href="listings/TwistedQuotes/quoteproto.py">quoteproto.py</a>; and</li>
+    <li><a href="listings/TwistedQuotes/plugins.tml">plugins.tml</a>.</li>
+    </ul>
+</li>
+<li>Add the <tt>TwistedQuotes</tt> directory's <em>parent</em> to your Python
+path. For example, if the TwistedQuotes directory's path is <tt>/tmp/TwistedQuotes</tt>
+add <tt>/tmp</tt> to your Python path. On UNIX this would be <code
+class="shell">export PYTHONPATH=/my/stuff:$PYTHONPATH</code>, on Microsoft
+Windows change the <code class="shell">PYTHONPATH</code> variable through the
+Systems Properites dialog to add <code class="shell">/my/stuff;</code> at the
+beginning.</li>
+<li>
+Test your package by trying to import it in the Python interpreter:
+<pre class="python-interpreter">
+Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
+[GCC 2.95.4 20011002 (Debian prerelease)] on linux2
+Type "copyright", "credits" or "license" for more information.
+&gt;&gt;&gt; import TwistedQuotes
+&gt;&gt;&gt; # No traceback means you're fine.
+</pre>
+</li>
+</ol>
+
+</body>
+
+</html>
