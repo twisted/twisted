@@ -53,36 +53,8 @@ plug-in system for Twisted, <code class="API">twisted.python.plugin</code>, is
 a way to find (without loading) and then load plug-ins for particular
 systems.</p>
 
-<p>Unlike other <q>plug-in</q> systems, like the well known ones associated
-with The
-Gimp, Photoshop, and Apache <code class="API">twisted.python.plugin</code> is
-generic.  Any one of the Twisted <a
-href="http://twistedmatrix.com/products/dot-products" ><q>dot-products</q></a>
-can
-define mechanisms for extensibility using plug-ins.  Two Twisted dot-products
-already load such plug-ins.  The 
-<code class="API">twisted.application</code>package loads Twisted Application
-builder modules (TAP plug-ins) and the
-<code class="API">twisted.lore</code> package loads document formatting
-modules.</p>
-
-<p>Twisted finds its plug-ins by using pre-existing Python concepts; the load
-path, and packages.  Every top-level <a
-href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000000"
->Python package</a> (that is, a directory whose parent is on sys.path and which
-contains an <code class="shell">__init__.py</code>) can potentially contain
-some number of plug-ins.  Packages which contain plug-ins are called
-<q>drop-ins</q>, because you <q>drop</q> them into your
-<code>sys.path</code>. The only
-difference
-between a package and a drop-in is the existence of a file named <code
-class="shell">plugins.tml</code> (TML for Twisted Module List) that contains
-some special Python expressions to identify the location of sub-packages or
-modules which can be loaded.</p>
-
-<p>If you look at <code class="shell">twisted/plugins.tml</code>, you will
-notice that Twisted is a drop-in for itself!  You can browse through it for
-lots of examples of plug-ins being registered.</p>
+<p>See <a href="plugin.xhtml">The Twisted Plugin system</a> for more
+information on using <code>twisted.python.plugin</code>.</p>
 
 <p>The most prevalent kind of plug-in is the <code>TAP</code> (Twisted
 Application builder) type.  These are relatively simple to get started with.
