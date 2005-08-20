@@ -100,12 +100,16 @@
     know before they can expect to use your document. For example:</p>
 
     <blockquote>
+    <p>
     The target audience of this document is a Twisted user who has a set of
     filesystem like data objects that they would like to make available to
     authenticated users over SFTP.
+    </p>
     
+    <p>
     Following the directions in this document will require that you are
     familiar with managing authentication via the Twisted Cred system.
+    </p>
     </blockquote>
 
     <p>Use your discretion about the extent to which you list assumed
@@ -126,6 +130,46 @@
     <p>Where possible, link to other documents that will fill in missing
     knowledge for the reader. Linking to documents in the Twisted repository
     is preferred but not essential.</p>
+
+    <h3>Goals of document</h3>
+
+    <p>The introduction should finish with a list of tasks that the user can
+    expect to see the document accomplish. These tasks should be concrete
+    rather than abstract, so rather than telling the user that they will
+    &quot;understand Twisted Conch&quot;, you would list the specific tasks
+    that they will see the document do. For example:</p>
+
+    <blockquote>
+    <p>
+    This document will demonstrate the following tasks using Twisted Conch:
+    </p>
+    
+    <ul>
+    <li>creating an anonymous access read-only SFTP server using a filesystem
+    backend;</li>
+    <li>creating an anonymous access read-only SFTP server using a proxy
+    backend connecting to an HTTP server; and</li>
+    <li>creating a anonymous access read and write SFTP server using a
+    filesystem backend.</li>
+    </ul>
+    </blockquote>
+
+    <p>In many cases this will essentially be a list of your code examples,
+    but it need not be. If large sections of your code are devoted to design
+    discussions, your goals might resemble the following:</p>
+
+    <blockquote>
+    <p>
+    This document will discuss the following design aspects of writing Conch
+    servers:
+    </p>
+    
+    <ul>
+    <li>authentication of users; and</li>
+    <li>choice of data backends.</li>
+    </ul>
+    </blockquote>
+
 
     <h2>Example code</h2>
 
