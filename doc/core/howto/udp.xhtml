@@ -126,5 +126,45 @@ reactor.resolve('example.com').addCallback(gotIP)
     making a connected port unconnected are not currently supported,
     but will likely be supported in the future.</p>
 
+    <h2>Multicast UDP</h2>
+
+    <p>A multicast UDP socket can send and receive datagrams from multiple clients.
+    The interesting and useful feature of the multicast is that a client can
+    contact multiple servers with a single packet, without knowing the specific IP
+    of any of the hosts.</p>
+    
+    <a href="listings/udp/MulticastServer.py"
+    class="py-listing">MulticastServer.py</a>
+
+    <p>
+    The server protocol is very simple, and closely resembles a normal listenUDP
+    implementation.  The main difference is that instead of listenUDP,
+    listenMulticast is called with a specified port number.  The server must also
+    call joinGroup to specify on which multicast IP address it will service
+    requests.  Another item of interest is the contents of the datagram.  Many
+    different applications use multicast as a way of device discovery, which leads
+    to an abundance of packets flying around.  Checking the payload can ensure
+    that we only service requests from our specific clients.
+    </p>
+
+    <a href="listings/udp/MulticastClient.py"
+    class="py-listing">MulticastServer.py</a>
+
+    <p>
+    This is a mirror implementation of a standard UDP client.  The only difference
+    is that the destination IP is the multicast address.  This datagram will be
+    distributed to every server listening on 224.0.0.1 and port 8005.  Note that
+    the client port is specified as 0, as we have no need to keep track of what
+    port the client is listening on.
+    </p>
+
+<h2>Acknowledgements</h2>
+
+<p>Thank you to all contributors to this document, including:</p>
+
+<ul>
+<li>Kyle Robertson, author of the explanation and examples of multicast</li>
+</ul>
+
 </body>
 </html>
