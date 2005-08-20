@@ -124,102 +124,15 @@ writing your first one.</p>
 <h2>Writing a mktap plugin: the Twisted Quotes example</h2>
 
 <p>As an example, we are going to work on a Quote of the Day application,
-<code>TwistedQuotes</code>.
-Aspects of this application will be explored in more depth
-throughout in the Twisted documentation. </p>
+<code>TwistedQuotes</code> described in the <a href="design.xhtml">Designing
+Twisted Applications</a> document.</p>
 
-<p><code>TwistedQuotes</code> is a very simple plugin which is a great
-demonstration of
-Twisted's power.  It will export a small kernel of functionality -- Quote of
-the Day -- which can be accessed through every interface that Twisted supports:
-web pages, e-mail, instant messaging, a specific Quote of the Day protocol, and
-more.</p>
 
 <h3>Set up the project directory</h3>
 
 <p>See the description of <a href="quotes.xhtml">setting up the TwistedQuotes
 example</a>.</p>
 
-<h3>A Look at the Heart of the Application</h3>
-
-<a href="listings/TwistedQuotes/quoters.py" class="py-listing">Twisted Quotes
-Central Abstraction</a>
-
-<p>This code listing shows us what the Twisted Quotes system is all about.  The
-code doesn't have any way of talking to the outside world, but it provides a
-library which is a clear and uncluttered abstraction: <q>give me the quote of
-the day</q>. </p>
-
-<p>Note that this module does not import any Twisted functionality at all!  The
-reason for doing things this way is integration.  If your <q>business
-objects</q> are not stuck to your user interface, you can make a module that
-can integrate those objects with different protocols, GUIs, and file formats.
-Having such classes provides a way to decouple your components from each other,
-by allowing each to be used independently.</p>
-
-<p>In this manner, Twisted itself has minimal impact on the logic of your
-program.  Although the Twisted <q>dot products</q> are highly interoperable,
-they
-also follow this approach.  You can use them independently because they are not
-stuck to each other.  They communicate in well-defined ways, and only when that
-communication provides some additional feature.  Thus, you can use <code
-class="API">twisted.web</code> with <code
-class="API">twisted.enterprise</code>, but neither requires the other, because
-they are integrated around the concept of <a href="defer.xhtml">Deferreds</a>.
-(Don't worry we'll get to each of those features in later documentation.)</p>
-
-<p>Your Twisted applications should follow this style as much as possible.
-Have (at least) one module which implements your specific functionality,
-independant of any user-interface code.  </p>
-
-<p>Next, we're going to need to associate this abstract logic with some way of
-displaying it to the user.  We'll do this by writing a Twisted server protocol,
-which will respond to the clients that connect to it by sending a quote to the
-client and then closing the connection.  Note: don't get too focused on the
-details of this -- different ways to interface with the user are 90% of what
-Twisted does, and there are lots of documents describing the different ways to
-do it.</p>
-
-<p>(You'll need to put this code into a file called <code
-class="shell">quoteproto.py</code> in your <code
-class="shell">TwistedQuotes</code> directory.)</p>
-
-<a href="listings/TwistedQuotes/quoteproto.py" class="py-listing">Twisted
-Quotes Protocol Implementation</a>
-
-<p>This is a very straightforward <code>Protocol</code> implementation, and the
-pattern described above is repeated here.  The Protocol contains essentially no
-logic of its own, just enough to tie together an object which can generate
-quotes (a <code class="python">Quoter</code>) and an object which can relay
-bytes to a TCP connection (a <code class="python">Transport</code>).  When a
-client connects to this server, a <code class="python">QOTD</code> instance is
-created, and its <code class="python">connectionMade</code> method is called.
-</p>
-
-<p> The <code class="python">QOTDFactory</code>'s role is to specify to the
-Twisted framework how to create a <code class="python">Protocol</code> instance
-that will handle the connection.  Twisted will not instantiate a <code
-class="python">QOTDFactory</code>; you will do that yourself later, in the
-<code class="shell">mktap</code> plug-in below.
-</p>
-
-<p>Note: you can read more specifics of <code class="python">Protocol</code> and
-<code class="python">Factory</code> in the <a href="servers.xhtml">Writing
-Servers</a> HOWTO.</p>
-
-<p>Once we have an abstraction -- a <code>Quoter</code> -- and we have a
-mechanism to connect it to the network -- the <code>QOTD</code> protocol -- the
-next thing to do is to put the last link in the chain of functionality between
-abstraction and user.  This last link will allow a user to choose a
-<code>Quoter</code> and configure the protocol.</p>
-
-<p>Practically speaking, this link is an interface for a savvy user who will
-run the server.  (In this case, you; when you have more users, a system
-administrator.)  For the purposes of this example we will first implement a
-<code class="shell">mktap</code> interface.  Like most system administrator
-tools, this is command-line oriented.  (It is possible to implement a graphical
-front-end to mktap, using the same plug-in structure, but this has not been
-done yet.)</p>
 
 <p>Creating the extension to <code class="shell">mktap</code> is done through
 implementing a
@@ -229,10 +142,6 @@ registering it to be found and loaded by <code>twisted.python.plugin</code>.
 As described above, registration is done by adding a call to
 <code class="python">register</code> in the file
 <code class="shell">TwistedQuotes/plugins.tml</code></p>
-
-<p>(You'll need to put this code into a file called <code
-class="shell">quotetap.py</code> in your <code
-class="shell">TwistedQuotes</code> directory.)</p>
 
 <a href="listings/TwistedQuotes/quotetap.py" class="py-listing">Twisted Quotes
 TAP construction module</a>
@@ -259,8 +168,8 @@ serving a protocol factory, and so on.</p>
 class="API">twisted.python.usage.Options</code> can be found in the document <a
 href="options.xhtml" >Using <code>usage.Options</code></a>.</p>
 
-<p>Now that we've implemented all the necessary pieces, we can finish putting
-them together by writing a TML file which allows the <code
+<p>Once the TwistedQuotes application design is complete, we pull it them
+together by writing a TML file which allows the <code
 class="shell">mktap</code> utility to find our protocol module.</p>
 
 <a href="listings/TwistedQuotes/plugins.tml" class="py-listing">Twisted Quotes
@@ -299,10 +208,6 @@ killing it via a saved out process id file.</p>
 <p>(<code class="shell">nc</code> is the <a
 href="http://www.atstake.com/research/tools/index.html#network_utilities">netcat</a>
 utility, which no UNIX system should be without.)  </p>
-
-<p>So we just saw Twisted in action as a framework.  With relatively little
-code, we've got a server that can respond to a request over a network, with two
-potential alternative back-ends (fortune files and static text).  </p>
 
 <p>After reading this (and following along with your own example, of course),
 you should be familiar with the process of getting your own Twisted code with
@@ -358,10 +263,5 @@ plug-in, more useful functionality will become available from Twisted Quotes.
 For example, a graphical tool could provide not just help messages at the
 command line, but a listing of all available TAP types and forms for each, for
 the user to enter information.</p>
-
-<p>It is this kind of power that results from using a dynamic, powerful
-framework like Twisted.  I hope that you take your newfound knowledge and
-discover all kinds of cool things like this that you get for free just by using
-it!</p>
 
 </body> </html>
