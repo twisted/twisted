@@ -135,35 +135,33 @@ the Day -- which can be accessed through every interface that Twisted supports:
 web pages, e-mail, instant messaging, a specific Quote of the Day protocol, and
 more.</p>
 
-<h3>Before you Begin</h3>
+<h3>Set up project directory</h3>
 
-<p>First, make a directory, <code>TwistedQuotes</code>, where you're going to
-keep
-your code.  If you installed Twisted from source, the path of least resistance
-is probably just to make a
-directory inside your <code class="shell">Twisted-X.X.X</code>
-directory, which will already be in your <code
-class="python">sys.path</code>.  If you want to put it elsewhere, make
-sure that your <code>TwistedQuotes</code> directory is a package on your python
-path.</p>
+<p>In order to run the Twisted Quotes example, you will need to do the
+following:</p>
 
-<div class="note"><p>The directory you add to your PYTHONPATH
-needs to be the directory <em>containing</em> your package's
-directory! For example, if your TwistedQuotes directory is
-/my/stuff/TwistedQuotes, you can <code class="shell">export
-PYTHONPATH=/my/stuff:$PYTHONPATH</code> in UNIX, or edit the <code
-class="shell">PYTHONPATH</code> environment variable to add <code
-class="shell">/my/stuff;</code> at the beginning through the System
-Properties dialog on Windows.</p></div>
-
-<p>You will then need to add an <code class="shell">__init__.py</code> to this
-directory, to mark it as a package.  (For more information on exactly how
-Python packages work, read <a
-href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000000"
->this section</a> of the Python tutorial.) In order to test that everything is
-working, start up the Python interactive interpreter, or your favorite IDE, and
-verify that the package imports properly.</p>
-
+<ol>
+<li>Make a <tt>TwistedQuotes</tt> directory on your system</li>
+<li>Place the following files in the <tt>TwistedQuotes</tt> directory:
+    <ul>
+    <li><a href="listings/TwistedQuotes/__init__.py">__init__.py</a> (this
+        file marks it as a package, see <a
+        href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000000"
+        >this section</a> of the Python tutorial for more on packages);</li>
+    <li><a href="listings/TwistedQuotes/quoters.py">quoters.py</a>;</li>
+    <li><a href="listings/TwistedQuotes/quoteproto.py">quoteproto.py</a>; and</li>
+    <li><a href="listings/TwistedQuotes/plugins.tml">plugins.tml</a>.</li>
+    </ul>
+</li>
+<li>Add the <tt>TwistedQuotes</tt> directory's <em>parent</em> to your Python
+path. For example, if the TwistedQuotes directory's path is <tt>/tmp/TwistedQuotes</tt>
+add <tt>/tmp</tt> to your Python path. On UNIX this would be <code
+class="shell">export PYTHONPATH=/my/stuff:$PYTHONPATH</code>, on Microsoft
+Windows change the <code class="shell">PYTHONPATH</code> variable through the
+Systems Properites dialog to add <code class="shell">/my/stuff;</code> at the
+beginning.</li>
+<li>
+Test your package by trying to import it in the Python interpreter:
 <pre class="python-interpreter">
 Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
 [GCC 2.95.4 20011002 (Debian prerelease)] on linux2
@@ -171,12 +169,10 @@ Type "copyright", "credits" or "license" for more information.
 &gt;&gt;&gt; import TwistedQuotes
 &gt;&gt;&gt; # No traceback means you're fine.
 </pre>
+</li>
+</ol>
 
 <h3>A Look at the Heart of the Application</h3>
-
-<p>(You'll need to put this code into a file called <code
-class="shell">quoters.py</code> in your <code
-class="shell">TwistedQuotes</code> directory.)</p>
 
 <a href="listings/TwistedQuotes/quoters.py" class="py-listing">Twisted Quotes
 Central Abstraction</a>
