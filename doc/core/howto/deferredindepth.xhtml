@@ -28,7 +28,7 @@ around with them.</p>
 
 First, a simple example so that we have something to talk about:
 
-<a href="../listings/deferred/deferred_ex.py" class="py-listing">deferred_ex.py</a>
+<a href="listings/deferred/deferred_ex.py" class="py-listing">deferred_ex.py</a>
 
 <p>And the output: (since both methods in the example produce the same output,
 it will only be shown once.) </p>
@@ -57,7 +57,7 @@ that describes the exception.</p>
 returned the deferred needs to alert the callback chain that an error
 has occurred.</p>
 
-<a href="../listings/deferred/deferred_ex1a.py" class="py-listing">deferred_ex1a.py</a>
+<a href="listings/deferred/deferred_ex1a.py" class="py-listing">deferred_ex1a.py</a>
 
 <pre>
 errback
@@ -81,7 +81,7 @@ garbage-collected.
 <p>Now let's see what happens when <em>our callback</em> raises an
 exception</p>
 
-<a href="../listings/deferred/deferred_ex1b.py" class="py-listing">deferred_ex1b.py</a>
+<a href="listings/deferred/deferred_ex1b.py" class="py-listing">deferred_ex1b.py</a>
 
 <p>And the output: (note, tracebacks will be edited slightly to conserve
 space)</p>
@@ -113,7 +113,7 @@ the next errback in your chain.</p>
 errback in the chain. If the chain is started off with a failure, the first
 method to be called will be the first errback.</p>
 
-<a href="../listings/deferred/deferred_ex2.py" class="py-listing">deferred_ex2.py</a>
+<a href="listings/deferred/deferred_ex2.py" class="py-listing">deferred_ex2.py</a>
 
 <pre>
 callback 1
@@ -143,7 +143,7 @@ exception is handled in the errback (i.e.  the errback does not return a
 failure or raise an exception) the chain continues on with the next
 callback.</p>
 
-<a href="../listings/deferred/deferred_ex3.py" class="py-listing">deferred_ex3.py</a>
+<a href="listings/deferred/deferred_ex3.py" class="py-listing">deferred_ex3.py</a>
 
 <pre>
 callback 1
@@ -169,7 +169,7 @@ method follows a common idiom in deferred callbacks by acting as a passthru,
 returning the value that it received to allow processing the chain to
 continue, but appearing transparent in terms of the result.</p>
 
-<a href="../listings/deferred/deferred_ex4.py" class="py-listing">deferred_ex4.py</a>
+<a href="listings/deferred/deferred_ex4.py" class="py-listing">deferred_ex4.py</a>
 
 <pre>
 callback 1
@@ -206,7 +206,7 @@ addCallbacks. Note that this is <strong>not</strong> the same thing as an
 addCallback followed by an addErrback.</p>
 
 
-<a href="../listings/deferred/deferred_ex5.py" class="py-listing">deferred_ex5.py</a>
+<a href="listings/deferred/deferred_ex5.py" class="py-listing">deferred_ex5.py</a>
 
 <pre>
 callback 1
@@ -228,7 +228,7 @@ skip the callback at &quot;- A -&quot; because of the error, but do some kind of
 processing in response to the error, we would have used a passthru, and
 returned the failure we received, as we see in this next example: </p>
 
-<a href="../listings/deferred/deferred_ex6.py" class="py-listing">deferred_ex6.py</a>
+<a href="listings/deferred/deferred_ex6.py" class="py-listing">deferred_ex6.py</a>
 
 <pre>
 callback 1
@@ -259,7 +259,7 @@ deferredExample2 are equivalent. The first sets up the processing chain
 beforehand and then executes it, the other executes the chain as it is being
 constructed.  This is because deferreds are <em>stateful</em>.  </p>
 
-<a href="../listings/deferred/deferred_ex7.py" class="py-listing">deferred_ex7.py</a>
+<a href="listings/deferred/deferred_ex7.py" class="py-listing">deferred_ex7.py</a>
 
 <pre>
 callback 1
@@ -310,7 +310,7 @@ chain, just return that deferred, and the result of the secondary deferred's
 processing chain will become the result that gets passed to the next callback
 of the primary deferreds processing chain </p>
 
-<a href="../listings/deferred/deferred_ex8.py" class="py-listing">deferred_ex8.py</a>
+<a href="listings/deferred/deferred_ex8.py" class="py-listing">deferred_ex8.py</a>
 
 <pre>
 callback 1
