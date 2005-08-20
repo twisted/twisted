@@ -91,14 +91,11 @@ Client service. </p>
 
 <h3>twistd and tac</h3>
 
-<p><code>.tac</code> files are configuration and start-up files for your
-Twisted application. Rather than using a configuration language for the
-configuration files, <code>.tac</code> files are Python files which need to
-have one special property: <code>.tac</code> files contain a variable named
-<code>application</code> at the top level of their namespace. 'application' is
-a fixed name for your <code class="api"
-base="twisted.application.service">Application</code> object, used by the
-<code>twistd</code> program.</p>
+<p>To handle start-up and configuration of your Twisted application, the
+Twisted Application infrastructure uses <code>.tac</code> files.
+<code>.tac</code> are Python files which configure an <code class="api"
+base="twisted.application.service">Application</code> object and assign this
+object to the top-level variable <q><code>application</code></q>.</p>
 
 <p>The following is a simple example of a <code>.tac</code> file:</p>
 
