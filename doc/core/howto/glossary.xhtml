@@ -12,12 +12,6 @@
 
 <dl>
 
-<dt><a name="AbsoluteSubmodelPaths">Absolute submodel paths</a></dt>
-<dd>
-  The full path to a <a href="#model">Model</a> object, starting at the root.
-  For example, <code>/foo/bar/baz</code>
-</dd>
-
 <dt><a name="adaptee">adaptee</a></dt>
 <dd>
   An object that has been adapted, also called <q>original</q>.  See <a
@@ -36,13 +30,6 @@
   HOWTOs on <a href="basics.xhtml">creating and manipulating</a> them as a
   system-administrator, as well as <a href="application.xhtml">using</a> them in
   your code.
-</dd>
-
-<dt><a name="Authorizer"><code noexpand="1" class="API" base="twisted.cred.authorizer">Authorizer</code></a></dt>
-<dd>
-  (Deprecated; this is part old cred) An object responsible for managing 
-  <a href="#Identity">Identities</a>.  See 
-  <code class="API">twisted.cred.authorizer</code>.
 </dd>
 
 <dt><a name="Avatar">Avatar</a></dt>
@@ -69,13 +56,6 @@
   A way to store data in readily accessible place for later reuse. Caching data
   is often done because the data is expensive to produce or access. Caching data
   risks being stale, or out of sync with the original data.
-</dd>
-
-<dt><a name="COIL">COIL</a></dt>
-<dd>
-  <q>COnfiguration ILlumination</q>.  It is a (stagnant and
-  incomplete) end-user interface for configuring Twisted applications.
-  See <code class="API">twisted.coil</code>.
 </dd>
 
 <dt><a name="component">component</a></dt>
@@ -113,13 +93,6 @@
 <dd>
   An object that consumes data from a <a href="#Producer">Producer</a>.  See 
   <code class="API">twisted.internet.interfaces.IConsumer</code>.
-</dd>
-
-<dt><a name="controller">controller</a></dt>
-<dd>
-  (In <a href="#Woven">Woven</a>) an object which accepts input from the user in
-  the form of mouse clicks, keypresses, and web form submissions, and updates
-  the <a href="#model">Model</a> component.
 </dd>
 
 <dt><a name="Cred">Cred</a></dt>
@@ -186,12 +159,6 @@
   these are used for passing errors through asynchronous callbacks.
 </dd>
 
-<dt><a name="Identity"><code noexpand="1" class="API" base="twisted.cred.identity">Identity</code></a></dt>
-<dd>
-  (Deprecated). A <a href="#Cred">Cred</a> object that represents a single user with a
-  username and a password of some sort.
-</dd>
-
 <dt><a name="im">im, t-im</a></dt>
 <dd>
   Abbreviation of <q>(Twisted) <a href="#InstanceMessenger">Instance
@@ -237,12 +204,6 @@ Standard</a>.</dd>
   A debugging/administration interface to a Twisted application.
 </dd>
 
-<dt><a name="Marmalade">Marmalade</a></dt>
-<dd>
-  An XML-based serialisation module.  See 
-  <code class="API">twisted.persisted.marmalade</code>.
-</dd>
-
 <dt><a name="Microdom">Microdom</a></dt>
 <dd>
   A partial DOM implementation using <a href="#SUX">SUX</a>.  It is simple and
@@ -250,37 +211,12 @@ Standard</a>.</dd>
   class="API">twisted.web.microdom</code>.
 </dd>
 
-<dt><a name="model">model</a></dt>
-<dd>
-  An object that contains data and business logic for manipulating this data.
-</dd>
-
-<dt><a name="modelStack">model stack</a></dt>
-<dd>
-  A stack of <a href="#model">Model</a> instances which keeps track of the Model
-  that is currently in scope during the <a href="#Woven">Woven</a> Page
-  rendering process.
-</dd>
-
 <dt><a name="Names">Names</a></dt>
 <dd>Twisted's DNS server, found in <code class="API">twisted.names</code>.</dd>
 
-<dt><a name="overrides">overrides</a></dt>
-<dd>
-  (In <a href="#Woven">Woven</a>)  A way to add data to cached data. Overrides
-  are not replaced when base data is updated.
-</dd>
-
-<dt><a name="pattern">pattern</a></dt>
-<dd>
-  A node in a <a href="#Woven">Woven</a> HTML template whose sole purpose is to
-  be copied and filled with data by a View component.
-</dd>
-
-<dt><a name="relativeSubmodelPath">relative submodel path</a></dt>
-<dd>
-  A partial path to a <a href="#model">Model</a> object, relative to the top of
-  the Model stack.
+<dt><a name="Nevow">Nevow</a></dt>
+<dd>The successor to <a href="#woven">Woven</a>, a web framework
+available at <a href="http://nevow.com/">nevow.com</a>.
 </dd>
 
 <dt><a name="PB">PB</a></dt>
@@ -377,13 +313,6 @@ with Perspective Broker</a>.</dd>
 <dd>A persistent reference manager for <a href="#PerspectiveBroker">PB</a>.
 See <code class="API">twisted.spread.sturdy</code>.</dd>
 
-<dt><a name="submodelPaths">submodel paths</a></dt>
-<dd>
-  A path to a <a href="#model">Model</a> object. A way of referring to a piece
-  of data in a <a href="#Woven">Woven</a> template that allows Python to locate
-  the data in a tree of python objects.
-</dd>
-
 <dt><a name="SUX">SUX</a></dt>
 <dd><em>S</em>mall <em>U</em>ncomplicated <em>X</em>ML, Twisted's simple XML
 parser written in pure Python.  See 
@@ -394,10 +323,6 @@ parser written in pure Python.  See
 <em>T</em>wisted <em>AP</em>plication.  A serialised application that created
 with <code>mktap</code> and runnable by <code>twistd</code>.  See 
 <a href="basics.xhtml">Using the Utilities</a>.</dd>
-
-<dt><a name="Tendril">Tendril</a></dt>
-<dd>A bridge between <a href="#Words">Twisted Words</a> and IRC.  See 
-<code class="API">twisted.words.tendril</code>.</dd>
 
 <dt><a name="Trial">Trial</a></dt>
 <dd><code class="API">twisted.trial</code>, Twisted's unit-testing framework,
@@ -423,33 +348,6 @@ Twisted's <a href="policy/test-standard.xhtml">Test Standard</a>.</dd>
 the standard <code>getopt</code> module for parsing command-lines which is much
 easier to work with.  See <a href="options.xhtml">Parsing command-lines</a>.</dd>
 
-<dt><a name="wcfactory"><code>wcfactory</code></a></dt>
-<dd>
-  A <a href="#Factory">factory</a> method for producing <a
-  href="#controller">Controller</a> objects when a <code>controller=</code>
-  directive is encountered in a <a href="#Woven">Woven</a> Template.
-</dd>
-
-<dt><a name="wchild"><code>wchild</code></a></dt>
-<dd>
-  In <a href="#Woven">Woven</a>, a <a href="#Factory">factory</a> method for
-  producing objects which represent URL segments below the current object.
-</dd>
-
-<dt><a name="widgets">widgets</a></dt>
-<dd>
-  In <a href="#Woven">Woven</a>, a <code class="API"
-  base="twisted.web.woven.view">View</code> subclass which specializes in
-  rendering a fragment of the DOM tree.
-</dd>
-
-<dt><a name="wmfactory"><code>wmfactory</code></a></dt>
-<dd>
-  A <a href="#Factory">factory</a> method for producing <a
-  href="#model">Model</a> objects when a <code>model=</code> directive is
-  encountered in a <a href="#Woven">Woven</a> Template.
-</dd>
-
 <dt><a name="Words">Words</a></dt>
 <dd>Twisted Words is a multi-protocol chat server that uses the 
 <a href="#PerspectiveBroker">Perspective Broker</a> protocol as its native
@@ -459,17 +357,6 @@ communication style.  See <code class="API">twisted.words</code>.</dd>
 <dd><em>W</em>eb <em>O</em>bject <em>V</em>isualization <em>En</em>vironment.
 A deprecated web templating system based on XML and the Model-View-Controller design
 pattern.  This has been deprecated in favor of <a href="http://nevow.com/">Nevow</a>.</dd>
-
-<dt><a name="wvfactory"><code>wvfactory</code></a></dt>
-<dd>
-  A <a href="#Factory">factory</a> method for producing View objects when a
-  <code>view=</code> directive is encoutered in a <a
-  href="#Woven">Woven</a>Template.
-</dd>
-
-<dt><a name="Zoot">Zoot</a></dt>
-<dd>Twisted's Gnutella implementation (currently very incomplete).  See 
-<code class="API">twisted.zoot</code>.</dd>
 
 </dl>
 
