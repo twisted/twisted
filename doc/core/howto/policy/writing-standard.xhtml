@@ -53,6 +53,37 @@
     complex sentences should ideally be avoided: these make reading
     unnecessarily difficult, particularly for non-native speakers.</p>
 
+    <h2>Descriptions of features</h2>
+
+    <p>Descriptions of any feature added since release 2.0 of Twisted core
+    must have a note describing which release of which Twisted project they
+    were added in at the first mention in each document. If they are not yet
+    released, give them the number of the next minor release.</p>
+
+    <p>For example, a substantial change might have a version number added in
+    the introduction:</p>
+
+    <blockquote>
+    This document describes the Application infrastructure for deploying
+    Twisted applications <em>(added in Twisted 1.3)</em>.
+    </blockquote>
+
+    <p>The version does not need to be mentioned elsewhere in the document
+    except for specific features which were added in subsequent releases,
+    which might should be mentioned separately.</p>
+
+    <blockquote>
+    The simplest way to create a <code>.tac</code> file, SuperTac <em>(added
+    in Twisted Core 99.7)</em>...</blockquote>
+
+    <p>In the case where the usage of a feature has substantially changed, the
+    number should be that of the release in which the current usage became
+    available. For example:</p>
+
+    <blockquote> This document describes the Application infrastructure for
+    deploying Twisted applications <em>(updated[/substantially updated] in Twisted
+    2.7)</em>.  </blockquote>
+
     <h2>Linking</h2>
 
     <p>The first occurrence of the name of any module, class or function should
