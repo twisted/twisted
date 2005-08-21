@@ -428,6 +428,69 @@ class TimeoutFactory(WrappingFactory):
                              timeoutPeriod=self.timeoutPeriod)
 
 
+class TrafficLoggingProtocol(ProtocolWrapper):
+    _counter = 0
+
+    def __init__(self, factory, wrappedProtocol, logfile, lengthLimit=None):
+        ProtocolWrapper.__init__(self, factory, wrappedProtocol)
+        self.logfile = logfile
+        self.lengthLimit = lengthLimit
+        TrafficLoggingProtocol._counter += 1
+        self._number = TrafficLoggingProtocol._counter
+
+    def _log(self, line):
+        self.logfile.write(line + '\n')
+        self.logfile.flush()
+
+    def _mungeData(self, data):
+        if self.lengthLimit and len(data) > self.lengthLimit:
+            data = data[:self.lengthLimit - 12] + '<... elided>'
+        return data
+
+    # IProtocol
+    def connectionMade(self):
+        self._log('*')
+        return ProtocolWrapper.connectionMade(self)
+
+    def dataReceived(self, data):
+        self._log('C %d: %r' % (self._number, self._mungeData(data)))
+        return ProtocolWrapper.dataReceived(self, data)
+
+    def connectionLost(self, reason):
+        self._log('C %d: %r' % (self._number, reason))
+        return ProtocolWrapper.connectionLost(self, reason)
+
+
+    # ITransport
+    def write(self, data):
+        self._log('S %d: %r' % (self._number, self._mungeData(data)))
+        return ProtocolWrapper.write(self, data)
+
+    def loseConnection(self):
+        self._log('S %d: *' % (self._number,))
+        return ProtocolWrapper.loseConnection(self)
+
+
+class TrafficLoggingFactory(WrappingFactory):
+    protocol = TrafficLoggingProtocol
+
+    _counter = 0
+
+    def __init__(self, wrappedFactory, logfilePrefix, lengthLimit=None):
+        self.logfilePrefix = logfilePrefix
+        self.lengthLimit = lengthLimit
+        WrappingFactory.__init__(self, wrappedFactory)
+
+    def open(self, name):
+        return file(name, 'w')
+
+    def buildProtocol(self, addr):
+        self._counter += 1
+        logfile = self.open(self.logfilePrefix + '-' + str(self._counter))
+        return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
+                             logfile, self.lengthLimit)
+
+
 class TimeoutMixin:
     """Mixin for protocols which wish to timeout connections
 

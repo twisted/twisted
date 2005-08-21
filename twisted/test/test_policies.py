@@ -478,3 +478,31 @@ class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
         op.connectionLost(None)
         self.assertEqual(0, factory.connectionCount)
 
+
+class TestLoggingFactory(policies.TrafficLoggingFactory):
+    openFile = None
+    def open(self, name):
+        assert self.openFile is None, "open() called too many times"
+        self.openFile = StringIO()
+        return self.openFile
+
+class LoggingFactoryTestCase(unittest.TestCase):
+    def testThingsGetLogged(self):
+        t = StringTransportWithDisconnection()
+        f = TestLoggingFactory(Server(), 'test')
+        p = f.buildProtocol(('1.2.3.4', 5678))
+        t.protocol = p
+        p.makeConnection(t)
+
+        self.failUnless('*' in f.openFile.getvalue())
+        self.failIf(t.value())
+
+        p.dataReceived('here are some bytes')
+
+        self.assertNotEqual(-1, f.openFile.getvalue().find("C 1: 'here are some bytes'"))
+        self.assertNotEqual(-1, f.openFile.getvalue().find("S 1: 'here are some bytes'"))
+        self.assertEquals(t.value(), 'here are some bytes')
+
+        p.loseConnection()
+
+        self.assertNotEqual(-1, f.openFile.getvalue().find('ConnectionDone'))
