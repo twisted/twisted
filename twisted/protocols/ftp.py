@@ -598,7 +598,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             if err.check(FTPCmdError):
                 msg = RESPONSE[err.value.errorCode] % (err.value.errorMessage,)
                 self.sendLine(msg)
-            elif err.check(TypeError):
+            elif (err.check(TypeError) and 
+                  err.value.args[0].find('takes exactly') != -1):
                 self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
             else:
                 log.msg("Unexpected FTP error")
