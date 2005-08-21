@@ -21,7 +21,7 @@ from zope.interface import implements, providedBy, directlyProvides
 
 class ProtocolWrapper(Protocol):
     """Wraps protocol instances and acts as their transport as well."""
-    
+
     implements(ITransport)
 
     disconnecting = 0
@@ -34,9 +34,9 @@ class ProtocolWrapper(Protocol):
         for iface in providedBy(transport):
             directlyProvides(self, iface)
         Protocol.makeConnection(self, transport)
-    
+
     # Transport relaying
-    
+
     def write(self, data):
         self.transport.write(data)
 
@@ -52,7 +52,7 @@ class ProtocolWrapper(Protocol):
 
     def getHost(self):
         return self.transport.getHost()
-    
+
     def registerProducer(self, producer, streaming):
         self.transport.registerProducer(producer, streaming)
 
@@ -64,9 +64,9 @@ class ProtocolWrapper(Protocol):
 
     def __getattr__(self, name):
         return getattr(self.transport, name)
-    
+
     # Protocol relaying
-    
+
     def connectionMade(self):
         self.factory.registerProtocol(self)
         self.wrappedProtocol.makeConnection(self)
@@ -83,9 +83,9 @@ components.backwardsCompatImplements(ProtocolWrapper)
 
 class WrappingFactory(ClientFactory):
     """Wraps a factory and its protocols, and keeps track of them."""
-    
+
     protocol = ProtocolWrapper
-    
+
     def __init__(self, wrappedFactory):
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
@@ -97,7 +97,7 @@ class WrappingFactory(ClientFactory):
     def doStop(self):
         self.wrappedFactory.doStop()
         ClientFactory.doStop(self)
-    
+
     def startedConnecting(self, connector):
         self.wrappedFactory.startedConnecting(connector)
 
@@ -108,7 +108,7 @@ class WrappingFactory(ClientFactory):
         self.wrappedFactory.clientConnectionLost(connector, reason)
 
     def buildProtocol(self, addr):
-        return self.protocol(self, self.wrappedFactory.buildProtocol(addr))    
+        return self.protocol(self, self.wrappedFactory.buildProtocol(addr))
 
     def registerProtocol(self, p):
         """Called by protocol to register itself."""
@@ -123,7 +123,7 @@ class ThrottlingProtocol(ProtocolWrapper):
     """Protocol for ThrottlingFactory."""
 
     # wrap API for tracking bandwidth
-    
+
     def write(self, data):
         self.factory.registerWritten(len(data))
         ProtocolWrapper.write(self, data)
@@ -144,7 +144,7 @@ class ThrottlingProtocol(ProtocolWrapper):
         del self.producer
         ProtocolWrapper.unregisterProducer(self)
 
-    
+
     def throttleReads(self):
         self.transport.stopReading()
 
@@ -206,7 +206,7 @@ class ThrottlingFactory(WrappingFactory):
             throttleTime = (float(self.writtenThisSecond) / self.writeLimit) - 1.0
             self.unthrottleWritesID = reactor.callLater(throttleTime,
                                                         self.unthrottleWrites)
-        # reset for next round    
+        # reset for next round
         self.writtenThisSecond = 0
         self.checkWriteBandwidthID = reactor.callLater(1, self.checkWriteBandwidth)
 
@@ -283,7 +283,7 @@ class LimitConnectionsByPeer(WrappingFactory):
 
     def startFactory(self):
         self.peerConnections = {}
-        
+
     def buildProtocol(self, addr):
         peerHost = addr[0]
         connectionCount = self.peerConnections.get(peerHost, 0)
@@ -310,13 +310,13 @@ class LimitTotalConnectionsFactory(ServerFactory):
     @cvar overflowProtocol: Protocol to use for new connections when
         connectionLimit is exceeded.  If C{None} (the default value), excess
         connections will be closed immediately.
-    
+
     API Stability: Unstable
     """
     connectionCount = 0
     connectionLimit = None
     overflowProtocol = None
-    
+
     def buildProtocol(self, addr):
         if (self.connectionLimit is None or
             self.connectionCount < self.connectionLimit):
@@ -331,7 +331,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
         self.connectionCount += 1
         return protocol
-            
+
     def registerProtocol(self, p):
         pass
 
@@ -341,7 +341,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
 class TimeoutProtocol(ProtocolWrapper):
     """Protocol that automatically disconnects when the connection is idle.
-    
+
     Stability: Unstable
     """
 
@@ -359,7 +359,7 @@ class TimeoutProtocol(ProtocolWrapper):
 
     def setTimeout(self, timeoutPeriod=None):
         """Set a timeout.
-        
+
         This will cancel any existing timeouts.
 
         @param timeoutPeriod: If not C{None}, change the timeout period.
@@ -372,7 +372,7 @@ class TimeoutProtocol(ProtocolWrapper):
 
     def cancelTimeout(self):
         """Cancel the timeout.
-        
+
         If the timeout was already cancelled, this does nothing.
         """
         if self.timeoutCall:
@@ -381,7 +381,7 @@ class TimeoutProtocol(ProtocolWrapper):
             except error.AlreadyCalled:
                 pass
             self.timeoutCall = None
-    
+
     def resetTimeout(self):
         """Reset the timeout, usually because some activity just happened."""
         if self.timeoutCall:
@@ -425,7 +425,7 @@ class TimeoutFactory(WrappingFactory):
 
     def buildProtocol(self, addr):
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
-                             timeoutPeriod=self.timeoutPeriod)    
+                             timeoutPeriod=self.timeoutPeriod)
 
 
 class TimeoutMixin:
@@ -441,17 +441,17 @@ class TimeoutMixin:
         """Reset the timeout count down"""
         if self.__timeoutCall is not None and self.timeOut is not None:
             self.__timeoutCall.reset(self.timeOut)
-    
+
     def setTimeout(self, period):
         """Change the timeout period
-        
+
         @type period: C{int} or C{NoneType}
         @param period: The period, in seconds, to change the timeout to, or
         C{None} to disable the timeout.
         """
         prev = self.timeOut
         self.timeOut = period
-        
+
         if self.__timeoutCall is not None:
             if period is None:
                 self.__timeoutCall.cancel()
@@ -460,7 +460,7 @@ class TimeoutMixin:
                 self.__timeoutCall.reset(period)
         elif period is not None:
             self.__timeoutCall = reactor.callLater(period, self.__timedOut)
-            
+
         return prev
 
     def __timedOut(self):
