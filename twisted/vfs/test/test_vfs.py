@@ -2,7 +2,6 @@
 import os
 import os.path
 import shutil
-import sets
 
 from twisted.trial import unittest
 
@@ -27,8 +26,9 @@ class OSVFSTest(unittest.TestCase):
 
     def test_listdir(self):
         nodes = self.filesystem.fetch( '/' ).children()
-        self.assertEquals(sets.Set([path for (path, node) in nodes]),
-                          sets.Set(['.', '..', 'ned', 'file.txt']))
+        paths = [path for (path, node) in nodes]
+        paths.sort()
+        self.assertEquals(paths, ['.', '..', 'file.txt', 'ned'])
 
     def test_mkdir(self):
         self.filesystem.fetch( '/' ).createDirectory('fred')
@@ -38,26 +38,30 @@ class OSVFSTest(unittest.TestCase):
     def test_rmdir(self):
         self.filesystem.fetch( '/ned' ).remove()
         nodes = self.filesystem.fetch( '/' ).children()
-        self.assertEquals(sets.Set([path for (path, node) in nodes]),
-                          sets.Set(['.', '..', 'file.txt']))
+        paths = [path for (path, node) in nodes]
+        paths.sort()
+        self.assertEquals(paths, ['.', '..', 'file.txt'])
 
     def test_rmfile(self):
         self.filesystem.fetch( '/file.txt' ).remove()
         nodes = self.filesystem.fetch( '/' ).children()
-        self.assertEquals(sets.Set([path for (path, node) in nodes]),
-                          sets.Set(['.', '..', 'ned']))
+        paths = [path for (path, node) in nodes]
+        paths.sort()
+        self.assertEquals(paths, ['.', '..', 'ned'])
 
     def test_rename(self):
         self.filesystem.fetch( '/ned' ).rename('sed')
         nodes = self.filesystem.fetch( '/' ).children()
-        self.assertEquals(sets.Set([path for (path, node) in nodes]),
-                          sets.Set(['.', '..', 'sed', 'file.txt']))
+        paths = [path for (path, node) in nodes]
+        paths.sort()
+        self.assertEquals(paths, ['.', '..', 'file.txt', 'sed'])
 
     def test_mkfile(self):
         new = self.filesystem.fetch( '/' ).createFile( 'fred.txt')
         nodes = self.filesystem.fetch( '/' ).children()
-        self.assertEquals(sets.Set([path for (path, node) in nodes]),
-                          sets.Set(['.', '..', 'ned', 'fred.txt', 'file.txt']))
+        paths = [path for (path, node) in nodes]
+        paths.sort()
+        self.assertEquals(paths, ['.', '..', 'file.txt', 'fred.txt', 'ned'])
 
     def test_writefile(self):
         new = self.filesystem.fetch( '/' ).createFile('fred.txt')
