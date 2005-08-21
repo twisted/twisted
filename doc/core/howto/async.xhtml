@@ -119,6 +119,7 @@ and then processes it. In asynchronous programming, a function requests the
 data, and lets the library call the callback function when the data is
 ready.</p>
 
+<a name="deferreds" />
 <h2>Deferreds</h2>
 
 <p>Twisted uses the <code class="API"
@@ -142,11 +143,13 @@ designed to help solve.  Functions that wait on hard drive access, database
 access, and network access all fall into this class, although the time delay
 varies.  </p>
 
-<p> Deferreds are designed to enable Twisted programs to wait for data without
-hanging until that data arrives. They do this by giving a callback simple management
-interface to libraries and applications. Libraries know that they always make
-their results available by calling <code class="API"
-base="twisted.internet.defer">Deferred.callback</code> and errors by calling
+<p> Deferreds are designed to enable Twisted programs to wait for data
+without hanging until that data arrives. They do this by giving a
+simple management interface for callbacks to libraries and
+applications. Libraries know that they always make their results
+available by calling <code class="API"
+base="twisted.internet.defer">Deferred.callback</code> and errors by
+calling
 <code class="API"
 base="twisted.internet.defer">Deferred.errback</code>. Applications set up
 result handlers by attaching callbacks and errbacks to deferreds in the order

@@ -27,6 +27,27 @@ then begin a callback chain when data is available.</p>
 <li><a href="async.xhtml">Asynchronous Programming with Twisted</a></li>
 </ul>
 
+<p>
+After reading this document, the reader should expect to be able to
+deal with most simple APIs in Twisted and Twisted-using code that
+return Deferreds.
+</p>
+
+<ul>
+<li>what sorts of things you can do when you get a Deferred from a
+function call; and</li>
+<li>how you can write your code to robustly handle errors in Deferred
+code.</li>
+</ul>
+
+<p>Unless you're already very familiar with asynchronous programming,
+it's strongly recommended you read
+the <a href="async.xhtml#deferreds">Deferreds section</a> of the
+Asynchronous programming document to get an idea of why Deferreds
+exist.
+</p>
+
+
 <h2>Callbacks</h2>
 
 <p>A <code class="API">twisted.internet.defer.Deferred</code> is a promise that
@@ -42,8 +63,9 @@ from twisted.internet import reactor, defer
 
 def getDummyData(self, x):
     """
-    This function is a dummy which simulates a delayed result
-    and returns a Deferred which will fire with that result
+    This function is a dummy which simulates a delayed result and
+    returns a Deferred which will fire with that result. Don't try too
+    hard to understand this.
     """
     d = defer.Deferred()
     # simulate a delayed result by asking the reactor to fire the
@@ -329,17 +351,17 @@ def authenticateUser(isValidUser, user):
 </pre>
 
 <p>
-However, it
-assumes that <code>isValidUser</code> returns immediately, whereas
-<code>isValidUser</code> may
-actually authenticate the user asynchronously and return a Deferred. It is
-possible to adapt this trivial user authentication code to accept either a
-synchronous <code>isValidUser</code> or an asynchronous <code>isValidUser</code>, allowing the
-library to handle either type of function. It is, however, also possible to
-adapt synchronous functions to return Deferreds. This section describes both
-alternatives: handling functions that might be synchronous or asynchronous in
-the library function (<code>authenticateUser</code>) or in the application
-code.
+However, it assumes that <code>isValidUser</code> returns immediately,
+whereas <code>isValidUser</code> may actually authenticate the user
+asynchronously and return a Deferred. It is possible to adapt this
+trivial user authentication code to accept either a
+synchronous <code>isValidUser</code> or an
+asynchronous <code>isValidUser</code>, allowing the library to handle
+either type of function. It is, however, also possible to adapt
+synchronous functions to return Deferreds. This section describes both
+alternatives: handling functions that might be synchronous or
+asynchronous in the library function (<code>authenticateUser</code>)
+or in the application code.
 </p>
 
 <h3>Handling possible Deferreds in the library code</h3>
