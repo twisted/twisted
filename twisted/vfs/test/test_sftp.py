@@ -1,7 +1,4 @@
-import sets
-
-from twisted.conch.ssh.filetransfer import (FXF_READ, FXF_WRITE, FXF_CREAT,
-    FXF_APPEND, FXF_EXCL)
+from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT, FXF_APPEND, FXF_EXCL
 from twisted.trial import unittest, assertions as A
 
 from twisted.vfs import ivfs, pathutils
@@ -9,6 +6,7 @@ from twisted.vfs.adapters import sftp
 from twisted.vfs.backends import inmem
 
 sftpAttrs = ['size', 'uid', 'gid', 'nlink', 'mtime', 'atime', 'permissions']
+sftpAttrs.sort()
 
 class SFTPAdapterTest(unittest.TestCase):
     def setUp(self):
@@ -23,7 +21,9 @@ class SFTPAdapterTest(unittest.TestCase):
 
     def _assertNodes(self, dir, mynodes):
         nodes = [x[0] for x in self.filesystem.fetch(dir).children()]
-        return A.assertEquals(sets.Set(nodes), sets.Set(mynodes))
+        nodes.sort()
+        mynodes.sort()
+        return A.assertEquals(nodes, mynodes)
 
     def test_openFile(self):
         child = self.sftp.openFile('file.txt', 0, None)
@@ -82,21 +82,19 @@ class SFTPAdapterTest(unittest.TestCase):
 
     def test_openDirectory(self):
         for name, lsline, attrs in self.sftp.openDirectory('/ned'):
-            A.failUnless(
-                sets.Set(sftpAttrs),
-                sets.Set(attrs.keys()),
-                )
+            keys = attrs.keys()
+            keys.sort()
+            A.failUnless(sftpAttrs, keys)
 
     def test_getAttrs(self):
-        A.failUnless(sets.Set(sftpAttrs),
-                     sets.Set(self.sftp.getAttrs('/ned', None).keys()))
-
+        attrs = self.sftp.getAttrs('/ned', None).keys()
+        attrs.sort()
+        A.failUnless(sftpAttrs, attrs)
 
     def test_dirlistWithoutAttrs(self):
         self.ned.getMetadata = self.f.getMetadata = lambda: {}
         for name, lsline, attrs in self.sftp.openDirectory('/'):
-            A.failUnless(
-                sets.Set(sftpAttrs),
-                sets.Set(attrs.keys()),
-                )
+            keys = attrs.keys()
+            keys.sort()
+            A.failUnless(sftpAttrs, keys)
 

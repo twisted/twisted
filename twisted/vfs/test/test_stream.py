@@ -1,5 +1,3 @@
-import sets
-
 from twisted.trial import unittest, assertions as A
 
 from twisted.vfs import ivfs, pathutils

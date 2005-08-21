@@ -18,9 +18,9 @@ class FileSystemToIFTPShellAdaptor:
     def __init__(self, filesystem):
         self.filesystem = filesystem
 
-    @staticmethod
     def _makePath(segments):
         return '/'.join(segments)
+    _makePath = staticmethod(_makePath)
 
     def makeDirectory(self, path):
         dirname, basename = path[:-1], path[-1]
