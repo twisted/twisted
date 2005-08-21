@@ -11,6 +11,10 @@ from zope.interface import implements
 from twisted.python import components
 from twisted.vfs import ivfs, pathutils
 
+# XXX: Import this to make sure the adapter registration has happened.
+from twisted.vfs.adapters import stream
+
+
 class FileSystemToIFTPShellAdaptor:
 
     implements(IFTPShell)
