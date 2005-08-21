@@ -9,7 +9,8 @@ class MulticastServerUDP(DatagramProtocol):
         self.transport.joinGroup('224.0.0.1')
 
     def datagramReceived(self, datagram, address):
-        # The uniqueID check is to ensure we only service requests from ourselves
+        # The uniqueID check is to ensure we only service requests from
+        # ourselves
         if datagram == 'UniqueID':
             print "Server Received:" + repr(datagram)
             self.transport.write("data", address)
