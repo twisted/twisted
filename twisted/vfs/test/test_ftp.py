@@ -76,12 +76,14 @@ class FTPAdapterTestCase(unittest.TestCase):
     def testLIST(self):
         d = self.ftp.ftp_LIST('')
         names = [name for (name, attrs) in self.ftp.dtpInstance.listResponse]
-        self.assertEqual(['.', '..', 'file.txt', 'ned'], sorted(names))
+        names.sort()
+        self.assertEqual(['.', '..', 'file.txt', 'ned'], names)
 
     def testNLST(self):
         d = self.ftp.ftp_NLST('')
         names = self.ftp.dtpInstance.lines
-        self.assertEqual(['.', '..', 'file.txt', 'ned'], sorted(names))
+        names.sort()
+        self.assertEqual(['.', '..', 'file.txt', 'ned'], names)
 
     def testCWD(self):
         self.ftp.ftp_CWD('ned')
