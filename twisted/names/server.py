@@ -17,7 +17,7 @@ Important: No additional processing is done on some of the record types.
 This violates the most basic RFC and is just plain annoying
 for resolvers to deal with.  Fix it.
 
-@author: U{Jp Calderone <exarkun@twistedmatrix.com>}
+@author: U{Jp Calderone <mailto:exarkun@twistedmatrix.com>}
 """
 
 from __future__ import nested_scopes

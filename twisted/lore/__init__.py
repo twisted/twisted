@@ -5,7 +5,7 @@
 '''
 The Twisted Documentation Generation System
 
-Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
+Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 '''
 
 # TODO

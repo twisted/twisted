@@ -8,7 +8,7 @@
 
 API Stability: Unstable
 
-@author: U{Jp Calderone<exarkun@twistedmatrix.com>}
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 TODO: Monitor files for reparsing
       Handle non-local alias targets

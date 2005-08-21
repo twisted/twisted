@@ -7,7 +7,7 @@
 
 Stability: semi-stable
 
-Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
+Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 
 Future Plans: more configurability.
 """

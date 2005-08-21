@@ -9,7 +9,7 @@ Requires SOAPpy 0.10.1 or later.
 
 API Stability: unstable
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org}
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 Future plans:
 SOAPContext support of some kind.

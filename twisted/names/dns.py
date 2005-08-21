@@ -13,7 +13,7 @@ Future Plans:
     - Put in a better lookupRecordType implementation.
 
 @author: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>},
-         U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
+         U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
 # System imports

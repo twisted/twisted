@@ -150,7 +150,7 @@ class Deferred:
     threads (see for example L{twisted.enterprise.adbapi}).
 
     For more information about Deferreds, see doc/howto/defer.html or
-    U{http://www.twistedmatrix.com/documents/howto/defer}
+    U{http://twistedmatrix.com/projects/core/documentation/howto/defer.html}
 
     When creating a Deferred, you may provide a canceller function,
     which will be called by d.cancel() to let you do any cleanup necessary

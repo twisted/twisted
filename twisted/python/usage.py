@@ -8,7 +8,7 @@ twisted.python.usage is a module for parsing/handling the
 command line of your program.
 
 For information on how to use it, see
-U{http://twistedmatrix.com/documents/howto/options}, or doc/howto/options.html
+U{http://twistedmatrix.com/projects/core/documentation/howto/options.html}, or doc/howto/options.html
 in your Twisted directory.
 """
 
@@ -90,7 +90,7 @@ class Options(dict):
     can do things like C{'self["option"] = val'} in these methods.
 
     Advanced functionality is covered in the howto documentation,
-    available at U{http://twistedmatrix.com/documents/howto/options}, or
+    available at U{http://twistedmatrix.com/projects/core/documentation/howto/options.html}, or
     doc/howto/options.html in your Twisted directory.
     """
 

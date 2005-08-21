@@ -5,9 +5,9 @@
 """
 An FTP protocol implementation
 
-@author: U{Itamar Shtull-Trauring<itamarst@twistedmatrix.com>}
-@author: U{Jp Calderone<exarkun@divmod.com>}
-@author: U{Andrew Bennetts<spiv@twistedmatrix.com>}
+@author: U{Itamar Shtull-Trauring<mailto:itamarst@twistedmatrix.com>}
+@author: U{Jp Calderone<mailto:exarkun@divmod.com>}
+@author: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 
 API stability: FTPClient is stable, FTP and FTPFactory (server) is unstable.
 """
