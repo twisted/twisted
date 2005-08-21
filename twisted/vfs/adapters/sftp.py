@@ -9,7 +9,7 @@ from twisted.conch.interfaces import ISession
 from twisted.conch.ssh.filetransfer import ISFTPServer, FileTransferServer
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
 from twisted.conch.ssh import session
-from twisted.conch.unix import _lsLine
+from twisted.conch.ls import lsLine
 
 from twisted.vfs import ivfs, pathutils
 
@@ -123,7 +123,7 @@ class AdaptFileSystemUserToISFTP:
                 s.st_size   = attrs["size"]
                 s.st_mtime  = attrs["mtime"]
                 s.st_nlink  = attrs["nlink"]
-                return ( name, _lsLine(name, s), attrs )
+                return ( name, lsLine(name, s), attrs )
 
             def close(self):
                 return
