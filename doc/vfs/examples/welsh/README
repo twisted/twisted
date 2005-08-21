@@ -1,0 +1,46 @@
+welsh server aims to be samba like from an administration point of view file
+server.  it should be able to work with any file like protocol you'd care to
+write an adaptor for.
+
+users are setup in the welshpasswd file.  the format for the file is:
+
+user:encrypted_passwd
+
+e.g.
+
+admin:OItBGZVW2B7s2
+
+you can use the genpasswd script to generate an encrypted password, e.g.
+
+> echo fred:`python genpasswd fredspasswd` >> welshpasswd
+
+file system shares are setup in the welsh.conf file. the format for the file
+is:
+
+sharename:uid:gid:dirmask:filemask:/path/to/shared/dir:users,commaseperated
+
+e.g.
+
+tsuser:1000:1000:2750:640:/tmp:admin
+tmpasroot:0:0:::/tmp:admin
+
+welsh presents a virtual root directory which contains directories named
+sharename for each share the logged in user has access to.  while the user is
+inside each of these virtual shared directories, they can manipulate the
+filesystem from /path/to/shared/dir down.  while working in the share they
+assume the uid and gid specified for the share. if the optional dirmask and
+filemask are specified then all new files are created will for forced to these
+umasks.
+
+welsh server needs to be run as root in order to be able the sete[gu]id.  the
+example has been configured to look for ssh keys in /etc/ssh, which if you have
+installed a ssh server on a debian related server should just worked.  if it
+doesn't you can generate some keys with:
+
+> ssh-keygen -q -b 1024 -t dsa -f ssh_host_dsa_key
+
+you'll need to set sshkeys in welsh.tac to point to where you create the keys.
+the tac is also configured to assume that welsh.conf and welshpasswd are in the
+same directory that you run welsh.tac from.
+
+the example welsh server has been set up for an admin user, passwd admin.

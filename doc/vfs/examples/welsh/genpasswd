@@ -1,0 +1,12 @@
+
+import string
+
+from sys import argv
+from crypt import crypt
+from random import choice
+
+salt_chars = './' + string.ascii_letters + string.digits
+salt = choice(salt_chars) + choice(salt_chars)
+print crypt(argv[1], salt)
+
+
