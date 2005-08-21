@@ -10,7 +10,6 @@ import re
 # Counterpart to evilness in test_http_headers
 try:
     _http_headers_isBeingTested
-    print "isbeingtested"
     from twisted.python.util import OrderedDict
     ODict = OrderedDict
     time = lambda : 999999990 # Sun, 09 Sep 2001 01:46:30 GMT
