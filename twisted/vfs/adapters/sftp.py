@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.vfs.test.test_sftp -*-
 
 import os, time
 

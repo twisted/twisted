@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.vfs.test.test_ftp -*-
 """Tests for the FTP server VFS adapter."""
 
 # TODO:
