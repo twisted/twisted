@@ -20,7 +20,7 @@ import zope.interface
 
 class NotLoggedIn(rend.Page):
     """The resource that is returned when you are not logged in"""
-    addSlash = True
+    addSlash = False
     docFactory = loaders.stan(
     tags.html[
         tags.head[tags.title["Not Logged In"]],
@@ -42,6 +42,19 @@ class NotLoggedIn(rend.Page):
         ]
     ]
 )
+
+
+class SiteResource(rend.Page):
+    def locateChild(self, ctx, segments):
+        ctx.remember(self, inevow.ICanHandleNotFound)
+        return self.original.locateChild(ctx, segments)
+
+    def willHandle_notFound(self, request):
+        return True
+
+    def renderHTTP_notFound(self, ctx):
+        return NotLoggedIn().renderHTTP(ctx)
+    
 
 class Realm:
     zope.interface.implements(portal.IRealm)
@@ -125,7 +138,7 @@ def createVFSApplication(vfsRoot):
 
     # web
     internet.TCPServer(
-        8080, appserver.NevowSite(guard.SessionWrapper(p))
+        8080, appserver.NevowSite(SiteResource(guard.SessionWrapper(p)))
     ).setServiceParent(application)
 
     return application
