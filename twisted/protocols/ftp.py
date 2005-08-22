@@ -370,8 +370,8 @@ class DTP(object, protocol.Protocol):
             'directory': directory and 'd' or '-',
             'permissions': formatMode(permissions),
             'hardlinks': hardlinks,
-            'owner': str(owner)[:8],
-            'group': str(group)[:8],
+            'owner': owner[:8],
+            'group': group[:8],
             'size': size,
             'date': formatDate(time.gmtime(modified)),
             'name': name}

@@ -83,8 +83,8 @@ class FileSystemToIFTPShellAdaptor:
         return {'permissions': permissions,
                 'directory': directory,
                 'size': meta.get('size', 0),
-                'owner': meta.get('uid', 'user'),
-                'group': meta.get('gid', 'user'),
+                'owner': str(meta.get('uid', 'user')),
+                'group': str(meta.get('gid', 'user')),
                 'modified': meta.get('mtime', time.time()),
                 'hardlinks': meta.get('nlink', 1)
                 }
