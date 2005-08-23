@@ -18,7 +18,10 @@ from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 # common code for serial ports
 class BaseSerialPort:
     def setBaudRate(self, baudrate):
-        self._serial.setBaudRate(baudrate)
+        if hasattr(self._serial, "setBaudrate"):
+            self._serial.setBaudrate(baudrate)
+        else:
+            self._serial.setBaudRate(baudrate)
 
     def inWaiting(self):
         return self._serial.inWaiting()
