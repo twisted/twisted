@@ -13,6 +13,7 @@ import os.path as osp
 from os.path import join as opj
 from cStringIO import StringIO
 
+from twisted.internet import defer
 from twisted.application import app
 from twisted.python import usage, reflect, failure, log
 from twisted import plugin
@@ -89,6 +90,7 @@ class Options(usage.Options):
     optFlags = [["help", "h"],
                 ["rterrors", "e", "realtime errors, print out tracebacks as soon as they occur"],
                 ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
+                ["debug-stacktraces", "B", "Report Deferred creation and callback stack traces"],
                 ["nopm", None, "don't automatically jump into debugger for postmorteming of exceptions"],
                 ["dry-run", 'n', "do everything but run the tests"],
                 ["profile", None, "Run tests under the Python profiler"],
@@ -494,9 +496,9 @@ def _monkeyPatchPyunit():
 def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
     if config['debug']:
-        from twisted.internet import defer
-        defer.setDebugging(True)
         failure.startDebugMode()
+    if config['debug'] or config['debug-stacktraces']:
+        defer.setDebugging(True)
 
 
 def _setUpLogging(config):
@@ -508,7 +510,11 @@ def _setUpLogging(config):
                print x['format'] % x
        if not config['suppresswarnings']:
            log.addObserver(seeWarnings)
-       log.startLogging(open(config['logfile'], 'a'), 0)
+       if config['logfile'] == '-':
+           logFileObj = sys.stdout
+       else:
+           logFileObj = file(config['logfile'], 'a')
+       log.startLogging(logFileObj, 0)
 
 
 def _getReporter(config):
