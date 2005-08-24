@@ -21,6 +21,7 @@ from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, remote
 from twisted.trial import adapters, reporter, tdoctest
 from twisted.trial.itrial import ITrialDebug
+from twisted.trial.unittest import TestVisitor
 
 import zope.interface as zi
 
@@ -529,7 +530,7 @@ def _getSuite(config):
     reporterKlass = _getReporter(config)
     log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r" % (reporterKlass,))
     
-    suite = runner.TestSuite(reporterKlass(
+    suite = runner.TrialRoot(reporterKlass(
         tbformat=config['tbformat'],
         args=config['reporter-args'],
         realtime=config['rterrors']),
@@ -537,8 +538,6 @@ def _getSuite(config):
         benchmark=config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
     
-    suite.dryRun = config['dry-run']
-
     for package in config['packages']:
         if isinstance(package, types.StringType):
             try:
@@ -641,9 +640,40 @@ def call_until_failure(f, *args, **kwargs):
         suite = f(*args, **kwargs)
     return suite
 
+class DryRunVisitor(TestVisitor):
+
+    def __init__(self, reporter):
+        self.reporter = reporter
+        
+    def visitModule(self, testModuleSuite):
+        # FIXME -- the reporter expects this to be a real module
+        orig = testModuleSuite.original
+        if hasattr(orig, '__name__'):
+            self.reporter.startModule(orig)
+
+    def visitModuleAfter(self, testModuleSuite):
+        # FIXME -- the reporter expects this to be a real module
+        orig = testModuleSuite.original
+        if hasattr(orig, '__name__'):
+            self.reporter.endModule(orig)
+
+    def visitClass(self, testClassSuite):
+        # FIXME -- the reporter expects _testCase to be a real class
+        if hasattr(testClassSuite, '_testCase'):
+            self.reporter.startClass(testClassSuite._testCase)
+
+    def visitClassAfter(self, testClassSuite):
+        # FIXME -- the reporter expects _testCase to be a real class
+        if hasattr(testClassSuite, '_testCase'):
+            self.reporter.endClass(testClassSuite._testCase)
+
+    def visitCase(self, testCase):
+        self.reporter.startTest(testCase)
+        self.reporter.endTest(testCase)
+
 
 def reallyRun(config):
-    if config['until-failure']:
+    if not config['dry-run'] and config['until-failure']:
         if not config['debug']:
             def _doRun(config):
                 suite = _getSuite(config)
@@ -659,7 +689,11 @@ def reallyRun(config):
             return _getDebugger(config).runcall(call_until_failure, _doRun, config)
 
     suite = _getSuite(config)
-    if config['debug']:
+    if config['dry-run']:
+        suite.setStartTime()
+        suite.visit(DryRunVisitor(suite.reporter))
+        suite._kickStopRunningStuff()
+    elif config['debug']:
         _setUpDebugging(config, suite)
     elif config['profile']:
         _doProfilingRun(config, suite)

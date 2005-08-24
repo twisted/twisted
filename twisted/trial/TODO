@@ -1,44 +1,30 @@
-implement setUp/tearDownModule
+
+Trial conflates concepts
+Want to move the xUnit architecture, because it's actually surprisingly powerful
+
+"Executing a test should have no dependencies on the TestRunner, TestResult or
+any containing TestSuites" ~ mpool
 
 
---- scoped reactor state ------------------------------------------------------
+GOALS
+- Command line to configure the runner and run
 
-setUpModule
+- Library that takes cmd line params and transforms to test suites
 
-    selectables = [moduleSocket}
+- test suites should be stock pyunit TestSuites unless good reason otherwise
+  (case-by-case "good reason")
 
-    setUpClass
+  - runner & result should be somewhat tightly joined
 
-        selectables = [classSocket, moduleSocket]
+- TestResult should be re-introduced into Trial as a real concept
 
-        setUp
-        
-            selectables = [methodSocket, classSocket, moduleSocket]
+- trial environment should have a subclass of Suite that calls hooks on the
+  result.  i.e. startModule etc, which are on Result
 
-            method
-                otherMethodSocket
-                cleanup otherMethodSocket
-            
-        tearDown
-            assert selectables == [methodSocket, classSocket, moduleSocket]
+- Magic Twisted fu (e.g. reactor spinning) should be part of TestCase.run
+  (a subclass of pyunit TestCase)
 
-    tearDownClass
-        assert selectables == [classSocket, moduleSocket]
+- Temporary directory set up should also be part of this.
 
-tearDownModule
-    assert selectables == [moduleSocket}
+- Command line can know about TestCase internals
 
-assert selectables == []
-
--------------------------------------------------------------------------------
-
-
-Refactor script.trial so that it only hands python objects to the
-Suite (none of this, isinstance(types.StringType) nonsense.
-
-
-IMultiError is broken, get rid of it!
-
-
-Right now, you cannot return SkipTest from a deferred and have it work
-correctly (iirc), doublecheck.

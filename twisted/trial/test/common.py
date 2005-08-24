@@ -145,7 +145,7 @@ class RegistryBaseMixin(object):
 
     def _getSuite(self, newSuite=False, benchmark=0):
         if self._suite is None or newSuite:
-            self._suite = runner.TestSuite(self.reporter, self.janitor, benchmark)
+            self._suite = runner.TrialRoot(self.reporter, self.janitor, benchmark)
             self._suite._initLogging = bogus
             self._suite._setUpSigchldHandler = bogus
             self._suite._bail = bogus

@@ -160,12 +160,12 @@ class ITimed(zi.Interface):
         @type endTime: types.FloatType in seconds-since-the-epoch""")
 
 
-class ITestSuite(ITimed):
+class ITrialRoot(ITimed):
     """I collect test elements and do a comprehensive test-run"""
 
     methods = zi.Attribute(
         """@cvar methods: returns an iterator over all of the ITestMethods
-                          this TestSuite's ITestRunner objects have generated
+                          this roots's ITestRunner objects have generated
                           during the test run
         @note: this attribute is dynamically generated. if you access it
                before the tests have been run, the results are undefined""")
@@ -199,6 +199,15 @@ class ITestSuite(ITimed):
     def run(output, seed=None):
         """run this TestSuite and report to output"""
 
+
+class ITestSuite(ITimed):
+    """A TestCase composite which can have TestCases added to it."""
+    
+    def countTestCases():
+        """How many TestCases are there in this?"""
+
+    def visit(visitor):
+        """Visit this TestSuite. See TestVisitor."""
 
 
 class ITestRunner(ITimed):
@@ -236,8 +245,14 @@ class ITestRunner(ITimed):
 
     ##########################################################################
 
+    def countTestCases():
+        """Return the number of test cases in this test runner."""
+
     def runTests():
         """runs this test class"""
+
+    def run(randomize, result):
+        """run this test class but never raise exceptions."""
 
 class IDocTestRunner(ITestRunner):
     """locates and runs doctests"""
@@ -312,6 +327,9 @@ class ITestMethod(ITimed):
     # XXX: Update Docs ------------------------------------------
     def run(testCaseInstance):
         """I run the test method"""
+
+    def countTestCases():
+        """Return the number of test cases in this composite element."""
     # -----------------------------------------------------------
 
 class IReporter(zi.Interface):
@@ -360,14 +378,16 @@ class IReporter(zi.Interface):
         """
 
     def startSuite(expectedTests):
+        # FIXME should be startTrial
         """kick off this trial run
         @param expectedTests: the number of tests we expect to run
         """
 
     def endSuite(suite):
+        # FIXME should be endTrial
         """at the end of a test run report the overall status and print out
         any errors caught
-        @param suite: an object implementing ITestSuite, can be adapted to
+        @param suite: an object implementing ITrialRoot, can be adapted to
                       ITestStats
         """
 

@@ -233,6 +233,7 @@ class TestTests(unittest.TestCase):
 
         tm = itrial.ITestMethod(method)
 
+        failUnlessEqual(tm.countTestCases(), 1)       
         failUnlessEqual(tm.runs, 1)
         failUnless(tm.startTime > 0)
         #failUnless(tm.endTime > 0)   # failed tests don't have endTime set
@@ -356,7 +357,7 @@ class TestTests(unittest.TestCase):
         for klass in (self.Tests,
                       self.TestSkipClassAttr,
                       self.TestTodoClassAttr):
-            suite = runner.TestSuite(BogusReporter(), util._Janitor())
+            suite = runner.TrialRoot(BogusReporter(), util._Janitor())
             suite.addTestClass(klass)
             suite.run()
 

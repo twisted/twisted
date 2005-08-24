@@ -15,7 +15,7 @@
 #  The program flow goes like this:
 #
 #  The twisted.scripts.trial module parses command line options, creates a
-#  TestSuite and passes it the _Janitor and Reporter objects. It then adds
+#  TrialRoot and passes it the _Janitor and Reporter objects. It then adds
 #  the modules, classes, and methods that the user requested that the suite
 #  search for test cases. Then the script calls .runTests() on the suite.
 #
@@ -85,18 +85,46 @@ class Timed(object):
 def _dbgPA(msg):
     log.msg(iface=itrial.ITrialDebug, parseargs=msg)
 
+_reactorKickStarted = False
+def _kickStartReactor():
+    """Start the reactor if needed so that tests can be run."""
+    global _reactorKickStarted
+    if not _reactorKickStarted:
+        # Kick-start things
+        from twisted.internet import reactor
+        reactor.callLater(0, reactor.crash)
+        reactor.run()
+        _reactorKickStarted = True
+
+
 class TestSuite(Timed):
+    """A TestCase container that implements both TestCase and TestSuite
+    interfaces."""
+
+    def countTestCases(self):
+        """Return the number of tests in the TestSuite."""
+        result = 0
+        for case in self._getChildren():
+            result += case.countTestCases()
+        return result
+
+    def _getChildren(self):
+        if not len(self.children):
+            self._populateChildren()
+        return self.children
+
+
+class TrialRoot(TestSuite):
     """This is the main organizing object. The front-end script creates a
-    TestSuite, and tells it what modules were requested on the command line.
-    It also hands it a reporter. The TestSuite then takes all of the
+    TrialRoot, and tells it what modules were requested on the command line.
+    It also hands it a reporter. The TrialRoot then takes all of the
     packages, modules, classes and methods, and adapts them to ITestRunner
-    objects, which it then calls the runTests method on.
+    objects, which it then calls the run method on.
     """
-    zi.implements(itrial.ITestSuite)
+    zi.implements(itrial.ITrialRoot)
     moduleGlob = 'test_*.py'
     sortTests = 1
     debugger = False
-    dryRun = False
 
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
@@ -201,6 +229,22 @@ class TestSuite(Timed):
         return stat
     benchmarkStats = property(_getBenchmarkStats)
 
+    def _kickStopRunningStuff(self):
+        self.endTime = time.time()
+        # hand the reporter the TrialRoot to give it access to all information
+        # from the test run
+        self.reporter.endSuite(self)
+        try:
+            util.wait(self.reporter.tearDownReporter())
+        except:
+            t, v, tb = sys.exc_info()
+            raise RuntimeError, "your reporter is broken %r" % \
+                  (''.join(v),), tb
+        self._bail()
+
+    def setStartTime(self):
+        self.startTime = time.time()
+
     ####
     # the root of the ParentAttributeMixin tree
     def getJanitor(self):
@@ -211,9 +255,6 @@ class TestSuite(Timed):
 
     def isDebuggingRun(self):
         return self.debugger
-    
-    def isDryRun(self):
-        return self.dryRun
     ####
 
     def _bail(self):
@@ -232,74 +273,47 @@ class TestSuite(Timed):
         log.startKeepingErrors()
 
     def run(self, seed=None):
-        self.startTime = time.time()
-        tests = self.tests
         if self.sortTests:
             # XXX twisted.python.util.dsu(tests, str)
-            tests.sort(lambda x, y: cmp(str(x), str(y)))
-        
+            self.tests.sort(lambda x, y: cmp(str(x), str(y)))
         self._initLogging()
-
-        # Kick-start things
-        from twisted.internet import reactor
-        reactor.callLater(0, reactor.crash)
-        reactor.run()
-
+        self.setStartTime()
+        result = unittest.TestResult()
         # randomize tests if requested
         r = None
         if seed is not None:
             r = random.Random(seed)
-            r.shuffle(tests)
+            r.shuffle(self.tests)
             self.reporter.write('Running tests shuffled with seed %d' % seed)
+        # this is where the test run starts
+        self.reporter.startSuite(self.countTestCases())
+        for tr in self._getChildren():
+            tr.run((seed is not None), result)
+            if result.shouldStop:
+                break
+        if self.benchmark:
+            pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
+        self._kickStopRunningStuff()
 
-        try:
-            # this is where the test run starts
-            # eventually, the suite should call reporter.startSuite() with
-            # the predicted number of tests to be run
-            try:
-                for test in tests:
-                    tr = itrial.ITestRunner(test)
-                    self.children.append(tr)
-                    tr.parent = self
+    def _populateChildren(self):
+        for test in self.tests:
+            tr = itrial.ITestRunner(test)
+            self.children.append(tr)
+            tr.parent = self
+        for name, exc in self.couldNotImport.iteritems():
+            # XXX: AFAICT this is only used by RemoteJellyReporter
+            self.reporter.reportImportError(name, exc)
 
-                    try:
-                        tr.runTests(randomize=(seed is not None))
-                    except KeyboardInterrupt:
-                        # KeyboardInterrupts are normal, not a bug in trial.
-                        # Just stop the test run, and do the usual reporting.
-                        raise
-                    except:
-                        # Any other exception is problem.  Report it.
-                        f = failure.Failure()
-                        annoyingBorder = "-!*@&" * 20
-                        trialIsBroken = """
-\tWHOOP! WHOOP! DANGER WILL ROBINSON! DANGER! WHOOP! WHOOP!
-\tcaught exception in TestSuite! \n\n\t\tTRIAL IS BROKEN!\n\n
-\t%s""" % ('\n\t'.join(f.getTraceback().split('\n')),)
-                        print "\n%s\n%s\n\n%s\n" % \
-                              (annoyingBorder, trialIsBroken, annoyingBorder)
-            except KeyboardInterrupt:
-                log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
+    def visit(self, visitor):
+        """Call visitor,visitSuite(self) and visit all child tests."""
+        visitor.visitSuite(self)
+        self._visitChildren(visitor)
+        visitor.visitSuiteAfter(self)
 
-            for name, exc in self.couldNotImport.iteritems():
-                # XXX: AFAICT this is only used by RemoteJellyReporter
-                self.reporter.reportImportError(name, exc)
-
-            if self.benchmark:
-                pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
-        finally:
-            self.endTime = time.time()
-
-        # hand the reporter the TestSuite to give it access to all information
-        # from the test run
-        self.reporter.endSuite(self)
-        try:
-            util.wait(self.reporter.tearDownReporter())
-        except:
-            t, v, tb = sys.exc_info()
-            raise RuntimeError, "your reporter is broken %r" % \
-                  (''.join(v),), tb
-        self._bail()
+    def _visitChildren(self, visitor):
+        """Visit all chilren of this test suite."""
+        for case in self._getChildren():
+            case.visit(visitor)
 
 
 class MethodInfoBase(Timed):
@@ -371,7 +385,7 @@ class UserMethodWrapper(MethodInfoBase):
 class ParentAttributeMixin:
     """a mixin to allow decendents of this class to call up 
     their parents to get a value. the default usage stops at the
-    TestSuite (as it is the trunk of all of this), but any class along the
+    TrialRoot (as it is the trunk of all of this), but any class along the
     way may return a different value.
     """
     def getJanitor(self):
@@ -383,14 +397,11 @@ class ParentAttributeMixin:
     def isDebuggingRun(self):
         return self.parent.isDebuggingRun()
 
-    def isDryRun(self):
-        return self.parent.isDryRun()
 
-
-class TestRunnerBase(Timed, ParentAttributeMixin):
+class TestRunnerBase(TestSuite, ParentAttributeMixin):
     zi.implements(itrial.ITestRunner)
     _tcInstance = None
-    methodNames = setUpClass = tearDownClass = methodsWithStatus = None
+    methodNames = setUpClass =estSuitorDownClast = methodsWithStatus = None
     children = parent = None
     testCaseInstance = lambda self: None
     skip = None
@@ -408,6 +419,34 @@ class TestRunnerBase(Timed, ParentAttributeMixin):
         test ran
         """
         return self.getJanitor().postCaseCleanup()
+
+    def run(self, randomize, result):
+        """Run all tests for this test runner, catching all exceptions.
+        If a KeyboardInterrupt is caught set result.shouldStop."""
+        _kickStartReactor()
+        try:
+            self.runTests(randomize=randomize)
+        except KeyboardInterrupt:
+            # KeyboardInterrupts are normal, not a bug in trial.
+            # Just stop the test run, and do the usual reporting.
+            log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
+            result.shouldStop = True
+        except:
+            # Any other exception is problem.  Report it.
+            f = failure.Failure()
+            annoyingBorder = "-!*@&" * 20
+            trialIsBroken = """
+\tWHOOP! WHOOP! DANGER WILL ROBINSON! DANGER! WHOOP! WHOOP!
+\tcaught exception in TrialRoot! \n\n\t\tTRIAL IS BROKEN!\n\n
+\t%s""" % ('\n\t'.join(f.getTraceback().split('\n')),)
+            print "\n%s\n%s\n\n%s\n" % \
+                  (annoyingBorder, trialIsBroken, annoyingBorder)
+
+    def _visitChildren(self, visitor):
+        """Visit all chilren of this test suite."""
+        for case in self._getChildren():
+            case.visit(visitor)
+
 
 def _runWithWarningFilters(filterlist, f, *a, **kw):
     """calls warnings.filterwarnings(*item[0], **item[1]) 
@@ -442,6 +481,7 @@ class TestModuleRunner(TestRunnerBase):
         self.setUpClass = _bogusCallable
         self.tearDownClass = _bogusCallable
         self.children = []
+        self.randomize = False
 
     def methodNames(self):
         if self._mnames is None:
@@ -480,39 +520,30 @@ class TestModuleRunner(TestRunnerBase):
 
         return self._tClasses
 
+    def _populateChildren(self):
+        tests = self._testClasses()
+        if self.randomize:
+            random.shuffle(tests)
+        for testClass in tests:
+            runner = itrial.ITestRunner(testClass)
+            runner.parent = self.parent
+            self.children.append(runner)
 
     def runTests(self, randomize=False):
         reporter = self.getReporter()
         reporter.startModule(self.original)
-
-        # add setUpModule handling
-        tests = self._testClasses()
-        if randomize:
-            random.shuffle(tests)
-
-        for testClass in tests:
-            runner = itrial.ITestRunner(testClass)
-            self.children.append(runner)
-
-#:        if hasattr(self.module, '__doctests__'):
-#:            vers = sys.version_info[0:2]
-#:            if vers[0] >= 2 and vers[1] >= 3:
-#:                runner = itrial.ITestRunner(getattr(self.module, '__doctests__'))
-#:                self.children.append(runner)
-#:            else:
-#:                warnings.warn(("trial's doctest support only works with "
-#:                               "python 2.3 or later, not running doctests"))
-
-        for runner in self.children:
-            runner.parent = self.parent
+        self.randomize = randomize
+        for runner in self._getChildren():
             runner.runTests(randomize)
-
             for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
-
-        # add tearDownModule handling
         reporter.endModule(self.original)
 
+    def visit(self, visitor):
+        """Call visitor,visitModule(self) and visit all child tests."""
+        visitor.visitModule(self)
+        self._visitChildren(visitor)
+        visitor.visitModuleAfter(self)
 
 
 class TestClassAndMethodBase(TestRunnerBase):
@@ -543,16 +574,14 @@ class TestClassAndMethodBase(TestRunnerBase):
         return getattr(self.module, 'tearDownModule', _bogusCallable)
     tearDownModule = property(tearDownModule)
 
-    def _apply(self, f):                  # XXX: need to rename this
+    def _populateChildren(self):
         for mname in self.methodNames:
             m = getattr(self._testCase, mname)
             tm = itrial.ITestMethod(m, None)
             if tm == None:
                 continue
-
             tm.parent = self
             self.children.append(tm)
-            f(tm)
 
     def runTests(self, randomize=False):
         reporter = self.getReporter()
@@ -586,32 +615,29 @@ class TestClassAndMethodBase(TestRunnerBase):
                         error.raiseException()
                 else:
                     reporter.upDownError(setUpClass)
-                    def _setUpClassError(tm):
+                    for tm in self._getChildren():
                         tm.errors.extend(setUpClass.errors)
                         reporter.startTest(tm)
                         self.methodsWithStatus.setdefault(tm.status,
                                                           []).append(tm)
                         reporter.endTest(tm)
-                    return self._apply(_setUpClassError) # and we're done
+                    return
 
             # --- run methods ----------------------------------------------
 
             if randomize:
                 random.shuffle(self.methodNames)
 
-            def _runTestMethod(testMethod):
+            for testMethod in self._getChildren():
                 log.msg("--> %s.%s.%s <--" % (testMethod.module.__name__,
                                               testMethod.klass.__name__,
                                               testMethod.name))
 
                 # suppression is handled by each testMethod
                 
-                if not self.isDryRun():
-                    testMethod.run(tci)
+                testMethod.run(tci)
                 self.methodsWithStatus.setdefault(testMethod.status,
                                                   []).append(testMethod)
-
-            self._apply(_runTestMethod)
 
             # --- tearDownClass ---------------------------------------------
 
@@ -637,6 +663,12 @@ class TestClassAndMethodBase(TestRunnerBase):
             reporter.endClass(self._testCase)
             self.endTime = time.time()
         
+    def visit(self, visitor):
+        """Call visitor,visitClass(self) and visit all child tests."""
+        visitor.visitClass(self)
+        self._visitChildren(visitor)
+        visitor.visitClassAfter(self)
+
 
 class TestCaseRunner(TestClassAndMethodBase):
     """I run L{twisted.trial.unittest.TestCase} instances and provide
@@ -738,7 +770,6 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
         self._skipReason = None  
         self._signalStateMgr = util.SignalStateManager()
 
-
     def _checkTodo(self):
         # returns EXPECTED_FAILURE for now if ITodo.types is None for
         # backwards compatiblity but as of twisted 2.1, will return FAILURE
@@ -755,8 +786,10 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
             if not itrial.ITodo(self.todo).isExpected(f):
                 return ERROR
         return EXPECTED_FAILURE
-
         
+    def countTestCases(self):
+        return 1
+
     def _getSkip(self):
         return (getattr(self.original, 'skip', None) \
                 or self._skipReason or self.parent.skip)
@@ -904,6 +937,9 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
                 self._eb(f)
             return e.failures
             
+    def visit(self, visitor):
+        """Call visitor.visitCase(self)."""
+        visitor.visitCase(self)
 
 
 class BenchmarkMethod(TestMethod):

@@ -505,6 +505,37 @@ class TestCase(object):
         for i in xrange(timesOrSeconds):
             reactor.iterate()
 
+
+class TestResult(object):
+
+    def __init__(self):
+        self.shouldStop = False
+
+
+class TestVisitor(object):
+    
+    def visitCase(self, testCase):
+        """Visit the testCase testCase."""
+
+    def visitClass(self, testClass):
+        """Visit the TestClassSuite testClass."""
+
+    def visitClassAfter(self, testClass):
+        """Visit the TestClassSuite testClass after its children."""
+
+    def visitModule(self, testModule):
+        """Visit the TestModuleSuite testModule."""
+
+    def visitModuleAfter(self, testModule):
+        """Visit the TestModuleSuite testModule after its children."""
+
+    def visitSuite(self, testSuite):
+        """Visit the TestSuite testSuite."""
+
+    def visitSuiteAfter(self, testSuite):
+        """Visit the TestSuite testSuite after its children."""
+
+
 __all__ = [
-    'TestCase', 'deferredResult', 'deferredError', 'wait'
+    'TestCase', 'deferredResult', 'deferredError', 'wait', 'TestResult'
     ]

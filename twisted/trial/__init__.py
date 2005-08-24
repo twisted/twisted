@@ -58,7 +58,7 @@ def _setUpAdapters():
 
 
 # ---- ITestStats  ------------------------------------
-(reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
+(reporter.TestStats, itrial.ITrialRoot, itrial.ITestStats),
 (reporter.TestStats, runner.TestModuleRunner, itrial.ITestStats),
 (reporter.TestStats, tdoctest.ModuleDocTestsRunner, itrial.ITestStats),
 (reporter.DocTestRunnerStats, tdoctest.DocTestRunner, itrial.ITestStats),

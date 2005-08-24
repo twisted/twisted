@@ -39,7 +39,8 @@ expectFailureInSetUp = [re.compile(r'.*twisted%(sep)sinternet%(sep)sdefer.py.*ma
                         re.compile(r'.*raise FoolishError.*'),
                         re.compile(r'.*erroneous.FoolishError: I am a broken setUp method')]
 
-expectTestFailure = [re.compile('.*'),
+expectTestFailure = ['Running 1 tests.',
+                     re.compile('.*'),
                      re.compile('.*'),
                      reporter.DOUBLE_SEPARATOR,
                      '[FAIL]: twisted.trial.test.common.FailfulTests.testFailure',
@@ -54,7 +55,8 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addTestClass(erroneous.TestFailureInSetUp)
         self.suite.run()
         
-        expect = [re.compile('.*'),
+        expect = ['Running 1 tests.',
+                  re.compile('.*'),
                   re.compile('.*'),
                   reporter.DOUBLE_SEPARATOR,
                   '[ERROR]: twisted.trial.test.erroneous.TestFailureInSetUp.testMethod']
@@ -91,7 +93,8 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         output = self.suite.reporter.out.splitlines()
 
-        expect = [re.compile('.*'),
+        expect = ['Running 1 tests.',
+                  re.compile('.*'),
                   reporter.DOUBLE_SEPARATOR,
                   re.compile(r'\[ERROR\]: .*' + re.escape(os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'))),
                   'docstring',
@@ -118,7 +121,8 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         output = self.reporter.out.split('\n')
 
-        expect = [reporter.DOUBLE_SEPARATOR,
+        expect = ['Running 0 tests.',
+                  reporter.DOUBLE_SEPARATOR,
                   'IMPORT ERROR:']
         
         common.stringComparison(expect, output)

@@ -315,6 +315,8 @@ class Reporter(object):
         for name, error in tstats.importErrors:
             self.write(self._formatImportError(name, error))
 
+    def startSuite(self, count):
+        """Inform the user how many tests are being run."""
 
     def endSuite(self, suite):
         tstats = itrial.ITestStats(suite)
@@ -417,6 +419,10 @@ class TreeReporter(VerboseTextReporter):
         if qualifiedClsName not in self.seenClasses:
             self.seenClasses[qualifiedClsName] = 1
             self.write('    %s\n' % clsName)
+
+    def startSuite(self, count):
+        """Inform the user how many tests are being run."""
+        self.write("Running %d tests.\n", count)
 
     def cleanupErrors(self, errs):
         self.write(self.color('    cleanup errors', self.RED))

@@ -180,7 +180,6 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
     def __init__(self, original):
         DocTestRunnerBase.__init__(self, original)
         doctest.DocTestRunner.__init__(self)
-
         # I know this _dt_ nonsense is ugly, but it's to prevent naming conflicts
         # with the doctest.DocTestRunner's names
         self._dt_errors = []
@@ -203,7 +202,7 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
         numRan = (len(self._dt_errors)
                   + len(self._dt_failures)
                   + len(self._dt_successes))
-        return numRan == len(self._dtest.examples)
+        return numRan == self.countTestCases()
     _dt_done = property(_dt_done)
 
     def report_start(self, out, test, example):
@@ -228,9 +227,15 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
         if self._dt_done:
             self._dt_reporter.endTest(self)
 
+    def countTestCases(self):
+        return len(self._dtest.examples)
+
     def runTests(self, randomize=None):
         # randiomize argument is ignored 
         doctest.DocTestRunner.run(self, self._dtest)
+
+    def visit(self, visitor):
+        visitor.visitCase(self)
 
 
 class ModuleDocTestsRunner(DocTestRunnerBase):
@@ -242,32 +247,34 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
         or python objects, it is the value of a module's __doctests__ attribute
         """
         super(ModuleDocTestsRunner, self).__init__(original)
+        self._testCase = original
 
-    def runTests(self, randomize=False):
-        # randomize is ignored for now
-        self.startTime = time.time()
-
-        reporter = self.getReporter()
+    def _populateChildren(self):
         dtf = doctest.DocTestFinder()
-        tests = []
         for obj in self.original:
             if isinstance(obj, types.StringType):
                 obj = reflect.namedAny(obj)
-            tests.extend(dtf.find(obj))
-        
+            for test in dtf.find(obj):
+                runner = itrial.ITestRunner(test, None)
+                if runner is None:
+                    continue
+                runner.parent = self
+                self.children.append(runner)
+
+    def countTestCases(self):
+        """Return the number of test cases self.run() would run."""
+        return sum([runner.countTestCases() for runner in self._getChildren()])
+
+    def visit(self, visitor):
+        visitor.visitModule(self)
+        self._visitChildren(visitor)
+        visitor.visitModuleAfter(self)
+
+    def runTests(self, randomize=False):
+        self.startTime = time.time()
         if randomize:
-            random.shuffle(tests)
-
-        for test in tests:
-            runner = itrial.ITestRunner(test, None)
-            if runner == None:
-                continue
-            runner.parent = self
-            self.children.append(runner)
+            random.shuffle(self._getChildren())
+        for runner in self._getChildren():
             runner.runTests(randomize)
-
             for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
-
-
-
