@@ -2,17 +2,22 @@ from zope.interface import Interface, Attribute, implements
 
 def getAbsoluteSegments(path, cwd='/'):
     """
-    This seems to take a maybe-relative path string and return an
-    absolute path, in segments.
-    It looks kind of like os.path.join(cwd, os.path.normpath(path)),
-    except not OS-dependent like those are.
-    """
-    paths = path.split("/")
+    @param path: either a string or a list of string segments
+    which specifys the desired path.  may be relative to the cwd
 
-    if paths[0] == "":
+    @param cwd: optional string specifying the current working directory
+
+    returns a list of string segments which most succinctly
+    describe how to get to path from root
+    """
+    if not isinstance(path, list): paths = path.split("/")
+    else: paths = path
+
+    if len(paths) and paths[0] == "":
         paths = paths[1:]
     else:
         paths = cwd.split("/") + paths
+
     result = []
 
     for path in paths:
@@ -24,28 +29,47 @@ def getAbsoluteSegments(path, cwd='/'):
 
         elif path not in ("", "."):
             result.append(path)
+
     return result
 
-def dirname(path, cwd='/'):
-    return "/" + "/".join(getAbsoluteSegments(path, cwd)[:-1])
+def fetch(root, path, cwd='/'):
+    """
+    @param root: IFileSystemContainer which represents the root node
+    of the filesystem
 
-def fetchPath(root, paths, cwd='/'):
+    @param path: either a string or a list of string segments
+    which specifys the desired path.  may be relative to the cwd
+
+    @param cwd: optional string specifying the current working directory
+
+    returns node described by path relative to the cwd
+    """
+    paths = getAbsoluteSegments(path, cwd)
     currNode = root
     for path in paths:
         currNode = currNode.child(path)
     return currNode
 
-def fetch(root, path, cwd='/'):
-    paths = getAbsoluteSegments(path, cwd)
-    return fetchPath(root, paths, cwd)
+def basename(path, cwd='/'):
+    return getAbsoluteSegments(path, cwd)[-1]
+
+def dirname(path, cwd='/'):
+    return "/" + "/".join(getAbsoluteSegments(path, cwd)[:-1])
 
 def getRoot(node):
     while node.parent is not node:
         node = node.parent
     return node
 
-def basename(path, cwd='/'):
-    return getAbsoluteSegments(path, cwd)[-1]
+def getSegments(node):
+    ret = []
+    while node.parent is not node:
+        ret.append(node.name)
+        node = node.parent
+    ret.reverse()
+    return ret
+
+
 
 
 
