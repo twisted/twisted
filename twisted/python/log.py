@@ -79,7 +79,7 @@ def showwarning(message, category, filename, lineno, file=None):
         msg(warning=message, category=category, filename=filename, lineno=lineno,
             format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
     else:
-        _oldshowwarning(message, category, filename, lineno, filename)
+        _oldshowwarning(message, category, filename, lineno, file)
 
 _keepErrors = 0
 _keptErrors = []
