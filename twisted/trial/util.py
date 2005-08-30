@@ -113,7 +113,6 @@ PENDING_TIMED_CALLS_MSG = "pendingTimedCalls still pending (consider setting twi
 
 
 class _Janitor(object):
-    zi.implements(itrial.IJanitor)
     logErrCheck = postCase = True
     cleanPending = cleanThreads = cleanReactor = postMethod = True
 

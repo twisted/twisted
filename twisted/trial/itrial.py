@@ -36,72 +36,6 @@ class IMethodInfo(zi.Interface):
         @type errors: list of failure.Failures""")
 
 
-class IUserMethod(zi.Interface):
-    """A wrapper around user-defined methods to allow for 'safe' execution
-    and response to errors."""
-
-    failure = zi.Attribute(
-        """@ivar failure: a L{twisted.python.failure.Failure} object
-        raised during the user-defined method's run""")
-
-    def call(*a, **kw):
-        """call the user-defined method with arguments (*a, **kw)
-        if the user method returns a deferred, this method will wait for the
-        result, or will call any registered errorHandlers.
-        @return: self
-        """
-        
-    def addErrback(callable, *a, **kw):
-        """a method that will be called if and when an error occurs in the
-        user-defined-method. It will be called callable(fail, *a, **kw),
-        where fail is a L{twisted.python.failure.Failure} object.
-
-        @return: self
-        """
-
-
-class IJanitor(zi.Interface):
-    """I perform and handle cleanup operations for the test framework"""
-
-    logErrCheck = zi.Attribute(
-        """@cvar doLogErrCheck: perform check and cleanup of log.errs
-        @type doLogErrCheck: Boolean""")
-
-    cleanPending = zi.Attribute(
-        """@cvar cleanPending: check and cleanup of left-over
-                               reactor.DelayedCalls
-        @type cleanPending: Boolean""")
-
-    cleanThreads = zi.Attribute(
-        """@cvar cleanThreads: perform cleanup of the reactor threadpool
-        @type cleanThreads: Boolean""")
-
-    cleanReactor = zi.Attribute(
-        """@cvar cleanReactor: perform cleanup of reactor connections
-        @type cleanReactor: Boolean""")
-
-    postCase = zi.Attribute(
-        """@cvar postCase: perform indicated cleanup after each TestCase has
-                           run
-        @type postCase: Boolean""")
-
-    postMethod = zi.Attribute(
-        """@cvar postMethod: perform indicated cleanup after each TestMethod
-                             has run
-        @type postMethod: Boolean""")
-
-    def postMethodCleanup():
-        """perform cleanup operations that were specified in my constructor
-        for running after each ITestMethod
-        @return: a sequence of L{twisted.python.failure.Failure} objects 
-        """
-
-    def postCaseCleanup():
-        """perform cleanup operations that were specified in my constructor
-        for running after each ITestCase
-        @return: a sequence of L{twisted.python.failure.Failure} objects 
-        """
-        
 class IBenchmark(zi.Interface):
     """an interface for running performance tests on a given TestCase"""
     pass
@@ -150,17 +84,7 @@ class IPyUnitTCFactory(zi.Interface):
 
 
 
-class ITimed(zi.Interface):
-    startTime = zi.Attribute(
-        """@ivar startTime: the time this event started
-        @type startTime: types.FloatType in seconds-since-the-epoch""")
-
-    endTime = zi.Attribute(
-        """@ivar endTime: the time this event ended
-        @type endTime: types.FloatType in seconds-since-the-epoch""")
-
-
-class ITrialRoot(ITimed):
+class ITrialRoot(zi.Interface):
     """I collect test elements and do a comprehensive test-run"""
 
     methods = zi.Attribute(
@@ -200,7 +124,7 @@ class ITrialRoot(ITimed):
         """run this TestSuite and report to output"""
 
 
-class ITestSuite(ITimed):
+class ITestSuite(zi.Interface):
     """A TestCase composite which can have TestCases added to it."""
     
     def countTestCases():
@@ -210,7 +134,7 @@ class ITestSuite(ITimed):
         """Visit this TestSuite. See TestVisitor."""
 
 
-class ITestRunner(ITimed):
+class ITestRunner(zi.Interface):
     testCaseInstance = zi.Attribute(
         """@ivar testCaseInstance: the instance of a TestCase subclass that
                                    we're running the tests for
@@ -260,7 +184,7 @@ class IDocTestRunner(ITestRunner):
 class IReporterMethod(zi.Interface):
     """the subset of ITestMethod that is necessary for reporting"""
 
-class ITestMethod(ITimed):
+class ITestMethod(zi.Interface):
     """the interface for running a single TestCase test method"""
     status = zi.Attribute(
         """@ivar status: the reporter.STATUS of this test run
@@ -350,15 +274,10 @@ class IReporter(zi.Interface):
     args = zi.Attribute("@ivar args: additional string argument passed from the command line")
 
     def setUpReporter():
-        """performs reporter setup, for example, connecting to a remote service
-        @returns: L{twisted.internet.defer.Deferred}
-        """
+        """performs reporter setup"""
 
     def tearDownReporter():
-        """performs reporter termination, for example, disconnecting from a
-        remote service
-        @returns: L{twisted.internet.defer.Deferred}
-        """
+        """performs reporter termination"""
 
     def reportImportError(name, exc):
         """report an import error

@@ -53,9 +53,6 @@ def _setUpAdapters():
 (tdoctest.DocTestRunnerToITestMethod, tdoctest.DocTestRunner, itrial.ITestMethod),
 (tdoctest.DocTestRunner, doctest.DocTest, itrial.ITestRunner),
 
-# XXX: i'm not happy about this association
-(tdoctest.ModuleDocTestsRunner, types.ListType, itrial.ITestRunner),
-
 
 # ---- ITestStats  ------------------------------------
 (reporter.TestStats, itrial.ITrialRoot, itrial.ITestStats),
@@ -70,7 +67,6 @@ def _setUpAdapters():
 (adapters.TupleTodo, types.TupleType, itrial.ITodo),
 (adapters.StringTodo, types.StringType, itrial.ITodo),
 (adapters.TodoBase, types.NoneType, itrial.ITodo),
-#(runner.UserMethodWrapper, types.MethodType, itrial.IUserMethod),
 (remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
 
         components.registerAdapter(a, o, i)

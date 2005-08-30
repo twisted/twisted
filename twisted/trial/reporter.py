@@ -174,13 +174,14 @@ class Reporter(object):
         self.tbformat = tbformat
         self.args = args
         self.realtime = realtime
+        self.shouldStop = False
         super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
     def setUpReporter(self):
-        return defer.succeed(None)
+        pass
 
     def tearDownReporter(self):
-        return defer.succeed(None)
+        pass
 
     def startTest(self, method):
         pass

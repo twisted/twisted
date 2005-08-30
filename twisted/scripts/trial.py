@@ -626,16 +626,6 @@ def _doProfilingRun(config, suite):
         pass
     prof.print_stats()
 
-# hotshot is broken as of right now :/
-
-##     import hotshot, hotshot.stats
-##     prof = hotshot.Profile('profile.data', 1, 1)
-##     prof.runctx("suite.run(config['random'])", globals(), locals())
-##     prof.close()
-##     stats = hotshot.stats.load('profile.data')
-##     stats.strip_dirs()
-##     stats.print_stats()
-
 def call_until_failure(f, *args, **kwargs):
     count = 1
     print "Test Pass %d" % count
@@ -645,6 +635,7 @@ def call_until_failure(f, *args, **kwargs):
         print "Test Pass %d" % count
         suite = f(*args, **kwargs)
     return suite
+
 
 class DryRunVisitor(TestVisitor):
 
@@ -732,8 +723,3 @@ def run():
 
     sys.exit(not itrial.ITestStats(suite).allPassed)
 
-## def run():
-##     import hotshot
-##     prof = hotshot.Profile("pythongrind.prof", lineevents=1)
-##     prof.runcall(_run)
-##     prof.close()

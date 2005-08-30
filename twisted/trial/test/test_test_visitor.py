@@ -1,4 +1,4 @@
-from twisted.trial.unittest import TestCase, TestResult
+from twisted.trial.unittest import TestCase
 
 class TestTestVisitor(TestCase):
 

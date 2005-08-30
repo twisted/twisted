@@ -77,11 +77,6 @@ class BrokenTestCaseWarning(Warning):
     """emitted as a warning when an exception occurs in one of
     setUp, tearDown, setUpClass, or tearDownClass"""
 
-class Timed(object):
-    zi.implements(itrial.ITimed)
-    startTime = None
-    endTime = None
-
 def _dbgPA(msg):
     log.msg(iface=itrial.ITrialDebug, parseargs=msg)
 
@@ -97,7 +92,7 @@ def _kickStartReactor():
         _reactorKickStarted = True
 
 
-class TestSuite(Timed):
+class TestSuite(object):
     """A TestCase container that implements both TestCase and TestSuite
     interfaces."""
 
@@ -128,16 +123,8 @@ class TrialRoot(TestSuite):
 
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
-        self.janitor = itrial.IJanitor(janitor)
-        
-
-        # XXX NO NO NO NO NO NO NO NO NO NO GOD DAMNIT NO YOU CANNOT DO THIS
-        # IT IS NOT ALLOWED DO NOT CALL WAIT() ANYWHERE EVER FOR ANY REASON
-        # *EVER*
-        util.wait(self.reporter.setUpReporter())
-
-
-
+        self.janitor = janitor
+        self.reporter.setUpReporter()
         self.benchmark = benchmark
         self.startTime, self.endTime = None, None
         self.numTests = 0
@@ -183,18 +170,17 @@ class TrialRoot(TestSuite):
         if hasattr(module, '__doctests__'):
             vers = sys.version_info[0:2]
             if vers[0] >= 2 and vers[1] >= 3:
-                runner = itrial.ITestRunner(getattr(module, '__doctests__'))
+                from twisted.trial import tdoctest
+                runner = tdoctest.ModuleDocTestsRunner(module.__doctests__)
                 self.tests.append(runner)
             else:
                 warnings.warn(("trial's doctest support only works with "
                                "python 2.3 or later, not running doctests"))
 
     def addDoctest(self, obj):
-        # XXX: this is a crap adaptation, ListType is adapted to 
-        # ITestRunner by tdoctest.ModuleDocTestsRunner
-        # it is crappy crap, awful dreadful crap
-        self.tests.append(itrial.ITestRunner([obj]))
-
+        from twisted.trial import tdoctest
+        self.tests.append(tdoctest.ModuleDocTestsRunner([obj]))
+        
     def addPackage(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__),
                                self.moduleGlob)
@@ -235,7 +221,7 @@ class TrialRoot(TestSuite):
         # from the test run
         self.reporter.endSuite(self)
         try:
-            util.wait(self.reporter.tearDownReporter())
+            self.reporter.tearDownReporter()
         except:
             t, v, tb = sys.exc_info()
             raise RuntimeError, "your reporter is broken %r" % \
@@ -249,9 +235,6 @@ class TrialRoot(TestSuite):
     # the root of the ParentAttributeMixin tree
     def getJanitor(self):
         return self.janitor
-
-    def getReporter(self):
-        return self.reporter
 
     def isDebuggingRun(self):
         return self.debugger
@@ -278,7 +261,6 @@ class TrialRoot(TestSuite):
             self.tests.sort(lambda x, y: cmp(str(x), str(y)))
         self._initLogging()
         self.setStartTime()
-        result = unittest.TestResult()
         # randomize tests if requested
         r = None
         if seed is not None:
@@ -288,8 +270,8 @@ class TrialRoot(TestSuite):
         # this is where the test run starts
         self.reporter.startSuite(self.countTestCases())
         for tr in self._getChildren():
-            tr.run((seed is not None), result)
-            if result.shouldStop:
+            tr.run(self.reporter, (seed is not None))
+            if self.reporter.shouldStop:
                 break
         if self.benchmark:
             pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
@@ -316,7 +298,8 @@ class TrialRoot(TestSuite):
             case.visit(visitor)
 
 
-class MethodInfoBase(Timed):
+class MethodInfoBase(object):
+    zi.implements(itrial.IMethodInfo)
     def __init__(self, original):
         self.original = o = original
         self.name = o.__name__
@@ -339,7 +322,6 @@ class UserMethodError(Exception):
     """
 
 class UserMethodWrapper(MethodInfoBase):
-    zi.implements(itrial.IUserMethod, itrial.IMethodInfo)
     def __init__(self, original, janitor, raiseOnErr=True, timeout=None,
                  suppress=None):
         super(UserMethodWrapper, self).__init__(original)
@@ -391,9 +373,6 @@ class ParentAttributeMixin:
     def getJanitor(self):
         return self.parent.getJanitor()
 
-    def getReporter(self):
-        return self.parent.getReporter()
-
     def isDebuggingRun(self):
         return self.parent.isDebuggingRun()
 
@@ -420,17 +399,17 @@ class TestRunnerBase(TestSuite, ParentAttributeMixin):
         """
         return self.getJanitor().postCaseCleanup()
 
-    def run(self, randomize, result):
+    def run(self, reporter, randomize):
         """Run all tests for this test runner, catching all exceptions.
-        If a KeyboardInterrupt is caught set result.shouldStop."""
+        If a KeyboardInterrupt is caught set reporter.shouldStop."""
         _kickStartReactor()
         try:
-            self.runTests(randomize=randomize)
+            self.runTests(reporter, randomize=randomize)
         except KeyboardInterrupt:
             # KeyboardInterrupts are normal, not a bug in trial.
             # Just stop the test run, and do the usual reporting.
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-            result.shouldStop = True
+            reporter.shouldStop = True
         except:
             # Any other exception is problem.  Report it.
             f = failure.Failure()
@@ -529,12 +508,11 @@ class TestModuleRunner(TestRunnerBase):
             runner.parent = self.parent
             self.children.append(runner)
 
-    def runTests(self, randomize=False):
-        reporter = self.getReporter()
+    def runTests(self, reporter, randomize=False):
         reporter.startModule(self.original)
         self.randomize = randomize
         for runner in self._getChildren():
-            runner.runTests(randomize)
+            runner.runTests(reporter, randomize)
             for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
         reporter.endModule(self.original)
@@ -583,8 +561,7 @@ class TestClassAndMethodBase(TestRunnerBase):
             tm.parent = self
             self.children.append(tm)
 
-    def runTests(self, randomize=False):
-        reporter = self.getReporter()
+    def runTests(self, reporter, randomize=False):
         janitor = self.getJanitor()
 
         
@@ -635,7 +612,7 @@ class TestClassAndMethodBase(TestRunnerBase):
 
                 # suppression is handled by each testMethod
                 
-                testMethod.run(tci)
+                testMethod.run(reporter, tci)
                 self.methodsWithStatus.setdefault(testMethod.status,
                                                   []).append(testMethod)
 
@@ -842,13 +819,14 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
             self.errors.append(f)
 
 
-    def run(self, testCaseInstance):
+    def run(self, reporter, testCaseInstance):
         self.testCaseInstance = tci = testCaseInstance
         self.runs += 1
         self.startTime = time.time()
         self._signalStateMgr.save()
         janitor = self.parent.getJanitor()
-        reporter = self.parent.getReporter()
+        if reporter is None:
+            reporter = self.parent.getReporter()
 
         try:
             # don't run test methods that are marked as .skip
@@ -947,12 +925,10 @@ class BenchmarkMethod(TestMethod):
         super(BenchmarkMethod, self).__init__(original)
         self.benchmarkStats = {}
 
-    def run(self, testCaseInstance):
+    def run(self, reporter, testCaseInstance):
         # WHY IS THIS MONKEY PATCH HERE?
         def _recordStat(datum):
             self.benchmarkStats[self.fullName] = datum
         testCaseInstance.recordStat = _recordStat
         self.original(testCaseInstance)
         
-
-

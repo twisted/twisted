@@ -62,7 +62,7 @@ class TestRunners(RegistryBaseMixin, unittest.TestCase):
             runner = itrial.ITestRunner(test)
             self.runners.append(runner)
             runner.parent = self
-            runner.runTests()
+            runner.runTests(self.reporter)
             for k, v in runner.methodsWithStatus.iteritems():
                 methodsWithStatus.setdefault(k, []).extend(v)
         self.verifyStatus(methodsWithStatus)
@@ -76,7 +76,7 @@ class TestRunners(RegistryBaseMixin, unittest.TestCase):
     def testModuleDocTestsRunner(self):
         mdtr = tdoctest.ModuleDocTestsRunner(self.doctests)
         mdtr.parent = self
-        mdtr.runTests()
+        mdtr.runTests(self.reporter)
         self.verifyStatus(mdtr.methodsWithStatus, *self.EXPECTED_STATI)
 #:        for line in self.reporter.out.split('\n'):
 #:            print "\t%s" % (line,)

@@ -506,12 +506,6 @@ class TestCase(object):
             reactor.iterate()
 
 
-class TestResult(object):
-
-    def __init__(self):
-        self.shouldStop = False
-
-
 class TestVisitor(object):
     
     def visitCase(self, testCase):

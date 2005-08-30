@@ -14,8 +14,6 @@ from twisted.python import reflect, util as tputil
 
 import zope.interface as zi
 
-class Proxy(object):
-    pass
 
 def bogus(*args, **kwargs):
     warnings.warn("bogus method called in tdoctest.py, not sure why")
@@ -27,7 +25,7 @@ class DocTestRunnerBase(runner.TestClassAndMethodBase, runner.ParentAttributeMix
     tearDownModule = testCaseInstance = bogus
     methodNames = methods = methodsWithStatus = None
     
-    def runTests(self, randomize=False):
+    def runTests(self, reporter, randomize=False):
         raise NotImplementedError, "override in subclasses"
 
 
@@ -188,8 +186,6 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
         
         # the doctest.DocTest object
         self._dtest = original
-       
-    _dt_reporter = property(lambda self: self.getReporter())
 
     def getMethodsWithStatus(self):
         # XXX: This is very very cheezy
@@ -230,8 +226,9 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
     def countTestCases(self):
         return len(self._dtest.examples)
 
-    def runTests(self, randomize=None):
-        # randiomize argument is ignored 
+    def runTests(self, reporter, randomize=None):
+        # randiomize argument is ignored
+        self._dt_reporter = reporter
         doctest.DocTestRunner.run(self, self._dtest)
 
     def visit(self, visitor):
@@ -270,11 +267,11 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
         self._visitChildren(visitor)
         visitor.visitModuleAfter(self)
 
-    def runTests(self, randomize=False):
+    def runTests(self, reporter, randomize=False):
         self.startTime = time.time()
         if randomize:
             random.shuffle(self._getChildren())
         for runner in self._getChildren():
-            runner.runTests(randomize)
+            runner.runTests(reporter, randomize)
             for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
