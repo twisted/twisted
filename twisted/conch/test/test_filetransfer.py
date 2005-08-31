@@ -10,14 +10,6 @@ except ImportError:
     import sys
     del sys.modules['twisted.conch.unix'] # remove the bad import
 
-if not hasattr(unix, 'SFTPServerForUnixConchUser'):
-    # Hack for import wierdness on win32.  I don't know why ImportError isn't
-    # happening.
-    unix = None
-    import sys
-    del sys.modules['twisted.conch.unix'] # remove the bad import
-
-
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session
 from twisted.internet import defer, reactor, protocol, interfaces
@@ -54,17 +46,28 @@ class ConchSessionForTestAvatar:
         self.avatar = avatar
 
 if unix:
-    class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
+    if not hasattr(unix, 'SFTPServerForUnixConchUser'):
+        # unix should either be a fully working module, or None.  I'm not sure
+        # how this happens, but on win32 it does.  Try to cope.  --spiv.
+        import warnings
+        warnings.warn(("twisted.conch.unix imported %r, "
+                       "but doesn't define SFTPServerForUnixConchUser'")
+                      % (unix,))
+        unix = None
+    else:
+        class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
-        def gotVersion(self, version, otherExt):
-            return {'conchTest' : 'ext data'}
+            def gotVersion(self, version, otherExt):
+                return {'conchTest' : 'ext data'}
 
-        def extendedRequest(self, extName, extData):
-            if extName == 'testExtendedRequest':
-                return 'bar'
-            raise NotImplementedError
+            def extendedRequest(self, extName, extData):
+                if extName == 'testExtendedRequest':
+                    return 'bar'
+                raise NotImplementedError
 
-    components.registerAdapter(FileTransferForTestAvatar, FileTransferTestAvatar, filetransfer.ISFTPServer)
+        components.registerAdapter(FileTransferForTestAvatar,
+                                   FileTransferTestAvatar,
+                                   filetransfer.ISFTPServer)
 
 class SFTPTestBase(unittest.TestCase):
 
