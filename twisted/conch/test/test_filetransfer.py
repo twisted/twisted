@@ -10,6 +10,14 @@ except ImportError:
     import sys
     del sys.modules['twisted.conch.unix'] # remove the bad import
 
+if not hasattr(unix, 'SFTPServerForUnixConchUser'):
+    # Hack for import wierdness on win32.  I don't know why ImportError isn't
+    # happening.
+    unix = None
+    import sys
+    del sys.modules['twisted.conch.unix'] # remove the bad import
+
+
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session
 from twisted.internet import defer, reactor, protocol, interfaces
