@@ -40,7 +40,7 @@ class FileSystemLeafStream(SimpleStream):
         if bytesRead != readSize:
             raise VFSError(
                 ("Ran out of data reading vfs leaf %r, expected %d more bytes,"
-                 " got %d") % (self.leaf, length))
+                 " got %d") % (self.leaf, readSize, bytesRead))
         else:
             self.length -= bytesRead
             self.start += bytesRead
