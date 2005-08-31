@@ -2,7 +2,7 @@ import os
 
 from zope.interface import implements
 from twisted.web2.stream import SimpleStream, IByteStream
-from twisted.vfs.ivfs import IFileSystemLeaf
+from twisted.vfs.ivfs import IFileSystemLeaf, VFSError
 from twisted.python import components
 
 class FileSystemLeafStream(SimpleStream):
@@ -38,9 +38,9 @@ class FileSystemLeafStream(SimpleStream):
         bytesRead = len(b)
 
         if bytesRead != readSize:
-            raise RuntimeError(
-                "Ran out of data reading vfs leaf %r, expected %d more bytes" %
-                    (self.leaf, length))
+            raise VFSError(
+                ("Ran out of data reading vfs leaf %r, expected %d more bytes,"
+                 " got %d") % (self.leaf, length))
         else:
             self.length -= bytesRead
             self.start += bytesRead
