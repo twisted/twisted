@@ -35,7 +35,7 @@ class StreamAdapterOSFSTest(StreamAdapterInmemTest):
         self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
         os.mkdir(os.path.join(self.tmpdir, 'ned'))
-        f = open(os.path.join(self.tmpdir, 'file.txt'), 'w')
+        f = open(os.path.join(self.tmpdir, 'file.txt'), 'wb')
         f.write('wobble\n')
         f.close()
         root = osfs.OSDirectory(self.tmpdir)
