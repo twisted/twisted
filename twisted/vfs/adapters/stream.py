@@ -1,3 +1,5 @@
+import os
+
 from zope.interface import implements
 from twisted.web2.stream import SimpleStream, IByteStream
 from twisted.vfs.ivfs import IFileSystemLeaf
@@ -15,6 +17,7 @@ class FileSystemLeafStream(SimpleStream):
         use only that portion of the leaf.
         """
         self.leaf = leaf
+        self.leaf.open(os.O_RDONLY)
         self.start = start
         if length is None:
             self.length = leaf.getMetadata()['size']
@@ -44,6 +47,7 @@ class FileSystemLeafStream(SimpleStream):
             return b
 
     def close(self):
+        self.leaf.close()
         self.leaf = None
         SimpleStream.close(self)
 

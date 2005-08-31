@@ -1,14 +1,16 @@
+import os.path
+
 from twisted.trial import unittest, assertions as A
 
 from twisted.vfs import ivfs, pathutils
 from twisted.vfs.adapters import stream
-from twisted.vfs.backends import inmem
+from twisted.vfs.backends import inmem, osfs
 
 from twisted.web2.stream import IByteStream
 
 sftpAttrs = ['size', 'uid', 'gid', 'nlink', 'mtime', 'atime', 'permissions']
 
-class StreamAdapterTest(unittest.TestCase):
+class StreamAdapterInmemTest(unittest.TestCase):
     def setUp(self):
         root = inmem.FakeDirectory()
         filesystem = pathutils.FileSystem( root )
@@ -28,3 +30,12 @@ class StreamAdapterTest(unittest.TestCase):
         self.bs.read()
         A.assertEquals(self.bs.read(), None)
 
+class StreamAdapterOSFSTest(StreamAdapterInmemTest):
+    def setUp(self):
+        self.tmpdir = self.mktemp()
+        os.mkdir(self.tmpdir)
+        os.mkdir(os.path.join(self.tmpdir, 'ned'))
+        open(os.path.join(self.tmpdir, 'file.txt'), 'w').write('wobble\n')
+        root = osfs.OSDirectory(self.tmpdir)
+        self.f = root.child('file.txt')
+        self.bs = IByteStream(self.f, None)
