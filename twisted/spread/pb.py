@@ -944,8 +944,14 @@ class Broker(banana.Banana):
     def _sendError(self, fail, requestID):
         """(internal) Send an error for a previously sent message.
         """
-        if not isinstance(fail, CopyableFailure) and isinstance(fail, failure.Failure):
-            fail = failure2Copyable(fail, self.factory.unsafeTracebacks)
+        if isinstance(fail, failure.Failure):
+            # If the failures value is jellyable or allowed through security,
+            # send the value
+            if (isinstance(fail.value, Jellyable) or
+                self.security.isClassAllowed(fail.value.__class__)):
+                fail = fail.value
+            elif not isinstance(fail, CopyableFailure):
+                fail = failure2Copyable(fail, self.factory.unsafeTracebacks)
         if isinstance(fail, CopyableFailure):
             fail.unsafeTracebacks = self.factory.unsafeTracebacks
         self.sendCall("error", requestID, self.serialize(fail))

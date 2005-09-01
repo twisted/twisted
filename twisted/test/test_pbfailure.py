@@ -40,9 +40,27 @@ class SimpleRoot(pb.Root):
         raise DieError("*gack*")
 
     def remote_jelly(self):
-        raise JellyError("I'm jellyable!")
+        self.raiseJelly()
 
     def remote_security(self):
+        self.raiseSecurity()
+
+    def remote_deferredJelly(self):
+        d = defer.Deferred()
+        d.addCallback(self.raiseJelly)
+        d.callback(None)
+        return d
+
+    def remote_deferredSecurity(self):
+        d = defer.Deferred()
+        d.addCallback(self.raiseSecurity)
+        d.callback(None)
+        return d
+
+    def raiseJelly(self, results=None):
+        raise JellyError("I'm jellyable!")
+
+    def raiseSecurity(self, results=None):
         raise SecurityError("I'm secure!")
 
 
@@ -103,10 +121,9 @@ class PBFailureTest(PBConnTestCase):
         return d
 
 
-    def addFailingCallbacks(self, remoteCall, expectedResult):
-        for m in (self.failurePoop, self.failureFail, self.failureDie, self.failureNoSuch,
-                  self.failureJelly, self.failureSecurity, lambda x: x):
-            remoteCall.addCallbacks(self.success, m, callbackArgs=(expectedResult,))
+    def addFailingCallbacks(self, remoteCall, expectedResult, eb):
+        remoteCall.addCallbacks(self.success, eb,
+                                callbackArgs=(expectedResult,))
         return remoteCall
 
     ##
@@ -114,15 +131,23 @@ class PBFailureTest(PBConnTestCase):
     ##
 
     def cleanupLoggedErrors(self, ignored):
-        errors = log.flushErrors(PoopError, FailError, DieError, AttributeError)
-        self.assertEquals(len(errors), 4)
+        errors = log.flushErrors(PoopError, FailError, DieError,
+                                 AttributeError, JellyError, SecurityError)
+        self.assertEquals(len(errors), 6)
         return ignored
 
     def connected(self, persp):
-        methods = (('poop', 42), ('fail', 420), ('die', 4200), ('nosuch', 42000),
-                   ('jelly', 43), ('security', 430))
+        methods = (('poop', 42, self.failurePoop),
+                   ('fail', 420, self.failureFail),
+                   ('die', 4200, self.failureDie),
+                   ('nosuch', 42000, self.failureNoSuch),
+                   ('jelly', 43, self.failureJelly),
+                   ('security', 430, self.failureSecurity),
+                   ('deferredJelly', 4300, self.failureDeferredJelly),
+                   ('deferredSecurity', 43000, self.failureDeferredSecurity))
         return defer.gatherResults([
-            self.addFailingCallbacks(persp.callRemote(meth), result) for (meth, result) in methods])
+            self.addFailingCallbacks(persp.callRemote(meth), result, eb)
+            for (meth, result, eb) in methods])
 
     def success(self, result, expectedResult):
         self.assertEquals(result, expectedResult)
@@ -160,6 +185,17 @@ class PBFailureTest(PBConnTestCase):
         self.failUnless(isinstance(fail.value, fail.type))
         return 430
 
+    def failureDeferredJelly(self, fail):
+        fail.trap(JellyError)
+        self.failIf(isinstance(fail.type, str))
+        self.failUnless(isinstance(fail.value, fail.type))
+        return 4300
+
+    def failureDeferredSecurity(self, fail):
+        fail.trap(SecurityError)
+        self.failIf(isinstance(fail.type, str))
+        self.failUnless(isinstance(fail.value, fail.type))
+        return 43000
 
 class PBFailureTestUnsafe(PBFailureTest):
 
