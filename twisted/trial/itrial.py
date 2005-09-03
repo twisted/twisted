@@ -75,10 +75,6 @@ class ITestCase(zi.Interface):
         """I am run after each method is run"""
 
 
-class ITestCaseFactory(zi.Interface):
-    pass
-
-
 class IPyUnitTCFactory(zi.Interface):
     pass
 

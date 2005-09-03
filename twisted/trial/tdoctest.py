@@ -18,11 +18,11 @@ import zope.interface as zi
 def bogus(*args, **kwargs):
     warnings.warn("bogus method called in tdoctest.py, not sure why")
 
-class DocTestRunnerBase(runner.TestClassAndMethodBase, runner.ParentAttributeMixin):
+class DocTestRunnerBase(runner.TestClassAndMethodBase):
     zi.implements(itrial.ITestRunner, itrial.IDocTestRunner)
 
-    setUpClass = tearDownClass = setUpModule = bogus
-    tearDownModule = testCaseInstance = bogus
+    setUpClass = tearDownClass = bogus
+    testCaseInstance = bogus
     methodNames = methods = methodsWithStatus = None
     
     def runTests(self, reporter, randomize=False):

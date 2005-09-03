@@ -88,7 +88,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
             raise unittest.SkipTest, 'doctest support only works in Python 2.3 or later'
 
         from twisted.trial.test import trialdoctest1
-        self.suite.addDoctest(trialdoctest1.Counter.unexpectedException)
+        self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
         self.suite.run()
 
         output = self.suite.reporter.out.splitlines()
@@ -109,21 +109,4 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         common.stringComparison(expect, output)
 
-    def testImportError(self):
-        self.failIfImportErrors = False
-        # Add a module that fails to import
-        modname = 'twisted.trial.test.importErrors'
-        if modname in sys.modules:
-            # Previous tests might leave this hanging around in Python < 2.4.
-            del sys.modules[modname]
-        self.suite.addModule(modname)
-        self.suite.run()
-
-        output = self.reporter.out.split('\n')
-
-        expect = ['Running 0 tests.',
-                  reporter.DOUBLE_SEPARATOR,
-                  'IMPORT ERROR:']
-        
-        common.stringComparison(expect, output)
 

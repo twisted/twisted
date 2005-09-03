@@ -359,11 +359,12 @@ class TestTests(unittest.TestCase):
             suite.addTestClass(klass)
             suite.run()
 
-            for method in suite.methods:
-                try:
-                    self.checkResults(method)
-                except unittest.FailTest:
-                    raise
+            for subsuite in suite._getChildren():
+                for method in subsuite._getChildren():
+                    try:
+                        self.checkResults(method)
+                    except unittest.FailTest:
+                        raise
 
 
 

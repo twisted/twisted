@@ -72,6 +72,7 @@ class TestTestVisitor(TestCase):
         from twisted.trial.runner import TestModuleRunner
         import sys
         testCase = TestModuleRunner(sys.modules[__name__])
+        testCase.janitor = testCase.debugger = None
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
@@ -80,8 +81,9 @@ class TestTestVisitor(TestCase):
         import sys
         test_visitor = self.mock_visitor()
         testCase = TestModuleRunner(sys.modules[__name__])
+        testCase.janitor = testCase.debugger = None
         testCase.visit(test_visitor)
-        self.failIf(len(test_visitor.calls) < 5)
+        self.failIf(len(test_visitor.calls) < 5, str(test_visitor.calls))
         self.assertEqual(test_visitor.calls[0], ("module", testCase))
         self.assertEqual(test_visitor.calls[1][0], "class")
         self.assertEqual(test_visitor.calls[-1], ("module_after", testCase))

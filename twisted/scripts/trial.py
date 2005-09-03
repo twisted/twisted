@@ -406,8 +406,8 @@ class Options(usage.Options):
             _dbg("arg: %s" % (arg,))
             
             if not os.sep in arg and not arg.endswith('.py'):
-                # simplest case, someone writes twisted.test.test_foo on the command line
-                # only one option, use namedAny
+                # simplest case, someone writes twisted.test.test_foo on the
+                # command line only one option, use namedAny
                 try:
                     self._tryNamedAny(arg)
                 except ArgumentError:
@@ -419,8 +419,9 @@ class Options(usage.Options):
             if not os.path.exists(arg):
                 raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
 
-            # if the argument ends in os.sep, it *must* be a directory (if it's valid)
-            # directories must be modules/packages, so use filenameToModuleName
+            # if the argument ends in os.sep, it *must* be a directory (if it's
+            # valid) directories must be modules/packages, so use
+            # filenameToModuleName
             if arg.endswith(os.sep) and arg != os.sep:
                 _dbg("arg endswith os.sep")
                 arg = arg[:-len(os.sep)]
@@ -453,7 +454,8 @@ class Options(usage.Options):
         _setUpLogging(self)
 
         def _mustBeInt():
-            raise usage.UsageError("Argument to --random must be a positive integer")
+            raise usage.UsageError("Argument to --random must be a positive "
+                                   "integer")
             
         if self['random'] is not None:
             try:
@@ -478,7 +480,8 @@ class Options(usage.Options):
 
         if self['nopm']:
             if not self['debug']:
-                raise usage.UsageError, "you must specify --debug when using --nopm "
+                raise usage.UsageError("you must specify --debug when using "
+                                       "--nopm ")
             failure.DO_POST_MORTEM = False
 
 # options
@@ -518,12 +521,14 @@ def _setUpLogging(config):
 
 
 def _getReporter(config):
-    log.msg(iface=ITrialDebug, reporter="config['reporter']: %s" % (config['reporter'],))
+    log.msg(iface=ITrialDebug, reporter="config['reporter']: %s"
+            % (config['reporter'],))
     if config['reporter'] is not None:
         return config['reporter']
 
     reporter = config.getReporter()
-    log.msg(iface=ITrialDebug, reporter="using reporter class: %r" % (reporter,))
+    log.msg(iface=ITrialDebug, reporter="using reporter class: %r"
+            % (reporter,))
     return reporter
 
 def _getJanitor(config=None):
@@ -534,7 +539,8 @@ def _getSuite(config):
     def _dbg(msg):
         log.msg(iface=itrial.ITrialDebug, parseargs=msg)
     reporterKlass = _getReporter(config)
-    log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r" % (reporterKlass,))
+    log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r"
+            % (reporterKlass,))
     
     suite = runner.TrialRoot(reporterKlass(
         tbformat=config['tbformat'],
@@ -578,11 +584,14 @@ def _setUpTestdir():
        try:
            shutil.rmtree(testdir)
        except OSError, e:
-           print "could not remove path, caught OSError [Errno %s]: %s" % (e.errno,e.strerror)
+           print ("could not remove path, caught OSError [Errno %s]: %s"
+                  % (e.errno,e.strerror))
            try:
-               os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
+               os.rename(testdir, os.path.abspath("_trial_temp_old%s"
+                                                  % random.randint(0, 99999999)))
            except OSError, e:
-               print "could not rename path, caught OSError [Errno %s]: %s" % (e.errno,e.strerror)
+               print ("could not rename path, caught OSError [Errno %s]: %s"
+                      % (e.errno,e.strerror))
                raise
 
     os.mkdir(testdir)
@@ -683,7 +692,8 @@ def reallyRun(config):
                 suite.debugger = suite.reporter.debugger = True
                 suite.run(config['random'])
                 return suite
-            return _getDebugger(config).runcall(call_until_failure, _doRun, config)
+            return _getDebugger(config).runcall(call_until_failure, _doRun,
+                                                config)
 
     suite = _getSuite(config)
     if config['dry-run']:
@@ -719,7 +729,8 @@ def run():
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()
-        results.write_results(show_missing=1, summary=False, coverdir=config.coverdir)
+        results.write_results(show_missing=1, summary=False,
+                              coverdir=config.coverdir)
 
     sys.exit(not itrial.ITestStats(suite).allPassed)
 

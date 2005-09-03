@@ -213,7 +213,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         self.assertMethodsCalled(*allMethods)
 
     def testTimingOutDeferred(self):
-        self.suite.addMethod(erroneous.TimingOutDeferred)
+        self.suite.addTestClass(erroneous.TimingOutDeferred)
 
         origTimeout = util.DEFAULT_TIMEOUT_DURATION
         util.DEFAULT_TIMEOUT_DURATION = 0.1
@@ -272,19 +272,6 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assertSubstring(suppression.CLASS_WARNING_MSG, self.stdio)
         assertSubstring(suppression.MODULE_WARNING_MSG, self.stdio)
         assertSubstring(suppression.METHOD_WARNING_MSG, self.stdio)
-
-    def testImportErrorsFailRun(self):
-        self.failIfImportErrors = False
-        modname = 'twisted.trial.test.importErrors'
-        if modname in sys.modules:
-            del sys.modules[modname]
-        assert_(modname not in sys.modules)
-        self.suite.addModule(modname)
-        # in python-2.4, broken imports are not left in sys.modules
-        #assert_(modname in sys.modules)
-        self.suite.run()
-        
-        failIf(itrial.ITestStats(self.suite).allPassed)
 
         
 FunctionalTest.timeout = 30.0

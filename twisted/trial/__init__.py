@@ -20,12 +20,6 @@ except ImportError:
 # mess with adapter registries that was here before.
 benchmarking = False
 
-def makeTestRunner(orig):
-    if benchmarking:
-        return runner.BenchmarkCaseRunner(orig)
-    else:
-        return runner.TestCaseRunner(orig)
-
 def makeTestMethod(orig):
     if benchmarking:
         return runner.BenchmarkMethod(orig)
@@ -43,7 +37,6 @@ def _setUpAdapters():
     for a, o, i in [
 
 # ---- ITestRunner and ITestMethod adapters -----------
-(makeTestRunner, itrial.ITestCaseFactory, itrial.ITestRunner),
 (runner.TestModuleRunner, types.ModuleType, itrial.ITestRunner),
 (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
 (runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),

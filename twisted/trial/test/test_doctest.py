@@ -98,21 +98,21 @@ class TestRunners(RegistryBaseMixin, unittest.TestCase):
         assertSubstring("Ran %s tests in" % (n,), self.reporter.out)
 
     def testSingleDoctestFailure(self):
-        self.suite.addDoctest(trialdoctest1.Counter.__eq__)
+        self.suite.addDoctests([trialdoctest1.Counter.__eq__])
         self.suite.run()
 
         mws = self.suite.children[0].methodsWithStatus
         self.verifyStatus(mws, (FAILURE, 1))
 
     def testSingleDoctestSuccess(self):
-        self.suite.addDoctest(trialdoctest1.Counter.incr)
+        self.suite.addDoctests([trialdoctest1.Counter.incr])
         self.suite.run()
 
         mws = self.suite.children[0].methodsWithStatus
         self.verifyStatus(mws, (SUCCESS, 1))
 
     def testSingleDoctestError(self):
-        self.suite.addDoctest(trialdoctest1.Counter.unexpectedException)
+        self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
         self.suite.run()
 
         mws = self.suite.children[0].methodsWithStatus

@@ -7,63 +7,17 @@
 # Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
 # Original Author: Jonathan Lange <jml@twistedmatrix.com>
 
-#  B{What's going on here?}
-#
-#  I've been staring at this file for about 3 weeks straight, and it seems
-#  like a good place to write down how all this stuff works.
-#
-#  The program flow goes like this:
-#
-#  The twisted.scripts.trial module parses command line options, creates a
-#  TrialRoot and passes it the _Janitor and Reporter objects. It then adds
-#  the modules, classes, and methods that the user requested that the suite
-#  search for test cases. Then the script calls .runTests() on the suite.
-#
-#  The suite goes through each argument and calls ITestRunner(obj) on each
-#  object. There are adapters that are registered for ModuleType, ClassType
-#  and MethodType, so each one of these adapters knows how to run their
-#  tests, and provides a common interface to the suite.
-#
-#  The module runner goes through the module and searches for classes that
-#  implement itrial.TestCaseFactory, does setUpModule, adapts that module's
-#  classes with ITestRunner(), and calls .run() on them in sequence.
-#
-#  The method runner wraps the method, locates the method's class and
-#  modules so that the setUp{Module, Class, } can be run for that test.
-#
-#  ------
-#
-#  A word about reporters...
-#
-#  All output is to be handled by the reporter class. Warnings, Errors, etc.
-#  are all given to the reporter and it decides what the correct thing to do
-#  is depending on the options given on the command line. This allows the
-#  runner code to concentrate on testing logic. The reporter is also given
-#  Test-related objects wherever possible, not strings. It is not the job of
-#  the runner to know what string should be output, it is the reporter's job
-#  to know how to make sense of the data
-#
-#  -------
-#
-#  The test framework considers any user-written code *dangerous*, and it
-#  wraps it in a UserMethodWrapper before execution. This allows us to
-#  handle the errors in a sane, consistent way. The wrapper will run the
-#  user-code, catching errors, and then checking for logged errors, saving
-#  it to IUserMethod.errors.
-#
-#  (more to follow)
-#
 from __future__ import generators
 
 
 import os, glob, types, warnings, time, sys, cPickle as pickle, inspect
-import fnmatch, random
+import fnmatch, random, inspect
 from os.path import join as opj
 
 from twisted.internet import defer, interfaces
 from twisted.python import components, reflect, log, failure
 from twisted.trial import itrial, util, unittest
-from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
+from twisted.trial.itrial import ITestCase, IReporter, ITrialDebug
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
@@ -71,7 +25,14 @@ import zope.interface as zi
 
 MAGIC_ATTRS = ('skip', 'todo', 'timeout', 'suppress')
 
-# --- Exceptions and Warnings ------------------------ 
+
+def makeTestRunner(orig):
+    from twisted import trial
+    if trial.benchmarking:
+        return BenchmarkCaseRunner(orig)
+    else:
+        return TestCaseRunner(orig)
+
 
 class BrokenTestCaseWarning(Warning):
     """emitted as a warning when an exception occurs in one of
@@ -103,10 +64,48 @@ class TestSuite(object):
             result += case.countTestCases()
         return result
 
-    def _getChildren(self):
+    def _getChildren(self, randomize=False):
         if not len(self.children):
             self._populateChildren()
+        if randomize:
+            random.shuffle(self.children)
         return self.children
+
+    def run(self):
+        for child in self._getChildren():
+            child.run()
+
+    def addTest(self, test):
+        self.children.append(test)
+
+    def addTests(self, tests):
+        for test in tests:
+            self.addTest(test)
+
+
+def isPackageDirectory(dirname):
+    """Is the directory at path 'dirname' a Python package directory?"""
+    for ext in 'py', 'so', 'pyd', 'dll':
+        if os.path.exists(os.path.join(dirname,
+                                       os.extsep.join(('__init__', ext)))):
+            return True
+    return False
+
+
+def filenameToModule(fn):
+    return reflect.namedModule(reflect.filenameToModuleName(fn))
+
+
+def findTestClasses(module):
+    """Given a module, return all trial Test classes"""
+    classes = [val for name, val in inspect.getmembers(module, inspect.isclass)]
+    return filter(ITestCase.implementedBy, classes)
+
+
+def findTestModules(package):
+    moduleGlob = 'test_*.py'
+    modGlob = os.path.join(os.path.dirname(package.__file__), moduleGlob)
+    return map(filenameToModule, glob.glob(modGlob))
 
 
 class TrialRoot(TestSuite):
@@ -117,8 +116,6 @@ class TrialRoot(TestSuite):
     objects, which it then calls the run method on.
     """
     zi.implements(itrial.ITrialRoot)
-    moduleGlob = 'test_*.py'
-    sortTests = 1
     debugger = False
 
     def __init__(self, reporter, janitor, benchmark=0):
@@ -129,8 +126,8 @@ class TrialRoot(TestSuite):
         self.startTime, self.endTime = None, None
         self.numTests = 0
         self.couldNotImport = {}
-        self.tests = []
         self.children = []
+        self.parent = self
         if benchmark:
             self._registerBenchmarkAdapters()
 
@@ -138,69 +135,35 @@ class TrialRoot(TestSuite):
         from twisted import trial
         trial.benchmarking = True
 
-    def addMethod(self, method):
-        self.tests.append(method)
+    def addTest(self, test):
+        test.janitor = self.janitor
+        test.debugger = self.debugger
+        TestSuite.addTest(self, test)
 
-    def _getMethods(self):
-        for runner in self.children:
-            for meth in runner.children:
-                yield meth
-    methods = property(_getMethods)
-        
+    def addMethod(self, method):
+        self.addTest(itrial.ITestRunner(method))
+
     def addTestClass(self, testClass):
-        if ITestCaseFactory.providedBy(testClass):
-            self.tests.append(testClass)
-        else:
-            warnings.warn(("didn't add %s because it does not implement "
-                           "ITestCaseFactory" % testClass))
+        self.addTest(makeTestRunner(testClass))
 
     def addModule(self, module):
-        if isinstance(module, types.StringType):
-            _dbgPA("addModule: %r" % (module,))
-            try:
-                module = reflect.namedModule(module)
-            except:
-                self.couldNotImport[module] = failure.Failure()
-                return
-
-        if isinstance(module, types.ModuleType):
-            _dbgPA("adding module: %r" % module)
-            self.tests.append(module)
-        
+        self.addTest(TestModuleRunner(module))
         if hasattr(module, '__doctests__'):
-            vers = sys.version_info[0:2]
-            if vers[0] >= 2 and vers[1] >= 3:
-                from twisted.trial import tdoctest
-                runner = tdoctest.ModuleDocTestsRunner(module.__doctests__)
-                self.tests.append(runner)
-            else:
-                warnings.warn(("trial's doctest support only works with "
-                               "python 2.3 or later, not running doctests"))
+            self.addDoctests(module.__doctests__)
 
-    def addDoctest(self, obj):
+    def addDoctests(self, obj):
         from twisted.trial import tdoctest
-        self.tests.append(tdoctest.ModuleDocTestsRunner([obj]))
+        self.addTest(tdoctest.ModuleDocTestsRunner(obj))
         
     def addPackage(self, package):
-        modGlob = os.path.join(os.path.dirname(package.__file__),
-                               self.moduleGlob)
-        modules = map(reflect.filenameToModuleName, glob.glob(modGlob))
-        for module in modules:
+        for module in findTestModules(package):
             self.addModule(module)
 
     def _packageRecurse(self, arg, dirname, names):
-
-        # Only recurse into packages
-        for ext in 'py', 'so', 'pyd', 'dll':
-            if os.path.exists(os.path.join(dirname, os.extsep.join(('__init__', ext)))):
-                break
-        else:
+        if not isPackageDirectory(dirname):
             return
-
-        testModuleNames = fnmatch.filter(names, self.moduleGlob)
-        testModules = [ reflect.filenameToModuleName(opj(dirname, name))
-                        for name in testModuleNames ]
-        for module in testModules:
+        package = filenameToModule(dirname)
+        for module in findTestModules(package):
             self.addModule(module)
 
     def addPackageRecursive(self, package):
@@ -231,46 +194,28 @@ class TrialRoot(TestSuite):
     def setStartTime(self):
         self.startTime = time.time()
 
-    ####
-    # the root of the ParentAttributeMixin tree
-    def getJanitor(self):
-        return self.janitor
-
-    def isDebuggingRun(self):
-        return self.debugger
-    ####
-
     def _bail(self):
         from twisted.internet import reactor
         d = defer.Deferred()
         reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
         reactor.fireSystemEvent('shutdown') # radix's suggestion
-
         treactor = interfaces.IReactorThreads(reactor, None)
         if treactor is not None:
             treactor.suggestThreadPoolSize(0)
-
         util.wait(d) # so that the shutdown event completes
 
     def _initLogging(self):
         log.startKeepingErrors()
 
-    def run(self, seed=None):
-        if self.sortTests:
-            # XXX twisted.python.util.dsu(tests, str)
-            self.tests.sort(lambda x, y: cmp(str(x), str(y)))
+    def run(self, randomize=None):
         self._initLogging()
         self.setStartTime()
-        # randomize tests if requested
-        r = None
-        if seed is not None:
-            r = random.Random(seed)
-            r.shuffle(self.tests)
-            self.reporter.write('Running tests shuffled with seed %d' % seed)
+        if randomize is not None:
+            self.reporter.write('Running tests shuffled with seed %d' % randomize)
         # this is where the test run starts
         self.reporter.startSuite(self.countTestCases())
-        for tr in self._getChildren():
-            tr.run(self.reporter, (seed is not None))
+        for tr in self._getChildren(randomize):
+            tr.run(self.reporter, (randomize is not None))
             if self.reporter.shouldStop:
                 break
         if self.benchmark:
@@ -278,14 +223,8 @@ class TrialRoot(TestSuite):
         self._kickStopRunningStuff()
 
     def _populateChildren(self):
-        for test in self.tests:
-            tr = itrial.ITestRunner(test)
-            self.children.append(tr)
-            tr.parent = self
-        for name, exc in self.couldNotImport.iteritems():
-            # XXX: AFAICT this is only used by RemoteJellyReporter
-            self.reporter.reportImportError(name, exc)
-
+        pass
+    
     def visit(self, visitor):
         """Call visitor,visitSuite(self) and visit all child tests."""
         visitor.visitSuite(self)
@@ -336,27 +275,19 @@ class UserMethodWrapper(MethodInfoBase):
         timeout = getattr(self, 'timeout', None)
         if timeout is None:
             timeout = getattr(self.original, 'timeout', util.DEFAULT_TIMEOUT)
-
         self.startTime = time.time()
-
         def run():
             return util.wait(
                 defer.maybeDeferred(self.original, *a, **kw),
                 timeout, useWaitError=True)
-
         try:
             _runWithWarningFilters(self.suppress, run)
         except util.MultiError, e:
             for f in e.failures:
                 self.errors.append(f)
-#:        except:
-#:            self.errors.append(failure.Failure())
-
         self.endTime = time.time()
-        
         for e in self.errors:
             self.errorHook(e)
-
         if self.raiseOnErr and self.errors:
             raise UserMethodError
 
@@ -364,20 +295,7 @@ class UserMethodWrapper(MethodInfoBase):
         pass
 
 
-class ParentAttributeMixin:
-    """a mixin to allow decendents of this class to call up 
-    their parents to get a value. the default usage stops at the
-    TrialRoot (as it is the trunk of all of this), but any class along the
-    way may return a different value.
-    """
-    def getJanitor(self):
-        return self.parent.getJanitor()
-
-    def isDebuggingRun(self):
-        return self.parent.isDebuggingRun()
-
-
-class TestRunnerBase(TestSuite, ParentAttributeMixin):
+class TestRunnerBase(TestSuite):
     zi.implements(itrial.ITestRunner)
     _tcInstance = None
     methodNames = setUpClass =estSuitorDownClast = methodsWithStatus = None
@@ -397,7 +315,7 @@ class TestRunnerBase(TestSuite, ParentAttributeMixin):
         cleanup, and restore signals to the state they were in before the
         test ran
         """
-        return self.getJanitor().postCaseCleanup()
+        return self.janitor.postCaseCleanup()
 
     def run(self, reporter, randomize):
         """Run all tests for this test runner, catching all exceptions.
@@ -441,81 +359,35 @@ def _runWithWarningFilters(filterlist, f, *a, **kw):
     finally:
         warnings.filters = filters[:]
 
+
 def _bogusCallable(ignore=None):
     pass
+
 
 class TestModuleRunner(TestRunnerBase):
     _tClasses = _mnames = None
     def __init__(self, original):
         super(TestModuleRunner, self).__init__(original)
         self.module = self.original
-        self.setUpModule = getattr(self.original, 'setUpModule',
-                                   _bogusCallable)
-        self.tearDownModule = getattr(self.original, 'tearDownModule',
-                                      _bogusCallable)
         self.skip = getattr(self.original, 'skip', None)
         self.todo = getattr(self.original, 'todo', None)
         self.timeout = getattr(self.original, 'timeout', None)
-
-        self.setUpClass = _bogusCallable
-        self.tearDownClass = _bogusCallable
         self.children = []
-        self.randomize = False
-
-    def methodNames(self):
-        if self._mnames is None:
-            self._mnames = [mn for tc in self._testCases
-                            for mn in tc.methodNames]
-        return self._mnames
-    methodNames = property(methodNames)
-
-    def _testClasses(self):
-        if self._tClasses is None:
-            self._tClasses = []
-            mod = self.original
-            if hasattr(mod, '__tests__'):
-                warnings.warn(("to allow for compatibility with python2.4's "
-                               "doctest module, please use a __unittests__ "
-                               "module attribute instead of __tests__"),
-                               DeprecationWarning)
-                objects = mod.__tests__
-            elif hasattr(mod, '__unittests__'):
-                objects = mod.__unittests__
-            else:
-                names = dir(mod)
-                objects = [getattr(mod, name) for name in names]
-
-            for obj in objects:
-                if isinstance(obj, (components.MetaInterface, zi.Interface)):
-                    continue
-                try:
-                    if ITestCaseFactory.providedBy(obj):
-                        self._tClasses.append(obj)
-                except AttributeError:
-                    # if someone (looking in exarkun's direction)
-                    # messes around with __getattr__ in a particularly funky
-                    # way, it's possible to mess up zi's providedBy()
-                    pass
-
-        return self._tClasses
-
-    def _populateChildren(self):
-        tests = self._testClasses()
-        if self.randomize:
-            random.shuffle(tests)
-        for testClass in tests:
-            runner = itrial.ITestRunner(testClass)
-            runner.parent = self.parent
-            self.children.append(runner)
 
     def runTests(self, reporter, randomize=False):
         reporter.startModule(self.original)
-        self.randomize = randomize
-        for runner in self._getChildren():
+        for runner in self._getChildren(randomize):
             runner.runTests(reporter, randomize)
             for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
         reporter.endModule(self.original)
+
+    def _populateChildren(self):
+        for testClass in findTestClasses(self.original):
+            runner = makeTestRunner(testClass)
+            runner.janitor = self.janitor
+            runner.debugger = self.debugger
+            self.addTest(runner)
 
     def visit(self, visitor):
         """Call visitor,visitModule(self) and visit all child tests."""
@@ -525,9 +397,8 @@ class TestModuleRunner(TestRunnerBase):
 
 
 class TestClassAndMethodBase(TestRunnerBase):
-    """base class for *Runner classes providing the testCaseInstance, finding
-    the appropriate setUpModule, tearDownModule classes, and running the
-    appropriate prefixed-methods as tests
+    """base class for *Runner classes providing the testCaseInstance, running
+    the appropriate prefixed-methods as tests
     """
     _module = _tcInstance = None
     
@@ -544,14 +415,6 @@ class TestClassAndMethodBase(TestRunnerBase):
         return self._module
     module = property(module)
 
-    def setUpModule(self):
-        return getattr(self.module, 'setUpModule', _bogusCallable)
-    setUpModule = property(setUpModule)
-
-    def tearDownModule(self):
-        return getattr(self.module, 'tearDownModule', _bogusCallable)
-    tearDownModule = property(tearDownModule)
-
     def _populateChildren(self):
         for mname in self.methodNames:
             m = getattr(self._testCase, mname)
@@ -561,20 +424,18 @@ class TestClassAndMethodBase(TestRunnerBase):
             tm.parent = self
             self.children.append(tm)
 
-    def runTests(self, reporter, randomize=False):
-        janitor = self.getJanitor()
+    def recordMethodStatus(self, testMethod):
+        self.methodsWithStatus.setdefault(testMethod.status,
+                                          []).append(testMethod)
 
-        
+    def runTests(self, reporter, randomize=False):
+        janitor = self.janitor
         tci = self.testCaseInstance
         self.startTime = time.time()
-
         try:
             self._signalStateMgr.save()
-
             reporter.startClass(self._testCase)
-
             # --- setUpClass -----------------------------------------------
-
             setUpClass = UserMethodWrapper(self.setUpClass, janitor,
                                            suppress=self.suppress)
             try:
@@ -584,8 +445,6 @@ class TestClassAndMethodBase(TestRunnerBase):
                 for error in setUpClass.errors:
                     if error.check(unittest.SkipTest):
                         self.skip = error.value[0]
-                        def _setUpSkipTests(tm):
-                            tm.skip = self.skip
                         break                   # <--- skip the else: clause
                     elif error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
@@ -595,29 +454,20 @@ class TestClassAndMethodBase(TestRunnerBase):
                     for tm in self._getChildren():
                         tm.errors.extend(setUpClass.errors)
                         reporter.startTest(tm)
-                        self.methodsWithStatus.setdefault(tm.status,
-                                                          []).append(tm)
+                        self.recordMethodStatus(tm)
                         reporter.endTest(tm)
                     return
 
             # --- run methods ----------------------------------------------
-
-            if randomize:
-                random.shuffle(self.methodNames)
-
-            for testMethod in self._getChildren():
+            for testMethod in self._getChildren(randomize):
                 log.msg("--> %s.%s.%s <--" % (testMethod.module.__name__,
                                               testMethod.klass.__name__,
                                               testMethod.name))
-
                 # suppression is handled by each testMethod
-                
                 testMethod.run(reporter, tci)
-                self.methodsWithStatus.setdefault(testMethod.status,
-                                                  []).append(testMethod)
+                self.recordMethodStatus(testMethod)
 
             # --- tearDownClass ---------------------------------------------
-
             tearDownClass = UserMethodWrapper(self.tearDownClass, janitor,
                                    suppress=self.suppress)
             try:
@@ -630,7 +480,6 @@ class TestClassAndMethodBase(TestRunnerBase):
                         error.raiseException()
                 else:
                     reporter.upDownError(tearDownClass)
-
         finally:
             try:
                 self.doCleanup()
@@ -686,13 +535,9 @@ class TestCaseMethodRunner(TestClassAndMethodBase):
 
         for attr in MAGIC_ATTRS:
             objs = [self.original, self._testCase,
-                        inspect.getmodule(self._testCase)]
+                    inspect.getmodule(self._testCase)]
             setattr(self, attr, util._selectAttr(attr, *objs))
         
-
-    # TODO: for 2.1
-    # this needs a custom runTests to handle setUpModule/tearDownModule
-
 
 class PyUnitTestCaseRunner(TestClassAndMethodBase):
     """I run python stdlib TestCases"""
@@ -707,9 +552,9 @@ class BenchmarkCaseRunner(TestCaseRunner):
     """I run benchmarking tests"""
     methodPrefix = 'benchmark'
         
+
 class StatusMixin:
     _status = None
-
     def _getStatus(self):
         if self._status is None:
             if self.todo is not None and (self.failures or self.errors):
@@ -728,7 +573,7 @@ class StatusMixin:
     status = property(_getStatus)
 
 
-class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
+class TestMethod(MethodInfoBase, StatusMixin):
     zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
     parent = None
 
@@ -784,7 +629,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
 
     def timeout(self):
         if hasattr(self.original, 'timeout'):
-            return getattr(self.original, 'timeout')
+            return self.original.timeout
         else:
             return getattr(self.parent, 'timeout', util.DEFAULT_TIMEOUT)
     timeout = property(timeout)
@@ -824,84 +669,74 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
         self.runs += 1
         self.startTime = time.time()
         self._signalStateMgr.save()
-        janitor = self.parent.getJanitor()
-        if reporter is None:
-            reporter = self.parent.getReporter()
-
+        janitor = self.parent.janitor
+        if self.skip: # don't run test methods that are marked as .skip
+            reporter.startTest(self)
+            reporter.endTest(self)
+            return
         try:
-            # don't run test methods that are marked as .skip
-            #
-            if self.skip:
-                # wheeee!
-                reporter.startTest(self)
-                reporter.endTest(self)
-                return
+            # capture all a TestMethod run's log events (warner's request)
+            observer = util._TrialLogObserver().install()
+            
+            # Record the name of the running test on the TestCase instance
+            tci._trial_caseMethodName = self.original.func_name
 
+            # Run the setUp method
+            setUp = UserMethodWrapper(self.setUp, janitor,
+                                      suppress=self.suppress)
             try:
-                # capture all a TestMethod run's log events (warner's request)
-                observer = util._TrialLogObserver().install()
+                setUp(tci)
+            except UserMethodError:
+                for error in setUp.errors:
+                    if error.check(KeyboardInterrupt):
+                        error.raiseException()
+                    self._eb(error)
+                else:
+                    # give the reporter the illusion that the test has 
+                    # run normally but don't actually run the test if 
+                    # setUp is broken
+                    reporter.startTest(self)
+                    reporter.upDownError(setUp, warn=False,
+                                         printStatus=False)
+                    return
+                 
+            # Run the test method
+            reporter.startTest(self)
+            try:
+                if not self.parent.debugger:
+                    sys.stdout = util._StdioProxy(sys.stdout)
+                    sys.stderr = util._StdioProxy(sys.stderr)
+                orig = UserMethodWrapper(self.original, janitor,
+                                         raiseOnErr=False,
+                                         timeout=self.timeout,
+                                         suppress=self.suppress)
+                orig.errorHook = self._eb
+                orig(tci)
 
-                # Record the name of the running test on the TestCase instance
-                tci._trial_caseMethodName = self.original.func_name
+            finally:
+                self.endTime = time.time()
 
-                # Run the setUp method
-                setUp = UserMethodWrapper(self.setUp, janitor,
-                                          suppress=self.suppress)
+                if not self.parent.debugger:
+                    self.stdout = sys.stdout.getvalue()
+                    self.stderr = sys.stderr.getvalue()
+                    sys.stdout = sys.stdout.original
+                    sys.stderr = sys.stderr.original
+
+                # Run the tearDown method
+                um = UserMethodWrapper(self.tearDown, janitor,
+                                       suppress=self.suppress)
                 try:
-                    setUp(tci)
+                    um(tci)
                 except UserMethodError:
-                    for error in setUp.errors:
-                        if error.check(KeyboardInterrupt):
-                            error.raiseException()
+                    for error in um.errors:
                         self._eb(error)
                     else:
-                        # give the reporter the illusion that the test has 
-                        # run normally but don't actually run the test if 
-                        # setUp is broken
-                        reporter.startTest(self)
-                        reporter.upDownError(setUp, warn=False,
-                                             printStatus=False)
-                        return
-                 
-                # Run the test method
-                reporter.startTest(self)
-                try:
-                    if not self.isDebuggingRun():
-                        sys.stdout = util._StdioProxy(sys.stdout)
-                        sys.stderr = util._StdioProxy(sys.stderr)
-                    orig = UserMethodWrapper(self.original, janitor,
-                                             raiseOnErr=False,
-                                             timeout=self.timeout,
-                                             suppress=self.suppress)
-                    orig.errorHook = self._eb
-                    orig(tci)
-
-                finally:
-                    self.endTime = time.time()
-
-                    if not self.isDebuggingRun():
-                        self.stdout = sys.stdout.getvalue()
-                        self.stderr = sys.stderr.getvalue()
-                        sys.stdout = sys.stdout.original
-                        sys.stderr = sys.stderr.original
-
-                    # Run the tearDown method
-                    um = UserMethodWrapper(self.tearDown, janitor,
-                                           suppress=self.suppress)
-                    try:
-                        um(tci)
-                    except UserMethodError:
-                        for error in um.errors:
-                            self._eb(error)
-                        else:
-                            reporter.upDownError(um, warn=False)
-            finally:
-                observer.remove()
-                self.logevents = observer.events
-                self.doCleanup()
-                reporter.endTest(self)
-
+                        reporter.upDownError(um, warn=False)
         finally:
+            observer.remove()
+            self.logevents = observer.events
+            self.doCleanup()
+            reporter.endTest(self)
             self._signalStateMgr.restore()
 
     def doCleanup(self):
@@ -909,7 +744,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
         cleanup
         """
         try:
-            self.getJanitor().postMethodCleanup()
+            self.parent.janitor.postMethodCleanup()
         except util.MultiError, e:
             for f in e.failures:
                 self._eb(f)

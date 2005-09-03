@@ -28,3 +28,89 @@ GOALS
 
 - Command line can know about TestCase internals
 
+
+
+MILESTONES
+- Remove ParentAttributeMixin
+- Deprecate assertions.py
+- Surely there's something better than UserMethodWrapper
+- Destroy _selectAttr
+
+
+REACTOR/TWISTED SANITY
+1. Totally understand what's going on with the reactor etc for *one test*
+2. Understand what's going on for *two tests*
+3. Maybe refactor
+
+
+        log.startKeepingErrors()
+        self.setStartTime()
+        if randomize is not None:
+            self.reporter.write('Running tests shuffled with seed %d' % randomize)
+
+        reporter.startModule(self.original)
+            self._signalStateMgr.save()
+        
+            setUpClass = UserMethodWrapper(self.setUpClass, janitor,
+                                           suppress=self.suppress)
+                # TESTS RUN IN HERE
+                self._signalStateMgr.save()
+                observer = util._TrialLogObserver().install()
+                setUp = UserMethodWrapper(self.setUp, janitor,
+                                          suppress=self.suppress)
+
+                reporter.startTest(self)
+                try:
+                    if not self.parent.debugger:
+                        sys.stdout = util._StdioProxy(sys.stdout)
+                        sys.stderr = util._StdioProxy(sys.stderr)
+                    orig = UserMethodWrapper(self.original, janitor,
+                                             raiseOnErr=False,
+                                             timeout=self.timeout,
+                                             suppress=self.suppress)
+                    orig.errorHook = self._eb
+                    orig(tci)
+                finally:
+                    um = UserMethodWrapper(self.tearDown, janitor,
+                                           suppress=self.suppress)
+
+                observer.remove()
+                self.logevents = observer.events
+                try:
+                    self.parent.janitor.postMethodCleanup()
+                except util.MultiError, e:
+                for f in e.failures:
+                    self._eb(f)
+                reporter.endTest(self)
+                self._signalStateMgr.restore()
+                                          
+            tearDownClass = UserMethodWrapper(self.tearDownClass, janitor,
+                                   suppress=self.suppress)
+            try:
+               return self.janitor.postCaseCleanup()
+            except util.MultiError, e:
+                reporter.cleanupErrors(e.failures)
+            self._signalStateMgr.restore()
+            reporter.endClass(self._testCase)
+            self.endTime = time.time()
+            
+        reporter.endModule(self.original)
+            
+        if self.benchmark:
+            pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
+        self.endTime = time.time()
+        self.reporter.endSuite(self)
+        try:
+            self.reporter.tearDownReporter()
+        except:
+            t, v, tb = sys.exc_info()
+            raise RuntimeError, "your reporter is broken %r" % \
+                  (''.join(v),), tb
+        from twisted.internet import reactor
+        d = defer.Deferred()
+        reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
+        reactor.fireSystemEvent('shutdown') # radix's suggestion
+        treactor = interfaces.IReactorThreads(reactor, None)
+        if treactor is not None:
+            treactor.suggestThreadPoolSize(0)
+        util.wait(d) # so that the shutdown event completes
