@@ -260,7 +260,10 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
 
     def countTestCases(self):
         """Return the number of test cases self.run() would run."""
-        return sum([runner.countTestCases() for runner in self._getChildren()])
+        ret = 0
+        for runner in self._getChildren():
+            ret += runner.countTestCases()
+        return ret
 
     def visit(self, visitor):
         visitor.visitModule(self)
