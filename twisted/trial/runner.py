@@ -98,13 +98,24 @@ def filenameToModule(fn):
 
 def findTestClasses(module):
     """Given a module, return all trial Test classes"""
-    classes = [val for name, val in inspect.getmembers(module, inspect.isclass)]
+    def isclass(k):
+        ## XXX -- work around. remove ASAP. 
+        ## inspect.isclass checks for ClassType and then if __bases__
+        ## is an attribute.
+        ## t.conch.insults.text.CharacterAttributes has a (buggy?) __getattr__
+        ## which returns objects for any given attribute.  Hence it has
+        ## __bases__, hence, inspect.isclass believes instances to be classes.
+        ## Remove this workaround and replace w/ inspect.isclass if
+        ## CharacterAttributes is fixed.
+        return isinstance(k, (types.ClassType, types.TypeType)) 
+    classes = [val for name, val in inspect.getmembers(module, isclass)]
     return filter(ITestCase.implementedBy, classes)
 
 
+MODULE_GLOB = 'test_*.py'
+
 def findTestModules(package):
-    moduleGlob = 'test_*.py'
-    modGlob = os.path.join(os.path.dirname(package.__file__), moduleGlob)
+    modGlob = os.path.join(os.path.dirname(package.__file__), MODULE_GLOB)
     return map(filenameToModule, glob.glob(modGlob))
 
 
@@ -162,8 +173,10 @@ class TrialRoot(TestSuite):
     def _packageRecurse(self, arg, dirname, names):
         if not isPackageDirectory(dirname):
             return
-        package = filenameToModule(dirname)
-        for module in findTestModules(package):
+        testModuleNames = fnmatch.filter(names, MODULE_GLOB)
+        testModules = [ filenameToModule(opj(dirname, name))
+                        for name in testModuleNames ]
+        for module in testModules:
             self.addModule(module)
 
     def addPackageRecursive(self, package):
