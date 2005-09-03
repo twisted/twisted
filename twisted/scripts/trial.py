@@ -559,7 +559,11 @@ def _getSuite(config):
                 continue
         if config['recurse']:
             _dbg("addPackageRecursive(%s)" % (package,))
-            suite.addPackageRecursive(package)
+            try:
+                suite.addPackageRecursive(package)
+            except ImportError:
+                suite.couldNotImport[package] = failure.Failure()
+                continue
         else:
             _dbg("addPackage(%s)" % (package,))
             suite.addPackage(package)
