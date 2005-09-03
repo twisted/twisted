@@ -18,6 +18,10 @@ class TestError(Exception):
 class TestContainer(BaseCase):
     wait_timeout = 10.0
 
+    def flushErrors(self, result, error):
+        log.flushErrors(error)
+        return result
+    
     def test_getContainedResource(self):
         """Test that non-blocking WSGI applications render properly.
         """
@@ -29,7 +33,7 @@ class TestContainer(BaseCase):
             return ['<h1>Some HTML</h1>',
                     '</html>']
 
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": None}, '<html><h1>Some HTML</h1></html>'))
 
@@ -47,7 +51,7 @@ class TestContainer(BaseCase):
             time.sleep(1)
             return ['<p>Hello!</p>']
 
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": None}, '<h1>A little bit of HTML</h1><p>Hello!</p>'))
 
@@ -61,7 +65,7 @@ class TestContainer(BaseCase):
             writer = start_response(status, response_headers)
             return []
 
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (314, {"Content-Length": 0}, ''))
 
@@ -69,10 +73,9 @@ class TestContainer(BaseCase):
         def application(environ, start_response):
             raise TestError("This is an expected error")
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (500, {}, None))
-        log.flushErrors(TestError)
+            (500, {}, None)).addBoth(self.flushErrors, TestError)
 
     def test_errorfulResource2(self):
         def application(environ, start_response):
@@ -80,11 +83,11 @@ class TestContainer(BaseCase):
             write("Foo")
             raise TestError("This is an expected error")
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {"Content-Length": None}, "Foo"), failure=True)
-        log.flushErrors(TestError)
-
+            (200, {"Content-Length": None}, "Foo"), failure=True
+            ).addBoth(self.flushErrors, TestError)
+    
     def test_errorfulIterator(self):
         def iterator():
             raise TestError("This is an expected error")
@@ -93,10 +96,9 @@ class TestContainer(BaseCase):
             start_response("200 OK", {})
             return iterator()
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (500, {}, None))
-        log.flushErrors(TestError)
+            (500, {}, None)).addBoth(self.flushErrors, TestError)
 
     def test_errorfulIterator2(self):
         def iterator():
@@ -108,26 +110,25 @@ class TestContainer(BaseCase):
             start_response("200 OK", {})
             return iterator()
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {"Content-Length": None}, "FooBar"), failure=True)
-        log.flushErrors(TestError)
+            (200, {"Content-Length": None}, "FooBar"), failure=True
+            ).addBoth(self.flushErrors, TestError)
 
     def test_didntCallStartResponse(self):
         def application(environ, start_response):
             return ["Foo"]
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (500, {}, None))
-        log.flushErrors(RuntimeError)
+            (500, {}, None)).addBoth(self.flushErrors, RuntimeError)
 
     def test_calledStartResponseLate(self):
         def application(environ, start_response):
             start_response("200 OK", {})
             yield "Foo"
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": None}, "Foo"))
 
@@ -136,7 +137,7 @@ class TestContainer(BaseCase):
             write = start_response("200 OK", {})
             return ["Foo", "Bar"]
         
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": 6}, "FooBar"))
         

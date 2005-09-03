@@ -134,7 +134,7 @@ class BaseCase(unittest.TestCase):
         """
         d = self.getResponseFor(*request_data)
         d.addCallback(self._cbGotResponse, expected_response, failure)
-        util.wait(d, timeout=self.wait_timeout)
+        return d
 
     def _cbGotResponse(self, (code, headers, data, failed), expected_response, expectedfailure=False):
         expected_code, expected_headers, expected_data = expected_response
@@ -165,17 +165,17 @@ class SampleWebTest(BaseCase):
         self.root = self.SampleTestResource()
 
     def test_root(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, 'http://host/'),
             (200, {}, 'This is a fake resource.'))
 
     def test_validChild(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, 'http://host/validChild'),
             (200, {}, 'This is a valid child resource.'))
 
     def test_invalidChild(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, 'http://host/invalidChild'),
             (404, {}, None))
 
@@ -189,23 +189,23 @@ class URLParsingTest(BaseCase):
         self.root = self.TestResource()
 
     def test_normal(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, '/path', {'Host':'host'}),
             (200, {}, 'Host:host, Path:/path'))
 
     def test_fullurl(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, 'http://host/path'),
             (200, {}, 'Host:host, Path:/path'))
 
     def test_strangepath(self):
         # Ensure that the double slashes don't confuse it
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, '//path', {'Host':'host'}),
             (200, {}, 'Host:host, Path://path'))
 
     def test_strangepathfull(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.root, 'http://host//path'),
             (200, {}, 'Host:host, Path://path'))
 
@@ -227,11 +227,11 @@ class TestDeferredRendering(BaseCase):
             return d
         
     def test_deferredRootResource(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.ResourceWithDeferreds(), 'http://host/'),
             (200, {}, 'I should be wrapped in a Deferred.'))
 
     def test_deferredChild(self):
-        self.assertResponse(
+        return self.assertResponse(
             (self.ResourceWithDeferreds(), 'http://host/deferred'),
             (200, {}, 'This is a fake resource.'))

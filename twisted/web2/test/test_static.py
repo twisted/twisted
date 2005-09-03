@@ -58,25 +58,25 @@ Content-Type: %s\r
     def assertInResponse(self, response, expected_response, failure=False):
         d = response
         d.addCallback(self._CbAssertInResponse, expected_response, failure)
-        util.wait(d, timeout=self.wait_timeout)
+        return d
 
     def testEnforcesMaxBytes(self):
-        self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
+        return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
                                          'text/html', 'X'*32),
                               (200, {}, 'exceeds maximum length'))
 
     def testEnforcesMimeType(self):
-        self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
+        return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
                                               'application/x-python', 'X'),
                               (200, {}, 'type not allowed'))
 
     def testInvalidField(self):
-        self.assertInResponse(self.uploadFile('NotARealField', 'myfilename',
+        return self.assertInResponse(self.uploadFile('NotARealField', 'myfilename',
                                               'text/html', 'X'),
                               (200, {}, 'not a valid field'))
 
     def testReportFileSave(self):
-        self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
+        return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
                                               'text/plain',
                                               'X'),
                               (200, {}, 'Saved file'))
