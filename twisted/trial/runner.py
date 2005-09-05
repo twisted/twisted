@@ -172,6 +172,7 @@ class TrialRoot(TestSuite):
 
     def _packageRecurse(self, arg, dirname, names):
         if not isPackageDirectory(dirname):
+            names[:] = []
             return
         testModuleNames = fnmatch.filter(names, MODULE_GLOB)
         testModules = [ filenameToModule(opj(dirname, name))
