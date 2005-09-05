@@ -290,12 +290,12 @@ class Options(usage.Options):
                 path, fullname = osp.split(filename)
                 name, ext = osp.splitext(fullname)
                 m = new.module(name)
-                sourcestring = file(filename, 'rb').read()
-                exec sourcestring in m.__dict__
+                sourcestring = file(filename, 'r').read()
+                sourcestring = sourcestring.replace('\r\n', '\n')
+                code = compile(sourcestring, filename, 'exec')
+                exec code in m.__dict__
                 sys.modules[name] = m
-                
         self['modules'].append(m)
-
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful

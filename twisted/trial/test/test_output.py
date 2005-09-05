@@ -11,6 +11,11 @@ def getTrialPath():
                                          os.pardir, 'bin', 'trial'))
 
 
+def runTrialWithEnv(env, *args):
+    return utils.getProcessOutput(getTrialPath(), args=args, errortoo=1,
+                                  env=env)
+
+
 if not interfaces.IReactorProcess.providedBy(reactor):
     skip = "These tests require the ability to spawn processes"
     
@@ -24,18 +29,26 @@ class TestImportErrors(unittest.TestCase):
 
     debug = False
 
-    def runTrial(self, *args):
+    def _getMockEnvironment(self):
         path = self._getMockPath()
         env = os.environ.copy()
         if not env.has_key('PYTHONPATH'):
             env['PYTHONPATH'] = path
         else:
             env['PYTHONPATH'] += os.pathsep + path
-        d = utils.getProcessOutput(getTrialPath(), args=args, errortoo=1,
-                                   env=env)
+        return env
+
+    def _runTrial(self, env, *args):
+        d = runTrialWithEnv(env, *args)
         if self.debug:
             d.addCallback(self._print)
         return d
+        
+    def runTrial(self, *args):
+        return self._runTrial(self._getMockEnvironment(), *args)
+
+    def runTrialPure(self, *args):
+        return self._runTrial(os.environ, *args)
 
     def _print(self, stuff):
         print stuff
@@ -140,6 +153,21 @@ class TestImportErrors(unittest.TestCase):
         d.addCallback(self.failUnlessIn, 'PASSED (successes=1)')
         return d
     
-    ## XXX -- needs tests for
-    ## - recursive on package that contains module that doesn't import
-    ## - package / modules that _do_ import
+    def test_filename(self):
+        path = self._getMockPath()
+        d = self.runTrialPure(os.path.join(path, 'package/test_module.py'))
+        d.addCallback(self.failIfIn, 'IMPORT ERROR')
+        d.addCallback(self.failIfIn, 'IOError')
+        d.addCallback(self.failUnlessIn, 'OK')
+        d.addCallback(self.failUnlessIn, 'PASSED (successes=1)')
+        return d
+
+    def test_dosFile(self):
+        ## XXX -- not really an output test, more of a script test
+        path = self._getMockPath()
+        d = self.runTrialPure(os.path.join(path, 'package/test_dos_module.py'))
+        d.addCallback(self.failIfIn, 'IMPORT ERROR')
+        d.addCallback(self.failIfIn, 'IOError')
+        d.addCallback(self.failUnlessIn, 'OK')
+        d.addCallback(self.failUnlessIn, 'PASSED (successes=1)')
+        return d
