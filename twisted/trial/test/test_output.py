@@ -1,6 +1,6 @@
 from twisted.trial import unittest
 from twisted.trial.assertions import FailTest
-from twisted.internet import utils
+from twisted.internet import utils, reactor, interfaces
 import os, re
 
 def getTrialPath():
@@ -14,6 +14,10 @@ def runTrial(*args):
     return utils.getProcessOutput(getTrialPath(), args=args, errortoo=1,
                                   env=os.environ)
 
+
+if not interfaces.IReactorProcess.providedBy(reactor):
+    skip = "These tests require the ability to spawn processes"
+    
 
 class TestImportErrors(unittest.TestCase):
     """Actually run trial on the command line and check that the output is
