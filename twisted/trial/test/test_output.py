@@ -11,7 +11,8 @@ def getTrialPath():
 
 
 def runTrial(*args):
-    return utils.getProcessOutput(getTrialPath(), args=args, errortoo=1)
+    return utils.getProcessOutput(getTrialPath(), args=args, errortoo=1,
+                                  env=os.environ)
 
 
 class TestImportErrors(unittest.TestCase):
