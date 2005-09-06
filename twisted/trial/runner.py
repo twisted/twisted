@@ -136,7 +136,6 @@ class TrialRoot(TestSuite):
         self.benchmark = benchmark
         self.startTime, self.endTime = None, None
         self.numTests = 0
-        self.couldNotImport = {}
         self.children = []
         self.parent = self
         if benchmark:
@@ -175,9 +174,12 @@ class TrialRoot(TestSuite):
             names[:] = []
             return
         testModuleNames = fnmatch.filter(names, MODULE_GLOB)
-        testModules = [ filenameToModule(opj(dirname, name))
-                        for name in testModuleNames ]
-        for module in testModules:
+        for name in testModuleNames:
+            try:
+                module = filenameToModule(opj(dirname, name))
+            except ImportError:
+                self.reporter.reportImportError(name, failure.Failure())
+                continue
             self.addModule(module)
 
     def addPackageRecursive(self, package):

@@ -1,2 +1,2 @@
 
-frotz
+raise ZeroDivisionError("fake error")

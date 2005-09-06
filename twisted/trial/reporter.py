@@ -112,9 +112,6 @@ class TestStatsBase(object):
 
 class TestStats(TestStatsBase):
     # this adapter is used for both TestSuite and TestModule objects
-    importErrors = property(lambda self: getattr(self.original,
-                                                 'couldNotImport', {}).items())
-
     def _collect(self, status):
         meths = []
         for r in self.original.children:
@@ -132,8 +129,6 @@ class TestStats(TestStatsBase):
         for r in self.original.children:
             if not itrial.ITestStats(r).allPassed:
                 return False
-        if getattr(self.original, 'couldNotImport', False):
-            return False
         return True
     allPassed = property(allPassed)
 
@@ -175,6 +170,7 @@ class Reporter(object):
         self.args = args
         self.realtime = realtime
         self.shouldStop = False
+        self.couldNotImport = []
         super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
     def setUpReporter(self):
@@ -187,7 +183,7 @@ class Reporter(object):
         pass
 
     def reportImportError(self, name, exc):
-        pass
+        self.couldNotImport.append((name, exc))
 
     def write(self, format, *args):
         s = str(format)
@@ -313,7 +309,7 @@ class Reporter(object):
                         meth.skip,
                         itrial.ITodo(meth.todo).msg))
 
-        for name, error in tstats.importErrors:
+        for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 
     def startSuite(self, count):

@@ -136,7 +136,7 @@ class Options(usage.Options):
         self['packages'] = []
         self['testcases'] = []
         self['methods'] = []
-        self['_couldNotImport'] = {}
+        self._couldNotImport = []
         self['reporter'] = None
         self['debugflags'] = []
         self['cleanup'] = []
@@ -373,7 +373,7 @@ class Options(usage.Options):
         except:
             f = failure.Failure()
             f.printTraceback()
-            self['_couldNotImport'][arg] = f
+            self._couldNotImport.append((arg, f))
             return
 
         # okay, we can use named any to import it, so now wtf is it?
@@ -541,29 +541,25 @@ def _getSuite(config):
     reporterKlass = _getReporter(config)
     log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r"
             % (reporterKlass,))
-    
-    suite = runner.TrialRoot(reporterKlass(
-        tbformat=config['tbformat'],
-        args=config['reporter-args'],
-        realtime=config['rterrors']),
-        _getJanitor(),
-        benchmark=config['benchmark'])
-    suite.couldNotImport.update(config['_couldNotImport'])
+
+    reporter = reporterKlass(tbformat=config['tbformat'],
+                             args=config['reporter-args'],
+                             realtime=config['rterrors'])
+    suite = runner.TrialRoot(reporter, _getJanitor(),
+                             benchmark=config['benchmark'])
+    for name, exc in config._couldNotImport:
+        reporter.reportImportError(name, exc)
     
     for package in config['packages']:
         if isinstance(package, types.StringType):
             try:
                 package = reflect.namedModule(package)
             except ImportError, e:
-                suite.couldNotImport[package] = failure.Failure()
+                reporter.reportImportError(package, failure.Failure())
                 continue
         if config['recurse']:
             _dbg("addPackageRecursive(%s)" % (package,))
-            try:
-                suite.addPackageRecursive(package)
-            except ImportError:
-                suite.couldNotImport[package] = failure.Failure()
-                continue
+            suite.addPackageRecursive(package)
         else:
             _dbg("addPackage(%s)" % (package,))
             suite.addPackage(package)

@@ -148,11 +148,11 @@ class TestImportErrors(unittest.TestCase):
     def test_recurseImportErrors(self):
         d = self.runTrial('-R', 'package2')
         d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'package2.test_module')
+        d.addCallback(self.failUnlessIn, 'package2')
+        d.addCallback(self.failUnlessIn, 'test_module')
         d.addCallback(self.failIfIn, '<module')
         d.addCallback(self.failIfIn, 'IOError')
         return d
-    test_recurseImportErrors.todo = "test for bug JP emailed me -- jml"
 
     def test_regularRun(self):
         d = self.runTrial('package.test_module')
