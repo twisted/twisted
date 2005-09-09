@@ -162,6 +162,8 @@ class TrialRoot(TestSuite):
             self.addDoctests(module.__doctests__)
 
     def addDoctests(self, obj):
+        if sys.version[:2] <= (2, 2):
+            return
         from twisted.trial import tdoctest
         self.addTest(tdoctest.ModuleDocTestsRunner(obj))
         

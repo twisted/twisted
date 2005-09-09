@@ -60,7 +60,11 @@ class TestCase(object):
     assertApproximates = lambda self, a, b, c, msg=None: assertApproximates(a, b, c, msg)
     failUnlessIdentical = lambda self, a, b, msg=None: failUnlessIdentical(a, b, msg)
     failUnlessAlmostEqual = lambda self, a, b, c=7, msg=None: failUnlessAlmostEqual(a, b, c, msg)
+    failUnlessSubstring = lambda self, *args: failUnlessSubstring(*args)
+    failIfSubstring = lambda self, *args: failIfSubstring(*args)
 
+    assertSubstring = failUnlessSubstring
+    assertNotSubstring = failIfSubstring
     assertAlmostEqual = assertAlmostEquals = failUnlessAlmostEqual
     assertNotAlmostEqual = assertNotAlmostEquals = failIfAlmostEqual
     assertEqual = assertEquals = failUnlessEqual

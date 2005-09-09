@@ -6,7 +6,7 @@ import os, re
 
 def getTrialPath():
     fp = os.path.abspath(unittest.__file__)
-    trialPath = fp.split(os.path.sep)[:-3] + ['bin', 'trial']
+    trialPath = fp.split(os.sep)[:-3] + ['bin', 'trial']
     return os.path.normpath(os.path.join(fp, os.pardir, os.pardir,
                                          os.pardir, 'bin', 'trial'))
 
@@ -60,14 +60,14 @@ class TestImportErrors(unittest.TestCase):
 
     def failUnlessIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        unittest.TestCase.failUnlessIn(self, containee, container,
-                                       *args, **kwargs)
+        unittest.TestCase.failUnlessSubstring(self, containee, container,
+                                              *args, **kwargs)
         return container
 
     def failIfIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        unittest.TestCase.failIfIn(self, containee, container,
-                                   *args, **kwargs)
+        unittest.TestCase.failIfSubstring(self, containee, container,
+                                          *args, **kwargs)
         return container
 
     def test_trialFound(self):

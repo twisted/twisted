@@ -69,7 +69,8 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addMethod(common.FailfulTests.testFailure)
         self.suite.run()
 
-        common.stringComparison(expectTestFailure, self.suite.reporter.out.splitlines())
+        common.stringComparison(expectTestFailure,
+                                self.suite.reporter.out.splitlines())
 
     def testTrimFilename(self):
         self.checkReporterSetup = False
@@ -85,8 +86,9 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
     def testDoctestError(self):
         if sys.version_info[0:2] < (2, 3):
-            raise unittest.SkipTest, 'doctest support only works in Python 2.3 or later'
-
+            raise unittest.SkipTest(
+                'doctest support only works in Python 2.3 or later')
+        
         from twisted.trial.test import trialdoctest1
         self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
         self.suite.run()
