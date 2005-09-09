@@ -24,7 +24,6 @@ HIDE_TRIAL_INTERNALS = True
 
 #******************************************************************************
 
-# test results, passed as resultType to Reporter.endTest()
 STATUSES = (SKIP, EXPECTED_FAILURE, FAILURE,
             ERROR, UNEXPECTED_SUCCESS, SUCCESS) = ("skips", "expectedFailures",
                                                    "failures", "errors",
@@ -66,6 +65,7 @@ def makeLoggingMethod(name, f):
         print "%s.%s(*%r, **%r)" % (name, f.func_name, a, kw)
         return f(*a, **kw)
     return loggingMethod
+
 
 class MethodCallLoggingType(type):
     def __new__(cls, name, bases, attrs):
@@ -133,6 +133,7 @@ class TestStats(TestStatsBase):
         return True
     allPassed = property(allPassed)
 
+
 class TestCaseStats(TestStatsBase):
     def _collect(self, status):
         """return a list of all TestMethods with status"""
@@ -148,6 +149,7 @@ class TestCaseStats(TestStatsBase):
                 return False
         return True
     allPassed = property(allPassed)
+
 
 class DocTestRunnerStats(TestCaseStats):
     def numTests(self):
@@ -189,7 +191,6 @@ class Reporter(object):
     def write(self, format, *args):
         s = str(format)
         assert isinstance(s, type(''))
-
         if args:
             self.stream.write(s % args)
         else:
@@ -231,19 +232,16 @@ class Reporter(object):
             for err in method.errors + method.failures:
                 err.printTraceback(self.stream)
 
-
     def _formatFailureTraceback(self, fail):
         # Short term hack
         if isinstance(fail, str):
-            return fail
-
+            return fail 
         detailLevel = self.tbformat
         result = fail.getTraceback(detail=detailLevel, elideFrameworkCode=True)
         if detailLevel == 'default':
             # Apparently trial's tests doen't like the 'Traceback:' line.
             result = '\n'.join(result.split('\n')[1:])
         return result
-
 
     def _formatImportError(self, name, error):
         """format an import error for report in the summary section of output
@@ -263,20 +261,16 @@ class Reporter(object):
         ret.append("Could not import %s: \n%s\n" % (name, what))
         return ''.join(ret)
 
-
     def _formatFailedTest(self, name, status, failures, skipMsg=None,
                           todoMsg=None):
         ret = [DOUBLE_SEPARATOR, '%s: %s\n' % (WORDS[status], name)]
-
         if skipMsg:
             ret.append(self._formatFailureTraceback(skipMsg) + '\n')
         if todoMsg:
             ret.append(todoMsg + '\n')
-
         if status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
             ret.extend(map(self._formatFailureTraceback, failures))
         return '\n'.join(ret)
-
 
     def _reportStatus(self, tsuite):
         tstats = itrial.ITestStats(tsuite)
@@ -294,7 +288,6 @@ class Reporter(object):
             status = PASSED
         self.write("%s%s\n", status, summary)
 
-
     def _reportFailures(self, tstats):
         for meth in getattr(tstats, "get_%s" % SKIP)():
             self.write(self._formatFailedTest(
@@ -302,7 +295,6 @@ class Reporter(object):
                 meth.errors + meth.failures,
                 meth.skip,
                 itrial.ITodo(meth.todo).msg))
-
         for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in getattr(tstats, "get_%s" % status)():
                 if meth.hasTbs:
@@ -311,7 +303,6 @@ class Reporter(object):
                         meth.errors + meth.failures,
                         meth.skip,
                         itrial.ITodo(meth.todo).msg))
-
         for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 
@@ -322,7 +313,6 @@ class Reporter(object):
         tstats = itrial.ITestStats(suite)
         self.write("\n")
         self._reportFailures(tstats)
-
         self.write("%s\n" % SEPARATOR)
         self.write('Ran %d tests in %.3fs\n', tstats.numTests(),
                    tstats.runningTime)
@@ -458,5 +448,3 @@ class TreeReporter(VerboseTextReporter):
         spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
         super(TreeReporter, self).write(spaces)
         super(TreeReporter, self).write("%s\n" % (self.color(message, color),))
-
-
