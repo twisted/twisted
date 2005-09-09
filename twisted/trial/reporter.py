@@ -48,7 +48,8 @@ SET_UP_CLASS_WARN = _basefmt % 'setUpClass'
 SET_UP_WARN = _basefmt % 'setUp'
 TEAR_DOWN_WARN = _basefmt % 'tearDown'
 TEAR_DOWN_CLASS_WARN = _basefmt % 'tearDownClass'
-DIRTY_REACTOR_POLICY_WARN = "This failure will cause all methods in your class to be reported as ERRORs in the summary"
+DIRTY_REACTOR_POLICY_WARN = ("This failure will cause all methods in your class"
+                             " to be reported as ERRORs in the summary")
 UNCLEAN_REACTOR_WARN = "REACTOR UNCLEAN! traceback(s) follow: "
 
 PASSED, FAILED = "PASSED", "FAILED"
@@ -213,14 +214,15 @@ class Reporter(object):
     def upDownError(self, userMeth, warn=True, printStatus=True):
         if warn:
             minfo = itrial.IMethodInfo(userMeth)
-            tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) # if not e.check(unittest.SkipTest)])
+            tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) 
             log.msg(tbStr)
             msg = "%s%s" % (methNameWarnMsg[minfo.name], tbStr)
             warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
     def cleanupErrors(self, errs):
         warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN,
-                                  '\n'.join(map(self._formatFailureTraceback, errs))),
+                                  '\n'.join(map(self._formatFailureTraceback,
+                                                errs))),
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
@@ -262,7 +264,8 @@ class Reporter(object):
         return ''.join(ret)
 
 
-    def _formatFailedTest(self, name, status, failures, skipMsg=None, todoMsg=None):
+    def _formatFailedTest(self, name, status, failures, skipMsg=None,
+                          todoMsg=None):
         ret = [DOUBLE_SEPARATOR, '%s: %s\n' % (WORDS[status], name)]
 
         if skipMsg:
