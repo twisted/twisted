@@ -163,6 +163,8 @@ class TrialRoot(TestSuite):
 
     def addDoctests(self, obj):
         if sys.version[:2] <= (2, 2):
+            warnings.warn("trial's doctest support only works with "
+                          "python 2.3 or later, not running doctests")
             return
         from twisted.trial import tdoctest
         self.addTest(tdoctest.ModuleDocTestsRunner(obj))
