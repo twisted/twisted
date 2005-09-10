@@ -64,7 +64,7 @@ class IMessageDelivery(components.Interface):
         @type origin: C{Address}
         @param origin: The address the message is from
 
-        @type recipients: C{list} of C{str}
+        @type recipients: C{list} of L{User}
         @param recipients: A list of the addresses for which this message
         is bound.
 
