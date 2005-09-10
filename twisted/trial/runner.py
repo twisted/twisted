@@ -162,7 +162,7 @@ class TrialRoot(TestSuite):
             self.addDoctests(module.__doctests__)
 
     def addDoctests(self, obj):
-        if sys.version[:2] <= (2, 2):
+        if sys.version_info[:2] <= (2, 2):
             warnings.warn("trial's doctest support only works with "
                           "python 2.3 or later, not running doctests")
             return
