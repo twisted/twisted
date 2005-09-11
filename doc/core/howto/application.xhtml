@@ -89,7 +89,7 @@ Client service. </p>
 
 <h2>Using application</h2>
 
-<h3>twistd and tac</h3>
+<h3>twistd and tac</h3><a name="twistd" />
 
 <p>To handle start-up and configuration of your Twisted application, the
 Twisted Application infrastructure uses <code>.tac</code> files.
@@ -104,7 +104,7 @@ object to the top-level variable <q><code>application</code></q>.</p>
 <p><code>twistd</code> is a program that runs Twisted applications using a
 <code>.tac</code> file. In its most simple form, it takes a single argument
 <code>-y</code> and a tac file name. For example, you can run the above server
-with the command <code class="command">twistd -y service.tac</code>.</p>
+with the command <code class="shell">twistd -y service.tac</code>.</p>
 
 <p>By default, <code>twistd</code> daemonizes and logs to a file called
 <code>twistd.log</code>. More usually, when debugging, you will want your
