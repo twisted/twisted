@@ -84,7 +84,7 @@ class TestTests(unittest.TestCase):
         def testApproximates3_fail(self):
             a = 1.0
             b = 1.2
-            self.assertApproximates(a, b, .1, "failed")
+            self.assertApproximates(a, b, .1, "failed (%r, %r)" % (a, b))
         def testApproximates4_fail(self):
             a = 1.0
             b = 1.2
@@ -227,35 +227,38 @@ class TestTests(unittest.TestCase):
             pass
     TestTodoClassAttr.todo = CLASS_TODO_MSG
 
-    def checkResults(self, method):
+    def checkResults(self, reporter, method):
         def _dbg(msg):
             log.msg(iface=itrial.ITrialDebug, testTests=msg)
 
         tm = itrial.ITestMethod(method)
 
         failUnlessEqual(tm.countTestCases(), 1)       
-        failUnlessEqual(tm.runs, 1)
         failUnless(tm.startTime > 0)
-        #failUnless(tm.endTime > 0)   # failed tests don't have endTime set
         failUnless(tm.name, "tm.name not set")
         failUnless(tm.klass, "tm.klass not set")
         failUnless(tm.module, "tm.module not set")
         failUnless(tm.setUp, "tm.setUp not set")
         failUnless(tm.tearDown, "tm.tearDown not set")
-        
+
+        def _hasTbs(meth):
+            return not (len(reporter._getFailures(meth))
+                        == len(reporter._getErrors(meth)) == 0)
 
         def _checkStatus(meth, status):
-            statusmsg = "test did not return status %s, instead returned %s" % (status, meth.status)
-            if meth.errors and status is not ERROR:
-                statusmsg += "\n\n%s" % (''.join(["\t%s\n" % line for line in
-                                                  ''.join([f.getTraceback() for f in meth.errors]
-                                        ).split('\n')]))
-            failUnlessEqual(meth.status, status, statusmsg)
+            statusmsg = ("test did not return status %s, instead returned %s"
+                         % (status, reporter.getStatus(meth)))
+            if reporter._getErrors(meth) and status is not ERROR:
+                tb = ''.join([f.getTraceback()
+                              for f in reporter._getErrors(meth)])
+                tb = ''.join(["\t%s\n" % line for line in tb.split('\n')])
+                statusmsg += "\n\n%s" % (tb)
+            failUnlessEqual(reporter.getStatus(meth), status, statusmsg)
 
         def _checkTimeoutError(meth):
-            if meth.timeout is not None:
-                failUnless(meth.hasTbs, 'method did not have tracebacks!')
-                f = meth.errors[0]
+            if meth.getTimeout() is not None:
+                failUnless(_hasTbs(meth), 'method did not have tracebacks!')
+                f = reporter._getErrors(meth)[0]
                 failUnlessEqual(f.type, defer.TimeoutError)
 
         try:
@@ -263,84 +266,84 @@ class TestTests(unittest.TestCase):
 
             if tm.name.endswith("_pass"):
                 _checkStatus(tm, SUCCESS)
-                failIf(tm.todo)
-                failIf(tm.hasTbs)
-                failIf(tm.skip)
+                failIf(tm.getTodo())
+                failIf(_hasTbs(tm))
+                failIf(tm.getSkip())
 
             elif tm.name.endswith("_fail"):
                 _checkStatus(tm, FAILURE)
                 _checkTimeoutError(tm)
-                failIf(tm.skip)
-                failIf(tm.errors)
-                failUnless(tm.hasTbs)
-                failUnless(len(tm.failures) == 1,
-                           "%s had %d failures" % (tm.name,
-                                                   len(tm.failures)))
+                failIf(tm.getSkip())
+                failIf(reporter._getErrors(tm))
+                failUnless(_hasTbs(tm))
+                failUnless(len(reporter._getFailures(tm)) == 1,
+                           "%s had %d failures"
+                           % (tm.name, len(reporter._getFailures(tm))))
             elif tm.name.endswith("_error"):
                 _checkStatus(tm, ERROR)
                 _checkTimeoutError(tm)
-                failUnless(tm.hasTbs)
-                failUnless(len(tm.errors) == 1,
+                failUnless(_hasTbs(tm))
+                failUnless(len(reporter._getErrors(tm)) == 1,
                            "%s had %d errors" % (tm.name,
-                                                 len(tm.errors)))
+                                                 len(reporter._getErrors(tm))))
 
                 # with new-style todos it's possible for a todoed method to
                 # wind up counting as a ERROR
                 # failIf(tm.todo)
-                failIf(tm.skip)
-                failIf(tm.failures)
+                failIf(tm.getSkip())
+                failIf(reporter._getFailures(tm))
 
             elif tm.name.endswith("_skip"):
                 _checkStatus(tm, SKIP)
-                failUnless(tm.skip, "skip reason not set")
-                failIf(tm.todo)
-                failIf(tm.errors)
-                failIf(tm.failures)
-                failIf(tm.hasTbs)
+                failUnless(tm.getSkip(), "skip reason not set")
+                failIf(tm.getTodo())
+                failIf(reporter._getErrors(tm))
+                failIf(reporter._getFailures(tm))
+                failIf(_hasTbs(tm))
 
             elif tm.name.endswith("_exfail"):
                 _checkStatus(tm, EXPECTED_FAILURE)
                 _checkTimeoutError(tm)
-                failUnless(tm.hasTbs)
-                failUnless(tm.errors or tm.failures)
-                failUnless(tm.todo)
-                failIf(tm.skip)
+                failUnless(_hasTbs(tm))
+                failUnless(reporter._getErrors(tm) or reporter._getFailures(tm))
+                failUnless(tm.getTodo())
+                failIf(tm.getSkip())
 
             elif tm.name.endswith("_unexpass"):
                 _checkStatus(tm, UNEXPECTED_SUCCESS)
                 _checkTimeoutError(tm)
-                failUnless(tm.todo)
-                failIf(tm.skip)
+                failUnless(tm.getTodo())
+                failIf(tm.getSkip())
 
             elif tm.name.endswith("_timeout"):
-                failUnless(tm.errors, "tm.errors was %s" % (tm.errors,))
-                expectedExc, f = tm.original.t_excClass, tm.errors[0]
+                failUnless(reporter._getErrors(tm), "tm.errors was %s" % (reporter._getErrors(tm),))
+                expectedExc, f = tm.original.t_excClass, reporter._getErrors(tm)[0]
                 failUnless(f.check(expectedExc),
                            "exception '%s', with tb:\n%s\n\n was not of expected type '%s'" % (
                            f, f.getTraceback(), expectedExc))
                 failUnlessEqual(f.value.args[0], tm.original.t_excArg)
-                failUnlessEqual(itrial.ITimeout(tm.timeout).duration, tm.original.t_duration)
+                failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.original.t_duration)
 
             elif tm.name.endswith("_timeoutClassAttr"):
-                failUnless(tm.errors, "tm.errors was %s" % (tm.errors,))
-                expectedExc, f = tm.klass.t_excClass, tm.errors[0]
+                failUnless(reporter._getErrors(tm), "tm.errors was %s" % (reporter._getErrors(tm),))
+                expectedExc, f = tm.klass.t_excClass, reporter._getErrors(tm)[0]
                 failUnless(f.check(expectedExc),
                            "exception '%s', with tb:\n%s\n\n was not of expected type '%s'" % (
                            f, f.getTraceback(), expectedExc))
                 failUnlessEqual(f.value.args[0], tm.klass.t_excArg)
-                failUnlessEqual(itrial.ITimeout(tm.timeout).duration, tm.klass.t_duration)
+                failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.klass.t_duration)
 
             elif tm.name.endswith("_skipClassAttr"):
-                failUnlessEqual(tm.skip, CLASS_SKIP_MSG)
+                failUnlessEqual(tm.getSkip(), CLASS_SKIP_MSG)
 
             elif tm.name.endswith("_skipAttr"):
-                failUnlessEqual(tm.skip, METHOD_SKIP_MSG)
+                failUnlessEqual(tm.getSkip(), METHOD_SKIP_MSG)
 
             elif tm.name.endswith("_todoClassAttr"):
-                failUnlessEqual(tm.todo, CLASS_TODO_MSG)
+                failUnlessEqual(tm.getTodo(), CLASS_TODO_MSG)
 
             elif tm.name.endswith("_todoAttr"):
-                failUnlessEqual(tm.todo, METHOD_TODO_MSG)
+                failUnlessEqual(tm.getTodo(), METHOD_TODO_MSG)
 
             else:
                 raise unittest.FailTest, "didn't have tests for a method ending in %s" % (
@@ -352,17 +355,18 @@ class TestTests(unittest.TestCase):
 
     def testMethods(self):
         from twisted.trial.test.common import BogusReporter
+        reporter = BogusReporter()
         for klass in (self.Tests,
                       self.TestSkipClassAttr,
                       self.TestTodoClassAttr):
-            suite = runner.TrialRoot(BogusReporter(), util._Janitor())
+            suite = runner.TrialRoot(reporter, util._Janitor())
             suite.addTestClass(klass)
             suite.run()
 
             for subsuite in suite._getChildren():
                 for method in subsuite._getChildren():
                     try:
-                        self.checkResults(method)
+                        self.checkResults(reporter, method)
                     except unittest.FailTest:
                         raise
 

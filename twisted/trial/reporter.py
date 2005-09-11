@@ -75,86 +75,8 @@ class MethodCallLoggingType(type):
         return super(MethodCallLoggingType, cls).__new__(cls, name, bases,
                                                          attrs)
 
-class TestStatsBase(object):
-    zi.implements(itrial.ITestStats)
-
-    importErrors = None
-    
-    def __init__(self, original):
-        #print "original: %r" % (original,)
-        self.original = original
-
-    def _collect(self):
-        raise NotImplementedError, "should be overridden in subclasses"
-
-    def get_skips(self):
-        return self._collect(SKIP)
-
-    def get_errors(self):
-        return self._collect(ERROR)
-
-    def get_failures(self):
-        return self._collect(FAILURE)
-
-    def get_expectedFailures(self):
-        return self._collect(EXPECTED_FAILURE)
-
-    def get_unexpectedSuccesses(self):
-        return self._collect(UNEXPECTED_SUCCESS)
-
-    def get_successes(self):
-        return self._collect(SUCCESS)
-
-    def runningTime(self):
-        o = self.original
-        return o.endTime - o.startTime
-    runningTime = property(runningTime)
-
-
-class TestStats(TestStatsBase):
-    # this adapter is used for both TestSuite and TestModule objects
-    def _collect(self, status):
-        meths = []
-        for r in self.original.children:
-            meths.extend(r.methodsWithStatus.get(status, []))
-        return meths
-
-    def numTests(self):
-        n = 0
-        for r in self.original.children:
-            ts = itrial.ITestStats(r)
-            n += ts.numTests()
-        return n
-
-    def allPassed(self):
-        for r in self.original.children:
-            if not itrial.ITestStats(r).allPassed:
-                return False
-        return True
-    allPassed = property(allPassed)
-
-
-class TestCaseStats(TestStatsBase):
-    def _collect(self, status):
-        """return a list of all TestMethods with status"""
-        return self.original.methodsWithStatus.get(status, [])
-
-    def numTests(self):
-        n = len(self.original.children)
-        return n
-
-    def allPassed(self):
-        for status in (ERROR, FAILURE):
-            if status in self.original.methodsWithStatus:
-                return False
-        return True
-    allPassed = property(allPassed)
-
-
-class DocTestRunnerStats(TestCaseStats):
-    def numTests(self):
-        """DocTestRunners are singleton runners"""
-        return 1
+def runningTime(testCase):
+    return testCase.endTime - testCase.startTime
 
 
 class BrokenTestCaseWarning(Warning):
@@ -174,6 +96,11 @@ class Reporter(object):
         self.realtime = realtime
         self.shouldStop = False
         self.couldNotImport = []
+        self.failures = []
+        self.errors = []
+        self.results = {}
+        for status in STATUSES:
+            self.results[status] = []
         super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
     def setUpReporter(self):
@@ -187,6 +114,40 @@ class Reporter(object):
 
     def reportImportError(self, name, exc):
         self.couldNotImport.append((name, exc))
+
+    def addFailure(self, test, failure):
+        self.failures.append((test, failure))
+
+    def addError(self, test, error):
+        self.errors.append((test, error))
+
+    def _getFailures(self, forTest):
+        return [ failure for (test, failure) in self.failures if test == forTest ]
+
+    def _getErrors(self, forTest):
+        return [ error for (test, error) in self.errors if test == forTest ]
+
+    def wasSuccessful(self):
+        return len(self.errors) == len(self.failures) == 0
+
+    def getStatus(self, method):
+        failures = self._getFailures(method)
+        errors = self._getErrors(method)
+        if method.getTodo() is not None and (failures or errors):
+            for f in failures + errors:
+                if not itrial.ITodo(method.getTodo()).isExpected(f):
+                    return ERROR
+                return EXPECTED_FAILURE
+        elif method.getSkip() is not None:
+            return SKIP
+        elif errors:
+            return ERROR
+        elif failures:
+            return FAILURE
+        elif method.getTodo():
+            return UNEXPECTED_SUCCESS
+        else:
+            return SUCCESS
 
     def write(self, format, *args):
         s = str(format)
@@ -228,8 +189,9 @@ class Reporter(object):
 
     def endTest(self, method):
         method = itrial.ITestMethod(method)
+        self.results[self.getStatus(method)].append(method)
         if self.realtime:
-            for err in method.errors + method.failures:
+            for err in self._getErrors(method) + self._getFailures(method):
                 err.printTraceback(self.stream)
 
     def _formatFailureTraceback(self, fail):
@@ -273,36 +235,33 @@ class Reporter(object):
         return '\n'.join(ret)
 
     def _reportStatus(self, tsuite):
-        tstats = itrial.ITestStats(tsuite)
         summaries = []
         for stat in STATUSES:
-            num = len(getattr(tstats, "get_%s" % stat)())
+            num = len(self.results[stat])
             if num:
                 summaries.append('%s=%d' % (stat, num))
-
         summary = (summaries and ' ('+', '.join(summaries)+')') or ''
-
-        if tstats.get_failures() or tstats.get_errors():
+        if self.results[FAILURE] or self.results[ERROR]:
             status = FAILED
         else:
             status = PASSED
         self.write("%s%s\n", status, summary)
 
-    def _reportFailures(self, tstats):
-        for meth in getattr(tstats, "get_%s" % SKIP)():
+    def _reportFailures(self):
+        # XXX - why isn't this one loop?? - jml
+        for meth in self.results[SKIP]:
             self.write(self._formatFailedTest(
-                meth.fullName, meth.status,
-                meth.errors + meth.failures,
-                meth.skip,
-                itrial.ITodo(meth.todo).msg))
+                meth.fullName, SKIP,
+                self._getErrors(meth) + self._getFailures(meth),
+                meth.getSkip(),
+                itrial.ITodo(meth.getTodo()).msg))
         for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
-            for meth in getattr(tstats, "get_%s" % status)():
-                if meth.hasTbs:
-                    self.write(self._formatFailedTest(
-                        meth.fullName, meth.status,
-                        meth.errors + meth.failures,
-                        meth.skip,
-                        itrial.ITodo(meth.todo).msg))
+            for meth in self.results[status]:
+                self.write(self._formatFailedTest(
+                    meth.fullName, status,
+                    self._getErrors(meth) + self._getFailures(meth),
+                    meth.getSkip(),
+                    itrial.ITodo(meth.getTodo()).msg))
         for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 
@@ -310,23 +269,21 @@ class Reporter(object):
         """Inform the user how many tests are being run."""
 
     def endSuite(self, suite):
-        tstats = itrial.ITestStats(suite)
         self.write("\n")
-        self._reportFailures(tstats)
+        self._reportFailures()
         self.write("%s\n" % SEPARATOR)
-        self.write('Ran %d tests in %.3fs\n', tstats.numTests(),
-                   tstats.runningTime)
+        self.write('Ran %d tests in %.3fs\n', suite.countTestCases(),
+                   runningTime(suite))
         self.write('\n')
         self._reportStatus(suite)
 
 
 class MinimalReporter(Reporter):
     def endSuite(self, suite):
-        tstats = itrial.ITestStats(suite)
-        t = (tstats.runningTime, tstats.numTests(), tstats.numTests(),
-             # XXX: expectedTests == runTests
-             len(tstats.importErrors), len(tstats.get_errors()),
-             len(tstats.get_failures()), len(tstats.get_skips()))
+        numTests = suite.countTestCases()
+        t = (runningTime(suite), numTests, numTests,
+             len(self.couldNotImport), len(self.results[ERROR]),
+             len(self.results[FAILURE]), len(self.results[SKIP]))
         self.stream.write(' '.join(map(str,t))+'\n')
 
 
@@ -337,7 +294,8 @@ class TextReporter(Reporter):
         self.seenModules, self.seenClasses = {}, {}
 
     def endTest(self, method):
-        self.write(LETTERS.get(itrial.ITestMethod(method).status, '?'))
+        method = itrial.ITestMethod(method)
+        self.write(LETTERS.get(self.getStatus(method), '?'))
         super(TextReporter, self).endTest(method)
 
 
@@ -355,13 +313,14 @@ class VerboseTextReporter(TextReporter):
         super(VerboseTextReporter, self).startTest(method)
         
     def endTest(self, method):
-        self.write("%s\n" % WORDS.get(itrial.ITestMethod(method).status,
-                                      "[??]"))
+        method = itrial.ITestMethod(method)
+        self.write("%s\n" % WORDS.get(self.getStatus(method), "[??]"))
+
 
 class TimingTextReporter(VerboseTextReporter):
     def endTest(self, method):
-        self.write("%s" % WORDS.get(method.status, "[??]") + " "
-                   + "(%.03f secs)\n" % method.runningTime())
+        self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
+                   + "(%.03f secs)\n" % runningTime(method))
 
 
 class TreeReporter(VerboseTextReporter):
@@ -439,7 +398,7 @@ class TreeReporter(VerboseTextReporter):
     def endTest(self, method):
         Reporter.endTest(self, method)
         tm = itrial.ITestMethod(method)
-        self.endLine(*self._getText(tm.status))
+        self.endLine(*self._getText(self.getStatus(tm)))
 
     def color(self, text, color):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')

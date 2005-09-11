@@ -114,23 +114,6 @@ class TestWait2(unittest.TestCase):
                 assert_(f.check(RuntimeError))
 
 
-class Attrib(object):
-    foo = None
-
-class AttributeSelection(unittest.TestCase):
-    def testSelectFirstFound(self):
-        a, b, c, d = Attrib(), Attrib(), Attrib(), Attrib()
-        assertEqual(util._selectAttr('foo', a, b, c, d), None)
-        d.foo = 'd_foo'
-        assertEqual(util._selectAttr('foo', a, b, c, d), 'd_foo')
-        c.foo = 'c_foo'
-        assertEqual(util._selectAttr('foo', a, b, c, d), 'c_foo')
-        b.foo = 'b_foo'
-        assertEqual(util._selectAttr('foo', a, b, c, d), 'b_foo')
-        a.foo = 'a_foo'
-        assertEqual(util._selectAttr('foo', a, b, c, d), 'a_foo')
-
-
 class TestMktemp(unittest.TestCase):
     def testMktmp(self):
         tmp = self.mktemp()
@@ -195,3 +178,14 @@ class MyTest(unittest.TestCase):
         die()
         log.flushErrors(FakeException)
 
+
+class TestIntrospection(unittest.TestCase):
+    def test_containers(self):
+        import suppression
+        parents = runner.getPythonContainers(
+            suppression.TestSuppression2.testSuppressModule)
+        expected = [ suppression.TestSuppression2,
+                     suppression ]
+        for a, b in zip(parents, expected):
+            self.failUnlessEqual(a, b)
+                     

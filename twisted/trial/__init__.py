@@ -37,24 +37,12 @@ def _setUpAdapters():
     for a, o, i in [
 
 # ---- ITestRunner and ITestMethod adapters -----------
-(runner.TestModuleRunner, types.ModuleType, itrial.ITestRunner),
+(runner.ModuleSuite, types.ModuleType, itrial.ITestRunner),
 (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
-(runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),
 (makeTestMethod, types.MethodType, itrial.ITestMethod),
 
 # ---- Doctest support --------------------------------
-(tdoctest.DocTestRunnerToITestMethod, tdoctest.DocTestRunner, itrial.ITestMethod),
 (tdoctest.DocTestRunner, doctest.DocTest, itrial.ITestRunner),
-
-
-# ---- ITestStats  ------------------------------------
-(reporter.TestStats, itrial.ITrialRoot, itrial.ITestStats),
-(reporter.TestStats, runner.TestModuleRunner, itrial.ITestStats),
-(reporter.TestStats, tdoctest.ModuleDocTestsRunner, itrial.ITestStats),
-(reporter.DocTestRunnerStats, tdoctest.DocTestRunner, itrial.ITestStats),
-(reporter.TestCaseStats, runner.TestCaseRunner, itrial.ITestStats),
-(reporter.TestCaseStats, runner.TestCaseMethodRunner, itrial.ITestStats),
-(reporter.TestCaseStats, runner.PyUnitTestCaseRunner, itrial.ITestStats),
 
 # ---- Magic Attribute Adapters -----------------------
 (adapters.TupleTodo, types.TupleType, itrial.ITodo),

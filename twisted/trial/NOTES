@@ -33,8 +33,6 @@ GOALS
 MILESTONES
 - Deprecate assertions.py
 - Surely there's something better than UserMethodWrapper
-- Destroy _selectAttr
-
 
 - death to ITestMethod
 - move all status information onto the reporter

@@ -55,66 +55,47 @@ class TestRunners(RegistryBaseMixin, unittest.TestCase):
     def testDocTestRunnerRunTests(self):
         dtf = doctest.DocTestFinder()
         tests = dtf.find(trialdoctest1)
-
-        methodsWithStatus = {}
-
         for test in tests:
             runner = itrial.ITestRunner(test)
             self.runners.append(runner)
             runner.parent = self
             runner.runTests(self.reporter)
-            for k, v in runner.methodsWithStatus.iteritems():
-                methodsWithStatus.setdefault(k, []).extend(v)
-        self.verifyStatus(methodsWithStatus)
+        self.verifyStatus()
 
-
-    def verifyStatus(self, mws, *expected):
+    def verifyStatus(self, *expected):
         for status, lenMeths in expected:
-            assert_(mws[status])
-            assertEqual(len(mws[status]), lenMeths)
+            assertEqual(len(self.reporter.results[status]), lenMeths)
 
     def testModuleDocTestsRunner(self):
         mdtr = tdoctest.ModuleDocTestsRunner(self.doctests)
         mdtr.parent = self
         mdtr.runTests(self.reporter)
-        self.verifyStatus(mdtr.methodsWithStatus, *self.EXPECTED_STATI)
-#:        for line in self.reporter.out.split('\n'):
-#:            print "\t%s" % (line,)
+        self.verifyStatus(*self.EXPECTED_STATI)
 
     def testSuite(self):
         self.suite.addModule(trialdoctest2)
         self.suite.run()
-
         # XXX: this children[idx] thing is pretty lame
         # it relies on the implementation of the suite, which is incorrect
-        mws = self.suite.children[1].methodsWithStatus
-        
-        self.verifyStatus(mws, *self.EXPECTED_STATI)
+        self.verifyStatus(*self.EXPECTED_STATI)
         n = 0
-        for v in mws.itervalues():
+        for v in self.reporter.results.itervalues():
             n += len(v)
-
         # test to make sure correct count is reporterated
         assertSubstring("Ran %s tests in" % (n,), self.reporter.out)
 
     def testSingleDoctestFailure(self):
         self.suite.addDoctests([trialdoctest1.Counter.__eq__])
         self.suite.run()
-
-        mws = self.suite.children[0].methodsWithStatus
-        self.verifyStatus(mws, (FAILURE, 1))
+        self.verifyStatus((FAILURE, 1))
 
     def testSingleDoctestSuccess(self):
         self.suite.addDoctests([trialdoctest1.Counter.incr])
         self.suite.run()
-
-        mws = self.suite.children[0].methodsWithStatus
-        self.verifyStatus(mws, (SUCCESS, 1))
+        self.verifyStatus((SUCCESS, 1))
 
     def testSingleDoctestError(self):
         self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
         self.suite.run()
-
-        mws = self.suite.children[0].methodsWithStatus
-        self.verifyStatus(mws, (ERROR, 1))
+        self.verifyStatus((ERROR, 1))
 

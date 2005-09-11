@@ -496,20 +496,6 @@ class _TrialLogObserver(object):
             log.removeObserver(self)
 
 
-def _selectAttr(attr, *args):
-    """do getattr(arg, attr, None) and return the first non-None value found, 
-    else return None if no non-None value is found
-    """
-    for a in args:
-        v = getattr(a, attr, None)
-        if v is None:
-            continue
-        else:
-            return v
-    else:
-        return None
-
-
 def suppress(action='ignore', **kwarg):
     """sets up the .suppress tuple properly, pass options to this method
     as you would the stdlib warnings.filterwarnings()

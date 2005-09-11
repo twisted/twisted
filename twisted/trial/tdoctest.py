@@ -18,18 +18,18 @@ import zope.interface as zi
 def bogus(*args, **kwargs):
     warnings.warn("bogus method called in tdoctest.py, not sure why")
 
-class DocTestRunnerBase(runner.TestClassAndMethodBase):
+class DocTestRunnerBase(runner.ClassSuite):
     zi.implements(itrial.ITestRunner, itrial.IDocTestRunner)
 
     setUpClass = tearDownClass = bogus
     testCaseInstance = bogus
-    methodNames = methods = methodsWithStatus = None
+    methodNames = methods = None
     
     def runTests(self, reporter, randomize=False):
         raise NotImplementedError, "override in subclasses"
 
 
-class _ExampleWrapper(tputil.FancyStrMixin, object, runner.StatusMixin):
+class _ExampleWrapper(tputil.FancyStrMixin, object):
     zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
     _parent = seqNum = None
     showAttributes = ('name', 'source', 'fullname', 'errors', 'failures')
@@ -63,46 +63,78 @@ class ExampleToITestMethod(object):
 class AnError(Exception):
     pass
 
-# the implementation of the DocTestRunner is confusing in the fact
-# that it must pretend to be both an ITestRunner and an ITestMethod.
-# It has to pretend to be an ITestMethod because the doctest definition
-# of a DocTestRunner, and of a DocTest itself is a collection of Examples
-# which are a single executable line of Python code. This doesn't map
-# well to our abstraction, it would be like making each line of a 
-# unittest equivalent to a TestMethod. So instead we treat the 
-# DocTestRunner as a kind of singleton runner that is adaptable to 
-# ITestMethod for convenience (because it only runs one theoretical TestMethod)
+## class _DTRToITM(object):
+##     """real adapter from DocTestRunner to ITestMethod"""
+##     zi.implements(itrial.IDocTestMethod)
+##     setUp = classmethod(bogus)
+##     tearDown = classmethod(bogus)
+##     method = None
+##     stderr = stdout = ''
 
-class _DTRToITM(object, runner.StatusMixin):
-    """real adapter from DocTestRunner to ITestMethod"""
+##     def __init__(self, original):
+
+
+## class _DTRToITMFactory(adapters.PersistentAdapterFactory):
+##     """a registry for persistent adapters of DocTestRunner to ITestMethod"""
+##     adapter = _DTRToITM
+
+## DocTestRunnerToITestMethod = _DTRToITMFactory()
+
+
+class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
+    """i run a group of doctest examples as a unit
+    things get a little funky with this as the DocTestRunner
+    doubles as an ITestMethod object. we're going to conceptualize the
+    Examples as an individual line from a unittest
+    """
+    todo = skip = timeout = suppress = None
+    _dt_started = False
+
     zi.implements(itrial.IDocTestMethod)
-    setUp = classmethod(bogus)
-    tearDown = classmethod(bogus)
-    method = todo = skip = timeout = suppress = None
-    stderr = stdout = ''
-    _failures = _errors = None
-
-    hasTbs = property(lambda self: (self.errors or self.failures))
 
     def __init__(self, original):
-        self.original = o = original
-        self.runs = 0
-        self.klass = "doctests have no class"
-        self.module = "doctests have no module"
-        # the originating module of this doctest
-        self.module = reflect.filenameToModuleName(self.original._dtest.filename)
-
-        self.fullName = self.filename = o._dtest.filename
-        self.lineno = o._dtest.lineno
-        self.docstr= "doctest, file: %s lineno: %s" % (osp.split(self.filename)[1], self.lineno)
-        self.name = o._dtest.name
-        self.fullname = repr(o._dtest)
+        DocTestRunnerBase.__init__(self, original)
+        doctest.DocTestRunner.__init__(self)
+        # I know this _dt_ nonsense is ugly, but it's to prevent naming conflicts
+        # with the doctest.DocTestRunner's names
+        self._dt_errors = []
+        self._dt_failures = []
+        self._dt_successes = []
+        
+        # the doctest.DocTest object
+        self._dtest = original
         self._regex = re.compile(r'\S')
+
+        # ITestMethod compat
+##         self.runs = 0
+##         self.klass = "doctests have no class"
+##         self.module = "doctests have no module"
+##         # the originating module of this doctest
+##         self.module = reflect.filenameToModuleName(self.original._dtest.filename)
+        self.fullName = self.filename = self._dtest.filename
+        self.lineno = self._dtest.lineno
+        self.docstr= ("doctest, file: %s lineno: %s"
+                      % (osp.split(self.filename)[1], self.lineno))
+##         self.name = o._dtest.name
+##         self.fullname = repr(o._dtest)
+
+
+    def getTodo(self):
+        pass
+
+    def getSkip(self):
+        pass
+
+    def getTimeout(self):
+        pass
+
+    def getSuppress(self):
+        pass
 
     def _getErrorfulDocstring(self, example):
         L = []
         foundStart = False
-        docstring = self.original._dtest.docstring
+        docstring = self._dtest.docstring
         for num, line in enumerate(docstring.split('\n')):
             if line.find('>>>') != -1:
                 foundStart = True
@@ -116,90 +148,30 @@ class _DTRToITM(object, runner.StatusMixin):
                     L.append(s)
         return L
 
-    def failures(self):
-        if self._failures is None:
-            if self.original._dt_failures:
-                L = []
-                for out, test, example, got in self.original._dt_failures:
-                    L.extend(["docstring", "---------"])
-                    L.extend(self._getErrorfulDocstring(example))
-                    L.append('')
-                    L.append("doctest error message:")
-                    L.append("----------------------")
-                    L.extend(self.original._checker.output_difference(
-                                   example, got, self.original.optionflags).split('\n'))
-                doctestFailStr = '\n'.join(L)
-                self._failures = [doctestFailStr]
-            else:
-                self._failures = []
-        return self._failures
-    failures = property(failures)
+    def _formatFailure(self, out, test, example, got):
+        L = []
+        L.extend(["docstring", "---------"])
+        L.extend(self._getErrorfulDocstring(example))
+        L.append('')
+        L.append("doctest error message:")
+        L.append("----------------------")
+        L.extend(self._checker.output_difference(
+            example, got, self.optionflags).split('\n'))
+        return '\n'.join(L)
 
-    def errors(self):
-        if self._errors is None:
-            if self.original._dt_errors:
-                L = []
-                for out, test, example, exc_info in self.original._dt_errors:
-                    L.append("docstring\n---------")
-                    L.extend(self._getErrorfulDocstring(example))
-                    L.append("\n")
-                    L.extend(traceback.format_exception(*exc_info))
-                    L.append('')
-                
-                # Since these adapters are persistent, we alter the original 
-                # object, deleting its _dt_errors so that it's not keeping
-                # exc_info tuples around for any longer than necessary
-                del self.original._dt_errors
-
-                doctestFailStr = '\n'.join(L)
-                self._errors = [doctestFailStr]
-            else:
-                self._errors = []
-        return self._errors
-    errors = property(errors)
-
-
-class _DTRToITMFactory(adapters.PersistentAdapterFactory):
-    """a registry for persistent adapters of DocTestRunner to ITestMethod"""
-    adapter = _DTRToITM
-
-DocTestRunnerToITestMethod = _DTRToITMFactory()
-
-
-class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
-    """i run a group of doctest examples as a unit
-    things get a little funky with this as the DocTestRunner
-    doubles as an ITestMethod object. we're going to conceptualize the
-    Examples as an individual line from a unittest
-    """
-    todo = skip = timeout = suppress = None
-    _dt_started = False
-
-    def __init__(self, original):
-        DocTestRunnerBase.__init__(self, original)
-        doctest.DocTestRunner.__init__(self)
-        # I know this _dt_ nonsense is ugly, but it's to prevent naming conflicts
-        # with the doctest.DocTestRunner's names
-        self._dt_errors = []
-        self._dt_failures = []
-        self._dt_successes = []
-        
-        # the doctest.DocTest object
-        self._dtest = original
-
-    def getMethodsWithStatus(self):
-        # XXX: This is very very cheezy
-        itm = itrial.ITestMethod(self)
-        return {itm.status: [itm]}
-
-    methodsWithStatus = property(getMethodsWithStatus, lambda self, v: None)
+    def _formatError(self, out, test, example, exc_info):
+        L = []
+        L.append("docstring\n---------")
+        L.extend(self._getErrorfulDocstring(example))
+        L.append("\n")
+        L.extend(traceback.format_exception(*exc_info))
+        L.append('')
+        return '\n'.join(L)
 
     def _dt_done(self):
-        numRan = (len(self._dt_errors)
-                  + len(self._dt_failures)
+        numRan = (len(self._dt_errors) + len(self._dt_failures)
                   + len(self._dt_successes))
-        return numRan == self.countTestCases()
-    _dt_done = property(_dt_done)
+        return numRan >= len(self._dtest.examples)
 
     def report_start(self, out, test, example):
         if not self._dt_started:
@@ -207,27 +179,25 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
             self._dt_started = True
     
     def report_failure(self, out, test, example, got):
-        # XXX: let's have a big hand for python's lack of traceback
-        # object constructor
-        self._dt_failures.append((out,test,example,got))
-        if self._dt_done:
-            self._dt_reporter.endTest(self)
+        self._dt_reporter.addFailure(self, self._formatFailure(out, test,
+                                                               example, got))
+        self._dt_reporter.endTest(self)
 
     def report_success(self, out, test, example, got):
         self._dt_successes.append(example)
-        if self._dt_done:
+        if self._dt_done():
             self._dt_reporter.endTest(self)
 
     def report_unexpected_exception(self, out, test, example, exc_info):
-        self._dt_errors.append((out, test, example, exc_info))
-        if self._dt_done:
-            self._dt_reporter.endTest(self)
+        self._dt_reporter.addError(self, self._formatError(out, test, example,
+                                                           exc_info))
+        self._dt_reporter.endTest(self)
 
     def countTestCases(self):
-        return len(self._dtest.examples)
+        return 1
 
     def runTests(self, reporter, randomize=None):
-        # randiomize argument is ignored
+        # randomize argument is ignored
         self._dt_reporter = reporter
         doctest.DocTestRunner.run(self, self._dtest)
 
@@ -252,9 +222,7 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
             if isinstance(obj, types.StringType):
                 obj = reflect.namedAny(obj)
             for test in dtf.find(obj):
-                runner = itrial.ITestRunner(test, None)
-                if runner is None:
-                    continue
+                runner = DocTestRunner(test)
                 runner.parent = self
                 self.children.append(runner)
 
@@ -276,5 +244,4 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
             random.shuffle(self._getChildren())
         for runner in self._getChildren():
             runner.runTests(reporter, randomize)
-            for k, v in runner.methodsWithStatus.iteritems():
-                self.methodsWithStatus.setdefault(k, []).extend(v)
+        # XXX -- there is no endTime? -- jml

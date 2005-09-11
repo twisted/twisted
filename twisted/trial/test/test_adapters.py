@@ -88,7 +88,6 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         if sys.version_info[0:2] < (2, 3):
             raise unittest.SkipTest(
                 'doctest support only works in Python 2.3 or later')
-        
         from twisted.trial.test import trialdoctest1
         self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
         self.suite.run()

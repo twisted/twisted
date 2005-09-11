@@ -639,7 +639,7 @@ def call_until_failure(f, *args, **kwargs):
     count = 1
     print "Test Pass %d" % count
     suite = f(*args, **kwargs)
-    while itrial.ITestStats(suite).allPassed:
+    while suite.reporter.wasSuccessful():
         count += 1
         print "Test Pass %d" % count
         suite = f(*args, **kwargs)
@@ -732,5 +732,5 @@ def run():
         results.write_results(show_missing=1, summary=False,
                               coverdir=config.coverdir)
 
-    sys.exit(not itrial.ITestStats(suite).allPassed)
+    sys.exit(not suite.reporter.wasSuccessful())
 
