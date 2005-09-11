@@ -233,8 +233,10 @@ corresponds to reactor.connectTCP.  </p>
 <p><code class="API"
 base="twisted.application.service">IServiceCollection</code> objects contain
 <code class="API" base="twisted.application.service">IService</code> objects.
-IService objects can be added to IServiceCollection by calling
-[[.setServiceParent]] and detached by using [[.disownServiceParent]].  </p>
+IService objects can be added to IServiceCollection by calling <code class="API"
+base="twisted.application.service.IService">setServiceParent</code> and detached
+by using <code class="API"
+base="twisted.application.service.IService">disownServiceParent</code>.</p>
 
 <p>The standard implementation of IServiceCollection is <code class="API"
 base="twisted.application.service">MultiService</code>, which also implements
@@ -244,26 +246,25 @@ MultiService which has a TCP and a UDP Service as children.</p>
 
 <pre class="python">
 from twisted.application import internet, service
-from twisted.names import server, dns
+from twisted.names import server, dns, hosts
 
-def makeSimpleDNSService(hostsFile, port=53):
-    svc = service.MultiService()
-    tcpFactory = server.DNSServerFactory()
-    internet.TCPServer(port, tcpFactory).setServiceParent(svc)
-    udpFactory = dns.DNSDatagramProtocol(tcpFactory)
-    internet.UDPServer(port, udpFactory).setServiceParent(svc)
-    return svc
+port = 53
 
+# Create a MultiService, and hook up a TCPServer and a UDPServer to it as
+# children.
+dnsService = service.MultiService()
+hostsResolver = hosts.Resolver('/etc/hosts')
+tcpFactory = server.DNSServerFactory([hostsResolver])
+internet.TCPServer(port, tcpFactory).setServiceParent(dnsService)
+udpFactory = dns.DNSDatagramProtocol(tcpFactory)
+internet.UDPServer(port, udpFactory).setServiceParent(dnsService)
+
+# Create an application as normal
 application = service.Application("DNSExample")
-dns1 = makeSimpleDNSService('hosts1')
-dns2 = makeSimpleDNSService('hosts2')
-dns1.setServiceParent(application)
-dns2.setServiceParent(application)
-</pre>
 
-<p>To run this example, you will need to download <a href="...">hosts1</a> and
-<a href="...">hosts2</a> into the directory that you are running the file
-from. </p>
+# Connect our MultiService to the application, just like a normal service.
+dnsService.setServiceParent(application)
+</pre>
 
 </body>
 
