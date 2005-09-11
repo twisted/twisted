@@ -148,10 +148,9 @@ class CharacterAttributes(object):
     def __getattr__(self, name):
         if name == 'normal':
             return _NormalAttr()
-        try:
+        if name in self.attrs:
             return _OtherAttr(name, True)
-        except KeyError:
-            raise AttributeError(name)
+        raise AttributeError(name)
 
 def flatten(output, attrs):
     """Serialize a sequence of characters with attribute information
