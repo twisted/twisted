@@ -128,7 +128,7 @@ class Reporter(object):
         return [ error for (test, error) in self.errors if test == forTest ]
 
     def wasSuccessful(self):
-        return len(self.errors) == len(self.failures) == 0
+        return len(self.results[FAILURE]) == len(self.results[ERROR]) == 0
 
     def getStatus(self, method):
         failures = self._getFailures(method)
