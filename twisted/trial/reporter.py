@@ -315,12 +315,14 @@ class VerboseTextReporter(TextReporter):
     def endTest(self, method):
         method = itrial.ITestMethod(method)
         self.write("%s\n" % WORDS.get(self.getStatus(method), "[??]"))
+        super(VerboseTextReporter, self).endTest(method)
 
 
 class TimingTextReporter(VerboseTextReporter):
     def endTest(self, method):
         self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
                    + "(%.03f secs)\n" % runningTime(method))
+        super(TimingTextReporter, self).endTest(method)
 
 
 class TreeReporter(VerboseTextReporter):
