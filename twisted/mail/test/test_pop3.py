@@ -254,6 +254,17 @@ QUIT''', '\n')
         self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
+    def testEmptyPASS(self):
+        dummy = DummyPOP3()
+        client = LineSendingProtocol([
+            "PASS ",
+            "QUIT"
+        ])
+        expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
+        loopback.loopback(dummy, client)
+        self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
+        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+
 
 class TestServerFactory:
     implements(pop3.IServerFactory)

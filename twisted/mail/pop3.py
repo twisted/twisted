@@ -174,7 +174,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def state_COMMAND(self, line):
         try:
-            return self.processCommand(*line.split())
+            return self.processCommand(*line.split(' '))
         except (ValueError, AttributeError, POP3Error, TypeError), e:
             log.err()
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
@@ -674,8 +674,11 @@ class POP3Client(basic.LineOnlyReceiver):
                       "please use twisted.mail.pop3.AdvancedPOP3Client "
                       "instead.", DeprecationWarning)
 
-    def sendShort(self, command, params):
-        self.sendLine('%s %s' % (command, params))
+    def sendShort(self, command, params=None):
+        if params is not None:
+            self.sendLine('%s %s' % (command, params))
+        else:
+            self.sendLine(command)
         self.command = command
         self.mode = SHORT
 
@@ -740,7 +743,7 @@ class POP3Client(basic.LineOnlyReceiver):
     def pass_(self, pass_):
         self.sendShort('PASS', pass_)
     def quit(self):
-        self.sendShort('QUIT', '')
+        self.sendShort('QUIT')
  
 from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
 from twisted.mail.pop3client import POP3ClientError
