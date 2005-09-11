@@ -2,6 +2,7 @@
 \usepackage[dvips]{graphicx}
 \usepackage{times,mathptmx}
 \usepackage{ifthen}
+\usepackage{hyperref}
 
 \setlength{\oddsidemargin}{0in}
 \setlength{\textwidth}{\paperwidth}
@@ -26,13 +27,16 @@
 
 \chapter{Introduction}
 
-\input{overview.tex}
 \input{vision.tex}
+\input{overview.tex}
+\input{async.tex}
 \input{internet-overview.tex}
-\input{pb.tex}
 
 \chapter{Tutorial}
 
+\input{servers.tex}
+\input{clients.tex}
+\input{design.tex}
 \input{tutorial/index.tex}
 \input{tutorial/intro.tex}
 \input{tutorial/protocol.tex}
@@ -48,14 +52,12 @@
 
 \chapter{Low-Level Twisted }
 
-\input{async.tex}
 \input{reactor-basics.tex}
-\input{servers.tex}
-\input{clients.tex}
 \input{udp.tex}
 \input{process.tex}
 \input{defer.tex}
 \input{gendefer.tex}
+\input{deferredindepth.tex}
 \input{deferrecipes.tex}
 \input{time.tex}
 \input{threading.tex}
@@ -64,22 +66,26 @@
 \chapter{High-Level Twisted}
 
 \input{basics.tex}
+\input{plugin.tex}
+\input{mktap.tex}
 \input{components.tex}
 \input{cred.tex}
 \input{application.tex}
-\input{plugin.tex}
-\input{upgrading.tex}
 
 \chapter{Utilities}
 
 \input{options.tex}
-\input{enterprise.tex}
-\input{row.tex}
 \input{dirdbm.tex}
 \input{telnet.tex}
 \input{testing.tex}
 
+\chapter{Twisted RDBMS support}
+
+\input{enterprise.tex}
+\input{row.tex}
+
 \chapter{Perspective Broker}
+\input{pb.tex}
 \input{pb-intro.tex}
 \input{pb-usage.tex}
 \input{pb-copyable.tex}
@@ -88,6 +94,7 @@
 
 \chapter{Working on the Twisted Code Base}
 
+\input{policy/index.tex}
 \input{policy/coding-standard.tex}
 \input{policy/doc-standard.tex}
 \input{policy/test-standard.tex}
