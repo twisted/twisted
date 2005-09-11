@@ -554,6 +554,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     def capabilities(self, useCache=True):
         """Retrieve the capabilities supported by this server.
 
+        Not all servers support this command.  If the server does not
+        support this, it is treated as though it returned a successful
+        response listing no capabilities.  At some future time, this may be
+        changed to instead seek out information about a server's
+        capabilities in some other fashion (only if it proves useful to do
+        so, and only if there are servers still in use which do not support
+        CAPA but which do support POP3 extensions that are useful).
+
         @type useCache: C{bool}
         @param useCache: If set, and if capabilities have been
         retrieved previously, just return the previously retrieved
@@ -598,12 +606,16 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             elif len(tmp) > 1:
                 cache[tmp[0]] = tmp[1:]
 
+        def capaNotSupported(err):
+            err.trap(ServerErrorResponse)
+            return None
+
         def gotCapabilities(result):
             self._capCache = cache
             return cache
 
         d = self._consumeOrAppend('CAPA', None, consume, None)
-        d.addCallback(gotCapabilities)
+        d.addErrback(capaNotSupported).addCallback(gotCapabilities)
         return d
 
 

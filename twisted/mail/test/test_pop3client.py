@@ -305,9 +305,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         d = p.capabilities(useCache=0)
         self.assertEquals(t.value(), "CAPA\r\n")
         p.dataReceived("-ERR This server is lame!\r\n")
-        return unittest.assertFailure(
-            d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEquals(exc.args[0], "This server is lame!"))
+        return d.addCallback(self.assertEquals, {})
 
     def testStat(self):
         p, t = setUp()
