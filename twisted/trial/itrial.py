@@ -7,38 +7,10 @@ import zope.interface as zi
 import sys
 
 
-class IMethodInfo(zi.Interface):
-    klass = zi.Attribute(
-        """@ivar klass: the class instance this method is bound to
-        @type klass: types.InstanceType""")
-
-    setUp = zi.Attribute(
-        """@ivar setUp: the setUp method of the class that this method is
-                        bound to
-        @type setUp: types.MethodType""")
-
-    tearDown = zi.Attribute(
-        """@ivar tearDown: the tearDown of the class this method is bound to
-        @type tearDown: types.MethodType""")
-
-    method = zi.Attribute("""@ivar method: the test method in question
-                             @type method: types.MethodType""")
-
-    name = zi.Attribute("""@ivar name: the test method's name
-                           @type name: string""")
-
-    fullName = zi.Attribute("""@ivar fullName: the fully-qualified test-name
-                               @type fullName: string""")
-
-    errors = zi.Attribute(
-        """@ivar errors: a list of all errors that occured during the run(s)
-                         of this test method
-        @type errors: list of failure.Failures""")
-
-
 class IBenchmark(zi.Interface):
     """an interface for running performance tests on a given TestCase"""
     pass
+
 
 class ITodo(zi.Interface):
     """I allow for more fine-tuned descriptions of what types of errors or
@@ -57,6 +29,7 @@ class ITodo(zi.Interface):
 
     def __add__(other):
         """returns .msg + other, for string concatenation"""
+
 
 class ITestCase(zi.Interface):
     # when adapting a test method, this interface will give the proper
@@ -174,11 +147,14 @@ class ITestRunner(zi.Interface):
     def run(randomize, result):
         """run this test class but never raise exceptions."""
 
+
 class IDocTestRunner(ITestRunner):
     """locates and runs doctests"""
 
+
 class IReporterMethod(zi.Interface):
     """the subset of ITestMethod that is necessary for reporting"""
+
 
 class ITestMethod(zi.Interface):
     """the interface for running a single TestCase test method"""
@@ -251,6 +227,7 @@ class ITestMethod(zi.Interface):
     def countTestCases():
         """Return the number of test cases in this composite element."""
     # -----------------------------------------------------------
+
 
 class IReporter(zi.Interface):
     """I report results from a run of a test suite.
@@ -340,46 +317,6 @@ class IRemoteReporter(IReporter):
         """connect to a BuildBot buildslave using pb. makes use of the value
         set in L{twisted.trial.itrial.IReporter.args}
         """
-
-class ITestStats(zi.Interface):
-    """data that is important for the reporter after test runs"""
-    imports = zi.Attribute(
-        """@ivar imports: Import errors encountered while assembling the test
-                          suite.
-        @type imports: List of objects adaptable to ITestMethod""")
-
-    failures = zi.Attribute(
-        """@ivar failures: Tests which have failed.
-        @type failures: list of objects adaptable to ITestMethod""")
-
-    numTests = zi.Attribute(
-        """@ivar numTests: The number of tests I have reports for.
-        @type numTests: int""")
-
-    expectedFailures = zi.Attribute(
-        """@ivar expectedFailures: Tests which failed but are marked as 'todo'
-        @type expectedFailures: list of objects adaptable to ITestMethod""")
-
-    unexpectedSuccesses = zi.Attribute(
-        """@ivar unexpectedSuccesses: Tests which passed but are marked as
-                                      'todo'
-        @type unexpectedSuccesses: list of objects adaptable to ITestMethod""")
-
-    errors = zi.Attribute(
-        """@ivar errors: Tests which have encountered an error.
-        @type errors: List of objects adaptable to ITestMethod""")
-
-    skips = zi.Attribute(
-        """@ivar skips: Tests which have been skipped.
-        @type skips: List of objects adaptable to ITestMethod""")
-
-    runningTime = zi.Attribute(
-        """@ivar runningTime: how long this test took to run
-        @type runningTime: float""")
-
-    allPassed = zi.Attribute("""@ivar allPassed: did all the tests pass
-                                @type allPassed: boolean""")
-
 
 class IDocTestMethod(ITestMethod):
     """a DocTestMethod, which is basically an ITestMethod with a few extra 

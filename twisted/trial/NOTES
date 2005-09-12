@@ -35,13 +35,15 @@ MILESTONES
 - Surely there's something better than UserMethodWrapper
 
 - death to ITestMethod
-- move all status information onto the reporter
 - get a TestSuite-alike into the Trial runner
 - Use Python's built-in doctest support
 - create a TestLoader class
 - Outline the real interface for Reporter
 
-- Should reporter know about the runner?
+- Should reporter know about the runner?  (suite.foo)
+
+- When is self.testCaseInstance needed? Remove from TestMethod
+
 
 
 REACTOR/TWISTED SANITY

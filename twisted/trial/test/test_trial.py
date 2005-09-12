@@ -170,7 +170,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
     def testBrokenSetUp(self):
         self.suite.addTestClass(erroneous.TestFailureInSetUp)
         self.suite.run()
-        imi = itrial.IMethodInfo(self.reporter.udeMethod)
+        imi = self.reporter.udeMethod
         assertEqual(imi.name, 'setUp')
         self.assertMethodsCalled('setUpClass', 'setUp', 'tearDownClass')
         self.assertMethodsNotCalled('method', 'tearDown')
@@ -181,7 +181,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
     def testBrokenTearDown(self):
         self.suite.addTestClass(erroneous.TestFailureInTearDown)
         self.suite.run()
-        imi = itrial.IMethodInfo(self.reporter.udeMethod)
+        imi = self.reporter.udeMethod
         assertEqual(imi.name, 'tearDown')
         self.assertMethodsCalled(*allMethods)
         errors = self.suite.reporter._getErrors(self.tm)
@@ -191,7 +191,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
     def testBrokenSetUpClass(self):
         self.suite.addTestClass(erroneous.TestFailureInSetUpClass)
         self.suite.run()
-        imi = itrial.IMethodInfo(self.reporter.udeMethod)
+        imi = self.reporter.udeMethod
         assertEqual(imi.name, 'setUpClass')
         self.assertMethodsCalled('setUpClass')
         self.assertMethodsNotCalled(*allMethods[1:])
@@ -200,7 +200,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
     def testBrokenTearDownClass(self):
         self.suite.addTestClass(erroneous.TestFailureInTearDownClass)
         self.suite.run()
-        imi = itrial.IMethodInfo(self.reporter.udeMethod)
+        imi = self.reporter.udeMethod
         assertEqual(imi.name, 'tearDownClass')
         self.assertMethodsCalled(*allMethods)
 

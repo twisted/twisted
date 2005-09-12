@@ -30,7 +30,7 @@ class DocTestRunnerBase(runner.ClassSuite):
 
 
 class _ExampleWrapper(tputil.FancyStrMixin, object):
-    zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
+    zi.implements(itrial.ITestMethod)
     _parent = seqNum = None
     showAttributes = ('name', 'source', 'fullname', 'errors', 'failures')
 
@@ -63,23 +63,6 @@ class ExampleToITestMethod(object):
 class AnError(Exception):
     pass
 
-## class _DTRToITM(object):
-##     """real adapter from DocTestRunner to ITestMethod"""
-##     zi.implements(itrial.IDocTestMethod)
-##     setUp = classmethod(bogus)
-##     tearDown = classmethod(bogus)
-##     method = None
-##     stderr = stdout = ''
-
-##     def __init__(self, original):
-
-
-## class _DTRToITMFactory(adapters.PersistentAdapterFactory):
-##     """a registry for persistent adapters of DocTestRunner to ITestMethod"""
-##     adapter = _DTRToITM
-
-## DocTestRunnerToITestMethod = _DTRToITMFactory()
-
 
 class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
     """i run a group of doctest examples as a unit
@@ -100,24 +83,18 @@ class DocTestRunner(DocTestRunnerBase, doctest.DocTestRunner):
         self._dt_errors = []
         self._dt_failures = []
         self._dt_successes = []
-        
         # the doctest.DocTest object
         self._dtest = original
         self._regex = re.compile(r'\S')
-
-        # ITestMethod compat
-##         self.runs = 0
-##         self.klass = "doctests have no class"
-##         self.module = "doctests have no module"
-##         # the originating module of this doctest
-##         self.module = reflect.filenameToModuleName(self.original._dtest.filename)
         self.fullName = self.filename = self._dtest.filename
-        self.lineno = self._dtest.lineno
-        self.docstr= ("doctest, file: %s lineno: %s"
-                      % (osp.split(self.filename)[1], self.lineno))
-##         self.name = o._dtest.name
-##         self.fullname = repr(o._dtest)
 
+    def id(self):
+        return "%s:%s" % (self.fullName, self._dtest.name)
+
+    def shortDescription(self):
+        lineno = self._dtest.lineno
+        return ("doctest, file: %s lineno: %s"
+                % (osp.split(self.filename)[1], lineno))
 
     def getTodo(self):
         pass

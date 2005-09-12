@@ -235,11 +235,8 @@ class TestTests(unittest.TestCase):
 
         failUnlessEqual(tm.countTestCases(), 1)       
         failUnless(tm.startTime > 0)
-        failUnless(tm.name, "tm.name not set")
-        failUnless(tm.klass, "tm.klass not set")
-        failUnless(tm.module, "tm.module not set")
-        failUnless(tm.setUp, "tm.setUp not set")
-        failUnless(tm.tearDown, "tm.tearDown not set")
+        failUnless(tm._setUp, "tm.setUp not set")
+        failUnless(tm._tearDown, "tm.tearDown not set")
 
         def _hasTbs(meth):
             return not (len(reporter._getFailures(meth))
@@ -264,13 +261,13 @@ class TestTests(unittest.TestCase):
         try:
             failUnless(tm.startTime > 0.0, "%f not > 0.0" % (tm.startTime,))
 
-            if tm.name.endswith("_pass"):
+            if tm.id().endswith("_pass"):
                 _checkStatus(tm, SUCCESS)
                 failIf(tm.getTodo())
                 failIf(_hasTbs(tm))
                 failIf(tm.getSkip())
 
-            elif tm.name.endswith("_fail"):
+            elif tm.id().endswith("_fail"):
                 _checkStatus(tm, FAILURE)
                 _checkTimeoutError(tm)
                 failIf(tm.getSkip())
@@ -278,13 +275,13 @@ class TestTests(unittest.TestCase):
                 failUnless(_hasTbs(tm))
                 failUnless(len(reporter._getFailures(tm)) == 1,
                            "%s had %d failures"
-                           % (tm.name, len(reporter._getFailures(tm))))
-            elif tm.name.endswith("_error"):
+                           % (tm.id(), len(reporter._getFailures(tm))))
+            elif tm.id().endswith("_error"):
                 _checkStatus(tm, ERROR)
                 _checkTimeoutError(tm)
                 failUnless(_hasTbs(tm))
                 failUnless(len(reporter._getErrors(tm)) == 1,
-                           "%s had %d errors" % (tm.name,
+                           "%s had %d errors" % (tm.id(),
                                                  len(reporter._getErrors(tm))))
 
                 # with new-style todos it's possible for a todoed method to
@@ -293,7 +290,7 @@ class TestTests(unittest.TestCase):
                 failIf(tm.getSkip())
                 failIf(reporter._getFailures(tm))
 
-            elif tm.name.endswith("_skip"):
+            elif tm.id().endswith("_skip"):
                 _checkStatus(tm, SKIP)
                 failUnless(tm.getSkip(), "skip reason not set")
                 failIf(tm.getTodo())
@@ -301,7 +298,7 @@ class TestTests(unittest.TestCase):
                 failIf(reporter._getFailures(tm))
                 failIf(_hasTbs(tm))
 
-            elif tm.name.endswith("_exfail"):
+            elif tm.id().endswith("_exfail"):
                 _checkStatus(tm, EXPECTED_FAILURE)
                 _checkTimeoutError(tm)
                 failUnless(_hasTbs(tm))
@@ -309,13 +306,13 @@ class TestTests(unittest.TestCase):
                 failUnless(tm.getTodo())
                 failIf(tm.getSkip())
 
-            elif tm.name.endswith("_unexpass"):
+            elif tm.id().endswith("_unexpass"):
                 _checkStatus(tm, UNEXPECTED_SUCCESS)
                 _checkTimeoutError(tm)
                 failUnless(tm.getTodo())
                 failIf(tm.getSkip())
 
-            elif tm.name.endswith("_timeout"):
+            elif tm.id().endswith("_timeout"):
                 failUnless(reporter._getErrors(tm), "tm.errors was %s" % (reporter._getErrors(tm),))
                 expectedExc, f = tm.original.t_excClass, reporter._getErrors(tm)[0]
                 failUnless(f.check(expectedExc),
@@ -324,7 +321,7 @@ class TestTests(unittest.TestCase):
                 failUnlessEqual(f.value.args[0], tm.original.t_excArg)
                 failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.original.t_duration)
 
-            elif tm.name.endswith("_timeoutClassAttr"):
+            elif tm.id().endswith("_timeoutClassAttr"):
                 failUnless(reporter._getErrors(tm), "tm.errors was %s" % (reporter._getErrors(tm),))
                 expectedExc, f = tm.klass.t_excClass, reporter._getErrors(tm)[0]
                 failUnless(f.check(expectedExc),
@@ -333,24 +330,24 @@ class TestTests(unittest.TestCase):
                 failUnlessEqual(f.value.args[0], tm.klass.t_excArg)
                 failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.klass.t_duration)
 
-            elif tm.name.endswith("_skipClassAttr"):
+            elif tm.id().endswith("_skipClassAttr"):
                 failUnlessEqual(tm.getSkip(), CLASS_SKIP_MSG)
 
-            elif tm.name.endswith("_skipAttr"):
+            elif tm.id().endswith("_skipAttr"):
                 failUnlessEqual(tm.getSkip(), METHOD_SKIP_MSG)
 
-            elif tm.name.endswith("_todoClassAttr"):
+            elif tm.id().endswith("_todoClassAttr"):
                 failUnlessEqual(tm.getTodo(), CLASS_TODO_MSG)
 
-            elif tm.name.endswith("_todoAttr"):
+            elif tm.id().endswith("_todoAttr"):
                 failUnlessEqual(tm.getTodo(), METHOD_TODO_MSG)
 
             else:
                 raise unittest.FailTest, "didn't have tests for a method ending in %s" % (
-                                         tm.name.split('_')[1],)
+                                         tm.id().split('_')[-1],)
         except unittest.FailTest:
             tb = failure.Failure().getTraceback()
-            raise unittest.FailTest, "error occured in test %s: %s" % (tm.name, tb)
+            raise unittest.FailTest, "error occured in test %s: %s" % (tm.id(), tb)
         
 
     def testMethods(self):

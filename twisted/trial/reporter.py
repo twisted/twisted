@@ -75,10 +75,6 @@ class MethodCallLoggingType(type):
         return super(MethodCallLoggingType, cls).__new__(cls, name, bases,
                                                          attrs)
 
-def runningTime(testCase):
-    return testCase.endTime - testCase.startTime
-
-
 class BrokenTestCaseWarning(Warning):
     """emitted as a warning when an exception occurs in one of
     setUp, tearDown, setUpClass, or tearDownClass"""
@@ -86,7 +82,6 @@ class BrokenTestCaseWarning(Warning):
 
 class Reporter(object):
     zi.implements(itrial.IReporter)
-    debugger = None
 
     def __init__(self, stream=sys.stdout, tbformat='default', args=None,
                  realtime=False):
@@ -175,10 +170,9 @@ class Reporter(object):
         
     def upDownError(self, userMeth, warn=True, printStatus=True):
         if warn:
-            minfo = itrial.IMethodInfo(userMeth)
             tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) 
             log.msg(tbStr)
-            msg = "%s%s" % (methNameWarnMsg[minfo.name], tbStr)
+            msg = "%s%s" % (methNameWarnMsg[userMeth.name], tbStr)
             warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
     def cleanupErrors(self, errs):
@@ -251,14 +245,14 @@ class Reporter(object):
         # XXX - why isn't this one loop?? - jml
         for meth in self.results[SKIP]:
             self.write(self._formatFailedTest(
-                meth.fullName, SKIP,
+                meth.id(), SKIP,
                 self._getErrors(meth) + self._getFailures(meth),
                 meth.getSkip(),
                 itrial.ITodo(meth.getTodo()).msg))
         for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in self.results[status]:
                 self.write(self._formatFailedTest(
-                    meth.fullName, status,
+                    meth.id(), status,
                     self._getErrors(meth) + self._getFailures(meth),
                     meth.getSkip(),
                     itrial.ITodo(meth.getTodo()).msg))
@@ -273,7 +267,7 @@ class Reporter(object):
         self._reportFailures()
         self.write("%s\n" % SEPARATOR)
         self.write('Ran %d tests in %.3fs\n', suite.countTestCases(),
-                   runningTime(suite))
+                   suite.runningTime())
         self.write('\n')
         self._reportStatus(suite)
 
@@ -281,7 +275,7 @@ class Reporter(object):
 class MinimalReporter(Reporter):
     def endSuite(self, suite):
         numTests = suite.countTestCases()
-        t = (runningTime(suite), numTests, numTests,
+        t = (suite.runningTime(), numTests, numTests,
              len(self.couldNotImport), len(self.results[ERROR]),
              len(self.results[FAILURE]), len(self.results[SKIP]))
         self.stream.write(' '.join(map(str,t))+'\n')
@@ -303,13 +297,7 @@ class VerboseTextReporter(TextReporter):
     # This is actually the bwverbose option
     def startTest(self, method):
         tm = itrial.ITestMethod(method)
-        # XXX this is a crap workaround for doctests,
-        # there should be a better solution.
-        try:
-            klass = reflect.qual(tm.klass)
-        except AttributeError: # not a real class
-            klass = str(tm.klass)
-        self.write('%s (%s) ... ', tm.name, klass)
+        self.write('%s ... ', tm.id())
         super(VerboseTextReporter, self).startTest(method)
         
     def endTest(self, method):
@@ -321,7 +309,7 @@ class VerboseTextReporter(TextReporter):
 class TimingTextReporter(VerboseTextReporter):
     def endTest(self, method):
         self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
-                   + "(%.03f secs)\n" % runningTime(method))
+                   + "(%.03f secs)\n" % method.runningTime())
         super(TimingTextReporter, self).endTest(method)
 
 
@@ -381,21 +369,13 @@ class TreeReporter(VerboseTextReporter):
         super(TreeReporter, self).cleanupErrors(errs)
 
     def upDownError(self, method, warn=True, printStatus=True):
-        m = itrial.IMethodInfo(method)
-        self.write(self.color("  %s" % m.name, self.RED))
+        self.write(self.color("  %s" % method.name, self.RED))
         if printStatus:
             self.endLine(*self._getText(ERROR))
         super(TreeReporter, self).upDownError(method, warn, printStatus)
         
     def startTest(self, method):
-        tm = itrial.ITestMethod(method)
-        if tm.docstr:
-            # inspect trims whitespace on the left; the lstrip here is
-            # for those odd folks who start docstrings with a blank line.
-            what = tm.docstr.lstrip().split('\n', 1)[0]
-        else:
-            what = tm.name
-        self.write('      %s ... ', what)
+        self.write('      %s ... ', method.shortDescription())
 
     def endTest(self, method):
         Reporter.endTest(self, method)

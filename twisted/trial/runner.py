@@ -18,8 +18,6 @@ from twisted.internet import defer, interfaces
 from twisted.python import components, reflect, log, failure
 from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCase, IReporter, ITrialDebug
-from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
-     ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
 
 
@@ -127,28 +125,19 @@ class TrialRoot(TestSuite):
     objects, which it then calls the run method on.
     """
     zi.implements(itrial.ITrialRoot)
-    debugger = False
 
-    def __init__(self, reporter, janitor, benchmark=0):
+    def __init__(self, reporter, benchmark=0):
+        TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
-        self.janitor = janitor
         self.reporter.setUpReporter()
         self.benchmark = benchmark
         self.startTime, self.endTime = None, None
-        self.numTests = 0
-        self.children = []
-        self.parent = self
         if benchmark:
             self._registerBenchmarkAdapters()
 
     def _registerBenchmarkAdapters(self):
         from twisted import trial
         trial.benchmarking = True
-
-    def addTest(self, test):
-        test.janitor = self.janitor
-        test.debugger = self.debugger
-        TestSuite.addTest(self, test)
 
     def addMethod(self, method):
         self.addTest(getTestRunner()(method.im_class, [method.__name__]))
@@ -256,20 +245,6 @@ class TrialRoot(TestSuite):
         for case in self._getChildren():
             case.visit(visitor)
 
-
-class MethodInfoBase(object):
-    zi.implements(itrial.IMethodInfo)
-    def __init__(self, original):
-        self.original = o = original
-        self.name = o.__name__
-        self.klass  = original.im_class
-        self.module = reflect.namedModule(original.im_class.__module__)
-        self.fullName = "%s.%s.%s" % (self.module.__name__, self.klass.__name__,
-                                      self.name)
-        self.docstr = (o.__doc__ or None)
-        self.startTime = 0.0
-        self.endTime = 0.0
-
     def runningTime(self):
         return self.endTime - self.startTime
 
@@ -279,15 +254,14 @@ class UserMethodError(Exception):
     call is complete
     """
 
-class UserMethodWrapper(MethodInfoBase):
-    def __init__(self, original, janitor, raiseOnErr=True, timeout=None,
-                 suppress=None):
-        super(UserMethodWrapper, self).__init__(original)
-        self.janitor = janitor
+class UserMethodWrapper(object):
+    def __init__(self, original, raiseOnErr=True, timeout=None, suppress=None):
+        self.original = original
         self.timeout = timeout
         self.raiseOnErr = raiseOnErr
         self.errors = []
         self.suppress = suppress
+        self.name = original.__name__
 
     def __call__(self, *a, **kw):
         timeout = getattr(self, 'timeout', None)
@@ -372,8 +346,6 @@ class ModuleSuite(TestRunnerBase):
     def _populateChildren(self):
         for testClass in findTestClasses(self.original):
             runner = getTestRunner()(testClass)
-            runner.janitor = self.janitor
-            runner.debugger = self.debugger
             self.addTest(runner)
 
     def visit(self, visitor):
@@ -403,6 +375,7 @@ class ClassSuite(TestRunnerBase):
         else:
             self.methodNames = methodNames
         self._signalStateMgr = util.SignalStateManager()
+        self._janitor = util._Janitor()
 
     _module = _tcInstance = None
     
@@ -419,7 +392,6 @@ class ClassSuite(TestRunnerBase):
             tm = itrial.ITestMethod(m, None)
             if tm == None:
                 continue
-            tm.parent = self
             self.children.append(tm)
 
     def _setUpClass(self):
@@ -428,7 +400,7 @@ class ClassSuite(TestRunnerBase):
         setUp = self.testCaseInstance.setUpClass
         suppress = acquireAttribute(
             getPythonContainers(setUp), 'suppress', None)
-        return UserMethodWrapper(setUp, self.janitor, suppress=suppress)
+        return UserMethodWrapper(setUp, suppress=suppress)
 
     def _tearDownClass(self):
         if not hasattr(self.testCaseInstance, 'tearDownClass'):
@@ -436,10 +408,10 @@ class ClassSuite(TestRunnerBase):
         tearDown = self.testCaseInstance.tearDownClass
         suppress = acquireAttribute(
             getPythonContainers(tearDown), 'suppress', None)
-        return UserMethodWrapper(tearDown, self.janitor, suppress=suppress)
+        return UserMethodWrapper(tearDown, suppress=suppress)
 
     def runTests(self, reporter, randomize=False):
-        janitor = self.janitor
+        janitor = util._Janitor()
         tci = self.testCaseInstance
         self.startTime = time.time()
         try:
@@ -469,9 +441,7 @@ class ClassSuite(TestRunnerBase):
 
             # --- run methods ----------------------------------------------
             for testMethod in self._getChildren(randomize):
-                log.msg("--> %s.%s.%s <--" % (testMethod.module.__name__,
-                                              testMethod.klass.__name__,
-                                              testMethod.name))
+                log.msg("--> %s <--" % (testMethod.id()))
                 # suppression is handled by each testMethod
                 testMethod.run(reporter, tci)
 
@@ -489,7 +459,7 @@ class ClassSuite(TestRunnerBase):
                     reporter.upDownError(tearDownClass)
         finally:
             try:
-                self.doCleanup()
+                janitor.postCaseCleanup()
             except util.MultiError, e:
                 reporter.cleanupErrors(e.failures)
             self._signalStateMgr.restore()
@@ -501,13 +471,6 @@ class ClassSuite(TestRunnerBase):
         visitor.visitClass(self)
         self._visitChildren(visitor)
         visitor.visitClassAfter(self)
-
-    def doCleanup(self):
-        """do cleanup after the test run. check log for errors, do reactor
-        cleanup, and restore signals to the state they were in before the
-        test ran
-        """
-        return self.janitor.postCaseCleanup()
 
 
 class PyUnitTestCaseRunner(ClassSuite):
@@ -552,14 +515,14 @@ def acquireAttribute(objects, attr, default=_DEFAULT):
     raise AttributeError('attribute %r not found in %r' % (attr, objects))
 
 
-class TestMethod(MethodInfoBase):
-    zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
+class TestMethod(object):
+    zi.implements(itrial.ITestMethod)
     parent = None
 
     def __init__(self, original):
-        super(TestMethod, self).__init__(original)
-        self.setUp = self.klass.setUp
-        self.tearDown = self.klass.tearDown
+        self.original = original
+        self._setUp = original.im_class.setUp
+        self._tearDown = original.im_class.tearDown
         self._signalStateMgr = util.SignalStateManager()
         self._parents = [original] + getPythonContainers(original)
 
@@ -577,6 +540,19 @@ class TestMethod(MethodInfoBase):
 
     def getTimeout(self):
         return acquireAttribute(self._parents, 'timeout', None)
+
+    def runningTime(self):
+        return self.endTime - self.startTime
+
+    def id(self):
+        k = self.original.im_class
+        return '%s.%s.%s' % (k.__module__, k.__name__, self.original.__name__)
+
+    def shortDescription(self):
+        doc = getattr(self.original, '__doc__', None)
+        if doc is not None:
+            return doc.lstrip().split('\n', 1)[0]
+        return self.original.__name__
 
     def _eb(self, f, reporter):
         log.msg(f.printTraceback())
@@ -604,7 +580,7 @@ class TestMethod(MethodInfoBase):
         self.testCaseInstance = tci = testCaseInstance
         self.startTime = time.time()
         self._signalStateMgr.save()
-        janitor = self.parent.janitor
+        janitor = util._Janitor()
         if self.getSkip(): # don't run test methods that are marked as .skip
             reporter.startTest(self)
             reporter.endTest(self)
@@ -617,8 +593,7 @@ class TestMethod(MethodInfoBase):
             tci._trial_caseMethodName = self.original.func_name
 
             # Run the setUp method
-            setUp = UserMethodWrapper(self.setUp, janitor,
-                                      suppress=self.getSuppress())
+            setUp = UserMethodWrapper(self._setUp, suppress=self.getSuppress())
             try:
                 setUp(tci)
             except UserMethodError:
@@ -638,7 +613,7 @@ class TestMethod(MethodInfoBase):
             # Run the test method
             reporter.startTest(self)
             try:
-                orig = UserMethodWrapper(self.original, janitor,
+                orig = UserMethodWrapper(self.original,
                                          raiseOnErr=False,
                                          timeout=self.getTimeout(),
                                          suppress=self.getSuppress())
@@ -647,7 +622,7 @@ class TestMethod(MethodInfoBase):
             finally:
                 self.endTime = time.time()
                 # Run the tearDown method
-                um = UserMethodWrapper(self.tearDown, janitor,
+                um = UserMethodWrapper(self._tearDown,
                                        suppress=self.getSuppress())
                 try:
                     um(tci)
@@ -658,21 +633,14 @@ class TestMethod(MethodInfoBase):
                         reporter.upDownError(um, warn=False)
         finally:
             observer.remove()
-            self.doCleanup(reporter)
+            try:
+                janitor.postMethodCleanup()
+            except util.MultiError, e:
+                for f in e.failures:
+                    self._eb(f, reporter)
             reporter.endTest(self)
             self._signalStateMgr.restore()
 
-    def doCleanup(self, reporter):
-        """do cleanup after the test run. check log for errors, do reactor
-        cleanup
-        """
-        try:
-            self.parent.janitor.postMethodCleanup()
-        except util.MultiError, e:
-            for f in e.failures:
-                self._eb(f, reporter)
-            return e.failures
-            
     def visit(self, visitor):
         """Call visitor.visitCase(self)."""
         visitor.visitCase(self)
@@ -686,7 +654,7 @@ class BenchmarkMethod(TestMethod):
     def run(self, reporter, testCaseInstance):
         # WHY IS THIS MONKEY PATCH HERE?
         def _recordStat(datum):
-            self.benchmarkStats[self.fullName] = datum
+            self.benchmarkStats[self.id()] = datum
         testCaseInstance.recordStat = _recordStat
         self.original(testCaseInstance)
         

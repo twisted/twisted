@@ -531,10 +531,6 @@ def _getReporter(config):
             % (reporter,))
     return reporter
 
-def _getJanitor(config=None):
-    j = util._Janitor()
-    return j
-
 def _getSuite(config):
     def _dbg(msg):
         log.msg(iface=itrial.ITrialDebug, parseargs=msg)
@@ -545,8 +541,7 @@ def _getSuite(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
-    suite = runner.TrialRoot(reporter, _getJanitor(),
-                             benchmark=config['benchmark'])
+    suite = runner.TrialRoot(reporter, benchmark=config['benchmark'])
     for name, exc in config._couldNotImport:
         reporter.reportImportError(name, exc)
     
@@ -619,7 +614,6 @@ def _getDebugger(config):
     return dbg
 
 def _setUpDebugging(config, suite):
-    suite.debugger = suite.reporter.debugger = True
     _getDebugger(config).runcall(suite.run, config['random'])
 
 def _doProfilingRun(config, suite):
