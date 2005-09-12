@@ -356,7 +356,7 @@ class TestTests(unittest.TestCase):
         for klass in (self.Tests,
                       self.TestSkipClassAttr,
                       self.TestTodoClassAttr):
-            suite = runner.TrialRoot(reporter, util._Janitor())
+            suite = runner.TrialRoot(reporter)
             suite.addTestClass(klass)
             suite.run()
 
