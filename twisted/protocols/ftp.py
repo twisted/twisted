@@ -228,6 +228,10 @@ class AnonUserDeniedError(FTPCmdError):
     Raised when an anonymous user issues a command that will alter the
     filesystem
     """
+    def __init__(self):
+        # No message
+        FTPCmdError.__init__(self, None)
+
     errorCode = ANON_USER_DENIED
 
 
@@ -652,13 +656,10 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 return BAD_CMD_SEQ
 
         elif self.state == self.AUTHED:
-            if (cmd == 'RETR' or cmd == 'PUT') and self.dtpInstance is None:
-                return BAD_CMD_SEQ, "PORT or PASV required before " + cmd
-            else:
-                method = getattr(self, "ftp_" + cmd, None)
-                if method is not None:
-                    return method(*params)
-                return defer.fail(CmdNotImplementedError(cmd))
+            method = getattr(self, "ftp_" + cmd, None)
+            if method is not None:
+                return method(*params)
+            return defer.fail(CmdNotImplementedError(cmd))
 
         elif self.state == self.RENAMING:
             if cmd == 'RNTO':
@@ -808,6 +809,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_NLST(self, path):
+        # XXX: why is this check different to ftp_RETR/ftp_STOR?
         if self.dtpInstance is None or not self.dtpInstance.isConnected:
             return defer.fail(BadCmdSequenceError('must send PORT or PASV before RETR'))
 
@@ -868,7 +870,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def ftp_RETR(self, path):
         if self.dtpInstance is None:
-            return defer.fail(BadCmdSequenceError('must send PORT or PASV before RETR'))
+            raise BadCmdSequenceError('PORT or PASV required before RETR')
 
         try:
             newsegs = toSegments(self.workingDirectory, path)
@@ -915,7 +917,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def ftp_STOR(self, path):
         if self.dtpInstance is None:
-            return defer.fail(BadCmdSequenceError('must send PORT or PASV before STOR'))
+            raise BadCmdSequenceError('PORT or PASV required before STOR')
 
         try:
             newsegs = toSegments(self.workingDirectory, path)
@@ -1109,46 +1111,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpInstance is not None:
             self.dtpInstance = None
 
-    def _doDTPCommand(self, cmd, *arg):
-        self.setTimeout(None)               # don't Time out when waiting for DTP Connection
-        try:
-            f = getattr(self.dtpInstance, "dtp_%s" % cmd, None)
-            log.debug('running dtp function %s' % f)
-        except AttributeError, e:
-            log.err('SOMETHING IS SCREWY IN _doDTPCommand')
-            raise e
-        else:
-            self.dtpFactory.setTimeout(self.dtpTimeout)
-            if arg:
-                d = f(arg)
-            else:
-                d = f()
-            d.addCallback(debugDeferred, 'deferred returned to _doDTPCommand has fired')
-            d.addCallback(lambda _: self._cbDTPCommand())
-            d.addCallback(debugDeferred, 'running cleanupDTP')
-            d.addCallback(lambda _: self.cleanupDTP())
-            d.addCallback(debugDeferred, 'running ftp.setTimeout()')
-            d.addCallback(lambda _: self.setTimeout(self.factory.timeOut))
-            d.addErrback(self._ebDTP)
-            return d
-
-    def _ebDTP(self, error):
-        log.msg('_ebDTP')
-        log.msg(error)
-        self.setTimeout(self.factory.timeOut)       # restart timeOut clock after DTP returns
-        r = error.trap(defer.TimeoutError,          # this is called when DTP times out
-                       BogusClientError,            # called if PI & DTP clients don't match
-                       FTPTimeoutError,             # called when FTP connection times out
-                       ClientDisconnectError,       # called if client disconnects prematurely during DTP transfer
-                       PortConnectionError)         # called when the connection to a PORT fails
-
-        if r in (defer.TimeoutError, PortConnectionError):
-            return CANT_OPEN_DATA_CNX
-        elif r in (BogusClientError, FTPTimeoutError):
-            return SVC_NOT_AVAIL_CLOSING_CTRL_CNX
-            self.transport.loseConnection()
-        elif r == ClientDisconnectError:
-            return CNX_CLOSED_TXFR_ABORTED
 components.backwardsCompatImplements(FTP)
 
 
@@ -1616,6 +1578,7 @@ class FTPCommand:
         self.deferred = defer.Deferred()
         self.ready = 1
         self.public = public
+        self.transferDeferred = None
 
     def fail(self, failure):
         if self.public:
@@ -1694,6 +1657,9 @@ def encodeHostPort(host, port):
     numbers = host.split('.') + [str(port >> 8), str(port % 256)]
     return ','.join(numbers)
 
+def _unwrapFirstError(failure):
+    failure.trap(defer.FirstError)
+    return failure.value.subFailure
 
 class FTPDataPortFactory(protocol.ServerFactory):
     """Factory for data connections that use the PORT command
@@ -1701,7 +1667,7 @@ class FTPDataPortFactory(protocol.ServerFactory):
     (i.e. "active" transfers)
     """
     noisy = 0
-    def buildProtocol(self, connection):
+    def buildProtocol(self, addr):
         # This is a bit hackish -- we already have a Protocol instance,
         # so just return it instead of making a new one
         # FIXME: Reject connections from the wrong address/port
@@ -1981,6 +1947,7 @@ class FTPClient(FTPClientBasic):
         cmds = [FTPCommand(command, public=1) for command in commands]
         cmdsDeferred = defer.DeferredList([cmd.deferred for cmd in cmds],
                                     fireOnOneErrback=True, consumeErrors=True)
+        cmdsDeferred.addErrback(_unwrapFirstError)
 
         if self.passive:
             # Hack: use a mutable object to sneak a variable out of the
@@ -1999,6 +1966,7 @@ class FTPClient(FTPClientBasic):
 
             results = [cmdsDeferred, pasvCmd.deferred, protocol.deferred]
             d = defer.DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
+            d.addErrback(_unwrapFirstError)
 
             # Ensure the connection is always closed
             def close(x, m=_mutable):
@@ -2034,6 +2002,7 @@ class FTPClient(FTPClientBasic):
 
             results = [cmdsDeferred, portCmd.deferred, portCmd.transferDeferred]
             d = defer.DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
+            # XXX: d.addErrback(_unwrapFirstError), but add a test.
 
         for cmd in cmds:
             self.queueCommand(cmd)

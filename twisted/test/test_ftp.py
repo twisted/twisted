@@ -210,6 +210,14 @@ class BasicFTPServerTestCase(FTPServerTestCase):
              "PORT or PASV required before RETR"],
             self._waitForCommandFailure(d))
 
+    def testSTORBeforePORT(self):
+        self._anonymousLogin()
+        d = self.client.queueStringCommand('STOR foo')
+        self.failUnlessEqual(
+            ["503 Incorrect sequence of commands: "
+             "PORT or PASV required before STOR"],
+            self._waitForCommandFailure(d))
+
     def testBadCommandArgs(self):
         self._anonymousLogin()
         d = self.client.queueStringCommand('MODE z')
@@ -493,17 +501,13 @@ class FTPClientTests(unittest.TestCase):
             p = protocol.Protocol()
             d = client.retrieveFile('/file/that/doesnt/exist', p)
 
-            # This callback should not be called
+            # This callback should not be called, because we're expecting a
+            # failure.
             d.addCallback(lambda r, self=self:
                             self.fail('Callback incorrectly called: %r' % r))
             def p(failure):
-                # Yow!  Nested DeferredLists!
-                failure.trap(defer.FirstError)
-                failure.value.subFailure.trap(defer.FirstError)
-                subsubFailure = failure.value.subFailure.value.subFailure
-                subsubFailure.trap(ftp.CommandFailed)
-                # If we got through all that, we got the right failure.
-
+                # Make sure we got the failure we were expecting.
+                failure.trap(ftp.CommandFailed)
             d.addErrback(p)
 
             wait(d)
