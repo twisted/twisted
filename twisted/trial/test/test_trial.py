@@ -111,7 +111,7 @@ class TestBenchmark(object):
         from twisted.trial.test.common import BogusReporter
         from twisted import trial
         
-        suite = runner.TrialRoot(BogusReporter(), util._Janitor(), benchmark=True)
+        suite = runner.TrialRoot(BogusReporter(), benchmark=True)
         suite.addTestClass(self.Benchmark)
         suite.run()
 

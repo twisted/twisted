@@ -152,7 +152,7 @@ class RegistryBaseMixin(object):
         return self._suite
     def _setSuite(self, val):
         self._suite = val
-    suite = property(_getSuite)
+    suite = property(_getSuite, _setSuite)
 
     def tearDown(self):
         self.reporter.verify(self.failIfImportErrors, self.checkReporterSetup)

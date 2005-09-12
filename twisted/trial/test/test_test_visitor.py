@@ -48,7 +48,7 @@ class TestTestVisitor(TestCase):
         from twisted.trial.runner import TrialRoot
         from twisted.trial.reporter import Reporter
         from twisted.trial.util import _Janitor
-        testCase = TrialRoot(Reporter(), _Janitor())
+        testCase = TrialRoot(Reporter())
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
@@ -58,7 +58,7 @@ class TestTestVisitor(TestCase):
         from twisted.trial.util import _Janitor
         import sys
         test_visitor = self.mock_visitor()
-        testCase = TrialRoot(Reporter(), _Janitor())
+        testCase = TrialRoot(Reporter())
         testCase.addModule(sys.modules[__name__])
         testCase.visit(test_visitor)
         self.failIf(len(test_visitor.calls) < 4)
