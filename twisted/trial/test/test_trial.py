@@ -118,6 +118,10 @@ class TestBenchmark(object):
         stats = pickle.load(file('test.stats', 'rb'))
         failUnlessEqual(stats, {reflect.qual(self.Benchmark.benchmarkValues): statdatum})
 
+    def tearDown(self):
+        from twisted import trial
+        trial.benchmarking = False
+        super(TestBenchmark, self).tearDown()
 
 
 class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
