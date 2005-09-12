@@ -21,9 +21,6 @@ class TestReporter(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.addMethod(common.FailfulTests.testTracebackReporting)
         self.suite.run()
         lines = self.reporter.out.split('\n')
-        print '*************'
-        print '\n'.join(lines)
-        print '*************'
         while 1:
             if not lines:
                 raise FailTest, "DOUBLE_SEPARATOR not found in lines"
