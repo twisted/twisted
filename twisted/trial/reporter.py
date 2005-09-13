@@ -302,7 +302,7 @@ class VerboseTextReporter(TextReporter):
     # This is actually the bwverbose option
     def startTest(self, tm):
         self.write('%s ... ', tm.id())
-        super(VerboseTextReporter, self).startTest(method)
+        super(VerboseTextReporter, self).startTest(tm)
         
     def endTest(self, method):
         self.write("%s\n" % WORDS.get(self.getStatus(method), "[??]"))
