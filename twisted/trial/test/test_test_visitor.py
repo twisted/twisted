@@ -1,8 +1,11 @@
 from twisted.trial.unittest import TestCase
+from twisted.trial.runner import TestLoader
+from twisted.trial.test import common
 
 class TestTestVisitor(TestCase):
 
     def setUp(self):
+        self.loader = TestLoader(common.BogusReporter())
         try:
             from twisted.trial.unittest import TestVisitor
             class MockVisitor(TestVisitor):
@@ -32,7 +35,7 @@ class TestTestVisitor(TestCase):
     def test_visit_case_default(self):
         from twisted.trial.unittest import TestVisitor
         from twisted.trial.runner import TestMethod
-        testCase = TestMethod(self.test_visit_case)
+        testCase = self.loader.loadTestMethod(self.test_visit_case)
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
@@ -47,7 +50,6 @@ class TestTestVisitor(TestCase):
         from twisted.trial.unittest import TestVisitor
         from twisted.trial.runner import TrialRoot
         from twisted.trial.reporter import Reporter
-        from twisted.trial.util import _Janitor
         testCase = TrialRoot(Reporter())
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
@@ -55,7 +57,6 @@ class TestTestVisitor(TestCase):
     def test_visit_suite(self):
         from twisted.trial.runner import TrialRoot
         from twisted.trial.reporter import Reporter
-        from twisted.trial.util import _Janitor
         import sys
         test_visitor = self.mock_visitor()
         testCase = TrialRoot(Reporter())
@@ -71,8 +72,7 @@ class TestTestVisitor(TestCase):
         from twisted.trial.unittest import TestVisitor
         from twisted.trial.runner import ModuleSuite
         import sys
-        testCase = ModuleSuite(sys.modules[__name__])
-        testCase.janitor = testCase.debugger = None
+        testCase = self.loader.loadModule(sys.modules[__name__])
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
@@ -80,8 +80,7 @@ class TestTestVisitor(TestCase):
         from twisted.trial.runner import ModuleSuite
         import sys
         test_visitor = self.mock_visitor()
-        testCase = ModuleSuite(sys.modules[__name__])
-        testCase.janitor = testCase.debugger = None
+        testCase = self.loader.loadModule(sys.modules[__name__])
         testCase.visit(test_visitor)
         self.failIf(len(test_visitor.calls) < 5, str(test_visitor.calls))
         self.assertEqual(test_visitor.calls[0], ("module", testCase))
@@ -91,16 +90,14 @@ class TestTestVisitor(TestCase):
     def test_visit_class_default(self):
         from twisted.trial.unittest import TestVisitor
         from twisted.trial.runner import ClassSuite
-        testCase = ClassSuite(self.__class__)
-        testCase.methodNames = ["test_visit_class_default"]
+        testCase = self.loader.loadMethod(self.test_visit_class_default)
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
     def test_visit_class(self):
         from twisted.trial.runner import ClassSuite
         test_visitor = self.mock_visitor()
-        testCase = ClassSuite(self.__class__)
-        testCase.methodNames = ["test_visit_class"]
+        testCase = self.loader.loadMethod(self.test_visit_class)
         testCase.visit(test_visitor)
         self.assertEqual(len(test_visitor.calls), 3)
         self.assertEqual(test_visitor.calls[0], ("class", testCase))

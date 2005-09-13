@@ -18,16 +18,6 @@ except ImportError:
 
 pyunit = __import__('unittest')
 
-#XXX: Having this be here is pretty damn lame, but it's better than the whole
-# mess with adapter registries that was here before.
-benchmarking = False
-
-def makeTestMethod(orig):
-    if benchmarking:
-        return runner.BenchmarkMethod(orig)
-    else:
-        return runner.TestMethod(orig)
-    
 def _setUpAdapters():
     from twisted.spread import jelly
     from twisted.python import failure
@@ -37,10 +27,8 @@ def _setUpAdapters():
     
     for a, o, i in [
 
-# ---- ITestRunner and ITestMethod adapters -----------
-(runner.ModuleSuite, types.ModuleType, itrial.ITestRunner),
-(runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
-(makeTestMethod, types.MethodType, itrial.ITestMethod),
+# ---- ITestMethod adapters -----------
+(runner.TestMethod, types.MethodType, itrial.ITestMethod),
 (runner.PyUnitTestMethod, pyunit.TestCase, itrial.ITestMethod),
 
 # ---- Magic Attribute Adapters -----------------------

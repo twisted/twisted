@@ -118,34 +118,23 @@ class TestBenchmark(object):
         stats = pickle.load(file('test.stats', 'rb'))
         failUnlessEqual(stats, {reflect.qual(self.Benchmark.benchmarkValues): statdatum})
 
-    def tearDown(self):
-        from twisted import trial
-        trial.benchmarking = False
-        super(TestBenchmark, self).tearDown()
-
 
 class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
     def testBenchmark(self):
         from twisted import trial
-        # this is side-effecty and awful, for details, take a look at the
-        # suite property of common.RegistryBaseMixin 
-        self._getSuite(newSuite=True, benchmark=True)
-        self.suite.addTestClass(TestBenchmark.Benchmark)
-        self.suite.run()
-
-        # Sucks but less than before
-        trial.benchmarking = False
         
+        # this is side-effecty and awful, for details, take a look at the
+        # suite property of common.RegistryBaseMixin
+        suite = runner.TrialRoot(self.reporter, benchmark=True)
+        suite.addTestClass(TestBenchmark.Benchmark)
+        suite.run()
+
         stats = pickle.load(file('test.stats', 'rb'))
         meth = TestBenchmark.Benchmark.benchmarkValues
         mod = 'twisted.trial.test.test_trial'
         meth = 'Benchmark.benchmarkValues'
         failUnlessEqual(stats, {mod + '.' + meth: statdatum})
 
-    def tearDown(self):
-        super(Benchmark, self).tearDown()
-        from twisted import trial
-        trial.benchmark = False
 
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')

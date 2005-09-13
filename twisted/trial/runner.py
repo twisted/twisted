@@ -22,15 +22,6 @@ import zope.interface as zi
 
 pyunit = __import__('unittest')
 
-def getTestRunner(orig, *args):
-    from twisted import trial
-    if issubclass(orig, pyunit.TestCase):
-        return PyUnitTestCaseRunner(orig, *args)
-    if trial.benchmarking:
-        return BenchmarkClassSuite(orig, *args)
-    else:
-        return ClassSuite(orig, *args)
-
 
 class BrokenTestCaseWarning(Warning):
     """emitted as a warning when an exception occurs in one of
@@ -66,8 +57,6 @@ class TestSuite(object):
         return result
 
     def _getChildren(self, randomize=False):
-        if not len(self.children):
-            self._populateChildren()
         if randomize:
             random.shuffle(self.children)
         return self.children
@@ -95,29 +84,6 @@ def isPackageDirectory(dirname):
 
 def filenameToModule(fn):
     return reflect.namedModule(reflect.filenameToModuleName(fn))
-
-
-def findTestClasses(module):
-    """Given a module, return all trial Test classes"""
-    def isclass(k):
-        ## XXX -- work around. remove ASAP. 
-        ## inspect.isclass checks for ClassType and then if __bases__
-        ## is an attribute.
-        ## t.conch.insults.text.CharacterAttributes has a (buggy?) __getattr__
-        ## which returns objects for any given attribute.  Hence it has
-        ## __bases__, hence, inspect.isclass believes instances to be classes.
-        ## Remove this workaround and replace w/ inspect.isclass if
-        ## CharacterAttributes is fixed.
-        return isinstance(k, (types.ClassType, types.TypeType)) 
-    classes = [val for name, val in inspect.getmembers(module, isclass)]
-    return filter(ITestCase.implementedBy, classes)
-
-
-MODULE_GLOB = 'test_*.py'
-
-def findTestModules(package):
-    modGlob = os.path.join(os.path.dirname(package.__file__), MODULE_GLOB)
-    return map(filenameToModule, glob.glob(modGlob))
 
 
 class DocTestSuite(TestSuite):
@@ -167,66 +133,35 @@ class TrialRoot(TestSuite):
         TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
-        self.benchmark = benchmark
+        self.loader = TestLoader(reporter)
         self.startTime, self.endTime = None, None
+        self.benchmark = benchmark
         if benchmark:
-            self._registerBenchmarkAdapters()
-
-    def _registerBenchmarkAdapters(self):
-        from twisted import trial
-        trial.benchmarking = True
+            self.loader.classSuiteFactory = BenchmarkClassSuite
+            self.loader.testMethodFactory = BenchmarkMethod
+            self.loader.methodPrefix = 'benchmark'
 
     def addMethod(self, method):
-        self.addTest(getTestRunner(method.im_class, [method.__name__]))
+        self.addTest(self.loader.loadMethod(method))
 
     def addTestClass(self, testClass):
-        self.addTest(getTestRunner(testClass))
+        self.addTest(self.loader.loadClass(testClass))
 
     def addModule(self, module):
-        self.addTest(ModuleSuite(module))
-        if hasattr(module, '__doctests__'):
-            self.addDoctests(module.__doctests__)
-
-    def addDoctests(self, objs):
-        if sys.version_info[:2] <= (2, 2):
-            warnings.warn("trial's doctest support only works with "
-                          "python 2.3 or later, not running doctests")
-            return
-        for test in objs:
-            self.addDoctest(test)
-
-    def addDoctest(self, module):
-        if sys.version_info[:2] <= (2, 2):
-            warnings.warn("trial's doctest support only works with "
-                          "python 2.3 or later, not running doctests")
-            return
-        if isinstance(module, str):
-            module = reflect.namedAny(module)
-        if not inspect.ismodule(module):
-            warnings.warn("trial only supports doctesting modules")
-            return
-        self.addTest(DocTestSuite(module))
+        self.addTest(self.loader.loadModule(module))
 
     def addPackage(self, package):
-        for module in findTestModules(package):
-            self.addModule(module)
-
-    def _packageRecurse(self, arg, dirname, names):
-        if not isPackageDirectory(dirname):
-            names[:] = []
-            return
-        testModuleNames = fnmatch.filter(names, MODULE_GLOB)
-        for name in testModuleNames:
-            try:
-                module = filenameToModule(opj(dirname, name))
-            except ImportError:
-                self.reporter.reportImportError(name, failure.Failure())
-                continue
-            self.addModule(module)
+        self.addTest(self.loader.loadPackage(package))
 
     def addPackageRecursive(self, package):
-        packageDir = os.path.dirname(package.__file__)
-        os.path.walk(packageDir, self._packageRecurse, None)
+        self.addTest(self.loader.loadPackageRecursive(package))
+
+    def addDoctests(self, doctests):
+        for doctest in doctests:
+            self.addDoctest(doctest)
+
+    def addDoctest(self, doctest):
+        self.addTest(self.loader.loadDoctests(doctest))
 
     def _getBenchmarkStats(self):
         stat = {}
@@ -280,9 +215,6 @@ class TrialRoot(TestSuite):
             pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
         self._kickStopRunningStuff()
 
-    def _populateChildren(self):
-        pass
-    
     def visit(self, visitor):
         """Call visitor,visitSuite(self) and visit all child tests."""
         visitor.visitSuite(self)
@@ -392,11 +324,6 @@ class ModuleSuite(TestRunnerBase):
             runner.runTests(reporter, randomize)
         reporter.endModule(self.original)
 
-    def _populateChildren(self):
-        for testClass in findTestClasses(self.original):
-            runner = getTestRunner(testClass)
-            self.addTest(runner)
-
     def visit(self, visitor):
         """Call visitor,visitModule(self) and visit all child tests."""
         visitor.visitModule(self)
@@ -413,15 +340,10 @@ class ClassSuite(TestRunnerBase):
     """
     methodPrefix = 'test'
 
-    def __init__(self, original, methodNames=None):
+    def __init__(self, original):
         super(ClassSuite, self).__init__(original)
         self.original = original
         self._testCase = self.original
-        if methodNames is None:
-            self.methodNames = [name for name in dir(self.testCaseInstance)
-                                if name.startswith(self.methodPrefix)]
-        else:
-            self.methodNames = methodNames
         self._signalStateMgr = util.SignalStateManager()
         self._janitor = util._Janitor()
 
@@ -433,14 +355,6 @@ class ClassSuite(TestRunnerBase):
             self._tcInstance = self._testCase()
         return self._tcInstance
     testCaseInstance = property(testCaseInstance)
-
-    def _populateChildren(self):
-        for mname in self.methodNames:
-            m = getattr(self._testCase, mname)
-            tm = itrial.ITestMethod(m, None)
-            if tm == None:
-                continue
-            self.children.append(tm)
 
     def _setUpClass(self):
         if not hasattr(self.testCaseInstance, 'setUpClass'):
@@ -519,13 +433,6 @@ class ClassSuite(TestRunnerBase):
         visitor.visitClass(self)
         self._visitChildren(visitor)
         visitor.visitClassAfter(self)
-
-
-class PyUnitTestCaseRunner(ClassSuite):
-    """I run python stdlib TestCases"""
-    def __init__(self, original):
-        original.__init__ = lambda _: None
-        super(PyUnitTestCaseRunner, self).__init__(original)
 
 
 class BenchmarkClassSuite(ClassSuite):
@@ -704,3 +611,109 @@ class BenchmarkMethod(TestMethod):
         testCaseInstance.recordStat = _recordStat
         self.original(testCaseInstance)
         
+
+class TestLoader(object):
+    methodPrefix = 'test'
+    moduleGlob = 'test_*.py'
+
+    def __init__(self, reporter):
+        self.reporter = reporter
+        self.suiteFactory = TestSuite
+        self.moduleSuiteFactory = ModuleSuite
+        self.classSuiteFactory = ClassSuite
+        self.testMethodFactory = TestMethod
+
+    def _findTestClasses(self, module):
+        """Given a module, return all trial Test classes"""
+        def isclass(k):
+            ## XXX -- work around. remove ASAP. 
+            ## inspect.isclass checks for ClassType and then if __bases__
+            ## is an attribute.
+            ## t.conch.insults.text.CharacterAttributes has a (buggy?) __getattr__
+            ## which returns objects for any given attribute.  Hence it has
+            ## __bases__, hence, inspect.isclass believes instances to be classes.
+            ## Remove this workaround and replace w/ inspect.isclass if
+            ## CharacterAttributes is fixed.
+            return isinstance(k, (types.ClassType, types.TypeType)) 
+        classes = [val for name, val in inspect.getmembers(module, isclass)]
+        return filter(ITestCase.implementedBy, classes)
+
+    def _findTestModules(self, package):
+        modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
+        return map(filenameToModule, glob.glob(modGlob))
+
+    def loadModule(self, module):
+        suite = self.moduleSuiteFactory(module)
+        for testClass in self._findTestClasses(module):
+            suite.addTest(self.loadClass(testClass))
+        if not hasattr(module, '__doctests__'):
+            return suite
+        docSuite = self.suiteFactory()
+        if sys.version_info[:2] <= (2, 2):
+            warnings.warn("trial's doctest support only works with "
+                          "python 2.3 or later, not running doctests")
+        else:
+            for doctest in module.__doctests__:
+                docSuite.addTest(self.loadDoctests(doctest))
+        modSuite = self.suiteFactory()
+        modSuite.addTests([suite, docSuite])
+        return modSuite
+
+    def loadClass(self, klass):
+        if issubclass(klass, pyunit.TestCase):
+            klass.__init__ = lambda _: None
+        factory = self.classSuiteFactory
+        instance = klass()
+        methodNames = [ name for name in dir(instance)
+                        if name.startswith(self.methodPrefix)
+                        and callable(getattr(instance, name)) ]
+        suite = factory(klass)
+        for mname in methodNames:
+            m = getattr(klass, mname)
+            suite.addTest(self.loadTestMethod(m))
+        return suite
+
+    def loadMethod(self, method):
+        suite = self.classSuiteFactory(method.im_class)
+        suite.addTest(self.loadTestMethod(method))
+        return suite
+
+    def loadTestMethod(self, method):
+        return self.testMethodFactory(method)
+
+    def loadPackage(self, package):
+        suite = self.suiteFactory()
+        for module in self._findTestModules(package):
+            suite.addTest(self.loadModule(module))
+        return suite
+
+    def _packageRecurse(self, suite, dirname, names):
+        if not isPackageDirectory(dirname):
+            names[:] = []
+            return
+        testModuleNames = fnmatch.filter(names, self.moduleGlob)
+        for name in testModuleNames:
+            try:
+                module = filenameToModule(opj(dirname, name))
+            except ImportError:
+                self.reporter.reportImportError(name, failure.Failure())
+                continue
+            suite.addTest(self.loadModule(module))
+
+    def loadPackageRecursive(self, package):
+        packageDir = os.path.dirname(package.__file__)
+        suite = self.suiteFactory()
+        os.path.walk(packageDir, self._packageRecurse, suite)
+        return suite
+
+    def loadDoctests(self, module):
+        if sys.version_info[:2] <= (2, 2):
+            warnings.warn("trial's doctest support only works with "
+                          "python 2.3 or later, not running doctests")
+            return
+        if isinstance(module, str):
+            module = reflect.namedAny(module)
+        if not inspect.ismodule(module):
+            warnings.warn("trial only supports doctesting modules")
+            return
+        return DocTestSuite(module)
