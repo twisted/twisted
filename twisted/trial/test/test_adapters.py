@@ -88,26 +88,22 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         if sys.version_info[0:2] < (2, 3):
             raise unittest.SkipTest(
                 'doctest support only works in Python 2.3 or later')
-        from twisted.trial.test import trialdoctest1
-        self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
+        from twisted.trial.test import trialdoctest2
+        self.suite.addDoctest(trialdoctest2)
         self.suite.run()
-
         output = self.suite.reporter.out.splitlines()
-
+        path = 'twisted.trial.test.trialdoctest2.unexpectedException'
         expect = ['Running 1 tests.',
                   re.compile('.*'),
                   reporter.DOUBLE_SEPARATOR,
-                  re.compile(r'\[ERROR\]: .*' + re.escape(os.path.join('twisted', 'trial', 'test', 'trialdoctest1.py'))),
-                  'docstring',
-                  '---------',
-                  '--> >>> 1/0',
-                  'Traceback (most recent call last):',
-                  None,
-                  None,
-                  re.compile('.*File.*doctest unexpectedException.*line 1.*in.*'),
-                  re.compile('.*1/0'),
-                  'ZeroDivisionError: integer division or modulo by zero']
-
+                  re.compile(r'\[(ERROR|FAIL)\]: .*[Dd]octest.*'
+                             + re.escape(path))]
         common.stringComparison(expect, output)
-
-
+        output = '\n'.join(output)
+        for substring in ['1/0', 'ZeroDivisionError',
+                          'Exception raised:',
+                          'twisted.trial.test.trialdoctest2.unexpectedException']:
+            self.assertSubstring(substring, output)
+        self.failUnless(
+            re.search('Fail(ed|ure in) example:', output),
+            "Couldn't match 'Failure in example: ' or 'Failed example: '")

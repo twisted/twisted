@@ -110,10 +110,14 @@ class Reporter(object):
     def reportImportError(self, name, exc):
         self.couldNotImport.append((name, exc))
 
-    def addFailure(self, test, failure):
-        self.failures.append((test, failure))
+    def addFailure(self, test, fail):
+        if isinstance(fail, tuple):
+            fail = failure.Failure(*fail)
+        self.failures.append((test, fail))
 
     def addError(self, test, error):
+        if isinstance(error, tuple):
+            error = failure.Failure(*error)
         self.errors.append((test, error))
 
     def _getFailures(self, forTest):
@@ -128,6 +132,7 @@ class Reporter(object):
     def getStatus(self, method):
         failures = self._getFailures(method)
         errors = self._getErrors(method)
+        method = itrial.ITestMethod(method)
         if method.getTodo() is not None and (failures or errors):
             for f in failures + errors:
                 if not itrial.ITodo(method.getTodo()).isExpected(f):
@@ -182,11 +187,18 @@ class Reporter(object):
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
-        method = itrial.ITestMethod(method)
         self.results[self.getStatus(method)].append(method)
         if self.realtime:
             for err in self._getErrors(method) + self._getFailures(method):
                 err.printTraceback(self.stream)
+
+    def stopTest(self, method):
+        # trial calls it 'end', pyunit calls it 'stop'        
+        return self.endTest(method)
+
+    def addSuccess(self, test):
+        # pyunit compat -- we don't use this
+        pass
 
     def _formatFailureTraceback(self, fail):
         # Short term hack
@@ -242,20 +254,14 @@ class Reporter(object):
         self.write("%s%s\n", status, summary)
 
     def _reportFailures(self):
-        # XXX - why isn't this one loop?? - jml
-        for meth in self.results[SKIP]:
-            self.write(self._formatFailedTest(
-                meth.id(), SKIP,
-                self._getErrors(meth) + self._getFailures(meth),
-                meth.getSkip(),
-                itrial.ITodo(meth.getTodo()).msg))
-        for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
+        for status in [SKIP, EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in self.results[status]:
+                trialMethod = itrial.ITestMethod(meth)
                 self.write(self._formatFailedTest(
-                    meth.id(), status,
+                    trialMethod.id(), status,
                     self._getErrors(meth) + self._getFailures(meth),
-                    meth.getSkip(),
-                    itrial.ITodo(meth.getTodo()).msg))
+                    trialMethod.getSkip(),
+                    itrial.ITodo(trialMethod.getTodo()).msg))
         for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 
@@ -288,20 +294,17 @@ class TextReporter(Reporter):
         self.seenModules, self.seenClasses = {}, {}
 
     def endTest(self, method):
-        method = itrial.ITestMethod(method)
         self.write(LETTERS.get(self.getStatus(method), '?'))
         super(TextReporter, self).endTest(method)
 
 
 class VerboseTextReporter(TextReporter):
     # This is actually the bwverbose option
-    def startTest(self, method):
-        tm = itrial.ITestMethod(method)
+    def startTest(self, tm):
         self.write('%s ... ', tm.id())
         super(VerboseTextReporter, self).startTest(method)
         
     def endTest(self, method):
-        method = itrial.ITestMethod(method)
         self.write("%s\n" % WORDS.get(self.getStatus(method), "[??]"))
         super(VerboseTextReporter, self).endTest(method)
 
@@ -379,8 +382,7 @@ class TreeReporter(VerboseTextReporter):
 
     def endTest(self, method):
         Reporter.endTest(self, method)
-        tm = itrial.ITestMethod(method)
-        self.endLine(*self._getText(self.getStatus(tm)))
+        self.endLine(*self._getText(self.getStatus(method)))
 
     def color(self, text, color):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')

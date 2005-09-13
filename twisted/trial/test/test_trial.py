@@ -142,6 +142,11 @@ class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
         meth = 'Benchmark.benchmarkValues'
         failUnlessEqual(stats, {mod + '.' + meth: statdatum})
 
+    def tearDown(self):
+        super(Benchmark, self).tearDown()
+        from twisted import trial
+        trial.benchmark = False
+
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')
 

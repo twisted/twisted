@@ -12,9 +12,11 @@ from twisted.trial import itrial
 # get assert* methods, fail* methods, FailTest and SkipTest
 from twisted.trial.assertions import *
 from twisted.trial.util import deferredResult, deferredError, wait
+pyunit = __import__('unittest')
 
 import zope.interface as zi
 
+zi.classImplements(pyunit.TestCase, itrial.ITestCase)
 
 #------------------------------------------------------------------------------
 # Set this to True if you want to disambiguate between test failures and
@@ -44,6 +46,9 @@ class TestCase(object):
 
     def tearDown(self):
         pass
+
+    def countTestCases(self):
+        return 1
 
     # backwards compatability parade! ----------------
 

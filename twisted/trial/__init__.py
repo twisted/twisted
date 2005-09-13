@@ -16,6 +16,8 @@ try:
 except ImportError:
     raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
 
+pyunit = __import__('unittest')
+
 #XXX: Having this be here is pretty damn lame, but it's better than the whole
 # mess with adapter registries that was here before.
 benchmarking = False
@@ -32,7 +34,6 @@ def _setUpAdapters():
     # sibling imports
     import types
     import reporter, runner, itrial, adapters, remote
-    import tdoctest, doctest
     
     for a, o, i in [
 
@@ -40,9 +41,7 @@ def _setUpAdapters():
 (runner.ModuleSuite, types.ModuleType, itrial.ITestRunner),
 (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
 (makeTestMethod, types.MethodType, itrial.ITestMethod),
-
-# ---- Doctest support --------------------------------
-(tdoctest.DocTestRunner, doctest.DocTest, itrial.ITestRunner),
+(runner.PyUnitTestMethod, pyunit.TestCase, itrial.ITestMethod),
 
 # ---- Magic Attribute Adapters -----------------------
 (adapters.TupleTodo, types.TupleType, itrial.ITodo),

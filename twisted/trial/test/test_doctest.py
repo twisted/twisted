@@ -7,13 +7,12 @@
 """
 test twisted's doctest support
 """
-import exceptions, sys
+import exceptions, sys, doctest
 
 from twisted import trial
-from twisted.trial import doctest, runner, tdoctest, unittest, reporter
+from twisted.trial import runner, unittest, reporter
 from twisted.trial import itrial
 from twisted.trial.reporter import  FAILURE, ERROR, SUCCESS
-from twisted.trial.assertions import *
 from twisted.python import failure
 
 from twisted.trial.test import trialdoctest1, trialdoctest2, common
@@ -22,80 +21,33 @@ from pprint import pprint
 
 import zope.interface as zi
 
-class RegistryBaseMixin(common.RegistryBaseMixin):
-    def setUp(self):
-        super(RegistryBaseMixin, self).setUp()
-        self.runners = []
-        self.reporter.verify = lambda *a, **kw: None
 
-    def tearDown(self):
-        super(RegistryBaseMixin, self).tearDown()
-        self.runners = None
+if sys.version_info[0:2] < (2,3):
+    skip = 'doctest support only works on 2.3 or later'
 
+class TestRunners(unittest.TestCase):
+    def test_correctCount(self):
+        suite = runner.DocTestSuite(trialdoctest1)
+        self.assertEqual(7, suite.countTestCases())
 
-class TestRunners(RegistryBaseMixin, unittest.TestCase):
-    EXPECTED_STATI = ((SUCCESS, 5), (FAILURE, 1), (ERROR, 1))
-    def setUpClass(self):
-        if sys.version_info[0:2] == (2,2):
-            raise SkipTest, 'doctest support only works on 2.3 or later'
-        super(TestRunners, self).setUpClass()
-    
-    def setUp(self):
-        super(TestRunners, self).setUp()
-        self.doctests = trialdoctest2.__doctests__
+    def test_basicTrialIntegration(self):
+        root = runner.TrialRoot(common.BogusReporter())
+        root.addDoctest(trialdoctest1)
+        self.assertEqual(7, root.countTestCases())
 
-    def tearDownClass(self):
-        if sys.version_info[0:2] == (2,2):
-            return
-        super(TestRunners, self).tearDownClass()
+    def test_backwardsCompat(self):
+        root = runner.TrialRoot(common.BogusReporter())
+        root.addDoctests([trialdoctest1])
+        self.assertEqual(7, root.countTestCases())
 
-    def tearDown(self):
-        super(TestRunners, self).tearDown()
-
-    def testDocTestRunnerRunTests(self):
-        dtf = doctest.DocTestFinder()
-        tests = dtf.find(trialdoctest1)
-        for test in tests:
-            runner = itrial.ITestRunner(test)
-            self.runners.append(runner)
-            runner.parent = self
-            runner.runTests(self.reporter)
-        self.verifyStatus()
-
-    def verifyStatus(self, *expected):
-        for status, lenMeths in expected:
-            assertEqual(len(self.reporter.results[status]), lenMeths)
-
-    def testModuleDocTestsRunner(self):
-        mdtr = tdoctest.ModuleDocTestsRunner(self.doctests)
-        mdtr.parent = self
-        mdtr.runTests(self.reporter)
-        self.verifyStatus(*self.EXPECTED_STATI)
-
-    def testSuite(self):
-        self.suite.addModule(trialdoctest2)
-        self.suite.run()
-        # XXX: this children[idx] thing is pretty lame
-        # it relies on the implementation of the suite, which is incorrect
-        self.verifyStatus(*self.EXPECTED_STATI)
-        n = 0
-        for v in self.reporter.results.itervalues():
-            n += len(v)
-        # test to make sure correct count is reporterated
-        assertSubstring("Ran %s tests in" % (n,), self.reporter.out)
-
-    def testSingleDoctestFailure(self):
-        self.suite.addDoctests([trialdoctest1.Counter.__eq__])
-        self.suite.run()
-        self.verifyStatus((FAILURE, 1))
-
-    def testSingleDoctestSuccess(self):
-        self.suite.addDoctests([trialdoctest1.Counter.incr])
-        self.suite.run()
-        self.verifyStatus((SUCCESS, 1))
-
-    def testSingleDoctestError(self):
-        self.suite.addDoctests([trialdoctest1.Counter.unexpectedException])
-        self.suite.run()
-        self.verifyStatus((ERROR, 1))
+    def test_expectedResults(self):
+        suite = runner.DocTestSuite(trialdoctest1)
+        reporter = common.BogusReporter()
+        root = runner.TrialRoot(reporter)
+        root.addTest(suite)
+        root.run(False)
+        self.assertEqual(5, len(reporter.results[SUCCESS]))
+        # doctest reports failures as errors in 2.3
+        self.assertEqual(2, len(reporter.results[ERROR])
+                         + len(reporter.results[FAILURE]))
 

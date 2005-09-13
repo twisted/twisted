@@ -104,5 +104,3 @@ class Counter(object):
         """
 
 
-
-__doctests__ = [ Counter ]

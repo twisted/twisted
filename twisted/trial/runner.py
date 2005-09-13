@@ -11,7 +11,7 @@ from __future__ import generators
 
 
 import os, glob, types, warnings, time, sys, cPickle as pickle, inspect
-import fnmatch, random, inspect
+import fnmatch, random, inspect, doctest
 from os.path import join as opj
 
 from twisted.internet import defer, interfaces
@@ -20,13 +20,16 @@ from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCase, IReporter, ITrialDebug
 import zope.interface as zi
 
+pyunit = __import__('unittest')
 
-def getTestRunner():
+def getTestRunner(orig, *args):
     from twisted import trial
+    if issubclass(orig, pyunit.TestCase):
+        return PyUnitTestCaseRunner(orig, *args)
     if trial.benchmarking:
-        return BenchmarkClassSuite
+        return BenchmarkClassSuite(orig, *args)
     else:
-        return ClassSuite
+        return ClassSuite(orig, *args)
 
 
 class BrokenTestCaseWarning(Warning):
@@ -69,9 +72,9 @@ class TestSuite(object):
             random.shuffle(self.children)
         return self.children
 
-    def run(self):
-        for child in self._getChildren():
-            child.run()
+    def run(self, reporter, randomize):
+        for child in self._getChildren(randomize):
+            child.run(reporter, randomize)
 
     def addTest(self, test):
         self.children.append(test)
@@ -117,6 +120,40 @@ def findTestModules(package):
     return map(filenameToModule, glob.glob(modGlob))
 
 
+class DocTestSuite(TestSuite):
+    def __init__(self, testModule):
+        super(DocTestSuite, self).__init__()
+        suite = doctest.DocTestSuite(testModule)
+        for test in suite._tests: #yay encapsulation
+            self.addTest(PyUnitTestMethod(test))
+
+
+class PyUnitTestMethod(object):
+    def __init__(self, test):
+        self._test = test
+
+    def countTestCases(self):
+        return 1
+
+    def id(self):
+        return self._test.shortDescription()
+
+    def getTodo(self):
+        pass
+
+    def getSkip(self):
+        pass
+
+    def getTimeout(self):
+        pass
+
+    def getSuppress(self):
+        pass
+
+    def run(self, reporter, testCaseInstance):
+        return self._test.run(reporter)
+        
+
 class TrialRoot(TestSuite):
     """This is the main organizing object. The front-end script creates a
     TrialRoot, and tells it what modules were requested on the command line.
@@ -140,24 +177,36 @@ class TrialRoot(TestSuite):
         trial.benchmarking = True
 
     def addMethod(self, method):
-        self.addTest(getTestRunner()(method.im_class, [method.__name__]))
+        self.addTest(getTestRunner(method.im_class, [method.__name__]))
 
     def addTestClass(self, testClass):
-        self.addTest(getTestRunner()(testClass))
+        self.addTest(getTestRunner(testClass))
 
     def addModule(self, module):
         self.addTest(ModuleSuite(module))
         if hasattr(module, '__doctests__'):
             self.addDoctests(module.__doctests__)
 
-    def addDoctests(self, obj):
+    def addDoctests(self, objs):
         if sys.version_info[:2] <= (2, 2):
             warnings.warn("trial's doctest support only works with "
                           "python 2.3 or later, not running doctests")
             return
-        from twisted.trial import tdoctest
-        self.addTest(tdoctest.ModuleDocTestsRunner(obj))
-        
+        for test in objs:
+            self.addDoctest(test)
+
+    def addDoctest(self, module):
+        if sys.version_info[:2] <= (2, 2):
+            warnings.warn("trial's doctest support only works with "
+                          "python 2.3 or later, not running doctests")
+            return
+        if isinstance(module, str):
+            module = reflect.namedAny(module)
+        if not inspect.ismodule(module):
+            warnings.warn("trial only supports doctesting modules")
+            return
+        self.addTest(DocTestSuite(module))
+
     def addPackage(self, package):
         for module in findTestModules(package):
             self.addModule(module)
@@ -345,7 +394,7 @@ class ModuleSuite(TestRunnerBase):
 
     def _populateChildren(self):
         for testClass in findTestClasses(self.original):
-            runner = getTestRunner()(testClass)
+            runner = getTestRunner(testClass)
             self.addTest(runner)
 
     def visit(self, visitor):
@@ -362,7 +411,6 @@ class ClassSuite(TestRunnerBase):
     as the value, if not, we search the parent for the appropriate attribute
     and if we still find nothing, we set our attribute to None
     """
-
     methodPrefix = 'test'
 
     def __init__(self, original, methodNames=None):
@@ -478,8 +526,6 @@ class PyUnitTestCaseRunner(ClassSuite):
     def __init__(self, original):
         original.__init__ = lambda _: None
         super(PyUnitTestCaseRunner, self).__init__(original)
-
-    testCaseInstance = property(ClassSuite.testCaseInstance)
 
 
 class BenchmarkClassSuite(ClassSuite):

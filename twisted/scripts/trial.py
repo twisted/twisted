@@ -20,7 +20,7 @@ from twisted import plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, remote
-from twisted.trial import adapters, reporter, tdoctest
+from twisted.trial import adapters, reporter
 from twisted.trial.itrial import ITrialDebug
 from twisted.trial.unittest import TestVisitor
 
@@ -488,13 +488,6 @@ class Options(usage.Options):
 # ----------------------------------------------------------
 # config and run
 
-def _monkeyPatchPyunit():
-    # MONKEY PATCH -----------------------------------------
-    unittest = eval("__import__('unittest')", {}, {})
-    from twisted.trial import unittest as twunit
-    unittest.TestCase = twunit.TestCase
-    # ------------------------------------------------------
-
     
 def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
@@ -704,8 +697,6 @@ def reallyRun(config):
 
 
 def run():
-    _monkeyPatchPyunit()
-
     if len(sys.argv) == 1:
         sys.argv.append("--help")
 
