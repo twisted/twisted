@@ -88,6 +88,8 @@ def _parseLocalVariables(line):
     """Accepts a single line in Emacs local variable declaration format and
     returns a dict of all the variables {name: value}.
     Raises ValueError if 'line' is in the wrong format.
+
+    See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
     """
     paren = '-*-'
     start = line.find(paren) + len(paren)
@@ -110,6 +112,8 @@ def _parseLocalVariables(line):
 def loadLocalVariables(filename):
     """Accepts a filename and attempts to load the Emacs variable declarations
     from that file, simulating what Emacs does.
+
+    See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
     """
     f = file(filename, "r")
     lines = [f.readline(), f.readline()]
