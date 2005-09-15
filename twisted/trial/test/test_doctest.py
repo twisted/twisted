@@ -45,7 +45,7 @@ class TestRunners(unittest.TestCase):
         reporter = common.BogusReporter()
         root = runner.TrialRoot(reporter)
         root.addTest(suite)
-        root.run()
+        root.run(False)
         self.assertEqual(5, len(reporter.results[SUCCESS]))
         # doctest reports failures as errors in 2.3
         self.assertEqual(2, len(reporter.results[ERROR])

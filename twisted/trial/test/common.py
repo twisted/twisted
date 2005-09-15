@@ -133,9 +133,8 @@ class RegistryBaseMixin(object):
     # the reporter's setUp/tearDownReporter methods were called
     checkReporterSetup = True
 
-    # THIS IS BAD BAD BAD DON'T ASSUME THIS FIXME XXX
-    tci = property(lambda self: self.suite._tests[0].testCaseInstance)
-    tm = property(lambda self: self.suite._tests[0]._tests[0])
+    tci = property(lambda self: self.suite.children[0].testCaseInstance)
+    tm = property(lambda self: self.suite.children[0].children[0])
     stdio = property(lambda self: self.tm.stderr + self.tm.stdout)
 
     def setUpClass(self):

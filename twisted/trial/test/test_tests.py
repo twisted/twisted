@@ -360,8 +360,8 @@ class TestTests(unittest.TestCase):
             suite.addTestClass(klass)
             suite.run()
 
-            for subsuite in suite._tests:
-                for method in subsuite._tests:
+            for subsuite in suite._getChildren():
+                for method in subsuite._getChildren():
                     try:
                         self.checkResults(reporter, method)
                     except unittest.FailTest:
