@@ -16,6 +16,7 @@ from os.path import join as opj
 
 from twisted.internet import defer, interfaces
 from twisted.python import components, reflect, log, failure
+from twisted.python.util import dsu
 from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCase, IReporter, ITrialDebug
 import zope.interface as zi
@@ -622,6 +623,7 @@ class TestLoader(object):
         self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
         self.testMethodFactory = TestMethod
+        self.sorter = lambda x : x.__name__
 
     def _findTestClasses(self, module):
         """Given a module, return all trial Test classes"""
@@ -636,11 +638,11 @@ class TestLoader(object):
             ## CharacterAttributes is fixed.
             return isinstance(k, (types.ClassType, types.TypeType)) 
         classes = [val for name, val in inspect.getmembers(module, isclass)]
-        return filter(ITestCase.implementedBy, classes)
+        return dsu(filter(ITestCase.implementedBy, classes), self.sorter)
 
     def _findTestModules(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
-        return map(filenameToModule, glob.glob(modGlob))
+        return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
 
     def loadModule(self, module):
         suite = self.moduleSuiteFactory(module)
@@ -664,13 +666,13 @@ class TestLoader(object):
             klass.__init__ = lambda _: None
         factory = self.classSuiteFactory
         instance = klass()
-        methodNames = [ name for name in dir(instance)
+        methods = dsu([ getattr(klass, name) for name in dir(instance)
                         if name.startswith(self.methodPrefix)
-                        and callable(getattr(instance, name)) ]
+                        and callable(getattr(instance, name)) ],
+                      self.sorter)
         suite = factory(klass)
-        for mname in methodNames:
-            m = getattr(klass, mname)
-            suite.addTest(self.loadTestMethod(m))
+        for method in methods:
+            suite.addTest(self.loadTestMethod(method))
         return suite
 
     def loadMethod(self, method):
