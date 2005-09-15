@@ -43,35 +43,6 @@ def _kickStartReactor():
         _reactorKickStarted = True
 
 
-class TestSuite(object):
-    """A TestCase container that implements both TestCase and TestSuite
-    interfaces."""
-
-    def __init__(self):
-        self.children = []
-
-    def countTestCases(self):
-        """Return the number of tests in the TestSuite."""
-        result = 0
-        for case in self._getChildren():
-            result += case.countTestCases()
-        return result
-
-    def _getChildren(self):
-        return self.children
-
-    def run(self, reporter):
-        for child in self._getChildren():
-            child.run(reporter)
-
-    def addTest(self, test):
-        self.children.append(test)
-
-    def addTests(self, tests):
-        for test in tests:
-            self.addTest(test)
-
-
 def isPackageDirectory(dirname):
     """Is the directory at path 'dirname' a Python package directory?"""
     for ext in 'py', 'so', 'pyd', 'dll':
@@ -85,7 +56,7 @@ def filenameToModule(fn):
     return reflect.namedModule(reflect.filenameToModuleName(fn))
 
 
-class DocTestSuite(TestSuite):
+class DocTestSuite(pyunit.TestSuite):
     def __init__(self, testModule):
         super(DocTestSuite, self).__init__()
         suite = doctest.DocTestSuite(testModule)
@@ -96,6 +67,9 @@ class DocTestSuite(TestSuite):
 class PyUnitTestMethod(object):
     def __init__(self, test):
         self._test = test
+
+    def __call__(self, result):
+        return self.run(result)
 
     def countTestCases(self):
         return 1
@@ -119,7 +93,7 @@ class PyUnitTestMethod(object):
         return self._test.run(reporter)
         
 
-class TrialRoot(TestSuite):
+class TrialRoot(pyunit.TestSuite):
     """This is the main organizing object. The front-end script creates a
     TrialRoot, and tells it what modules were requested on the command line.
     It also hands it a reporter. The TrialRoot then takes all of the
@@ -129,7 +103,7 @@ class TrialRoot(TestSuite):
     zi.implements(itrial.ITrialRoot)
 
     def __init__(self, reporter, benchmark=0, randomize=None):
-        TestSuite.__init__(self)
+        pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
         self.loader = TestLoader(reporter)
@@ -169,9 +143,10 @@ class TrialRoot(TestSuite):
         self.addTest(self.loader.loadDoctests(doctest))
 
     def _getBenchmarkStats(self):
+        # THIS IS BROKEN WHY ARE YOU ASSUMING TWO LAYERS ARG FIXME XXX
         stat = {}
-        for r in self.children:
-            for m in r.children:
+        for r in self._tests:
+            for m in r._tests:
                 stat.update(getattr(m, 'benchmarkStats', {}))
         return stat
     benchmarkStats = property(_getBenchmarkStats)
@@ -210,7 +185,7 @@ class TrialRoot(TestSuite):
         self.setStartTime()
         # this is where the test run starts
         self.reporter.startSuite(self.countTestCases())
-        for tr in self._getChildren():
+        for tr in self._tests:
             tr.run(self.reporter)
             if self.reporter.shouldStop:
                 break
@@ -226,7 +201,7 @@ class TrialRoot(TestSuite):
 
     def _visitChildren(self, visitor):
         """Visit all chilren of this test suite."""
-        for case in self._getChildren():
+        for case in self._tests:
             case.visit(visitor)
 
     def runningTime(self):
@@ -285,11 +260,11 @@ class UserMethodWrapper(object):
         pass
 
 
-class TestRunnerBase(TestSuite):
+class TestRunnerBase(pyunit.TestSuite):
     zi.implements(itrial.ITestRunner)
     
     def __init__(self, original):
-        TestSuite.__init__(self)
+        pyunit.TestSuite.__init__(self)
         self.original = original
 
     def run(self, reporter):
@@ -316,14 +291,14 @@ class TestRunnerBase(TestSuite):
 
     def _visitChildren(self, visitor):
         """Visit all chilren of this test suite."""
-        for case in self._getChildren():
+        for case in self._tests:
             case.visit(visitor)
 
 
 class ModuleSuite(TestRunnerBase):
     def runTests(self, reporter):
         reporter.startModule(self.original)
-        for runner in self._getChildren():
+        for runner in self._tests:
             runner.runTests(reporter)
         reporter.endModule(self.original)
 
@@ -397,7 +372,7 @@ class ClassSuite(TestRunnerBase):
                         error.raiseException()
                 else:
                     reporter.upDownError(setUpClass)
-                    for tm in self._getChildren():
+                    for tm in self._tests:
                         for error in setUpClass.errors:
                             reporter.addError(tm, error)
                         reporter.startTest(tm)
@@ -405,7 +380,7 @@ class ClassSuite(TestRunnerBase):
                     return
 
             # --- run methods ----------------------------------------------
-            for testMethod in self._getChildren():
+            for testMethod in self._tests:
                 log.msg("--> %s <--" % (testMethod.id()))
                 # suppression is handled by each testMethod
                 testMethod.run(reporter, tci)
@@ -621,7 +596,7 @@ class TestLoader(object):
 
     def __init__(self, reporter):
         self.reporter = reporter
-        self.suiteFactory = TestSuite
+        self.suiteFactory = pyunit.TestSuite
         self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
         self.testMethodFactory = TestMethod
