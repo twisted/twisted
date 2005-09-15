@@ -57,14 +57,12 @@ class TestSuite(object):
             result += case.countTestCases()
         return result
 
-    def _getChildren(self, randomize=False):
-        if randomize:
-            random.shuffle(self.children)
+    def _getChildren(self):
         return self.children
 
-    def run(self, reporter, randomize):
-        for child in self._getChildren(randomize):
-            child.run(reporter, randomize)
+    def run(self, reporter):
+        for child in self._getChildren():
+            child.run(reporter)
 
     def addTest(self, test):
         self.children.append(test)
@@ -117,7 +115,7 @@ class PyUnitTestMethod(object):
     def getSuppress(self):
         pass
 
-    def run(self, reporter, testCaseInstance):
+    def run(self, reporter):
         return self._test.run(reporter)
         
 
@@ -130,7 +128,7 @@ class TrialRoot(TestSuite):
     """
     zi.implements(itrial.ITrialRoot)
 
-    def __init__(self, reporter, benchmark=0):
+    def __init__(self, reporter, benchmark=0, randomize=None):
         TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
@@ -141,6 +139,12 @@ class TrialRoot(TestSuite):
             self.loader.classSuiteFactory = BenchmarkClassSuite
             self.loader.testMethodFactory = BenchmarkMethod
             self.loader.methodPrefix = 'benchmark'
+        if randomize:
+            randomer = random.Random()
+            randomer.seed(randomize)
+            self.loader.sorter = lambda x : randomer.random()
+            self.reporter.write('Running tests shuffled with seed %d\n'
+                                % randomize)
 
     def addMethod(self, method):
         self.addTest(self.loader.loadMethod(method))
@@ -201,15 +205,13 @@ class TrialRoot(TestSuite):
     def _initLogging(self):
         log.startKeepingErrors()
 
-    def run(self, randomize=None):
+    def run(self):
         self._initLogging()
         self.setStartTime()
-        if randomize is not None:
-            self.reporter.write('Running tests shuffled with seed %d' % randomize)
         # this is where the test run starts
         self.reporter.startSuite(self.countTestCases())
-        for tr in self._getChildren(randomize):
-            tr.run(self.reporter, (randomize is not None))
+        for tr in self._getChildren():
+            tr.run(self.reporter)
             if self.reporter.shouldStop:
                 break
         if self.benchmark:
@@ -290,12 +292,12 @@ class TestRunnerBase(TestSuite):
         TestSuite.__init__(self)
         self.original = original
 
-    def run(self, reporter, randomize):
+    def run(self, reporter):
         """Run all tests for this test runner, catching all exceptions.
         If a KeyboardInterrupt is caught set reporter.shouldStop."""
         _kickStartReactor()
         try:
-            self.runTests(reporter, randomize=randomize)
+            self.runTests(reporter)
         except KeyboardInterrupt:
             # KeyboardInterrupts are normal, not a bug in trial.
             # Just stop the test run, and do the usual reporting.
@@ -319,10 +321,10 @@ class TestRunnerBase(TestSuite):
 
 
 class ModuleSuite(TestRunnerBase):
-    def runTests(self, reporter, randomize=False):
+    def runTests(self, reporter):
         reporter.startModule(self.original)
-        for runner in self._getChildren(randomize):
-            runner.runTests(reporter, randomize)
+        for runner in self._getChildren():
+            runner.runTests(reporter)
         reporter.endModule(self.original)
 
     def visit(self, visitor):
@@ -373,7 +375,7 @@ class ClassSuite(TestRunnerBase):
             getPythonContainers(tearDown), 'suppress', None)
         return UserMethodWrapper(tearDown, suppress=suppress)
 
-    def runTests(self, reporter, randomize=False):
+    def runTests(self, reporter):
         janitor = util._Janitor()
         tci = self.testCaseInstance
         self.startTime = time.time()
@@ -403,7 +405,7 @@ class ClassSuite(TestRunnerBase):
                     return
 
             # --- run methods ----------------------------------------------
-            for testMethod in self._getChildren(randomize):
+            for testMethod in self._getChildren():
                 log.msg("--> %s <--" % (testMethod.id()))
                 # suppression is handled by each testMethod
                 testMethod.run(reporter, tci)

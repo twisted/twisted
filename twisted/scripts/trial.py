@@ -525,7 +525,8 @@ def _getSuite(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
-    suite = runner.TrialRoot(reporter, benchmark=config['benchmark'])
+    suite = runner.TrialRoot(reporter, benchmark=config['benchmark'],
+                             randomize=config['random'])
     for name, exc in config._couldNotImport:
         reporter.reportImportError(name, exc)
     
@@ -598,7 +599,7 @@ def _getDebugger(config):
     return dbg
 
 def _setUpDebugging(config, suite):
-    _getDebugger(config).runcall(suite.run, config['random'])
+    _getDebugger(config).runcall(suite.run)
 
 def _doProfilingRun(config, suite):
     if config['until-failure']:
@@ -607,7 +608,7 @@ def _doProfilingRun(config, suite):
     import profile
     prof = profile.Profile()
     try:
-        prof.runcall(suite.run, config['random'])
+        prof.runcall(suite.run)
         prof.dump_stats('profile.data')
     except SystemExit:
         pass
@@ -661,14 +662,14 @@ def reallyRun(config):
         if not config['debug']:
             def _doRun(config):
                 suite = _getSuite(config)
-                suite.run(config['random'])
+                suite.run()
                 return suite
             return call_until_failure(_doRun, config)
         else:
             def _doRun(config):
                 suite = _getSuite(config)
                 suite.debugger = suite.reporter.debugger = True
-                suite.run(config['random'])
+                suite.run()
                 return suite
             return _getDebugger(config).runcall(call_until_failure, _doRun,
                                                 config)
@@ -683,7 +684,7 @@ def reallyRun(config):
     elif config['profile']:
         _doProfilingRun(config, suite)
     else:
-        suite.run(config['random'])
+        suite.run()
     return suite
 
 
