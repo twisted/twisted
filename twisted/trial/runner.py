@@ -16,6 +16,7 @@ from os.path import join as opj
 
 from twisted.internet import defer, interfaces
 from twisted.python import components, reflect, log, failure
+from twisted.python.util import dsu
 from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCase, IReporter, ITrialDebug
 import zope.interface as zi
@@ -42,37 +43,6 @@ def _kickStartReactor():
         _reactorKickStarted = True
 
 
-class TestSuite(object):
-    """A TestCase container that implements both TestCase and TestSuite
-    interfaces."""
-
-    def __init__(self):
-        self.children = []
-
-    def countTestCases(self):
-        """Return the number of tests in the TestSuite."""
-        result = 0
-        for case in self._getChildren():
-            result += case.countTestCases()
-        return result
-
-    def _getChildren(self, randomize=False):
-        if randomize:
-            random.shuffle(self.children)
-        return self.children
-
-    def run(self, reporter, randomize):
-        for child in self._getChildren(randomize):
-            child.run(reporter, randomize)
-
-    def addTest(self, test):
-        self.children.append(test)
-
-    def addTests(self, tests):
-        for test in tests:
-            self.addTest(test)
-
-
 def isPackageDirectory(dirname):
     """Is the directory at path 'dirname' a Python package directory?"""
     for ext in 'py', 'so', 'pyd', 'dll':
@@ -86,9 +56,9 @@ def filenameToModule(fn):
     return reflect.namedModule(reflect.filenameToModuleName(fn))
 
 
-class DocTestSuite(TestSuite):
+class DocTestSuite(pyunit.TestSuite):
     def __init__(self, testModule):
-        super(DocTestSuite, self).__init__()
+        pyunit.TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
             self.addTest(PyUnitTestMethod(test))
@@ -97,6 +67,9 @@ class DocTestSuite(TestSuite):
 class PyUnitTestMethod(object):
     def __init__(self, test):
         self._test = test
+
+    def __call__(self, result):
+        return self.run(result)
 
     def countTestCases(self):
         return 1
@@ -116,11 +89,11 @@ class PyUnitTestMethod(object):
     def getSuppress(self):
         pass
 
-    def run(self, reporter, testCaseInstance):
+    def run(self, reporter):
         return self._test.run(reporter)
         
 
-class TrialRoot(TestSuite):
+class TrialRoot(pyunit.TestSuite):
     """This is the main organizing object. The front-end script creates a
     TrialRoot, and tells it what modules were requested on the command line.
     It also hands it a reporter. The TrialRoot then takes all of the
@@ -129,8 +102,8 @@ class TrialRoot(TestSuite):
     """
     zi.implements(itrial.ITrialRoot)
 
-    def __init__(self, reporter, benchmark=0):
-        TestSuite.__init__(self)
+    def __init__(self, reporter, benchmark=0, randomize=None):
+        pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
         self.loader = TestLoader(reporter)
@@ -140,6 +113,12 @@ class TrialRoot(TestSuite):
             self.loader.classSuiteFactory = BenchmarkClassSuite
             self.loader.testMethodFactory = BenchmarkMethod
             self.loader.methodPrefix = 'benchmark'
+        if randomize:
+            randomer = random.Random()
+            randomer.seed(randomize)
+            self.loader.sorter = lambda x : randomer.random()
+            self.reporter.write('Running tests shuffled with seed %d\n'
+                                % randomize)
 
     def addMethod(self, method):
         self.addTest(self.loader.loadMethod(method))
@@ -164,9 +143,12 @@ class TrialRoot(TestSuite):
         self.addTest(self.loader.loadDoctests(doctest))
 
     def _getBenchmarkStats(self):
+        # XXX -- This code assumes that there are two nested suites.
+        # This assumption is not warranted in any fashion.  Probably replace
+        # with a visitor pattern thing -- jml
         stat = {}
-        for r in self.children:
-            for m in r.children:
+        for r in self._tests:
+            for m in r._tests:
                 stat.update(getattr(m, 'benchmarkStats', {}))
         return stat
     benchmarkStats = property(_getBenchmarkStats)
@@ -200,15 +182,13 @@ class TrialRoot(TestSuite):
     def _initLogging(self):
         log.startKeepingErrors()
 
-    def run(self, randomize=None):
+    def run(self):
         self._initLogging()
         self.setStartTime()
-        if randomize is not None:
-            self.reporter.write('Running tests shuffled with seed %d' % randomize)
         # this is where the test run starts
         self.reporter.startSuite(self.countTestCases())
-        for tr in self._getChildren(randomize):
-            tr.run(self.reporter, (randomize is not None))
+        for tr in self._tests:
+            tr.run(self.reporter)
             if self.reporter.shouldStop:
                 break
         if self.benchmark:
@@ -223,7 +203,7 @@ class TrialRoot(TestSuite):
 
     def _visitChildren(self, visitor):
         """Visit all chilren of this test suite."""
-        for case in self._getChildren():
+        for case in self._tests:
             case.visit(visitor)
 
     def runningTime(self):
@@ -282,19 +262,22 @@ class UserMethodWrapper(object):
         pass
 
 
-class TestRunnerBase(TestSuite):
+class TestRunnerBase(pyunit.TestSuite):
     zi.implements(itrial.ITestRunner)
     
     def __init__(self, original):
-        TestSuite.__init__(self)
+        pyunit.TestSuite.__init__(self)
         self.original = original
 
-    def run(self, reporter, randomize):
+    def __call__(self, reporter):
+        return self.run(reporter)
+
+    def run(self, reporter):
         """Run all tests for this test runner, catching all exceptions.
         If a KeyboardInterrupt is caught set reporter.shouldStop."""
         _kickStartReactor()
         try:
-            self.runTests(reporter, randomize=randomize)
+            self.runTests(reporter)
         except KeyboardInterrupt:
             # KeyboardInterrupts are normal, not a bug in trial.
             # Just stop the test run, and do the usual reporting.
@@ -313,15 +296,15 @@ class TestRunnerBase(TestSuite):
 
     def _visitChildren(self, visitor):
         """Visit all chilren of this test suite."""
-        for case in self._getChildren():
+        for case in self._tests:
             case.visit(visitor)
 
 
 class ModuleSuite(TestRunnerBase):
-    def runTests(self, reporter, randomize=False):
+    def runTests(self, reporter):
         reporter.startModule(self.original)
-        for runner in self._getChildren(randomize):
-            runner.runTests(reporter, randomize)
+        for runner in self._tests:
+            runner.runTests(reporter)
         reporter.endModule(self.original)
 
     def visit(self, visitor):
@@ -341,7 +324,7 @@ class ClassSuite(TestRunnerBase):
     methodPrefix = 'test'
 
     def __init__(self, original):
-        super(ClassSuite, self).__init__(original)
+        TestRunnerBase.__init__(self, original)
         self.original = original
         self._testCase = self.original
         self._signalStateMgr = util.SignalStateManager()
@@ -372,7 +355,7 @@ class ClassSuite(TestRunnerBase):
             getPythonContainers(tearDown), 'suppress', None)
         return UserMethodWrapper(tearDown, suppress=suppress)
 
-    def runTests(self, reporter, randomize=False):
+    def runTests(self, reporter):
         janitor = util._Janitor()
         tci = self.testCaseInstance
         self.startTime = time.time()
@@ -394,7 +377,7 @@ class ClassSuite(TestRunnerBase):
                         error.raiseException()
                 else:
                     reporter.upDownError(setUpClass)
-                    for tm in self._getChildren():
+                    for tm in self._tests:
                         for error in setUpClass.errors:
                             reporter.addError(tm, error)
                         reporter.startTest(tm)
@@ -402,7 +385,7 @@ class ClassSuite(TestRunnerBase):
                     return
 
             # --- run methods ----------------------------------------------
-            for testMethod in self._getChildren(randomize):
+            for testMethod in self._tests:
                 log.msg("--> %s <--" % (testMethod.id()))
                 # suppression is handled by each testMethod
                 testMethod.run(reporter, tci)
@@ -601,7 +584,7 @@ class TestMethod(object):
 
 class BenchmarkMethod(TestMethod):
     def __init__(self, original):
-        super(BenchmarkMethod, self).__init__(original)
+        TestMethod.__init__(self, original)
         self.benchmarkStats = {}
 
     def run(self, reporter, testCaseInstance):
@@ -618,10 +601,11 @@ class TestLoader(object):
 
     def __init__(self, reporter):
         self.reporter = reporter
-        self.suiteFactory = TestSuite
+        self.suiteFactory = pyunit.TestSuite
         self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
         self.testMethodFactory = TestMethod
+        self.sorter = lambda x : x.__name__
 
     def _findTestClasses(self, module):
         """Given a module, return all trial Test classes"""
@@ -636,11 +620,11 @@ class TestLoader(object):
             ## CharacterAttributes is fixed.
             return isinstance(k, (types.ClassType, types.TypeType)) 
         classes = [val for name, val in inspect.getmembers(module, isclass)]
-        return filter(ITestCase.implementedBy, classes)
+        return dsu(filter(ITestCase.implementedBy, classes), self.sorter)
 
     def _findTestModules(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
-        return map(filenameToModule, glob.glob(modGlob))
+        return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
 
     def loadModule(self, module):
         suite = self.moduleSuiteFactory(module)
@@ -664,13 +648,13 @@ class TestLoader(object):
             klass.__init__ = lambda _: None
         factory = self.classSuiteFactory
         instance = klass()
-        methodNames = [ name for name in dir(instance)
+        methods = dsu([ getattr(klass, name) for name in dir(instance)
                         if name.startswith(self.methodPrefix)
-                        and callable(getattr(instance, name)) ]
+                        and callable(getattr(instance, name)) ],
+                      self.sorter)
         suite = factory(klass)
-        for mname in methodNames:
-            m = getattr(klass, mname)
-            suite.addTest(self.loadTestMethod(m))
+        for method in methods:
+            suite.addTest(self.loadTestMethod(method))
         return suite
 
     def loadMethod(self, method):

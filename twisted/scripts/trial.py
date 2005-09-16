@@ -83,6 +83,58 @@ TBFORMAT_MAP = {
     'verbose': 'verbose'
     }
 
+
+def _parseLocalVariables(line):
+    """Accepts a single line in Emacs local variable declaration format and
+    returns a dict of all the variables {name: value}.
+    Raises ValueError if 'line' is in the wrong format.
+
+    See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
+    """
+    paren = '-*-'
+    start = line.find(paren) + len(paren)
+    end = line.rfind(paren)
+    if start == -1 or end == -1:
+        raise ValueError("%r not a valid local variable declaration" % (line,))
+    items = line[start:end].split(';')
+    localVars = {}
+    for item in items:
+        if len(item.strip()) == 0:
+            continue
+        split = item.split(':')
+        if len(split) != 2:
+            raise ValueError("%r contains invalid declaration %r"
+                             % (line, item))
+        localVars[split[0].strip()] = split[1].strip()
+    return localVars
+
+
+def loadLocalVariables(filename):
+    """Accepts a filename and attempts to load the Emacs variable declarations
+    from that file, simulating what Emacs does.
+
+    See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
+    """
+    f = file(filename, "r")
+    lines = [f.readline(), f.readline()]
+    f.close()
+    for line in lines:
+        try:
+            return _parseLocalVariables(line)
+        except ValueError:
+            pass
+    return {}
+
+
+def isTestFile(filename):
+    """Returns true if 'filename' looks like a file containing unit tests.
+    False otherwise.  Doesn't care whether filename exists.
+    """
+    basename = os.path.basename(filename)
+    return (basename.startswith('test_')
+            and os.path.splitext(basename)[1] == ('.py'))
+
+
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
@@ -127,9 +179,6 @@ class Options(usage.Options):
     defaultReporter = None
 
     def __init__(self):
-        # make *absolutely* sure that we haven't loaded a reactor
-        # by this point
-        assert "twisted.internet.reactor" not in sys.modules
         usage.Options.__init__(self)
         self._logObserver = None
         self['modules'] = []
@@ -206,78 +255,27 @@ class Options(usage.Options):
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
 
-
     def opt_testmodule(self, filename):
-        "Module to grep for test cases (-*- test-case-name)"
-        # only look at the first two lines of the file. Try to behave as
-        # much like emacs local-variables scanner as is sensible
-
-        # XXX: This doesn't make sense! ------------------------------------
+        "Filename to grep for test cases (-*- test-case-name)"
+        # If the filename passed to this parameter looks like a test module
+        # we just add that to the test suite.
+        #
+        # If not, we inspect it for an Emacs buffer local variable called
+        # 'test-case-name'.  If that variable is declared, we try to add its
+        # value to the test suite as a module.
+        #
+        # This parameter allows automated processes (like Buildbot) to pass
+        # a list of files to Trial with the general expectation of "these files,
+        # whatever they are, will get tested"
         if not os.path.isfile(filename):
-            return
-
-        # recognize twisted/test/test_foo.py, which is itself a test case.
-        # also twisted/web/test/test_foo.py
-        d,f = os.path.split(filename)
-        if (d.startswith("twisted/") and d.endswith("/test")
-            and f.startswith("test_") and f.endswith(".py")):
-            modname = filename.replace("/",".")[:-3]
-            if modname not in self['modules']:
-                self['modules'].append(modname)
-            return
-        # ------------------------------------------------------------------
-
-        f = file(filename, "r")
-        lines = [f.readline(), f.readline()]
-        f.close()
-
-        m = []
-        for line in lines:
-            # insist upon -*- delimiters
-            res = re.search(r'-\*-(.*)-\*-', line)
-            if res:
-                # handle multiple variables
-                for var in res.group(1).split(";"):
-                    bits = var.split(":")
-                    # ignore malformed variables
-                    if len(bits) == 2 and bits[0].strip() == "test-case-name":
-                        for module in bits[1].split(","):
-                            module = module.strip()
-                            # avoid duplicates
-                            if module not in self['modules']:
-                                self['modules'].append(module)
-
-
-    def _deprecateOption(self, optName, alt):
-        msg = ("the --%s option is deprecated, "
-               "please just specify the %s on the command line "
-               "and trial will do the right thing") % (optName, alt)
-        warnings.warn(msg)
-
-    def opt_module(self, module):
-        "Module to test (DEPRECATED)"
-        self._deprecateOption('module', "fully qualified module name")
-        self._tryNamedAny(module)
-
-    def opt_package(self, package):
-        "Package to test (DEPRECATED)"
-        self._deprecateOption('package', "fully qualified package name")
-        self._tryNamedAny(package)
-
-    def opt_testcase(self, case):
-        "TestCase to test (DEPRECATED)"
-        self._deprecateOption('testcase', "fully qualified TestCase name")
-        self._tryNamedAny(case)
-
-    def opt_file(self, filename):
-        "Filename of module to test (DEPRECATED)"
-        self._deprecateOption('file', "path to your test file")
-        self._handleFile(filename)
-
-    def opt_method(self, method):
-        "Method to test (DEPRECATED)"
-        self._deprecateOption('method', "fully qualified method name")
-        self._tryNamedAny(method)
+            raise usage.UsageError("File %r doesn't exist" % (filename,))
+        if isTestFile(filename):
+            moduleName = reflect.filenameToModuleName(filename)
+        else:
+            localVars = loadLocalVariables(filename)
+            moduleName = localVars.get('test-case-name', None)
+        if moduleName is not None and moduleName not in self['modules']:
+            self._tryNamedAny(moduleName)
 
     def _handleFile(self, filename):
         m = None
@@ -348,13 +346,6 @@ class Options(usage.Options):
         except LogError, e:
             raise usage.UsageError, "%s not a valid debugging channel" % (e.args[0])
 
-
-    # the short, short version
-    opt_c = opt_testcase
-    opt_f = opt_file
-    opt_m = opt_module
-    opt_M = opt_method
-    opt_p = opt_package
     opt_x = opt_extra
 
     tracer = None
@@ -534,7 +525,8 @@ def _getSuite(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
-    suite = runner.TrialRoot(reporter, benchmark=config['benchmark'])
+    suite = runner.TrialRoot(reporter, benchmark=config['benchmark'],
+                             randomize=config['random'])
     for name, exc in config._couldNotImport:
         reporter.reportImportError(name, exc)
     
@@ -607,7 +599,7 @@ def _getDebugger(config):
     return dbg
 
 def _setUpDebugging(config, suite):
-    _getDebugger(config).runcall(suite.run, config['random'])
+    _getDebugger(config).runcall(suite.run)
 
 def _doProfilingRun(config, suite):
     if config['until-failure']:
@@ -616,7 +608,7 @@ def _doProfilingRun(config, suite):
     import profile
     prof = profile.Profile()
     try:
-        prof.runcall(suite.run, config['random'])
+        prof.runcall(suite.run)
         prof.dump_stats('profile.data')
     except SystemExit:
         pass
@@ -670,14 +662,14 @@ def reallyRun(config):
         if not config['debug']:
             def _doRun(config):
                 suite = _getSuite(config)
-                suite.run(config['random'])
+                suite.run()
                 return suite
             return call_until_failure(_doRun, config)
         else:
             def _doRun(config):
                 suite = _getSuite(config)
                 suite.debugger = suite.reporter.debugger = True
-                suite.run(config['random'])
+                suite.run()
                 return suite
             return _getDebugger(config).runcall(call_until_failure, _doRun,
                                                 config)
@@ -692,7 +684,7 @@ def reallyRun(config):
     elif config['profile']:
         _doProfilingRun(config, suite)
     else:
-        suite.run(config['random'])
+        suite.run()
     return suite
 
 

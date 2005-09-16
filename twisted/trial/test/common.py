@@ -133,8 +133,16 @@ class RegistryBaseMixin(object):
     # the reporter's setUp/tearDownReporter methods were called
     checkReporterSetup = True
 
-    tci = property(lambda self: self.suite.children[0].testCaseInstance)
-    tm = property(lambda self: self.suite.children[0].children[0])
+    # XXX -- the meaning of this property (tci) should be well defined.  It
+    # should *not* assume that the suite has unit tests, nor should it assume
+    # that those tests have testCaseInstance attributes jml
+    tci = property(lambda self: self.suite._tests[0].testCaseInstance)
+
+    # XXX -- tm assumes that self.suite has a suite as its first child 'test'
+    # and that that suite has a TestMethod as its first child.  This assumption
+    # is broken and unwarranted.  Further, the necessity and function of this
+    # property is unclear.  -- jml
+    tm = property(lambda self: self.suite._tests[0]._tests[0])
     stdio = property(lambda self: self.tm.stderr + self.tm.stdout)
 
     def setUpClass(self):
