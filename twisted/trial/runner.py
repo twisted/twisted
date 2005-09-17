@@ -609,18 +609,14 @@ class TestLoader(object):
 
     def _findTestClasses(self, module):
         """Given a module, return all trial Test classes"""
-        def isclass(k):
-            ## XXX -- work around. remove ASAP. 
-            ## inspect.isclass checks for ClassType and then if __bases__
-            ## is an attribute.
-            ## t.conch.insults.text.CharacterAttributes has a (buggy?) __getattr__
-            ## which returns objects for any given attribute.  Hence it has
-            ## __bases__, hence, inspect.isclass believes instances to be classes.
-            ## Remove this workaround and replace w/ inspect.isclass if
-            ## CharacterAttributes is fixed.
-            return isinstance(k, (types.ClassType, types.TypeType)) 
-        classes = [val for name, val in inspect.getmembers(module, isclass)]
-        return dsu(filter(ITestCase.implementedBy, classes), self.sorter)
+        classes = []
+        for name, val in inspect.getmembers(module):
+            try:
+                if ITestCase.implementedBy(val):
+                    classes.append(val)
+            except TypeError:
+                pass
+        return dsu(classes, self.sorter)
 
     def _findTestModules(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
