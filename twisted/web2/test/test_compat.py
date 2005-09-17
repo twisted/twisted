@@ -1,11 +1,16 @@
 from twisted.web2.test.test_server import BaseCase
+import sys
 
 class TestNevowCompat(BaseCase):
     todo = "Nevow compat doesn't work yet."
-    try:
-        import nevow
-    except ImportError:
-        skip = "can't run w/o nevow"
+
+    if not sys.version_info[:2] >= (2, 3):
+        skip = "nevow requires Python 2.3 or greater"
+    else:
+        try:
+            import nevow
+        except ImportError:
+            skip = "can't run w/o nevow"
 
     def testSimpleNevowResource(self):
         from nevow import rend
