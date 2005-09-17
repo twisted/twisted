@@ -279,21 +279,22 @@ class Options(usage.Options):
 
     def _handleFile(self, filename):
         m = None
-        if osp.isfile(filename):
-            try:
-                mname = reflect.filenameToModuleName(filename)
-                self._tryNamedAny(mname)
-            except ArgumentError:
-                # okay, not in PYTHONPATH...
-                path, fullname = osp.split(filename)
-                name, ext = osp.splitext(fullname)
-                m = new.module(name)
-                sourcestring = file(filename, 'r').read()
-                sourcestring = sourcestring.replace('\r\n', '\n')
-                code = compile(sourcestring, filename, 'exec')
-                exec code in m.__dict__
-                sys.modules[name] = m
-        self['modules'].append(m)
+        if not osp.isfile(filename):
+            return
+        try:
+            mname = reflect.filenameToModuleName(filename)
+            self._tryNamedAny(mname)
+        except ArgumentError:
+            # okay, not in PYTHONPATH...
+            path, fullname = osp.split(filename)
+            name, ext = osp.splitext(fullname)
+            m = new.module(name)
+            sourcestring = file(filename, 'r').read()
+            sourcestring = sourcestring.replace('\r\n', '\n')
+            code = compile(sourcestring, filename, 'exec')
+            exec code in m.__dict__
+            sys.modules[name] = m
+            self['modules'].append(m)
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
