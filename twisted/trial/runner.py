@@ -615,6 +615,7 @@ class TestLoader(object):
                 if ITestCase.implementedBy(val):
                     classes.append(val)
             except TypeError:
+                # val is not a class / type, and therefore not a test class
                 pass
         return dsu(classes, self.sorter)
 
