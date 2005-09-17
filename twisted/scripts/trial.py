@@ -632,26 +632,20 @@ class DryRunVisitor(TestVisitor):
         self.reporter = reporter
         
     def visitModule(self, testModuleSuite):
-        # FIXME -- the reporter expects this to be a real module
         orig = testModuleSuite.original
-        if hasattr(orig, '__name__'):
-            self.reporter.startModule(orig)
+        self.reporter.startModule(orig)
 
     def visitModuleAfter(self, testModuleSuite):
-        # FIXME -- the reporter expects this to be a real module
         orig = testModuleSuite.original
-        if hasattr(orig, '__name__'):
-            self.reporter.endModule(orig)
+        self.reporter.endModule(orig)
 
     def visitClass(self, testClassSuite):
-        # FIXME -- the reporter expects _testCase to be a real class
-        if hasattr(testClassSuite, '_testCase'):
-            self.reporter.startClass(testClassSuite._testCase)
+        orig = testClassSuite.original
+        self.reporter.startClass(orig)
 
     def visitClassAfter(self, testClassSuite):
-        # FIXME -- the reporter expects _testCase to be a real class
-        if hasattr(testClassSuite, '_testCase'):
-            self.reporter.endClass(testClassSuite._testCase)
+        orig = testClassSuite.original
+        self.reporter.endClass(orig)
 
     def visitCase(self, testCase):
         self.reporter.startTest(testCase)

@@ -49,22 +49,30 @@ def isPackageDirectory(dirname):
         if os.path.exists(os.path.join(dirname,
                                        os.extsep.join(('__init__', ext)))):
             return True
-    return False
+        return False
 
 
 def filenameToModule(fn):
     return reflect.namedModule(reflect.filenameToModuleName(fn))
 
 
-class DocTestSuite(pyunit.TestSuite):
+class TestSuite(pyunit.TestSuite):
+    def visit(self, visitor):
+        for case in self._tests:
+            case.visit(visitor)
+
+
+class DocTestSuite(TestSuite):
     def __init__(self, testModule):
-        pyunit.TestSuite.__init__(self)
+        TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
             self.addTest(PyUnitTestMethod(test))
 
 
 class PyUnitTestMethod(object):
+    zi.implements(itrial.ITestMethod)
+
     def __init__(self, test):
         self._test = test
 
@@ -75,6 +83,9 @@ class PyUnitTestMethod(object):
         return 1
 
     def id(self):
+        return self._test.shortDescription()
+
+    def shortDescription(self):
         return self._test.shortDescription()
 
     def getTodo(self):
@@ -92,6 +103,10 @@ class PyUnitTestMethod(object):
     def run(self, reporter):
         return self._test.run(reporter)
         
+    def visit(self, visitor):
+        """Call visitor.visitCase(self)."""
+        visitor.visitCase(self)
+
 
 class TrialRoot(pyunit.TestSuite):
     """This is the main organizing object. The front-end script creates a
@@ -601,7 +616,7 @@ class TestLoader(object):
 
     def __init__(self, reporter):
         self.reporter = reporter
-        self.suiteFactory = pyunit.TestSuite
+        self.suiteFactory = TestSuite
         self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
         self.testMethodFactory = TestMethod
