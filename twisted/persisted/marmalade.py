@@ -14,7 +14,7 @@ identical.
 """
 
 import warnings
-warnings.warn("twisted.persisted.marmalade is deprecated", DeprecationWarning)
+warnings.warn("twisted.persisted.marmalade is deprecated", DeprecationWarning, stacklevel=2)
 
 import new
 
