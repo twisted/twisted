@@ -265,10 +265,10 @@ class Reporter(object):
         for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 
-    def startSuite(self, count):
+    def startTrial(self, count):
         """Inform the user how many tests are being run."""
 
-    def endSuite(self, suite):
+    def endTrial(self, suite):
         self.write("\n")
         self._reportFailures()
         self.write("%s\n" % SEPARATOR)
@@ -279,7 +279,7 @@ class Reporter(object):
 
 
 class MinimalReporter(Reporter):
-    def endSuite(self, suite):
+    def endTrial(self, suite):
         numTests = suite.countTestCases()
         t = (suite.runningTime(), numTests, numTests,
              len(self.couldNotImport), len(self.results[ERROR]),
@@ -362,7 +362,7 @@ class TreeReporter(VerboseTextReporter):
             self.seenClasses[qualifiedClsName] = 1
             self.write('    %s\n' % clsName)
 
-    def startSuite(self, count):
+    def startTrial(self, count):
         """Inform the user how many tests are being run."""
         self.write("Running %d tests.\n", count)
 

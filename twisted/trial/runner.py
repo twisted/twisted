@@ -172,7 +172,7 @@ class TrialRoot(pyunit.TestSuite):
         self.endTime = time.time()
         # hand the reporter the TrialRoot to give it access to all information
         # from the test run
-        self.reporter.endSuite(self)
+        self.reporter.endTrial(self)
         try:
             self.reporter.tearDownReporter()
         except:
@@ -201,7 +201,7 @@ class TrialRoot(pyunit.TestSuite):
         self._initLogging()
         self.setStartTime()
         # this is where the test run starts
-        self.reporter.startSuite(self.countTestCases())
+        self.reporter.startTrial(self.countTestCases())
         for tr in self._tests:
             tr.run(self.reporter)
             if self.reporter.shouldStop:
