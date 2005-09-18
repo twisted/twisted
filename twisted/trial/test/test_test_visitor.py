@@ -21,9 +21,9 @@ class TestTestVisitor(TestCase):
                     self.calls.append(("module", testModule))
                 def visitModuleAfter(self, testModule):
                     self.calls.append(("module_after", testModule))
-                def visitSuite(self, testSuite):
+                def visitTrial(self, testSuite):
                     self.calls.append(("suite", testSuite))
-                def visitSuiteAfter(self, testSuite):
+                def visitTrialAfter(self, testSuite):
                     self.calls.append(("suite_after", testSuite))
             self.mock_visitor = MockVisitor
         except ImportError:

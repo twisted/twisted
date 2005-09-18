@@ -212,9 +212,9 @@ class TrialRoot(pyunit.TestSuite):
 
     def visit(self, visitor):
         """Call visitor,visitSuite(self) and visit all child tests."""
-        visitor.visitSuite(self)
+        visitor.visitTrial(self)
         self._visitChildren(visitor)
-        visitor.visitSuiteAfter(self)
+        visitor.visitTrialAfter(self)
 
     def _visitChildren(self, visitor):
         """Visit all chilren of this test suite."""

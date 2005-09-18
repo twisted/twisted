@@ -174,10 +174,10 @@ class TestVisitor(object):
     def visitModuleAfter(self, testModule):
         """Visit the TestModuleSuite testModule after its children."""
 
-    def visitSuite(self, testSuite):
+    def visitTrial(self, testSuite):
         """Visit the TestSuite testSuite."""
 
-    def visitSuiteAfter(self, testSuite):
+    def visitTrialAfter(self, testSuite):
         """Visit the TestSuite testSuite after its children."""
 
 
