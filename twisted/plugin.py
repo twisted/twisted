@@ -117,6 +117,10 @@ except NameError:
         is missing.
         """
 
+# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+ERROR_PATH_NOT_FOUND = 3
+ERROR_INVALID_NAME = 123
+
 def getCache(module):
     topcache = {}
     for p in module.__path__:
@@ -132,10 +136,13 @@ def getCache(module):
         try:
             dropinNames = os.listdir(p)
         except WindowsError, e:
-            if e.errno != 3:
-                raise
-            else:
+            if e.errno == ERROR_PATH_NOT_FOUND:
                 continue
+            elif e.errno == ERROR_INVALID_NAME:
+                log.msg("Invalid path %r in search path for %s" % (p, module.__name__))
+                continue
+            else:
+                raise
         except OSError, ose:
             if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
                 raise
