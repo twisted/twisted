@@ -48,8 +48,8 @@ class TestModuleTest(unittest.TestCase):
     def test_actuallyRuns(self):
         from twisted.internet import interfaces, reactor
         if not interfaces.IReactorProcess.providedBy(reactor):
-            raise SkipTest("This test runs an external process. "
-                           "This reactor doesn't support it.")
+            raise unittest.SkipTest("This test runs an external process. "
+                                    "This reactor doesn't support it.")
         import test_output, os
         d = test_output.runTrialWithEnv(os.environ, '--testmodule',
                                         sibpath('moduletest.py'))
