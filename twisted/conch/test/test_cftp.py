@@ -42,7 +42,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
     def connectionMade(self):
         self.connected = 1
-        
+
     def clearBuffer(self):
         self.buffer = ''
 
@@ -82,7 +82,7 @@ class CFTPClientTestBase(SFTPTestBase):
         self.server.stopListening()
         util.spinWhile(lambda:self.server.connected)
         reactor.iterate()
-       
+
     def tearDownClass(self):
         for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
             try:
@@ -97,9 +97,9 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
            return
         test_process.SignalMixin.setUpClass(self)
         CFTPClientTestBase.setUpClass(self)
-        
+
         self.startServer()
-        cmds = ('-p %i -l testuser ' 
+        cmds = ('-p %i -l testuser '
                '--known-hosts kh_test '
                '--user-authentications publickey '
                '--host-key-algorithms ssh-rsa '
@@ -112,7 +112,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         cmds = test_conch._makeArgs((cmds % port).split(), mod='cftp')
         log.msg('running %s %s' % (sys.executable, cmds))
         self.processProtocol = SFTPTestProcess()
-        
+
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(self.processProtocol, sys.executable, cmds,
@@ -199,7 +199,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
 
     def testGet(self):
         getRes = self._getCmdResult('get testfile1 "sftp_test/test file2"')
-        self._failUnlessFilesEqual('sftp_test/testfile1', 
+        self._failUnlessFilesEqual('sftp_test/testfile1',
                 'sftp_test/test file2', "get failed")
         self.failUnless(getRes.endswith("Transferred %s/sftp_test/testfile1 to sftp_test/test file2" % os.getcwd()))
         self.failIf(self._getCmdResult('rm "test file2"'))
@@ -222,7 +222,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         self.failUnless(putRes.endswith('Transferred sftp_test/testfile1 to %s/sftp_test/test"file2' % os.getcwd()))
         self.failIf(self._getCmdResult('rm "test\\"file2"'))
         self.failIf(os.path.exists('sftp_test/test"file2'))
-        
+
     def testWildcardPut(self):
         self.failIf(self._getCmdResult('cd ..'))
         getRes = self._getCmdResult('put sftp_test/testR*')
@@ -249,7 +249,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         self.failIf(self._getCmdResult('rmdir testMakeDirectory'))
         self.failIf(self._getCmdResult('lmkdir sftp_test/testLocalDirectory'))
         self.failIf(self._getCmdResult('rmdir testLocalDirectory'))
-    
+
     def testRename(self):
         self.failIf(self._getCmdResult('rename testfile1 testfile2'))
         lsRes = self._getCmdResult('ls testfile?').split('\n')
@@ -407,7 +407,7 @@ exit
         self.conn.transport.loseConnection()
         util.spinWhile(lambda:not self.conn.transport.transport.connected)
         self.stopServer()
- 
+
 if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
     TestOurServerBatchFile.skip = "don't run w/o spawnProcess or PyCrypto"

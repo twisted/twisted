@@ -49,7 +49,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
     test the handling of reading/signing/verifying with RSA and DSA keys
     assumed test keys are in test/
     """
-    
+
     if not Crypto:
         skip = "cannot run w/o PyCrypto"
 
@@ -111,4 +111,3 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
                 keys.getPrivateKeyObject(data = encData,
                                      passphrase = 'test').__getstate__(),
                 privKey.__getstate__())
-

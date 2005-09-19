@@ -18,13 +18,13 @@ from twisted.python import components, log, failure
 
 import os
 
-class FileTransferTestAvatar(avatar.ConchUser): 
+class FileTransferTestAvatar(avatar.ConchUser):
 
     def __init__(self):
         avatar.ConchUser.__init__(self)
         self.channelLookup['session'] = session.SSHSession
         self.subsystemLookup['sftp'] = filetransfer.FileTransferServer
-            
+
     def _runAsUser(self, f, *args, **kw):
         try:
             f = iter(f)
@@ -93,20 +93,20 @@ class SFTPTestBase(unittest.TestCase):
 
 
     def tearDown(self):
-        for f in ['testfile1', 'testRemoveFile', 'testRenameFile', 
-                  'testRenamedFile', 'testLink', 'testfile2', 
+        for f in ['testfile1', 'testRemoveFile', 'testRenameFile',
+                  'testRenamedFile', 'testLink', 'testfile2',
                   '.testHiddenFile']:
             try:
                 os.remove('sftp_test/' + f)
             except OSError:
                 pass
-        for d in ['sftp_test/testDirectory', 'sftp_test/testMakeDirectory', 
+        for d in ['sftp_test/testDirectory', 'sftp_test/testMakeDirectory',
                 'sftp_test']:
             try:
                 os.rmdir(d)
             except:
                 pass
-       
+
 
 class TestOurServerOurClient(SFTPTestBase):
 
@@ -125,7 +125,7 @@ class TestOurServerOurClient(SFTPTestBase):
             self._serverVersion = serverVersion
             self._extData = extData
         self.client.gotServerVersion = _
-        serverTransport = loopback.LoopbackRelay(self.client) 
+        serverTransport = loopback.LoopbackRelay(self.client)
         self.client.makeConnection(clientTransport)
         self.server.makeConnection(serverTransport)
 
@@ -202,7 +202,7 @@ class TestOurServerOurClient(SFTPTestBase):
         d = self.client.getAttrs("testMakeDirectory")
         attrs = self._waitWithBuffer(d)
         # XXX not until version 4/5
-        # self.failUnlessEqual(filetransfer.FILEXFER_TYPE_DIRECTORY&attrs['type'], 
+        # self.failUnlessEqual(filetransfer.FILEXFER_TYPE_DIRECTORY&attrs['type'],
         #                     filetransfer.FILEXFER_TYPE_DIRECTORY)
 
         d = self.client.removeDirectory("testMakeDirectory")
@@ -222,8 +222,8 @@ class TestOurServerOurClient(SFTPTestBase):
                     break
             files.append(f[0])
         files.sort()
-        self.failUnlessEqual(files, ['.testHiddenFile', 'testDirectory', 
-                'testRemoveFile', 'testRenameFile', 'testfile1']) 
+        self.failUnlessEqual(files, ['.testHiddenFile', 'testDirectory',
+                'testRemoveFile', 'testRenameFile', 'testfile1'])
         d = openDir.close()
         result = self._waitWithBuffer(d)
 
@@ -244,5 +244,3 @@ class TestOurServerOurClient(SFTPTestBase):
         self.failUnlessEqual(self._waitWithBuffer(d), 'bar')
         d = self.client.extendedRequest('testBadRequest', '')
         self.failUnlessRaises(NotImplementedError, self._waitWithBuffer, d)
-
-

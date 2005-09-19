@@ -21,7 +21,7 @@ from test_recvline import LoopbackRelay
 import struct
 
 class ConchTestRealm:
-    
+
     def requestAvatar(self, avatarID, mind, *interfaces):
         unittest.assertEquals(avatarID, 'testuser')
         a = ConchTestAvatar()
@@ -29,7 +29,7 @@ class ConchTestRealm:
 
 class ConchTestAvatar(avatar.ConchUser):
     loggedOut = False
-    
+
     def __init__(self):
         avatar.ConchUser.__init__(self)
         self.listeners = {}
@@ -68,7 +68,7 @@ class ConchTestAvatar(avatar.ConchUser):
         del self.listeners[(host, port)]
         listener.stopListening()
         return 1
-            
+
     def logout(self):
         loggedOut = True
         for listener in self.listeners.values():
@@ -100,7 +100,7 @@ class ConchSessionForTestAvatar:
 
     def execCommand(self, proto, cmd):
         self.cmd = cmd
-        unittest.assert_(cmd.split()[0] in ['false', 'echo', 'secho', 'eecho','jumboliah'], 
+        unittest.assert_(cmd.split()[0] in ['false', 'echo', 'secho', 'eecho','jumboliah'],
                 'invalid command: %s' % cmd.split()[0])
         if cmd == 'jumboliah':
             raise error.ConchError('bad exec')
@@ -121,7 +121,7 @@ class ConchSessionForTestAvatar:
             t.write(cmd[6:])
             t.loseConnection()
         self.avatar.conn.transport.expectedLoseConnection = 1
-        
+
 #    def closeReceived(self):
 #        #if self.proto:
 #        #   self.proto.transport.loseConnection()
@@ -157,7 +157,7 @@ class CrazySubsystem(protocol.Protocol):
 class FalseTransport:
 
     def __init__(self, p):
-        p.makeConnection(self) 
+        p.makeConnection(self)
         p.processEnded(failure.Failure(ProcessTerminated(255, None, None)))
 
     def loseConnection(self):
@@ -325,8 +325,8 @@ if Crypto: # stuff that needs PyCrypto to even import
             self.expectedLoseConnection = 1
             self.loseConnection()
 
-    class ConchTestServer(ConchTestBase, transport.SSHServerTransport): 
-        
+    class ConchTestServer(ConchTestBase, transport.SSHServerTransport):
+
         def connectionLost(self, reason):
             ConchTestBase.connectionLost(self, reason)
             transport.SSHServerTransport.connectionLost(self, reason)
@@ -483,7 +483,7 @@ if Crypto: # stuff that needs PyCrypto to even import
 
         def request_exit_status(self, status):
             self.status ,= struct.unpack('>L', status)
-            
+
         def eofReceived(self):
             log.msg('eof received')
             self.eofCalled = 1
@@ -525,7 +525,7 @@ if Crypto: # stuff that needs PyCrypto to even import
 
         def request_exit_status(self, status):
             self.status ,= struct.unpack('>L', status)
-            
+
         def eofReceived(self):
             log.msg('eof received')
             self.eofCalled = 1
@@ -568,7 +568,7 @@ if Crypto: # stuff that needs PyCrypto to even import
 
         def request_exit_status(self, status):
             self.status ,= struct.unpack('>L', status)
-            
+
         def eofReceived(self):
             log.msg('eof received')
             self.eofCalled = 1
@@ -585,7 +585,7 @@ if Crypto: # stuff that needs PyCrypto to even import
             return 1
 
     class SSHTestShellChannel(channel.SSHChannel):
-        
+
         name = 'session'
         testBuf = ''
         eofCalled = 0
@@ -662,7 +662,7 @@ if Crypto: # stuff that needs PyCrypto to even import
             d2 = self.conn.sendGlobalRequest('foo-2', 'bar2', 1)
             d2.addCallback(lambda x: unittest.assertEquals(x, 'data'))
             d2.addErrback(self._ebSecondGlobal)
-            
+
             d3 = self.conn.sendGlobalRequest('bar', 'foo', 1)
             d3.addCallback(self._cbThirdGlobal)
             d3.addErrback(lambda x,s=self: log.msg('subsystem finished') or s.conn.addResult() or s.loseConnection())
@@ -705,7 +705,7 @@ class SSHProtocolTestCase(unittest.TestCase):
 
         self.server.makeConnection(self.serverTransport)
         self.client.makeConnection(self.clientTransport)
-        
+
         def _notDone():
             while self.serverTransport.buffer or self.clientTransport.buffer:
                 log.callWithContext({'system': 'serverTransport'}, self.serverTransport.clearBuffer)

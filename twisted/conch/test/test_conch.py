@@ -63,7 +63,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
     def connectionMade(self):
         reactor.callLater(1, self._connect)
-    
+
     def _connect(self):
         self.connected = 1
         cc = protocol.ClientCreator(reactor, ConchTestForwardingPort, self)
@@ -122,7 +122,7 @@ from test_keys import publicDSA_openssh, privateDSA_openssh
 if Crypto:
     from twisted.conch.client import options, default, connect
     from twisted.conch.error import ConchError
-    from twisted.conch.ssh import keys, transport, factory, forwarding 
+    from twisted.conch.ssh import keys, transport, factory, forwarding
     from twisted.conch.ssh import connection, common, session, channel
     from Crypto.PublicKey import RSA, DSA
 
@@ -140,7 +140,7 @@ if Crypto:
             self.connected = 0
             self.remoteForwards = {}
 
-        
+
         def serviceStarted(self):
             if self.spawn:
                 env = os.environ.copy()
@@ -150,7 +150,7 @@ if Crypto:
 
         def requestRemoteForwarding(self, remotePort, hostport):
             data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-            d = self.sendGlobalRequest('tcpip-forward', data, 
+            d = self.sendGlobalRequest('tcpip-forward', data,
                                        wantReply=1)
             log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
             d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
@@ -160,7 +160,7 @@ if Crypto:
             log.msg('accepted remote forwarding %s:%s' % (remotePort, hostport))
             self.remoteForwards[remotePort] = hostport
             log.msg(repr(self.remoteForwards))
-        
+
         def _ebRemoteForwarding(self, f, remotePort, hostport):
             log.msg('remote forwarding %s:%s failed' % (remotePort, hostport))
             log.msg(f)
@@ -190,7 +190,7 @@ if Crypto:
             else:
                 raise ConchError(connection.OPEN_CONNECT_FAILED, "don't know about that port")
 
-        
+
 
 def _makeArgs(args, mod="conch"):
     start = [sys.executable, '-c'
@@ -329,14 +329,14 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                ' 127.0.0.1 ' + args
         cmds = _makeArgs(cmd.split())
         log.msg(str(cmds))
-        
+
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(p, sys.executable, cmds, env=env)
 
         # wait for process to finish
         util.spinWhile(lambda: not p.done, timeout=30)
-        
+
         # cleanup
         if not p.done:
             p.transport.signalProcess('KILL')
@@ -352,7 +352,7 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                 '--known-hosts kh_test '
                 '--user-authentications publickey '
                 '--host-key-algorithms ssh-rsa '
-                '-a ' 
+                '-a '
                 '-K direct '
                 '-i dsa_test '
                 '127.0.0.1') % port
@@ -372,7 +372,7 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         uao = default.SSHUserAuthClient(o['user'], o, conn)
         d = connect.connect(o['host'], int(o['port']), o, vhk, uao)
         d.addErrback(lambda f: unittest.fail('Failure connecting to test server: %s' % f))
-        
+
         util.spinWhile(lambda: not p.done, timeout=30)
 
         # cleanup
