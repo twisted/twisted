@@ -146,7 +146,6 @@ class Options(usage.Options):
                 ["nopm", None, "don't automatically jump into debugger for postmorteming of exceptions"],
                 ["dry-run", 'n', "do everything but run the tests"],
                 ["profile", None, "Run tests under the Python profiler"],
-                ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["recurse", "R", "Search packages recursively"],
                 ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
@@ -526,8 +525,7 @@ def _getSuite(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
-    suite = runner.TrialRoot(reporter, benchmark=config['benchmark'],
-                             randomize=config['random'])
+    suite = runner.TrialRoot(reporter, randomize=config['random'])
     for name, exc in config._couldNotImport:
         reporter.reportImportError(name, exc)
     

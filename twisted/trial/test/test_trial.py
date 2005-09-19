@@ -94,47 +94,10 @@ class TestSkip(common.RegistryBaseMixin, unittest.TestCase):
         from twisted import trial
         from twisted.trial.test.common import BogusReporter
 
-        suite = self._getSuite(newSuite=True, benchmark=False)
+        suite = self._getSuite(newSuite=True)
         suite.addTestClass(SkipperTester)
         suite.run()
         self.failIf(SkipperTester.errorStr, SkipperTester.errorStr)
-
-
-class TestBenchmark(object):
-
-    class Benchmark(common.BaseTest, unittest.TestCase):
-        def benchmarkValues(self):
-            self.methodCalled = True
-            self.recordStat(statdatum)
-
-    def testBenchmark(self):
-        from twisted.trial.test.common import BogusReporter
-        from twisted import trial
-        
-        suite = runner.TrialRoot(BogusReporter(), benchmark=True)
-        suite.addTestClass(self.Benchmark)
-        suite.run()
-
-        stats = pickle.load(file('test.stats', 'rb'))
-        failUnlessEqual(stats, {reflect.qual(self.Benchmark.benchmarkValues): statdatum})
-
-
-class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
-    def testBenchmark(self):
-        from twisted import trial
-        
-        # this is side-effecty and awful, for details, take a look at the
-        # suite property of common.RegistryBaseMixin
-        suite = runner.TrialRoot(self.reporter, benchmark=True)
-        suite.addTestClass(TestBenchmark.Benchmark)
-        suite.run()
-
-        stats = pickle.load(file('test.stats', 'rb'))
-        meth = TestBenchmark.Benchmark.benchmarkValues
-        mod = 'twisted.trial.test.test_trial'
-        meth = 'Benchmark.benchmarkValues'
-        failUnlessEqual(stats, {mod + '.' + meth: statdatum})
-
 
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')

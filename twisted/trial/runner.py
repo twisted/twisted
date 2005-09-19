@@ -117,17 +117,12 @@ class TrialRoot(pyunit.TestSuite):
     """
     zi.implements(itrial.ITrialRoot)
 
-    def __init__(self, reporter, benchmark=0, randomize=None):
+    def __init__(self, reporter, randomize=None):
         pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
         self.loader = TestLoader(reporter)
         self.startTime, self.endTime = None, None
-        self.benchmark = benchmark
-        if benchmark:
-            self.loader.classSuiteFactory = BenchmarkClassSuite
-            self.loader.testMethodFactory = BenchmarkMethod
-            self.loader.methodPrefix = 'benchmark'
         if randomize:
             randomer = random.Random()
             randomer.seed(randomize)
@@ -156,17 +151,6 @@ class TrialRoot(pyunit.TestSuite):
 
     def addDoctest(self, doctest):
         self.addTest(self.loader.loadDoctests(doctest))
-
-    def _getBenchmarkStats(self):
-        # XXX -- This code assumes that there are two nested suites.
-        # This assumption is not warranted in any fashion.  Probably replace
-        # with a visitor pattern thing -- jml
-        stat = {}
-        for r in self._tests:
-            for m in r._tests:
-                stat.update(getattr(m, 'benchmarkStats', {}))
-        return stat
-    benchmarkStats = property(_getBenchmarkStats)
 
     def _kickStopRunningStuff(self):
         self.endTime = time.time()
@@ -206,8 +190,6 @@ class TrialRoot(pyunit.TestSuite):
             tr.run(self.reporter)
             if self.reporter.shouldStop:
                 break
-        if self.benchmark:
-            pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
         self._kickStopRunningStuff()
 
     def visit(self, visitor):
@@ -433,11 +415,6 @@ class ClassSuite(TestRunnerBase):
         visitor.visitClassAfter(self)
 
 
-class BenchmarkClassSuite(ClassSuite):
-    """I run benchmarking tests"""
-    methodPrefix = 'benchmark'
-        
-
 def getPythonContainers(meth):
     """Walk up the Python tree from method 'meth', finding its class, its module
     and all containing packages."""
@@ -596,19 +573,6 @@ class TestMethod(object):
         """Call visitor.visitCase(self)."""
         visitor.visitCase(self)
 
-
-class BenchmarkMethod(TestMethod):
-    def __init__(self, original):
-        TestMethod.__init__(self, original)
-        self.benchmarkStats = {}
-
-    def run(self, reporter, testCaseInstance):
-        # WHY IS THIS MONKEY PATCH HERE?
-        def _recordStat(datum):
-            self.benchmarkStats[self.id()] = datum
-        testCaseInstance.recordStat = _recordStat
-        self.original(testCaseInstance)
-        
 
 class TestLoader(object):
     methodPrefix = 'test'
