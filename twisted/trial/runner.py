@@ -43,6 +43,12 @@ def _kickStartReactor():
         _reactorKickStarted = True
 
 
+def isPackage(module):
+    """Given a module returns True if the module looks like a package"""
+    basename = os.path.splitext(os.path.basename(module.__file__))[0]
+    return basename == '__init__'
+
+    
 def isPackageDirectory(dirname):
     """Is the directory at path 'dirname' a Python package directory?"""
     for ext in 'py', 'so', 'pyd', 'dll':
@@ -641,7 +647,9 @@ class TestLoader(object):
     def loadTestMethod(self, method):
         return self.testMethodFactory(method)
 
-    def loadPackage(self, package):
+    def loadPackage(self, package, recurse=False):
+        if recurse:
+            return self.loadPackageRecursive(package)
         suite = self.suiteFactory()
         for module in self._findTestModules(package):
             suite.addTest(self.loadModule(module))
@@ -677,3 +685,16 @@ class TestLoader(object):
             warnings.warn("trial only supports doctesting modules")
             return
         return DocTestSuite(module)
+
+    def loadAnything(self, thing, recurse=False):
+        if isinstance(thing, types.ModuleType):
+            if isPackage(thing):
+                return self.loadPackage(thing, recurse)
+            return self.loadModule(thing)
+        elif isinstance(thing, types.ClassType):
+            return self.loadClass(thing)
+        elif isinstance(thing, type):
+            return self.loadClass(thing)
+        elif isinstance(thing, types.MethodType):
+            return self.loadMethod(thing)
+        raise TypeError("No loader for %r. Unrecognized type" % (thing,)) 

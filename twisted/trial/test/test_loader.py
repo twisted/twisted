@@ -1,3 +1,5 @@
+import sys
+from twisted.python import util
 from twisted.trial import unittest
 from twisted.trial import runner, reporter
 
@@ -31,6 +33,10 @@ class LoaderTest(unittest.TestCase):
     def setUp(self):
         self.reporter = reporter.Reporter()
         self.loader = runner.TestLoader(self.reporter)
+        sys.path.append(util.sibpath(__file__, 'foo'))
+
+    def tearDown(self):
+        sys.path.pop()
 
     def test_loadClass(self):
         import sample
@@ -43,3 +49,50 @@ class LoaderTest(unittest.TestCase):
         import sample
         suite = self.loader.loadModule(sample)
         self.failUnlessEqual(7, suite.countTestCases())
+
+    def test_loadPackage(self):
+        import goodpackage
+        suite = self.loader.loadPackage(goodpackage)
+        self.failUnlessEqual(7, suite.countTestCases())
+
+    def test_loadPackageRecursive(self):
+        import goodpackage
+        suite = self.loader.loadPackage(goodpackage, recurse=True)
+        self.failUnlessEqual(14, suite.countTestCases())
+
+    def test_loadAnythingOnModule(self):
+        import sample
+        suite = self.loader.loadAnything(sample)
+        self.failUnless(isinstance(suite, self.loader.moduleSuiteFactory))
+        self.failUnlessEqual(suite.original, sample)
+
+    def test_loadAnythingOnClass(self):
+        import sample
+        suite = self.loader.loadAnything(sample.FooTest)
+        self.failUnless(isinstance(suite, self.loader.classSuiteFactory),
+                        '%r is not an instance of ClassSuite' % (suite,))
+        self.failUnlessEqual(suite.original, sample.FooTest)
+        self.failUnlessEqual(2, suite.countTestCases())
+        
+    def test_loadAnythingOnMethod(self):
+        import sample
+        suite = self.loader.loadAnything(sample.FooTest.test_foo)
+        self.failUnless(isinstance(suite, self.loader.classSuiteFactory),
+                        '%r is not an instance of ClassSuite' % (suite,))
+        self.failUnlessEqual(1, suite.countTestCases())
+
+    def test_loadAnythingOnPackage(self):
+        import goodpackage
+        suite = self.loader.loadAnything(goodpackage)
+        self.failUnless(isinstance(suite, self.loader.suiteFactory))
+        self.failUnlessEqual(7, suite.countTestCases())
+        
+    def test_loadAnythingOnPackageRecursive(self):
+        import goodpackage
+        suite = self.loader.loadAnything(goodpackage, recurse=True)
+        self.failUnless(isinstance(suite, self.loader.suiteFactory))
+        self.failUnlessEqual(14, suite.countTestCases())
+        
+    def test_loadAnythingOnString(self):
+        self.failUnlessRaises(TypeError,
+                              self.loader.loadAnything, "goodpackage")
