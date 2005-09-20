@@ -79,10 +79,10 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             ])
 
         def gotOutputAndValue((out, err, code)):
-            self.assertEquals(out, "hello world!\n")
-            self.assertEquals(err, "goodbye world!\n")
+            self.assertEquals(out, "hello world!" + os.linesep)
+            self.assertEquals(err, "goodbye world!" + os.linesep)
             self.assertEquals(code, 1)
-        d = utils.getProcessOutputAndValue(exe, ['-u', scriptFile])
+        d = utils.getProcessOutputAndValue(exe, [scriptFile])
         return d.addCallback(gotOutputAndValue)
 
     def testOutputSignal(self):
