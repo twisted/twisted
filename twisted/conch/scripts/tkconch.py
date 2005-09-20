@@ -13,6 +13,7 @@ import Tkinter, tkFileDialog, tkFont, tkMessageBox, string
 from twisted.conch.ui import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
+from twisted.conch.client.default import isInKnownHosts
 from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
 
@@ -361,7 +362,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         #d.addCallback(lambda x:defer.succeed(1))
         #d.callback(2)
         #return d
-        goodKey = self.isInKnownHosts(options['host'], pubKey)
+        goodKey = isInKnownHosts(options['host'], pubKey, {'known-hosts': None})
         if goodKey == 1: # good key
             return defer.succeed(1)
         elif goodKey == 2: # AAHHHHH changed
@@ -398,35 +399,6 @@ class SSHClientTransport(transport.SSHClientTransport):
         except:
             log.deferr()
             raise error.ConchError 
-
-    def isInKnownHosts(self, host, pubKey):
-        """checks to see if host is in the known_hosts file for the user.
-        returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
-        """
-        keyType = common.getNS(pubKey)[0]
-        retVal = 0
-        try:
-            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'))
-        except IOError:
-            return 0
-        for line in known_hosts.xreadlines():
-            split = line.split()
-            if len(split) != 3: # old 4-field known_hosts entry (ssh1?)
-                continue
-            hosts, hostKeyType, encodedKey = split
-            if not host in hosts.split(','): # incorrect host
-                continue
-            if not hostKeyType == keyType: # incorrect type of key
-                continue
-            try:
-                decodedKey = base64.decodestring(encodedKey)
-            except:
-                continue
-            if decodedKey == pubKey:
-                return 1
-            else:
-                retVal = 2
-        return retVal
 
     def connectionSecure(self):
         if options['user']:
