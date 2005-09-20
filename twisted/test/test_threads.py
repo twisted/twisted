@@ -129,29 +129,15 @@ class DeferredResultTestCase(unittest.TestCase):
 
     def setUp(self):
         reactor.suggestThreadPoolSize(8)
-        self.done = 0
-        self.gotResult = 0
 
     def tearDown(self):
         reactor.suggestThreadPoolSize(0)
 
 
-    def _timeout(self):
-        self.done = 1
-
-    def _resultCallback(self, result):
-        self.assertEquals(result, 7)
-        self.gotResult = 1
-
-    def _resultErrback(self, error):
-        self.done = 1
-        self.assert_( isinstance(error, failure.Failure) )
-        self.assertEquals(error.type, TypeError)
-        self.gotResult = 1
-
     def testDeferredResult(self):
         d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
-        return d.addCallback(self.assertEquals, 7)
+        d.addCallback(self.assertEquals, 7)
+        return d
 
     def testDeferredFailure(self):
         class NewError(Exception):
@@ -176,11 +162,14 @@ class DeferredResultTestCase(unittest.TestCase):
         reactor.callLater(1, reactor.crash)
         reactor.callInThread(nothing)
         reactor.run()
+
         def raiseError(): raise TypeError
         d = threads.deferToThread(raiseError)
-        d.addErrback(self._resultErrback)
-        t = reactor.callLater(1, self._timeout)
-        while not self.done:
-            reactor.iterate()
-        self.failUnless(self.gotResult, "timeout")
-        if t.active(): t.cancel()
+        d.addCallbacks(lambda res: self.fail("should have failed"),
+                       self._checkTypeError)
+        return d
+    testDeferredFailure2.timeout = 1
+
+    def _checkTypeError(self, error):
+        self.assert_( isinstance(error, failure.Failure) )
+        self.assertEquals(error.type, TypeError)
