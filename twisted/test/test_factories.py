@@ -10,7 +10,7 @@ from twisted.trial import unittest, util
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import Factory, ReconnectingClientFactory
 from twisted.protocols.basic import Int16StringReceiver
-import time, pickle
+import pickle
 
 class In(Int16StringReceiver):
     def __init__(self):
@@ -26,6 +26,8 @@ class In(Int16StringReceiver):
 
     def connectionLost(self, reason):
         self.factory.allMessages.append(self.msgs)
+        if len(self.factory.allMessages) >= self.factory.goal:
+            self.factory.d.callback(None)
 
 class Out(Int16StringReceiver):
     msgs = dict([(x, 'X' * x) for x in range(10)])
@@ -52,21 +54,22 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         f.protocol = In
         f.connections = 0
         f.allMessages = []
+        f.goal = 2
+        f.d = defer.Deferred()
 
         c = ReconnectingClientFactory()
         c.initialDelay = c.delay = 0.2
         c.protocol = Out
         c.howManyTimes = 2
 
-        port = reactor.listenTCP(0, f)
+        port = self.port = reactor.listenTCP(0, f)
         PORT = port.getHost().port
         reactor.connectTCP('127.0.0.1', PORT, c)
 
-        now = time.time()
-        while len(f.allMessages) != 2 and (time.time() < now + 10):
-            reactor.iterate(0.1)
-        util.wait(defer.maybeDeferred(port.stopListening))
-        
+        f.d.addCallback(self._testStopTrying_1, f, c)
+        return f.d
+    testStopTrying.timeout = 10
+    def _testStopTrying_1(self, res, f, c):
         self.assertEquals(len(f.allMessages), 2,
                           "not enough messages -- %s" % f.allMessages)
         self.assertEquals(f.connections, 2,
@@ -74,3 +77,6 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
                           f.connections)
         self.assertEquals(f.allMessages, [Out.msgs] * 2)
         self.failIf(c.continueTrying, "stopTrying never called or ineffective")
+
+    def tearDown(self):
+        return self.port.stopListening()
