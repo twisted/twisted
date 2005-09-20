@@ -701,7 +701,8 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
                         'Child should fail due to EPIPE.')
         reason.trap(error.ProcessTerminated)
         # child must not get past that write without raising
-        unittest.failIfEqual(reason.value.exitCode, 42)
+        unittest.failIfEqual(reason.value.exitCode, 42, 
+                             'process reason was %r' % reason)
         unittest.failUnlessEqual(self.output, '')
         return self.errput
 
@@ -719,7 +720,8 @@ class ClosingPipes(unittest.TestCase):
     def doit(self, fd):
         p = ClosingPipesProcessProtocol(True)
         reactor.spawnProcess(p, sys.executable,
-                             [sys.executable, '-c', r'raw_input(); import sys, os; os.write(%d, "foo\n"); sys.exit(42)' % fd],
+                             [sys.executable, '-u', '-c', 
+                              r'raw_input(); import sys, os; os.write(%d, "foo\n"); sys.exit(42)' % fd],
                              env=None)
         p.transport.write('go\n')
 

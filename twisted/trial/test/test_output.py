@@ -77,7 +77,8 @@ class TestImportErrors(unittest.TestCase):
         # This doesn't test a feature.  This tests that we are accurately finding
         # the directory with all of the mock modules and packages.
         path = self._getMockPath()
-        self.failUnless(path.endswith('twisted/trial/test/foo'))
+        self.failUnless(path.endswith('twisted/trial/test/foo'), 
+                        'got path: %r' % path)
         self.failUnless(os.path.isdir(path))
 
     def test_trialRun(self):

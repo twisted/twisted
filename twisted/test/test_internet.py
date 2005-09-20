@@ -542,7 +542,7 @@ class Resolve(unittest.TestCase):
         helperf.close()
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        d = getProcessOutput(sys.executable, (helper,), env, errortoo=1)
+        d = getProcessOutput(sys.executable, ('-u', helper,), env, errortoo=1)
         d.addCallback(self._testChildResolve_1)
         return d
     testChildResolve.timeout = 10

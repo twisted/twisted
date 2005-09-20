@@ -876,7 +876,27 @@ class SimpleRequest(http.Request):
         response.finish()
         self.writeResponse(response)
         
-class TCPServerTest(unittest.TestCase):
+class AbstractServerTestMixin:
+    type = None
+    def testBasicWorkingness(self):
+        args = ('-u', util.sibpath(__file__, "simple_client.py"), "basic",
+                str(self.port), self.type)
+        out,err,code = wait(
+            utils.getProcessOutputAndValue(sys.executable, args=args))
+        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+
+    def testLingeringClose(self):
+        args = ('-u', util.sibpath(__file__, "simple_client.py"),
+                "lingeringClose", str(self.port), self.type)
+        out,err,code = wait(
+            utils.getProcessOutputAndValue(sys.executable, args=args))
+        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+        
+
+class TCPServerTest(unittest.TestCase, AbstractServerTestMixin):
+    type = 'tcp'
     def setUp(self):
         factory=SimpleFactory(requestFactory=SimpleRequest)
 
@@ -895,18 +915,6 @@ class TCPServerTest(unittest.TestCase):
         self.factory.conn.transport.loseConnection()
         spinUntil(lambda: self.connlost)
         
-    def testBasicWorkingness(self):
-        out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port), "tcp")))
-        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-
-    def testLingeringClose(self):
-        out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port), "tcp")))
-        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-
 
 try:
     from twisted.internet import ssl
@@ -919,7 +927,8 @@ if ssl and not ssl.supported:
     
 certPath = util.sibpath(__file__, "server.pem")
 
-class SSLServerTest(unittest.TestCase):
+class SSLServerTest(unittest.TestCase, AbstractServerTestMixin):
+    type = 'ssl'
     def setUp(self):
         sCTX = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
         factory=SimpleFactory(requestFactory=SimpleRequest)
@@ -939,17 +948,6 @@ class SSLServerTest(unittest.TestCase):
         self.factory.conn.transport.loseConnection()
         spinUntil(lambda: self.connlost)
         
-    def testBasicWorkingness(self):
-        out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port), "ssl")))
-        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-
-    def testLingeringClose(self):
-        out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port), "ssl")))
-        self.assertEquals(code, 0, "Error output:\n%s" % (err,))
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
 if interfaces.IReactorProcess(reactor, None) is None:
     TCPServerTest.skip = SSLServerTest.skip = "Required process support missing from reactor"

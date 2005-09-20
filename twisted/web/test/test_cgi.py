@@ -69,7 +69,7 @@ class CGI(unittest.TestCase):
         d.addCallback(self._testCGI_1)
         return d
     def _testCGI_1(self, res):
-        self.failUnlessEqual(res, "cgi output\n")
+        self.failUnlessEqual(res, "cgi output" + os.linesep)
 
 
     def testReadEmptyInput(self):

@@ -302,7 +302,8 @@ class ProcessStreamerTest(unittest.TestCase):
     def runCode(self, code, inputStream=None):
         if inputStream is None:
             inputStream = stream.MemoryStream("")
-        return stream.ProcessStreamer(inputStream, sys.executable, [sys.executable, "-c", code],
+        return stream.ProcessStreamer(inputStream, sys.executable,
+                                      [sys.executable, "-u", "-c", code],
                                       os.environ)
 
     def test_output(self):
