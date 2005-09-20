@@ -269,7 +269,8 @@ class Options(usage.Options):
         if not os.path.isfile(filename):
             raise usage.UsageError("File %r doesn't exist" % (filename,))
         if isTestFile(filename):
-            moduleName = reflect.filenameToModuleName(filename)
+            self._handleFile(filename)
+            return            
         else:
             localVars = loadLocalVariables(filename)
             moduleName = localVars.get('test-case-name', None)
