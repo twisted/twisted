@@ -44,7 +44,9 @@ def _kickStartReactor():
 
 
 def isPackage(module):
-    """Given a module returns True if the module looks like a package"""
+    """Given an object return True if the object looks like a package"""
+    if not isinstance(module, types.ModuleType):
+        return False
     basename = os.path.splitext(os.path.basename(module.__file__))[0]
     return basename == '__init__'
 
@@ -609,6 +611,8 @@ class TestLoader(object):
         return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
 
     def loadModule(self, module):
+        if not isinstance(module, types.ModuleType):
+            raise TypeError("%r is not a module" % (module,))
         suite = self.moduleSuiteFactory(module)
         for testClass in self._findTestClasses(module):
             suite.addTest(self.loadClass(testClass))
@@ -626,6 +630,10 @@ class TestLoader(object):
         return modSuite
 
     def loadClass(self, klass):
+        if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
+            raise TypeError("%r is not a class" % (klass,))
+        if not ITestCase.implementedBy(klass):
+            raise ValueError("%r is not a test case" % (klass,))
         if issubclass(klass, pyunit.TestCase):
             klass.__init__ = lambda _: None
         factory = self.classSuiteFactory
@@ -640,6 +648,8 @@ class TestLoader(object):
         return suite
 
     def loadMethod(self, method):
+        if not isinstance(method, types.MethodType):
+            raise TypeError("%r not a method" % (method,))
         suite = self.classSuiteFactory(method.im_class)
         suite.addTest(self.loadTestMethod(method))
         return suite
@@ -648,6 +658,8 @@ class TestLoader(object):
         return self.testMethodFactory(method)
 
     def loadPackage(self, package, recurse=False):
+        if not isPackage(package):
+            raise TypeError("%r is not a package" % (package,))
         if recurse:
             return self.loadPackageRecursive(package)
         suite = self.suiteFactory()
