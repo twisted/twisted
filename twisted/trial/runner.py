@@ -10,7 +10,7 @@
 from __future__ import generators
 
 
-import os, glob, types, warnings, time, sys, cPickle as pickle, inspect
+import os, glob, types, warnings, time, sys, inspect, imp
 import fnmatch, random, inspect, doctest
 from os.path import join as opj
 
@@ -52,16 +52,48 @@ def isPackage(module):
 
     
 def isPackageDirectory(dirname):
-    """Is the directory at path 'dirname' a Python package directory?"""
-    for ext in 'py', 'so', 'pyd', 'dll':
-        if os.path.exists(os.path.join(dirname,
-                                       os.extsep.join(('__init__', ext)))):
-            return True
-        return False
+    """Is the directory at path 'dirname' a Python package directory?
+    Returns the name of the __init__ file (it may have a weird extension)
+    if dirname is a package directory.  Otherwise, returns False"""
+    for ext in zip(*imp.get_suffixes())[0]:
+        initFile = '__init__' + ext
+        if os.path.exists(os.path.join(dirname, initFile)):
+            return initFile
+    return False
 
 
 def filenameToModule(fn):
-    return reflect.namedModule(reflect.filenameToModuleName(fn))
+    if not os.path.exists(fn):
+        raise ValueError("%r doesn't exist" % (fn,))
+    try:
+        return reflect.namedModule(reflect.filenameToModuleName(fn))
+    except ImportError:
+        """Not in PYTHONPATH"""
+    return _importFromFile(fn)
+
+
+def _importFromFile(fn, moduleName=None):
+    fn = _resolveDirectory(fn)
+    if not moduleName:
+        moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
+    if moduleName in sys.modules:
+        return sys.modules[moduleName]
+    fd = open(fn, 'r')
+    try:
+        module = imp.load_source(moduleName, fn, fd)
+    finally:
+        fd.close()
+    return module
+
+
+def _resolveDirectory(fn):
+    if os.path.isdir(fn):
+        initFile = isPackageDirectory(fn)
+        if initFile:
+            fn = os.path.join(fn, initFile)
+        else:
+            raise ValueError('%r is not a package directory' % (fn,))
+    return fn
 
 
 class TestSuite(pyunit.TestSuite):

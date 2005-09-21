@@ -278,23 +278,17 @@ class Options(usage.Options):
             self._tryNamedAny(moduleName)
 
     def _handleFile(self, filename):
-        m = None
-        if not osp.isfile(filename):
+        if not os.path.isfile(filename):
+            # We aren't interested in directories / packages
             return
         try:
-            mname = reflect.filenameToModuleName(filename)
-            self._tryNamedAny(mname)
-        except ArgumentError:
-            # okay, not in PYTHONPATH...
-            path, fullname = osp.split(filename)
-            name, ext = osp.splitext(fullname)
-            m = new.module(name)
-            sourcestring = file(filename, 'r').read()
-            sourcestring = sourcestring.replace('\r\n', '\n')
-            code = compile(sourcestring, filename, 'exec')
-            exec code in m.__dict__
-            sys.modules[name] = m
-            self['modules'].append(m)
+            m = runner.filenameToModule(filename)
+        except (ImportError, SyntaxError):
+            f = failure.Failure()
+            self._couldNotImport.append((filename, f))
+            f.printTraceback()
+            return
+        self['modules'].append(m)
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful

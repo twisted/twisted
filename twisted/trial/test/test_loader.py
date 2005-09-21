@@ -1,7 +1,69 @@
-import sys
+import sys, os
 from twisted.python import util
 from twisted.trial import unittest
 from twisted.trial import runner, reporter
+
+
+class FileTest(unittest.TestCase):
+    samplePath = util.sibpath(__file__, 'foo')
+
+    def tearDown(self):
+        importedModules = ['goodpackage',
+                           'goodpackage.test_sample',
+                           'test_sample',
+                           'sample']
+        for moduleName in importedModules:
+            if sys.modules.has_key(moduleName):
+                del sys.modules[moduleName]
+
+    def test_notFile(self):
+        self.failUnlessRaises(ValueError,
+                              runner.filenameToModule, 'doesntexist')
+
+    def test_moduleInPath(self):
+        sample1 = runner.filenameToModule(util.sibpath(__file__, 'sample.py'))
+        import sample as sample2
+        self.failUnlessEqual(sample2, sample1)
+
+    def test_moduleNotInPath(self):
+        sample1 = runner.filenameToModule(os.path.join(self.samplePath,
+                                                       'goodpackage',
+                                                       'test_sample.py'))
+        sys.path.append(self.samplePath)
+        from goodpackage import test_sample as sample2
+        try:
+            self.failUnlessEqual(os.path.splitext(sample2.__file__)[0],
+                                 os.path.splitext(sample1.__file__)[0])
+        finally:
+            sys.path.remove(self.samplePath)
+
+    def test_packageInPath(self):
+        sys.path.append(self.samplePath)
+        try:
+            package1 = runner.filenameToModule(os.path.join(self.samplePath,
+                                                            'goodpackage'))
+            import goodpackage
+            self.failUnlessEqual(goodpackage, package1)
+        finally:
+            sys.path.remove(self.samplePath)
+
+    def test_packageNotInPath(self):
+        package1 = runner.filenameToModule(os.path.join(self.samplePath,
+                                                        'goodpackage'))
+        sys.path.append(self.samplePath)
+        import goodpackage
+        sys.path.remove(self.samplePath)
+        self.failUnlessEqual(os.path.splitext(goodpackage.__file__)[0],
+                             os.path.splitext(package1.__file__)[0])
+
+    def test_directoryNotPackage(self):
+        self.failUnlessRaises(ValueError, runner.filenameToModule,
+                              self.samplePath)
+
+    def test_filenameNotPython(self):
+        self.failUnlessRaises(SyntaxError, runner.filenameToModule,
+                              util.sibpath(__file__, 'notpython'))
+    
 
 class LoaderTest(unittest.TestCase):
 
@@ -21,14 +83,16 @@ class LoaderTest(unittest.TestCase):
     ## * Loading from a string
     ##   * could be a file / directory
     ##   * could be name of a python object
+
+    samplePath = util.sibpath(__file__, 'foo')
     
     def setUp(self):
         self.reporter = reporter.Reporter()
         self.loader = runner.TestLoader(self.reporter)
-        sys.path.append(util.sibpath(__file__, 'foo'))
+        sys.path.append(self.samplePath)
 
     def tearDown(self):
-        sys.path.pop()
+        sys.path.remove(self.samplePath)
 
     def test_loadMethod(self):
         import sample
