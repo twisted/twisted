@@ -8,8 +8,8 @@ static int g_imallocs, g_ifrees, g_amallocs, g_afrees;
 static int g_incobj, g_decobj, g_incarg, g_decarg;
 
 //#define SPEW
-// compensate for mingw's lack of recent Windows headers
-#ifndef _MSC_VER
+// compensate for mingw's (and MSVC6's) lack of recent Windows headers
+#ifndef WSAID_CONNECTEX
 #define WSAID_CONNECTEX {0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
 #define WSAID_ACCEPTEX {0xb5367df1,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
 
