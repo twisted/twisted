@@ -17,19 +17,17 @@ class TestModuleTest(unittest.TestCase):
         self.config = None
 
     def test_baseState(self):
-        self.failUnlessEqual(0, len(self.config['modules']))
+        self.failUnlessEqual(0, len(self.config['tests']))
 
     def test_testmoduleOnModule(self):
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.failUnless(inspect.ismodule(self.config['modules'][0]))
         self.failUnlessEqual('twisted.trial.test.test_test_visitor',
-                             self.config['modules'][0].__name__)
+                             self.config['tests'][0])
 
     def test_testmoduleOnScript(self):
         self.config.opt_testmodule(sibpath('scripttest.py'))
-        self.failUnless(inspect.ismodule(self.config['modules'][0]))
         self.failUnlessEqual('twisted.trial.test.test_test_visitor',
-                             self.config['modules'][0].__name__)
+                             self.config['tests'][0])
 
     def test_testmoduleOnNonexistentFile(self):
         self.failUnlessRaises(usage.UsageError,
@@ -38,7 +36,7 @@ class TestModuleTest(unittest.TestCase):
 
     def test_testmoduleOnEmptyVars(self):
         self.config.opt_testmodule(sibpath('novars.py'))
-        self.failUnlessEqual([], self.config['modules'])
+        self.failUnlessEqual([], self.config['tests'])
 
     def test_testmoduleOnModuleName(self):
         self.failUnlessRaises(usage.UsageError,

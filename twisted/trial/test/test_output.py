@@ -95,15 +95,15 @@ class TestImportErrors(unittest.TestCase):
     def test_nonexistentPackage(self):
         d = self.runTrial('doesntexist')
         d.addCallback(self.failUnlessIn, 'doesntexist')
-        d.addCallback(self.failUnlessIn, 'IOError')
-        d.addCallback(self.failIfIn, 'IMPORT ERROR')
+        d.addCallback(self.failUnlessIn, 'ValueError')
+        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         return d
 
     def test_nonexistentPackageWithModule(self):
         d = self.runTrial('doesntexist.barney')
         d.addCallback(self.failUnlessIn, 'doesntexist.barney')
-        d.addCallback(self.failUnlessIn, 'IOError')
-        d.addCallback(self.failIfIn, 'IMPORT ERROR')
+        d.addCallback(self.failUnlessIn, 'ValueError')
+        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         return d
 
     def test_badpackage(self):

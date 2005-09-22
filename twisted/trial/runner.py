@@ -730,9 +730,9 @@ class TestLoader(object):
             return self.loadMethod(thing)
         raise TypeError("No loader for %r. Unrecognized type" % (thing,))
 
-    def loadByName(self, name):
+    def loadByName(self, name, recurse=False):
         thing = self.findByName(name)
-        return self.loadAnything(name)
+        return self.loadAnything(thing, recurse)
 
 
 class SafeTestLoader(TestLoader):
@@ -758,7 +758,7 @@ class SafeTestLoader(TestLoader):
             self.addImportError(str(module), failure.Failure())
             return self.suiteFactory()
 
-    def loadFromName(self, name, recurse=False):
+    def loadByName(self, name, recurse=False):
         try:
             thing = self.findByName(name)
         except:

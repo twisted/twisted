@@ -180,11 +180,7 @@ class Options(usage.Options):
     def __init__(self):
         usage.Options.__init__(self)
         self._logObserver = None
-        self['modules'] = []
-        self['packages'] = []
-        self['testcases'] = []
-        self['methods'] = []
-        self._couldNotImport = []
+        self['tests'] = []
         self['reporter'] = None
         self['debugflags'] = []
         self['cleanup'] = []
@@ -269,26 +265,13 @@ class Options(usage.Options):
         if not os.path.isfile(filename):
             raise usage.UsageError("File %r doesn't exist" % (filename,))
         if isTestFile(filename):
-            self._handleFile(filename)
+            self['tests'].append(filename)
             return            
         else:
             localVars = loadLocalVariables(filename)
             moduleName = localVars.get('test-case-name', None)
-        if moduleName is not None and moduleName not in self['modules']:
-            self._tryNamedAny(moduleName)
-
-    def _handleFile(self, filename):
-        if not os.path.isfile(filename):
-            # We aren't interested in directories / packages
-            return
-        try:
-            m = runner.filenameToModule(filename)
-        except (ImportError, SyntaxError):
-            f = failure.Failure()
-            self._couldNotImport.append((filename, f))
-            f.printTraceback()
-            return
-        self['modules'].append(m)
+        if moduleName is not None and moduleName not in self['tests']:
+            self['tests'].append(moduleName)
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
@@ -345,93 +328,13 @@ class Options(usage.Options):
 
     tracer = None
 
-    def _tryNamedAny(self, arg):
-        try:
-            try:
-                n = reflect.namedAny(arg)
-            except ValueError, ve:
-                if ve.args == ('Empty module name',):
-                    raise ArgumentError
-                else:
-                    raise
-        except ArgumentError:
-            raise
-        except:
-            f = failure.Failure()
-            f.printTraceback()
-            self._couldNotImport.append((arg, f))
-            return
-
-        # okay, we can use named any to import it, so now wtf is it?
-        if inspect.ismodule(n):
-            filename = os.path.basename(n.__file__)
-            filename = os.path.splitext(filename)[0]
-            if filename == '__init__':
-                self['packages'].append(n)
-            else:
-                self['modules'].append(n)
-        elif inspect.isclass(n):
-            self['testcases'].append(n)
-        elif inspect.ismethod(n):
-            self['methods'].append(n)
-        else:
-            raise ArgumentError, "could not figure out how to use %s" % arg
-            #self['methods'].append(n)
-
-
     def parseArgs(self, *args):
         def _dbg(msg):
             if self._logObserver is not None:
                 log.msg(iface=ITrialDebug, parseargs=msg)
-
+        self['tests'].extend(args)
         if self.extra is not None:
-            args = list(args)
-            args.extend(self.extra)
-
-        for arg in args:
-            _dbg("arg: %s" % (arg,))
-            
-            if not os.sep in arg and not arg.endswith('.py'):
-                # simplest case, someone writes twisted.test.test_foo on the
-                # command line only one option, use namedAny
-                try:
-                    self._tryNamedAny(arg)
-                except ArgumentError:
-                    pass
-                else:
-                    continue
-            
-            # make sure the user isn't smoking crack
-            if not os.path.exists(arg):
-                raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
-
-            # if the argument ends in os.sep, it *must* be a directory (if it's
-            # valid) directories must be modules/packages, so use
-            # filenameToModuleName
-            if arg.endswith(os.sep) and arg != os.sep:
-                _dbg("arg endswith os.sep")
-                arg = arg[:-len(os.sep)]
-                _dbg("arg now %s" % (arg,))
-                modname = reflect.filenameToModuleName(arg)
-                self._tryNamedAny(modname)
-                continue
-                
-            elif arg.endswith('.py'):
-                _dbg("*Probably* a file.")
-                if osp.exists(arg):
-                    self._handleFile(arg)
-                    continue
-
-            elif osp.isdir(arg):
-                if osp.exists(opj(arg, '__init__.py')):
-                    modname = reflect.filenameToModuleName(arg)
-                    self._tryNamedAny(modname)
-                    continue
-                
-            raise ArgumentError, ("argument %r appears to be "
-                 "invalid, rather than doing something incredibly stupid, "
-                 "I'm blowing up" % (arg,))
-
+            self['tests'].extend(self.extra)
 
     def postOptions(self):
         self['_origdir'] = os.getcwd()
@@ -522,29 +425,12 @@ def _getSuite(config):
                              realtime=config['rterrors'])
     loader = _getLoader(config, reporter)
     suite = runner.TrialRoot(reporter, randomize=config['random'])
-    for name, exc in config._couldNotImport:
-        reporter.reportImportError(name, exc)
-    
-    for package in config['packages']:
-        if isinstance(package, types.StringType):
-            try:
-                package = reflect.namedModule(package)
-            except ImportError, e:
-                reporter.reportImportError(package, failure.Failure())
-                continue
-        suite.addTest(loader.loadPackage(package, recurse=config['recurse']))
-        
-    for module in config['modules']:
-        _dbg("addingModules: %s" % module)
-        suite.addTest(loader.loadModule(module))
-    for testcase in config['testcases']:
-        if isinstance(testcase, types.StringType):
-            case = reflect.namedObject(testcase)
+    for test in config['tests']:
+        if isinstance(test, str):
+            suite.addTest(loader.loadByName(test, recurse=config['recurse']))
         else:
-            case = testcase
-        suite.addTest(loader.loadClass(case))
-    for testmethod in config['methods']:
-        suite.addTest(loader.loadMethod(testmethod))
+            suite.addTest(loader.loadAnything(test,
+                                              recurse=config['recurse']))
     for error in loader.getImportErrors():
         reporter.reportImportError(*error)
     return suite
