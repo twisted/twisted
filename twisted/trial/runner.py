@@ -68,7 +68,8 @@ def filenameToModule(fn):
     try:
         return reflect.namedAny(reflect.filenameToModuleName(fn))
     except (ValueError, AttributeError):
-        """Couldn't find module.  The file 'fn' is not in PYTHONPATH"""
+        # Couldn't find module.  The file 'fn' is not in PYTHONPATH
+        pass
     return _importFromFile(fn)
 
 
