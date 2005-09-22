@@ -264,6 +264,7 @@ class Options(usage.Options):
         # whatever they are, will get tested"
         if not os.path.isfile(filename):
             raise usage.UsageError("File %r doesn't exist" % (filename,))
+        filename = os.path.abspath(filename)
         if isTestFile(filename):
             self['tests'].append(filename)
             return            
