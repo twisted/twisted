@@ -198,8 +198,10 @@ class LoaderTest(unittest.TestCase):
     def test_loadPackageWithBadModules(self):
         import package
         suite = self.loader.loadPackage(package, recurse=True)
-        self.failUnlessEqual(tuple(zip(*self.loader.getImportErrors())[0]),
-                             ('test_bad_module.py', 'test_import_module.py'))
+        importErrors = list(zip(*self.loader.getImportErrors())[0])
+        importErrors.sort()
+        self.failUnlessEqual(importErrors,
+                             ['test_bad_module.py', 'test_import_module.py'])
 
     def test_loadNonPackage(self):
         import sample
