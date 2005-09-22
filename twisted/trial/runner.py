@@ -344,7 +344,7 @@ class ClassSuite(TestRunnerBase):
     def testCaseInstance(self):
         # a property getter, called by subclasses
         if not self._tcInstance:
-            self._tcInstance = self._testCase()
+            self._tcInstance = self._testCase(None)  # XXX - pass the meth
         return self._tcInstance
     testCaseInstance = property(testCaseInstance)
 
@@ -653,9 +653,9 @@ class TestLoader(object):
         if not ITestCase.implementedBy(klass):
             raise ValueError("%r is not a test case" % (klass,))
         if issubclass(klass, pyunit.TestCase):
-            klass.__init__ = lambda _: None
+            klass.__init__ = lambda x, y: None
         factory = self.classSuiteFactory
-        instance = klass()
+        instance = klass(None)  # XXX -- later pass this the methodName
         methods = dsu([ getattr(klass, name) for name in dir(instance)
                         if name.startswith(self.methodPrefix)
                         and callable(getattr(instance, name)) ],

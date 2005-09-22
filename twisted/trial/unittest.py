@@ -34,7 +34,10 @@ else:
 
 class TestCase(object):
     zi.implements(itrial.ITestCase)
-    
+
+    def __init__(self, methodName=None):
+        pass
+            
     def setUpClass(self):
         pass
 

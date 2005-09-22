@@ -22,7 +22,8 @@ CLASS_TODO_MSG = "todo all methods in this class"
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
-        def __init__(self):
+        def __init__(self, methodName=None):
+            unittest.TestCase.__init__(self, methodName)
             self.setupRun = 0
             self.teardownRun = 0
         def setUp(self):
