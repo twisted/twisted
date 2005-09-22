@@ -648,6 +648,9 @@ class TestLoader(object):
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
         return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
 
+    def addImportError(self, name, error):
+        self._importErrors.append((name, error))
+
     def getImportErrors(self):
         return self._importErrors
 
@@ -726,7 +729,7 @@ class TestLoader(object):
                 module = filenameToModule(opj(dirname, name))
             except:
                 # Importing a module can raise any kind of error. Get them all.
-                self._importErrors.append((name, failure.Failure()))
+                self.addImportError(name, failure.Failure())
                 continue
             suite.addTest(self.loadModule(module))
 
@@ -759,4 +762,40 @@ class TestLoader(object):
             return self.loadClass(thing)
         elif isinstance(thing, types.MethodType):
             return self.loadMethod(thing)
-        raise TypeError("No loader for %r. Unrecognized type" % (thing,)) 
+        raise TypeError("No loader for %r. Unrecognized type" % (thing,))
+
+    def loadByName(self, name):
+        thing = self.findByName(name)
+        return self.loadAnything(name)
+
+
+class SafeTestLoader(TestLoader):
+    """A version of TestLoader that stores all import errors, rather than
+    raising them.  When the method is supposed to return a suite and it can't
+    return the right one due to error, we return an empty suite.
+    """
+
+    def _findTestModules(self, package):
+        modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
+        modules = []
+        for filename in glob.glob(modGlob):
+            try:
+                modules.append(filenameToModule(filename))
+            except:
+                self.addImportError(filename, failure.Failure())
+        return dsu(modules, self.sorter)
+        
+    def loadDoctests(self, module):
+        try:
+            return super(SafeTestLoader, self).loadDoctests(module)
+        except:
+            self.addImportError(str(module), failure.Failure())
+            return self.suiteFactory()
+
+    def loadFromName(self, name, recurse=False):
+        try:
+            thing = self.findByName(name)
+        except:
+            self.addImportError(name, failure.Failure())
+            return self.suiteFactory()
+        return self.loadAnything(thing, recurse)

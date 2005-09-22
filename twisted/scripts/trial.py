@@ -520,6 +520,7 @@ def _getSuite(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
+    loader = _getLoader(config, reporter)
     suite = runner.TrialRoot(reporter, randomize=config['random'])
     for name, exc in config._couldNotImport:
         reporter.reportImportError(name, exc)
@@ -531,24 +532,21 @@ def _getSuite(config):
             except ImportError, e:
                 reporter.reportImportError(package, failure.Failure())
                 continue
-        if config['recurse']:
-            _dbg("addPackageRecursive(%s)" % (package,))
-            suite.addPackageRecursive(package)
-        else:
-            _dbg("addPackage(%s)" % (package,))
-            suite.addPackage(package)
-
+        suite.addTest(loader.loadPackage(package, recurse=config['recurse']))
+        
     for module in config['modules']:
         _dbg("addingModules: %s" % module)
-        suite.addModule(module)
+        suite.addTest(loader.loadModule(module))
     for testcase in config['testcases']:
         if isinstance(testcase, types.StringType):
             case = reflect.namedObject(testcase)
         else:
             case = testcase
-        suite.addTestClass(case)
+        suite.addTest(loader.loadClass(case))
     for testmethod in config['methods']:
-        suite.addMethod(testmethod)
+        suite.addTest(loader.loadMethod(testmethod))
+    for error in loader.getImportErrors():
+        reporter.reportImportError(*error)
     return suite
 
 
@@ -570,6 +568,17 @@ def _setUpTestdir():
 
     os.mkdir(testdir)
     os.chdir(testdir)
+
+
+def _getLoader(config, reporter):
+    loader = runner.SafeTestLoader()
+    if config['random']:
+        randomer = random.Random()
+        randomer.seed(config['random'])
+        loader.sorter = lambda x : randomer.random()
+        reporter.write('Running tests shuffled with seed %d\n'
+                       % config['random'])
+    return loader
 
 
 def _getDebugger(config):

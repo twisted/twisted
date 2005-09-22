@@ -162,8 +162,6 @@ class TestImportErrors(unittest.TestCase):
         d.addCallback(self.failUnlessIn, "No module named frotz")
         d.addCallback(self.failIfIn, '<module')
         return d
-    test_nonRecurseImportErrors.todo = ("findTestModules needs to check "
-                                        "for exceptions internally")
 
     def test_regularRun(self):
         d = self.runTrial('package.test_module')
