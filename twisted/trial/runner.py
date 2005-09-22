@@ -162,41 +162,7 @@ class TrialRoot(pyunit.TestSuite):
         pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
-        self.loader = TestLoader()
         self.startTime, self.endTime = None, None
-        if randomize:
-            randomer = random.Random()
-            randomer.seed(randomize)
-            self.loader.sorter = lambda x : randomer.random()
-            self.reporter.write('Running tests shuffled with seed %d\n'
-                                % randomize)
-
-    def addMethod(self, method):
-        self.addTest(self.loader.loadMethod(method))
-
-    def addTestClass(self, testClass):
-        self.addTest(self.loader.loadClass(testClass))
-
-    def addModule(self, module):
-        self.addTest(self.loader.loadModule(module))
-
-    def addPackage(self, package):
-        self.addTest(self.loader.loadPackage(package))
-
-    def addPackageRecursive(self, package):
-        self.addTest(self.loader.loadPackageRecursive(package))
-        importErrors = self.loader.getImportErrors()
-        if len(importErrors) > 0:
-            for name, failure in importErrors:
-                self.reporter.reportImportError(name, failure)
-            self.loader.clearImportErrors()
-
-    def addDoctests(self, doctests):
-        for doctest in doctests:
-            self.addDoctest(doctest)
-
-    def addDoctest(self, doctest):
-        self.addTest(self.loader.loadDoctests(doctest))
 
     def _kickStopRunningStuff(self):
         self.endTime = time.time()

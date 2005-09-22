@@ -8,7 +8,7 @@
 import re, os, sys
 
 from twisted.trial.test import erroneous, common
-from twisted.trial import adapters, itrial, unittest, reporter
+from twisted.trial import adapters, itrial, unittest, reporter, runner
 from twisted.trial.assertions import *
 from twisted.python import failure
 
@@ -51,8 +51,12 @@ expectTestFailure = ['Running 1 tests.',
                      'twisted.trial.assertions.FailTest: %s' % (common.FAILURE_MSG,)]
 
 class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
+    def setUp(self):
+        super(TestFailureFormatting, self).setUp()
+        self.loader = runner.TestLoader()
+    
     def testFormatErroredMethod(self):
-        self.suite.addTestClass(erroneous.TestFailureInSetUp)
+        self.suite.addTest(self.loader.loadClass(erroneous.TestFailureInSetUp))
         self.suite.run()
         
         expect = ['Running 1 tests.',
@@ -66,7 +70,8 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         common.stringComparison(expect, self.suite.reporter.out.splitlines())
 
     def testFormatFailedMethod(self):
-        self.suite.addMethod(common.FailfulTests.testFailure)
+        self.suite.addTest(self.loader.loadMethod(
+            common.FailfulTests.testFailure))
         self.suite.run()
 
         common.stringComparison(expectTestFailure,
@@ -89,7 +94,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
             raise unittest.SkipTest(
                 'doctest support only works in Python 2.3 or later')
         from twisted.trial.test import trialdoctest2
-        self.suite.addDoctest(trialdoctest2)
+        self.suite.addTest(self.loader.loadDoctests(trialdoctest2))
         self.suite.run()
         output = self.suite.reporter.out.splitlines()
         path = 'twisted.trial.test.trialdoctest2.unexpectedException'

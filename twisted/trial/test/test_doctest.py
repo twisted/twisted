@@ -31,13 +31,9 @@ class TestRunners(unittest.TestCase):
         self.assertEqual(7, suite.countTestCases())
 
     def test_basicTrialIntegration(self):
+        loader = runner.TestLoader()
         root = runner.TrialRoot(common.BogusReporter())
-        root.addDoctest(trialdoctest1)
-        self.assertEqual(7, root.countTestCases())
-
-    def test_backwardsCompat(self):
-        root = runner.TrialRoot(common.BogusReporter())
-        root.addDoctests([trialdoctest1])
+        root.addTest(loader.loadDoctests(trialdoctest1))
         self.assertEqual(7, root.countTestCases())
 
     def test_expectedResults(self):

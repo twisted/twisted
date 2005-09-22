@@ -55,12 +55,12 @@ class TestTestVisitor(TestCase):
         testCase.visit(test_visitor)
 
     def test_visit_suite(self):
-        from twisted.trial.runner import TrialRoot
+        from twisted.trial.runner import TrialRoot, TestLoader
         from twisted.trial.reporter import Reporter
         import sys
         test_visitor = self.mock_visitor()
         testCase = TrialRoot(Reporter())
-        testCase.addModule(sys.modules[__name__])
+        testCase.addTest(self.loader.loadModule(sys.modules[__name__]))
         testCase.visit(test_visitor)
         self.failIf(len(test_visitor.calls) < 4)
         self.assertEqual(test_visitor.calls[0], ("suite", testCase))

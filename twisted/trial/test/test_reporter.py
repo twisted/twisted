@@ -10,7 +10,7 @@ from __future__ import nested_scopes
 import re, types
 from pprint import pformat, pprint
 
-from twisted.trial import unittest
+from twisted.trial import unittest, runner
 from twisted.trial.test import common, erroneous
 from twisted.trial.reporter import DOUBLE_SEPARATOR, SEPARATOR
 from twisted.trial.assertions import *
@@ -18,7 +18,9 @@ from twisted.trial.assertions import *
 
 class TestReporter(common.RegistryBaseMixin, unittest.TestCase):
     def testTracebackReporting(self):
-        self.suite.addMethod(common.FailfulTests.testTracebackReporting)
+        loader = runner.TestLoader()
+        suite = loader.loadMethod(common.FailfulTests.testTracebackReporting)
+        self.suite.addTest(suite)
         self.suite.run()
         lines = self.reporter.out.split('\n')
         while 1:
