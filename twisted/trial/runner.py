@@ -66,9 +66,9 @@ def filenameToModule(fn):
     if not os.path.exists(fn):
         raise ValueError("%r doesn't exist" % (fn,))
     try:
-        return reflect.namedModule(reflect.filenameToModuleName(fn))
-    except ImportError:
-        """Not in PYTHONPATH"""
+        return reflect.namedAny(reflect.filenameToModuleName(fn))
+    except (ValueError, AttributeError):
+        """Couldn't find module.  The file 'fn' is not in PYTHONPATH"""
     return _importFromFile(fn)
 
 
@@ -642,6 +642,11 @@ class TestLoader(object):
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
         return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
 
+    def findByName(self, name):
+        if os.path.exists(name):
+            return filenameToModule(name)
+        return reflect.namedAny(name)
+
     def loadModule(self, module):
         if not isinstance(module, types.ModuleType):
             raise TypeError("%r is not a module" % (module,))
@@ -707,7 +712,8 @@ class TestLoader(object):
         for name in testModuleNames:
             try:
                 module = filenameToModule(opj(dirname, name))
-            except ImportError:
+            except:
+                # Importing a module can raise any kind of error. Get them all.
                 self.reporter.reportImportError(name, failure.Failure())
                 continue
             suite.addTest(self.loadModule(module))

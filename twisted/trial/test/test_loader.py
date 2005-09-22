@@ -4,6 +4,47 @@ from twisted.trial import unittest
 from twisted.trial import runner, reporter
 
 
+class FinderTest(unittest.TestCase):
+    def setUp(self):
+        self.reporter = reporter.Reporter()
+        self.loader = runner.TestLoader(self.reporter)
+
+    def test_findPackage(self):
+        sample1 = self.loader.findByName('twisted')
+        import twisted as sample2
+        self.failUnlessEqual(sample1, sample2)
+    
+    def test_findModule(self):
+        sample1 = self.loader.findByName('twisted.trial.test.sample')
+        import sample as sample2
+        self.failUnlessEqual(sample1, sample2)
+
+    def test_findFile(self):
+        path = util.sibpath(__file__, 'sample.py')
+        sample1 = self.loader.findByName(path)
+        import sample as sample2
+        self.failUnlessEqual(sample1, sample2)
+
+    def test_findObject(self):
+        sample1 = self.loader.findByName('twisted.trial.test.sample.FooTest')
+        import sample
+        self.failUnlessEqual(sample.FooTest, sample1)
+
+    def test_findNonModule(self):
+        self.failUnlessRaises(AttributeError,
+                              self.loader.findByName,
+                              'twisted.trial.test.nonexistent')
+
+    def test_findNonPackage(self):
+        self.failUnlessRaises(ValueError,
+                              self.loader.findByName,
+                              'nonextant')
+
+    def test_findNonFile(self):
+        path = util.sibpath(__file__, 'nonexistent.py')
+        self.failUnlessRaises(ValueError, self.loader.findByName, path)
+        
+        
 class FileTest(unittest.TestCase):
     samplePath = util.sibpath(__file__, 'foo')
 
@@ -61,8 +102,8 @@ class FileTest(unittest.TestCase):
                               self.samplePath)
 
     def test_filenameNotPython(self):
-        self.failUnlessRaises(SyntaxError, runner.filenameToModule,
-                              util.sibpath(__file__, 'notpython'))
+        self.failUnlessRaises(ValueError, runner.filenameToModule,
+                              util.sibpath(__file__, 'notpython.py'))
     
 
 class LoaderTest(unittest.TestCase):
@@ -76,10 +117,6 @@ class LoaderTest(unittest.TestCase):
     ## * loading doctests
 
     ## FIXME -- Need tests (and implementations) for:
-    ## * Loading from a file
-    ##   * when it refers to a module (in sys.path and out of sys.path)
-    ##   * when it refers to a package (in sys.path and out of sys.path,
-    ##     a directory or __init__.py)
     ## * Loading from a string
     ##   * could be a file / directory
     ##   * could be name of a python object
