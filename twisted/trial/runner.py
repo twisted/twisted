@@ -162,7 +162,7 @@ class TrialRoot(pyunit.TestSuite):
         pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
-        self.loader = TestLoader(reporter)
+        self.loader = TestLoader()
         self.startTime, self.endTime = None, None
         if randomize:
             randomer = random.Random()
@@ -185,6 +185,11 @@ class TrialRoot(pyunit.TestSuite):
 
     def addPackageRecursive(self, package):
         self.addTest(self.loader.loadPackageRecursive(package))
+        importErrors = self.loader.getImportErrors()
+        if len(importErrors) > 0:
+            for name, failure in importErrors:
+                self.reporter.reportImportError(name, failure)
+            self.loader.clearImportErrors()
 
     def addDoctests(self, doctests):
         for doctest in doctests:
@@ -619,13 +624,13 @@ class TestLoader(object):
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
 
-    def __init__(self, reporter):
-        self.reporter = reporter
+    def __init__(self):
         self.suiteFactory = TestSuite
         self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
         self.testMethodFactory = TestMethod
         self.sorter = lambda x : x.__name__
+        self._importErrors = []
 
     def _findTestClasses(self, module):
         """Given a module, return all trial Test classes"""
@@ -642,6 +647,12 @@ class TestLoader(object):
     def _findTestModules(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
         return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
+
+    def getImportErrors(self):
+        return self._importErrors
+
+    def clearImportErrors(self):
+        self._importErrors = []
 
     def findByName(self, name):
         if os.path.exists(name):
@@ -715,7 +726,7 @@ class TestLoader(object):
                 module = filenameToModule(opj(dirname, name))
             except:
                 # Importing a module can raise any kind of error. Get them all.
-                self.reporter.reportImportError(name, failure.Failure())
+                self._importErrors.append((name, failure.Failure()))
                 continue
             suite.addTest(self.loadModule(module))
 

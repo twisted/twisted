@@ -5,7 +5,7 @@ from twisted.trial.test import common
 class TestTestVisitor(TestCase):
 
     def setUp(self):
-        self.loader = TestLoader(common.BogusReporter())
+        self.loader = TestLoader()
         try:
             from twisted.trial.unittest import TestVisitor
             class MockVisitor(TestVisitor):
