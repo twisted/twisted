@@ -84,11 +84,10 @@ query3_root = xpath.internQuery("/stream[@xmlns='etherx']")
 query3_elem1 = xpath.internQuery("/error[not(@xmlns)]")
 
 class DomishStreamTestCase(unittest.TestCase):    
-    def __init__(self):
+    def setUp(self):
         self.doc_started = False
         self.packet_count = 0
         self.doc_ended = False
-        self.match_list = []
 
     def _docStarted(self, root):
         self.doc_started = True
@@ -106,9 +105,6 @@ class DomishStreamTestCase(unittest.TestCase):
         self.stream.DocumentStartEvent = self._docStarted
         self.stream.ElementEvent = self._elementMatched
         self.stream.DocumentEndEvent = self._docEnded
-        self.doc_started = False
-        self.packet_count = 0
-        self.doc_ended = False
         self.match_list = matches
     
     def testSuxStream(self):
