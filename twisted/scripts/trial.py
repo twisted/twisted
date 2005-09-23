@@ -425,14 +425,13 @@ def _getRunner(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
-    loader = _getLoader(config)
     root = runner.TrialRoot(reporter)
     root.addTest(_getSuite(config, reporter))
     return root
 
 
 def _getSuite(config, reporter):
-    loader = _getLoader(config)
+    loader = _getLoader(config, reporter)
     suite = runner.TestSuite()
     for test in config['tests']:
         if isinstance(test, str):
@@ -465,7 +464,7 @@ def _setUpTestdir():
     os.chdir(testdir)
 
 
-def _getLoader(config):
+def _getLoader(config, reporter):
     loader = runner.SafeTestLoader()
     if config['random']:
         randomer = random.Random()
