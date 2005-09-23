@@ -548,6 +548,13 @@ class FTPClientBasicTests(unittest.TestCase):
         ftpClient.lineReceived('220 Imaginary FTP.')
         self.failUnlessEqual(['220 Imaginary FTP.'], ftpClient.greeting)
 
+    def testResponseWithNoMessage(self):
+        # Responses with no message are still valid, i.e. three digits followed
+        # by a space is complete response.
+        ftpClient = ftp.FTPClientBasic()
+        ftpClient.lineReceived('220 ')
+        self.failUnlessEqual(['220 '], ftpClient.greeting)
+
     def testMultilineResponse(self):
         ftpClient = ftp.FTPClientBasic()
         ftpClient.transport = DummyTransport()

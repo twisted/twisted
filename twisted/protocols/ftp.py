@@ -154,7 +154,7 @@ RESPONSE = {
     BAD_CMD_SEQ:                        '503 Incorrect sequence of commands: %s',
     CMD_NOT_IMPLMNTD_FOR_PARAM:         "504 Not implemented for parameter '%s'.",
     NOT_LOGGED_IN:                      '530 Please login with USER and PASS.',
-    AUTH_FAILURE:                       '530 Sorry, Authentication failed. %s',
+    AUTH_FAILURE:                       '530 Sorry, Authentication failed.',
     NEED_ACCT_FOR_STOR:                 '532 Need an account for storing files',
     FILE_NOT_FOUND:                     '550 %s: No such file or directory.',
     PERMISSION_DENIED:                  '550 %s: Permission denied.',
@@ -213,10 +213,13 @@ class WrongFiletype(FilesystemShellException):
 # -- Custom Exceptions --
 
 class FTPCmdError(Exception):
-    def __init__(self, msg):
-        Exception.__init__(self, msg)
+    def __init__(self, *msg):
+        Exception.__init__(self, *msg)
         self.errorMessage = msg
 
+    def response(self):
+        """Generate a FTP response message for this error."""
+        return RESPONSE[self.errorCode] % self.errorMessage
 
 
 class FileNotFoundError(FTPCmdError):
@@ -600,8 +603,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
         def processFailed(err):
             if err.check(FTPCmdError):
-                msg = RESPONSE[err.value.errorCode] % (err.value.errorMessage,)
-                self.sendLine(msg)
+                self.sendLine(err.value.response())
             elif (err.check(TypeError) and 
                   err.value.args[0].find('takes exactly') != -1):
                 self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
@@ -712,7 +714,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def _ebLogin(failure):
             failure.trap(cred_error.UnauthorizedLogin, cred_error.UnhandledCredentials)
             self.state = self.UNAUTH
-            return (AUTH_FAILURE, '')
+            raise AuthorizationError
 
         d = self.portal.login(creds, None, IFTPShell)
         d.addCallbacks(_cbLogin, _ebLogin)
@@ -1807,7 +1809,6 @@ class FTPClientBasic(basic.LineReceiver):
         # Add this line to the current response
         if self.debug:
             log.msg('--> %s' % line)
-        line = line.rstrip()
         self.response.append(line)
 
         # Bail out if this isn't the last line of a response
