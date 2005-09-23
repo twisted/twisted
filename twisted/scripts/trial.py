@@ -407,24 +407,19 @@ def _getReporter(config):
     log.msg(iface=ITrialDebug, reporter="config['reporter']: %s"
             % (config['reporter'],))
     if config['reporter'] is not None:
-        return config['reporter']
-
-    reporter = config.getReporter()
+        reporterKlass = config['reporter']
+    else:
+        reporterKlass = config.getReporter()
     log.msg(iface=ITrialDebug, reporter="using reporter class: %r"
-            % (reporter,))
+            % (reporterKlass,))
+    reporter = reporterKlass(tbformat=config['tbformat'],
+                             args=config['reporter-args'],
+                             realtime=config['rterrors'])
     return reporter
 
 
 def _getRunner(config):
-    def _dbg(msg):
-        log.msg(iface=itrial.ITrialDebug, parseargs=msg)
-    reporterKlass = _getReporter(config)
-    log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r"
-            % (reporterKlass,))
-
-    reporter = reporterKlass(tbformat=config['tbformat'],
-                             args=config['reporter-args'],
-                             realtime=config['rterrors'])
+    reporter = _getReporter(config)
     root = runner.TrialRoot(reporter)
     root.addTest(_getSuite(config, reporter))
     return root
