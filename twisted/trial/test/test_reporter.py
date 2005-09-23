@@ -20,8 +20,7 @@ class TestReporter(common.RegistryBaseMixin, unittest.TestCase):
     def testTracebackReporting(self):
         loader = runner.TestLoader()
         suite = loader.loadMethod(common.FailfulTests.testTracebackReporting)
-        self.suite.addTest(suite)
-        self.suite.run()
+        self.suite.run(suite)
         lines = self.reporter.out.split('\n')
         while 1:
             if not lines:

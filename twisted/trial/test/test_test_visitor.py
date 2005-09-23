@@ -21,10 +21,6 @@ class TestTestVisitor(TestCase):
                     self.calls.append(("module", testModule))
                 def visitModuleAfter(self, testModule):
                     self.calls.append(("module_after", testModule))
-                def visitTrial(self, testSuite):
-                    self.calls.append(("suite", testSuite))
-                def visitTrialAfter(self, testSuite):
-                    self.calls.append(("suite_after", testSuite))
             self.mock_visitor = MockVisitor
         except ImportError:
             pass
@@ -45,28 +41,6 @@ class TestTestVisitor(TestCase):
         test_visitor = self.mock_visitor()
         testCase.visit(test_visitor)
         self.assertEqual(test_visitor.calls, [("case", testCase)])
-
-    def test_visit_suite_default(self):
-        from twisted.trial.unittest import TestVisitor
-        from twisted.trial.runner import TrialRoot
-        from twisted.trial.reporter import Reporter
-        testCase = TrialRoot(Reporter())
-        test_visitor = TestVisitor()
-        testCase.visit(test_visitor)
-
-    def test_visit_suite(self):
-        from twisted.trial.runner import TrialRoot, TestLoader
-        from twisted.trial.reporter import Reporter
-        import sys
-        test_visitor = self.mock_visitor()
-        testCase = TrialRoot(Reporter())
-        testCase.addTest(self.loader.loadModule(sys.modules[__name__]))
-        testCase.visit(test_visitor)
-        self.failIf(len(test_visitor.calls) < 4)
-        self.assertEqual(test_visitor.calls[0], ("suite", testCase))
-        self.assertEqual(test_visitor.calls[1][0], "module")
-        self.assertEqual(test_visitor.calls[2][0], "class")
-        self.assertEqual(test_visitor.calls[-1], ("suite_after", testCase))
 
     def test_visit_module_default(self):
         from twisted.trial.unittest import TestVisitor

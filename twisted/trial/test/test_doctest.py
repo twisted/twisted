@@ -32,16 +32,14 @@ class TestRunners(unittest.TestCase):
 
     def test_basicTrialIntegration(self):
         loader = runner.TestLoader()
-        root = runner.TrialRoot(common.BogusReporter())
-        root.addTest(loader.loadDoctests(trialdoctest1))
-        self.assertEqual(7, root.countTestCases())
+        suite = loader.loadDoctests(trialdoctest1)
+        self.assertEqual(7, suite.countTestCases())
 
     def test_expectedResults(self):
         suite = runner.DocTestSuite(trialdoctest1)
         reporter = common.BogusReporter()
         root = runner.TrialRoot(reporter)
-        root.addTest(suite)
-        root.run()
+        root.run(suite)
         self.assertEqual(5, len(reporter.results[SUCCESS]))
         # doctest reports failures as errors in 2.3
         self.assertEqual(2, len(reporter.results[ERROR])

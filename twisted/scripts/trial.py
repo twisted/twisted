@@ -418,13 +418,6 @@ def _getReporter(config):
     return reporter
 
 
-def _getRunner(config):
-    reporter = _getReporter(config)
-    root = runner.TrialRoot(reporter)
-    root.addTest(_getSuite(config, reporter))
-    return root
-
-
 def _getSuite(config, reporter):
     loader = _getLoader(config, reporter)
     suite = runner.TestSuite()
@@ -490,17 +483,17 @@ def _getDebugger(config):
                 dbg.rcLines.extend(rcFile.readlines())
     return dbg
 
-def _doDebuggingRun(config, suite):
-    _getDebugger(config).runcall(suite.run)
+def _doDebuggingRun(config, root, suite):
+    _getDebugger(config).runcall(root.run, suite)
 
-def _doProfilingRun(config, suite):
+def _doProfilingRun(config, root, suite):
     if config['until-failure']:
         raise RuntimeError, \
               "you cannot use both --until-failure and --profile"
     import profile
     prof = profile.Profile()
     try:
-        prof.runcall(suite.run)
+        prof.runcall(root.run, suite)
         prof.dump_stats('profile.data')
     except SystemExit:
         pass
@@ -544,22 +537,24 @@ class DryRunVisitor(TestVisitor):
 
 
 def reallyRun(config):
-    root = _getRunner(config)
+    reporter = _getReporter(config)
+    suite = _getSuite(config, reporter)
+    root = runner.TrialRoot(reporter)
     if config['dry-run']:
         root.setStartTime()
-        root.visit(DryRunVisitor(root.reporter))
+        suite.visit(DryRunVisitor(root.reporter))
         root._kickStopRunningStuff()
     elif config['until-failure']:
         if config['debug']:
-            _getDebugger(config).runcall(call_until_failure, root.run)
+            _getDebugger(config).runcall(call_until_failure, root.run, suite)
         else:
-            call_until_failure(root.run)
+            call_until_failure(root.run, suite)
     elif config['debug']:
-        _doDebuggingRun(config, root)
+        _doDebuggingRun(config, root, suite)
     elif config['profile']:
-        _doProfilingRun(config, root)
+        _doProfilingRun(config, root, suite)
     else:
-        root.run()
+        root.run(suite)
     return root
 
 

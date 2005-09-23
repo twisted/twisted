@@ -149,7 +149,7 @@ class PyUnitTestMethod(object):
         visitor.visitCase(self)
 
 
-class TrialRoot(pyunit.TestSuite):
+class TrialRoot(object):
     """This is the main organizing object. The front-end script creates a
     TrialRoot, and tells it what modules were requested on the command line.
     It also hands it a reporter. The TrialRoot then takes all of the
@@ -159,7 +159,6 @@ class TrialRoot(pyunit.TestSuite):
     zi.implements(itrial.ITrialRoot)
 
     def __init__(self, reporter):
-        pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()
         self.startTime, self.endTime = None, None
@@ -193,27 +192,13 @@ class TrialRoot(pyunit.TestSuite):
     def _initLogging(self):
         log.startKeepingErrors()
 
-    def run(self):
+    def run(self, suite):
         self._initLogging()
         self.setStartTime()
         # this is where the test run starts
-        self.reporter.startTrial(self.countTestCases())
-        for tr in self._tests:
-            tr.run(self.reporter)
-            if self.reporter.shouldStop:
-                break
+        self.reporter.startTrial(suite.countTestCases())
+        suite.run(self.reporter)
         self._kickStopRunningStuff()
-
-    def visit(self, visitor):
-        """Call visitor,visitSuite(self) and visit all child tests."""
-        visitor.visitTrial(self)
-        self._visitChildren(visitor)
-        visitor.visitTrialAfter(self)
-
-    def _visitChildren(self, visitor):
-        """Visit all chilren of this test suite."""
-        for case in self._tests:
-            case.visit(visitor)
 
     def runningTime(self):
         return self.endTime - self.startTime

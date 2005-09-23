@@ -71,6 +71,7 @@ class Reporter(object):
     def __init__(self, stream=sys.stdout, tbformat='default', args=None,
                  realtime=False):
         self.stream = stream
+        self.testsRun = 0
         self.tbformat = tbformat
         self.args = args
         self.realtime = realtime
@@ -93,7 +94,7 @@ class Reporter(object):
         pass
 
     def startTest(self, method):
-        pass
+        self.testsRun += 1
 
     def reportImportError(self, name, exc):
         self.couldNotImport.append((name, exc))
@@ -273,7 +274,7 @@ class Reporter(object):
         self.write("\n")
         self._reportFailures()
         self.write("%s\n" % SEPARATOR)
-        self.write('Ran %d tests in %.3fs\n', suite.countTestCases(),
+        self.write('Ran %d tests in %.3fs\n', self.testsRun,
                    suite.runningTime())
         self.write('\n')
         self._reportStatus(suite)
@@ -379,6 +380,7 @@ class TreeReporter(VerboseTextReporter):
         
     def startTest(self, method):
         self.write('      %s ... ', method.shortDescription())
+        super(VerboseTextReporter, self).startTest(method)
 
     def endTest(self, method):
         Reporter.endTest(self, method)

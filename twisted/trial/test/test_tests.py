@@ -360,16 +360,15 @@ class TestTests(unittest.TestCase):
         for klass in (self.Tests,
                       self.TestSkipClassAttr,
                       self.TestTodoClassAttr):
-            suite = runner.TrialRoot(reporter)
-            suite.addTest(runner.TestLoader().loadClass(klass))
-            suite.run()
+            suite = runner.TestLoader().loadClass(klass)
+            root = runner.TrialRoot(reporter)
+            root.run(suite)
 
-            for subsuite in suite._tests:
-                for method in subsuite._tests:
-                    try:
-                        self.checkResults(reporter, method)
-                    except unittest.FailTest:
-                        raise
+            for method in suite._tests:
+                try:
+                    self.checkResults(reporter, method)
+                except unittest.FailTest:
+                    raise
 
 
 
