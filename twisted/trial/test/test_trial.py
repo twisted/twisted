@@ -59,6 +59,54 @@ class LogObserver:
                 print repr(events)
 
 
+class _StdioProxy(pyutil.SubclassableCStringIO):
+    """Use me to store IO"""
+    def __init__(self, original):
+        super(_StdioProxy, self).__init__()
+        self.original = original
+
+    def __iter__(self):
+        return self.original.__iter__()
+
+    def write(self, s):
+        super(_StdioProxy, self).write(s)
+        return self.original.write(s)
+
+    def writelines(self, list):
+        super(_StdioProxy, self).writelines(list)
+        return self.original.writelines(list)
+
+    def flush(self):
+        return self.original.flush()
+
+    def next(self):
+        return self.original.next()
+
+    def close(self):
+        return self.original.close()
+
+    def isatty(self):
+        return self.original.isatty()
+
+    def seek(self, pos, mode=0):
+        return self.original.seek(pos, mode)
+
+    def tell(self):
+        return self.original.tell()
+
+    def read(self, n=-1):
+        return self.original.read(n)
+
+    def readline(self, length=None):
+        return self.original.readline(length)
+
+    def readlines(self, sizehint=0):
+        return self.original.readlines(sizehint)
+
+    def truncate(self, size=None):
+        return self.original.truncate(size)
+
+
 statdatum = {"foo": "bar", "baz": "spam"}
 
 class TestSkip(common.RegistryBaseMixin, unittest.TestCase):
@@ -109,8 +157,8 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
     def setUp(self):
         common.RegistryBaseMixin.setUp(self)
-        sys.stdout = util._StdioProxy(sys.stdout)
-        sys.stderr = util._StdioProxy(sys.stderr)
+        sys.stdout = _StdioProxy(sys.stdout)
+        sys.stderr = _StdioProxy(sys.stderr)
         self.loader = runner.TestLoader()
 
     def tearDown(self):

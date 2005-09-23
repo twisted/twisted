@@ -46,9 +46,6 @@ class SignalStateManager:
         self._store = {}
             
 
-def _append(result, lst):
-    lst.append(result)
-
 def deferredResult(d, timeout=None):
     """
     Waits for a Deferred to arrive, then returns or throws an exception,
@@ -419,60 +416,6 @@ def suppressWarnings(f, *warningz):
     return enclosingScope(warnings, warningz)
 
 
-def classesToTestWithTrial(*cls):
-    from twisted.trial import itrial
-    for c in cls:
-        zi.directlyProvides(c, itrial.IPyUnitTCFactory)
-        #zi.directlyProvides(c, itrial.ITestCaseFactory)
-
-
-class _StdioProxy(util.SubclassableCStringIO):
-    def __init__(self, original):
-        super(_StdioProxy, self).__init__()
-        self.original = original
-
-    def __iter__(self):
-        return self.original.__iter__()
-
-    def write(self, s):
-        super(_StdioProxy, self).write(s)
-        return self.original.write(s)
-
-    def writelines(self, list):
-        super(_StdioProxy, self).writelines(list)
-        return self.original.writelines(list)
-
-    def flush(self):
-        return self.original.flush()
-
-    def next(self):
-        return self.original.next()
-
-    def close(self):
-        return self.original.close()
-
-    def isatty(self):
-        return self.original.isatty()
-
-    def seek(self, pos, mode=0):
-        return self.original.seek(pos, mode)
-
-    def tell(self):
-        return self.original.tell()
-
-    def read(self, n=-1):
-        return self.original.read(n)
-
-    def readline(self, length=None):
-        return self.original.readline(length)
-
-    def readlines(self, sizehint=0):
-        return self.original.readlines(sizehint)
-
-    def truncate(self, size=None):
-        return self.original.truncate(size)
-
-        
 class _TrialLogObserver(object):
     def __init__(self):
         self.events = []
