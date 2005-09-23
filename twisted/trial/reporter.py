@@ -60,21 +60,6 @@ methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
 
 # ----------------------------------------------------------------------------
 
-def makeLoggingMethod(name, f):
-    def loggingMethod(*a, **kw):
-        print "%s.%s(*%r, **%r)" % (name, f.func_name, a, kw)
-        return f(*a, **kw)
-    return loggingMethod
-
-
-class MethodCallLoggingType(type):
-    def __new__(cls, name, bases, attrs):
-        for (k, v) in attrs.items():
-            if isinstance(v, types.FunctionType):
-                attrs[k] = makeLoggingMethod(name, v)
-        return super(MethodCallLoggingType, cls).__new__(cls, name, bases,
-                                                         attrs)
-
 class BrokenTestCaseWarning(Warning):
     """emitted as a warning when an exception occurs in one of
     setUp, tearDown, setUpClass, or tearDownClass"""
@@ -317,7 +302,6 @@ class TimingTextReporter(VerboseTextReporter):
 
 
 class TreeReporter(VerboseTextReporter):
-    #__metaclass__ = MethodCallLoggingType
     currentLine = ''
     columns = 79
 
