@@ -21,7 +21,6 @@ from twisted.python.util import spewer
 from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, remote
 from twisted.trial import adapters, reporter
-from twisted.trial.itrial import ITrialDebug
 from twisted.trial.unittest import TestVisitor
 
 import zope.interface as zi
@@ -176,7 +175,6 @@ class Options(usage.Options):
         for opt, qual in self.optToQual.iteritems():
             if self[opt]:
                 nany = reflect.namedAny(qual)
-                log.msg(iface=ITrialDebug, reporter="reporter option: %s, returning %r" % (opt, nany))
                 return nany
         else:
             return self.fallbackReporter
@@ -365,14 +363,10 @@ def _setUpLogging(config):
 
 
 def _getReporter(config):
-    log.msg(iface=ITrialDebug, reporter="config['reporter']: %s"
-            % (config['reporter'],))
     if config['reporter'] is not None:
         reporterKlass = config['reporter']
     else:
         reporterKlass = config.getReporter()
-    log.msg(iface=ITrialDebug, reporter="using reporter class: %r"
-            % (reporterKlass,))
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
