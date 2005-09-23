@@ -5393,3 +5393,9 @@ Jerub|and I still, to this day, curse that man.
 <jotham> you guys are like ADHD vultures, swoop in, devour my problem, leave me
 bewildered, then go off to the next corpse
 %
+<radix> php thinks 0 == "Foo"
+<radix> why
+...
+<moshez> radix: as consistent and clear PHP is, it has its problem areas
+<moshez> radix: wait, no, I can't say that with a straight face
+%
