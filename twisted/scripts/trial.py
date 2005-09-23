@@ -18,14 +18,6 @@ from twisted.trial.unittest import TestVisitor
 class PluginError(Exception):
     pass
 
-class PluginWarning(Warning):
-    pass
-
-
-class ArgumentError(Exception):
-    """raised when trial can't figure out how to convert an argument into
-    a runnable chunk of python
-    """
 
 # Yea, this is stupid.  Leave it for for command-line compatibility for a
 # while, though.
@@ -134,6 +126,8 @@ class Options(usage.Options):
 
     fallbackReporter = reporter.TreeReporter
     defaultReporter = None
+    extra = None
+    tracer = None
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -147,15 +141,12 @@ class Options(usage.Options):
             self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
             qual = "%s.%s" % (p.module, p.klass)
             self.optToQual[p.longOpt] = qual
-
             # find the default
             d = getattr(p, 'default', None)
             if d is not None:
                 self.defaultReporter = qual
-
         if self.defaultReporter is None:
             raise PluginError, "no default reporter specified"
-
 
     def getReporter(self):
         """return the class of the selected reporter
@@ -178,7 +169,6 @@ class Options(usage.Options):
     def opt_coverage(self, coverdir):
         """Generate coverage information in the given directory
         (relative to _trial_temp). Requires Python 2.3.3."""
-
         print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
@@ -265,8 +255,6 @@ class Options(usage.Options):
             raise usage.UsageError(
                 "tbformat must be 'plain', 'emacs', or 'cgitb'.")
 
-
-    extra = None
     def opt_extra(self, arg):
         """
         Add an extra argument.  (This is a hack necessary for interfacing with
@@ -275,6 +263,7 @@ class Options(usage.Options):
         if self.extra is None:
             self.extra = []
         self.extra.append(arg)
+    opt_x = opt_extra
 
     def opt_recursionlimit(self, arg):
         """see sys.setrecursionlimit()"""
@@ -283,10 +272,6 @@ class Options(usage.Options):
         except (TypeError, ValueError):
             raise usage.UsageError(
                 "argument to recursionlimit must be an integer")
-
-    opt_x = opt_extra
-
-    tracer = None
 
     def parseArgs(self, *args):
         ## XXX - hack around the directory changing evil
@@ -304,41 +289,31 @@ class Options(usage.Options):
         # Want to do this stuff as early as possible
         _setUpTestdir()
         _setUpLogging(self)
-
-        def _mustBeInt():
-            raise usage.UsageError("Argument to --random must be a positive "
-                                   "integer")
-            
         if self['random'] is not None:
             try:
                 self['random'] = long(self['random'])
             except ValueError:
-                _mustBeInt()
+                raise usage.UsageError(
+                    "Argument to --random must be a positive integer")
             else:
                 if self['random'] < 0:
-                    _mustBeInt()
+                    raise usage.UsageError(
+                        "Argument to --random must be a positive integer")
                 elif self['random'] == 0:
                     self['random'] = long(time.time() * 100)
-
         if not self.has_key('tbformat'):
             self['tbformat'] = 'default'
-
         if self['psyco']:
             try:
                 import psyco
                 psyco.full()
             except ImportError:
                 print "couldn't import psyco, so continuing on without..."
-
         if self['nopm']:
             if not self['debug']:
                 raise usage.UsageError("you must specify --debug when using "
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
-
-# options
-# ----------------------------------------------------------
-# config and run
 
     
 def _initialDebugSetup(config):
@@ -406,7 +381,6 @@ def _setUpTestdir():
                print ("could not rename path, caught OSError [Errno %s]: %s"
                       % (e.errno,e.strerror))
                raise
-
     os.mkdir(testdir)
     os.chdir(testdir)
 
@@ -429,8 +403,6 @@ def _getDebugger(config):
     except ImportError:
         print "readline module not available"
         hasattr(sys, 'exc_clear') and sys.exc_clear()
-        pass
-
     origdir = config['_origdir']
     for path in (os.path.join(origdir, '.pdbrc'),
                  os.path.join(origdir, 'pdbrc')):
@@ -521,23 +493,17 @@ def reallyRun(config):
 def run():
     if len(sys.argv) == 1:
         sys.argv.append("--help")
-
     config = Options()
-
     try:
         config.parseOptions()
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
-
     _initialDebugSetup(config)
-
     suite = reallyRun(config)
-
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()
         results.write_results(show_missing=1, summary=False,
                               coverdir=config.coverdir)
-
     sys.exit(not suite.reporter.wasSuccessful())
 
