@@ -78,6 +78,9 @@ class Reporter(object):
         self.couldNotImport = []
         self.failures = []
         self.errors = []
+        self.skips = []
+        self.expectedFailures = []
+        self.unexpectedSuccesses = []
         self.results = {}
         for status in STATUSES:
             self.results[status] = []
@@ -105,11 +108,26 @@ class Reporter(object):
             error = failure.Failure(*error)
         self.errors.append((test, error))
 
+    def addSkip(self, test, reason):
+        self.skips.append((test, reason))
+
+    def addUnexpectedSuccess(self, test, todo):
+        self.unexpectedSuccesses.append((test, todo))
+
+    def addExpectedFailure(self, test, error):
+        self.expectedFailures.append((test, error))
+
     def _getFailures(self, forTest):
-        return [ failure for (test, failure) in self.failures if test == forTest ]
+        return self._statusGrep(forTest, self.failures)
 
     def _getErrors(self, forTest):
-        return [ error for (test, error) in self.errors if test == forTest ]
+        return self._statusGrep(forTest, self.errors)
+
+    def _getExpectedFailures(self, forTest):
+        return self._statusGrep(forTest, self.expectedFailures)
+
+    def _statusGrep(self, needle, haystack):
+        return [ data for (test, data) in haystack if test == needle ]
 
     def wasSuccessful(self):
         return len(self.results[FAILURE]) == len(self.results[ERROR]) == 0
@@ -118,11 +136,8 @@ class Reporter(object):
         failures = self._getFailures(method)
         errors = self._getErrors(method)
         method = itrial.ITestMethod(method)
-        if method.getTodo() is not None and (failures or errors):
-            for f in failures + errors:
-                if not itrial.ITodo(method.getTodo()).isExpected(f):
-                    return ERROR
-                return EXPECTED_FAILURE
+        if self._getExpectedFailures(method):
+            return EXPECTED_FAILURE
         elif method.getSkip() is not None:
             return SKIP
         elif errors:
@@ -244,7 +259,8 @@ class Reporter(object):
                 trialMethod = itrial.ITestMethod(meth)
                 self.write(self._formatFailedTest(
                     trialMethod.id(), status,
-                    self._getErrors(meth) + self._getFailures(meth),
+                    self._getErrors(meth) + self._getFailures(meth)
+                    + self._getExpectedFailures(meth),
                     trialMethod.getSkip(),
                     itrial.ITodo(trialMethod.getTodo()).msg))
         for name, error in self.couldNotImport:

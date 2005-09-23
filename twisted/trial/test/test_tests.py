@@ -241,7 +241,9 @@ class TestTests(unittest.TestCase):
 
         def _hasTbs(meth):
             return not (len(reporter._getFailures(meth))
-                        == len(reporter._getErrors(meth)) == 0)
+                        == len(reporter._getErrors(meth))
+                        == len(reporter._getExpectedFailures(meth))
+                        == 0)
 
         def _checkStatus(meth, status):
             statusmsg = ("test did not return status %s, instead returned %s"
@@ -256,7 +258,9 @@ class TestTests(unittest.TestCase):
         def _checkTimeoutError(meth):
             if meth.getTimeout() is not None:
                 failUnless(_hasTbs(meth), 'method did not have tracebacks!')
-                f = reporter._getErrors(meth)[0]
+                errors = (reporter._getErrors(meth)
+                          or reporter._getExpectedFailures(meth))
+                f = errors[0]
                 failUnlessEqual(f.type, defer.TimeoutError)
 
         try:
@@ -303,7 +307,6 @@ class TestTests(unittest.TestCase):
                 _checkStatus(tm, EXPECTED_FAILURE)
                 _checkTimeoutError(tm)
                 failUnless(_hasTbs(tm))
-                failUnless(reporter._getErrors(tm) or reporter._getFailures(tm))
                 failUnless(tm.getTodo())
                 failIf(tm.getSkip())
 

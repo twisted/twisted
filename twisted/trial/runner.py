@@ -496,10 +496,13 @@ class TestMethod(object):
 
     def _eb(self, f, reporter):
         log.msg(f.printTraceback())
+        if (self.getTodo() is not None
+            and itrial.ITodo(self.getTodo()).isExpected(f)):
+            reporter.addExpectedFailure(self, f)
+            return        
         if f.check(util.DirtyReactorWarning):
             reporter.cleanupErrors(f)
-        elif f.check(unittest.FAILING_EXCEPTION,
-                   unittest.FailTest):
+        elif f.check(unittest.FAILING_EXCEPTION, unittest.FailTest):
             reporter.addFailure(self, f)
         elif f.check(KeyboardInterrupt):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
@@ -508,11 +511,11 @@ class TestMethod(object):
                 reason = f.value.args[0]
             else:
                 warnings.warn(("Do not raise unittest.SkipTest with no "
-                               "arguments! "
-                               "Give a reason for skipping tests!"),
+                               "arguments! Give a reason for skipping tests!"),
                               stacklevel=2)
                 reason = f
             self.skip = reason
+            reporter.addSkip(self, reason)
         else:
             reporter.addError(self, f)
 
@@ -523,6 +526,7 @@ class TestMethod(object):
         janitor = util._Janitor()
         if self.getSkip(): # don't run test methods that are marked as .skip
             reporter.startTest(self)
+            reporter.addSkip(self, self.getSkip())
             reporter.endTest(self)
             return
         try:
@@ -559,6 +563,9 @@ class TestMethod(object):
                                          suppress=self.getSuppress())
                 orig.errorHook = lambda x : self._eb(x, reporter)
                 orig(tci)
+                if (self.getTodo() is not None
+                    and len(orig.errors) == 0):
+                    reporter.addUnexpectedSuccess(self, self.getTodo())
             finally:
                 self.endTime = time.time()
                 # Run the tearDown method
