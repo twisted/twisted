@@ -3,27 +3,17 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# Author/Maintainer: Jonathan D. Simms <slyphon@twistedmatrix.com>
-# Originally written by: Jonathan Lange <jml@twistedmatrix.com>
-#                        and countless contributors
 
-import sys, os, inspect, types, errno, pdb, new
-import shutil, random, gc, re, warnings, time
-import os.path as osp
-from os.path import join as opj
-from cStringIO import StringIO
+import sys, os, errno, pdb, shutil, random, gc, warnings, time
 
 from twisted.internet import defer
 from twisted.application import app
 from twisted.python import usage, reflect, failure, log
 from twisted import plugin
 from twisted.python.util import spewer
-from twisted.spread import jelly
-from twisted.trial import runner, util, itrial, remote
-from twisted.trial import adapters, reporter
+from twisted.trial import runner, itrial, reporter
 from twisted.trial.unittest import TestVisitor
 
-import zope.interface as zi
 
 class PluginError(Exception):
     pass
@@ -136,8 +126,6 @@ class Options(usage.Options):
                      ["reporter-args", None, None,
                       "a string passed to the reporter's 'args' kwarg"]]
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
     zsh_mutuallyExclusive = [("verbose", "bwverbose")]
     zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
     zsh_actionDescr = {"logfile":"log file name",
@@ -399,8 +387,8 @@ def _getSuite(config, reporter):
     
 
 def _setUpTestdir():
-    testdir = osp.normpath(osp.abspath("_trial_temp"))
-    if osp.exists(testdir):
+    testdir = os.path.normpath(os.path.abspath("_trial_temp"))
+    if os.path.exists(testdir):
        try:
            shutil.rmtree(testdir)
        except OSError, e:
@@ -440,8 +428,9 @@ def _getDebugger(config):
         pass
 
     origdir = config['_origdir']
-    for path in opj(origdir, '.pdbrc'), opj(origdir, 'pdbrc'):
-        if osp.exists(path):
+    for path in (os.path.join(origdir, '.pdbrc'),
+                 os.path.join(origdir, 'pdbrc')):
+        if os.path.exists(path):
             try:
                 rcFile = file(path, 'r')
             except IOError:
