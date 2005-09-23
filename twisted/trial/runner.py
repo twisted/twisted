@@ -158,7 +158,7 @@ class TrialRoot(pyunit.TestSuite):
     """
     zi.implements(itrial.ITrialRoot)
 
-    def __init__(self, reporter, randomize=None):
+    def __init__(self, reporter):
         pyunit.TestSuite.__init__(self)
         self.reporter = IReporter(reporter)
         self.reporter.setUpReporter()

@@ -425,7 +425,7 @@ def _getSuite(config):
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
     loader = _getLoader(config, reporter)
-    suite = runner.TrialRoot(reporter, randomize=config['random'])
+    suite = runner.TrialRoot(reporter)
     for test in config['tests']:
         if isinstance(test, str):
             suite.addTest(loader.loadByName(test, recurse=config['recurse']))
