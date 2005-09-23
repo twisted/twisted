@@ -496,7 +496,7 @@ def _getDebugger(config):
                 dbg.rcLines.extend(rcFile.readlines())
     return dbg
 
-def _setUpDebugging(config, suite):
+def _doDebuggingRun(config, suite):
     _getDebugger(config).runcall(suite.run)
 
 def _doProfilingRun(config, suite):
@@ -550,34 +550,23 @@ class DryRunVisitor(TestVisitor):
 
 
 def reallyRun(config):
-    if not config['dry-run'] and config['until-failure']:
-        if not config['debug']:
-            def _doRun(config):
-                suite = _getRunner(config)
-                suite.run()
-                return suite
-            return call_until_failure(_doRun, config)
-        else:
-            def _doRun(config):
-                suite = _getRunner(config)
-                suite.debugger = suite.reporter.debugger = True
-                suite.run()
-                return suite
-            return _getDebugger(config).runcall(call_until_failure, _doRun,
-                                                config)
-
-    suite = _getRunner(config)
+    root = _getRunner(config)
     if config['dry-run']:
-        suite.setStartTime()
-        suite.visit(DryRunVisitor(suite.reporter))
-        suite._kickStopRunningStuff()
+        root.setStartTime()
+        root.visit(DryRunVisitor(root.reporter))
+        root._kickStopRunningStuff()
+    elif config['until-failure']:
+        if config['debug']:
+            _getDebugger(config).runcall(call_until_failure, root.run)
+        else:
+            call_until_failure(root.run)
     elif config['debug']:
-        _setUpDebugging(config, suite)
+        _doDebuggingRun(config, root)
     elif config['profile']:
-        _doProfilingRun(config, suite)
+        _doProfilingRun(config, root)
     else:
-        suite.run()
-    return suite
+        root.run()
+    return root
 
 
 def run():
