@@ -6,6 +6,13 @@
 """TELNET implementation, with line-oriented command handling.
 """
 
+import warnings
+warnings.warn(
+    "As of Twisted 2.1, twisted.protocols.telnet is deprecated.  "
+    "See twisted.conch.telnet for the current, supported API.",
+    DeprecationWarning,
+    stacklevel=2)
+
 
 # System Imports
 try:
