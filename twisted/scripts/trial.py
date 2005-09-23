@@ -330,10 +330,13 @@ class Options(usage.Options):
     tracer = None
 
     def parseArgs(self, *args):
-        def _dbg(msg):
-            if self._logObserver is not None:
-                log.msg(iface=ITrialDebug, parseargs=msg)
-        self['tests'].extend(args)
+        ## XXX - hack around the directory changing evil
+        safeArgs = []
+        for arg in args:
+            if os.path.exists(arg):
+                arg = os.path.abspath(arg)
+            safeArgs.append(arg)
+        self['tests'].extend(safeArgs)
         if self.extra is not None:
             self['tests'].extend(self.extra)
 
