@@ -139,8 +139,6 @@ class Options(usage.Options):
         usage.Options.__init__(self)
         self['tests'] = []
         self['reporter'] = None
-        self['debugflags'] = []
-        self['cleanup'] = []
 
     def _loadReporters(self):
         self.pluginFlags, self.optToQual = [], {}
@@ -184,7 +182,13 @@ class Options(usage.Options):
         print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
-        # begin monkey patch --------------------------- 
+        # begin monkey patch ---------------------------
+        #   Before Python 2.4, this function asserted that 'filename' had
+        #   to end with '.py'  This is wrong for at least two reasons:
+        #   1.  We might be wanting to find executable line nos in a script
+        #   2.  The implementation should use os.splitext
+        #   This monkey patch is the same function as in the stdlib (v2.3)
+        #   but with the assertion removed.
         def find_executable_linenos(filename):
             """Return dict where keys are line numbers in the line number
             table.
