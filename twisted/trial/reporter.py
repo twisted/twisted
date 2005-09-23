@@ -282,7 +282,7 @@ class Reporter(object):
 
 class MinimalReporter(Reporter):
     def endTrial(self, suite):
-        numTests = suite.countTestCases()
+        numTests = self.testsRun
         t = (suite.runningTime(), numTests, numTests,
              len(self.couldNotImport), len(self.results[ERROR]),
              len(self.results[FAILURE]), len(self.results[SKIP]))
