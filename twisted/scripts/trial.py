@@ -414,7 +414,8 @@ def _getReporter(config):
             % (reporter,))
     return reporter
 
-def _getSuite(config):
+
+def _getRunner(config):
     def _dbg(msg):
         log.msg(iface=itrial.ITrialDebug, parseargs=msg)
     reporterKlass = _getReporter(config)
@@ -424,8 +425,15 @@ def _getSuite(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
-    loader = _getLoader(config, reporter)
-    suite = runner.TrialRoot(reporter)
+    loader = _getLoader(config)
+    root = runner.TrialRoot(reporter)
+    root.addTest(_getSuite(config, reporter))
+    return root
+
+
+def _getSuite(config, reporter):
+    loader = _getLoader(config)
+    suite = runner.TestSuite()
     for test in config['tests']:
         if isinstance(test, str):
             suite.addTest(loader.loadByName(test, recurse=config['recurse']))
@@ -435,7 +443,7 @@ def _getSuite(config):
     for error in loader.getImportErrors():
         reporter.reportImportError(*error)
     return suite
-
+    
 
 def _setUpTestdir():
     testdir = osp.normpath(osp.abspath("_trial_temp"))
@@ -457,7 +465,7 @@ def _setUpTestdir():
     os.chdir(testdir)
 
 
-def _getLoader(config, reporter):
+def _getLoader(config):
     loader = runner.SafeTestLoader()
     if config['random']:
         randomer = random.Random()
@@ -545,20 +553,20 @@ def reallyRun(config):
     if not config['dry-run'] and config['until-failure']:
         if not config['debug']:
             def _doRun(config):
-                suite = _getSuite(config)
+                suite = _getRunner(config)
                 suite.run()
                 return suite
             return call_until_failure(_doRun, config)
         else:
             def _doRun(config):
-                suite = _getSuite(config)
+                suite = _getRunner(config)
                 suite.debugger = suite.reporter.debugger = True
                 suite.run()
                 return suite
             return _getDebugger(config).runcall(call_until_failure, _doRun,
                                                 config)
 
-    suite = _getSuite(config)
+    suite = _getRunner(config)
     if config['dry-run']:
         suite.setStartTime()
         suite.visit(DryRunVisitor(suite.reporter))
