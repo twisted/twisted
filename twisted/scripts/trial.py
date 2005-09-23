@@ -26,40 +26,6 @@ from twisted.trial.unittest import TestVisitor
 
 import zope.interface as zi
 
-class LogError(Exception):
-    pass
-
-class _DebugLogObserver(object):
-    validChannels = ('reporter', 'kbd', 'parseargs',
-                     'wait', 'testTests', 'timeout',
-                     'reactor')
-
-    def __init__(self, *channels):
-        L = []
-        for c in channels:
-            if c not in self.validChannels:
-                raise LogError, c
-            L.append(c)
-        self.channels = L
-        self.install()
-
-    def __call__(self, events):
-        iface = events.get('iface', None)
-        if (iface is not None
-            and iface is not itrial.ITrialDebug):
-            return
-        for c in self.channels:
-            if c in events:
-                print "TRIAL DEBUG: %s" % (''.join(events[c]),)
-
-    def install(self):
-        log.addObserver(self)
-
-    def remove(self):
-        if self in log.theLogPublisher.observers:
-            log.removeObserver(self)
-
-
 class PluginError(Exception):
     pass
 
@@ -179,7 +145,6 @@ class Options(usage.Options):
 
     def __init__(self):
         usage.Options.__init__(self)
-        self._logObserver = None
         self['tests'] = []
         self['reporter'] = None
         self['debugflags'] = []
@@ -317,13 +282,6 @@ class Options(usage.Options):
             sys.setrecursionlimit(int(arg))
         except (TypeError, ValueError):
             raise usage.UsageError, "argument to recursionlimit must be an integer"
-
-    def opt_trialdebug(self, arg):
-        """turn on trial's internal debugging flags"""
-        try:
-            self._logObserver = _DebugLogObserver(arg)
-        except LogError, e:
-            raise usage.UsageError, "%s not a valid debugging channel" % (e.args[0])
 
     opt_x = opt_extra
 
