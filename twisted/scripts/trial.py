@@ -100,11 +100,6 @@ class Options(usage.Options):
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["recurse", "R", "Search packages recursively"],
                 ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
-                ['verbose', 'v', 'verbose color output (default)'],
-                ['bwverbose', 'o', 'Colorless verbose output'],
-                ['summary', 's', 'minimal summary output'],
-                ['text', 't', 'terse text output'],
-                ['timing', None, 'Timing output'],
                 ['suppresswarnings', None,
                  'Only print warnings to log, not stdout'],
                 ]
@@ -125,28 +120,23 @@ class Options(usage.Options):
     zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
 
     fallbackReporter = reporter.TreeReporter
-    defaultReporter = None
     extra = None
     tracer = None
 
     def __init__(self):
-        usage.Options.__init__(self)
         self['tests'] = []
         self['reporter'] = None
+        self._loadReporters()
+        usage.Options.__init__(self)
 
     def _loadReporters(self):
-        self.pluginFlags, self.optToQual = [], {}
-        self.plugins = plugin.getPlugins(itrial.IReporter)
-        for p in self.plugins:
-            self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
+        self.optToQual = {}
+        for p in plugin.getPlugins(itrial.IReporter):
+            self.optFlags.append([p.longOpt, p.shortOpt, p.description])
             qual = "%s.%s" % (p.module, p.klass)
             self.optToQual[p.longOpt] = qual
-            # find the default
-            d = getattr(p, 'default', None)
-            if d is not None:
-                self.defaultReporter = qual
-        if self.defaultReporter is None:
-            raise PluginError, "no default reporter specified"
+            if getattr(p, 'default', False):
+                self.fallbackReporter = reflect.namedAny(qual)
 
     def getReporter(self):
         """return the class of the selected reporter
