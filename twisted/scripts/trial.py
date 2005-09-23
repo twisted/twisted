@@ -273,6 +273,26 @@ class Options(usage.Options):
             raise usage.UsageError(
                 "argument to recursionlimit must be an integer")
 
+    def opt_psyco(self):
+        try:
+            import psyco
+            psyco.full()
+        except ImportError:
+            print "couldn't import psyco, so continuing on without..."
+
+    def opt_random(self, option):
+        try:
+            self['random'] = long(option)
+        except ValueError:
+            raise usage.UsageError(
+                "Argument to --random must be a positive integer")
+        else:
+            if self['random'] < 0:
+                raise usage.UsageError(
+                    "Argument to --random must be a positive integer")
+            elif self['random'] == 0:
+                self['random'] = long(time.time() * 100)
+
     def parseArgs(self, *args):
         ## XXX - hack around the directory changing evil
         safeArgs = []
@@ -289,26 +309,8 @@ class Options(usage.Options):
         # Want to do this stuff as early as possible
         _setUpTestdir()
         _setUpLogging(self)
-        if self['random'] is not None:
-            try:
-                self['random'] = long(self['random'])
-            except ValueError:
-                raise usage.UsageError(
-                    "Argument to --random must be a positive integer")
-            else:
-                if self['random'] < 0:
-                    raise usage.UsageError(
-                        "Argument to --random must be a positive integer")
-                elif self['random'] == 0:
-                    self['random'] = long(time.time() * 100)
         if not self.has_key('tbformat'):
             self['tbformat'] = 'default'
-        if self['psyco']:
-            try:
-                import psyco
-                psyco.full()
-            except ImportError:
-                print "couldn't import psyco, so continuing on without..."
         if self['nopm']:
             if not self['debug']:
                 raise usage.UsageError("you must specify --debug when using "
