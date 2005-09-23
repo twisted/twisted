@@ -105,10 +105,14 @@ class Options(usage.Options):
     """ % (os.path.basename(sys.argv[0]),)
 
     optFlags = [["help", "h"],
-                ["rterrors", "e", "realtime errors, print out tracebacks as soon as they occur"],
-                ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
-                ["debug-stacktraces", "B", "Report Deferred creation and callback stack traces"],
-                ["nopm", None, "don't automatically jump into debugger for postmorteming of exceptions"],
+                ["rterrors", "e", "realtime errors, print out tracebacks as "
+                 "soon as they occur"],
+                ["debug", "b", "Run tests in the Python debugger. Will load "
+                 "'.pdbrc' from current directory if it exists."],
+                ["debug-stacktraces", "B", "Report Deferred creation and "
+                 "callback stack traces"],
+                ["nopm", None, "don't automatically jump into debugger for "
+                 "postmorteming of exceptions"],
                 ["dry-run", 'n', "do everything but run the tests"],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["until-failure", "u", "Repeat test until it fails"],
@@ -119,7 +123,8 @@ class Options(usage.Options):
                 ['summary', 's', 'minimal summary output'],
                 ['text', 't', 'terse text output'],
                 ['timing', None, 'Timing output'],
-                ['suppresswarnings', None, 'Only print warnings to log, not stdout'],
+                ['suppresswarnings', None,
+                 'Only print warnings to log, not stdout'],
                 ]
 
     optParameters = [["reactor", "r", None,
@@ -193,13 +198,16 @@ class Options(usage.Options):
 
         # begin monkey patch --------------------------- 
         def find_executable_linenos(filename):
-            """Return dict where keys are line numbers in the line number table."""
+            """Return dict where keys are line numbers in the line number
+            table.
+            """
             #assert filename.endswith('.py') # YOU BASTARDS
             try:
                 prog = open(filename).read()
                 prog = '\n'.join(prog.splitlines()) + '\n'
             except IOError, err:
-                sys.stderr.write("Not printing coverage data for %r: %s\n" % (filename, err))
+                sys.stderr.write("Not printing coverage data for %r: %s\n"
+                                 % (filename, err))
                 sys.stderr.flush()
                 return {}
             code = compile(prog, filename, "exec")
@@ -256,12 +264,14 @@ class Options(usage.Options):
         gc.disable()
 
     def opt_tbformat(self, opt):
-        """Specify the format to display tracebacks with. Valid formats are 'plain', 'emacs',
-        and 'cgitb' which uses the nicely verbose stdlib cgitb.text function"""
+        """Specify the format to display tracebacks with. Valid formats are
+        'plain', 'emacs', and 'cgitb' which uses the nicely verbose stdlib
+        cgitb.text function"""
         try:
             self['tbformat'] = TBFORMAT_MAP[opt]
         except KeyError:
-            raise usage.UsageError("tbformat must be 'plain', 'emacs', or 'cgitb'.")
+            raise usage.UsageError(
+                "tbformat must be 'plain', 'emacs', or 'cgitb'.")
 
 
     extra = None
@@ -279,7 +289,8 @@ class Options(usage.Options):
         try:
             sys.setrecursionlimit(int(arg))
         except (TypeError, ValueError):
-            raise usage.UsageError, "argument to recursionlimit must be an integer"
+            raise usage.UsageError(
+                "argument to recursionlimit must be an integer")
 
     opt_x = opt_extra
 
@@ -396,8 +407,9 @@ def _setUpTestdir():
            print ("could not remove path, caught OSError [Errno %s]: %s"
                   % (e.errno,e.strerror))
            try:
-               os.rename(testdir, os.path.abspath("_trial_temp_old%s"
-                                                  % random.randint(0, 99999999)))
+               os.rename(testdir,
+                         os.path.abspath("_trial_temp_old%s"
+                                         % random.randint(0, 99999999)))
            except OSError, e:
                print ("could not rename path, caught OSError [Errno %s]: %s"
                       % (e.errno,e.strerror))
