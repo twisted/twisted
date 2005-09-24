@@ -26,11 +26,6 @@ def _setUpAdapters():
     import reporter, runner, itrial, adapters, remote
     
     for a, o, i in [
-
-# ---- ITestMethod adapters -----------
-(runner.TestMethod, types.MethodType, itrial.ITestMethod),
-(runner.PyUnitTestMethod, pyunit.TestCase, itrial.ITestMethod),
-
 # ---- Magic Attribute Adapters -----------------------
 (adapters.TupleTodo, types.TupleType, itrial.ITodo),
 (adapters.StringTodo, types.StringType, itrial.ITodo),
