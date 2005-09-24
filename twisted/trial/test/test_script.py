@@ -1,4 +1,4 @@
-import inspect
+import inspect, StringIO, sys
 from twisted.trial import unittest
 from twisted.scripts import trial
 from twisted.python import util, usage
@@ -30,18 +30,32 @@ class TestModuleTest(unittest.TestCase):
                              self.config['tests'][0])
 
     def test_testmoduleOnNonexistentFile(self):
-        self.failUnlessRaises(usage.UsageError,
-                              self.config.opt_testmodule,
-                              'test_thisbetternoteverexist.py')
+        buffy = StringIO.StringIO()
+        stderr, sys.stderr = sys.stderr, buffy
+        filename = 'test_thisbetternoteverexist.py'
+        try:
+            self.config.opt_testmodule(filename)
+            self.failUnlessEqual([], self.config['tests'])
+            self.failUnlessEqual("File %r doesn't exist\n" % (filename,),
+                                 buffy.getvalue())
+        finally:
+            sys.stderr = stderr
 
     def test_testmoduleOnEmptyVars(self):
         self.config.opt_testmodule(sibpath('novars.py'))
         self.failUnlessEqual([], self.config['tests'])
 
     def test_testmoduleOnModuleName(self):
-        self.failUnlessRaises(usage.UsageError,
-                              self.config.opt_testmodule,
-                              'twisted.trial.test.test_script')
+        buffy = StringIO.StringIO()
+        stderr, sys.stderr = sys.stderr, buffy
+        moduleName = 'twisted.trial.test.test_script'
+        try:
+            self.config.opt_testmodule(moduleName)
+            self.failUnlessEqual([], self.config['tests'])
+            self.failUnlessEqual("File %r doesn't exist\n" % (moduleName,),
+                                 buffy.getvalue())
+        finally:
+            sys.stderr = stderr
 
     def test_actuallyRuns(self):
         from twisted.internet import interfaces, reactor

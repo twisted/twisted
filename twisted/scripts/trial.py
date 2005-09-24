@@ -206,7 +206,8 @@ class Options(usage.Options):
         # a list of files to Trial with the general expectation of "these files,
         # whatever they are, will get tested"
         if not os.path.isfile(filename):
-            raise usage.UsageError("File %r doesn't exist" % (filename,))
+            sys.stderr.write("File %r doesn't exist\n" % (filename,))
+            return
         filename = os.path.abspath(filename)
         if isTestFile(filename):
             self['tests'].append(filename)
