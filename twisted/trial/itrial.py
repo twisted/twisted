@@ -6,41 +6,12 @@
 import zope.interface as zi
 
 
-class ITodo(zi.Interface):
-    """I allow for more fine-tuned descriptions of what types of errors or
-    failures
-    """
-    types = zi.Attribute(
-        """a tuple of Exception types that we expect the test to have, if the
-        ITestMethod's .failures or .errors don't match these types, the test
-        is an ERROR""")
-    msg = zi.Attribute("""the .todo message""")
-
-    def isExpected(exceptionType):
-        """returns True if exceptionType is an expected failure type, False
-        otherwise if .types is None, should always return True
-        """
-
-    def __add__(other):
-        """returns .msg + other, for string concatenation"""
-
-
 class ITestCase(zi.Interface):
     def setUp():
         """I am run before each method is run"""
 
     def tearDown():
         """I am run after each method is run"""
-
-
-class ITestMethod(zi.Interface):
-    """the interface for running a single TestCase test method"""
-
-    def run(testCaseInstance):
-        """I run the test method"""
-
-    def countTestCases():
-        """Return the number of test cases in this composite element."""
 
 
 class IReporter(zi.Interface):
