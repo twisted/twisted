@@ -134,10 +134,8 @@ class PyUnitTestMethod(object):
 
 class TrialRoot(object):
     """This is the main organizing object. The front-end script creates a
-    TrialRoot, and tells it what modules were requested on the command line.
-    It also hands it a reporter. The TrialRoot then takes all of the
-    packages, modules, classes and methods, and adapts them to ITestRunner
-    objects, which it then calls the run method on.
+    TrialRoot, handing it a reporter, and then calls run, passing it an
+    already-created TestSuite.
     """
     zi.implements(itrial.ITrialRoot)
 
