@@ -166,9 +166,6 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         sys.stdout = sys.stdout.original
         sys.stderr = sys.stderr.original
 
-    def getIO(self):
-        return sys.stdout.getvalue() + sys.stderr.getvalue()
-
     def testBrokenSetUp(self):
         self.suite.run(self.loader.loadClass(erroneous.TestFailureInSetUp))
         imi = self.reporter.udeMethod
@@ -241,8 +238,22 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         self.suite.run(self.loader.loadModule(numOfTests))
         assertSubstring("Ran 1 tests in", self.reporter.out)
 
+
+class SuppressionTest(unittest.TestCase):
+    def setUp(self):
+        self.stream = StringIO()
+        self._stdout, sys.stdout = sys.stdout, self.stream
+        self.suite = runner.TrialRoot(reporter.Reporter(self.stream))
+        self.loader = runner.TestLoader()
+
+    def tearDown(self):
+        sys.stdout = self._stdout
+        self.stream = None
+    
+    def getIO(self):
+        return self.stream.getvalue()
+
     def testSuppressMethod(self):
-        """please ignore the following warnings, we're testing method-level warning suppression"""
         self.suite.run(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressMethod))
         assertNotSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
@@ -250,7 +261,6 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
     def testSuppressClass(self):
-        """please ignore the following warnings, we're testing class-level warning suppression"""
         self.suite.run(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressClass))
         assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
@@ -258,7 +268,6 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
     def testSuppressModule(self):
-        """please ignore the following warnings, we're testing module-level warning suppression"""
         self.suite.run(self.loader.loadMethod(
             suppression.TestSuppression2.testSuppressModule))
         assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
@@ -266,7 +275,6 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         assertNotSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
     def testOverrideSuppressClass(self):
-        """please ignore the following warnings, we're testing override of warning suppression"""
         self.suite.run(self.loader.loadMethod(
             suppression.TestSuppression.testOverrideSuppressClass))
         assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
