@@ -112,8 +112,6 @@ class DocTestSuite(TestSuite):
 
 
 class PyUnitTestMethod(object):
-    zi.implements(itrial.ITestMethod)
-
     def __init__(self, test):
         self._test = test
         test.id = self.id
@@ -137,7 +135,6 @@ class TrialRoot(object):
     TrialRoot, handing it a reporter, and then calls run, passing it an
     already-created TestSuite.
     """
-    zi.implements(itrial.ITrialRoot)
 
     def __init__(self, reporter):
         self.reporter = IReporter(reporter)
@@ -238,8 +235,6 @@ class UserMethodWrapper(object):
 
 
 class TestRunnerBase(pyunit.TestSuite):
-    zi.implements(itrial.ITestRunner)
-    
     def __init__(self, original):
         pyunit.TestSuite.__init__(self)
         self.original = original
@@ -422,7 +417,6 @@ def acquireAttribute(objects, attr, default=_DEFAULT):
 
 
 class TestMethod(object):
-    zi.implements(itrial.ITestMethod)
     parent = None
 
     def __init__(self, original):
