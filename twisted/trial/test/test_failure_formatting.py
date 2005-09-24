@@ -66,7 +66,7 @@ expectTestFailure = ['Running 1 tests.',
                      None,
                      re.compile(r'.*common.py.*in testFailure'),
                      None,
-                     'twisted.trial.assertions.FailTest: %s' % (common.FAILURE_MSG,)]
+                     'twisted.trial.unittest.FailTest: %s' % (common.FAILURE_MSG,)]
 
 class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
     def setUp(self):
