@@ -116,37 +116,20 @@ class PyUnitTestMethod(object):
 
     def __init__(self, test):
         self._test = test
-
-    def __call__(self, result):
-        return self.run(result)
-
-    def countTestCases(self):
-        return 1
+        test.id = self.id
 
     def id(self):
         return self._test.shortDescription()
 
-    def shortDescription(self):
-        return self._test.shortDescription()
+    def __call__(self, results):
+        return self._test(results)
 
-    def getTodo(self):
-        pass
-
-    def getSkip(self):
-        pass
-
-    def getTimeout(self):
-        pass
-
-    def getSuppress(self):
-        pass
-
-    def run(self, reporter):
-        return self._test.run(reporter)
-        
     def visit(self, visitor):
         """Call visitor.visitCase(self)."""
         visitor.visitCase(self)
+
+    def __getattr__(self, name):
+        return getattr(self._test, name)
 
 
 class TrialRoot(object):
@@ -481,10 +464,11 @@ class TestMethod(object):
 
     def _eb(self, f, reporter):
         log.msg(f.printTraceback())
-        if (self.getTodo() is not None
-            and itrial.ITodo(self.getTodo()).isExpected(f)):
-            reporter.addExpectedFailure(self, f)
-            return        
+        if self.getTodo() is not None:
+            todo = itrial.ITodo(self.getTodo())
+            if todo.isExpected(f):
+                reporter.addExpectedFailure(self, f, todo.msg)
+                return        
         if f.check(util.DirtyReactorWarning):
             reporter.cleanupErrors(f)
         elif f.check(unittest.FAILING_EXCEPTION, unittest.FailTest):

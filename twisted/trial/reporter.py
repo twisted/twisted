@@ -115,8 +115,8 @@ class Reporter(object):
     def addUnexpectedSuccess(self, test, todo):
         self.unexpectedSuccesses.append((test, todo))
 
-    def addExpectedFailure(self, test, error):
-        self.expectedFailures.append((test, error))
+    def addExpectedFailure(self, test, error, reason):
+        self.expectedFailures.append((test, error, reason))
 
     def _getFailures(self, forTest):
         return self._statusGrep(forTest, self.failures)
@@ -125,7 +125,27 @@ class Reporter(object):
         return self._statusGrep(forTest, self.errors)
 
     def _getExpectedFailures(self, forTest):
-        return self._statusGrep(forTest, self.expectedFailures)
+        return [ error for test, error, reason in self.expectedFailures
+                 if forTest == test ]
+
+    def _getSkip(self, test):
+        skips = self._statusGrep(test, self.skips)
+        if len(skips) == 0:
+            return None
+        if len(skips) > 1:
+            # XXX -- some sort of warning/error? -- jml
+            pass
+        return skips[0]
+
+    def _getTodoReason(self, test):
+        reasons = [ reason for t, error, reason in self.expectedFailures
+                    if t == test ]
+        if len(reasons) == 0:
+            return None
+        if len(reasons) > 1:
+            # XXX -- some sort of warning/error? -- jml
+            pass
+        return reasons[0]
 
     def _statusGrep(self, needle, haystack):
         return [ data for (test, data) in haystack if test == needle ]
@@ -134,18 +154,15 @@ class Reporter(object):
         return len(self.results[FAILURE]) == len(self.results[ERROR]) == 0
 
     def getStatus(self, method):
-        failures = self._getFailures(method)
-        errors = self._getErrors(method)
-        method = itrial.ITestMethod(method)
-        if self._getExpectedFailures(method):
-            return EXPECTED_FAILURE
-        elif method.getSkip() is not None:
-            return SKIP
-        elif errors:
+        if self._getErrors(method):
             return ERROR
-        elif failures:
+        elif self._getExpectedFailures(method):
+            return EXPECTED_FAILURE
+        elif self._statusGrep(method, self.skips):
+            return SKIP
+        elif self._getFailures(method):
             return FAILURE
-        elif method.getTodo():
+        elif self._statusGrep(method, self.unexpectedSuccesses):
             return UNEXPECTED_SUCCESS
         else:
             return SUCCESS
@@ -257,13 +274,12 @@ class Reporter(object):
     def _reportFailures(self):
         for status in [SKIP, EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in self.results[status]:
-                trialMethod = itrial.ITestMethod(meth)
                 self.write(self._formatFailedTest(
-                    trialMethod.id(), status,
+                    meth.id(), status,
                     self._getErrors(meth) + self._getFailures(meth)
                     + self._getExpectedFailures(meth),
-                    trialMethod.getSkip(),
-                    itrial.ITodo(trialMethod.getTodo()).msg))
+                    self._getSkip(meth),
+                    self._getTodoReason(meth)))
         for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 

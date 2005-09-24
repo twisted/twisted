@@ -231,9 +231,7 @@ class TestTests(unittest.TestCase):
     def checkResults(self, reporter, method):
         def _dbg(msg):
             log.msg(iface=itrial.ITrialDebug, testTests=msg)
-
-        tm = itrial.ITestMethod(method)
-
+        tm = method
         failUnlessEqual(tm.countTestCases(), 1)       
         failUnless(tm.startTime > 0)
         failUnless(tm._setUp, "tm.setUp not set")
