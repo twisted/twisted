@@ -4,12 +4,6 @@
 # Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
 
 import zope.interface as zi
-import sys
-
-
-class IBenchmark(zi.Interface):
-    """an interface for running performance tests on a given TestCase"""
-    pass
 
 
 class ITodo(zi.Interface):
@@ -46,11 +40,6 @@ class ITestCase(zi.Interface):
 
     def tearDown():
         """I am run after each method is run"""
-
-
-class IPyUnitTCFactory(zi.Interface):
-    pass
-
 
 
 class ITrialRoot(zi.Interface):
@@ -91,16 +80,6 @@ class ITrialRoot(zi.Interface):
 
     def run(output, seed=None):
         """run this TestSuite and report to output"""
-
-
-class ITestSuite(zi.Interface):
-    """A TestCase composite which can have TestCases added to it."""
-    
-    def countTestCases():
-        """How many TestCases are there in this?"""
-
-    def visit(visitor):
-        """Visit this TestSuite. See TestVisitor."""
 
 
 class ITestRunner(zi.Interface):
@@ -146,14 +125,6 @@ class ITestRunner(zi.Interface):
 
     def run(randomize, result):
         """run this test class but never raise exceptions."""
-
-
-class IDocTestRunner(ITestRunner):
-    """locates and runs doctests"""
-
-
-class IReporterMethod(zi.Interface):
-    """the subset of ITestMethod that is necessary for reporting"""
 
 
 class ITestMethod(zi.Interface):
@@ -310,56 +281,6 @@ class IReporter(zi.Interface):
                             message appropriate for the type of error
         @type printStatus: Boolean
         """
-
-
-class IRemoteReporter(IReporter):
-    def connectToSlave(self):
-        """connect to a BuildBot buildslave using pb. makes use of the value
-        set in L{twisted.trial.itrial.IReporter.args}
-        """
-
-class IDocTestMethod(ITestMethod):
-    """a DocTestMethod, which is basically an ITestMethod with a few extra 
-    attributes specific to doctests (i.e. the filename and line number)
-    """
-    filename = zi.Attribute(
-       """@ivar filename: the tail part (os.path.split(name)[1] part) 
-       of the originating file name of this doctest""")
-
-    fullname = zi.Attribute(
-        """@ivar fullname: the repr() of the original doctest.DocTest object
-                           (quite informative)""")
-                            
-    docstr = zi.Attribute(
-        """@ivar docstr: a BIG FAT LIE! this value is what is printed when
-        the reporter reports the beginning of this doctest (i.e. startMethod
-        is called)
-        @note: this HORRID HACK will be fixed sometime in the near future
-               with the addition of IDisplayName or some such
-        """)
-    
-
-class IJellied(zi.Interface):
-    pass
-
-
-class IUnjellied(zi.Interface):
-    pass
-
-
-class ITestError(zi.Interface):
-    def __str__():
-        """return the properly formatted error given the ITestMethod's
-        status"""
-
-
-class IOldSkoolInfo(zi.Interface):
-    """a compatability interface to provide information JellyReporter needs
-    from ITestMethods"""
-    testClass = zi.Attribute("the test Class")
-    method = zi.Attribute("the test method")
-    resultType = zi.Attribute("ITestMethod.status")
-    results = zi.Attribute("the appropriate results for the status of this test, a failure.Failure")
 
 
 class ITrialDebug(zi.Interface):
