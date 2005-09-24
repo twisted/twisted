@@ -16,23 +16,14 @@ try:
 except ImportError:
     raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
 
-pyunit = __import__('unittest')
-
 def _setUpAdapters():
     from twisted.spread import jelly
-    from twisted.python import failure
     # sibling imports
-    import types
-    import reporter, runner, itrial, adapters, remote
-    
-    for a, o, i in [
-# ---- Magic Attribute Adapters -----------------------
-(adapters.TupleTodo, types.TupleType, itrial.ITodo),
-(adapters.StringTodo, types.StringType, itrial.ITodo),
-(adapters.TodoBase, types.NoneType, itrial.ITodo),
-(remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
+    import itrial, remote
+    components.registerAdapter(remote.JellyableTestMethod,
+                               itrial.ITestMethod,
+                               jelly.IJellyable)
 
-        components.registerAdapter(a, o, i)
 
 _setUpAdapters()
 
