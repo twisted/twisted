@@ -454,13 +454,39 @@ class TestMethod(object):
             return doc.lstrip().split('\n', 1)[0]
         return self.original.__name__
 
+    def _todoExpected(self, failure):
+        todo = self.getTodo()
+        if todo is None:
+            return False
+        if isinstance(todo, str):
+            return True
+        elif isinstance(todo, tuple):
+            try:
+                expected = list(todo[0])
+            except TypeError:
+                expected = [todo[0]]
+            for error in expected:
+                if failure.check(error):
+                    return True
+            return False
+        else:
+            raise ValueError('%r is not a valid .todo attribute' % (todo,))
+
+    def _getTodoMessage(self):
+        todo = self.getTodo()
+        if todo is None or isinstance(todo, str):
+            return todo
+        elif isinstance(todo, tuple):
+            return todo[1]
+        else:
+            raise ValueError("%r is not a valid .todo attribute" % (todo,))
+
     def _eb(self, f, reporter):
         log.msg(f.printTraceback())
         if self.getTodo() is not None:
-            todo = itrial.ITodo(self.getTodo())
-            if todo.isExpected(f):
-                reporter.addExpectedFailure(self, f, todo.msg)
-                return        
+            if self._todoExpected(f):
+                reporter.addExpectedFailure(self, f, self._getTodoMessage())
+                return
         if f.check(util.DirtyReactorWarning):
             reporter.cleanupErrors(f)
         elif f.check(unittest.FAILING_EXCEPTION, unittest.FailTest):
