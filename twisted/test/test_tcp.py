@@ -109,12 +109,15 @@ class ListeningTestCase(PortCleanerUpper):
         port = reactor.listenTCP(0, f, interface="127.0.0.1")
         n = port.getHost().port
         self.ports.append(port)
-        l = []
-        defer.maybeDeferred(port.stopListening).addCallback(l.append)
-        while not l:
-            reactor.iterate(0.1)
-        port = reactor.listenTCP(n, f, interface="127.0.0.1")
-        self.ports.append(port)
+
+        def cbStopListening(ignored):
+            # Make sure we can rebind the port right away
+            port = reactor.listenTCP(n, f, interface="127.0.0.1")
+            self.ports.append(port)
+
+        d = defer.maybeDeferred(port.stopListening)
+        d.addCallback(cbStopListening)
+        return d
 
     def testNumberedInterface(self):
         f = MyServerFactory()
