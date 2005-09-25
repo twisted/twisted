@@ -442,20 +442,35 @@ class POP3TLSTestCase(unittest.TestCase):
 
         conn = reactor.connectTCP(port.getHost().host, port.getHost().port, cf)
 
-        cp.deferred.addCallback(lambda ign: cp.startTLS())
-        cp.deferred.addCallback(lambda ign: cp.quit())
+        def cbConnected(ignored):
+            log.msg("Connected to server; starting TLS")
+            return cp.startTLS()
 
-        def asserts(ign):
+        def cbStartedTLS(ignored):
+            log.msg("Started TLS; disconnecting")
+            return cp.quit()
+
+        def cbDisconnected(ign):
+            log.msg("Disconnected; asserting correct input received")
             self.assertEquals(
                 sf.input,
                 ['CAPA', 'STLS', 'CAPA', 'QUIT'])
-        cp.deferred.addCallback(asserts)
 
         def cleanup(result):
+            log.msg("Asserted correct input; disconnecting client and shutting down server")
             conn.disconnect()
-            return defer.maybeDeferred(port.stopListening).addCallback(lambda ign: result)
 
+            def cbShutdown(ignored):
+                log.msg("Shut down server")
+                return result
+
+            return defer.maybeDeferred(port.stopListening).addCallback(cbShutdown)
+
+        cp.deferred.addCallback(cbConnected)
+        cp.deferred.addCallback(cbStartedTLS)
+        cp.deferred.addCallback(cbDisconnected)
         cp.deferred.addBoth(cleanup)
+
         return cp.deferred
 
 
