@@ -88,6 +88,3 @@ class IReporter(zi.Interface):
         @type printStatus: Boolean
         """
 
-
-class ITrialDebug(zi.Interface):
-    """used internally as an argument to log.msg"""

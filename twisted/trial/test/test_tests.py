@@ -227,8 +227,6 @@ class TestTests(unittest.TestCase):
     TestTodoClassAttr.todo = CLASS_TODO_MSG
 
     def checkResults(self, reporter, method):
-        def _dbg(msg):
-            log.msg(iface=itrial.ITrialDebug, testTests=msg)
         tm = method
         self.failUnlessEqual(tm.countTestCases(), 1)       
         self.failUnless(tm.startTime > 0)

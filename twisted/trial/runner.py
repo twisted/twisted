@@ -18,7 +18,7 @@ from twisted.internet import defer, interfaces
 from twisted.python import components, reflect, log, failure
 from twisted.python.util import dsu
 from twisted.trial import itrial, util, unittest
-from twisted.trial.itrial import ITestCase, IReporter, ITrialDebug
+from twisted.trial.itrial import ITestCase, IReporter
 import zope.interface as zi
 
 pyunit = __import__('unittest')
@@ -309,7 +309,6 @@ class ClassSuite(TestSuite):
                         self.original.skip = error.value[0]
                         break                   # <--- skip the else: clause
                     elif error.check(KeyboardInterrupt):
-                        log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
                         reporter.shouldStop = True
                 else:
                     reporter.upDownError(setUpClass)
@@ -322,8 +321,6 @@ class ClassSuite(TestSuite):
 
             # --- run methods ----------------------------------------------
             for testMethod in self._tests:
-                log.msg("--> %s <--" % (testMethod.id()))
-                # suppression is handled by each testMethod
                 testMethod.run(reporter, tci)
                 if reporter.shouldStop:
                     break
@@ -336,7 +333,6 @@ class ClassSuite(TestSuite):
             except UserMethodError:
                 for error in tearDownClass.errors:
                     if error.check(KeyboardInterrupt):
-                        log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
                         reporter.shouldStop = True
                 else:
                     reporter.upDownError(tearDownClass)
@@ -476,6 +472,7 @@ class TestMethod(object):
             reporter.addError(self, f)
 
     def run(self, reporter, testCaseInstance):
+        log.msg("--> %s <--" % (self.id()))
         self.testCaseInstance = tci = testCaseInstance
         self.startTime = time.time()
         self._signalStateMgr.save()
