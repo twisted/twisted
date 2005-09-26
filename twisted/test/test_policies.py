@@ -508,7 +508,6 @@ class LoggingFactoryTestCase(unittest.TestCase):
 
         p.dataReceived('here are some bytes')
 
-        
         v = f.openFile.getvalue()
         self.assertNotEqual(-1, v.find("C 1: 'here are some bytes'"), "Expected client string not found in %r" % (v,))
         self.assertNotEqual(-1, v.find("S 1: 'here are some bytes'"), "Expected server string not found in %r" % (v,))
