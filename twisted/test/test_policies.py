@@ -90,14 +90,6 @@ class SimpleSenderProtocol(SimpleProtocol):
         self.data += data
 
 
-class WrapperTestCase(unittest.TestCase):
-    def testProtocolFactoryAttribute(self):
-        # Make sure protocol.factory is the wrapped factory, not the wrapping factory
-        f = Server()
-        wf = policies.WrappingFactory(f)
-        p = wf.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 35))
-        self.assertIdentical(p.wrappedProtocol.factory, f)
-
 
 class ThrottlingTestCase(unittest.TestCase):
 

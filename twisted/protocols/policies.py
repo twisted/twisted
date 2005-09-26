@@ -28,7 +28,7 @@ class ProtocolWrapper(Protocol):
 
     def __init__(self, factory, wrappedProtocol):
         self.wrappedProtocol = wrappedProtocol
-        self.factory = factory
+        self.factory = wrappedProtocol.factory = factory
 
     def makeConnection(self, transport):
         for iface in providedBy(transport):
@@ -321,16 +321,14 @@ class LimitTotalConnectionsFactory(ServerFactory):
         if (self.connectionLimit is None or
             self.connectionCount < self.connectionLimit):
                 # Build the normal protocol
-                wrappedProtocol = self.protocol()
+                protocol = ProtocolWrapper(self, self.protocol())
         elif self.overflowProtocol is None:
             # Just drop the connection
             return None
         else:
             # Too many connections, so build the overflow protocol
-            wrappedProtocol = self.overflowProtocol()
+            protocol = ProtocolWrapper(self, self.overflowProtocol())
 
-        wrappedProtocol.factory = self
-        protocol = ProtocolWrapper(self, wrappedProtocol)
         self.connectionCount += 1
         return protocol
 
