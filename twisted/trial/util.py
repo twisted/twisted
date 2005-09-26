@@ -2,9 +2,21 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
-#         and countless contributors
-#
+
+"""A collection of utility functions and classes, used internally by Trial.
+
+API Stability: Unstable
+
+This code is for Trial's internal use.  Do NOT use this code if you are writing
+tests.  It is subject to change at the Trial maintainer's whim.  There is
+nothing here in this module for you to use unless you are maintaining Trial.
+
+Any non-Trial Twisted code that uses this module will be shot.
+
+Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
+"""
+
+
 from __future__ import generators
 
 import traceback, warnings, time, signal, gc
