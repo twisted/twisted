@@ -239,9 +239,6 @@ class ModuleSuite(TestSuite):
         TestSuite.__init__(self)
         self.original = original
 
-    def __call__(self, reporter):
-        return self.run(reporter)
-
     def run(self, reporter):
         reporter.startModule(self.original)
         TestSuite.run(self, reporter)
