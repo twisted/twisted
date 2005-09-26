@@ -83,6 +83,18 @@ class TestSuite(pyunit.TestSuite):
         for case in self._tests:
             case.visit(visitor)
 
+    def __call__(self, result):
+        return self.run(result)
+
+    def run(self, result):
+        # we implement this because Python 2.3 unittest defines this code
+        # in __call__, whereas 2.4 defines the code in run.
+        for test in self._tests:
+            if result.shouldStop:
+                break
+            test(result)
+        return result        
+
 
 class DocTestSuite(TestSuite):
     def __init__(self, testModule):
