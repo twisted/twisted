@@ -419,29 +419,6 @@ def suppressWarnings(f, *warningz):
     return enclosingScope(warnings, warningz)
 
 
-class _TrialLogObserver(object):
-    def __init__(self):
-        self.events = []
-
-    def __call__(self, eventDict):
-        d = eventDict.copy()
-        # don't include our internal log events as part of the
-        # test run's log events
-        #
-        from twisted.trial.itrial import ITrialDebug
-        iface = d.get('iface', None)
-        if iface is not None and iface is ITrialDebug:
-            return
-        self.events.append(dict([(str(k),str(v)) for k, v in d.iteritems()]))
-    def install(self):
-        log.addObserver(self)
-        return self
-
-    def remove(self):
-        if self in log.theLogPublisher.observers:
-            log.removeObserver(self)
-
-
 def suppress(action='ignore', **kwarg):
     """sets up the .suppress tuple properly, pass options to this method
     as you would the stdlib warnings.filterwarnings()

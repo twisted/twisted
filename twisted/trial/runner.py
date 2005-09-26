@@ -24,25 +24,6 @@ import zope.interface as zi
 pyunit = __import__('unittest')
 
 
-class BrokenTestCaseWarning(Warning):
-    """emitted as a warning when an exception occurs in one of
-    setUp, tearDown, setUpClass, or tearDownClass"""
-
-def _dbgPA(msg):
-    log.msg(iface=itrial.ITrialDebug, parseargs=msg)
-
-_reactorKickStarted = False
-def _kickStartReactor():
-    """Start the reactor if needed so that tests can be run."""
-    global _reactorKickStarted
-    if not _reactorKickStarted:
-        # Kick-start things
-        from twisted.internet import reactor
-        reactor.callLater(0, reactor.crash)
-        reactor.run()
-        _reactorKickStarted = True
-
-
 def isPackage(module):
     """Given an object return True if the object looks like a package"""
     if not isinstance(module, types.ModuleType):
@@ -493,9 +474,6 @@ class TestMethod(object):
             reporter.endTest(self)
             return
         try:
-            # capture all a TestMethod run's log events (warner's request)
-            observer = util._TrialLogObserver().install()
-            
             # Record the name of the running test on the TestCase instance
             tci._trial_caseMethodName = self.original.func_name
 
@@ -540,7 +518,6 @@ class TestMethod(object):
                     else:
                         reporter.upDownError(um, warn=False)
         finally:
-            observer.remove()
             try:
                 janitor.postMethodCleanup()
             except util.MultiError, e:
