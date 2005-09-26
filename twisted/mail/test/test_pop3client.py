@@ -7,6 +7,7 @@ from twisted.mail.pop3 import InsecureAuthenticationDisallowed
 from twisted.mail.pop3 import ServerErrorResponse
 from twisted.protocols import loopback
 from twisted.internet import reactor, defer, error, protocol
+from twisted.python import log
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
