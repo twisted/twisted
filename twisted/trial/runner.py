@@ -210,6 +210,9 @@ class UserMethodWrapper(object):
         except util.MultiError, e:
             for f in e.failures:
                 self.errors.append(f)
+        except KeyboardInterrupt:
+            f = failure.Failure()
+            self.errors.append(f)
         self.endTime = time.time()
         for e in self.errors:
             self.errorHook(e)
@@ -465,6 +468,7 @@ class TestMethod(object):
             reporter.addFailure(self, f)
         elif f.check(KeyboardInterrupt):
             reporter.shouldStop = True
+            reporter.addError(self, f)
         elif f.check(unittest.SkipTest):
             if len(f.value.args) > 0:
                 reason = f.value.args[0]
