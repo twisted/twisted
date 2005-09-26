@@ -234,57 +234,27 @@ class UserMethodWrapper(object):
         pass
 
 
-class TestRunnerBase(pyunit.TestSuite):
+class ModuleSuite(TestSuite):
     def __init__(self, original):
-        pyunit.TestSuite.__init__(self)
+        TestSuite.__init__(self)
         self.original = original
 
     def __call__(self, reporter):
         return self.run(reporter)
 
     def run(self, reporter):
-        """Run all tests for this test runner, catching all exceptions.
-        If a KeyboardInterrupt is caught set reporter.shouldStop."""
-        _kickStartReactor()
-        try:
-            self.runTests(reporter)
-        except KeyboardInterrupt:
-            # KeyboardInterrupts are normal, not a bug in trial.
-            # Just stop the test run, and do the usual reporting.
-            log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-            reporter.shouldStop = True
-        except:
-            # Any other exception is problem.  Report it.
-            f = failure.Failure()
-            annoyingBorder = "-!*@&" * 20
-            trialIsBroken = """
-\tWHOOP! WHOOP! DANGER WILL ROBINSON! DANGER! WHOOP! WHOOP!
-\tcaught exception in TrialRoot! \n\n\t\tTRIAL IS BROKEN!\n\n
-\t%s""" % ('\n\t'.join(f.getTraceback().split('\n')),)
-            print "\n%s\n%s\n\n%s\n" % \
-                  (annoyingBorder, trialIsBroken, annoyingBorder)
-
-    def _visitChildren(self, visitor):
-        """Visit all chilren of this test suite."""
-        for case in self._tests:
-            case.visit(visitor)
-
-
-class ModuleSuite(TestRunnerBase):
-    def runTests(self, reporter):
         reporter.startModule(self.original)
-        for runner in self._tests:
-            runner.runTests(reporter)
+        TestSuite.run(self, reporter)
         reporter.endModule(self.original)
 
     def visit(self, visitor):
         """Call visitor,visitModule(self) and visit all child tests."""
         visitor.visitModule(self)
-        self._visitChildren(visitor)
+        TestSuite.visit(self, visitor)
         visitor.visitModuleAfter(self)
 
 
-class ClassSuite(TestRunnerBase):
+class ClassSuite(TestSuite):
     """I run L{twisted.trial.unittest.TestCase} instances and provide
     the correct setUp/tearDownClass methods, method names, and values for
     'magic attributes'. If this TestCase defines an attribute, it is taken
@@ -294,7 +264,7 @@ class ClassSuite(TestRunnerBase):
     methodPrefix = 'test'
 
     def __init__(self, original):
-        TestRunnerBase.__init__(self, original)
+        pyunit.TestSuite.__init__(self)
         self.original = original
         self._testCase = self.original
         self._signalStateMgr = util.SignalStateManager()
@@ -302,6 +272,9 @@ class ClassSuite(TestRunnerBase):
 
     _module = _tcInstance = None
     
+    def __call__(self, reporter):
+        return self.run(reporter)
+
     def testCaseInstance(self):
         # a property getter, called by subclasses
         if not self._tcInstance:
@@ -325,7 +298,7 @@ class ClassSuite(TestRunnerBase):
             getPythonContainers(tearDown), 'suppress', None)
         return UserMethodWrapper(tearDown, suppress=suppress)
 
-    def runTests(self, reporter):
+    def run(self, reporter):
         janitor = util._Janitor()
         tci = self.testCaseInstance
         self.startTime = time.time()
@@ -344,7 +317,7 @@ class ClassSuite(TestRunnerBase):
                         break                   # <--- skip the else: clause
                     elif error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-                        error.raiseException()
+                        reporter.shouldStop = True
                 else:
                     reporter.upDownError(setUpClass)
                     for tm in self._tests:
@@ -359,6 +332,8 @@ class ClassSuite(TestRunnerBase):
                 log.msg("--> %s <--" % (testMethod.id()))
                 # suppression is handled by each testMethod
                 testMethod.run(reporter, tci)
+                if reporter.shouldStop:
+                    break
 
             # --- tearDownClass ---------------------------------------------
             tearDownClass = self._tearDownClass()
@@ -369,7 +344,7 @@ class ClassSuite(TestRunnerBase):
                 for error in tearDownClass.errors:
                     if error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-                        error.raiseException()
+                        reporter.shouldStop = True
                 else:
                     reporter.upDownError(tearDownClass)
         finally:
@@ -384,7 +359,7 @@ class ClassSuite(TestRunnerBase):
     def visit(self, visitor):
         """Call visitor,visitClass(self) and visit all child tests."""
         visitor.visitClass(self)
-        self._visitChildren(visitor)
+        TestSuite.visit(self, visitor)
         visitor.visitClassAfter(self)
 
 
@@ -492,7 +467,7 @@ class TestMethod(object):
         elif f.check(unittest.FAILING_EXCEPTION, unittest.FailTest):
             reporter.addFailure(self, f)
         elif f.check(KeyboardInterrupt):
-            log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
+            reporter.shouldStop = True
         elif f.check(unittest.SkipTest):
             if len(f.value.args) > 0:
                 reason = f.value.args[0]
@@ -529,8 +504,6 @@ class TestMethod(object):
                 setUp(tci)
             except UserMethodError:
                 for error in setUp.errors:
-                    if error.check(KeyboardInterrupt):
-                        error.raiseException()
                     self._eb(error, reporter)
                 else:
                     # give the reporter the illusion that the test has 

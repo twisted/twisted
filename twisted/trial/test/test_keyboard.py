@@ -1,0 +1,115 @@
+import StringIO
+from twisted.trial import unittest
+from twisted.trial import reporter, runner
+
+
+class TrialTest(unittest.TestCase):
+    def setUp(self):
+        self.output = StringIO.StringIO()
+        self.reporter = reporter.Reporter(stream=self.output)
+        self.loader = runner.TestLoader()
+        self.root = runner.TrialRoot(self.reporter)
+
+
+class TestInterruptInTest(TrialTest):
+    class InterruptedTest(unittest.TestCase):
+        def test_02_raiseInterrupt(self):
+            raise KeyboardInterrupt
+        
+        def test_01_doNothing(self):
+            pass
+        
+        def test_03_doNothing(self):
+            TestInterruptInTest.test_03_doNothing_run = True
+
+    def setUp(self):
+        super(TestInterruptInTest, self).setUp()
+        self.suite = self.loader.loadClass(TestInterruptInTest.InterruptedTest)
+        TestInterruptInTest.test_03_doNothing_run = None
+
+    def test_setUpOK(self):
+        self.failUnlessEqual(3, self.suite.countTestCases())
+        self.failUnlessEqual(0, self.reporter.testsRun)
+        self.failIf(self.reporter.shouldStop)
+        
+    def test_interruptInTest(self):
+        self.root.run(self.suite)
+        self.failUnless(self.reporter.shouldStop)
+        self.failUnlessEqual(2, self.reporter.testsRun)
+        self.failIf(TestInterruptInTest.test_03_doNothing_run,
+                    "test_03_doNothing ran.")
+
+
+
+class TestInterruptInSetUp(TrialTest):
+    testsRun = 0
+    
+    class InterruptedTest(unittest.TestCase):
+        def setUp(self):
+            if TestInterruptInSetUp.testsRun > 0:
+                raise KeyboardInterrupt
+
+        def test_01(self):
+            TestInterruptInSetUp.testsRun += 1
+
+        def test_02(self):
+            TestInterruptInSetUp.testsRun += 1
+            TestInterruptInSetUp.test_02_run = True
+
+    def setUp(self):
+        super(TestInterruptInSetUp, self).setUp()
+        self.suite = self.loader.loadClass(
+            TestInterruptInSetUp.InterruptedTest)
+        TestInterruptInSetUp.test_02_run = False
+        TestInterruptInSetUp.testsRun = 0
+
+    def test_setUpOK(self):
+        self.failUnlessEqual(0, TestInterruptInSetUp.testsRun)
+        self.failUnlessEqual(2, self.suite.countTestCases())
+        self.failUnlessEqual(0, self.reporter.testsRun)
+        self.failIf(self.reporter.shouldStop)
+
+    def test_interruptInSetUp(self):
+        self.root.run(self.suite)
+        self.failUnless(self.reporter.shouldStop)
+        self.failUnlessEqual(2, self.reporter.testsRun)
+        self.failIf(TestInterruptInSetUp.test_02_run,
+                    "test_02 ran")
+
+
+class TestInterruptInTearDown(TrialTest):
+    testsRun = 0
+
+    class InterruptedTest(unittest.TestCase):
+        def tearDown(self):
+            if TestInterruptInTearDown.testsRun > 0:
+                raise KeyboardInterrupt
+
+        def test_01(self):
+            TestInterruptInTearDown.testsRun += 1
+
+        def test_02(self):
+            TestInterruptInSetUp.testsRun += 1
+            TestInterruptInTearDown.test_02_run = True
+
+    def setUp(self):
+        super(TestInterruptInTearDown, self).setUp()
+        self.suite = self.loader.loadClass(
+            TestInterruptInTearDown.InterruptedTest)
+        TestInterruptInTearDown.testsRun = 0
+        TestInterruptInTearDown.test_02_run = False
+
+    def test_setUpOK(self):
+        self.failUnlessEqual(0, TestInterruptInTearDown.testsRun)
+        self.failUnlessEqual(2, self.suite.countTestCases())
+        self.failUnlessEqual(0, self.reporter.testsRun)
+        self.failIf(self.reporter.shouldStop)
+
+    def test_interruptInSetUp(self):
+        self.root.run(self.suite)
+        self.failUnless(self.reporter.shouldStop)
+        self.failUnlessEqual(1, self.reporter.testsRun)
+        self.failIf(TestInterruptInTearDown.test_02_run,
+                    "test_02 ran")
+
+

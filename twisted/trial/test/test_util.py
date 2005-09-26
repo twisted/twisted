@@ -122,37 +122,50 @@ class TestMktemp(unittest.TestCase):
 
 class TestWaitInterrupt(unittest.TestCase):
 
+    def raiseKeyInt(self, ignored):
+        # XXX Abstraction violation, I suppose.  However: signals are
+        # unreliable, so using them to simulate a KeyboardInterrupt
+        # would be sketchy too; os.kill() is not available on Windows,
+        # so we can't use that and let this run on Win32; raising
+        # KeyboardInterrupt itself is wholely unrealistic, as the
+        # reactor would normally block SIGINT for its own purposes and
+        # not allow a KeyboardInterrupt to happen at all!
+        if interfaces.IReactorThreads.providedBy(reactor):
+            reactor.callInThread(reactor.sigInt)
+        else:
+            reactor.callLater(0, reactor.sigInt)
+        return defer.Deferred()
+
+    def setUp(self):
+        self.shutdownCalled = False
+
     def testKeyboardInterrupt(self):
         # Test the KeyboardInterrupt is *not* caught by wait -- we
         # want to allow users to Ctrl-C test runs.  And the use of the
         # useWaitError should not matter in this case.
-        def raiseKeyInt(ignored):
-
-            # XXX Abstraction violation, I suppose.  However: signals are
-            # unreliable, so using them to simulate a KeyboardInterrupt
-            # would be sketchy too; os.kill() is not available on Windows,
-            # so we can't use that and let this run on Win32; raising
-            # KeyboardInterrupt itself is wholely unrealistic, as the
-            # reactor would normally block SIGINT for its own purposes and
-            # not allow a KeyboardInterrupt to happen at all!
-
-            if interfaces.IReactorThreads.providedBy(reactor):
-                reactor.callInThread(reactor.sigInt)
-            else:
-                reactor.callLater(0, reactor.sigInt)
-            return defer.Deferred()
-
         d = defer.Deferred()
-        d.addCallback(raiseKeyInt)
-        reactor.callLater(0, d.callback, True)
+        d.addCallback(self.raiseKeyInt)
+        reactor.callLater(0, d.callback, None)
         self.assertRaises(KeyboardInterrupt, util.wait, d, useWaitError=False)
 
+    def _shutdownCalled(self):
+        self.shutdownCalled = True
+
+    def test_interruptDoesntShutdown(self):
+        reactor.addSystemEventTrigger('after', 'shutdown',
+                                      self._shutdownCalled)
         d = defer.Deferred()
-        d.addCallback(raiseKeyInt)
-        reactor.callLater(0, d.callback, True)
-        self.assertRaises(KeyboardInterrupt, util.wait, d, useWaitError=True)
+        d.addCallback(self.raiseKeyInt)
+        reactor.callLater(0, d.callback, None)
+        try:
+            util.wait(d, useWaitError=False)
+        except KeyboardInterrupt:
+            self.failIf(self.shutdownCalled,
+                        "System shutdown triggered")
+        else:
+            self.fail("KeyboardInterrupt wasn't raised")
 
-
+ 
 # glyph's contributed test
 # http://twistedmatrix.com/bugs/file317/failing.py
 
