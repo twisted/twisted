@@ -306,17 +306,12 @@ class MinimalReporter(Reporter):
 
 
 class TextReporter(Reporter):
-    def __init__(self, stream=sys.stdout, tbformat='default', args=None,
-                 realtime=False):
-        super(TextReporter, self).__init__(stream, tbformat, args, realtime)
-        self.seenModules, self.seenClasses = {}, {}
-
     def endTest(self, method):
         self.write(LETTERS.get(self.getStatus(method), '?'))
         super(TextReporter, self).endTest(method)
 
 
-class VerboseTextReporter(TextReporter):
+class VerboseTextReporter(Reporter):
     # This is actually the bwverbose option
     def startTest(self, tm):
         self.write('%s ... ', tm.id())
@@ -327,14 +322,18 @@ class VerboseTextReporter(TextReporter):
         super(VerboseTextReporter, self).endTest(method)
 
 
-class TimingTextReporter(VerboseTextReporter):
+class TimingTextReporter(Reporter):
+    def startTest(self, tm):
+        self.write('%s ... ', tm.id())
+        super(VerboseTextReporter, self).startTest(tm)
+        
     def endTest(self, method):
         self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
                    + "(%.03f secs)\n" % method.runningTime())
         super(TimingTextReporter, self).endTest(method)
 
 
-class TreeReporter(VerboseTextReporter):
+class TreeReporter(Reporter):
     currentLine = ''
     columns = 79
 
@@ -356,6 +355,7 @@ class TreeReporter(VerboseTextReporter):
                       ERROR: ('[ERROR]', self.RED),
                       UNEXPECTED_SUCCESS: ('[SUCCESS!?!]', self.RED),
                       SUCCESS: ('[OK]', self.GREEN)}
+        self.seenModules, self.seenClasses = {}, {}
 
     def _getText(self, status):
         return self.words.get(status, ('[??]', self.BLUE))
@@ -396,11 +396,11 @@ class TreeReporter(VerboseTextReporter):
         
     def startTest(self, method):
         self.write('      %s ... ', method.shortDescription())
-        super(VerboseTextReporter, self).startTest(method)
+        super(TreeReporter, self).startTest(method)
 
     def endTest(self, method):
-        Reporter.endTest(self, method)
         self.endLine(*self._getText(self.getStatus(method)))
+        super(TreeReporter, self).endTest(method)
 
     def color(self, text, color):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')
