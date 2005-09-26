@@ -21,6 +21,10 @@ _failureConditionals = [
 
 # ---------------------------------
 
+DEFAULT_TIMEOUT = object()
+DEFAULT_TIMEOUT_DURATION = 120.0
+
+
 class SignalStateManager:
     """
     keeps state of signal handlers and provides methods for restoration
@@ -199,7 +203,8 @@ class _Janitor(object):
          gc.collect()
 
 
-def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
+def spinUntil(f, timeout=DEFAULT_TIMEOUT_DURATION,
+              msg="condition not met before timeout"):
     """spin the reactor while condition returned by f() == False or timeout
     seconds have elapsed i.e. spin until f() is True
     """
@@ -212,7 +217,8 @@ def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
             raise defer.TimeoutError, msg
         reactor.iterate(0.1)
 
-def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
+def spinWhile(f, timeout=DEFAULT_TIMEOUT_DURATION,
+              msg="f did not return false before timeout"):
     """spin the reactor while condition returned by f() == True or until
     timeout seconds have elapsed i.e. spin until f() is False
     """
@@ -286,9 +292,6 @@ def _wait(d, timeout=None, running=[]):
         results = None
         running.pop()
 
-
-DEFAULT_TIMEOUT = object()
-DEFAULT_TIMEOUT_DURATION = 120.0
 
 def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     """Waits (spins the reactor) for a Deferred to arrive, then returns or
