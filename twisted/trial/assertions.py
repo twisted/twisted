@@ -11,7 +11,8 @@ import warnings
 from twisted.trial import unittest
 
 warnings.warn("twisted.trial.assertions is deprecated.  Instead use the "
-              "assertion methods on unittest.TestCase", stacklevel=2)
+              "assertion methods on unittest.TestCase", stacklevel=2,
+              category=DeprecationWarning)
 
 __all__ = unittest._assertions + ['SkipTest', 'FailTest']
 

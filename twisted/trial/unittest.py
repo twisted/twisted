@@ -363,7 +363,7 @@ def deprecate(name):
     def _(*args, **kwargs):
         warnings.warn("unittest.%s is deprecated.  Instead use the %r "
                       "method on unittest.TestCase" % (name, name),
-                      stacklevel=2)
+                      stacklevel=2, category=DeprecationWarning)
         return getattr(_inst, name)(*args, **kwargs)
     return _
 
