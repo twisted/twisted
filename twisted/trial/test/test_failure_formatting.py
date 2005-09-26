@@ -7,7 +7,6 @@ import re, os, sys
 
 from twisted.trial.test import erroneous, common
 from twisted.trial import itrial, unittest, reporter, runner
-from twisted.trial.assertions import *
 from twisted.python import failure
 
 from pprint import pformat, pprint
@@ -84,13 +83,13 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         expect.extend(expectFailureInSetUp)
 
-        common.stringComparison(expect, self.suite.reporter.out.splitlines())
+        self.stringComparison(expect, self.suite.reporter.out.splitlines())
 
     def testFormatFailedMethod(self):
         self.suite.run(self.loader.loadMethod(
             common.FailfulTests.testFailure))
 
-        common.stringComparison(expectTestFailure,
+        self.stringComparison(expectTestFailure,
                                 self.suite.reporter.out.splitlines())
 
     def testTrimFilename(self):
@@ -99,11 +98,11 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         out = trimFilename(path, 3)
         s = "...%s" % (os.sep.join(['baz','spam','spunk']),)
-        assertEqual(out, s)
+        self.assertEqual(out, s)
         
         out = trimFilename(path, 10)
         s = os.sep.join(['foo','bar','baz','spam','spunk'])
-        assertEqual(out, s)
+        self.assertEqual(out, s)
 
     def testDoctestError(self):
         if sys.version_info[0:2] < (2, 3):
@@ -118,7 +117,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
                   reporter.DOUBLE_SEPARATOR,
                   re.compile(r'\[(ERROR|FAIL)\]: .*[Dd]octest.*'
                              + re.escape(path))]
-        common.stringComparison(expect, output)
+        self.stringComparison(expect, output)
         output = '\n'.join(output)
         for substring in ['1/0', 'ZeroDivisionError',
                           'Exception raised:',

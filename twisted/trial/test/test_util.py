@@ -4,9 +4,6 @@ from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, threads, interfaces
 from twisted.trial import unittest, util, runner
 
-# this is ok, the module has been designed for this usage
-from twisted.trial.assertions import *
-
 import os, time, signal
 
 class UserError(Exception):
@@ -30,15 +27,15 @@ class TestUserMethod(unittest.TestCase):
     def testErrorHandling(self):
         """wrapper around user code"""
         umw = runner.UserMethodWrapper(self.errorfulMethod, self.janitor)
-        failUnlessRaises(runner.UserMethodError, umw)
-        failUnless(umw.errors[0].check(UserError))
-        failUnless(umw.endTime >= umw.startTime)
+        self.failUnlessRaises(runner.UserMethodError, umw)
+        self.failUnless(umw.errors[0].check(UserError))
+        self.failUnless(umw.endTime >= umw.startTime)
 
     def testDeferredError(self):
         umw = runner.UserMethodWrapper(self.errorfulDeferred, self.janitor)
-        failUnlessRaises(runner.UserMethodError, umw)
-        failUnless(umw.errors[0].check(UserError))
-        failUnless(umw.endTime >= umw.startTime)
+        self.failUnlessRaises(runner.UserMethodError, umw)
+        self.failUnless(umw.errors[0].check(UserError))
+        self.failUnless(umw.endTime >= umw.startTime)
 
 
 class WaitReentrancyTest(unittest.TestCase):
@@ -57,13 +54,13 @@ class WaitReentrancyTest(unittest.TestCase):
         return d.addCallback(self._cbDoWait)
 
     def _cbDoWait(self, result):
-        assertEquals(result, "Beginning")
+        self.assertEquals(result, "Beginning")
         d = defer.succeed("End")
-        assertEquals(unittest.wait(d), "End")
+        self.assertEquals(unittest.wait(d), "End")
 
     def testReturnedDeferredThenWait(self):
         d = self._returnedDeferredThenWait()
-        assertRaises(util.WaitIsNotReentrantError, unittest.wait, d)
+        self.assertRaises(util.WaitIsNotReentrantError, unittest.wait, d)
 
     def _reentrantWait(self):
         def threadedOperation(n):
@@ -75,7 +72,7 @@ class WaitReentrancyTest(unittest.TestCase):
         unittest.wait(d1)
 
     def testReentrantWait(self):
-        assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
+        self.assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
 
 
 class TestWait2(unittest.TestCase):
@@ -92,26 +89,26 @@ class TestWait2(unittest.TestCase):
         raise util.MultiError(L)
 
     def testMultiError(self):
-        assertRaises(util.MultiError, self._errorfulMethod)
+        self.assertRaises(util.MultiError, self._errorfulMethod)
         try:
             self._errorfulMethod()
         except util.MultiError, e:
-            assert_(hasattr(e, 'failures'))
-            assertEqual(len(e.failures), self.NUM_FAILURES)
+            self.assert_(hasattr(e, 'failures'))
+            self.assertEqual(len(e.failures), self.NUM_FAILURES)
             for f in e.failures:
-                assert_(f.check(RuntimeError))
+                self.assert_(f.check(RuntimeError))
 
     def testMultiErrorAsFailure(self):
-        assertRaises(util.MultiError, self._errorfulMethod)
+        self.assertRaises(util.MultiError, self._errorfulMethod)
         try:
             self._errorfulMethod()
         except util.MultiError:
             f = failure.Failure()
-            assert_(hasattr(f, 'value'))
-            assert_(hasattr(f.value, 'failures'))
-            assertEqual(len(f.value.failures), self.NUM_FAILURES)
+            self.assert_(hasattr(f, 'value'))
+            self.assert_(hasattr(f.value, 'failures'))
+            self.assertEqual(len(f.value.failures), self.NUM_FAILURES)
             for f in f.value.failures:
-                assert_(f.check(RuntimeError))
+                self.assert_(f.check(RuntimeError))
 
 
 class TestMktemp(unittest.TestCase):
@@ -119,8 +116,8 @@ class TestMktemp(unittest.TestCase):
         tmp = self.mktemp()
         tmp1 = self.mktemp()
         exp = os.path.join('twisted.trial.test.test_trial', 'UtilityTestCase', 'testMktmp')
-        failIfEqual(tmp, tmp1)
-        failIf(os.path.exists(exp))
+        self.failIfEqual(tmp, tmp1)
+        self.failIf(os.path.exists(exp))
 
 
 class TestWaitInterrupt(unittest.TestCase):

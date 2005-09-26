@@ -1,5 +1,4 @@
 from twisted.trial import unittest
-from twisted.trial.assertions import FailTest
 from twisted.python import util
 from twisted.internet import utils, reactor, interfaces
 import os, re

@@ -13,7 +13,6 @@ from pprint import pformat, pprint
 from twisted.trial import unittest, runner
 from twisted.trial.test import common, erroneous
 from twisted.trial.reporter import DOUBLE_SEPARATOR, SEPARATOR
-from twisted.trial.assertions import *
 
 
 class TestReporter(common.RegistryBaseMixin, unittest.TestCase):
@@ -42,7 +41,7 @@ SEPARATOR,
 re.compile(r'Ran 1 tests in [0-9.]*s'),
 r'FAILED (errors=1)'
 ]
-        common.stringComparison(expect, lines)
+        self.stringComparison(expect, lines)
        
 
 __unittests__ = [TestReporter]

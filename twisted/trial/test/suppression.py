@@ -5,8 +5,6 @@ import warnings
 
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.trial import unittest, runner, reporter, util, itrial
-from twisted.trial.assertions import failUnless, failUnlessRaises, failIf, failUnlessEqual
-from twisted.trial.assertions import failUnlessSubstring, failIfSubstring
 from twisted.trial.test import common
 from twisted.python import log, failure
 from twisted.internet import defer, reactor
