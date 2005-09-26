@@ -502,15 +502,19 @@ class LoggingFactoryTestCase(unittest.TestCase):
         t.protocol = p
         p.makeConnection(t)
 
-        self.failUnless('*' in f.openFile.getvalue())
+        v = f.openFile.getvalue()
+        self.failUnless('*' in v, "* not found in %r" % (v,))
         self.failIf(t.value())
 
         p.dataReceived('here are some bytes')
 
-        self.assertNotEqual(-1, f.openFile.getvalue().find("C 1: 'here are some bytes'"))
-        self.assertNotEqual(-1, f.openFile.getvalue().find("S 1: 'here are some bytes'"))
+        
+        v = f.openFile.getvalue()
+        self.assertNotEqual(-1, v.find("C 1: 'here are some bytes'"), "Expected client string not found in %r" % (v,))
+        self.assertNotEqual(-1, v.find("S 1: 'here are some bytes'"), "Expected server string not found in %r" % (v,))
         self.assertEquals(t.value(), 'here are some bytes')
 
         p.loseConnection()
 
-        self.assertNotEqual(-1, f.openFile.getvalue().find('ConnectionDone'))
+        v = f.openFile.getvalue()
+        self.assertNotEqual(-1, v.find('ConnectionDone'), "Connection done notification not found in %r" % (v,))
