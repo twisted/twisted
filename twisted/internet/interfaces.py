@@ -16,7 +16,7 @@ from twisted.python.components import Interface
 class IAddress(Interface):
     """An address, e.g. a TCP (host, port).
 
-    Default implementations are in twisted.internet.address.
+    Default implementations are in L{twisted.internet.address}.
     """
 
 
