@@ -98,7 +98,9 @@ class Options(usage.Options):
                 ["dry-run", 'n', "do everything but run the tests"],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["until-failure", "u", "Repeat test until it fails"],
-                ["recurse", "R", "Search packages recursively"],
+                ["recurse", "R",
+                 "Search packages recursively (enabled by default, DEPRECATED)"],
+                ["no-recurse", "N", "Don't recurse into packages"],
                 ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
                 ['suppresswarnings', None,
                  'Only print warnings to log, not stdout'],
@@ -347,12 +349,12 @@ def _getReporter(config):
 def _getSuite(config, reporter):
     loader = _getLoader(config, reporter)
     suite = runner.TestSuite()
+    recurse = not config['no-recurse']
     for test in config['tests']:
         if isinstance(test, str):
-            suite.addTest(loader.loadByName(test, recurse=config['recurse']))
+            suite.addTest(loader.loadByName(test, recurse))
         else:
-            suite.addTest(loader.loadAnything(test,
-                                              recurse=config['recurse']))
+            suite.addTest(loader.loadAnything(test, recurse))
     for error in loader.getImportErrors():
         reporter.reportImportError(*error)
     return suite

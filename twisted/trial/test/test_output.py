@@ -136,7 +136,7 @@ class TestImportErrors(unittest.TestCase):
         return d
 
     def test_recurseImport(self):
-        d = self.runTrial('-R', 'package')
+        d = self.runTrial('package')
         d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         d.addCallback(self.failUnlessIn, 'package.test_bad_module')
         d.addCallback(self.failUnlessIn, 'package.test_import_module')
@@ -146,7 +146,7 @@ class TestImportErrors(unittest.TestCase):
     test_recurseImport.todo = "probable regression -- jml"
 
     def test_recurseImportErrors(self):
-        d = self.runTrial('-R', 'package2')
+        d = self.runTrial('package2')
         d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         d.addCallback(self.failUnlessIn, 'package2')
         d.addCallback(self.failUnlessIn, 'test_module')
