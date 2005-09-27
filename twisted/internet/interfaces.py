@@ -941,8 +941,8 @@ class ITransport(Interface):
     """
 
     def write(self, data):
-	"""Write some data to the physical connection, in sequence, in a
-	non-blocking fashion.
+        """Write some data to the physical connection, in sequence, in a
+        non-blocking fashion.
 
         If possible, make sure that it is all written.  No data will
         ever be lost, although (obviously) the connection may be closed
