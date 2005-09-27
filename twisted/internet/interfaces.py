@@ -468,9 +468,8 @@ class IDelayedCall(Interface):
 
     def active(self):
         """
-        @returns: A bool representing whether or not this call has been called
-                  or cancelled. (True == This DelayedCall has not been called or
-                  cancelled. False, otherwise).
+        @returns: True if this call is still active, False if it has been
+            called or cancelled.
         """
 
 class IReactorThreads(Interface):
