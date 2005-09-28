@@ -29,11 +29,17 @@ class IFileSystemNode(Interface):
         """
 
     def remove(self):
-        """removes this node"""
+        """
+        Removes this node.
+        An error is raised if the node is a directory and is not empty.
+        """
 
     def rename(self, newName):
-        """renames this node to newName"""
-
+        """
+        Renames this node to newName.  newName can be in a different
+        directory.  If the destination is an existing directory, an
+        error will be raised.
+        """
 
 
 class IFileSystemLeaf(IFileSystemNode):
@@ -74,12 +80,14 @@ class IFileSystemContainer(IFileSystemNode):
 
     def createDirectory(self, childName):
         """
-        creates a new folder named childName under this folder.
+        Creates a new folder named childName under this folder.
+        An error is raised if the folder already exists.
         """
 
     def createFile(self, childName):
         """
-        creates a new file named childName under this folder.
+        Creates a new file named childName under this folder.
+        An error is raised if the file already exists.
         """
 
     def exists(self, childName):
