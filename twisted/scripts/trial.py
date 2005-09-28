@@ -161,6 +161,8 @@ class Options(usage.Options):
     def opt_coverage(self, coverdir):
         """Generate coverage information in the given directory
         (relative to _trial_temp). Requires Python 2.3.3."""
+        warnings.warn("--coverage will become a flag in Twisted 2.2",
+                      stacklevel=4, category=DeprecationWarning)
         print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
@@ -267,11 +269,14 @@ class Options(usage.Options):
                 "argument to recursionlimit must be an integer")
 
     def opt_psyco(self):
-        try:
-            import psyco
-            psyco.full()
-        except ImportError:
-            print "couldn't import psyco, so continuing on without..."
+        warnings.warn("--psyco option is deprecated and does nothing. "
+                      "Will be removed in Twisted 2.2",
+                      stacklevel=4, category=DeprecationWarning)
+
+    def opt_recurse(self):
+        warnings.warn("-R, --recurse are now the default. The options are "
+                      "deprecated, and will be remove in Twisted 2.2",
+                      stacklevel=4, category=DeprecationWarning)
 
     def opt_random(self, option):
         try:
