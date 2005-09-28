@@ -1,6 +1,6 @@
 import os.path
 
-from twisted.trial import unittest, assertions as A
+from twisted.trial import unittest
 
 from twisted.vfs import ivfs, pathutils
 from twisted.vfs.adapters import stream
@@ -20,15 +20,15 @@ class StreamAdapterInmemTest(unittest.TestCase):
         self.bs = IByteStream(self.f, None)
 
     def test_adapt(self):
-        A.assertNotEquals(self.bs, None,
+        self.assertNotEquals(self.bs, None,
                           "Could not adapt %r to IByteStream" % (self.f))
 
     def test_read(self):
-        A.assertEquals(self.bs.read(), 'wobble\n')
+        self.assertEquals(self.bs.read(), 'wobble\n')
 
     def test_readOutofData(self):
         self.bs.read()
-        A.assertEquals(self.bs.read(), None)
+        self.assertEquals(self.bs.read(), None)
 
 class StreamAdapterOSFSTest(StreamAdapterInmemTest):
     def setUp(self):

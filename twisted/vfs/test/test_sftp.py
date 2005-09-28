@@ -1,5 +1,5 @@
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT, FXF_APPEND, FXF_EXCL
-from twisted.trial import unittest, assertions as A
+from twisted.trial import unittest
 
 from twisted.vfs import ivfs, pathutils
 from twisted.vfs.adapters import sftp
@@ -23,38 +23,38 @@ class SFTPAdapterTest(unittest.TestCase):
         nodes = [x[0] for x in self.filesystem.fetch(dir).children()]
         nodes.sort()
         mynodes.sort()
-        return A.assertEquals(nodes, mynodes)
+        return self.assertEquals(nodes, mynodes)
 
     def test_openFile(self):
         child = self.sftp.openFile('file.txt', 0, None)
-        A.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
 
     def test_openNewFile(self):
         # Opening a new file should work if FXF_CREAT is passed
         child = self.sftp.openFile('new file.txt', FXF_READ|FXF_CREAT, None)
-        A.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
 
         # But not with FXF_READ alone.
-        A.assertRaises(IOError,
+        self.assertRaises(IOError,
                        self.sftp.openFile, 'new file 2.txt', FXF_READ, None)
 
         # The FXF_WRITE flag alone can create a file.
         child = self.sftp.openFile('new file 3.txt', FXF_WRITE, None)
-        A.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
 
         # So, of course FXF_WRITE plus FXF_READ can too.
         child = self.sftp.openFile('new file 4.txt', FXF_WRITE|FXF_READ, None)
-        A.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
 
         # The FXF_APPEND flag alone can create a file.
         child = self.sftp.openFile('new file 5.txt', FXF_APPEND, None)
-        A.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
 
     def test_openNewFileExclusive(self):
         # Creating a file should fail if the FXF_EXCL flag is given and the file
         # already exists.
         flags = FXF_WRITE|FXF_CREAT|FXF_EXCL
-        A.assertRaises(ivfs.VFSError,
+        self.assertRaises(ivfs.VFSError,
                        self.sftp.openFile, 'file.txt', flags, None)
 
     def test_removeFile(self):
@@ -84,17 +84,17 @@ class SFTPAdapterTest(unittest.TestCase):
         for name, lsline, attrs in self.sftp.openDirectory('/ned'):
             keys = attrs.keys()
             keys.sort()
-            A.failUnless(sftpAttrs, keys)
+            self.failUnless(sftpAttrs, keys)
 
     def test_getAttrs(self):
         attrs = self.sftp.getAttrs('/ned', None).keys()
         attrs.sort()
-        A.failUnless(sftpAttrs, attrs)
+        self.failUnless(sftpAttrs, attrs)
 
     def test_dirlistWithoutAttrs(self):
         self.ned.getMetadata = self.f.getMetadata = lambda: {}
         for name, lsline, attrs in self.sftp.openDirectory('/'):
             keys = attrs.keys()
             keys.sort()
-            A.failUnless(sftpAttrs, keys)
+            self.failUnless(sftpAttrs, keys)
 
