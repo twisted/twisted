@@ -10,8 +10,6 @@ from twisted.web import server
 
 import twisted.protocols.ftp
 
-from nevow import inevow, rend, tags, guard, loaders, appserver
-
 from twisted.vfs.backends import inmem
 from twisted.vfs.adapters import sftp, web, ftp #, dav
 from twisted.vfs import ivfs, pathutils
@@ -44,18 +42,6 @@ class NotLoggedIn(rend.Page):
 )
 
 
-class SiteResource(rend.Page):
-    def locateChild(self, ctx, segments):
-        ctx.remember(self, inevow.ICanHandleNotFound)
-        return self.original.locateChild(ctx, segments)
-
-    def willHandle_notFound(self, request):
-        return True
-
-    def renderHTTP_notFound(self, ctx):
-        return NotLoggedIn().renderHTTP(ctx)
-    
-
 class Realm:
     zope.interface.implements(portal.IRealm)
 
@@ -70,17 +56,6 @@ class Realm:
             if interface is IConchUser:
                 user = sftp.VFSConchUser(username, self.vfsRoot)
                 return interface, user, user.logout
-
-            # web user
-            elif interface is inevow.IResource:
-                if username is checkers.ANONYMOUS:
-                    resc = NotLoggedIn()
-                    resc.realm = self
-                    return (inevow.IResource, resc, lambda : None)
-                else:
-                    resc = self.vfsRoot
-                    resc.realm = self
-                    return (inevow.IResource, resc, lambda : None)
 
             # ftp user
             elif interface is twisted.protocols.ftp.IFTPShell:
@@ -135,10 +110,5 @@ def createVFSApplication(vfsRoot):
 ##     internet.TCPServer(
 ##         int( 2280 ), server.Site(dav.DavResource(vfsRoot))
 ##     ).setServiceParent(application)
-
-    # web
-    internet.TCPServer(
-        8080, appserver.NevowSite(SiteResource(guard.SessionWrapper(p)))
-    ).setServiceParent(application)
 
     return application
