@@ -46,6 +46,18 @@ class IFileSystemLeaf(IFileSystemNode):
     def close(self):
         """closes this node"""
 
+    def readChunk(self, offset, length):
+        """
+        Leaf should have been previously opened with suitable flags.
+        Reads length bytes or until the end of file from this leaf from
+        the given offset.
+        """
+
+    def writeChunk(self, offset, data):
+        """
+        Leaf should have been previously opened with suitable flags.
+        Writes data to leaf from the given offset.
+        """
 
 class IFileSystemContainer(IFileSystemNode):
 
