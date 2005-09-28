@@ -231,13 +231,21 @@ class PortableGtkReactor(selectreactor.SelectReactor):
 
     def crash(self):
         import gtk
-        gtk.mainquit()
+        # mainquit is deprecated in newer versions
+        if hasattr(gtk, 'main_quit'):
+            gtk.main_quit()
+        else:
+            gtk.mainquit()
 
     def run(self, installSignalHandlers=1):
         import gtk
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
-        gtk.mainloop()
+        # mainloop is deprecated in newer versions
+        if hasattr(gtk, 'main'):
+            gtk.main()
+        else:
+            gtk.mainloop()
 
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
