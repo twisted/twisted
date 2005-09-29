@@ -11,7 +11,6 @@ import socket, time, os
 from zope.interface import implements
 from twisted.trial import unittest, util
 from twisted.trial.util import spinWhile, spinUntil
-from twisted.trial.unittest import assert_
 from  twisted.python import log
 
 from twisted.internet import protocol, reactor, defer, interfaces
@@ -257,7 +256,7 @@ class LoopbackTestCase(PortCleanerUpper):
 
         finally:
             socket.getservbyname = serv
-        assert_(s.called, '%s was not called' % (s,))
+        self.assert_(s.called, '%s was not called' % (s,))
 
 
 class StartStopFactory(protocol.Factory):
