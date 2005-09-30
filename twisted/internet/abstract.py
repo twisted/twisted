@@ -164,7 +164,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
         ready for writing.
         """
         if isinstance(data, unicode): # no, really, I mean it
-            raise TypeError("Data must be not be unicode")
+            raise TypeError("Data must not be unicode")
         if not self.connected or self._writeDisconnected:
             return
         if data:
