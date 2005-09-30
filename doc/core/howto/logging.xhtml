@@ -29,7 +29,10 @@ log.msg('Hello, world.')
       <dd>Writes a failure to the log, including traceback information (if any).
       You can pass it a <code class="API"
       base="twisted.python.failure">Failure</code> or Exception instance, or
-      nothing.  If you pass nothing, it will construct a Failure from the
+      nothing.  If you pass something else, it will be converted to a string
+      with <code>repr</code> and logged.
+      
+      If you pass nothing, it will construct a Failure from the
       currently active exception, which makes it convenient to use in an <code
       class="python">except</code> clause:
         <pre class="python">
@@ -39,6 +42,10 @@ except:
     log.err()   # will log the ZeroDivisionError
         </pre>
       </dd>
+
+      <dt><code class="API" base="twisted.python.log">debug</code></dt>
+      <dd>Logs a debug message.  By default, this is treated the same an
+      ordinary log message.</dd>
 
       <dt><code class="API" base="twisted.python.log">startLogging</code></dt>
       <dd>Starts logging to a given file-like object.  For example:
@@ -101,6 +108,20 @@ twisted.python.log.addObserver(yourCallable)
       <dd>This is a boolean that will be true if this event came from a call to
       <code>log.err</code>.  If this is set, there may be a <code>failure</code>
       item in the dictionary as will, with a Failure object in it.</dd>
+    </dl>
+
+    <p>Other items the built in logging functionality may add include:</p>
+
+    <dl>
+      <dt>printed</dt>
+      <dd>This message was captured from <code>sys.stdout</code>, i.e. this
+      message came from a <code>print</code> statement.  If
+      <code>isError</code> is also true, it came from
+      <code>sys.stderr</code>.</dd>
+
+      <dt>debug</dt>
+      <dd>This message is a debugging message, probably from a call to <code
+      class="API" base="twisted.python">log.debug</code>.</dd>
     </dl>
 
     <p>You can pass additional items to the event dictionary by passing keyword
