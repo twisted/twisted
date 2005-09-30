@@ -6,7 +6,7 @@ from __future__ import generators
 
 import time
 
-from twisted.trial import unittest, assertions
+from twisted.trial import unittest
 from twisted.internet import error, defer
 from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio, ssh
 from twisted.conch import manhole
@@ -132,7 +132,7 @@ class ManholeLoopbackMixin:
             self._testwrite(manhole.CTRL_BACKSLASH)
 
             d = self.recvlineClient.onDisconnection
-            return assertions.assertFailure(d, error.ConnectionDone)
+            return self.assertFailure(d, error.ConnectionDone)
 
         def gotClearedLine(ign):
             self._assertBuffer(
@@ -160,7 +160,7 @@ class ManholeLoopbackMixin:
 
         self._testwrite(manhole.CTRL_D)
         d = self.recvlineClient.onDisconnection
-        disconnected = self.wfd(assertions.assertFailure(d, error.ConnectionDone))
+        disconnected = self.wfd(self.assertFailure(d, error.ConnectionDone))
         yield disconnected
         disconnected.getResult()
     testControlD = defer.deferredGenerator(testControlD)
