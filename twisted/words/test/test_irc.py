@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 
-from twisted.trial import unittest, assertions as A
+from twisted.trial import unittest
 from twisted.words.protocols import irc
 from twisted.internet import protocol
 import StringIO
@@ -340,34 +340,34 @@ class ClientMsgTests(unittest.TestCase):
 
     def testSingleLine(self):
         self.client.msg('foo', 'bar')
-        A.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
+        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
 
     def testDodgyMaxLength(self):
-        A.assertRaises(ValueError, self.client.msg, 'foo', 'bar', 0)
-        A.assertRaises(ValueError, self.client.msg, 'foo', 'bar', 3)
+        self.assertRaises(ValueError, self.client.msg, 'foo', 'bar', 0)
+        self.assertRaises(ValueError, self.client.msg, 'foo', 'bar', 3)
 
     def testMultipleLine(self):
         maxLen = len('PRIVMSG foo :') + 3 + 2 # 2 for line endings
         self.client.msg('foo', 'barbazbo', maxLen)
-        A.assertEquals(self.client.lines, ['PRIVMSG foo :bar',
-                                           'PRIVMSG foo :baz',
-                                           'PRIVMSG foo :bo'])
+        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar',
+                                              'PRIVMSG foo :baz',
+                                              'PRIVMSG foo :bo'])
 
     def testSufficientWidth(self):
         msg = 'barbazbo'
         maxLen = len('PRIVMSG foo :%s' % (msg,)) + 2
         self.client.msg('foo', msg, maxLen)
-        A.assertEquals(self.client.lines, ['PRIVMSG foo :%s' % (msg,)])
+        self.assertEquals(self.client.lines, ['PRIVMSG foo :%s' % (msg,)])
         self.client.lines = []
         self.client.msg('foo', msg, maxLen-1)
-        A.assertEquals(2, len(self.client.lines))
+        self.assertEquals(2, len(self.client.lines))
         self.client.lines = []
         self.client.msg('foo', msg, maxLen+1)
-        A.assertEquals(1, len(self.client.lines))
+        self.assertEquals(1, len(self.client.lines))
 
     def testSplitSanity(self):
         # Whiteboxing
-        A.assertRaises(ValueError, irc.split, 'foo', -1)
-        A.assertRaises(ValueError, irc.split, 'foo', 0)
-        A.assertEquals([], irc.split('', 1))
-        A.assertEquals([], irc.split(''))
+        self.assertRaises(ValueError, irc.split, 'foo', -1)
+        self.assertRaises(ValueError, irc.split, 'foo', 0)
+        self.assertEquals([], irc.split('', 1))
+        self.assertEquals([], irc.split(''))

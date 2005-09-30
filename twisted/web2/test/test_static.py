@@ -5,8 +5,6 @@ from twisted.web2 import static
 from twisted.web2 import http_headers
 from twisted.web2 import stream
 
-from twisted.trial import util, assertions
-
 class TestFileSaver(BaseCase):
     def setUpClass(self):
         self.tempdir = self.mktemp()
@@ -44,7 +42,7 @@ Content-Type: %s\r
             self.assertEquals(code, expected_code)
 
             if expected_data is not None:
-                assertions.failUnlessSubstring(expected_data, data)
+                self.failUnlessSubstring(expected_data, data)
 
             for key, value in expected_headers.iteritems():
                 self.assertEquals(headers.getHeader(key), value)

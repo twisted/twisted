@@ -9,7 +9,7 @@ Test cases for twisted.mail.smtp module.
 import time
 from zope.interface import implements
 
-from twisted.trial import unittest, util, assertions
+from twisted.trial import unittest, util
 from twisted import protocols
 from twisted import internet
 from twisted.protocols import loopback
@@ -496,8 +496,7 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
         after = time.time()
         self.failIf(after - before > 1.0)
 
-        return assertions.assertFailure(
-            onDone, smtp.SMTPTimeoutError)
+        return self.assertFailure(onDone, smtp.SMTPTimeoutError)
 
 
     def testSMTPClient(self):

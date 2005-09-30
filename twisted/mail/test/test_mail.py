@@ -429,13 +429,13 @@ class ServiceDomainTestCase(unittest.TestCase):
 
     def testValidateToBadUsername(self):
         user = smtp.User('resu@test.domain', 'helo', None, 'wherever@whatever')
-        return unittest.assertFailure(
+        return self.assertFailure(
             defer.maybeDeferred(self.D.validateTo, user),
             smtp.SMTPBadRcpt)
 
     def testValidateToBadDomain(self):
         user = smtp.User('user@domain.test', 'helo', None, 'wherever@whatever')
-        return unittest.assertFailure(
+        return self.assertFailure(
             defer.maybeDeferred(self.D.validateTo, user),
             smtp.SMTPBadRcpt)
 
@@ -490,13 +490,13 @@ class VirtualPOP3TestCase(unittest.TestCase):
 
     def testAuthenticateIncorrectUserAPOP(self):
         resp = md5.new(self.P.magic + 'password').hexdigest()
-        return unittest.assertFailure(
+        return self.assertFailure(
             self.P.authenticateUserAPOP('resu', resp),
             cred.error.UnauthorizedLogin)
 
     def testAuthenticateIncorrectResponseAPOP(self):
         resp = md5.new('wrong digest').hexdigest()
-        return unittest.assertFailure(
+        return self.assertFailure(
             self.P.authenticateUserAPOP('user', resp),
             cred.error.UnauthorizedLogin)
 
@@ -512,12 +512,12 @@ class VirtualPOP3TestCase(unittest.TestCase):
         result[2]()
 
     def testAuthenticateBadUserPASS(self):
-        return unittest.assertFailure(
+        return self.assertFailure(
             self.P.authenticateUserPASS('resu', 'password'),
             cred.error.UnauthorizedLogin)
 
     def testAuthenticateBadPasswordPASS(self):
-        return unittest.assertFailure(
+        return self.assertFailure(
             self.P.authenticateUserPASS('user', 'wrong password'),
             cred.error.UnauthorizedLogin)
 
@@ -783,10 +783,10 @@ class MXTestCase(unittest.TestCase):
 
     def testSimpleFailure(self):
         self.mx.fallbackToDomain = False
-        return unittest.assertFailure(self.mx.getMX('test.domain'), IOError)
+        return self.assertFailure(self.mx.getMX('test.domain'), IOError)
 
     def testSimpleFailureWithFallback(self):
-        return unittest.assertFailure(self.mx.getMX('test.domain'), DNSLookupError)
+        return self.assertFailure(self.mx.getMX('test.domain'), DNSLookupError)
 
     def testManyRecords(self):
         self.auth.addresses['test.domain'] = [

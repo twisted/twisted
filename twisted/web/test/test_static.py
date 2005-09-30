@@ -1,5 +1,4 @@
 from twisted.trial import unittest
-from twisted.trial.assertions import *
 import os
 from twisted.web import static
 
@@ -35,7 +34,7 @@ class FakeRequest:
         self._written = self._written + data
 
 class Range(unittest.TestCase):
-    todo = (FailTest, 'No range support yet.')
+    todo = (unittest.FailTest, 'No range support yet.')
 
     def setUp(self):
         self.tmpdir = self.mktemp()
@@ -50,16 +49,16 @@ class Range(unittest.TestCase):
     def testBodyLength(self):
         self.request._headers['range'] = 'bytes=0-1999'
         self.file.render(self.request)
-        assertEquals(len(self.request._written), 2000)
+        self.assertEquals(len(self.request._written), 2000)
 
     def testContentLength(self):
         """Content-Length of a request is correct."""
         self.request._headers['range'] = 'bytes=0-1999'
         self.file.render(self.request)
-        assertEquals(self.request._setHeaders['content-length'], ['2000'])
+        self.assertEquals(self.request._setHeaders['content-length'], ['2000'])
 
     def testContentRange(self):
         """Content-Range of a request is correct."""
         self.request._headers['range'] = 'bytes=0-1999'
         self.file.render(self.request)
-        assertEquals(self.request._setHeaders.get('content-range'), ['bytes 0-1999/8000'])
+        self.assertEquals(self.request._setHeaders.get('content-range'), ['bytes 0-1999/8000'])

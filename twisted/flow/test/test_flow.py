@@ -312,7 +312,7 @@ class FlowTest(unittest.TestCase):
 
     def testDeferredFailure(self):
         d = flow.Deferred(badgen())
-        return unittest.assertFailure(d, ZeroDivisionError)
+        return self.assertFailure(d, ZeroDivisionError)
 
     def testDeferredTrap(self):
         d = flow.Deferred(badgen(), ZeroDivisionError)
@@ -323,7 +323,7 @@ class FlowTest(unittest.TestCase):
         lhs = [(1,'a'),(2,'b'),(3,'c')]
         mrg = flow.Zip([1,2,flow.Cooperate(),3],badgen())
         d = flow.Deferred(mrg)
-        return unittest.assertFailure(d, ZeroDivisionError)
+        return self.assertFailure(d, ZeroDivisionError)
 
     def testDeferredWrapper(self):
         a = defer.Deferred()
@@ -342,7 +342,7 @@ class FlowTest(unittest.TestCase):
         d = defer.Deferred()
         f = lambda: d.errback(flow.Failure(IOError()))
         reactor.callLater(0, f)
-        return unittest.assertFailure(d, IOError)
+        return self.assertFailure(d, IOError)
 
     def testCallback(self):
         cb = flow.Callback()
@@ -359,7 +359,7 @@ class FlowTest(unittest.TestCase):
         for x in range(3):
             cb.result(x)
         cb.errback(flow.Failure(IOError()))
-        return unittest.assertFailure(d, IOError)
+        return self.assertFailure(d, IOError)
 
     def testConcurrentCallback(self):
         ca = flow.Callback()
@@ -419,7 +419,7 @@ class ThreadedFlowTest(unittest.TestCase):
             yield 1
             raise ValueError
         d = flow.Deferred(Threaded(iterator()))
-        return unittest.assertFailure(d, ValueError)
+        return self.assertFailure(d, ValueError)
 
     def testThreadedSleep(self):
         expect = [5,4,3,2,1]

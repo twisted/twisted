@@ -136,7 +136,7 @@ class WebClientTestCase(unittest.TestCase):
 
     def testTimeoutTriggering(self):
         # Test that when the timeout does trigger, we get a defer.TimeoutError.
-        return unittest.assertFailure(
+        return self.assertFailure(
             client.getPage(self.getURL("wait"), timeout=0.5),
             defer.TimeoutError)
 
@@ -162,7 +162,7 @@ class WebClientTestCase(unittest.TestCase):
             def close(self):
                 pass
         ef = errorfile()
-        return unittest.assertFailure(
+        return self.assertFailure(
             client.downloadPage(self.getURL("file"), ef),
             IOError)
 
@@ -173,7 +173,7 @@ class WebClientTestCase(unittest.TestCase):
             def close(self):
                 raise IOError, "badness happened during close"
         ef = errorfile()
-        return unittest.assertFailure(
+        return self.assertFailure(
             client.downloadPage(self.getURL("file"), ef),
             IOError)
 
@@ -183,7 +183,7 @@ class WebClientTestCase(unittest.TestCase):
         tmpfile = open("unwritable", "wb")
         tmpfile.close()
         os.chmod("unwritable", 0) # make it unwritable (to us)
-        d = unittest.assertFailure(
+        d = self.assertFailure(
             client.downloadPage(self.getURL("file"), "unwritable"),
             IOError)
         d.addBoth(self._cleanupDownloadPageError3)
@@ -225,7 +225,7 @@ class WebClientTestCase(unittest.TestCase):
     
     def _cbRedirect(self, pageData):
         self.assertEquals(pageData, "0123456789")
-        d = unittest.assertFailure(
+        d = self.assertFailure(
             client.getPage(self.getURL("redirect"), followRedirect=0),
             error.PageRedirect)
         d.addCallback(self._cbCheckLocation)

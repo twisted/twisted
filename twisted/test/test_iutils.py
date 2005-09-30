@@ -7,7 +7,7 @@
 Test running processes.
 """
 
-from twisted.trial import unittest, util, assertions
+from twisted.trial import unittest
 from twisted.test.test_process import SignalMixin
 
 import gzip, os, popen2, time, sys, signal
@@ -46,7 +46,7 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
             ])
 
         d = utils.getProcessOutput(exe, ['-u', scriptFile], errortoo=0)
-        return assertions.assertFailure(d, IOError)
+        return self.assertFailure(d, IOError)
 
     def testOutputWithErrorCollected(self):
         # make sure stderr raises an error normally

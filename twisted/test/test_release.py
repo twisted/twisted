@@ -1,5 +1,5 @@
 import os
-from twisted.trial import unittest, assertions as A
+from twisted.trial import unittest
 
 from twisted.internet import reactor
 from twisted.python import release, log
@@ -12,9 +12,9 @@ class UtilityTest(unittest.TestCase):
             os.mkdir('releaseCh')
             os.chdir('releaseCh')
             1/0
-        A.assertRaises(ZeroDivisionError,
-                       release.runChdirSafe, chAndBreak)
-        A.assertEquals(cwd, os.getcwd())
+        self.assertRaises(ZeroDivisionError,
+                          release.runChdirSafe, chAndBreak)
+        self.assertEquals(cwd, os.getcwd())
 
     def testReplaceInFile(self):
         in_ = 'foo\nhey hey $VER\nbar\n'
@@ -24,10 +24,10 @@ class UtilityTest(unittest.TestCase):
 
         expected = in_.replace('$VER', '2.0.0')
         release.replaceInFile('release.replace', {'$VER': '2.0.0'})
-        A.assertEquals(open('release.replace').read(), expected)
+        self.assertEquals(open('release.replace').read(), expected)
 
 
         expected = expected.replace('2.0.0', '3.0.0')
         release.replaceInFile('release.replace', {'2.0.0': '3.0.0'})
-        A.assertEquals(open('release.replace').read(), expected)
+        self.assertEquals(open('release.replace').read(), expected)
 

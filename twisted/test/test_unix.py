@@ -8,7 +8,7 @@ import stat, os, sys
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
 from twisted.python import components, lockfile, failure
 from twisted.protocols import loopback
-from twisted.trial import unittest, assertions
+from twisted.trial import unittest
 from twisted.trial.util import spinWhile, spinUntil, wait
 
 
@@ -172,7 +172,7 @@ class UnixSocketTestCase(PortCleanerUpper):
             d = defer.Deferred()
             f = FailedConnectionClientFactory(d)
             c = reactor.connectUNIX(self.filename, f, checkPID=True)
-            return assertions.assertFailure(d, error.BadFileError)
+            return self.assertFailure(d, error.BadFileError)
         return self._uncleanSocketTest(ranStupidChild)
 
 
