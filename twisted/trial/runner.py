@@ -446,7 +446,7 @@ class TestMethod(object):
             raise ValueError("%r is not a valid .todo attribute" % (todo,))
 
     def _eb(self, f, reporter):
-        log.msg(f.printTraceback())
+        log.msg(f.getTraceback())
         if self.getTodo() is not None:
             if self._todoExpected(f):
                 reporter.addExpectedFailure(self, f, self._getTodoMessage())

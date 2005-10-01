@@ -121,7 +121,7 @@ class SSHUserAuthServer(service.SSHService):
             if reason.type == error.ConchError:
                 log.msg(str(reason))
             else:
-                log.msg(reason.printTraceback())
+                log.msg(reason.getTraceback())
             self.loginAttempts += 1
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
