@@ -106,7 +106,7 @@ class Persistent:
             ext = "tas"
         else:
             def dumpFunc(obj, file):
-                pickle.dump(obj, file, 1)
+                pickle.dump(obj, file, 2)
             ext = "tap"
         return ext, dumpFunc
 
