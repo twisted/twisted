@@ -33,7 +33,6 @@ class ADBAPITestBase:
         self.startDB()
         self.dbpool = self.makePool(cp_openfun=self.openfun)
         self.dbpool.start()
-        self.wait(self.dbpool.runOperation(simple_table_schema))
 
     def tearDown(self):
         self.wait(self.dbpool.runOperation('DROP TABLE simple'))
@@ -50,6 +49,8 @@ class ADBAPITestBase:
             self.failUnless(self.openfun_called.has_key(conn))
 
     def testPool(self):
+        self.wait(self.dbpool.runOperation(simple_table_schema))
+
         if self.test_failures:
             # make sure failures are raised correctly
             try:
@@ -265,6 +266,8 @@ class DBTestConnector:
     DB_USER = 'twisted_test'
     DB_PASS = 'twisted_test'
 
+    DB_DIR = None # directory for database storage
+
     nulls_ok = True # nulls supported
     trailing_spaces_ok = True # trailing spaces in strings preserved
     can_rollback = True # rollback supported
@@ -273,11 +276,16 @@ class DBTestConnector:
     good_sql = ConnectionPool.good_sql
     early_reconnect = True # cursor() will fail on closed connection
     can_clear = True # can try to clear out tables when starting
+    needs_dbdir = False # if a temporary directory is needed for the db
 
     num_iterations = 50 # number of iterations for test loops
                         # (lower this for slow db's)
 
     def setUpClass(self):
+        if self.needs_dbdir:
+            self.DB_DIR = tempfile.mktemp()
+            os.mkdir(self.DB_DIR)
+
         if not self.can_connect():
             raise unittest.SkipTest, '%s: Cannot access db' % self.TEST_PREFIX
 
@@ -310,12 +318,11 @@ class DBTestConnector:
 class GadflyConnector(DBTestConnector):
     TEST_PREFIX = 'Gadfly'
 
-    DB_DIR = "./gadflyDB"
-
     nulls_ok = False
     can_rollback = False
     escape_slashes = False
     good_sql = 'select * from simple where 1=0'
+    needs_dbdir = True
 
     num_iterations = 1 # slow
 
@@ -328,7 +335,6 @@ class GadflyConnector(DBTestConnector):
 
     def startDB(self):
         import gadfly
-        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
         conn = gadfly.gadfly()
         conn.startup(self.DB_NAME, self.DB_DIR)
 
@@ -346,9 +352,8 @@ class GadflyConnector(DBTestConnector):
 class SQLiteConnector(DBTestConnector):
     TEST_PREFIX = 'SQLite'
 
-    DB_DIR = "./sqliteDB"
-
     escape_slashes = False
+    needs_dbdir = True
 
     num_iterations = 1 # slow
 
@@ -358,9 +363,9 @@ class SQLiteConnector(DBTestConnector):
         return True
 
     def startDB(self):
-        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
         self.database = os.path.join(self.DB_DIR, self.DB_NAME)
-        if os.path.exists(self.database): os.unlink(self.database)
+        if os.path.exists(self.database):
+            os.unlink(self.database)
 
     def getPoolArgs(self):
         args = ('sqlite',)
@@ -395,7 +400,7 @@ class PsycopgConnector(DBTestConnector):
         except: return False
         try:
             conn = psycopg.connect(database=self.DB_NAME, user=self.DB_USER,
-                                   password=self.DB_PASS, host='127.0.0.1')
+                                   password=self.DB_PASS)
             conn.close()
             return True
         except:
@@ -433,13 +438,11 @@ class MySQLConnector(DBTestConnector):
 class FirebirdConnector(DBTestConnector):
     TEST_PREFIX = 'Firebird'
 
-    DB_DIR = tempfile.mktemp()
-    DB_NAME = os.path.join(DB_DIR, DBTestConnector.DB_NAME)
-
     test_failures = False # failure testing causes problems
     escape_slashes = False
     good_sql = None # firebird doesn't handle failed sql well
     can_clear = False # firebird is not so good
+    needs_dbdir = True
 
     num_iterations = 5 # slow
 
@@ -455,13 +458,12 @@ class FirebirdConnector(DBTestConnector):
 
     def startDB(self):
         import kinterbasdb
-        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
+        self.DB_NAME = os.path.join(self.DB_DIR, DBTestConnector.DB_NAME)
         os.chmod(self.DB_DIR, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)
         sql = 'create database "%s" user "%s" password "%s"'
         sql %= (self.DB_NAME, self.DB_USER, self.DB_PASS);
         conn = kinterbasdb.create_database(sql)
         conn.close()
-        os.chmod(self.DB_NAME, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)
 
     def getPoolArgs(self):
         args = ('kinterbasdb',)
@@ -475,7 +477,6 @@ class FirebirdConnector(DBTestConnector):
                                    host='127.0.0.1', user=self.DB_USER,
                                    password=self.DB_PASS)
         conn.drop_database()
-        conn.close()
 
 def makeSQLTests(base, suffix, globals):
     """Make a test case for every db connector which can connect.
