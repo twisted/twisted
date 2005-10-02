@@ -1,3 +1,12 @@
+
+"""
+Simple insults-based widget library
+
+API Stability: 0
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+"""
+
 import array
 
 from twisted.conch.insults import insults
