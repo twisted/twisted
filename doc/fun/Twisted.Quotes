@@ -5399,3 +5399,11 @@ bewildered, then go off to the next corpse
 <moshez> radix: as consistent and clear PHP is, it has its problem areas
 <moshez> radix: wait, no, I can't say that with a straight face
 %
+<mumak> Python totally needs to find a use for É
+<spiv> mumak: dude
+<`anthony> mumak: range!
+<spiv> mumak: There's *already* an ellipsis type in Python.
+<spiv> mumak: Put 2 and 2 together!
+<`anthony> spiv: but the ellipsis type is useless.
+<spiv> `anthony: Clearly unicode would fix that!
+%
