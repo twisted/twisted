@@ -113,9 +113,21 @@ class ButtonDemo(insults.TerminalProtocol):
         hbox.addChild(window.Border(self.select1))
         hbox.addChild(window.Border(self.select2))
 
+        t1 = window.TextOutputArea(longLines=window.TextOutputArea.WRAP)
+        t2 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
+        for _t in t1, t2:
+            _t.setText((('This is a very long string.  ' * 3) + '\n') * 3)
+        texts = window.VBox()
+        texts.addChild(window.Border(t1))
+        texts.addChild(window.Border(t2))
+
+        areas = window.HBox()
+        areas.addChild(window.Border(self.canvas))
+        areas.addChild(texts)
+
         vbox = window.VBox()
         vbox.addChild(hbox)
-        vbox.addChild(window.Border(self.canvas))
+        vbox.addChild(areas)
         self.window.addChild(vbox)
         self.terminalSize(self.width, self.height)
 

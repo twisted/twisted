@@ -10,6 +10,7 @@ API Stability: 0
 import array
 
 from twisted.conch.insults import insults
+from twisted.python import text as tptext
 
 class YieldFocus(Exception):
     """Input focus manipulation exception
@@ -423,15 +424,23 @@ class TextInput(Widget):
         return self.maxwidth + 1, 1
 
     def render(self, width, height, terminal):
+        currentText = self._renderText()
         terminal.cursorPosition(0, 0)
         if self.focused:
-            terminal.write(self.buffer[:self.cursor])
-            cursor(terminal, self.buffer[self.cursor:self.cursor+1] or ' ')
-            terminal.write(self.buffer[self.cursor+1:])
-            terminal.write(' ' * (self.maxwidth - len(self.buffer) + 1))
+            terminal.write(currentText[:self.cursor])
+            cursor(terminal, currentText[self.cursor:self.cursor+1] or ' ')
+            terminal.write(currentText[self.cursor+1:])
+            terminal.write(' ' * (self.maxwidth - len(currentText) + 1))
         else:
-            more = self.maxwidth - len(self.buffer)
-            terminal.write(self.buffer + '_' * more)
+            more = self.maxwidth - len(currentText)
+            terminal.write(currentText + '_' * more)
+
+    def _renderText(self):
+        return self.buffer
+
+class PasswordInput(TextInput):
+    def _renderText(self):
+        return '*' * len(self.buffer)
 
 class TextOutput(Widget):
     text = ''
@@ -453,6 +462,29 @@ class TextOutput(Widget):
 
     def focusReceived(self):
         raise YieldFocus()
+
+class TextOutputArea(TextOutput):
+    WRAP, TRUNCATE = range(2)
+
+    def __init__(self, size=None, longLines=WRAP):
+        TextOutput.__init__(self, size)
+        self.longLines = longLines
+
+    def render(self, width, height, terminal):
+        n = 0
+        inputLines = self.text.splitlines()
+        outputLines = []
+        while inputLines:
+            if self.longLines == self.WRAP:
+                wrappedLines = tptext.greedyWrap(inputLines.pop(0), width)
+                outputLines.extend(wrappedLines or [''])
+            else:
+                outputLines.append(inputLines.pop(0)[:width])
+            if len(outputLines) >= height:
+                break
+        for n, L in enumerate(outputLines[:height]):
+            terminal.cursorPosition(0, n)
+            terminal.write(L)
 
 def cursor(terminal, ch):
     terminal.saveCursor()
