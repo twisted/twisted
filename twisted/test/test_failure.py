@@ -17,6 +17,10 @@ from twisted.trial import unittest, util
 from twisted.python import failure
 
 
+class BrokenStr(Exception):
+    def __str__(self):
+        raise self
+
 class FailureTestCase(unittest.TestCase):
 
     def testFailAndTrap(self):
@@ -100,3 +104,15 @@ class FailureTestCase(unittest.TestCase):
             self.assertEquals(sys.exc_info()[0], "bugger off")
         else:
             raise AssertionError("Should have raised")
+
+    def testBrokenStr(self):
+        x = BrokenStr()
+        try:
+            str(x)
+        except:
+            f = failure.Failure()
+        self.assertEquals(f.value, x)
+        try:
+            f.getTraceback()
+        except:
+            self.fail("getTraceback() shouldn't raise an exception")

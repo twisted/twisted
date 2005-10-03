@@ -294,3 +294,39 @@ class SafeRepr(unittest.TestCase):
         class X(BTBase):
             breakName = True
         reflect.safe_repr(X())
+
+
+class SafeStr(unittest.TestCase):
+    def testWorkingStr(self):
+        x = [1,2,3]
+        self.assertEquals(reflect.safe_str(x), str(x))
+
+    def testBrokenStr(self):
+        b = Breakable()
+        b.breakStr = True
+        reflect.safe_str(b)
+
+    def testBrokenRepr(self):
+        b = Breakable()
+        b.breakRepr = True
+        reflect.safe_str(b)
+
+    def testBrokenClassStr(self):
+        class X(BTBase):
+            breakStr = True
+        reflect.safe_str(X)
+        reflect.safe_str(X())
+
+    def testBrokenClassRepr(self):
+        class X(BTBase):
+            breakRepr = True
+        reflect.safe_str(X)
+        reflect.safe_str(X())
+
+    def testBroken__Class__Attr(self):
+        reflect.safe_str(NoClassAttr())
+
+    def testBroken__Class__Name__Attr(self):
+        class X(BTBase):
+            breakName = True
+        reflect.safe_str(X())

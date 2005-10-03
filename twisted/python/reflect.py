@@ -461,7 +461,25 @@ def safe_repr(o):
             whati,swron,gwith)
         return you
 
+def safe_str(o):
+    """safe_str(anything) -> string
 
+    Returns a string representation of an object, or a string containing a
+    traceback, if that object's __str__ raised an exception.
+    """
+
+    try:
+        return str(o)
+    except:
+        io = StringIO.StringIO()
+        traceback.print_stack(file=io)
+        whati = _determineClassName(o)
+        swron = io.getvalue()
+        gwith = id(o)
+        you ='<%s instance at %s with str error %s>' % (
+            whati,swron,gwith)
+        return you
+    
 ##the following were factored out of usage
 
 def allYourBase(classObj, baseClass=None):

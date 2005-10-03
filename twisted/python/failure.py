@@ -297,7 +297,7 @@ class Failure:
         """Get a string of the exception which caused this Failure."""
         if isinstance(self.value, Failure):
             return self.value.getErrorMessage()
-        return str(self.value)
+        return reflect.safe_str(self.value)
 
     def getBriefTraceback(self):
         io = StringIO()
@@ -341,7 +341,8 @@ class Failure:
 
         # postamble, if any
         if not detail == 'brief':
-            w("%s: %s\n" % (str(self.type), str(self.value)))
+            w("%s: %s\n" % (reflect.safe_str(self.type),
+                            reflect.safe_str(self.value)))
         # chaining
         if isinstance(self.value, Failure):
             # TODO: indentation for chained failures?
