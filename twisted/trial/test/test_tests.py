@@ -1,5 +1,6 @@
 import cPickle as pickle
 import warnings
+import StringIO
 
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.trial import unittest, runner, reporter, util, itrial
@@ -17,6 +18,46 @@ CLASS_SKIP_MSG = "skip all methods in this class"
 METHOD_TODO_MSG = "todo this method"
 CLASS_TODO_MSG = "todo all methods in this class"
 
+
+class TestAssertions(unittest.TestCase):
+    failureException = unittest.FAILING_EXCEPTION
+
+    class FailingTest(unittest.TestCase):
+        def test_fails(self):
+            raise TestAssertions.failureException()
+
+    def testFail(self):
+        try:
+            self.fail("failed")
+        except self.failureException, e:
+            if not str(e) == 'failed':
+                raise self.failureException("Exception had msg %s instead of %s"
+                                            % str(e), 'failed')
+        else:
+            raise self.failureException("Call to self.fail() didn't fail test")
+
+    def test_failingException_fails(self):
+        test = runner.TestLoader().loadClass(TestAssertions.FailingTest)
+        io = StringIO.StringIO()
+        result = reporter.Reporter(stream=io)
+        test.run(result)
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(len(result.errors), 0)
+        self.failUnlessEqual(len(result.failures), 1)
+
+    def test_failIf(self):
+        for notTrue in [0, 0.0, False, None, (), []]:
+            self.failIf(notTrue, "failed on %r" % (notTrue,))
+        for true in [1, True, 'cat', [1,2], (3,4)]:
+            try:
+                self.failIf(true, "failed on %r" % (true,))
+            except self.failureException, e:
+                self.failUnlessEqual(str(e), "failed on %r" % (true,))
+            else:
+                raise self.failureException("Call to failIf(%r) didn't fail"
+                                            % (true,))
+
+
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
@@ -30,12 +71,6 @@ class TestTests(unittest.TestCase):
             self.teardownRun += 1
         def testSuccess_pass(self):
             pass
-        def testFail_fail(self):
-            self.fail("failed")
-        def testFailIf_pass(self):
-            self.failIf(0, "failed")
-        def testFailIf_fail(self):
-            self.failIf(1, "failed")
         def testFailUnless_pass(self):
             self.failUnless(1, "failed")
         def testFailUnless_fail(self):
