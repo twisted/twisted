@@ -1,4 +1,27 @@
 
+QUICK THOUGHTS
+
+Make TrialRoot a suite, documented as only ever being used at the top-level
+Create a TestRunner object.  Give it run, debug, profile and callUntilFailure
+  methods -- each of which accepts a suite
+Design it to be subclassable.  Subclasses are different kinds of "Reporters"
+Extract a TestResult object out.  Make it inherit from pyunit.TestResult
+Make startModule/startClass -> startSuite
+Probably have an adapter from pyunit.TestResult to our TestResult
+  (for skip, todo, startSuite etc)
+
+
+This will give us:
+- Easy, safe integration into PyUnit runners (logging setup and thread cleanup
+  will be done in TrialRoot)
+- Safe integration into GUI runners (subunit.IsolatedTestSuite will wrap straight
+  around TrialRoot)
+- Clean class to put all of the trial command line stuff into, separate from
+  basic Trial mechanics.
+
+
+
+
 Trial conflates concepts
 Want to move the xUnit architecture, because it's actually surprisingly powerful
 
