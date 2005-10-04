@@ -80,6 +80,17 @@ class TestAssertions(unittest.TestCase):
             else:
                 self.fail("Call to failIf(%r) didn't fail" % (true,))
 
+    def test_failUnless(self):
+        for notTrue in [0, 0.0, False, None, (), []]:
+            try:
+                self.failUnless(notTrue, "failed on %r" % (notTrue,))
+            except self.failureException, e:
+                self.failUnlessEqual(str(e), "failed on %r" % (notTrue,))
+            else:
+                self.fail("Call to failUnless(%r) didn't fail" % (notTrue,))
+        for true in [1, True, 'cat', [1,2], (3,4)]:
+            self.failUnless(true, "failed on %r" % (true,))
+
     def _testEqualPair(self, first, second):
         x = self.failUnlessEqual(first, second)
         if x != first:
@@ -170,6 +181,27 @@ class TestAssertions(unittest.TestCase):
         else:
             self.fail("Should have raised exception")
 
+    def test_failIfEqual_basic(self):
+        x, y, z = [1], [2], [1]
+        ret = self.failIfEqual(x, y)
+        self.failUnlessEqual(ret, x,
+                             "failIfEqual should return first parameter")
+        self.failUnlessRaises(self.failureException,
+                              self.failIfEqual, x, x)
+        self.failUnlessRaises(self.failureException,
+                              self.failIfEqual, x, z)
+
+    def test_failIfEqual_customEq(self):
+        x = MockEquality('first')
+        y = MockEquality('second')
+        z = MockEquality('fecund')
+        ret = self.failIfEqual(x, y)
+        self.failUnlessEqual(ret, x,
+                             "failIfEqual should return first parameter")
+        self.failUnlessRaises(self.failureException,
+                              self.failIfEqual, x, x)
+        # test when __ne__ is not defined
+        self.failIfEqual(x, z, "__ne__ not defined, so not equal")
 
 
 class TestAssertionNames(unittest.TestCase):
@@ -213,26 +245,6 @@ class TestTests(unittest.TestCase):
             self.teardownRun += 1
         def testSuccess_pass(self):
             pass
-        def testFailUnless_pass(self):
-            self.failUnless(1, "failed")
-        def testFailUnless_fail(self):
-            self.failUnless(0, "failed")
-        def testFailUnlessRaises_pass(self):
-            def boom():
-                raise ValueError
-            self.failUnlessRaises(ValueError, boom)
-        def testFailUnlessRaises1_fail(self):
-            def boom():
-                raise IndexError
-            self.failUnlessRaises(ValueError, boom)
-        def testFailUnlessRaises2_fail(self):
-            def boom():
-                pass
-            self.failUnlessRaises(ValueError, boom)
-        def testFailIfEqual_fail(self):
-            self.failIfEqual(1, 1, "failed")
-        def testFailIfEqual_pass(self):
-            self.failIfEqual(1, 2, "failed")
         def testFailUnlessIdentical_pass(self):
             a = [1,2]
             b = a
