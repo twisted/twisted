@@ -26,10 +26,10 @@ class IReporter(zi.Interface):
     args = zi.Attribute("@ivar args: additional string argument passed from the command line")
 
     def setUpReporter():
-        """performs reporter setup"""
+        """performs reporter setup. DEPRECATED"""
 
     def tearDownReporter():
-        """performs reporter termination"""
+        """performs reporter termination. DEPRECATED"""
 
     def reportImportError(name, exc):
         """report an import error

@@ -316,7 +316,7 @@ class ClassSuite(TestSuite):
                         for error in setUpClass.errors:
                             reporter.addError(tm, error)
                         reporter.startTest(tm)
-                        reporter.endTest(tm)
+                        reporter.stopTest(tm)
                     return
 
             # --- run methods ----------------------------------------------
@@ -480,7 +480,7 @@ class TestMethod(object):
         if self.getSkip(): # don't run test methods that are marked as .skip
             reporter.startTest(self)
             reporter.addSkip(self, self.getSkip())
-            reporter.endTest(self)
+            reporter.stopTest(self)
             return
         try:
             # Record the name of the running test on the TestCase instance
@@ -532,7 +532,7 @@ class TestMethod(object):
             except util.MultiError, e:
                 for f in e.failures:
                     self._eb(f, reporter)
-            reporter.endTest(self)
+            reporter.stopTest(self)
             self._signalStateMgr.restore()
 
     def visit(self, visitor):

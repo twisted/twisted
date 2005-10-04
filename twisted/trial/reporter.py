@@ -3,8 +3,12 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
-# Original Author: Jonathan Lange <jml@twistedmatrix.com>
+# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+
+"""Defines classes that handle the results of tests.
+
+API Stability: Unstable
+"""
 
 from __future__ import generators
 
@@ -88,10 +92,12 @@ class Reporter(object):
         super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
     def setUpReporter(self):
-        pass
+        warnings.warn("setUpReporter is deprecated. Find another way",
+                      stacklevel=2, category=DeprecationWarning)
 
     def tearDownReporter(self):
-        pass
+        warnings.warn("tearDownReporter is deprecated. Find another way",
+                      stacklevel=2, category=DeprecationWarning)
 
     def startTest(self, method):
         self.testsRun += 1
@@ -205,14 +211,16 @@ class Reporter(object):
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
+        # trial calls it 'end', pyunit calls it 'stop'
+        warnings.warn("endTest is deprecated.  Use stopTest.",
+                      stacklevel=2, category=DeprecationWarning)
+        return self.stopTest(method)
+
+    def stopTest(self, method):
         self.results[self.getStatus(method)].append(method)
         if self.realtime:
             for err in self._getErrors(method) + self._getFailures(method):
                 err.printTraceback(self.stream)
-
-    def stopTest(self, method):
-        # trial calls it 'end', pyunit calls it 'stop'        
-        return self.endTest(method)
 
     def addSuccess(self, test):
         # pyunit compat -- we don't use this
@@ -306,9 +314,9 @@ class MinimalReporter(Reporter):
 
 
 class TextReporter(Reporter):
-    def endTest(self, method):
+    def stopTest(self, method):
         self.write(LETTERS.get(self.getStatus(method), '?'))
-        super(TextReporter, self).endTest(method)
+        super(TextReporter, self).stopTest(method)
 
 
 class VerboseTextReporter(Reporter):
@@ -317,9 +325,9 @@ class VerboseTextReporter(Reporter):
         self.write('%s ... ', tm.id())
         super(VerboseTextReporter, self).startTest(tm)
         
-    def endTest(self, method):
+    def stopTest(self, method):
         self.write("%s\n" % WORDS.get(self.getStatus(method), "[??]"))
-        super(VerboseTextReporter, self).endTest(method)
+        super(VerboseTextReporter, self).stopTest(method)
 
 
 class TimingTextReporter(Reporter):
@@ -327,10 +335,10 @@ class TimingTextReporter(Reporter):
         self.write('%s ... ', tm.id())
         super(VerboseTextReporter, self).startTest(tm)
         
-    def endTest(self, method):
+    def stopTest(self, method):
         self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
                    + "(%.03f secs)\n" % method.runningTime())
-        super(TimingTextReporter, self).endTest(method)
+        super(TimingTextReporter, self).stopTest(method)
 
 
 class TreeReporter(Reporter):
@@ -398,9 +406,9 @@ class TreeReporter(Reporter):
         self.write('      %s ... ', method.shortDescription())
         super(TreeReporter, self).startTest(method)
 
-    def endTest(self, method):
+    def stopTest(self, method):
         self.endLine(*self._getText(self.getStatus(method)))
-        super(TreeReporter, self).endTest(method)
+        super(TreeReporter, self).stopTest(method)
 
     def color(self, text, color):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')
