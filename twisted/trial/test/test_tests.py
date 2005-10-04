@@ -4,7 +4,8 @@ import StringIO
 
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.trial import unittest, runner, reporter, util, itrial
-from twisted.python import log, failure
+from twisted.python import log, failure, reflect
+from twisted.python.util import dsu
 from twisted.python.compat import adict
 from twisted.internet import defer, reactor
 
@@ -17,6 +18,9 @@ CLASS_SKIP_MSG = "skip all methods in this class"
 
 METHOD_TODO_MSG = "todo this method"
 CLASS_TODO_MSG = "todo all methods in this class"
+
+
+same = lambda x : x
 
 
 class MockEquality(object):
@@ -113,7 +117,35 @@ class TestAssertions(unittest.TestCase):
         else:
             self.fail("Comparing %r and %r should have raised an exception"
                       % (apple, orange))
-            
+
+
+class TestAssertionNames(unittest.TestCase):
+    """Tests for consistency of naming within TestCase assertion methods
+    """
+    def test_failUnless_matches_assert(self):
+        asserts = [ name for name in
+                    reflect.prefixedMethodNames(unittest.TestCase, 'assert')
+                    if not name.startswith('Not') and name != '_' ]
+        failUnlesses = reflect.prefixedMethodNames(unittest.TestCase,
+                                                   'failUnless')
+        self.failUnlessEqual(dsu(asserts, same), dsu(failUnlesses, same))
+
+    def test_failIf_matches_assertNot(self):
+        asserts = reflect.prefixedMethodNames(unittest.TestCase, 'assertNot')
+        failIfs = reflect.prefixedMethodNames(unittest.TestCase, 'failIf')
+        self.failUnlessEqual(dsu(asserts, same), dsu(failIfs, same))
+
+    def test_equalSpelling(self):
+        for name, value in vars(unittest.TestCase).items():
+            if not callable(value):
+                continue
+            if name.endswith('Equal'):
+                self.failUnless(hasattr(unittest.TestCase, name+'s'),
+                                "%s but no %ss" % (name, name))
+            if name.endswith('Equals'):
+                self.failUnless(hasattr(unittest.TestCase, name[:-1]),
+                                "%s but no %s" % (name, name[:-1]))
+
 
 class TestTests(unittest.TestCase):
     # first, the things we're going to test

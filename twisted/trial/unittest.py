@@ -124,7 +124,7 @@ class TestCase(object):
         if not first == second:
             raise FailTest, (msg or '%r != %r' % (first, second))
         return first
-    assertEqual = assertEquals = failUnlessEqual
+    assertEqual = assertEquals = failUnlessEquals = failUnlessEqual
 
     def failUnlessIdentical(self, first, second, msg=None):
         """fail the test if C{first} is not C{second}. This is an
@@ -204,6 +204,7 @@ class TestCase(object):
             raise FailTest, (msg or '%r == %r within %r places' %
                                                  (first, second, places))
     assertNotAlmostEqual = assertNotAlmostEquals = failIfAlmostEqual
+    failIfAlmostEquals = failIfAlmostEqual
     
     def failUnlessAlmostEqual(self, first, second, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
@@ -220,6 +221,7 @@ class TestCase(object):
             raise FailTest, (msg or '%r != %r within %r places' %
                                                  (first, second, places))
     assertAlmostEqual = assertAlmostEquals = failUnlessAlmostEqual
+    failUnlessAlmostEquals = failUnlessAlmostEqual
 
     def failUnlessApproximates(self, first, second, tolerance, msg=None):
         """asserts that C{first} - C{second} > C{tolerance}
