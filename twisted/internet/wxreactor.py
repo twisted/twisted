@@ -31,26 +31,9 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 from twisted.python.runtime import seconds
 from twisted.python import log
-from twisted.internet import selectreactor
+from twisted.internet import threadedselectreactor
 
-from wxPython.wx import wxTimer, wxApp
-
-
-class ReactorTimer(wxTimer):
-    """Run reactor event loop every millisecond."""
-
-    # The wx docs promise no better than 1ms and no worse than 1s (!) 
-    # Experiments have shown that Linux, gets better than 50K timer 
-    # calls per second --  however, Windows only gets around 100 
-    # timer calls per second. Caveat coder.
-    def __init__(self, reactor): 
-        wxTimer.__init__(self) 
-        self.reactor = reactor
-        self.Start(1) 
- 
-    def Notify(self): 
-        """Called every timer interval"""
-        self.reactor.simulate()
+from wxPython.wx import wxApp, wxCallAfter, wxEventLoop, wxFrame, NULL
 
 
 class DummyApp(wxApp):
@@ -59,7 +42,7 @@ class DummyApp(wxApp):
         return True
 
 
-class WxReactor(selectreactor.SelectReactor):
+class WxReactor(threadedselectreactor.ThreadedSelectReactor):
     """wxPython reactor.
 
     wx drives the event loop, and calls Twisted every millisecond, and
@@ -69,30 +52,19 @@ class WxReactor(selectreactor.SelectReactor):
     def registerWxApp(self, wxapp):
         """Register wxApp instance with the reactor."""
         self.wxapp = wxapp
+        self.interleave(wxCallAfter)
     
     def crash(self):
-        selectreactor.SelectReactor.crash(self)
-        self.timer.Stop()
-        del self.timer
-        self.wxapp.ExitMainLoop()
-
+        threadedselectreactor.ThreadedSelectReactor.crash(self)
+        if hasattr(self, "wxapp"):
+            self.wxapp.ExitMainLoop()
+    
     def run(self, installSignalHandlers=1):
         if not hasattr(self, "wxapp"):
             log.msg("registerWxApp() was not called on reactor, this is probably an error.")
-            self.wxapp = DummyApp(0)
+            self.registerWxApp(DummyApp(0))
         self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.timer = ReactorTimer(self)
         self.wxapp.MainLoop()
-    
-    def simulate(self):
-        """Run simulation loops and reschedule callbacks.
-        """
-        if self.running:
-            t = 0.01
-            start = seconds()
-            while t > 0:
-                self.iterate(t)
-                t = 0.01 - (seconds() - start)
 
 
 def install():

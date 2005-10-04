@@ -21,17 +21,26 @@ def twoSecondsPassed():
 reactor.callLater(2, twoSecondsPassed)
 
 ID_EXIT  = 101
+ID_DIALOG = 102
 
 class MyFrame(wxFrame):
     def __init__(self, parent, ID, title):
         wxFrame.__init__(self, parent, ID, title, wxDefaultPosition, wxSize(300, 200))
         menu = wxMenu()
+        menu.Append(ID_DIALOG, "D&ialog", "Show dialog")
         menu.Append(ID_EXIT, "E&xit", "Terminate the program")
         menuBar = wxMenuBar()
         menuBar.Append(menu, "&File")
         self.SetMenuBar(menuBar)
         EVT_MENU(self, ID_EXIT,  self.DoExit)
-
+        EVT_MENU(self, ID_DIALOG,  self.DoDialog)
+    
+    def DoDialog(self, event):
+        dl = wxMessageDialog(self, "Check terminal to see if messages are still being "
+                             "printed by Twisted.")
+        dl.ShowModal()
+        dl.Destroy()
+    
     def DoExit(self, event):
         self.Close(true)
         reactor.stop()
