@@ -19,6 +19,19 @@ METHOD_TODO_MSG = "todo this method"
 CLASS_TODO_MSG = "todo all methods in this class"
 
 
+class MockEquality(object):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return "MockEquality(%s)" % (self.name,)
+
+    def __eq__(self, other):
+        if not hasattr(other, 'name'):
+            raise ValueError("%r not comparable to %r" % (other, self))
+        return self.name[0] == other.name[0]
+
+
 class TestAssertions(unittest.TestCase):
     failureException = unittest.FAILING_EXCEPTION
 
@@ -57,6 +70,54 @@ class TestAssertions(unittest.TestCase):
                 raise self.failureException("Call to failIf(%r) didn't fail"
                                             % (true,))
 
+    def _testEqualPair(self, first, second):
+        x = self.failUnlessEqual(first, second)
+        if x != first:
+            raise self.failureException("failUnlessEqual should return "
+                                        "first parameter")
+
+    def _testUnequalPair(self, first, second):
+        try:
+            self.failUnlessEqual(first, second)
+        except self.failureException, e:
+            expected = '%r != %r' % (first, second)
+            if str(e) != expected:
+                raise self.failureException("Expected: %r; Got: %s"
+                                            % (expected, str(e)))
+        else:
+            raise self.failureException("Call to failUnlessEqual(%r, %r) "
+                                        "didn't fail" % (first, second))
+
+    def test_failUnlessEqual_basic(self):
+        self._testEqualPair('cat', 'cat')
+        self._testUnequalPair('cat', 'dog')
+        self._testEqualPair([1], [1])
+        self._testUnequalPair([1], 'orange')
+    
+    def test_failUnlessEqual_custom(self):
+        x = MockEquality('first')
+        y = MockEquality('second')
+        z = MockEquality('fecund')
+        self._testEqualPair(x, x)
+        self._testEqualPair(x, z)
+        self._testUnequalPair(x, y)
+        self._testUnequalPair(y, z)
+
+    def test_failUnlessEqual_incomparable(self):
+        apple = MockEquality('apple')
+        orange = ['orange']
+        try:
+            self.failUnlessEqual(apple, orange)
+        except self.failureException:
+            raise self.failureException("Fail raised when ValueError ought "
+                                        "to have been raised.")
+        except ValueError:
+            # good. error not swallowed
+            pass
+        else:
+            raise self.failureException("Comparing %r and %r should have "
+                                        "raised an exception"
+                                        % (apple, orange))
 
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
@@ -87,10 +148,6 @@ class TestTests(unittest.TestCase):
             def boom():
                 pass
             self.failUnlessRaises(ValueError, boom)
-        def testFailUnlessEqual_pass(self):
-            self.failUnlessEqual(1, 1, "failed")
-        def testFailUnlessEqual_fail(self):
-            self.failUnlessEqual(1, 2, "failed")
         def testFailIfEqual_fail(self):
             self.failIfEqual(1, 1, "failed")
         def testFailIfEqual_pass(self):
