@@ -43,10 +43,6 @@ except:
         </pre>
       </dd>
 
-      <dt><code class="API" base="twisted.python.log">debug</code></dt>
-      <dd>Logs a debug message.  By default, this is treated the same an
-      ordinary log message.</dd>
-
       <dt><code class="API" base="twisted.python.log">startLogging</code></dt>
       <dd>Starts logging to a given file-like object.  For example:
         <pre class="python">
@@ -101,8 +97,9 @@ twisted.python.log.addObserver(yourCallable)
 
     <dl>
       <dt>message</dt>
-      <dd>The message for this log event, as passed to <code>log.msg</code> or
-      the message in the failure passed to <code>log.err</code>.</dd>
+      <dd>The message (a list, usually of strings)
+      for this log event, as passed to <code>log.msg</code> or the
+      message in the failure passed to <code>log.err</code>.</dd>
       
       <dt>isError</dt>
       <dd>This is a boolean that will be true if this event came from a call to
@@ -118,10 +115,6 @@ twisted.python.log.addObserver(yourCallable)
       message came from a <code>print</code> statement.  If
       <code>isError</code> is also true, it came from
       <code>sys.stderr</code>.</dd>
-
-      <dt>debug</dt>
-      <dd>This message is a debugging message, probably from a call to <code
-      class="API" base="twisted.python">log.debug</code>.</dd>
     </dl>
 
     <p>You can pass additional items to the event dictionary by passing keyword
