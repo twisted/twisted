@@ -71,7 +71,10 @@ def debug(*stuff,**otherstuff):
     """
     Write some debug data to the log. It passes debug=1 in the log
     dict.
+
+    DEPRECATED (Since Twisted 2.1): Pass debug=1 to msg() yourself.
     """
+    warnings.warn("Use log.msg(..., debug=True), not log.debug().", DeprecationWarning, stacklevel=2)
     msg(debug=1, *stuff, **otherstuff)
 
 def showwarning(message, category, filename, lineno, file=None):

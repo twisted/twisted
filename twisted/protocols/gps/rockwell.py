@@ -124,7 +124,7 @@ class Zodiac(protocol.Protocol):
         cksum, = struct.unpack('<h', struct.pack('<h', cksum))
         if cksum != checksum:
           if DEBUG:
-            log.debug('msg_id = %r length = %r' % (msg_id, length))
+            log.dmsg('msg_id = %r length = %r' % (msg_id, length), debug=True)
             raise ZodiacParseError('Invalid Data Checksum %r != %r %r' % (checksum, cksum, message))
           else:
             raise ZodiacParseError
@@ -142,7 +142,7 @@ class Zodiac(protocol.Protocol):
     if not (handler and decoder):
       # missing handler or decoder
       #if DEBUG:
-      #  log.debug('MISSING HANDLER/DECODER PAIR FOR: %r' % (dispatch,))
+      #  log.msg('MISSING HANDLER/DECODER PAIR FOR: %r' % (dispatch,), debug=True)
       return
     decoded = decoder(message)
     return handler(*decoded)
@@ -155,7 +155,7 @@ class Zodiac(protocol.Protocol):
     # I'll just snag the important stuff and spit it out like my NMEA decoder
     utc = (utchr * 3600.0) + (utcmn * 60.0) + utcsc + (float(utcns) * 0.000000001)
     
-    log.debug('utchr, utcmn, utcsc, utcns = ' + repr((utchr, utcmn, utcsc, utcns)))
+    log.msg('utchr, utcmn, utcsc, utcns = ' + repr((utchr, utcmn, utcsc, utcns)), debug=True)
     
     latitude = float(latitude)   * 0.00000180 / math.pi
     longitude = float(longitude) * 0.00000180 / math.pi

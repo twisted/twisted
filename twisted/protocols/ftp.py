@@ -302,7 +302,7 @@ class AuthorizationError(FTPCmdError):
 # -- Utility Functions --
 
 def debugDeferred(self, *_):
-    log.debug('debugDeferred(): %s' % str(_))
+    log.msg('debugDeferred(): %s' % str(_), debug=True)
 
 
 # -- DTP Protocol --
@@ -463,7 +463,7 @@ class DTPFactory(protocol.ClientFactory):
         self.delayedCall = None
 
     def buildProtocol(self, addr):
-        log.debug('DTPFactory.buildProtocol')
+        log.msg('DTPFactory.buildProtocol', debug=True)
         self.cancelTimeout()
         if self.pi.dtpInstance:   # only create one instance
             return
@@ -474,7 +474,7 @@ class DTPFactory(protocol.ClientFactory):
         return p
 
     def stopFactory(self):
-        log.debug('dtpFactory.stopFactory')
+        log.msg('dtpFactory.stopFactory', debug=True)
         self.cancelTimeout()
 
     def timeoutFactory(self):
@@ -490,10 +490,10 @@ class DTPFactory(protocol.ClientFactory):
 
     def cancelTimeout(self):
         if not self.delayedCall.called and not self.delayedCall.cancelled:
-            log.debug('cancelling DTP timeout')
+            log.msg('cancelling DTP timeout', debug=True)
             self.delayedCall.cancel()
             assert self.delayedCall.cancelled
-            log.debug('timeout has been cancelled')
+            log.msg('timeout has been cancelled', debug=True)
 
     def setTimeout(self, seconds):
         log.msg('DTPFactory.setTimeout set to %s seconds' % seconds)
@@ -1096,7 +1096,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def cleanupDTP(self):
         """call when DTP connection exits
         """
-        log.debug('cleanupDTP')
+        log.msg('cleanupDTP', debug=True)
 
         log.msg(self.dtpPort)
         dtpPort, self.dtpPort = self.dtpPort, None
