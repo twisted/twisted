@@ -468,6 +468,10 @@ class TrafficLoggingProtocol(ProtocolWrapper):
         self._log('S %d: %r' % (self._number, self._mungeData(data)))
         return ProtocolWrapper.write(self, data)
 
+    def writeSequence(self, iovec):
+        self._log('SV %d: %r' % (self._number, [self._mungeData(d) for d in iovec]))
+        return ProtocolWrapper.writeSequence(self, iovec)
+
     def loseConnection(self):
         self._log('S %d: *' % (self._number,))
         return ProtocolWrapper.loseConnection(self)

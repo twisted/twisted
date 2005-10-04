@@ -487,6 +487,13 @@ class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
         self.assertEqual(0, factory.connectionCount)
 
 
+class WriteSequenceEchoProtocol(EchoProtocol):
+    def dataReceived(self, bytes):
+        if bytes.find('vector!') != -1:
+            self.transport.writeSequence([bytes])
+        else:
+            EchoProtocol.dataReceived(self, bytes)
+
 class TestLoggingFactory(policies.TrafficLoggingFactory):
     openFile = None
     def open(self, name):
@@ -496,8 +503,10 @@ class TestLoggingFactory(policies.TrafficLoggingFactory):
 
 class LoggingFactoryTestCase(unittest.TestCase):
     def testThingsGetLogged(self):
+        wrappedFactory = Server()
+        wrappedFactory.protocol = WriteSequenceEchoProtocol
         t = StringTransportWithDisconnection()
-        f = TestLoggingFactory(Server(), 'test')
+        f = TestLoggingFactory(wrappedFactory, 'test')
         p = f.buildProtocol(('1.2.3.4', 5678))
         t.protocol = p
         p.makeConnection(t)
@@ -512,6 +521,12 @@ class LoggingFactoryTestCase(unittest.TestCase):
         self.assertNotEqual(-1, v.find("C 1: 'here are some bytes'"), "Expected client string not found in %r" % (v,))
         self.assertNotEqual(-1, v.find("S 1: 'here are some bytes'"), "Expected server string not found in %r" % (v,))
         self.assertEquals(t.value(), 'here are some bytes')
+
+        t.clear()
+        p.dataReceived('prepare for vector! to the extreme')
+        v = f.openFile.getvalue()
+        self.assertNotEqual(-1, v.find("SV 1: ['prepare for vector! to the extreme']"), "Expected server string not found in %r" % (v,))
+        self.assertEquals(t.value(), 'prepare for vector! to the extreme')
 
         p.loseConnection()
 
