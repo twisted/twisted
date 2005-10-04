@@ -67,14 +67,12 @@ class TestAssertions(unittest.TestCase):
             except self.failureException, e:
                 self.failUnlessEqual(str(e), "failed on %r" % (true,))
             else:
-                raise self.failureException("Call to failIf(%r) didn't fail"
-                                            % (true,))
+                self.fail("Call to failIf(%r) didn't fail" % (true,))
 
     def _testEqualPair(self, first, second):
         x = self.failUnlessEqual(first, second)
         if x != first:
-            raise self.failureException("failUnlessEqual should return "
-                                        "first parameter")
+            self.fail("failUnlessEqual should return first parameter")
 
     def _testUnequalPair(self, first, second):
         try:
@@ -82,11 +80,10 @@ class TestAssertions(unittest.TestCase):
         except self.failureException, e:
             expected = '%r != %r' % (first, second)
             if str(e) != expected:
-                raise self.failureException("Expected: %r; Got: %s"
-                                            % (expected, str(e)))
+                self.fail("Expected: %r; Got: %s" % (expected, str(e)))
         else:
-            raise self.failureException("Call to failUnlessEqual(%r, %r) "
-                                        "didn't fail" % (first, second))
+            self.fail("Call to failUnlessEqual(%r, %r) didn't fail"
+                      % (first, second))
 
     def test_failUnlessEqual_basic(self):
         self._testEqualPair('cat', 'cat')
@@ -109,15 +106,14 @@ class TestAssertions(unittest.TestCase):
         try:
             self.failUnlessEqual(apple, orange)
         except self.failureException:
-            raise self.failureException("Fail raised when ValueError ought "
-                                        "to have been raised.")
+            self.fail("Fail raised when ValueError ought to have been raised.")
         except ValueError:
             # good. error not swallowed
             pass
         else:
-            raise self.failureException("Comparing %r and %r should have "
-                                        "raised an exception"
-                                        % (apple, orange))
+            self.fail("Comparing %r and %r should have raised an exception"
+                      % (apple, orange))
+            
 
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
