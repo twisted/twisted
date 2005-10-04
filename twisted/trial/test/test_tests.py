@@ -37,6 +37,13 @@ class MockEquality(object):
 
 
 class TestAssertions(unittest.TestCase):
+    """Tests for TestCase's assertion methods.  That is, failUnless*,
+    failIf*, assert*.
+
+    This is pretty paranoid.  Still, a certain paranoia is healthy if you
+    are testing a unit testing framework.
+    """
+    
     failureException = unittest.FAILING_EXCEPTION
 
     class FailingTest(unittest.TestCase):
@@ -117,6 +124,52 @@ class TestAssertions(unittest.TestCase):
         else:
             self.fail("Comparing %r and %r should have raised an exception"
                       % (apple, orange))
+
+    def _raiseError(self, error):
+        raise error
+
+    def test_failUnlessRaises_expected(self):
+        x = self.failUnlessRaises(ValueError, self._raiseError, ValueError)
+        self.failUnless(isinstance(x, ValueError),
+                        "Expect failUnlessRaises to return instance of raised "
+                        "exception.")
+
+    def test_failUnlessRaises_unexpected(self):
+        try:
+            self.failUnlessRaises(ValueError, self._raiseError, TypeError)
+        except TypeError:
+            self.fail("failUnlessRaises shouldn't re-raise unexpected "
+                      "exceptions")
+        except self.failureException, e:
+            # what we expect
+            pass
+        else:
+            self.fail("Expected exception wasn't raised. Should have failed")
+
+    def test_failUnlessRaises_noException(self):
+        try:
+            self.failUnlessRaises(ValueError, lambda : None)
+        except self.failureException, e:
+            self.failUnlessEqual(str(e),
+                                 'ValueError not raised (None returned)')
+        else:
+            self.fail("Exception not raised. Should have failed")
+
+    def test_failUnlessRaises_failureException(self):
+        x = self.failUnlessRaises(self.failureException, self._raiseError,
+                                  self.failureException)
+        self.failUnless(isinstance(x, self.failureException),
+                        "Expected %r instance to be returned"
+                        % (self.failureException,))
+        try:
+            x = self.failUnlessRaises(self.failureException, self._raiseError,
+                                      ValueError)
+        except self.failureException, e:
+            # what we expect
+            pass
+        else:
+            self.fail("Should have raised exception")
+
 
 
 class TestAssertionNames(unittest.TestCase):
