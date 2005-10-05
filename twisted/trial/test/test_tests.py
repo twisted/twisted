@@ -309,6 +309,51 @@ class TestAssertionNames(unittest.TestCase):
                 self.failUnlessEqual(value, getattr(self, name[:-1]))
 
 
+class TestSkipMethods(unittest.TestCase):
+    class SkippingTests(unittest.TestCase):
+        def test_skip1(self):
+            raise unittest.SkipTest('skip1')
+
+        def test_skip2(self):
+            raise RuntimeError("I should not get raised")
+        test_skip2.skip = 'skip2'
+
+        def test_skip3(self):
+            self.fail('I should not fail')
+        test_skip3.skip = 'skip3'
+
+    def setUp(self):
+        self.loader = runner.TestLoader()
+        self.suite = self.loader.loadClass(TestSkipMethods.SkippingTests)
+        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
+
+    def test_setUp(self):
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(len(self.reporter.errors), 0)
+        self.failUnlessEqual(len(self.reporter.failures), 0)
+        self.failUnlessEqual(len(self.reporter.skips), 0)
+
+    def test_counting(self):
+        self.failUnlessEqual(self.suite.countTestCases(), 3)
+        self.suite(self.reporter)
+        self.failUnlessEqual(self.reporter.testsRun, 3)
+
+    def test_results(self):
+        self.suite(self.reporter)
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(len(self.reporter.skips), 3)
+
+    def test_reasons(self):
+        self.suite(self.reporter)
+        prefix = 'test_'
+        # whiteboxing reporter 
+        for test, reason in self.reporter.skips:
+            self.failUnlessEqual(test.shortDescription()[len(prefix):],
+                                 str(reason))
+
+
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
@@ -322,11 +367,6 @@ class TestTests(unittest.TestCase):
             self.teardownRun += 1
         def testSuccess_pass(self):
             pass
-        def testSkip1_skip(self):
-            raise unittest.SkipTest("skip me")
-        def testSkip2_skip(self):
-            pass
-        testSkip2_skip.skip = "skip me"
         def testTodo1_exfail(self):
             self.fail("deliberate failure")
         testTodo1_exfail.todo = "expected to fail"
