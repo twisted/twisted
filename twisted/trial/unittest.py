@@ -203,6 +203,7 @@ class TestCase(object):
         if round(second-first, places) == 0:
             raise FailTest, (msg or '%r == %r within %r places' %
                                                  (first, second, places))
+        return first
     assertNotAlmostEqual = assertNotAlmostEquals = failIfAlmostEqual
     failIfAlmostEquals = failIfAlmostEqual
     
@@ -220,6 +221,7 @@ class TestCase(object):
         if round(second-first, places) != 0:
             raise FailTest, (msg or '%r != %r within %r places' %
                                                  (first, second, places))
+        return first
     assertAlmostEqual = assertAlmostEquals = failUnlessAlmostEqual
     failUnlessAlmostEquals = failUnlessAlmostEqual
 
@@ -253,6 +255,7 @@ class TestCase(object):
         """
         if astring.find(substring) == -1:
             raise FailTest, (msg or "%r not found in %r" % (substring, astring))
+        return substring
     assertSubstring = failUnlessSubstring
 
     def failIfSubstring(self, substring, astring, msg=None):
@@ -261,6 +264,7 @@ class TestCase(object):
         """
         if astring.find(substring) != -1:
             raise FailTest, (msg or "%r found in %r" % (substring, astring))
+        return substring
     assertNotSubstring = failIfSubstring
 
     def mktemp(self):

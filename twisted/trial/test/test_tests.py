@@ -200,6 +200,77 @@ class TestAssertions(unittest.TestCase):
         # test when __ne__ is not defined
         self.failIfEqual(x, z, "__ne__ not defined, so not equal")
 
+    def test_failUnlessIdentical(self):
+        x, y, z = [1], [1], [2]
+        ret = self.failUnlessIdentical(x, x)
+        self.failUnlessEqual(ret, x,
+                             'failUnlessIdentical should return first '
+                             'parameter')
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessIdentical, x, y)
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessIdentical, x, z)
+
+    def test_failUnlessApproximates(self):
+        x, y, z = 1.0, 1.1, 1.2
+        self.failUnlessApproximates(x, x, 0.2)
+        ret = self.failUnlessApproximates(x, y, 0.2)
+        self.failUnlessEqual(ret, x, "failUnlessApproximates should return "
+                             "first parameter")
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessApproximates, x, z, 0.1)
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessApproximates, x, y, 0.1)
+
+    def test_failUnlessAlmostEqual(self):
+        precision = 5
+        x = 8.000001
+        y = 8.00001
+        z = 8.000002
+        self.failUnlessAlmostEqual(x, x, precision)
+        ret = self.failUnlessAlmostEqual(x, z, precision)
+        self.failUnlessEqual(ret, x, "failUnlessAlmostEqual should return "
+                             "first parameter (%r, %r)" % (ret, x))
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessAlmostEqual, x, y, precision)
+        
+    def test_failIfAlmostEqual(self):
+        precision = 5
+        x = 8.000001
+        y = 8.00001
+        z = 8.000002
+        ret = self.failIfAlmostEqual(x, y, precision)
+        self.failUnlessEqual(ret, x, "failIfAlmostEqual should return "
+                             "first parameter (%r, %r)" % (ret, x))
+        self.failUnlessRaises(self.failureException,
+                              self.failIfAlmostEqual, x, x, precision)
+        self.failUnlessRaises(self.failureException,
+                              self.failIfAlmostEqual, x, z, precision)
+
+    def test_failUnlessSubstring(self):
+        x = "cat"
+        y = "the dog sat"
+        z = "the cat sat"
+        self.failUnlessSubstring(x, x)
+        ret = self.failUnlessSubstring(x, z)
+        self.failUnlessEqual(ret, x, 'should return first parameter')
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessSubstring, x, y)
+        self.failUnlessRaises(self.failureException,
+                              self.failUnlessSubstring, z, x)
+
+    def test_failIfSubstring(self):
+        x = "cat"
+        y = "the dog sat"
+        z = "the cat sat"
+        self.failIfSubstring(z, x)
+        ret = self.failIfSubstring(x, y)
+        self.failUnlessEqual(ret, x, 'should return first parameter')
+        self.failUnlessRaises(self.failureException,
+                              self.failIfSubstring, x, x)
+        self.failUnlessRaises(self.failureException,
+                              self.failIfSubstring, x, z)
+
 
 class TestAssertionNames(unittest.TestCase):
     """Tests for consistency of naming within TestCase assertion methods
@@ -251,73 +322,6 @@ class TestTests(unittest.TestCase):
             self.teardownRun += 1
         def testSuccess_pass(self):
             pass
-        def testFailUnlessIdentical_pass(self):
-            a = [1,2]
-            b = a
-            self.failUnlessIdentical(a, b, "failed")
-        def testFailUnlessIdentical1_fail(self):
-            a = [1,2]
-            b = [1,2]
-            self.failUnlessIdentical(a, b, "failed")
-        def testFailUnlessIdentical2_fail(self):
-            a = [1,2]
-            b = [3,4]
-            self.failUnlessIdentical(a, b, "failed")
-        def testApproximates1_pass(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(a, b, .3, "failed")
-        def testApproximates2_pass(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(b, a, .3, "failed")
-        def testApproximates3_fail(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(a, b, .1, "failed (%r, %r)" % (a, b))
-        def testApproximates4_fail(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(b, a, .1, "failed")
-        def testFailUnlessAlmostEqual_pass(self):
-            a = 8.0000001
-            b = 8.00000012
-            self.failUnlessAlmostEqual(a, b, 7, "failed")
-        def testFailUnlessAlmostEqual_fail(self):
-            a = 0.0000001
-            b = 0.0000010
-            self.failUnlessAlmostEqual(a, b, 7, "failed")
-
-        def testFailIfAlmostEqual_pass(self):
-            a = 0.0000001
-            b = 0.0000010
-            self.failIfAlmostEqual(a, b, 7, "failed")
-
-        def testFailIfAlmostEqual_fail(self):
-            a = 8.0000001
-            b = 8.00000012
-            self.failIfAlmostEqual(a, b, 7, "failed")
-
-        def testFailUnlessSubstring_pass(self):
-            astring = "this is a string"
-            substring = "this"
-            self.failUnlessSubstring(substring, astring)
-
-        def testFailUnlessSubstring_fail(self):
-            astring = "this is a string"
-            substring = "o/` batman!....batman! o/`"
-            self.failUnlessSubstring(substring, astring)
-
-        def testFailIfSubstring_pass(self):
-            astring = "this is a string"
-            substring = "o/` batman!....batman! o/`"
-            self.failIfSubstring(substring, astring)
-
-        def testFailIfSubstring_fail(self):
-            astring = "this is a string"
-            substring = "this"
-            self.failIfSubstring(substring, astring)
-            
         def testSkip1_skip(self):
             raise unittest.SkipTest("skip me")
         def testSkip2_skip(self):
