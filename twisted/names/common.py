@@ -129,7 +129,7 @@ def extractRecord(resolver, name, answers, level = 10):
             r = client.Resolver(servers=[(str(r.payload.name), dns.PORT)])
             return r.lookupAddress(str(name)
                 ).addCallback(lambda (ans, auth, add): extractRecord(r, name, ans + auth + add, level - 1)
-                )
+                ).addBoth(lambda passthrough: (r.protocol.transport.stopListening(), passthrough)[1])
 
 typeToMethod = {
     dns.A:     'lookupAddress',
