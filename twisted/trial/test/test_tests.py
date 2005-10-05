@@ -13,9 +13,6 @@ from twisted.internet import defer, reactor
 TIMEOUT_MSG = "this is a timeout arg"
 CLASS_TIMEOUT_MSG = "this is a class level timeout arg"
 
-METHOD_SKIP_MSG = "skip this method"
-CLASS_SKIP_MSG = "skip all methods in this class"
-
 METHOD_TODO_MSG = "todo this method"
 CLASS_TODO_MSG = "todo all methods in this class"
 
@@ -354,17 +351,57 @@ class TestSkipMethods(unittest.TestCase):
                                  str(reason))
 
 
+class TestSkipClasses(unittest.TestCase):
+    class SkippedClass(unittest.TestCase):
+        skip = 'class'
+        def test_skip1(self):
+            raise SkipTest('skip1')
+        def test_skip2(self):
+            raise RuntimeError("Ought to skip me")
+        test_skip2.skip = 'skip2'
+        def test_skip3(self):
+            pass
+        def test_skip4(self):
+            raise RuntimeError("Skip me too")
+        
+    def setUp(self):
+        self.loader = runner.TestLoader() # alpha sorting is assumed
+        self.suite = self.loader.loadClass(TestSkipClasses.SkippedClass)
+        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
+
+    def test_setUp(self):
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(len(self.reporter.errors), 0)
+        self.failUnlessEqual(len(self.reporter.failures), 0)
+        self.failUnlessEqual(len(self.reporter.skips), 0)
+
+    def test_counting(self):
+        self.failUnlessEqual(4, self.suite.countTestCases())
+        self.suite(self.reporter)
+        self.failUnlessEqual(4, self.reporter.testsRun)
+
+    def test_results(self):
+        self.suite(self.reporter)
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(len(self.reporter.skips), 4)
+
+    def test_reasons(self):
+        self.suite(self.reporter)
+        expectedReasons = ['class', 'skip2', 'class', 'class']
+        # whitebox reporter
+        self.failUnlessEqual(len(expectedReasons), len(self.reporter.skips),
+                             "This test assumes all skips are being reported "
+                             "(%r != %r)" % (len(expectedReasons),
+                                             len(self.reporter.skips)))
+        for (r1, (test, r2)) in zip(expectedReasons, self.reporter.skips):
+            self.failUnlessEqual(r1, r2)
+
+
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
-        def __init__(self, methodName=None):
-            unittest.TestCase.__init__(self, methodName)
-            self.setupRun = 0
-            self.teardownRun = 0
-        def setUp(self):
-            self.setupRun += 1
-        def tearDown(self):
-            self.teardownRun += 1
         def testSuccess_pass(self):
             pass
         def testTodo1_exfail(self):
@@ -444,14 +481,6 @@ class TestTests(unittest.TestCase):
             except:
                 log.err()
         testNewStyleTodoLoggedErr_exfail.todo = (ZeroDivisionError, "need to learn that I can't divide by 0")
-
-    class TestSkipClassAttr(unittest.TestCase):
-        def testMethodSkipPrecedence_skipAttr(self):
-            pass
-        testMethodSkipPrecedence_skipAttr.skip = METHOD_SKIP_MSG
-        def testClassSkipPrecedence_skipClassAttr(self):
-            pass
-    TestSkipClassAttr.skip = CLASS_SKIP_MSG
 
     class TestTodoClassAttr(unittest.TestCase):
         def testMethodTodoPrecedence_todoAttr(self):
@@ -563,12 +592,6 @@ class TestTests(unittest.TestCase):
                 self.failUnlessEqual(f.value.args[0], tm.klass.t_excArg)
                 self.failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.klass.t_duration)
 
-            elif tm.id().endswith("_skipClassAttr"):
-                self.failUnlessEqual(tm.getSkip(), CLASS_SKIP_MSG)
-
-            elif tm.id().endswith("_skipAttr"):
-                self.failUnlessEqual(tm.getSkip(), METHOD_SKIP_MSG)
-
             elif tm.id().endswith("_todoClassAttr"):
                 self.failUnlessEqual(tm.getTodo(), CLASS_TODO_MSG)
 
@@ -587,7 +610,6 @@ class TestTests(unittest.TestCase):
         from twisted.trial.test.common import BogusReporter
         reporter = BogusReporter()
         for klass in (self.Tests,
-                      self.TestSkipClassAttr,
                       self.TestTodoClassAttr):
             suite = runner.TestLoader().loadClass(klass)
             root = runner.TrialRoot(reporter)
