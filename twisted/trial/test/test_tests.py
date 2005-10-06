@@ -391,28 +391,84 @@ class TestSkipClasses(unittest.TestCase):
         self.suite(self.reporter)
         expectedReasons = ['class', 'skip2', 'class', 'class']
         # whitebox reporter
-        self.failUnlessEqual(len(expectedReasons), len(self.reporter.skips),
-                             "This test assumes all skips are being reported "
-                             "(%r != %r)" % (len(expectedReasons),
-                                             len(self.reporter.skips)))
-        for (r1, (test, r2)) in zip(expectedReasons, self.reporter.skips):
-            self.failUnlessEqual(r1, r2)
+        reasonsGiven = [ reason for test, reason in self.reporter.skips ]
+        self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
+class TestTodo(unittest.TestCase):
+    class TodoTests(unittest.TestCase):
+        def test_todo1(self):
+            self.fail("deliberate failure")
+        test_todo1.todo = "todo1"
+
+        def test_todo2(self):
+            raise RuntimeError("deliberate error")
+        test_todo2.todo = "todo2"
+
+        def test_todo3(self):
+            """unexpected success"""
+        test_todo3.todo = 'todo3'
+    
+    def setUp(self):
+        self.loader = runner.TestLoader() 
+        self.suite = self.loader.loadClass(TestTodo.TodoTests)
+        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
+
+    def test_setUp(self):
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(len(self.reporter.errors), 0)
+        self.failUnlessEqual(len(self.reporter.failures), 0)
+        self.failUnlessEqual(len(self.reporter.skips), 0)
+
+    def test_counting(self):
+        self.failUnlessEqual(self.suite.countTestCases(), 3)
+        self.suite(self.reporter)
+        self.failUnlessEqual(self.reporter.testsRun, 3)
+
+    def test_results(self):
+        self.suite(self.reporter)
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(self.reporter.skips, [])
+        self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
+        self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 1)
+    
+    def test_expectedFailures(self):
+        self.suite(self.reporter)
+        expectedReasons = ['todo1', 'todo2']
+        reasonsGiven = [ r for t, e, r in self.reporter.expectedFailures ]
+        self.failUnlessEqual(expectedReasons, reasonsGiven)
+            
+    def test_unexpectedSuccesses(self):
+        self.suite(self.reporter)
+        expectedReasons = ['todo3']
+        reasonsGiven = [ r for t, r in self.reporter.unexpectedSuccesses ]
+        self.failUnlessEqual(expectedReasons, reasonsGiven)
+
+    
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
-        def testSuccess_pass(self):
-            pass
-        def testTodo1_exfail(self):
-            self.fail("deliberate failure")
-        testTodo1_exfail.todo = "expected to fail"
-        def testTodo2_exfail(self):
-            raise ValueError
-        testTodo2_exfail.todo = "expected to fail"
-        def testTodo3_unexpass(self):
-            pass # unexpected success
-        testTodo3_unexpass.todo = "expected to fail"
+        def testNewStyleTodo1_exfail(self):
+            raise RuntimeError, "expected failure"
+        testNewStyleTodo1_exfail.todo = (RuntimeError, "this is an expected failure")
+        def testNewStyleTodo2_exfail(self):
+            raise RuntimeError, "expected failure"
+        testNewStyleTodo2_exfail.todo = ((RuntimeError, OSError), "we expected as much")
+        def testNewStyleTodo3_error(self):
+            raise RuntimeError, "we had no idea!+"
+        testNewStyleTodo3_error.todo = (OSError, "we expected something else")
+        def testNewStyleTodo4_error(self):
+            raise RuntimeError, "we had no idea!+"
+        testNewStyleTodo4_error.todo = ((OSError, SyntaxError), "we expected something else")
+        def testNewStyleTodoLoggedErr_exfail(self):
+            try:
+                1/0
+            except:
+                log.err()
+        testNewStyleTodoLoggedErr_exfail.todo = (ZeroDivisionError, "need to learn that I can't divide by 0")
+
         def testDeferred1_pass(self):
             return defer.succeed('hoorj!')
         def testDeferred2_fail(self):
@@ -441,46 +497,22 @@ class TestTests(unittest.TestCase):
             reactor.callLater(0, d.callback, 'hoorj!')
             return d
         testTimeout1_pass.timeout = 2
-
         def testTimeout2_pass(self):
             # test default timeout time of 4
             d = defer.Deferred()
             reactor.callLater(0, d.callback, 'hoorj!')
             return d
-
         def testTimeout3_error(self):
             return defer.Deferred()
         testTimeout3_error.timeout = 0
-
         def testTimeout4_exfail(self):
             return defer.Deferred()
         testTimeout4_exfail.timeout = 0
         testTimeout4_exfail.todo = "i will get it right, eventually"
-
         def testTimeout5_skip(self):
             return defer.Deferred()
         testTimeout5_skip.timeout = 0.1
         testTimeout5_skip.skip = "i will get it right, eventually"
-
-        def testNewStyleTodo1_exfail(self):
-            raise RuntimeError, "expected failure"
-        testNewStyleTodo1_exfail.todo = (RuntimeError, "this is an expected failure")
-        def testNewStyleTodo2_exfail(self):
-            raise RuntimeError, "expected failure"
-        testNewStyleTodo2_exfail.todo = ((RuntimeError, OSError), "we expected as much")
-        def testNewStyleTodo3_error(self):
-            raise RuntimeError, "we had no idea!+"
-        testNewStyleTodo3_error.todo = (OSError, "we expected something else")
-        def testNewStyleTodo4_error(self):
-            raise RuntimeError, "we had no idea!+"
-        testNewStyleTodo4_error.todo = ((OSError, SyntaxError), "we expected something else")
-
-        def testNewStyleTodoLoggedErr_exfail(self):
-            try:
-                1/0
-            except:
-                log.err()
-        testNewStyleTodoLoggedErr_exfail.todo = (ZeroDivisionError, "need to learn that I can't divide by 0")
 
     class TestTodoClassAttr(unittest.TestCase):
         def testMethodTodoPrecedence_todoAttr(self):
