@@ -131,7 +131,6 @@ class TrialRoot(object):
 
     def __init__(self, reporter):
         self.reporter = IReporter(reporter)
-        self.reporter.setUpReporter()
         self.startTime, self.endTime = None, None
 
     def _kickStopRunningStuff(self):
@@ -139,12 +138,6 @@ class TrialRoot(object):
         # hand the reporter the TrialRoot to give it access to all information
         # from the test run
         self.reporter.endTrial(self)
-        try:
-            self.reporter.tearDownReporter()
-        except:
-            t, v, tb = sys.exc_info()
-            raise RuntimeError, "your reporter is broken %r" % \
-                  (''.join(v),), tb
         self._bail()
 
     def setStartTime(self):
