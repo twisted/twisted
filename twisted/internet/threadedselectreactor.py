@@ -285,6 +285,16 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
     def removeAll(self):
         return self._removeAll(self.reads, self.writes)
+
+    def run(self, installSignalHandlers=1):
+        self.startRunning(installSignalHandlers=installSignalHandlers)
+        self.mainLoop()
+
+    def mainLoop(self):
+        q = Queue()
+        self.interleave(q.put)
+        while self.running:
+            q.get()()
         
     
 components.backwardsCompatImplements(ThreadedSelectReactor)
