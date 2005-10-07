@@ -303,7 +303,25 @@ class TestAssertionNames(unittest.TestCase):
                 self.failUnlessEqual(value, getattr(self, name[:-1]))
 
 
-class TestSkipMethods(unittest.TestCase):
+class ResultsTestMixin:
+    def loadSuite(self, suite):
+        self.loader = runner.TestLoader()
+        self.suite = self.loader.loadClass(suite)
+        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
+
+    def test_setUp(self):
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(self.reporter.skips, [])
+        
+    def assertCount(self, numTests):
+        self.failUnlessEqual(self.suite.countTestCases(), numTests)
+        self.suite(self.reporter)
+        self.failUnlessEqual(self.reporter.testsRun, numTests)
+
+
+class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
     class SkippingTests(unittest.TestCase):
         def test_skip1(self):
             raise unittest.SkipTest('skip1')
@@ -317,20 +335,10 @@ class TestSkipMethods(unittest.TestCase):
         test_skip3.skip = 'skip3'
 
     def setUp(self):
-        self.loader = runner.TestLoader()
-        self.suite = self.loader.loadClass(TestSkipMethods.SkippingTests)
-        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
-
-    def test_setUp(self):
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(len(self.reporter.errors), 0)
-        self.failUnlessEqual(len(self.reporter.failures), 0)
-        self.failUnlessEqual(len(self.reporter.skips), 0)
+        self.loadSuite(TestSkipMethods.SkippingTests)
 
     def test_counting(self):
-        self.failUnlessEqual(self.suite.countTestCases(), 3)
-        self.suite(self.reporter)
-        self.failUnlessEqual(self.reporter.testsRun, 3)
+        self.assertCount(3)
 
     def test_results(self):
         self.suite(self.reporter)
@@ -348,7 +356,7 @@ class TestSkipMethods(unittest.TestCase):
                                  str(reason))
 
 
-class TestSkipClasses(unittest.TestCase):
+class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
     class SkippedClass(unittest.TestCase):
         skip = 'class'
         def test_skip1(self):
@@ -362,20 +370,10 @@ class TestSkipClasses(unittest.TestCase):
             raise RuntimeError("Skip me too")
         
     def setUp(self):
-        self.loader = runner.TestLoader() # alpha sorting is assumed
-        self.suite = self.loader.loadClass(TestSkipClasses.SkippedClass)
-        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
-
-    def test_setUp(self):
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(len(self.reporter.errors), 0)
-        self.failUnlessEqual(len(self.reporter.failures), 0)
-        self.failUnlessEqual(len(self.reporter.skips), 0)
+        self.loadSuite(TestSkipClasses.SkippedClass)
 
     def test_counting(self):
-        self.failUnlessEqual(4, self.suite.countTestCases())
-        self.suite(self.reporter)
-        self.failUnlessEqual(4, self.reporter.testsRun)
+        self.assertCount(4)
 
     def test_results(self):
         self.suite(self.reporter)
@@ -392,7 +390,7 @@ class TestSkipClasses(unittest.TestCase):
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
-class TestTodo(unittest.TestCase):
+class TestTodo(unittest.TestCase, ResultsTestMixin):
     class TodoTests(unittest.TestCase):
         def test_todo1(self):
             self.fail("deliberate failure")
@@ -405,22 +403,12 @@ class TestTodo(unittest.TestCase):
         def test_todo3(self):
             """unexpected success"""
         test_todo3.todo = 'todo3'
-    
+
     def setUp(self):
-        self.loader = runner.TestLoader() 
-        self.suite = self.loader.loadClass(TestTodo.TodoTests)
-        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
-
-    def test_setUp(self):
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(len(self.reporter.errors), 0)
-        self.failUnlessEqual(len(self.reporter.failures), 0)
-        self.failUnlessEqual(len(self.reporter.skips), 0)
-
+        self.loadSuite(TestTodo.TodoTests)
+    
     def test_counting(self):
-        self.failUnlessEqual(self.suite.countTestCases(), 3)
-        self.suite(self.reporter)
-        self.failUnlessEqual(self.reporter.testsRun, 3)
+        self.assertCount(3)
 
     def test_results(self):
         self.suite(self.reporter)
@@ -444,7 +432,7 @@ class TestTodo(unittest.TestCase):
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
-class TestTodoClass(unittest.TestCase):
+class TestTodoClass(unittest.TestCase, ResultsTestMixin):
     class TodoClass(unittest.TestCase):
         def test_todo1(self):
             pass
@@ -459,20 +447,10 @@ class TestTodoClass(unittest.TestCase):
     TodoClass.todo = "class"
 
     def setUp(self):
-        self.loader = runner.TestLoader() 
-        self.suite = self.loader.loadClass(TestTodoClass.TodoClass)
-        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
-
-    def test_setUp(self):
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(len(self.reporter.errors), 0)
-        self.failUnlessEqual(len(self.reporter.failures), 0)
-        self.failUnlessEqual(len(self.reporter.skips), 0)
+        self.loadSuite(TestTodoClass.TodoClass)
 
     def test_counting(self):
-        self.failUnlessEqual(self.suite.countTestCases(), 4)
-        self.suite(self.reporter)
-        self.failUnlessEqual(self.reporter.testsRun, 4)
+        self.assertCount(4)
 
     def test_results(self):
         self.suite(self.reporter)
