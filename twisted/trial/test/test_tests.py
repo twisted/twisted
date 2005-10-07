@@ -35,8 +35,6 @@ class TestAssertions(unittest.TestCase):
     are testing a unit testing framework.
     """
     
-    failureException = unittest.FAILING_EXCEPTION
-
     class FailingTest(unittest.TestCase):
         def test_fails(self):
             raise TestAssertions.failureException()
@@ -576,10 +574,8 @@ class TestTests(unittest.TestCase):
 
     def checkResults(self, reporter, method):
         tm = method
-        self.failUnlessEqual(tm.countTestCases(), 1)       
-        self.failUnless(tm.startTime > 0)
-        self.failUnless(tm._setUp, "tm.setUp not set")
-        self.failUnless(tm._tearDown, "tm.tearDown not set")
+        self.failUnlessEqual(tm.countTestCases(), 1)
+        self.failUnless(tm.startTime >= 0)
 
         def _hasTbs(meth):
             return not (len(reporter._getFailures(meth))
@@ -606,7 +602,7 @@ class TestTests(unittest.TestCase):
                 self.failUnlessEqual(f.type, defer.TimeoutError)
 
         try:
-            self.failUnless(tm.startTime > 0.0, "%f not > 0.0" % (tm.startTime,))
+            self.failUnless(tm.startTime >= 0.0, "%f not >= 0.0" % (tm.startTime,))
 
             if tm.id().endswith("_pass"):
                 _checkStatus(tm, SUCCESS)

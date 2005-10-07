@@ -26,14 +26,14 @@ class TestUserMethod(unittest.TestCase):
 
     def testErrorHandling(self):
         """wrapper around user code"""
-        umw = runner.UserMethodWrapper(self.errorfulMethod, self.janitor)
-        self.failUnlessRaises(runner.UserMethodError, umw)
+        umw = util.UserMethodWrapper(self.errorfulMethod, self.janitor)
+        self.failUnlessRaises(util.UserMethodError, umw)
         self.failUnless(umw.errors[0].check(UserError))
         self.failUnless(umw.endTime >= umw.startTime)
 
     def testDeferredError(self):
-        umw = runner.UserMethodWrapper(self.errorfulDeferred, self.janitor)
-        self.failUnlessRaises(runner.UserMethodError, umw)
+        umw = util.UserMethodWrapper(self.errorfulDeferred, self.janitor)
+        self.failUnlessRaises(util.UserMethodError, umw)
         self.failUnless(umw.errors[0].check(UserError))
         self.failUnless(umw.endTime >= umw.startTime)
 
@@ -192,7 +192,7 @@ class MyTest(unittest.TestCase):
 class TestIntrospection(unittest.TestCase):
     def test_containers(self):
         import suppression
-        parents = runner.getPythonContainers(
+        parents = util.getPythonContainers(
             suppression.TestSuppression2.testSuppressModule)
         expected = [ suppression.TestSuppression2,
                      suppression ]

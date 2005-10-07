@@ -19,7 +19,7 @@ Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 
 from __future__ import generators
 
-import traceback, warnings, time, signal, gc
+import traceback, warnings, time, signal, gc, sys
 from twisted.python import failure, util, log
 from twisted.internet import defer, interfaces
 from twisted.trial import itrial
@@ -67,6 +67,8 @@ def deferredResult(d, timeout=None):
     Waits for a Deferred to arrive, then returns or throws an exception,
     based on the result.
     """
+    warnings.warn("Do NOT use deferredResult.  Return a Deferred from your "
+                  "test.", stacklevel=2, category=DeprecationWarning)
     result = _wait(d, timeout)
     if isinstance(result, failure.Failure):
         raise result
@@ -79,6 +81,8 @@ def deferredError(d, timeout=None):
 
     If the deferred succeeds, raises FailTest.
     """
+    warnings.warn("Do NOT use deferredError.  Return a Deferred from your "
+                  "test.", stacklevel=2, category=DeprecationWarning)
     from twisted.trial import unittest
     result = _wait(d, timeout)
     if isinstance(result, failure.Failure):
@@ -454,6 +458,89 @@ def suppress(action='ignore', **kwarg):
     level by specifying .suppress = []
     """
     return ((action,), kwarg)
+
+
+class UserMethodError(Exception):
+    """indicates that the user method had an error, but raised after
+    call is complete
+    """
+
+class UserMethodWrapper(object):
+    def __init__(self, original, raiseOnErr=True, timeout=None, suppress=None):
+        self.original = original
+        self.timeout = timeout
+        self.raiseOnErr = raiseOnErr
+        self.errors = []
+        self.suppress = suppress
+        self.name = original.__name__
+
+    def __call__(self, *a, **kw):
+        timeout = getattr(self, 'timeout', None)
+        if timeout is None:
+            timeout = getattr(self.original, 'timeout', DEFAULT_TIMEOUT)
+        self.startTime = time.time()
+        def run():
+            return wait(defer.maybeDeferred(self.original, *a, **kw),
+                        timeout, useWaitError=True)
+        try:
+            self._runWithWarningFilters(run)
+        except MultiError, e:
+            for f in e.failures:
+                self.errors.append(f)
+        except KeyboardInterrupt:
+            f = failure.Failure()
+            self.errors.append(f)
+        self.endTime = time.time()
+        for e in self.errors:
+            self.errorHook(e)
+        if self.raiseOnErr and self.errors:
+            raise UserMethodError
+
+    def _runWithWarningFilters(self, f, *a, **kw):
+        """calls warnings.filterwarnings(*item[0], **item[1]) 
+        for each item in alist, then runs func f(*a, **kw) and 
+        resets warnings.filters to original state at end
+        """
+        filters = warnings.filters[:]
+        try:
+            if self.suppress is not None:
+                for args, kwargs in self.suppress:
+                    warnings.filterwarnings(*args, **kwargs)
+            return f(*a, **kw)
+        finally:
+            warnings.filters = filters[:]
+
+    def errorHook(self, fail):
+        pass
+
+
+def getPythonContainers(meth):
+    """Walk up the Python tree from method 'meth', finding its class, its module
+    and all containing packages."""
+    containers = []
+    containers.append(meth.im_class)
+    moduleName = meth.im_class.__module__
+    while moduleName is not None:
+        module = sys.modules.get(moduleName, None)
+        if module is None:
+            module = __import__(moduleName)
+        containers.append(module)
+        moduleName = getattr(module, '__module__', None)
+    return containers
+
+
+_DEFAULT = object()
+def acquireAttribute(objects, attr, default=_DEFAULT):
+    """Go through the list 'objects' sequentially until we find one which has
+    attribute 'attr', then return the value of that attribute.  If not found,
+    return 'default' if set, otherwise, raise AttributeError. """
+    for obj in objects:
+        if hasattr(obj, attr):
+            return getattr(obj, attr)
+    if default is not _DEFAULT:
+        return default
+    raise AttributeError('attribute %r not found in %r' % (attr, objects))
+
 
 __all__ = ["MultiError", "LoggedErrors", 'WaitError', 'JanitorError', 'DirtyReactorWarning',
            'DirtyReactorError', 'PendingTimedCallsError', 'WaitIsNotReentrantError',

@@ -9,6 +9,6 @@ import unittest
 
 from twisted.trial.test.common import BaseTest
 
-class PyUnitTest(BaseTest, unittest.TestCase):
+class PyUnitTest(unittest.TestCase):
     pass
 

@@ -133,8 +133,8 @@ class LoaderTest(unittest.TestCase):
         import sample
         suite = self.loader.loadMethod(sample.FooTest.test_foo)
         self.failUnlessEqual(1, suite.countTestCases())
-        self.failUnlessEqual([sample.FooTest.test_foo],
-                             [test.original for test in suite._tests])
+        self.failUnlessEqual(['test_foo'],
+                             [test._testMethodName for test in suite._tests])
         self.failUnless(isinstance(suite, runner.ClassSuite),
                         "%r must be a runner.ClassSuite instance"
                         % (suite,))
@@ -152,8 +152,8 @@ class LoaderTest(unittest.TestCase):
         import sample
         suite = self.loader.loadClass(sample.FooTest)
         self.failUnlessEqual(2, suite.countTestCases())
-        self.failUnlessEqual([sample.FooTest.test_bar, sample.FooTest.test_foo],
-                             [test.original for test in suite._tests])
+        self.failUnlessEqual(['test_bar', 'test_foo'],
+                             [test._testMethodName for test in suite._tests])
         self.failUnless(isinstance(suite, runner.ClassSuite),
                         "%r must be a runner.ClassSuite instance"
                         % (suite,))

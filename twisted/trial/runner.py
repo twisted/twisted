@@ -101,10 +101,19 @@ class DocTestSuite(TestSuite):
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
-            self.addTest(PyUnitTestMethod(test))
+            self.addTest(PyUnitTestCase(test))
 
 
-class PyUnitTestMethod(object):
+class PyUnitTestCase(object):
+    """This class decorates the pyunit.TestCase class, mainly to work around
+    the differences between unittest in Python 2.3 and unittest in Python 2.4
+    These differences are:
+    - The way doctest unittests describe themselves
+    - Where the implementation of TestCase.run is (used to be in __call__)
+
+    It also implements visit, which we like.
+    """
+    
     def __init__(self, test):
         self._test = test
         test.id = self.id
@@ -168,61 +177,6 @@ class TrialRoot(object):
         return self.endTime - self.startTime
 
 
-class UserMethodError(Exception):
-    """indicates that the user method had an error, but raised after
-    call is complete
-    """
-
-class UserMethodWrapper(object):
-    def __init__(self, original, raiseOnErr=True, timeout=None, suppress=None):
-        self.original = original
-        self.timeout = timeout
-        self.raiseOnErr = raiseOnErr
-        self.errors = []
-        self.suppress = suppress
-        self.name = original.__name__
-
-    def __call__(self, *a, **kw):
-        timeout = getattr(self, 'timeout', None)
-        if timeout is None:
-            timeout = getattr(self.original, 'timeout', util.DEFAULT_TIMEOUT)
-        self.startTime = time.time()
-        def run():
-            return util.wait(
-                defer.maybeDeferred(self.original, *a, **kw),
-                timeout, useWaitError=True)
-        try:
-            self._runWithWarningFilters(run)
-        except util.MultiError, e:
-            for f in e.failures:
-                self.errors.append(f)
-        except KeyboardInterrupt:
-            f = failure.Failure()
-            self.errors.append(f)
-        self.endTime = time.time()
-        for e in self.errors:
-            self.errorHook(e)
-        if self.raiseOnErr and self.errors:
-            raise UserMethodError
-
-    def _runWithWarningFilters(self, f, *a, **kw):
-        """calls warnings.filterwarnings(*item[0], **item[1]) 
-        for each item in alist, then runs func f(*a, **kw) and 
-        resets warnings.filters to original state at end
-        """
-        filters = warnings.filters[:]
-        try:
-            if self.suppress is not None:
-                for args, kwargs in self.suppress:
-                    warnings.filterwarnings(*args, **kwargs)
-            return f(*a, **kw)
-        finally:
-            warnings.filters = filters[:]
-
-    def errorHook(self, fail):
-        pass
-
-
 class ModuleSuite(TestSuite):
     def __init__(self, original):
         TestSuite.__init__(self)
@@ -263,30 +217,29 @@ class ClassSuite(TestSuite):
 
     def testCaseInstance(self):
         # a property getter, called by subclasses
-        if not self._tcInstance:
-            self._tcInstance = self._testCase(None)  # XXX - pass the meth
-        return self._tcInstance
+        return self.original._testCaseInstance
     testCaseInstance = property(testCaseInstance)
 
     def _setUpClass(self):
-        if not hasattr(self.testCaseInstance, 'setUpClass'):
+        if not hasattr(self.original, 'setUpClass'):
             return lambda : None
         setUp = self.testCaseInstance.setUpClass
-        suppress = acquireAttribute(
-            getPythonContainers(setUp), 'suppress', None)
-        return UserMethodWrapper(setUp, suppress=suppress)
+        suppress = util.acquireAttribute(
+            util.getPythonContainers(setUp), 'suppress', None)
+        return util.UserMethodWrapper(setUp, suppress=suppress)
 
     def _tearDownClass(self):
-        if not hasattr(self.testCaseInstance, 'tearDownClass'):
+        if not hasattr(self.original, 'tearDownClass'):
             return lambda : None
         tearDown = self.testCaseInstance.tearDownClass
-        suppress = acquireAttribute(
-            getPythonContainers(tearDown), 'suppress', None)
-        return UserMethodWrapper(tearDown, suppress=suppress)
+        suppress = util.acquireAttribute(
+            util.getPythonContainers(tearDown), 'suppress', None)
+        return util.UserMethodWrapper(tearDown, suppress=suppress)
 
     def run(self, reporter):
         janitor = util._Janitor()
-        tci = self.testCaseInstance
+        if len(self._tests) == 0:
+            return
         self.startTime = time.time()
         try:
             self._signalStateMgr.save()
@@ -294,9 +247,9 @@ class ClassSuite(TestSuite):
             # --- setUpClass -----------------------------------------------
             setUpClass = self._setUpClass()
             try:
-                if not getattr(tci, 'skip', None):
+                if not getattr(self.original, 'skip', None):
                     setUpClass()
-            except UserMethodError:
+            except util.UserMethodError:
                 for error in setUpClass.errors:
                     if error.check(unittest.SkipTest):
                         self.original.skip = error.value[0]
@@ -314,16 +267,16 @@ class ClassSuite(TestSuite):
 
             # --- run methods ----------------------------------------------
             for testMethod in self._tests:
-                testMethod.run(reporter, tci)
+                testMethod.run(reporter)
                 if reporter.shouldStop:
                     break
 
             # --- tearDownClass ---------------------------------------------
             tearDownClass = self._tearDownClass()
             try:
-                if not getattr(tci, 'skip', None):
+                if not getattr(self.original, 'skip', None):
                     tearDownClass()
-            except UserMethodError:
+            except util.UserMethodError:
                 for error in tearDownClass.errors:
                     if error.check(KeyboardInterrupt):
                         reporter.shouldStop = True
@@ -345,192 +298,10 @@ class ClassSuite(TestSuite):
         visitor.visitClassAfter(self)
 
 
-def getPythonContainers(meth):
-    """Walk up the Python tree from method 'meth', finding its class, its module
-    and all containing packages."""
-    containers = []
-    containers.append(meth.im_class)
-    moduleName = meth.im_class.__module__
-    while moduleName is not None:
-        module = sys.modules.get(moduleName, None)
-        if module is None:
-            module = __import__(moduleName)
-        containers.append(module)
-        moduleName = getattr(module, '__module__', None)
-    return containers
-
-
-_DEFAULT = object()
-def acquireAttribute(objects, attr, default=_DEFAULT):
-    """Go through the list 'objects' sequentially until we find one which has
-    attribute 'attr', then return the value of that attribute.  If not found,
-    return 'default' if set, otherwise, raise AttributeError. """
-    for obj in objects:
-        if hasattr(obj, attr):
-            return getattr(obj, attr)
-    if default is not _DEFAULT:
-        return default
-    raise AttributeError('attribute %r not found in %r' % (attr, objects))
-
-
-class TestMethod(object):
-    parent = None
-
-    def __init__(self, original):
-        self.original = original
-        self._setUp = original.im_class.setUp
-        self._tearDown = original.im_class.tearDown
-        self._signalStateMgr = util.SignalStateManager()
-        self._parents = [original] + getPythonContainers(original)
-
-    def countTestCases(self):
-        return 1
-
-    def getSkip(self):
-        return acquireAttribute([self] + self._parents, 'skip', None)
-
-    def getTodo(self):
-        return acquireAttribute(self._parents, 'todo', None)
-    
-    def getSuppress(self):
-        return acquireAttribute(self._parents, 'suppress', None)
-
-    def getTimeout(self):
-        return acquireAttribute(self._parents, 'timeout', None)
-
-    def runningTime(self):
-        return self.endTime - self.startTime
-
-    def id(self):
-        k = self.original.im_class
-        return '%s.%s.%s' % (k.__module__, k.__name__, self.original.__name__)
-
-    def shortDescription(self):
-        doc = getattr(self.original, '__doc__', None)
-        if doc is not None:
-            return doc.lstrip().split('\n', 1)[0]
-        return self.original.__name__
-
-    def _todoExpected(self, failure):
-        todo = self.getTodo()
-        if todo is None:
-            return False
-        if isinstance(todo, str):
-            return True
-        elif isinstance(todo, tuple):
-            try:
-                expected = list(todo[0])
-            except TypeError:
-                expected = [todo[0]]
-            for error in expected:
-                if failure.check(error):
-                    return True
-            return False
-        else:
-            raise ValueError('%r is not a valid .todo attribute' % (todo,))
-
-    def _getTodoMessage(self):
-        todo = self.getTodo()
-        if todo is None or isinstance(todo, str):
-            return todo
-        elif isinstance(todo, tuple):
-            return todo[1]
-        else:
-            raise ValueError("%r is not a valid .todo attribute" % (todo,))
-
-    def _eb(self, f, reporter):
-        log.msg(f.getTraceback())
-        if self.getTodo() is not None:
-            if self._todoExpected(f):
-                reporter.addExpectedFailure(self, f, self._getTodoMessage())
-                return
-        if f.check(util.DirtyReactorWarning):
-            reporter.cleanupErrors(f)
-        elif f.check(unittest.FAILING_EXCEPTION, unittest.FailTest):
-            reporter.addFailure(self, f)
-        elif f.check(KeyboardInterrupt):
-            reporter.shouldStop = True
-            reporter.addError(self, f)
-        elif f.check(unittest.SkipTest):
-            if len(f.value.args) > 0:
-                reason = f.value.args[0]
-            else:
-                warnings.warn(("Do not raise unittest.SkipTest with no "
-                               "arguments! Give a reason for skipping tests!"),
-                              stacklevel=2)
-                reason = f
-            self.skip = reason
-            reporter.addSkip(self, reason)
-        else:
-            reporter.addError(self, f)
-
-    def run(self, reporter, testCaseInstance):
-        log.msg("--> %s <--" % (self.id()))
-        self.testCaseInstance = tci = testCaseInstance
-        self.startTime = time.time()
-        self._signalStateMgr.save()
-        janitor = util._Janitor()
-        if self.getSkip(): # don't run test methods that are marked as .skip
-            reporter.startTest(self)
-            reporter.addSkip(self, self.getSkip())
-            reporter.stopTest(self)
-            return
-        try:
-            # Record the name of the running test on the TestCase instance
-            tci._trial_caseMethodName = self.original.func_name
-
-            # Run the setUp method
-            setUp = UserMethodWrapper(self._setUp, suppress=self.getSuppress())
-            try:
-                setUp(tci)
-            except UserMethodError:
-                for error in setUp.errors:
-                    self._eb(error, reporter)
-                else:
-                    # give the reporter the illusion that the test has 
-                    # run normally but don't actually run the test if 
-                    # setUp is broken
-                    reporter.startTest(self)
-                    reporter.upDownError(setUp, warn=False,
-                                         printStatus=False)
-                    return
-                 
-            # Run the test method
-            reporter.startTest(self)
-            try:
-                orig = UserMethodWrapper(self.original,
-                                         raiseOnErr=False,
-                                         timeout=self.getTimeout(),
-                                         suppress=self.getSuppress())
-                orig.errorHook = lambda x : self._eb(x, reporter)
-                orig(tci)
-                if (self.getTodo() is not None
-                    and len(orig.errors) == 0):
-                    reporter.addUnexpectedSuccess(self, self.getTodo())
-            finally:
-                self.endTime = time.time()
-                # Run the tearDown method
-                um = UserMethodWrapper(self._tearDown,
-                                       suppress=self.getSuppress())
-                try:
-                    um(tci)
-                except UserMethodError:
-                    for error in um.errors:
-                        self._eb(error, reporter)
-                    else:
-                        reporter.upDownError(um, warn=False)
-        finally:
-            try:
-                janitor.postMethodCleanup()
-            except util.MultiError, e:
-                for f in e.failures:
-                    self._eb(f, reporter)
-            reporter.stopTest(self)
-            self._signalStateMgr.restore()
-
-    def visit(self, visitor):
-        """Call visitor.visitCase(self)."""
-        visitor.visitCase(self)
+def name(thing):
+    if hasattr(thing, '__name__'):
+        return thing.__name__
+    return thing.id()
 
 
 class TestLoader(object):
@@ -541,8 +312,7 @@ class TestLoader(object):
         self.suiteFactory = TestSuite
         self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
-        self.testMethodFactory = TestMethod
-        self.sorter = lambda x : x.__name__
+        self.sorter = name
         self._importErrors = []
 
     def _findTestClasses(self, module):
@@ -599,28 +369,20 @@ class TestLoader(object):
             raise TypeError("%r is not a class" % (klass,))
         if not ITestCase.implementedBy(klass):
             raise ValueError("%r is not a test case" % (klass,))
-        if issubclass(klass, pyunit.TestCase):
-            klass.__init__ = lambda x, y: None
         factory = self.classSuiteFactory
-        instance = klass(None)  # XXX -- later pass this the methodName
-        methods = dsu([ getattr(klass, name) for name in dir(instance)
-                        if name.startswith(self.methodPrefix)
-                        and callable(getattr(instance, name)) ],
-                      self.sorter)
+        names = reflect.prefixedMethodNames(klass, self.methodPrefix)
+        tests = dsu([ klass(self.methodPrefix+name) for name in names ],
+                    self.sorter)
         suite = factory(klass)
-        for method in methods:
-            suite.addTest(self.loadTestMethod(method))
+        suite.addTests(tests)
         return suite
 
     def loadMethod(self, method):
         if not isinstance(method, types.MethodType):
             raise TypeError("%r not a method" % (method,))
         suite = self.classSuiteFactory(method.im_class)
-        suite.addTest(self.loadTestMethod(method))
+        suite.addTest(method.im_class(method.__name__))
         return suite
-
-    def loadTestMethod(self, method):
-        return self.testMethodFactory(method)
 
     def loadPackage(self, package, recurse=False):
         if not isPackage(package):
@@ -628,7 +390,7 @@ class TestLoader(object):
         if recurse:
             return self.loadPackageRecursive(package)
         suite = self.suiteFactory()
-        for module in self._findTestModules(package):
+        for module in dsu(self._findTestModules(package), self.sorter):
             suite.addTest(self.loadModule(module))
         return suite
 
@@ -637,13 +399,15 @@ class TestLoader(object):
             names[:] = []
             return
         testModuleNames = fnmatch.filter(names, self.moduleGlob)
+        modules = []
         for name in testModuleNames:
             try:
-                module = filenameToModule(opj(dirname, name))
+                modules.append(filenameToModule(opj(dirname, name)))
             except:
                 # Importing a module can raise any kind of error. Get them all.
                 self.addImportError(name, failure.Failure())
                 continue
+        for module in dsu(modules, self.sorter):
             suite.addTest(self.loadModule(module))
 
     def loadPackageRecursive(self, package):

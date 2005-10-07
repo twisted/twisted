@@ -30,14 +30,12 @@ class TestTestVisitor(TestCase):
 
     def test_visit_case_default(self):
         from twisted.trial.unittest import TestVisitor
-        from twisted.trial.runner import TestMethod
-        testCase = self.loader.loadTestMethod(self.test_visit_case)
+        testCase = self.loader.loadMethod(self.test_visit_case_default)
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
     def test_visit_case(self):
-        from twisted.trial.runner import TestMethod
-        testCase = TestMethod(self.test_visit_case)
+        testCase = TestTestVisitor('test_visit_case')
         test_visitor = self.mock_visitor()
         testCase.visit(test_visitor)
         self.assertEqual(test_visitor.calls, [("case", testCase)])

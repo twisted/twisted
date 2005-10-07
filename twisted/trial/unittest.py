@@ -4,30 +4,17 @@
 # See LICENSE for details.
 
 
-import os, errno, warnings, sys
+import os, errno, warnings, sys, time
 
-from twisted.python import failure
-from twisted.trial import itrial
+from twisted.python import failure, log, reflect
+from twisted.trial import itrial, util
+from twisted.trial.util import deferredResult, deferredError
 
-from twisted.trial.util import deferredResult, deferredError, wait
 pyunit = __import__('unittest')
 
 import zope.interface as zi
 
 zi.classImplements(pyunit.TestCase, itrial.ITestCase)
-
-#------------------------------------------------------------------------------
-# Set this to True if you want to disambiguate between test failures and
-# other assertions.  If you are in the habit of using the "assert" statement
-# in your tests, you probably want to leave this false.
-
-ASSERTION_IS_ERROR = 0
-if not ASSERTION_IS_ERROR:
-    FAILING_EXCEPTION = AssertionError
-else:
-    FAILING_EXCEPTION = FailTest
-
-# ------------------------------------------------------------- #
 
 
 class SkipTest(Exception):
@@ -42,26 +29,172 @@ class FailTest(AssertionError):
     """Raised to indicate the current test has failed to pass."""
 
 
-class TestCase(object):
+class TestCase(pyunit.TestCase, object):
     zi.implements(itrial.ITestCase)
+    failureException = FailTest
 
     def __init__(self, methodName=None):
-        pass
-            
-    def setUpClass(self):
-        pass
+        super(TestCase, self).__init__(methodName)
+        self._testMethodName = methodName
+        testMethod = getattr(self, methodName)
+        self._parents = [testMethod, self]
+        self._parents.extend(util.getPythonContainers(testMethod))
+        self._prepareClassFixture()
+        self.startTime = self.endTime = 0 # XXX - this is a kludge
 
-    def tearDownClass(self):
-        pass
+    def _prepareClassFixture(self):
+        """Lots of tests assume that test methods all run in the same instance
+        of TestCase.  This isn't true. Calling this method ensures that
+        self.__class__._testCaseInstance contains an instance of this class
+        that will remain the same for all tests from this class.
+        """
+        if not hasattr(self.__class__, '_testCaseInstance'):
+            self.__class__._testCaseInstance = self
+        if self.__class__._testCaseInstance.__class__ != self.__class__:
+            self.__class__._testCaseInstance = self            
+
+    def _sharedTestCase(self):
+        return self.__class__._testCaseInstance
+
+    def id(self):
+        # only overriding this because Python 2.2's unittest has a broken
+        # implementation
+        return "%s.%s" % (reflect.qual(self.__class__), self._testMethodName)
+
+    def shortDescription(self):
+        desc = super(TestCase, self).shortDescription()
+        if desc is None:
+            return self._testMethodName
+        return desc
+
+    def __call__(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+    def run(self, reporter):
+        log.msg("--> %s <--" % (self.id()))
+        _signalStateMgr = util.SignalStateManager()
+        _signalStateMgr.save()
+        janitor = util._Janitor()
+        testCase = self._sharedTestCase()
+        testMethod = getattr(testCase, self._testMethodName)
+
+        reporter.startTest(self)
+        if self.getSkip(): # don't run test methods that are marked as .skip
+            reporter.addSkip(self, self.getSkip())
+            reporter.stopTest(self)
+            return
+        try:
+            setUp = util.UserMethodWrapper(testCase.setUp,
+                                           suppress=self.getSuppress())
+            try:
+                setUp()
+            except util.UserMethodError:
+                for error in setUp.errors:
+                    self._eb(error, reporter)
+                else:
+                    reporter.upDownError(setUp, warn=False,
+                                         printStatus=False)
+                    return
+                 
+            orig = util.UserMethodWrapper(testMethod,
+                                          raiseOnErr=False,
+                                          timeout=self.getTimeout(),
+                                          suppress=self.getSuppress())
+            orig.errorHook = lambda x : self._eb(x, reporter)
+            try:
+                self.startTime = time.time()
+                orig()
+                if (self.getTodo() is not None
+                    and len(orig.errors) == 0):
+                    reporter.addUnexpectedSuccess(self, self.getTodo())
+            finally:
+                self.endTime = time.time()
+                um = util.UserMethodWrapper(testCase.tearDown,
+                                            suppress=self.getSuppress())
+                try:
+                    um()
+                except util.UserMethodError:
+                    for error in um.errors:
+                        self._eb(error, reporter)
+                    else:
+                        reporter.upDownError(um, warn=False)
+        finally:
+            try:
+                janitor.postMethodCleanup()
+            except util.MultiError, e:
+                for f in e.failures:
+                    self._eb(f, reporter)
+            reporter.stopTest(self)
+            _signalStateMgr.restore()
+
+    def _eb(self, f, reporter):
+        log.msg(f.getTraceback())
+        if self.getTodo() is not None:
+            if self._todoExpected(f):
+                reporter.addExpectedFailure(self, f, self._getTodoMessage())
+                return
+        if f.check(util.DirtyReactorWarning):
+            reporter.cleanupErrors(f)
+        elif f.check(self.failureException, FailTest):
+            reporter.addFailure(self, f)
+        elif f.check(KeyboardInterrupt):
+            reporter.shouldStop = True
+            reporter.addError(self, f)
+        elif f.check(SkipTest):
+            if len(f.value.args) > 0:
+                reason = f.value.args[0]
+            else:
+                warnings.warn(("Do not raise unittest.SkipTest with no "
+                               "arguments! Give a reason for skipping tests!"),
+                              stacklevel=2)
+                reason = f
+            self.skip = reason
+            reporter.addSkip(self, reason)
+        else:
+            reporter.addError(self, f)
+
+    def getSkip(self):
+        return util.acquireAttribute(self._parents, 'skip', None)
+
+    def getTodo(self):
+        return util.acquireAttribute(self._parents, 'todo', None)
+
+    def _todoExpected(self, failure):
+        todo = self.getTodo()
+        if todo is None:
+            return False
+        if isinstance(todo, str):
+            return True
+        elif isinstance(todo, tuple):
+            try:
+                expected = list(todo[0])
+            except TypeError:
+                expected = [todo[0]]
+            for error in expected:
+                if failure.check(error):
+                    return True
+            return False
+        else:
+            raise ValueError('%r is not a valid .todo attribute' % (todo,))
+
+    def _getTodoMessage(self):
+        todo = self.getTodo()
+        if todo is None or isinstance(todo, str):
+            return todo
+        elif isinstance(todo, tuple):
+            return todo[1]
+        else:
+            raise ValueError("%r is not a valid .todo attribute" % (todo,))
     
-    def setUp(self):
-        pass
+    def getSuppress(self):
+        return util.acquireAttribute(self._parents, 'suppress', None)
 
-    def tearDown(self):
-        pass
-
-    def countTestCases(self):
-        return 1
+    def getTimeout(self):
+        return util.acquireAttribute(self._parents, 'timeout', None)
+    
+    def visit(self, visitor):
+        """Call visitor.visitCase(self)."""
+        visitor.visitCase(self)
 
     def fail(self, msg=None):
         """absolutely fails the test, do not pass go, do not collect $200
@@ -69,7 +202,7 @@ class TestCase(object):
         @param msg: the message that will be displayed as the reason for the
         failure
         """
-        raise FailTest, msg
+        raise self.failureException(msg)
 
     def failIf(self, condition, msg=None):
         """fails the test if C{condition} evaluates to False
@@ -77,9 +210,9 @@ class TestCase(object):
         @param condition: any object that defines __nonzero__
         """
         if condition:
-            raise FailTest, msg
+            raise self.failureException(msg)
         return condition
-    assertNot = failIf
+    assertNot = assertFalse = failUnlessFalse = failIf
 
     def failUnless(self, condition, msg=None):
         """fails the test if C{condition} evaluates to True
@@ -87,9 +220,9 @@ class TestCase(object):
         @param condition: any object that defines __nonzero__
         """
         if not condition:
-            raise FailTest, msg
+            raise self.failureException(msg)
         return condition
-    assert_ = failUnless
+    assert_ = assertTrue = failUnlessTrue = failUnless
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
         """fails the test unless calling the function C{f} with the given C{args}
@@ -100,7 +233,7 @@ class TestCase(object):
         @param f: the function to call
     
         @return: The raised exception instance, if it is of the given type.
-        @raise FailTest: Raised if the function call does not raise an exception
+        @raise self.failureException: Raised if the function call does not raise an exception
         or if it raises an exception of a different type.
         """
         try:
@@ -108,12 +241,13 @@ class TestCase(object):
         except exception, inst:
             return inst
         except:
-            raise FailTest, '%s raised instead of %s:\n %s' % \
-                  (sys.exc_info()[0], exception.__name__,
-                   failure.Failure().getTraceback())
+            raise self.failureException('%s raised instead of %s:\n %s'
+                                        % (sys.exc_info()[0],
+                                           exception.__name__,
+                                           failure.Failure().getTraceback()))
         else:
-            raise FailTest('%s not raised (%r returned)'
-                           % (exception.__name__, result))
+            raise self.failureException('%s not raised (%r returned)'
+                                        % (exception.__name__, result))
     assertRaises = failUnlessRaises
 
     def failUnlessEqual(self, first, second, msg=None):
@@ -122,7 +256,7 @@ class TestCase(object):
         % (first, second)
         """
         if not first == second:
-            raise FailTest, (msg or '%r != %r' % (first, second))
+            raise self.failureException(msg or '%r != %r' % (first, second))
         return first
     assertEqual = assertEquals = failUnlessEquals = failUnlessEqual
 
@@ -134,7 +268,7 @@ class TestCase(object):
         '%r is not %r' % (first, second)
         """
         if first is not second:
-            raise FailTest, (msg or '%r is not %r' % (first, second))
+            raise self.failureException(msg or '%r is not %r' % (first, second))
         return first
     assertIdentical = failUnlessIdentical
 
@@ -146,7 +280,7 @@ class TestCase(object):
         '%r is %r' % (first, second)
         """
         if first is second:
-            raise FailTest, (msg or '%r is %r' % (first, second))
+            raise self.failureException(msg or '%r is %r' % (first, second))
         return first
     assertNotIdentical = failIfIdentical
 
@@ -157,7 +291,7 @@ class TestCase(object):
         '%r == %r' % (first, second)
         """
         if not first != second:
-            raise FailTest, (msg or '%r == %r' % (first, second))
+            raise self.failureException(msg or '%r == %r' % (first, second))
         return first
     assertNotEqual = assertNotEquals = failIfEquals = failIfEqual
 
@@ -171,7 +305,8 @@ class TestCase(object):
                     '%r not in %r' % (first, second)
         """
         if containee not in container:
-            raise FailTest, (msg or "%r not in %r" % (containee, container))
+            raise self.failureException(msg or "%r not in %r"
+                                        % (containee, container))
         return containee
     assertIn = failUnlessIn
 
@@ -185,7 +320,8 @@ class TestCase(object):
                     '%r in %r' % (first, second)
         """
         if containee in container:
-            raise FailTest, (msg or "%r in %r" % (containee, container))
+            raise self.failureException(msg or "%r in %r"
+                                        % (containee, container))
         return containee
     assertNotIn = failIfIn
 
@@ -201,8 +337,8 @@ class TestCase(object):
         @note: included for compatiblity with PyUnit test cases
         """
         if round(second-first, places) == 0:
-            raise FailTest, (msg or '%r == %r within %r places' %
-                                                 (first, second, places))
+            raise self.failureException(msg or '%r == %r within %r places'
+                                        % (first, second, places))
         return first
     assertNotAlmostEqual = assertNotAlmostEquals = failIfAlmostEqual
     failIfAlmostEquals = failIfAlmostEqual
@@ -219,8 +355,8 @@ class TestCase(object):
         @note: included for compatiblity with PyUnit test cases
         """
         if round(second-first, places) != 0:
-            raise FailTest, (msg or '%r != %r within %r places' %
-                                                 (first, second, places))
+            raise self.failureException(msg or '%r != %r within %r places'
+                                        % (first, second, places))
         return first
     assertAlmostEqual = assertAlmostEquals = failUnlessAlmostEqual
     failUnlessAlmostEquals = failUnlessAlmostEqual
@@ -232,7 +368,7 @@ class TestCase(object):
                     '%r ~== %r' % (first, second)
         """
         if abs(first - second) > tolerance:
-            raise FailTest, (msg or "%s ~== %s" % (first, second))
+            raise self.failureException(msg or "%s ~== %s" % (first, second))
         return first
     assertApproximates = failUnlessApproximates
 
@@ -241,7 +377,8 @@ class TestCase(object):
         this is analagous to an async assertRaises 
         """
         def _cb(ignore):
-            raise FailTest, "did not catch an error, instead got %r" % (ignore,)
+            raise self.failureException(
+                "did not catch an error, instead got %r" % (ignore,))
 
         def _eb(failure):
             failure.trap(*expectedFailures)
@@ -254,7 +391,8 @@ class TestCase(object):
         parameters follow the semantics of failUnlessIn
         """
         if astring.find(substring) == -1:
-            raise FailTest, (msg or "%r not found in %r" % (substring, astring))
+            raise self.failureException(msg or "%r not found in %r"
+                                        % (substring, astring))
         return substring
     assertSubstring = failUnlessSubstring
 
@@ -263,7 +401,8 @@ class TestCase(object):
         astring parameters follow the semantics of failUnlessIn
         """
         if astring.find(substring) != -1:
-            raise FailTest, (msg or "%r found in %r" % (substring, astring))
+            raise self.failureException(msg or "%r found in %r"
+                                        % (substring, astring))
         return substring
     assertNotSubstring = failIfSubstring
 
@@ -278,7 +417,7 @@ class TestCase(object):
         #        tempfile.mkdtemp.
         cls = self.__class__
         base = os.path.join(cls.__module__, cls.__name__,
-                            getattr(self, '_trial_caseMethodName', 'class')[:32])
+                            self._testMethodName[:32])
         try:
             os.makedirs(base)
         except OSError, e:
@@ -363,7 +502,18 @@ class TestVisitor(object):
         """Visit the TestSuite testSuite after its children."""
 
 
-_inst = TestCase()
+
+def wait(*args, **kwargs):
+    warnings.warn("Do NOT use wait().  Just return a Deferred",
+                  stacklevel=2, category=DeprecationWarning)
+    return util.wait(*args, **kwargs)
+
+
+class _SubTestCase(TestCase):
+    def __init__(self):
+        pass
+
+_inst = _SubTestCase()
 
 def deprecate(name):
     def _(*args, **kwargs):
@@ -393,6 +543,7 @@ for methodName in _assertions:
 
 
 __all__ = [
-    'TestCase', 'deferredResult', 'deferredError', 'wait', 'TestResult'
+    'TestCase', 'deferredResult', 'deferredError', 'wait', 'TestResult',
+    'FailTest', 'SkipTest'
     ]
 
