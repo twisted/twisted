@@ -101,7 +101,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.reads = {}
         self.writes = {}
         self.toThreadQueue = Queue()
-        self.toMainThread = Queue(1)
+        self.toMainThread = Queue()
         self.workerThread = None
         self.mainWaker = None
         posixbase.PosixReactorBase.__init__(self)
