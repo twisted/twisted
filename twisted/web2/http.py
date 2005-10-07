@@ -97,34 +97,52 @@ def NotModifiedResponse(oldResponse=None):
     return Response(code=responsecode.NOT_MODIFIED, headers=headers)
     
 
-def checkPreconditions(request, response, entityExists=True):
+def checkPreconditions(request, response=None, entityExists=True, etag=None, lastModified=None):
     """Check to see if this request passes the conditional checks specified
-    by the client. As a side-effect, may modify my response code to
-    L{NOT_MODIFIED} or L{PRECONDITION_FAILED}.
+    by the client. May raise an HTTPError with result codes L{NOT_MODIFIED}
+    or L{PRECONDITION_FAILED}, as appropriate.
 
-    Call this function after setting the ETag and Last-Modified
-    output headers, but before actually proceeding with request
-    processing.
+    This function is called automatically as an output filter for GET and
+    HEAD requests. With GET/HEAD, it is not important for the precondition
+    check to occur before doing the action, as the method is non-destructive.
+
+    However, if you are implementing other request methods, like PUT
+    for your resource, you will need to call this after determining
+    the etag and last-modified time of the existing resource but
+    before actually doing the requested action. In that case, 
 
     This examines the appropriate request headers for conditionals,
     (If-Modified-Since, If-Unmodified-Since, If-Match, If-None-Match,
-    or If-Range), compares with the existing response headers and
+    or If-Range), compares with the etag and last and
     and then sets the response code as necessary.
 
+    @param response: This should be provided for GET/HEAD methods. If
+             it is specified, the etag and lastModified arguments will
+             be retrieved automatically from the response headers and
+             shouldn't be separately specified. Not providing the
+             response with a GET request may cause the emitted
+             "Not Modified" responses to be non-conformant.
+             
     @param entityExists: Set to False if the entity in question doesn't
              yet exist. Necessary for PUT support with 'If-None-Match: *'.
+             
+    @param etag: The etag of the resource to check against, or None.
+    
+    @param lastModified: The last modified date of the resource to check
+              against, or None.
+              
     @raise: HTTPError: Raised when the preconditions fail, in order to
              abort processing and emit an error page.
 
     """
-    # if the code is some sort of error code, don't do anything
-    if not ((response.code >= 200 and response.code <= 299)
-            or response.code == responsecode.PRECONDITION_FAILED):
-        return False
-
-    etag = response.headers.getHeader("etag")
-    lastModified = response.headers.getHeader("last-modified")
-
+    if response:
+        # if the code is some sort of error code, don't do anything
+        if not ((response.code >= 200 and response.code <= 299)
+                or response.code == responsecode.PRECONDITION_FAILED):
+            return False
+        etag = response.headers.getHeader("etag")
+        lastModified = response.headers.getHeader("last-modified")
+    
     def matchETag(tags, allowWeak):
         if entityExists and '*' in tags:
             return True
@@ -176,7 +194,12 @@ def checkPreconditions(request, response, entityExists=True):
                 raise HTTPError(responsecode.PRECONDITION_FAILED)
     else:
         if notModified == True:
-            raise HTTPError(NotModifiedResponse(response))
+            if request.method in ("HEAD", "GET"):
+                raise HTTPError(NotModifiedResponse(response))
+            else:
+                # S14.25 doesn't actually say what to do for a failing IMS on
+                # non-GET methods. But Precondition Failed makes sense to me.
+                raise HTTPError(responsecode.PRECONDITION_FAILED)
 
 def checkIfRange(request, response):
     """Checks for the If-Range header, and if it exists, checks if the

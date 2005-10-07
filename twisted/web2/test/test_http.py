@@ -14,48 +14,47 @@ from zope.interface import implements
 
 
 class PreconditionTestCase(unittest.TestCase):
-    def checkPreconditions(self, request, headers, expectedResult, expectedCode,
-                           initCode=responsecode.OK, entityExists=True):
-        response = TestResponse()
-        code=response.code=initCode
+    def checkPreconditions(self, request, response, expectedResult, expectedCode,
+                           **kw):
         preconditionsPass = True
-        response.headers = headers
         
         try:
-            http.checkPreconditions(request, response, entityExists=entityExists)
+            http.checkPreconditions(request, response, **kw)
         except http.HTTPError, e:
             preconditionsPass = False
-            code = e.response.code
+            self.assertEquals(e.response.code, expectedCode)
         self.assertEquals(preconditionsPass, expectedResult)
-        self.assertEquals(code, expectedCode)
 
     def testWithoutHeaders(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
         out_headers = http_headers.Headers()
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        response = http.Response(responsecode.OK, out_headers, None)
+        
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
         
         out_headers.removeHeader("ETag")
         out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         out_headers.setHeader("ETag", http_headers.ETag('foo'))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
         
     def testIfMatch(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
         out_headers = http_headers.Headers()
-
+        response = http.Response(responsecode.OK, out_headers, None)
+        
         # Behavior with no ETag set, should be same as with an ETag
         request.headers.setRawHeaders("If-Match", ('*',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED, entityExists=False)
+        self.checkPreconditions(request, response, True, responsecode.OK)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED, entityExists=False)
         
         # Ask for tag, but no etag set.
         request.headers.setRawHeaders("If-Match", ('"frob"',))
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
 
         ## Actually set the ETag header
         out_headers.setHeader("ETag", http_headers.ETag('foo'))
@@ -63,51 +62,54 @@ class PreconditionTestCase(unittest.TestCase):
 
         # behavior of entityExists
         request.headers.setRawHeaders("If-Match", ('*',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED, entityExists=False)
+        self.checkPreconditions(request, response, True, responsecode.OK)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED, entityExists=False)
 
         # tag matches
         request.headers.setRawHeaders("If-Match", ('"frob", "foo"',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         # none match
         request.headers.setRawHeaders("If-Match", ('"baz", "bob"',))
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
-                                initCode=responsecode.INTERNAL_SERVER_ERROR)
+        response.code = responsecode.INTERNAL_SERVER_ERROR
+        self.checkPreconditions(request, response, True, responsecode.INTERNAL_SERVER_ERROR)
+        response.code = responsecode.OK
         
         # Must only compare strong tags
         out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
         request.headers.setRawHeaders("If-Match", ('W/"foo"',))
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
 
     def testIfUnmodifiedSince(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
         out_headers = http_headers.Headers()
+        response = http.Response(responsecode.OK, out_headers, None)
         
         # No Last-Modified => always fail.
         request.headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
 
         # Set output headers
         out_headers.setHeader("ETag", http_headers.ETag('foo'))
         out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
 
         request.headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
         
         request.headers.setRawHeaders("If-Unmodified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
-                                initCode=responsecode.INTERNAL_SERVER_ERROR)
+        response.code = responsecode.INTERNAL_SERVER_ERROR
+        self.checkPreconditions(request, response, True, responsecode.INTERNAL_SERVER_ERROR)
+        response.code = responsecode.OK
 
         # invalid date => header ignored
         request.headers.setRawHeaders("If-Unmodified-Since", ('alalalalalalalalalala',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
 
     def testIfModifiedSince(self):
@@ -116,39 +118,47 @@ class PreconditionTestCase(unittest.TestCase):
 
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
         out_headers = http_headers.Headers()
+        response = http.Response(responsecode.OK, out_headers, None)
         
         # No Last-Modified => always succeed
         request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         # Set output headers
         out_headers.setHeader("ETag", http_headers.ETag('foo'))
         out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
         
         request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, response, False, responsecode.NOT_MODIFIED)
+
+        # With a non-GET method
+        request.method="PUT"
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
+        request.method="GET"
         
         request.headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
-                                initCode=responsecode.INTERNAL_SERVER_ERROR)
-
+        response.code = responsecode.INTERNAL_SERVER_ERROR
+        self.checkPreconditions(request, response, True, responsecode.INTERNAL_SERVER_ERROR)
+        response.code = responsecode.OK
+        
         # invalid date => header ignored
         request.headers.setRawHeaders("If-Modified-Since", ('alalalalalalalalalala',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         # date in the future => assume modified
         request.headers.setHeader("If-Modified-Since", time.time() + 500)
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
     def testIfNoneMatch(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
         out_headers = http_headers.Headers()
+        response = http.Response(responsecode.OK, out_headers, None)
         
         request.headers.setRawHeaders("If-None-Match", ('"foo"',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
         
         out_headers.setHeader("ETag", http_headers.ETag('foo'))
         out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
@@ -156,59 +166,75 @@ class PreconditionTestCase(unittest.TestCase):
         # behavior of entityExists
         request.headers.setRawHeaders("If-None-Match", ('*',))
         request.method="PUT"
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
         request.method="GET"
-        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
-        self.checkPreconditions(request, out_headers, True, responsecode.OK, entityExists=False)
+        self.checkPreconditions(request, response, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, response, True, responsecode.OK, entityExists=False)
 
         # tag matches
         request.headers.setRawHeaders("If-None-Match", ('"frob", "foo"',))
         request.method="PUT"
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
         request.method="GET"
-        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, response, False, responsecode.NOT_MODIFIED)
 
         # now with IMS, also:
         request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
         request.method="PUT"
-        self.checkPreconditions(request, out_headers, False, responsecode.PRECONDITION_FAILED)
+        self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
         request.method="GET"
-        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, response, False, responsecode.NOT_MODIFIED)
         
         request.headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         request.headers.removeHeader("If-Modified-Since")
         
         
         # none match
         request.headers.setRawHeaders("If-None-Match", ('"baz", "bob"',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         # now with IMS, also:
         request.headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
         
         request.headers.setRawHeaders("If-Modified-Since", ('Sat, 01 Jan 2000 00:00:00 GMT',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
         request.headers.removeHeader("If-Modified-Since")
 
         # But if we have an error code already, ignore this header
-        self.checkPreconditions(request, out_headers, True, responsecode.INTERNAL_SERVER_ERROR,
-                                initCode=responsecode.INTERNAL_SERVER_ERROR)
-        
+        response.code = responsecode.INTERNAL_SERVER_ERROR
+        self.checkPreconditions(request, response, True, responsecode.INTERNAL_SERVER_ERROR)
+        response.code = responsecode.OK
+
         # Weak tags okay for GET
         out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
         request.headers.setRawHeaders("If-None-Match", ('W/"foo"',))
-        self.checkPreconditions(request, out_headers, False, responsecode.NOT_MODIFIED)
+        self.checkPreconditions(request, response, False, responsecode.NOT_MODIFIED)
 
         # Weak tags not okay for other methods
         request.method="PUT"
         out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
         request.headers.setRawHeaders("If-None-Match", ('W/"foo"',))
-        self.checkPreconditions(request, out_headers, True, responsecode.OK)
+        self.checkPreconditions(request, response, True, responsecode.OK)
 
+    def testNoResponse(self):
+        # Ensure that passing etag/lastModified arguments instead of response works.
+        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request.method="PUT"
+        request.headers.setRawHeaders("If-None-Match", ('"foo"',))
+        
+        self.checkPreconditions(request, None, True, responsecode.OK)
+        self.checkPreconditions(request, None, False, responsecode.PRECONDITION_FAILED,
+                                etag=http_headers.ETag('foo'),
+                                lastModified=946771200)
+
+        # Make sure that, while you shoudn't do this, that it doesn't cause an error
+        request.method="GET"
+        self.checkPreconditions(request, None, False, responsecode.NOT_MODIFIED,
+                                etag=http_headers.ETag('foo'))
 
 class IfRangeTestCase(unittest.TestCase):
     def testIfRange(self):
@@ -293,13 +319,10 @@ class TestResponse(object):
     implements(iweb.IResponse)
     
     code = responsecode.OK
-    data = ""
     headers = None
-    consumer = None
     
-    def __init__(self, initialData=None):
+    def __init__(self):
         self.headers = http_headers.Headers()
-        self.callback = defer.Deferred()
         self.stream = stream.ProducerStream()
         
     def write(self, data):

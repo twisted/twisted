@@ -49,10 +49,19 @@ class HeadersAPITest(unittest.TestCase):
         h = http_headers.Headers(parsers={'test':(parse,)}, generators={'test':(generate,)})
         h.setRawHeaders("test", rawvalue)
         self.assertEquals(h.getHeader("test"), parsedvalue(rawvalue))
-        
+
         h.setHeader("test", parsedvalue(rawvalue2))
         self.assertEquals(h.getRawHeaders("test"), rawvalue2)
-        
+
+        # Check the initializers
+        h = http_headers.Headers(rawHeaders={"test": rawvalue},
+                                 parsers={'test':(parse,)}, generators={'test':(generate,)})
+        self.assertEquals(h.getHeader("test"), parsedvalue(rawvalue))
+
+        h = http_headers.Headers({"test": parsedvalue(rawvalue2)},
+                                 parsers={'test':(parse,)}, generators={'test':(generate,)})
+        self.assertEquals(h.getRawHeaders("test"), rawvalue2)
+
     def testImmutable(self):
         h = http_headers.Headers(parsers={}, generators={})
         h.makeImmutable()

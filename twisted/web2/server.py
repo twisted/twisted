@@ -89,11 +89,8 @@ def parsePOSTData(request):
         d.addCallbacks(updateArgs, error)
         return d
     elif ctype.mediaType == 'multipart' and ctype.mediaSubtype == 'form-data':
-        for f in ctype.params.iteritems():
-            if f[0]=='boundary':
-                boundary=f[1]
-                break
-        else:
+        boundary = ctype.params.get('boundary')
+        if boundary is None:
             return failure.Failure(fileupload.MimeFormatError("Boundary not specified in Content-Type."))
         d = fileupload.parseMultipartFormData(request.stream, boundary)
         d.addCallbacks(updateArgsAndFiles, error)
@@ -112,7 +109,8 @@ class StopTraversal(object):
 class Request(http.Request):
     """
     vars:
-    site 
+    site
+    
     scheme
     host
     port
