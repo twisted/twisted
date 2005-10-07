@@ -45,9 +45,6 @@ def success(response):
 def fail(error):
     print 'Failed.  Error was:'
     print error
-    from twisted.internet import reactor
-    reactor.stop()
-
 
 def showFiles(result, fileListProtocol):
     print 'Processed file listing:'
@@ -82,9 +79,12 @@ def run():
     FTPClient.debug = config.opts['debug']
     creator = ClientCreator(reactor, FTPClient, config.opts['username'],
                             config.opts['password'], passive=config.opts['passive'])
-    creator.connectTCP(config.opts['host'], config.opts['port']).addCallback(connectionMade)
+    creator.connectTCP(config.opts['host'], config.opts['port']).addCallback(connectionMade).addErrback(connectionFailed)
     reactor.run()
 
+def connectionFailed(f):
+    print "Connection Failed:", f
+    reactor.stop()
 
 def connectionMade(ftpClient):
     # Get the current working directory
