@@ -545,18 +545,12 @@ class TestTests(unittest.TestCase):
             return defer.fail(RuntimeError('suck it'))
         def testDeferred5_skip(self):
             return defer.fail(unittest.SkipTest('lalala, skip me'))
-        def testDeferred6_skip(self):
-            pass
-        testDeferred6_skip.skip = 'skip this test'
         def testDeferred7_exfail(self):
             return defer.fail(unittest.FailTest('you got an F!'))
         testDeferred7_exfail.todo = "i'm gonna get an F"
         def testDeferred8_exfail(self):
             return defer.fail(RuntimeError('you got another F!'))
         testDeferred8_exfail.todo = "I'm gonna get another F"
-        def testDeferred9_unexpass(self):
-            pass
-        testDeferred9_unexpass.todo = "Holy shit! i didn't get an F!"
         
         def testTimeout1_pass(self):
             d = defer.Deferred()
