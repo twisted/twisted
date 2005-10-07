@@ -11,6 +11,51 @@ from __future__ import generators
 API Stability: unstable
 
 Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
+
+
+The threadedselectreactor is a specialized reactor for integrating with
+arbitrary foreign event loop, such as those you find in GUI toolkits.
+
+There are three things you'll need to do to use this reactor.
+
+Install the reactor at the beginning of your program, before importing
+the rest of Twisted::
+
+    | from twisted.internet import threadedselectreactor
+    | threadedselectreactor.install()
+
+Interleave this reactor with your foreign event loop, at some point after
+your event loop is initialized::
+    
+    | from twisted.internet import reactor
+    | reactor.interleave(foreignEventLoopWakerFunction)
+    | self.addSystemEventTrigger('after', 'shutdown', foreignEventLoopStop)
+
+Instead of shutting down the foreign event loop directly, shut down the
+reactor::
+    
+    | from twisted.internet import reactor
+    | reactor.stop()
+
+In order for Twisted to do its work in the main thread (the thread that
+interleave is called from), a waker function is necessary.  The waker function
+will be called from a "background" thread with one argument: func.
+The waker function's purpose is to call func() from the main thread.
+Many GUI toolkits ship with appropriate waker functions.
+Some examples of this are wxPython's wx.callAfter (may be wxCallAfter in
+older versions of wxPython) or PyObjC's PyObjCTools.AppHelper.callAfter.
+These would be used in place of "foreignEventLoopWakerFunction" in the above
+example.
+
+The other integration point at which the foreign event loop and this reactor
+must integrate is shutdown.  In order to ensure clean shutdown of Twisted,
+you must allow for Twisted to come to a complete stop before quitting the
+application.  Typically, you will do this by setting up an after shutdown
+trigger to stop your foreign event loop, and call reactor.stop() where you
+would normally have initiated the shutdown procedure for the foreign event
+loop.  Shutdown functions that could be used in place of 
+"foreignEventloopStop" would be the ExitMainLoop method of the wxApp instance
+with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
 
 from threading import Thread
@@ -205,12 +250,14 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
     def interleave(self, waker, *args, **kw):
         """
-        waker(func) is a callable that will be called from
-        some random thread.  Its job is to call func from
-        the same thread that called this method.
+        interleave(waker) interleaves this reactor with the
+        current application by moving the blocking parts of
+        the reactor (select() in this case) to a separate
+        thread.  This is typically useful for integration with
+        GUI applications which have their own event loop
+        already running.
 
-        You should use this like a ninja master to integrate
-        with foreign event loops.
+        See the module docstring for more information.
         """
         self.startRunning(*args, **kw)
         loop = self._interleave()
