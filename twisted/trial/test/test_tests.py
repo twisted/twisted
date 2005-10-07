@@ -13,9 +13,6 @@ from twisted.internet import defer, reactor
 TIMEOUT_MSG = "this is a timeout arg"
 CLASS_TIMEOUT_MSG = "this is a class level timeout arg"
 
-METHOD_TODO_MSG = "todo this method"
-CLASS_TODO_MSG = "todo all methods in this class"
-
 
 class MockEquality(object):
     def __init__(self, name):
@@ -446,6 +443,58 @@ class TestTodo(unittest.TestCase):
         reasonsGiven = [ r for t, r in self.reporter.unexpectedSuccesses ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
+
+class TestTodoClass(unittest.TestCase):
+    class TodoClass(unittest.TestCase):
+        def test_todo1(self):
+            pass
+        test_todo1.todo = "method"
+        def test_todo2(self):
+            pass
+        def test_todo3(self):
+            self.fail("Deliberate Failure")
+        test_todo3.todo = "method"
+        def test_todo4(self):
+            self.fail("Deliberate Failure")        
+    TodoClass.todo = "class"
+
+    def setUp(self):
+        self.loader = runner.TestLoader() 
+        self.suite = self.loader.loadClass(TestTodoClass.TodoClass)
+        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
+
+    def test_setUp(self):
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(len(self.reporter.errors), 0)
+        self.failUnlessEqual(len(self.reporter.failures), 0)
+        self.failUnlessEqual(len(self.reporter.skips), 0)
+
+    def test_counting(self):
+        self.failUnlessEqual(self.suite.countTestCases(), 4)
+        self.suite(self.reporter)
+        self.failUnlessEqual(self.reporter.testsRun, 4)
+
+    def test_results(self):
+        self.suite(self.reporter)
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(self.reporter.skips, [])
+        self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
+        self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 2)
+    
+    def test_expectedFailures(self):
+        self.suite(self.reporter)
+        expectedReasons = ['method', 'class']
+        reasonsGiven = [ r for t, e, r in self.reporter.expectedFailures ]
+        self.failUnlessEqual(expectedReasons, reasonsGiven)
+            
+    def test_unexpectedSuccesses(self):
+        self.suite(self.reporter)
+        expectedReasons = ['method', 'class']
+        reasonsGiven = [ r for t, r in self.reporter.unexpectedSuccesses ]
+        self.failUnlessEqual(expectedReasons, reasonsGiven)
+
     
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
@@ -513,14 +562,6 @@ class TestTests(unittest.TestCase):
             return defer.Deferred()
         testTimeout5_skip.timeout = 0.1
         testTimeout5_skip.skip = "i will get it right, eventually"
-
-    class TestTodoClassAttr(unittest.TestCase):
-        def testMethodTodoPrecedence_todoAttr(self):
-            pass
-        testMethodTodoPrecedence_todoAttr.todo = METHOD_TODO_MSG
-        def testClassTodoPrecedence_todoClassAttr(self):
-            pass
-    TestTodoClassAttr.todo = CLASS_TODO_MSG
 
     def checkResults(self, reporter, method):
         tm = method
@@ -623,13 +664,6 @@ class TestTests(unittest.TestCase):
                                 % (f, f.getTraceback(), expectedExc))
                 self.failUnlessEqual(f.value.args[0], tm.klass.t_excArg)
                 self.failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.klass.t_duration)
-
-            elif tm.id().endswith("_todoClassAttr"):
-                self.failUnlessEqual(tm.getTodo(), CLASS_TODO_MSG)
-
-            elif tm.id().endswith("_todoAttr"):
-                self.failUnlessEqual(tm.getTodo(), METHOD_TODO_MSG)
-
             else:
                 raise unittest.FailTest, "didn't have tests for a method ending in %s" % (
                                          tm.id().split('_')[-1],)
@@ -641,17 +675,14 @@ class TestTests(unittest.TestCase):
     def testMethods(self):
         from twisted.trial.test.common import BogusReporter
         reporter = BogusReporter()
-        for klass in (self.Tests,
-                      self.TestTodoClassAttr):
-            suite = runner.TestLoader().loadClass(klass)
-            root = runner.TrialRoot(reporter)
-            root.run(suite)
-
-            for method in suite._tests:
-                try:
-                    self.checkResults(reporter, method)
-                except unittest.FailTest:
-                    raise
+        suite = runner.TestLoader().loadClass(self.Tests)
+        root = runner.TrialRoot(reporter)
+        root.run(suite)
+        for method in suite._tests:
+            try:
+                self.checkResults(reporter, method)
+            except unittest.FailTest:
+                raise
 
 
 
