@@ -473,29 +473,68 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
         reasonsGiven = [ r for t, r in self.reporter.unexpectedSuccesses ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
+
+class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
+    class Todos(unittest.TestCase):
+        def test_todo1(self):
+            raise RuntimeError, "expected failure"
+        test_todo1.todo = (RuntimeError, "todo1")
+        
+        def test_todo2(self):
+            raise RuntimeError, "expected failure"
+        test_todo2.todo = ((RuntimeError, OSError), "todo2")
+        
+        def test_todo3(self):
+            raise RuntimeError, "we had no idea!"
+        test_todo3.todo = (OSError, "todo3")
+        
+        def test_todo4(self):
+            raise RuntimeError, "we had no idea!"
+        test_todo4.todo = ((OSError, SyntaxError), "todo4")
+        
+        def test_todo5(self):
+            self.fail("deliberate failure")
+        test_todo5.todo = (unittest.FailTest, "todo5")
+
+        def test_todo6(self):
+            self.fail("deliberate failure")
+        test_todo6.todo = (RuntimeError, "todo6")
+
+        def test_todo7(self):
+            pass
+        test_todo7.todo = (RuntimeError, "todo7")
+
+    def setUp(self):
+        self.loadSuite(TestStrictTodo.Todos)
+
+    def test_counting(self):
+        self.assertCount(7)
+
+    def test_results(self):
+        self.suite(self.reporter)
+        self.failIf(self.reporter.wasSuccessful())
+        self.failUnlessEqual(len(self.reporter.errors), 2)
+        self.failUnlessEqual(len(self.reporter.failures), 1)
+        self.failUnlessEqual(len(self.reporter.expectedFailures), 3)
+        self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 1)
+        self.failUnlessEqual(self.reporter.skips, [])
+
+    def test_expectedFailures(self):
+        self.suite(self.reporter)
+        expectedReasons = ['todo1', 'todo2', 'todo5']
+        reasonsGotten = [ r for t, e, r in self.reporter.expectedFailures ]
+        self.failUnlessEqual(expectedReasons, reasonsGotten)
+
+    def test_unexpectedSuccesses(self):
+        self.suite(self.reporter)
+        expectedReasons = [(RuntimeError, 'todo7')]
+        reasonsGotten = [ r for t, r in self.reporter.unexpectedSuccesses ]
+        self.failUnlessEqual(expectedReasons, reasonsGotten)
+
     
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
-        def testNewStyleTodo1_exfail(self):
-            raise RuntimeError, "expected failure"
-        testNewStyleTodo1_exfail.todo = (RuntimeError, "this is an expected failure")
-        def testNewStyleTodo2_exfail(self):
-            raise RuntimeError, "expected failure"
-        testNewStyleTodo2_exfail.todo = ((RuntimeError, OSError), "we expected as much")
-        def testNewStyleTodo3_error(self):
-            raise RuntimeError, "we had no idea!+"
-        testNewStyleTodo3_error.todo = (OSError, "we expected something else")
-        def testNewStyleTodo4_error(self):
-            raise RuntimeError, "we had no idea!+"
-        testNewStyleTodo4_error.todo = ((OSError, SyntaxError), "we expected something else")
-        def testNewStyleTodoLoggedErr_exfail(self):
-            try:
-                1/0
-            except:
-                log.err()
-        testNewStyleTodoLoggedErr_exfail.todo = (ZeroDivisionError, "need to learn that I can't divide by 0")
-
         def testDeferred1_pass(self):
             return defer.succeed('hoorj!')
         def testDeferred2_fail(self):
