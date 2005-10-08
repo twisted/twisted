@@ -118,7 +118,7 @@ class SafeNetstringReceiver(NetstringReceiver):
 
 class LineOnlyReceiver(protocol.Protocol):
     """A protocol that receives only lines.
-    
+
     This is purely a speed optimisation over LineReceiver, for the
     cases that raw mode is known to be unnecessary.
 
@@ -131,7 +131,7 @@ class LineOnlyReceiver(protocol.Protocol):
     _buffer = ''
     delimiter = '\r\n'
     MAX_LENGTH = 16384
-    
+
     def dataReceived(self, data):
         """Translates bytes into lines, and calls lineReceived."""
         lines  = (self._buffer+data).split(self.delimiter)
@@ -144,11 +144,11 @@ class LineOnlyReceiver(protocol.Protocol):
                 # the one that told it to close.
                 return
             if len(line) > self.MAX_LENGTH:
-                return self.lineLengthExceeded(line)                
+                return self.lineLengthExceeded(line)
             else:
                 self.lineReceived(line)
         if len(self._buffer) > self.MAX_LENGTH:
-            return self.lineLengthExceeded(self._buffer)                
+            return self.lineLengthExceeded(self._buffer)
 
     def lineReceived(self, line):
         """Override this for when each line is received.
@@ -165,7 +165,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Override if it needs to be dealt with in some special way.
         """
         return error.ConnectionLost('Line length exceeded')
-    
+
 
 class _PauseableMixin:
     paused = False
@@ -186,14 +186,14 @@ class _PauseableMixin:
 
 class LineReceiver(protocol.Protocol, _PauseableMixin):
     """A protocol that receives lines and/or raw data, depending on mode.
-    
+
     In line mode, each line that's received becomes a callback to
     L{lineReceived}.  In raw data mode, each chunk of raw data becomes a
     callback to L{rawDataReceived}.  The L{setLineMode} and L{setRawMode}
     methods switch between the two modes.
-    
+
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
-    
+
     @cvar delimiter: The line-ending delimiter to use. By default this is
                      '\\r\\n'.
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
@@ -204,11 +204,11 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     __buffer = ''
     delimiter = '\r\n'
     MAX_LENGTH = 16384
-    
+
     def clearLineBuffer(self):
         """Clear buffered data."""
         self.__buffer = ""
-    
+
     def dataReceived(self, data):
         """Protocol.dataReceived.
         Translates bytes into lines, and calls lineReceived (or
@@ -225,10 +225,10 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                     self.__buffer=''
                     return self.lineLengthExceeded(line)
                 break
-            
+
             line=self.__buffer[lastoffset:offset]
             lastoffset=offset+len(self.delimiter)
-            
+
             if len(line) > self.MAX_LENGTH:
                 line=self.__buffer[lastoffset:]
                 self.__buffer=''
@@ -260,7 +260,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         self.line_mode = 1
         if extra:
             return self.dataReceived(extra)
-        
+
     def setRawMode(self):
         """Sets the raw mode of this receiver.
         Further data received will be sent to rawDataReceived rather
