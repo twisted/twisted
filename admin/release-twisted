@@ -72,7 +72,7 @@ class Options(usage.Options):
          "Don't do anything permanent: finalize tags, upload tarballs, etc."]]
 
     def postOptions(self):
-        self['release-url'] = repourl + self['release-source']
+        self['release-url'] = repourl + self['release-source'] or '/trunk'
         self['tagurl'] = '%s/tags/release-%s' % (repourl,
                                                  self['core-version'])
         self['temptagurl'] = '%s/tags/temp-%s' % (repourl,
