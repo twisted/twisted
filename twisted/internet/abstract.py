@@ -37,7 +37,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     _writeDisconnected = False
     dataBuffer = ""
     offset = 0
-    
+
     SEND_LIMIT = 128*1024
 
     implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
@@ -49,7 +49,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
         self.reactor = reactor
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
-    
+
     def connectionLost(self, reason):
         """The connection was lost.
 
@@ -68,7 +68,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
             self.producer = None
         self.stopReading()
         self.stopWriting()
-    
+
     def writeSomeData(self, data):
         """Write as much as possible of the given data, immediately.
 
@@ -80,7 +80,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
 
         raise NotImplementedError("%s does not implement writeSomeData" %
                                   reflect.qual(self.__class__))
-    
+
     def doRead(self):
         raise NotImplementedError("%s does not implement doRead" %
                                   reflect.qual(self.__class__))
@@ -100,7 +100,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
             self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
-            
+
         # Send as much data as you can.
         if self.offset:
             l = self.writeSomeData(buffer(self.dataBuffer, self.offset))
@@ -147,7 +147,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     def _closeWriteConnection(self):
         # override in subclasses
         pass
-    
+
     def writeConnectionLost(self, reason):
         # in current code should never be called
         self.connectionLost(reason)
@@ -155,7 +155,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     def readConnectionLost(self, reason):
         # override in subclasses
         self.connectionLost(reason)
-    
+
     def write(self, data):
         """Reliably write some data.
 
@@ -187,7 +187,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
                 self.producerPaused = 1
                 self.producer.pauseProducing()
         self.startWriting()
-    
+
     def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
         """Close the connection at the next available opportunity.
 
@@ -214,7 +214,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     def loseWriteConnection(self):
         self._writeDisconnecting = True
         self.startWriting()
-    
+
     def stopReading(self):
         """Stop waiting for read availability.
 
