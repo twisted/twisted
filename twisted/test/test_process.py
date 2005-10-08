@@ -691,20 +691,7 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
 
     def __init__(self, outOrErr):
         self.deferred = defer.Deferred()
-        self.deferred.addCallbacks(
-            callback=lambda _: unittest.fail("I wanted an errback."),
-            errback=self._end)
         self.outOrErr = outOrErr
-
-    def _end(self, reason):
-        unittest.failIf(reason.check(error.ProcessDone),
-                        'Child should fail due to EPIPE.')
-        reason.trap(error.ProcessTerminated)
-        # child must not get past that write without raising
-        unittest.failIfEqual(reason.value.exitCode, 42, 
-                             'process reason was %r' % reason)
-        unittest.failUnlessEqual(self.output, '')
-        return self.errput
 
     def processEnded(self, reason):
         self.deferred.callback(reason)
@@ -715,10 +702,14 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
     def errReceived(self, data):
         self.errput += data
 
+
 class ClosingPipes(unittest.TestCase):
 
     def doit(self, fd):
         p = ClosingPipesProcessProtocol(True)
+        p.deferred.addCallbacks(
+            callback=lambda _: self.fail("I wanted an errback."),
+            errback=self._endProcess, errbackArgs=(p,))
         reactor.spawnProcess(p, sys.executable,
                              [sys.executable, '-u', '-c', 
                               r'raw_input(); import sys, os; os.write(%d, "foo\n"); sys.exit(42)' % fd],
@@ -736,12 +727,22 @@ class ClosingPipes(unittest.TestCase):
         p.transport.closeStdin()
         return p.deferred
 
+    def _endProcess(self, reason, p):
+        self.failIf(reason.check(error.ProcessDone),
+                    'Child should fail due to EPIPE.')
+        reason.trap(error.ProcessTerminated)
+        # child must not get past that write without raising
+        self.failIfEqual(reason.value.exitCode, 42, 
+                         'process reason was %r' % reason)
+        self.failUnlessEqual(p.output, '')
+        return p.errput
+
     def test_stdout(self):
         """ProcessProtocol.transport.closeStdout actually closes the pipe."""
         d = self.doit(1)
         def _check(errput):
-            unittest.failIfEqual(errput.index('OSError'), -1)
-            unittest.failIfEqual(errput.index('Broken pipe'), -1)
+            self.failIfEqual(errput.index('OSError'), -1)
+            self.failIfEqual(errput.index('Broken pipe'), -1)
         d.addCallback(_check)
         return d
 
@@ -751,7 +752,7 @@ class ClosingPipes(unittest.TestCase):
         def _check(errput):
             # there should be no stderr open, so nothing for it to
             # write the error to.
-            unittest.failUnlessEqual(errput, '')
+            self.failUnlessEqual(errput, '')
         d.addCallback(_check)
         return d
 
