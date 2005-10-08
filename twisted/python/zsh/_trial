@@ -10,22 +10,31 @@ _arguments -s -A "-*" \
 '--suppresswarnings[Only print warnings to log, not stdout]' \
 '(--extra)-x[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
 '(-x)--extra=[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
+'(--text)-t[terse text output]' \
+'(-t)--text[terse text output]' \
 '(--random)-z[Run tests in random order using the specified seed]:random seed:_files' \
 '(-z)--random=[Run tests in random order using the specified seed]:random seed:_files' \
 '--psyco[run tests with psyco.full() (EXPERIMENTAL)]' \
 '--coverage=[Generate coverage information in the given directory]:coverage:_files' \
+'--timing[Timing output]' \
 '(--logfile)-l[log file name]:log file name:_files' \
 '(-l)--logfile=[log file name]:log file name:_files' \
 '--tbformat=[Specify the format to display tracebacks with. Valid formats are]:tbformat:_files' \
 '(--help)-h[Display this help and exit.]' \
 '(-h)--help[Display this help and exit.]' \
+'(--verbose -v --bwverbose)-o[Colorless verbose output]' \
+'(--verbose -v -o)--bwverbose[Colorless verbose output]' \
 '--disablegc[Disable the garbage collector]' \
+'(--bwverbose -o --verbose)-v[verbose color output (default reporter)]' \
+'(--bwverbose -o -v)--verbose[verbose color output (default reporter)]' \
 '--spew[Print an insanely verbose log of everything that happens.  Useful]' \
 "(--no-recurse)-N[Don't recurse into packages]" \
 "(-N)--no-recurse[Don't recurse into packages]" \
 '(--recurse)-R[Search packages recursively (enabled by default, DEPRECATED)]' \
 '(-R)--recurse[Search packages recursively (enabled by default, DEPRECATED)]' \
 '--testmodule=[Filename to grep for test cases (-*- test-case-name)]:testmodule:_files' \
+'(--summary)-s[minimal summary output]' \
+'(-s)--summary[minimal summary output]' \
 '(--until-failure)-u[Repeat test until it fails]' \
 '(-u)--until-failure[Repeat test until it fails]' \
 '(--debug-stacktraces)-B[Report Deferred creation and callback stack traces]' \
