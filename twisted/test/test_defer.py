@@ -473,87 +473,6 @@ class AlreadyCalledTestCase(unittest.TestCase):
         defer.setDebugging(True)
         d.addBoth(lambda ign: None)
 
-class FooError(Exception):
-    pass
-
-class DeferredCancellerTest(unittest.TestCase):
-    def setUp(self):
-        self.callback_results = None
-        self.errback_results = None
-        self.callback2_results = None
-        self.cancellerCalled = False
-        
-    def _callback(self, data):
-        self.callback_results = data
-        return args[0]
-
-    def _callback2(self, data):
-        self.callback2_results = data
-
-    def _errback(self, data):
-        self.errback_results = data
-
-    
-    def testNoCanceller(self):
-        # Deferred without a canceller errbacks defer.CancelledError
-        d=defer.Deferred()
-        d.addCallbacks(self._callback, self._errback)
-        d.cancel()
-        self.assertEquals(self.errback_results.type, defer.CancelledError)
-
-        # Test that further callbacks *are* swallowed
-        d.callback(None)
-
-        # But that a second is not
-        self.assertRaises(defer.AlreadyCalledError, d.callback, None)
-        
-    def testCanceller(self):
-        def cancel(d):
-            self.cancellerCalled=True
-            
-        d=defer.Deferred(canceller=cancel)
-        d.addCallbacks(self._callback, self._errback)
-        d.cancel()
-        self.assertEquals(self.cancellerCalled, True)
-        self.assertEquals(self.errback_results.type, defer.CancelledError)
-
-        # Test that further callbacks are *not* swallowed
-        self.assertRaises(defer.AlreadyCalledError, d.callback, None)
-        
-    def testCancellerWithCallback(self):
-        # If we explicitly callback from the canceller, don't callback CancelledError
-        def cancel(d):
-            self.cancellerCalled=True
-            d.errback(FooError())
-        d=defer.Deferred(canceller=cancel)
-        d.addCallbacks(self._callback, self._errback)
-        d.cancel()
-        self.assertEquals(self.cancellerCalled, True)
-        self.assertEquals(self.errback_results.type, FooError)
-
-    def testCancelAlreadyCalled(self):
-        def cancel(d):
-            self.cancellerCalled=True
-        d=defer.Deferred(canceller=cancel)
-        d.callback(None)
-        self.assertRaises(defer.AlreadyCalledError, d.cancel)
-        self.assertEquals(self.cancellerCalled, False)
-    
-    def testCancelNestedDeferred(self):
-        def innerCancel(d):
-            self.assertIdentical(d, innerDeferred)
-            self.cancellerCalled=True
-        def cancel(d):
-            self.assert_(False)
-            
-        innerDeferred=defer.Deferred(canceller=innerCancel)
-        d=defer.Deferred(canceller=cancel)
-        d.callback(None)
-        d.addCallback(lambda data: innerDeferred)
-        d.cancel()
-        d.addCallbacks(self._callback, self._errback)
-        self.assertEquals(self.cancellerCalled, True)
-        self.assertEquals(self.errback_results.type, defer.CancelledError)
 
 class LogTestCase(unittest.TestCase):
 
@@ -644,10 +563,6 @@ class OtherPrimitives(unittest.TestCase):
         self.failUnless(lock.locked)
         self.assertEquals(self.counter, 3)
 
-        d = lock.acquire().addBoth(lambda x: setattr(self, 'result', x))
-        d.cancel()
-        self.assertEquals(self.result.type, defer.CancelledError)
-        
         lock.release()
         self.failIf(lock.locked)
 
@@ -676,22 +591,12 @@ class OtherPrimitives(unittest.TestCase):
             sem.acquire().addCallback(self._incr)
             self.assertEquals(self.counter, i)
 
-
-        success = []
-        def fail(r):
-            success.append(False)
-        def succeed(r):
-            success.append(True)
-        d = sem.acquire().addCallbacks(fail, succeed)
-        d.cancel()
-        self.assertEquals(success, [True])
-        
         sem.acquire().addCallback(self._incr)
         self.assertEquals(self.counter, N)
 
         sem.release()
         self.assertEquals(self.counter, N + 1)
-        
+
         for i in range(1, 1 + N):
             sem.release()
             self.assertEquals(self.counter, N + 1)
@@ -733,14 +638,3 @@ class OtherPrimitives(unittest.TestCase):
         queue = defer.DeferredQueue(backlog=0)
         self.assertRaises(defer.QueueUnderflow, queue.get)
 
-        queue = defer.DeferredQueue(size=0)
-
-        success = []
-        def fail(r):
-            success.append(False)
-        def succeed(r):
-            success.append(True)
-        d = queue.get().addCallbacks(fail, succeed)
-        d.cancel()
-        self.assertEquals(success, [True])
-        self.assertRaises(defer.QueueOverflow, queue.put, None)
