@@ -23,6 +23,7 @@ import time, glob
 packaged_projects = dist.twisted_subprojects[:]
 packaged_projects.remove('web2')
 
+core_blacklist = ['vfs']
 
 # FIXME:
 # 2. If we ever do a sumo release on the same day, the version will
@@ -188,10 +189,11 @@ def makeBallCore(opts):
     os.makedirs(os.path.join(tdir, 'bin'))
 
     twisted_subprojects = ','.join(dist.twisted_subprojects)
+    package_blacklist = ','.join(core_blacklist + dist.twisted_subprojects)
 
     sh('''
     ln -s `pwd`/Twisted.exp/twisted/* %(tdir)s/twisted/
-    rm -f %(tdir)s/twisted/{%(twisted_subprojects)s}
+    rm -f %(tdir)s/twisted/{%(package_blacklist)s}
     rm -f %(tdir)s/twisted/topfiles
     ln -s `pwd`/Twisted.exp/LICENSE %(tdir)s/
     ln -s `pwd`/Twisted.exp/twisted/topfiles/* %(tdir)s/
