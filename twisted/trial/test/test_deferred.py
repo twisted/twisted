@@ -84,4 +84,4 @@ class TestNeverFire(unittest.TestCase):
         self.failUnlessEqual(len(result.failures), 0)
         self.failUnlessEqual(len(result.errors), 1)
         self.failIf(detests.DeferredSetUpNeverFire.testCalled)
-        self.failUnless(result.errors[0][1].check(defer.CancelledError))
+        self.failUnless(result.errors[0][1].check(defer.TimeoutError))
