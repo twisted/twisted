@@ -104,6 +104,8 @@ class Options(usage.Options):
                 ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
                 ['suppresswarnings', None,
                  'Only print warnings to log, not stdout'],
+                ['help-reporters', None,
+                 "Help on available output plugins (reporters)"]
                 ]
 
     optParameters = [["reactor", "r", None,
@@ -113,7 +115,8 @@ class Options(usage.Options):
                      ["random", "z", None,
                       "Run tests in random order using the specified seed"],
                      ["reporter-args", None, None,
-                      "a string passed to the reporter's 'args' kwarg"]]
+                      "a string passed to the reporter's 'args' kwarg. "
+                      "DEPRECATED"]]
 
     zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
     zsh_actionDescr = {"logfile":"log file name",
@@ -147,6 +150,9 @@ class Options(usage.Options):
             self._loadReporters()
         for opt, qual in self.optToQual.iteritems():
             if self[opt]:
+                warnings.warn('Setting the reporter using flags is deprecated.'
+                              ' Use --reporter instead',
+                              category=DeprecationWarning)
                 nany = reflect.namedAny(qual)
                 return nany
         else:
@@ -227,14 +233,29 @@ class Options(usage.Options):
         sys.settrace(spewer)
         
     def opt_reporter(self, opt=None):
-        """the fully-qualified name of the class to use as the reporter for
-        this run. The class must implement twisted.trial.itrial.IReporter.
-        by default, the stream argument will be sys.stdout
+        """The reporter to use for this test run.  See --help-reporters
+        for more info.
         """
         if opt is None:
             raise UsageError, 'must specify a fully qualified class name'
+        if opt in self.optToQual:
+            opt = self.optToQual[opt]
+        else:
+            warnings.warn("Only pass names of Reporter plugins to --reporter. "
+                          "See --help-reporters for more info.",
+                          category=DeprecationWarning)
         self['reporter'] = reflect.namedAny(opt)
 
+    def opt_help_reporters(self):
+        synopsis = ("Trial's output can be customized using plugins called "
+                    "Reporters. You can\nselect any of the following "
+                    "reporters using --reporter=<foo>\n")
+        print synopsis
+        for p in plugin.getPlugins(itrial.IReporter):
+            print '   ', p.longOpt, '\t', p.description
+        print
+        sys.exit(0)
+        
     def opt_disablegc(self):
         """Disable the garbage collector"""
         gc.disable()
@@ -313,6 +334,9 @@ class Options(usage.Options):
                 raise usage.UsageError("you must specify --debug when using "
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
+        if self['reporter-args']:
+            warnings.warn("--reporter-args is deprecated. Use plugin instead.",
+                          category=DeprecationWarning)
 
     
 def _initialDebugSetup(config):
