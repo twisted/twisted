@@ -117,10 +117,24 @@ def main():
 # Utilities
 ##
 def lore(ver, docdir):
+    # We get an arg like "doc/<blah>/", "doc/<blah>/sub/", and so
+    # forth. We need to pass -l to lore such that, in http/html terms,
+    # we get from a given file in one of these directories to
+    # doc/<blah>/howto.
+
+    # doc/<blat>/howto -> ../howto (for ease of implementation)
+    # doc/<blat>/ -> howto
+    # doc/<blat>/foo -> ../howto
+    # doc/<blat>/foo/bar -> ../../howto
+    # we always get doc/<blat>/ at least
+    relativity = list(os.path.normpath(docdir)).count('/') - 1 
+    homelink = ('../' * relativity) + 'howto/'
+    print "HOMELINK", homelink
     sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
        "--config ext=.html --config version=%(ver)s "
-       "--config noapi=please -l ../howto/ "
-       "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir})
+       "--config noapi=please -l %(homelink)s "
+       "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir,
+                               'homelink': homelink})
     sh("rm -f %(docdir)s/*.xhtml" % {'docdir': docdir})
 
 def tar(tdir):
