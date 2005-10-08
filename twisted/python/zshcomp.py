@@ -139,15 +139,15 @@ class MyOptions(usage.Options):
             raise usage.UsageError, "%s is not a directory" % self['directory']
 
 class Builder:
-    def __init__(self, cmd_name, optionsClass, file):
+    def __init__(self, cmd_name, options, file):
         self.cmd_name = cmd_name
-        self.optionsClass = optionsClass
+        self.options = options
         self.file = file
 
     def write(self):
         #by default, we just write out a single call to _arguments
         self.file.write('#compdef %s\n' % self.cmd_name)
-        gen = ArgumentsGenerator(self.cmd_name, self.optionsClass, self.file)
+        gen = ArgumentsGenerator(self.cmd_name, self.options, self.file)
         gen.write()
 
 class MktapBuilder(Builder):
@@ -162,8 +162,8 @@ class MktapBuilder(Builder):
             self.file.write('"%s:%s"\n' % (p.tapname, p.description))
         self.file.write(")\n\n")
 
-        self.optionsClass.zsh_extras = ['*::subcmd:->subcmd']
-        gen = ArgumentsGenerator(self.cmd_name, self.optionsClass, self.file)
+        self.options.__class__.zsh_extras = ['*::subcmd:->subcmd']
+        gen = ArgumentsGenerator(self.cmd_name, self.options, self.file)
         gen.write()
 
         self.file.write("""if (( CURRENT == 1 )); then
@@ -178,7 +178,7 @@ case $service in\n""")
         plugins = newplugin.getPlugins(IServiceMaker)
         for p in plugins:
             self.file.write(p.tapname + ")\n")
-            gen = ArgumentsGenerator(p.tapname, p.options, self.file)
+            gen = ArgumentsGenerator(p.tapname, p.options(), self.file)
             gen.write()
             self.file.write(";;\n")
         self.file.write("""*) _message "don't know how to complete $service";;\nesac""")
@@ -186,10 +186,10 @@ case $service in\n""")
 class ArgumentsGenerator:
     """generate a call to the zsh _arguments completion function
     based on data in a usage.Options subclass"""
-    def __init__(self, cmd_name, optionsClass, file):
+    def __init__(self, cmd_name, options, file):
         """write the zsh completion code to the given file"""
         self.cmd_name = cmd_name
-        self.optionsClass = optionsClass
+        self.options = options
         self.file = file
 
         self.altArgDescr = {}
@@ -202,20 +202,20 @@ class ArgumentsGenerator:
         aCL = reflect.accumulateClassList
         aCD = reflect.accumulateClassDict
 
-        aCD(optionsClass, 'zsh_altArgDescr', self.altArgDescr)
-        aCD(optionsClass, 'zsh_actionDescr', self.actionDescr)
-        aCL(optionsClass, 'zsh_multiUse', self.multiUse)
-        aCL(optionsClass, 'zsh_mutuallyExclusive', self.mutuallyExclusive)
-        aCD(optionsClass, 'zsh_actions', self.actions)
-        aCL(optionsClass, 'zsh_extras', self.extras)
+        aCD(options.__class__, 'zsh_altArgDescr', self.altArgDescr)
+        aCD(options.__class__, 'zsh_actionDescr', self.actionDescr)
+        aCL(options.__class__, 'zsh_multiUse', self.multiUse)
+        aCL(options.__class__, 'zsh_mutuallyExclusive', self.mutuallyExclusive)
+        aCD(options.__class__, 'zsh_actions', self.actions)
+        aCL(options.__class__, 'zsh_extras', self.extras)
 
         optFlags = []
         optParams = []
 
-        aCL(optionsClass, 'optFlags', optFlags)
-#        optFlags = getattr(optionsClass, 'optFlags', [])
-        aCL(optionsClass, 'optParameters', optParams)
-#        optParams = getattr(optionsClass, 'optParameters', [])
+        aCL(options.__class__, 'optFlags', optFlags)
+#        optFlags = getattr(options, 'optFlags', [])
+        aCL(options.__class__, 'optParameters', optParams)
+#        optParams = getattr(options, 'optParameters', [])
 
 #        for l in optFlags:
 #            print l
@@ -430,7 +430,7 @@ class ArgumentsGenerator:
 
         # lets try to get it from the opt_foo method doc string, if there is one
         longMangled = long.replace('-', '_') # this is what t.p.usage does
-        obj = getattr(self.optionsClass, 'opt_%s' % longMangled, None)
+        obj = getattr(self.options, 'opt_%s' % longMangled, None)
         if obj:
             descr = descrFromDoc(obj)
             if descr is not None:
@@ -450,7 +450,7 @@ class ArgumentsGenerator:
         """Add additional options to the optFlags and optParams lists.
         These will be defined by 'opt_foo' methods of the Options subclass"""
         methodsDict = {}
-        reflect.accumulateMethods(self.optionsClass, methodsDict, 'opt_', curClass=self.optionsClass)
+        reflect.accumulateMethods(self.options, methodsDict, 'opt_')
         # we need to go through methodsDict and figure out is there are such things as
         # opt_debug and opt_b that point to the same method (long and short option names
         methodToShort = {}
@@ -521,7 +521,7 @@ def siteFunctionsPath():
 def makeCompFunctionFiles(out_path):
     for cmd_name, module_name, class_name in generateFor:
         m = __import__('%s' % module_name, None, None, (class_name))
-        o = getattr(m, class_name)
+        o = getattr(m, class_name)() # instantiate Options class
         f = file('%s/_%s' % (out_path, cmd_name), 'w')
 
         if cmd_name in specialBuilders:
