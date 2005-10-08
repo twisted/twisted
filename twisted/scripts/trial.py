@@ -115,7 +115,6 @@ class Options(usage.Options):
                      ["reporter-args", None, None,
                       "a string passed to the reporter's 'args' kwarg"]]
 
-    zsh_mutuallyExclusive = [("verbose", "bwverbose")]
     zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
     zsh_actionDescr = {"logfile":"log file name",
                        "random":"random seed"}
