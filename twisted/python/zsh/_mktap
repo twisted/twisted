@@ -8,7 +8,7 @@ _mktap_subcmds=(
 "web:A general-purpose web server which can serve from a filesystem or application resource."
 "inetd:An inetd(8) replacement."
 "news:A news server."
-"words:A chat service."
+"words:A modern words server"
 "toc:An AIM TOC service."
 "dns:A domain name server."
 "mail:An email service"
@@ -48,13 +48,14 @@ service="$words[1]"
 case $service in
 ftp)
 _arguments -s -A "-*" \
+'--password-file=[username:password-style credentials database]:password-file:_files' \
+'--help[Display this help and exit.]' \
 '--userAnonymous=[Name of the anonymous user.]:userAnonymous:_files' \
 '--version[version]' \
 '(--root)-r[define the root of the ftp-site.]:root:_files' \
 '(-r)--root=[define the root of the ftp-site.]:root:_files' \
 '(--port)-p[set the port number]:port:_files' \
 '(-p)--port=[set the port number]:port:_files' \
-'--help[Display this help and exit.]' \
 && return 0
 ;;
 telnet)
@@ -172,22 +173,13 @@ _arguments -s -A "-*" \
 ;;
 words)
 _arguments -s -A "-*" \
-'(--web)-w[Port to run the web interface on.]:web:_files' \
-'(-w)--web=[Port to run the web interface on.]:web:_files' \
-'--version[version]' \
+'--group=[Specify a group which should exist]:group:_files' \
 '--help[Display this help and exit.]' \
-'(--webhost)-s[Host to bind web interface to.]:webhost:_hosts' \
-'(-s)--webhost=[Host to bind web interface to.]:webhost:_hosts' \
-'(--wordshost)-b[Host to bind Words service to.]:wordshost:_hosts' \
-'(-b)--wordshost=[Host to bind Words service to.]:wordshost:_hosts' \
-'(--irchost)-h[Host to bind IRC server to.]:irchost:_hosts' \
-'(-h)--irchost=[Host to bind IRC server to.]:irchost:_hosts' \
-'(--irc)-i[Port to run the IRC server on.]:irc:_files' \
-'(-i)--irc=[Port to run the IRC server on.]:irc:_files' \
-'--bot=[Specify a bot-plugin to load; this should be in the format]:bot:_files' \
-'(--port)-p[Port to run the Words service on.]:port:_files' \
-'(-p)--port=[Port to run the Words service on.]:port:_files' \
-'--user=[Specify a user/password combination to add to the authorizer and]:user:_users' \
+'--passwd=[Name of a passwd-style password file. (REQUIRED)]:passwd:_files' \
+'--hostname=[Name of this server; purely an informative]:hostname:_files' \
+'--irc-port=[strports description of the port to bind for the  irc server]:irc-port:_files' \
+'--pb-port=[strports description of the port to bind for the  pb server]:pb-port:_files' \
+'--version[version]' \
 && return 0
 ;;
 toc)

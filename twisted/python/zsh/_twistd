@@ -2,10 +2,10 @@
 _arguments -s -A "-*" \
 '(--profile)-p[Run in profile mode, dumping results to specified file]:profile:_files' \
 '(-p)--profile=[Run in profile mode, dumping results to specified file]:profile:_files' \
-'(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
-'(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
-'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file]:python:_files -g "*.(tac|py)"' \
-'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file]:python:_files -g "*.(tac|py)"' \
+'(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 threadedselect wx)' \
+'(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 threadedselect wx)' \
+'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file (implies -o)]:python:_files -g "*.(tac|py)"' \
+'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file (implies -o)]:python:_files -g "*.(tac|py)"' \
 '(--encrypted)-e[The specified tap/aos/xml file is encrypted.]' \
 '(-e)--encrypted[The specified tap/aos/xml file is encrypted.]' \
 '--syslog[Log to syslog, not to file]' \

@@ -12,8 +12,8 @@ _arguments -s -A "-*" \
 '(--password)-w[password]:password:_files' \
 '(-w)--password=[password]:password:_files' \
 '--help[Display this help and exit.]' \
-'(--toolkit)-t[Front-end to use; one of gtk2 gtk1]:toolkit:_files' \
-'(-t)--toolkit=[Front-end to use; one of gtk2 gtk1]:toolkit:_files' \
+'(--toolkit)-t[Front-end to use; one of gtk2]:toolkit:_files' \
+'(-t)--toolkit=[Front-end to use; one of gtk2]:toolkit:_files' \
 '(--port)-p[port]:port:_files' \
 '(-p)--port=[port]:port:_files' \
 && return 0
