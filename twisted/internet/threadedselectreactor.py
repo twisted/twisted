@@ -341,7 +341,10 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         q = Queue()
         self.interleave(q.put)
         while self.running:
-            q.get()()
+            try:
+                q.get()()
+            except StopIteration:
+                break
         
     
 components.backwardsCompatImplements(ThreadedSelectReactor)
