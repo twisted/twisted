@@ -1,4 +1,24 @@
-2.0.0 (Date TBD):
+2.0.1 (May 9, 2005):
+Minor bug fix release.
+
+SVN rev (file) - [bug number] description
+-----------------------------------------
+13307 (twisted/topfiles/README) - Mention support for python 2.4, too
+13324 (twisted/internet/defer.py) - [947] Fix DeferredQueue backlog/size limit.
+13354 (twisted/plugins/__init__.py) - Correct maintainer address.
+13355 (twisted/test/test_defer.py) - improvements to DeferredQueue test case
+13387 (setup.py) - add news to list of subprojects to install
+13332 (twisted/internet/posixbase.py) - Fix spelling error
+13366 (twisted/internet/qtreactor.py) - [957] [954] reactor.iterate fixes
+13368 (twisted/test/test_internet.py) - Fix DelayedCall test case
+13422 (twisted/internet/posixbase.py) - Remove log from _Win32Waker creation.
+13437 (twisted/plugin.py) - [958] Only write cache if there were changes.
+13666 (twisted/internet/gtkreactor.py,gtk2reactor.py) - Don't run callbacks
+          until the reactor is actually up and running
+13748 (twisted/internet/gtk2reactor.py) - [552] [994] Initialize threading properly.
+
+
+2.0.0 (March 25, 2005):
 
 Major new features
 -----------------------
