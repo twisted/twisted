@@ -2,8 +2,10 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""This program allows you to edit twisted/*/__init__.py to insert
-new version numbers into svn easily."""
+"""
+This program allows you to edit a bunch of crap in the SVN Twisted
+tree to insert new version numbers easily.
+"""
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
@@ -21,92 +23,74 @@ try:
 except:
     pass
 
-from twisted.python import dist, reflect
-projectNames = ['twisted']+['twisted.'+proj for proj in dist.twisted_subprojects]
+from twisted.python import dist, reflect, release
 
 class Project:
-    # currentVersionStr
-    # newVersionStr
-    # newVersionInfo
-    # filename
-    # name
+    newVersionStr = None
+    newVersionInfo = None
+    initfile = None
+    name = None
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+class Done(Exception):
     pass
 
-projects = []
-
-verstringMatcher = re.compile("^([0-9]+)\.([0-9]+)\.([0-9]+)(?:([abc])([0-9]+))?$")
+verstringMatcher = re.compile("^([0-9]+)\.([0-9]+)\.([0-9]+)$")
 def inputNewVersion(project):
     match = None
     while match is None:
-        new_vers = raw_input("New version for %s? [%s] " % (project.name, project.currentVersion))
+        new_vers = raw_input("New version for %s? " % (project.name))
         if not new_vers:
             return None,None
+        if new_vers == 'done':
+            raise Done
         match = verstringMatcher.match(new_vers)
         if match is None:
-            print 'Invalid format. Use e.g. 2.0.0 or 2.0.0a1, for a in abc'
-    major,minor,micro,level,serial = match.groups()
-    if level is None: level = 'f'
-    if serial is None: serial = 0
-    
+            print 'Invalid format. Use e.g. 2.0.0.'
+    major,minor,micro = match.groups()
+
     major=int(major)
     minor=int(minor)
     micro=int(micro)
-    level = {'a':'alpha', 'b':'beta', 'c':'candidate', 'f':'final'}[level]
-    serial=int(serial)
-    return new_vers, (major,minor,micro,level,serial)
+    return new_vers, (major,minor,micro)
 
 
-def gatherCurrentInfo():
-    for pname in projectNames:
-        mod = reflect.namedModule(pname)
-        project = Project()
-        project.name = pname
-        project.currentVersion = mod.__version__
-        fname = os.path.abspath(mod.__file__)
-        if fname.endswith(".pyc"):
-            fname=fname[:-1]
-        project.filename = fname
-        projects.append(project)
-
+## def gatherCurrentInfo():
+##     for pname in projectNames:
+##         mod = reflect.namedModule(pname)
+##         project = Project()
+##         project.name = pname
+##         project.currentVersion = mod.__version__
+##         fname = os.path.abspath(mod.__file__)
+##         if fname.endswith(".pyc"):
+##             fname=fname[:-1]
+##         project.filename = fname
+##         yield project
 
 
 def modifyInit(project):
-    filename = project.filename
-    
-    print ">> Modifying:", os.path.abspath(filename)
-    
-    os.rename(filename, filename+'.bak')
-    f = open(filename+'.bak')
-    oldlines = f.readlines()
-    f.close()
-    f = open(filename + '.new', 'w')
-
-    # Write out old contents
-    for l in oldlines:
-        if l.startswith("__version__ = ") or l.startswith("version_info = "):
-            continue
-        else:
-            f.write(l)
-    # Add new lines:
-    f.write('__version__ = "%s"%sversion_info = %s%s' % (
-        project.newVersionStr, os.linesep,
-        repr(project.newVersionInfo), os.linesep))
-    f.close()
-    os.rename(filename+'.new', filename)
-    os.unlink(filename+'.bak')
+    filename = project.initfile
+    print ">> Modifying:", filename
+    release.replaceInFile(filename, {'SVN-Trunk': project.newVersionStr})
 
 def main():
     print "Gathering info..."
-    gatherCurrentInfo()
-    
-    print "Current versions:"
-    for project in projects:
-        print "  %s %s (%s)" % (project.name, project.currentVersion, project.filename)
-        
-    print ""
+
+    projects = [Project(name='twisted', initfile='twisted/__init__.py')]
+    for pname in dist.twisted_subprojects:
+        projects.append(
+            Project(name='twisted.'+pname,
+                    initfile='twisted/%s/__init__.py' % pname))
+
     # Get input
+    print "type 'done' when done"
     for project in projects:
-        project.newVersionStr, project.newVersionInfo = inputNewVersion(project)
+        try:
+            project.newVersionStr, project.newVersionInfo = inputNewVersion(
+                project)
+        except Done:
+            break
         
     print "Modifying files..."
     for project in projects:
