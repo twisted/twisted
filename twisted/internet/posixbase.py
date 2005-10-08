@@ -156,7 +156,7 @@ class PosixReactorBase(ReactorBase):
         ReactorBase.__init__(self)
         if self.usingThreads or platformType == "posix":
             self.installWaker()
-        
+
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
         try:
@@ -195,7 +195,7 @@ class PosixReactorBase(ReactorBase):
         # Just in case we're started on a different thread than
         # we're made on
         threadable.registerAsIOThread()
-        
+
         self.fireSystemEvent('startup')
         if installSignalHandlers:
             self._handleSignals()
@@ -233,7 +233,7 @@ class PosixReactorBase(ReactorBase):
         self.removeReader(selectable)
         f = faildict.get(why.__class__)
         if f:
-            if (isRead and why.__class__ ==  error.ConnectionDone 
+            if (isRead and why.__class__ ==  error.ConnectionDone
                 and IHalfCloseableDescriptor.providedBy(selectable)):
                 selectable.readConnectionLost(f)
             else:
@@ -413,13 +413,13 @@ class PosixReactorBase(ReactorBase):
               return self._removeAll(reads, writes)
         where reads, writes are iterables.
         """
-        readers = [reader for reader in readers if 
+        readers = [reader for reader in readers if
                    reader is not self.waker]
 
         readers_dict = {}
         for reader in readers:
             readers_dict[reader] = 1
-            
+
         for reader in readers:
             self.removeReader(reader)
             self.removeWriter(reader)
@@ -428,7 +428,7 @@ class PosixReactorBase(ReactorBase):
                    writer not in readers_dict]
         for writer in writers:
             self.removeWriter(writer)
-        
+
         return readers+writers
 
 
