@@ -15,8 +15,8 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
-from twisted.python import usage, util, failure, dist
-from twisted.python.release import runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
+from twisted.python import usage, dist, reflect
+from twisted.python.release import runChdirSafe, sh, DirectoryExists, DirectoryDoesntExist
 
 import time, glob
 
@@ -24,30 +24,11 @@ packaged_projects = dist.twisted_subprojects[:]
 packaged_projects.remove('web2')
 
 
-repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
-#repourl = 'file:///home/radix/Twisted.repo'
-
-## NOTE: This script currently doesn't deal too well with building
-## subprojects alone, at least in its dealings with SVN.
-
 # FIXME:
-# 1. Don't use the core-version in the tag name; it doesn't make sense
-#    when doing subprojects alone...
 # 2. If we ever do a sumo release on the same day, the version will
 #    conflict, since we just use %Y-%m-%d as the version...
-# 3. Can't generate tarball from a particular tag without exporting it
-#    beforehand.
 
 
-# OK I know this sucks but HOW ABOUT THIS When making a SUMO ball, you
-# say "give me project X from dir A and project Y from dir B!  Damn
-# but that will be a very verbose way of doing things. Well, maybe not
-# really in practice, if we map it somehow like
-
-# {A: ['core'],
-#  B: ['conch', 'words', 'etc']}
-
-# Parameterising the release-tag would fix #1 and #3.
 
 def makeCommands():
     # Yeah, I could do dynamic lookups and for loops and shit, but
@@ -59,7 +40,6 @@ def makeCommands():
         'makeBallAll': makeBallAll,
         'makeBallCore': makeBallCore,
         'makeBallSumo': makeBallSumo,
-        'finalizeTag': finalizeTag,
 
         'makeDocConch': makeMakeDoc('conch'),
         'makeDocFlow': makeMakeDoc('flow'),
@@ -91,22 +71,15 @@ def makeCommands():
 
 class Options(usage.Options):
     optParameters = [
-        ['core-version', None, None,
-         "(required) Twisted Core version"],
-        ['commands', None, None,
+        ['commands', None, 'exportTemp,makeDocAll,makeBallAll,makeBallSumo',
          "(optional) Comma-separated list of individual steps to run"],
         ['release-source', None, '/trunk',
          "SVN path to be released."]
         ]
-    optParameters += [[x+'-version', None, None, x+" version"]
-                        for x in dist.twisted_subprojects]
 
-    optFlags = [
-        ['nopermanent', None,
-         "Don't do anything permanent: finalize tags, upload tarballs, etc."]]
 
-    _desc = """\
---commands available are:
+    _desc = """
+Things appropriate for --command are:
 
 %s
 
@@ -119,35 +92,9 @@ admin/change-versions.
                         % ', '.join(sorted(ALL_COMMANDS)))
 
     def postOptions(self):
-        self['release-url'] = repourl + self['release-source'] or '/trunk'
-        self['tagurl'] = '%s/tags/release-%s' % (repourl,
-                                                 self['core-version'])
-        self['temptagurl'] = '%s/tags/temp-%s' % (repourl,
-                                                  self['core-version'])
-
-        commands = []
-        if self['commands'] is not None:
-            commands = self['commands'].split(',')
-            # heh heh
-            commands = [ALL_COMMANDS[x] for x in commands]
-
-        else:
-            ## infer commands to run ##
-
-            commands += [
-                exportTemp,
-                makeDocAll,
-                makeBallAll,
-                makeBallSumo,
-                ]
-
-            if not self['nopermanent']:
-                commands += [
-                    finalizeTag,
-                    ]
-
+        commands = self['commands'].split(',')
+        commands = [ALL_COMMANDS[x] for x in commands]
         self['commands'] = commands
-
         print "GOING TO DO", ','.join([x.__name__ for x in commands])
 
 
@@ -179,6 +126,11 @@ def tar(tdir):
     sh('find Twisted.exp %(tdir)s -name "*.pyc" | xargs rm -f' % locals())
     sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
+def getVersion(projdesc):
+    if projdesc == 'core':
+        return reflect.namedModule('twisted').__version__
+    else:
+        return reflect.namedModule('twisted.'+projdesc).__version__
 
 ##
 # The MEAT.
@@ -191,7 +143,7 @@ def exportTemp(opts):
 
 
 def makeDocCore(opts):
-    ver = opts['core-version']
+    ver = getVersion('core')
     os.chdir('Twisted.exp')
 
     for docdir in ['howto', 'howto/tutorial', 'howto/policy', 'upgrades',
@@ -209,7 +161,7 @@ def makeMakeDoc(projname):
         for sub in ('howto', 'examples'):
             sub = os.path.join(base, sub)
             if os.path.exists(sub):
-                lore(opts['%s-version' % projname], sub)
+                lore(getVersion(projname), sub)
     return makeDoc
 
 
@@ -227,7 +179,7 @@ def makeBallAll(opts):
 
 
 def makeBallCore(opts):
-    ver = opts['core-version']
+    ver = getVersion('core')
     tdir = "Twisted-%s" % (ver,)
     if not os.path.exists('Twisted.exp'):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
@@ -250,35 +202,14 @@ def makeBallCore(opts):
     rm -f %(tdir)s/bin/{%(twisted_subprojects)s}
 
     ''' % locals())
-##     # we want copies so we can replace versions
-##     rm %(tdir)s/README %(tdir)s/setup.py
-##     cp `pwd`/Twisted.exp/twisted/topfiles/setup.py %(tdir)s/
-##     cp `pwd`/Twisted.exp/twisted/topfiles/README %(tdir)s/
-##     rm %(tdir)s/twisted/__init__.py %(tdir)s/twisted/copyright.py
-##     cp `pwd`/Twisted.exp/twisted/__init__.py %(tdir)s/twisted/
-##     cp `pwd`/Twisted.exp/twisted/copyright.py %(tdir)s/twisted/
-##     replaceMe = {'SVN-Trunk': ver}
-##     replaceInFile(os.path.join(tdir, 'setup.py'), replaceMe)
-##     replaceInFile(os.path.join(tdir, 'README'), replaceMe)
-##     replaceInFile(os.path.join(tdir, 'twisted', '__init__.py'),
-##                   replaceMe)
-##     replaceInFile(os.path.join(tdir, 'twisted', 'copyright.py'),
-##                   replaceMe)
+
     tar(tdir)
 
 
 def makeBallSumo(opts):
     ver = time.strftime('%Y-%m-%d')
-    basever = opts['core-version']
+    basever = getVersion('core')
     tdir = "TwistedSumo-%s" % (ver,)
-    # # # OMFG this is going to be horrible but we need to pull in
-    # # # subprojects from various SVN branches here. It needs to know
-    # # # how to pull all the relevant files from each individual
-    # # # project. i.e., get words from release-2.0.0 means
-    # # # r-2/twisted/words *AND*
-    # # # r-2/twisted/plugins/twisted_words.py. I will probably have
-    # # # to parse setup.py of that project to figure out what plugins
-    # # # to include. !!!!!!!!!!
     if not os.path.exists('Twisted.exp'):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
     zig = glob.glob('ZopeInterface-*.tgz')
@@ -298,28 +229,6 @@ def makeBallSumo(opts):
     ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
     ln -s `pwd`/%(zi)s %(tdir)s/
     ''' % locals())
-##     # SUMO README references all subproject versions
-##     sumoReplace = {'SUMO-Date': ver,
-##                    'Core-SVN-Trunk': opts['core-version']}
-##     for subproj in packaged_projects:
-##         subver = opts['%s-version' % subproj]
-##         if not subver:
-##             raise Exception("You need to pass --proj-version for all "
-##                             "subprojects when building sumo! including %s"
-##                             % subproj)
-##         sumoReplace['%s-SVN-Trunk' % subproj.capitalize()] = subver
-
-##     replaceInFile(os.path.join(tdir, 'README'), sumoReplace)
-##     # replace versions for core
-##     coreReplace = {'SVN-Trunk': basever}
-##     for fn in ('copyright.py', '__init__.py', 'topfiles/README',
-##                'topfiles/setup.py'):
-##         replaceInFile(os.path.join(tdir, 'twisted', fn), coreReplace)
-##     # Replace versions for subproject files
-##     for sub in packaged_projects:
-##         subReplace = {'SVN-Trunk': opts['%s-version' % sub]}
-##         for fn in ('__init__.py', 'topfiles/setup.py', 'topfiles/README'):
-##             replaceInFile(os.path.join(tdir, 'twisted', sub, fn), subReplace)
     tar(tdir)
 
 
@@ -336,20 +245,11 @@ def createSubprojectDirectory(proj, version):
     ln -s `pwd`/Twisted.exp/LICENSE %(sdir)s
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/* %(sdir)s
     """ % locals())
-##     # we want copies so we can replace versions
-##     rm %(sdir)s/setup.py %(sdir)s/README
-##     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/setup.py %(sdir)s/
-##     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/README %(sdir)s/
     
     if os.path.exists('Twisted.exp/twisted/plugins/twisted_%s.py' % (proj,)):
         sh("ln -s `pwd`/Twisted.exp/twisted/plugins/twisted_%(proj)s.py "
            "%(sdir)s/twisted/plugins" % locals())
     
-##     replaceMe = {'SVN-Trunk': version}
-##     replaceInFile(os.path.join(sdir, 'setup.py'), replaceMe)
-##     replaceInFile(os.path.join(sdir, 'README'), replaceMe)
-##     replaceInFile(os.path.join(sdir, 'twisted', proj, '__init__.py'),
-##                   replaceMe)
     if os.path.exists('Twisted.exp/doc/'+proj):
         sh('ln -s `pwd`/Twisted.exp/doc/%(proj)s %(sdir)s/doc' % locals())
     if os.path.exists('Twisted.exp/bin/'+proj):
@@ -358,7 +258,7 @@ def createSubprojectDirectory(proj, version):
 
 def makeMakeBall(proj):
     def makeBall(opts):
-        projver = opts[proj+'-version']
+        projver = getVersion(proj)
         if not projver:
             raise "NEED --%s-version!" % (proj,)
         projdir = 'Twisted%s-%s' % (proj.capitalize(), projver,)
@@ -366,11 +266,6 @@ def makeMakeBall(proj):
         tar(projdir)
     return makeBall
 
-
-def finalizeTag(opts):
-    sh('svn mv -m "Finalizing release of %s" %s %s'
-       % (opts['core-version'], opts['temptagurl'], opts['tagurl']),
-       prompt=True)
 
 
 ALL_COMMANDS = makeCommands()
