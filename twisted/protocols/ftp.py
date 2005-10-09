@@ -26,7 +26,7 @@ try:
 except ImportError:
     pwd = grp = None
 
-from zope.interface import implements
+from zope.interface import Interface, implements
 
 # Twisted Imports
 from twisted import copyright
@@ -194,6 +194,16 @@ def toSegments(cwd, path):
             segs.append(s)
     return segs
 
+
+def errnoToFailure(e, path):
+    if e == errno.ENOENT or e == errno.EISDIR:
+        return defer.fail(FileNotFoundError(path))
+    elif e == errno.EACCES or e == errno.EPERM:
+        return defer.fail(PermissionDeniedError(path))
+    elif e == errno.ENOTDIR:
+        return defer.fail(IsNotADirectoryError(path))
+    else:
+        return defer.fail()
 
 # Generic VFS exceptions
 class FilesystemShellException(Exception):
@@ -879,14 +889,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbSent(result):
-            return (TXFR_COMPLETE_OK,)
-
-        def ebSent(err):
-            log.msg("Doh")
-            log.err(err)
-            return (CNX_CLOSED_TXFR_ABORTED,)
-
         # XXX For now, just disable the timeout.  Later we'll want to
         # leave it active and have the DTP connection reset it
         # periodically.
@@ -903,15 +905,34 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         else:
             cons = self.dtpInstance
 
-        d = self.shell.send(newsegs, cons)
-        d.addBoth(enableTimeout)
-        d.addCallbacks(cbSent, ebSent)
+        def cbSent(result):
+            return (TXFR_COMPLETE_OK,)
 
-        # Tell them what to doooo
-        if self.dtpInstance.isConnected:
-            self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
-        else:
-            self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
+        def ebSent(err):
+            log.msg("Unexpected error attempting to transmit file to client:")
+            log.err(err)
+            return (CNX_CLOSED_TXFR_ABORTED,)
+
+        def cbOpened(file):
+            # Tell them what to doooo
+            if self.dtpInstance.isConnected:
+                self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
+            else:
+                self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
+
+            d = file.send(cons)
+            d.addCallbacks(cbSent, ebSent)
+            return d
+
+        def ebOpened(err):
+            if not err.check(PermissionDeniedError, FileNotFoundError, IsNotADirectoryError):
+                log.msg("Unexpected error attempting to open file for transmission:")
+                log.err(err)
+            return (FILE_NOT_FOUND, '/'.join(newsegs))
+
+        d = self.shell.openForReading(newsegs)
+        d.addCallbacks(cbOpened, ebOpened)
+        d.addBoth(enableTimeout)
 
         # Pass back Deferred that fires when the transfer is done
         return d
@@ -1150,7 +1171,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
 
 # -- Cred Objects --
 
-class IFTPShell(components.Interface):
+class IFTPShell(Interface):
     """
     An abstraction of the shell commands used by the FTP protocol for
     a given user account.
@@ -1158,7 +1179,7 @@ class IFTPShell(components.Interface):
     All path names must be absolute.
     """
 
-    def makeDirectory(self, path):
+    def makeDirectory(path):
         """
         Create a directory.
 
@@ -1170,7 +1191,7 @@ class IFTPShell(components.Interface):
         """
 
 
-    def removeDirectory(self, path):
+    def removeDirectory(path):
         """
         Remove a directory.
 
@@ -1182,7 +1203,7 @@ class IFTPShell(components.Interface):
         """
 
 
-    def removeFile(self, path):
+    def removeFile(path):
         """
         Remove a file.
 
@@ -1194,7 +1215,7 @@ class IFTPShell(components.Interface):
         """
 
 
-    def rename(self, fromPath, toPath):
+    def rename(fromPath, toPath):
         """
         Rename a file or directory.
 
@@ -1209,7 +1230,7 @@ class IFTPShell(components.Interface):
         """
 
 
-    def access(self, path):
+    def access(path):
         """
         Determine whether access to the given path is allowed.
 
@@ -1221,7 +1242,7 @@ class IFTPShell(components.Interface):
         """
 
 
-    def stat(self, path, keys=()):
+    def stat(path, keys=()):
         """
         Retrieve information about the given path.
 
@@ -1229,7 +1250,8 @@ class IFTPShell(components.Interface):
         child paths.
         """
 
-    def list(self, path, keys=()):
+
+    def list(path, keys=()):
         """
         Retrieve information about the given path.
 
@@ -1260,12 +1282,31 @@ class IFTPShell(components.Interface):
         """
 
 
-    def send(self, path, consumer):
+    def openForReading(path):
         """
-        Produce the contents of the given path to the given consumer.
-
-        @param path: The path, as a list of segments, to send
+        @param path: The path, as a list of segments, to open
         @type path: C{list} of C{unicode}
+
+        @rtype: C{Deferred} which will fire with L{IReadFile}
+        """
+
+
+    def openForWriting(path):
+        """
+        @param path: The path, as a list of segments, to open
+        @type path: C{list} of C{unicode}
+
+        @rtype: C{Deferred} which will fire with L{IWriteFile}
+        """
+
+
+class IReadFile(Interface):
+    """A file out of which bytes may be read.
+    """
+    def send(consumer):
+        """
+        Produce the contents of the given path to the given consumer.  This
+        method may only be invoked once on each provider.
 
         @type consumer: C{IConsumer}
 
@@ -1274,15 +1315,20 @@ class IFTPShell(components.Interface):
         """
 
 
-    def receive(self, path):
+class IWriteFile(Interface):
+    """A file into which bytes may be written.
+    """
+    def receive(path):
         """
-        Create a consumer for the given path.
+        Create a consumer for the given path.  This method may only be
+        invoked once on each provider.
 
         @param path: The path, as a list of segments, to save to
         @type path: C{list} of C{unicode}
 
         @rtype: C{Deferred} of C{IConsumer}
         """
+
 
 def _getgroups(uid):
     """Return the primary and supplementary groups for the given UID.
@@ -1386,36 +1432,24 @@ class FTPAnonymousShell(object):
         path = self._path(path)
         return defer.fail(AnonUserDeniedError())
 
-    def send(self, path, consumer):
+    def openForReading(self, path):
         p = self._path(path)
         try:
             f = p.open('rb')
-        except OSError, e:
-            if e.errno == errno.ENOENT:
-                return defer.fail(FileNotFoundError(path))
-            elif e.errno == errno.EACCES or e.errno == errno.EPERM:
-                return defer.fail(PermissionDeniedError(path))
-            elif e.errno == errno.ENOTDIR:
-                return defer.fail(IsNotADirectoryError(path))
-            else:
-                return defer.fail()
+        except (IOError, OSError), e:
+            return errnoToFailure(e.errno, path)
+        except:
+            return defer.fail()
         else:
-            return basic.FileSender().beginFileTransfer(f, consumer)
+            return defer.succeed(_FileReader(f))
 
     def access(self, path):
         p = self._path(path)
         # For now, just see if we can os.listdir() it
         try:
             p.listdir()
-        except OSError, e:
-            if e.errno == errno.ENOENT:
-                return defer.fail(FileNotFoundError(path))
-            elif e.errno == errno.EACCES or e.errno == errno.EPERM:
-                return defer.fail(PermissionDeniedError(path))
-            elif e.errno == errno.ENOTDIR:
-                return defer.fail(IsNotADirectoryError(path))
-            else:
-                return defer.fail()
+        except (IOError, OSError), e:
+            return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
         else:
@@ -1441,9 +1475,16 @@ class FTPAnonymousShell(object):
             results.append((fName, ent))
             if keys:
                 if fName is not None:
-                    statResult = os.stat(os.path.join(path.path, fName))
+                    p = os.path.join(path.path, fName)
                 else:
-                    statResult = os.stat(path.path)
+                    p = path.path
+                try:
+                    statResult = os.stat(p)
+                except (IOError, OSError), e:
+                    return errnoToFailure(e.errno, path)
+                except:
+                    return defer.fail()
+
             for k in keys:
                 ent.append(getattr(self, '_list_' + k)(statResult))
         return defer.succeed(results)
@@ -1455,18 +1496,43 @@ class FTPAnonymousShell(object):
 
     def _list_owner(self, st):
         if pwd is not None:
-            return pwd.getpwuid(st.st_uid)[0]
+            try:
+                return pwd.getpwuid(st.st_uid)[0]
+            except KeyError:
+                pass
         return str(st.st_uid)
 
     def _list_group(self, st):
         if grp is not None:
-            return grp.getgrgid(st.st_gid)[0]
+            try:
+                return grp.getgrgid(st.st_gid)[0]
+            except KeyError:
+                pass
         return str(st.st_gid)
 
     def _list_directory(self, st):
         return bool(st.st_mode & stat.S_IFDIR)
 
-components.backwardsCompatImplements(FTPAnonymousShell)
+
+class _FileReader(object):
+    implements(IReadFile)
+
+    def __init__(self, fObj):
+        self.fObj = fObj
+        self._send = False
+
+    def _close(self, passthrough):
+        self._send = True
+        self.fObj.close()
+        return passthrough
+
+    def send(self, consumer):
+        assert not self._send, "Can only call IReadFile.send *once* per instance"
+        self._send = True
+        d = basic.FileSender().beginFileTransfer(self.fObj, consumer)
+        d.addBoth(self._close)
+        return d
+
 
 class FTPShell(FTPAnonymousShell):
     def makeDirectory(self, path):
@@ -1510,13 +1576,27 @@ class FTPShell(FTPAnonymousShell):
             return defer.succeed(None)
 
 
-    def receive(self, path):
+    def openForWriting(self, path):
         p = self._path(path)
         try:
             fObj = p.open('wb')
         except:
             return defer.fail()
-        return defer.succeed(FileConsumer(fObj))
+        return defer.succeed(_FileWriter(fObj))
+
+
+class _FileWriter(object):
+    implements(IWriteFile)
+
+    def __init__(self, fObj):
+        self.fObj = fObj
+        self._receive = False
+
+    def receive(self):
+        assert not self._receive, "Can only call IWriteFile.receive *once* per instance"
+        self._receive = True
+        # FileConsumer will close the file object
+        return defer.succeed(FileConsumer(self.fObj))
 
 
 class FTPRealm:
