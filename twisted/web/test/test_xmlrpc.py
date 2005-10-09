@@ -96,17 +96,19 @@ class XMLRPCTestCase(unittest.TestCase):
         return xmlrpc.Proxy("http://127.0.0.1:%d/" % self.port)
 
     def testResults(self):
-        x = self.proxy().callRemote("add", 2, 3)
-        self.assertEquals(unittest.deferredResult(x), 5)
-        x = self.proxy().callRemote("defer", "a")
-        self.assertEquals(unittest.deferredResult(x), "a")
-        x = self.proxy().callRemote("dict", {"a" : 1}, "a")
-        self.assertEquals(unittest.deferredResult(x), 1)
-        x = self.proxy().callRemote("pair", 'a', 1)
-        self.assertEquals(unittest.deferredResult(x), ['a', 1])
-        x = self.proxy().callRemote("complex")
-        self.assertEquals(unittest.deferredResult(x),
-                          {"a": ["b", "c", 12, []], "D": "foo"})
+        inputOutput = [
+            ("add", (2, 3), 5),
+            ("defer", ("a",), "a"),
+            ("dict", ({"a": 1}, "a"), 1),
+            ("pair", ("a", 1), ["a", 1]),
+            ("complex", (), {"a": ["b", "c", 12, []], "D": "foo"})]
+
+        dl = []
+        for meth, args, outp in inputOutput:
+            d = self.proxy().callRemote(meth, *args)
+            d.addCallback(self.assertEquals, outp)
+            dl.append(d)
+        return defer.DeferredList(dl)
 
     def testErrors(self):
         for code, methodName in [(666, "fail"), (666, "deferFail"),
@@ -140,38 +142,44 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         self.port = self.p.getHost().port
 
     def testListMethods(self):
+
+        def cbMethods(meths):
+            meths.sort()
+            self.failUnlessEqual(
+                meths,
+                ['add', 'complex', 'defer', 'deferFail',
+                 'deferFault', 'dict', 'fail', 'fault',
+                 'pair', 'system.listMethods',
+                 'system.methodHelp',
+                 'system.methodSignature'])
+
         d = self.proxy().callRemote("system.listMethods")
-        list = unittest.deferredResult(d)
-        list.sort()
-        self.failUnlessEqual(list, ['add', 'complex', 'defer', 'deferFail',
-                                    'deferFault', 'dict', 'fail', 'fault',
-                                    'pair', 'system.listMethods',
-                                    'system.methodHelp',
-                                    'system.methodSignature'])
+        d.addCallback(cbMethods)
+        return d
 
     def testMethodHelp(self):
-        d = self.proxy().callRemote("system.methodHelp", 'defer')
-        help = unittest.deferredResult(d)
-        self.failUnlessEqual(help, 'Help for defer.')
+        inputOutputs = [
+            ("defer", "Help for defer."),
+            ("fail", ""),
+            ("dict", "Help for dict.")]
 
-        d = self.proxy().callRemote("system.methodHelp", 'fail')
-        help = unittest.deferredResult(d)
-        self.failUnlessEqual(help, '')
-
-        d = self.proxy().callRemote("system.methodHelp", 'dict')
-        help = unittest.deferredResult(d)
-        self.failUnlessEqual(help, 'Help for dict.')
+        dl = []
+        for meth, expected in inputOutputs:
+            d = self.proxy().callRemote("system.methodHelp", meth)
+            d.addCallback(self.assertEquals, expected)
+            dl.append(d)
+        return defer.DeferredList(dl)
 
     def testMethodSignature(self):
-        d = self.proxy().callRemote("system.methodSignature", 'defer')
-        sig = unittest.deferredResult(d)
-        self.failUnlessEqual(sig, '')
+        inputOutputs = [
+            ("defer", ""),
+            ("add", [['int', 'int', 'int'],
+                     ['double', 'double', 'double']]),
+            ("pair", [['array', 'string', 'int']])]
 
-        d = self.proxy().callRemote("system.methodSignature", 'add')
-        sig = unittest.deferredResult(d)
-        self.failUnlessEqual(sig, [['int', 'int', 'int'],
-                                   ['double', 'double', 'double']])
-
-        d = self.proxy().callRemote("system.methodSignature", 'pair')
-        sig = unittest.deferredResult(d)
-        self.failUnlessEqual(sig, [['array', 'string', 'int']])
+        dl = []
+        for meth, expected in inputOutputs:
+            d = self.proxy().callRemote("system.methodSignature", meth)
+            d.addCallback(self.assertEquals, expected)
+            dl.append(d)
+        return defer.DeferredList(dl)
