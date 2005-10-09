@@ -22,6 +22,12 @@ class BufferingMixin:
 
     DELAY = 0.0
 
+    def schedule(self):
+        return reactor.callLater(self.DELAY, self.flush)
+
+    def reschedule(self, token):
+        token.reset(self.DELAY)
+
     def write(self, bytes):
         """Buffer some bytes to be written soon.
 
@@ -31,9 +37,9 @@ class BufferingMixin:
         """
         if self._delayedWriteCall is None:
             self.bytes = []
-            self._delayedWriteCall = reactor.callLater(self.DELAY, self.flush)
+            self._delayedWriteCall = self.schedule()
         else:
-            self._delayedWriteCall.reset(self.DELAY)
+            self.reschedule(self._delayedWriteCall)
         self.bytes.append(bytes)
 
     def flush(self):

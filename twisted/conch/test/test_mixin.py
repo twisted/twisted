@@ -11,23 +11,37 @@ from twisted.test.proto_helpers import StringTransport
 
 from twisted.conch import mixin
 
+class TestBufferingProto(mixin.BufferingMixin):
+    scheduled = False
+    rescheduled = 0
+    def schedule(self):
+        self.scheduled = True
+        return object()
+
+    def reschedule(self, token):
+        self.rescheduled += 1
+
 class BufferingTest(unittest.TestCase):
     def testBuffering(self):
-        p = mixin.BufferingMixin()
+        p = TestBufferingProto()
         t = p.transport = StringTransport()
+
+        self.failIf(p.scheduled)
 
         L = ['foo', 'bar', 'baz', 'quux']
 
+        p.write('foo')
+        self.failUnless(p.scheduled)
+        self.failIf(p.rescheduled)
+
         for s in L:
+            n = p.rescheduled
             p.write(s)
+            self.assertEquals(p.rescheduled, n + 1)
             self.assertEquals(t.value(), '')
 
-        for i in range(10):
-            reactor.iterate(0.01)
-            if t.value():
-                break
-
-        self.assertEquals(t.value(), ''.join(L))
+        p.flush()
+        self.assertEquals(t.value(), 'foo' + ''.join(L))
 
 class BufferingProtocol(protocol.Protocol, mixin.BufferingMixin):
     pass
