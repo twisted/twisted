@@ -115,17 +115,22 @@ class MessageProducerTestCase(unittest.TestCase):
 
         c = BufferingConsumer()
         p = imap4.MessageProducer(msg)
-        r = unittest.deferredResult(p.beginProducing(c))
-        self.failUnlessIdentical(r, p)
-        self.assertEquals(''.join(c.buffer),
-            '{119}\r\n'
-            'From: sender@host\r\n'
-            'To: recipient@domain\r\n'
-            'Subject: booga booga boo\r\n'
-            'Content-Type: text/plain\r\n'
-            '\r\n'
-            + body
-        )
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.assertIdentical(result, p)
+            self.assertEquals(
+                ''.join(c.buffer),
+
+                '{119}\r\n'
+                'From: sender@host\r\n'
+                'To: recipient@domain\r\n'
+                'Subject: booga booga boo\r\n'
+                'Content-Type: text/plain\r\n'
+                '\r\n'
+                + body)
+        return d.addCallback(cbProduced)
+
 
     def testSingleMultiPart(self):
         outerBody = ''
@@ -146,23 +151,30 @@ class MessageProducerTestCase(unittest.TestCase):
 
         c = BufferingConsumer()
         p = imap4.MessageProducer(msg)
-        r = unittest.deferredResult(p.beginProducing(c))
-        self.failUnlessIdentical(r, p)
-        self.assertEquals(''.join(c.buffer),
-            '{239}\r\n'
-            'From: sender@host\r\n'
-            'To: recipient@domain\r\n'
-            'Subject: booga booga boo\r\n'
-            'Content-Type: multipart/alternative; boundary="xyz"\r\n'
-            '\r\n'
-            '\r\n'
-            '--xyz\r\n'
-            'Subject: this is subject text\r\n'
-            'Content-Type: text/plain\r\n'
-            '\r\n'
-            + innerBody
-            + '\r\n--xyz--\r\n'
-        )
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+
+            self.assertEquals(
+                ''.join(c.buffer),
+
+                '{239}\r\n'
+                'From: sender@host\r\n'
+                'To: recipient@domain\r\n'
+                'Subject: booga booga boo\r\n'
+                'Content-Type: multipart/alternative; boundary="xyz"\r\n'
+                '\r\n'
+                '\r\n'
+                '--xyz\r\n'
+                'Subject: this is subject text\r\n'
+                'Content-Type: text/plain\r\n'
+                '\r\n'
+                + innerBody
+                + '\r\n--xyz--\r\n')
+
+        return d.addCallback(cbProduced)
+
 
     def testMultipleMultiPart(self):
         outerBody = ''
@@ -187,28 +199,33 @@ class MessageProducerTestCase(unittest.TestCase):
 
         c = BufferingConsumer()
         p = imap4.MessageProducer(msg)
-        r = unittest.deferredResult(p.beginProducing(c))
-        self.failUnlessIdentical(r, p)
-        self.assertEquals(''.join(c.buffer),
-            '{354}\r\n'
-            'From: sender@host\r\n'
-            'To: recipient@domain\r\n'
-            'Subject: booga booga boo\r\n'
-            'Content-Type: multipart/alternative; boundary="xyz"\r\n'
-            '\r\n'
-            '\r\n'
-            '--xyz\r\n'
-            'Subject: this is subject text\r\n'
-            'Content-Type: text/plain\r\n'
-            '\r\n'
-            + innerBody1
-            + '\r\n--xyz\r\n'
-            'Subject: <b>this is subject</b>\r\n'
-            'Content-Type: text/html\r\n'
-            '\r\n'
-            + innerBody2
-            + '\r\n--xyz--\r\n'
-        )
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+
+            self.assertEquals(
+                ''.join(c.buffer),
+
+                '{354}\r\n'
+                'From: sender@host\r\n'
+                'To: recipient@domain\r\n'
+                'Subject: booga booga boo\r\n'
+                'Content-Type: multipart/alternative; boundary="xyz"\r\n'
+                '\r\n'
+                '\r\n'
+                '--xyz\r\n'
+                'Subject: this is subject text\r\n'
+                'Content-Type: text/plain\r\n'
+                '\r\n'
+                + innerBody1
+                + '\r\n--xyz\r\n'
+                'Subject: <b>this is subject</b>\r\n'
+                'Content-Type: text/html\r\n'
+                '\r\n'
+                + innerBody2
+                + '\r\n--xyz--\r\n')
+
 
 class IMAP4HelperTestCase(unittest.TestCase):
     def testFileProducer(self):
@@ -216,9 +233,14 @@ class IMAP4HelperTestCase(unittest.TestCase):
         c = BufferingConsumer()
         f = StringIO(b)
         p = imap4.FileProducer(f)
-        r = unittest.deferredResult(p.beginProducing(c))
-        self.failUnlessIdentical(r, p)
-        self.assertEquals(('{%d}\r\n' % len(b))+ b, ''.join(c.buffer))
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+            self.assertEquals(
+                ('{%d}\r\n' % len(b))+ b,
+                ''.join(c.buffer))
+        return d.addCallback(cbProduced)
 
     def testWildcard(self):
         cases = [
@@ -1598,18 +1620,23 @@ class HandCraftedTestCase(unittest.TestCase):
         c.makeConnection(transport)
         c.lineReceived('* OK [IMAP4rev1]')
 
+        def cbSelect(ignored):
+            d = c.fetchMessage('1')
+            c.dataReceived('* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
+            c.dataReceived('0003 OK FETCH\r\n')
+            return d
+
+        def cbLogin(ignored):
+            d = c.select('inbox')
+            c.lineReceived('0002 OK SELECT')
+            d.addCallback(cbSelect)
+            return d
+
         d = c.login('blah', 'blah')
         c.dataReceived('0001 OK LOGIN\r\n')
-        self.failUnless(unittest.deferredResult(d))
+        d.addCallback(cbLogin)
+        return d
 
-        d = c.select('inbox')
-        c.lineReceived('0002 OK SELECT')
-        self.failUnless(unittest.deferredResult(d))
-
-        d = c.fetchMessage('1')
-        c.dataReceived('* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
-        c.dataReceived('0003 OK FETCH\r\n')
-        self.failUnless(unittest.deferredResult(d))
 
     def testPathelogicalScatteringOfLiterals(self):
         transport = StringTransport()
@@ -2209,16 +2236,19 @@ class CopyWorkerTestCase(unittest.TestCase):
 
         m = FakeMailbox()
         d = f([(i, FeaturefulMessage()) for i in range(1, 11)], 'tag', m)
-        r = unittest.deferredResult(d)
 
-        for a in m.args:
-            self.assertEquals(a[0].read(), "open")
-            self.assertEquals(a[1], "flags")
-            self.assertEquals(a[2], "internaldate")
+        def cbCopy(results):
+            for a in m.args:
+                self.assertEquals(a[0].read(), "open")
+                self.assertEquals(a[1], "flags")
+                self.assertEquals(a[2], "internaldate")
 
-        for (status, result) in r:
-            self.failUnless(status)
-            self.assertEquals(result, None)
+            for (status, result) in results:
+                self.failUnless(status)
+                self.assertEquals(result, None)
+
+        return d.addCallback(cbCopy)
+
 
     def testUnfeaturefulMessage(self):
         s = imap4.IMAP4Server()
@@ -2229,22 +2259,24 @@ class CopyWorkerTestCase(unittest.TestCase):
         m = FakeMailbox()
         msgs = [FakeyMessage({'Header-Counter': str(i)}, (), 'Date', 'Body %d' % (i,), i + 10, None) for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
-        r = unittest.deferredResult(d)
 
-        seen = []
-        for a in m.args:
-            seen.append(a[0].read())
-            self.assertEquals(a[1], ())
-            self.assertEquals(a[2], "Date")
+        def cbCopy(results):
+            seen = []
+            for a in m.args:
+                seen.append(a[0].read())
+                self.assertEquals(a[1], ())
+                self.assertEquals(a[2], "Date")
 
-        seen.sort()
-        exp = ["Header-Counter: %d\r\n\r\nBody %d" % (i, i) for i in range(1, 11)]
-        exp.sort()
-        self.assertEquals(seen, exp)
+            seen.sort()
+            exp = ["Header-Counter: %d\r\n\r\nBody %d" % (i, i) for i in range(1, 11)]
+            exp.sort()
+            self.assertEquals(seen, exp)
 
-        for (status, result) in r:
-            self.failUnless(status)
-            self.assertEquals(result, None)
+            for (status, result) in results:
+                self.failUnless(status)
+                self.assertEquals(result, None)
+
+        return d.addCallback(cbCopy)
 
     def testMessageCopier(self):
         s = imap4.IMAP4Server()
@@ -2255,11 +2287,14 @@ class CopyWorkerTestCase(unittest.TestCase):
         m = MessageCopierMailbox()
         msgs = [object() for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
-        r = unittest.deferredResult(d)
 
-        self.assertEquals(r, zip([1] * 10, range(1, 11)))
-        for (orig, new) in zip(msgs, m.msgs):
-            self.assertIdentical(orig, new)
+        def cbCopy(results):
+            self.assertEquals(results, zip([1] * 10, range(1, 11)))
+            for (orig, new) in zip(msgs, m.msgs):
+                self.assertIdentical(orig, new)
+
+        return d.addCallback(cbCopy)
+
 
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
