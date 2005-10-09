@@ -454,14 +454,14 @@ def _doProfilingRun(config, root, suite):
         pass
     prof.print_stats()
 
-def call_until_failure(f, *args, **kwargs):
+def call_until_failure(reporter, f, *args, **kwargs):
     count = 1
     print "Test Pass %d" % count
     suite = f(*args, **kwargs)
-    while suite.reporter.wasSuccessful():
+    while reporter.wasSuccessful():
         count += 1
         print "Test Pass %d" % count
-        suite = f(*args, **kwargs)
+        f(*args, **kwargs)
     return suite
 
 
@@ -501,9 +501,10 @@ def reallyRun(config):
         root._kickStopRunningStuff()
     elif config['until-failure']:
         if config['debug']:
-            _getDebugger(config).runcall(call_until_failure, root.run, suite)
+            _getDebugger(config).runcall(call_until_failure, reporter,
+                                         root.run, suite)
         else:
-            call_until_failure(root.run, suite)
+            call_until_failure(reporter, root.run, suite)
     elif config['debug']:
         _doDebuggingRun(config, root, suite)
     elif config['profile']:

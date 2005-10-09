@@ -172,6 +172,7 @@ class TrialRoot(object):
         self.reporter.startTrial(suite.countTestCases())
         suite.run(self.reporter)
         self._kickStopRunningStuff()
+        return suite
 
     def runningTime(self):
         return self.endTime - self.startTime
