@@ -129,7 +129,6 @@ def lore(ver, docdir):
     # we always get doc/<blat>/ at least
     relativity = list(os.path.normpath(docdir)).count('/') - 1 
     homelink = ('../' * relativity) + 'howto/'
-    print "HOMELINK", homelink
     sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
        "--config ext=.html --config version=%(ver)s "
        "--config noapi=please -l %(homelink)s "
