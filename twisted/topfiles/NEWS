@@ -1,3 +1,61 @@
+2.1.0 (To Be Announced):
+
+Features
+--------
+ - threadedselectreactor, a reactor which potentially makes
+   integration with foreign event loops much simpler.
+ - major improvements to twisted.conch.insults, including many new widgets.
+ - adbapi ConnectionPools now have 'runWithConnection' which is
+   similar to runInteraction but gives you a connection object instead of
+   a transaction. [975]
+ - __file__ is now usable in tac files
+ - twisted.cred.pamauth now contains a PAM checker (moved from twisted.conch)
+ - twisted.protocols.policies.LimitTotalConnectionsFactory now exists,
+   which does as the name suggests
+ - twisted.protocols.ident now uses /proc/net/tcp on Linux [233]
+ - trial now recurses packages by default (a la the old -R parameter)
+ - (PB) Calling a remote method that doesn't exist now raises
+   NoSuchMethod instead of AttributeError.
+
+Fixes
+-----
+ - FTP client and server improvements
+ - Trial improvements: The code is now much simpler, and more stable.
+ - twisted.protocols.basic.FileSender now works with empty files 
+ - Twisted should now be much more usable on Pythons without thread support.
+ - minor improvements to process code in win32eventreactor
+ - twistd -y (--python) now implies -o (--nosave). [539]
+ - improved lockfile handling especially with respect to unix sockets.
+ - deferredGenerator now no longer overuses the stack, which sometimes
+   caused stack overflows.
+ - Failure.raiseException now at least always raises the correct Exception.
+ - minor improvements to serialport code
+
+Deprecations
+------------
+ - twisted.python.componts.getAdapter. Use IFoo(o) instead.
+ - Adapter persistence (IFoo(x, persist=True)). Just don't use it.
+ - log.debug. It was equivalent to log.msg(), just use that.
+ - twisted.protocols.telnet. twisted.conch.telnet replaces it.
+ - Setting a trial reporter using a flag to 'trial'. Instead of 'trial
+   --bwverbose', for example, use 'trial --reporter=bwverbose'.
+ - trial --coverage will become a flag in Twisted 2.2.
+ - passing a fully-qualified python name to --reporter is
+   deprecated. Pass only names of Reporter plugins.
+ - trial --psyco.
+ - trial -R (--recurse) is now the default, so passing it is deprecated.
+ - trial --reporter-args. Use the plugin system to do this sort of thing.
+ - trial.assertions.assertionMethod and trial.unittest.assertionMethod
+   are both deprecated. Use instance methods on TestCases instead.
+ - trial's deferredResult, deferredError, and wait functions. Return
+   Deferreds from your test methods instead of using them.
+ - Raising unittest.SkipTest with no arguments. Give a reason for your skip.
+ - The Failure returned from a gatherResults and DeferredList is now
+   of type FirstError instead of a tuple of (Exception, index). It
+   supports a firstError[idx] syntax but that is deprecated. Use
+   firstError.subFailure and firstError.index instead.
+
+
 2.0.1 (May 9, 2005):
 Minor bug fix release.
 
@@ -21,7 +79,7 @@ SVN rev (file) - [bug number] description
 2.0.0 (March 25, 2005):
 
 Major new features
------------------------
+------------------
  - Replaced home-grown components system with zope.interface.
  - Split Twisted into multiple pieces.
  - Relicensed: Now under the MIT license, rather than LGPL.
