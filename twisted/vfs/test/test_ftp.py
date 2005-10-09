@@ -16,7 +16,7 @@ from twisted.python import failure
 from twisted.internet import defer
 
 from twisted.vfs.backends import inmem
-from twisted.vfs import pathutils
+from twisted.vfs import pathutils, ivfs
 from twisted.vfs.adapters.ftp import FileSystemToIFTPShellAdaptor
 
 
@@ -109,12 +109,12 @@ class FTPAdapterTestCase(unittest.TestCase):
 
     def testSIZE(self):
         d = self.ftp.ftp_SIZE('file.txt')
-        responseCode, size = d.result
-        self.assertEqual('7', size)
+        return d.addCallback(lambda r: self.assertEquals(r[1], '7'))
 
     def testMDTM(self):
         d = self.ftp.ftp_MDTM('file.txt')
-        responseCode, mdtm = d.result
+        # ??? There should probably be a _real_ assertion here.
+        return d.addCallback(lambda r: self.assertEquals(len(r), 2))
 
     def testMKD(self):
         d = self.ftp.ftp_MKD('newdir')
@@ -122,47 +122,29 @@ class FTPAdapterTestCase(unittest.TestCase):
 
         # Creating an already existing directory should fail.
         d = self.ftp.ftp_MKD('newdir')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     'MKD newdir twice should cause a failure')
-
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
+        return self.assertFailure(d, ivfs.VFSError, "MKD newdir twice should cause a failure")
 
     def testRMD(self):
         d = self.ftp.ftp_RMD('ned')
-        self.assertNotIn('ned', self.root._children.keys())
-
-        d = self.ftp.ftp_RMD('ned')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     'RMD newdir twice should cause a failure')
-
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
-
-        d = self.ftp.ftp_RMD('file.txt')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     'RMD should not be able to remove directories.')
-
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
+        def gotRMD(r):
+            self.assertNotIn('ned', self.root._children.keys())
+            return self.ftp.ftp_RMD('ned')
+        d.addCallback(gotRMD)
+        self.assertFailure(d, KeyError, 'RMD newdir twice should fail')
+        d.addCallback(lambda r: self.ftp.ftp_RMD('file.txt'))
+        self.assertFailure(d, IOError, "RMD Should not be able to remove files")
+        return d
 
     def testDELE(self):
         d = self.ftp.ftp_DELE('file.txt')
-        self.assertNotIn('file.txt', self.root._children.keys())
-
-        d = self.ftp.ftp_DELE('file.txt')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     'DELE newdir twice should cause a failure')
-
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
-
-        d = self.ftp.ftp_DELE('ned')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     'DELE should not be able to remove directories.')
-
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
+        def gotDELE(r):
+            self.assertNotIn('file.txt', self.root._children.keys())
+            return  self.ftp.ftp_DELE('file.txt')
+        d.addCallback(gotDELE)
+        self.assertFailure(d, KeyError, "DELE newdir twice should cause a failure")
+        d.addCallback(lambda r: self.ftp.ftp_DELE('ned'))
+        self.assertFailure(d, IOError, 'DELE should not be able to remove directories.')
+        return d
 
     def testRename(self):
         self.ftp.ftp_RNFR('file.txt')
@@ -173,18 +155,11 @@ class FTPAdapterTestCase(unittest.TestCase):
         # renaming a missing file should fail
         self.ftp.ftp_RNFR('file.txt')
         d = self.ftp.ftp_RNTO('blah.txt')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     "renaming a missing file should cause a failure")
+        self.assertFailure(d, KeyError, "renaming a missing file should cause a failure")
 
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
+        d.addCallback(lambda r: self.ftp.ftp_RNFR('blah.txt'))
+        d.addCallback(lambda r: self.ftp.ftp_RNTO('ned'))
+        self.assertFailure(d, ivfs.VFSError, "renaming a file into a dir should cause a failure")
+        return d
 
-        # renaming a file to an existing directory should fail
-        self.ftp.ftp_RNFR('blah.txt')
-        d = self.ftp.ftp_RNTO('ned')
-        self.assert_(isinstance(d.result, failure.Failure),
-                     "renaming a file into a dir should cause a failure")
-
-        # Cleanup the error.
-        d.addErrback(lambda f: None)
 
