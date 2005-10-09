@@ -88,9 +88,7 @@ class XMLRPCTestCase(unittest.TestCase):
         self.port = self.p.getHost().port
 
     def tearDown(self):
-        self.p.stopListening()
-        reactor.iterate()
-        reactor.iterate()
+        return self.p.stopListening()
 
     def proxy(self):
         return xmlrpc.Proxy("http://127.0.0.1:%d/" % self.port)
@@ -108,7 +106,7 @@ class XMLRPCTestCase(unittest.TestCase):
             d = self.proxy().callRemote(meth, *args)
             d.addCallback(self.assertEquals, outp)
             dl.append(d)
-        return defer.DeferredList(dl)
+        return defer.DeferredList(dl, fireOnOneErrback=True)
 
     def testErrors(self):
         for code, methodName in [(666, "fail"), (666, "deferFail"),
@@ -168,7 +166,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
             d = self.proxy().callRemote("system.methodHelp", meth)
             d.addCallback(self.assertEquals, expected)
             dl.append(d)
-        return defer.DeferredList(dl)
+        return defer.DeferredList(dl, fireOnOneErrback=True)
 
     def testMethodSignature(self):
         inputOutputs = [
@@ -182,4 +180,4 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
             d = self.proxy().callRemote("system.methodSignature", meth)
             d.addCallback(self.assertEquals, expected)
             dl.append(d)
-        return defer.DeferredList(dl)
+        return defer.DeferredList(dl, fireOnOneErrback=True)
