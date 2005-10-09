@@ -215,33 +215,26 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         rawDataReceived, depending on mode.)
         """
         self.__buffer = self.__buffer+data
-        lastoffset=0
         while self.line_mode and not self.paused:
-            offset=self.__buffer.find(self.delimiter, lastoffset)
-            if offset == -1:
-                self.__buffer=self.__buffer[lastoffset:]
+            try:
+                line, self.__buffer = self.__buffer.split(self.delimiter, 1)
+            except ValueError:
                 if len(self.__buffer) > self.MAX_LENGTH:
-                    line=self.__buffer
-                    self.__buffer=''
+                    line, self.__buffer = self.__buffer, ''
                     return self.lineLengthExceeded(line)
                 break
-
-            line=self.__buffer[lastoffset:offset]
-            lastoffset=offset+len(self.delimiter)
-
-            if len(line) > self.MAX_LENGTH:
-                line=self.__buffer[lastoffset:]
-                self.__buffer=''
-                return self.lineLengthExceeded(line)
-            why = self.lineReceived(line)
-            if why or self.transport and self.transport.disconnecting:
-                self.__buffer = self.__buffer[lastoffset:]
-                return why
-        else:
-            if self.paused:
-                self.__buffer=self.__buffer[lastoffset:]
             else:
-                data=self.__buffer[lastoffset:]
+                linelength = len(line)
+                if linelength > self.MAX_LENGTH:
+                    exceeded = line + self.__buffer
+                    self.__buffer = ''
+                    return self.lineLengthExceeded(exceeded)
+                why = self.lineReceived(line)
+                if why or self.transport and self.transport.disconnecting:
+                    return why
+        else:
+            if not self.paused:
+                data=self.__buffer
                 self.__buffer=''
                 if data:
                     return self.rawDataReceived(data)

@@ -41,6 +41,10 @@ class LineTester(basic.LineReceiver):
             self.stopProducing()
         elif line[:4] == 'len ':
             self.length = int(line[4:])
+        elif line.startswith('produce'):
+            self.transport.registerProducer(self, False)
+        elif line.startswith('unproduce'):
+            self.transport.unregisterProducer()
 
     def rawDataReceived(self, data):
         data, rest = data[:self.length], data[self.length:]
@@ -183,7 +187,15 @@ a'''
                 s = self.stop_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.failUnlessEqual(self.stop_output, a.received)
-        
+
+
+    def testLineReceiverAsProducer(self):
+        a = LineTester()
+        t = StringIOWithoutClosing()
+        a.makeConnection(protocol.FileWrapper(t))
+        a.dataReceived('produce\nhello world\nunproduce\ngoodbye\n')
+        self.assertEquals(a.received, ['produce', 'hello world', 'unproduce', 'goodbye'])
+
 
 class LineOnlyReceiverTestCase(unittest.TestCase):
 
