@@ -301,7 +301,19 @@ def _wait(d, timeout=None, running=[]):
 
         if results:
             return results[0]
+        # If the timeout didn't happen, and we didn't get a result or
+        # a failure, then the user probably aborted the test, so let's
+        # just raise KeyboardInterrupt.
 
+        # FIXME: imagine this:
+        # web/test/test_webclient.py:
+        # exc = self.assertRaises(error.Error, unittest.wait, method(url))
+        #
+        # wait() will raise KeyboardInterrupt, and assertRaises will
+        # swallow it. Therefore, wait() raising KeyboardInterrupt is
+        # insufficient to stop trial. A suggested solution is to have
+        # this code set a "stop trial" flag, or otherwise notify trial
+        # that it should really try to stop as soon as possible.
         raise KeyboardInterrupt()
 
     finally:
