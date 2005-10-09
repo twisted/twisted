@@ -1,17 +1,13 @@
 from twisted.trial import unittest
 from twisted.python import util
 from twisted.internet import utils, reactor, interfaces
-import os, re
-
-def getTrialPath():
-    fp = os.path.abspath(unittest.__file__)
-    trialPath = fp.split(os.sep)[:-3] + ['bin', 'trial']
-    return os.path.normpath(os.path.join(fp, os.pardir, os.pardir,
-                                         os.pardir, 'bin', 'trial'))
+import os, re, sys
 
 
 def runTrialWithEnv(env, *args):
-    return utils.getProcessOutput(getTrialPath(), args=args, errortoo=1,
+    params = [ '-c', 'from twisted.scripts.trial import run; run()' ]
+    params.extend(args)
+    return utils.getProcessOutput(sys.executable, args=params, errortoo=1,
                                   env=env)
 
 
@@ -29,12 +25,9 @@ class TestImportErrors(unittest.TestCase):
     debug = False
 
     def _getMockEnvironment(self):
-        path = self._getMockPath()
         env = os.environ.copy()
-        if not env.has_key('PYTHONPATH'):
-            env['PYTHONPATH'] = path
-        else:
-            env['PYTHONPATH'] += os.pathsep + path
+        path = [self._getMockPath()] + sys.path
+        env['PYTHONPATH'] = os.pathsep.join(path)
         return env
 
     def _runTrial(self, env, *args):
@@ -47,7 +40,9 @@ class TestImportErrors(unittest.TestCase):
         return self._runTrial(self._getMockEnvironment(), *args)
 
     def runTrialPure(self, *args):
-        return self._runTrial(os.environ, *args)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        return self._runTrial(env, *args)
 
     def _print(self, stuff):
         print stuff
@@ -59,18 +54,13 @@ class TestImportErrors(unittest.TestCase):
 
     def failUnlessIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        unittest.TestCase.failUnlessSubstring(self, containee, container,
-                                              *args, **kwargs)
+        self.failUnlessSubstring(containee, container, *args, **kwargs)
         return container
 
     def failIfIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        unittest.TestCase.failIfSubstring(self, containee, container,
-                                          *args, **kwargs)
+        self.failIfSubstring(containee, container, *args, **kwargs)
         return container
-
-    def test_trialFound(self):
-        self.failUnless(os.path.isfile(getTrialPath()), getTrialPath())
 
     def test_mockPathCorrect(self):
         # This doesn't test a feature.  This tests that we are accurately finding
