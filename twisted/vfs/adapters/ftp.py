@@ -1,7 +1,7 @@
 import os, time
 from cStringIO import StringIO
 
-from twisted.protocols.ftp import IFTPShell
+from twisted.protocols.ftp import IFTPShell, IReadFile, IWriteFile
 from twisted.internet import defer
 from twisted.internet.interfaces import IConsumer
 from twisted.web2.stream import StreamProducer, IByteStream
@@ -93,15 +93,18 @@ class FileSystemToIFTPShellAdaptor:
         # XXX: stubbed out to always succeed.
         return defer.succeed(None)
 
-    def send(self, path, consumer):
-        node = self.filesystem.fetch(self._makePath(path))
-        return StreamProducer(IByteStream(node)).beginProducing(consumer)
+    def openForReading(self, segs):
+        node = self.filesystem.fetch(self._makePath(segs))
+        frvfs = FTPReadVFS(node)
+        return defer.succeed(frvfs)
 
-    def receive(self, path):
+    def openForWriting(self, segs):
         # XXX: this method is way too ugly
-        dirname, basename = path[:-1], path[-1]
-        f = self.filesystem.fetch(self._makePath(dirname)).createFile(basename)
-        return defer.succeed(IConsumer(f))
+        dirname, basename = segs[:-1], segs[-1]
+        node = self.filesystem.fetch(
+            self._makePath(dirname)).createFile(basename)
+        fwvfs = FTPWriteVFS(node)
+        return defer.succeed(fwvfs)
 
     def stat(self, path, keys=()):
         node = self.filesystem.fetch(self._makePath(path))
@@ -117,6 +120,26 @@ class FileSystemToIFTPShellAdaptor:
             return defer.fail()
         else:
             return defer.succeed(None)
+
+
+class FTPReadVFS(object):
+    implements(IReadFile)
+
+    def __init__(self, node):
+        self.node = node
+
+    def send(self, consumer):
+        return StreamProducer(IByteStream(self.node)).beginProducing(consumer)
+
+
+class FTPWriteVFS(object):
+    implements(IWriteFile)
+
+    def __init__(self, node):
+        self.node = node
+
+    def receive(self, consumer):
+        return defer.succeed(IConsumer(self.node))
 
 
 class _FileToConsumerAdapter:
