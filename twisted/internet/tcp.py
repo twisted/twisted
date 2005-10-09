@@ -695,7 +695,7 @@ class Port(base.BasePort, _SocketCloser):
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
-        if hasattr(socket, "SO_REUSEADDR"):
+        if platformType == "posix" and sys.platform != "cygwin":
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
