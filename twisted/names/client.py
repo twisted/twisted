@@ -24,7 +24,7 @@ import time
 
 # Twisted imports
 from twisted.python.runtime import platform
-from twisted.internet import defer, protocol, interfaces, threads
+from twisted.internet import error, defer, protocol, interfaces, threads
 from twisted.python import log, failure, components
 from twisted.names import dns
 from zope.interface import implements
@@ -290,15 +290,26 @@ class Resolver(common.ResolverBase):
         address = self.pickServer()
         if address is None:
             return defer.fail(IOError('No domain name servers available'))
-        host,port = address
-        from twisted.internet import reactor
+        host, port = address
         d = defer.Deferred()
-        d.setTimeout(timeout or 10)
         controller = AXFRController(name, d)
         factory = DNSClientFactory(controller, timeout)
         factory.noisy = False #stfu
+
+        from twisted.internet import reactor
         connector = reactor.connectTCP(host, port, factory)
+        controller.timeoutCall = reactor.callLater(timeout or 10,
+                                                   self._timeoutZone,
+                                                   d, controller,
+                                                   connector,
+                                                   timeout or 10)
         return d.addCallback(self._cbLookupZone, connector)
+
+    def _timeoutZone(self, d, controller, connector, seconds):
+        connector.disconnect()
+        controller.timeoutCall = None
+        controller.deferred = None
+        d.errback(error.TimeoutError("Zone lookup timed out after %d seconds" % (seconds,)))
 
     def _cbLookupZone(self, result, connector):
         connector.disconnect()
@@ -308,6 +319,8 @@ components.backwardsCompatImplements(Resolver)
 
 
 class AXFRController:
+    timeoutCall = None
+
     def __init__(self, name, deferred):
         self.name = name
         self.deferred = deferred
@@ -336,7 +349,13 @@ class AXFRController:
                 self.soa = self.records[0]
         if len(self.records) > 1 and self.records[-1].type == dns.SOA:
             #print "It's the second SOA! We're done."
-            self.deferred.callback(self.records)
+            if self.timeoutCall is not None:
+                self.timeoutCall.cancel()
+                self.timeoutCall = None
+            if self.deferred is not None:
+                self.deferred.callback(self.records)
+                self.deferred = None
+            
 
 
 from twisted.internet.base import ThreadedResolver as _ThreadedResolverImpl
