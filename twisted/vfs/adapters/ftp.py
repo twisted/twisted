@@ -138,7 +138,7 @@ class FTPWriteVFS(object):
     def __init__(self, node):
         self.node = node
 
-    def receive(self, consumer):
+    def receive(self):
         return defer.succeed(IConsumer(self.node))
 
 

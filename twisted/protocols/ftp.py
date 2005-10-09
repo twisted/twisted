@@ -947,14 +947,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbSent(result):
-            return (TXFR_COMPLETE_OK,)
-
-        def ebSent(err):
-            log.msg("Doh")
-            log.err(err)
-            return (CNX_CLOSED_TXFR_ABORTED,)
-
         # XXX For now, just disable the timeout.  Later we'll want to
         # leave it active and have the DTP connection reset it
         # periodically.
@@ -965,28 +957,43 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.setTimeout(self.factory.timeOut)
             return result
 
+        def cbSent(result):
+            return (TXFR_COMPLETE_OK,)
+
+        def ebSent(err):
+            log.msg("Unexpected error receiving file from client:")
+            log.err(err)
+            return (CNX_CLOSED_TXFR_ABORTED,)
+
         def cbConsumer(cons):
-            # And away she goes
             if not self.binary:
                 cons = ASCIIConsumerWrapper(cons)
-            return self.dtpInstance.registerConsumer(cons)
 
-        def ebTransfering(err):
-            log.msg("Consumer choked on some bytes:")
-            log.err(err)
-            return (REQ_ACTN_ABRTD_LOCAL_ERR,)
+            d = self.dtpInstance.registerConsumer(cons)
+            d.addCallbacks(cbSent, ebSent)
 
-        d = self.shell.receive(newsegs)
-        d.addCallback(cbConsumer)
+            # Tell them what to doooo
+            if self.dtpInstance.isConnected:
+                self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
+            else:
+                self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
+
+            return d
+
+        def cbOpened(file):
+            d = file.receive()
+            d.addCallback(cbConsumer)
+            return d
+
+        def ebOpened(err):
+            if not err.check(PermissionDeniedError, FileNotFoundError, IsNotADirectoryError):
+                log.msg("Unexpected error attempting to open file for upload:")
+                log.err(err)
+            return (FILE_NOT_FOUND, '/'.join(newsegs))
+
+        d = self.shell.openForWriting(newsegs)
+        d.addCallbacks(cbOpened, ebOpened)
         d.addBoth(enableTimeout)
-        d.addCallbacks(cbSent, ebSent)
-        d.addErrback(ebTransfering)
-
-        # Tell them what to doooo
-        if self.dtpInstance.isConnected:
-            self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
-        else:
-            self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
 
         # Pass back Deferred that fires when the transfer is done
         return d
@@ -1318,13 +1325,10 @@ class IReadFile(Interface):
 class IWriteFile(Interface):
     """A file into which bytes may be written.
     """
-    def receive(path):
+    def receive():
         """
-        Create a consumer for the given path.  This method may only be
-        invoked once on each provider.
-
-        @param path: The path, as a list of segments, to save to
-        @type path: C{list} of C{unicode}
+        Create a consumer which will write to this file.  This method may
+        only be invoked once on each provider.
 
         @rtype: C{Deferred} of C{IConsumer}
         """

@@ -13,6 +13,7 @@ from twisted.trial import unittest
 from twisted.protocols.ftp import FTP
 from twisted.cred import portal
 from twisted.python import failure
+from twisted.internet import defer
 
 from twisted.vfs.backends import inmem
 from twisted.vfs import pathutils
@@ -39,6 +40,10 @@ class MockDTP:
         self.bytes += bytes
     def registerConsumer(self, consumer):
         self.consumer = consumer
+        self.whenDone = defer.Deferred()
+        return self.whenDone
+    def finished(self):
+        self.whenDone.callback(None)
     def registerProducer(self, producer, streaming):
         producer.resumeProducing()
     def unregisterProducer(self):
@@ -98,6 +103,7 @@ class FTPAdapterTestCase(unittest.TestCase):
     def testSTOR(self):
         d = self.ftp.ftp_STOR('shazam!.txt')
         self.ftp.dtpInstance.consumer.write('abcdef')
+        self.ftp.dtpInstance.finished()
         self.assertEqual('abcdef',
                          self.root.child('shazam!.txt').data.getvalue())
 
