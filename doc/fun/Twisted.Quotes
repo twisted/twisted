@@ -5407,3 +5407,8 @@ bewildered, then go off to the next corpse
 <`anthony> spiv: but the ellipsis type is useless.
 <spiv> `anthony: Clearly unicode would fix that!
 %
+<glyph> WOOO
+<glyph> What the *crap*, how does this work
+<spiv> glyph: LD_PRELOAD
+<glyph> fuck, why is everything horrible
+%
