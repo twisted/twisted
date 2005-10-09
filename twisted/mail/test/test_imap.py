@@ -225,6 +225,7 @@ class MessageProducerTestCase(unittest.TestCase):
                 '\r\n'
                 + innerBody2
                 + '\r\n--xyz--\r\n')
+        return d.addCallback(cbProduced)
 
 
 class IMAP4HelperTestCase(unittest.TestCase):
