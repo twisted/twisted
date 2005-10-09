@@ -23,6 +23,12 @@ from twisted.python import log
 
 import time
 
+class TestRuntimeError(RuntimeError):
+    pass
+
+class TestValueError(ValueError):
+    pass
+
 class Test(XMLRPC):
 
     FAILURE = 666
@@ -50,11 +56,11 @@ class Test(XMLRPC):
         return defer.succeed(x)
 
     def xmlrpc_deferFail(self):
-        return defer.fail(ValueError())
+        return defer.fail(TestValueError())
 
     # don't add a doc string, it's part of the test
     def xmlrpc_fail(self):
-        raise RuntimeError
+        raise TestRuntimeError
 
     def xmlrpc_fault(self):
         return xmlrpc.Fault(12, "hello")
@@ -109,19 +115,17 @@ class XMLRPCTestCase(unittest.TestCase):
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
     def testErrors(self):
+        dl = []
         for code, methodName in [(666, "fail"), (666, "deferFail"),
                                  (12, "fault"), (23, "noSuchMethod"),
                                  (17, "deferFault"), (42, "SESSION_TEST")]:
-            l = []
-            d = self.proxy().callRemote(methodName).addErrback(l.append)
-            timeout = time.time() + 10
-            while not l and time.time() < timeout:
-                reactor.iterate(0.01)
-            if not l:
-                self.fail("timeout")
-            l[0].trap(xmlrpc.Fault)
-            self.assertEquals(l[0].value.faultCode, code)
-        log.flushErrors(RuntimeError, ValueError)
+            d = self.proxy().callRemote(methodName)
+            d = self.assertFailure(d, xmlrpc.Fault)
+            d.addCallback(lambda exc, code=code: self.assertEquals(exc.faultCode, code))
+            dl.append(d)
+        d = defer.DeferredList(dl, fireOnOneErrback=True)
+        d.addCallback(lambda ign: log.flushErrors(TestRuntimeError, TestValueError))
+        return d
 
 
 class XMLRPCTestCase2(XMLRPCTestCase):
