@@ -115,9 +115,10 @@ class WebClientTestCase(unittest.TestCase):
 
     def testBrokenDownload(self):
         # test what happens when download gets disconnected in the middle
-        exc = self.assertRaises(client.PartialDownloadError, unittest.wait,
-                                client.getPage(self.getURL("broken")))
-        self.assertEquals(exc.response, "abc")
+        d = client.getPage(self.getURL("broken"))
+        d = self.assertFailure(d, client.PartialDownloadError)
+        d.addCallback(lambda exc: self.assertEquals(exc.response, "abc"))
+        return d
     
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise
@@ -132,7 +133,8 @@ class WebClientTestCase(unittest.TestCase):
     def testTimeoutNotTriggering(self):
         # Test that when the timeout doesn't trigger, things work as expected.
         d = client.getPage(self.getURL("wait"), timeout=100)
-        self.assertEquals(unittest.wait(d), "hello!!!")
+        d.addCallback(self.assertEquals, "hello!!!")
+        return d
 
     def testTimeoutTriggering(self):
         # Test that when the timeout does trigger, we get a defer.TimeoutError.
@@ -195,10 +197,14 @@ class WebClientTestCase(unittest.TestCase):
         return ignored
 
     def _downloadTest(self, method):
+        dl = []
         for (url, code) in [("nosuchfile", "404"), ("error", "401"),
                             ("error?showlength=1", "401")]:
-            exc = self.assertRaises(error.Error, unittest.wait, method(url))
-            self.assertEquals(exc.args[0], code)
+            d = method(url)
+            d = self.assertFailure(d, error.Error)
+            d.addCallback(lambda exc, code=code: self.assertEquals(exc.args[0], code))
+            dl.append(d)
+        return defer.DeferredList(dl, fireOnOneErrback=True)
 
     def testServerError(self):
         return self._downloadTest(lambda url: client.getPage(self.getURL(url)))
