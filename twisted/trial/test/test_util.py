@@ -56,11 +56,11 @@ class WaitReentrancyTest(unittest.TestCase):
     def _cbDoWait(self, result):
         self.assertEquals(result, "Beginning")
         d = defer.succeed("End")
-        self.assertEquals(unittest.wait(d), "End")
+        self.assertEquals(util.wait(d), "End")
 
     def testReturnedDeferredThenWait(self):
         d = self._returnedDeferredThenWait()
-        self.assertRaises(util.WaitIsNotReentrantError, unittest.wait, d)
+        self.assertRaises(util.WaitIsNotReentrantError, util.wait, d)
 
     def _reentrantWait(self):
         def threadedOperation(n):
@@ -68,8 +68,8 @@ class WaitReentrancyTest(unittest.TestCase):
             return n
         d1 = threads.deferToThread(threadedOperation, 0.125)
         d2 = threads.deferToThread(threadedOperation, 0.250)
-        d1.addCallback(lambda ignored: unittest.wait(d2))
-        unittest.wait(d1)
+        d1.addCallback(lambda ignored: util.wait(d2))
+        util.wait(d1)
 
     def testReentrantWait(self):
         self.assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
