@@ -19,7 +19,7 @@ site = server.Site(resource.IResource(f))
 internet.TCPServer(8000, site
                    ).setServiceParent(serviceCollection)
 
-internet.SSLServer(443, site, ServerContextFactory()
+internet.SSLServer(443, site, finger.ServerContextFactory()
                    ).setServiceParent(serviceCollection)
 
 i = finger.IIRCClientFactory(f)
