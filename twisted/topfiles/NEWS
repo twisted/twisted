@@ -54,7 +54,7 @@ Deprecations
    of type FirstError instead of a tuple of (Exception, index). It
    supports a firstError[idx] syntax but that is deprecated. Use
    firstError.subFailure and firstError.index instead.
-
+ - whenThreaded now simply calls the passed function synchronously.
 
 2.0.1 (May 9, 2005):
 Minor bug fix release.
