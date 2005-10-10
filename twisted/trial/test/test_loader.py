@@ -1,12 +1,17 @@
 import sys, os
 from twisted.python import util
+from twisted.trial.test import packages
 from twisted.trial import unittest
 from twisted.trial import runner
 
 
 class FinderTest(unittest.TestCase):
     def setUp(self):
+        packages.setUp()
         self.loader = runner.TestLoader()
+
+    def tearDown(self):
+        packages.tearDown()
 
     def test_findPackage(self):
         sample1 = self.loader.findByName('twisted')
@@ -45,7 +50,12 @@ class FinderTest(unittest.TestCase):
         
         
 class FileTest(unittest.TestCase):
-    samplePath = util.sibpath(__file__, 'foo')
+    parent = '_test_loader_FileTest'
+    
+    def setUp(self):
+        self.oldPath = sys.path[:]
+        sys.path.append(self.parent)
+        packages.setUp(self.parent)
 
     def tearDown(self):
         importedModules = ['goodpackage',
@@ -55,6 +65,8 @@ class FileTest(unittest.TestCase):
         for moduleName in importedModules:
             if sys.modules.has_key(moduleName):
                 del sys.modules[moduleName]
+        packages.tearDown(self.parent)
+        sys.path = self.oldPath
 
     def test_notFile(self):
         self.failUnlessRaises(ValueError,
@@ -66,39 +78,33 @@ class FileTest(unittest.TestCase):
         self.failUnlessEqual(sample2, sample1)
 
     def test_moduleNotInPath(self):
-        sample1 = runner.filenameToModule(os.path.join(self.samplePath,
+        sys.path, newPath = self.oldPath, sys.path
+        sample1 = runner.filenameToModule(os.path.join(self.parent,
                                                        'goodpackage',
                                                        'test_sample.py'))
-        sys.path.append(self.samplePath)
+        sys.path = newPath
         from goodpackage import test_sample as sample2
-        try:
-            self.failUnlessEqual(os.path.splitext(sample2.__file__)[0],
-                                 os.path.splitext(sample1.__file__)[0])
-        finally:
-            sys.path.remove(self.samplePath)
+        self.failUnlessEqual(os.path.splitext(sample2.__file__)[0],
+                             os.path.splitext(sample1.__file__)[0])
 
     def test_packageInPath(self):
-        sys.path.append(self.samplePath)
-        try:
-            package1 = runner.filenameToModule(os.path.join(self.samplePath,
-                                                            'goodpackage'))
-            import goodpackage
-            self.failUnlessEqual(goodpackage, package1)
-        finally:
-            sys.path.remove(self.samplePath)
+        package1 = runner.filenameToModule(os.path.join(self.parent,
+                                                        'goodpackage'))
+        import goodpackage
+        self.failUnlessEqual(goodpackage, package1)
 
     def test_packageNotInPath(self):
-        package1 = runner.filenameToModule(os.path.join(self.samplePath,
+        sys.path, newPath = self.oldPath, sys.path
+        package1 = runner.filenameToModule(os.path.join(self.parent,
                                                         'goodpackage'))
-        sys.path.append(self.samplePath)
+        sys.path = newPath
         import goodpackage
-        sys.path.remove(self.samplePath)
         self.failUnlessEqual(os.path.splitext(goodpackage.__file__)[0],
                              os.path.splitext(package1.__file__)[0])
 
     def test_directoryNotPackage(self):
         self.failUnlessRaises(ValueError, runner.filenameToModule,
-                              self.samplePath)
+                              util.sibpath(__file__, 'directory'))
 
     def test_filenameNotPython(self):
         self.failUnlessRaises(ValueError, runner.filenameToModule,
@@ -120,14 +126,17 @@ class LoaderTest(unittest.TestCase):
     ##   * could be a file / directory
     ##   * could be name of a python object
 
-    samplePath = util.sibpath(__file__, 'foo')
+    parent = '_test_loader'
     
     def setUp(self):
         self.loader = runner.TestLoader()
-        sys.path.append(self.samplePath)
+        self.oldPath = sys.path[:]
+        sys.path.append(self.parent)
+        packages.setUp(self.parent)
 
     def tearDown(self):
-        sys.path.remove(self.samplePath)
+        sys.path = self.oldPath
+        packages.tearDown(self.parent)
 
     def test_loadMethod(self):
         import sample

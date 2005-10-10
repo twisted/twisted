@@ -1,2 +1,0 @@
-
-raise ZeroDivisionError("fake error")

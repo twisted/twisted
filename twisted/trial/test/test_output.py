@@ -1,4 +1,5 @@
 from twisted.trial import unittest
+from twisted.trial.test import packages
 from twisted.python import util
 from twisted.internet import utils, reactor, interfaces
 import os, re, sys
@@ -24,11 +25,11 @@ class TestImportErrors(unittest.TestCase):
 
     debug = False
 
-    def _getMockEnvironment(self):
-        env = os.environ.copy()
-        path = [self._getMockPath()] + sys.path
-        env['PYTHONPATH'] = os.pathsep.join(path)
-        return env
+    def setUp(self):
+        packages.setUp()
+
+    def tearDown(self):
+        packages.tearDown()
 
     def _runTrial(self, env, *args):
         d = runTrialWithEnv(env, *args)
@@ -37,9 +38,6 @@ class TestImportErrors(unittest.TestCase):
         return d
         
     def runTrial(self, *args):
-        return self._runTrial(self._getMockEnvironment(), *args)
-
-    def runTrialPure(self, *args):
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         return self._runTrial(env, *args)
@@ -47,10 +45,6 @@ class TestImportErrors(unittest.TestCase):
     def _print(self, stuff):
         print stuff
         return stuff
-
-    def _getMockPath(self):
-        from twisted.trial import test
-        return os.path.normpath(util.sibpath(test.__file__, 'foo'))
 
     def failUnlessIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
@@ -61,14 +55,6 @@ class TestImportErrors(unittest.TestCase):
         # redefined to be useful in callbacks
         self.failIfSubstring(containee, container, *args, **kwargs)
         return container
-
-    def test_mockPathCorrect(self):
-        # This doesn't test a feature.  This tests that we are accurately finding
-        # the directory with all of the mock modules and packages.
-        path = self._getMockPath()
-        self.failUnless(path.endswith('twisted/trial/test/foo'), 
-                        'got path: %r' % path)
-        self.failUnless(os.path.isdir(path))
 
     def test_trialRun(self):
         d = self.runTrial('--help')
@@ -135,6 +121,7 @@ class TestImportErrors(unittest.TestCase):
         return d
 
     def test_recurseImportErrors(self):
+        self.failUnless(os.path.exists('package2/__init__.py'))
         d = self.runTrial('package2')
         d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         d.addCallback(self.failUnlessIn, 'package2')
@@ -145,7 +132,7 @@ class TestImportErrors(unittest.TestCase):
         return d
 
     def test_nonRecurseImportErrors(self):
-        d = self.runTrial('package2')
+        d = self.runTrial('-N', 'package2')
         d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         d.addCallback(self.failUnlessIn, "No module named frotz")
         d.addCallback(self.failIfIn, '<module')
@@ -160,8 +147,8 @@ class TestImportErrors(unittest.TestCase):
         return d
     
     def test_filename(self):
-        path = self._getMockPath()
-        d = self.runTrialPure(os.path.join(path, 'package/test_module.py'))
+        self.failUnless(os.path.exists('package/test_module.py'))
+        d = self.runTrial('package/test_module.py')
         d.addCallback(self.failIfIn, 'IMPORT ERROR')
         d.addCallback(self.failIfIn, 'IOError')
         d.addCallback(self.failUnlessIn, 'OK')
@@ -170,8 +157,7 @@ class TestImportErrors(unittest.TestCase):
 
     def test_dosFile(self):
         ## XXX -- not really an output test, more of a script test
-        path = self._getMockPath()
-        d = self.runTrialPure(os.path.join(path, 'package/test_dos_module.py'))
+        d = self.runTrial('package/test_dos_module.py')
         d.addCallback(self.failIfIn, 'IMPORT ERROR')
         d.addCallback(self.failIfIn, 'IOError')
         d.addCallback(self.failUnlessIn, 'OK')
