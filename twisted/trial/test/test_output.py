@@ -24,12 +24,13 @@ class TestImportErrors(unittest.TestCase):
     ## shell out for this stuff.
 
     debug = False
+    parent = "_testImportErrors"
 
     def setUp(self):
-        packages.setUp()
+        packages.setUp(self.parent)
 
     def tearDown(self):
-        packages.tearDown()
+        packages.tearDown(self.parent)
 
     def _runTrial(self, env, *args):
         d = runTrialWithEnv(env, *args)
@@ -39,9 +40,14 @@ class TestImportErrors(unittest.TestCase):
         
     def runTrial(self, *args):
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        env['PYTHONPATH'] = os.pathsep.join([self.parent] + sys.path)
         return self._runTrial(env, *args)
 
+    def runTrialPure(self, *args):
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        return self._runTrial(env, *args)
+ 
     def _print(self, stuff):
         print stuff
         return stuff
@@ -121,7 +127,6 @@ class TestImportErrors(unittest.TestCase):
         return d
 
     def test_recurseImportErrors(self):
-        self.failUnless(os.path.exists('package2/__init__.py'))
         d = self.runTrial('package2')
         d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
         d.addCallback(self.failUnlessIn, 'package2')
@@ -147,8 +152,8 @@ class TestImportErrors(unittest.TestCase):
         return d
     
     def test_filename(self):
-        self.failUnless(os.path.exists('package/test_module.py'))
-        d = self.runTrial('package/test_module.py')
+        d = self.runTrialPure(os.path.join(self.parent,
+                                           'package', 'test_module.py'))
         d.addCallback(self.failIfIn, 'IMPORT ERROR')
         d.addCallback(self.failIfIn, 'IOError')
         d.addCallback(self.failUnlessIn, 'OK')
@@ -157,7 +162,8 @@ class TestImportErrors(unittest.TestCase):
 
     def test_dosFile(self):
         ## XXX -- not really an output test, more of a script test
-        d = self.runTrial('package/test_dos_module.py')
+        d = self.runTrialPure(os.path.join(self.parent,
+                                           'package', 'test_dos_module.py'))
         d.addCallback(self.failIfIn, 'IMPORT ERROR')
         d.addCallback(self.failIfIn, 'IOError')
         d.addCallback(self.failUnlessIn, 'OK')
