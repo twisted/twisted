@@ -109,7 +109,19 @@ class FileTest(unittest.TestCase):
     def test_filenameNotPython(self):
         self.failUnlessRaises(ValueError, runner.filenameToModule,
                               util.sibpath(__file__, 'notpython.py'))
-    
+
+    def test_filenameMatchesPackage(self):
+        filename = os.path.join(self.parent, 'goodpackage.py') 
+        fd = open(filename, 'w')
+        fd.write(packages.testModule)
+        fd.close()
+        try:
+            module = runner.filenameToModule(filename)
+            self.failUnlessEqual(filename, module.__file__)
+        finally:
+            os.remove(filename)
+    test_filenameMatchesPackage.todo = "issue1266"
+
 
 class LoaderTest(unittest.TestCase):
 
