@@ -305,6 +305,17 @@ def name(thing):
     return thing.id()
 
 
+def isTestCase(obj):
+    try:
+        return ITestCase.implementedBy(obj)
+    except TypeError:
+        return False
+    except AttributeError:
+        # Working around a bug in zope.interface; this isn't the user's fault,
+        # so we won't emit a warning.  Somebody procure a bug number for this
+        # comment, maybe? -glyph
+        return False
+
 class TestLoader(object):
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
@@ -320,12 +331,8 @@ class TestLoader(object):
         """Given a module, return all trial Test classes"""
         classes = []
         for name, val in inspect.getmembers(module):
-            try:
-                if ITestCase.implementedBy(val):
-                    classes.append(val)
-            except TypeError:
-                # val is not a class / type, and therefore not a test class
-                pass
+            if isTestCase(val):
+                classes.append(val)
         return dsu(classes, self.sorter)
 
     def _findTestModules(self, package):
@@ -368,7 +375,7 @@ class TestLoader(object):
     def loadClass(self, klass):
         if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
             raise TypeError("%r is not a class" % (klass,))
-        if not ITestCase.implementedBy(klass):
+        if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
         factory = self.classSuiteFactory
         names = reflect.prefixedMethodNames(klass, self.methodPrefix)
