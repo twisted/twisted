@@ -6,7 +6,7 @@ import os
 import urllib
 
 # Move this to twisted core soonish
-from twisted.internet import process, error, interfaces, fdesc
+from twisted.internet import process, error, interfaces
 from twisted.python import log, failure
 from zope.interface import implements
 
@@ -17,6 +17,8 @@ class StdIOThatDoesntSuckAsBad(object):
     disconnected = False
 
     def __init__(self, proto, stdin=0, stdout=1):
+        import fdesc
+        
         self.protocol = proto
         
         fdesc.setNonBlocking(stdin)
