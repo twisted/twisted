@@ -1,7 +1,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
+import sys, random
 from wxPython.wx import *
 
 from twisted.python import log
@@ -14,7 +14,7 @@ from twisted.internet import reactor, defer
 dc = None
 def helloWorld():
     global dc
-    print "hello, world"
+    print "hello, world (%s)" % (random.randint(0, 9),)
     dc = reactor.callLater(0.1, helloWorld)
 dc = reactor.callLater(0.1, helloWorld)
 
