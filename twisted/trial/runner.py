@@ -311,9 +311,9 @@ def isTestCase(obj):
     except TypeError:
         return False
     except AttributeError:
-        # Working around a bug in zope.interface; this isn't the user's fault,
-        # so we won't emit a warning.  Somebody procure a bug number for this
-        # comment, maybe? -glyph
+        # Working around a bug in zope.interface 3.1.0; this isn't the user's
+        # fault, so we won't emit a warning.
+        # See http://www.zope.org/Collectors/Zope3-dev/470.
         return False
 
 class TestLoader(object):
