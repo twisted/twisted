@@ -17,7 +17,7 @@ class StdIOThatDoesntSuckAsBad(object):
     disconnected = False
 
     def __init__(self, proto, stdin=0, stdout=1):
-        import fdesc, process
+        from twisted.internet import fdesc, process
         
         self.protocol = proto
         
@@ -279,15 +279,5 @@ def startCGI(site):
     """
     StdIOThatDoesntSuckAsBad(CGIChannelRequest(site, os.environ))
     reactor.run()
-
-if __name__ == '__main__':
-    import pdb, signal, sys
-#    from twisted.python import util
-#    sys.settrace(util.spewer)
-    signal.signal(signal.SIGQUIT, lambda *args: pdb.set_trace())
-    
-    from twisted.web2 import demo
-    res = demo.Test()
-    startCGI(server.Site(res))
 
 __all__ = ['startCGI']
