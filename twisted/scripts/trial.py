@@ -14,10 +14,6 @@ from twisted.python.util import spewer
 from twisted.trial import runner, itrial, reporter
 
 
-class PluginError(Exception):
-    pass
-
-
 # Yea, this is stupid.  Leave it for for command-line compatibility for a
 # while, though.
 TBFORMAT_MAP = {
