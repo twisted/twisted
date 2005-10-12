@@ -208,6 +208,15 @@ class TestFindObject(unittest.TestCase):
         sys.path.append('_TestFindObject')
 
     def tearDown(self):
+        importedModules = ['goodpackage',
+                           'goodpackage.test_sample',
+                           'package', 'package2',
+                           'package.test_bad_module',
+                           'package2.test_module',
+                           'sample']
+        for moduleName in importedModules:
+            if sys.modules.has_key(moduleName):
+                del sys.modules[moduleName]
         sys.path = self.oldPath
         packages.tearDown('_TestFindObject')
 
