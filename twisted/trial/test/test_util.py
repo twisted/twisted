@@ -3,8 +3,9 @@ from twisted.python import failure, log
 from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, threads, interfaces
 from twisted.trial import unittest, util, runner
+from twisted.trial.test import packages
 
-import os, time, signal
+import sys, os, time, signal
 
 class UserError(Exception):
     pass
@@ -199,3 +200,49 @@ class TestIntrospection(unittest.TestCase):
         for a, b in zip(parents, expected):
             self.failUnlessEqual(a, b)
                      
+
+class TestFindObject(unittest.TestCase):
+    def setUp(self):
+        packages.setUp('_TestFindObject')
+        self.oldPath = sys.path[:]
+        sys.path.append('_TestFindObject')
+
+    def tearDown(self):
+        sys.path = self.oldPath
+        packages.tearDown('_TestFindObject')
+
+    def test_importPackage(self):
+        package1 = util.findObject('package')
+        import package as package2
+        self.failUnlessEqual(package1, (True, package2))
+
+    def test_importModule(self):
+        test_sample2 = util.findObject('goodpackage.test_sample')
+        from goodpackage import test_sample
+        self.failUnlessEqual((True, test_sample), test_sample2)
+
+    def test_importError(self):
+        self.failUnlessRaises(ZeroDivisionError,
+                              util.findObject, 'package.test_bad_module')
+
+    def test_sophisticatedImportError(self):
+        self.failUnlessRaises(ImportError,
+                              util.findObject, 'package2.test_module')
+
+    def test_importNonexistentPackage(self):
+        self.failUnlessEqual(util.findObject('doesntexist')[0], False)
+
+    def test_findNonexistentModule(self):
+        self.failUnlessEqual(util.findObject('package.doesntexist')[0], False)
+
+    def test_findNonexistentObject(self):
+        self.failUnlessEqual(util.findObject(
+            'goodpackage.test_sample.doesnt')[0], False)
+        self.failUnlessEqual(util.findObject(
+            'goodpackage.test_sample.AlphabetTest.doesntexist')[0], False)
+
+    def test_findObjectExist(self):
+        alpha1 = util.findObject('goodpackage.test_sample.AlphabetTest')
+        from goodpackage import test_sample
+        self.failUnlessEqual(alpha1, (True, test_sample.AlphabetTest))
+        
