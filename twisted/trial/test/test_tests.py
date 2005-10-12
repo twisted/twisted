@@ -575,7 +575,6 @@ class TestTests(unittest.TestCase):
     def checkResults(self, reporter, method):
         tm = method
         self.failUnlessEqual(tm.countTestCases(), 1)
-        self.failUnless(tm.startTime >= 0)
 
         def _hasTbs(meth):
             return not (len(reporter._getFailures(meth))
@@ -602,8 +601,6 @@ class TestTests(unittest.TestCase):
                 self.failUnlessEqual(f.type, defer.TimeoutError)
 
         try:
-            self.failUnless(tm.startTime >= 0.0, "%f not >= 0.0" % (tm.startTime,))
-
             if tm.id().endswith("_pass"):
                 _checkStatus(tm, SUCCESS)
                 self.failIf(tm.getTodo())
@@ -683,8 +680,7 @@ class TestTests(unittest.TestCase):
         from twisted.trial.test.common import BogusReporter
         reporter = BogusReporter()
         suite = runner.TestLoader().loadClass(self.Tests)
-        root = runner.TrialRoot(reporter)
-        root.run(suite)
+        suite.run(reporter)
         for method in suite._tests:
             try:
                 self.checkResults(reporter, method)

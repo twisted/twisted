@@ -40,7 +40,6 @@ class TestCase(pyunit.TestCase, object):
         self._parents = [testMethod, self]
         self._parents.extend(util.getPythonContainers(testMethod))
         self._prepareClassFixture()
-        self.startTime = self.endTime = 0 # XXX - this is a kludge
 
     def _prepareClassFixture(self):
         """Lots of tests assume that test methods all run in the same instance
@@ -83,6 +82,7 @@ class TestCase(pyunit.TestCase, object):
             reporter.addSkip(self, self.getSkip())
             reporter.stopTest(self)
             return
+        passed = False
         try:
             setUp = util.UserMethodWrapper(testCase.setUp,
                                            suppress=self.getSuppress())
@@ -102,28 +102,35 @@ class TestCase(pyunit.TestCase, object):
                                           suppress=self.getSuppress())
             orig.errorHook = lambda x : self._eb(x, reporter)
             try:
-                self.startTime = time.time()
                 orig()
                 if (self.getTodo() is not None
                     and len(orig.errors) == 0):
                     reporter.addUnexpectedSuccess(self, self.getTodo())
+                elif len(orig.errors) == 0:
+                    passed = True
             finally:
-                self.endTime = time.time()
                 um = util.UserMethodWrapper(testCase.tearDown,
                                             suppress=self.getSuppress())
                 try:
                     um()
                 except util.UserMethodError:
+                    passed = False
                     for error in um.errors:
                         self._eb(error, reporter)
                     else:
                         reporter.upDownError(um, warn=False)
+                except:
+                    passed = False
+                    raise
         finally:
             try:
                 janitor.postMethodCleanup()
             except util.MultiError, e:
+                passed = False
                 for f in e.failures:
                     self._eb(f, reporter)
+            if passed:
+                reporter.addSuccess(self)
             reporter.stopTest(self)
             _signalStateMgr.restore()
 
@@ -483,16 +490,10 @@ class TestVisitor(object):
     def visitCase(self, testCase):
         """Visit the testCase testCase."""
 
-    def visitClass(self, testClass):
-        """Visit the TestClassSuite testClass."""
-
-    def visitClassAfter(self, testClass):
-        """Visit the TestClassSuite testClass after its children."""
-
-    def visitModule(self, testModule):
+    def visitSuite(self, testSuite):
         """Visit the TestModuleSuite testModule."""
 
-    def visitModuleAfter(self, testModule):
+    def visitSuiteAfter(self, testSuite):
         """Visit the TestModuleSuite testModule after its children."""
 
     def visitTrial(self, testSuite):

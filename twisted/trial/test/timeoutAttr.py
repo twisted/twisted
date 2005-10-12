@@ -8,7 +8,7 @@ from twisted.trial import unittest
 from twisted.trial.test import common
 from twisted.internet import defer
 
-class TestClassTimeoutAttribute(common.BaseTest, unittest.TestCase):
+class TestClassTimeoutAttribute(common.BaseTest):
     def setUp(self):
         self.d = defer.Deferred()
 

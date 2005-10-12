@@ -16,37 +16,37 @@ class FoolishError(Exception):
     pass
 
 
-class TestFailureInSetUp(BaseTest, unittest.TestCase):
+class TestFailureInSetUp(BaseTest):
     def setUp(self):
         super(TestFailureInSetUp, self).setUp()
         raise FoolishError, "I am a broken setUp method"
 
 
-class TestFailureInTearDown(BaseTest, unittest.TestCase):
+class TestFailureInTearDown(BaseTest):
     def tearDown(self):
         super(TestFailureInTearDown, self).tearDown()
         raise FoolishError, "I am a broken tearDown method"
 
 
-class TestFailureInSetUpClass(BaseTest, unittest.TestCase):
+class TestFailureInSetUpClass(BaseTest):
     def setUpClass(self):
         super(TestFailureInSetUpClass, self).setUpClass()
         raise FoolishError, "I am a broken setUpClass method"
 
 
-class TestFailureInTearDownClass(BaseTest, unittest.TestCase):
+class TestFailureInTearDownClass(BaseTest):
     def tearDownClass(self):
         super(TestFailureInTearDownClass, self).tearDownClass()
         raise FoolishError, "I am a broken setUp method"
 
 
-class TestSkipTestCase(BaseTest, unittest.TestCase):
+class TestSkipTestCase(BaseTest):
     pass
 
 TestSkipTestCase.skip = "skipping this test"
 
 
-class TestSkipTestCase2(BaseTest, unittest.TestCase):
+class TestSkipTestCase2(BaseTest):
     def setUpClass(self):
         raise unittest.SkipTest, "thi stest is fukct"
 
@@ -57,7 +57,7 @@ class TestSkipTestCase2(BaseTest, unittest.TestCase):
 
 HIDDEN_EXCEPTION_MSG = "something blew up"
 
-class DemoTest(BaseTest, unittest.TestCase):
+class DemoTest(BaseTest):
     def setUp(self):
         super(DemoTest, self).setUp()
         self.finished = False
@@ -76,21 +76,21 @@ class DemoTest(BaseTest, unittest.TestCase):
             reactor.iterate(0.1)
         self.failUnless(self.finished)
 
-class ReactorCleanupTests(BaseTest, unittest.TestCase):
+class ReactorCleanupTests(BaseTest):
     def test_leftoverPendingCalls(self):
         self.methodCalled = True
         def _():
             print 'foo!'
         reactor.callLater(10000.0, _)
 
-class SocketOpenTest(BaseTest, unittest.TestCase):
+class SocketOpenTest(BaseTest):
     def test_socketsLeftOpen(self):
         self.methodCalled = True
         f = protocol.Factory()
         f.protocol = protocol.Protocol
         reactor.listenTCP(0, f)
 
-class TimingOutDeferred(BaseTest, unittest.TestCase):
+class TimingOutDeferred(BaseTest):
     def test_alpha(self):
         pass
 

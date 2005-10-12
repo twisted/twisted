@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import sys, os, errno, pdb, shutil, random, gc, warnings, time
+import sys, os, errno, shutil, random, gc, warnings, time
 
 from twisted.internet import defer
 from twisted.application import app
@@ -12,7 +12,6 @@ from twisted.python import usage, reflect, failure, log
 from twisted import plugin
 from twisted.python.util import spewer
 from twisted.trial import runner, itrial, reporter
-from twisted.trial.unittest import TestVisitor
 
 
 class PluginError(Exception):
@@ -364,6 +363,8 @@ def _setUpLogging(config):
 
 
 def _getReporter(config):
+    if getattr(config, '_reporter', None) is not None:
+        return config._reporter
     if config['reporter'] is not None:
         reporterKlass = config['reporter']
     else:
@@ -371,6 +372,7 @@ def _getReporter(config):
     reporter = reporterKlass(tbformat=config['tbformat'],
                              args=config['reporter-args'],
                              realtime=config['rterrors'])
+    config._reporter = reporter
     return reporter
 
 
@@ -419,99 +421,56 @@ def _getLoader(config, reporter):
     return loader
 
 
-def _getDebugger(config):
-    dbg = pdb.Pdb()
-    try:
-        import readline
-    except ImportError:
-        print "readline module not available"
-        hasattr(sys, 'exc_clear') and sys.exc_clear()
-    origdir = config['_origdir']
-    for path in (os.path.join(origdir, '.pdbrc'),
-                 os.path.join(origdir, 'pdbrc')):
-        if os.path.exists(path):
-            try:
-                rcFile = file(path, 'r')
-            except IOError:
-                hasattr(sys, 'exc_clear') and sys.exc_clear()
-            else:
-                dbg.rcLines.extend(rcFile.readlines())
-    return dbg
+def _doProfilingRun(func, *args, **kwargs):
+    if sys.version_info[0:2] != (2, 4):
+        import profile
+        prof = profile.Profile()
+        try:
+            result = prof.runcall(func, *args, **kwargs)
+            prof.dump_stats('profile.data')
+        except SystemExit:
+            pass
+        prof.print_stats()
+        return result
+    else: # use hotshot, profile is broken in 2.4
+        import hotshot.stats
+        pro_file = os.path.join(os.getcwd(), "profile.data")
+        prof = hotshot.Profile(pro_file)
+        try:
+            result = prof.runcall(func, *args, **kwargs)
+            return result
+        finally:
+            stats = hotshot.stats.load(pro_file)
+            stats.strip_dirs()
+            stats.sort_stats('cum')   # 'time'
+            stats.print_stats(100)
 
-def _doDebuggingRun(config, root, suite):
-    _getDebugger(config).runcall(root.run, suite)
 
-def _doProfilingRun(config, root, suite):
-    if config['until-failure']:
-        raise RuntimeError, \
-              "you cannot use both --until-failure and --profile"
-    import profile
-    prof = profile.Profile()
-    try:
-        prof.runcall(root.run, suite)
-        prof.dump_stats('profile.data')
-    except SystemExit:
-        pass
-    prof.print_stats()
-
-def call_until_failure(reporter, f, *args, **kwargs):
+def call_until_failure(f, *args, **kwargs):
     count = 1
     print "Test Pass %d" % count
-    suite = f(*args, **kwargs)
-    while reporter.wasSuccessful():
+    result = f(*args, **kwargs)
+    while result.wasSuccessful():
         count += 1
         print "Test Pass %d" % count
-        f(*args, **kwargs)
-    return suite
-
-
-class DryRunVisitor(TestVisitor):
-
-    def __init__(self, reporter):
-        self.reporter = reporter
-        
-    def visitModule(self, testModuleSuite):
-        orig = testModuleSuite.original
-        self.reporter.startModule(orig)
-
-    def visitModuleAfter(self, testModuleSuite):
-        orig = testModuleSuite.original
-        self.reporter.endModule(orig)
-
-    def visitClass(self, testClassSuite):
-        orig = testClassSuite.original
-        self.reporter.startClass(orig)
-
-    def visitClassAfter(self, testClassSuite):
-        orig = testClassSuite.original
-        self.reporter.endClass(orig)
-
-    def visitCase(self, testCase):
-        self.reporter.startTest(testCase)
-        self.reporter.endTest(testCase)
+        result = f(*args, **kwargs)
+    return result
 
 
 def reallyRun(config):
     reporter = _getReporter(config)
-    suite = _getSuite(config, reporter)
-    root = runner.TrialRoot(reporter)
-    if config['dry-run']:
-        root.setStartTime()
-        suite.visit(DryRunVisitor(root.reporter))
-        root._kickStopRunningStuff()
-    elif config['until-failure']:
-        if config['debug']:
-            _getDebugger(config).runcall(call_until_failure, reporter,
-                                         root.run, suite)
-        else:
-            call_until_failure(reporter, root.run, suite)
-    elif config['debug']:
-        _doDebuggingRun(config, root, suite)
-    elif config['profile']:
-        _doProfilingRun(config, root, suite)
+    my_runner = runner.TrialRunner(config)
+    def do_a_run():
+        suite = _getSuite(config, reporter)
+        return my_runner.run(suite)
+    if config['profile']:
+        call_with = _doProfilingRun
     else:
-        root.run(suite)
-    return root
+        call_with = lambda func, *args, **kwargs: func(*args, **kwargs)
+    if config['until-failure']:
+        return call_with(call_until_failure, do_a_run)
+    else:
+        return call_with(do_a_run)
 
 
 def run():
@@ -523,11 +482,11 @@ def run():
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
     _initialDebugSetup(config)
-    suite = reallyRun(config)
+    test_result = reallyRun(config)
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()
         results.write_results(show_missing=1, summary=False,
                               coverdir=config.coverdir)
-    sys.exit(not suite.reporter.wasSuccessful())
+    sys.exit(not test_result.wasSuccessful())
 

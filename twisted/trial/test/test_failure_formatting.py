@@ -67,13 +67,17 @@ expectTestFailure = ['Running 1 tests.',
                      None,
                      'twisted.trial.unittest.FailTest: %s' % (common.FAILURE_MSG,)]
 
-class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
+class TestFailureFormatting(common.RegistryBaseMixin):
     def setUp(self):
         super(TestFailureFormatting, self).setUp()
         self.loader = runner.TestLoader()
     
     def testFormatErroredMethod(self):
-        self.suite.run(self.loader.loadClass(erroneous.TestFailureInSetUp))
+        # this should be in test_reporter, and should be testing output summaries
+        # not run() side effects. Until then wrap it in TrialSuite which triggers
+        # the output side effects
+        self.run_a_suite(runner.TrialSuite([
+            self.loader.loadClass(erroneous.TestFailureInSetUp)]))
         
         expect = ['Running 1 tests.',
                   re.compile('.*'),
@@ -83,14 +87,17 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
         expect.extend(expectFailureInSetUp)
 
-        self.stringComparison(expect, self.suite.reporter.out.splitlines())
+        self.stringComparison(expect, self.reporter.out.splitlines())
 
     def testFormatFailedMethod(self):
-        self.suite.run(self.loader.loadMethod(
-            common.FailfulTests.testFailure))
+        # this should be in test_reporter, and should be testing output summaries
+        # not run() side effects. Until then wrap it in TrialSuite which triggers
+        # the output side effects
+        self.run_a_suite(runner.TrialSuite([self.loader.loadMethod(
+            common.FailfulTests.testFailure)]))
 
         self.stringComparison(expectTestFailure,
-                                self.suite.reporter.out.splitlines())
+                                self.reporter.out.splitlines())
 
     def testTrimFilename(self):
         self.checkReporterSetup = False
@@ -109,8 +116,12 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
             raise unittest.SkipTest(
                 'doctest support only works in Python 2.3 or later')
         from twisted.trial.test import trialdoctest2
-        self.suite.run(self.loader.loadDoctests(trialdoctest2))
-        output = self.suite.reporter.out.splitlines()
+        # this should be in test_reporter, and should be testing output summaries
+        # not run() side effects. Until then wrap it in TrialSuite which triggers
+        # the output side effects
+        self.run_a_suite(runner.TrialSuite([
+            self.loader.loadDoctests(trialdoctest2)]))
+        output = self.reporter.out.splitlines()
         path = 'twisted.trial.test.trialdoctest2.unexpectedException'
         expect = ['Running 1 tests.',
                   re.compile('.*'),

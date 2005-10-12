@@ -8,7 +8,6 @@ class TrialTest(unittest.TestCase):
         self.output = StringIO.StringIO()
         self.reporter = reporter.Reporter(stream=self.output)
         self.loader = runner.TestLoader()
-        self.root = runner.TrialRoot(self.reporter)
 
 
 class TestInterruptInTest(TrialTest):
@@ -33,12 +32,11 @@ class TestInterruptInTest(TrialTest):
         self.failIf(self.reporter.shouldStop)
         
     def test_interruptInTest(self):
-        self.root.run(self.suite)
+        runner.TrialSuite([self.suite]).run(self.reporter)
         self.failUnless(self.reporter.shouldStop)
         self.failUnlessEqual(2, self.reporter.testsRun)
         self.failIf(TestInterruptInTest.test_03_doNothing_run,
                     "test_03_doNothing ran.")
-
 
 
 class TestInterruptInSetUp(TrialTest):
@@ -70,7 +68,7 @@ class TestInterruptInSetUp(TrialTest):
         self.failIf(self.reporter.shouldStop)
 
     def test_interruptInSetUp(self):
-        self.root.run(self.suite)
+        runner.TrialSuite([self.suite]).run(self.reporter)
         self.failUnless(self.reporter.shouldStop)
         self.failUnlessEqual(2, self.reporter.testsRun)
         self.failIf(TestInterruptInSetUp.test_02_run,
@@ -106,7 +104,7 @@ class TestInterruptInTearDown(TrialTest):
         self.failIf(self.reporter.shouldStop)
 
     def test_interruptInSetUp(self):
-        self.root.run(self.suite)
+        runner.TrialSuite([self.suite]).run(self.reporter)
         self.failUnless(self.reporter.shouldStop)
         self.failUnlessEqual(1, self.reporter.testsRun)
         self.failIf(TestInterruptInTearDown.test_02_run,

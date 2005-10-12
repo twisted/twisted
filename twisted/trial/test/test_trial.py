@@ -105,7 +105,7 @@ class _StdioProxy(pyutil.SubclassableCStringIO):
 
 statdatum = {"foo": "bar", "baz": "spam"}
 
-class TestSkip(common.RegistryBaseMixin, unittest.TestCase):
+class TestSkip(common.RegistryBaseMixin):
     """
     Test that setUp is not run when class is set to skip
     """
@@ -138,15 +138,15 @@ class TestSkip(common.RegistryBaseMixin, unittest.TestCase):
         from twisted import trial
         from twisted.trial.test.common import BogusReporter
 
-        suite = self._getSuite(newSuite=True)
         loader = runner.TestLoader()
-        suite.run(loader.loadClass(SkipperTester))
+        suite = loader.loadClass(SkipperTester)
+        suite.run(BogusReporter())
         self.failIf(SkipperTester.errorStr, SkipperTester.errorStr)
 
 
 allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')
 
-class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
+class FunctionalTest(common.RegistryBaseMixin):
     """
     """
     cpp = None
@@ -163,7 +163,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         sys.stderr = sys.stderr.original
 
     def testBrokenSetUp(self):
-        self.suite.run(self.loader.loadClass(erroneous.TestFailureInSetUp))
+        self.run_a_suite(self.loader.loadClass(erroneous.TestFailureInSetUp))
         imi = self.reporter.udeMethod
         self.assertEqual(imi.name, 'setUp')
         self.assert_(len(self.reporter.errors) > 0)
@@ -171,7 +171,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
                                 erroneous.FoolishError))
 
     def testBrokenTearDown(self):
-        self.suite.run(self.loader.loadClass(erroneous.TestFailureInTearDown))
+        self.run_a_suite(self.loader.loadClass(erroneous.TestFailureInTearDown))
         imi = self.reporter.udeMethod
         self.assertEqual(imi.name, 'tearDown')
         errors = self.reporter.errors
@@ -179,31 +179,34 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
 
     def testBrokenSetUpClass(self):
-        self.suite.run(self.loader.loadClass(
+        self.run_a_suite(self.loader.loadClass(
             erroneous.TestFailureInSetUpClass))
         imi = self.reporter.udeMethod
         self.assertEqual(imi.name, 'setUpClass')
         self.assert_(self.reporter.errors)
 
     def testBrokenTearDownClass(self):
-        self.suite.run(self.loader.loadClass(
+        self.run_a_suite(self.loader.loadClass(
             erroneous.TestFailureInTearDownClass))
         imi = self.reporter.udeMethod
         self.assertEqual(imi.name, 'tearDownClass')
 
     def testHiddenException(self):
-        self.suite.run(self.loader.loadMethod(
-            erroneous.DemoTest.testHiddenException))
+        # this is testing that the error reporter prints the error, it should 
+        # be checked by printErrors or whatnot. Until then we ensure the suite
+        # is wrapped in TrialSuite
+        self.run_a_suite(runner.TrialSuite([self.loader.loadMethod(
+            erroneous.DemoTest.testHiddenException)]))
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, self.reporter.out)
 
     def testLeftoverSockets(self):
-        self.suite.run(self.loader.loadMethod(
+        self.run_a_suite(self.loader.loadMethod(
             erroneous.SocketOpenTest.test_socketsLeftOpen))
         self.assert_(self.reporter.cleanerrs)
         self.assert_(isinstance(self.reporter.cleanerrs[0].value, util.DirtyReactorWarning))
 
     def testLeftoverPendingCalls(self):
-        self.suite.run(self.loader.loadMethod(
+        self.run_a_suite(self.loader.loadMethod(
             erroneous.ReactorCleanupTests.test_leftoverPendingCalls))
         errors = self.reporter.errors
         self.assert_(len(errors) > 0)
@@ -213,17 +216,22 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         origTimeout = util.DEFAULT_TIMEOUT_DURATION
         util.DEFAULT_TIMEOUT_DURATION = 0.1
         try:
-            self.suite.run(self.loader.loadClass(erroneous.TimingOutDeferred))
+            self.run_a_suite(self.loader.loadClass(erroneous.TimingOutDeferred))
         finally:
             util.DEFAULT_TIMEOUT_DURATION = origTimeout 
-        self.assertSubstring("FAILED (errors=1, successes=3)", self.reporter.out)
+        self.assertEqual(0, len(self.reporter.results[FAILURE]))
+        self.assertEqual(1, len(self.reporter.results[ERROR]))
+        self.assertEqual(3, len(self.reporter.results[SUCCESS]))
+        # two places to store stuff. neat.
+        self.assertEqual(1, len(self.reporter.errors))
+        self.assertEqual(0, len(self.reporter.failures))
 
     def testPyUnitSupport(self):
-        self.suite.run(self.loader.loadClass(pyunit.PyUnitTest))
+        self.run_a_suite(self.loader.loadClass(pyunit.PyUnitTest))
 
     def testClassTimeoutAttribute(self):
         """test to make sure that class-attribute timeout works"""
-        self.suite.run(self.loader.loadClass(
+        self.run_a_suite(self.loader.loadClass(
             timeoutAttr.TestClassTimeoutAttribute))
         errors = self.reporter.errors
         self.assert_(len(errors) > 0)
@@ -231,15 +239,22 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
     def testCorrectNumberTestReporting(self):
         """make sure trial reports the correct number of tests run (issue 770)"""
-        self.suite.run(self.loader.loadModule(numOfTests))
+        # this should be in test_reporter, and should be testing output summaries
+        # not run() side effects. Until then wrap it in TrialSuite which triggers
+        # the output side effects
+        self.run_a_suite(runner.TrialSuite([self.loader.loadModule(numOfTests)]))
         self.assertSubstring("Ran 1 tests in", self.reporter.out)
 
 
 class SuppressionTest(unittest.TestCase):
+
+    def run_a_suite(self, suite):
+        from twisted.trial.test.common import BogusReporter
+        suite.run(BogusReporter())
+    
     def setUp(self):
         self.stream = StringIO()
         self._stdout, sys.stdout = sys.stdout, self.stream
-        self.suite = runner.TrialRoot(reporter.Reporter(self.stream))
         self.loader = runner.TestLoader()
 
     def tearDown(self):
@@ -250,28 +265,28 @@ class SuppressionTest(unittest.TestCase):
         return self.stream.getvalue()
 
     def testSuppressMethod(self):
-        self.suite.run(self.loader.loadMethod(
+        self.run_a_suite(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressMethod))
         self.assertNotSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
     def testSuppressClass(self):
-        self.suite.run(self.loader.loadMethod(
+        self.run_a_suite(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressClass))
         self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
         self.assertNotSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
     def testSuppressModule(self):
-        self.suite.run(self.loader.loadMethod(
+        self.run_a_suite(self.loader.loadMethod(
             suppression.TestSuppression2.testSuppressModule))
         self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertNotSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
     def testOverrideSuppressClass(self):
-        self.suite.run(self.loader.loadMethod(
+        self.run_a_suite(self.loader.loadMethod(
             suppression.TestSuppression.testOverrideSuppressClass))
         self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())

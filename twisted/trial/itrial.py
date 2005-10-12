@@ -24,6 +24,8 @@ class IReporter(zi.Interface):
     stream = zi.Attribute("@ivar stream: the io-stream that this reporter will write to")
     tbformat = zi.Attribute("@ivar tbformat: either 'default', 'brief', or 'verbose'")
     args = zi.Attribute("@ivar args: additional string argument passed from the command line")
+    shouldStop = zi.Attribute("@ivar shouldStop: a boolean indicating that"
+                              " this reporter would like the test run to stop.")
 
     def setUpReporter():
         """performs reporter setup. DEPRECATED"""
@@ -60,17 +62,14 @@ class IReporter(zi.Interface):
                       ITestStats
         """
 
-    def startClass(klass):
-        "called at the beginning of each TestCase with the class"
+    def startSuite(name):
+        """suites which wish to appear in reporter output should call this
+        before running their tests"""
 
-    def endClass(klass):
-        "called at the end of each TestCase with the class"
-
-    def startModule(module):
-        "called at the beginning of each module"
-
-    def endModule(module):
-        "called at the end of each module"
+    def endSuite(name):
+        """called at the end of a suite, if and only if that suite has called
+        'startSuite'
+        """
 
     def cleanupErrors(errs):
         """called when the reactor has been left in a 'dirty' state
@@ -88,3 +87,5 @@ class IReporter(zi.Interface):
         @type printStatus: Boolean
         """
 
+    def addSuccess(test):
+        """Record that test passed."""

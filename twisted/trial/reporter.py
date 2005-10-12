@@ -13,6 +13,7 @@ API Stability: Unstable
 from __future__ import generators
 
 import sys, types
+import time
 import warnings
 
 from twisted.python import reflect, failure, log
@@ -89,6 +90,7 @@ class Reporter(object):
         self.results = {}
         for status in STATUSES:
             self.results[status] = []
+        self._timings = []
         super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
     def setUpReporter(self):
@@ -101,6 +103,7 @@ class Reporter(object):
 
     def startTest(self, method):
         self.testsRun += 1
+        self._somethingStarted()
 
     def reportImportError(self, name, exc):
         self.couldNotImport.append((name, exc))
@@ -182,16 +185,10 @@ class Reporter(object):
             self.stream.write(s)
         self.stream.flush()
 
-    def startModule(self, name):
+    def startSuite(self, name):
         pass
 
-    def startClass(self, klass):
-        pass
-
-    def endModule(self, module):
-        pass
-
-    def endClass(self, klass):
+    def endSuite(self, name):
         pass
 
     def emitWarning(self, message, category=UserWarning, stacklevel=0):
@@ -218,6 +215,7 @@ class Reporter(object):
 
     def stopTest(self, method):
         self.results[self.getStatus(method)].append(method)
+        self._somethingStopped()
         if self.realtime:
             for err in self._getErrors(method) + self._getFailures(method):
                 err.printTraceback(self.stream)
@@ -293,21 +291,35 @@ class Reporter(object):
 
     def startTrial(self, count):
         """Inform the user how many tests are being run."""
+        self._somethingStarted()
 
     def endTrial(self, suite):
         self.write("\n")
         self._reportFailures()
         self.write("%s\n" % SEPARATOR)
         self.write('Ran %d tests in %.3fs\n', self.testsRun,
-                   suite.runningTime())
+                   self._somethingStopped())
         self.write('\n')
         self._reportStatus(suite)
+
+    def _somethingStarted(self):
+        """Note that something has started."""
+        self._timings.append(time.time())
+
+    def _somethingStopped(self):
+        """Note that something has finished, and get back its duration.
+        
+        The value is also stored in self._last_time to ease multiple 
+        accesses.
+        """
+        self._last_time = time.time() - self._timings.pop()
+        return self._last_time
 
 
 class MinimalReporter(Reporter):
     def endTrial(self, suite):
         numTests = self.testsRun
-        t = (suite.runningTime(), numTests, numTests,
+        t = (self._somethingStopped(), numTests, numTests,
              len(self.couldNotImport), len(self.results[ERROR]),
              len(self.results[FAILURE]), len(self.results[SKIP]))
         self.stream.write(' '.join(map(str,t))+'\n')
@@ -333,16 +345,17 @@ class VerboseTextReporter(Reporter):
 class TimingTextReporter(Reporter):
     def startTest(self, tm):
         self.write('%s ... ', tm.id())
-        super(VerboseTextReporter, self).startTest(tm)
+        super(TimingTextReporter, self).startTest(tm)
         
     def stopTest(self, method):
-        self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
-                   + "(%.03f secs)\n" % method.runningTime())
         super(TimingTextReporter, self).stopTest(method)
+        self.write("%s" % WORDS.get(self.getStatus(method), "[??]") + " "
+                   + "(%.03f secs)\n" % self._last_time)
 
 
 class TreeReporter(Reporter):
     currentLine = ''
+    indent = '  '
     columns = 79
 
     BLACK = 30
@@ -363,7 +376,7 @@ class TreeReporter(Reporter):
                       ERROR: ('[ERROR]', self.RED),
                       UNEXPECTED_SUCCESS: ('[SUCCESS!?!]', self.RED),
                       SUCCESS: ('[OK]', self.GREEN)}
-        self.seenModules, self.seenClasses = {}, {}
+        self.indentLevel = 0
 
     def _getText(self, status):
         return self.words.get(status, ('[??]', self.BLUE))
@@ -374,22 +387,17 @@ class TreeReporter(Reporter):
         self.currentLine = format
         super(TreeReporter, self).write(self.currentLine)
 
-    def startModule(self, module):
-        modName = module.__name__
-        if modName not in self.seenModules:
-            self.seenModules[modName] = 1
-            self.write('  %s\n' % modName)
+    def startSuite(self, name):
+        self.indentLevel += 1
+        self.write('%s%s\n' % (self.indent * self.indentLevel, name))
 
-    def startClass(self, klass):
-        clsName = klass.__name__
-        qualifiedClsName = reflect.qual(klass)
-        if qualifiedClsName not in self.seenClasses:
-            self.seenClasses[qualifiedClsName] = 1
-            self.write('    %s\n' % clsName)
+    def endSuite(self, name):
+        self.indentLevel -= 1
 
     def startTrial(self, count):
         """Inform the user how many tests are being run."""
         self.write("Running %d tests.\n", count)
+        super(TreeReporter,self).startTrial(count)
 
     def cleanupErrors(self, errs):
         self.write(self.color('    cleanup errors', self.RED))
@@ -403,12 +411,13 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).upDownError(method, warn, printStatus)
         
     def startTest(self, method):
-        self.write('      %s ... ', method.shortDescription())
+        self.write('%s%s ... ' % (self.indent * (self.indentLevel + 1),
+                                  method.shortDescription()))
         super(TreeReporter, self).startTest(method)
 
     def stopTest(self, method):
-        self.endLine(*self._getText(self.getStatus(method)))
         super(TreeReporter, self).stopTest(method)
+        self.endLine(*self._getText(self.getStatus(method)))
 
     def color(self, text, color):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')

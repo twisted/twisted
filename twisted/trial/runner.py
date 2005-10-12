@@ -8,9 +8,8 @@
 # Original Author: Jonathan Lange <jml@twistedmatrix.com>
 
 from __future__ import generators
-
-
-import os, glob, types, warnings, time, sys, inspect, imp
+import pdb
+import os, glob, types, warnings, sys, inspect, imp
 import fnmatch, random, inspect, doctest
 from os.path import join as opj
 
@@ -78,10 +77,24 @@ def _resolveDirectory(fn):
     return fn
 
 
-class TestSuite(pyunit.TestSuite):
-    def visit(self, visitor):
-        for case in self._tests:
+def visit_suite(suite, visitor):
+    for case in suite._tests:
+        visit = getattr(case, 'visit', None)
+        if visit is not None:
             case.visit(visitor)
+        else:
+            if isinstance(case, pyunit.TestCase):
+                case = PyUnitTestCase(case)
+                case.visit(visitor)
+            elif isinstance(case, pyunit.TestSuite):
+                visit_suite(case, visitor)
+            else:
+                # assert kindly
+                case.visit(visitor)
+
+
+class TestSuite(pyunit.TestSuite):
+    visit = visit_suite
 
     def __call__(self, result):
         return self.run(result)
@@ -132,25 +145,7 @@ class PyUnitTestCase(object):
         return getattr(self._test, name)
 
 
-class TrialRoot(object):
-    """This is the main organizing object. The front-end script creates a
-    TrialRoot, handing it a reporter, and then calls run, passing it an
-    already-created TestSuite.
-    """
-
-    def __init__(self, reporter):
-        self.reporter = IReporter(reporter)
-        self.startTime, self.endTime = None, None
-
-    def _kickStopRunningStuff(self):
-        self.endTime = time.time()
-        # hand the reporter the TrialRoot to give it access to all information
-        # from the test run
-        self.reporter.endTrial(self)
-        self._bail()
-
-    def setStartTime(self):
-        self.startTime = time.time()
+class TrialSuite(TestSuite):
 
     def _bail(self):
         from twisted.internet import reactor
@@ -162,57 +157,53 @@ class TrialRoot(object):
             treactor.suggestThreadPoolSize(0)
         util.wait(d) # so that the shutdown event completes
 
-    def _initLogging(self):
-        log.startKeepingErrors()
-
-    def run(self, suite):
-        self._initLogging()
-        self.setStartTime()
-        # this is where the test run starts
-        self.reporter.startTrial(suite.countTestCases())
-        suite.run(self.reporter)
-        self._kickStopRunningStuff()
-        return suite
-
-    def runningTime(self):
-        return self.endTime - self.startTime
+    def run(self, result):
+        try:
+            result.startTrial(self.countTestCases())
+            log.startKeepingErrors()
+            super(TrialSuite, self).run(result)
+        finally:
+            result.endTrial(self)
+            self._bail()
 
 
-class ModuleSuite(TestSuite):
-    def __init__(self, original):
-        TestSuite.__init__(self)
-        self.original = original
+class NamedSuite(object):
+    def __init__(self, name, suite):
+        self._name = name
+        self._suite = suite
+
+    def name(self):
+        return self._name
+
+    def __call__(self, reporter):
+        return self.run(reporter)
+
+    def __getattr__(self, name):
+        return getattr(self._suite, name)
 
     def run(self, reporter):
-        reporter.startModule(self.original)
-        TestSuite.run(self, reporter)
-        reporter.endModule(self.original)
-
+        reporter.startSuite(self.name())
+        self._suite.run(reporter)
+        reporter.endSuite(self.name())
+        
     def visit(self, visitor):
-        """Call visitor,visitModule(self) and visit all child tests."""
-        visitor.visitModule(self)
-        TestSuite.visit(self, visitor)
-        visitor.visitModuleAfter(self)
+        visitor.visitSuite(self)
+        self._suite.visit(visitor)
+        visitor.visitSuiteAfter(self)
 
 
 class ClassSuite(TestSuite):
     """I run L{twisted.trial.unittest.TestCase} instances and provide
-    the correct setUp/tearDownClass methods, method names, and values for
-    'magic attributes'. If this TestCase defines an attribute, it is taken
-    as the value, if not, we search the parent for the appropriate attribute
-    and if we still find nothing, we set our attribute to None
+    the correct setUp/tearDownClass methods.
     """
     methodPrefix = 'test'
 
     def __init__(self, original):
         pyunit.TestSuite.__init__(self)
         self.original = original
-        self._testCase = self.original
         self._signalStateMgr = util.SignalStateManager()
         self._janitor = util._Janitor()
 
-    _module = _tcInstance = None
-    
     def __call__(self, reporter):
         return self.run(reporter)
 
@@ -241,10 +232,8 @@ class ClassSuite(TestSuite):
         janitor = util._Janitor()
         if len(self._tests) == 0:
             return
-        self.startTime = time.time()
         try:
             self._signalStateMgr.save()
-            reporter.startClass(self._testCase)
             # --- setUpClass -----------------------------------------------
             setUpClass = self._setUpClass()
             try:
@@ -289,15 +278,7 @@ class ClassSuite(TestSuite):
             except util.MultiError, e:
                 reporter.cleanupErrors(e.failures)
             self._signalStateMgr.restore()
-            reporter.endClass(self._testCase)
-            self.endTime = time.time()
         
-    def visit(self, visitor):
-        """Call visitor,visitClass(self) and visit all child tests."""
-        visitor.visitClass(self)
-        TestSuite.visit(self, visitor)
-        visitor.visitClassAfter(self)
-
 
 def name(thing):
     if hasattr(thing, '__name__'):
@@ -322,7 +303,6 @@ class TestLoader(object):
 
     def __init__(self):
         self.suiteFactory = TestSuite
-        self.moduleSuiteFactory = ModuleSuite
         self.classSuiteFactory = ClassSuite
         self.sorter = name
         self._importErrors = []
@@ -356,11 +336,11 @@ class TestLoader(object):
     def loadModule(self, module):
         if not isinstance(module, types.ModuleType):
             raise TypeError("%r is not a module" % (module,))
-        suite = self.moduleSuiteFactory(module)
+        suite = self.suiteFactory()
         for testClass in self._findTestClasses(module):
             suite.addTest(self.loadClass(testClass))
         if not hasattr(module, '__doctests__'):
-            return suite
+            return NamedSuite(module.__name__, suite)
         docSuite = self.suiteFactory()
         if sys.version_info[:2] <= (2, 2):
             warnings.warn("trial's doctest support only works with "
@@ -370,7 +350,7 @@ class TestLoader(object):
                 docSuite.addTest(self.loadDoctests(doctest))
         modSuite = self.suiteFactory()
         modSuite.addTests([suite, docSuite])
-        return modSuite
+        return NamedSuite(module.__name__, modSuite)
 
     def loadClass(self, klass):
         if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
@@ -383,14 +363,14 @@ class TestLoader(object):
                     self.sorter)
         suite = factory(klass)
         suite.addTests(tests)
-        return suite
+        return NamedSuite(klass.__name__, suite)
 
     def loadMethod(self, method):
         if not isinstance(method, types.MethodType):
             raise TypeError("%r not a method" % (method,))
         suite = self.classSuiteFactory(method.im_class)
         suite.addTest(method.im_class(method.__name__))
-        return suite
+        return NamedSuite(method.im_class.__name__, suite)
 
     def loadPackage(self, package, recurse=False):
         if not isPackage(package):
@@ -484,3 +464,71 @@ class SafeTestLoader(TestLoader):
             self.addImportError(name, failure.Failure())
             return self.suiteFactory()
         return self.loadAnything(thing, recurse)
+
+
+class DryRunVisitor(unittest.TestVisitor):
+
+    def __init__(self, reporter):
+        self.reporter = reporter
+        
+    def visitSuite(self, testSuite):
+        self.reporter.startSuite(testSuite.name())
+
+    def visitSuiteAfter(self, testSuite):
+        self.reporter.endSuite(testSuite.name())
+
+    def visitCase(self, testCase):
+        self.reporter.startTest(testCase)
+        self.reporter.stopTest(testCase)
+
+
+class TrialRunner(object):
+    """A specialised runner that the trial front end uses."""
+
+    def _getDebugger(self):
+        dbg = pdb.Pdb()
+        try:
+            import readline
+        except ImportError:
+            print "readline module not available"
+            hasattr(sys, 'exc_clear') and sys.exc_clear()
+        origdir = self._config['_origdir']
+        for path in (os.path.join(origdir, '.pdbrc'),
+                     os.path.join(origdir, 'pdbrc')):
+            if os.path.exists(path):
+                try:
+                    rcFile = file(path, 'r')
+                except IOError:
+                    hasattr(sys, 'exc_clear') and sys.exc_clear()
+                else:
+                    dbg.rcLines.extend(rcFile.readlines())
+        return dbg
+    
+    def _getResult(self):
+        return self._config._reporter
+        
+    def __init__(self, config):
+        self._config = config
+        self._root = None
+
+    def run(self, test):
+        """Run the test or suite and return a result object."""
+        # we do not create our reporter here, which is unlike pyunits
+        # textrunner, however, as we have specified the interface 
+        # reporter must honour, its fine.
+        result = self._getResult()
+        # decorate the suite with reactor cleanup and log starting
+        # This should move out of the runner and be presumed to be 
+        # present
+        suite = TrialSuite([test])
+        if self._config['dry-run']:
+            result.startTrial(suite)
+            suite.visit(DryRunVisitor(result))
+            result.endTrial(suite)
+        elif self._config['debug']:
+            # open question - should this be self.debug() instead.
+            debugger = self._getDebugger()
+            debugger.runcall(suite.run, result)
+        else:
+            suite.run(result)
+        return result

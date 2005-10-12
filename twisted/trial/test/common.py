@@ -23,9 +23,11 @@ class FailfulTests(unittest.TestCase):
     def testFailure(self):
         raise unittest.FailTest, FAILURE_MSG
 
-class BaseTest(object):
+class BaseTest(unittest.TestCase):
+
     setUpCalled = tearDownCalled = setUpClassCalled = tearDownClassCalled = False
     methodCalled = False
+
     def setUpClass(self):
         self.setUpClassCalled = True
 
@@ -63,25 +65,17 @@ class BogusReporter(reporter.TreeReporter):
         self.cleanerrs = errs
 
 
-class RegistryBaseMixin(object):
-    _suite = None
+class RegistryBaseMixin(unittest.TestCase):
 
+    def run_a_suite(self, suite):
+        self.reporter = BogusReporter()
+        suite.run(self.reporter)
+    
     def setUpClass(self):
         self.janitor = util._Janitor()
 
     def setUp(self):
         self.reporter = BogusReporter()
-
-    def _getSuite(self, newSuite=False):
-        if self._suite is None or newSuite:
-            self._suite = runner.TrialRoot(self.reporter)
-            self._suite._initLogging = bogus
-            self._suite._setUpSigchldHandler = bogus
-            self._suite._bail = bogus
-        return self._suite
-    def _setSuite(self, val):
-        self._suite = val
-    suite = property(_getSuite, _setSuite)
 
     def tearDown(self):
         self._suite = None

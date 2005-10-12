@@ -1,7 +1,6 @@
 
 QUICK THOUGHTS
 
-Make TrialRoot a suite, documented as only ever being used at the top-level
 Create a TestRunner object.  Give it run, debug, profile and callUntilFailure
   methods -- each of which accepts a suite
 Design it to be subclassable.  Subclasses are different kinds of "Reporters"
@@ -9,6 +8,11 @@ Extract a TestResult object out.  Make it inherit from pyunit.TestResult
 Make startModule/startClass -> startSuite
 Probably have an adapter from pyunit.TestResult to our TestResult
   (for skip, todo, startSuite etc)
+TrialRoot is gone, its now TrialResult. This result will implement the 
+truely test related apis, and pass them through to the reporter, which
+is the instance users can supply. TrialRoot functionality is moving 
+onto TrialRunner, which coordinates test runs. There is also a 
+ReactorSuite, which does not return from run until the reactor is clean.
 
 
 This will give us:
