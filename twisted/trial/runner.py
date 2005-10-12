@@ -161,7 +161,7 @@ class TrialSuite(TestSuite):
         try:
             result.startTrial(self.countTestCases())
             log.startKeepingErrors()
-            super(TrialSuite, self).run(result)
+            TestSuite.run(self, result)
         finally:
             result.endTrial(self)
             self._bail()
