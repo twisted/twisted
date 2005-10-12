@@ -188,13 +188,13 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(self.config, my_runner._config)
 
     def test_runner_can_get_reporter(self):
-        self.config.parseOptions()
+        self.config.parseOptions([])
         reporter = trial._getReporter(self.config)
         my_runner = runner.TrialRunner(self.config)
         self.assertEqual(reporter, my_runner._getResult())
 
     def test_runner_get_result(self):
-        self.config.parseOptions()
+        self.config.parseOptions([])
         trial._getReporter(self.config)
         my_runner = runner.TrialRunner(self.config)
         result = my_runner._getResult()
