@@ -65,107 +65,86 @@ class DomishTestCase(unittest.TestCase):
         self.assertEquals(e.hasAttribute("attrib2"), 0)
         self.assertEquals(e[("testns2", "attrib2")], "value2")
 
-xml1 = """<stream:stream xmlns:stream='etherx' xmlns='jabber'>
-             <message to='bar'><x xmlns='xdelay'>some&amp;data&gt;</x></message>
-          </stream:stream>"""
-query1_root = xpath.internQuery("/stream[@xmlns='etherx']")    
-query1_elem1 = xpath.internQuery("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
-
-xml2 = """<stream>
-             <error xmlns='etherx'/>
-          </stream>"""
-query2_root = xpath.internQuery("/stream[not(@xmlns)]")    
-query2_elem1 = xpath.internQuery("/error[@xmlns='etherx']")
-
-xml3 = """<stream:stream xmlns:stream='etherx'>
-             <error/>
-      </stream:stream>"""
-query3_root = xpath.internQuery("/stream[@xmlns='etherx']")    
-query3_elem1 = xpath.internQuery("/error[not(@xmlns)]")
-
-class DomishStreamTestCase(unittest.TestCase):    
+class DomishStreamTests:
     def setUp(self):
         self.doc_started = False
         self.packet_count = 0
         self.doc_ended = False
+        self.stream = self.streamClass()
+        self.stream.DocumentStartEvent = self._docStarted
+        self.stream.ElementEvent = self._elementMatched
+        self.stream.DocumentEndEvent = self._docEnded
 
     def _docStarted(self, root):
         self.doc_started = True
-        assert self.match_list.pop(0).matches(root)
+        assert self.match_root.matches(root)
 
     def _elementMatched(self, elem):
         self.packet_count = self.packet_count + 1
-        assert self.match_list.pop(0).matches(elem)
+        assert self.match_elem.matches(elem)
 
     def _docEnded(self):
         self.doc_ended = True
 
-    def setupStream(self, stream, matches):
-        self.stream = stream
-        self.stream.DocumentStartEvent = self._docStarted
-        self.stream.ElementEvent = self._elementMatched
-        self.stream.DocumentEndEvent = self._docEnded
-        self.match_list = matches
-    
-    def testSuxStream(self):
-        if domish.SuxElementStream is None:
-            raise unittest.SkipTest, "Skipping SuxElementStream test, since twisted.web is not available."
-        # Setup the stream
-        self.setupStream(domish.SuxElementStream(),
-                         [query1_root, query1_elem1])
-
-        # Run the test
-        self.stream.parse(xml1)
-
-        # Check result vars
+    def doTest(self, xml):
+        self.stream.parse(xml)
         self.assertEquals(self.doc_started, True)
         self.assertEquals(self.packet_count, 1)
         self.assertEquals(self.doc_ended, True)
+
+    def testBasic(self):
+        xml = "<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n" + \
+              "  <message to='bar'>" + \
+              "    <x xmlns='xdelay'>some&amp;data&gt;</x>" + \
+              "  </message>" + \
+              "</stream:stream>"
+
+        self.match_root = xpath.internQuery("/stream[@xmlns='etherx']")
+        self.match_elem = xpath.internQuery("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
+
+        self.doTest(xml)
+
+    def testNoRootNS(self):
+        xml = "<stream><error xmlns='etherx'/></stream>"
+
+        self.match_root = xpath.internQuery("/stream[not(@xmlns)]")    
+        self.match_elem = xpath.internQuery("/error[@xmlns='etherx']")
         
-        # Setup the 2nd stream
-        self.setupStream(domish.ExpatElementStream(),
-                 [query2_root, query2_elem1])
+        self.doTest(xml)
 
-        # Run the test
-        self.stream.parse(xml2)
+    def testNoDefaultNS(self):
+        xml = "<stream:stream xmlns:stream='etherx'><error/></stream:stream>"""
+        self.match_root = xpath.internQuery("/stream[@xmlns='etherx']")    
+        self.match_elem = xpath.internQuery("/error[not(@xmlns)]")
+        
+        self.doTest(xml)
 
-        # Setup the 3nd stream
-        self.setupStream(domish.ExpatElementStream(),
-                 [query3_root, query3_elem1])
+    def testUnclosedElement(self):
+        self.match_root = xpath.internQuery("/root")    
+        self.assertRaises(domish.ParserError, self.stream.parse, 
+                                              "<root><error></root>")
 
-        # Run the test
-        self.stream.parse(xml3)
+class DomishExpatStreamTestCase(unittest.TestCase, DomishStreamTests):
+    def setUp(self):
+        DomishStreamTests.setUp(self)
 
-    def testExpatStream(self):
+    def setUpClass(self):
         try: 
-            # Setup the stream
-            self.setupStream(domish.ExpatElementStream(),
-                             [query1_root, query1_elem1])
-
-            # Run the test
-            self.stream.parse(xml1)
-
-            # Check result vars
-            self.assertEquals(self.doc_started, True)
-            self.assertEquals(self.packet_count, 1)
-            self.assertEquals(self.doc_ended, True)
-
-            # Setup the 2nd stream
-            self.setupStream(domish.ExpatElementStream(),
-                             [query2_root, query2_elem1])
-
-            # Run the test
-            self.stream.parse(xml2)
-
-            # Setup the 3nd stream
-            self.setupStream(domish.ExpatElementStream(),
-                     [query3_root, query3_elem1])
-
-            # Run the test
-            self.stream.parse(xml3)
-
+            import pyexpat
         except ImportError:
             raise unittest.SkipTest, "Skipping ExpatElementStream test, since no expat wrapper is available."
+
+        self.streamClass = domish.ExpatElementStream
+
+class DomishSuxStreamTestCase(unittest.TestCase, DomishStreamTests):
+    def setUp(self):
+        DomishStreamTests.setUp(self)
+
+    def setUpClass(self):
+        if domish.SuxElementStream is None:
+            raise unittest.SkipTest, "Skipping SuxElementStream test, since twisted.web is not available."
+
+        self.streamClass = domish.SuxElementStream
 
 class SerializerTests:
     def testSerialization(self):

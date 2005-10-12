@@ -357,7 +357,13 @@ else:
             self.documentStarted = False
             self.defaultNsStack = []
             self.prefixStack = []
-            self.parse = self.dataReceived
+
+        def parse(self, buffer):
+            try:
+                self.dataReceived(buffer)
+            except sux.ParseError, e:
+                raise ParserError, str(e)
+
 
         def findUri(self, prefix):
             # Walk prefix stack backwards, looking for the uri
@@ -502,6 +508,7 @@ class ExpatElementStream:
         self.DocumentStartEvent = None
         self.ElementEvent = None
         self.DocumentEndEvent = None
+        self.error = pyexpat.error
         self.parser = pyexpat.ParserCreate("UTF-8", " ")
         self.parser.StartElementHandler = self._onStartElement
         self.parser.EndElementHandler = self._onEndElement
@@ -513,7 +520,10 @@ class ExpatElementStream:
         self.documentStarted = 0        
 
     def parse(self, buffer):
-        self.parser.Parse(buffer)
+        try:
+            self.parser.Parse(buffer)
+        except self.error, e:
+            raise ParserError, str(e)
 
     def _onStartElement(self, name, attrs):
         # Generate a qname tuple from the provided name
