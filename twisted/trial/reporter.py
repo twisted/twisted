@@ -291,6 +291,7 @@ class Reporter(object):
 
     def startTrial(self, count):
         """Inform the user how many tests are being run."""
+        self.write("Running %d tests.\n", count)
         self._somethingStarted()
 
     def endTrial(self, suite):
@@ -393,11 +394,6 @@ class TreeReporter(Reporter):
 
     def endSuite(self, name):
         self.indentLevel -= 1
-
-    def startTrial(self, count):
-        """Inform the user how many tests are being run."""
-        self.write("Running %d tests.\n", count)
-        super(TreeReporter,self).startTrial(count)
 
     def cleanupErrors(self, errs):
         self.write(self.color('    cleanup errors', self.RED))
