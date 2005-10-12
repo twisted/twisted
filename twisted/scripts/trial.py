@@ -442,7 +442,7 @@ def _doProfilingRun(func, *args, **kwargs):
             stats.print_stats(100)
 
 
-def call_until_failure(f, *args, **kwargs):
+def callUntilFailure(f, *args, **kwargs):
     count = 1
     print "Test Pass %d" % count
     result = f(*args, **kwargs)
@@ -464,7 +464,7 @@ def reallyRun(config):
     else:
         call_with = lambda func, *args, **kwargs: func(*args, **kwargs)
     if config['until-failure']:
-        return call_with(call_until_failure, do_a_run)
+        return call_with(callUntilFailure, do_a_run)
     else:
         return call_with(do_a_run)
 
