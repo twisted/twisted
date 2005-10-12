@@ -63,12 +63,14 @@ class TestModuleTest(unittest.TestCase):
             raise unittest.SkipTest("This test runs an external process. "
                                     "This reactor doesn't support it.")
         import test_output, os
-        d = test_output.runTrialWithEnv(os.environ, '--testmodule',
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        d = test_output.runTrialWithEnv(env, '--testmodule',
                                         sibpath('moduletest.py'))
         d.addCallback(lambda x : self.assertSubstring(
             'twisted.trial.test.test_test_visitor', x))
         return d
-                             
+        
     def test_parseLocalVariable(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_trial -*-'
         localVars = trial._parseLocalVariables(declaration)
