@@ -46,11 +46,16 @@ def filenameToModule(fn):
     if not os.path.exists(fn):
         raise ValueError("%r doesn't exist" % (fn,))
     try:
-        return reflect.namedAny(reflect.filenameToModuleName(fn))
+        ret = reflect.namedAny(reflect.filenameToModuleName(fn))
     except (ValueError, AttributeError):
         # Couldn't find module.  The file 'fn' is not in PYTHONPATH
-        pass
-    return _importFromFile(fn)
+        return _importFromFile(fn)
+    # ensure that the loaded module matches the file
+    retFile = os.path.splitext(ret.__file__)[0] + '.py'
+    if os.path.isfile(fn) and not os.path.samefile(fn, retFile):
+        del sys.modules[ret.__name__]
+        ret = _importFromFile(fn)
+    return ret
 
 
 def _importFromFile(fn, moduleName=None):

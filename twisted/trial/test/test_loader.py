@@ -122,7 +122,6 @@ class FileTest(unittest.TestCase):
             self.failUnlessEqual(filename, module.__file__)
         finally:
             os.remove(filename)
-    test_filenameMatchesPackage.todo = "issue1266"
 
 
 class LoaderTest(unittest.TestCase):
