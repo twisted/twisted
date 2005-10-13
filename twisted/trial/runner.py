@@ -42,6 +42,10 @@ def isPackageDirectory(dirname):
     return False
 
 
+def samefile(filename1, filename2):
+    # hacky implementation of os.path.samefile
+    return os.path.abspath(filename1) == os.path.abspath(filename2)
+
 def filenameToModule(fn):
     if not os.path.exists(fn):
         raise ValueError("%r doesn't exist" % (fn,))
@@ -52,10 +56,9 @@ def filenameToModule(fn):
         return _importFromFile(fn)
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + '.py'
-    # not all platforms (e.g. win32) have os.path.samefile.  We just fallback to
-    # simple equality on those platforms.
-    samefile = getattr(os.path, 'samefile', lambda x, y: x == y)
-    if os.path.isfile(fn) and not samefile(fn, retFile):
+    # not all platforms (e.g. win32) have os.path.samefile
+    same = getattr(os.path, 'samefile', samefile)
+    if os.path.isfile(fn) and not same(fn, retFile):
         del sys.modules[ret.__name__]
         ret = _importFromFile(fn)
     return ret
