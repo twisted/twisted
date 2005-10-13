@@ -1,8 +1,9 @@
-from twisted.trial import unittest
+from twisted.scripts import trial
+from twisted.trial import unittest, runner
 from twisted.trial.test import packages
 from twisted.python import util
-from twisted.internet import utils, reactor, interfaces
-import os, re, sys
+from twisted.internet import utils, reactor, interfaces, defer
+import os, re, sys, StringIO
 
 
 def runTrialWithEnv(env, *args):
@@ -28,25 +29,39 @@ class TestImportErrors(unittest.TestCase):
 
     def setUp(self):
         packages.setUp(self.parent)
-
+ 
     def tearDown(self):
+        for moduleName in ['package.test_import_module', 'package.test_module',
+                           'package.test_bad_module', 'package.frotz',
+                           'package', 'badpackage.test_module', 'badpackage']:
+            try:
+                del sys.modules[moduleName]
+            except KeyError:
+                pass
         packages.tearDown(self.parent)
 
-    def _runTrial(self, env, *args):
-        d = runTrialWithEnv(env, *args)
-        if self.debug:
-            d.addCallback(self._print)
-        return d
+    def _runTrial(self, *args):
+        config = trial.Options()
+        config.parseOptions(args)
+        os.chdir(config['_origdir'])
+        reporter = trial._getReporter(config)
+        output = StringIO.StringIO()
+        reporter.stream = output
+        suite = trial._getSuite(config, reporter)
+        myRunner = runner.TrialRunner(config)
+        result = myRunner.run(suite)
+        return output.getvalue()
         
     def runTrial(self, *args):
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join([self.parent] + sys.path)
-        return self._runTrial(env, *args)
+        oldPath = sys.path[:]
+        sys.path.append(self.parent)
+        try:
+            return self._runTrial(*args)
+        finally:
+            sys.path = oldPath
 
     def runTrialPure(self, *args):
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        return self._runTrial(env, *args)
+        return self._runTrial(*args)
  
     def _print(self, stuff):
         print stuff
@@ -63,109 +78,107 @@ class TestImportErrors(unittest.TestCase):
         return container
 
     def test_trialRun(self):
-        d = self.runTrial('--help')
-        d.addCallback(self.failUnless, 'trial')
-        return d
+        self.runTrial()
 
     def test_nonexistentModule(self):
         d = self.runTrial('twisted.doesntexist')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'twisted.doesntexist')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'twisted.doesntexist')
         return d
 
     def test_nonexistentPackage(self):
         d = self.runTrial('doesntexist')
-        d.addCallback(self.failUnlessIn, 'doesntexist')
-        d.addCallback(self.failUnlessIn, 'ValueError')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'doesntexist')
+        self.failUnlessIn(d, 'ValueError')
+        self.failUnlessIn(d, 'IMPORT ERROR')
         return d
 
     def test_nonexistentPackageWithModule(self):
         d = self.runTrial('doesntexist.barney')
-        d.addCallback(self.failUnlessIn, 'doesntexist.barney')
-        d.addCallback(self.failUnlessIn, 'ValueError')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'doesntexist.barney')
+        self.failUnlessIn(d, 'ValueError')
+        self.failUnlessIn(d, 'IMPORT ERROR')
         return d
 
     def test_badpackage(self):
         d = self.runTrial('badpackage')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'badpackage')
-        d.addCallback(self.failIfIn, 'IOError')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'badpackage')
+        self.failIfIn(d, 'IOError')
         return d
 
     def test_moduleInBadpackage(self):
         d = self.runTrial('badpackage.test_module')
-        d.addCallback(self.failUnlessIn, "IMPORT ERROR")
-        d.addCallback(self.failUnlessIn, "badpackage.test_module")
-        d.addCallback(self.failIfIn, 'IOError')
+        self.failUnlessIn(d, "IMPORT ERROR")
+        self.failUnlessIn(d, "badpackage.test_module")
+        self.failIfIn(d, 'IOError')
         return d
 
     def test_badmodule(self):
         d = self.runTrial('package.test_bad_module')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'package.test_bad_module')
-        d.addCallback(self.failIfIn, 'IOError')
-        d.addCallback(self.failIfIn, '<module')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'package.test_bad_module')
+        self.failIfIn(d, 'IOError')
+        self.failIfIn(d, '<module')
         return d
 
     def test_badimport(self):
         d = self.runTrial('package.test_import_module')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'package.test_import_module')
-        d.addCallback(self.failIfIn, 'IOError')
-        d.addCallback(self.failIfIn, '<module')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'package.test_import_module')
+        self.failIfIn(d, 'IOError')
+        self.failIfIn(d, '<module')
         return d
 
     def test_recurseImport(self):
         d = self.runTrial('package')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'test_bad_module')
-        d.addCallback(self.failUnlessIn, 'test_import_module')
-        d.addCallback(self.failIfIn, '<module')
-        d.addCallback(self.failIfIn, 'IOError')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'test_bad_module')
+        self.failUnlessIn(d, 'test_import_module')
+        self.failIfIn(d, '<module')
+        self.failIfIn(d, 'IOError')
         return d
 
     def test_recurseImportErrors(self):
         d = self.runTrial('package2')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, 'package2')
-        d.addCallback(self.failUnlessIn, 'test_module')
-        d.addCallback(self.failUnlessIn, "No module named frotz")
-        d.addCallback(self.failIfIn, '<module')
-        d.addCallback(self.failIfIn, 'IOError')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, 'package2')
+        self.failUnlessIn(d, 'test_module')
+        self.failUnlessIn(d, "No module named frotz")
+        self.failIfIn(d, '<module')
+        self.failIfIn(d, 'IOError')
         return d
 
     def test_nonRecurseImportErrors(self):
         d = self.runTrial('-N', 'package2')
-        d.addCallback(self.failUnlessIn, 'IMPORT ERROR')
-        d.addCallback(self.failUnlessIn, "No module named frotz")
-        d.addCallback(self.failIfIn, '<module')
+        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, "No module named frotz")
+        self.failIfIn(d, '<module')
         return d
 
     def test_regularRun(self):
         d = self.runTrial('package.test_module')
-        d.addCallback(self.failIfIn, 'IMPORT ERROR')
-        d.addCallback(self.failIfIn, 'IOError')
-        d.addCallback(self.failUnlessIn, 'OK')
-        d.addCallback(self.failUnlessIn, 'PASSED (successes=1)')
+        self.failIfIn(d, 'IMPORT ERROR')
+        self.failIfIn(d, 'IOError')
+        self.failUnlessIn(d, 'OK')
+        self.failUnlessIn(d, 'PASSED (successes=1)')
         return d
     
     def test_filename(self):
         d = self.runTrialPure(os.path.join(self.parent,
                                            'package', 'test_module.py'))
-        d.addCallback(self.failIfIn, 'IMPORT ERROR')
-        d.addCallback(self.failIfIn, 'IOError')
-        d.addCallback(self.failUnlessIn, 'OK')
-        d.addCallback(self.failUnlessIn, 'PASSED (successes=1)')
+        self.failIfIn(d, 'IMPORT ERROR')
+        self.failIfIn(d, 'IOError')
+        self.failUnlessIn(d, 'OK')
+        self.failUnlessIn(d, 'PASSED (successes=1)')
         return d
 
     def test_dosFile(self):
         ## XXX -- not really an output test, more of a script test
         d = self.runTrialPure(os.path.join(self.parent,
                                            'package', 'test_dos_module.py'))
-        d.addCallback(self.failIfIn, 'IMPORT ERROR')
-        d.addCallback(self.failIfIn, 'IOError')
-        d.addCallback(self.failUnlessIn, 'OK')
-        d.addCallback(self.failUnlessIn, 'PASSED (successes=1)')
+        self.failIfIn(d, 'IMPORT ERROR')
+        self.failIfIn(d, 'IOError')
+        self.failUnlessIn(d, 'OK')
+        self.failUnlessIn(d, 'PASSED (successes=1)')
         return d
