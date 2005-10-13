@@ -52,7 +52,10 @@ def filenameToModule(fn):
         return _importFromFile(fn)
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + '.py'
-    if os.path.isfile(fn) and not os.path.samefile(fn, retFile):
+    # not all platforms (e.g. win32) have os.path.samefile.  We just fallback to
+    # simple equality on those platforms.
+    samefile = getattr(os.path, 'samefile', lambda x, y: x == y)
+    if os.path.isfile(fn) and not samefile(fn, retFile):
         del sys.modules[ret.__name__]
         ret = _importFromFile(fn)
     return ret
