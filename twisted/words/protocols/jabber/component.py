@@ -6,8 +6,8 @@
 
 from zope.interface import implements
 
-from twisted.xish import domish, xpath, utility, xmlstream
-from twisted.words.protocols.jabber import jstrports
+from twisted.xish import domish, xpath, utility
+from twisted.words.protocols.jabber import jstrports, xmlstream
 
 def componentFactory(componentid, password):
     a = ConnectComponentAuthenticator(componentid, password)
@@ -32,10 +32,11 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
         @type password: L{str}
         @param password: Password/secret this component uses to authenticate.
         """
+        # Note that we are sending 'to' our desired component JID.
         xmlstream.ConnectAuthenticator.__init__(self, componentjid)
         self.password = password
 
-    def streamStarted(self, rootelem):
+    def streamStarted(self):
         # Create handshake
         hs = domish.Element(("jabber:component:accept", "handshake"))
         hs.addContent(xmlstream.hashPassword(self.xmlstream.sid, self.password))
@@ -45,6 +46,9 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
         self.xmlstream.send(hs)
 
     def _handshakeEvent(self, elem):
+        # we have successfully shaken hands and can now consider this
+        # entity to represent the component JID.
+        self.xmlstream.thisHost = self.xmlstream.otherHost
         self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
 
 class ListenComponentAuthenticator(xmlstream.Authenticator):

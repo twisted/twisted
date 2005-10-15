@@ -8,7 +8,7 @@ from twisted.trial import unittest
 
 from twisted.words.protocols.jabber.component import ConnectComponentAuthenticator
 from twisted.words.protocols import jabber
-from twisted.xish import xmlstream
+from twisted.words.protocols.jabber import xmlstream
 
 class ComponentAuthTest(unittest.TestCase):
     def authPassed(self, stream):

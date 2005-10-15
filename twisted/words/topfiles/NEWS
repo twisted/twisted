@@ -1,3 +1,10 @@
+x.x.x:
+
+ - Fix digest authentication in Jabber
+ - Add Jabber xmlstream module that contains the Jabber specific bits that
+   got factored out of Twisted Xish's xmlstream, and make it suitable for
+   implementing full XMPP support.
+
 0.1.0:
  - Fix some miscellaneous bugs in OSCAR
  - Add QUIT notification for IRC

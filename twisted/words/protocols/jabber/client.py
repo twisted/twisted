@@ -4,7 +4,8 @@
 # See LICENSE for details.
 
 
-from twisted.xish import domish, xpath, utility, xmlstream
+from twisted.xish import domish, xpath, utility
+from twisted.words.protocols.jabber import xmlstream
 
 DigestAuthQry = xpath.internQuery("/iq/query/digest")
 PlaintextAuthQry = xpath.internQuery("/iq/query/password")
@@ -99,7 +100,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         self.jid = jid
         self.password = password
 
-    def streamStarted(self, rootelem):
+    def streamStarted(self):
         # Send request for auth fields
         iq = IQ(self.xmlstream, "get")
         iq.addElement(("jabber:iq:auth", "query"))

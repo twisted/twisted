@@ -3,6 +3,18 @@
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+""" XML Stream processing.
+
+An XML Stream is defined as a connection over which two XML documents are
+exchanged during the lifetime of the connection, one for each direction. The
+unit of interaction is a direct child element of the root element (stanza).
+
+The most prominent use of XML Streams is Jabber, but this module is generically
+usable. See Twisted Words for Jabber specific protocol support.
+
+Maintainer: U{Ralph Meijer<mailto:twisted@ralphm.ik.nu>)
+"""
+
 from twisted.internet import protocol
 from twisted.xish import domish, utility
 
@@ -10,136 +22,53 @@ STREAM_CONNECTED_EVENT = intern("//event/stream/connected")
 STREAM_START_EVENT = intern("//event/stream/start")
 STREAM_END_EVENT = intern("//event/stream/end")
 STREAM_ERROR_EVENT = intern("//event/stream/error")
-STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 RAWDATA_IN_EVENT = intern("//event/rawdata/in")
 RAWDATA_OUT_EVENT = intern("//event/rawdata/out")
 
-def hashPassword(sid, password):
-    """Create a SHA1-digest string of a session identifier and password """
-    import sha
-    return sha.new("%s%s" % (sid, password)).hexdigest()
-
-class Authenticator:
-    """ Base class for business logic of authenticating an XmlStream
-
-    Subclass this object to enable an XmlStream to authenticate to different
-    types of stream hosts (such as clients, components, etc.).
-
-    Rules:
-      1. The Authenticator MUST dispatch a L{STREAM_AUTHD_EVENT} when the
-         stream has been completely authenticated.
-      2. The Authenticator SHOULD reset all state information when
-         L{associateWithStream} is called.
-      3. The Authenticator SHOULD override L{streamStarted}, and start
-         authentication there.
-
-
-    @type namespace: L{str}
-    @cvar namespace: Default namespace for the XmlStream
-
-    @type version: L{int}
-    @cvar version: Version attribute for XmlStream. 0.0 will cause the
-                   XmlStream to not include a C{version} attribute in the
-                   header.
-
-    @type streamHost: L{str}
-    @ivar streamHost: Target host for this stream (used as the 'to' attribute)
-
-    @type xmlstream: L{XmlStream}
-    @ivar xmlstream: The XmlStream that needs authentication
-    """
-
-    namespace = 'invalid' # Default namespace for stream
-    version = 0.0         # Stream version
-
-    def __init__(self, streamHost):
-        self.streamHost = streamHost
-        self.xmlstream = None
-
-    def connectionMade(self):
-        """
-        Called by the XmlStream when the underlying socket connection is
-        in place. This allows the Authenticator to send an initial root
-        element, if it's connecting, or wait for an inbound root from
-        the peer if it's accepting the connection
-
-        Subclasses can use self.xmlstream.send() with the provided xmlstream
-        parameter to send any initial data to the peer
-        """
-
-    def streamStarted(self, rootelem):
-        """
-        Called by the XmlStream when it has received a root element from
-        the connected peer. 
-        
-        @type rootelem: L{domish.Element}
-        @param rootelem: The root element of the XmlStream received from
-                         the streamHost
-        """
-
-    def associateWithStream(self, xmlstream):
-        """
-        Called by the XmlStreamFactory when a connection has been made
-        to the requested peer, and an XmlStream object has been
-        instantiated.
-
-        The default implementation just saves a handle to the new
-        XmlStream.
-
-        @type xmlstream: L{XmlStream}
-        @param xmlstream: The XmlStream that will be passing events to this
-                          Authenticator.
-        
-        """
-        self.xmlstream = xmlstream
-
-class ConnectAuthenticator(Authenticator):
-    def connectionMade(self):
-        # Generate stream header
-        if self.version == 1.0:
-            sh = "<stream:stream xmlns='%s' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>" % \
-                 (self.namespace)
-        else:
-            sh = "<stream:stream xmlns='%s' xmlns:stream='http://etherx.jabber.org/streams' to='%s'>" % \
-                 (self.namespace, self.streamHost.encode('utf-8'))
-        self.xmlstream.send(sh)
-    
 class XmlStream(protocol.Protocol, utility.EventDispatcher):
-    def __init__(self, authenticator):
+    """ Generic Streaming XML protocol handler.
+
+    This protocol handler will parse incoming data as XML and dispatch events
+    accordingly. Incoming stanzas can be handled by registering observers using
+    XPath-like expressions that are matched against each stanza. See
+    L{utility.EventDispatcher} for details.
+    """
+    def __init__(self):
         utility.EventDispatcher.__init__(self)
         self.stream = None
-        self.authenticator = authenticator
-        self.sid = None
         self.rawDataOutFn = None
         self.rawDataInFn = None
 
-        # Reset the authenticator
-        authenticator.associateWithStream(self)
-
-        # Setup watcher for stream errors
-        self.addObserver("/error[@xmlns='http://etherx.jabber.org/streams']", self.streamError)
-
-    def streamError(self, errelem):
-        self.dispatch(errelem, STREAM_ERROR_EVENT)
-        self.transport.loseConnection()
+    def _initializeStream(self):
+        """ Sets up XML Parser. """
+        self.stream = domish.elementStream()
+        self.stream.DocumentStartEvent = self.onDocumentStart
+        self.stream.ElementEvent = self.onElement
+        self.stream.DocumentEndEvent = self.onDocumentEnd
 
     ### --------------------------------------------------------------
     ###
     ### Protocol events
     ###
     ### --------------------------------------------------------------
-    def connectionMade(self):
-        # Setup the parser
-        self.stream = domish.elementStream()
-        self.stream.DocumentStartEvent = self.onDocumentStart
-        self.stream.ElementEvent = self.onElement
-        self.stream.DocumentEndEvent = self.onDocumentEnd
 
+    def connectionMade(self):
+        """ Called when a connection is made.
+
+        Sets up the XML parser and dispatches the L{STREAM_CONNECTED_EVENT}
+        event indicating the connection has been established.
+        """
+        self._initializeStream()
         self.dispatch(self, STREAM_CONNECTED_EVENT)
 
-        self.authenticator.connectionMade()
-
     def dataReceived(self, buf):
+        """ Called whenever data is received.
+
+        Passes the data to the XML parser. This can result in calls to the
+        DOM handlers. If a parse error occurs, the L{STREAM_ERROR_EVENT} event
+        is called to allow for cleanup actions, followed by dropping the
+        connection.
+        """
         try:
             if self.rawDataInFn: self.rawDataInFn(buf)
             self.stream.parse(buf)
@@ -148,6 +77,10 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
             self.transport.loseConnection()
 
     def connectionLost(self, _):
+        """ Called when the connection is shut down.
+
+        Dispatches the L{STREAM_END_EVENT}.
+        """
         self.dispatch(self, STREAM_END_EVENT)
         self.stream = None
         
@@ -156,25 +89,53 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     ### DOM events
     ###
     ### --------------------------------------------------------------
+
     def onDocumentStart(self, rootelem):
-        if rootelem.hasAttribute("id"):
-            self.sid = rootelem["id"]              # Extract stream identifier
-        self.authenticator.streamStarted(rootelem) # Notify authenticator
+        """ Called whenever the start tag of a root element has been received.
+
+        Dispatches the L{STREAM_START_EVENT}.
+        """
         self.dispatch(self, STREAM_START_EVENT)    
 
     def onElement(self, element):
+        """ Called whenever a direct child element of the root element has
+            been received.
+
+        Dispatches the received element.
+        """
         self.dispatch(element)
 
     def onDocumentEnd(self):
+        """ Called whenever the end tag of the root element has been received.
+
+        Closes the connection. This causes C{connectionLost} being called.
+        """
         self.transport.loseConnection()
 
     def setDispatchFn(self, fn):
+        """ Set another function to handle elements. """
         self.stream.ElementEvent = fn
 
     def resetDispatchFn(self):
+        """ Set the default function (C{onElement}) to handle elements. """
         self.stream.ElementEvent = self.onElement
 
     def send(self, obj):
+        """ Send data over the stream.
+
+        Sends the given C{obj} over the connection. C{obj} may be instances of
+        L{domish.Element}, L{unicode} and L{str}. The first two will be
+        properly serialized and/or encoded. L{str} objects must be in UTF-8
+        encoding.
+
+        Note: because it is easy to make mistakes in maintaining a properly
+        encoded L{str} object, it is advised to use L{unicode} objects
+        everywhere when dealing with XML Streams.
+
+        @param obj: Object to be sent over the stream.
+        @type obj: L{domish.Element}, L{domish} or L{str}
+
+        """
         if isinstance(obj, domish.Element):
             obj = obj.toXml()
             
@@ -188,21 +149,33 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
 
 class XmlStreamFactory(protocol.ReconnectingClientFactory):
-    def __init__(self, authenticator):
-        self.authenticator = authenticator
+    """ Factory for XmlStream protocol objects as a reconnection client.
+    
+    This factory generates XmlStream objects when a connection has been
+    established. To make sure certain event observers are set up before
+    incoming data is processed, you can set up bootstrap event observers using
+    C{addBootstrap}.
+    """
+
+    def __init__(self):
         self.bootstraps = []
 
     def buildProtocol(self, _):
+        """ Create an instance of XmlStream.
+
+        The returned instance will have bootstrap event observers registered
+        and will proceed to handle input on an incoming connection.
+        """
         self.resetDelay()
-        # Create the stream and register all the bootstrap observers
-        xs = XmlStream(self.authenticator)
+        xs = XmlStream()
         xs.factory = self
         for event, fn in self.bootstraps: xs.addObserver(event, fn)
         return xs
 
     def addBootstrap(self, event, fn):
+        """ Add a bootstrap event handler. """
         self.bootstraps.append((event, fn))
 
     def removeBootstrap(self, event, fn):
+        """ Remove a bootstrap event handler. """
         self.bootstraps.remove((event, fn))
-

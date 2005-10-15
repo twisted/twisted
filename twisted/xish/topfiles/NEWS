@@ -4,6 +4,10 @@ x.x.x:
  - Removed _Serializer in favour of _ListSerializer
  - Use unicode objects for representing serialized XML, instead of utf-8
    encoded str objects.
+ - Properly catch XML parser errors
+ - Rework and fix element stream test cases
+ - Strip xmlstream from all Jabber specifics that moved to Twisted Words
+ - Added exhaustive docstrings to xmlstream.
 
 0.1.0:
 
