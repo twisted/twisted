@@ -8,8 +8,6 @@ from twisted.xish.xmlstream import STREAM_CONNECTED_EVENT
 from twisted.xish.xmlstream import STREAM_START_EVENT
 from twisted.xish.xmlstream import STREAM_END_EVENT
 from twisted.xish.xmlstream import STREAM_ERROR_EVENT
-from twisted.xish.xmlstream import RAWDATA_IN_EVENT
-from twisted.xish.xmlstream import RAWDATA_OUT_EVENT
 
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 
