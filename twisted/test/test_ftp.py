@@ -167,6 +167,11 @@ class BasicFTPServerTestCase(FTPServerTestCase):
     def testAnonymousLogin(self):
         self._anonymousLogin()
 
+    def testQuit(self):
+        """Issuing QUIT should return a 221 message."""
+        self._anonymousLogin()
+        return self.client.queueStringCommand('QUIT').addCallback(self.assertEquals, ['221 Goodbye.'])
+
     def testAnonymousLoginDenied(self):
         # Reconfigure the server to disallow anonymous access, and to have an
         # IUsernamePassword checker that always rejects.

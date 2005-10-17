@@ -1117,6 +1117,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_QUIT(self):
+        self.reply(GOODBYE_MSG)
         self.transport.loseConnection()
         self.disconnected = True
 
