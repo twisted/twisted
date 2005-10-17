@@ -410,9 +410,9 @@ class TestLoader(object):
             suite.addTest(self.loadModule(module))
 
     def loadPackageRecursive(self, package):
+        packageDir = os.path.dirname(package.__file__)
         suite = self.suiteFactory()
-        for packageDir in package.__path__:
-            os.path.walk(packageDir, self._packageRecurse, suite)
+        os.path.walk(packageDir, self._packageRecurse, suite)
         return suite
 
     def loadDoctests(self, module):
