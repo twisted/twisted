@@ -22,8 +22,6 @@ STREAM_CONNECTED_EVENT = intern("//event/stream/connected")
 STREAM_START_EVENT = intern("//event/stream/start")
 STREAM_END_EVENT = intern("//event/stream/end")
 STREAM_ERROR_EVENT = intern("//event/stream/error")
-RAWDATA_IN_EVENT = intern("//event/rawdata/in")
-RAWDATA_OUT_EVENT = intern("//event/rawdata/out")
 
 class XmlStream(protocol.Protocol, utility.EventDispatcher):
     """ Generic Streaming XML protocol handler.
