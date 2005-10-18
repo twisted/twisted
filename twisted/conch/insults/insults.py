@@ -562,18 +562,22 @@ class ServerProtocol(protocol.Protocol):
 
     # ITerminalTransport
     def cursorUp(self, n=1):
+        assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
         self.write('\x1b[%dA' % (n,))
 
     def cursorDown(self, n=1):
+        assert n >= 1
         self.cursorPos.y = min(self.cursorPos.y + n, self.termSize.y - 1)
         self.write('\x1b[%dB' % (n,))
 
     def cursorForward(self, n=1):
+        assert n >= 1
         self.cursorPos.x = min(self.cursorPos.x + n, self.termSize.x - 1)
         self.write('\x1b[%dC' % (n,))
 
     def cursorBackward(self, n=1):
+        assert n >= 1
         self.cursorPos.x = max(self.cursorPos.x - n, 0)
         self.write('\x1b[%dD' % (n,))
 

@@ -3,7 +3,7 @@ from __future__ import division
 import string, random
 
 from twisted.python import log
-from twisted.internet import protocol
+from twisted.internet import protocol, task
 from twisted.application import internet, service
 from twisted.cred import checkers, portal
 
@@ -19,19 +19,24 @@ class DrawableCanvas(window.Canvas):
 
     def func_LEFT_ARROW(self, modifier):
         self.x -= 1
+        self.repaint()
 
     def func_RIGHT_ARROW(self, modifier):
         self.x += 1
+        self.repaint()
 
     def func_UP_ARROW(self, modifier):
         self.y -= 1
+        self.repaint()
 
     def func_DOWN_ARROW(self, modifier):
         self.y += 1
+        self.repaint()
 
     def characterReceived(self, keyID, modifier):
         self[self.x, self.y] = keyID
         self.x += 1
+        self.repaint()
 
     def keystrokeReceived(self, keyID, modifier):
         if keyID == '\r' or keyID == '\v':
@@ -46,6 +51,7 @@ class DrawableCanvas(window.Canvas):
             self.y = 0
         elif self.y < 0:
             self.y = self.height - 1
+        self.repaint()
 
     def render(self, width, height, terminal):
         window.Canvas.render(self, width, height, terminal)
@@ -54,51 +60,22 @@ class DrawableCanvas(window.Canvas):
             window.cursor(terminal, self[self.x, self.y])
 
 
-class CanvasDemo(insults.TerminalProtocol):
-    width = 80
-    height = 24
-
-    def connectionMade(self):
-        self.terminal.eraseDisplay()
-        self.terminal.resetPrivateModes([insults.privateModes.CURSOR_MODE])
-        self.canvases = []
-        self.window = window.TopWindow()
-        self.packer = window.Packer()
-        self.addCanvas()
-        self.window.addChild(self.packer)
-        self.terminalSize(self.width, self.height)
-
-    def terminalSize(self, width, height):
-        self.width = width
-        self.height = height
-        self.window.render(self.width, self.height, self.terminal)
-
-    def addCanvas(self):
-        self.canvases.append(DrawableCanvas(self.width, self.height))
-        self.packer.addChild(self.canvases[-1])
-
-    def remCanvas(self):
-        self.packer.remChild(self.canvases.pop())
-
-    def keystrokeReceived(self, keyID, modifier):
-        if keyID == '\r':
-            self.addCanvas()
-        elif keyID == self.terminal.BACKSPACE:
-            self.remCanvas()
-        else:
-            self.window.keystrokeReceived(keyID, modifier)
-        self.window.render(self.width, self.height, self.terminal)
-
-
 class ButtonDemo(insults.TerminalProtocol):
     width = 80
     height = 24
 
+    def _draw(self):
+        self.window.draw(self.width, self.height, self.terminal)
+
+    def _redraw(self):
+        self.window.filthy()
+        self._draw()
+
     def connectionMade(self):
         self.terminal.eraseDisplay()
         self.terminal.resetPrivateModes([insults.privateModes.CURSOR_MODE])
 
-        self.window = window.TopWindow()
+        self.window = window.TopWindow(self._draw)
         self.output = window.TextOutput((15, 1))
         self.input = window.TextInput(15, self._setText)
         self.select1 = window.Selection(map(str, range(100)), self._setText, 10)
@@ -115,8 +92,24 @@ class ButtonDemo(insults.TerminalProtocol):
 
         t1 = window.TextOutputArea(longLines=window.TextOutputArea.WRAP)
         t2 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
-        for _t in t1, t2:
+        t3 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
+        t4 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
+        for _t in t1, t2, t3, t4:
             _t.setText((('This is a very long string.  ' * 3) + '\n') * 3)
+
+        vp = window.Viewport(t3)
+        d = [1]
+        def spin():
+            vp.xOffset += d[0]
+            if vp.xOffset == 0 or vp.xOffset == 25:
+                d[0] *= -1
+        self.call = task.LoopingCall(spin)
+        self.call.start(0.25, now=False)
+        hbox.addChild(window.Border(vp))
+
+        vp2 = window.ScrolledArea(t4)
+        hbox.addChild(vp2)
+
         texts = window.VBox()
         texts.addChild(window.Border(t1))
         texts.addChild(window.Border(t2))
@@ -131,16 +124,19 @@ class ButtonDemo(insults.TerminalProtocol):
         self.window.addChild(vbox)
         self.terminalSize(self.width, self.height)
 
+    def connectionLost(self, reason):
+        self.call.stop()
+        insults.TerminalProtocol.connectionLost(self, reason)
+
     def terminalSize(self, width, height):
         self.width = width
         self.height = height
         self.terminal.eraseDisplay()
-        self.window.render(self.width, self.height, self.terminal)
+        self._redraw()
 
 
     def keystrokeReceived(self, keyID, modifier):
         self.window.keystrokeReceived(keyID, modifier)
-        self.window.render(self.width, self.height, self.terminal)
 
     def _clear(self):
         self.canvas.clear()
