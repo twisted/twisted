@@ -1,5 +1,4 @@
-
-Copyright (c) 2005
+Copyright (c) 2001-2005
 Allen Short
 Andrew Bennetts
 Benjamin Bruheim
@@ -42,3 +41,9 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Exception: 
+
+Some files in twisted/python/pymodules/ is copyright Python Software
+Foundation and covered by the License contained in
+twisted/python/pymodules/LICENSE-python.txt.
