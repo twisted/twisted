@@ -44,6 +44,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Exception: 
 
-Some files in twisted/python/pymodules/ is copyright Python Software
+Some files in twisted/python/pymodules/ are copyright Python Software
 Foundation and covered by the License contained in
 twisted/python/pymodules/LICENSE-python.txt.
