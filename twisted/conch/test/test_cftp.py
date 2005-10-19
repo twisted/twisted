@@ -2,6 +2,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
+import sys
+
 from twisted.trial import unittest, util
 try:
     from twisted.conch import unix
@@ -9,8 +11,11 @@ try:
     from twisted.conch.client import connect, default, options
 except ImportError:
     unix = None
-    import sys
-    del sys.modules['twisted.conch.unix'] # remove the bad import
+    try:
+        del sys.modules['twisted.conch.unix'] # remove the bad import
+    except KeyError:
+        # In Python 2.4, the bad import has already been cleaned up for us.
+        pass
 
 try:
     import Crypto

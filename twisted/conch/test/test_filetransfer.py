@@ -2,13 +2,19 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
+import sys
+
 from twisted.trial import unittest, util
 try:
     from twisted.conch import unix
 except ImportError:
     unix = None
-    import sys
-    del sys.modules['twisted.conch.unix'] # remove the bad import
+    try:
+        sys.modules['twisted.conch.unix'] # remove the bad import
+    except KeyError:
+        # In Python 2.4, the bad import has already been cleaned up for us. 
+        # Hooray.
+        pass
 
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session
