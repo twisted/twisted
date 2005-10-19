@@ -10,7 +10,7 @@ try:
 except ImportError:
     unix = None
     try:
-        sys.modules['twisted.conch.unix'] # remove the bad import
+        del sys.modules['twisted.conch.unix'] # remove the bad import
     except KeyError:
         # In Python 2.4, the bad import has already been cleaned up for us. 
         # Hooray.
