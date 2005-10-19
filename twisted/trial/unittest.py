@@ -470,9 +470,7 @@ class TestCase(pyunit.TestCase, object):
                interpreted as seconds, rather than iterations.
         """
         warnings.warn("runReactor is deprecated. return a deferred from "
-                      "your test method, and trial will wait for results."
-                      "Alternatively, call twisted.trial.util.wait to"
-                      "block until the deferred fires.",
+                      "your test method, and trial will wait for results.",
                       DeprecationWarning, stacklevel=2)
         from twisted.internet import reactor
 
