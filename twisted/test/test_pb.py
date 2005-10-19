@@ -1056,7 +1056,12 @@ class ConnectionTestCase(unittest.TestCase):
     def _testDisconnect_2(self, res, p, factory):
         factory.disconnect()
         d = defer.Deferred()
+
         # TODO: clunky, but it works
+        
+        # XXX no it doesn't, it's a race-condition.  This should be using
+        # notifyOnDisconnect to be *sure* it's gone.
+
         reactor.callLater(0.1, d.callback, p)
         #reactor.iterate(); reactor.iterate(); reactor.iterate()
         d.addCallback(self._testDisconnect_3)
