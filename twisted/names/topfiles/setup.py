@@ -26,7 +26,7 @@ if __name__ == '__main__':
             "Intended Audience :: Developers",
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python",
-            "Topic :: Internet",
+            "Topic :: Internet :: Name Service (DNS)",
             "Topic :: Software Development :: Libraries :: Python Modules",
         ],
         long_description="""\
