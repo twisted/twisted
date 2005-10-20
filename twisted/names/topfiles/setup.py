@@ -8,6 +8,20 @@ except ImportError:
                      "attempting to install any other Twisted projects.")
 
 if __name__ == '__main__':
+    if sys.version_info[:2] >= (2, 4):
+        extraMeta = dict(
+            classifiers=[
+                "Development Status :: 4 - Beta",
+                "Environment :: No Input/Output (Daemon)",
+                "Intended Audience :: Developers",
+                "License :: OSI Approved :: MIT License",
+                "Programming Language :: Python",
+                "Topic :: Internet :: Name Service (DNS)",
+                "Topic :: Software Development :: Libraries :: Python Modules",
+            ])
+    else:
+        extraMeta = {}
+
     dist.setup(
         twisted_subproject="names",
         # metadata
@@ -20,15 +34,6 @@ if __name__ == '__main__':
         maintainer_email="exarkun@divmod.com",
         url="http://twistedmatrix.com/projects/names/",
         license="MIT",
-        classifiers=[
-            "Development Status :: 4 - Beta",
-            "Environment :: No Input/Output (Daemon)",
-            "Intended Audience :: Developers",
-            "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python",
-            "Topic :: Internet :: Name Service (DNS)",
-            "Topic :: Software Development :: Libraries :: Python Modules",
-        ],
         long_description="""\
 Twisted Names is both a domain name server as well as a client
 resolver library. Twisted Names comes with an "out of the box"
@@ -40,4 +45,5 @@ these. Twisted Names' client resolver library provides functions to
 query for all commonly used record types as well as a replacement for
 the blocking gethostbyname() function provided by the Python stdlib
 socket module.
-""")
+""",
+        **extraMeta)
