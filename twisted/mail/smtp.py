@@ -1148,12 +1148,13 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         raise NotImplementedError
 
     def sendError(self, exc):
-        """If an error occurs before a mail message is sent sendError will be called.
-           This base class method sends a QUIT if the error is non-fatal
-           and disconnects the connection.
+        """
+        If an error occurs before a mail message is sent sendError will be
+        called.  This base class method sends a QUIT if the error is
+        non-fatal and disconnects the connection.
 
-           @param exc: The SMTPClientError (or child class) raised
-           @type exc: C{SMTPClientError}
+        @param exc: The SMTPClientError (or child class) raised
+        @type exc: C{SMTPClientError}
         """
         assert isinstance(exc, SMTPClientError)
 
