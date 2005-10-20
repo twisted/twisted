@@ -116,6 +116,7 @@ def main():
         else:
             val = project.currentVersionStr
         fatRepl[key] = val
+    fatRepl = dict([(k, v) for k, v in fatRepl.items() if v != None])
 
     for project in projects:
         if not project.newVersionStr:
