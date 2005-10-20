@@ -31,5 +31,4 @@ these. Twisted Names' client resolver library provides functions to
 query for all commonly used record types as well as a replacement for
 the blocking gethostbyname() function provided by the Python stdlib
 socket module.
-""",
-        )
+""")
