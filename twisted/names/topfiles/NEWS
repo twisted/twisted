@@ -1,5 +1,10 @@
+0.2.0:
+ - Fix occassional TCP connection leak in gethostbyname()
+ - Fix TCP connection leak in recursive lookups
+ - Remove deprecated use of Deferred.setTimeout
+ - Improved test coverage for zone transfers
 0.1.0:
- - Fix TCP Connection leak in zone transfers
+ - Fix TCP connection leak in zone transfers
  - Handle empty or missing resolv.conf as if 127.0.0.1 was specified
  - Don't use blocking kernel entropy sources
  - Retry logic now properly tries all specified servers.
