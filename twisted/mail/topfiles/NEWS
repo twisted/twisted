@@ -1,10 +1,18 @@
-NEXT_RELEASE:
+0.2.0:
  - SMTP server:
    - Now gives application-level code opportunity to set a different
      Received header for each recipient of a multi-recipient message.
  - IMAP client:
    - New `startTLS' method to allow explicit negotiation of transport
      security.
+- POP client:
+   - Support for per-command timeouts
+   - New `startTLS' method, similar to the one added to the IMAP
+     client.
+   - NOOP, RSET, and STAT support added
+- POP server:
+   - Bug handling passwords of "" fixed
+
 
 0.1.0:
  - Tons of bugfixes in IMAP4, POP3, and SMTP protocols
