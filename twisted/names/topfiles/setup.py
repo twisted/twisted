@@ -20,6 +20,15 @@ if __name__ == '__main__':
         maintainer_email="exarkun@divmod.com",
         url="http://twistedmatrix.com/projects/names/",
         license="MIT",
+        classifiers=[
+            "Development Status :: 4 - Beta",
+            "Environment :: No Input/Output (Daemon)",
+            "Intended Audience :: Developers",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python",
+            "Topic :: Internet",
+            "Topic :: Software Development :: Libraries :: Python Modules",
+        ],
         long_description="""\
 Twisted Names is both a domain name server as well as a client
 resolver library. Twisted Names comes with an "out of the box"
