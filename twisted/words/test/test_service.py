@@ -1,3 +1,5 @@
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from __future__ import generators
 

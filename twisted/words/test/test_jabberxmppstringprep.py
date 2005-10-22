@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 

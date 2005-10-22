@@ -1,4 +1,4 @@
-x.x.x:
+0.2.0:
  - Jabber:
    - Fix digest authentication in Jabber
    - Add Jabber xmlstream module that contains the Jabber specific bits that
@@ -14,6 +14,9 @@ x.x.x:
    - Rework and fix element stream test cases
    - Strip xmlstream from all Jabber specifics that moved to Twisted Words
    - Added exhaustive docstrings to xmlstream.
+ - Words Service:
+   - Complete rewrite
+   - Not backwards compatible
 
 0.1.0:
  - Fix some miscellaneous bugs in OSCAR

@@ -8,6 +8,24 @@ except ImportError:
                      "attempting to install any other Twisted projects.")
 
 if __name__ == '__main__':
+    if sys.version_info[:2] >= (2, 4):
+        extraMeta = dict(
+            classifiers=[
+                "Development Status :: 4 - Beta",
+                "Environment :: No Input/Output (Daemon)",
+                "Intended Audience :: Developers",
+                "License :: OSI Approved :: MIT License",
+                "Programming Language :: Python",
+                "Topic :: Communications :: Chat",
+                "Topic :: Communications :: Chat :: AOL Instant Messenger",
+                "Topic :: Communications :: Chat :: ICQ",
+                "Topic :: Communications :: Chat :: Internet Relay Chat",
+                "Topic :: Internet",
+                "Topic :: Software Development :: Libraries :: Python Modules",
+            ])
+    else:
+        extraMeta = {}
+
     dist.setup(
         twisted_subproject="words",
         scripts=dist.getScripts("words"),
@@ -31,4 +49,4 @@ In support of Jabber, Twisted Words also contains X-ish, a library for
 processing XML with Twisted and Python, with support for a Pythonic DOM and
 an XPath-like toolkit.
 """,
-        )
+        **extraMeta)
