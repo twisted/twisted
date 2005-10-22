@@ -93,10 +93,7 @@ class Options(usage.Options):
                 ["dry-run", 'n', "do everything but run the tests"],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["until-failure", "u", "Repeat test until it fails"],
-                ["recurse", "R",
-                 "Search packages recursively (enabled by default, DEPRECATED)"],
                 ["no-recurse", "N", "Don't recurse into packages"],
-                ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
                 ['suppresswarnings', None,
                  'Only print warnings to log, not stdout'],
                 ['help-reporters', None,
@@ -108,10 +105,7 @@ class Options(usage.Options):
                       ", ".join(app.reactorTypes.keys()) + "."],
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
-                      "Run tests in random order using the specified seed"],
-                     ["reporter-args", None, None,
-                      "a string passed to the reporter's 'args' kwarg. "
-                      "DEPRECATED"]]
+                      "Run tests in random order using the specified seed"]]
 
     zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
     zsh_actionDescr = {"logfile":"log file name",
@@ -131,7 +125,6 @@ class Options(usage.Options):
     def _loadReporters(self):
         self.optToQual = {}
         for p in plugin.getPlugins(itrial.IReporter):
-            self.optFlags.append([p.longOpt, p.shortOpt, p.description])
             qual = "%s.%s" % (p.module, p.klass)
             self.optToQual[p.longOpt] = qual
             if getattr(p, 'default', False):
@@ -141,28 +134,19 @@ class Options(usage.Options):
         """return the class of the selected reporter
         @param config: a usage.Options instance after parsing options
         """
-        if not hasattr(self, 'optToQual'):
-            self._loadReporters()
-        for opt, qual in self.optToQual.iteritems():
-            if self[opt]:
-                warnings.warn('Setting the reporter using flags is deprecated.'
-                              ' Use --reporter instead',
-                              category=DeprecationWarning)
-                nany = reflect.namedAny(qual)
-                return nany
-        else:
-            return self.fallbackReporter
+        if self['reporter'] is not None:
+            return self['reporter']
+        return self.fallbackReporter
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
         app.installReactor(reactorName)
         print "Using %s reactor" % app.reactorTypes[reactorName]
 
-    def opt_coverage(self, coverdir):
+    def opt_coverage(self):
         """Generate coverage information in the given directory
         (relative to _trial_temp). Requires Python 2.3.3."""
-        warnings.warn("--coverage will become a flag in Twisted 2.2",
-                      stacklevel=4, category=DeprecationWarning)
+        coverdir = 'coverage'
         print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
@@ -227,18 +211,16 @@ class Options(usage.Options):
         when debugging freezes or locks in complex code."""
         sys.settrace(spewer)
         
-    def opt_reporter(self, opt=None):
+    def opt_reporter(self, opt):
         """The reporter to use for this test run.  See --help-reporters
         for more info.
         """
-        if opt is None:
-            raise UsageError, 'must specify a fully qualified class name'
         if opt in self.optToQual:
             opt = self.optToQual[opt]
         else:
-            warnings.warn("Only pass names of Reporter plugins to --reporter. "
-                          "See --help-reporters for more info.",
-                          category=DeprecationWarning)
+            raise usage.UsageError("Only pass names of Reporter plugins to "
+                                   "--reporter. See --help-reporters for "
+                                   "more info.")
         self['reporter'] = reflect.namedAny(opt)
 
     def opt_help_reporters(self):
@@ -283,16 +265,6 @@ class Options(usage.Options):
             raise usage.UsageError(
                 "argument to recursionlimit must be an integer")
 
-    def opt_psyco(self):
-        warnings.warn("--psyco option is deprecated and does nothing. "
-                      "Will be removed in Twisted 2.2",
-                      stacklevel=4, category=DeprecationWarning)
-
-    def opt_recurse(self):
-        warnings.warn("-R, --recurse are now the default. The options are "
-                      "deprecated, and will be remove in Twisted 2.2",
-                      stacklevel=4, category=DeprecationWarning)
-
     def opt_random(self, option):
         try:
             self['random'] = long(option)
@@ -329,9 +301,6 @@ class Options(usage.Options):
                 raise usage.UsageError("you must specify --debug when using "
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
-        if self['reporter-args']:
-            warnings.warn("--reporter-args is deprecated. Use plugin instead.",
-                          category=DeprecationWarning)
 
     
 def _initialDebugSetup(config):
@@ -366,7 +335,6 @@ def _getReporter(config):
     else:
         reporterKlass = config.getReporter()
     reporter = reporterKlass(tbformat=config['tbformat'],
-                             args=config['reporter-args'],
                              realtime=config['rterrors'])
     config._reporter = reporter
     return reporter

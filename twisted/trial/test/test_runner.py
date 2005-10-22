@@ -9,7 +9,9 @@ from zope.interface import implements
 
 from twisted.trial.itrial import IReporter
 from twisted.trial import unittest, runner
+from twisted.python import reflect
 from twisted.scripts import trial
+from twisted.plugins import twisted_trial
 
 
 class CapturingDebugger(object):
@@ -20,7 +22,7 @@ class CapturingDebugger(object):
     def runcall(self, *args, **kwargs):
         self._calls.append('runcall')
         args[0](*args[1:], **kwargs)
-           
+
 
 class CapturingReporter(object):
 
@@ -126,6 +128,9 @@ class TestRunner(unittest.TestCase):
     def setUp(self):
         unittest.TestCase.setUp(self)
         self.config = trial.Options()
+        # whitebox hack a reporter in, because plugins are CACHED and will
+        # only reload if the FILE gets changed.
+        self.config.optToQual['capturing'] = reflect.qual(CapturingReporter)
         self.standardReport = ['startTrial',
                          'startSuite', 
                          'startSuite',
@@ -201,9 +206,8 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(result, self.config._reporter)
 
     def test_runner_dry_run(self):
-        self.config.parseOptions(['--dry-run', '--reporter', 
-            'twisted.trial.test.test_runner.CapturingReporter',
-            'twisted.trial.test.sample'])
+        self.config.parseOptions(['--dry-run', '--reporter', 'capturing',
+                                  'twisted.trial.test.sample'])
         reporter = trial._getReporter(self.config)
         my_runner = runner.TrialRunner(self.config)
         loader = runner.SafeTestLoader()
@@ -212,9 +216,8 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(self.dryRunReport, reporter._calls)
 
     def test_runner_normal(self):
-        self.config.parseOptions(['--reporter', 
-            'twisted.trial.test.test_runner.CapturingReporter',
-            'twisted.trial.test.sample'])
+        self.config.parseOptions(['--reporter', 'capturing',
+                                  'twisted.trial.test.sample'])
         reporter = trial._getReporter(self.config)
         my_runner = runner.TrialRunner(self.config)
         loader = runner.SafeTestLoader()
@@ -223,10 +226,8 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(self.standardReport, reporter._calls)
 
     def test_runner_debug(self):
-        self.config.parseOptions(['--reporter', 
-            'twisted.trial.test.test_runner.CapturingReporter',
-            '--debug',
-            'twisted.trial.test.sample'])
+        self.config.parseOptions(['--reporter', 'capturing',
+                                  '--debug', 'twisted.trial.test.sample'])
         reporter = trial._getReporter(self.config)
         my_runner = runner.TrialRunner(self.config)
         debugger = CapturingDebugger()
