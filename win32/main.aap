@@ -80,7 +80,7 @@ TwSources += twisted/lore/template.mgp
              twisted/test/server.pem
              twisted/web/woven/FlashConduit*
              twisted/web/woven/WebConduit*
-             twisted/xish/xpathparser.g
+             twisted/words/xish/xpathparser.g
              $(CSources)
              win32/twisted_postinstall.py
 

@@ -3,7 +3,7 @@
 # http://randomthoughts.vandorp.ca/
 
 from twisted.words.protocols.jabber import client, jid
-from twisted.xish import domish
+from twisted.words.xish import domish
 from twisted.internet import reactor
         
 def authd(xmlstream):

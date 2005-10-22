@@ -1,5 +1,5 @@
 import warnings
-warnings.warn("twisted.protocols.xmlstream is DEPRECATED. import twisted.xish.xmlstream instead.",
+warnings.warn("twisted.protocols.xmlstream is DEPRECATED. import twisted.words.xish.xmlstream instead.",
               DeprecationWarning, stacklevel=2)
 
-from twisted.xish.xmlstream import *
+from twisted.words.xish.xmlstream import *

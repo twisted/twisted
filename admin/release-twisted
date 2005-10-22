@@ -53,7 +53,6 @@ def makeCommands():
         'makeDocWeb': makeMakeDoc('web'),
         'makeDocWeb2': makeMakeDoc('web2'),
         'makeDocWords': makeMakeDoc('words'),
-        'makeDocXish': makeMakeDoc('xish'),
 
         'makeBallConch': makeMakeBall('conch'),
         'makeBallFlow': makeMakeBall('flow'),
@@ -66,7 +65,6 @@ def makeCommands():
         'makeBallWeb': makeMakeBall('web'),
         'makeBallWeb2': makeMakeBall('web2'),
         'makeBallWords': makeMakeBall('words'),
-        'makeBallXish': makeMakeBall('xish'),
         }
 
 

@@ -309,7 +309,7 @@ def wrap_error_reporter(parser, rule):
 
 
 
-from twisted.xish.xpath import _Location, _AnyLocation, IndexValue, CompareValue, AttribValue, LiteralValue, Function
+from twisted.words.xish.xpath import _Location, _AnyLocation, IndexValue, CompareValue, AttribValue, LiteralValue, Function
 
 %%
 parser XPathParser:
