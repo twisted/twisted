@@ -7,8 +7,8 @@
 import sys, os
 from twisted.trial import unittest
 
-from twisted.xish.domish import Element
-from twisted.xish.utility import EventDispatcher
+from twisted.words.xish.domish import Element
+from twisted.words.xish.utility import EventDispatcher
 
 class CallbackTracker:
     def __init__(self):

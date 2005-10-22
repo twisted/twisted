@@ -1,9 +1,19 @@
 x.x.x:
-
- - Fix digest authentication in Jabber
- - Add Jabber xmlstream module that contains the Jabber specific bits that
-   got factored out of Twisted Xish's xmlstream, and make it suitable for
-   implementing full XMPP support.
+ - Jabber:
+   - Fix digest authentication in Jabber
+   - Add Jabber xmlstream module that contains the Jabber specific bits that
+     got factored out of Twisted Xish's xmlstream, and make it suitable for
+     implementing full XMPP support.
+ - Xish:
+   - Fixed serialization in _ListSerializer
+   - Removed unneeded extra whitespace generated in serialization
+   - Removed _Serializer in favour of _ListSerializer
+   - Use unicode objects for representing serialized XML, instead of utf-8
+     encoded str objects.
+   - Properly catch XML parser errors
+   - Rework and fix element stream test cases
+   - Strip xmlstream from all Jabber specifics that moved to Twisted Words
+   - Added exhaustive docstrings to xmlstream.
 
 0.1.0:
  - Fix some miscellaneous bugs in OSCAR

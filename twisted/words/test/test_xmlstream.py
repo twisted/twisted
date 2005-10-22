@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 from twisted.trial import unittest
-from twisted.xish import xmlstream
+from twisted.words.xish import xmlstream
 
 class XmlStreamTest(unittest.TestCase):
     def setUp(self):

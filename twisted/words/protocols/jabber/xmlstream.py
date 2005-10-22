@@ -3,11 +3,11 @@
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.xish import xmlstream
-from twisted.xish.xmlstream import STREAM_CONNECTED_EVENT
-from twisted.xish.xmlstream import STREAM_START_EVENT
-from twisted.xish.xmlstream import STREAM_END_EVENT
-from twisted.xish.xmlstream import STREAM_ERROR_EVENT
+from twisted.words.xish import xmlstream
+from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
+from twisted.words.xish.xmlstream import STREAM_START_EVENT
+from twisted.words.xish.xmlstream import STREAM_END_EVENT
+from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
 
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
 

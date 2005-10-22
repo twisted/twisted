@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.xish.test.test_xpath -*-
+# -*- test-case-name: twisted.words.test.test_xpath -*-
 #
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -228,7 +228,7 @@ class _AnyLocation:
 class XPathQuery:
     def __init__(self, queryStr):
         self.queryStr = queryStr
-        from twisted.xish.xpathparser import parse
+        from twisted.words.xish.xpathparser import parse
         self.baseLocation = parse('XPATH', queryStr)
 
     def __hash__(self):

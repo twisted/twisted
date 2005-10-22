@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.xish.test.test_xishutil -*-
+# -*- test-case-name: twisted.words.test.test_xishutil -*-
 #
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -38,7 +38,7 @@ class CallbackList:
             if onetime:
                 del self.callbacks[key]
 
-from twisted.xish import xpath, domish
+from twisted.words.xish import xpath, domish
 
 class EventDispatcher:
     """ Event dispatching service.

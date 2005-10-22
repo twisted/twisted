@@ -1,1 +1,0 @@
-'xish tests'

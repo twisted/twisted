@@ -7,9 +7,9 @@
 from twisted.trial import unittest
 import sys, os
 
-from twisted.xish.domish import Element
-from twisted.xish.xpath import XPathQuery
-from twisted.xish import xpath
+from twisted.words.xish.domish import Element
+from twisted.words.xish.xpath import XPathQuery
+from twisted.words.xish import xpath
 
 class XPathTest(unittest.TestCase):
     def setUp(self):

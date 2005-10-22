@@ -6,7 +6,7 @@ from twisted.trial import unittest
 
 import sys, os
 
-from twisted.xish import domish, xpath
+from twisted.words.xish import domish, xpath
 
 class DomishTestCase(unittest.TestCase):
     def testEscaping(self):

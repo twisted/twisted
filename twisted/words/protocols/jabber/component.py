@@ -6,7 +6,7 @@
 
 from zope.interface import implements
 
-from twisted.xish import domish, xpath, utility
+from twisted.words.xish import domish, xpath, utility
 from twisted.words.protocols.jabber import jstrports, xmlstream
 
 def componentFactory(componentid, password):

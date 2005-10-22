@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-from twisted.xish import domish, xpath, utility
+from twisted.words.xish import domish, xpath, utility
 from twisted.words.protocols.jabber import xmlstream
 
 DigestAuthQry = xpath.internQuery("/iq/query/digest")

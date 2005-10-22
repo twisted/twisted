@@ -26,5 +26,9 @@ Twisted Words contains implementations of many Instant Messaging
 protocols, including IRC, Jabber, MSN, OSCAR (AIM & ICQ), TOC (AOL),
 and some functionality for creating bots, inter-protocol gateways, and
 a client application for many of the protocols.
+
+In support of Jabber, Twisted Words also contains X-ish, a library for
+processing XML with Twisted and Python, with support for a Pythonic DOM and
+an XPath-like toolkit.
 """,
         )

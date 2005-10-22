@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 from twisted.internet import reactor, protocol, defer
-from twisted.xish import domish, utility
+from twisted.words.xish import domish, utility
 from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep
 import string
 

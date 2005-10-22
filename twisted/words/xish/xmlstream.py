@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.xish.test.test_xmlstream -*-
+# -*- test-case-name: twisted.words.test.test_xmlstream -*-
 #
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -16,7 +16,7 @@ Maintainer: U{Ralph Meijer<mailto:twisted@ralphm.ik.nu>)
 """
 
 from twisted.internet import protocol
-from twisted.xish import domish, utility
+from twisted.words.xish import domish, utility
 
 STREAM_CONNECTED_EVENT = intern("//event/stream/connected")
 STREAM_START_EVENT = intern("//event/stream/start")

@@ -3,5 +3,9 @@ Twisted Words SVN-Trunk
 Words was recently split out of Twisted.
 
 Twisted Words depends on Twisted.
+
 If you want MSN or the web interface to work, you need Twisted Web.
-If you want Jabber to work, you need Twisted Xish.
+
+Xish was recently merged into Twisted Words.  Previously Jabber support
+depended on the separate twisted.xish package, but now packages this as
+twisted.words.xish.

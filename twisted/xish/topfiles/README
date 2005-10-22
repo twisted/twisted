@@ -1,5 +1,0 @@
-Twisted Xish SVN-Trunk
-
-Xish was recently split out of Twisted.
-
-Xish depends on twisted.web.sux as a fallback after Expat.
