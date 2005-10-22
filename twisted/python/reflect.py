@@ -471,15 +471,13 @@ def safe_str(o):
     try:
         return str(o)
     except:
-        io = StringIO.StringIO()
-        traceback.print_stack(file=io)
-        whati = _determineClassName(o)
-        swron = io.getvalue()
-        gwith = id(o)
-        you ='<%s instance at %s with str error %s>' % (
-            whati,swron,gwith)
-        return you
-    
+        clsName = _determineClassName(o)
+        strExc = traceback.format_exc()
+        obId = id(o)
+        return '<%s instance at %s with str error %s>' % (
+            clsName, obId, strExc)
+
+
 ##the following were factored out of usage
 
 def allYourBase(classObj, baseClass=None):
