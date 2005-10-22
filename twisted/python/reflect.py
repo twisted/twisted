@@ -471,8 +471,8 @@ def safe_str(o):
     try:
         return str(o)
     except:
+        strExc = '\n'.join(traceback.format_exception(*sys.exc_info()))
         clsName = _determineClassName(o)
-        strExc = traceback.format_exc()
         obId = id(o)
         return '<%s instance at %s with str error %s>' % (
             clsName, obId, strExc)
