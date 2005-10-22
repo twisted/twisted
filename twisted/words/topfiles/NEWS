@@ -1,4 +1,4 @@
-0.2.0:
+0.3.0:
  - Jabber:
    - Fix digest authentication in Jabber
    - Add Jabber xmlstream module that contains the Jabber specific bits that
