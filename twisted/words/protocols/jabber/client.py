@@ -108,6 +108,11 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         iq.addCallback(self._authQueryResultEvent)
         iq.send()
 
+    def associateWithStream(self, xs):
+        xs.version = (0, 0)
+        xs.useTls = 1
+        xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
+
     def _authQueryResultEvent(self, iq):
         if iq["type"] == "result":
             # Construct auth request

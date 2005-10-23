@@ -45,6 +45,11 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
         self.xmlstream.addOnetimeObserver("/handshake", self._handshakeEvent)
         self.xmlstream.send(hs)
 
+    def associateWithStream(self, xs):
+        xs.version = (0, 0)
+        xs.useTls = 0
+        xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
+
     def _handshakeEvent(self, elem):
         # we have successfully shaken hands and can now consider this
         # entity to represent the component JID.

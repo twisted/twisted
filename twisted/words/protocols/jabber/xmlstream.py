@@ -3,6 +3,9 @@
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from OpenSSL import SSL
+
+from twisted.internet import ssl
 from twisted.words.xish import xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
 from twisted.words.xish.xmlstream import STREAM_START_EVENT
@@ -10,8 +13,10 @@ from twisted.words.xish.xmlstream import STREAM_END_EVENT
 from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
 
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
+TLS_FAILED_EVENT = intern("//event/tls/failed")
 
 NS_STREAMS = 'http://etherx.jabber.org/streams'
+NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
 
 def hashPassword(sid, password):
     """Create a SHA1-digest string of a session identifier and password """
@@ -87,15 +92,35 @@ class ConnectAuthenticator(Authenticator):
         self.xmlstream.sendHeader()
 
 class XmlStream(xmlstream.XmlStream):
-    """ XMPP XML Stream protocol handler. """
-    version = (0, 0)      # Stream version; a pair of integers: (major, minor)
-    namespace = 'invalid' # Default namespace for stream (in ASCII)
-    thisHost = None       # Hostname of this entity
-    otherHost = None      # Hostname of the entity we connect to
-    sid = None            # Session identifier (in ASCII)
-    initiating = True     # True if this is the initiating stream
-    _headerSent = False   # True if the stream header has been sent
-    features = None       # Stream features element or None
+    """ XMPP XML Stream protocol handler.
+
+    The use of TLS is controlled by the C{useTls} attribute. It can have
+    three values:
+
+     - 0: never initiate TLS
+     - 1: initiate TLS when available
+     - 2: always initiate TLS or dispatch L{TLS_FAILED_EVENT} if not
+          available
+
+    L{TLS_FAILED_EVENT} is also fired when TLS negotiation failed.
+
+    The C{tlsEstablished} attribute is set to True whenever TLS was negotiated
+    succesfully.
+
+    The C{features} attribute is a L{dict} mapping (uri, name) tuples to
+    their respective received feature elements.
+    """
+
+    version = (1, 0)        # Stream version; pair of integers: (major, minor)
+    namespace = 'invalid'   # Default namespace for stream (in ASCII)
+    thisHost = None         # Hostname of this entity
+    otherHost = None        # Hostname of the entity we connect to
+    sid = None              # Session identifier (in ASCII)
+    initiating = True       # True if this is the initiating stream
+    _headerSent = False     # True if the stream header has been sent
+    features = {}           # Stream features dictionary {(uri, name): element}
+    useTls = 2              # 0 = never, 1 = whenever possible, 2 = always
+    tlsEstablished = False  # True if TLS has been succesfully negotiated
 
     def __init__(self, authenticator):
         xmlstream.XmlStream.__init__(self)
@@ -127,18 +152,50 @@ class XmlStream(xmlstream.XmlStream):
         self.dispatch(errelem, STREAM_ERROR_EVENT)
         self.transport.loseConnection()
 
+    def startTLS(self):
+        def proceed(obj):
+            print "proceed"
+            ctx = ssl.ClientContextFactory()
+            ctx.method = SSL.TLSv1_METHOD   # We only do TLS, no SSL
+            self.transport.startTLS(ctx)
+            self.reset()
+            self.tlsEstablished = 1
+            self.sendHeader()
+
+        def failure(obj):
+            self.factory.stopTrying()
+            self.dispatch(obj, TLS_FAILED_EVENT)
+
+        self.addOnetimeObserver("/proceed", proceed)
+        self.addOnetimeObserver("/failure", failure)
+        self.send("<starttls xmlns='%s'/>" % NS_XMPP_TLS)
+
     def onFeatures(self, features):
         """ Called when a stream:features element has been received.
     
-        Stores the received features in the C{features} attribute, and
-        notifies the authenticator of the start of the stream.
+        Stores the received features in the C{features} attribute, checks the
+        need for initiating TLS and notifies the authenticator of the start of
+        the stream.
 
         @param features: The received features element.
         @type features: L{domish.Element}
         """
-        self.features = features
-        self.authenticator.streamStarted()
-
+        self.features = {}
+        for feature in features.elements():
+            self.features[(feature.uri, feature.name)] = feature
+        
+        starttls = (NS_XMPP_TLS, 'starttls') in self.features
+        
+        if self.tlsEstablished or self.useTls == 0 or \
+           (self.useTls == 1 and not starttls):
+            self.authenticator.streamStarted()
+        elif not self.tlsEstablished and self.useTls in (1, 2) and starttls:
+            self.startTLS()
+        else:
+            self.factory.stopTrying()
+            self.dispatch(None, TLS_FAILED_EVENT)
+            self.transport.loseConnection()
+            
     def hasFeature(self, uri, name):
         """ Report if a certain feature is supported.
         
@@ -147,14 +204,7 @@ class XmlStream(xmlstream.XmlStream):
         @param name: Feature name.
         @type name: L{str}
         """
-        if self.features is None:
-            return False
-
-        for feature in self.features.elements():
-            if feature.uri == uri and feature.name == name:
-                return True
-
-        return False
+        return (uri, name) in self.features
 
     def sendHeader(self):
         """ Send stream header. """
