@@ -8,6 +8,25 @@ except ImportError:
                      "attempting to install any other Twisted projects.")
 
 if __name__ == '__main__':
+    if sys.version_info[:2] >= (2, 4):
+        extraMeta = dict(
+            classifiers=[
+                "Development Status :: 4 - Beta",
+                "Environment :: Console",
+                "Environment :: No Input/Output (Daemon)",
+                "Intended Audience :: Developers",
+                "Intended Audience :: End Users/Desktop",
+                "Intended Audience :: System Administrators",
+                "License :: OSI Approved :: MIT License",
+                "Programming Language :: Python",
+                "Topic :: Internet",
+                "Topic :: Security",
+                "Topic :: Software Development :: Libraries :: Python Modules",
+                "Topic :: Terminals",
+            ])
+    else:
+        extraMeta = {}
+
     dist.setup(
         twisted_subproject="conch",
         scripts=dist.getScripts("conch"),
@@ -25,4 +44,4 @@ if __name__ == '__main__':
 Conch is an SSHv2 implementation using the Twisted framework.  It
 includes a server, client, a SFTP client, and a key generator.
 """,
-    )
+        **extraMeta)
