@@ -1,3 +1,21 @@
+0.6.0:
+
+ Bugfixes and improvements in SSH support and Insults:
+  - PAM authenticator support factored out into twisted.cred
+  - Poorly supported next-line terminal operation replaced with simple \r\n
+
+ New functionality:
+  - An ITerminalTransport implementation with expect-like features
+  - Support for the "none" SSH cipher
+  - Insults support for handling more keystrokes and more methods for
+    terminal manipulation
+  - New, simple insults-based widget library added
+
+ Better test coverage:
+  - Dependence on `localhost' name removed
+  - Some timing-sensitive tests changed to be more reliable
+  - Process spawning tests initialize environment more robustly
+
 0.5.0:
 
  Many improvements to SSH support. Here's some in particular:
