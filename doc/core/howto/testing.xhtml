@@ -4,26 +4,29 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>Tips for writing tests for Twisted code</title>
+    <title>Writing tests for Twisted code</title>
   </head>
 
   <body>
 
-<h1>Tips for writing tests for Twisted code</h1>
+<h1>Writing tests for Twisted code</h1>
 
 <h2>Trial basics</h2>
 
-<p><strong>Trial</strong> is Twisted's testing framework.  It provides a library
-for building test cases (similar to the Python standard library's
-<code>unittest</code> module) and utility functions for working with the Twisted
-environment in your tests, and a command-line utility for running your tests.
-For instance, to run all the Twisted tests, do:</p>
+<p><strong>Trial</strong> is Twisted's testing framework.  It provides a
+library for writing test cases and utility functions for working with the
+Twisted environment in your tests, and a command-line utility for running your
+tests. Trial is built on the Python standard library's <code>unittest</code>
+module.</p>
+
+<p>To run all the Twisted tests, do:</p>
 
 <pre class="shell">
-$ trial -R twisted
+$ trial twisted
 </pre>
 
 <p>Refer to the Trial man page for other command-line options.</p>
+
 
 <h2>Twisted-specific quirks: reactor, Deferreds, callLater</h2>
 
@@ -38,7 +41,7 @@ your tests.</p>
 
 <h3>Leave the Reactor as you found it</h3>
 
-<p>Trial runs the entire test suite (over one thousand tests) in a single
+<p>Trial runs the entire test suite (over two thousand tests) in a single
 process, with a single reactor. Therefore it is important that your test
 leave the reactor in the same state as it found it. Leftover timers may
 expire during somebody else's unsuspecting test. Leftover connection attempts
@@ -52,19 +55,20 @@ always run regardless of whether your test passes or fails (like a bare
 <code>except</code> clause in a try-except construct). Exceptions in
 <code>tearDown</code> are flagged as errors and flunk the test.</p>
 
-<p><code>reactor.stop</code> is considered very harmful, and should only be used by
-reactor-specific test cases which know how to restore the state that it
-kills. If you must use reactor.run, use <code>reactor.crash</code> to stop it instead of
-<code>reactor.stop</code>.</p>
+<p><code>reactor.stop</code> is considered very harmful, and should only be
+used by reactor-specific test cases which know how to restore the state that it
+kills. If you must use reactor.run, use <code>reactor.crash</code> to stop it
+instead of <code>reactor.stop</code>.</p>
 
-<p>Calls to <code>reactor.callLater</code> create <code
-class="API" base="twisted.internet.interfaces">IDelayedCall</code>s.  These need
-to be run or cancelled during a test, otherwise they will outlive the test.
-This would be bad, because they could interfere with a later test, causing
-confusing failures in unrelated tests!  For this reason, Trial checks the
-reactor to make sure there are no leftover <code class="API"
+<p>Calls to <code>reactor.callLater</code> create <code class="API"
+base="twisted.internet.interfaces">IDelayedCall</code>s.  These need to be run
+or cancelled during a test, otherwise they will outlive the test.  This would
+be bad, because they could interfere with a later test, causing confusing
+failures in unrelated tests!  For this reason, Trial checks the reactor to make
+sure there are no leftover <code class="API"
 base="twisted.internet.interfaces">IDelayedCall</code>s in the reactor after a
-test, and will fail the test if there are.</p>
+test, and will fail the test if there are.  The cleanest and simplest way to
+make sure this all works is to return a Deferred from your test.</p>
 
 <p>Similarly, sockets created during a test should be closed by the end of the
 test.  This applies to both listening ports and client connections.  So, calls
@@ -72,36 +76,15 @@ to <code>reactor.listenTCP</code> (and <code>listenUNIX</code>, and so on)
 return <code class="API"
 base="twisted.internet.interfaces">IListeningPort</code>s, and these should be
 cleaned up before a test ends by calling their <code class="API"
-base="twisted.internet.interfaces.IListeningPort">stopListening</code> method
-(note that this can return a Deferred, so you should <code>wait</code> on it to
-make sure it has really stopped before the test ends.  Calls to
-<code>reactor.connectTCP</code> return <code class="API"
+base="twisted.internet.interfaces.IListeningPort">stopListening</code> method.
+Calls to <code>reactor.connectTCP</code> return <code class="API"
 base="twisted.internet.interfaces">IConnector</code>s, which should be cleaned
 up by calling their <code class="API"
 base="twisted.internet.interfaces.IConnector">disconnect</code> method.  Trial
 will warn about unclosed sockets.</p>
 
-<h3>deferredResult</h3>
-
-<p>If your test creates a <code class="API"
-base="twisted.internet.defer">Deferred</code> and simply wants to verify
-something about its result, use <code class="API"
-base="twisted.trial.util">deferredResult</code>. It will wait for the
-Deferred to fire and give you the result. If the Deferred runs the errback
-handler instead, it will raise an exception so your test can fail. Note that
-the <em>only</em> thing that will terminate a <code>deferredResult</code>
-call is if the Deferred fires; in particular, timers which raise exceptions
-will not cause it to return.</p>
-
-<h3>Waiting for Things</h3>
-
-<p>The preferred way to run a test that waits for something to happen (always
-triggered by other things that you have done) is to use a <code
-class="python">while not self.done</code> loop that does <code
-class="python">reactor.iterate(0.1)</code> at the beginning of each pass. The
-<q>0.1</q> argument sets a limit on how long the reactor will wait to return
-if there is nothing to do. 100 milliseconds is long enough to avoid spamming
-the CPU while your timers wait to expire.</p>
+<p>The golden rule is: If your tests call a function which returns a Deferred,
+your test should return a Deferred.</p>
 
 <h3>Using Timers to Detect Failing Tests</h3>
 
@@ -113,78 +96,10 @@ stalling because of a single test. This is especially important for the
 Twisted test suite, because it is run automatically by the buildbot whenever
 changes are committed to the Subversion repository.</p>
 
-<p>Trial tests indicate they have failed by raising a FailTest exception
-(self.fail and friends are just wrappers around this <code
-class="python">raise</code> statement). Exceptions that are raised inside a
-callRemote timer are caught and logged but otherwise ignored. Trial uses a
-logging hook to notice when errors have been logged by the test that just
-completed (so such errors will flunk the test), but this happens after the
-fact: they will not be noticed by the main body of your test code. Therefore
-callRemote timers can not be used directly to establish timeouts which
-terminate and flunk the test.</p>
+<p>The way to do this in Trial is to set the <code>.timeout</code> attribute
+on your unit test method.  Set the attribute to the number of seconds you wish
+to elapse before the test raises a timeout error.</p>
 
-<p>The right way to implement this sort of timeout is to have a
-<code>self.done</code> flag, and a while loop which iterates the reactor
-until it becomes true. Anything that causes the test to be finished (success
-<em>or</em> failure) can set self.done to cause the loop to exit.</p>
-
-<p>Most of the code in Twisted is run by the reactor as a result of socket
-activity. This is almost always started by Protocol.connectionMade or
-Protocol.dataReceived (because the output side goes through a buffer which
-queues data for transmission). Exceptions that are raised by code called in
-this way (by the reactor, through doRead or doWrite) are caught, logged,
-handed to connectionLost, and otherwise ignored.</p>
-
-<p>This means that your Protocol's connectionLost method, if invoked because
-of an exception, must also set this self.done flag. Otherwise the test will
-not terminate.</p>
-
-<p>Exceptions that are raised in a Deferred callback are turned into a
-Failure and stashed inside the Deferred. When an errback handler is attached,
-the Failure is given to it. If the Deferred goes out of scope while an error
-is still pending, the error is logged just like exceptions that happen in
-timers or protocol handlers. This will cause the current test to flunk
-(eventually), but it is not checked until after the test fails. So again, it
-is a good idea to add errbacks to your Deferreds that will terminate your
-test's main loop.</p>
-
-<p>Here is a brief example that demonstrates a few of these techniques.</p>
-
-<pre class="python">
-class MyTest(unittest.TestCase):
-    def setUp(self):
-        self.done = False
-        self.failure = None
-
-    def tearDown(self):
-        self.server.stopListening()
-        # TODO: also shut down client
-        try:
-            self.timeout.cancel()
-        except (error.AlreadyCancelled, error.AlreadyCalled):
-            pass
-
-    def succeeded(self):
-        self.done = True
-
-    def failed(self, why):
-        self.done = True
-        self.failure = why
-
-    def testServer(self):
-        self.server = reactor.listenTCP(port, factory)
-        self.client = reactor.connectTCP(port, factory)
-        # you should give the factories a way to call our 'succeeded' or
-        # 'failed' methods
-        self.timeout = reactor.callLater(5, self.failed, "timeout")
-        while not self.done:
-            reactor.iterate(0.1)
-
-        # we get here if the test is finished, for good or for bad
-        if self.failure:
-            self.fail(self.failure)
-        # otherwise it probably passed. Cleanup will be done in tearDown()
-</pre>
 
   </body>
 </html>
