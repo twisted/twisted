@@ -58,8 +58,8 @@ class SerialPort(BaseSerialPort):
 
 # replace SerialPort with appropriate serial port
 if os.name == 'posix':
-    from posixserialport import SerialPort
+    from twisted.internet._posixserialport import SerialPort
 elif os.name == 'java':
-    from javaserialport import SerialPort
+    from twisted.internet._javaserialport import SerialPort
 elif sys.platform == 'win32':
-    from win32serialport import SerialPort
+    from twisted.internet._win32serialport import SerialPort
