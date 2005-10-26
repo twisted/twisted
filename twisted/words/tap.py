@@ -47,14 +47,14 @@ class Options(usage.Options):
 
 def makeService(config):
     if config['passwd']:
-        checkers = [checkers.FilePasswordDB(config['passwd'], cache=True)]
+        credCheckers = [checkers.FilePasswordDB(config['passwd'], cache=True)]
     elif config['checkers']:
-        checkers = config['checkers']
+        credCheckers = config['checkers']
     else:
-        checkers = []
+        credCheckers = []
 
     wordsRealm = service.InMemoryWordsRealm(config['hostname'])
-    wordsPortal = portal.Portal(wordsRealm, checkers)
+    wordsPortal = portal.Portal(wordsRealm, credCheckers)
 
     msvc = MultiService()
 
