@@ -191,15 +191,17 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
         """Close the connection at the next available opportunity.
 
-        Call this to cause this FileDescriptor to lose its connection; if this is in
-        the main loop, it will lose its connection as soon as it's done
-        flushing its write buffer; otherwise, it will wake up the main thread
-        and lose the connection immediately.
+        Call this to cause this FileDescriptor to lose its connection.  It will
+        first write any data that it has buffered.
 
-        If you have a producer registered, the connection won't be closed until the
-        producer is finished. Therefore, make sure you unregister your producer
-        when it's finished, or the connection will never close.
+        If there is data buffered yet to be written, this method will cause the
+        transport to lose its connection as soon as it's done flushing its
+        write buffer.  If you have a producer registered, the connection won't
+        be closed until the producer is finished. Therefore, make sure you
+        unregister your producer when it's finished, or the connection will
+        never close.
         """
+
         if self.connected and not self.disconnecting:
             if self._writeDisconnected:
                 # doWrite won't trigger the connection close anymore
