@@ -251,5 +251,15 @@ class FilePath:
     def getContent(self):
         return self.open().read()
 
+    # new in 2.2.0
+    def children(self):
+        return map(self.child, self.listdir())
+
+    def walk(self):
+        yield self
+        if self.isdir():
+            for c in self.children():
+                for subc in c.walk():
+                    yield subc
 
 FilePath.clonePath = FilePath

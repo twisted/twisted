@@ -10,20 +10,39 @@ class FilePathTestCase(unittest.TestCase):
     f1content = "file 1"
     f2content = "file 2"
 
+    def _mkpath(self, *p):
+        x = os.path.abspath(os.path.join(self.cmn, *p))
+        self.all.append(x)
+        return x
+
+    def subdir(self, *dirname):
+        os.mkdir(self._mkpath(*dirname))
+
+    def subfile(self, *dirname):
+        return open(self._mkpath(*dirname), "wb")
+
     def setUp(self):
         self.now = time.time()
-        cmn = self.mktemp()
+        cmn = self.cmn = os.path.abspath(self.mktemp())
+        self.all = [cmn]
         os.mkdir(cmn)
-        os.mkdir(os.path.join(cmn,"sub1"))
-        f = open(os.path.join(cmn, "file1"),"wb")
+        self.subdir("sub1")
+        f = self.subfile("file1")
         f.write(self.f1content)
-        f = open(os.path.join(cmn, "sub1", "file2"),"wb")
+        f = self.subfile("sub1", "file2")
         f.write(self.f2content)
-        os.mkdir(os.path.join(cmn, 'sub3'))
-        f = open(os.path.join(cmn, "sub3", "file3.ext1"),"wb")
-        f = open(os.path.join(cmn, "sub3", "file3.ext2"),"wb")
-        f = open(os.path.join(cmn, "sub3", "file3.ext3"),"wb")
+        self.subdir('sub3')
+        f = self.subfile("sub3", "file3.ext1")
+        f = self.subfile("sub3", "file3.ext2")
+        f = self.subfile("sub3", "file3.ext3")
+        self.all.sort()
+
         self.path = filepath.FilePath(cmn)
+
+    def testWalk(self):
+        x = [foo.path for foo in self.path.walk()]
+        x.sort()
+        self.assertEquals(x, self.all)
 
     def testGetAndSet(self):
         content = 'newcontent'
