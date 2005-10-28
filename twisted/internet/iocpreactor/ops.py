@@ -6,7 +6,7 @@ import struct, socket, os, errno
 #import time
 
 from twisted.internet import error
-from twisted.python import failure
+from twisted.python import failure, log
 
 from _iocp import have_connectex
 
@@ -128,3 +128,118 @@ class ConnectExOp(OverlappedOp):
         if res:
             raise error.getConnectError((res, os.strerror(res)))
 
+## Define custom xxxOp classes to handle IO operations related
+## to stdout/err/in for the process transport.
+class ReadOutOp(OverlappedOp):
+    def ovDone(self, ret, bytes, (handle, buffer)):
+        if ret or not bytes:
+            try:
+                self.transport.outConnectionLost()
+            except Exception, e:
+                log.err(e)
+                # Close all handles and proceed as normal,
+                # waiting for process to exit.
+                self.transport.closeStdout()
+                self.transport.closeStderr()
+                self.transport.closeStdin()
+        else:
+            try:
+                self.transport.protocol.outReceived(buffer[:bytes])
+            except Exception, e:
+                log.err(e)
+                # Close all handles and proceed as normal,
+                # waiting for process to exit.
+                self.transport.closeStdout()
+                self.transport.closeStderr()
+                self.transport.closeStdin()
+            # Keep reading
+            try:
+                self.initiateOp(handle, buffer)
+            except WindowsError, e:
+                if e.strerror == "The pipe has been ended":
+                    self.transport.outConnectionLost()
+                else:
+                    raise e
+
+    def initiateOp(self, handle, buffer):
+        self.reactor.issueReadFile(handle, buffer, self.ovDone, (handle, buffer))
+
+class ReadErrOp(OverlappedOp):
+    def ovDone(self, ret, bytes, (handle, buffer)):
+        if ret or not bytes:
+            try:
+                self.transport.errConnectionLost()
+            except Exception, e:
+                log.err(e)
+                # Close all handles and proceed as normal,
+                # waiting for process to exit.
+                self.transport.closeStdout()
+                self.transport.closeStderr()
+                self.transport.closeStdin()
+        else:
+            try:
+                self.transport.protocol.errReceived(buffer[:bytes])
+            except Exception, e:
+                log.err(e)
+                # Close all handles and proceed as normal,
+                # waiting for process to exit.
+                self.transport.closeStdout()
+                self.transport.closeStderr()
+                self.transport.closeStdin()
+            # Keep reading
+            try:
+                self.initiateOp(handle, buffer)
+            except WindowsError, e:
+                if e.strerror == "The pipe has been ended":
+                    self.transport.errConnectionLost()
+                else:
+                    raise e
+
+    def initiateOp(self, handle, buffer):
+        self.reactor.issueReadFile(handle, buffer, self.ovDone, (handle, buffer))
+
+class WriteInOp(OverlappedOp):
+    def ovDone(self, ret, bytes, (handle, buffer)):
+        if ret or not bytes:
+            try:
+                self.transport.inConnectionLost()
+            except Exception, e:
+                log.err(e)
+                # Close all handles and proceed as normal,
+                # waiting for process to exit.
+                self.transport.closeStdout()
+                self.transport.closeStderr()
+                self.transport.closeStdin()
+        else:
+            try:
+                self.transport.writeDone(bytes)
+            except Exception, e:
+                log.err(e)
+                # Close all handles and proceed as normal,
+                # waiting for process to exit.
+                self.transport.closeStdout()
+                self.transport.closeStderr()
+                self.transport.closeStdin()
+
+    def initiateOp(self, handle, buffer):
+        self.reactor.issueWriteFile(handle, buffer, self.ovDone, (handle, buffer))
+
+class ReadInOp(OverlappedOp):
+    """Stdin pipe will be opened in duplex mode.  The parent will read
+    stdin to detect when the child closes it so we can close our end.
+    """
+    def ovDone(self, ret, bytes, (handle, buffer)):
+        if ret or not bytes:
+            self.transport.inConnectionLost()
+        else:
+            # Keep reading
+            try:
+                self.initiateOp(handle, buffer)
+            except WindowsError, e:
+                if e.strerror == "The pipe has been ended":
+                    self.transport.inConnectionLost()
+                else:
+                    raise e
+                    
+    def initiateOp(self, handle, buffer):
+        self.reactor.issueReadFile(handle, buffer, self.ovDone, (handle, buffer))

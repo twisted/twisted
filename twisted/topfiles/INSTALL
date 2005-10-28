@@ -9,6 +9,7 @@ Requirements
   On Windows pywin32 is recommended (this is built in to ActivePython,
   so no need to reinstall if you use it instead of standard Python)
       http://sourceforge.net/project/showfiles.php?group_id=78018
+  The Windows IOCP reactor requires pywin32 build 205 or later.
 
 Installation
 
