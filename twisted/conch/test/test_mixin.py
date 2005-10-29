@@ -64,23 +64,25 @@ class BufferingTiming(unittest.TestCase):
         self.unbuffered = f3.connectTCP('127.0.0.1', self.server.getHost().port)
 
     def benchmarkBuffering(self, clock=time.clock, sleep=time.sleep):
-        bufp = unittest.deferredResult(self.buffered)
-        unbufp = unittest.deferredResult(self.unbuffered)
+        def cbGotTransports(results):
+            bufp, unbufp = results[0][1], results[1][1]
 
-        one = 'x'
-        ten = one * 10
-        hundred = ten * 10
-        thousand = hundred * 10
+            one = 'x'
+            ten = one * 10
+            hundred = ten * 10
+            thousand = hundred * 10
 
-        for p in bufp, unbufp:
-            write = p.write
-            iteration = xrange(100)
-            start = clock()
+            for p in bufp, unbufp:
+                write = p.write
+                iteration = xrange(100)
+                start = clock()
 
-            write(one)
-            for i in iteration:
-                write(ten)
+                write(one)
+                for i in iteration:
+                    write(ten)
 
-            end = clock()
-            print 'Took', end - start
-
+                end = clock()
+                print 'Took', end - start
+        return defer.DeferredList(
+            [self.buffered, self.unbuffered],
+            fireOnOneErrback=True)
