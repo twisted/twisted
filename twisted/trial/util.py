@@ -224,6 +224,8 @@ def spinUntil(f, timeout=DEFAULT_TIMEOUT_DURATION,
     """spin the reactor while condition returned by f() == False or timeout
     seconds have elapsed i.e. spin until f() is True
     """
+    warnings.warn("Do NOT use spinUntil.  Return a Deferred from your "
+                  "test.", stacklevel=2, category=DeprecationWarning)
     assert callable(f)
     from twisted.internet import reactor
     now = time.time()
@@ -238,6 +240,8 @@ def spinWhile(f, timeout=DEFAULT_TIMEOUT_DURATION,
     """spin the reactor while condition returned by f() == True or until
     timeout seconds have elapsed i.e. spin until f() is False
     """
+    warnings.warn("Do NOT use spinWhile.  Return a Deferred from your "
+                  "test.", stacklevel=2, category=DeprecationWarning)
     assert callable(f)
     from twisted.internet import reactor
     now = time.time()
