@@ -14,11 +14,16 @@ class Mixin:
     started = 0
     stopped = 0
 
+    startedDeferred = None
+
     def __init__(self):
         self.packets = []
     
     def startProtocol(self):
         self.started = 1
+        if self.startedDeferred is not None:
+            self.startedDeferred.callback(None)
+            self.startedDeferred = None
 
     def stopProtocol(self):
         self.stopped = 1
@@ -188,14 +193,22 @@ class UDPTestCase(unittest.TestCase):
         self.assertEquals(len(l), 1)
 
     def testRebind(self):
+        # XXX What the hell is this supposed to be testing?
         server = Server()
+        d = server.startedDeferred = defer.Deferred()
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
-        reactor.iterate()
-        unittest.deferredResult(defer.maybeDeferred(p.stopListening))
-        p = reactor.listenUDP(0, server, interface="127.0.0.1")
-        reactor.iterate()
-        unittest.deferredResult(defer.maybeDeferred(p.stopListening))
+
+        def cbStarted(ignored, port):
+            return port.stopListening()
+
+        def cbStopped(ignored):
+            d = server.startedDeferred = defer.Deferred()
+            p = reactor.listenUDP(0, server, interface="127.0.0.1")
+            return d.addCallback(cbStarted, p)
+
+        return d.addCallback(cbStarted, p)
     
+
     def testBindError(self):
         server = Server()
         port = reactor.listenUDP(0, server, interface='127.0.0.1')
