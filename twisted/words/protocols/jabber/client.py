@@ -163,7 +163,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     def _registerResultEvent(self, iq):
         if iq["type"] == "result":
             # Registration succeeded -- go ahead and auth
-            self.streamStarted(None)
+            self.streamStarted()
         else:
             # Registration failed
             self.xmlstream.dispatch(iq, self.REGISTER_FAILED_EVENT)
