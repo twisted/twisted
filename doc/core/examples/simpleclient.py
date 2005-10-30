@@ -25,9 +25,6 @@ class EchoClient(protocol.Protocol):
     
     def connectionLost(self, reason):
         print "connection lost"
-        from twisted.internet import reactor
-        reactor.stop()
-
 
 class EchoFactory(protocol.ClientFactory):
     protocol = EchoClient
