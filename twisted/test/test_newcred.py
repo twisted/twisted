@@ -172,10 +172,10 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-        creds = [ credentials.UsernamePassword(u, p) for u, p in self.users ]
+        creds = [credentials.UsernamePassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
-            [ defer.maybeDeferred(db.requestAvatarId, c) for c in creds ])
-        d.addCallback(self.assertEquals, [ u for u, p in self.users ])
+            [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
+        d.addCallback(self.assertEquals, [u for u, p in self.users])
         return d
     
     def testRequestAvatarId_hashed(self):
@@ -185,11 +185,10 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-        creds = [ credentials.UsernameHashedPassword(u, p)
-                  for u, p in self.users ]
+        creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
-            [ defer.maybeDeferred(db.requestAvatarId, c) for c in creds ])
-        d.addCallback(self.assertEquals, [ u for u, p in self.users ])
+            [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
+        d.addCallback(self.assertEquals, [u for u, p in self.users])
         return d
 
 
@@ -226,23 +225,23 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
         d = defer.gatherResults([self.port.login(c, None, ITestable)
                                  for c in goodCreds])
-        d.addCallback(lambda x : [ a.original.name for i, a, l in x ])
+        d.addCallback(lambda x: [a.original.name for i, a, l in x])
         d.addCallback(self.assertEquals, [u for u, p in self.users])
         return d
 
     def testBadCredentials(self):
         badCreds = [credentials.UsernamePassword(u, 'wrong password')
                     for u, p in self.users]
-        d = defer.DeferredList([ self.port.login(c, None, ITestable)
-                                 for c in badCreds ], consumeErrors=True)
+        d = defer.DeferredList([self.port.login(c, None, ITestable)
+                                for c in badCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnauthorizedLogin)
         return d
     
     def testHashedCredentials(self):
         hashedCreds = [credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
                        for u, p in self.users]
-        d = defer.DeferredList([ self.port.login(c, None, ITestable)
-                                 for c in hashedCreds ], consumeErrors=True)
+        d = defer.DeferredList([self.port.login(c, None, ITestable)
+                                for c in hashedCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnhandledCredentials)
         return d
 

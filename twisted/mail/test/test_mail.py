@@ -223,9 +223,7 @@ class MaildirAppendStringTestCase(unittest.TestCase):
 
     def _append(self, ignored, mbox):
         d = mbox.appendMessage('TEST')
-        d.addErrback(lambda x :
-                     self.failUnless(isinstance(x, failure.Failure)))
-        return d
+        return self.assertFailure(d, Exception)
 
     def _setState(self, ignored, mbox, rename=None, write=None, open=None):
         if rename is not None:

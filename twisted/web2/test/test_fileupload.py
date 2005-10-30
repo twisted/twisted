@@ -38,10 +38,10 @@ class TestStream(stream.SimpleStream):
 class MultipartTests(unittest.TestCase):
     def doTestError(self, boundary, data, expected_error):
         # Test different amounts of data at a time.
-        ds = [ fileupload.parseMultipartFormData(TestStream(data,
-                                                            maxReturn=bytes),
-                                                 boundary)
-               for bytes in range(1, 20) ]
+        ds = [fileupload.parseMultipartFormData(TestStream(data,
+                                                           maxReturn=bytes),
+                                                boundary)
+              for bytes in range(1, 20)]
         d = defer.DeferredList(ds, consumeErrors=True)
         d.addCallback(self._assertFailures, expected_error)
         return d
