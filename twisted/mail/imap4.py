@@ -2034,6 +2034,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """We are no longer connected"""
         if self.timeout > 0:
             self.setTimeout(None)
+        if self.queued is not None:
+            queued = self.queued
+            self.queued = None
+            for cmd in queued:
+                cmd.defer.errback(reason)
+        if self.tags is not None:
+            tags = self.tags
+            self.tags = None
+            for cmd in tags.itervalues():
+                if cmd is not None and cmd.defer is not None:
+                    cmd.defer.errback(reason)
+
 
     def lineReceived(self, line):
 #        print 'C: ' + repr(line)
@@ -2425,11 +2437,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         and whose errback is invoked otherwise.
         """
         d = maybeDeferred(self.getCapabilities)
-        d.addCallbacks(
-            self.__cbLoginCaps,
-            self.__ebLoginCaps,
-            callbackArgs=(username, password),
-        )
+        d.addCallback(self.__cbLoginCaps, username, password)
         return d
 
     def serverGreeting(self, caps):
@@ -2481,10 +2489,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self._capCache = None
         self.startedTLS = True
         return result
-
-    def __ebLoginCaps(self, failure):
-        log.err(failure)
-        return failure
 
     def __cbLoginTLS(self, result, username, password):
         args = ' '.join((username, password))

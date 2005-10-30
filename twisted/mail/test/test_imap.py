@@ -2456,6 +2456,15 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
             c.uninstall()
 
 
+class Disconnection(unittest.TestCase):
+    def testClientDisconnectFailsDeferreds(self):
+        c = imap4.IMAP4Client()
+        t = StringTransportWithDisconnection()
+        c.makeConnection(t)
+        d = self.assertFailure(c.login('testuser', 'example.com'), error.ConnectionDone)
+        c.connectionLost(error.ConnectionDone("Connection closed"))
+        return d
+
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
         case.skip = "OpenSSL not present"
