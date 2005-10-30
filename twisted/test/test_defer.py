@@ -241,6 +241,7 @@ class DeferredTestCase(unittest.TestCase):
         l = []
         d = defer.succeed("success")
         # this is how trial.util.deferredResult works
+        # NOTE: never actually use trial.util.deferredResult. It doesn't work.
         d.setTimeout(1.0)
         d.addCallback(l.append)
         self.assertEquals(l, ["success"])
@@ -324,13 +325,16 @@ class DeferredTestCase(unittest.TestCase):
 
         d = defer.Deferred()
         reactor.callLater(0.2, d.callback, 'Success')
-        r = unittest.deferredResult(defer.maybeDeferred(lambda: d))
-        self.assertEquals(r, 'Success')
+        d.addCallback(self.assertEquals, 'Success')
+        d.addCallback(self._testMaybeError)
+        return d
 
+    def _testMaybeError(self, ignored):
         d = defer.Deferred()
         reactor.callLater(0.2, d.errback, failure.Failure(RuntimeError()))
-        r = unittest.deferredError(defer.maybeDeferred(lambda: d))
-        r.trap(RuntimeError)
+        self.assertFailure(d, RuntimeError)
+        return d
+
 
 class AlreadyCalledTestCase(unittest.TestCase):
     def setUp(self):

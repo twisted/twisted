@@ -177,8 +177,8 @@ class GoogleTestCase(unittest.TestCase):
     def testCheckGoogle(self):
         raise unittest.SkipTest("no violation of google ToS")
         d = google.checkGoogle('site:www.twistedmatrix.com twisted')
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, 'http://twistedmatrix.com/')
+        d.addCallback(self.assertEquals, 'http://twistedmatrix.com/')
+        return d
 
 from twisted.web import static
 from twisted.web import script

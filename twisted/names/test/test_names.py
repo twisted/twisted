@@ -9,8 +9,7 @@ from __future__ import nested_scopes
 
 import sys, socket, operator, copy
 from twisted.trial import unittest
-from twisted.trial.util import deferredResult as dR
-from twisted.trial.util import wait, spinWhile, spinUntil
+from twisted.trial.util import wait, spinUntil
 
 from twisted.internet import reactor, protocol, defer, error
 from twisted.names import client, server, common, authority, hosts, dns

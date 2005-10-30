@@ -172,55 +172,88 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-
-        for (u, p) in self.users:
-            c = credentials.UsernamePassword(u, p)
-            d = defer.maybeDeferred(db.requestAvatarId, c)
-            self.assertEquals(unittest.deferredResult(d), u)
-
-        for (u, p) in self.users:
-            self.assertEquals(
-                unittest.deferredResult(db.requestAvatarId(
-                    credentials.UsernameHashedPassword(u, p))),
-                u
-            )
-
-    def testHashedPasswords(self):
-        def hash(u, p, s):
-            return crypt(p, s)
-
+        creds = [ credentials.UsernamePassword(u, p) for u, p in self.users ]
+        d = defer.gatherResults(
+            [ defer.maybeDeferred(db.requestAvatarId, c) for c in creds ])
+        d.addCallback(self.assertEquals, [ u for u, p in self.users ])
+        return d
+    
+    def testRequestAvatarId_hashed(self):
         dbfile = self.mktemp()
-        db = checkers.FilePasswordDB(dbfile, hash=hash)
+        db = checkers.FilePasswordDB(dbfile, caseSensitive=0)
+        f = file(dbfile, 'w')
+        for (u, p) in self.users:
+            f.write('%s:%s\n' % (u, p))
+        f.close()
+        creds = [ credentials.UsernameHashedPassword(u, p)
+                  for u, p in self.users ]
+        d = defer.gatherResults(
+            [ defer.maybeDeferred(db.requestAvatarId, c) for c in creds ])
+        d.addCallback(self.assertEquals, [ u for u, p in self.users ])
+        return d
+
+
+
+class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
+    users = [
+        ('user1', 'pass1'),
+        ('user2', 'pass2'),
+        ('user3', 'pass3'),
+    ]
+
+
+    def hash(self, u, p, s):
+        return crypt(p, s)
+
+    def setUp(self):
+        dbfile = self.mktemp()
+        self.db = checkers.FilePasswordDB(dbfile, hash=self.hash)
         f = file(dbfile, 'w')
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, crypt(p, u[:2])))
         f.close()
-
         r = TestRealm()
-        port = portal.Portal(r)
-        port.registerChecker(db)
+        self.port = portal.Portal(r)
+        self.port.registerChecker(self.db)
 
-        for (u, p) in self.users:
-            c = credentials.UsernamePassword(u, p)
+    def testGoodCredentials(self):
+        goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
+        d = defer.gatherResults([self.db.requestAvatarId(c) for c in goodCreds])
+        d.addCallback(self.assertEquals, [u for u, p in self.users])
+        return d
 
-            d = defer.maybeDeferred(db.requestAvatarId, c)
-            self.assertEquals(unittest.deferredResult(d), u)
+    def testGoodCredentials_login(self):
+        goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
+        d = defer.gatherResults([self.port.login(c, None, ITestable)
+                                 for c in goodCreds])
+        d.addCallback(lambda x : [ a.original.name for i, a, l in x ])
+        d.addCallback(self.assertEquals, [u for u, p in self.users])
+        return d
 
-            d = port.login(c, None, ITestable)
-            i, a, l = unittest.deferredResult(d)
-            self.assertEquals(a.original.name, u)
+    def testBadCredentials(self):
+        badCreds = [credentials.UsernamePassword(u, 'wrong password')
+                    for u, p in self.users]
+        d = defer.DeferredList([ self.port.login(c, None, ITestable)
+                                 for c in badCreds ], consumeErrors=True)
+        d.addCallback(self._assertFailures, error.UnauthorizedLogin)
+        return d
+    
+    def testHashedCredentials(self):
+        hashedCreds = [credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
+                       for u, p in self.users]
+        d = defer.DeferredList([ self.port.login(c, None, ITestable)
+                                 for c in hashedCreds ], consumeErrors=True)
+        d.addCallback(self._assertFailures, error.UnhandledCredentials)
+        return d
 
-            # It should fail if we pass the wrong password
-            c = credentials.UsernamePassword(u, 'wrong password')
-            d = port.login(c, None, ITestable)
-            f = unittest.deferredError(d)
-            f.trap(error.UnauthorizedLogin)
+    def _assertFailures(self, failures, *expectedFailures):
+        for flag, failure in failures:
+            self.failUnlessEqual(flag, defer.FAILURE)
+            failure.trap(*expectedFailures)
+        return None
 
-            # And it should fail for UsernameHashedPassword
-            c = credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
-            d = port.login(c, None, ITestable)
-            f = unittest.deferredError(d)
-            f.trap(error.UnhandledCredentials)
+    def _errback(self, ignored):
+        print 'FAILED: ERRBACKED: ', ignored
 
     if crypt is None:
         testHashedPasswords.skip = "crypt module not available"
@@ -264,7 +297,8 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         creds = credentials.PluggableAuthenticationModules('testuser',
                 conv)
         d = db.requestAvatarId(creds)
-        self.assertEquals(unittest.deferredResult(d), 'testuser')
+        d.addCallback(self.assertEquals, 'testuser')
+        return d
 
     def testBadCredentials(self):
         db = checkers.PluggableAuthenticationModulesChecker()
@@ -272,8 +306,8 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         creds = credentials.PluggableAuthenticationModules('testuser',
                 conv)
         d = db.requestAvatarId(creds)
-        f = unittest.deferredError(d)
-        f.trap(error.UnauthorizedLogin)
+        self.assertFailure(d, error.UnauthorizedLogin)
+        return d
 
     def testBadUsername(self):
         db = checkers.PluggableAuthenticationModulesChecker()
@@ -281,8 +315,8 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         creds = credentials.PluggableAuthenticationModules('baduser',
                 conv)
         d = db.requestAvatarId(creds)
-        f = unittest.deferredError(d)
-        f.trap(error.UnauthorizedLogin)
+        self.assertFailure(d, error.UnauthorizedLogin)
+        return d
 
     if not pamauth:
         skip = "Can't run without PyPAM"

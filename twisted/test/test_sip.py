@@ -452,10 +452,11 @@ class RegistrationTestCase(unittest.TestCase):
         self.assertEquals(len(self.registry.users), 1)
         dc, uri = self.registry.users["joe"]
         self.assertEquals(uri.toString(), "sip:joe@client.com:5060")
-        desturl = unittest.deferredResult(
-            self.proxy.locator.getAddress(sip.URL(username="joe", host="bell.example.com")))
-        self.assertEquals((desturl.host, desturl.port), ("client.com", 5060))
-
+        d = self.proxy.locator.getAddress(sip.URL(username="joe",
+                                                  host="bell.example.com"))
+        d.addCallback(lambda desturl : (desturl.host, desturl.port))
+        d.addCallback(self.assertEquals, ('client.com', 5060))
+        return d
 
     def testUnregister(self):
         self.register()
