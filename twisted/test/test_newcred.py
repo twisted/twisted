@@ -252,11 +252,8 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
             failure.trap(*expectedFailures)
         return None
 
-    def _errback(self, ignored):
-        print 'FAILED: ERRBACKED: ', ignored
-
     if crypt is None:
-        testHashedPasswords.skip = "crypt module not available"
+        skip = "crypt module not available"
 
 class PluggableAuthenticationModulesTest(unittest.TestCase):
     
