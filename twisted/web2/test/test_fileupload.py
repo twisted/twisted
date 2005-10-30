@@ -1,5 +1,6 @@
+from twisted.internet import defer
 from twisted.trial import unittest
-from twisted.trial.util import wait, spinUntil, deferredError
+from twisted.trial.util import wait
 
 from twisted.web2 import stream, fileupload
 from twisted.web2.http_headers import MimeType
@@ -37,10 +38,18 @@ class TestStream(stream.SimpleStream):
 class MultipartTests(unittest.TestCase):
     def doTestError(self, boundary, data, expected_error):
         # Test different amounts of data at a time.
-        for bytes in range(1, 20):
-            s = TestStream(data, maxReturn=bytes)
-            f = deferredError(fileupload.parseMultipartFormData(s, boundary))
-            f.trap(expected_error)
+        ds = [ fileupload.parseMultipartFormData(TestStream(data,
+                                                            maxReturn=bytes),
+                                                 boundary)
+               for bytes in range(1, 20) ]
+        d = defer.DeferredList(ds, consumeErrors=True)
+        d.addCallback(self._assertFailures, expected_error)
+        return d
+
+    def _assertFailures(self, failures, *expectedFailures):
+        for flag, failure in failures:
+            self.failUnlessEqual(flag, defer.FAILURE)
+            failure.trap(*expectedFailures)
             
     def doTest(self, boundary, data, expected_args, expected_files):
         #import time, gc, cgi, cStringIO

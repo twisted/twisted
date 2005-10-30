@@ -543,14 +543,16 @@ class RegistrationTestCase(unittest.TestCase):
     def testWrongDomainLookup(self):
         self.register()
         url = sip.URL(username="joe", host="foo.com")
-        f = unittest.deferredError(self.proxy.locator.getAddress(url))
-        f.trap(LookupError)
+        d = self.proxy.locator.getAddress(url)
+        self.assertFailure(d, LookupError)
+        return d
     
     def testNoContactLookup(self):
         self.register()
         url = sip.URL(username="jane", host="bell.example.com")
-        f = unittest.deferredError(self.proxy.locator.getAddress(url))
-        f.trap(LookupError)
+        d = self.proxy.locator.getAddress(url)
+        self.assertFailure(d, LookupError)
+        return d
 
 
 class Client(sip.Base):

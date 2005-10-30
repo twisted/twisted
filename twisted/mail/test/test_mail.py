@@ -221,6 +221,20 @@ class MaildirAppendStringTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.d)
 
+    def _append(self, ignored, mbox):
+        d = mbox.appendMessage('TEST')
+        d.addErrback(lambda x :
+                     self.failUnless(isinstance(x, failure.Failure)))
+        return d
+
+    def _setState(self, ignored, mbox, rename=None, write=None, open=None):
+        if rename is not None:
+            mbox.AppendFactory._renameState = rename
+        if write is not None:
+            mbox.AppendFactory._writeState = write
+        if open is not None:
+            mbox.AppendFactory._openstate = open
+
     def testAppend(self):
         mbox = mail.maildir.MaildirMailbox(self.d)
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
@@ -233,17 +247,13 @@ class MaildirAppendStringTestCase(unittest.TestCase):
         self.assertEquals(len(mbox.getMessage(5).read()), 6)
         # test in the right order: last to first error location.
         mbox.AppendFactory._renamestate = False
-        self.failUnless(isinstance(unittest.deferredError(mbox.appendMessage("TEST")),
-                                                        failure.Failure))
-        mbox.AppendFactory._renamestate = True
-        mbox.AppendFactory._writestate = False
-        self.failUnless(isinstance(unittest.deferredError(mbox.appendMessage("TEST")),
-                                                        failure.Failure))
-        mbox.AppendFactory._writestate = True
-        mbox.AppendFactory._openstate = False
-        self.failUnless(isinstance(unittest.deferredError(mbox.appendMessage("TEST")),
-                                                        failure.Failure))
-        mbox.AppendFactory._openstate = True
+        d = self._append(None, mbox)
+        d.addCallback(self._setState, mbox, rename=True, write=False)
+        d.addCallback(self._append, mbox)
+        d.addCallback(self._setState, mbox, write=True, open=False)
+        d.addCallback(self._append, mbox)
+        d.addCallback(self._setState, mbox, open=True)
+        return d
 
 
 class MaildirAppendFileTestCase(unittest.TestCase):

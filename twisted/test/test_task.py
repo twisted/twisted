@@ -124,13 +124,8 @@ class LoopTestCase(unittest.TestCase):
 
         lc = task.LoopingCall(foo, "bar")
         d = lc.start(0.1)
-        err = unittest.deferredError(d)
-        err.trap(TestException)
-
-        # catch any possibly lingering issues
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+        self.assertFailure(d, TestException)
+        return d
 
     def testBadDelay(self):
         lc = task.LoopingCall(lambda: None)
