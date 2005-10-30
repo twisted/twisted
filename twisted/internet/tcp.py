@@ -124,9 +124,8 @@ class _TLSMixin:
                 return main.CONNECTION_LOST
             log.err()
             return main.CONNECTION_LOST
-        except SSL.Error:
-            log.err()
-            return main.CONNECTION_LOST
+        except SSL.Error, e:
+            return e
 
     def doWrite(self):
         # Retry disconnecting
@@ -159,9 +158,8 @@ class _TLSMixin:
                 return 0
             else:
                 return main.CONNECTION_LOST
-        except SSL.Error:
-            log.err()
-            return main.CONNECTION_LOST
+        except SSL.Error, e:
+            return e
 
     def _postLoseConnection(self):
         """Gets called after loseConnection(), after buffered data is sent.
@@ -216,9 +214,8 @@ class _TLSMixin:
                 #              "please upgrade to ver 0.XX", category=UserWarning)
                 self.socket.shutdown()
                 done = True
-        except SSL.Error:
-            log.err()
-            return main.CONNECTION_LOST
+        except SSL.Error, e:
+            return e
 
         if done:
             self.stopWriting()
