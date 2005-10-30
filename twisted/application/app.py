@@ -258,7 +258,9 @@ class ServerOptions(usage.Options):
         threading.settrace(util.spewer)
 
     def parseOptions(self, options=None):
-        usage.Options.parseOptions(self, options or sys.argv[1:] or ["--help"])
+        if options is None:
+            options = sys.argv[1:] or ["--help"]
+        usage.Options.parseOptions(self, options)
 
     def postOptions(self):
         if self['python']:
