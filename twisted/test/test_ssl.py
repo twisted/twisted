@@ -412,5 +412,5 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
 
 if interfaces.IReactorSSL(reactor, None) is None:
     for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase, 
-                  BufferingTestCase, ImmediateDisconnectTestCase]:
+                  BufferingTestCase, ConnectionLostTestCase]:
         tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
