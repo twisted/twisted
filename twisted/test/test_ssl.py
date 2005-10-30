@@ -94,7 +94,6 @@ class RecordingClientProtocol(protocol.Protocol):
 
 class ImmediatelyDisconnectingProtocol(protocol.Protocol):
     def connectionMade(self):
-        # Twisted's SSL support is terribly broken.
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
@@ -107,7 +106,7 @@ class AlmostImmediatelyDisconnectingProtocol(protocol.Protocol):
         reactor.callLater(0.1, self.transport.loseConnection)
 
     def connectionLost(self, reason):
-        self.factory.connectionDisconnected.callback(None)
+        self.factory.connectionDisconnected.callback(reason)
 
 
 def generateCertificateObjects(organization, organizationalUnit):
@@ -346,9 +345,7 @@ class BufferingTestCase(unittest.TestCase):
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
 
 
-class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
-
-    todo = "Logged SSL.Error - [('SSL routines', 'SSL23_READ', 'ssl handshake failure')]"
+class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
 
     def testImmediateDisconnect(self):
         org = "twisted.test.test_ssl"
@@ -371,6 +368,47 @@ class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
         
         return clientProtocolFactory.connectionDisconnected.addCallback(
             lambda ignoredResult: self.serverPort.stopListening())
+
+    def testFailedVerify(self):
+        org = "twisted.test.test_ssl"
+        self.setupServerAndClient(
+            (org, org + ", client"), {},
+            (org, org + ", server"), {})
+
+        def verify(*a):
+            return False
+        self.clientCtxFactory.getContext().set_verify(SSL.VERIFY_PEER, verify)
+
+        serverConnLost = defer.Deferred()
+        serverProtocol = protocol.Protocol()
+        serverProtocol.connectionLost = serverConnLost.callback
+        serverProtocolFactory = protocol.ServerFactory()
+        serverProtocolFactory.protocol = lambda: serverProtocol
+        self.serverPort = serverPort = reactor.listenSSL(0,
+            serverProtocolFactory, self.serverCtxFactory)
+
+        clientConnLost = defer.Deferred()
+        clientProtocol = protocol.Protocol()
+        clientProtocol.connectionLost = clientConnLost.callback
+        clientProtocolFactory = protocol.ClientFactory()
+        clientProtocolFactory.protocol = lambda: clientProtocol
+        clientConnector = reactor.connectSSL('127.0.0.1',
+            serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
+
+        dl = defer.DeferredList([serverConnLost, clientConnLost], consumeErrors=True)
+        return dl.addCallback(self._cbLostConns)
+
+    def _cbLostConns(self, results):
+        (sSuccess, sResult), (cSuccess, cResult) = results
+
+        self.failIf(sSuccess)
+        self.failIf(cSuccess)
+
+        sResult.trap(SSL.Error)
+        cResult.trap(SSL.Error)
+
+        return self.serverPort.stopListening()
+
 
 if interfaces.IReactorSSL(reactor, None) is None:
     for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase, 
