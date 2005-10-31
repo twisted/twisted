@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """Filesystem backend for VFS."""
 
 import sys
@@ -81,29 +84,61 @@ class OSDirectory(OSNode):
     implements(ivfs.IFileSystemContainer)
 
     def children(self):
+        """See IFileSystemContainer."""
         return ([('.', self), ('..', self.parent)] +
                 [(childName, self.child(childName))
                  for childName in os.listdir(self.realPath)])
 
     def child(self, childName):
-
+        """See IFileSystemContainer."""
         fullPath = os.path.join(self.realPath, childName)
 
         if not os.path.exists(fullPath):
             raise ivfs.VFSError("path not found: %s" % childName)
 
-        if os.path.isdir(fullPath): Node = OSDirectory
-        else: Node = OSFile
+        if os.path.isdir(fullPath):
+            nodeFactory = self.childDirFactory()
+        else:
+            nodeFactory = self.childFileFactory()
 
-        return Node(fullPath, childName, self)
+        return nodeFactory(fullPath, childName, self)
+
+    def childDirFactory(cls):
+        """Returns a callable that will be used to construct instances for
+        subdirectories of this OSDirectory.  The callable should accept the same
+        interface as OSDirectory.__init__; i.e. take three args (path, name,
+        parent), and return an IFileSystemContainer.
+
+        By default, this will be the class of the child's parent.  Override this
+        method if you want a different behaviour.
+        """
+        # If you subclass OSDirectory, this will ensure children of OSDirectory
+        # are also your subclass.
+        return cls
+    childDirFactory = classmethod(childDirFactory)
+
+    def childFileFactory(self):
+        """Returns a callable that will be used to construct instances for files
+        in this OSDirectory.  The callable should accept the same interface as
+        OSFile.__init__; i.e. take three args (path, name, parent), and return
+        an IFileSystemLeaf.
+
+        By default, this will be OSFile.  Override this method if you want a
+        different behaviour.
+        """
+        return OSFile
 
     def createDirectory(self, childName):
-        child = OSDirectory(os.path.join(self.realPath, childName), childName, self)
+        """See IFileSystemContainer."""
+        child = self.childDirFactory()(os.path.join(self.realPath, childName),
+                                       childName, self)
         child.create()
         return child
 
     def createFile(self, childName):
-        child = OSFile(os.path.join(self.realPath, childName), childName, self)
+        """See IFileSystemContainer."""
+        child = self.childFileFactory()(os.path.join(self.realPath, childName),
+                                        childName, self)
         child.create()
         return child
 
@@ -114,6 +149,7 @@ class OSDirectory(OSNode):
         os.rmdir(self.realPath)
 
     def exists(self, childName):
+        """See IFileSystemContainer."""
         return os.path.exists(os.path.join(self.realPath, childName))
 
 
