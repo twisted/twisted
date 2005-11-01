@@ -199,7 +199,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, usePTY=0):
         """Spawn a process."""
-        Process(self, processProtocol, executable, args, env, path)
+        return Process(self, processProtocol, executable, args, env, path)
 
 components.backwardsCompatImplements(Win32Reactor)
 

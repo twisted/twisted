@@ -376,6 +376,8 @@ class IReactorProcess(Interface):
 
         @see: L{twisted.internet.protocol.ProcessProtocol}
 
+        @returns: An L{IProcessTransport} object.
+
         @raise OSError: Raised with errno EAGAIN or ENOMEM if there are
         insufficient system resources to create a new process.
         """
