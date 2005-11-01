@@ -5,13 +5,13 @@
 from twisted.internet import defer, base, main
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitrary, IReactorProcess
 from twisted.internet.iocpreactor import process
-from twisted.python import threadable, log
+from twisted.python import threadable, log, reflect
 from zope.interface import implements, implementsOnly
 
 import tcp, udp
 from _iocp import iocpcore
 
-class Proactor(iocpcore, base.ReactorBase):
+class Proactor(iocpcore, base.ReactorBase, log.Logger):
     # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
     # IReactorSSL (or leave it until exarkun finishes TLS)
     # IReactorProcess, IReactorCore (cleanup)
@@ -22,6 +22,7 @@ class Proactor(iocpcore, base.ReactorBase):
     def __init__(self):
         iocpcore.__init__(self)
         base.ReactorBase.__init__(self)
+        self.logstr = reflect.qual(self.__class__)
 #        self.completables = {}
 
     def startRunning(self):
@@ -97,6 +98,9 @@ class Proactor(iocpcore, base.ReactorBase):
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, usePTY=0):
         """Spawn a process."""
         return process.Process(self, processProtocol, executable, args, env, path)
+    
+    def logPrefix(self):
+        return self.logstr
         
 
 def install():

@@ -6,6 +6,7 @@
 
 static int g_imallocs, g_ifrees, g_amallocs, g_afrees;
 static int g_incobj, g_decobj, g_incarg, g_decarg;
+static PyObject * callWithLogger;
 
 //#define SPEW
 // compensate for mingw's (and MSVC6's) lack of recent Windows headers
@@ -157,7 +158,10 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
 #ifdef SPEW
         printf("calling callback with err %d, bytes %ld\n", err, bytes);
 #endif
-        ret = PyObject_CallFunction(object, "llO", err, bytes, object_arg);
+        /* def callWithLogger(logger, func, *args, **kw) */
+        ret = PyObject_CallFunction(callWithLogger, "OOllO",
+            self, object, err, bytes, object_arg);
+
         if(!ret) {
             Py_DECREF(object);
             g_decobj++;
@@ -801,6 +805,7 @@ init_iocp(void)
 {
     int have_connectex = 1;
     PyObject *m;
+    PyObject *tp_log;
     GUID guid1 = WSAID_CONNECTEX; // should use one GUID variable, but oh well
     GUID guid2 = WSAID_ACCEPTEX;
     DWORD bytes, ret;
@@ -830,6 +835,18 @@ init_iocp(void)
 
     closesocket(s);
 
+    /* Grab twisted.python.log.callWithLogger */
+    tp_log = PyImport_ImportModule("twisted.python.log");
+    if (!tp_log) {
+        return;
+    }
+
+    callWithLogger = PyObject_GetAttrString(tp_log, "callWithLogger");
+    Py_DECREF(tp_log);
+    if (!callWithLogger) {
+        return;
+    }
+    
     m = Py_InitModule3("_iocp", module_methods,
                        "core functionality for IOCP reactor");
     if(!m) {
