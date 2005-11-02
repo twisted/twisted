@@ -9,6 +9,8 @@ from twisted.conch.avatar import ConchUser
 from twisted.conch.interfaces import ISession
 from twisted.conch.ssh.filetransfer import ISFTPServer, FileTransferServer
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
+from twisted.conch.ssh.filetransfer import SFTPError
+from twisted.conch.ssh.filetransfer import FX_PERMISSION_DENIED, FX_FAILURE
 from twisted.conch.ssh import session
 from twisted.conch.ls import lsLine
 
@@ -98,7 +100,12 @@ class AdaptFileSystemUserToISFTP:
     def makeDirectory(self, path, attrs):
         dirname  = self.filesystem.dirname(path)
         basename = self.filesystem.basename(path)
-        self.filesystem.fetch(dirname).createDirectory(basename)
+        try:
+            self.filesystem.fetch(dirname).createDirectory(basename)
+        except ivfs.PermissionError, e:
+            raise SFTPError(FX_PERMISSION_DENIED, str(e))
+        except ivfs.VFSError, e:
+            raise SFTPError(FX_FAILURE, str(e))
 
     def removeDirectory(self, path):
         self.filesystem.fetch(path).remove()

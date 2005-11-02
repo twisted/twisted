@@ -3,6 +3,8 @@ from zope.interface import Interface, Attribute
 class VFSError(Exception):
     """Base class for all VFS errors."""
 
+class PermissionError(VFSError):
+    """The user does not have permission to perform the requested operation."""
 
 class IFileSystemNode(Interface):
 
