@@ -12,10 +12,12 @@ class AdhocDirectory:
 
     implements(ivfs.IFileSystemContainer)
 
-    def __init__(self, children={}, name=None, parent=None):
+    def __init__(self, children=None, name=None, parent=None):
         if not parent : self.parent = self
         else : self.parent = parent
         self.name = name
+        if children is None:
+            children = {}
         self._children = children
 
     def children(self):
