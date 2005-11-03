@@ -211,7 +211,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         return finished.addCallback(asserts).addErrback(takedownProcess)
 
     def testCommandLine(self):
-        args = [r'a\"b ', r'a\b ', r' a\\"b', r' a\\b', r'"foo bar" "']
+        args = [r'a\"b ', r'a\b ', r' a\\"b', r' a\\b', r'"foo bar" "', '\tab', '"\\', 'a"b', "a'b"]
         pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_cmdline.py")
         p = Accumulator()

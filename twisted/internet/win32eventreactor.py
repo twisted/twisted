@@ -211,8 +211,10 @@ def install():
     main.installReactor(r)
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
+_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
 def _cmdLineQuote(s):
-    return '"' + _cmdLineQuoteRe.sub(r'\1\1\\"', s) + '"'
+    quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
+    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
 
 class Process(abstract.FileDescriptor):
     """A process that integrates with the Twisted event loop.
