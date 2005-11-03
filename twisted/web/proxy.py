@@ -66,6 +66,8 @@ class ProxyClient(http.HTTPClient):
 class ProxyClientFactory(protocol.ClientFactory):
     """Used by ProxyRequest to implement a simple web proxy."""
 
+    protocol = ProxyClient
+
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father
         self.command = command
@@ -76,8 +78,8 @@ class ProxyClientFactory(protocol.ClientFactory):
 
 
     def buildProtocol(self, addr):
-        return ProxyClient(self.command, self.rest, self.version,
-                           self.headers, self.data, self.father)
+        return self.protocol(self.command, self.rest, self.version,
+                             self.headers, self.data, self.father)
 
 
     def clientConnectionFailed(self, connector, reason):
