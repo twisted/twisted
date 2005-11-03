@@ -13,6 +13,7 @@ from ops import ReadFileOp, WriteFileOp
 from util import StateEventMachineType
 from zope.interface import implements
 
+from socket import error as socket_error
 
 class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
@@ -115,7 +116,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         # XXX: perhaps the following needs to be around to avoid resetting the connection ungracefully
         try:
             self.socket.shutdown(2)
-        except socket.error:
+        except socket_error:
             pass
         # this should call closesocket() and kill it dead!
         self.socket.close()
