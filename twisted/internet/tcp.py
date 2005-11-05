@@ -265,6 +265,14 @@ class _TLSMixin:
         else:
             self.stopReading()
 
+def _getTLSClass(klass, _existing={}):
+    if klass not in _existing:
+        class TLSConnection(_TLSMixin, klass):
+            implements(interfaces.ISSLTransport)
+        components.backwardsCompatImplements(TLSConnection)
+        _existing[klass] = TLSConnection
+    return _existing[klass]
+
 class Connection(abstract.FileDescriptor, _SocketCloser):
     """I am the superclass of all socket-based FileDescriptors.
 
@@ -314,11 +322,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
 
         def _startTLS(self):
             self.TLS = 1
-            klass = self.__class__
-            class TLSConnection(_TLSMixin, klass):
-                implements(interfaces.ISSLTransport)
-            components.backwardsCompatImplements(TLSConnection)
-            self.__class__ = TLSConnection
+            self.__class__ = _getTLSClass(self.__class__)
 
     def getHandle(self):
         """Return the socket for this connection."""
