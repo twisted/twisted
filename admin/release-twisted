@@ -135,7 +135,7 @@ def lore(ver, docdir):
     sh("rm -f %(docdir)s/*.xhtml" % {'docdir': docdir})
 
 def tar(tdir):
-    sh('find Twisted.exp %(tdir)s -name "*.pyc" | xargs rm -f' % locals())
+    sh('find %(tdir)s -name "*.pyc" | xargs rm -f' % locals())
     sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
 def getVersion(projdesc):
@@ -223,24 +223,20 @@ def makeBallSumo(opts):
     ver = time.strftime('%Y-%m-%d')
     basever = getVersion('core')
     tdir = "TwistedSumo-%s" % (ver,)
-    if not os.path.exists('Twisted.exp'):
-        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
     zig = glob.glob('ZopeInterface-*.tgz')
     if not zig:
         raise Exception(
             "Creating sumo distribution rquires a ZopeInterface tarball - "
             "Please download one from <http://www.zope.org/Products/ZopeInterface>.")
-    zi = zig[0]
     os.makedirs(tdir)
+    twistedBalls = glob.glob('twistedballs/Twisted*.tar.bz2')
+    for tb in twistedBalls:
+        sh('tar xjf %s -C %s' % (tb, tdir))
+    sh('tar xzf %s -C %s' % (zig[0], tdir))
     sh('''
-    ln -s `pwd`/Twisted.exp/bin %(tdir)s/
-    cp -r `pwd`/Twisted.exp/twisted %(tdir)s/
-    rm -rf `pwd`/Twisted.exp/twisted/web2 # XXX
-    ln -s `pwd`/Twisted.exp/doc %(tdir)s/
-    cp    `pwd`/Twisted.exp/README %(tdir)s/
-    ln -s `pwd`/Twisted.exp/LICENSE %(tdir)s/
-    ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
-    ln -s `pwd`/%(zi)s %(tdir)s/
+    cp    `pwd`/README %(tdir)s/
+    ln -s `pwd`/LICENSE %(tdir)s/
+    ln -s `pwd`/admin/sumo-setup.py %(tdir)s/setup.py
     ''' % locals())
     tar(tdir)
 
