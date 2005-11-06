@@ -508,7 +508,9 @@ class IRCClient(basic.LineReceiver):
     @ivar nickname: Nickname the client will use.
     @ivar password: Password used to log on to the server.  May be C{None}.
     @ivar realname: Supplied to the server during login as the \"Real name\"
-        or \"ircname\".
+        or \"ircname\".  May be C{None}.
+    @ivar username: Supplied to the server during login as the \"User name\".
+        May be C{None}
 
     @ivar userinfo: Sent in reply to a X{USERINFO} CTCP query.  If C{None}, no
         USERINFO reply will be sent.
@@ -535,6 +537,7 @@ class IRCClient(basic.LineReceiver):
     nickname = 'irc'
     password = None
     realname = None
+    username = None
     ### Responses to various CTCP queries.
 
     userinfo = None
@@ -895,7 +898,9 @@ class IRCClient(basic.LineReceiver):
         if self.password is not None:
             self.sendLine("PASS %s" % self.password)
         self.setNick(nickname)
-        self.sendLine("USER %s foo bar :%s" % (nickname, self.realname))
+        if self.username is None:
+            self.username = nickname
+        self.sendLine("USER %s foo bar :%s" % (self.username, self.realname))
 
     def setNick(self, nickname):
         self.nickname = nickname
