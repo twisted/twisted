@@ -1,13 +1,13 @@
-This is the README for the Twisted Sumo package (as well as the SVN
-repository). For general information about Twisted, see
-topfiles/twisted/README or our web site at http://twistedmatrix.com/.
+This is the README for the Twisted Sumo package. For general
+information about Twisted, see Twisted core README or our web site
+at http://twistedmatrix.com/.
 
 Twisted Sumo contains all of Twisted and its subprojects. A setup.py
 is provided which will install Twisted and each subproject for
 you. Run the command "python setup.py --help" for more information.
 Twisted Sumo also includes Zope Interface, a dependency of Twisted and
-most of its subprojects, in a file named ZopeInterface-*.tgz in the
-root directory.  Twisted requires at Zope Interface 3.0.1 or
+most of its subprojects, in a directory named ZopeInterface-* in the
+root directory.  Twisted requires at least Zope Interface 3.0.1 or
 higher. It can also work with ZopeX3 version 3.0.0c1 or higher.
 
 For information about the Twisted split that happened before 2.0, see
@@ -27,26 +27,3 @@ Twisted Pair Pair-SVN-Trunk
 Twisted Runner Runner-SVN-Trunk
 Twisted Web Web-SVN-Trunk
 Twisted Words Words-SVN-Trunk
-
-Below is an explanation of the layout of this tarball (as well as the
-SVN repository).
-
-== twisted/ == 
-This directory contains the code. Each package that represents a
-single project (e.g., the toplevel 'twisted', and 'twisted.web', etc,
-but not 'twisted.python', since that's a part of core) has a
-'topfiles' directory inside of it.
-
-== bin/ ==
-The executable scripts that come with Twisted core are in
-bin/. Twisted subprojects get a subdirectory of bin/, like
-bin/conch/conch.
-
-== doc/ ==
-Documentation resides in the doc/ directory, with a similar layout to
-bin/.
-
-== **/topfiles ==
-Project-specific READMEs (and other files, like setup.py, ChangeLogs
-and NEWS files) are located in **/topfiles/, where ** is twisted or
-any of its separated subprojects.
