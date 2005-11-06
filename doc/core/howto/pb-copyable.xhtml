@@ -408,8 +408,9 @@ functions). Your object needs to get control <em>every</em> single time some
 attribute is changed<span class="footnote">of course you could be clever and
 add a hook to <code>__setattr__</code>, along with magical change-announcing
 subclasses of the usual builtin types, to detect changes that result from
-normal <q>=</q> set operations. The result might be hard to maintain or
-extend, though.</span>.</p>
+normal <q>=</q> set operations. The semi-magical <q>property attributes</q>
+that were introduced in Python-2.2 could be useful too. The result might be
+hard to maintain or extend, though.</span>.</p>
 
 <p>You derive your sender-side class from <code>pb.Cacheable</code>, and you
 add two methods: <code class="API"
