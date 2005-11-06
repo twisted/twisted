@@ -118,6 +118,12 @@ def main():
         fatRepl[key] = val
     fatRepl = dict([(k, v) for k, v in fatRepl.items() if v != None])
 
+    print "|| Modifying Sumo README.", fatRepl
+    release.replaceInFile('README', fatRepl)
+
+    if '--sumo-only' in sys.argv:
+        return
+
     for project in projects:
         if not project.newVersionStr:
             continue
@@ -129,8 +135,6 @@ def main():
                                           ]):
             print "|| >> Modifying:", fn
             release.replaceInFile(fn, {'SVN-Trunk': project.newVersionStr})
-    print "|| Modifying Sumo README.", fatRepl
-    release.replaceInFile('README', fatRepl)
 
 if __name__=='__main__':
     main()

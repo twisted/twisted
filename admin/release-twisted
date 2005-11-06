@@ -223,20 +223,25 @@ def makeBallSumo(opts):
     ver = time.strftime('%Y-%m-%d')
     basever = getVersion('core')
     tdir = "TwistedSumo-%s" % (ver,)
-    zig = glob.glob('ZopeInterface-*.tgz')
+    if not os.path.exists('twistedballs'):
+        raise Exception("Please create a 'twistedballs' directory and "
+                        "populate it with tarballs of Twisted projects "
+                        "and Zope Interface.")
+    zig = glob.glob('twistedballs/ZopeInterface-*.tgz')
     if not zig:
         raise Exception(
-            "Creating sumo distribution rquires a ZopeInterface tarball - "
-            "Please download one from <http://www.zope.org/Products/ZopeInterface>.")
+            "Creating sumo distribution requires a ZopeInterface tarball - "
+            "Please download one from "
+            "<http://www.zope.org/Products/ZopeInterface>.")
     os.makedirs(tdir)
     twistedBalls = glob.glob('twistedballs/Twisted*.tar.bz2')
     for tb in twistedBalls:
         sh('tar xjf %s -C %s' % (tb, tdir))
     sh('tar xzf %s -C %s' % (zig[0], tdir))
     sh('''
-    cp    `pwd`/README %(tdir)s/
-    ln -s `pwd`/LICENSE %(tdir)s/
-    ln -s `pwd`/admin/sumo-setup.py %(tdir)s/setup.py
+    cp `pwd`/README %(tdir)s/
+    cp `pwd`/LICENSE %(tdir)s/
+    cp `pwd`/admin/sumo-setup.py %(tdir)s/setup.py
     ''' % locals())
     tar(tdir)
 
