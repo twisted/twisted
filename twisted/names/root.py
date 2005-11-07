@@ -165,8 +165,8 @@ def makePlaceholder(deferred, name):
 
 class DeferredResolver:
     def __init__(self, resolverDeferred):
-        resolverDeferred.addCallback(self.gotRealResolver)
         self.waiting = []
+        resolverDeferred.addCallback(self.gotRealResolver)
 
     def gotRealResolver(self, resolver):
         w = self.waiting
