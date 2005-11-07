@@ -79,7 +79,7 @@ Content-Type: %s\r
                                               'X'),
                               (200, {}, 'Saved file'))
 
-    def testCompareFileConents(self):
+    def testCompareFileContents(self):
         def gotFname(fname):
             contents = file(fname, 'r').read()
             self.assertEquals(contents, 'Test contents')
