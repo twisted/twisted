@@ -36,7 +36,7 @@ class AlreadyCached(Exception):
     """This exception is raised when a path has already been cached.
     """
 
-class CacheScanner:
+class CacheScanner(object):
     def __init__(self, path, registry):
         self.path = path
         self.registry = registry

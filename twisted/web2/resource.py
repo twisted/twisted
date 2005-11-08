@@ -142,7 +142,7 @@ class LeafResource(Resource):
     def locateChild(self, request, segments):
         return self, server.StopTraversal
 
-class WrapperResource:
+class WrapperResource(object):
     """A helper class for resources which just change some state
     before passing the request on to a contained resource."""
     implements(iweb.IResource)

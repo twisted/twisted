@@ -32,18 +32,22 @@ consumer which is a stream, so that other producers can write to it.
 
 from __future__ import generators
 
-import copy, os, types
+import copy, os, types, sys
 from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
 from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error as ti_error
 from twisted.python import components, log
 from twisted.python.failure import Failure
 
-try:
-    import mmap
-except ImportError:
+# Python 2.4.2 (only) has a broken mmap that leaks a fd every time you call it.
+if sys.version_info[0:3] != (2,4,2):
+    try:
+        import mmap
+    except ImportError:
+        mmap = None
+else:
     mmap = None
-
+    
 ##############################
 ####      Interfaces      ####
 ##############################
@@ -106,7 +110,7 @@ class ISendfileableStream(Interface):
         If sendfile == True, returns either the above, or a SendfileBuffer.
         """
         
-class SimpleStream:
+class SimpleStream(object):
     """Superclass of simple streams with a single buffer and a offset and length
     into that buffer."""
     implements(IByteStream)
@@ -272,7 +276,7 @@ components.registerAdapter(MemoryStream, types.BufferType, IByteStream)
 ####    CompoundStream    ####
 ##############################
 
-class CompoundStream:
+class CompoundStream(object):
     """A stream which is composed of many other streams.
 
     Call addStream to add substreams.
@@ -377,7 +381,7 @@ class CompoundStream:
 ####      readStream      ####
 ##############################
 
-class _StreamReader:
+class _StreamReader(object):
     """Process a stream's data using callbacks for data and stream finish."""
 
     def __init__(self, stream, gotDataCallback):
@@ -473,7 +477,7 @@ def fallbackSplit(stream, point):
     before = TruncaterStream(stream, point, after)
     return (before, after)
 
-class TruncaterStream:
+class TruncaterStream(object):
     def __init__(self, stream, point, postTruncater):
         self.stream = stream
         self.length = point
@@ -531,7 +535,7 @@ class TruncaterStream:
             self.length = 0
             
 
-class PostTruncaterStream:
+class PostTruncaterStream(object):
     deferred = None
     sentInitialSegment = False
     truncaterClosed = None
@@ -597,7 +601,7 @@ class PostTruncaterStream:
 #### ProducerStream/StreamProducer  ####
 ########################################
             
-class ProducerStream:
+class ProducerStream(object):
     """Turns producers into a IByteStream.
     Thus, implements IConsumer and IByteStream."""
 
@@ -700,7 +704,7 @@ class ProducerStream:
     def unregisterProducer(self):
         self.producer = None
         
-class StreamProducer:
+class StreamProducer(object):
     """A push producer which gets its data by reading a stream."""
     implements(ti_interfaces.IPushProducer)
 
@@ -823,7 +827,7 @@ class _ProcessStreamerProtocol(protocol.ProcessProtocol):
         del self.resultDeferred
 
 
-class ProcessStreamer:
+class ProcessStreamer(object):
     """Runs a process hooked up to streams.
 
     Requires an input stream, has attributes 'outStream' and 'errStream'
@@ -860,7 +864,7 @@ class ProcessStreamer:
 ####   generatorToStream  ####
 ##############################
 
-class _StreamIterator:
+class _StreamIterator(object):
     done=False
 
     def __iter__(self):
@@ -871,7 +875,7 @@ class _StreamIterator:
         return self.value
     wait=object()
 
-class _IteratorStream:
+class _IteratorStream(object):
     length = None
     
     def __init__(self, fun, stream, args, kwargs):

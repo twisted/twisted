@@ -719,6 +719,39 @@ class CoreHTTPTestCase(HTTPTests):
         time.sleep(0.5) # Wait for timeout
         self.assertDone(cxn)
 
+    def testConnectionCloseRequested(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+        
+        cxn.client.write("GET / HTTP/1.1\r\n\r\n")
+        cmds[0] += [('init', 'GET', '/', (1,1), ()),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        cxn.client.write("GET / HTTP/1.1\r\nConnection: close\r\n\r\n")
+        cmds.append([])
+        cmds[1] += [('init', 'GET', '/', (1,1), ()),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        response = TestResponse()
+        response.headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[0].writeResponse(response)
+        response.finish()
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+
+        response = TestResponse()
+        response.headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[1].writeResponse(response)
+        response.finish()
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+
+        self.compareResult(cxn, cmds, data)
+        self.assertDone(cxn)
+
     def testExtraCRLFs(self):
         cxn = self.connect()
         cmds = [[]]

@@ -51,7 +51,7 @@ Content-Type: %s\r
 
     def fileNameFromResponse(self, response):
         (code, headers, data, failure) = response
-        return data[data.find('Saved file')+11:data.find('<br />')]
+        return data[data.index('Saved file')+11:data.index('<br />')]
 
     def assertInResponse(self, response, expected_response, failure=False):
         d = response

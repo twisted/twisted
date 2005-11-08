@@ -260,7 +260,7 @@ class WSGIHandler(object):
     def stopProducing(self):
         self.stopped = True
         
-class FileWrapper:
+class FileWrapper(object):
     """Wrapper to convert file-like objects to iterables"""
 
     def __init__(self, filelike, blksize=8192):

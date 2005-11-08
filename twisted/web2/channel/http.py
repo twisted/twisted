@@ -23,7 +23,7 @@ def _cachedGetHostByAddr(hostaddr):
         _cachedHostNames[hostaddr]=hostname
     return hostname
 
-class StringTransport:
+class StringTransport(object):
     """
     I am a StringIO wrapper that conforms for the transport API. I support
     the 'writeSequence' method.
@@ -38,7 +38,7 @@ class StringTransport:
 class AbortedException(Exception):
     pass
 
-class HTTPChannelRequest:
+class HTTPChannelRequest(object):
     """This class handles the state and parsing for one HTTP request.
     It is responsible for all the low-level connection oriented behavior.
     Thus, it takes care of keep-alive, de-chunking, etc., and passes

@@ -395,7 +395,7 @@ class Request(http.Request):
              'content-length': len(body)},
             body)
 
-class Site:
+class Site(object):
     def __init__(self, resource):
         """Initialize.
         """

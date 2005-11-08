@@ -70,7 +70,7 @@ class NameVirtualHost(resource.Resource):
         return self.hosts.get(host, self.default), segments
 
 
-class AutoVHostURIRewrite:
+class AutoVHostURIRewrite(object):
     """ I do request mangling to insure that children know what host they are being 
         accessed from behind apache2.
 
@@ -129,7 +129,7 @@ class AutoVHostURIRewrite:
         
         return self.resource, segments
         
-class VHostURIRewrite:
+class VHostURIRewrite(object):
     """ I do request mangling to insure that children know what host they are being 
         accessed from behind mod_proxy.
 

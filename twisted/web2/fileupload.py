@@ -96,7 +96,7 @@ def _readHeaders(stream):
 _readHeaders = defer.deferredGenerator(_readHeaders)
 
 
-class _BoundaryWatchingStream:
+class _BoundaryWatchingStream(object):
     def __init__(self, stream, boundary):
         self.stream = stream
         self.boundary = boundary
@@ -152,7 +152,7 @@ class _BoundaryWatchingStream:
         # Assume error will be raised again and handled by MMS?
         readAndDiscard(self).addErrback(lambda _: None)
         
-class MultipartMimeStream:
+class MultipartMimeStream(object):
     implements(IStream)
     def __init__(self, stream, boundary):
         self.stream = BufferedStream(stream)

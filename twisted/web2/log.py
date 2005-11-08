@@ -9,7 +9,7 @@ from twisted.internet import defer
 from twisted.web2 import iweb, stream, resource
 from zope.interface import implements, Attribute, Interface
 
-class _LogByteCounter:
+class _LogByteCounter(object):
     implements(stream.IByteStream)
     
     def __init__(self, stream, done):
@@ -48,7 +48,7 @@ class ILogInfo(Interface):
     secondsTaken=Attribute("Number of seconds taken to serve the request.")
     startTime=Attribute("Time at which the request started")
     
-class LogInfo:
+class LogInfo(object):
     implements(ILogInfo)
 
     responseCompleted=None

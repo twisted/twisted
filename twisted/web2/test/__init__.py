@@ -12,8 +12,11 @@ import __builtin__
 __builtin__._http_headers_isBeingTested=True
 import sys
 import twisted.web2
+import twisted.python.rebuild
 if sys.modules.has_key('twisted.web2.http_headers'):
-    reload(twisted.web2.http_headers)
+    twisted.python.rebuild.rebuild(twisted.web2.http_headers)
 else:
     from twisted.web2 import http_headers
 del __builtin__._http_headers_isBeingTested
+del sys
+del twisted

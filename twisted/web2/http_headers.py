@@ -280,7 +280,7 @@ def generateKeyValues(kvs):
     return ";".join(l)
 
 
-class MimeType:
+class MimeType(object):
     def __init__(self, mediaType, mediaSubtype, params={}, **kwargs):
         self.mediaType = mediaType
         self.mediaSubtype = mediaSubtype
@@ -646,7 +646,7 @@ def generateAuthorization(seq):
     return seq
     
 ####
-class ETag:
+class ETag(object):
     def __init__(self, tag, weak=False):
         self.tag = str(tag)
         self.weak = weak
@@ -1070,7 +1070,7 @@ _RecalcNeeded = __RecalcNeeded()
 DefaultHTTPParsers = {}
 DefaultHTTPGenerators = {}
 
-class Headers:
+class Headers(object):
     """This class stores the HTTP headers as both a parsed representation and
     the raw string representation. It converts between the two on demand."""
     
