@@ -193,7 +193,8 @@ class UDPTestCase(unittest.TestCase):
         self.assertEquals(len(l), 1)
 
     def testRebind(self):
-        # XXX What the hell is this supposed to be testing?
+        # Ensure binding the same DatagramProtocol repeatedly invokes all
+        # the right callbacks.
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
