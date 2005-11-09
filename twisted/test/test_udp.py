@@ -47,12 +47,8 @@ class Server(Mixin, protocol.DatagramProtocol):
 class Client(Mixin, protocol.ConnectedDatagramProtocol):
     
     packetReceived = None
+    refused = 0
 
-    def __init__(self, *args, **kw):
-        Mixin.__init__(self, *args, **kw)
-        protocol.ConnectedDatagramProtocol.__init__(self, *args, **kw)
-        self.refused = 0
-    
     def datagramReceived(self, data):
         self.packets.append(data)
         if self.packetReceived is not None:
