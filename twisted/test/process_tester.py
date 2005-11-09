@@ -2,7 +2,8 @@
 
 import sys, os
 
-test_file = "process_test.log"
+test_file_match = "process_test.log.*"
+test_file = "process_test.log.%d" % os.getpid()
 
 def main():
     f = open(test_file, 'wb')

@@ -62,7 +62,6 @@ class CGI(unittest.TestCase):
         if self.p:
             return self.p.stopListening()
 
-
     def testCGI(self):
         cgiFilename = os.path.abspath(self.mktemp())
         cgiFile = file(cgiFilename, 'wt')
@@ -74,7 +73,7 @@ class CGI(unittest.TestCase):
         d.addCallback(self._testCGI_1)
         return d
     def _testCGI_1(self, res):
-        self.failUnlessEqual(res, "cgi output\n")
+        self.failUnlessEqual(res, "cgi output%s" % os.linesep)
 
 
     def testReadEmptyInput(self):
@@ -89,7 +88,7 @@ class CGI(unittest.TestCase):
         return d
     testReadEmptyInput.timeout = 5
     def _testReadEmptyInput_1(self, res):
-        self.failUnlessEqual(res, "readinput ok\n")
+        self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -105,7 +104,7 @@ class CGI(unittest.TestCase):
         return d
     testReadInput.timeout = 5
     def _testReadInput_1(self, res):
-        self.failUnlessEqual(res, "readinput ok\n")
+        self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
 
 
     def testRealAllInput(self):
@@ -122,7 +121,7 @@ class CGI(unittest.TestCase):
         return d
     testRealAllInput.timeout = 5
     def _testRealAllInput_1(self, res):
-        self.failUnlessEqual(res, "readallinput ok\n")
+        self.failUnlessEqual(res, "readallinput ok%s" % os.linesep)
 
 if not interfaces.IReactorProcess.providedBy(reactor):
     CGI.skip = "CGI tests require a functional reactor.spawnProcess()"

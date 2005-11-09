@@ -84,7 +84,7 @@ class CGI(unittest.TestCase):
         return d
     testReadEmptyInput.timeout = 5
     def _testReadEmptyInput_1(self, res):
-        self.failUnlessEqual(res, "readinput ok\n")
+        self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -100,7 +100,7 @@ class CGI(unittest.TestCase):
         return d
     testReadInput.timeout = 5
     def _testReadInput_1(self, res):
-        self.failUnlessEqual(res, "readinput ok\n")
+        self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
 
 
     def testReadAllInput(self):
@@ -117,7 +117,7 @@ class CGI(unittest.TestCase):
         return d
     testReadAllInput.timeout = 5
     def _testReadAllInput_1(self, res):
-        self.failUnlessEqual(res, "readallinput ok\n")
+        self.failUnlessEqual(res, "readallinput ok%s" % os.linesep)
 
 if not interfaces.IReactorProcess.providedBy(reactor):
     CGI.skip = "CGI tests require a functional reactor.spawnProcess()"

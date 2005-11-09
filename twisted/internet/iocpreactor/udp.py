@@ -22,6 +22,9 @@ class Port(log.Logger, styles.Ephemeral, object):
     read_op_class = WSARecvFromOp
     write_op_class = WSASendToOp
     reading = False
+    # Actual port number being listened on, only set to a non-None
+    # value when we are actually listening.
+    _realPortNumber = None
     disconnected = property(lambda self: self.state == "disconnected")
 
     def __init__(self, bindAddress, proto, maxPacketSize=8192):
@@ -35,9 +38,12 @@ class Port(log.Logger, styles.Ephemeral, object):
         self.read_op = self.read_op_class(self)
         self.readbuf = reactor.AllocateReadBuffer(maxPacketSize)
         self.reactor = reactor
-
+    
     def __repr__(self):
-        return "<%s on %s>" % (self.protocol.__class__, 'port')
+        if self._realPortNumber is not None:
+            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
+        else:
+            return "<%s not connected>" % (self.protocol.__class__,)
 
     def handle_listening_connect(self, host, port):
         self.state = "connecting"
@@ -59,13 +65,19 @@ class Port(log.Logger, styles.Ephemeral, object):
         self._connectSocket()
 
     def _bindSocket(self):
-        log.msg("%s starting on %s" % (self.protocol.__class__, 'port'))
         try:
             skt = socket.socket(*self.sockinfo)
             skt.bind(self.bindAddress)
 #            print "bound %s to %s" % (skt.fileno(), self.bindAddress)
         except socket.error, le:
             raise error.CannotListenError, (None, None, le)
+        
+        # Make sure that if we listened on port 0, we update that to
+        # reflect what the OS actually assigned us.
+        self._realPortNumber = skt.getsockname()[1]
+        
+        log.msg("%s starting on %s"%(self.protocol.__class__, self._realPortNumber))
+        
         self.socket = skt
 
     def _connectSocket(self):
@@ -156,7 +168,8 @@ class Port(log.Logger, styles.Ephemeral, object):
     handle_connected_stopListening = handle_listening_stopListening
 
     def connectionLost(self, reason=None):
-        log.msg('(Port %r Closed)' % ('port',))
+        log.msg('(Port %s Closed)' % self._realPortNumber)
+        self._realPortNumber = None
         self.protocol.doStop()
         self.socket.close()
         del self.socket

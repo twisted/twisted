@@ -36,7 +36,6 @@ class TrivialProcessProtocol(protocol.ProcessProtocol):
         self.finished = 1
         self.reason = reason
 
-
 class TestProcessProtocol(protocol.ProcessProtocol):
 
     finished = 0
@@ -164,6 +163,16 @@ class SignalMixin:
             log.msg("Uninstalled SIGCHLD signal handler.")
             signal.signal(signal.SIGCHLD, self.sigchldHandler)
 
+class TestManyProcessProtocol(TestProcessProtocol):
+    def __init__(self):
+        self.deferred = defer.Deferred()
+ 
+    def processEnded(self, reason):
+        TestProcessProtocol.processEnded(self, reason)
+        if reason.check(error.ProcessDone):
+            self.deferred.callback(None)
+        else:
+            self.deferred.errback(reason)
 
 class ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test running a process."""
@@ -186,11 +195,39 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         #self.assertEquals(f.value.signal, None)
 
         try:
-            import process_tester
-            os.remove(process_tester.test_file)
+            import process_tester, glob
+            for f in glob.glob(process_tester.test_file_match):
+                os.remove(f)
         except:
             pass
 
+    def testManyProcesses(self):
+        
+        def _check(results, protocols):
+            for p in protocols:
+                self.failUnless(p.finished)
+                self.assertEquals(p.stages, [1, 2, 3, 4, 5], "[%d] stages = %s" % (id(p.transport), str(p.stages)))
+                # test status code
+                f = p.reason
+                f.trap(error.ProcessTerminated)
+                self.assertEquals(f.value.exitCode, 23)
+        
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_tester.py")
+        args = [exe, "-u", scriptPath]
+        protocols = []
+        deferreds = []
+                   
+        for i in xrange(50):
+            p = TestManyProcessProtocol()
+            protocols.append(p)
+            reactor.spawnProcess(p, exe, args, env=None)
+            deferreds.append(p.deferred)
+        
+        deferredList = defer.DeferredList(deferreds, consumeErrors=True)
+        deferredList.addCallback(_check, protocols)
+        return deferredList
+            
     def testEcho(self):
         finished = defer.Deferred()
         p = EchoProtocol(finished)
@@ -217,12 +254,11 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         p = Accumulator()
         reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath]+args, env=None,
                              path=None)
-
         spinUntil(lambda :p.closed)
         self.assertEquals(p.errF.getvalue(), "")
         recvdArgs = p.outF.getvalue().splitlines()
         self.assertEquals(recvdArgs, args)
-        
+    
     testEcho.timeout = 60
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
@@ -741,8 +777,9 @@ class ClosingPipes(unittest.TestCase):
         """ProcessProtocol.transport.closeStdout actually closes the pipe."""
         d = self.doit(1)
         def _check(errput):
-            self.failIfEqual(errput.index('OSError'), -1)
-            self.failIfEqual(errput.index('Broken pipe'), -1)
+            self.failIfEqual(errput.find('OSError'), -1)
+            if runtime.platform.getType() != 'win32':
+                self.failIfEqual(errput.find('Broken pipe'), -1)
         d.addCallback(_check)
         return d
 

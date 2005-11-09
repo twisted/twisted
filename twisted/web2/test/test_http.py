@@ -1007,5 +1007,7 @@ class SSLServerTest(unittest.TestCase, AbstractServerTestMixin):
 
 if interfaces.IReactorProcess(reactor, None) is None:
     TCPServerTest.skip = SSLServerTest.skip = "Required process support missing from reactor"
+elif interfaces.IReactorSSL(reactor, None) is None:
+    SSLServerTest.skip = "Required SSL support missing from reactor"
 elif ssl is None:
     SSLServerTest.skip = "SSL not available, cannot test SSL."

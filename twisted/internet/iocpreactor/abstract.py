@@ -25,6 +25,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     reading = False
     write_shutdown = False
     read_shutdown = False
+    producerPaused = False
 
     def __init__(self, socket, protocol, sockfactory):
         self.state = "connected"
@@ -227,15 +228,16 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
             self.addBufferCallback(self.milkProducer, "buffer empty")
             self.addBufferCallback(self.stfuProducer, "buffer full")
             if not streaming:
+                self.producerPaused = False
                 producer.resumeProducing()
 
     def milkProducer(self):
         if not self.streamingProducer or self.producerPaused:
+            self.producerPaused = False
             self.producer.resumeProducing()
-            self.producerPaused = 0
 
     def stfuProducer(self):
-        self.producerPaused = 1
+        self.producerPaused = True
         self.producer.pauseProducing()
         
     def unregisterProducer(self):

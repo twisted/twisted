@@ -6,7 +6,7 @@ from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
 from twisted.mail.pop3 import InsecureAuthenticationDisallowed
 from twisted.mail.pop3 import ServerErrorResponse
 from twisted.protocols import loopback
-from twisted.internet import reactor, defer, error, protocol
+from twisted.internet import reactor, defer, error, protocol, interfaces
 from twisted.python import log
 
 from twisted.trial import unittest
@@ -510,3 +510,7 @@ class POP3TimeoutTestCase(POP3HelperMixin, unittest.TestCase):
 if ClientTLSContext is None:
     for case in (POP3TLSTestCase,):
         case.skip = "OpenSSL not present"
+elif interfaces.IReactorSSL(reactor, None) is None:
+    for case in (POP3TLSTestCase,):
+        case.skip = "Reactor doesn't support SSL"
+

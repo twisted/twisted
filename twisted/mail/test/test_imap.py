@@ -27,6 +27,7 @@ from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
+from twisted.internet import interfaces
 from twisted.trial import unittest
 from twisted.python import util
 from twisted.python import components
@@ -2468,3 +2469,6 @@ class Disconnection(unittest.TestCase):
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
         case.skip = "OpenSSL not present"
+elif interfaces.IReactorSSL(reactor, None) is None:
+    for case in (TLSTestCase,):
+        case.skip = "Reactor doesn't support SSL"

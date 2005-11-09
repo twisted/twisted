@@ -28,6 +28,9 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
     sockinfo = None
     transport_class = ServerSocket
     sessionno = 0
+    # Actual port number being listened on, only set to a non-None
+    # value when we are actually listening.
+    _realPortNumber = None
 
     def __init__(self, addr, factory, backlog):
         self.state = "disconnected"
@@ -37,7 +40,11 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         self.accept_op = AcceptExOp(self)
 
     def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, self.getOwnPort())
+        if self._realPortNumber is not None:
+            return "<%s of %s on %s>" % (self.__class__, self.factory.__class__,
+                                         self._realPortNumber)
+        else:
+            return "<%s of %s (not listening)>" % (self.__class__, self.factory.__class__)
 
     def handle_disconnected_startListening(self):
         log.msg("%s starting on %s" % (self.factory.__class__, self.getOwnPort()))
@@ -46,6 +53,13 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
             skt.bind(self.addr)
         except socket.error, le:
             raise error.CannotListenError, (None, None, le)
+        
+        # Make sure that if we listened on port 0, we update that to
+        # reflect what the OS actually assigned us.
+        self._realPortNumber = skt.getsockname()[1]
+
+        log.msg("%s starting on %s" % (self.factory.__class__, self._realPortNumber))
+        
         self.factory.doStart()
         skt.listen(self.backlog)
         self.socket = skt
@@ -81,7 +95,8 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
     def handle_listening_stopListening(self):
         self.state = "disconnected"
         self.socket.close()
-        log.msg('(Port %s Closed)' % (self.getOwnPort(),))
+        log.msg('(Port %s Closed)' % self._realPortNumber)
+        self._realPortNumber = None
         self.factory.doStop()
 
     handle_listening_loseConnection = handle_listening_stopListening

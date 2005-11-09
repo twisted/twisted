@@ -3,18 +3,18 @@
 
 
 from twisted.internet import defer, base, main
-from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitrary
+from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitrary, IReactorProcess
 from twisted.python import threadable, log, reflect
 from zope.interface import implements, implementsOnly
 
-import tcp, udp
+import tcp, udp, process, process_waiter
 from _iocp import iocpcore
 
 class Proactor(iocpcore, base.ReactorBase, log.Logger):
     # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
     # IReactorSSL (or leave it until exarkun finishes TLS)
-    # IReactorProcess, IReactorCore (cleanup)
-    implementsOnly(IReactorTCP, IReactorUDP, IReactorArbitrary)
+    # IReactorCore (cleanup)
+    implementsOnly(IReactorTCP, IReactorUDP, IReactorArbitrary, IReactorProcess)
     handles = None
     iocp = None
 
@@ -22,6 +22,7 @@ class Proactor(iocpcore, base.ReactorBase, log.Logger):
         iocpcore.__init__(self)
         base.ReactorBase.__init__(self)
         self.logstr = reflect.qual(self.__class__)
+        self.processWaiter = process_waiter.ProcessWaiter(self)
 #        self.completables = {}
 
     def startRunning(self):
@@ -72,7 +73,7 @@ class Proactor(iocpcore, base.ReactorBase, log.Logger):
         c = tcp.Connector((host, port), factory, timeout, bindAddress)
         c.connect()
         return c
-
+           
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         p = udp.Port((interface, port), protocol, maxPacketSize)
         p.startListening()
@@ -93,6 +94,10 @@ class Proactor(iocpcore, base.ReactorBase, log.Logger):
         c = connectorType(*args, **kw)
         c.connect()
         return c
+
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, usePTY=0):
+        """Spawn a process."""
+        return process.Process(self, processProtocol, executable, args, env, path)
     
     def logPrefix(self):
         return self.logstr
