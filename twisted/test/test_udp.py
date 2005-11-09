@@ -22,8 +22,8 @@ class Mixin:
     def startProtocol(self):
         self.started = 1
         if self.startedDeferred is not None:
-            self.startedDeferred.callback(None)
-            self.startedDeferred = None
+            d, self.startedDeferred = self.startedDeferred, None
+            d.callback(None)
 
     def stopProtocol(self):
         self.stopped = 1
@@ -31,25 +31,44 @@ class Mixin:
 
 class Server(Mixin, protocol.DatagramProtocol):
 
+    packetReceived = None
+
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
+        if self.packetReceived is not None:
+            d, self.packetReceived = self.packetReceived, None
+            d.callback(None)
 
 
 class Client(Mixin, protocol.ConnectedDatagramProtocol):
     
+    packetReceived = None
+
     def datagramReceived(self, data):
         self.packets.append(data)
+        if self.packetReceived is not None:
+            d, self.packetReceived = self.packetReceived, None
+            d.callback(None)
 
     def connectionFailed(self, failure):
+        if self.startedDeferred is not None:
+            d, self.startedDeferred = self.startedDeferred, None
+            d.errback(failure)
         self.failure = failure
 
     def connectionRefused(self):
+        if self.startedDeferred is not None:
+            d, self.startedDeferred = self.startedDeferred, None
+            d.errback(error.ConnectionRefusedError("yup"))
         self.refused = 1
 
 
 class GoodClient(Server):
     
     def connectionRefused(self):
+        if self.startedDeferred is not None:
+            d, self.startedDeferred = self.startedDeferred, None
+            d.errback(error.ConnectionRefusedError("yup"))
         self.refused = 1
 
 
@@ -84,53 +103,80 @@ class PortCleanerUpper(unittest.TestCase):
 class OldConnectedUDPTestCase(PortCleanerUpper):
     def testStartStop(self):
         client = Client()
+        d = client.startedDeferred = defer.Deferred()
         port2 = reactor.connectUDP("127.0.0.1", 8888, client)
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(client.started, 1)
-        self.assertEquals(client.stopped, 0)
-        l = []
-        self.assert_(repr(port2).find('test_udp.Client') > 0)
-        defer.maybeDeferred(port2.stopListening).addCallback(l.append)
-        reactor.iterate()
-        reactor.iterate()
-        self.assert_(repr(port2).find('test_udp.Client') > 0)
-        self.assertEquals(client.stopped, 1)
-        self.assertEquals(len(l), 1)
+
+        def assertName():
+            self.failUnless(repr(port2).find('test_udp.Client') >= 0)
+
+        def cbStarted(ignored):
+            self.assertEquals(client.started, 1)
+            self.assertEquals(client.stopped, 0)
+            assertName()
+            return defer.maybeDeferred(port2.stopListening).addCallback(lambda ign: assertName())
+
+        return d.addCallback(cbStarted)
     testStartStop = util.suppressWarnings(testStartStop,
                                           ('use listenUDP and then transport.connect',
                                            DeprecationWarning))
 
     def testDNSFailure(self):
         client = Client()
+        d = client.startedDeferred = defer.Deferred()
         # if this domain exists, shoot your sysadmin
         reactor.connectUDP("xxxxxxxxx.zzzzzzzzz.yyyyy.", 8888, client)
-        while not hasattr(client, 'failure'):
-            reactor.iterate(0.05)
-        self.assert_(client.failure.trap(error.DNSLookupError))
-        self.assertEquals(client.stopped, 0)
-        self.assertEquals(client.started, 0)
+
+        def didNotConnect(ign):
+            self.assertEquals(client.stopped, 0)
+            self.assertEquals(client.started, 0)
+        
+        d = self.assertFailure(d, error.DNSLookupError)
+        d.addCallback(didNotConnect)
+        return d
+
     testDNSFailure = util.suppressWarnings(testDNSFailure,
                                            ('use listenUDP and then transport.connect',
                                            DeprecationWarning))
     def testSendPackets(self):
         server = Server()
-        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
+        serverStarted = server.startedDeferred = defer.Deferred()
+
         client = Client()
-        port2 = reactor.connectUDP("127.0.0.1", server.transport.getHost().port, client)
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        server.transport.write("hello", (client.transport.getHost().host,
-                                         client.transport.getHost().port))
-        client.transport.write("world")
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(client.packets, ["hello"])
-        self.assertEquals(server.packets, [("world", ("127.0.0.1", client.transport.getHost().port))])
-        port1.stopListening(); port2.stopListening()
-        reactor.iterate(); reactor.iterate()
+        clientStarted = client.startedDeferred = defer.Deferred()
+
+        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
+
+        def cbServerStarted(ignored):
+            self.port2 = reactor.connectUDP("127.0.0.1", server.transport.getHost().port, client)
+            return clientStarted
+
+        d = serverStarted.addCallback(cbServerStarted)
+
+        def cbClientStarted(ignored):
+            clientSend = server.packetReceived = defer.Deferred()
+            serverSend = client.packetReceived = defer.Deferred()
+
+            cAddr = client.transport.getHost()
+            server.transport.write("hello", (cAddr.host, cAddr.port))
+            client.transport.write("world")
+
+            # No one will ever call errback on either of these Deferreds,
+            # otherwise I would pass fireOnOneErrback=True here.
+            return defer.DeferredList([clientSend, serverSend])
+
+        d.addCallback(cbClientStarted)
+
+        def cbPackets(ignored):
+            self.assertEquals(client.packets, ["hello"])
+            self.assertEquals(server.packets, [("world", ("127.0.0.1", client.transport.getHost().port))])
+            
+            return defer.DeferredList([
+                defer.maybeDeferred(port1.stopListening),
+                defer.maybeDeferred(self.port2.stopListening)],
+                fireOnOneErrback=True)
+
+        d.addCallback(cbPackets)
+        return d
     testSendPackets = util.suppressWarnings(testSendPackets,
                                             ('use listenUDP and then transport.connect',
                                              DeprecationWarning))
@@ -227,43 +273,109 @@ class UDPTestCase(unittest.TestCase):
 
     def testSendPackets(self):
         server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
+
         client = GoodClient()
-        port2 = reactor.listenUDP(0, client, interface="127.0.0.1")
-        reactor.iterate()
-        reactor.iterate()
-        client.transport.connect("127.0.0.1", server.transport.getHost().port)
-        clientAddr = client.transport.getHost()
-        serverAddress = server.transport.getHost()
-        server.transport.write("hello", (clientAddr.host, clientAddr.port))
-        client.transport.write("a")
-        client.transport.write("b", None)
-        client.transport.write("c", (serverAddress.host, serverAddress.port))
-        self.runReactor(0.4, True)
-        self.assertEquals(client.packets, [("hello", ("127.0.0.1", server.transport.getHost().port))])
-        addr = ("127.0.0.1", client.transport.getHost().port)
-        self.assertEquals(server.packets, [("a", addr), ("b", addr), ("c", addr)])
-        port1.stopListening(); port2.stopListening()
-        reactor.iterate(); reactor.iterate()
+        clientStarted = client.startedDeferred = defer.Deferred()
+
+        def cbServerStarted(ignored):
+            self.port2 = reactor.listenUDP(0, client, interface="127.0.0.1")
+            return clientStarted
+
+        d = serverStarted.addCallback(cbServerStarted)
+
+        def cbClientStarted(ignored):
+            client.transport.connect("127.0.0.1", server.transport.getHost().port)
+            cAddr = client.transport.getHost()
+            sAddr = server.transport.getHost()
+
+            serverSend = client.packetReceived = defer.Deferred()
+            server.transport.write("hello", (cAddr.host, cAddr.port))
+
+            clientWrites = [
+                ("a",),
+                ("b", None),
+                ("c", (sAddr.host, sAddr.port))]
+
+            def cbClientSend(ignored):
+                if clientWrites:
+                    nextClientWrite = server.packetReceived = defer.Deferred()
+                    nextClientWrite.addCallback(cbClientSend)
+                    client.transport.write(*clientWrites.pop(0))
+                    return nextClientWrite
+
+            # No one will ever call .errback on either of these Deferreds,
+            # but there is a non-trivial amount of test code which might
+            # cause them to fail somehow.  So fireOnOneErrback=True.
+            return defer.DeferredList([
+                cbClientSend(None),
+                serverSend],
+                fireOnOneErrback=True)
+
+        d.addCallback(cbClientStarted)
+
+        def cbSendsFinished(ignored):
+            cAddr = client.transport.getHost()
+            sAddr = server.transport.getHost()
+            self.assertEquals(
+                client.packets,
+                [("hello", (sAddr.host, sAddr.port))])
+            clientAddr = (cAddr.host, cAddr.port)
+            self.assertEquals(
+                server.packets,
+                [("a", clientAddr),
+                 ("b", clientAddr),
+                 ("c", clientAddr)])
+
+        d.addCallback(cbSendsFinished)
+
+        def cbFinished(ignored):
+            return defer.DeferredList([
+                defer.maybeDeferred(port1.stopListening),
+                defer.maybeDeferred(self.port2.stopListening)],
+                fireOnOneErrback=True)
+
+        d.addCallback(cbFinished)
+        return d
+
 
     def testConnectionRefused(self):
         # assume no one listening on port 80 UDP
         client = GoodClient()
+        clientStarted = client.startedDeferred = defer.Deferred()
         port = reactor.listenUDP(0, client, interface="127.0.0.1")
-        client.transport.connect("127.0.0.1", 80)
+
         server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
         port2 = reactor.listenUDP(0, server, interface="127.0.0.1")
-        self.runReactor(0.4, True)
-        client.transport.write("a")
-        client.transport.write("b")
-        server.transport.write("c", ("127.0.0.1", 80))
-        server.transport.write("d", ("127.0.0.1", 80))
-        server.transport.write("e", ("127.0.0.1", 80))
-        self.runReactor(0.4, True)
-        self.assertEquals(client.refused, 1)
-        port.stopListening()
-        port2.stopListening()
-        reactor.iterate(); reactor.iterate()
+
+        d = defer.DeferredList(
+            [clientStarted, serverStarted],
+            fireOnOneErrback=True)
+
+        def cbStarted(ignored):
+            connectionRefused = client.startedDeferred = defer.Deferred()
+            client.transport.connect("127.0.0.1", 80)
+
+            for i in range(10):
+                client.transport.write(str(i))
+                server.transport.write(str(i), ("127.0.0.1", 80))
+
+            return self.assertFailure(
+                connectionRefused,
+                error.ConnectionRefusedError)
+
+        d.addCallback(cbStarted)
+
+        def cbFinished(ignored):
+            return defer.DeferredList([
+                defer.maybeDeferred(port.stopListening),
+                defer.maybeDeferred(port2.stopListening)],
+                fireOnOneErrback=True)
+
+        d.addCallback(cbFinished)
+        return d
 
     def testBadConnect(self):
         client = GoodClient()
@@ -271,9 +383,7 @@ class UDPTestCase(unittest.TestCase):
         self.assertRaises(ValueError, client.transport.connect, "localhost", 80)
         client.transport.connect("127.0.0.1", 80)
         self.assertRaises(RuntimeError, client.transport.connect, "127.0.0.1", 80)
-        port.stopListening()
-        reactor.iterate()
-        reactor.iterate()
+        return port.stopListening()
 
 
     def testPortRepr(self):
