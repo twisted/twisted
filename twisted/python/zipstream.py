@@ -43,7 +43,7 @@ class ChunkingZipFile(zipfile.ZipFile):
         bytes = f.read()
         crc = binascii.crc32(bytes)
         if crc != zinfo.CRC:
-            raise BadZipfile, "Bad CRC-32 for file %s" % name
+            raise zipfile.BadZipfile, "Bad CRC-32 for file %s" % name
         return bytes        
 
 

@@ -3,7 +3,7 @@
 
 #
 syslog = __import__('syslog')
-import sys
+
 import log
 
 class SyslogObserver:

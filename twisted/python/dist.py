@@ -2,7 +2,7 @@
 Distutils convenience functionality.
 """
 
-import sys, os, types
+import sys, os
 from distutils import sysconfig
 from distutils.command import build_scripts, install_data, build_ext, build_py
 from distutils.errors import CompileError
@@ -74,7 +74,7 @@ EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
                  "RCS", "SCCS", ".svn"]
 EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
 
-import glob, fnmatch
+import fnmatch
 
 def _filterNames(names):
     """Given a list of file names, return those names that should be copied.

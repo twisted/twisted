@@ -9,7 +9,7 @@ A rotating, browsable log file.
 """
 
 # System Imports
-import os, stat, glob, string, time
+import os, glob, string, time
 
 # sibling imports
 

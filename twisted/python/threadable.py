@@ -10,8 +10,6 @@ unimplemented.  The idea is to abstract away some commonly used
 functionality so that I don't have to special-case it in all programs.
 """
 
-import traceback
-import sys
 import warnings
 
 from twisted.python import hook

@@ -5,14 +5,12 @@
 from __future__ import generators
 
 import os
-from os.path import isdir, isabs, isfile, exists, normpath, abspath, splitext
-from os.path import basename, dirname, getsize, getmtime
-from os.path import split as splitpath
+from os.path import isabs, exists, normpath, abspath, splitext
+from os.path import basename, dirname
 from os.path import join as joinpath
 from os import sep as slash
 from os import listdir, utime, stat
 from os import remove
-from new import instance
 
 from stat import ST_MODE, ST_MTIME, ST_ATIME, ST_CTIME, ST_SIZE
 

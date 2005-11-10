@@ -2,10 +2,7 @@
 A release-automation toolkit.
 """
 
-import sys, os, re
-
-from twisted.python import failure, usage
-
+import os
 
 #errors
 

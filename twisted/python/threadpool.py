@@ -14,7 +14,6 @@ instead of creating a thread pool directly.
 import Queue
 import threading
 import threadable
-import traceback
 import copy
 import sys
 

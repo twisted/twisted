@@ -21,7 +21,6 @@ import pickle
 import new
 import traceback
 import weakref
-import gc
 import re
 
 RegexType = type(re.compile(""))

@@ -16,7 +16,6 @@ in your Twisted directory.
 import string
 import os
 import sys
-import new
 import getopt
 from os import path
 

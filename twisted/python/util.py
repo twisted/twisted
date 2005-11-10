@@ -276,7 +276,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
     If stdin is not a terminal, and C{forceTTY} is not true, read in a line
     and use it as the password, less the trailing newline, if any.  If
     C{forceTTY} is true, attempt to open a tty and prompt for the password
-    using it.  Raise a RuntimeException if this is not possible.
+    using it.  Raise a RuntimeError if this is not possible.
 
     @returns: C{str}
     """
@@ -290,7 +290,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
                     old = sys.stdin, sys.stdout
                     sys.stdin = sys.stdout = open('/dev/tty', 'r+')
                 except:
-                    raise RuntimeException, "Cannot obtain a TTY"
+                    raise RuntimeError, "Cannot obtain a TTY"
             else:
                 password = sys.stdin.readline()
                 if password[-1] == '\n':

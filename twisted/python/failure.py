@@ -12,13 +12,10 @@ See L{Failure}.
 
 # System Imports
 import sys
-import traceback
 import linecache
 import string
 from cStringIO import StringIO
 import types
-import inspect
-
 
 count = 0
 traceupLength = 4

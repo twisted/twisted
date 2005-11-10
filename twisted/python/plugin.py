@@ -12,7 +12,7 @@ import types
 import warnings
 
 # Twisted imports
-from twisted.python import log, util
+from twisted.python import util
 
 # Sibling Imports
 from reflect import namedModule

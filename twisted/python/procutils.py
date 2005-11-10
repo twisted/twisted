@@ -8,7 +8,7 @@
 @stability: Unstable
 """
 
-import os, sys, imp
+import os
 
 def which(name, flags=os.X_OK):
     """Search PATH for executable files with the given name.

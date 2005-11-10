@@ -14,7 +14,7 @@ the latest version of Python directly from your code, if possible.
 
 from __future__ import generators
 
-import os, sys, string, types, socket, struct, __builtin__, exceptions, UserDict
+import os, sys, string, socket, struct, __builtin__, UserDict
 
 #elif sys.version_info[:2] == (2, 2):
 #    def dict(*arg, **kwargs):
@@ -174,7 +174,7 @@ except AttributeError:
             names = os.listdir(top)
         except OSError, e:
             if onerror is not None:
-                onerror(err)
+                onerror(e)
             return
 
         nondir, dir = [], []

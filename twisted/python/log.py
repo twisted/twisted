@@ -7,11 +7,6 @@
 """
 
 # System Imports
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 import sys
 import time
 import warnings
