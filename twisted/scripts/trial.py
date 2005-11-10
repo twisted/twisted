@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import sys, os, errno, shutil, random, gc, warnings, time
+import sys, os, shutil, random, gc, time
 
 from twisted.internet import defer
 from twisted.application import app

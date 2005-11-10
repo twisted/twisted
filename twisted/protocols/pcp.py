@@ -9,9 +9,11 @@
 __version__ = '$Revision: 1.4 $'[11:-2]
 
 import operator
-from twisted.python import log, components
-from twisted.internet import interfaces
+
 from zope.interface import implements
+
+from twisted.python import components
+from twisted.internet import interfaces
 
 
 class BasicProducerConsumerProxy:

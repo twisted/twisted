@@ -2,12 +2,9 @@
 # See LICENSE for details.
 
 
-from twisted.enterprise import adbapi
 from twisted.news import news, database
 from twisted.application import strports
 from twisted.python import usage, log
-
-import sys, getpass
 
 class DBOptions(usage.Options):
     optParameters = [

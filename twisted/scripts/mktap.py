@@ -8,7 +8,7 @@ from twisted.python.components import backwardsCompatImplements
 
 from twisted.application import service, compat, app
 from twisted.persisted import sob
-from twisted.python import log, usage, util, plugin as oldplugin
+from twisted.python import usage, util, plugin as oldplugin
 from twisted import plugin as newplugin
 
 class IServiceMaker(Interface):

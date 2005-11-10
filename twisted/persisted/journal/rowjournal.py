@@ -18,7 +18,6 @@ You're going to need the following table in your database::
 from __future__ import nested_scopes
 
 # twisted imports
-from twisted.enterprise import row, adbapi
 from twisted.internet import defer
 
 # sibling imports

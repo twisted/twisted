@@ -6,7 +6,7 @@
 from twisted.names import dns
 from twisted.persisted import styles
 from twisted.python import failure
-from twisted.internet import interfaces, defer
+from twisted.internet import defer
 
 from twisted.names import common
 

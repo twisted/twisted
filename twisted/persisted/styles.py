@@ -22,7 +22,6 @@ except ImportError:
 from twisted.python import log
 
 try:
-    from new import instance
     from new import instancemethod
 except:
     from org.python.core import PyMethod

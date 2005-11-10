@@ -26,7 +26,6 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import os
 import types
 import base64
-import string
 import glob
 
 try:

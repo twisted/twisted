@@ -9,10 +9,11 @@
 from __future__ import nested_scopes
 
 import PAM
+
+import getpass, threading, os
+
 from twisted.internet import reactor
 from twisted.internet import threads, defer
-
-import sys, time, getpass, threading, os
 
 def pamAuthenticateThread(service, user, conv):
     def _conv(items):
@@ -45,7 +46,7 @@ def callIntoPAM(service, user, conv):
     pam = PAM.pam()
     pam.start(service)
     pam.set_item(PAM.PAM_USER, user)
-    pam.set_item(PAM.PAM_CONV, _conv)
+    pam.set_item(PAM.PAM_CONV, conv)
     gid = os.getegid()
     uid = os.geteuid()
     os.setegid(0)

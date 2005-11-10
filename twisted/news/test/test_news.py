@@ -1,11 +1,11 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, types
+import sys, types
 from pprint import pformat
 
 from twisted.trial import unittest
-from twisted.news import news, database
+from twisted.news import database
 from twisted.internet import reactor
 
 MESSAGE_ID = "f83ba57450ed0fd8ac9a472b847e830e"

@@ -7,13 +7,14 @@ Test cases for twisted.names.
 """
 from __future__ import nested_scopes
 
-import sys, socket, operator, copy
+import socket, operator, copy
+
 from twisted.trial import unittest
 from twisted.trial.util import wait, spinUntil
 
-from twisted.internet import reactor, protocol, defer, error
+from twisted.internet import reactor, defer, error
 from twisted.names import client, server, common, authority, hosts, dns
-from twisted.python import log, failure
+from twisted.python import failure
 
 def justPayload(results):
     return [r.payload for r in results[0]]

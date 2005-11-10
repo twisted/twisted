@@ -10,7 +10,6 @@ TODO: add log that logs to a file.
 """
 
 # twisted imports
-from twisted.spread import banana
 from twisted.persisted import dirdbm
 from twisted.internet import defer
 from twisted.python.components import backwardsCompatImplements

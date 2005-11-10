@@ -12,7 +12,7 @@ import sys
 # Twisted imports
 from twisted.protocols import basic
 from twisted.protocols import policies
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import protocol, defer
 from twisted.python import log
 import UserDict
 import urllib
@@ -64,7 +64,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
             try:
                 f(params)
             except:
-                self.sendCode(400, 'Command %r failed: %s.' % (request, sys.exc_value))
+                self.sendCode(400, 'Command %r failed: %s.' % (request, sys.exc_info()[1]))
 
     def do_get(self, key):
         if key is None:
@@ -118,8 +118,6 @@ if __name__ == '__main__':
     """Test app for PostfixTCPMapServer. Call with parameters
     KEY1=VAL1 KEY2=VAL2 ..."""
     from twisted.internet import reactor
-    from twisted.python import log
-    import sys
     log.startLogging(sys.stdout)
     d = {}
     for arg in sys.argv[1:]:

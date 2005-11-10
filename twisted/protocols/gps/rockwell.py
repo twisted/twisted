@@ -21,7 +21,7 @@ Other desired features::
     - Compatability with the DeLorme Tripmate and other devices with this chipset (?)
 """
 
-import struct, operator, math, string
+import struct, operator, math
 from twisted.internet import protocol
 from twisted.python import log
 

@@ -2,15 +2,12 @@
 # See LICENSE for details.
 
 from zope.interface import classProvides
-from twisted.python.components import backwardsCompatImplements
 
 from twisted.plugin import IPlugin
 
 from twisted.scripts.mktap import _tapHelper
-from twisted.application import service, compat
-from twisted.python.reflect import namedAny
-from twisted.words import iwords
-
+from twisted.words import iwords, service
+from twisted.spread import pb
 
 TwistedTOC = _tapHelper(
     "Twisted TOC Server",
@@ -30,7 +27,6 @@ class RelayChatInterface(object):
     name = 'irc'
 
     def getFactory(cls, realm, portal):
-        from twisted.words import service
         return service.IRCFactory(realm, portal)
     getFactory = classmethod(getFactory)
 
@@ -40,7 +36,6 @@ class PBChatInterface(object):
     name = 'pb'
 
     def getFactory(cls, realm, portal):
-        from twisted.spread import pb
         return pb.PBServerFactory(portal, True)
     getFactory = classmethod(getFactory)
 

@@ -18,7 +18,7 @@ todo: robustify it
 
 from __future__ import generators
 
-import random
+import sys
 
 from twisted.python import log
 from twisted.internet import defer
@@ -189,7 +189,6 @@ def bootstrap(resolver):
     to look up.
     """
     domains = [chr(ord('a') + i) for i in range(13)]
-    from twisted.python import log
     # f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
     f = lambda r: r
     L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
@@ -198,8 +197,6 @@ def bootstrap(resolver):
     return DeferredResolver(d)
 
 if __name__ == '__main__':
-    from twisted.python import log
-    import sys
     if len(sys.argv) < 2:
         print 'Specify a domain'
     else:

@@ -9,10 +9,9 @@
 Utility classes for dealing with circular references.
 """
 
-from twisted.python import log
+from twisted.python import log, reflect
 
 try:
-    from new import instance
     from new import instancemethod
 except:
     from org.python.core import PyMethod
@@ -72,7 +71,7 @@ class _InstanceMethod(NotKnown):
 
     def __call__(self, *args, **kw):
         import traceback
-        log.msg('instance method %s.%s' % (qual(self.my_class), self.name))
+        log.msg('instance method %s.%s' % (reflect.qual(self.my_class), self.name))
         log.msg('being called with %r %r' % (args, kw))
         traceback.print_stack(file=log.logfile)
         assert 0

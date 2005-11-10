@@ -3,11 +3,11 @@
 # See LICENSE for details.
 
 
-import operator, sys, socket, random
+import socket
 
 from twisted.names import dns
 from twisted.internet import defer, error
-from twisted.python import failure, log
+from twisted.python import failure
 
 EMPTY_RESULT = (), (), ()
 

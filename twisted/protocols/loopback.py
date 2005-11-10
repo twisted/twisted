@@ -14,7 +14,7 @@ from zope.interface import implements
 
 # Twisted Imports
 from twisted.internet import interfaces, protocol, main
-from twisted.python import hook, failure, components
+from twisted.python import failure, components
 from twisted.trial.util import spinUntil, spinWhile
 
 class LoopbackRelay:

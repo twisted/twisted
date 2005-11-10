@@ -4,7 +4,6 @@ from twisted.internet import task, defer
 from twisted.names import dns
 from twisted.names import common
 from twisted.names import client
-from twisted.names import server
 from twisted.names import resolve
 from twisted.python import log, failure
 from twisted.application import service

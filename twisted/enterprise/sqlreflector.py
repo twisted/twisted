@@ -3,9 +3,9 @@
 # See LICENSE for details.
 
 
-from twisted.enterprise import adbapi, reflector
+from twisted.enterprise import reflector
 from twisted.enterprise.util import DBError, getKeyColumn, quote, safe
-from twisted.enterprise.util import _TableInfo, _TableRelationship
+from twisted.enterprise.util import _TableInfo
 from twisted.enterprise.row import RowObject
 
 from twisted.python import reflect

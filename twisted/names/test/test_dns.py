@@ -6,8 +6,6 @@
 Tests for twisted.names.dns.
 """
 
-import socket
-
 try:
     from cStringIO import StringIO
 except ImportError:

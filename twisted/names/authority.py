@@ -6,8 +6,6 @@
 from __future__ import nested_scopes
 
 import os
-import copy
-import operator
 import time
 
 from twisted.names import dns

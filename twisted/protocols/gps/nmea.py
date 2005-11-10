@@ -19,7 +19,7 @@ Other desired features::
     - A NMEA 0183 producer to emulate GPS devices (?)
 """
 
-import time, operator
+import operator
 from twisted.protocols import basic
 
 POSFIX_INVALID, POSFIX_SPS, POSFIX_DGPS, POSFIX_PPS = 0, 1, 2, 3

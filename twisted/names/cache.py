@@ -3,7 +3,8 @@
 # See LICENSE for details.
 
 
-import operator, time, copy
+import time
+
 from zope.interface import implements
 
 from twisted.names import dns

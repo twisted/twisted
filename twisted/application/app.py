@@ -3,11 +3,13 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import sys, os, pdb, getpass, traceback, signal
+
 from twisted.python import runtime, log, usage, reflect, failure, util, logfile
 from twisted.persisted import sob
-from twisted.application import compat, service
+from twisted.application import service
+from twisted.internet import defer
 from twisted import copyright
-import sys, os, pdb, getpass, traceback, signal
 
 reactorTypes = {
     'wx': 'twisted.internet.wxreactor',
@@ -62,7 +64,7 @@ may provide it in a separate package.
 def runWithHotshot(reactor, config):
     """Run reactor under hotshot profiler."""
     try:
-        import hotshot, hotshot.stats
+        import hotshot.stats
     except ImportError, e:
         s = "Failed to import module hotshot: %s" % e
         s += """
@@ -110,7 +112,7 @@ def fixPdb():
     pdb.Pdb.help_stop = help_stop
 
 def runReactorWithLogging(config, oldstdout, oldstderr):
-    from twisted.internet import reactor, defer
+    from twisted.internet import reactor
     try:
         if config['profile']:
             if sys.version_info[:2] > (2, 2) and not config['nothotshot']:
@@ -241,7 +243,6 @@ class ServerOptions(usage.Options):
         run the application in the Python Debugger (implies nodaemon),
         sending SIGUSR2 will drop into debugger
         """
-        from twisted.internet import defer
         defer.setDebugging(True)
         failure.startDebugMode()
         self['debug'] = True

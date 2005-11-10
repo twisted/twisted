@@ -3,7 +3,7 @@
 
 #  TODO: need to implement log-file rotation
 
-import sys, os, string, shutil, time, glob
+import sys, os, shutil, time, glob
 
 from twisted.python import usage
 from twisted.scripts import tap2deb
@@ -170,13 +170,13 @@ def makeBuildDir(baseDir):
     '''Set up the temporary directory for building RPMs.
     Returns: Tuple: ( buildDir, rpmrcFile )
     '''
-    import whrandom, time, string
+    import random, string
 
     #  make top directory
     oldMask = os.umask(0077)
     while 1:
         tmpDir = os.path.join(baseDir, 'tap2rpm-%s-%s' % ( os.getpid(),
-                                        whrandom.randint(0, 999999999) ))
+                                        random.randint(0, 999999999) ))
         if not os.path.exists(tmpDir):
             os.makedirs(tmpDir)
             break

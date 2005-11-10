@@ -14,12 +14,12 @@ API Stability: unstable
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 
-from twisted.python import components
-from twisted.application import internet, service
-from twisted.persisted import sob
 import warnings, sys
+
 from zope.interface import implements
 
+from twisted.python import components
+from twisted.application import internet, service
 
 class IOldApplication(components.Interface):
 

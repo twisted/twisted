@@ -260,7 +260,7 @@ class PickleStorage:
     def notifyModerators(self, moderators, article):
         # Moderated postings go through as long as they have an Approved
         # header, regardless of what the value is
-        a.putHeader('To', ', '.join(moderators))
+        article.putHeader('To', ', '.join(moderators))
         return smtp.sendEmail(
             'twisted@' + socket.gethostname(),
             moderators,
@@ -316,7 +316,7 @@ class PickleStorage:
 
         a.putHeader('Xref', '%s %s' % (
             socket.gethostname().split()[0],
-            ''.join(map(lambda x: string.join(x, ':'), xref))
+            ''.join(map(lambda x: ':'.join(x), xref))
         ))
 
         self.flush()

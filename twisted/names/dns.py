@@ -20,7 +20,7 @@ Future Plans:
 import warnings
 
 import struct, random, types, socket
-from math import ceil, floor
+
 try:
     import cStringIO as StringIO
 except ImportError:
@@ -60,7 +60,7 @@ from zope.interface import implements
 
 
 # Twisted imports
-from twisted.internet import protocol, defer, error
+from twisted.internet import protocol, defer
 from twisted.python import log, failure
 from twisted.python import util as tputil
 from twisted.python import components

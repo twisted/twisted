@@ -1,4 +1,3 @@
-import sys
 
 try:
     from twisted.python import dist

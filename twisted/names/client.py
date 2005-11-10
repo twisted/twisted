@@ -16,15 +16,12 @@ better caching, respect timeouts
 
 from __future__ import nested_scopes
 
-import warnings
-import socket
 import os
 import errno
-import time
 
 # Twisted imports
 from twisted.python.runtime import platform
-from twisted.internet import error, defer, protocol, interfaces, threads
+from twisted.internet import error, defer, protocol, interfaces
 from twisted.python import log, failure, components
 from twisted.names import dns
 from zope.interface import implements

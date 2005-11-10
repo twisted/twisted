@@ -12,7 +12,8 @@ Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 Future Plans: more configurability.
 """
 
-import pwd, grp, socket
+import os, pwd, grp, socket
+
 from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
 from twisted.internet.protocol import ServerFactory

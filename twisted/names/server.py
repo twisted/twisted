@@ -21,15 +21,14 @@ for resolvers to deal with.  Fix it.
 """
 
 from __future__ import nested_scopes
-import copy
 import time
 
 # Twisted imports
-from twisted.internet import protocol, defer
+from twisted.internet import protocol
 from twisted.names import dns
-from twisted.python import failure, log
+from twisted.python import log
 
-import resolve, common
+import resolve
 
 class DNSServerFactory(protocol.ServerFactory):
     protocol = dns.DNSProtocol

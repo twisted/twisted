@@ -32,11 +32,6 @@ Other desired features:
    - A control protocol
 """
 
-from twisted.internet import protocol
-from twisted.protocols import basic
-from twisted.python import log
-from twisted.python import failure
-
 import time
 import types
 
@@ -44,6 +39,9 @@ try:
     import cStringIO as StringIO
 except:
     import StringIO
+
+from twisted.protocols import basic
+from twisted.python import log
 
 def parseRange(text):
     articles = text.split('-')

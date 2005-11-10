@@ -8,14 +8,14 @@
 """
 
 # System imports
-import Tkinter, tkMessageBox, tkFileDialog, StringIO, os, sys, inspect
+import Tkinter, tkMessageBox, tkFileDialog, StringIO, os
 import traceback
 
 # Twisted imports
 from twisted.application import service
 from twisted.internet import tksupport, reactor
 from twisted.scripts import mktap
-from twisted.python import failure, usage, reflect
+from twisted.python import usage, reflect
 from twisted.copyright import version
 
 

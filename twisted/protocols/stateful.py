@@ -11,8 +11,6 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from struct import pack, unpack
-
 class StatefulProtocol(protocol.Protocol):
     """A Protocol that stores state for you.
 

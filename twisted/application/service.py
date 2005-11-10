@@ -15,14 +15,11 @@ API Stability: unstable
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 
-import os
+from zope.interface import implements
 
 from twisted.python import components
-from zope.interface import implements
 from twisted.internet import defer
 from twisted.persisted import sob
-from twisted.python.runtime import platformType
-
 
 class IService(components.Interface):
 

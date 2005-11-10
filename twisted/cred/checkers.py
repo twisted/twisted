@@ -4,11 +4,13 @@
 
 from __future__ import generators
 
+import os
+
 from zope import interface
-from twisted.internet import reactor, threads, defer
+
+from twisted.internet import defer
 from twisted.python import components, failure, log
 from twisted.cred import error, credentials
-import os
 
 try:
     from twisted.cred import pamauth
@@ -249,7 +251,7 @@ class PluggableAuthenticationModulesChecker:
     
     def requestAvatarId(self, credentials):
         if not pamauth:
-            return defer.fail(UnauthorizedLogin())
+            return defer.fail(error.UnauthorizedLogin())
         d = pamauth.pamAuthenticate(self.service, credentials.username,
                                     credentials.pamConversion)
         d.addCallback(lambda x: credentials.username)

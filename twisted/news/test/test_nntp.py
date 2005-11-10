@@ -1,13 +1,10 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, string, shutil
-
 from twisted.trial import unittest
-from twisted.news import news, database
+from twisted.news import database
 from twisted.news import nntp
 from twisted.protocols import loopback
-from twisted.internet import reactor, protocol
 
 ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
 GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')

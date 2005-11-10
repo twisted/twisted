@@ -22,7 +22,6 @@ except ImportError:
 
 # Twisted Imports
 from twisted import copyright
-from twisted.python import log, failure
 from twisted.internet import protocol
 
 # Some utility chars.
