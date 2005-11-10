@@ -6,8 +6,7 @@ from zope.interface import classProvides
 from twisted.plugin import IPlugin
 
 from twisted.scripts.mktap import _tapHelper
-from twisted.words import iwords, service
-from twisted.spread import pb
+from twisted.words import iwords
 
 TwistedTOC = _tapHelper(
     "Twisted TOC Server",
@@ -27,6 +26,7 @@ class RelayChatInterface(object):
     name = 'irc'
 
     def getFactory(cls, realm, portal):
+        from twisted.words import service
         return service.IRCFactory(realm, portal)
     getFactory = classmethod(getFactory)
 
@@ -36,6 +36,7 @@ class PBChatInterface(object):
     name = 'pb'
 
     def getFactory(cls, realm, portal):
+        from twisted.spread import pb
         return pb.PBServerFactory(portal, True)
     getFactory = classmethod(getFactory)
 
