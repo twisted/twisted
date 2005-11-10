@@ -8,7 +8,7 @@ See also twisted.python.shortcut.
 """
 
 # system imports
-import win32api, win32con
+import win32api, win32con, re
 
 # sibling import
 from runtime import platform
@@ -37,3 +37,9 @@ def getProgramFilesPath():
     currentV = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE, 
                                      keyname, 0, win32con.KEY_READ)
     return win32api.RegQueryValueEx(currentV, 'ProgramFilesDir')[0]
+
+_cmdLineQuoteRe = re.compile(r'(\\*)"')
+_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+def cmdLineQuote(s):
+    quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
+    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote

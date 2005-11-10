@@ -30,6 +30,7 @@ from win32event import QS_ALLEVENTS
 from zope.interface import implements
 from twisted.internet import error
 from twisted.python import failure, components
+from twisted.python.win32 import cmdLineQuote
 from twisted.internet.interfaces import IProcessTransport, IConsumer
 
 # sibling imports
@@ -39,18 +40,11 @@ import process_waiter
 # System imports
 import os
 import sys
-import re
 import time
 import itertools
 
 # Counter for uniquely identifying pipes
 counter = itertools.count(1)
-
-_cmdLineQuoteRe = re.compile(r'(\\*)"')
-_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
-def _cmdLineQuote(s):
-    quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
-    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
 
 class Process(object):
     """A process that integrates with the Twisted event loop.
@@ -235,7 +229,7 @@ class Process(object):
         StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
         
         # create the process
-        cmdline = ' '.join([_cmdLineQuote(a) for a in args])
+        cmdline = ' '.join([cmdLineQuote(a) for a in args])
         self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(
                 command,     # name
                 cmdline,     # command line

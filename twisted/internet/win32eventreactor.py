@@ -61,6 +61,7 @@ import win32gui
 # Twisted imports
 from twisted.internet import abstract, posixbase, main, error
 from twisted.python import log, threadable, failure, components
+from twisted.python.win32 import cmdLineQuote
 from twisted.internet.interfaces import IReactorFDSet, IReactorProcess, IProcessTransport
 
 # System imports
@@ -70,7 +71,6 @@ import Queue
 import string
 import time
 import sys
-import re
 from zope.interface import implements
 
 
@@ -210,12 +210,6 @@ def install():
     import main
     main.installReactor(r)
 
-_cmdLineQuoteRe = re.compile(r'(\\*)"')
-_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
-def _cmdLineQuote(s):
-    quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
-    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
-
 class Process(abstract.FileDescriptor):
     """A process that integrates with the Twisted event loop.
 
@@ -286,7 +280,7 @@ class Process(abstract.FileDescriptor):
         env.update(environment or {})
 
         # create the process
-        cmdline = ' '.join([_cmdLineQuote(a) for a in args])
+        cmdline = ' '.join([cmdLineQuote(a) for a in args])
         self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(command, cmdline, None, None, 1, 0, env, path, StartupInfo)
 
         # close handles which only the child will use

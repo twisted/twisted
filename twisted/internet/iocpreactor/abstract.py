@@ -84,7 +84,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
             self.addBufferCallback(self._cbDisconnecting, "buffer empty")
             self.state = "disconnecting"
         else:
-            self.connectionLost(failure.Failure(main.CONNECTION_DONE))
+            self.reactor.callLater(0, self.connectionLost, failure.Failure(main.CONNECTION_DONE))
 
     def handle_disconnecting_loseConnection(self):
         pass
@@ -149,7 +149,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
             self.read_op.initiateOp(self.socket.fileno(), self.readbuf)
         except WindowsError, we:
 #            log.msg("initiating read failed with args %s" % (we,))
-            self.connectionLost(failure.Failure(main.CONNECTION_DONE))
+            self.reactor.callLater(0, self.connectionLost, failure.Failure(main.CONNECTION_DONE))
 
     def stopReading(self):
         self.reading = False
@@ -185,7 +185,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
             self.write_op.initiateOp(self.socket.fileno(), b)
         except WindowsError, we:
 #            log.msg("initiating write failed with args %s" % (we,))
-            self.connectionLost(failure.Failure(main.CONNECTION_DONE))
+            self.reactor.callLater(0, self.connectionLost, failure.Failure(main.CONNECTION_DONE))
 
     def stopWriting(self):
         self.writing = False
