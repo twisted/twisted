@@ -218,30 +218,28 @@ class UDPTestCase(unittest.TestCase):
 
     def testOldAddress(self):
         server = Server()
+        d = server.startedDeferred = defer.Deferred()
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
-        reactor.iterate()
-        addr = p.getHost()
-        self.assertEquals(addr, ('INET_UDP', addr.host, addr.port))
-        p.stopListening()
+        def cbStarted(ignored):
+            addr = p.getHost()
+            self.assertEquals(addr, ('INET_UDP', addr.host, addr.port))
+            return p.stopListening()
+        return d.addCallback(cbStarted)
     testOldAddress = util.suppressWarnings(testOldAddress,
                                            ('IPv4Address.__getitem__',
                                             DeprecationWarning))
     
     def testStartStop(self):
         server = Server()
+        d = server.startedDeferred = defer.Deferred()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(server.started, 1)
-        self.assertEquals(server.stopped, 0)
-        l = []
-        defer.maybeDeferred(port1.stopListening).addCallback(l.append)
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(server.stopped, 1)
-        self.assertEquals(len(l), 1)
+        def cbStarted(ignored):
+            self.assertEquals(server.started, 1)
+            self.assertEquals(server.stopped, 0)
+            return port1.stopListening()
+        def cbStopped(ignored):
+            self.assertEquals(server.stopped, 1)
+        return d.addCallback(cbStarted).addCallback(cbStopped)
 
     def testRebind(self):
         # Ensure binding the same DatagramProtocol repeatedly invokes all
