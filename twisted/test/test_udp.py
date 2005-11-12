@@ -31,11 +31,8 @@ class Mixin:
 
 class Server(Mixin, protocol.DatagramProtocol):
     
-    def __init__(self, *args, **kw):
-        Mixin.__init__(self, *args, **kw)
-        self.refused = 0
-
     packetReceived = None
+    refused = 0
 
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
