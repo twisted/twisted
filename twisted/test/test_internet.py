@@ -6,7 +6,6 @@ from twisted.trial import unittest
 from twisted.trial.util import spinUntil
 from twisted.internet import reactor, protocol, error, app, abstract
 from twisted.internet import interfaces
-from twisted.internet.utils import getProcessOutput
 
 from twisted.test.test_task import Clock
 
@@ -513,7 +512,7 @@ from twisted.internet import reactor
 
 class Foo:
     def __init__(self):
-        reactor.callLater(1, self.start)
+        reactor.callWhenRunning(self.start)
         self.timer = reactor.callLater(3, self.failed)
     def start(self):
         reactor.resolve('localhost').addBoth(self.done)
@@ -528,33 +527,63 @@ f = Foo()
 reactor.run()
 """
 
+class ChildResolveProtocol(protocol.ProcessProtocol):
+    def __init__(self, onCompletion):
+        self.onCompletion = onCompletion
+
+    def connectionMade(self):
+        self.output = []
+        self.error = []
+
+    def outReceived(self, out):
+        self.output.append(out)
+
+    def errReceived(self, err):
+        self.error.append(err)
+
+    def processEnded(self, reason):
+        self.onCompletion.callback((reason, self.output, self.error))
+        self.onCompletion = None
+
+
 class Resolve(unittest.TestCase):
-    # this uses t.i.util.getProcessOutput, and maybe it wants to live in
-    # test_iutils.py instead of here
     def testChildResolve(self):
         # I've seen problems with reactor.run under gtk2reactor. Spawn a
-        # child which just does reactor.resolve after a second of delay, and
-        # fail if it does not complete in a timely fashion.
-        helper = os.path.abspath(self.mktemp())
-        helperf = open(helper, 'wt')
-        reactorname = reactor.__module__
-        helperf.write(resolve_helper % {'reactor': reactorname})
-        helperf.close()
+        # child which just does reactor.resolve after the reactor has
+        # started, fail if it does not complete in a timely fashion.
+        helperPath = os.path.abspath(self.mktemp())
+        helperFile = open(helperPath, 'w')
+        
+        # Eeueuuggg
+        reactorName = reactor.__module__
+
+        helperFile.write(resolve_helper % {'reactor': reactorName})
+        helperFile.close()
+
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        d = getProcessOutput(sys.executable, ('-u', helper,), env, errortoo=1)
-        d.addCallback(self._testChildResolve_1)
-        return d
-    testChildResolve.timeout = 10
-    def _testChildResolve_1(self, res):
-        if res.startswith("failed\n"):
-            print "The child process timed out. Output is:"
-            print res
-            self.fail("The child process timed out.")
-        self.failUnlessEqual(res, "done 127.0.0.1\n")
+
+        helperDeferred = Deferred()
+        helperProto = ChildResolveProtocol(helperDeferred)
+
+        reactor.spawnProcess(helperProto, sys.executable, ("python", "-u", helperPath), env)
+
+        def cbFinished((reason, output, error)):
+            # If the output is "done 127.0.0.1\n" we don't really care what
+            # else happened.
+            output = ''.join(output)
+            if output != 'done 127.0.0.1\n':
+                self.fail((
+                    "The child process failed to produce the desired results:\n"
+                    "   Reason for termination was: %r\n"
+                    "   Output stream was: %r\n"
+                    "   Error stream was: %r\n") % (reason.getErrorMessage(), output, ''.join(error)))
+
+        helperDeferred.addCallback(cbFinished)
+        return helperDeferred
+
 if not interfaces.IReactorProcess(reactor, None):
     Resolve.skip = "cannot run test: reactor doesn't support IReactorProcess"
-
 
 class Counter:
     index = 0
