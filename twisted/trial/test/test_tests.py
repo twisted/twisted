@@ -605,12 +605,10 @@ class TestTests(unittest.TestCase):
                 _checkStatus(tm, SUCCESS)
                 self.failIf(tm.getTodo())
                 self.failIf(_hasTbs(tm))
-                self.failIf(tm.getSkip())
 
             elif tm.id().endswith("_fail"):
                 _checkStatus(tm, FAILURE)
                 _checkTimeoutError(tm)
-                self.failIf(tm.getSkip())
                 self.failIf(reporter._getErrors(tm))
                 self.failUnless(_hasTbs(tm))
                 self.failUnless(len(reporter._getFailures(tm)) == 1,
@@ -627,29 +625,18 @@ class TestTests(unittest.TestCase):
                 # with new-style todos it's possible for a todoed method to
                 # wind up counting as a ERROR
                 # failIf(tm.todo)
-                self.failIf(tm.getSkip())
                 self.failIf(reporter._getFailures(tm))
-
-            elif tm.id().endswith("_skip"):
-                _checkStatus(tm, SKIP)
-                self.failUnless(tm.getSkip(), "skip reason not set")
-                self.failIf(tm.getTodo())
-                self.failIf(reporter._getErrors(tm))
-                self.failIf(reporter._getFailures(tm))
-                self.failIf(_hasTbs(tm))
 
             elif tm.id().endswith("_exfail"):
                 _checkStatus(tm, EXPECTED_FAILURE)
                 _checkTimeoutError(tm)
                 self.failUnless(_hasTbs(tm))
                 self.failUnless(tm.getTodo())
-                self.failIf(tm.getSkip())
 
             elif tm.id().endswith("_unexpass"):
                 _checkStatus(tm, UNEXPECTED_SUCCESS)
                 _checkTimeoutError(tm)
                 self.failUnless(tm.getTodo())
-                self.failIf(tm.getSkip())
 
             elif tm.id().endswith("_timeout"):
                 self.failUnless(reporter._getErrors(tm), "tm.errors was %s" % (reporter._getErrors(tm),))
@@ -668,9 +655,6 @@ class TestTests(unittest.TestCase):
                                 % (f, f.getTraceback(), expectedExc))
                 self.failUnlessEqual(f.value.args[0], tm.klass.t_excArg)
                 self.failUnlessEqual(itrial.ITimeout(tm.getTimeout()).duration, tm.klass.t_duration)
-            else:
-                raise unittest.FailTest, "didn't have tests for a method ending in %s" % (
-                                         tm.id().split('_')[-1],)
         except unittest.FailTest:
             tb = failure.Failure().getTraceback()
             raise unittest.FailTest, "error occured in test %s: %s" % (tm.id(), tb)

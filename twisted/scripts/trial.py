@@ -95,7 +95,7 @@ class Options(usage.Options):
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["no-recurse", "N", "Don't recurse into packages"],
                 ['suppresswarnings', None,
-                 'Only print warnings to log, not stdout'],
+                 'Only print warnings to log, not stdout. DEPRECATED.'],
                 ['help-reporters', None,
                  "Help on available output plugins (reporters)"]
                 ]
@@ -294,6 +294,9 @@ class Options(usage.Options):
         # Want to do this stuff as early as possible
         _setUpTestdir()
         _setUpLogging(self)
+        if self['suppresswarnings']:
+            warnings.warn('--suppresswarnings deprecated. Is a no-op',
+                          category=DeprecationWarning)
         if not self.has_key('tbformat'):
             self['tbformat'] = 'default'
         if self['nopm']:
@@ -318,8 +321,7 @@ def _setUpLogging(config):
            if x.has_key('warning'):
                print
                print x['format'] % x
-       if not config['suppresswarnings']:
-           log.addObserver(seeWarnings)
+       log.addObserver(seeWarnings)
        if config['logfile'] == '-':
            logFileObj = sys.stdout
        else:

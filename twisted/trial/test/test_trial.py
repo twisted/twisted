@@ -165,7 +165,7 @@ class FunctionalTest(common.RegistryBaseMixin):
     def testBrokenSetUp(self):
         self.run_a_suite(self.loader.loadClass(erroneous.TestFailureInSetUp))
         imi = self.reporter.udeMethod
-        self.assertEqual(imi.name, 'setUp')
+        self.assertEqual(imi, 'setUp')
         self.assert_(len(self.reporter.errors) > 0)
         self.assert_(isinstance(self.reporter.errors[0][1].value,
                                 erroneous.FoolishError))
@@ -173,7 +173,7 @@ class FunctionalTest(common.RegistryBaseMixin):
     def testBrokenTearDown(self):
         self.run_a_suite(self.loader.loadClass(erroneous.TestFailureInTearDown))
         imi = self.reporter.udeMethod
-        self.assertEqual(imi.name, 'tearDown')
+        self.assertEqual(imi, 'tearDown')
         errors = self.reporter.errors
         self.assert_(len(errors) > 0)
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
@@ -182,14 +182,14 @@ class FunctionalTest(common.RegistryBaseMixin):
         self.run_a_suite(self.loader.loadClass(
             erroneous.TestFailureInSetUpClass))
         imi = self.reporter.udeMethod
-        self.assertEqual(imi.name, 'setUpClass')
+        self.assertEqual(imi, 'setUpClass')
         self.assert_(self.reporter.errors)
 
     def testBrokenTearDownClass(self):
         self.run_a_suite(self.loader.loadClass(
             erroneous.TestFailureInTearDownClass))
         imi = self.reporter.udeMethod
-        self.assertEqual(imi.name, 'tearDownClass')
+        self.assertEqual(imi, 'tearDownClass')
 
     def testHiddenException(self):
         # this is testing that the error reporter prints the error, it should 
@@ -203,14 +203,16 @@ class FunctionalTest(common.RegistryBaseMixin):
         self.run_a_suite(self.loader.loadMethod(
             erroneous.SocketOpenTest.test_socketsLeftOpen))
         self.assert_(self.reporter.cleanerrs)
-        self.assert_(isinstance(self.reporter.cleanerrs[0].value, util.DirtyReactorWarning))
+        self.assert_(isinstance(self.reporter.cleanerrs.value,
+                                util.DirtyReactorError))
 
     def testLeftoverPendingCalls(self):
         self.run_a_suite(self.loader.loadMethod(
             erroneous.ReactorCleanupTests.test_leftoverPendingCalls))
         errors = self.reporter.errors
-        self.assert_(len(errors) > 0)
-        self.assert_(isinstance(errors[0][1].value, util.PendingTimedCallsError))
+        self.assert_(self.reporter.cleanerrs)
+        self.assert_(isinstance(self.reporter.cleanerrs.value,
+                                util.PendingTimedCallsError))
 
     def testTimingOutDeferred(self):
         origTimeout = util.DEFAULT_TIMEOUT_DURATION

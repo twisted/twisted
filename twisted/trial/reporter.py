@@ -93,6 +93,9 @@ class Reporter(object):
         self._timings = []
         super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
+    def stop(self):
+        self.shouldStop = True
+
     def setUpReporter(self):
         warnings.warn("setUpReporter is deprecated. Find another way",
                       stacklevel=2, category=DeprecationWarning)
@@ -194,17 +197,16 @@ class Reporter(object):
     def emitWarning(self, message, category=UserWarning, stacklevel=0):
         warnings.warn(message, category, stacklevel - 1)
         
-    def upDownError(self, userMeth, warn=True, printStatus=True):
+    def upDownError(self, method, error, warn, printStatus):
         if warn:
-            tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) 
+            tbStr = error.getTraceback()
             log.msg(tbStr)
-            msg = "%s%s" % (methNameWarnMsg[userMeth.name], tbStr)
+            msg = "%s%s" % (methNameWarnMsg[method], tbStr)
             warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
     def cleanupErrors(self, errs):
         warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN,
-                                  '\n'.join(map(self._formatFailureTraceback,
-                                                errs))),
+                                  self._formatFailureTraceback(errs)),
                       BrokenTestCaseWarning)
 
     def endTest(self, method):
@@ -400,11 +402,11 @@ class TreeReporter(Reporter):
         self.endLine(*self._getText(ERROR))
         super(TreeReporter, self).cleanupErrors(errs)
 
-    def upDownError(self, method, warn=True, printStatus=True):
-        self.write(self.color("  %s" % method.name, self.RED))
+    def upDownError(self, method, error, warn, printStatus):
+        self.write(self.color("  %s" % method, self.RED))
         if printStatus:
             self.endLine(*self._getText(ERROR))
-        super(TreeReporter, self).upDownError(method, warn, printStatus)
+        super(TreeReporter, self).upDownError(method, error, warn, printStatus)
         
     def startTest(self, method):
         self.write('%s%s ... ' % (self.indent * (self.indentLevel + 1),

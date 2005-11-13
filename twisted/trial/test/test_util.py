@@ -7,37 +7,6 @@ from twisted.trial.test import packages
 
 import sys, os, time, signal
 
-class UserError(Exception):
-    pass
-
-class TestUserMethod(unittest.TestCase):
-    def setUp(self):
-        self.janitor = util._Janitor()
-
-    def errorfulMethod(self):
-        raise UserError, 'i am a user error'
-
-    def errorfulDeferred(self):
-        f = None
-        try:
-            self.errorfulMethod()
-        except:
-            f = failure.Failure()
-        return defer.fail(f)
-
-    def testErrorHandling(self):
-        """wrapper around user code"""
-        umw = util.UserMethodWrapper(self.errorfulMethod, self.janitor)
-        self.failUnlessRaises(util.UserMethodError, umw)
-        self.failUnless(umw.errors[0].check(UserError))
-        self.failUnless(umw.endTime >= umw.startTime)
-
-    def testDeferredError(self):
-        umw = util.UserMethodWrapper(self.errorfulDeferred, self.janitor)
-        self.failUnlessRaises(util.UserMethodError, umw)
-        self.failUnless(umw.errors[0].check(UserError))
-        self.failUnless(umw.endTime >= umw.startTime)
-
 
 class WaitReentrancyTest(unittest.TestCase):
 
@@ -74,42 +43,6 @@ class WaitReentrancyTest(unittest.TestCase):
 
     def testReentrantWait(self):
         self.assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
-
-
-class TestWait2(unittest.TestCase):
-    NUM_FAILURES = 3
-
-    def _generateFailure(self):
-        try:
-            raise RuntimeError, "i am a complete and utter failure"
-        except RuntimeError:
-            return failure.Failure()
-
-    def _errorfulMethod(self):
-        L = [self._generateFailure() for x in xrange(self.NUM_FAILURES)]
-        raise util.MultiError(L)
-
-    def testMultiError(self):
-        self.assertRaises(util.MultiError, self._errorfulMethod)
-        try:
-            self._errorfulMethod()
-        except util.MultiError, e:
-            self.assert_(hasattr(e, 'failures'))
-            self.assertEqual(len(e.failures), self.NUM_FAILURES)
-            for f in e.failures:
-                self.assert_(f.check(RuntimeError))
-
-    def testMultiErrorAsFailure(self):
-        self.assertRaises(util.MultiError, self._errorfulMethod)
-        try:
-            self._errorfulMethod()
-        except util.MultiError:
-            f = failure.Failure()
-            self.assert_(hasattr(f, 'value'))
-            self.assert_(hasattr(f.value, 'failures'))
-            self.assertEqual(len(f.value.failures), self.NUM_FAILURES)
-            for f in f.value.failures:
-                self.assert_(f.check(RuntimeError))
 
 
 class TestMktemp(unittest.TestCase):

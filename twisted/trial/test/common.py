@@ -54,8 +54,8 @@ class BogusReporter(reporter.TreeReporter):
 
     out = property(lambda self:self.stream.getvalue())
 
-    def upDownError(self, method, warn=True, printStatus=True):
-        super(BogusReporter, self).upDownError(method, False, printStatus)
+    def upDownError(self, method, error, warn, printStatus):
+        super(BogusReporter, self).upDownError(method, error, False, printStatus)
         self.udeMethod = method
 
     def reportImportError(self, name, exc):

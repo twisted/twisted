@@ -223,22 +223,6 @@ class ClassSuite(TestSuite):
         return self.original._testCaseInstance
     testCaseInstance = property(testCaseInstance)
 
-    def _setUpClass(self):
-        if not hasattr(self.original, 'setUpClass'):
-            return lambda : None
-        setUp = self.testCaseInstance.setUpClass
-        suppress = util.acquireAttribute(
-            util.getPythonContainers(setUp), 'suppress', None)
-        return util.UserMethodWrapper(setUp, suppress=suppress)
-
-    def _tearDownClass(self):
-        if not hasattr(self.original, 'tearDownClass'):
-            return lambda : None
-        tearDown = self.testCaseInstance.tearDownClass
-        suppress = util.acquireAttribute(
-            util.getPythonContainers(tearDown), 'suppress', None)
-        return util.UserMethodWrapper(tearDown, suppress=suppress)
-
     def run(self, reporter):
         janitor = util._Janitor()
         if len(self._tests) == 0:
@@ -246,23 +230,22 @@ class ClassSuite(TestSuite):
         try:
             self._signalStateMgr.save()
             # --- setUpClass -----------------------------------------------
-            setUpClass = self._setUpClass()
             try:
-                if not getattr(self.original, 'skip', None):
-                    setUpClass()
-            except util.UserMethodError:
-                for error in setUpClass.errors:
-                    if error.check(unittest.SkipTest):
-                        self.original.skip = error.value[0]
-                        break                   # <--- skip the else: clause
-                    elif error.check(KeyboardInterrupt):
-                        reporter.shouldStop = True
+                if (not getattr(self.original, 'skip', None)
+                    and hasattr(self.original, 'setUpClass')):
+                    util.testFunction(self.testCaseInstance.setUpClass)
+            except util.FailureError, e:
+                error = e.original
+                if error.check(unittest.SkipTest):
+                    self.original.skip = error.value[0]
                 else:
-                    reporter.upDownError(setUpClass)
+                    if error.check(KeyboardInterrupt):
+                        reporter.shouldStop = True
+                    reporter.upDownError('setUpClass', error, warn=True,
+                                         printStatus=True)
                     for tm in self._tests:
-                        for error in setUpClass.errors:
-                            reporter.addError(tm, error)
                         reporter.startTest(tm)
+                        reporter.addError(tm, error)
                         reporter.stopTest(tm)
                     return
 
@@ -273,21 +256,23 @@ class ClassSuite(TestSuite):
                     break
 
             # --- tearDownClass ---------------------------------------------
-            tearDownClass = self._tearDownClass()
             try:
-                if not getattr(self.original, 'skip', None):
-                    tearDownClass()
-            except util.UserMethodError:
-                for error in tearDownClass.errors:
-                    if error.check(KeyboardInterrupt):
-                        reporter.shouldStop = True
-                else:
-                    reporter.upDownError(tearDownClass)
+                if (not getattr(self.original, 'skip', None)
+                    and hasattr(self.original, 'tearDownClass')):
+                    util.testFunction(self.testCaseInstance.tearDownClass)
+            except util.FailureError, e:
+                error = e.original
+                if error.check(KeyboardInterrupt):
+                    reporter.shouldStop = True
+                reporter.upDownError('tearDownClass', error, warn=True,
+                                     printStatus=True)
         finally:
             try:
                 janitor.postCaseCleanup()
-            except util.MultiError, e:
-                reporter.cleanupErrors(e.failures)
+            except util.FailureError, e:
+                reporter.cleanupErrors(e.original)
+            except:
+                reporter.cleanupErrors(failure.Failure())
             self._signalStateMgr.restore()
         
 

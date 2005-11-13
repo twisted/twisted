@@ -24,8 +24,8 @@ class TestSetUp(unittest.TestCase):
         suite(result)
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
-        self.failUnlessEqual(len(result.failures), 1)
-        self.failUnlessEqual(len(result.errors), 0)
+        self.failUnlessEqual(len(result.failures), 0)
+        self.failUnlessEqual(len(result.errors), 1)
         self.failIf(detests.DeferredSetUpFail.testCalled)
 
     def test_callbackFail(self):
@@ -34,8 +34,8 @@ class TestSetUp(unittest.TestCase):
         suite(result)
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
-        self.failUnlessEqual(len(result.failures), 1)
-        self.failUnlessEqual(len(result.errors), 0)
+        self.failUnlessEqual(len(result.failures), 0)
+        self.failUnlessEqual(len(result.errors), 1)
         self.failIf(detests.DeferredSetUpCallbackFail.testCalled)
         
     def test_error(self):
@@ -52,13 +52,12 @@ class TestSetUp(unittest.TestCase):
         self.failIf(detests.DeferredSetUpSkip.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpSkip)
         suite(result)
-        self.failUnless(result.wasSuccessful())
+        self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.failures), 0)
-        self.failUnlessEqual(len(result.errors), 0)
-        self.failUnlessEqual(len(result.skips), 1)
+        self.failUnlessEqual(len(result.errors), 1)
+        self.failUnlessEqual(len(result.skips), 0)
         self.failIf(detests.DeferredSetUpSkip.testCalled)
-        self.failUnlessEqual(str(result.skips[0][1]), 'skip me')
         
 
 class TestNeverFire(unittest.TestCase):

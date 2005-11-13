@@ -91,30 +91,13 @@ def deferredError(d, timeout=None):
         raise unittest.FailTest, "Deferred did not fail: %r" % (result,)
 
 
-class MultiError(Exception):
-    """smuggle a sequence of failures through a raise
-    @ivar failures: a sequence of failure objects that prompted the raise
-    @ivar args: additional arguments
-    """
-    def __init__(self, failures, *args):
-        if isinstance(failures, failure.Failure):
-            self.failures = [failures]
-        else:
-            self.failures = list(failures)
-        self.args = args
+class FailureError(Exception):
+    """Wraps around a Failure so it can get re-raised as an Exception"""
 
-    def __str__(self):
-        return '\n\n'.join([e.getTraceback() for e in self.failures])
+    def __init__(self, failure):
+        Exception.__init__(self)
+        self.original = failure
 
-
-class LoggedErrors(MultiError):
-    """raised when there have been errors logged using log.err"""
-    
-class WaitError(MultiError):
-    """raised when there have been errors during a call to wait"""
-
-class JanitorError(MultiError):
-    """raised when an error is encountered during a *Cleanup"""
 
 class DirtyReactorError(Exception):
     """emitted when the reactor has been left in an unclean state"""
@@ -143,28 +126,15 @@ class _Janitor(object):
                                   'cleanPending', 'cleanThreads')
 
     def _dispatch(self, *attrs):
-        errors = []
         for attr in attrs:
-            if getattr(self, attr):
-                try:
-                    getattr(self, "do_%s" % attr)()
-                except LoggedErrors, e:
-                    errors.extend(e.failures)
-                except PendingTimedCallsError:
-                    errors.append(failure.Failure())
-        if errors:
-            raise JanitorError([e for e in errors if e is not None])
+            getattr(self, "do_%s" % attr)()
 
     def do_logErrCheck(cls):
-        if log._keptErrors:
-            L = []
-            for err in log._keptErrors:
-                if isinstance(err, failure.Failure):
-                    L.append(err)
-                else:
-                    L.append(repr(err))
+        try:
+            if len(log._keptErrors) > 0:
+                raise FailureError(log._keptErrors[0])
+        finally:
             log.flushErrors()
-            raise LoggedErrors(L)
     do_logErrCheck = classmethod(do_logErrCheck)
 
     def do_cleanPending(cls):
@@ -211,8 +181,7 @@ class _Janitor(object):
                     sel.signalProcess('KILL')
                 s.append(repr(sel))
         if s:
-            # raise DirtyReactorError, s
-            raise JanitorError(failure.Failure(DirtyReactorWarning(' '.join(s))))
+            raise DirtyReactorError(' '.join(s))
     do_cleanReactor = classmethod(do_cleanReactor)
 
     def doGcCollect(cls):
@@ -261,50 +230,42 @@ class WaitIsNotReentrantError(Exception):
 
 def _wait(d, timeout=None, running=[]):
     from twisted.internet import reactor
-
     if running:
         raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
+
     running.append(None)
+    results = []
+    def append(any):
+        if results is not None:
+            results.append(any)
+    def crash(ign):
+        if results is not None:
+            reactor.crash()
+    def stop():
+        reactor.crash()
+
     try:
-        assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
-
-        results = []
-        def append(any):
-             if results is not None:
-                results.append(any)
         d.addBoth(append)
-
         if results:
             return results[0]
-
-        def crash(ign):
-            if results is not None:
-                reactor.crash()
-
         d.addBoth(crash)
-
         if timeout is None:
             timeoutCall = None
         else:
             timeoutCall = reactor.callLater(timeout, reactor.crash)
-
-        def stop():
-            reactor.crash()
-
         reactor.stop = stop
         try:
             reactor.run()
         finally:
             del reactor.stop
-
         if timeoutCall is not None:
             if timeoutCall.active():
                 timeoutCall.cancel()
             else:
                 raise defer.TimeoutError()
-
         if results:
             return results[0]
+
         # If the timeout didn't happen, and we didn't get a result or
         # a failure, then the user probably aborted the test, so let's
         # just raise KeyboardInterrupt.
@@ -319,7 +280,6 @@ def _wait(d, timeout=None, running=[]):
         # this code set a "stop trial" flag, or otherwise notify trial
         # that it should really try to stop as soon as possible.
         raise KeyboardInterrupt()
-
     finally:
         results = None
         running.pop()
@@ -370,18 +330,12 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         #  it would be nice if i didn't have to armor this call like
         # this (with a blank except:, but we *are* calling user code 
         r = failure.Failure()
-    
-    if not useWaitError:
-        if isinstance(r, failure.Failure):
-            r.raiseException()
-    else:
-        flist = []
-        if isinstance(r, failure.Failure):
-            flist.append(r)
-        
-        if flist:
-            raise WaitError(flist)
 
+    if isinstance(r, failure.Failure):
+        if useWaitError:
+            raise FailureError(r)
+        else:
+            r.raiseException()
     return r
 
 def extract_tb(tb, limit=None):
@@ -433,10 +387,8 @@ def format_exception(eType, eValue, tb, limit=None):
     return l
 
 def suppressWarnings(f, *warningz):
-    """this method is not supported for the moment and is 
-    awaiting a fix (see U{issue627 
-    <http://www.twistedmatrix.com/users/roundup.twistd/twisted/issue627>})
-    """
+    warnings.warn("Don't use this.  Use the .suppress attribute instead",
+                  category=DeprecationWarning, stacklevel=2)
     def enclosingScope(warnings, warningz):
         exec """def %s(*args, **kwargs):
     for warning in warningz:
@@ -476,58 +428,31 @@ def suppress(action='ignore', **kwarg):
     return ((action,), kwarg)
 
 
-class UserMethodError(Exception):
-    """indicates that the user method had an error, but raised after
-    call is complete
+def suppressedRun(suppressedWarnings, f, *a, **kw):
+    """Run the function C{f}, but with some warnings suppressed.
+
+    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
+                               Must be a sequence of 2-tuples (args, kwargs).
+    @param f: A callable, followed by its arguments and keyword arguments
     """
+    filters = warnings.filters[:]
+    try:
+        for args, kwargs in suppressedWarnings:
+            warnings.filterwarnings(*args, **kwargs)
+        return f(*a, **kw)
+    finally:
+        warnings.filters = filters[:]
 
-class UserMethodWrapper(object):
-    def __init__(self, original, raiseOnErr=True, timeout=None, suppress=None):
-        self.original = original
-        self.timeout = timeout
-        self.raiseOnErr = raiseOnErr
-        self.errors = []
-        self.suppress = suppress
-        self.name = original.__name__
 
-    def __call__(self, *a, **kw):
-        timeout = getattr(self, 'timeout', None)
-        if timeout is None:
-            timeout = getattr(self.original, 'timeout', DEFAULT_TIMEOUT)
-        self.startTime = time.time()
-        def run():
-            return wait(defer.maybeDeferred(self.original, *a, **kw),
-                        timeout, useWaitError=True)
-        try:
-            self._runWithWarningFilters(run)
-        except MultiError, e:
-            for f in e.failures:
-                self.errors.append(f)
-        except KeyboardInterrupt:
-            f = failure.Failure()
-            self.errors.append(f)
-        self.endTime = time.time()
-        for e in self.errors:
-            self.errorHook(e)
-        if self.raiseOnErr and self.errors:
-            raise UserMethodError
+def timedRun(timeout, f, *a, **kw):
+    return wait(defer.maybeDeferred(f, *a, **kw), timeout, useWaitError=True)
 
-    def _runWithWarningFilters(self, f, *a, **kw):
-        """calls warnings.filterwarnings(*item[0], **item[1]) 
-        for each item in alist, then runs func f(*a, **kw) and 
-        resets warnings.filters to original state at end
-        """
-        filters = warnings.filters[:]
-        try:
-            if self.suppress is not None:
-                for args, kwargs in self.suppress:
-                    warnings.filterwarnings(*args, **kwargs)
-            return f(*a, **kw)
-        finally:
-            warnings.filters = filters[:]
 
-    def errorHook(self, fail):
-        pass
+def testFunction(f):
+    containers = [f] + getPythonContainers(f)
+    suppress = acquireAttribute(containers, 'suppress', [])
+    timeout = acquireAttribute(containers, 'timeout', DEFAULT_TIMEOUT)
+    return suppressedRun(suppress, lambda : timedRun(timeout, f))
 
 
 def getPythonContainers(meth):
@@ -598,7 +523,7 @@ def findObject(name):
     return (True, obj)
 
         
-__all__ = ["MultiError", "LoggedErrors", 'WaitError', 'JanitorError', 'DirtyReactorWarning',
-           'DirtyReactorError', 'PendingTimedCallsError', 'WaitIsNotReentrantError',
-           'deferredResult', 'deferredError', 'wait', 'extract_tb', 'format_exception',
-           'suppressWarnings']
+__all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
+           'PendingTimedCallsError', 'WaitIsNotReentrantError',
+           'deferredResult', 'deferredError', 'wait', 'extract_tb',
+           'format_exception', 'suppressWarnings']

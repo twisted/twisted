@@ -58,15 +58,25 @@ GOALS
 
 
 MILESTONES
-- Deprecate assertions.py
 - Surely there's something better than UserMethodWrapper
 
-- death to ITestMethod
 - Outline the real interface for Reporter
 
 - Should reporter know about the runner?  (suite.foo)
 
-- When is self.testCaseInstance needed? Remove from TestMethod
+
+TestCase.run()
+==============
+
+Needs to:
+- save signals
+- skip test, if necessary
+- wrap calls in util.wait()
+- catch errors from util.wait()
+- run setUp, testMethod, tearDown
+- suppress warnings
+- report to the testResult object
+- pass timeout to wait
 
 
 

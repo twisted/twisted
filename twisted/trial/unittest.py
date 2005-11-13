@@ -73,7 +73,6 @@ class TestCase(pyunit.TestCase, object):
         log.msg("--> %s <--" % (self.id()))
         _signalStateMgr = util.SignalStateManager()
         _signalStateMgr.save()
-        janitor = util._Janitor()
         testCase = self._sharedTestCase()
         testMethod = getattr(testCase, self._testMethodName)
 
@@ -82,83 +81,73 @@ class TestCase(pyunit.TestCase, object):
             reporter.addSkip(self, self.getSkip())
             reporter.stopTest(self)
             return
+
         passed = False
         try:
-            setUp = util.UserMethodWrapper(testCase.setUp,
-                                           suppress=self.getSuppress())
             try:
-                setUp()
-            except util.UserMethodError:
-                for error in setUp.errors:
-                    self._eb(error, reporter)
-                else:
-                    reporter.upDownError(setUp, warn=False,
-                                         printStatus=False)
-                    return
+                util.testFunction(testCase.setUp)
+            except util.FailureError, e:
+                reporter.addError(self, e.original)
+                if e.original.check(KeyboardInterrupt):
+                    reporter.stop()
+                reporter.upDownError('setUp', e.original, warn=False,
+                                     printStatus=False)
+                return
                  
-            orig = util.UserMethodWrapper(testMethod,
-                                          raiseOnErr=False,
-                                          timeout=self.getTimeout(),
-                                          suppress=self.getSuppress())
-            orig.errorHook = lambda x : self._eb(x, reporter)
             try:
-                orig()
-                if (self.getTodo() is not None
-                    and len(orig.errors) == 0):
+                util.testFunction(testMethod)
+                if self.getTodo() is not None:
                     reporter.addUnexpectedSuccess(self, self.getTodo())
-                elif len(orig.errors) == 0:
+                else:
                     passed = True
-            finally:
-                um = util.UserMethodWrapper(testCase.tearDown,
-                                            suppress=self.getSuppress())
-                try:
-                    um()
-                except util.UserMethodError:
-                    passed = False
-                    for error in um.errors:
-                        self._eb(error, reporter)
-                    else:
-                        reporter.upDownError(um, warn=False)
-                except:
-                    passed = False
-                    raise
-        finally:
+            except util.FailureError, e:
+                f = e.original
+                if self.getTodo() is not None and self._todoExpected(f):
+                    reporter.addExpectedFailure(self, f, self._getTodoMessage())
+                elif f.check(self.failureException, FailTest):
+                    reporter.addFailure(self, f)
+                elif f.check(KeyboardInterrupt):
+                    reporter.addError(self, f)
+                    reporter.stop()
+                elif f.check(SkipTest):
+                    reporter.addSkip(self, self._getReason(f))
+                else:
+                    reporter.addError(self, f)
+
             try:
-                janitor.postMethodCleanup()
-            except util.MultiError, e:
+                util.testFunction(testCase.tearDown)
+            except util.FailureError, e:
+                reporter.addError(self, e.original)
+                if e.original.check(KeyboardInterrupt):
+                    reporter.stop()
+                reporter.upDownError('tearDown', e.original, warn=False,
+                                     printStatus=True)
                 passed = False
-                for f in e.failures:
-                    self._eb(f, reporter)
+
+            try:
+                util._Janitor().postMethodCleanup()
+            except util.FailureError, e:
+                reporter.addError(self, e.original)
+                passed = False
+            except:
+                reporter.cleanupErrors(failure.Failure())
+                passed = False
+
             if passed:
                 reporter.addSuccess(self)
+        finally:
             reporter.stopTest(self)
             _signalStateMgr.restore()
 
-    def _eb(self, f, reporter):
-        log.msg(f.getTraceback())
-        if self.getTodo() is not None:
-            if self._todoExpected(f):
-                reporter.addExpectedFailure(self, f, self._getTodoMessage())
-                return
-        if f.check(util.DirtyReactorWarning):
-            reporter.cleanupErrors(f)
-        elif f.check(self.failureException, FailTest):
-            reporter.addFailure(self, f)
-        elif f.check(KeyboardInterrupt):
-            reporter.shouldStop = True
-            reporter.addError(self, f)
-        elif f.check(SkipTest):
-            if len(f.value.args) > 0:
-                reason = f.value.args[0]
-            else:
-                warnings.warn(("Do not raise unittest.SkipTest with no "
-                               "arguments! Give a reason for skipping tests!"),
-                              stacklevel=2)
-                reason = f
-            self.skip = reason
-            reporter.addSkip(self, reason)
+    def _getReason(self, f):
+        if len(f.value.args) > 0:
+            reason = f.value.args[0]
         else:
-            reporter.addError(self, f)
+            warnings.warn(("Do not raise unittest.SkipTest with no "
+                           "arguments! Give a reason for skipping tests!"),
+                          stacklevel=2)
+            reason = f
+        return reason
 
     def getSkip(self):
         return util.acquireAttribute(self._parents, 'skip', None)
@@ -193,9 +182,6 @@ class TestCase(pyunit.TestCase, object):
         else:
             raise ValueError("%r is not a valid .todo attribute" % (todo,))
     
-    def getSuppress(self):
-        return util.acquireAttribute(self._parents, 'suppress', None)
-
     def getTimeout(self):
         return util.acquireAttribute(self._parents, 'timeout', None)
     
