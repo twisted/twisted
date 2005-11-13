@@ -799,6 +799,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         # bug in Nautilus 2.10.0
         if path == "-L":
             path = ''
+        # bug in ange-ftp
+        if path == "-la":
+            path = ''
 
         def gotListing(results):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
