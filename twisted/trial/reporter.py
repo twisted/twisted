@@ -266,6 +266,26 @@ class Reporter(object):
             ret.extend(map(self._formatFailureTraceback, failures))
         return '\n'.join(ret)
 
+    def _formatUnexpectedSuccess(self, test, todo):
+        if isinstance(todo, tuple):
+            msg = todo[1]
+            try:
+                expected = list(todo[0])
+            except TypeError:
+                expected = [todo[0]]
+            errors = [ e.__name__ for e in expected ]
+        else:
+            msg = todo
+            errors = []
+        output = [DOUBLE_SEPARATOR,
+                  '%s: %s' % (WORDS[UNEXPECTED_SUCCESS], test.id()),
+                  '',
+                  'Reason: %r' % (msg,)]
+        if errors:
+            output.append('Expected errors: %s' % (', '.join(errors),))
+        output.append('')
+        return '\n'.join(output)
+
     def _reportStatus(self, tsuite):
         summaries = []
         for stat in STATUSES:
@@ -288,6 +308,8 @@ class Reporter(object):
                     + self._getExpectedFailures(meth),
                     self._getSkip(meth),
                     self._getTodoReason(meth)))
+        for test, todo in self.unexpectedSuccesses:
+            self.write(self._formatUnexpectedSuccess(test, todo))
         for name, error in self.couldNotImport:
             self.write(self._formatImportError(name, error))
 
