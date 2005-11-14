@@ -8,15 +8,13 @@ from twisted.plugin import IPlugin
 class _Reporter(object):
     implements(IPlugin, IReporter)
 
-    def __init__(self, name, module, description,
-                 longOpt, shortOpt, klass, default=False):
+    def __init__(self, name, module, description, longOpt, shortOpt, klass):
         self.name = name
         self.module = module
         self.description = description
         self.longOpt = longOpt
         self.shortOpt = shortOpt
         self.klass = klass
-        self.default = default
 
 backwardsCompatImplements(_Reporter)
 
@@ -25,8 +23,7 @@ Tree = _Reporter("Tree Reporter",
                  description="verbose color output (default reporter)",
                  longOpt="verbose",
                  shortOpt="v",
-                 klass="TreeReporter",
-                 default=True)
+                 klass="TreeReporter")
 
 BlackAndWhite = _Reporter("Black-And-White Reporter",
                           "twisted.trial.reporter",
@@ -55,3 +52,4 @@ Timing = _Reporter("Timing Reporter",
                    longOpt="timing",
                    shortOpt=None,
                    klass="TimingTextReporter")
+

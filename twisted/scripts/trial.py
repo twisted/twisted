@@ -123,12 +123,22 @@ class Options(usage.Options):
         usage.Options.__init__(self)
 
     def _loadReporters(self):
+        if self._supportsColor():
+            default = 'verbose'
+        else:
+            default = 'bwverbose'
         self.optToQual = {}
         for p in plugin.getPlugins(itrial.IReporter):
             qual = "%s.%s" % (p.module, p.klass)
             self.optToQual[p.longOpt] = qual
-            if getattr(p, 'default', False):
+            if p.longOpt == default:
                 self.fallbackReporter = reflect.namedAny(qual)
+
+    def _supportsColor(self):
+        supportedTerms = ['xterm', 'xterm-color', 'linux', 'screen']
+        if not os.environ.has_key('TERM'):
+            return False
+        return os.environ['TERM'] in supportedTerms
 
     def getReporter(self):
         """return the class of the selected reporter
