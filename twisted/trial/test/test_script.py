@@ -58,18 +58,10 @@ class TestModuleTest(unittest.TestCase):
             sys.stderr = stderr
 
     def test_actuallyRuns(self):
-        from twisted.internet import interfaces, reactor
-        if not interfaces.IReactorProcess.providedBy(reactor):
-            raise unittest.SkipTest("This test runs an external process. "
-                                    "This reactor doesn't support it.")
-        import test_output, os
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        d = test_output.runTrialWithEnv(env, '--testmodule',
-                                        sibpath('moduletest.py'))
-        d.addCallback(lambda x : self.assertSubstring(
-            'twisted.trial.test.test_test_visitor', x))
-        return d
+        import test_output
+        output = test_output.runTrial('--testmodule',
+                                      sibpath('moduletest.py'))
+        self.assertSubstring('twisted.trial.test.test_test_visitor', output)
         
     def test_parseLocalVariable(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_trial -*-'

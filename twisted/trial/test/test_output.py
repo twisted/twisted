@@ -2,27 +2,26 @@ from twisted.scripts import trial
 from twisted.trial import unittest, runner
 from twisted.trial.test import packages
 from twisted.python import util
-from twisted.internet import utils, reactor, interfaces, defer
 import os, re, sys, StringIO
 
 
-def runTrialWithEnv(env, *args):
-    params = [ '-c', 'from twisted.scripts.trial import run; run()' ]
-    params.extend(args)
-    return utils.getProcessOutput(sys.executable, args=params, errortoo=1,
-                                  env=env)
+def runTrial(*args):
+    config = trial.Options()
+    config.parseOptions(args)
+    os.chdir(config['_origdir'])
+    reporter = trial._getReporter(config)
+    output = StringIO.StringIO()
+    reporter.stream = output
+    suite = trial._getSuite(config, reporter)
+    myRunner = runner.TrialRunner(config)
+    result = myRunner.run(suite)
+    return output.getvalue()
 
-
-if not interfaces.IReactorProcess.providedBy(reactor):
-    skip = "These tests require the ability to spawn processes"
-    
 
 class TestImportErrors(unittest.TestCase):
-    """Actually run trial on the command line and check that the output is
-    what we expect.
+    """Actually run trial as if on the command line and check that the output
+    is what we expect.
     """
-    ## XXX -- ideally refactor the trial top-level stuff so we don't have to
-    ## shell out for this stuff.
 
     debug = False
     parent = "_testImportErrors"
@@ -40,28 +39,16 @@ class TestImportErrors(unittest.TestCase):
                 pass
         packages.tearDown(self.parent)
 
-    def _runTrial(self, *args):
-        config = trial.Options()
-        config.parseOptions(args)
-        os.chdir(config['_origdir'])
-        reporter = trial._getReporter(config)
-        output = StringIO.StringIO()
-        reporter.stream = output
-        suite = trial._getSuite(config, reporter)
-        myRunner = runner.TrialRunner(config)
-        result = myRunner.run(suite)
-        return output.getvalue()
-        
     def runTrial(self, *args):
         oldPath = sys.path[:]
         sys.path.append(self.parent)
         try:
-            return self._runTrial(*args)
+            return runTrial(*args)
         finally:
             sys.path = oldPath
 
     def runTrialPure(self, *args):
-        return self._runTrial(*args)
+        return runTrial(*args)
  
     def _print(self, stuff):
         print stuff

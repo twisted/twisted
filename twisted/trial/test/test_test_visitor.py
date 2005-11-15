@@ -1,8 +1,8 @@
-from twisted.trial.unittest import TestCase
+from twisted.trial import unittest
 from twisted.trial.runner import TestLoader
 from twisted.trial.test import common
 
-class TestTestVisitor(TestCase):
+class TestTestVisitor(unittest.TestCase):
 
     def setUp(self):
         self.loader = TestLoader()
