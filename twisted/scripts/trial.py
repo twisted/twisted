@@ -309,7 +309,6 @@ class Options(usage.Options):
         self['_origdir'] = os.getcwd()
         # Want to do this stuff as early as possible
         _setUpTestdir()
-        _setUpLogging(self)
         if self['suppresswarnings']:
             warnings.warn('--suppresswarnings deprecated. Is a no-op',
                           category=DeprecationWarning)
@@ -450,6 +449,7 @@ def run():
         config.parseOptions()
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
+    _setUpLogging(config)
     _initialDebugSetup(config)
     test_result = reallyRun(config)
     if config.tracer:
