@@ -501,11 +501,14 @@ class TrialRunner(object):
         return dbg
     
     def _getResult(self):
-        return self._config._reporter
+        if self._result is None:
+            self._result = self._config.getReporter()
+        return self._result
         
     def __init__(self, config):
         self._config = config
         self._root = None
+        self._result = None
 
     def run(self, test):
         """Run the test or suite and return a result object."""

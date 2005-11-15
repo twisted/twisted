@@ -200,20 +200,20 @@ class TestRunner(unittest.TestCase):
         self.parseOptions([])
         reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
-        self.assertEqual(reporter, my_runner._getResult())
+        self.assertEqual(reporter.__class__, my_runner._getResult().__class__)
 
     def test_runner_get_result(self):
         self.parseOptions([])
         self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
         result = my_runner._getResult()
-        self.assertEqual(result, self.config._reporter)
+        self.assertEqual(result.__class__, self.config.getReporter().__class__)
 
     def test_runner_dry_run(self):
         self.parseOptions(['--dry-run', '--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
+        reporter = my_runner._getResult()
         loader = runner.SafeTestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
         result = my_runner.run(suite)
@@ -222,8 +222,8 @@ class TestRunner(unittest.TestCase):
     def test_runner_normal(self):
         self.parseOptions(['--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
+        reporter = my_runner._getResult()
         loader = runner.SafeTestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
         result = my_runner.run(suite)
@@ -232,8 +232,8 @@ class TestRunner(unittest.TestCase):
     def test_runner_debug(self):
         self.parseOptions(['--reporter', 'capturing',
                            '--debug', 'twisted.trial.test.sample'])
-        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
+        reporter = my_runner._getResult()
         debugger = CapturingDebugger()
         def get_debugger():
             return debugger

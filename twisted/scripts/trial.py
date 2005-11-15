@@ -149,12 +149,9 @@ class Options(usage.Options):
         return self.fallbackReporter
 
     def getReporter(self):
-        if getattr(self, '_reporter', None) is not None:
-            return self._reporter
         reporterKlass = self._getReporterClass()
         reporter = reporterKlass(tbformat=self['tbformat'],
                                  realtime=self['rterrors'])
-        self._reporter = reporter
         return reporter
 
     def opt_reactor(self, reactorName):
@@ -430,9 +427,9 @@ def callUntilFailure(f, *args, **kwargs):
 
 
 def reallyRun(config):
-    reporter = config.getReporter()
-    my_runner = runner.TrialRunner(config)
     def do_a_run():
+        my_runner = runner.TrialRunner(config)
+        reporter = my_runner._getResult()
         suite = _getSuite(config, reporter)
         return my_runner.run(suite)
     if config['profile']:

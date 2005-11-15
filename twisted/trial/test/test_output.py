@@ -9,11 +9,11 @@ def runTrial(*args):
     config = trial.Options()
     config.parseOptions(args)
     os.chdir(config['_origdir'])
-    reporter = config.getReporter()
+    myRunner = runner.TrialRunner(config)
     output = StringIO.StringIO()
+    reporter = myRunner._getResult()
     reporter.stream = output
     suite = trial._getSuite(config, reporter)
-    myRunner = runner.TrialRunner(config)
     result = myRunner.run(suite)
     return output.getvalue()
 
