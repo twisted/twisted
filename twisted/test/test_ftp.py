@@ -646,6 +646,34 @@ class FTPClientBasicTests(unittest.TestCase):
         # sent a PASS command).
         self.failUnlessEqual('', ftpClient.transport.buffer)
 
+    def testCommandAfterFail(self):
+        """connectionLost prior to a queueCommand should fail subsequent commands
+        """
+        # Create a client, and give it a greeting
+        ftpClient = ftp.FTPClientBasic()
+        ftpClient.transport = BufferingTransport()
+        ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
+
+        # Queue a login
+        ftpClient.queueLogin('bob', None)
+        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.buffer)
+
+        # Just to make sure we're at a state where the
+        # client is waiting for the next command
+        ftpClient.transport.buffer = ''
+        ftpClient.lineReceived('200 Hello bob.')
+
+        # we waited to long to send the next command
+        ftpClient.lineReceived('421 Connection timed out')
+        self.failUnless(ftpClient._failed)
+
+        def _finish(result):
+            self.assertFailure(commandDeferred)
+
+        ftpClient.queueStringCommand('RETR /').addCallback(_finish)
+
+        
+
 
 class PathHandling(unittest.TestCase):
     def testNormalizer(self):

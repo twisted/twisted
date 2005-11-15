@@ -238,5 +238,6 @@ class RequestContext(FactoryContext):
 
 components.registerAdapter(lambda ctx: ctx.tag, RequestContext, iweb.IRequest)
 components.registerAdapter(lambda ctx: iweb.IOldRequest(ctx.tag), RequestContext, iweb.IOldRequest)
+components.registerAdapter(lambda ctx: iweb.IRequest(ctx).site, RequestContext, iweb.ISite)
 
 __all__ = ['WebContext', 'SiteContext', 'RequestContext', 'FactoryContext']

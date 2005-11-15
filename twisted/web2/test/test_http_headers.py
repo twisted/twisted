@@ -2,7 +2,7 @@ from twisted.trial import unittest
 import random
 
 from twisted.web2 import http_headers
-from twisted.web2.http_headers import Cookie
+from twisted.web2.http_headers import Cookie, HeaderHandler
 
 class parsedvalue:
     """Marker class"""
@@ -16,7 +16,7 @@ class HeadersAPITest(unittest.TestCase):
     """Make sure the public API exists and works."""
     def testRaw(self):
         rawvalue = ("value1", "value2")
-        h = http_headers.Headers(parsers={}, generators={})
+        h = http_headers.Headers(handler=HeaderHandler(parsers={}, generators={}))
         h.setRawHeaders("test", rawvalue)
         self.assertEquals(h.hasHeader("test"), True)
         self.assertEquals(h.getRawHeaders("test"), rawvalue)
@@ -28,7 +28,8 @@ class HeadersAPITest(unittest.TestCase):
                           
     def testParsed(self):
         parsed = parsedvalue(("value1", "value2"))
-        h = http_headers.Headers(parsers={}, generators={})
+        h = http_headers.Headers(handler=HeaderHandler(parsers={}, generators={}))
+
         h.setHeader("test", parsed)
         self.assertEquals(h.hasHeader("test"), True)
         self.assertEquals(h.getHeader("test"), parsed)
@@ -46,7 +47,10 @@ class HeadersAPITest(unittest.TestCase):
         
         rawvalue = ("value1", "value2")
         rawvalue2 = ("value3", "value4")
-        h = http_headers.Headers(parsers={'test':(parse,)}, generators={'test':(generate,)})
+	handler = HeaderHandler(parsers={'test':(parse,)},
+				generators={'test':(generate,)})
+
+        h = http_headers.Headers(handler=handler)
         h.setRawHeaders("test", rawvalue)
         self.assertEquals(h.getHeader("test"), parsedvalue(rawvalue))
 
@@ -55,15 +59,16 @@ class HeadersAPITest(unittest.TestCase):
 
         # Check the initializers
         h = http_headers.Headers(rawHeaders={"test": rawvalue},
-                                 parsers={'test':(parse,)}, generators={'test':(generate,)})
+                                 handler=handler)
         self.assertEquals(h.getHeader("test"), parsedvalue(rawvalue))
 
         h = http_headers.Headers({"test": parsedvalue(rawvalue2)},
-                                 parsers={'test':(parse,)}, generators={'test':(generate,)})
+                                 handler=handler)
         self.assertEquals(h.getRawHeaders("test"), rawvalue2)
 
     def testImmutable(self):
-        h = http_headers.Headers(parsers={}, generators={})
+        h = http_headers.Headers(handler=HeaderHandler(parsers={}, generators={}))
+
         h.makeImmutable()
         self.assertRaises(AttributeError, h.setRawHeaders, "test", [1])
         self.assertRaises(AttributeError, h.setHeader, "test", 1)
@@ -96,12 +101,12 @@ class TokenizerTest(unittest.TestCase):
         pass
 
 def parseHeader(name, val):
-    head = http_headers.Headers(parsers=http_headers.DefaultHTTPParsers)
+    head = http_headers.Headers(handler=http_headers.DefaultHTTPHandler)
     head.setRawHeaders(name,val)
     return head.getHeader(name)
 
 def generateHeader(name, val):
-    head = http_headers.Headers(generators=http_headers.DefaultHTTPGenerators)
+    head = http_headers.Headers(handler=http_headers.DefaultHTTPHandler)
     head.setHeader(name, val)
     return head.getRawHeaders(name)
 
@@ -266,7 +271,7 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
              ("basic", "dXNlcm5hbWU6cGFzc3dvcmQ="),
              "basic dXNlcm5hbWU6cGFzc3dvcmQ="),
             ('Digest nonce="bar", realm="foo", username="baz", response="bax"',
-             ['digest', {'nonce': 'bar', 'realm': 'foo', 'username': 'baz', 'response': 'bax'}],
+             ('digest', 'nonce="bar", realm="foo", username="baz", response="bax"'),
              'digest nonce="bar", realm="foo", username="baz", response="bax"')
             )
 
@@ -475,7 +480,7 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
             ('Digest realm="foo", nonce="bAr", qop="auth"',
              ['digest', {'realm': 'foo', 'nonce': 'bAr', 'qop': 'auth'}],
              'digest realm="foo", nonce="bAr", qop="auth"'),
-            ('basic realm="foo"',
+            ('Basic realm="foo"',
              ['basic', {'realm': 'foo'}], 'basic realm="foo"'))
          
         self.runRoundtripTest("WWW-Authenticate", table)
@@ -603,8 +608,11 @@ class TestMimeType(unittest.TestCase):
                                           (('param', None),
                                            ('key', 'value')))
 
+	stringMime = http_headers.MimeType.fromString('text/plain;key=value;param')
+
         self.assertEquals(kwargMime, dictMime)
         self.assertEquals(dictMime, tupleMime)
         self.assertEquals(kwargMime, tupleMime)
+	self.assertEquals(kwargMime, stringMime)
         
                                          

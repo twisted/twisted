@@ -357,8 +357,11 @@ class IChanRequest(Interface):
         socket, or may come from additional information, depending on
         the transport.
         """
-        
 
     persistent = Attribute("""Whether this request supports HTTP connection persistence. May be set to False. Should not be set to other values.""")
 
-__all__ = ['ICanHandleException', 'IChanRequest', 'IChanRequestCallbacks', 'IOldNevowResource', 'IOldRequest', 'IRequest', 'IResource', 'IResponse']
+
+class ISite(Interface):
+    pass
+
+__all__ = ['ICanHandleException', 'IChanRequest', 'IChanRequestCallbacks', 'IOldNevowResource', 'IOldRequest', 'IRequest', 'IResource', 'IResponse', 'ISite']

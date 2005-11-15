@@ -29,6 +29,80 @@ monthname = [None,
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 monthname_lower = [name and name.lower() for name in monthname]
 
+# HTTP Header parsing API
+
+header_case_mapping = {}
+
+def casemappingify(d):
+    global header_case_mapping
+    newd = dict([(key.lower(),key) for key in d.keys()])
+    header_case_mapping.update(newd)
+
+def lowerify(d):
+    return dict([(key.lower(),value) for key,value in d.items()])
+
+class HeaderHandler(object):
+    HTTPParsers = {}
+    HTTPGenerators = {}
+
+    def __init__(self, parsers=None, generators=None):
+	if parsers:
+	    self.HTTPParsers.update(parsers)
+	if generators:
+	    self.HTTPGenerators.update(generators)
+
+    def parse(self, name, header):
+        parser = self.HTTPParsers.get(name, None)
+        if parser is None:
+            raise ValueError("No header parser for header '%s', either add one or use getHeaderRaw." % (name,))
+
+        try:
+            for p in parser:
+                # print "Parsing %s: %s(%s)" % (name, repr(p), repr(h))
+                header = p(header)
+                # if isinstance(h, types.GeneratorType):
+                #     h=list(h)
+        except ValueError,v:
+            # print v
+            header=None
+        
+        return header
+
+    def generate(self, name, header):
+        generator = self.HTTPGenerators.get(name, None)
+
+        if generator is None:
+            # print self.generators
+            raise ValueError("No header generator for header '%s', either add one or use setHeaderRaw." % (name,))
+
+        for g in generator:
+            header = g(header)
+            
+        #self._raw_headers[name] = h
+        return header
+
+    def updateParsers(self, parsers):
+	casemappingify(parsers)
+	self.HTTPParsers.update(lowerify(parsers))
+
+    def addParser(self, name, value):
+	self.updateParsers({name: value})
+
+    def updateGenerators(self, generators):
+	casemappingify(generators)
+	self.HTTPGenerators.update(lowerify(generators))
+
+    def addGenerators(self, name, value):
+	self.updateGenerators({name: value})
+
+    def update(self, parsers, generators):
+	self.updateParsers(parsers)
+	self.updateGenerators(generators)
+
+
+DefaultHTTPHandler = HeaderHandler()
+
+
 ## HTTP DateTime parser
 def parseDateTime(dateString):
     """Convert an HTTP date string (one of three formats) to seconds since epoch."""
@@ -281,6 +355,11 @@ def generateKeyValues(kvs):
 
 
 class MimeType(object):
+    def fromString(klass, mimeTypeString):
+	return DefaultHTTPHandler.parse('content-type', [mimeTypeString])
+
+    fromString = classmethod(fromString)
+
     def __init__(self, mediaType, mediaSubtype, params={}, **kwargs):
         self.mediaType = mediaType
         self.mediaSubtype = mediaSubtype
@@ -484,30 +563,11 @@ def parseWWWAuthenticate(header):
     
     return [scheme[0], ODict(challenge)]
 
-def parseBasicAuthorization(header):
+def parseAuthorization(header):
     scheme, rest = header[0].split(' ', 1)
     # this header isn't tokenized because it may eat characters
     # in the unquoted base64 encoded credentials
-    # but to be sure it gets the same style output we manually
-    # lowercase the scheme
     return scheme.lower(), rest
-
-# we need to farm out authorization schemes to their
-# own parser chains
-
-authParsers = {'digest': (tokenize, parseWWWAuthenticate),
-               'basic': (parseBasicAuthorization,)}                         
-
-def parseAuthorization(header):
-    header = tuple(header)
-    h = zip(*split(tokenize(header), Token(' ')))[0]
-    scheme, rest = h[0], h[1:]
-    
-    parsers = authParsers.get(scheme, [])
-    for p in parsers:
-        header = p(header)
-
-    return header
 
 #### Header generators
 def generateAccept(accept):
@@ -636,14 +696,9 @@ def generateWWWAuthenticate(seq):
 
     return ["%s %s" % (scheme, ", ".join(l))]
 
-authGenerators = {'digest': (generateWWWAuthenticate,),
-                  'basic': (lambda s: [' '.join(s)],)}
-
 def generateAuthorization(seq):
-    for p in authGenerators[seq[0].lower()]:
-        seq = p(seq)
+    return [' '.join(seq)]
 
-    return seq
     
 ####
 class ETag(object):
@@ -1067,18 +1122,14 @@ class __RecalcNeeded(object):
 
 _RecalcNeeded = __RecalcNeeded()
 
-DefaultHTTPParsers = {}
-DefaultHTTPGenerators = {}
-
 class Headers(object):
     """This class stores the HTTP headers as both a parsed representation and
     the raw string representation. It converts between the two on demand."""
     
-    def __init__(self, headers=None, rawHeaders=None, parsers=DefaultHTTPParsers, generators=DefaultHTTPGenerators):
+    def __init__(self, headers=None, rawHeaders=None, handler=DefaultHTTPHandler):
         self._raw_headers = ODict()
         self._headers = ODict()
-        self.parsers = parsers
-        self.generators = generators
+        self.handler = handler
         if headers is not None:
             for key, value in headers.iteritems():
                 self.setHeader(key, value)
@@ -1091,38 +1142,19 @@ class Headers(object):
         self._headers = {}
         
     def _toParsed(self, name):
-        parser = self.parsers.get(name, None)
-        if parser is None:
-            raise ValueError("No header parser for header '%s', either add one or use getHeaderRaw." % (name,))
-
-        h = self._raw_headers[name]
-        try:
-            for p in parser:
-                # print "Parsing %s: %s(%s)" % (name, repr(p), repr(h))
-                h = p(h)
-                # if isinstance(h, types.GeneratorType):
-                #     h=list(h)
-        except ValueError,v:
-            # print v
-            h=None
-        
-        self._headers[name] = h
-        return h
+	r = self._raw_headers.get(name, None)
+	h = self.handler.parse(name, r)
+	if h is not None:
+	    self._headers[name] = h
+	return h
 
     def _toRaw(self, name):
-        generator = self.generators.get(name, None)
+	h = self._headers.get(name, None)
+	r = self.handler.generate(name, h)
+	if r is not None:
+	    self._raw_headers[name] = r
+	return r
 
-        if generator is None:
-            # print self.generators
-            raise ValueError("No header generator for header '%s', either add one or use setHeaderRaw." % (name,))
-
-        h = self._headers[name]
-        for g in generator:
-            h = g(h)
-            
-        self._raw_headers[name] = h
-        return h
-    
     def hasHeader(self, name):
         """Does a header with the given name exist?"""
         name=name.lower()
@@ -1139,7 +1171,7 @@ class Headers(object):
         return self._toRaw(name)
     
     def getHeader(self, name, default=None):
-        """Returns the parsed representation of the given header.
+        """Ret9urns the parsed representation of the given header.
         The exact form of the return value depends on the header in question.
         
         If no parser for the header exists, raise ValueError.
@@ -1358,31 +1390,19 @@ generator_entity_headers = {
     'Last-Modified':(generateDateTime, singleHeader),
     }
 
-DefaultHTTPParsers.update(parser_general_headers)
-DefaultHTTPParsers.update(parser_request_headers)
-DefaultHTTPParsers.update(parser_response_headers)
-DefaultHTTPParsers.update(parser_entity_headers)
+DefaultHTTPHandler.updateParsers(parser_general_headers)
+DefaultHTTPHandler.updateParsers(parser_request_headers)
+DefaultHTTPHandler.updateParsers(parser_response_headers)
+DefaultHTTPHandler.updateParsers(parser_entity_headers)
 
-DefaultHTTPGenerators.update(generator_general_headers)
-DefaultHTTPGenerators.update(generator_request_headers)
-DefaultHTTPGenerators.update(generator_response_headers)
-DefaultHTTPGenerators.update(generator_entity_headers)
-
-header_case_mapping = {}
-
-def casemappingify(d):
-    global header_case_mapping
-    newd = dict([(key.lower(),key) for key in d.keys()])
-    header_case_mapping.update(newd)
-
-def lowerify(d):
-    newd = dict([(key.lower(),value) for key,value in d.items()])
-    d.clear()
-    d.update(newd)
+DefaultHTTPHandler.updateGenerators(generator_general_headers)
+DefaultHTTPHandler.updateGenerators(generator_request_headers)
+DefaultHTTPHandler.updateGenerators(generator_response_headers)
+DefaultHTTPHandler.updateGenerators(generator_entity_headers)
 
 
-casemappingify(DefaultHTTPParsers)
-casemappingify(DefaultHTTPGenerators)
+# casemappingify(DefaultHTTPParsers)
+# casemappingify(DefaultHTTPGenerators)
 
-lowerify(DefaultHTTPParsers)
-lowerify(DefaultHTTPGenerators)
+# lowerify(DefaultHTTPParsers)
+# lowerify(DefaultHTTPGenerators)

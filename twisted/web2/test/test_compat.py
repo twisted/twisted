@@ -1,27 +1,6 @@
 from twisted.web2.test.test_server import BaseCase
 import sys
 
-class TestNevowCompat(BaseCase):
-    todo = "Nevow compat doesn't work yet."
-
-    if not sys.version_info[:2] >= (2, 3):
-        skip = "nevow requires Python 2.3 or greater"
-    else:
-        try:
-            import nevow
-        except ImportError:
-            skip = "can't run w/o nevow"
-
-    def testSimpleNevowResource(self):
-        from nevow import rend
-        class Foo(rend.Page):
-            def renderHTTP(self, ctx):
-                return "Foo"
-
-        self.assertResponse((Foo(), "http://localhost/"),
-                            (200, {}, 'Foo'))
-
-
 try:
     from twisted.web import resource
 
