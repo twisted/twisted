@@ -140,13 +140,22 @@ class Options(usage.Options):
             return False
         return os.environ['TERM'] in supportedTerms
 
-    def getReporter(self):
+    def _getReporterClass(self):
         """return the class of the selected reporter
         @param config: a usage.Options instance after parsing options
         """
         if self['reporter'] is not None:
             return self['reporter']
         return self.fallbackReporter
+
+    def getReporter(self):
+        if getattr(self, '_reporter', None) is not None:
+            return self._reporter
+        reporterKlass = self._getReporterClass()
+        reporter = reporterKlass(tbformat=self['tbformat'],
+                                 realtime=self['rterrors'])
+        self._reporter = reporter
+        return reporter
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
@@ -339,19 +348,6 @@ def _setUpLogging(config):
        log.startLogging(logFileObj, 0)
 
 
-def _getReporter(config):
-    if getattr(config, '_reporter', None) is not None:
-        return config._reporter
-    if config['reporter'] is not None:
-        reporterKlass = config['reporter']
-    else:
-        reporterKlass = config.getReporter()
-    reporter = reporterKlass(tbformat=config['tbformat'],
-                             realtime=config['rterrors'])
-    config._reporter = reporter
-    return reporter
-
-
 def _getSuite(config, reporter):
     loader = _getLoader(config, reporter)
     suite = runner.TestSuite()
@@ -434,7 +430,7 @@ def callUntilFailure(f, *args, **kwargs):
 
 
 def reallyRun(config):
-    reporter = _getReporter(config)
+    reporter = config.getReporter()
     my_runner = runner.TrialRunner(config)
     def do_a_run():
         suite = _getSuite(config, reporter)

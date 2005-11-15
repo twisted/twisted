@@ -198,13 +198,13 @@ class TestRunner(unittest.TestCase):
 
     def test_runner_can_get_reporter(self):
         self.parseOptions([])
-        reporter = trial._getReporter(self.config)
+        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
         self.assertEqual(reporter, my_runner._getResult())
 
     def test_runner_get_result(self):
         self.parseOptions([])
-        trial._getReporter(self.config)
+        self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
         result = my_runner._getResult()
         self.assertEqual(result, self.config._reporter)
@@ -212,7 +212,7 @@ class TestRunner(unittest.TestCase):
     def test_runner_dry_run(self):
         self.parseOptions(['--dry-run', '--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        reporter = trial._getReporter(self.config)
+        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
         loader = runner.SafeTestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
@@ -222,7 +222,7 @@ class TestRunner(unittest.TestCase):
     def test_runner_normal(self):
         self.parseOptions(['--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        reporter = trial._getReporter(self.config)
+        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
         loader = runner.SafeTestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
@@ -232,7 +232,7 @@ class TestRunner(unittest.TestCase):
     def test_runner_debug(self):
         self.parseOptions(['--reporter', 'capturing',
                            '--debug', 'twisted.trial.test.sample'])
-        reporter = trial._getReporter(self.config)
+        reporter = self.config.getReporter()
         my_runner = runner.TrialRunner(self.config)
         debugger = CapturingDebugger()
         def get_debugger():

@@ -9,7 +9,7 @@ def runTrial(*args):
     config = trial.Options()
     config.parseOptions(args)
     os.chdir(config['_origdir'])
-    reporter = trial._getReporter(config)
+    reporter = config.getReporter()
     output = StringIO.StringIO()
     reporter.stream = output
     suite = trial._getSuite(config, reporter)
