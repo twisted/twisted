@@ -426,6 +426,13 @@ def callUntilFailure(f, *args, **kwargs):
 
 
 def reallyRun(config):
+    my_runner = runner.TrialRunner(config)
+    reporter = my_runner._getResult()
+    suite = _getSuite(config, reporter)
+    if suite.countTestCases() == 0:
+        reporter.startTrial(0)
+        reporter.endTrial(suite)
+        return reporter
     def do_a_run():
         my_runner = runner.TrialRunner(config)
         reporter = my_runner._getResult()
