@@ -46,6 +46,12 @@ class Resolver(common.ResolverBase):
 
     def __init__(self, resolv = None, servers = None, timeout = (1, 3, 11, 45)):
         """
+        Construct a resolver which will query domain name servers listed in
+        the C{resolv.conf(5)}-format file given by C{resolv} as well as
+        those in the given C{servers} list.  Servers are queried in a
+        round-robin fashion.  If given, C{resolv} is periodically checked
+        for modification and re-parsed if it is noticed to have changed.
+
         @type servers: C{list} of C{(str, int)} or C{None}
         @param servers: If not None, interpreted as a list of addresses of
         domain name servers to attempt to use for this lookup.  Addresses
