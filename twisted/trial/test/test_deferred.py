@@ -141,8 +141,8 @@ class TestTimeout(TestTester):
     def getTest(self, name):
         return timeouts.TimeoutTests(name)
 
-    def _wasTimeout(self, errors):
-        self.failUnlessEqual(errors[0][1].check(defer.TimeoutError),
+    def _wasTimeout(self, error):
+        self.failUnlessEqual(error.check(defer.TimeoutError),
                              defer.TimeoutError)
 
     def test_pass(self):
@@ -160,14 +160,14 @@ class TestTimeout(TestTester):
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.errors), 1)
-        self._wasTimeout(result.errors)
+        self._wasTimeout(result.errors[0][1])
 
     def test_timeoutZero(self):
         result = self.runTest('test_timeoutZero')
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.errors), 1)
-        self._wasTimeout(result.errors)
+        self._wasTimeout(result.errors[0][1])
     
     def test_skip(self):
         result = self.runTest('test_skip')
@@ -180,4 +180,10 @@ class TestTimeout(TestTester):
         self.failUnless(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.expectedFailures), 1)
-        self._wasTimeout(result.expectedFailures)
+        self._wasTimeout(result.expectedFailures[0][1])
+
+    def test_errorPropagation(self):
+        result = self.runTest('test_errorPropagation')
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self._wasTimeout(timeouts.TimeoutTests.timedOut)

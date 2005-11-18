@@ -262,7 +262,10 @@ def _wait(d, timeout=None, running=[]):
             if timeoutCall.active():
                 timeoutCall.cancel()
             else:
-                raise defer.TimeoutError()
+                f = failure.Failure(defer.TimeoutError())
+                d.errback(f)
+                return f
+            
         if results:
             return results[0]
 
