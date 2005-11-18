@@ -2,7 +2,7 @@ import StringIO
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.trial import runner, reporter, util
-from twisted.trial.test import detests
+from twisted.trial.test import detests, timeouts
 
 
 class TestSetUp(unittest.TestCase):
@@ -86,14 +86,19 @@ class TestNeverFire(unittest.TestCase):
         self.failUnless(result.errors[0][1].check(defer.TimeoutError))
 
 
-class TestDeferred(unittest.TestCase):
+class TestTester(unittest.TestCase):
     def getTest(self, name):
-        return detests.DeferredTests(name)
+        raise NotImplementedError("must override me")
 
     def runTest(self, name):
         result = reporter.Reporter(stream=StringIO.StringIO())
         self.getTest(name).run(result)
         return result
+
+
+class TestDeferred(TestTester):
+    def getTest(self, name):
+        return detests.DeferredTests(name)
 
     def test_pass(self):
         result = self.runTest('test_pass')
@@ -131,3 +136,48 @@ class TestDeferred(unittest.TestCase):
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.expectedFailures), 1)
         
+
+class TestTimeout(TestTester):
+    def getTest(self, name):
+        return timeouts.TimeoutTests(name)
+
+    def _wasTimeout(self, errors):
+        self.failUnlessEqual(errors[0][1].check(defer.TimeoutError),
+                             defer.TimeoutError)
+
+    def test_pass(self):
+        result = self.runTest('test_pass')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+
+    def test_passDefault(self):
+        result = self.runTest('test_passDefault')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+
+    def test_timeout(self):
+        result = self.runTest('test_timeout')
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.errors), 1)
+        self._wasTimeout(result.errors)
+
+    def test_timeoutZero(self):
+        result = self.runTest('test_timeoutZero')
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.errors), 1)
+        self._wasTimeout(result.errors)
+    
+    def test_skip(self):
+        result = self.runTest('test_skip')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.skips), 1)
+    
+    def test_todo(self):
+        result = self.runTest('test_expectedFailure')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.expectedFailures), 1)
+        self._wasTimeout(result.expectedFailures)
