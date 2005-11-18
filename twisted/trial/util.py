@@ -339,12 +339,8 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     return r
 
 def extract_tb(tb, limit=None):
-    """Extract a list of frames from a traceback, without unittest internals.
-
-    Functionally identical to L{traceback.extract_tb}, but cropped to just
-    the test case itself, excluding frames that are part of the Trial
-    testing framework.
-    """
+    """DEPRECATED in Twisted 2.2"""
+    warnings.warn("Deprecated in Twisted 2.2", category=DeprecationWarning)
     from twisted.trial import unittest, runner
     l = traceback.extract_tb(tb, limit)
     util_file = __file__.replace('.pyc','.py')
@@ -363,12 +359,8 @@ def extract_tb(tb, limit=None):
     return l
 
 def format_exception(eType, eValue, tb, limit=None):
-    """A formatted traceback and exception, without exposing the framework.
-
-    I am identical in function to L{traceback.format_exception},
-    but I screen out frames from the traceback that are part of
-    the testing framework itself, leaving only the code being tested.
-    """
+    """DEPRECATED in Twisted 2.2"""
+    warnings.warn("Deprecated in Twisted 2.2", category=DeprecationWarning)
     from twisted.trial import unittest
     result = [x.strip()+'\n' for x in
               failure.Failure(eValue,eType,tb).getBriefTraceback().split('\n')]
