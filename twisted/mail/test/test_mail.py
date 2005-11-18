@@ -17,7 +17,7 @@ import tempfile
 
 from zope.interface import providedBy
 
-from twisted.trial import unittest, util as tutil
+from twisted.trial import unittest
 from twisted.mail import smtp
 from twisted.mail import pop3
 from twisted.names import dns
