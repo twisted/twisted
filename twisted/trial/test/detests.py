@@ -74,3 +74,47 @@ class DeferredSetUpSkip(unittest.TestCase):
 
     def test_ok(self):
         DeferredSetUpSkip.testCalled = True
+
+
+class DeferredTests(unittest.TestCase):
+    touched = False
+    
+    def _cb_fail(self, reason):
+        self.fail(reason)
+
+    def _cb_error(self, reason):
+        raise RuntimeError(reason)
+
+    def _cb_skip(self, reason):
+        raise unittest.SkipTest(reason)
+
+    def _touchClass(self, ignored):
+        self.__class__.touched = True
+
+    def test_pass(self):
+        return defer.succeed('success')
+
+    def test_fail(self):
+        return defer.fail(self.failureException('I fail'))
+
+    def test_failureInCallback(self):
+        d = defer.succeed('fail')
+        d.addCallback(self._cb_fail)
+        return d
+
+    def test_errorInCallback(self):
+        d = defer.succeed('error')
+        d.addCallback(self._eb_fail)
+        return d
+
+    def test_skip(self):
+        d = defer.succeed('skip')
+        d.addCallback(self._cb_skip)
+        d.addCallback(self._touchClass)
+        return d
+
+    def test_expectedFailure(self):
+        d = defer.succeed('todo')
+        d.addCallback(self._cb_error)
+        return d
+    test_expectedFailure.todo = "Expected failure"

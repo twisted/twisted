@@ -84,3 +84,50 @@ class TestNeverFire(unittest.TestCase):
         self.failUnlessEqual(len(result.errors), 1)
         self.failIf(detests.DeferredSetUpNeverFire.testCalled)
         self.failUnless(result.errors[0][1].check(defer.TimeoutError))
+
+
+class TestDeferred(unittest.TestCase):
+    def getTest(self, name):
+        return detests.DeferredTests(name)
+
+    def runTest(self, name):
+        result = reporter.Reporter(stream=StringIO.StringIO())
+        self.getTest(name).run(result)
+        return result
+
+    def test_pass(self):
+        result = self.runTest('test_pass')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+
+    def test_fail(self):
+        result = self.runTest('test_fail')
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.failures), 1)
+
+    def test_failureInCallback(self):
+        result = self.runTest('test_failureInCallback')
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.failures), 1)
+        
+    def test_errorInCallback(self):
+        result = self.runTest('test_errorInCallback')
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.errors), 1)
+
+    def test_skip(self):
+        result = self.runTest('test_skip')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.skips), 1)
+        self.failIf(detests.DeferredTests.touched)
+
+    def test_todo(self):
+        result = self.runTest('test_expectedFailure')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.expectedFailures), 1)
+        

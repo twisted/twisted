@@ -533,23 +533,6 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
     class Tests(unittest.TestCase):
-        def testDeferred1_pass(self):
-            return defer.succeed('hoorj!')
-        def testDeferred2_fail(self):
-            return defer.fail(unittest.FailTest('i fail'))
-        def testDeferred3_fail(self):
-            return self.fail('this test fails')
-        def testDeferred4_error(self):
-            return defer.fail(RuntimeError('suck it'))
-        def testDeferred5_skip(self):
-            return defer.fail(unittest.SkipTest('lalala, skip me'))
-        def testDeferred7_exfail(self):
-            return defer.fail(unittest.FailTest('you got an F!'))
-        testDeferred7_exfail.todo = "i'm gonna get an F"
-        def testDeferred8_exfail(self):
-            return defer.fail(RuntimeError('you got another F!'))
-        testDeferred8_exfail.todo = "I'm gonna get another F"
-        
         def testTimeout1_pass(self):
             d = defer.Deferred()
             reactor.callLater(0, d.callback, 'hoorj!')
