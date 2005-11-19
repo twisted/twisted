@@ -1984,7 +1984,7 @@ def lowDequote(s):
 
     return mEscape_re.sub(sub, s)
 
-X_QUOTE = chr(0134)
+X_QUOTE = '\\'
 
 xQuoteTable = {
     X_DELIM: X_QUOTE + 'a',
