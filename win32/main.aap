@@ -33,18 +33,26 @@ HERE=`os.getcwd()`
 
         return iss_template % dct
 
+    def find(filename, topdir='.'):
+        """A crude unix find(1), returns only the first match"""
+        for dirpath, dirnames, filenames in os.walk(topdir):
+            if filename in filenames:
+                return os.path.join(dirpath, filename)
+        raise ValueError("%s not found under %s" % (filename,topdir))
+
     def getBuildingTwistedVersion():
         """Return the version of Twisted in $HERE, which may be
         different from the version of Twisted in sys.path.
         """
-        globs=globals().copy()
-        execfile("./twisted/copyright.py", globs)
+        globs = globals().copy()
+        copyright = find('copyright.py')
+        execfile(copyright, globs)
         return globs['version']
 
 # get the version of twisted from the tree being built, not sys.path
 Version=`getBuildingTwistedVersion()`
 
-ZIVersion=3.0.1
+ZIVersion=3.1.0c1
 
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values
@@ -70,31 +78,16 @@ pyexe=$(pyhome)\python.exe
 all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
     :print : Done building $(target)
 
-# find all the files that can cause a rebuild with setup.py
-:syseval find twisted -name '*.c' -o -name '*.h' | :assign CSources
-# don't try to build the .c files automatically...
-:attr {filetype = ignore} $(CSources)
-
-:syseval find twisted -name '*.py' -o -name '*.sql' -o -name '*.glade*'  | :assign TwSources
-TwSources += twisted/lore/template.mgp
-             twisted/test/server.pem
-             twisted/web/woven/FlashConduit*
-             twisted/web/woven/WebConduit*
-             twisted/words/xish/xpathparser.g
-             $(CSources)
-             win32/twisted_postinstall.py
-
 # publish to sf.net
 :attr {publish=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(setupbase)-$(Version).win32-py$(pyversion).exe} dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
 
 # only run setup.py when needed
 build/scripts-$(pyversion) build/lib.win32-$(pyversion):  \
-                                                $TwSources 
                                                 ZopeInterface-$ZIVersion
     :mkdir {f} build/scripts-$(pyversion)
     :copy win32/twisted_postinstall.py  build/scripts-$(pyversion)/.
     :sys $(pyexe) setup.py all  build --compiler=mingw32 \
-                                install --root=win32dist --no-compile
+                                install --root=../win32dist --no-compile
     @1
     :pushdir ZopeInterface-$(ZIVersion)
     @try:
@@ -113,7 +106,6 @@ ZopeInterface-$ZIVersion: ZopeInterface-$(ZIVersion).tgz
 ExeDeps=py$(pyversion)-$(DoDocs).iss
         build/lib.win32-$(pyversion)
         build/scripts-$(pyversion)
-        $(TwSources)
 
 iscc=`pathdb["iscc"]`
 dist/Twisted-$(Version).win32-py$(pyversion).exe: doc/twisteddoc.zip $(ExeDeps)
@@ -136,7 +128,7 @@ doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
     :sys zip -rq ../twisteddoc.zip *
 
 # generate iss files
-py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template twisted/copyright.py
+py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template
     @docs = (_top.DoDocs == 'withdocs')
     # file2string is fucked, don't use
     @tmpl = file('win32/pyx.x-foo.iss.template').read()
