@@ -125,20 +125,6 @@ class FileTest(unittest.TestCase):
 
 
 class LoaderTest(unittest.TestCase):
-
-    ## FIXME -- Need tests for:
-    ## * loading packages that contain modules with errors
-    ## * loading package recursively for packages that contain modules with
-    ##   errors
-    ## * loading with custom sorter
-    ## * the default sort order (alphabetic)
-    ## * loading doctests
-
-    ## FIXME -- Need tests (and implementations) for:
-    ## * Loading from a string
-    ##   * could be a file / directory
-    ##   * could be name of a python object
-
     parent = '_test_loader'
     
     def setUp(self):
@@ -156,6 +142,18 @@ class LoaderTest(unittest.TestCase):
                 del sys.modules[moduleName]        
         sys.path = self.oldPath
         packages.tearDown(self.parent)
+
+    def test_sortCases(self):
+        import sample
+        suite = self.loader.loadClass(sample.AlphabetTest)
+        self.failUnlessEqual(['test_a', 'test_b', 'test_c'],
+                             [test._testMethodName for test in suite._tests])
+        newOrder = ['test_b', 'test_c', 'test_a']
+        sortDict = dict(zip(newOrder, range(3)))
+        self.loader.sorter = lambda x : sortDict.get(x.shortDescription(), -1)
+        suite = self.loader.loadClass(sample.AlphabetTest)
+        self.failUnlessEqual(newOrder,
+                             [test._testMethodName for test in suite._tests])
 
     def test_loadMethod(self):
         import sample
