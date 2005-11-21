@@ -11,8 +11,6 @@ class FinderTest(packages.PackageTest):
         self.loader = runner.TestLoader()
 
     def tearDown(self):
-        if sys.modules.has_key('sample'):
-            del sys.modules['sample']
         packages.PackageTest.tearDown(self)
 
     def test_findPackage(self):
@@ -60,13 +58,6 @@ class FileTest(packages.PackageTest):
         packages.PackageTest.setUp(self, self.parent)
 
     def tearDown(self):
-        importedModules = ['goodpackage',
-                           'goodpackage.test_sample',
-                           'test_sample',
-                           'sample']
-        for moduleName in importedModules:
-            if sys.modules.has_key(moduleName):
-                del sys.modules[moduleName]
         packages.PackageTest.tearDown(self, self.parent)
         sys.path = self.oldPath
 
@@ -134,12 +125,6 @@ class LoaderTest(packages.PackageTest):
         packages.PackageTest.setUp(self, self.parent)
 
     def tearDown(self):
-        importedModules = ['goodpackage',
-                           'package', 'package.test_bad_module',
-                           'package.test_import_module' 'test_sample', 'sample']
-        for moduleName in importedModules:
-            if sys.modules.has_key(moduleName):
-                del sys.modules[moduleName]        
         sys.path = self.oldPath
         packages.PackageTest.tearDown(self, self.parent)
 

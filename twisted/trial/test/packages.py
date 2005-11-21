@@ -1,4 +1,4 @@
-import os, shutil
+import sys, os, shutil
 from twisted.trial import unittest
 
 testModule = """
@@ -72,7 +72,27 @@ class PackageTest(unittest.TestCase):
         ('goodpackage/sub/__init__.py', ''),
         ('goodpackage/sub/test_sample.py', testSample)
         ]
-    
+
+    def _toModuleName(self, filename):
+        name = os.path.splitext(filename)[0]
+        segs = name.split('/')
+        if segs[-1] == '__init__':
+            segs = segs[:-1]
+        return '.'.join(segs)
+
+    def getModules(self):
+        return map(self._toModuleName, zip(*self.files)[0])
+
+    def cleanUpModules(self):
+        modules = self.getModules()
+        modules.sort()
+        modules.reverse()
+        for module in modules:
+            try:
+                del sys.modules[module]
+            except KeyError:
+                pass
+
     def createFiles(self, files, parentDir='.'):
         for filename, contents in self.files:
             filename = os.path.join(parentDir, filename)
@@ -101,4 +121,5 @@ class PackageTest(unittest.TestCase):
             shutil.rmtree(directory)
 
     def tearDown(self, parentDir='.'):
+        self.cleanUpModules()
         self.removeFiles(self.files, parentDir)

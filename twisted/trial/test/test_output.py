@@ -30,13 +30,6 @@ class TestImportErrors(packages.PackageTest):
         packages.PackageTest.setUp(self, self.parent)
 
     def tearDown(self):
-        for moduleName in ['package.test_import_module', 'package.test_module',
-                           'package.test_bad_module', 'package.frotz',
-                           'package', 'badpackage.test_module', 'badpackage']:
-            try:
-                del sys.modules[moduleName]
-            except KeyError:
-                pass
         packages.PackageTest.tearDown(self, self.parent)
 
     def runTrial(self, *args):
