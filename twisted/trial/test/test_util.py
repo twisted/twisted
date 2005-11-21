@@ -134,9 +134,9 @@ class TestIntrospection(unittest.TestCase):
             self.failUnlessEqual(a, b)
                      
 
-class TestFindObject(unittest.TestCase):
+class TestFindObject(packages.PackageTest):
     def setUp(self):
-        packages.setUp('_TestFindObject')
+        packages.PackageTest.setUp(self, '_TestFindObject')
         self.oldPath = sys.path[:]
         sys.path.append('_TestFindObject')
 
@@ -151,7 +151,7 @@ class TestFindObject(unittest.TestCase):
             if sys.modules.has_key(moduleName):
                 del sys.modules[moduleName]
         sys.path = self.oldPath
-        packages.tearDown('_TestFindObject')
+        packages.PackageTest.tearDown(self, '_TestFindObject')
 
     def test_importPackage(self):
         package1 = util.findObject('package')

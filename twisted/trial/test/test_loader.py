@@ -5,15 +5,15 @@ from twisted.trial import unittest
 from twisted.trial import runner
 
 
-class FinderTest(unittest.TestCase):
+class FinderTest(packages.PackageTest):
     def setUp(self):
-        packages.setUp()
+        packages.PackageTest.setUp(self)
         self.loader = runner.TestLoader()
 
     def tearDown(self):
         if sys.modules.has_key('sample'):
             del sys.modules['sample']
-        packages.tearDown()
+        packages.PackageTest.tearDown(self)
 
     def test_findPackage(self):
         sample1 = self.loader.findByName('twisted')
@@ -51,13 +51,13 @@ class FinderTest(unittest.TestCase):
         self.failUnlessRaises(ValueError, self.loader.findByName, path)
         
         
-class FileTest(unittest.TestCase):
+class FileTest(packages.PackageTest):
     parent = '_test_loader_FileTest'
     
     def setUp(self):
         self.oldPath = sys.path[:]
         sys.path.append(self.parent)
-        packages.setUp(self.parent)
+        packages.PackageTest.setUp(self, self.parent)
 
     def tearDown(self):
         importedModules = ['goodpackage',
@@ -67,7 +67,7 @@ class FileTest(unittest.TestCase):
         for moduleName in importedModules:
             if sys.modules.has_key(moduleName):
                 del sys.modules[moduleName]
-        packages.tearDown(self.parent)
+        packages.PackageTest.tearDown(self, self.parent)
         sys.path = self.oldPath
 
     def test_notFile(self):
@@ -124,14 +124,14 @@ class FileTest(unittest.TestCase):
             os.remove(filename)
 
 
-class LoaderTest(unittest.TestCase):
+class LoaderTest(packages.PackageTest):
     parent = '_test_loader'
     
     def setUp(self):
         self.loader = runner.TestLoader()
         self.oldPath = sys.path[:]
         sys.path.append(self.parent)
-        packages.setUp(self.parent)
+        packages.PackageTest.setUp(self, self.parent)
 
     def tearDown(self):
         importedModules = ['goodpackage',
@@ -141,7 +141,7 @@ class LoaderTest(unittest.TestCase):
             if sys.modules.has_key(moduleName):
                 del sys.modules[moduleName]        
         sys.path = self.oldPath
-        packages.tearDown(self.parent)
+        packages.PackageTest.tearDown(self, self.parent)
 
     def test_sortCases(self):
         import sample

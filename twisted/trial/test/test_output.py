@@ -18,7 +18,7 @@ def runTrial(*args):
     return output.getvalue()
 
 
-class TestImportErrors(unittest.TestCase):
+class TestImportErrors(packages.PackageTest):
     """Actually run trial as if on the command line and check that the output
     is what we expect.
     """
@@ -27,8 +27,8 @@ class TestImportErrors(unittest.TestCase):
     parent = "_testImportErrors"
 
     def setUp(self):
-        packages.setUp(self.parent)
- 
+        packages.PackageTest.setUp(self, self.parent)
+
     def tearDown(self):
         for moduleName in ['package.test_import_module', 'package.test_module',
                            'package.test_bad_module', 'package.frotz',
@@ -37,7 +37,7 @@ class TestImportErrors(unittest.TestCase):
                 del sys.modules[moduleName]
             except KeyError:
                 pass
-        packages.tearDown(self.parent)
+        packages.PackageTest.tearDown(self, self.parent)
 
     def runTrial(self, *args):
         oldPath = sys.path[:]
