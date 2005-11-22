@@ -17,7 +17,7 @@ reactorTypes = {
     'gtk2': 'twisted.internet.gtk2reactor',
     'glib2': 'twisted.internet.glib2reactor',
     'glade': 'twisted.manhole.gladereactor',
-    'default': 'twisted.internet.default',
+    'default': 'twisted.internet.selectreactor',
     'win32': 'twisted.internet.win32eventreactor',
     'win': 'twisted.internet.win32eventreactor',
     'poll': 'twisted.internet.pollreactor',
