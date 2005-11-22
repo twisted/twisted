@@ -23,7 +23,6 @@ from twisted.python import log, filepath
 
 # Sibling Imports
 import http
-import iweb
 import resource
 import responsecode
 import server
@@ -33,10 +32,7 @@ import stream
 
 headerNameTranslation = ''.join([c.isalnum() and c.upper() or '_' for c in map(chr, range(256))])
 
-def createCGIEnvironment(ctx, request=None):
-    if request is None:
-        request = iweb.IRequest(ctx)
-
+def createCGIEnvironment(request):
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
     # http://cgi-spec.golux.com/draft-coar-cgi-v11-03-clean.html for a better one
     remotehost = request.chanRequest.getRemoteHost()
@@ -119,17 +115,16 @@ class CGIScript(resource.LeafResource):
         self.filename = filename
         resource.LeafResource.__init__(self)
 
-    def render(self, ctx):
+    def render(self, request):
         """Do various things to conform to the CGI specification.
 
         I will set up the usual slew of environment variables, then spin off a
         process.
         """
-        request = iweb.IRequest(ctx)
         # Make sure that we don't have an unknown content-length
         if request.stream.length is None:
             return http.Response(responsecode.LENGTH_REQUIRED)
-        env = createCGIEnvironment(ctx, request=request)
+        env = createCGIEnvironment(request)
         env['SCRIPT_FILENAME'] = self.filename
         if '=' in request.querystring:
             qargs = []
@@ -138,8 +133,8 @@ class CGIScript(resource.LeafResource):
 
         return self.runProcess(env, request, qargs)
 
-    def http_POST(self, ctx):
-        return self.render(ctx)
+    def http_POST(self, request):
+        return self.render(request)
 
     def runProcess(self, env, request, qargs=[]):
         d = defer.Deferred()
@@ -324,7 +319,7 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, pathname)
 
-    def locateChild(self, ctx, segments):
+    def locateChild(self, request, segments):
         fnp = self.child(segments[0])
         if not fnp.exists():
             print fnp.path, 'does not exist'
@@ -335,7 +330,7 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
             return CGIScript(fnp.path), segments[1:]
         return None, ()
 
-    def render(self, ctx):
+    def render(self, request):
         errormsg = 'CGI directories do not support directory listing'
         return http.Response(responsecode.FORBIDDEN)
 

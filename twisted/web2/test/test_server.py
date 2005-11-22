@@ -86,7 +86,7 @@ class BaseTestResource(resource.Resource):
         for i in children:
             self.putChild(i[0], i[1])
 
-    def render(self, ctx):
+    def render(self, req):
         return http.Response(self.responseCode, stream=self.responseStream())
 
     def responseStream(self):
@@ -149,13 +149,13 @@ class BaseCase(unittest.TestCase):
 class SampleWebTest(BaseCase):
     class SampleTestResource(BaseTestResource):
         addSlash = True
-        def child_validChild(self, ctx):
+        def child_validChild(self, req):
             f = BaseTestResource()
             f.responseCode = 200
             f.responseText = 'This is a valid child resource.'
             return f
 
-        def child_missingChild(self, ctx):
+        def child_missingChild(self, req):
             f = BaseTestResource()
             f.responseCode = 404
             f.responseStream = lambda self: None
@@ -181,8 +181,7 @@ class SampleWebTest(BaseCase):
 
 class URLParsingTest(BaseCase):
     class TestResource(resource.LeafResource):
-        def render(self, ctx):
-            req=iweb.IRequest(ctx)
+        def render(self, req):
             return http.Response(stream="Host:%s, Path:%s"%(req.host, req.path))
             
     def setUp(self):
@@ -213,14 +212,14 @@ class TestDeferredRendering(BaseCase):
     class ResourceWithDeferreds(BaseTestResource):
         addSlash=True
         responseText = 'I should be wrapped in a Deferred.'
-        def render(self, ctx):
+        def render(self, req):
             from twisted.internet import reactor
             d = defer.Deferred()
             reactor.callLater(
-                0, d.callback, BaseTestResource.render(self, ctx))
+                0, d.callback, BaseTestResource.render(self, req))
             return d
 
-        def child_deferred(self, ctx):
+        def child_deferred(self, req):
             from twisted.internet import reactor
             d = defer.Deferred()
             reactor.callLater(0, d.callback, BaseTestResource())

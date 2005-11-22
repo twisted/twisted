@@ -20,7 +20,7 @@ from twisted.python import log, failure
 
 # Sibling Imports
 from twisted.web2 import http, iweb, fileupload, responsecode
-from twisted.web2 import http_headers, context
+from twisted.web2 import http_headers
 from twisted.web2.filter.range import rangefilter
 from twisted.web2 import error
 
@@ -31,7 +31,7 @@ VERSION = "Twisted/%s TwistedWeb/%s" % (twisted_version, web2_version)
 _errorMarker = object()
 
 
-def defaultHeadersFilter(request, response, ctx):
+def defaultHeadersFilter(request, response):
     if not response.headers.hasHeader('server'):
         response.headers.setHeader('server', VERSION)
     if not response.headers.hasHeader('date'):
@@ -39,7 +39,7 @@ def defaultHeadersFilter(request, response, ctx):
     return response
 defaultHeadersFilter.handleErrors = True
 
-def preconditionfilter(request, response, ctx):
+def preconditionfilter(request, response):
     newresponse = http.checkPreconditions(request, response)
     if newresponse is not None:
         return newresponse
@@ -245,8 +245,6 @@ class Request(http.Request):
 
     def process(self):
         "Process a request."
-        self._requestContext = context.RequestContext(tag=self, parent=self.site.context)
-        
         try:
             self.checkExpect()
             resp = self.preprocessRequest()
@@ -260,7 +258,7 @@ class Request(http.Request):
             return
         
         d = self._getChild(self.site.resource, self.postpath)
-        d.addCallback(lambda res, ctx: res.renderHTTP(ctx), self._requestContext)
+        d.addCallback(lambda res, req: res.renderHTTP(req), self)
         d.addCallback(self._cbFinishRender)
         d.addErrback(self._processingFailed)
 
@@ -287,7 +285,7 @@ class Request(http.Request):
             return defer.succeed(res)
 
         return defer.maybeDeferred(
-            res.locateChild, self._requestContext, path
+            res.locateChild, self, path
         ).addCallback(
             self._handleSegment, res, path
         )
@@ -332,8 +330,8 @@ class Request(http.Request):
             # Otherwise, it was a random exception, so give a
             # ICanHandleException implementer a chance to render the page.
             def _processingFailed_inner(reason):
-                handler = iweb.ICanHandleException(self._requestContext, default=self)
-                return handler.renderHTTP_exception(self._requestContext, reason)
+                handler = iweb.ICanHandleException(self, default=self)
+                return handler.renderHTTP_exception(self, reason)
             d = defer.maybeDeferred(_processingFailed_inner, reason)
         
         d.addCallback(self._cbFinishRender)
@@ -360,7 +358,7 @@ class Request(http.Request):
         def filterit(response, f):
             if (hasattr(f, 'handleErrors') or
                 (response.code >= 200 and response.code < 300 and response.code != 204)):
-                return f(self, response, self._requestContext)
+                return f(self, response)
             else:
                 return response
 
@@ -376,13 +374,13 @@ class Request(http.Request):
         resource = iweb.IResource(result, None)
         if resource:
             self.resources.append(resource)
-            d = defer.maybeDeferred(resource.renderHTTP, self._requestContext)
+            d = defer.maybeDeferred(resource.renderHTTP, self)
             d.addCallback(self._cbFinishRender)
             return d
 
         raise TypeError("html is not a resource or a response")
 
-    def renderHTTP_exception(self, ctx, reason):
+    def renderHTTP_exception(self, req, reason):
         log.msg("Exception rendering:", isErr=1)
         log.err(reason)
         
@@ -399,19 +397,10 @@ class Site(object):
     def __init__(self, resource):
         """Initialize.
         """
-        self.context = context.SiteContext()
         self.resource = iweb.IResource(resource)
 
     def __call__(self, *args, **kwargs):
         return Request(site=self, *args, **kwargs)
-    
-    def remember(self, obj, inter=None):
-        """Remember the given object for the given interfaces (or all interfaces
-        obj implements) in the site's context.
 
-        The site context is the parent of all other contexts. Anything
-        remembered here will be available throughout the site.
-        """
-        self.context.remember(obj, inter)
 
 __all__ = ['Request', 'Site', 'StopTraversal', 'VERSION', 'defaultHeadersFilter', 'doTrace', 'parsePOSTData', 'preconditionfilter']

@@ -33,7 +33,7 @@ class Data(resource.Resource):
         self.type = type
         self.created_time = time.time()
     
-    def render(self, ctx):
+    def render(self, req):
         response = http.Response(responsecode.OK, stream=self.data)
         response.headers.setRawHeaders("content-type", (self.type, ))
         response.headers.setHeader('etag',
@@ -164,7 +164,7 @@ class File(resource.Resource):
     def putChild(self, name, child):
         self.children[name] = child
         
-    def locateChild(self, ctx, segments):
+    def locateChild(self, req, segments):
         r = self.children.get(segments[0], None)
         if r:
             return r, segments[1:]
@@ -199,10 +199,9 @@ class File(resource.Resource):
 
         return self.createSimilarFile(fpath.path), segments[1:]
 
-    def render(self, ctx):
+    def render(self, req):
         """You know what you doing."""
         self.fp.restat()
-        request = iweb.IRequest(ctx)
         response = http.Response()
         
         if self.type is None:
@@ -218,7 +217,7 @@ class File(resource.Resource):
             # If this is a directory, redirect
             return http.Response(
                 responsecode.MOVED_PERMANENTLY,
-                {'location': request.unparseURL(path=request.path+'/')})
+                {'location': req.unparseURL(path=req.path+'/')})
 
         if self.type:
             response.headers.setRawHeaders('content-type', (self.type,))
@@ -327,10 +326,8 @@ class FileSaver(resource.PostableResource):
 
         return outname
 
-    def render(self, ctx):
+    def render(self, req):
         content = ["<html><body>"]
-
-        req = iweb.IRequest(ctx)
 
         if req.files:
             for fieldName in req.files:

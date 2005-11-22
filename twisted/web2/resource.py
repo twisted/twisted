@@ -27,7 +27,7 @@ class Resource(object):
     
     # Concrete HTTP interface
 
-    def locateChild(self, ctx, segments):
+    def locateChild(self, req, segments):
         """Return a tuple of (child, segments) representing the Resource
         below this after consuming the segments which are not returned.
         """
@@ -37,20 +37,19 @@ class Resource(object):
             r = iweb.IResource(w, None)
             if r:
                 return r, segments[1:]
-            return w(ctx), segments[1:]
+            return w(req), segments[1:]
 
         factory = getattr(self, 'childFactory', None)
         if factory is not None:
-            r = factory(ctx, segments[0])
+            r = factory(req, segments[0])
             if r:
                 return r, segments[1:]
      
         return None, []
     
-    def child_(self, ctx):
+    def child_(self, req):
         """I'm how requests for '' (urls ending in /) get handled :)
         """
-        req = iweb.IRequest(ctx)
         if self.addSlash and len(req.postpath) == 1:
             return self
         return None
@@ -66,7 +65,7 @@ class Resource(object):
         setattr(self, 'child_%s' % (path, ), child)
 
     
-    def renderHTTP(self, ctx):
+    def renderHTTP(self, req):
         """Render a given resource. See L{IResource}'s render method.
 
         I delegate to methods of self with the form 'http_METHOD'
@@ -79,7 +78,7 @@ class Resource(object):
         will be the rendered page, or else a deferred that results
         in a byte string.
         """
-        m = getattr(self, 'http_' + iweb.IRequest(ctx).method, None)
+        m = getattr(self, 'http_' + req.method, None)
         if not m:
             if self.allowedMethods is None:
                 # Update allowed methods
@@ -89,19 +88,18 @@ class Resource(object):
             response = http.Response(responsecode.NOT_ALLOWED)
             response.headers.setHeader('allow', self.allowedMethods)
             return response
-        return m(ctx)
+        return m(req)
 
-    def http_HEAD(self, ctx):
+    def http_HEAD(self, req):
         """By default http_HEAD just calls http_GET. The body is discarded
         when the result is being written.
         
         Override this if you want to handle it differently.
         """
-        return self.http_GET(ctx)
+        return self.http_GET(req)
     
-    def http_GET(self, ctx):
+    def http_GET(self, req):
         """Ensures there is no incoming body data, and calls render."""
-        req = iweb.IRequest(ctx)
         if self.addSlash and req.prepath[-1] != '':
             # If this is a directory-ish resource...
             return http.Response(
@@ -110,9 +108,9 @@ class Resource(object):
             
         if req.stream.length != 0:
             return responsecode.REQUEST_ENTITY_TOO_LARGE
-        return self.render(ctx)
+        return self.render(req)
 
-    def http_OPTIONS(self, ctx):
+    def http_OPTIONS(self, req):
         """Sends back OPTIONS response."""
         if self.allowedMethods is None:
             # Update allowed methods
@@ -122,20 +120,20 @@ class Resource(object):
         response.headers.setHeader('allow', self.allowedMethods)
         return response
 
-    def http_TRACE(self, ctx):
-        return server.doTrace(ctx)
+    def http_TRACE(self, req):
+        return server.doTrace(req)
     
-    def render(self, ctx):
+    def render(self, req):
         """Your class should implement this method to do default page rendering.
         """
         raise NotImplementedError("Subclass must implement render method.")
 components.backwardsCompatImplements(Resource)
 
 class PostableResource(Resource):
-    def http_POST(self, ctx):
+    def http_POST(self, req):
         """Reads and parses the incoming body data then calls render."""
-        return server.parsePOSTData(iweb.IRequest(ctx)).addCallback(
-            lambda res: self.render(ctx))
+        return server.parsePOSTData(req).addCallback(
+            lambda res: self.render(req))
         
         
 class LeafResource(Resource):
@@ -150,7 +148,7 @@ class WrapperResource(object):
     def __init__(self, res):
         self.res=res
 
-    def hook(self, ctx):
+    def hook(self, req):
         """Override this method in order to do something before
         passing control on to the wrapped resource. Must either return
         None or a Deferred which is waited upon, but whose result is
@@ -158,14 +156,14 @@ class WrapperResource(object):
         """
         raise NotImplementedError
     
-    def locateChild(self, ctx, segments):
-        x = self.hook(ctx)
+    def locateChild(self, req, segments):
+        x = self.hook(req)
         if x is not None:
             return x.addCallback(lambda data: self.res, segments)
         return self.res, segments
 
-    def renderHTTP(self, ctx):
-        x = self.hook(ctx)
+    def renderHTTP(self, req):
+        x = self.hook(req)
         if x is not None:
             return x.addCallback(lambda data: self.res)
         return self.res

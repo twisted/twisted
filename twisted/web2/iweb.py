@@ -14,7 +14,7 @@ class IResource(Interface):
         I am a web resource.
     """
 
-    def locateChild(self, ctx, segments):
+    def locateChild(self, req, segments):
         """Locate another object which can be adapted to IResource.
 
         @return: A 2-tuple of (resource, remaining-path-segments),
@@ -31,7 +31,7 @@ class IResource(Interface):
                  handle.
         """
 
-    def renderHTTP(self, ctx):
+    def renderHTTP(self, req):
         """Return an IResponse or a deferred which will fire an
         IResponse. This response will be written to the web browser
         which initiated the request.
@@ -79,7 +79,7 @@ class ICanHandleException(components.Interface):
         """Render an exception to the given request object.
         """
 
-    def renderInlineException(self, context, reason):
+    def renderInlineException(self, request, reason):
         """Return stan representing the exception, to be printed in the page,
         not replacing the page."""
 

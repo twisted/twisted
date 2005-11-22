@@ -8,11 +8,11 @@ from twisted.web2 import http_headers
 
 class HostResource(BaseTestResource):
     addSlash=True
-    def child_bar(self, ctx):
+    def child_bar(self, req):
         return self
 
-    def render(self, ctx):
-        h = iweb.IRequest(ctx).host
+    def render(self, req):
+        h = req.host
         return http.Response(responsecode.OK, stream=h)
 
 class TestVhost(BaseCase):
@@ -67,9 +67,8 @@ class TestVhost(BaseCase):
             (200, {}, 'is.nested'))
     
 class PathResource(resource.LeafResource):
-    def render(self, ctx):  
-        r = iweb.IRequest(ctx)
-        response = r.scheme+'://'+'/'.join([r.host,] + r.prepath + r.postpath)
+    def render(self, req):  
+        response = req.scheme+'://'+'/'.join([req.host,] + req.prepath + req.postpath)
         return http.Response(responsecode.OK, stream=response)
 
 class TestURIRewrite(BaseCase):

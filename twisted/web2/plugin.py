@@ -26,10 +26,10 @@ class TestResource(PluginResource, resource.LeafResource):
         self.foo = foo
         self.bar = bar
 
-    def locateChild(self, ctx, segments):
-        return resource.LeafResource.locateChild(self, ctx, segments)
+    def locateChild(self, req, segments):
+        return resource.LeafResource.locateChild(self, req, segments)
 
-    def render(self, ctx):
+    def render(self, req):
         return http.Response(200, stream="I am a very simple resource, a pluggable resource too")
 
 
@@ -37,7 +37,7 @@ class NoPlugin(resource.LeafResource):
     def __init__(self, plugin):
         self.plugin = plugin
         
-    def render(self, ctx):
+    def render(self, req):
         return http.Response(404, stream="No Such Plugin %s" % self.plugin)
 
 

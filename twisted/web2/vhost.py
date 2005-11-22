@@ -49,13 +49,13 @@ class NameVirtualHost(resource.Resource):
         """
         del self.hosts[name]
 
-    def locateChild(self, ctx, segments):
+    def locateChild(self, req, segments):
         """It's a NameVirtualHost, do you know where your children are?
         
         This uses locateChild magic so you don't have to mutate the request.
         """
 
-        host = iweb.IRequest(ctx).host.lower()
+        host = req.host.lower()
         
         if self.supportNested:
             """ If supportNested is True domain prefixes (the stuff up to the first '.')
@@ -98,11 +98,10 @@ class AutoVHostURIRewrite(object):
     def __init__(self, resource):
         self.resource=resource
         
-    def renderHTTP(self, ctx):
+    def renderHTTP(self, req):
         return http.Response(responsecode.NOT_FOUND)
 
-    def locateChild(self, ctx, segments):
-        req = iweb.IRequest(ctx)
+    def locateChild(self, req, segments):
         scheme = req.headers.getRawHeaders('x-app-scheme')
         host = req.headers.getRawHeaders('x-forwarded-host')
         app_location = req.headers.getRawHeaders('x-app-location')
@@ -163,11 +162,10 @@ class VHostURIRewrite(object):
         self.path = map(urllib.unquote, self.path[1:].split('/'))[:-1]
         self.host, self.port = http.splitHostPort(self.scheme, self.host)
         
-    def renderHTTP(self, ctx):
+    def renderHTTP(self, req):
         return http.Response(responsecode.NOT_FOUND)
 
-    def locateChild(self, ctx, segments):
-        req = iweb.IRequest(ctx)
+    def locateChild(self, req, segments):
         req.scheme = self.scheme
         req.host = self.host
         req.port = self.port

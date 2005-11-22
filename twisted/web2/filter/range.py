@@ -45,7 +45,7 @@ def makeSegment(inputStream, lastOffset, start, end):
         before.close()
     return inputStream.split(length)
 
-def rangefilter(request, oldresponse, ctx):
+def rangefilter(request, oldresponse):
     if oldresponse.stream is None:
         return oldresponse
     size = oldresponse.stream.length

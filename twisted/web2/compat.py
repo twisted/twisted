@@ -410,9 +410,9 @@ class OldResourceAdapter(object):
     def __repr__(self):
         return "<%s @ 0x%x adapting %r>" % (self.__class__.__name__, id(self), self.original)
 
-    def locateChild(self, ctx, segments):
+    def locateChild(self, req, segments):
         import server
-        request = iweb.IOldRequest(ctx)
+        request = iweb.IOldRequest(req)
         if self.original.isLeaf:
             return self, server.StopTraversal
         name = segments[0]
@@ -438,8 +438,8 @@ class OldResourceAdapter(object):
         else:
             return data
 
-    def renderHTTP(self, ctx):
-        request = iweb.IOldRequest(ctx)
+    def renderHTTP(self, req):
+        request = iweb.IOldRequest(req)
         result = defer.maybeDeferred(self.original.render, request).addCallback(
             self._handle_NOT_DONE_YET, request)
         return result

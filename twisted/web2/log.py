@@ -56,14 +56,15 @@ class LogInfo(object):
     bytesSent=None
     startTime=None
     
-def _logfilter(request, response, ctx):
+def _logfilter(request, response, startTime):
     def _log(success, length):
-        loginfo=ILogInfo(ctx)
+        loginfo=LogInfo()
         loginfo.bytesSent=length
         loginfo.responseCompleted=success
-        loginfo.secondsTaken=time.time()-loginfo.startTime
+        loginfo.secondsTaken=time.time()-startTime
         
-        tlog.msg(interface=iweb.IRequest, request=request, response=response, context=ctx)
+        tlog.msg(interface=iweb.IRequest, request=request, response=response,
+                 loginfo=loginfo)
         # Or just...
         # ILogger(ctx).log(...) ?
         
@@ -73,16 +74,9 @@ def _logfilter(request, response, ctx):
 _logfilter.handleErrors=True
 
 class LogWrapperResource(resource.WrapperResource):
-    def hook(self, ctx):
+    def hook(self, request):
         # Insert logger
-        req=iweb.IRequest(ctx)
-        if _logfilter not in req.responseFilters:
-            req.addResponseFilter(_logfilter, atEnd=True)
-            loginfo=LogInfo()
-            loginfo.startTime=time.time()
-            ctx.remember(loginfo, ILogInfo)
-
-
+        request.addResponseFilter(lambda req, resp: _logfilter(req, resp, time.time()), atEnd=True)
 
 monthname = [None, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -142,8 +136,7 @@ class BaseCommonAccessLoggingObserver(object):
 
         request = eventDict['request']
         response = eventDict['response']
-        ctx = eventDict['context']
-        loginfo=ILogInfo(ctx)
+        loginfo = eventDict['loginfo']
         firstLine = '%s %s HTTP/%s' %(
             request.method,
             request.uri,

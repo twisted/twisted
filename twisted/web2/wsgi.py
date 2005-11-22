@@ -28,10 +28,10 @@ class WSGIResource(object):
     def __init__(self, application):
         self.application = application
 
-    def renderHTTP(self, ctx):
+    def renderHTTP(self, req):
         from twisted.internet import reactor
         # Do stuff with WSGIHandler.
-        handler = WSGIHandler(self.application, ctx)
+        handler = WSGIHandler(self.application, req)
         # Get deferred
         d = handler.responseDeferred
         # Run it in a thread
@@ -91,18 +91,17 @@ class WSGIHandler(object):
     stopped = False
     stream = None
     
-    def __init__(self, application, ctx):
+    def __init__(self, application, request):
         # Called in IO thread
-        request = iweb.IRequest(ctx)
-        self.setupEnvironment(ctx, request)
+        self.setupEnvironment(request)
         self.application = application
         self.request = request
         self.response = None
         self.responseDeferred = defer.Deferred()
 
-    def setupEnvironment(self, ctx, request):
+    def setupEnvironment(self, request):
         # Called in IO thread
-        env = createCGIEnvironment(ctx, request)
+        env = createCGIEnvironment(request)
         env['wsgi.version']      = (1, 0)
         env['wsgi.url_scheme']   = env['REQUEST_SCHEME']
         env['wsgi.input']        = InputStream(request.stream)

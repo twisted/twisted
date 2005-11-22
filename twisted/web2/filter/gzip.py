@@ -48,7 +48,7 @@ def deflateStream(input, compressLevel=6):
     yield compress.flush()
 deflateStream=stream.generatorToStream(deflateStream)
 
-def gzipfilter(request, response, ctx):
+def gzipfilter(request, response):
     if response.stream is None or response.headers.getHeader('content-encoding'):
         # Empty stream, or already compressed.
         return response

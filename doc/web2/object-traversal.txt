@@ -32,7 +32,7 @@ to generate the HTML from it; these methods are described in the interface
 	  I am a web resource.
       ""
 
-      def locateChild(self, ctx, segments):
+      def locateChild(self, request, segments):
           """Locate another object which can be adapted to IResource.
 
           @return: A 2-tuple of (resource, remaining-path-segments),
@@ -49,7 +49,7 @@ to generate the HTML from it; these methods are described in the interface
                    handle.
           """
 
-      def renderHTTP(self, ctx):
+      def renderHTTP(self, request):
           """Return an IResponse or a deferred which will fire an
           IResponse. This response will be written to the web browser
           which initiated the request.
@@ -63,10 +63,10 @@ resource::
   class SimpleRoot(object):
       implements(iweb.IResource)
 
-      def locateChild(self, ctx, segments):
+      def locateChild(self, request, segments):
           return self, ()
 
-      def renderHTTP(self, ctx):
+      def renderHTTP(self, request):
           return http.Response(200, stream=stream.MemoryStream("Hello, world!"))
 
 This resource, when passed as the root resource to ``server.Site`` or
@@ -110,7 +110,7 @@ and files::
       def __init__(self, directory):
           self.directory = directory
 
-      def renderHTTP(self, ctx):
+      def renderHTTP(self, request):
           html = ['<ul>']
           for child in os.listdir(self.directory):
               fullpath = os.path.join(self.directory, child)
@@ -121,7 +121,7 @@ and files::
 	  html = stream.MemoryStream(''.join(html))
           return http.Response(200, stream=html)
 
-      def locateChild(self, ctx, segments):
+      def locateChild(self, request, segments):
           name = segments[0]
           fullpath = os.path.join(self.directory, name)
           if not os.path.exists(fullpath):
@@ -142,13 +142,13 @@ existing directories and files.
 So, let us examine what happens when the URI "/foo/bar/baz.html" is traversed,
 where "foo" and "bar" are directories, and "baz.html" is a file.
 
-Directory('/').locateChild(ctx, ('foo', 'bar', 'baz.html'))
+Directory('/').locateChild(request, ('foo', 'bar', 'baz.html'))
     Returns Directory('/foo'), ('bar', 'baz.html')
 
-Directory('/foo').locateChild(ctx, ('bar', 'baz.html'))
+Directory('/foo').locateChild(request, ('bar', 'baz.html'))
     Returns Directory('/foo/bar'), ('baz.html, )
 
-Directory('/foo/bar').locateChild(ctx, ('baz.html'))
+Directory('/foo/bar').locateChild(request, ('baz.html'))
     Returns File('/foo/bar/baz.html'), ()
 
 No more segments to be consumed; ``File('/foo/bar/baz.html').renderHTTP(ctx)`` is
@@ -192,7 +192,7 @@ implementation and overrides the ``childFactory`` hook instead::
       def __init__(self, dataDict):
           self.dataDict = dataDict
 
-      def renderHTTP(self, ctx):
+      def renderHTTP(self, request):
           if self.dataDict is None:
 	     content = "Leaf"
 	  else:
@@ -204,7 +204,7 @@ implementation and overrides the ``childFactory`` hook instead::
 	  
 	  return http.Response(200, stream=stream.MemoryStream(content))
 
-      def childFactory(self, ctx, name):
+      def childFactory(self, request, name):
           if name not in self.dataDict:
               return None # 404
           return DictTree(self.dataDict[name])
@@ -225,7 +225,7 @@ methods::
   from twisted.web2 import resource, http, static
 
   class Linker(resource.Resource):
-      def renderHTTP(self, ctx):
+      def renderHTTP(self, request):
           page = """<html>
     <head>
       <link href="css" rel="stylesheet" />
@@ -237,13 +237,13 @@ methods::
 
 	  return http.Response(200, stream=stream.MemoryStream(page))
 
-      def child_css(self, ctx):
+      def child_css(self, request):
           return static.File('/Users/dp/styles.css')
 
-      def child_scripts(self, ctx):
+      def child_scripts(self, request):
           return static.File('/Users/dp/scripts.js')
 
-      def child_images(self, ctx):
+      def child_images(self, request):
           return static.File('/Users/dp/images/')
 
 One thing you may have noticed is that all of the examples so far have returned
@@ -301,21 +301,13 @@ point in the future.
 ``IRequest.prepath`` and ``IRequest.postpath``
 -----------------------------------------------
 
-During the object traversal process, it may be useful to discover which segments
-have already been handled and which segments are remaining to be handled. This
-information may be obtained from the ``context`` object which is passed to all the
-traversal APIs. This is provided by the ``twisted.web2.iweb.IRequest``
-API via ``IRequest.prepath`` and ``IRequest.postpath``
-retrieve a tuple of segments which have previously been consumed during object
-traversal, use this syntax::
+During object traversal, it may be useful to discover which segments
+have already been handled and which segments are remaining to be
+handled.  In locateChild the remaining segments are given as the
+second argument.  However, since all object traversal APIs
+are also passed the ``request`` object, this information can also be
+obtained via the ``IRequest.prepath`` and ``IRequest.postpath`` attributes.
 
-  segs = IRequest(ctx).prepath
-
-The same is true of ``IRequest.postpath``. ``IRequest.postpath`` is the same value
-which is passed as ``segments`` to ``locateChild``, but may also be useful in the
-implementations of ``childFactory`` or a ``child``-prefixed method, where this
-nformation would not otherwise be available.
- 
 Conclusion
 ==========
 

@@ -35,7 +35,7 @@ class DirectoryLister(resource.Resource):
         self.path = pathname
         resource.Resource.__init__(self)
 
-    def data_listing(self, context, data):
+    def data_listing(self, request, data):
         if self.dirs is None:
             directory = os.listdir(self.path)
             directory.sort()
@@ -83,8 +83,7 @@ class DirectoryLister(resource.Resource):
     __str__ = __repr__
 
 
-    def render(self, ctx):
-        request = ctx.locate(iweb.IRequest)
+    def render(self, request):
         title = "Directory listing for %s" % urllib.unquote(request.path)
     
         s= """<html><head><title>%s</title><style>
@@ -107,7 +106,7 @@ class DirectoryLister(resource.Resource):
         s+="<table>"
         s+="<tr><th>Filename</th><th>Size</th><th>Last Modified</th><th>File Type</th></tr>"
         even = False
-        for row in self.data_listing(ctx, None):
+        for row in self.data_listing(request, None):
             s+='<tr class="%s">' % (even and 'even' or 'odd',)
             s+='<td><a href="%(link)s">%(linktext)s</a></td><td align="right">%(size)s</td><td>%(lastmod)s</td><td>%(type)s</td></tr>' % row
             even = not even

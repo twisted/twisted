@@ -29,8 +29,7 @@ class SCGIClientResource(resource.LeafResource):
         self.host = host
         self.port = port
     
-    def renderHTTP(self, ctx):
-        request = iweb.IRequest(ctx)
+    def renderHTTP(self, request):
         factory = SCGIClientProtocolFactory(request)
         reactor.connectTCP(self.host, self.port, factory)
         return factory.deferred

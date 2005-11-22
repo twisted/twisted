@@ -3,7 +3,7 @@ from twisted.web2 import resource, http
 from twisted.web2 import plugin
 
 class MyDefaultResource(plugin.PluginResource):
-    def render(self, ctx):
+    def render(self, req):
         http.Response(200, stream='DEFAULT')
 
 class TestResourcePlugin(unittest.TestCase):

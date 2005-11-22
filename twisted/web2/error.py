@@ -68,7 +68,7 @@ def _escape(original):
         return None
     return original.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
-def defaultErrorHandler(request, response, ctx):
+def defaultErrorHandler(request, response):
     if response.stream is not None:
         # Already got an error message
         return response
