@@ -29,7 +29,7 @@ class _SubConnector:
         self.sf = sf
 
     def startConnecting(self):
-        d = defer.maybeDeferred(self.sf.prepareAddress)
+        d = defer.maybeDeferred(self.sf.resolveAddress)
         d.addCallback(self._cbResolveDone)
         d.addErrback(self._ebResolveErr)
 
@@ -85,6 +85,7 @@ class SocketConnector(styles.Ephemeral, object):
         self.timeout = timeout
         self.bindAddress = bindAddress
         self.reactor = reactor
+        self.prepareAddress()
 
     def handle_connecting_stopConnecting(self):
         self.connectionFailed(failure.Failure(error.UserError()))
@@ -122,6 +123,9 @@ class SocketConnector(styles.Ephemeral, object):
         self.factory.startedConnecting(self)
 
     def prepareAddress(self):
+        raise NotImplementedError
+    
+    def resolveAddress(self):
         raise NotImplementedError
 
     def connectionLost(self, reason):

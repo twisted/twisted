@@ -81,8 +81,11 @@ class Connector(client.SocketConnector):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
-                return defer.fail(error.ServiceNameUnknownError(string=str(e)))
+                raise error.ServiceNameUnknownError(string=str(e))
         self.addr= (host, port)
+    
+    def resolveAddress(self):
+        host, port = self.addr
         if isIPAddress(host):
             return self.addr
         else:

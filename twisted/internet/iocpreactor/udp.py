@@ -13,6 +13,7 @@ from ops import ReadFileOp, WriteFileOp, WSARecvFromOp, WSASendToOp
 from util import StateEventMachineType
 from zope.interface import implements
 
+ERROR_PORT_UNREACHABLE = 1234
 
 class Port(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
@@ -32,6 +33,7 @@ class Port(log.Logger, styles.Ephemeral, object):
         self.state = "disconnected"
         from twisted.internet import reactor
         self.bindAddress = bindAddress
+        self._connectedAddr = None
         self.protocol = proto
         self.maxPacketSize = maxPacketSize
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
@@ -46,14 +48,15 @@ class Port(log.Logger, styles.Ephemeral, object):
             return "<%s not connected>" % (self.protocol.__class__,)
 
     def handle_listening_connect(self, host, port):
+        if not isIPAddress(host):
+            raise ValueError, "please pass only IP addresses, not domain names"
         self.state = "connecting"
-        if isIPAddress(host):
-             return defer.maybeDeferred(self._connectDone, host, port)
-        else:
-            d = self.reactor.resolve(host)
-            d.addCallback(self._connectDone, port)
-            return d        
+        return defer.maybeDeferred(self._connectDone, host, port)      
 
+    def handle_connecting_connect(self, host, port):
+        raise RuntimeError, "already connected, reconnecting is not currently supported (talk to itamar if you want this)"
+    handle_connected_connect = handle_connecting_connect
+        
     def _connectDone(self, host, port):
         self._connectedAddr = (host, port)
         self.state = "connected"
@@ -62,7 +65,13 @@ class Port(log.Logger, styles.Ephemeral, object):
 
     def handle_disconnected_startListening(self):
         self._bindSocket()
-        self._connectSocket()
+        host, port = self.bindAddress
+        if isIPAddress(host):
+             return defer.maybeDeferred(self._connectSocket, host)
+        else:
+            d = self.reactor.resolve(host)
+            d.addCallback(self._connectSocket)
+            return d
 
     def _bindSocket(self):
         try:
@@ -80,7 +89,8 @@ class Port(log.Logger, styles.Ephemeral, object):
         
         self.socket = skt
 
-    def _connectSocket(self):
+    def _connectSocket(self, host):
+        self.bindAddress = (host, self.bindAddress[1])
         self.protocol.makeConnection(self)
         self.startReading()
         self.state = "listening"
@@ -148,7 +158,8 @@ class Port(log.Logger, styles.Ephemeral, object):
 
     def handle_listening_writeErr(self, ret, bytes):
         log.msg("write failed with err %s" % (ret,))
-        self.connectionLost()
+        if ret == ERROR_PORT_UNREACHABLE:
+            self.protocol.connectionRefused()
     handle_connecting_writeErr = handle_listening_writeErr
     handle_connected_writeErr = handle_listening_writeErr
 
