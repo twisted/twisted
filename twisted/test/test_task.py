@@ -16,13 +16,21 @@ class Clock(object):
 
     def install(self):
         # Violation is fun.
-        from twisted.internet import base
-        self.original = base.seconds
+        from twisted.internet import base, task
+        from twisted.python import runtime
+        self.base_original = base.seconds
+        self.task_original = task.seconds
+        self.runtime_original = runtime.seconds
         base.seconds = self
+        task.seconds = self
+        runtime.seconds = self
 
     def uninstall(self):
-        from twisted.internet import base
-        base.seconds = self.original
+        from twisted.internet import base, task
+        from twisted.python import runtime
+        base.seconds = self.base_original
+        runtime.seconds = self.runtime_original
+        task.seconds = self.task_original
     
     def adjust(self, amount):
         self.rightNow += amount
@@ -50,7 +58,9 @@ class LoopTestCase(unittest.TestCase):
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
         # called a few times.
-        timings = [0.05, 0.1, 0.1, 0.1]
+        # Only need to go to 2.5 to get 3 calls, since the first call
+        # happens before any time has elapsed.
+        timings = [0.05, 0.1, 0.1]
 
         L = []
         def foo(a, b, c=None, d=None):
@@ -79,7 +89,7 @@ class LoopTestCase(unittest.TestCase):
         self.assertIdentical(D.result, lc)
 
     def testDelayedStart(self):
-        timings = [0.05, 0.1, 0.1, 0.1]
+        timings = [0.05, 0.1, 0.1]
 
         L = []
         lc = task.LoopingCall(L.append, None)

@@ -115,7 +115,8 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
             return NULL;
         }
         if(tm == Py_None) {
-            timeout = INFINITE;
+            // Default to 0.1 like other reactors do.
+            timeout = (int)(0.1 * 1000);
         } else {
             PyErr_SetString(PyExc_TypeError, "Wrong timeout argument");
             return NULL;
