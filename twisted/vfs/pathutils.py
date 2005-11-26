@@ -51,7 +51,10 @@ def fetch(root, path, cwd='/'):
     return currNode
 
 def basename(path, cwd='/'):
-    return getAbsoluteSegments(path, cwd)[-1]
+    s = getAbsoluteSegments(path, cwd)
+    if s:
+        return s[-1]
+    return ''
 
 def dirname(path, cwd='/'):
     return "/" + "/".join(getAbsoluteSegments(path, cwd)[:-1])
