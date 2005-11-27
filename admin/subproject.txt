@@ -1,0 +1,18 @@
+To release a Twisted subproject, all you need to do is run the
+following command (assuming the project name is "Foo"):
+
+./admin/release-twisted --commands=exportTemp,makeDocFoo,makeDocFoo
+
+This assumes that the Foo project has already been set up to be a
+Twisted subproject, of course. If you're creating a new one, there are
+few things that must be done.
+
+To just get it to work with release-twisted, you only need to add the
+short package name to the twisted.python.dist.subprojects list.
+
+To make it installable, you need to have a twisted/foo/topfiles
+directory that contains a setup.py. Copy it from one of the other
+projects, like twisted/conch/topfiles.py. If your subproject has
+extension modules, see twisted/runner/topfiles/setup.py as an example.
+
+
