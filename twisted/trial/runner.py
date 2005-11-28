@@ -210,70 +210,90 @@ class ClassSuite(TestSuite):
     methodPrefix = 'test'
 
     def __init__(self, original):
-        pyunit.TestSuite.__init__(self)
+        TestSuite.__init__(self)
         self.original = original
-        self._signalStateMgr = util.SignalStateManager()
-        self._janitor = util._Janitor()
 
     def __call__(self, reporter):
         return self.run(reporter)
 
-    def testCaseInstance(self):
+    def _sharedTestCase(self):
         # a property getter, called by subclasses
-        return self.original._testCaseInstance
-    testCaseInstance = property(testCaseInstance)
+        try:
+            return self.original._testCaseInstance
+        except AttributeError:
+            return None
 
-    def run(self, reporter):
-        janitor = util._Janitor()
+    def _run(self, methodName):
+        testCase = self._sharedTestCase()
+        return testCase._run(methodName)
+
+    def deferSetUpClass(self, result):
+        d = self._run('setUpClass')
+        d.addCallbacks(self.runTests, self._ebDeferSetUpClass,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        return d
+
+    def _ebDeferSetUpClass(self, error, result):
+        if error.check(unittest.SkipTest):
+            self.original.skip = error.value[0]
+        elif error.check(KeyboardInterrupt):
+            result.stop()
+        else:
+            result.upDownError('setUpClass', error, warn=True,
+                               printStatus=True)
+            for tm in self._tests:
+                result.startTest(tm)
+                result.addError(tm, error)
+                result.stopTest(tm)
+
+    def runTests(self, ignored, result):
+        for test in self._tests:
+            if result.shouldStop:
+                return
+            test.run(result)
+        if hasattr(self.original, 'tearDownClass'):
+            return self.deferTearDownClass(result)
+
+    def deferTearDownClass(self, result):
+        d = self._run('tearDownClass')
+        d.addErrback(self._ebTearDownClass, result)
+        return d
+
+    def _ebTearDownClass(self, error, result):
+        if error.check(KeyboardInterrupt):
+            result.stop()
+        result.upDownError('tearDownClass', error, warn=True, printStatus=True)
+
+    def _cleanUp(self, result):
+        try:
+            util._Janitor().postCaseCleanup()
+        except util.FailureError, e:
+            result.cleanupErrors(e.original)
+        except:
+            result.cleanupErrors(failure.Failure())
+
+    def run(self, result):
         if len(self._tests) == 0:
             return
+        if hasattr(self.original, 'skip'):
+            for test in self._tests:
+                result.startTest(test)
+                result.addSkip(test, test.getSkip())
+                result.stopTest(test)
+            return
+        signalStateMgr = util.SignalStateManager()
+        signalStateMgr.save()
         try:
-            self._signalStateMgr.save()
-            # --- setUpClass -----------------------------------------------
-            try:
-                if (not getattr(self.original, 'skip', None)
-                    and hasattr(self.original, 'setUpClass')):
-                    util.testFunction(self.testCaseInstance.setUpClass)
-            except util.FailureError, e:
-                error = e.original
-                if error.check(unittest.SkipTest):
-                    self.original.skip = error.value[0]
-                else:
-                    if error.check(KeyboardInterrupt):
-                        reporter.shouldStop = True
-                    reporter.upDownError('setUpClass', error, warn=True,
-                                         printStatus=True)
-                    for tm in self._tests:
-                        reporter.startTest(tm)
-                        reporter.addError(tm, error)
-                        reporter.stopTest(tm)
-                    return
-
-            # --- run methods ----------------------------------------------
-            for testMethod in self._tests:
-                testMethod.run(reporter)
-                if reporter.shouldStop:
-                    break
-
-            # --- tearDownClass ---------------------------------------------
-            try:
-                if (not getattr(self.original, 'skip', None)
-                    and hasattr(self.original, 'tearDownClass')):
-                    util.testFunction(self.testCaseInstance.tearDownClass)
-            except util.FailureError, e:
-                error = e.original
-                if error.check(KeyboardInterrupt):
-                    reporter.shouldStop = True
-                reporter.upDownError('tearDownClass', error, warn=True,
-                                     printStatus=True)
+            # pyunit tests don't do setUpClass
+            if hasattr(self.original, 'setUpClass'):
+                d = self.deferSetUpClass(result)
+                util.wait(d, timeout=None)
+            else:
+                self.runTests(None, result)
         finally:
-            try:
-                janitor.postCaseCleanup()
-            except util.FailureError, e:
-                reporter.cleanupErrors(e.original)
-            except:
-                reporter.cleanupErrors(failure.Failure())
-            self._signalStateMgr.restore()
+            self._cleanUp(result)
+            signalStateMgr.restore()
         
 
 def name(thing):

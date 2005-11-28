@@ -602,13 +602,9 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
     numberRounds = 2048
     timeLimit = 200
 
-    def _setUp(self):
-        # This method is used by test_ssl
+    def setUp(self):
         PortCleanerUpper.setUp(self)
         self.serverConns = []
-
-    def setUp(self):
-        self._setUp()
         f = protocol.ServerFactory()
         f.protocol = NoopProtocol
         f.protocol.master = self

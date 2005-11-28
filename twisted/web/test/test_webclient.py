@@ -100,9 +100,7 @@ class WebClientTestCase(unittest.TestCase):
     def tearDown(self):
         if serverCallID and serverCallID.active():
             serverCallID.cancel()
-        self.port.stopListening()
-        reactor.iterate(); reactor.iterate();
-        del self.port
+        return self.port.stopListening()
 
     def getURL(self, path):
         return "http://127.0.0.1:%d/%s" % (self.portno, path)

@@ -1,5 +1,5 @@
 from twisted.trial import unittest
-from twisted.internet import defer
+from twisted.internet import defer, threads
 
 
 class DeferredSetUpOK(unittest.TestCase):
@@ -104,7 +104,7 @@ class DeferredTests(unittest.TestCase):
 
     def test_errorInCallback(self):
         d = defer.succeed('error')
-        d.addCallback(self._eb_fail)
+        d.addCallback(self._cb_error)
         return d
 
     def test_skip(self):
@@ -112,6 +112,9 @@ class DeferredTests(unittest.TestCase):
         d.addCallback(self._cb_skip)
         d.addCallback(self._touchClass)
         return d
+
+    def test_thread(self):
+        return threads.deferToThread(lambda : None)
 
     def test_expectedFailure(self):
         d = defer.succeed('todo')

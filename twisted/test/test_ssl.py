@@ -173,7 +173,8 @@ if SSL is not None:
 
 class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
     def setUp(self):
-        self._setUp()
+        test_tcp.PortCleanerUpper.setUp(self)
+        self.serverConns = []
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
         self.listener = reactor.listenSSL(

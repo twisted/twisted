@@ -1105,11 +1105,6 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
     def tearDownClass(self):
         smtp.DNSNAME = self.DNSNAME
 
-    def tearDown(self):
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-
     def testProcessAlias(self):
         path = util.sibpath(__file__, 'process.alias.sh')
         a = mail.alias.ProcessAlias(path, None, None)

@@ -6,6 +6,7 @@
 
 import os, errno, warnings, sys, time
 
+from twisted.internet import defer
 from twisted.python import failure, log, reflect
 from twisted.trial import itrial, util
 from twisted.trial.util import deferredResult, deferredError
@@ -40,6 +41,7 @@ class TestCase(pyunit.TestCase, object):
         self._parents = [testMethod, self]
         self._parents.extend(util.getPythonContainers(testMethod))
         self._prepareClassFixture()
+        self._passed = False
 
     def _prepareClassFixture(self):
         """Lots of tests assume that test methods all run in the same instance
@@ -55,6 +57,14 @@ class TestCase(pyunit.TestCase, object):
     def _sharedTestCase(self):
         return self.__class__._testCaseInstance
 
+    def _run(self, methodName):
+        from twisted.internet import reactor
+        method = getattr(self._sharedTestCase(), methodName)
+        d = defer.maybeDeferred(util.suppressedRun, self.getSuppress(), method)
+        call = reactor.callLater(self.getTimeout(), defer.timeout, d)
+        d.addBoth(lambda x : call.active() and call.cancel() or x)
+        return d
+
     def id(self):
         # only overriding this because Python 2.2's unittest has a broken
         # implementation
@@ -69,75 +79,89 @@ class TestCase(pyunit.TestCase, object):
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
 
-    def run(self, reporter):
-        log.msg("--> %s <--" % (self.id()))
-        _signalStateMgr = util.SignalStateManager()
-        _signalStateMgr.save()
-        testCase = self._sharedTestCase()
-        testMethod = getattr(testCase, self._testMethodName)
+    def deferSetUp(self, result):
+        d = self._run('setUp')
+        d.addCallbacks(self.deferTestMethod, self._ebDeferSetUp,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        return d
 
-        reporter.startTest(self)
-        if self.getSkip(): # don't run test methods that are marked as .skip
-            reporter.addSkip(self, self.getSkip())
-            reporter.stopTest(self)
-            return
+    def _ebDeferSetUp(self, failure, result):
+        result.addError(self, failure)
+        result.upDownError('setUp', failure, warn=False, printStatus=False)
+        if failure.check(KeyboardInterrupt):
+            result.stop()
 
-        passed = False
+    def deferTestMethod(self, ignored, result):
+        testMethod = getattr(self._sharedTestCase(), self._testMethodName)
+        d = self._run(self._testMethodName)
+        d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        d.addBoth(self.deferTearDown, result)
+        return d
+
+    def _cbDeferTestMethod(self, ignored, result):
+        if self.getTodo() is not None:
+            result.addUnexpectedSuccess(self, self.getTodo())
+        else:
+            self._passed = True
+        return ignored
+
+    def _ebDeferTestMethod(self, f, result):
+        if self.getTodo() is not None and self._todoExpected(f):
+            result.addExpectedFailure(self, f, self._getTodoMessage())
+        elif f.check(self.failureException, FailTest):
+            result.addFailure(self, f)
+        elif f.check(KeyboardInterrupt):
+            result.addError(self, f)
+            result.stop()
+        elif f.check(SkipTest):
+            result.addSkip(self, self._getReason(f))
+        else:
+            result.addError(self, f)
+
+    def deferTearDown(self, ignored, result):
+        d = self._run('tearDown')
+        d.addErrback(self._ebDeferTearDown, result)
+        return d
+
+    def _ebDeferTearDown(self, failure, result):
+        result.addError(self, failure)
+        if failure.check(KeyboardInterrupt):
+            result.stop()
+        result.upDownError('tearDown', failure, warn=False, printStatus=True)
+        self._passed = False
+
+    def _cleanUp(self, result):
         try:
-            try:
-                util.testFunction(testCase.setUp)
-            except util.FailureError, e:
-                reporter.addError(self, e.original)
-                if e.original.check(KeyboardInterrupt):
-                    reporter.stop()
-                reporter.upDownError('setUp', e.original, warn=False,
-                                     printStatus=False)
-                return
-                 
-            try:
-                util.testFunction(testMethod)
-                if self.getTodo() is not None:
-                    reporter.addUnexpectedSuccess(self, self.getTodo())
-                else:
-                    passed = True
-            except util.FailureError, e:
-                f = e.original
-                if self.getTodo() is not None and self._todoExpected(f):
-                    reporter.addExpectedFailure(self, f, self._getTodoMessage())
-                elif f.check(self.failureException, FailTest):
-                    reporter.addFailure(self, f)
-                elif f.check(KeyboardInterrupt):
-                    reporter.addError(self, f)
-                    reporter.stop()
-                elif f.check(SkipTest):
-                    reporter.addSkip(self, self._getReason(f))
-                else:
-                    reporter.addError(self, f)
-
-            try:
-                util.testFunction(testCase.tearDown)
-            except util.FailureError, e:
-                reporter.addError(self, e.original)
-                if e.original.check(KeyboardInterrupt):
-                    reporter.stop()
-                reporter.upDownError('tearDown', e.original, warn=False,
-                                     printStatus=True)
-                passed = False
-
-            try:
-                util._Janitor().postMethodCleanup()
-            except util.FailureError, e:
-                reporter.addError(self, e.original)
-                passed = False
-            except:
-                reporter.cleanupErrors(failure.Failure())
-                passed = False
-
-            if passed:
-                reporter.addSuccess(self)
+            util._Janitor().postMethodCleanup()
+        except util.FailureError, e:
+            result.addError(self, e.original)
+            self._passed = False
+        except:
+            result.cleanupErrors(failure.Failure())
+            self._passed = False
+        if self._passed:
+            result.addSuccess(self)
+        
+    def run(self, result):
+        log.msg("--> %s <--" % (self.id()))
+        signalStateMgr = util.SignalStateManager()
+        signalStateMgr.save()
+        result.startTest(self)
+        if self.getSkip(): # don't run test methods that are marked as .skip
+            result.addSkip(self, self.getSkip())
+            result.stopTest(self)
+            return
+        self._passed = False
+        d = self.deferSetUp(result)
+        try:
+            util.wait(d, timeout=None)
         finally:
-            reporter.stopTest(self)
-            _signalStateMgr.restore()
+            self._cleanUp(result)
+            result.stopTest(self)
+            signalStateMgr.restore()
 
     def _getReason(self, f):
         if len(f.value.args) > 0:
@@ -183,7 +207,21 @@ class TestCase(pyunit.TestCase, object):
             raise ValueError("%r is not a valid .todo attribute" % (todo,))
     
     def getTimeout(self):
-        return util.acquireAttribute(self._parents, 'timeout', None)
+        timeout =  util.acquireAttribute(self._parents, 'timeout',
+                                         util.DEFAULT_TIMEOUT_DURATION)
+        try:
+            return float(timeout)
+        except (ValueError, TypeError):
+            # XXX -- this is here because sometimes people will have methods
+            # called 'timeout', or set timeout to 'orange', or something
+            # Particularly, test_news.NewsTestCase and ReactorCoreTestCase
+            # both do this.
+            warnings.warn("'timeout' attribute needs to be a number.",
+                          category=DeprecationWarning)
+            return util.DEFAULT_TIMEOUT_DURATION
+
+    def getSuppress(self):
+        return util.acquireAttribute(self._parents, 'suppress', [])
     
     def visit(self, visitor):
         """Call visitor.visitCase(self)."""
@@ -496,8 +534,8 @@ def wait(*args, **kwargs):
 
 class _SubTestCase(TestCase):
     def __init__(self):
-        pass
-
+        TestCase.__init__(self, 'run')
+    
 _inst = _SubTestCase()
 
 def deprecate(name):

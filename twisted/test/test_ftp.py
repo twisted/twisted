@@ -91,12 +91,12 @@ class FTPServerTestCase(unittest.TestCase):
     def tearDown(self):
         # Clean up sockets
         self.client.transport.loseConnection()
-        d = self.port.stopListening()
-        if d is not None:
-            wait(d)
+        d = defer.maybeDeferred(self.port.stopListening)
+        d.addCallback(self.ebTearDown)
+        return d
 
+    def ebTearDown(self, ignore):
         del self.serverProtocol
-
         # Clean up temporary directory
         shutil.rmtree(self.directory)
 
