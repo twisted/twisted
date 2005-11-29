@@ -926,7 +926,9 @@ class HalfClose2TestCase(unittest.TestCase):
         f.protocol.transport.loseConnection()
         client.transport.write("X")
         client.transport.loseWriteConnection()
-        spinUntil(lambda :f.protocol.closed, True)
+        d = self._delayDeferred(0.2, f.protocol)
+        d.addCallback(lambda x : self.failUnlessEqual(x.closed, True))
+        return d
 
 class HalfClose3TestCase(PortCleanerUpper):
     """Test half-closing connections where notification code has bugs."""
