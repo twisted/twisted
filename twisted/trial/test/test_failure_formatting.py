@@ -73,7 +73,6 @@ class TestFailureFormatting(common.RegistryBaseMixin):
         self.loader = runner.TestLoader()
     
     def testFormatErroredMethod(self):
-        # FIXME
         # this should be in test_reporter, and should be testing output summaries
         # not run() side effects. Until then wrap it in TrialSuite which triggers
         # the output side effects
@@ -87,17 +86,18 @@ class TestFailureFormatting(common.RegistryBaseMixin):
                   '[ERROR]: twisted.trial.test.erroneous.TestFailureInSetUp.testMethod']
 
         expect.extend(expectFailureInSetUp)
+
         self.stringComparison(expect, self.reporter.out.splitlines())
 
     def testFormatFailedMethod(self):
-        # FIXME
         # this should be in test_reporter, and should be testing output summaries
         # not run() side effects. Until then wrap it in TrialSuite which triggers
         # the output side effects
         self.run_a_suite(runner.TrialSuite([self.loader.loadMethod(
             common.FailfulTests.testFailure)]))
+
         self.stringComparison(expectTestFailure,
-                              self.reporter.out.splitlines())
+                                self.reporter.out.splitlines())
 
     def testTrimFilename(self):
         self.checkReporterSetup = False

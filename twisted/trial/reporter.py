@@ -226,24 +226,15 @@ class Reporter(object):
         # pyunit compat -- we don't use this
         pass
 
-    def _trimFrame(self, fail):
-        if len(fail.frames) < 2:
-            return fail.frames
-        oldFrames = fail.frames[:]
-        del fail.frames[1]
-        return oldFrames
-
     def _formatFailureTraceback(self, fail):
         # Short term hack
         if isinstance(fail, str):
-            return fail
-        oldFrames = self._trimFrame(fail)
+            return fail 
         detailLevel = self.tbformat
         result = fail.getTraceback(detail=detailLevel, elideFrameworkCode=True)
         if detailLevel == 'default':
             # Apparently trial's tests doen't like the 'Traceback:' line.
             result = '\n'.join(result.split('\n')[1:])
-        fail.frames = oldFrames
         return result
 
     def _formatImportError(self, name, error):
