@@ -903,22 +903,17 @@ class HalfClose2TestCase(unittest.TestCase):
         self.client.transport.loseConnection()
         return self.p.stopListening()
 
-    def _delayDeferred(self, time, arg=None):
-        from twisted.internet import reactor
-        d = defer.Deferred()
-        reactor.callLater(time, d.callback, arg)
-        return d
-        
     def testNoNotification(self):
         client = self.client
         f = self.f
         client.transport.write("hello")
         w = client.transport.write
         client.transport.loseWriteConnection()
-        d = self._delayDeferred(0.2, f.protocol)
-        d.addCallback(lambda x : self.assertEqual(f.protocol.data, 'hello'))
-        d.addCallback(lambda x : self.assertEqual(f.protocol.closed, True))
-        return d
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(f.protocol.data, "hello")
+        self.assertEquals(f.protocol.closed, True)
 
     def testShutdownException(self):
         client = self.client
@@ -926,9 +921,7 @@ class HalfClose2TestCase(unittest.TestCase):
         f.protocol.transport.loseConnection()
         client.transport.write("X")
         client.transport.loseWriteConnection()
-        d = self._delayDeferred(0.2, f.protocol)
-        d.addCallback(lambda x : self.failUnlessEqual(x.closed, True))
-        return d
+        spinUntil(lambda :f.protocol.closed, True)
 
 class HalfClose3TestCase(PortCleanerUpper):
     """Test half-closing connections where notification code has bugs."""
