@@ -85,14 +85,12 @@ class PortCleanerUpper(unittest.TestCase):
         self.ports = []
 
     def tearDown(self):
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
     def cleanPorts(self, *ports):
-        for p in ports:
-            if p.connected:
-                p.loseConnection()
-                util.spinWhile(lambda :p.connected)
-
+        ds = [ defer.maybeDeferred(p.loseConnection)
+               for p in ports if p.connected ]
+        return defer.gatherResults(ds)
 
 
 class ListeningTestCase(PortCleanerUpper):
@@ -189,9 +187,7 @@ class LoopbackTestCase(PortCleanerUpper):
             reactor.iterate()
             self.assertEquals(transport.getTcpNoDelay(), 0)
 
-        self.cleanPorts(clientF.protocol.transport, port)
-
-        clientF.lostReason.trap(error.ConnectionDone)
+        return self.cleanPorts(clientF.protocol.transport, port)
 
     def testTcpKeepAlive(self):
         f = MyServerFactory()
@@ -213,8 +209,7 @@ class LoopbackTestCase(PortCleanerUpper):
 
             spinUntil(lambda :transport.getTcpKeepAlive() == 0, timeout=1.0)
 
-        self.cleanPorts(clientF.protocol.transport, port)
-        clientF.lostReason.trap(error.ConnectionDone)
+        return self.cleanPorts(clientF.protocol.transport, port)
 
     def testFailing(self):
         clientF = MyClientFactory()
@@ -237,6 +232,7 @@ class LoopbackTestCase(PortCleanerUpper):
     
     def testConnectByService(self):
         serv = socket.getservbyname
+        d = defer.succeed(None)
         try:
             s = MyServerFactory()
             port = reactor.listenTCP(0, s, interface="127.0.0.1")
@@ -252,11 +248,12 @@ class LoopbackTestCase(PortCleanerUpper):
                 raise
 
             spinUntil(lambda :getattr(s, 'protocol', None) is not None)
-            self.cleanPorts(port, c.transport, cf.protocol.transport)
-
+            d = self.cleanPorts(port, c.transport, cf.protocol.transport)
         finally:
             socket.getservbyname = serv
-        self.assert_(s.called, '%s was not called' % (s,))
+        d.addCallback(lambda x : self.assert_(s.called,
+                                              '%s was not called' % (s,)))
+        return d
 
 
 class StartStopFactory(protocol.Factory):
@@ -333,7 +330,7 @@ class FactoryTestCase(PortCleanerUpper):
         spinWhile(lambda :(p3.connected == 1))
 
         self.assertEquals((f.started, f.stopped), (1, 1))
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
 
     def testClientStartStop(self):
@@ -353,7 +350,7 @@ class FactoryTestCase(PortCleanerUpper):
 
         spinUntil(lambda :factory.stopped)
 
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
 
 class ConnectorTestCase(PortCleanerUpper):
@@ -380,10 +377,11 @@ class ConnectorTestCase(PortCleanerUpper):
 
         spinUntil(lambda :factory.stopped)
 
-        self.cleanPorts(*self.ports)
+        d = self.cleanPorts(*self.ports)
 
         m[0].trap(error.ConnectionDone)
         self.assertEquals(l, [connector, connector])
+        return d
 
     def testUserFail(self):
         f = MyServerFactory()
@@ -403,7 +401,7 @@ class ConnectorTestCase(PortCleanerUpper):
         self.assertEquals(factory.failed, 1)
         factory.reason.trap(error.UserError)
 
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
         
 
     def testReconnect(self):
@@ -428,7 +426,7 @@ class ConnectorTestCase(PortCleanerUpper):
         factory.reason.trap(error.ConnectionRefusedError)
         self.assertEquals(factory.stopped, 1)
 
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
 
 class CannotBindTestCase(PortCleanerUpper):
@@ -450,7 +448,7 @@ class CannotBindTestCase(PortCleanerUpper):
         self.assertRaises(error.CannotListenError,
                           reactor.listenTCP, n, f, interface='127.0.0.1')
 
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
     def testClientBind(self):
         f = MyServerFactory()
@@ -484,7 +482,7 @@ class CannotBindTestCase(PortCleanerUpper):
         spinWhile(lambda :p.connected)
 
         self.assertEquals(factory.stopped, 1)
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
 class MyOtherClientFactory(protocol.ClientFactory):
     def buildProtocol(self, address):
@@ -602,13 +600,9 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
     numberRounds = 2048
     timeLimit = 200
 
-    def _setUp(self):
-        # This method is used by test_ssl
+    def setUp(self):
         PortCleanerUpper.setUp(self)
         self.serverConns = []
-
-    def setUp(self):
-        self._setUp()
         f = protocol.ServerFactory()
         f.protocol = NoopProtocol
         f.protocol.master = self
@@ -630,10 +624,9 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
     def tearDown(self):
         # Wait until all the protocols on the server-side of this test have
         # been disconnected, to avoid leaving junk in the reactor.
-        for d in self.serverConns:
-            util.wait(d)
-
-        PortCleanerUpper.tearDown(self)
+        d = defer.gatherResults(self.serverConns)
+        d.addBoth(lambda x : PortCleanerUpper.tearDown(self))
+        return d
     
     def testProperlyCloseFiles(self):
         self.connector()
@@ -907,17 +900,22 @@ class HalfClose2TestCase(unittest.TestCase):
         self.client.transport.loseConnection()
         return self.p.stopListening()
 
+    def _delayDeferred(self, time, arg=None):
+        from twisted.internet import reactor
+        d = defer.Deferred()
+        reactor.callLater(time, d.callback, arg)
+        return d
+        
     def testNoNotification(self):
         client = self.client
         f = self.f
         client.transport.write("hello")
         w = client.transport.write
         client.transport.loseWriteConnection()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(f.protocol.data, "hello")
-        self.assertEquals(f.protocol.closed, True)
+        d = self._delayDeferred(0.2, f.protocol)
+        d.addCallback(lambda x : self.assertEqual(f.protocol.data, 'hello'))
+        d.addCallback(lambda x : self.assertEqual(f.protocol.closed, True))
+        return d
 
     def testShutdownException(self):
         client = self.client
@@ -925,7 +923,9 @@ class HalfClose2TestCase(unittest.TestCase):
         f.protocol.transport.loseConnection()
         client.transport.write("X")
         client.transport.loseWriteConnection()
-        spinUntil(lambda :f.protocol.closed, True)
+        d = self._delayDeferred(0.2, f.protocol)
+        d.addCallback(lambda x : self.failUnlessEqual(x.closed, True))
+        return d
 
 class HalfClose3TestCase(PortCleanerUpper):
     """Test half-closing connections where notification code has bugs."""

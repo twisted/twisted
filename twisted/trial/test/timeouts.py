@@ -38,6 +38,7 @@ class TimeoutTests(unittest.TestCase):
     def test_errorPropagation(self):
         def timedOut(err):
             self.__class__.timedOut = err
+            return err
         d = defer.Deferred()
         d.addErrback(timedOut)
         return d

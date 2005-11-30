@@ -134,8 +134,15 @@ class TestDeferred(TestTester):
         result = self.runTest('test_expectedFailure')
         self.failUnless(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.errors), 0)
+        self.failUnlessEqual(len(result.failures), 0)
         self.failUnlessEqual(len(result.expectedFailures), 1)
         
+    def test_thread(self):
+        result = self.runTest('test_thread')
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnless(result.wasSuccessful(), result.errors)
+
 
 class TestTimeout(TestTester):
     def getTest(self, name):

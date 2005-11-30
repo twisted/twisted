@@ -87,7 +87,7 @@ class TestInterruptInTearDown(TrialTest):
             TestInterruptInTearDown.testsRun += 1
 
         def test_02(self):
-            TestInterruptInSetUp.testsRun += 1
+            TestInterruptInTearDown.testsRun += 1
             TestInterruptInTearDown.test_02_run = True
 
     def setUp(self):
@@ -103,10 +103,10 @@ class TestInterruptInTearDown(TrialTest):
         self.failUnlessEqual(0, self.reporter.testsRun)
         self.failIf(self.reporter.shouldStop)
 
-    def test_interruptInSetUp(self):
+    def test_interruptInTearDown(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
-        self.failUnless(self.reporter.shouldStop)
         self.failUnlessEqual(1, self.reporter.testsRun)
+        self.failUnless(self.reporter.shouldStop)
         self.failIf(TestInterruptInTearDown.test_02_run,
                     "test_02 ran")
 

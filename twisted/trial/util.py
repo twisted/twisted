@@ -263,7 +263,6 @@ def _wait(d, timeout=None, running=[]):
                 timeoutCall.cancel()
             else:
                 f = failure.Failure(defer.TimeoutError())
-                d.errback(f)
                 return f
             
         if results:

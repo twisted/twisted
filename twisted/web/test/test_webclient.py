@@ -94,15 +94,12 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("broken", BrokenDownloadResource())
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
-        reactor.iterate(); reactor.iterate()
         self.portno = self.port.getHost().port
 
     def tearDown(self):
         if serverCallID and serverCallID.active():
             serverCallID.cancel()
-        self.port.stopListening()
-        reactor.iterate(); reactor.iterate();
-        del self.port
+        return self.port.stopListening()
 
     def getURL(self, path):
         return "http://127.0.0.1:%d/%s" % (self.portno, path)
@@ -311,7 +308,6 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
                                          interface="127.0.0.1")
         self.plainPort = reactor.listenTCP(0, plainSite, interface="127.0.0.1")
 
-        reactor.iterate(); reactor.iterate()
         self.plainPortno = self.plainPort.getHost().port
         self.tlsPortno = self.tlsPort.getHost().port
 
@@ -321,11 +317,9 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
         tlsRoot.putChild('four', static.Data('FOUND IT!', 'text/plain'))
 
     def tearDown(self):
-        self.plainPort.stopListening()
-        self.tlsPort.stopListening()
-        reactor.iterate(); reactor.iterate();
-        del self.plainPort
-        del self.tlsPort
+        ds = map(defer.maybeDeferred,
+                 [self.plainPort.stopListening, self.tlsPort.stopListening])
+        return defer.gatherResults(ds)
 
     def testHoppingAround(self):
         return client.getPage(self.getHTTP("one")
@@ -349,13 +343,10 @@ class CookieTestCase(unittest.TestCase):
         root.putChild("rawcookiemirror", RawCookieMirrorResource())
         site = server.Site(root, timeout=None)
         self.port = self._listen(site)
-        reactor.iterate(); reactor.iterate()
         self.portno = self.port.getHost().port
 
     def tearDown(self):
-        self.port.stopListening()
-        reactor.iterate(); reactor.iterate();
-        del self.port
+        return self.port.stopListening()
 
     def getHTTP(self, path):
         return "http://127.0.0.1:%d/%s" % (self.portno, path)
