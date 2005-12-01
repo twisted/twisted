@@ -6,6 +6,7 @@
 """I hold HTML generation helpers.
 """
 
+from twisted.python import log
 #t.w imports
 from twisted.web import resource
 
@@ -37,11 +38,12 @@ def linkList(lst):
 def output(func, *args, **kw):
     """output(func, *args, **kw) -> html string
     Either return the result of a function (which presumably returns an
-    HTML-legal string) or an HTMLized traceback describing why that function
-    didn't run.
+    HTML-legal string) or a sparse HTMLized error message and a message
+    in the server log.
     """
     try:
-        return apply(func, args, kw)
+        return func(*args, **kw)
     except:
-        io = StringIO()
-        return PRE(io.getvalue())
+        log.msg("Error calling %r:" % (func,))
+        log.err()
+        return PRE("An error occurred.")
