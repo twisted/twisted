@@ -5,6 +5,10 @@
 from __future__ import generators
 
 import os
+import errno
+import base64
+import sha
+
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
 from os.path import join as joinpath
@@ -25,8 +29,13 @@ except ImportError:
 class InsecurePath(Exception):
     pass
 
+def _secureEnoughString():
+    """
+    Create a pseudorandom, 16-character string for use in secure filenames.
+    """
+    return base64.urlsafe_b64encode(sha.new(os.urandom(64)).digest())[:16]
+
 class FilePath:
-    
     """I am a path on the filesystem that only permits 'downwards' access.
 
     Instantiate me with a pathname (for example,
@@ -41,14 +50,19 @@ class FilePath:
 
     Even if you pass me a relative path, I will convert that to an absolute
     path internally.
+
+    @type alwaysCreate: C{bool}
+    @ivar alwaysCreate: When opening this file, only succeed if the file does not
+    already exist.
     """
 
     # __slots__ = 'path abs'.split()
 
     statinfo = None
 
-    def __init__(self, path):
+    def __init__(self, path, alwaysCreate=False):
         self.path = abspath(path)
+        self.alwaysCreate = alwaysCreate
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -75,7 +89,6 @@ class FilePath:
         if not newpath.startswith(self.path):
             raise InsecurePath("%s is not a child of %s" % (newpath, self.path))
         return self.clonePath(newpath)
-        
 
     def childSearchPreauth(self, *paths):
         """Return my first existing child with a name in 'paths'.
@@ -121,6 +134,9 @@ class FilePath:
         return self.clonePath(self.path+ext)
 
     def open(self, mode='r'):
+        if self.alwaysCreate:
+            assert 'a' not in mode, "Appending not supported when alwaysCreate == True"
+            return self.create()
         return open(self.path, mode+'b')
 
     # stat methods below
@@ -132,7 +148,7 @@ class FilePath:
             self.statinfo = 0
             if reraise:
                 raise
-    
+
     def getsize(self):
         st = self.statinfo
         if not st:
@@ -214,10 +230,16 @@ class FilePath:
             self.open('a').close()
         except IOError:
             pass
-        utime(self.path,None)
+        utime(self.path, None)
 
     def remove(self):
-        remove(self.path)
+        if self.isdir():
+            for child in self.children():
+                child.remove()
+            os.rmdir(self.path)
+        else:
+            os.remove(self.path)
+        self.restat(False)
 
     def makedirs(self):
         return os.makedirs(self.path)
@@ -250,6 +272,39 @@ class FilePath:
         return self.open().read()
 
     # new in 2.2.0
+
+    def __cmp__(self, other):
+        if not isinstance(other, FilePath):
+            return NotImplemented
+        return cmp(self.path, other.path)
+
+    def createDirectory(self):
+        os.mkdir(self.path)
+
+    def requireCreate(self, val=1):
+        self.alwaysCreate = val
+
+    def create(self):
+        """Exclusively create a file, only if this file previously did not exist.
+        """
+        fdint = os.open(self.path, (os.O_EXCL |
+                                    os.O_CREAT |
+                                    os.O_RDWR))
+
+        # XXX TODO: 'name' attribute of returned files is not mutable or
+        # settable via fdopen, so this file is slighly less functional than the
+        # one returned from 'open' by default.  send a patch to Python...
+
+        return os.fdopen(fdint, 'w+b')
+
+    def temporarySibling(self):
+        """
+        Create a path naming a temporary sibling of this path in a secure fashion.
+        """
+        sib = self.parent().child(_secureEnoughString() + self.basename())
+        sib.requireCreate()
+        return sib
+
     def children(self):
         return map(self.child, self.listdir())
 
@@ -259,5 +314,66 @@ class FilePath:
             for c in self.children():
                 for subc in c.walk():
                     yield subc
+
+    _chunkSize = 2 ** 2 ** 2 ** 2
+
+    def copyTo(self, destination):
+        # XXX TODO: *thorough* audit and documentation of the exact desired
+        # semantics of this code.  Right now the behavior of existent
+        # destination symlinks is convenient, and quite possibly correct, but
+        # its security properties need to be explained.
+        if self.isdir():
+            if not destination.exists():
+                destination.createDirectory()
+            for child in self.children():
+                destChild = destination.child(child.basename())
+                child.copyTo(destChild)
+        elif self.isfile():
+            writefile = destination.open('w')
+            readfile = self.open()
+            while 1:
+                # XXX TODO: optionally use os.open, os.read and O_DIRECT and
+                # use os.fstatvfs to determine chunk sizes and make
+                # *****sure**** copy is page-atomic; the following is good
+                # enough for 99.9% of everybody and won't take a week to audit
+                # though.
+                chunk = readfile.read(self._chunkSize)
+                writefile.write(chunk)
+                if len(chunk) < self._chunkSize:
+                    break
+            writefile.close()
+            readfile.close()
+        else:
+            # If you see the following message because you want to copy
+            # symlinks, fifos, block devices, character devices, or unix
+            # sockets, please feel free to add support to do sensible things in
+            # reaction to those types!
+            raise NotImplementedError(
+                "Only copying of files and directories supported")
+
+    def moveTo(self, destination):
+        try:
+            os.rename(self.path, destination.path)
+        except OSError, ose:
+            if ose.errno == errno.EXDEV:
+                # man 2 rename, ubuntu linux 5.10 "breezy":
+
+                #   oldpath and newpath are not on the same mounted filesystem.
+                #   (Linux permits a filesystem to be mounted at multiple
+                #   points, but rename(2) does not work across different mount
+                #   points, even if the same filesystem is mounted on both.)
+
+                # that means it's time to copy trees of directories!
+                secsib = destination.secureSibling()
+                self.copyTo(secsib) # slow
+                secsib.moveTo(destination) # visible
+
+                # done creating new stuff.  let's clean me up.
+                mysecsib = self.secureSibling()
+                self.moveTo(mysecsib) # visible
+                mysecsib.remove() # slow
+            else:
+                raise
+
 
 FilePath.clonePath = FilePath

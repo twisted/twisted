@@ -1,5 +1,5 @@
 
-import os, time, pickle
+import os, time, pickle, errno
 
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -106,7 +106,8 @@ class FilePathTestCase(unittest.TestCase):
         self.failUnlessEqual(abs(p.getatime() - time.time()) // 20, 0)
         self.failUnlessEqual(p.exists(), True)
         self.failUnlessEqual(p.exists(), True)
-        p.remove()
+        # OOB removal: FilePath.remove() will automatically restat
+        os.remove(p.path)
         # test caching
         self.failUnlessEqual(p.exists(), True)
         p.restat(reraise=False)
@@ -131,8 +132,6 @@ class FilePathTestCase(unittest.TestCase):
 
     if platform.getType() != 'win32':
         testInsecureWin32.skip = "Consider yourself lucky."
-    else:
-        testInsecureWin32.todo = "Hrm, broken"
 
     def testInsecureWin32Whacky(self):
         """Windows has 'special' filenames like NUL and CON and COM1 and LPR
@@ -146,12 +145,144 @@ class FilePathTestCase(unittest.TestCase):
 
     if platform.getType() != 'win32':
         testInsecureWin32Whacky.skip = "Consider yourself lucky."
-    else:
-        testInsecureWin32Whacky.todo = "Broken, no checking for whacky devices"
+
+    def testComparison(self):
+        self.assertEquals(filepath.FilePath('a'),
+                          filepath.FilePath('a'))
+        self.failUnless(filepath.FilePath('z') >
+                        filepath.FilePath('a'))
+        self.failUnless(filepath.FilePath('z') >=
+                        filepath.FilePath('a'))
+        self.failUnless(filepath.FilePath('a') >=
+                        filepath.FilePath('a'))
+        self.failUnless(filepath.FilePath('a') <=
+                        filepath.FilePath('a'))
+        self.failUnless(filepath.FilePath('a') <
+                        filepath.FilePath('z'))
+        self.failUnless(filepath.FilePath('a') <=
+                        filepath.FilePath('z'))
+        self.failUnless(filepath.FilePath('a') !=
+                        filepath.FilePath('z'))
+        self.failUnless(filepath.FilePath('z') !=
+                        filepath.FilePath('a'))
+
+        self.failIf(filepath.FilePath('z') !=
+                    filepath.FilePath('z'))
+
+    def testTemporarySibling(self):
+        ts = self.path.temporarySibling()
+        self.assertEquals(ts.dirname(), self.path.dirname())
+        self.assertNotIn(ts.basename(), self.path.listdir())
+        ts.createDirectory()
+        self.assertIn(ts, self.path.parent().children())
+
+    def testRemove(self):
+        self.path.remove()
+        self.failIf(self.path.exists())
+
+    def testCopyTo(self):
+        self.assertRaises(OSError, self.path.copyTo, self.path.child('file1'))
+        oldPaths = list(self.path.walk()) # Record initial state
+        fp = filepath.FilePath(self.mktemp())
+        self.path.copyTo(fp)
+        self.path.remove()
+        fp.copyTo(self.path)
+        newPaths = list(self.path.walk()) # Record double-copy state
+        newPaths.sort()
+        oldPaths.sort()
+        self.assertEquals(newPaths, oldPaths)
+
+    def testMoveTo(self):
+        self.assertRaises(OSError, self.path.moveTo, self.path.child('file1'))
+        oldPaths = list(self.path.walk()) # Record initial state
+        fp = filepath.FilePath(self.mktemp())
+        self.path.moveTo(fp)
+        fp.moveTo(self.path)
+        newPaths = list(self.path.walk()) # Record double-move state
+        newPaths.sort()
+        oldPaths.sort()
+        self.assertEquals(newPaths, oldPaths)
+
+    def testOpen(self):
+        # Opening a file for reading when it does not already exist is an error
+        nonexistent = self.path.child('nonexistent')
+        e = self.assertRaises(IOError, nonexistent.open)
+        self.assertEquals(e.errno, errno.ENOENT)
+
+        # Opening a file for writing when it does not exist is okay
+        writer = self.path.child('writer')
+        f = writer.open('w')
+        f.write('abc\ndef')
+        f.close()
+
+        # Make sure those bytes ended up there - and test opening a file for
+        # reading when it does exist at the same time
+        f = writer.open()
+        self.assertEquals(f.read(), 'abc\ndef')
+        f.close()
+
+        # Re-opening that file in write mode should erase whatever was there.
+        f = writer.open('w')
+        f.close()
+        f = writer.open()
+        self.assertEquals(f.read(), '')
+        f.close()
+
+        # Put some bytes in a file so we can test that appending does not
+        # destroy them.
+        appender = self.path.child('appender')
+        f = appender.open('w')
+        f.write('abc')
+        f.close()
+
+        f = appender.open('a')
+        f.write('def')
+        f.close()
+
+        f = appender.open('r')
+        self.assertEquals(f.read(), 'abcdef')
+        f.close()
+
+        # read/write should let us do both without erasing those bytes
+        f = appender.open('r+')
+        self.assertEquals(f.read(), 'abcdef')
+        f.write('ghi')
+        f.close()
+
+        # Make sure those new bytes really showed up
+        f = appender.open('r')
+        self.assertEquals(f.read(), 'abcdefghi')
+        f.close()
+
+        # write/read should let us do both, but erase anything that's there
+        # already.
+        f = appender.open('w+')
+        self.assertEquals(f.read(), '')
+        f.write('123')
+        f.close()
+
+        # super append mode should let us read and write and also position the
+        # cursor at the end of the file, without erasing everything.
+        f = appender.open('a+')
+
+        # The order of these lines may seem surprising, but it is necessary.
+        # The cursor is not at the end of the file until after the first write.
+        f.write('456')
+        self.assertEquals(f.read(), '')
+
+        f.seek(0, 0)
+        self.assertEquals(f.read(), '123456')
+        f.close()
+
+        # Opening a file exclusively must fail if that file exists already.
+        nonexistent.alwaysCreate = True
+        nonexistent.open('w').close()
+        existent = nonexistent
+        del nonexistent
+        self.assertRaises(OSError, existent.open)
 
 
 from twisted.python import urlpath
-
 
 class URLPathTestCase(unittest.TestCase):
     def setUp(self):
