@@ -266,7 +266,9 @@ def _getpass(prompt):
     except EOFError:
         raise KeyboardInterrupt
 
-def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
+def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
+                confirmPrompt = 'Confirm password: ',
+                mismatchMessage = "Passwords don't match."):
     """Obtain a password by prompting or from stdin.
 
     If stdin is a terminal, prompt for a new password, and confirm (if
@@ -290,7 +292,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
                     old = sys.stdin, sys.stdout
                     sys.stdin = sys.stdout = open('/dev/tty', 'r+')
                 except:
-                    raise RuntimeError, "Cannot obtain a TTY"
+                    raise RuntimeError("Cannot obtain a TTY")
             else:
                 password = sys.stdin.readline()
                 if password[-1] == '\n':
@@ -301,11 +303,11 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
             try1 = _getpass(prompt)
             if not confirm:
                 return try1
-            try2 = _getpass("Confirm: ")
+            try2 = _getpass(confirmPrompt)
             if try1 == try2:
                 return try1
             else:
-                sys.stderr.write("Passwords don't match.\n")
+                sys.stderr.write(mismatchMessage + "\n")
     finally:
         if old:
             sys.stdin.close()
