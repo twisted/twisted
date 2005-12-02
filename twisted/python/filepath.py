@@ -73,10 +73,10 @@ class FilePath:
     def child(self, path):
         norm = normpath(path)
         if slash in norm:
-            raise InsecurePath()
+            raise InsecurePath("%r contains one or more directory separators" % (path,))
         newpath = abspath(joinpath(self.path, norm))
         if not newpath.startswith(self.path):
-            raise InsecurePath()
+            raise InsecurePath("%r is not a child of %s" % (newpath, self.path))
         return self.clonePath(newpath)
 
     def preauthChild(self, path):
@@ -354,6 +354,7 @@ class FilePath:
     def moveTo(self, destination):
         try:
             os.rename(self.path, destination.path)
+            self.restat(False)
         except OSError, ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":
