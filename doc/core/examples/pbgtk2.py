@@ -104,7 +104,7 @@ class EchoClient:
         w.add(vb)
         map(vb.add, [b, self.entry, self.outry])
         b.connect('clicked', self.clicked)
-        w.connect('destroy', gtk.mainquit)
+        w.connect('destroy', reactor.stop)
         w.show_all()
 
     def clicked(self, b):
@@ -115,6 +115,6 @@ class EchoClient:
 d = defer.Deferred()
 LoginDialog(d)
 d.addCallbacks(EchoClient,
-               gtk.mainquit)
+               lambda _: reactor.stop())
 
 reactor.run()
