@@ -7,6 +7,7 @@ from __future__ import generators
 import os
 import errno
 import base64
+import random
 import sha
 
 from os.path import isabs, exists, normpath, abspath, splitext
@@ -25,6 +26,14 @@ try:
 except ImportError:
     def islink(path):
         return False
+
+try:
+    from os import urandom as randomBytes
+except ImportError:
+    def randomBytes(n):
+        randomData = [random.randrange(256) for n in xrange(n)]
+        return ''.join(map(chr, randomData))
+
 
 class InsecurePath(Exception):
     pass
