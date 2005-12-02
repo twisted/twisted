@@ -34,6 +34,11 @@ except ImportError:
         randomData = [random.randrange(256) for n in xrange(n)]
         return ''.join(map(chr, randomData))
 
+try:
+    from base64 import urlsafe_b64encode as armor
+except ImportError:
+    def armor(s):
+        return s.encode('hex')
 
 class InsecurePath(Exception):
     pass
@@ -42,7 +47,7 @@ def _secureEnoughString():
     """
     Create a pseudorandom, 16-character string for use in secure filenames.
     """
-    return base64.urlsafe_b64encode(sha.new(os.urandom(64)).digest())[:16]
+    return armor(sha.new(randomBytes(64)).digest())[:16]
 
 class FilePath:
     """I am a path on the filesystem that only permits 'downwards' access.
