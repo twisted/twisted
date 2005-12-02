@@ -181,7 +181,7 @@ class FilePathTestCase(unittest.TestCase):
         self.failIf(self.path.exists())
 
     def testCopyTo(self):
-        self.assertRaises(OSError, self.path.copyTo, self.path.child('file1'))
+        self.assertRaises((OSError, IOError), self.path.copyTo, self.path.child('file1'))
         oldPaths = list(self.path.walk()) # Record initial state
         fp = filepath.FilePath(self.mktemp())
         self.path.copyTo(fp)
@@ -193,7 +193,7 @@ class FilePathTestCase(unittest.TestCase):
         self.assertEquals(newPaths, oldPaths)
 
     def testMoveTo(self):
-        self.assertRaises(OSError, self.path.moveTo, self.path.child('file1'))
+        self.assertRaises((OSError, IOError), self.path.moveTo, self.path.child('file1'))
         oldPaths = list(self.path.walk()) # Record initial state
         fp = filepath.FilePath(self.mktemp())
         self.path.moveTo(fp)
@@ -279,7 +279,7 @@ class FilePathTestCase(unittest.TestCase):
         nonexistent.open('w').close()
         existent = nonexistent
         del nonexistent
-        self.assertRaises(OSError, existent.open)
+        self.assertRaises((OSError, IOError), existent.open)
 
 
 from twisted.python import urlpath
