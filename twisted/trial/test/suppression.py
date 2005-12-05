@@ -3,7 +3,6 @@
 import cPickle as pickle
 import warnings
 
-from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.trial import unittest, runner, reporter, util, itrial
 from twisted.trial.test import common
 from twisted.python import log, failure

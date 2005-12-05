@@ -6,7 +6,7 @@ from twisted.trial import reporter, runner
 class TrialTest(unittest.TestCase):
     def setUp(self):
         self.output = StringIO.StringIO()
-        self.reporter = reporter.Reporter(stream=self.output)
+        self.reporter = reporter.TestResult()
         self.loader = runner.TestLoader()
 
 

@@ -8,7 +8,7 @@ from twisted.trial.test import detests, timeouts
 class TestSetUp(unittest.TestCase):
     def _loadSuite(self, klass):
         loader = runner.TestLoader()
-        r = reporter.Reporter(stream=StringIO.StringIO())
+        r = reporter.TestResult()
         s = loader.loadClass(klass)
         return r, s
 
@@ -70,7 +70,7 @@ class TestNeverFire(unittest.TestCase):
 
     def _loadSuite(self, klass):
         loader = runner.TestLoader()
-        r = reporter.Reporter(stream=StringIO.StringIO())
+        r = reporter.TestResult()
         s = loader.loadClass(klass)
         return r, s
 
@@ -91,7 +91,7 @@ class TestTester(unittest.TestCase):
         raise NotImplementedError("must override me")
 
     def runTest(self, name):
-        result = reporter.Reporter(stream=StringIO.StringIO())
+        result = reporter.TestResult()
         self.getTest(name).run(result)
         return result
 

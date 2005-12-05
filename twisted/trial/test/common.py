@@ -46,7 +46,7 @@ class BaseTest(unittest.TestCase):
 
 bogus = lambda *a, **kw: None
 
-class BogusReporter(reporter.TreeReporter):
+class BogusReporter(reporter.Reporter):
     tbformat = 'default'
     
     def __init__(self):

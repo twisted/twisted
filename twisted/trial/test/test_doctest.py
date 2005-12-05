@@ -12,7 +12,6 @@ import exceptions, sys, doctest
 from twisted import trial
 from twisted.trial import runner, unittest, reporter
 from twisted.trial import itrial
-from twisted.trial.reporter import  FAILURE, ERROR, SUCCESS
 from twisted.python import failure
 
 from twisted.trial.test import trialdoctest1, trialdoctest2, common
@@ -37,10 +36,9 @@ class TestRunners(unittest.TestCase):
 
     def test_expectedResults(self):
         suite = runner.DocTestSuite(trialdoctest1)
-        reporter = common.BogusReporter()
-        suite.run(reporter)
-        self.assertEqual(5, len(reporter.results[SUCCESS]))
+        result = reporter.TestResult()
+        suite.run(result)
+        self.assertEqual(5, len(result.successes))
         # doctest reports failures as errors in 2.3
-        self.assertEqual(2, len(reporter.results[ERROR])
-                         + len(reporter.results[FAILURE]))
+        self.assertEqual(2, len(result.errors) + len(result.failures))
 

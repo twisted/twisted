@@ -2,7 +2,6 @@ import cPickle as pickle
 import warnings
 import StringIO
 
-from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.trial import unittest, runner, reporter, util, itrial
 from twisted.python import log, failure, reflect
 from twisted.python.util import dsu
@@ -52,7 +51,7 @@ class TestAssertions(unittest.TestCase):
     def test_failingException_fails(self):
         test = runner.TestLoader().loadClass(TestAssertions.FailingTest)
         io = StringIO.StringIO()
-        result = reporter.Reporter(stream=io)
+        result = reporter.TestResult()
         test.run(result)
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(len(result.errors), 0)
@@ -305,7 +304,7 @@ class ResultsTestMixin:
     def loadSuite(self, suite):
         self.loader = runner.TestLoader()
         self.suite = self.loader.loadClass(suite)
-        self.reporter = reporter.Reporter(stream=StringIO.StringIO())
+        self.reporter = reporter.TestResult()
 
     def test_setUp(self):
         self.failUnless(self.reporter.wasSuccessful())
@@ -357,6 +356,12 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
 class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
     class SkippedClass(unittest.TestCase):
         skip = 'class'
+        def setUpClass(self):
+            self.__class__._setUpClassRan = True
+        def setUp(self):
+            self.__class__._setUpRan = True
+        def tearDownClass(self):
+            self.__class__._tearDownClassRan = True
         def test_skip1(self):
             raise SkipTest('skip1')
         def test_skip2(self):
@@ -369,9 +374,20 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
         
     def setUp(self):
         self.loadSuite(TestSkipClasses.SkippedClass)
+        TestSkipClasses.SkippedClass._setUpRan = False
+        TestSkipClasses.SkippedClass._setUpClassRan = False
+        TestSkipClasses.SkippedClass._tearDownClassRan = False
 
     def test_counting(self):
         self.assertCount(4)
+
+    def test_setUpRan(self):
+        self.suite(self.reporter)
+        self.failUnlessEqual(TestSkipClasses.SkippedClass._setUpRan, False)
+        self.failUnlessEqual(TestSkipClasses.SkippedClass._setUpClassRan,
+                             False)
+        self.failUnlessEqual(TestSkipClasses.SkippedClass._tearDownClassRan,
+                             False)
 
     def test_results(self):
         self.suite(self.reporter)
@@ -420,13 +436,15 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2']
-        reasonsGiven = [ r for t, e, r in self.reporter.expectedFailures ]
+        reasonsGiven = [ r.reason
+                         for t, e, r in self.reporter.expectedFailures ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
             
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = ['todo3']
-        reasonsGiven = [ r for t, r in self.reporter.unexpectedSuccesses ]
+        reasonsGiven = [ r.reason
+                         for t, r in self.reporter.unexpectedSuccesses ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
@@ -462,13 +480,15 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
-        reasonsGiven = [ r for t, e, r in self.reporter.expectedFailures ]
+        reasonsGiven = [ r.reason
+                         for t, e, r in self.reporter.expectedFailures ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
             
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
-        reasonsGiven = [ r for t, r in self.reporter.unexpectedSuccesses ]
+        reasonsGiven = [ r.reason
+                         for t, r in self.reporter.unexpectedSuccesses ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
@@ -520,12 +540,14 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2', 'todo5']
-        reasonsGotten = [ r for t, e, r in self.reporter.expectedFailures ]
+        reasonsGotten = [ r.reason
+                          for t, e, r in self.reporter.expectedFailures ]
         self.failUnlessEqual(expectedReasons, reasonsGotten)
 
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
-        expectedReasons = [(RuntimeError, 'todo7')]
-        reasonsGotten = [ r for t, r in self.reporter.unexpectedSuccesses ]
+        expectedReasons = [([RuntimeError], 'todo7')]
+        reasonsGotten = [ (r.errors, r.reason)
+                          for t, r in self.reporter.unexpectedSuccesses ]
         self.failUnlessEqual(expectedReasons, reasonsGotten)
 

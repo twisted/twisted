@@ -30,6 +30,35 @@ class FailTest(AssertionError):
     """Raised to indicate the current test has failed to pass."""
 
 
+class Todo(object):
+    def __init__(self, reason, errors=None):
+        self.reason = reason
+        self.errors = errors
+
+    def __repr__(self):
+        return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
+
+    def expected(self, failure):
+        if self.errors is None:
+            return True
+        for error in self.errors:
+            if failure.check(error):
+                return True
+        return False
+
+
+def makeTodo(value):
+    if isinstance(value, str):
+        return Todo(reason=value)
+    if isinstance(value, tuple):
+        errors, reason = value
+        try:
+            errors = list(errors)
+        except TypeError:
+            errors = [errors]
+        return Todo(reason=reason, errors=errors)
+
+
 class TestCase(pyunit.TestCase, object):
     zi.implements(itrial.ITestCase)
     failureException = FailTest
@@ -109,8 +138,9 @@ class TestCase(pyunit.TestCase, object):
         return ignored
 
     def _ebDeferTestMethod(self, f, result):
-        if self.getTodo() is not None and self._todoExpected(f):
-            result.addExpectedFailure(self, f, self._getTodoMessage())
+        todo = self.getTodo()
+        if todo is not None and todo.expected(f):
+            result.addExpectedFailure(self, f, todo)
         elif f.check(self.failureException, FailTest):
             result.addFailure(self, f)
         elif f.check(KeyboardInterrupt):
@@ -177,35 +207,11 @@ class TestCase(pyunit.TestCase, object):
         return util.acquireAttribute(self._parents, 'skip', None)
 
     def getTodo(self):
-        return util.acquireAttribute(self._parents, 'todo', None)
-
-    def _todoExpected(self, failure):
-        todo = self.getTodo()
+        todo = util.acquireAttribute(self._parents, 'todo', None)
         if todo is None:
-            return False
-        if isinstance(todo, str):
-            return True
-        elif isinstance(todo, tuple):
-            try:
-                expected = list(todo[0])
-            except TypeError:
-                expected = [todo[0]]
-            for error in expected:
-                if failure.check(error):
-                    return True
-            return False
-        else:
-            raise ValueError('%r is not a valid .todo attribute' % (todo,))
+            return None
+        return makeTodo(todo)
 
-    def _getTodoMessage(self):
-        todo = self.getTodo()
-        if todo is None or isinstance(todo, str):
-            return todo
-        elif isinstance(todo, tuple):
-            return todo[1]
-        else:
-            raise ValueError("%r is not a valid .todo attribute" % (todo,))
-    
     def getTimeout(self):
         timeout =  util.acquireAttribute(self._parents, 'timeout',
                                          util.DEFAULT_TIMEOUT_DURATION)

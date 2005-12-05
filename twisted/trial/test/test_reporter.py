@@ -12,10 +12,8 @@ import time
 import types
 from pprint import pformat, pprint
 
-from twisted.trial import unittest, runner
+from twisted.trial import unittest, runner, reporter
 from twisted.trial.test import common, erroneous
-from twisted.trial.reporter import DOUBLE_SEPARATOR, SEPARATOR
-import twisted.trial.reporter as reporter
 
 
 class TestReporter(common.RegistryBaseMixin):
@@ -30,14 +28,14 @@ class TestReporter(common.RegistryBaseMixin):
         lines = self.reporter.out.split('\n')
         while 1:
             if not lines:
-                raise FailTest, "DOUBLE_SEPARATOR not found in lines"
-            if lines[0] != DOUBLE_SEPARATOR:
+                raise FailTest, "double separator not found in lines"
+            if lines[0] != reporter.Reporter.doubleSeparator:
                 lines.pop(0)
             else:
                 return
 
         expect = [
-DOUBLE_SEPARATOR,
+reporter.Reporter.doubleSeparator,
 '[ERROR]: testTracebackReporting (twisted.trial.test.test_reporter.FailfulTests)',
 None,
 None,

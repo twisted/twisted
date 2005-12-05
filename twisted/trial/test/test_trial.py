@@ -9,7 +9,6 @@ from __future__ import nested_scopes
 
 __version__ = "$Revision: 1.17 $"[11:-2]
 
-from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.python import reflect, failure, log, util as pyutil, compat
 from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error, threads
@@ -25,36 +24,6 @@ import cPickle as pickle
 from cStringIO import StringIO
 
     
-class LogObserver:
-    channels = compat.adict(
-        foobar = True
-    )
-    def __init__(self, outputter=None):
-        self.outputter = outputter
-        if outputter is None:
-            self.outputter = lambda events, k: pyutil.println(''.join(events[k]))
-
-    def setOutputter(self, f):
-        if not callable(f):
-            raise TypeError, "argument to setOutputter must be a callable object"
-        self.outputter = f
-
-    def install(self):
-        log.addObserver(self)
-        return self
-
-    def remove(self):
-        # hack to get around trial's brokeness
-        if self in log.theLogPublisher.observers:
-            log.removeObserver(self)
-
-    def __call__(self, events):
-        for k in events:
-            if self.channels.get(k, None):
-                #self.outputter(events, k)
-                print repr(events)
-
-
 class _StdioProxy(pyutil.SubclassableCStringIO):
     """Use me to store IO"""
     def __init__(self, original):
@@ -102,49 +71,6 @@ class _StdioProxy(pyutil.SubclassableCStringIO):
     def truncate(self, size=None):
         return self.original.truncate(size)
 
-
-statdatum = {"foo": "bar", "baz": "spam"}
-
-class TestSkip(common.RegistryBaseMixin):
-    """
-    Test that setUp is not run when class is set to skip
-    """
-
-    def testSkippedClasses(self):
-        class SkipperTester(unittest.TestCase):
-
-            skip = 'yes'
-
-            errorStr = ''
-
-            def setUpClass(self):
-                '''
-                The class is set to skip, this should not be run
-                '''
-                SkipperTester.errorStr += "setUpClass should be skipped because the class has skip = 'yes'\n"
-
-            def tearDownClass(self):
-                '''
-                This method should also not run.
-                '''
-                SkipperTester.errorStr += "tearDownClass should be skipped because the class has skip = 'yes'\n"
-
-            def testSkip(self):
-                '''
-                The class is set to skip, this should not be run
-                '''
-                SkipperTester.errorStr += "testSkip should be skipped because the class has skip = 'yes'\n"
-
-        from twisted import trial
-        from twisted.trial.test.common import BogusReporter
-
-        loader = runner.TestLoader()
-        suite = loader.loadClass(SkipperTester)
-        suite.run(BogusReporter())
-        self.failIf(SkipperTester.errorStr, SkipperTester.errorStr)
-
-
-allMethods = ('setUpClass', 'setUp', 'tearDown', 'tearDownClass', 'method')
 
 class FunctionalTest(common.RegistryBaseMixin):
     """
@@ -221,9 +147,9 @@ class FunctionalTest(common.RegistryBaseMixin):
             self.run_a_suite(self.loader.loadClass(erroneous.TimingOutDeferred))
         finally:
             util.DEFAULT_TIMEOUT_DURATION = origTimeout 
-        self.assertEqual(0, len(self.reporter.results[FAILURE]))
-        self.assertEqual(1, len(self.reporter.results[ERROR]))
-        self.assertEqual(3, len(self.reporter.results[SUCCESS]))
+        self.assertEqual(0, len(self.reporter.failures))
+        self.assertEqual(1, len(self.reporter.errors))
+        self.assertEqual(3, len(self.reporter.successes))
         # two places to store stuff. neat.
         self.assertEqual(1, len(self.reporter.errors))
         self.assertEqual(0, len(self.reporter.failures))
@@ -251,8 +177,7 @@ class FunctionalTest(common.RegistryBaseMixin):
 class SuppressionTest(unittest.TestCase):
 
     def run_a_suite(self, suite):
-        from twisted.trial.test.common import BogusReporter
-        suite.run(BogusReporter())
+        suite.run(reporter.TestResult())
     
     def setUp(self):
         self.stream = StringIO()

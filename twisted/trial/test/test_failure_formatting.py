@@ -57,9 +57,7 @@ expectFailureInSetUp = [re.compile(r'.*twisted%(sep)sinternet%(sep)sdefer.py.*ma
                         re.compile(r'.*erroneous.FoolishError: I am a broken setUp method')]
 
 expectTestFailure = ['Running 1 tests.',
-                     re.compile('.*'),
-                     re.compile('.*'),
-                     reporter.DOUBLE_SEPARATOR,
+                     reporter.Reporter.doubleSeparator,
                      '[FAIL]: twisted.trial.test.common.FailfulTests.testFailure',
                      None,
                      None,
@@ -81,9 +79,7 @@ class TestFailureFormatting(common.RegistryBaseMixin):
             self.loader.loadClass(erroneous.TestFailureInSetUp)]))
         
         expect = ['Running 1 tests.',
-                  re.compile('.*'),
-                  re.compile('.*'),
-                  reporter.DOUBLE_SEPARATOR,
+                  reporter.Reporter.doubleSeparator,
                   '[ERROR]: twisted.trial.test.erroneous.TestFailureInSetUp.testMethod']
 
         expect.extend(expectFailureInSetUp)
@@ -124,8 +120,7 @@ class TestFailureFormatting(common.RegistryBaseMixin):
         output = self.reporter.out.splitlines()
         path = 'twisted.trial.test.trialdoctest2.unexpectedException'
         expect = ['Running 1 tests.',
-                  re.compile('.*'),
-                  reporter.DOUBLE_SEPARATOR,
+                  reporter.Reporter.doubleSeparator,
                   re.compile(r'\[(ERROR|FAIL)\]: .*[Dd]octest.*'
                              + re.escape(path))]
         self.stringComparison(expect, output)
