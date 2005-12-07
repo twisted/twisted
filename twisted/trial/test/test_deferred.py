@@ -105,6 +105,11 @@ class TestDeferred(TestTester):
         self.failUnless(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
 
+    def test_passGenerated(self):
+        result = self.runTest('test_passGenerated')
+        self.failUnless(result.wasSuccessful())
+        self.failUnlessEqual(result.testsRun, 1)
+
     def test_fail(self):
         result = self.runTest('test_fail')
         self.failIf(result.wasSuccessful())

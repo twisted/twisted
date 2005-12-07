@@ -40,6 +40,11 @@ class TestFailureInTearDownClass(BaseTest):
         raise FoolishError, "I am a broken setUp method"
 
 
+class TestRegularFail(unittest.TestCase):
+    def test_fail(self):
+        self.fail("I fail")
+
+
 class TestSkipTestCase(BaseTest):
     pass
 

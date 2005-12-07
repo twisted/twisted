@@ -147,6 +147,17 @@ class LoaderTest(packages.PackageTest):
         self.failUnlessEqual(['test_foo'],
                              [test._testMethodName for test in suite._tests])
 
+    def test_loadFailingMethod(self):
+        # test added for issue1353
+        from twisted.trial import reporter
+        import erroneous
+        suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
+        result = reporter.TestResult()
+        suite.run(result)
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failUnlessEqual(len(result.errors), 1)
+    test_loadFailingMethod.todo = "loaded methods don't actually get run!"
+
     def test_loadNonMethod(self):
         import sample
         self.failUnlessRaises(TypeError, self.loader.loadMethod, sample)

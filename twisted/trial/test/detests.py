@@ -91,8 +91,16 @@ class DeferredTests(unittest.TestCase):
     def _touchClass(self, ignored):
         self.__class__.touched = True
 
+    def setUp(self):
+        self.__class__.touched = False
+
     def test_pass(self):
         return defer.succeed('success')
+
+    def test_passGenerated(self):
+        self._touchClass(None)
+        yield None
+    test_passGenerated = defer.deferredGenerator(test_passGenerated)
 
     def test_fail(self):
         return defer.fail(self.failureException('I fail'))
