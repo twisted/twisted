@@ -155,8 +155,7 @@ class LoaderTest(packages.PackageTest):
         result = reporter.TestResult()
         suite.run(result)
         self.failUnlessEqual(result.testsRun, 1)
-        self.failUnlessEqual(len(result.errors), 1)
-    test_loadFailingMethod.todo = "loaded methods don't actually get run!"
+        self.failUnlessEqual(len(result.failures), 1)
 
     def test_loadNonMethod(self):
         import sample
