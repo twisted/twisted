@@ -84,12 +84,25 @@
     that module.</p>
 
     <p>Depending on the situation, it is acceptable to have imports that
-       look like this:
-       <pre class="python">from twisted.internet.defer import Deferred</pre>
-       or like this: 
-       <pre class="python">from twisted.internet import defer</pre> 
-       That is, modules should import <em>modules</em> or 
-       <em>classes and functions</em>, but not <em>packages</em>.</p>
+    look like this:
+    <pre class="python">from twisted.internet.defer import Deferred</pre>
+    or like this:
+    <pre class="python">from twisted.internet import defer</pre>
+    That is, modules should import <em>modules</em> or <em>classes and
+    functions</em>, but not <em>packages</em>.</p>
+
+    <p>Wildcard import syntax may not be used by code in Twisted.  These
+    imports lead to code which is difficult to read and maintain by
+    introducing complexity which strains human readers and automated tools
+    alike.  If you find yourself with many imports to make from a single
+    module and wish to save typing, consider importing the module itself,
+    rather than its attributes.</p>
+
+    <p><em>Relative imports</em> (or <em>sibling imports</em>) may not be
+    used by code in Twisted.  Relative imports allow certain circularities
+    to be introduced which can ultimately lead to unimportable modules or
+    duplicate instances of a single module.  Relative imports also make the
+    task of refactoring more difficult.</p>
 
     <h2>Packages</h2>
 
