@@ -27,6 +27,7 @@ from twisted.python import failure
 from twisted import cred
 import twisted.cred.checkers
 import twisted.cred.credentials
+from twisted.python.runtime import platform
 
 # System imports
 import time, string, re, base64, types, socket, os, random, hmac
@@ -47,7 +48,13 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-DNSNAME = socket.getfqdn() # Cache the hostname
+# Cache the hostname (XXX Yes - this is broken)
+if platform.isMacOSX():
+    # On OS X, getfqdn() is ridiculously slow - use the
+    # probably-identical-but-sometimes-not gethostname() there.
+    DNSNAME = socket.gethostname()
+else:
+    DNSNAME = socket.getfqdn()
 
 # Used for fast success code lookup
 SUCCESS = dict(map(None, range(200, 300), []))
