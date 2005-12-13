@@ -86,10 +86,12 @@ class IFileSystemContainer(IFileSystemNode):
         An error is raised if the folder already exists.
         """
 
-    def createFile(self, childName):
+    def createFile(self, childName, exclusive=True):
         """
         Creates a new file named childName under this folder.
-        An error is raised if the file already exists.
+
+        If exclusive is True (the default), an error is raised if the file
+        already exists.
         """
 
     def exists(self, childName):

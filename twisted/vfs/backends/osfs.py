@@ -8,6 +8,7 @@ import os
 import os.path
 import stat
 import time
+import errno
 
 from twisted.vfs import ivfs
 
@@ -55,8 +56,19 @@ class OSFile(OSNode):
 
     implements(ivfs.IFileSystemLeaf)
 
-    def create(self):
-        f = open(self.realPath, "w")
+    def create(self, exclusive=True):
+        flags = os.O_WRONLY | os.O_CREAT
+        if exclusive:
+            flags |= os.O_EXCL
+        try:
+            fd = os.open(self.realPath, flags)
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                raise ivfs.VFSError("File %r already exists." % self.name)
+
+            # Something unexpected happened.  Let it propagate.
+            raise
+        f = os.fdopen(fd, "w")
         f.close()
 
     def open(self, flags):
@@ -135,11 +147,11 @@ class OSDirectory(OSNode):
         child.create()
         return child
 
-    def createFile(self, childName):
+    def createFile(self, childName, exclusive=True):
         """See IFileSystemContainer."""
         child = self.childFileFactory()(os.path.join(self.realPath, childName),
                                         childName, self)
-        child.create()
+        child.create(exclusive=exclusive)
         return child
 
     def create(self):

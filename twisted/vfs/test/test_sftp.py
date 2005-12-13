@@ -57,6 +57,10 @@ class SFTPAdapterTest(unittest.TestCase):
         self.assertRaises(ivfs.VFSError,
                        self.sftp.openFile, 'file.txt', flags, None)
 
+        # But if the file doesn't exist, then it should work.
+        child = self.sftp.openFile('new file.txt', flags, None)
+        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+
     def test_removeFile(self):
         self.sftp.removeFile('/file.txt')
         self._assertNodes('/', ['.', '..', 'ned'])

@@ -8,7 +8,7 @@ import shutil
 from twisted.trial import unittest
 
 from twisted.vfs.backends import osfs, inmem
-from twisted.vfs.ivfs import IFileSystemContainer, IFileSystemLeaf
+from twisted.vfs.ivfs import IFileSystemContainer, IFileSystemLeaf, VFSError
 from twisted.vfs import pathutils
 
 
@@ -52,4 +52,19 @@ class OSVFSTest(unittest.TestCase):
         self.assert_(isinstance(osdir.createDirectory('new'), osfs.OSDirectory))
         self.assertNot(isinstance(osdir.createDirectory('new2'), OSDirSubclass))
         
+    def test_createFileExclusive(self):
+        osdir = osfs.OSDirectory(self.tmpdir)
+
+        # Creating a new file with exclusivity should pass
+        child = osdir.createFile('foo', exclusive=True)
+        self.failUnless(IFileSystemLeaf.providedBy(child))
+        self.assertIn('foo', [name for name, child in osdir.children()])
+
+        # Creating an existing file with exclusivity should fail.
+        self.assertRaises(VFSError, osdir.createFile, 'foo', exclusive=True)
+
+        # Creating an existing file unexclusively should pass.
+        child = osdir.createFile('foo', exclusive=False)
+        self.failUnless(IFileSystemLeaf.providedBy(child))
+        self.assertIn('foo', [name for name, child in osdir.children()])
 

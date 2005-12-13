@@ -38,3 +38,13 @@ class AdhocDirectory:
         node.parent = self
         self._children[name] = node
 
+    def createDirectory(self, childName):
+        # Users cannot add directories to an AdhocDirectory, so raise
+        # PermissionError.
+        raise ivfs.PermissionError()
+    
+    def createFile(self, childName, exclusive=True):
+        # AdhocDirectories cannot contain files directly, so give permission
+        # denied if someone tries to create one.
+        raise ivfs.PermissionError()
+        
