@@ -4,6 +4,8 @@
 
 from __future__ import generators
 
+from twisted.python.runtime import platform
+
 import os
 import errno
 import base64
@@ -85,6 +87,9 @@ class FilePath:
         return d
 
     def child(self, path):
+        if platform.isWindows() and path.count(":"):
+            # Catch paths like C:blah that don't have a slash
+            raise InsecurePath("%r contains a colon." % (path,))
         norm = normpath(path)
         if slash in norm:
             raise InsecurePath("%r contains one or more directory separators" % (path,))

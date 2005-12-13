@@ -63,8 +63,11 @@ class Platform:
                 return 1
             except WindowsError:
                 return 0
-        # not windows at all...
+        # not windows NT
         return 0
+    
+    def isWindows(self):
+        return self.getType() == 'win32'
 
     def supportsThreads(self):
         """Can threads be created?
