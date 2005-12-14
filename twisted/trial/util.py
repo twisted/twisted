@@ -187,6 +187,14 @@ class _Janitor(object):
     def doGcCollect(cls):
          gc.collect()
 
+def fireWhenDoneFunc(d, f):
+    """Returns closure that when called calls f and then callbacks d.
+    """
+    def newf(*args, **kw):
+        rtn = f(*args, **kw)
+        d.callback('')
+        return rtn
+    return util.mergeFunctionMetadata(f, newf)
 
 def spinUntil(f, timeout=DEFAULT_TIMEOUT_DURATION,
               msg="condition not met before timeout"):

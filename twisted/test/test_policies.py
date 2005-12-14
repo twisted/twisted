@@ -8,14 +8,14 @@ from __future__ import nested_scopes
 from StringIO import StringIO
 
 from twisted.trial import unittest
+from twisted.trial.util import fireWhenDoneFunc
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.test.test_task import Clock
 
 import time
 
-from twisted.internet import protocol, reactor, address
+from twisted.internet import protocol, reactor, address, defer
 from twisted.protocols import policies
-
 
 class StringIOWithoutClosing(StringIO):
     def close(self): pass
@@ -24,12 +24,18 @@ class SimpleProtocol(protocol.Protocol):
 
     connected = disconnected = 0
     buffer = ""
+    
+    def __init__(self):
+        self.dConnected = defer.Deferred()
+        self.dDisconnected = defer.Deferred()
 
     def connectionMade(self):
         self.connected = 1
+        self.dConnected.callback('')
 
     def connectionLost(self, reason):
         self.disconnected = 1
+        self.dDisconnected.callback('')
 
     def dataReceived(self, data):
         self.buffer += data
@@ -109,30 +115,52 @@ class ThrottlingTestCase(unittest.TestCase):
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
         tServer = policies.ThrottlingFactory(server, 2)
+        theDeferred = defer.Deferred()
+        tServer.startFactory = fireWhenDoneFunc(theDeferred, tServer.startFactory)
+        
+        # Start listening
         p = reactor.listenTCP(0, tServer, interface="127.0.0.1")
         n = p.getHost().port
-        self.doIterations()
+        
+        def _connect123(results):
+            for c in c1, c2, c3:
+                p = reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
+            deferreds = [c.dConnected for c in c1, c2, c3]
+            deferreds.append(c3.dDisconnected)
+            return defer.DeferredList(deferreds)
 
-        for c in c1, c2, c3:
-            reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
-            self.doIterations()
+        def _check123(results):
+            self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
+            self.assertEquals([c.disconnected for c in c1, c2, c3], [0, 0, 1])
+            self.assertEquals(len(tServer.protocols.keys()), 2)
+            return results
 
-        self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
-        self.assertEquals([c.disconnected for c in c1, c2, c3], [0, 0, 1])
-        self.assertEquals(len(tServer.protocols.keys()), 2)
+        def _lose1(results):
+            # disconnect one protocol and now another should be able to connect
+            c1.transport.loseConnection()
+            return c1.dDisconnected
 
-        # disconnect one protocol and now another should be able to connect
-        c1.transport.loseConnection()
-        self.doIterations()
-        reactor.connectTCP("127.0.0.1", n, SillyFactory(c4))
-        self.doIterations()
+        def _connect4(results):
+            reactor.connectTCP("127.0.0.1", n, SillyFactory(c4))
+            return c4.dConnected
 
-        self.assertEquals(c4.connected, 1)
-        self.assertEquals(c4.disconnected, 0)
+        def _check4(results):
+            self.assertEquals(c4.connected, 1)
+            self.assertEquals(c4.disconnected, 0)
+            return results
 
-        for c in c2, c4: c.transport.loseConnection()
-        p.stopListening()
-        self.doIterations()
+        def _cleanup(results):
+            for c in c2, c4: c.transport.loseConnection()
+            p.stopListening()
+            return defer.DeferredList([c2.dDisconnected, c4.dDisconnected])
+        
+        theDeferred.addCallback(_connect123)
+        theDeferred.addCallback(_check123)
+        theDeferred.addCallback(_lose1)
+        theDeferred.addCallback(_connect4)
+        theDeferred.addCallback(_check4)
+        theDeferred.addCallback(_cleanup)
+        return theDeferred
 
     def testWriteLimit(self):
         server = Server()

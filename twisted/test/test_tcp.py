@@ -10,7 +10,7 @@ from __future__ import nested_scopes
 import socket, time, os
 from zope.interface import implements
 from twisted.trial import unittest, util
-from twisted.trial.util import spinWhile, spinUntil
+from twisted.trial.util import spinWhile, spinUntil, fireWhenDoneFunc
 from  twisted.python import log
 
 from twisted.internet import protocol, reactor, defer, interfaces
@@ -451,38 +451,67 @@ class CannotBindTestCase(PortCleanerUpper):
         return self.cleanPorts(*self.ports)
 
     def testClientBind(self):
-        f = MyServerFactory()
-        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        theDeferred = defer.Deferred()
+        sf = MyServerFactory()
+        sf.startFactory = fireWhenDoneFunc(theDeferred, sf.startFactory)
+        p = reactor.listenTCP(0, sf, interface="127.0.0.1")
         self.ports.append(p)
         
-        factory = MyClientFactory()
-        reactor.connectTCP("127.0.0.1", p.getHost().port, factory,
-                           bindAddress=("127.0.0.1", 0))
-
-        spinUntil(lambda :factory.protocol is not None)
+        def _connect1(results):
+            d = defer.Deferred()
+            cf1 = MyClientFactory()
+            cf1.buildProtocol = fireWhenDoneFunc(d, cf1.buildProtocol)
+            reactor.connectTCP("127.0.0.1", p.getHost().port, cf1,
+                               bindAddress=("127.0.0.1", 0))
+            d.addCallback(_conmade, cf1)
+            return d
         
-        self.assertEquals(factory.protocol.made, 1)
-
-        port = factory.protocol.transport.getHost().port
-        f2 = MyClientFactory()
-        reactor.connectTCP("127.0.0.1", p.getHost().port, f2,
-                           bindAddress=("127.0.0.1", port))
-
-
-        spinUntil(lambda :f2.failed)
+        def _conmade(results, cf1):
+            d = defer.Deferred()
+            cf1.protocol.connectionMade = fireWhenDoneFunc(d, cf1.protocol.connectionMade)
+            d.addCallback(_check1connect2, cf1)
+            return d
         
-        self.assertEquals(f2.failed, 1)
-        f2.reason.trap(error.ConnectBindError)
-        self.assert_(f2.reason.check(error.ConnectBindError))
-        self.assertEquals(f2.stopped, 1)
+        def _check1connect2(results, cf1):
+            self.assertEquals(cf1.protocol.made, 1)
+    
+            d1 = defer.Deferred()
+            d2 = defer.Deferred()
+            port = cf1.protocol.transport.getHost().port
+            cf2 = MyClientFactory()
+            cf2.clientConnectionFailed = fireWhenDoneFunc(d1, cf2.clientConnectionFailed)
+            cf2.stopFactory = fireWhenDoneFunc(d2, cf2.stopFactory)
+            reactor.connectTCP("127.0.0.1", p.getHost().port, cf2,
+                               bindAddress=("127.0.0.1", port))
+            d1.addCallback(_check2failed, cf1, cf2)
+            d2.addCallback(_check2stopped, cf1, cf2)
+            dl = defer.DeferredList([d1, d2])
+            dl.addCallback(_stop, cf1, cf2)
+            return dl
+
+        def _check2failed(results, cf1, cf2):
+            self.assertEquals(cf2.failed, 1)
+            cf2.reason.trap(error.ConnectBindError)
+            self.assert_(cf2.reason.check(error.ConnectBindError))
+            return results
+
+        def _check2stopped(results, cf1, cf2):
+            self.assertEquals(cf2.stopped, 1)
+            return results
+
+        def _stop(results, cf1, cf2):
+            d = defer.Deferred()
+            d.addCallback(_check1cleanup, cf1)
+            cf1.stopFactory = fireWhenDoneFunc(d, cf1.stopFactory)
+            cf1.protocol.transport.loseConnection()
+            return d
+
+        def _check1cleanup(results, cf1):
+            self.assertEquals(cf1.stopped, 1)
+            return self.cleanPorts(*self.ports)
         
-        p.stopListening()
-        factory.protocol.transport.loseConnection()
-
-        spinWhile(lambda :p.connected)
-
-        self.assertEquals(factory.stopped, 1)
-        return self.cleanPorts(*self.ports)
+        theDeferred.addCallback(_connect1)
+        return theDeferred
 
 class MyOtherClientFactory(protocol.ClientFactory):
     def buildProtocol(self, address):
