@@ -140,7 +140,44 @@ class TestContainer(BaseCase):
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": 6}, "FooBar"))
+
+    def test_readAllInput(self):
+        def application(environ, start_response):
+            input = environ['wsgi.input']
+            out = input.read(-1)
+            start_response("200 OK", {})
+            return [out]
         
+        return self.assertResponse(
+            (WSGI(application), 'http://host/', {}, None, None, '', "This is some content"),
+            (200, {"Content-Length": 20}, "This is some content"))
+
+    def test_readInputLines(self):
+        def application(environ, start_response):
+            input = environ['wsgi.input']
+            out = 'X'.join(input.readlines())
+            start_response("200 OK", {})
+            return [out]
+        
+        return self.assertResponse(
+            (WSGI(application), 'http://host/', {}, None, None, '', "These\nare\nlines"),
+            (200, {"Content-Length": 18}, "These\nXare\nXlines\n"))
+
+    def test_readInputMixed(self):
+        def application(environ, start_response):
+            input = environ['wsgi.input']
+            out = [input.read(5)]
+            out += ["X", input.readline()]
+            out += ["X", input.read(1)]
+            out += ["X", input.readline()]
+            
+            start_response("200 OK", {})
+            return out
+        
+        return self.assertResponse(
+            (WSGI(application), 'http://host/', {}, None, None, '', "Line blah blah\nOh Line\n"),
+            (200, {"Content-Length": 26}, "Line Xblah blah\nXOXh Line\n"))
+
 class TestWSGIEnvironment(BaseCase):
     """
     Test that the WSGI container does everything we expect it to do

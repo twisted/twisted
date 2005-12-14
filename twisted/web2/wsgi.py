@@ -61,13 +61,15 @@ class InputStream(object):
         
     def read(self, size=None):
         # Called in application thread
+        if size < 0:
+            size = None
         return callInReactor(self.stream.readExactly, size)
 
     def readline(self):
         # Called in application thread
         return callInReactor(self.stream.readline, '\n')+'\n'
     
-    def readlines(self, hint):
+    def readlines(self, hint=None):
         # Called in application thread
         data = self.read()
         return [s+'\n' for s in data.split('\n')]

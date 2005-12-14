@@ -991,6 +991,9 @@ class BufferedStream(object):
     def readExactly(self, size=None):
         """Read exactly size bytes of data, or, if size is None, read
         the entire stream into a string."""
+        if size is not None and size < 0:
+            raise ValueError("readExactly: size cannot be negative: %s", size)
+        
         def gotdata():
             data = self.data
             if size is not None and len(data) >= size:
