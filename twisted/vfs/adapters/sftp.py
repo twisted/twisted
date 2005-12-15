@@ -11,6 +11,7 @@ from twisted.conch.ssh.filetransfer import ISFTPServer, FileTransferServer
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
 from twisted.conch.ssh.filetransfer import SFTPError
 from twisted.conch.ssh.filetransfer import FX_PERMISSION_DENIED, FX_FAILURE
+from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE
 from twisted.conch.ssh import session
 from twisted.conch.ls import lsLine
 
@@ -71,7 +72,12 @@ class AdaptFileSystemUserToISFTP:
 
         pathSegments = self.filesystem.splitPath(filename)
         dirname, basename = pathSegments[:-1], pathSegments[-1]
-        parentNode = self.filesystem.fetch('/'.join(dirname))
+        try:
+            parentNode = self.filesystem.fetch('/'.join(dirname))
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        except KeyError, e: # XXX: awful exception to catch
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
         if createPlease:
             child = parentNode.createFile(basename, exclusive)
         elif parentNode.exists(basename):
@@ -95,7 +101,12 @@ class AdaptFileSystemUserToISFTP:
                 oldNode = self.filesystem.fetch(oldpath)
                 newpath = self.filesystem.joinPath(
                     newpath, self.filesystem.basename(oldpath))
-        self.filesystem.fetch(oldpath).rename(newpath)
+        try:
+            old = self.filesystem.fetch(oldpath)
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        else:
+            old.rename(newpath)
 
     def makeDirectory(self, path, attrs):
         dirname  = self.filesystem.dirname(path)

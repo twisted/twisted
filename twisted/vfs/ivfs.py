@@ -6,6 +6,9 @@ class VFSError(Exception):
 class PermissionError(VFSError):
     """The user does not have permission to perform the requested operation."""
 
+class NotFoundError(VFSError):
+    """The file or directory does not exist."""
+
 class IFileSystemNode(Interface):
 
     parent = Attribute(

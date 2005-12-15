@@ -27,6 +27,7 @@ class _FakeNode:
                 "Cannot rename over the top of an existing directory")
         self.name = pathutils.basename(pathutils.basename(newName))
         newParent._children[self.name] = self
+        self.parent = newParent
 
 
 class FakeDirectory(_FakeNode):

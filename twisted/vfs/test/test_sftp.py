@@ -1,20 +1,32 @@
+import os
+
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT, FXF_APPEND, FXF_EXCL
 from twisted.trial import unittest
 
 from twisted.vfs import ivfs, pathutils
 from twisted.vfs.adapters import sftp
-from twisted.vfs.backends import inmem
+from twisted.vfs.backends import inmem, osfs
 
 sftpAttrs = ['size', 'uid', 'gid', 'nlink', 'mtime', 'atime', 'permissions']
 sftpAttrs.sort()
 
 class SFTPAdapterTest(unittest.TestCase):
+
+    def rootDir(self):
+        return inmem.FakeDirectory()
+
     def setUp(self):
-        root = inmem.FakeDirectory()
+        root = self.rootDir()
+
+        # Create a subdirectory 'ned'
+        self.ned = ned = root.createDirectory('ned')
+
+        # Create a file 'file.txt'
+        self.f = f = root.createFile('file.txt')
+        f.open(os.O_WRONLY).writeChunk(0, 'wobble\n')
+        f.close()
+
         filesystem = pathutils.FileSystem( root )
-        self.ned = ned = inmem.FakeDirectory('ned', root)
-        self.f = f = inmem.FakeFile('file.txt', root, 'wobble\n')
-        root._children = { 'ned' : ned, 'file.txt' : f }
         self.filesystem = filesystem
         self.avatar = sftp.VFSConchUser('radix', root)
         self.sftp = sftp.AdaptFileSystemUserToISFTP(self.avatar)
@@ -69,10 +81,21 @@ class SFTPAdapterTest(unittest.TestCase):
         self.sftp.renameFile('/file.txt', '/radixiscool.txt')
         self._assertNodes('/', ['.', '..', 'ned', 'radixiscool.txt'])
 
+    def test_renameFileRelative(self):
+        self.sftp.renameFile('file.txt', 'radixiscool.txt')
+        self._assertNodes('/', ['.', '..', 'ned', 'radixiscool.txt'])
+
     def test_renameToDirectory(self):
         self.sftp.renameFile('/file.txt', '/ned')
         self._assertNodes('/', ['.', '..', 'ned'])
         self._assertNodes('/ned', ['.', '..', 'file.txt'])
+
+    def test_renameInDirectory(self):
+        self.sftp.renameFile('/file.txt', '/ned')
+        self._assertNodes('/', ['.', '..', 'ned'])
+        self._assertNodes('/ned', ['.', '..', 'file.txt'])
+        self.sftp.renameFile('/ned/file.txt', '/ned/file2.txt')
+        self._assertNodes('/ned', ['.', '..', 'file2.txt'])
 
     def test_makeDirectory(self):
         self.sftp.makeDirectory('/dir', None)
@@ -101,4 +124,11 @@ class SFTPAdapterTest(unittest.TestCase):
             keys = attrs.keys()
             keys.sort()
             self.failUnless(sftpAttrs, keys)
+
+
+class SFTPAdapterOSFSTest(SFTPAdapterTest):
+    def rootDir(self):
+        path = self.mktemp()
+        os.mkdir(path)
+        return osfs.OSDirectory(path)
 

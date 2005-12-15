@@ -43,10 +43,17 @@ class OSNode:
 
 
     def rename(self, newName):
-        newName = os.path.join(os.path.dirname(self.realPath), newName)
-        os.rename(self.realPath, newName)
-        self.realPath = newName
+        from twisted.vfs import pathutils
+        newParent = pathutils.fetch(pathutils.getRoot(self),
+                                    pathutils.dirname(newName))
+        # XXX spiv 2005-12-15
+        # assumes newParent is also an OSDirectory.  Probably should politely
+        # decline (rather than break with an undefined error) if it's not.
+        newPath = os.path.join(newParent.realPath, pathutils.basename(newName))
+        os.rename(self.realPath, newPath)
+        self.realPath = newPath
         self.name = newName
+        self.parent = newParent
 
     def remove(self):
         raise NotImplementedError("Override me.")
@@ -106,7 +113,7 @@ class OSDirectory(OSNode):
         fullPath = os.path.join(self.realPath, childName)
 
         if not os.path.exists(fullPath):
-            raise ivfs.VFSError("path not found: %s" % childName)
+            raise ivfs.NotFoundError(childName)
 
         if os.path.isdir(fullPath):
             nodeFactory = self.childDirFactory()
