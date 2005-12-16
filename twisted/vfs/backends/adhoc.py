@@ -26,7 +26,10 @@ class AdhocDirectory:
             for childName in self._children.keys() ]
 
     def child(self, childName):
-        return self._children[childName]
+        try:
+            return self._children[childName]
+        except KeyError:
+            raise ivfs.NotFoundError(childName)
 
     def getMetadata(self):
         return {}

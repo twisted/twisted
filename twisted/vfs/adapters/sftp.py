@@ -112,9 +112,11 @@ class AdaptFileSystemUserToISFTP:
         dirname  = self.filesystem.dirname(path)
         basename = self.filesystem.basename(path)
         try:
-            self.filesystem.fetch(dirname).createDirectory(basename)
+            return self.filesystem.fetch(dirname).createDirectory(basename)
         except ivfs.PermissionError, e:
             raise SFTPError(FX_PERMISSION_DENIED, str(e))
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
         except ivfs.VFSError, e:
             raise SFTPError(FX_FAILURE, str(e))
 
