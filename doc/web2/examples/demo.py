@@ -30,7 +30,7 @@ def simple_wsgi_app(environ, start_response):
 
 ### Demonstrate a simple resource which renders slowly.
 class Sleepy(resource.Resource):
-    def render(self, ctx):
+    def render(self, req):
         # Create a stream object which can be written in pieces.
         s=stream.ProducerStream()
         # Write a string, and then, later, write another string, and
@@ -46,9 +46,7 @@ class Sleepy(resource.Resource):
 
 ### Form posting
 class FormPost(resource.PostableResource):
-    def render(self, ctx):
-        req = iweb.IRequest(ctx)
-        
+    def render(self, req):
         return http.Response(responsecode.OK,
                              {'content-type': http_headers.MimeType('text', 'html')},
                              """
@@ -75,7 +73,7 @@ class Toplevel(resource.Resource):
 
     # Render the resource. Here the stream is a string, which will get
     # adapted to a MemoryStream object.
-    def render(self, ctx):
+    def render(self, req):
         contents = """<html>
 <head><title>Twisted.web2 demo server</title><head>
 <body>
