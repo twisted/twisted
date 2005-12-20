@@ -1,69 +1,14 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
+# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
-import re, os, sys
+import re, os, sys, StringIO
 
 from twisted.trial.test import erroneous, common
 from twisted.trial import itrial, unittest, reporter, runner
 from twisted.python import failure
 
-from pprint import pformat, pprint
-
-class BogusError(Exception):
-    pass
-
-ERROR_MSG = "i did something dumb"
-
-
-def trimFilename(name, N):
-    """extracts the last N path elements of a path and returns them
-    as a string, preceeded by an elipsis and separated by os.sep
-    """
-    # XXX: this function is *not* perfect
-    # if N > num path elements you still get an elipsis prepended
-    L = []
-    drive, name = os.path.splitdrive(name)
-    while 1:
-        head, tail = os.path.split(name)
-        L.insert(0, tail)
-        if not head or head == os.sep:
-            break
-        name = head
-    if drive:
-        L.insert(0, drive)
-    if len(L) <= N:
-        ret = "%s" % (os.path.join(*L),)
-    else:
-        ret = "...%s" % os.path.join(*L[-N:])
-    return ret
-
-
-def gimmeAFailure():
-    f = None
-    try:
-        raise BogusError, ERROR_MSG
-    except:
-        f = failure.Failure()
-    return f
-
-re_psep = re.escape(os.sep)
-
-expectFailureInSetUp = [re.compile(r'.*twisted%(sep)sinternet%(sep)sdefer.py.*maybeDeferred' % {'sep': re_psep}), # XXX: this may break
-                        None,
-                        re.compile(r'.*test%(sep)serroneous.py.*in setUp' % {'sep': re_psep}),
-                        re.compile(r'.*raise FoolishError.*'),
-                        re.compile(r'.*erroneous.FoolishError: I am a broken setUp method')]
-
-expectTestFailure = ['Running 1 tests.',
-                     reporter.Reporter.doubleSeparator,
-                     '[FAIL]: twisted.trial.test.common.FailfulTests.testFailure',
-                     None,
-                     None,
-                     re.compile(r'.*common.py.*in testFailure'),
-                     None,
-                     'twisted.trial.unittest.FailTest: %s' % (common.FAILURE_MSG,)]
 
 class TestFailureFormatting(common.RegistryBaseMixin):
     def setUp(self):
@@ -75,37 +20,36 @@ class TestFailureFormatting(common.RegistryBaseMixin):
         # this should be in test_reporter, and should be testing output summaries
         # not run() side effects. Until then wrap it in TrialSuite which triggers
         # the output side effects
-        self.run_a_suite(runner.TrialSuite([
-            self.loader.loadClass(erroneous.TestFailureInSetUp)]))
-        
-        expect = ['Running 1 tests.',
-                  reporter.Reporter.doubleSeparator,
-                  '[ERROR]: twisted.trial.test.erroneous.TestFailureInSetUp.testMethod']
-
-        expect.extend(expectFailureInSetUp)
-        self.stringComparison(expect, self.reporter.out.splitlines())
+        suite = self.loader.loadClass(erroneous.TestFailureInSetUp)
+        output = StringIO.StringIO()
+        result = reporter.Reporter(output)
+        suite.run(result)
+        result.printErrors()
+        output = output.getvalue().splitlines()
+        match = [re.compile(r'^=+$'),
+                 ('[ERROR]: twisted.trial.test.erroneous.'
+                  'TestFailureInSetUp.testMethod'),
+                 re.compile(r'^\s+File .*erroneous\.py., line \d+, in setUp$'),
+                 re.compile(r'^\s+raise FoolishError, '
+                            r'.I am a broken setUp method.$'),
+                 ('twisted.trial.test.erroneous.FoolishError: '
+                  'I am a broken setUp method')]
+        self.stringComparison(match, output)
 
     def testFormatFailedMethod(self):
-        # FIXME
-        # this should be in test_reporter, and should be testing output summaries
-        # not run() side effects. Until then wrap it in TrialSuite which triggers
-        # the output side effects
-        self.run_a_suite(runner.TrialSuite([self.loader.loadMethod(
-            common.FailfulTests.testFailure)]))
-        self.stringComparison(expectTestFailure,
-                              self.reporter.out.splitlines())
-
-    def testTrimFilename(self):
-        self.checkReporterSetup = False
-        path = os.sep.join(['foo', 'bar', 'baz', 'spam', 'spunk'])
-
-        out = trimFilename(path, 3)
-        s = "...%s" % (os.sep.join(['baz','spam','spunk']),)
-        self.assertEqual(out, s)
-        
-        out = trimFilename(path, 10)
-        s = os.sep.join(['foo','bar','baz','spam','spunk'])
-        self.assertEqual(out, s)
+        # FIXME - this should be in test_reporter
+        suite = self.loader.loadMethod(common.FailfulTests.testFailure)
+        output = StringIO.StringIO()
+        result = reporter.Reporter(output)
+        suite.run(result)
+        result.printErrors()
+        output = output.getvalue().splitlines()
+        match = [re.compile(r'^=+$'),
+                 r'[FAIL]: twisted.trial.test.common.FailfulTests.testFailure',
+                 re.compile(r'^\s+File .*common\.py., line \d+, in testFailure$'),
+                 re.compile(r'^\s+raise unittest.FailTest, FAILURE_MSG$'),
+                 'twisted.trial.unittest.FailTest: this test failed']
+        self.stringComparison(match, output)
 
     def testDoctestError(self):
         if sys.version_info[0:2] < (2, 3):

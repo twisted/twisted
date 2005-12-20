@@ -10,7 +10,7 @@
 API Stability: Unstable
 """
 
-import sys, types
+import sys, types, os
 import time
 import warnings
 
@@ -159,10 +159,14 @@ class Reporter(TestResult):
                       BrokenTestCaseWarning)
 
     def _trimFrame(self, fail):
-        if len(fail.frames) < 2:
+        if len(fail.frames) < 3:
             return fail.frames
         oldFrames = fail.frames[:]
-        del fail.frames[1]
+        fail.frames = fail.frames[2:]
+        f = fail.frames[-1]
+        if (f[0].startswith('fail')
+            and os.path.splitext(os.path.basename(f[1]))[0] == 'unittest'):
+            fail.frames = fail.frames[:-1]
         return oldFrames
 
     def _formatFailureTraceback(self, fail):
