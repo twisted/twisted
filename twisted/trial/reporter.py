@@ -149,7 +149,7 @@ class Reporter(TestResult):
             tbStr = self._formatFailureTraceback(error)
             log.msg(tbStr)
             msg = ("caught exception in %s, your TestCase is broken\n\n%s"
-                   % (methNameWarnMsg[method], tbStr))
+                   % (method, tbStr))
             warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
     def cleanupErrors(self, errs):
