@@ -36,9 +36,9 @@ from twisted.internet.defer import maybeDeferred, Deferred, DeferredList
 from twisted.web2.iweb import IRequest
 from twisted.web2.http_headers import Headers
 from twisted.web2.stream import MemoryStream
-from twisted.web2.dav.static import DAVFile
 from twisted.web2.dav.fileop import rmdir
 from twisted.web2.dav.util import joinURL
+from twisted.web2.dav.static import DAVFile
 
 class TestCase(unittest.TestCase):
     docroot = property(lambda(self): self.site.resource.fp.path)

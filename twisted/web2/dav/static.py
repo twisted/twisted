@@ -50,10 +50,16 @@ from twisted.web2.stream import FileStream, readIntoFile, readStream
 from twisted.web2.dirlist import DirectoryLister
 from twisted.web2.server import StopTraversal
 from twisted.web2.dav import davxml
-from twisted.web2.dav.props import WebDAVPropertyStore
 from twisted.web2.dav.fileop import *
 from twisted.web2.dav.util import bindMethods
-from twisted.web2.dav.xattrprops import xattrPropertyStore
+from twisted.web2.dav.props import WebDAVPropertyStore as LivePropertyStore
+
+try:
+    from twisted.web2.dav.xattrprops import xattrPropertyStore as DeadPropertyStore
+except ImportError:
+    log.msg("No dead property store available; using nonePropertyStore.")
+    log.msg("Setting of dead properties will not be allowed.")
+    from twisted.web2.dav.noneprops import NonePropertyStore as DeadPropertyStore
 
 #
 # FIXME: We need an IDAVResource interface.
@@ -394,8 +400,8 @@ class DAVFile (File):
         else:
             return None
 
-    properties      = property(WebDAVPropertyStore)
-    dead_properties = property(xattrPropertyStore)
+    properties      = property(LivePropertyStore)
+    dead_properties = property(DeadPropertyStore)
 
     def hasProperty(self, property):
         """

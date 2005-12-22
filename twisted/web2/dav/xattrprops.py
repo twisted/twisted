@@ -41,10 +41,6 @@ from twisted.python import log
 
 from twisted.web2.dav import davxml
 
-##
-# Utilities
-##
-
 class xattrPropertyStore (object, UserDict.DictMixin):
     """
     This implementation uses Bob Ippolito's xattr package.
@@ -130,6 +126,4 @@ class xattrPropertyStore (object, UserDict.DictMixin):
         prefix     = self.dead_property_xattr_prefix
         prefix_len = len(prefix)
 
-        keys = [ self._decode(key) for key in self.attrs if key.startswith(prefix) ]
-
-        return keys
+        return [ self._decode(key) for key in self.attrs if key.startswith(prefix) ]
