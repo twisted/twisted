@@ -37,7 +37,7 @@ from twisted.web2.iweb import IRequest
 from twisted.web2.stream import readIntoFile
 from twisted.web2.dav.fileop import put
 
-def http_PUT_preconditions(self, ctx):
+def http_PUT_preconditions(self, request):
     if self.fp.exists():
         if not self.fp.isfile():
             log.err("Unable to PUT to non-file: %s" % (self.fp.path,))
@@ -54,8 +54,6 @@ def http_PUT_preconditions(self, ctx):
                 "Parent collection resource does not exist."
             ))
         resource_is_new = True
-
-    request = IRequest(ctx)
 
     #
     # HTTP/1.1 (RFC 2068, section 9.6) requires that we respond with a Not
@@ -80,20 +78,18 @@ def http_PUT_preconditions(self, ctx):
                 "Unrecognized content header %r in request." % (header,)
             ))
 
-def http_PUT(self, ctx):
+def http_PUT(self, request):
     """
     Respond to a PUT request. (RFC 2518, section 8.7)
     """
     self.fp.restat(False)
 
     try:
-        self.http_PUT_preconditions(ctx)
+        self.http_PUT_preconditions(request)
     except HTTPError, e:
         return e.response
 
     log.msg("Writing request stream to %s" % (self.fp.path,))
-
-    request = IRequest(ctx)
 
     #
     # Don't pass in the request URI, since PUT isn't specified to be able

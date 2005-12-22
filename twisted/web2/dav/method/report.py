@@ -38,7 +38,7 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.http import ErrorResponse
 from twisted.web2.dav.util import davXMLFromStream
 
-def http_REPORT(self, ctx):
+def http_REPORT(self, request):
     """
     Respond to a REPORT request. (RFC 3253, section 3.6)
     """
@@ -51,7 +51,7 @@ def http_REPORT(self, ctx):
     #
     # Read request body
     #
-    d = davXMLFromStream(IRequest(ctx).stream)
+    d = davXMLFromStream(request.stream)
 
     def gotXML(doc):
         if doc is None:
@@ -95,7 +95,7 @@ def http_REPORT(self, ctx):
                 davxml.SupportedReport()
             )
 
-        return method(ctx, doc.root_element)
+        return method(request, doc.root_element)
 
     def gotError(f):
         log.err("Error while handling REPORT body: %s" % (f,))

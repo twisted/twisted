@@ -34,7 +34,7 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.http import statusForFailure
 from twisted.web2.dav.davxml import dav_namespace
 
-def report_DAV__expand_property(self, ctx, expand_property):
+def report_DAV__expand_property(self, request, expand_property):
     """
     Generate an expand-property REPORT. (RFC 3253, section 3.8)
     """

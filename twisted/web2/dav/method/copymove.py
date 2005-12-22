@@ -42,25 +42,25 @@ from twisted.web2.dav.fileop import copy, delete, move
 # FIXME: This is circular
 import twisted.web2.dav.static
 
-def http_COPY(self, ctx):
+def http_COPY(self, request):
     """
     Respond to a COPY request. (RFC 2518, section 8.8)
     """
     self.fp.restat(False)
 
-    r = prepareForCopy(self, ctx)
+    r = prepareForCopy(self, request)
     if type(r) is int or isinstance(r, StatusResponse): return r
     destination, destination_uri, depth = r
 
     return copy(self.fp, destination.fp, destination_uri, depth)
 
-def http_MOVE(self, ctx):
+def http_MOVE(self, request):
     """
     Respond to a MOVE request. (RFC 2518, section 8.9)
     """
     self.fp.restat(False)
 
-    r = prepareForCopy(self, ctx)
+    r = prepareForCopy(self, request)
     if type(r) is int or isinstance(r, StatusResponse): return r
     destination, destination_uri, depth = r
 
@@ -80,11 +80,9 @@ def http_MOVE(self, ctx):
         log.err(msg)
         return StatusResponse(responsecode.BAD_REQUEST, msg)
 
-    return move(self.fp, IRequest(ctx).uri, destination.fp, destination_uri, depth)
+    return move(self.fp, request.uri, destination.fp, destination_uri, depth)
 
-def prepareForCopy(self, ctx):
-    request = IRequest(ctx)
-
+def prepareForCopy(self, request):
     if not self.fp.exists():
         log.err("File not found: %s" % (self.fp.path,))
         return StatusResponse(
@@ -104,7 +102,7 @@ def prepareForCopy(self, ctx):
         return StatusResponse(responsecode.BAD_REQUEST, msg)
 
     try:
-        destination = self.locateSiblingResource(ctx, destination_uri)
+        destination = self.locateSiblingResource(request, destination_uri)
     except ValueError, e:
         return StatusResponse(responsecode.BAD_GATEWAY, str(e))
 

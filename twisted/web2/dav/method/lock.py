@@ -30,14 +30,14 @@ __all__ = ["http_LOCK", "http_UNLOCK"]
 
 from twisted.web2 import responsecode
 
-def http_LOCK(self, ctx):
+def http_LOCK(self, request):
     """
     Respond to a LOCK request. (RFC 2518, section 8.10)
     """
     return responsecode.OK # FIXME: We're lying
     return responsecode.NOT_IMPLEMENTED
 
-def http_UNLOCK(self, ctx):
+def http_UNLOCK(self, request):
     """
     Respond to a UNLOCK request. (RFC 2518, section 8.11)
     """

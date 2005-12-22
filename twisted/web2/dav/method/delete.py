@@ -34,7 +34,7 @@ from twisted.web2 import responsecode
 
 from twisted.web2.dav.fileop import delete
 
-def http_DELETE(self, ctx):
+def http_DELETE(self, request):
     """
     Respond to a DELETE request. (RFC 2518, section 8.6)
     """
@@ -44,7 +44,6 @@ def http_DELETE(self, ctx):
         log.err("File not found: %s" % (self.fp.path,))
         return responsecode.NOT_FOUND
 
-    request = IRequest(ctx)
     depth   = request.headers.getHeader("depth", "infinity")
 
     return delete(request.uri, self.fp, depth)

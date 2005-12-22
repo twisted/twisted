@@ -37,7 +37,7 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.http import ResponseQueue
 from twisted.web2.dav.util import davXMLFromStream
 
-def http_PROPPATCH(self, ctx):
+def http_PROPPATCH(self, request):
     """
     Respond to a PROPPATCH request. (RFC 2518, section 8.2)
     """
@@ -48,7 +48,7 @@ def http_PROPPATCH(self, ctx):
     #
     # Read request body
     #
-    d = davXMLFromStream(IRequest(ctx).stream)
+    d = davXMLFromStream(request.stream)
 
     #
     # Set properties

@@ -40,7 +40,7 @@ from twisted.web2.dav.fileop import mkcollection
 from twisted.web2.dav.http import statusForFailure
 from twisted.web2.dav.util import noDataFromStream
 
-def http_MKCOL(self, ctx):
+def http_MKCOL(self, request):
     """
     Respond to a MKCOL request. (RFC 2518, section 8.3)
     """
@@ -59,7 +59,7 @@ def http_MKCOL(self, ctx):
     #
     # Read request body
     #
-    d = noDataFromStream(IRequest(ctx).stream)
+    d = noDataFromStream(request.stream)
 
     #
     # Create directory

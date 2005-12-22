@@ -297,12 +297,10 @@ class DAVFile (File):
             if ius >= self.lastModified():
                 raise HTTPError(responsecode.PRECONDITION_FAILED)
 
-    def checkPreconditions(self, ctx):
+    def checkPreconditions(self, request):
         """
         Check preconditions on the request.
         """
-        request = IRequest(ctx)
-
         failure = None
 
         for test in (
@@ -446,8 +444,7 @@ class DAVFile (File):
     # Render
     ##
 
-    def renderHTTP(self, ctx):
-        request = IRequest(ctx)
+    def renderHTTP(self, request):
 
         # FIXME: This is for testing with litmus; comment out when not in use
         #litmus = request.headers.getRawHeaders("x-litmus")
@@ -467,11 +464,11 @@ class DAVFile (File):
         # Generate response and append common headers
         #
         try:
-            self.checkPreconditions(ctx)
+            self.checkPreconditions(request)
         except HTTPError, e:
             response = succeed(e.response)
         else:
-            response = maybeDeferred(File.renderHTTP, self, ctx)
+            response = maybeDeferred(File.renderHTTP, self, request)
 
         assert response, "No response"
 
@@ -501,14 +498,14 @@ class DAVFile (File):
         response.addCallback(set_headers)
         return response
 
-    def http_OPTIONS(self, ctx):
+    def http_OPTIONS(self, request):
         def set_headers(response):
             if self.type is not None:
                 response = IResponse(response)
                 response.headers.setHeader("content-type", MimeType.fromString(self.type))
             return response
 
-        response = maybeDeferred(File.http_OPTIONS, self, ctx)
+        response = maybeDeferred(File.http_OPTIONS, self, request)
         response.addCallback(set_headers)
         return response
 
@@ -522,7 +519,7 @@ class DAVFile (File):
         """
         pass
 
-    def locateChild(self, ctx, segments):
+    def locateChild(self, request, segments):
         # If a static child is set up, return it
         r = self.children.get(segments[0], None)
         if r: return (r, segments[1:])
@@ -567,14 +564,12 @@ class DAVFile (File):
 
         return self.createSimilarFile(fpath.path), segments[1:]
 
-    def locateSiblingResource(self, ctx, uri):
+    def locateSiblingResource(self, request, uri):
         """
         Look up a resource on the same server with the given URI.
         """
         if uri is None: return None
 
-        request = IRequest(ctx)
-    
         #
         # Parse the URI
         #
@@ -603,10 +598,10 @@ class DAVFile (File):
         #
         sibling = request.site.resource
         while segments and segments is not StopTraversal:        
-            sibling, segments = sibling.locateChild(ctx, segments)
+            sibling, segments = sibling.locateChild(request, segments)
         return sibling
     
-    def render(self, ctx):
+    def render(self, request):
         """
         Default rendering method, called by http_GET().
         """
@@ -617,8 +612,6 @@ class DAVFile (File):
         if not self.fp.exists():
             log.err("File not found: %s" % (self.fp.path,))
             return responsecode.NOT_FOUND
-
-        request = IRequest(ctx)
 
         if self.fp.isdir():
             if request.uri[-1] != "/":
@@ -635,7 +628,7 @@ class DAVFile (File):
                     self.contentTypes,
                     self.contentEncodings,
                     self.defaultType
-                ).render(ctx)
+                ).render(request)
 
         # Be sure it's a regular file.
         if not self.fp.isfile():

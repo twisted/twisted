@@ -37,7 +37,7 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.http import MultiStatusResponse, statusForFailure
 from twisted.web2.dav.util import normalizeURL, joinURL, davXMLFromStream
 
-def http_PROPFIND(self, ctx):
+def http_PROPFIND(self, request):
     """
     Respond to a PROPFIND request. (RFC 2518, section 8.1)
     """
@@ -50,7 +50,7 @@ def http_PROPFIND(self, ctx):
     #
     # Read request body
     #
-    d = davXMLFromStream(IRequest(ctx).stream)
+    d = davXMLFromStream(request.stream)
 
     def gotXML(doc):
         if doc is None:
@@ -96,7 +96,7 @@ def http_PROPFIND(self, ctx):
         #
         # Generate XML output stream
         #
-        request = IRequest(ctx)
+        request = request
         request_uri = request.uri
         depth = request.headers.getHeader("depth", "infinity")
 
