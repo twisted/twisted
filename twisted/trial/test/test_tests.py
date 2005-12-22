@@ -331,6 +331,16 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
             self.fail('I should not fail')
         test_skip3.skip = 'skip3'
 
+    class SkippingSetUp(unittest.TestCase):
+        def setUp(self):
+            raise unittest.SkipTest('skipSetUp')
+
+        def test_1(self):
+            pass
+
+        def test_2(self):
+            pass
+
     def setUp(self):
         self.loadSuite(TestSkipMethods.SkippingTests)
 
@@ -343,6 +353,14 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(self.reporter.errors, [])
         self.failUnlessEqual(self.reporter.failures, [])
         self.failUnlessEqual(len(self.reporter.skips), 3)
+
+    def test_setUp(self):
+        self.loadSuite(TestSkipMethods.SkippingSetUp)
+        self.suite(self.reporter)
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(len(self.reporter.skips), 2)
 
     def test_reasons(self):
         self.suite(self.reporter)

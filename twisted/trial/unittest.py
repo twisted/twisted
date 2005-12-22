@@ -116,10 +116,13 @@ class TestCase(pyunit.TestCase, object):
         return d
 
     def _ebDeferSetUp(self, failure, result):
-        result.addError(self, failure)
-        result.upDownError('setUp', failure, warn=False, printStatus=False)
-        if failure.check(KeyboardInterrupt):
-            result.stop()
+        if failure.check(SkipTest):
+            result.addSkip(self, self._getReason(failure))
+        else:
+            result.addError(self, failure)
+            result.upDownError('setUp', failure, warn=False, printStatus=False)
+            if failure.check(KeyboardInterrupt):
+                result.stop()
 
     def deferTestMethod(self, ignored, result):
         testMethod = getattr(self._sharedTestCase(), self._testMethodName)
