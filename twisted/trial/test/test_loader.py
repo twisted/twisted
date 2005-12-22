@@ -2,7 +2,7 @@ import sys, os
 from twisted.python import util
 from twisted.trial.test import packages
 from twisted.trial import unittest
-from twisted.trial import runner
+from twisted.trial import runner, reporter
 
 
 class FinderTest(packages.PackageTest):
@@ -213,10 +213,13 @@ class LoaderTest(packages.PackageTest):
     def test_loadPackageWithBadModules(self):
         import package
         suite = self.loader.loadPackage(package, recurse=True)
-        importErrors = list(zip(*self.loader.getImportErrors())[0])
+        result = reporter.Reporter()
+        suite.run(result)
+        importErrors = [ test.id() for test, error in result.couldNotImport ]
         importErrors.sort()
         self.failUnlessEqual(importErrors,
-                             ['test_bad_module.py', 'test_import_module.py'])
+                             ['package.test_bad_module',
+                              'package.test_import_module'])
 
     def test_loadNonPackage(self):
         import sample

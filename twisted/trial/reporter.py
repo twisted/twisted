@@ -84,12 +84,6 @@ class TestResult(pyunit.TestResult, object):
 
     def cleanupErrors(self, errs):
         pass
-
-    def startTrial(self, count):
-        pass
-
-    def endTrial(self, suite):
-        pass
     
     def startSuite(self, name):
         pass
@@ -104,12 +98,10 @@ class Reporter(TestResult):
     separator = '-' * 79
     doubleSeparator = '=' * 79
 
-    def __init__(self, stream=sys.stdout, tbformat='default', args=None,
-                 realtime=False):
+    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
         super(Reporter, self).__init__()
         self.stream = stream
         self.tbformat = tbformat
-        self.args = args
         self.realtime = realtime
         self.couldNotImport = []
 
@@ -206,11 +198,11 @@ class Reporter(TestResult):
             self.writeln('')
 
     def printImportErrors(self):
-        for name, error in self.couldNotImport:
+        for test, error in self.couldNotImport:
             self.writeln(self.doubleSeparator)
             self.writeln('IMPORT ERROR:')
             self.writeln('')
-            self.writeln('Could not import: %s' % (name,))
+            self.writeln('Could not import: %s' % (test.id(),))
             if isinstance(error, failure.Failure):
                 what = self._formatFailureTraceback(error)
             elif type(error) == types.TupleType:
@@ -220,6 +212,7 @@ class Reporter(TestResult):
             self.writeln(what)
 
     def printErrors(self):
+        self.write('\n')
         self.printErrorList("[SKIPPED]", self.skips)
         self.printExpectedFailures()
         self.printErrorList("[FAIL]", self.failures)
@@ -227,7 +220,7 @@ class Reporter(TestResult):
         self.printUnexpectedSuccesses()
         self.printImportErrors()
 
-    def _reportStatus(self, tsuite):
+    def printSummary(self):
         summaries = []
         for stat in ("skips", "expectedFailures", "failures", "errors",
                      "unexpectedSuccesses", "successes"):
@@ -241,25 +234,12 @@ class Reporter(TestResult):
             status = "PASSED"
         self.write("%s%s\n", status, summary)
 
-    def startTrial(self, count):
-        """Inform the user how many tests are being run."""
-        super(Reporter, self).startTrial(count)
-        self.write("Running %d tests.\n", count)
-        self._somethingStarted()
-
-    def endTrial(self, suite):
-        super(Reporter, self).endTrial(suite)
-        self.write("\n")
-        self.printErrors()
-        self.write("%s\n" % self.separator)
-        self.write('Ran %d tests in %.3fs\n', self.testsRun,
-                   self._somethingStopped())
-        self.write('\n')
-        self._reportStatus(suite)
-
 
 class MinimalReporter(Reporter):
-    def endTrial(self, suite):
+    def printErrors(self):
+        pass
+
+    def printSummary(self):
         numTests = self.testsRun
         t = (self._somethingStopped(), numTests, numTests,
              len(self.couldNotImport), len(self.errors),
@@ -349,9 +329,8 @@ class TreeReporter(Reporter):
     CYAN = 36
     WHITE = 37
 
-    def __init__(self, stream=sys.stdout, tbformat='default', args=None,
-                 realtime=False):
-        super(TreeReporter, self).__init__(stream, tbformat, args, realtime)
+    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
+        super(TreeReporter, self).__init__(stream, tbformat, realtime)
         self.indentLevel = 0
 
     def addSuccess(self, test):

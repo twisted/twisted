@@ -118,7 +118,6 @@ class Options(usage.Options):
 
     def __init__(self):
         self['tests'] = []
-        self['reporter'] = None
         self._loadReporters()
         usage.Options.__init__(self)
 
@@ -132,27 +131,13 @@ class Options(usage.Options):
             qual = "%s.%s" % (p.module, p.klass)
             self.optToQual[p.longOpt] = qual
             if p.longOpt == default:
-                self.fallbackReporter = reflect.namedAny(qual)
+                self['reporter'] = reflect.namedAny(qual)
 
     def _supportsColor(self):
         supportedTerms = ['xterm', 'xterm-color', 'linux', 'screen']
         if not os.environ.has_key('TERM'):
             return False
         return os.environ['TERM'] in supportedTerms
-
-    def _getReporterClass(self):
-        """return the class of the selected reporter
-        @param config: a usage.Options instance after parsing options
-        """
-        if self['reporter'] is not None:
-            return self['reporter']
-        return self.fallbackReporter
-
-    def getReporter(self):
-        reporterKlass = self._getReporterClass()
-        reporter = reporterKlass(tbformat=self['tbformat'],
-                                 realtime=self['rterrors'])
-        return reporter
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
@@ -295,20 +280,11 @@ class Options(usage.Options):
                 self['random'] = long(time.time() * 100)
 
     def parseArgs(self, *args):
-        ## XXX - hack around the directory changing evil
-        safeArgs = []
-        for arg in args:
-            if os.path.exists(arg):
-                arg = os.path.abspath(arg)
-            safeArgs.append(arg)
-        self['tests'].extend(safeArgs)
+        self['tests'].extend(args)
         if self.extra is not None:
             self['tests'].extend(self.extra)
 
     def postOptions(self):
-        self['_origdir'] = os.getcwd()
-        # Want to do this stuff as early as possible
-        _setUpTestdir()
         if self['suppresswarnings']:
             warnings.warn('--suppresswarnings deprecated. Is a no-op',
                           category=DeprecationWarning)
@@ -329,23 +305,8 @@ def _initialDebugSetup(config):
         defer.setDebugging(True)
 
 
-def _setUpLogging(config):
-    if config['logfile']:
-       # we should SEE deprecation warnings
-       def seeWarnings(x):
-           if x.has_key('warning'):
-               print
-               print x['format'] % x
-       log.addObserver(seeWarnings)
-       if config['logfile'] == '-':
-           logFileObj = sys.stdout
-       else:
-           logFileObj = file(config['logfile'], 'a')
-       log.startLogging(logFileObj, 0)
-
-
-def _getSuite(config, reporter):
-    loader = _getLoader(config, reporter)
+def _getSuite(config):
+    loader = _getLoader(config)
     suite = runner.TestSuite()
     recurse = not config['no-recurse']
     for test in config['tests']:
@@ -353,99 +314,31 @@ def _getSuite(config, reporter):
             suite.addTest(loader.loadByName(test, recurse))
         else:
             suite.addTest(loader.loadAnything(test, recurse))
-    for error in loader.getImportErrors():
-        reporter.reportImportError(*error)
     return suite
     
 
-def _setUpTestdir():
-    testdir = os.path.normpath(os.path.abspath("_trial_temp"))
-    if os.path.exists(testdir):
-       try:
-           shutil.rmtree(testdir)
-       except OSError, e:
-           print ("could not remove path, caught OSError [Errno %s]: %s"
-                  % (e.errno,e.strerror))
-           try:
-               os.rename(testdir,
-                         os.path.abspath("_trial_temp_old%s"
-                                         % random.randint(0, 99999999)))
-           except OSError, e:
-               print ("could not rename path, caught OSError [Errno %s]: %s"
-                      % (e.errno,e.strerror))
-               raise
-    os.mkdir(testdir)
-    os.chdir(testdir)
-
-
-def _getLoader(config, reporter):
-    loader = runner.SafeTestLoader()
+def _getLoader(config):
+    loader = runner.TestLoader()
     if config['random']:
         randomer = random.Random()
         randomer.seed(config['random'])
         loader.sorter = lambda x : randomer.random()
-        reporter.write('Running tests shuffled with seed %d\n'
-                       % config['random'])
+        print 'Running tests shuffled with seed %d\n' % config['random']
     return loader
 
 
-def _doProfilingRun(func, *args, **kwargs):
-    if sys.version_info[0:2] != (2, 4):
-        import profile
-        prof = profile.Profile()
-        try:
-            result = prof.runcall(func, *args, **kwargs)
-            prof.dump_stats('profile.data')
-        except SystemExit:
-            pass
-        prof.print_stats()
-        return result
-    else: # use hotshot, profile is broken in 2.4
-        import hotshot.stats
-        pro_file = os.path.join(os.getcwd(), "profile.data")
-        prof = hotshot.Profile(pro_file)
-        try:
-            result = prof.runcall(func, *args, **kwargs)
-            return result
-        finally:
-            stats = hotshot.stats.load(pro_file)
-            stats.strip_dirs()
-            stats.sort_stats('cum')   # 'time'
-            stats.print_stats(100)
-
-
-def callUntilFailure(f, *args, **kwargs):
-    count = 1
-    print "Test Pass %d" % count
-    result = f(*args, **kwargs)
-    while result.wasSuccessful():
-        count += 1
-        print "Test Pass %d" % count
-        result = f(*args, **kwargs)
-    return result
-
-
-def reallyRun(config):
-    my_runner = runner.TrialRunner(config)
-    reporter = my_runner._getResult()
-    suite = _getSuite(config, reporter)
-    if suite.countTestCases() == 0:
-        reporter.startTrial(0)
-        reporter.endTrial(suite)
-        return reporter
-    def do_a_run():
-        my_runner = runner.TrialRunner(config)
-        reporter = my_runner._getResult()
-        suite = _getSuite(config, reporter)
-        return my_runner.run(suite)
-    if config['profile']:
-        call_with = _doProfilingRun
-    else:
-        call_with = lambda func, *args, **kwargs: func(*args, **kwargs)
-    if config['until-failure']:
-        return call_with(callUntilFailure, do_a_run)
-    else:
-        return call_with(do_a_run)
+def _makeRunner(config):
+    mode = None
+    if config['debug']:
+        mode = runner.TrialRunner.DEBUG
+    if config['dry-run']:
+        mode = runner.TrialRunner.DRY_RUN
+    return runner.TrialRunner(config['reporter'],
+                              mode=mode,
+                              profile=config['profile'],
+                              logfile=config['logfile'],
+                              tracebackFormat=config['tbformat'],
+                              realTimeErrors=config['rterrors'])
 
 
 def run():
@@ -456,9 +349,13 @@ def run():
         config.parseOptions()
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
-    _setUpLogging(config)
     _initialDebugSetup(config)
-    test_result = reallyRun(config)
+    trialRunner = _makeRunner(config)
+    suite = _getSuite(config)
+    if config['until-failure']:
+        test_result = trialRunner.runUntilFailure(suite)
+    else:
+        test_result = trialRunner.run(suite)
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()

@@ -8,9 +8,9 @@
 # Original Author: Jonathan Lange <jml@twistedmatrix.com>
 
 from __future__ import generators
-import pdb
+import pdb, shutil
 import os, glob, types, warnings, sys, inspect, imp
-import fnmatch, random, inspect, doctest
+import fnmatch, random, inspect, doctest, time
 from os.path import join as opj
 
 from twisted.internet import defer, interfaces
@@ -170,11 +170,9 @@ class TrialSuite(TestSuite):
 
     def run(self, result):
         try:
-            result.startTrial(self.countTestCases())
             log.startKeepingErrors()
             TestSuite.run(self, result)
         finally:
-            result.endTrial(self)
             self._bail()
 
 
@@ -297,6 +295,8 @@ class ClassSuite(TestSuite):
         
 
 def name(thing):
+    if isinstance(thing, str):
+        return thing
     if hasattr(thing, '__name__'):
         return thing.__name__
     return thing.id()
@@ -313,6 +313,32 @@ def isTestCase(obj):
         # See http://www.zope.org/Collectors/Zope3-dev/470.
         return False
 
+
+class ErrorHolder(object):
+    def __init__(self, description, error):
+        self.description = description
+        self.error = error
+
+    def id(self):
+        return self.description
+
+    def shortDescription(self):
+        return self.description
+
+    def __repr__(self):
+        return "<ErrorHolder description=%r error=%r>" % (self.description,
+                                                          self.error)
+
+    def run(self, result):
+        result.reportImportError(self, self.error)
+
+    def __call__(self, result):
+        return self.run(result)
+
+    def countTestCases(self):
+        return 0
+
+
 class TestLoader(object):
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
@@ -323,26 +349,16 @@ class TestLoader(object):
         self.sorter = name
         self._importErrors = []
 
+    def sort(self, xs):
+        return dsu(xs, self.sorter)
+
     def _findTestClasses(self, module):
         """Given a module, return all trial Test classes"""
         classes = []
         for name, val in inspect.getmembers(module):
             if isTestCase(val):
                 classes.append(val)
-        return dsu(classes, self.sorter)
-
-    def _findTestModules(self, package):
-        modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
-        return dsu(map(filenameToModule, glob.glob(modGlob)), self.sorter)
-
-    def addImportError(self, name, error):
-        self._importErrors.append((name, error))
-
-    def getImportErrors(self):
-        return self._importErrors
-
-    def clearImportErrors(self):
-        self._importErrors = []
+        return self.sort(classes)
 
     def findByName(self, name):
         if os.path.exists(name):
@@ -367,6 +383,7 @@ class TestLoader(object):
         modSuite = self.suiteFactory()
         modSuite.addTests([suite, docSuite])
         return NamedSuite(module.__name__, modSuite)
+    loadTestsFromModule = loadModule
 
     def loadClass(self, klass):
         if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
@@ -374,12 +391,15 @@ class TestLoader(object):
         if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
         factory = self.classSuiteFactory
-        names = reflect.prefixedMethodNames(klass, self.methodPrefix)
-        tests = dsu([ klass(self.methodPrefix+name) for name in names ],
-                    self.sorter)
+        names = self.getTestCaseNames(klass)
+        tests = self.sort([ klass(self.methodPrefix+name) for name in names ])
         suite = factory(klass)
         suite.addTests(tests)
         return NamedSuite(klass.__name__, suite)
+    loadTestsFromTestCase = loadClass
+
+    def getTestCaseNames(self, klass):
+        return reflect.prefixedMethodNames(klass, self.methodPrefix)
 
     def loadMethod(self, method):
         if not isinstance(method, types.MethodType):
@@ -388,31 +408,30 @@ class TestLoader(object):
         suite.addTest(method.im_class(method.__name__))
         return NamedSuite(method.im_class.__name__, suite)
 
+    def _findTestModules(self, package):
+        modGlob = os.path.join(os.path.dirname(package.__file__),
+                               self.moduleGlob)
+        return [ reflect.filenameToModuleName(filename)
+                 for filename in glob.glob(modGlob) ]
+        
     def loadPackage(self, package, recurse=False):
         if not isPackage(package):
             raise TypeError("%r is not a package" % (package,))
         if recurse:
             return self.loadPackageRecursive(package)
         suite = self.suiteFactory()
-        for module in dsu(self._findTestModules(package), self.sorter):
-            suite.addTest(self.loadModule(module))
+        for moduleName in self.sort(self._findTestModules(package)):
+            suite.addTest(self.loadByName(moduleName))
         return suite
 
     def _packageRecurse(self, suite, dirname, names):
         if not isPackageDirectory(dirname):
             names[:] = []
             return
-        testModuleNames = fnmatch.filter(names, self.moduleGlob)
-        modules = []
-        for name in testModuleNames:
-            try:
-                modules.append(filenameToModule(opj(dirname, name)))
-            except:
-                # Importing a module can raise any kind of error. Get them all.
-                self.addImportError(name, failure.Failure())
-                continue
-        for module in dsu(modules, self.sorter):
-            suite.addTest(self.loadModule(module))
+        moduleNames = [reflect.filenameToModuleName(opj(dirname, filename))
+                       for filename in fnmatch.filter(names, self.moduleGlob)]
+        for moduleName in self.sort(moduleNames):
+            suite.addTest(self.loadByName(moduleName))
 
     def loadPackageRecursive(self, package):
         packageDir = os.path.dirname(package.__file__)
@@ -426,7 +445,10 @@ class TestLoader(object):
                           "python 2.3 or later, not running doctests")
             return
         if isinstance(module, str):
-            module = reflect.namedAny(module)
+            try:
+                module = reflect.namedAny(module)
+            except:
+                return ErrorHolder(module, failure.Failure())
         if not inspect.ismodule(module):
             warnings.warn("trial only supports doctesting modules")
             return
@@ -446,40 +468,18 @@ class TestLoader(object):
         raise TypeError("No loader for %r. Unrecognized type" % (thing,))
 
     def loadByName(self, name, recurse=False):
-        thing = self.findByName(name)
-        return self.loadAnything(thing, recurse)
-
-
-class SafeTestLoader(TestLoader):
-    """A version of TestLoader that stores all import errors, rather than
-    raising them.  When the method is supposed to return a suite and it can't
-    return the right one due to error, we return an empty suite.
-    """
-
-    def _findTestModules(self, package):
-        modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
-        modules = []
-        for filename in glob.glob(modGlob):
-            try:
-                modules.append(filenameToModule(filename))
-            except:
-                self.addImportError(filename, failure.Failure())
-        return dsu(modules, self.sorter)
-        
-    def loadDoctests(self, module):
-        try:
-            return super(SafeTestLoader, self).loadDoctests(module)
-        except:
-            self.addImportError(str(module), failure.Failure())
-            return self.suiteFactory()
-
-    def loadByName(self, name, recurse=False):
         try:
             thing = self.findByName(name)
         except:
-            self.addImportError(name, failure.Failure())
-            return self.suiteFactory()
+            return ErrorHolder(name, failure.Failure())
         return self.loadAnything(thing, recurse)
+    loadTestsFromName = loadByName
+
+    def loadTestsFromNames(self, names, module=None):
+        suites = []
+        for name in names:
+            suites.append(self.loadTestsFromName(name, module))
+        return self.suiteClass(suite)
 
 
 class DryRunVisitor(unittest.TestVisitor):
@@ -495,11 +495,15 @@ class DryRunVisitor(unittest.TestVisitor):
 
     def visitCase(self, testCase):
         self.reporter.startTest(testCase)
+        self.reporter.addSuccess(testCase)
         self.reporter.stopTest(testCase)
 
 
 class TrialRunner(object):
     """A specialised runner that the trial front end uses."""
+
+    DEBUG = 'debug'
+    DRY_RUN = 'dry-run'
 
     def _getDebugger(self):
         dbg = pdb.Pdb()
@@ -508,9 +512,7 @@ class TrialRunner(object):
         except ImportError:
             print "readline module not available"
             hasattr(sys, 'exc_clear') and sys.exc_clear()
-        origdir = self._config['_origdir']
-        for path in (os.path.join(origdir, '.pdbrc'),
-                     os.path.join(origdir, 'pdbrc')):
+        for path in ('.pdbrc', 'pdbrc'):
             if os.path.exists(path):
                 try:
                     rcFile = file(path, 'r')
@@ -520,34 +522,100 @@ class TrialRunner(object):
                     dbg.rcLines.extend(rcFile.readlines())
         return dbg
     
-    def _getResult(self):
-        if self._result is None:
-            self._result = self._config.getReporter()
-        return self._result
+    def _setUpTestdir(self):
+        currentDir = os.getcwd()
+        testdir = os.path.normpath(os.path.abspath("_trial_temp"))
+        if os.path.exists(testdir):
+           try:
+               shutil.rmtree(testdir)
+           except OSError, e:
+               print ("could not remove path, caught OSError [Errno %s]: %s"
+                      % (e.errno,e.strerror))
+               try:
+                   os.rename(testdir,
+                             os.path.abspath("_trial_temp_old%s"
+                                             % random.randint(0, 99999999)))
+               except OSError, e:
+                   print ("could not rename path, caught OSError [Errno %s]: %s"
+                          % (e.errno,e.strerror))
+                   raise
+        os.mkdir(testdir)
+        os.chdir(testdir)
+        return currentDir
+
+    def _makeResult(self):
+        return self.reporterFactory(self.stream, self.tbformat, self.rterrors)
         
-    def __init__(self, config):
-        self._config = config
-        self._root = None
+    def __init__(self, reporterFactory,
+                 mode=None,
+                 logfile='test.log',
+                 stream=sys.stdout,
+                 profile=False,
+                 tracebackFormat='default',
+                 realTimeErrors=False):
+        self.reporterFactory = reporterFactory
+        self.logfile = logfile
+        self.mode = mode
+        self.stream = stream
+        self.tbformat = tracebackFormat
+        self.rterrors = realTimeErrors
         self._result = None
+        if profile:
+            self.run = util.profiled(self.run, 'profile.data')
+
+    def _setUpLogging(self):
+        def seeWarnings(x):
+           if x.has_key('warning'):
+               print
+               print x['format'] % x
+        log.addObserver(seeWarnings)
+        if self.logfile == '-':
+           logFileObj = sys.stdout
+        else:
+           logFileObj = file(self.logfile, 'a')
+        log.startLogging(logFileObj, 0)
 
     def run(self, test):
         """Run the test or suite and return a result object."""
-        # we do not create our reporter here, which is unlike pyunits
-        # textrunner, however, as we have specified the interface 
-        # reporter must honour, its fine.
-        result = self._getResult()
+        result = self._makeResult()
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be 
         # present
         suite = TrialSuite([test])
-        if self._config['dry-run']:
-            result.startTrial(suite)
+        startTime = time.time()
+        result.write("Running %d tests.\n", suite.countTestCases())
+        if self.mode == self.DRY_RUN:
             suite.visit(DryRunVisitor(result))
-            result.endTrial(suite)
-        elif self._config['debug']:
+        elif self.mode == self.DEBUG:
             # open question - should this be self.debug() instead.
             debugger = self._getDebugger()
+            oldDir = self._setUpTestdir()
+            self._setUpLogging()
             debugger.runcall(suite.run, result)
+            os.chdir(oldDir)
         else:
+            oldDir = self._setUpTestdir()
+            self._setUpLogging()
             suite.run(result)
+            os.chdir(oldDir)
+        endTime = time.time()
+        result.printErrors()
+        result.writeln(result.separator)
+        result.writeln('Ran %d tests in %.3fs', result.testsRun,
+                       endTime - startTime)
+        result.write('\n')
+        result.printSummary()
         return result
+
+    def runUntilFailure(self, test):
+        count = 0
+        while True:
+            count += 1
+            self.stream.write("Test Pass %d\n" % (count,))
+            result = self.run(test)
+            if result.testsRun == 0:
+                break
+            if not result.wasSuccessful():
+                break
+        return result
+    

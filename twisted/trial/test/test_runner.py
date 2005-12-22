@@ -32,6 +32,8 @@ class CapturingReporter(object):
     stream = None
     tbformat = None
     args = None
+    separator = None
+    testsRun = None
 
     def __init__(self, tbformat=None, args=None, realtime=None):
         """Create a capturing reporter."""
@@ -72,14 +74,6 @@ class CapturingReporter(object):
         """
         self._calls.append('startTrial')
 
-    def endTrial(self, suite):
-        """at the end of a test run report the overall status and print out
-        any errors caught
-        @param suite: an object implementing ITrialResult, can be adapted to
-                      ITestStats
-        """
-        self._calls.append('endTrial')
-
     def startClass(self, klass):
         "called at the beginning of each TestCase with the class"
         self._calls.append('startClass')
@@ -117,6 +111,18 @@ class CapturingReporter(object):
     def addSuccess(self, test):
         self._calls.append('addSuccess')
 
+    def printErrors(self):
+        pass
+
+    def printSummary(self):
+        pass
+
+    def write(self, *args, **kw):
+        pass
+
+    def writeln(self, *args, **kw):
+        pass
+
 
 class TestImports(unittest.TestCase):
 
@@ -132,116 +138,115 @@ class TestRunner(unittest.TestCase):
         # whitebox hack a reporter in, because plugins are CACHED and will
         # only reload if the FILE gets changed.
         self.config.optToQual['capturing'] = reflect.qual(CapturingReporter)
-        self.standardReport = ['startTrial',
-                         'startSuite', 
-                         'startSuite',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'endSuite',
-                         'startSuite',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'endSuite',
-                         'startSuite',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'startTest',
-                         'addSuccess',
-                         'stopTest',
-                         'endSuite',
-                         'endSuite',
-                         'endTrial']
-        self.dryRunReport = ['startTrial',
-                         'startSuite', 
-                         'startSuite',
-                         'startTest',
-                         'stopTest',
-                         'startTest',
-                         'stopTest',
-                         'startTest',
-                         'stopTest',
-                         'endSuite',
-                         'startSuite',
-                         'startTest',
-                         'stopTest',
-                         'startTest',
-                         'stopTest',
-                         'endSuite',
-                         'startSuite',
-                         'startTest',
-                         'stopTest',
-                         'startTest',
-                         'stopTest',
-                         'endSuite',
-                         'endSuite',
-                         'endTrial']
-
+        self.standardReport = [
+            'startSuite', 
+            'startSuite',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'endSuite',
+            'startSuite',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'endSuite',
+            'startSuite',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'endSuite',
+            'endSuite']
+        self.dryRunReport = [
+            'startSuite', 
+            'startSuite',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'endSuite',
+            'startSuite',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'endSuite',
+            'startSuite',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'startTest',
+            'addSuccess',
+            'stopTest',
+            'endSuite',
+            'endSuite']
+        
     def parseOptions(self, args):
         self.config.parseOptions(args)
-        os.chdir(self.config['_origdir'])
-    
-    def test_contruct_with_config(self):
-        my_runner = runner.TrialRunner(self.config)
-        self.assertEqual(self.config, my_runner._config)
 
+    def getRunner(self):
+        return trial._makeRunner(self.config)
+    
     def test_runner_can_get_reporter(self):
         self.parseOptions([])
-        reporter = self.config.getReporter()
-        my_runner = runner.TrialRunner(self.config)
-        self.assertEqual(reporter.__class__, my_runner._getResult().__class__)
+        reporter = self.config['reporter']
+        my_runner = self.getRunner()
+        self.assertEqual(reporter, my_runner._makeResult().__class__)
 
     def test_runner_get_result(self):
         self.parseOptions([])
-        self.config.getReporter()
-        my_runner = runner.TrialRunner(self.config)
-        result = my_runner._getResult()
-        self.assertEqual(result.__class__, self.config.getReporter().__class__)
+        my_runner = self.getRunner()
+        result = my_runner._makeResult()
+        self.assertEqual(result.__class__, self.config['reporter'])
 
     def test_runner_dry_run(self):
         self.parseOptions(['--dry-run', '--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        my_runner = runner.TrialRunner(self.config)
-        reporter = my_runner._getResult()
-        loader = runner.SafeTestLoader()
+        my_runner = self.getRunner()
+        loader = runner.TestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
         result = my_runner.run(suite)
-        self.assertEqual(self.dryRunReport, reporter._calls)
+        self.assertEqual(self.dryRunReport, result._calls)
 
     def test_runner_normal(self):
         self.parseOptions(['--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        my_runner = runner.TrialRunner(self.config)
-        reporter = my_runner._getResult()
-        loader = runner.SafeTestLoader()
+        my_runner = self.getRunner()
+        loader = runner.TestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
         result = my_runner.run(suite)
-        self.assertEqual(self.standardReport, reporter._calls)
+        self.assertEqual(self.standardReport, result._calls)
 
     def test_runner_debug(self):
         self.parseOptions(['--reporter', 'capturing',
                            '--debug', 'twisted.trial.test.sample'])
-        my_runner = runner.TrialRunner(self.config)
-        reporter = my_runner._getResult()
+        my_runner = self.getRunner()
         debugger = CapturingDebugger()
         def get_debugger():
             return debugger
         my_runner._getDebugger = get_debugger
-        loader = runner.SafeTestLoader()
+        loader = runner.TestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
         result = my_runner.run(suite)
-        self.assertEqual(self.standardReport, reporter._calls)
+        self.assertEqual(self.standardReport, result._calls)
         self.assertEqual(['runcall'], debugger._calls)
 
 

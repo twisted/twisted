@@ -8,7 +8,7 @@ import os, errno, warnings, sys, time
 
 from twisted.internet import defer
 from twisted.python import failure, log, reflect
-from twisted.trial import itrial, util
+from twisted.trial import itrial, util, reporter
 from twisted.trial.util import deferredResult, deferredError
 
 pyunit = __import__('unittest')
@@ -532,7 +532,6 @@ class TestVisitor(object):
 
     def visitTrialAfter(self, testSuite):
         """Visit the TestSuite testSuite after its children."""
-
 
 
 def wait(*args, **kwargs):

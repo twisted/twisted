@@ -59,12 +59,11 @@ class TestFailureFormatting(common.RegistryBaseMixin):
         # this should be in test_reporter, and should be testing output summaries
         # not run() side effects. Until then wrap it in TrialSuite which triggers
         # the output side effects
-        self.run_a_suite(runner.TrialSuite([
-            self.loader.loadDoctests(trialdoctest2)]))
+        self.run_a_suite(self.loader.loadDoctests(trialdoctest2))
+        self.reporter.printErrors()
         output = self.reporter.out.splitlines()
         path = 'twisted.trial.test.trialdoctest2.unexpectedException'
-        expect = ['Running 1 tests.',
-                  reporter.Reporter.doubleSeparator,
+        expect = [reporter.Reporter.doubleSeparator,
                   re.compile(r'\[(ERROR|FAIL)\]: .*[Dd]octest.*'
                              + re.escape(path))]
         self.stringComparison(expect, output)

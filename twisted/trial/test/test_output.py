@@ -6,14 +6,12 @@ import os, re, sys, StringIO
 
 
 def runTrial(*args):
+    from twisted.trial import reporter
     config = trial.Options()
     config.parseOptions(args)
-    os.chdir(config['_origdir'])
-    myRunner = runner.TrialRunner(config)
     output = StringIO.StringIO()
-    reporter = myRunner._getResult()
-    reporter.stream = output
-    suite = trial._getSuite(config, reporter)
+    myRunner = runner.TrialRunner(reporter.VerboseTextReporter, stream=output)
+    suite = trial._getSuite(config)
     result = myRunner.run(suite)
     return output.getvalue()
 

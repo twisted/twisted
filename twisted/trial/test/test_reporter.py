@@ -23,12 +23,12 @@ class TestReporter(common.RegistryBaseMixin):
         # the fact this is needed shows that we need to split out the reporting
         # from the run action.
         loader = runner.TestLoader()
-        suite = TrialSuite([loader.loadMethod(common.FailfulTests.testTracebackReporting)])
+        suite = loader.loadMethod(common.FailfulTests.testTracebackReporting)
         self.run_a_suite(suite)
+        self.reporter.printErrors()
         lines = self.reporter.out.split('\n')
         while 1:
-            if not lines:
-                raise FailTest, "double separator not found in lines"
+            self.failUnless(lines, "double separator not found in lines")
             if lines[0] != reporter.Reporter.doubleSeparator:
                 lines.pop(0)
             else:

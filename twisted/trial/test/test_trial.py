@@ -119,10 +119,11 @@ class FunctionalTest(common.RegistryBaseMixin):
 
     def testHiddenException(self):
         # this is testing that the error reporter prints the error, it should 
-        # be checked by printErrors or whatnot. Until then we ensure the suite
-        # is wrapped in TrialSuite
-        self.run_a_suite(runner.TrialSuite([self.loader.loadMethod(
-            erroneous.DemoTest.testHiddenException)]))
+        # be checked by printErrors or whatnot.
+        # XXX - Move to test_reporter
+        self.run_a_suite(self.loader.loadMethod(
+            erroneous.DemoTest.testHiddenException))
+        self.reporter.printErrors()
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, self.reporter.out)
 
     def testLeftoverSockets(self):
@@ -164,14 +165,6 @@ class FunctionalTest(common.RegistryBaseMixin):
         errors = self.reporter.errors
         self.assert_(len(errors) > 0)
         errors[0][1].trap(defer.TimeoutError)
-
-    def testCorrectNumberTestReporting(self):
-        """make sure trial reports the correct number of tests run (issue 770)"""
-        # this should be in test_reporter, and should be testing output summaries
-        # not run() side effects. Until then wrap it in TrialSuite which triggers
-        # the output side effects
-        self.run_a_suite(runner.TrialSuite([self.loader.loadModule(numOfTests)]))
-        self.assertSubstring("Ran 1 tests in", self.reporter.out)
 
 
 class SuppressionTest(unittest.TestCase):

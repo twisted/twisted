@@ -50,7 +50,7 @@ class BogusReporter(reporter.Reporter):
     tbformat = 'default'
     
     def __init__(self):
-        super(BogusReporter, self).__init__(StringIO(), 'default', None, False)
+        super(BogusReporter, self).__init__(StringIO(), 'default', False)
 
     out = property(lambda self:self.stream.getvalue())
 
