@@ -96,7 +96,6 @@ def http_PROPFIND(self, request):
         #
         # Generate XML output stream
         #
-        request = request
         request_uri = request.uri
         depth = request.headers.getHeader("depth", "infinity")
 
