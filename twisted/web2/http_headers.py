@@ -1075,6 +1075,16 @@ def generateSetCookie2(cookies):
         setCookies.append('; '.join(out))
     return setCookies
 
+def parseDepth(depth):
+    if depth not in ("0", "1", "infinity"):
+        raise ValueError("Invalid depth header value: %s" % (depth,))
+    return depth
+
+def parseOverWrite(overwrite):
+    if   overwrite == "F": return False
+    elif overwrite == "T": return True
+    raise ValueError("Invalid overwrite header value: %s" % (overwrite,))
+
 ##### Random stuff that looks useful.
 # def sortMimeQuality(s):
 #     def sorter(item1, item2):
@@ -1312,7 +1322,6 @@ parser_request_headers = {
     'User-Agent':(last,str),
 }
 
-
 generator_request_headers = {
     'Accept': (iteritems,listGenerator(generateAccept),singleHeader),
     'Accept-Charset': (iteritems, listGenerator(generateAcceptQvalue),singleHeader),
@@ -1340,7 +1349,7 @@ parser_response_headers = {
     'Accept-Ranges':(tokenize, filterTokens),
     'Age':(last,int),
     'ETag':(tokenize, ETag.parse),
-    'Location':(last,), # TODO: uri object?
+    'Location':(last,), # TODO: URI object?
 #    'Proxy-Authenticate'
     'Retry-After':(last, parseRetryAfter),
     'Server':(last,),
@@ -1390,15 +1399,39 @@ generator_entity_headers = {
     'Last-Modified':(generateDateTime, singleHeader),
     }
 
+parser_dav_headers = {
+    'DAV'         : (tokenize, list),
+    'Depth'       : (last, parseDepth),
+    'Destination' : (last,), # TODO: URI object?
+   #'If'          : (),
+   #'Lock-Token'  : (),
+    'Overwrite'   : (last, parseOverWrite),
+   #'Status-URI'  : (),
+   #'Timeout'     : (),
+}
+
+generator_dav_headers = {
+    'DAV'         : (generateList, singleHeader),
+    'Depth'       : (singleHeader),
+    'Destination' : (singleHeader),
+   #'If'          : (),
+   #'Lock-Token'  : (),
+   #'Overwrite'   : (),
+   #'Status-URI'  : (),
+   #'Timeout'     : (),
+}
+
 DefaultHTTPHandler.updateParsers(parser_general_headers)
 DefaultHTTPHandler.updateParsers(parser_request_headers)
 DefaultHTTPHandler.updateParsers(parser_response_headers)
 DefaultHTTPHandler.updateParsers(parser_entity_headers)
+DefaultHTTPHandler.updateParsers(parser_dav_headers)
 
 DefaultHTTPHandler.updateGenerators(generator_general_headers)
 DefaultHTTPHandler.updateGenerators(generator_request_headers)
 DefaultHTTPHandler.updateGenerators(generator_response_headers)
 DefaultHTTPHandler.updateGenerators(generator_entity_headers)
+DefaultHTTPHandler.updateGenerators(generator_dav_headers)
 
 
 # casemappingify(DefaultHTTPParsers)

@@ -14,6 +14,7 @@ Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 # system imports
 import socket
 import time
+import cgi
 
 # twisted imports
 from twisted.internet import interfaces
@@ -79,6 +80,56 @@ class Response(object):
             self.headers = http_headers.Headers()
         if stream is not None:
             self.stream = IByteStream(stream)
+
+class StatusResponse (Response):
+    """
+    A Response object which simply contains a status code and a description of
+    what happened.
+    """
+    description = None
+
+    def __init__(self, code, description):
+        title = cgi.escape(responsecode.RESPONSES[code])
+
+        output = "".join((
+            "<html>",
+            "<head>",
+            "<title>%s</title>" % (title,),
+            "</head>",
+            "<body>",
+            "<h1>%s</h1>" % (title,),
+            "<p>%s</p>" % (cgi.escape(description),),
+            "</body>",
+            "</html>",
+        ))
+
+        if type(output) == unicode:
+            output = output.encode("utf-8")
+            mime_params = {"charset": "utf-8"}
+        else:
+            mime_params = {}
+
+        Response.__init__(self, code=code, stream=output)
+
+        self.headers.setHeader("content-type", http_headers.MimeType("text", "html", mime_params))
+        self.headers.setHeader("content-length", len(output))
+
+        self.description = description
+
+    def __repr__(self):
+        return "<%s %s %s>" % (self.__class__.__name__, self.code, self.description)
+
+class RedirectResponse (StatusResponse):
+    """
+    A Response object that contains a redirect.
+    """
+    def __init__(self, location):
+        StatusResponse.__init__(
+            self, responsecode.MOVED_PERMANENTLY,
+            "Document moved to %s." % (location,)
+        )
+
+        self.headers.setHeader("location", location)
 
 def NotModifiedResponse(oldResponse=None):
     if oldResponse is not None:

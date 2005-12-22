@@ -1,0 +1,39 @@
+Clean up docstrings
+
+Resource:
+  self.allowedMethods in Resource should be a method, not an ivar.
+  Does render() really make sense as distinct from render_GET?
+
+File:
+  Reconcile DAVFile's listNames() with File's
+  contentTypes should be a (class) method, not an attribute.
+    loadMimeTypes() may be superfluous
+
+IResource:
+  Add some methods (from DAVFile):
+    etag()
+    exists()
+    lastModified()
+    creationDate()
+    contentLength()
+    displayName()
+    update()
+  Add site to interface (it's in Resource)
+
+ISite:
+  Create ISite interface
+  Add locateSiblingResource()? (I have it in DAVFile, which is an IResource)
+
+IDAVResource:
+  Create IDAVResource interface
+
+Integrate authentication configuration into DAV methods.
+
+Add attributes to http_* methods?
+  per resource ALLOW?
+    allowed()
+  pre/post conditions per method (see deltaV)
+    checkPreConditions()
+    checkPostConditions() - perhaps more like an exception handler?
+
+Figure out how to do logging without hacking renderHTTP()

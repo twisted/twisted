@@ -115,13 +115,41 @@ class File(resource.Resource):
     return the contents of /tmp/foo/bar.html .
     """
 
-    
-    contentTypes = loadMimeTypes()
+    def _getContentTypes(self):
+        if not hasattr(File, "_sharedContentTypes"):
+            File._sharedContentTypes = loadMimeTypes()
+        return File._sharedContentTypes
+
+    contentTypes = property(_getContentTypes)
 
     contentEncodings = {
         ".gz" : "gzip",
         ".bz2": "bzip2"
         }
+
+    def _initTypeAndEncoding(self):
+        self._type, self._encoding = getTypeAndEncoding(
+            self.fp.basename(),
+            self.contentTypes,
+            self.contentEncodings,
+            self.defaultType
+        )
+
+        # Handle cases not covered by getTypeAndEncoding()
+        if self.fp.isdir(): self._type = "httpd/unix-directory"
+
+    def _getType(self):
+        if not hasattr(self, "_type"):
+            self._initTypeAndEncoding()
+        return self._type
+
+    def _getEncoding(self):
+        if not hasattr(self, "_encoding"):
+            self._initTypeAndEncoding()
+        return self._encoding
+
+    type     = property(_getType    )
+    encoding = property(_getEncoding)
 
     processors = {}
 
@@ -204,12 +232,6 @@ class File(resource.Resource):
         self.fp.restat()
         response = http.Response()
         
-        if self.type is None:
-            self.type, self.encoding = getTypeAndEncoding(self.fp.basename(),
-                                                          self.contentTypes,
-                                                          self.contentEncodings,
-                                                          self.defaultType)
-
         if not self.fp.exists():
             return responsecode.NOT_FOUND
 

@@ -1,0 +1,82 @@
+License for files in the pypy/ directory 
+==================================================
+
+Except when otherwise stated (look for LICENSE files in directories or
+information at the beginning of each file) all software and
+documentation in the 'pypy' directories is licensed as follows: 
+
+    The MIT License
+
+    Permission is hereby granted, free of charge, to any person 
+    obtaining a copy of this software and associated documentation 
+    files (the "Software"), to deal in the Software without 
+    restriction, including without limitation the rights to use, 
+    copy, modify, merge, publish, distribute, sublicense, and/or 
+    sell copies of the Software, and to permit persons to whom the 
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included 
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+    DEALINGS IN THE SOFTWARE.
+
+
+PyPy Copyright holders 2003-2005
+----------------------------------- 
+
+Except when otherwise stated (look for LICENSE files or information at
+the beginning of each file) the files in the 'pypy' directory are each
+copyrighted by one or more of the following people and organizations:    
+
+    Armin Rigo <arigo@tunes.org>
+    Samuele Pedroni <pedronis@strakt.com>
+    Holger Krekel <hpk@trillke.net>
+    Christian Tismer <tismer@tismer.com>
+    Michael Hudson <mwh@python.net>
+    Carl Friedrich Bolz <cfbolz@gmx.de>
+    Eric van Riet Paap <eric@vanrietpaap.nl>
+    Richard Emslie <rxe@ukshells.co.uk>
+    Anders Chrigstrom <ac@strakt.com>
+    Seo Sanghyeon <sanxiyn@gmail.com>
+    Alex Martelli <aleaxit@yahoo.com>
+    Anders Lehmann <serendipity-soft@get2net.dk>
+    Patrick Maupin <pmaupin@speakeasy.net>
+    Ludovic Aubry <ludovic.aubry@logilab.fr>
+    Bob Ippolito <bob@redivi.com>
+    Adrien Di Mascio <adim@logilab.fr>
+    Jacob Hallen <jacob@strakt.com>
+    Laura Creighton <lac@strakt.com>
+    Marius Gedminas <mgedmin@b4net.lt>
+    Niklaus Haldimann <nhaldimann@gmx.ch>
+    Amaury Forgeot d Arc <amauryfa@gmail.com>
+    Boris Feigin <boria@fbg.uklinux.net>
+    Valentino Volonghi <dialtone@divmod.com>        
+    Bert Freudenberg <bert@impara.de>
+    Andrew Thompson <andrew.thompson@newhert.com>    
+    Jonathan David Riehl <jriehl@spaceship.com>
+    Guido van Rossum <guido@python.org>
+
+    Heinrich-Heine University, Germany 
+    AB Strakt, Sweden  
+    merlinux GmbH, Germany 
+    tismerysoft GmbH, Germany 
+    Logilab Paris, France 
+    DFKI GmbH, Germany 
+    Impara, Germany
+
+ 
+License for 'lib-python/2.4.1' and 'lib-python/2.4.1-modified'
+============================================================== 
+
+Except when otherwise stated (look for LICENSE files or
+copyright/license information at the beginning of each file) the files
+in the 'lib-python/2.4.1' and 'lib-python/2.4.1-modified' directories
+are all copyrighted by the Python Software Foundation and licensed under
+the Python Software License of which you can find a copy here:
+http://www.python.org/doc/Copyright.html 
