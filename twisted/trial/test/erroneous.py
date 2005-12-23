@@ -1,43 +1,42 @@
-# -*- test-case-name: twisted.trial.test.test_trial -*-
+# -*- test-case-name: twisted.trial.test.test_tests -*-
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, defer
-from twisted.trial.test.common import BaseTest
 
-"""
-in some cases, it is necessary to run trial in a child process to effectively test it's behavior
-in erroneous conditions, this module provides such tests
-"""
-
-#__tests__ = []
-
-DO_OUTPUT = False
 
 class FoolishError(Exception):
     pass
 
 
-class TestFailureInSetUp(BaseTest):
+class TestFailureInSetUp(unittest.TestCase):
     def setUp(self):
-        super(TestFailureInSetUp, self).setUp()
         raise FoolishError, "I am a broken setUp method"
 
+    def test_noop(self):
+        pass
 
-class TestFailureInTearDown(BaseTest):
+
+class TestFailureInTearDown(unittest.TestCase):
     def tearDown(self):
-        super(TestFailureInTearDown, self).tearDown()
         raise FoolishError, "I am a broken tearDown method"
 
+    def test_noop(self):
+        pass
 
-class TestFailureInSetUpClass(BaseTest):
+
+class TestFailureInSetUpClass(unittest.TestCase):
     def setUpClass(self):
-        super(TestFailureInSetUpClass, self).setUpClass()
         raise FoolishError, "I am a broken setUpClass method"
 
+    def test_noop(self):
+        pass
 
-class TestFailureInTearDownClass(BaseTest):
+
+class TestFailureInTearDownClass(unittest.TestCase):
     def tearDownClass(self):
-        super(TestFailureInTearDownClass, self).tearDownClass()
         raise FoolishError, "I am a broken setUp method"
+
+    def test_noop(self):
+        pass
 
 
 class TestRegularFail(unittest.TestCase):
@@ -45,24 +44,23 @@ class TestRegularFail(unittest.TestCase):
         self.fail("I fail")
 
 
-class TestSkipTestCase(BaseTest):
+class TestSkipTestCase(unittest.TestCase):
     pass
 
 TestSkipTestCase.skip = "skipping this test"
 
 
-class TestSkipTestCase2(BaseTest):
+class TestSkipTestCase2(unittest.TestCase):
+    
     def setUpClass(self):
         raise unittest.SkipTest, "thi stest is fukct"
 
     def test_thisTestWillBeSkipped(self):
-        self.methodCalled = True
-        if DO_OUTPUT:
-            print TESTING_MSG
+        pass
 
 HIDDEN_EXCEPTION_MSG = "something blew up"
 
-class DemoTest(BaseTest):
+class DemoTest(unittest.TestCase):
     def setUp(self):
         super(DemoTest, self).setUp()
         self.finished = False
@@ -73,7 +71,6 @@ class DemoTest(BaseTest):
         self.finished = True
 
     def testHiddenException(self):
-        self.methodCalled = True
         import time
         cl = reactor.callLater(0, self.go)
         timeout = time.time() + 2
@@ -81,21 +78,19 @@ class DemoTest(BaseTest):
             reactor.iterate(0.1)
         self.failUnless(self.finished)
 
-class ReactorCleanupTests(BaseTest):
+class ReactorCleanupTests(unittest.TestCase):
     def test_leftoverPendingCalls(self):
-        self.methodCalled = True
         def _():
             print 'foo!'
         reactor.callLater(10000.0, _)
 
-class SocketOpenTest(BaseTest):
+class SocketOpenTest(unittest.TestCase):
     def test_socketsLeftOpen(self):
-        self.methodCalled = True
         f = protocol.Factory()
         f.protocol = protocol.Protocol
         reactor.listenTCP(0, f)
 
-class TimingOutDeferred(BaseTest):
+class TimingOutDeferred(unittest.TestCase):
     def test_alpha(self):
         pass
 
@@ -106,3 +101,12 @@ class TimingOutDeferred(BaseTest):
 
     def test_omega(self):
         pass
+
+
+def unexpectedException(self):
+    """i will raise an unexpected exception...
+    ... *CAUSE THAT'S THE KINDA GUY I AM*
+    
+    >>> 1/0
+    """
+

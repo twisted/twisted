@@ -1,16 +1,12 @@
-# -*- test-case-name: twisted.trial.test.test_trial -*-
+# -*- test-case-name: twisted.trial.test.test_tests -*-
 
-import cPickle as pickle
 import warnings
 
-from twisted.trial import unittest, runner, reporter, util, itrial
-from twisted.trial.test import common
-from twisted.python import log, failure
-from twisted.internet import defer, reactor
+from twisted.trial import unittest, util
 
 
-""" 
-test to make sure that warning supression works at the module, method, and class levels
+""" test to make sure that warning supression works at the module, method, and
+class levels
 """
 
 METHOD_WARNING_MSG = "method warning message"

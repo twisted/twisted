@@ -1,6 +1,6 @@
 from twisted.trial import unittest
 from twisted.trial.runner import TestLoader
-from twisted.trial.test import common
+
 
 class TestTestVisitor(unittest.TestCase):
 

@@ -2,7 +2,7 @@ import StringIO
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.trial import runner, reporter, util
-from twisted.trial.test import detests, timeouts
+from twisted.trial.test import detests
 
 
 class TestSetUp(unittest.TestCase):
@@ -152,7 +152,7 @@ class TestDeferred(TestTester):
 
 class TestTimeout(TestTester):
     def getTest(self, name):
-        return timeouts.TimeoutTests(name)
+        return detests.TimeoutTests(name)
 
     def _wasTimeout(self, error):
         self.failUnlessEqual(error.check(defer.TimeoutError),
@@ -199,4 +199,13 @@ class TestTimeout(TestTester):
         result = self.runTest('test_errorPropagation')
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
-        self._wasTimeout(timeouts.TimeoutTests.timedOut)
+        self._wasTimeout(detests.TimeoutTests.timedOut)
+
+    def test_classTimeout(self):
+        loader = runner.TestLoader()
+        suite = loader.loadClass(detests.TestClassTimeoutAttribute)
+        result = reporter.TestResult()
+        suite.run(result)
+        self.failUnlessEqual(len(result.errors), 1)
+        self._wasTimeout(result.errors[0][1])
+        

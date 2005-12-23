@@ -57,36 +57,30 @@ class TestModuleTest(unittest.TestCase):
         finally:
             sys.stderr = stderr
 
-    def test_actuallyRuns(self):
-        import test_output
-        output = test_output.runTrial('--testmodule',
-                                      sibpath('moduletest.py'))
-        self.assertSubstring('twisted.trial.test.test_test_visitor', output)
-        
     def test_parseLocalVariable(self):
-        declaration = '-*- test-case-name: twisted.trial.test.test_trial -*-'
+        declaration = '-*- test-case-name: twisted.trial.test.test_tests -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_trial'},
+        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests'},
                              localVars)
 
     def test_trailingSemicolon(self):
-        declaration = '-*- test-case-name: twisted.trial.test.test_trial; -*-'
+        declaration = '-*- test-case-name: twisted.trial.test.test_tests; -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_trial'},
+        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests'},
                              localVars)
         
     def test_parseLocalVariables(self):
-        declaration = '-*- test-case-name: twisted.trial.test.test_trial; ' \
+        declaration = '-*- test-case-name: twisted.trial.test.test_tests; ' \
                       'foo: bar -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_trial',
+        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests',
                               'foo': 'bar'},
                              localVars)
 
     def test_surroundingGuff(self):
-        declaration = '## -*- test-case-name: twisted.trial.test.test_trial -*- #'
+        declaration = '## -*- test-case-name: twisted.trial.test.test_tests -*- #'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_trial'},
+        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests'},
                              localVars)
 
     def test_invalidLine(self):

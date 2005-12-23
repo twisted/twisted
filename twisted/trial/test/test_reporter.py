@@ -1,53 +1,45 @@
-# -*- test-case-name: twisted.trial.test.test_reporter -*-
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
+# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
-from __future__ import nested_scopes
 
-import re
-import time
-import types
-from pprint import pformat, pprint
-
+import time, re, StringIO
 from twisted.trial import unittest, runner, reporter
-from twisted.trial.test import common, erroneous
+from twisted.trial.test import erroneous
 
-
-class TestReporter(common.RegistryBaseMixin):
-
-    def testTracebackReporting(self):
-        from twisted.trial.runner import TrialSuite
-        # the fact this is needed shows that we need to split out the reporting
-        # from the run action.
-        loader = runner.TestLoader()
-        suite = loader.loadMethod(common.FailfulTests.testTracebackReporting)
-        self.run_a_suite(suite)
-        self.reporter.printErrors()
-        lines = self.reporter.out.split('\n')
-        while 1:
-            self.failUnless(lines, "double separator not found in lines")
-            if lines[0] != reporter.Reporter.doubleSeparator:
-                lines.pop(0)
+class TestReporter(unittest.TestCase):
+    doubleSeparator = re.compile(r'^=+$')
+    
+    def stringComparison(self, expect, output):
+        output = filter(None, output)
+        self.failUnless(len(expect) <= len(output),
+                        "Must have more observed than expected"
+                        "lines %d < %d" % (len(output), len(expect)))
+        REGEX_PATTERN_TYPE = type(re.compile(''))
+        for exp, out in zip(expect, output):
+            if exp is None:
+                continue
+            elif isinstance(exp, str):
+                self.assertSubstring(exp, out)
+            elif isinstance(exp, REGEX_PATTERN_TYPE):
+                self.failUnless(exp.match(out), "%r did not match string %r"
+                                % (exp.pattern, out))
             else:
-                return
+                raise TypeError("don't know what to do with object %r"
+                                % (exp,))
 
-        expect = [
-reporter.Reporter.doubleSeparator,
-'[ERROR]: testTracebackReporting (twisted.trial.test.test_reporter.FailfulTests)',
-None,
-None,
-re.compile(r'.*twisted/trial/test/test_reporter\.py.*testTracebackReporting'),
-re.compile(r'.*1/0'),
-re.compile(r'.*ZeroDivisionError.*'),
-SEPARATOR,
-re.compile(r'Ran 1 tests in [0-9.]*s'),
-r'FAILED (errors=1)'
-]
-        self.stringComparison(expect, lines)
-     
+    def setUp(self):
+        super(TestReporter, self).setUp()
+        self.loader = runner.TestLoader()
+
+    def runTests(self, suite):
+        output = StringIO.StringIO()
+        result = reporter.Reporter(output)
+        suite.run(result)
+        result.printErrors()
+        return output.getvalue()
+    
     def test_timing(self):
         the_reporter = reporter.Reporter()
         the_reporter._somethingStarted()
@@ -59,6 +51,56 @@ r'FAILED (errors=1)'
         self.failUnless(time1 < time2)
         self.assertEqual(the_reporter._last_time, time2)
         
+    def testFormatErroredMethod(self):
+        suite = self.loader.loadClass(erroneous.TestFailureInSetUp)
+        output = self.runTests(suite).splitlines()
+        match = [self.doubleSeparator,
+                 ('[ERROR]: twisted.trial.test.erroneous.'
+                  'TestFailureInSetUp.test_noop'),
+                 re.compile(r'^\s+File .*erroneous\.py., line \d+, in setUp$'),
+                 re.compile(r'^\s+raise FoolishError, '
+                            r'.I am a broken setUp method.$'),
+                 ('twisted.trial.test.erroneous.FoolishError: '
+                  'I am a broken setUp method')]
+        self.stringComparison(match, output)
+
+    def testFormatFailedMethod(self):
+        suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
+        output = self.runTests(suite).splitlines()
+        match = [
+            self.doubleSeparator,
+            '[FAIL]: '
+            'twisted.trial.test.erroneous.TestRegularFail.test_fail',
+            re.compile(r'^\s+File .*erroneous\.py., line \d+, in test_fail$'),
+            re.compile(r'^\s+self\.fail\("I fail"\)$'),
+            'twisted.trial.unittest.FailTest: I fail'
+            ]
+        self.stringComparison(match, output)
+
+    def testDoctestError(self):
+        import sys
+        from twisted.trial.test import erroneous
+        if sys.version_info[0:2] < (2, 3):
+            raise unittest.SkipTest(
+                'doctest support only works in Python 2.3 or later')
+        suite = self.loader.loadDoctests(erroneous)
+        output = self.runTests(suite)
+        path = 'twisted.trial.test.erroneous.unexpectedException'
+        for substring in ['1/0', 'ZeroDivisionError',
+                          'Exception raised:', path]:
+            self.assertSubstring(substring, output)
+        self.failUnless(re.search('Fail(ed|ure in) example:', output),
+                        "Couldn't match 'Failure in example: ' "
+                        "or 'Failed example: '")
+        expect = [self.doubleSeparator,
+                  re.compile(r'\[(ERROR|FAIL)\]: .*[Dd]octest.*'
+                             + re.escape(path))]
+        self.stringComparison(expect, output.splitlines())
+
+    def testHiddenException(self):
+        output = self.runTests(erroneous.DemoTest('testHiddenException'))
+        self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
+
         
 __unittests__ = [TestReporter]
 

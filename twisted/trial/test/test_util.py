@@ -1,11 +1,9 @@
-# -*- test-case-name: twisted.trial.test.test_util -*-
-from twisted.python import failure, log
-from twisted.python.runtime import platformType
+from twisted.python import log
 from twisted.internet import defer, reactor, threads, interfaces
-from twisted.trial import unittest, util, runner
+from twisted.trial import unittest, util
 from twisted.trial.test import packages
 
-import sys, os, time, signal
+import sys, os, time
 
 
 class WaitReentrancyTest(unittest.TestCase):
@@ -49,7 +47,9 @@ class TestMktemp(unittest.TestCase):
     def testMktmp(self):
         tmp = self.mktemp()
         tmp1 = self.mktemp()
-        exp = os.path.join('twisted.trial.test.test_trial', 'UtilityTestCase', 'testMktmp')
+        # XXX -- what does this test?
+        exp = os.path.join('twisted.trial.test.test_trial',
+                           'UtilityTestCase', 'testMktmp')
         self.failIfEqual(tmp, tmp1)
         self.failIf(os.path.exists(exp))
 

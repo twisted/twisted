@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.trial.test.test_trial -*-
+# -*- test-case-name: twisted.trial.test.test_tests -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.

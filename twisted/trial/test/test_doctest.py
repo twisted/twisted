@@ -14,7 +14,7 @@ from twisted.trial import runner, unittest, reporter
 from twisted.trial import itrial
 from twisted.python import failure
 
-from twisted.trial.test import trialdoctest1, trialdoctest2, common
+from twisted.trial.test import mockdoctest
 
 from pprint import pprint
 
@@ -26,16 +26,16 @@ if sys.version_info[0:2] < (2,3):
 
 class TestRunners(unittest.TestCase):
     def test_correctCount(self):
-        suite = runner.DocTestSuite(trialdoctest1)
+        suite = runner.DocTestSuite(mockdoctest)
         self.assertEqual(7, suite.countTestCases())
 
     def test_basicTrialIntegration(self):
         loader = runner.TestLoader()
-        suite = loader.loadDoctests(trialdoctest1)
+        suite = loader.loadDoctests(mockdoctest)
         self.assertEqual(7, suite.countTestCases())
 
     def test_expectedResults(self):
-        suite = runner.DocTestSuite(trialdoctest1)
+        suite = runner.DocTestSuite(mockdoctest)
         result = reporter.TestResult()
         suite.run(result)
         self.assertEqual(5, len(result.successes))

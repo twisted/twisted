@@ -71,7 +71,7 @@ class Counter(object):
     def incr(self):
         """increment my value by 1
 
-             >>> from twisted.trial.test.trialdoctest1 import Counter
+             >>> from twisted.trial.test.mockdoctest import Counter
              >>> c = Counter(10, 11)
              >>> c.incr()
              >>> c.value() == 11
@@ -79,9 +79,9 @@ class Counter(object):
              >>> c.incr()
              Traceback (most recent call last):
                File "<stdin>", line 1, in ?
-               File "twisted/trial/test/trialdoctest1.py", line 51, in incr
+               File "twisted/trial/test/mockdoctest.py", line 51, in incr
                  self.__iadd__(1)
-               File "twisted/trial/test/trialdoctest1.py", line 39, in __iadd__
+               File "twisted/trial/test/mockdoctest.py", line 39, in __iadd__
                  raise ValueError, "sorry, counter got too big"
              ValueError: sorry, counter got too big
         """
