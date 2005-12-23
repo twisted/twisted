@@ -2,8 +2,7 @@
 
 # This is the primary entry point for newpb
 
-# TODO: remove when 2.2-compat is dropped
-from __future__ import generators
+from __future__ import generators # TODO: remove when 2.2-compat is dropped
 
 from twisted.python import failure, log, urlpath
 from twisted.python.components import registerAdapter
