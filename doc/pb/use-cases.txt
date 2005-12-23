@@ -1,0 +1,115 @@
+This file contains a collection of pb wishlist items, things it would be nice
+to have in newpb.
+
+
+* Log in, specifying desired interfaces
+
+The server can provide several different interfaces, each of which inherit from
+pb.IPerspective. The client can specify which of these interfaces that it
+desires.
+
+This change requires Jellyable interfaces, which in turn requires being able to
+"register jelliers sanely" (exarkun 2004-05-10).
+
+An example, in oldpb lingo:
+
+  # client
+  factory = PBClientFactory()
+  reactor.connectTCP('localhost', portNum, factory)
+  d = factory.login(creds, mind, IBusiness) # <-- API change
+  d.addCallbacks(connected, disaster)
+
+  # server
+  class IBusiness(pb.IPerspective):
+    def perspective_foo(self, bar):
+      "Does something"
+
+  class Business(pb.Avatar):
+    __implements__ = (IBusinessInterface, pb.Avatar.__implements__)
+    def perspective_foo(self, bar):
+      return bar
+
+  class Finance(pb.Avatar):
+    def perspective_cash(self):
+      """do cash"""
+
+  class BizRealm:
+    __implements__ = portal.IRealm
+    def requestAvatar(self, avatarId, mind, *interfaces):
+      if IBusiness in interfaces:
+        return IBusiness, Business(avatarId, mind), lambda : None
+      elif pb.IPerspective in interfaces:
+        return pb.IPerspective, Finance(avatarId), lambda : None
+      else:
+        raise NotImplementedError
+
+
+* data schemas in Zope3
+
+http://svn.zope.org/Zope3/trunk/src/zope/schema/README.txt?rev=13888&view=auto
+
+* objects that are both Referenceable and Copyable
+ -warner
+
+I have a music player which can be controlled remotely via PB. There are
+server-side objects (corresponding to songs or albums) which contain both
+public attributes (song name, artist name) and private state (pathname to the
+local .ogg file, whether or not it is present in the cache).
+
+These objects may be sent to the remote end (the client) in response to
+either a "what are you playing right now" query, or a "tell me about all of
+your music" query. When they are sent down, the remote end should get an
+object which contains the public attributes.
+
+If the remote end sends that object back (in a "please play this song"
+method), the local end (the server) should get back a reference to the
+original Song or Album object.
+
+This requires that the original object be serialized with both some public
+state and a reference ID. The remote end must create a representation that
+contains both pieces. That representation will be serialized with just the
+reference ID.
+
+Ideally this should be as easy to express as marking the source object as
+implementing both pb.Referenceable and pb.Copyable, and the receiving object
+as both a pb.RemoteReference and a pb.RemoteCopy.
+
+Without this capability, my workaround is to manually assign a sequential
+integer to each of these referenceable objects, then send a dict of the
+public attributes and the index number. The recipient sends back the whole
+dict, and the server end only pays attention to the .index attribute.
+
+Note that I don't care about doing .callRemote on the remote object. This is
+a case where it might make sense to split pb.Referenceable into two pieces,
+one that talks about referenceability and the other that talks about
+callablilty (pb.Callable?).
+
+* both Callable and Copyable
+
+buildbot: remote version of BuildStatus. When a build starts, the
+buildmaster sends the current build to all status clients. It would be handy
+for them to get some static data (name, number, reason, changes) about the
+build at that time, plus a reference that can be used to query it again
+later (through callRemote). This can be done manually, but requires knowing
+all the places where a BuildStatus might be sent over the wire and wrapping
+them. I suppose it could be done with a Slicer/Unslicer pair:
+
+class CCSlicer:
+ def slice(self, obj):
+   yield obj
+   yield obj.getName()
+   yield obj.getNumber()
+   yield obj.getReason()
+   yield obj.getChanges()
+
+class CCUnslicer:
+ def receiveChild(self, obj):
+   if state == 0: self.obj = makeRemoteReference(obj); state += 1; return
+   if state == 1: self.obj.name = obj; state += 1; return
+   if state == 2: self.obj.reason = obj; state += 1; return
+   if state == 3: self.obj.changes = obj; state += 1; return
+
+plus some glue to make sure the object gets added to the per-Broker
+references list: this makes sure the object is not sent (in full) twice, and
+that the receiving side keeps a reference to the slaved version.
+
