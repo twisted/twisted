@@ -177,7 +177,6 @@ class TestOurServerOurClient(SFTPTestBase):
         attrs['atime'] = 0
         self._waitWithBuffer(self.client.setAttrs('testfile1', attrs))
         attrs3 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
-        del attrs3['uid'], attrs3['gid']
         self.failUnlessEqual(attrs, attrs3)
 
     def testRemoveFile(self):
