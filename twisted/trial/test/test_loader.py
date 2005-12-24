@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, StringIO
 from twisted.python import util
 from twisted.trial.test import packages
 from twisted.trial import unittest
@@ -279,3 +279,11 @@ class LoaderTest(packages.PackageTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadAnything, "goodpackage")
 
+    def test_importErrors(self):
+        import package
+        suite = self.loader.loadPackage(package, recurse=True)
+        result = reporter.Reporter(StringIO.StringIO())
+        suite.run(result)
+        self.failUnlessEqual(2, len(result.couldNotImport))
+        self.failUnlessEqual(False, result.wasSuccessful())
+        

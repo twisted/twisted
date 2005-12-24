@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import os, errno, warnings, sys, time
+import os, errno, warnings, sys, time, tempfile
 
 from twisted.internet import defer
 from twisted.python import failure, log, reflect
@@ -452,27 +452,7 @@ class TestCase(pyunit.TestCase, object):
         @note: you must call os.mkdir on the value returned from this
                method if you wish to use it as a directory!
         """
-        # FIXME: when we drop support for python 2.2 and start to require 2.3,
-        #        we should ditch most of this cruft and just call
-        #        tempfile.mkdtemp.
-        cls = self.__class__
-        base = os.path.join(cls.__module__, cls.__name__,
-                            self._testMethodName[:32])
-        try:
-            os.makedirs(base)
-        except OSError, e:
-            code = e[0]
-            if code == errno.EEXIST:
-                pass
-            else:
-                raise
-        pid = os.getpid()
-        while 1:
-            num = self._mktGetCounter(base)
-            name = os.path.join(base, "%s.%s" % (pid, num))
-            if not os.path.exists(name):
-                break
-        return name
+        return tempfile.mkdtemp()
 
     # mktemp helper to increment a counter
     def _mktGetCounter(self, base):
