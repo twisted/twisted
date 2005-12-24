@@ -235,6 +235,8 @@ class ClassSuite(TestSuite):
     def _ebDeferSetUpClass(self, error, result):
         if error.check(unittest.SkipTest):
             self.original.skip = error.value[0]
+            for test in self._tests:
+                test.run(result)
         elif error.check(KeyboardInterrupt):
             result.stop()
         else:

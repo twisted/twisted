@@ -126,6 +126,59 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
+class TestSkipClassesRaised(unittest.TestCase, ResultsTestMixin):
+    class SkippedClass(unittest.TestCase):
+        def setUpClass(self):
+            raise unittest.SkipTest("class")
+        def setUp(self):
+            self.__class__._setUpRan = True
+        def tearDownClass(self):
+            self.__class__._tearDownClassRan = True
+        def test_skip1(self):
+            raise SkipTest('skip1')
+        def test_skip2(self):
+            raise RuntimeError("Ought to skip me")
+        test_skip2.skip = 'skip2'
+        def test_skip3(self):
+            pass
+        def test_skip4(self):
+            raise RuntimeError("Skip me too")
+        
+    def setUp(self):
+        if hasattr(TestSkipClassesRaised.SkippedClass, 'skip'):
+            delattr(TestSkipClassesRaised.SkippedClass, 'skip')
+        self.loadSuite(TestSkipClassesRaised.SkippedClass)
+        TestSkipClassesRaised.SkippedClass._setUpRan = False
+        TestSkipClassesRaised.SkippedClass._tearDownClassRan = False
+
+    def test_counting(self):
+        self.assertCount(4)
+
+    def test_setUpRan(self):
+        self.suite(self.reporter)
+        self.failUnlessEqual(
+            TestSkipClassesRaised.SkippedClass._setUpRan, False)
+
+    def test_tearDownClassRan(self):
+        self.suite(self.reporter)
+        self.failUnlessEqual(
+            TestSkipClassesRaised.SkippedClass._tearDownClassRan, False)
+
+    def test_results(self):
+        self.suite(self.reporter)
+        self.failUnless(self.reporter.wasSuccessful())
+        self.failUnlessEqual(self.reporter.errors, [])
+        self.failUnlessEqual(self.reporter.failures, [])
+        self.failUnlessEqual(len(self.reporter.skips), 4)
+
+    def test_reasons(self):
+        self.suite(self.reporter)
+        expectedReasons = ['class', 'skip2', 'class', 'class']
+        # whitebox reporter
+        reasonsGiven = [ reason for test, reason in self.reporter.skips ]
+        self.failUnlessEqual(expectedReasons, reasonsGiven)
+
+
 class TestTodo(unittest.TestCase, ResultsTestMixin):
     class TodoTests(unittest.TestCase):
         def test_todo1(self):
