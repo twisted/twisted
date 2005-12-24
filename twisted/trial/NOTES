@@ -1,13 +1,9 @@
 
 QUICK THOUGHTS
 
-Create a TestRunner object.  Give it run, debug, profile and callUntilFailure
-  methods -- each of which accepts a suite
-Design it to be subclassable.  Subclasses are different kinds of "Reporters"
-Extract a TestResult object out.  Make it inherit from pyunit.TestResult
-Make startModule/startClass -> startSuite
-Probably have an adapter from pyunit.TestResult to our TestResult
-  (for skip, todo, startSuite etc)
+Design TrialRunner to be subclassable.
+Subclasses are different kinds of "Reporters"
+
 TrialRoot is gone, its now TrialResult. This result will implement the 
 truely test related apis, and pass them through to the reporter, which
 is the instance users can supply. TrialRoot functionality is moving 
@@ -25,135 +21,20 @@ This will give us:
 
 
 
-
-Trial conflates concepts
-Want to move the xUnit architecture, because it's actually surprisingly powerful
-
 "Executing a test should have no dependencies on the TestRunner, TestResult or
 any containing TestSuites" ~ mpool
 
 
 GOALS
-- Command line to configure the runner and run
-
-- Library that takes cmd line params and transforms to test suites
-
 - test suites should be stock pyunit TestSuites unless good reason otherwise
   (case-by-case "good reason")
 
   - runner & result should be somewhat tightly joined
 
-- TestResult should be re-introduced into Trial as a real concept
-
-- trial environment should have a subclass of Suite that calls hooks on the
-  result.  i.e. startModule etc, which are on Result
-
 - Magic Twisted fu (e.g. reactor spinning) should be part of TestCase.run
   (a subclass of pyunit TestCase)
-
-- Temporary directory set up should also be part of this.
 
 - Command line can know about TestCase internals
 
 
 
-MILESTONES
-- Surely there's something better than UserMethodWrapper
-
-- Outline the real interface for Reporter
-
-- Should reporter know about the runner?  (suite.foo)
-
-
-TestCase.run()
-==============
-
-Needs to:
-- save signals
-- skip test, if necessary
-- wrap calls in util.wait()
-- catch errors from util.wait()
-- run setUp, testMethod, tearDown
-- suppress warnings
-- report to the testResult object
-- pass timeout to wait
-
-
-
-REACTOR/TWISTED SANITY
-1. Totally understand what's going on with the reactor etc for *one test*
-2. Understand what's going on for *two tests*
-3. Maybe refactor
-
-
-        log.startKeepingErrors()
-        self.setStartTime()
-        if randomize is not None:
-            self.reporter.write('Running tests shuffled with seed %d' % randomize)
-
-        reporter.startModule(self.original)
-            self._signalStateMgr.save()
-        
-            setUpClass = UserMethodWrapper(self.setUpClass, janitor,
-                                           suppress=self.suppress)
-                # TESTS RUN IN HERE
-                self._signalStateMgr.save()
-                observer = util._TrialLogObserver().install()
-                setUp = UserMethodWrapper(self.setUp, janitor,
-                                          suppress=self.suppress)
-
-                reporter.startTest(self)
-                try:
-                    if not self.parent.debugger:
-                        sys.stdout = util._StdioProxy(sys.stdout)
-                        sys.stderr = util._StdioProxy(sys.stderr)
-                    orig = UserMethodWrapper(self.original, janitor,
-                                             raiseOnErr=False,
-                                             timeout=self.timeout,
-                                             suppress=self.suppress)
-                    orig.errorHook = self._eb
-                    orig(tci)
-                finally:
-                    um = UserMethodWrapper(self.tearDown, janitor,
-                                           suppress=self.suppress)
-
-                observer.remove()
-                self.logevents = observer.events
-                try:
-                    self.parent.janitor.postMethodCleanup()
-                except util.MultiError, e:
-                for f in e.failures:
-                    self._eb(f)
-                reporter.endTest(self)
-                self._signalStateMgr.restore()
-                                          
-            tearDownClass = UserMethodWrapper(self.tearDownClass, janitor,
-                                   suppress=self.suppress)
-            try:
-               return self.janitor.postCaseCleanup()
-            except util.MultiError, e:
-                reporter.cleanupErrors(e.failures)
-            self._signalStateMgr.restore()
-            reporter.endClass(self._testCase)
-            self.endTime = time.time()
-            
-        reporter.endModule(self.original)
-            
-        if self.benchmark:
-            pickle.dump(self.benchmarkStats, file("test.stats", 'wb'))
-        self.endTime = time.time()
-        self.reporter.endSuite(self)
-        try:
-            self.reporter.tearDownReporter()
-        except:
-            t, v, tb = sys.exc_info()
-            raise RuntimeError, "your reporter is broken %r" % \
-                  (''.join(v),), tb
-        from twisted.internet import reactor
-        d = defer.Deferred()
-        reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
-        reactor.fireSystemEvent('shutdown') # radix's suggestion
-        treactor = interfaces.IReactorThreads(reactor, None)
-        if treactor is not None:
-            treactor.suggestThreadPoolSize(0)
-        util.wait(d) # so that the shutdown event completes
