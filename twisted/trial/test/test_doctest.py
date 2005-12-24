@@ -21,9 +21,6 @@ from pprint import pprint
 import zope.interface as zi
 
 
-if sys.version_info[0:2] < (2,3):
-    skip = 'doctest support only works on 2.3 or later'
-
 class TestRunners(unittest.TestCase):
     def test_correctCount(self):
         suite = runner.DocTestSuite(mockdoctest)

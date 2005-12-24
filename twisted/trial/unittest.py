@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import os, errno, warnings, sys, time
+import os, errno, warnings, sys, time, tempfile
 
 from twisted.internet import defer
 from twisted.python import failure, log, reflect
@@ -93,11 +93,6 @@ class TestCase(pyunit.TestCase, object):
         call = reactor.callLater(self.getTimeout(), defer.timeout, d)
         d.addBoth(lambda x : call.active() and call.cancel() or x)
         return d
-
-    def id(self):
-        # only overriding this because Python 2.2's unittest has a broken
-        # implementation
-        return "%s.%s" % (reflect.qual(self.__class__), self._testMethodName)
 
     def shortDescription(self):
         desc = super(TestCase, self).shortDescription()
@@ -427,23 +422,11 @@ class TestCase(pyunit.TestCase, object):
     assertFailure = failUnlessFailure
 
     def failUnlessSubstring(self, substring, astring, msg=None):
-        """a python2.2 friendly test to assert that substring is found in astring
-        parameters follow the semantics of failUnlessIn
-        """
-        if astring.find(substring) == -1:
-            raise self.failureException(msg or "%r not found in %r"
-                                        % (substring, astring))
-        return substring
+        return self.failUnlessIn(substring, astring, msg)
     assertSubstring = failUnlessSubstring
 
     def failIfSubstring(self, substring, astring, msg=None):
-        """a python2.2 friendly test to assert that substring is not found in
-        astring parameters follow the semantics of failUnlessIn
-        """
-        if astring.find(substring) != -1:
-            raise self.failureException(msg or "%r found in %r"
-                                        % (substring, astring))
-        return substring
+        return self.failIfIn(substring, astring, msg)
     assertNotSubstring = failIfSubstring
 
     def mktemp(self):

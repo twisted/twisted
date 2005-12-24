@@ -80,9 +80,6 @@ class TestReporter(unittest.TestCase):
     def testDoctestError(self):
         import sys
         from twisted.trial.test import erroneous
-        if sys.version_info[0:2] < (2, 3):
-            raise unittest.SkipTest(
-                'doctest support only works in Python 2.3 or later')
         suite = self.loader.loadDoctests(erroneous)
         output = self.runTests(suite)
         path = 'twisted.trial.test.erroneous.unexpectedException'

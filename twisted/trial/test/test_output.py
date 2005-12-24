@@ -47,12 +47,14 @@ class TestImportErrors(packages.PackageTest):
 
     def failUnlessIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        self.failUnlessSubstring(containee, container, *args, **kwargs)
+        super(TestImportErrors, self).failUnlessIn(
+            containee, container, *args, **kwargs)
         return container
 
     def failIfIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        self.failIfSubstring(containee, container, *args, **kwargs)
+        super(TestImportErrors, self).failIfIn(
+            containee, container, *args, **kwargs)
         return container
 
     def test_trialRun(self):

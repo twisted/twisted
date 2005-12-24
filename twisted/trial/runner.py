@@ -374,12 +374,8 @@ class TestLoader(object):
         if not hasattr(module, '__doctests__'):
             return NamedSuite(module.__name__, suite)
         docSuite = self.suiteFactory()
-        if sys.version_info[:2] <= (2, 2):
-            warnings.warn("trial's doctest support only works with "
-                          "python 2.3 or later, not running doctests")
-        else:
-            for doctest in module.__doctests__:
-                docSuite.addTest(self.loadDoctests(doctest))
+        for doctest in module.__doctests__:
+            docSuite.addTest(self.loadDoctests(doctest))
         modSuite = self.suiteFactory()
         modSuite.addTests([suite, docSuite])
         return NamedSuite(module.__name__, modSuite)
@@ -440,10 +436,6 @@ class TestLoader(object):
         return suite
 
     def loadDoctests(self, module):
-        if sys.version_info[:2] <= (2, 2):
-            warnings.warn("trial's doctest support only works with "
-                          "python 2.3 or later, not running doctests")
-            return
         if isinstance(module, str):
             try:
                 module = reflect.namedAny(module)
