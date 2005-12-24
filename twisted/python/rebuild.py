@@ -75,37 +75,22 @@ def latestFunction(oldFunc):
     return getattr(module, oldFunc.__name__)
 
 
-if sys.version_info >= (2, 2, 0):
-    # We have 'object'
-    def latestClass(oldClass):
-        """Get the latest version of a class.
-        """
-        module = reflect.namedModule(oldClass.__module__)
-        newClass = getattr(module, oldClass.__name__)
-        newBases = []
-        for base in newClass.__bases__:
-            newBases.append(latestClass(base))
-        
-        try:
-            # This makes old-style stuff work
-            newClass.__bases__ = tuple(newBases)
-            return newClass
-        except TypeError:
-            ctor = getattr(newClass, '__metaclass__', type)
-            return ctor(newClass.__name__, tuple(newBases), dict(newClass.__dict__))
-else:
-    object = 0
+def latestClass(oldClass):
+    """Get the latest version of a class.
+    """
+    module = reflect.namedModule(oldClass.__module__)
+    newClass = getattr(module, oldClass.__name__)
+    newBases = []
+    for base in newClass.__bases__:
+        newBases.append(latestClass(base))
 
-    def latestClass(oldClass):
-        """Get the latest version of a class.
-        """
-        module = __import__(oldClass.__module__, {}, {}, 'nothing')
-        newClass = getattr(module, oldClass.__name__)
-        newBases = []
-        for base in newClass.__bases__:
-            newBases.append(latestClass(base))
+    try:
+        # This makes old-style stuff work
         newClass.__bases__ = tuple(newBases)
         return newClass
+    except TypeError:
+        ctor = getattr(newClass, '__metaclass__', type)
+        return ctor(newClass.__name__, tuple(newBases), dict(newClass.__dict__))
 
 
 def updateInstance(self):
@@ -162,7 +147,7 @@ def rebuild(module, doLog=1):
                 if doLog:
                     log.logfile.write("f")
                     log.logfile.flush()
-        elif object and isinstance(v, type):
+        elif isinstance(v, type):
             if v.__module__ == module.__name__:
                 newclasses[v] = 1
                 if doLog:
@@ -201,25 +186,14 @@ def rebuild(module, doLog=1):
             clazz.__module__ = module.__name__
     if newclasses:
         import gc
-        if (2, 2, 0) <= sys.version_info[:3] < (2, 2, 2):
-            hasBrokenRebuild = 1
-            gc_objects = gc.get_objects()
-        else:
-            hasBrokenRebuild = 0
     for nclass in newclasses:
         ga = getattr(module, nclass.__name__)
         if ga is nclass:
             log.msg("WARNING: new-class %s not replaced by reload!" % reflect.qual(nclass))
         else:
-            if hasBrokenRebuild:
-                for r in gc_objects:
-                    if not getattr(r, '__class__', None) is nclass:
-                        continue
+            for r in gc.get_referrers(nclass):
+                if getattr(r, '__class__', None) is nclass:
                     r.__class__ = ga
-            else:
-                for r in gc.get_referrers(nclass):
-                    if getattr(r, '__class__', None) is nclass:
-                        r.__class__ = ga
     if doLog:
         log.msg('')
         log.msg('  (fixing   %s): ' % str(module.__name__))

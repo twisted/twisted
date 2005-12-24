@@ -197,25 +197,6 @@ def getScripts(projname):
     return [os.path.join(scriptdir, x) for x in thingies]
 
 
-# Apple distributes a nasty version of Python 2.2 w/ all release builds of
-# OS X 10.2 and OS X Server 10.2
-BROKEN_CONFIG = '2.2 (#1, 07/14/02, 23:25:09) \n[GCC Apple cpp-precomp 6.14]'
-if sys.platform == 'darwin' and sys.version == BROKEN_CONFIG:
-    # change this to 1 if you have some need to compile
-    # with -flat_namespace as opposed to -bundle_loader
-    FLAT_NAMESPACE = 0
-    BROKEN_ARCH = '-arch i386'
-    BROKEN_NAMESPACE = '-flat_namespace -undefined_suppress'
-    sysconfig.get_config_vars()
-    x = sysconfig._config_vars['LDSHARED']
-    y = x.replace(BROKEN_ARCH, '')
-    if not FLAT_NAMESPACE:
-        e = os.path.realpath(sys.executable)
-        y = y.replace(BROKEN_NAMESPACE, '-bundle_loader ' + e)
-    if y != x:
-        print "Fixing some of Apple's compiler flag mistakes..."
-        sysconfig._config_vars['LDSHARED'] = y
-
 ## Helpers and distutil tweaks
 
 class build_py_twisted(build_py.build_py):

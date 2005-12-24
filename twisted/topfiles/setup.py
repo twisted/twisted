@@ -8,8 +8,8 @@ Distutils installer for Twisted.
 """
 import os, sys
 
-if sys.version_info < (2,2):
-    print >>sys.stderr, "You must use at least Python 2.2 for Twisted"
+if sys.version_info < (2,3):
+    print >>sys.stderr, "You must use at least Python 2.3 for Twisted"
     sys.exit(3)
 
 import distutils
@@ -19,12 +19,6 @@ if os.path.exists('twisted'):
     sys.path.insert(0, '.') # eek! need this to import twisted. sorry.
 from twisted import copyright
 from twisted.python import dist, util
-
-# 2.2 doesn't have __file__ in main-scripts.
-try:
-    __file__
-except NameError:
-    __file__ = sys.argv[0]
 
 def detectExtensions(builder):
     """

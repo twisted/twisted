@@ -119,6 +119,7 @@ For some extra verbosity, and general niceness add these lines too:
 
 Have fun!
 """
+import itertools
 import sys, commands
 import os.path
 from twisted.python import reflect, util, usage
@@ -284,7 +285,7 @@ class ArgumentsGenerator:
                 "examining zsh_ attributes for the %s command" % (
                     name, self.cmd_name)
 
-        for name in chain(self.altArgDescr, self.actionDescr, self.actions,
+        for name in itertools.chain(self.altArgDescr, self.actionDescr, self.actions,
                                                              self.multiUse):
             if name not in self.optAll_d:
                 err(name)
@@ -332,7 +333,7 @@ class ArgumentsGenerator:
 
         #create a mapping of long option name -> single character name
         longToShort = {}
-        for optList in chain(self.optParams, self.optFlags):
+        for optList in itertools.chain(self.optParams, self.optFlags):
             try:
                 if optList[1] != None:
                     longToShort[optList[0]] = optList[1]
@@ -546,22 +547,6 @@ def run():
         makeCompFunctionFiles(dir)
     else:
         makeCompFunctionFiles(options['directory'])
-
-# in case of python2.2 ...
-try:
-    enumerate
-except:
-    def enumerate(seq):
-        return zip(range(len(seq)), seq)
-try:
-    from itertools import chain
-except:
-    def chain(*args):
-        lst = []
-        for seq in args:
-            for item in seq:
-                lst.append(item)
-        return lst
 
 generateFor = [
                ('conch', 'twisted.conch.scripts.conch', 'ClientOptions'),

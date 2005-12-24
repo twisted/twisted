@@ -113,7 +113,8 @@ Someone set up us the bomb!\015
         if self.mbox != self.factory.domains['baz.com'].messages:
             raise AssertionError(self.factory.domains['baz.com'].messages)
         protocol.setTimeout(None)
-    testMessages = util.suppressWarnings(testMessages, ('DomainSMTP', DeprecationWarning))
+        
+    testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
 
 mail = '''\
 Subject: hello
@@ -162,7 +163,7 @@ class LoopbackTestCase(LoopbackMixin):
         protocol.factory = factory
         clientProtocol = self.clientClass()
         self.loopback(protocol, clientProtocol)
-    testMessages = util.suppressWarnings(testMessages, ('DomainSMTP', DeprecationWarning))
+    testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
 
 class LoopbackSMTPTestCase(LoopbackTestCase, unittest.TestCase):
     clientClass = MySMTPClient

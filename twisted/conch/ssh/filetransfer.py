@@ -701,8 +701,7 @@ class FileTransferClient(FileTransferBase):
 
     def packet_HANDLE(self, data):
         d, data = self._parseRequest(data)
-        isFile, name = self.wasAFile[d] # replace with get when we're at 2.3
-        del self.wasAFile[d]
+        isFile, name = self.wasAFile.pop(d)
         if isFile:
             cb = ClientFile(self, getNS(data)[0])
         else:

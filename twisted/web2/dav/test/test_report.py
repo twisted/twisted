@@ -60,7 +60,9 @@ class REPORT(twisted.web2.dav.test.util.TestCase):
             if response.code != responsecode.FORBIDDEN:
                 self.fail("Unexpected response code for unknown REPORT: %s"
                           % (response.code,))
-
+            from twisted.web2 import stream
+            import sys
+            stream.readStream(response.stream, lambda x: (sys.stderr.write(x), sys.stderr.write("\n")))
         class GoofyReport (davxml.WebDAVUnknownElement):
             namespace = "GOOFY:"
             name      = "goofy-report"

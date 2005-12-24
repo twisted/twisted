@@ -80,20 +80,8 @@ from types import NoneType
 from types import ClassType
 import copy
 
-try:
-    import datetime
-except ImportError:
-    class datetime:
-        def sorry(self, *args, **kw):
-            raise NotImplementedError("Datetime unserializing not supported in Python < 2.3")
-        datetime = sorry
-        timedelta = sorry
-        date = sorry
-        time = sorry
-try:
-    from types import BooleanType
-except ImportError:
-    BooleanType = None
+import datetime
+from types import BooleanType
 
 from new import instance
 from new import instancemethod

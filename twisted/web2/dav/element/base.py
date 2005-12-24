@@ -34,10 +34,7 @@ import string
 import StringIO
 import xml.dom.minidom
 
-try:
-    import datetime
-except ImportError:
-    import twisted.python.pymodules.datetime as datetime
+import datetime
 
 from twisted.python import log
 from twisted.web2.http_headers import parseDateTime

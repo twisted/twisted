@@ -6,8 +6,6 @@
 
 """Manhole client with a GTK v2.x front-end.
 """
-# Note: Because GTK 2.x Python bindings are only available for Python 2.2,
-# this code may use Python 2.2-isms.
 
 __version__ = '$Revision: 1.9 $'[11:-2]
 

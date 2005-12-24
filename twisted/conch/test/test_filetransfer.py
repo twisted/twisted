@@ -175,10 +175,6 @@ class TestOurServerOurClient(SFTPTestBase):
         # XXX test setAttrs
         # Ok, how about this for a start?  It caught a bug :)  -- spiv.
         attrs['atime'] = 0
-        # XXX: Remove 'uid' and 'gid', because python 2.2 doesn't have
-        #      os.lchown, so we just skip that bit (dodgy!)
-        #        -- spiv, 2005-02-27
-        del attrs['uid'], attrs['gid']
         self._waitWithBuffer(self.client.setAttrs('testfile1', attrs))
         attrs3 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
         del attrs3['uid'], attrs3['gid']

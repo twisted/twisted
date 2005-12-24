@@ -23,9 +23,8 @@ except ImportError:
     gotMicrodom = False
 
 
-suppressOldApp = lambda x : util.suppressWarnings(x,
-                                                  ('twisted.internet.app is deprecated',
-                                                   DeprecationWarning))
+oldAppSuppressions = [util.suppress(message='twisted.internet.app is deprecated',
+                                    category=DeprecationWarning)]
 
 class Dummy:
     processName=None
@@ -345,7 +344,7 @@ class TestInternet(unittest.TestCase):
 
         # Cleanup the reactor
         util.wait(TestEcho.d)
-    testUNIX = suppressOldApp(testUNIX)
+    testUNIX.suppress = oldAppSuppressions
 
     def testTCP(self):
         s = service.MultiService()
@@ -373,7 +372,7 @@ class TestInternet(unittest.TestCase):
 
         # Cleanup the reactor
         util.wait(TestEcho.d)
-    testTCP = suppressOldApp(testTCP)
+    testTCP.suppress = oldAppSuppressions
 
     def testCalling(self):
         s = service.MultiService()
@@ -404,7 +403,7 @@ class TestInternet(unittest.TestCase):
         for ch in s:
             self.failIf(ch.kwargs)
             self.assertEqual(ch.name, None)
-    testCalling = suppressOldApp(testCalling)
+    testCalling.suppress = oldAppSuppressions
 
     def testUnlistenersCallable(self):
         s = service.MultiService()
@@ -413,7 +412,7 @@ class TestInternet(unittest.TestCase):
         self.assert_(callable(c.unlistenUNIX))
         self.assert_(callable(c.unlistenUDP))
         self.assert_(callable(c.unlistenSSL))
-    testUnlistenersCallable = suppressOldApp(testUnlistenersCallable)
+    testUnlistenersCallable.suppress = oldAppSuppressions
 
     def testServices(self):
         s = service.MultiService()
@@ -424,7 +423,7 @@ class TestInternet(unittest.TestCase):
         self.assertEqual(c.getServiceNamed("lala"), ch)
         ch.disownServiceParent()
         self.assertEqual(list(s), [])
-    testServices = suppressOldApp(testServices)
+    testServices.suppress = oldAppSuppressions
 
     def testInterface(self):
         s = service.MultiService()
@@ -432,7 +431,7 @@ class TestInternet(unittest.TestCase):
         for key in compat.IOldApplication.__dict__.keys():
             if callable(getattr(compat.IOldApplication, key)):
                 self.assert_(callable(getattr(c, key)))
-    testInterface = suppressOldApp(testInterface)
+    testInterface.suppress = oldAppSuppressions
 
 class DummyApp:
     processName = None
@@ -756,11 +755,11 @@ class TestCompat(unittest.TestCase):
         self.assertEquals(c.getServiceNamed("foo"), svc)
         self.assertEquals(s.getServiceNamed("foo").name, "foo")
         c.removeService(svc)
-    testService = suppressOldApp(testService)
+    testService.suppress = oldAppSuppressions
 
     def testOldApplication(self):
         from twisted.internet import app as oapp
         application = oapp.Application("HELLO")
         oapp.MultiService("HELLO", application)
         compat.convert(application)
-    testOldApplication = suppressOldApp(testOldApplication)
+    testOldApplication.suppress = oldAppSuppressions

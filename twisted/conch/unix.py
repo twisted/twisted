@@ -310,8 +310,6 @@ class SFTPServerForUnixConchUser:
         i.e. under _runAsUser()
         """
         if attrs.has_key("uid") and attrs.has_key("gid"):
-            # XXX: Python 2.2 doesn't have os.lchown!
-            #        -- spiv, 2005-02-27
             os.lchown(path, attrs["uid"], attrs["gid"])
         if attrs.has_key("permissions"):
             os.chmod(path, attrs["permissions"])

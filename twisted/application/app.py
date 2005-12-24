@@ -115,7 +115,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
     from twisted.internet import reactor
     try:
         if config['profile']:
-            if sys.version_info[:2] > (2, 2) and not config['nothotshot']:
+            if not config['nothotshot']:
                 runWithHotshot(reactor, config)
             else:
                 runWithProfiler(reactor, config)

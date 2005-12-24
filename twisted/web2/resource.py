@@ -159,7 +159,7 @@ class WrapperResource(object):
     def locateChild(self, req, segments):
         x = self.hook(req)
         if x is not None:
-            return x.addCallback(lambda data: self.res, segments)
+            return x.addCallback(lambda data: (self.res, segments))
         return self.res, segments
 
     def renderHTTP(self, req):

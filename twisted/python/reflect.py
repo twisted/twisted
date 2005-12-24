@@ -48,15 +48,7 @@ class Settable:
         return self
 
 
-if sys.version_info[:2] >= (2, 2):
-    type22 = type
-else:
-    # just make fake classes so the module can be imported
-    class type22: pass
-    class object: pass
-
-
-class AccessorType(type22):
+class AccessorType(type):
     """Metaclass that generates properties automatically.
 
     This is for Python 2.2 and up.

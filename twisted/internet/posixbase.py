@@ -170,7 +170,7 @@ class PosixReactorBase(ReactorBase):
             signal.signal(signal.SIGINT, self.sigInt)
         signal.signal(signal.SIGTERM, self.sigTerm)
 
-        # Catch Ctrl-Break in windows (only available in Python 2.2 and up)
+        # Catch Ctrl-Break in windows
         if hasattr(signal, "SIGBREAK"):
             signal.signal(signal.SIGBREAK, self.sigBreak)
 

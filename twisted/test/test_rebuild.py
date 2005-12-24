@@ -11,11 +11,10 @@ from twisted.python import rebuild
 import crash_test_dummy
 f = crash_test_dummy.foo
 
-if sys.version_info >= (2, 2, 0):
-    class Foo: pass
-    class Bar(Foo): pass
-    class Baz(object): pass
-    class Buz(Bar, Baz): pass
+class Foo: pass
+class Bar(Foo): pass
+class Baz(object): pass
+class Buz(Bar, Baz): pass
 
 class RebuildTestCase(unittest.TestCase):
     """Simple testcase for rebuilding, to at least exercise the code.
@@ -104,21 +103,20 @@ class RebuildTestCase(unittest.TestCase):
                               crash_test_dummy.XA, crash_test_dummy.X,
                               crash_test_dummy.IX)
 
-    if sys.version_info >= (2, 2, 0):
-        def testUpdateInstance(self):
-            global Foo, Buz
+    def testUpdateInstance(self):
+        global Foo, Buz
 
-            b = Buz()
+        b = Buz()
 
-            class Foo:
-                def foo(self):
-                    pass
-            class Buz(Bar, Baz):
-                x = 10
+        class Foo:
+            def foo(self):
+                pass
+        class Buz(Bar, Baz):
+            x = 10
 
-            rebuild.updateInstance(b)
-            assert hasattr(b, 'foo'), "Missing method on rebuilt instance"
-            assert hasattr(b, 'x'), "Missing class attribute on rebuilt instance"
+        rebuild.updateInstance(b)
+        assert hasattr(b, 'foo'), "Missing method on rebuilt instance"
+        assert hasattr(b, 'x'), "Missing class attribute on rebuilt instance"
 
     def testBananaInteraction(self):
         from twisted.python import rebuild

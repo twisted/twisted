@@ -13,13 +13,8 @@ from twisted.python import log
 import warnings
 
 class AppTestCase(unittest.TestCase):
-    def setUpClass(self):
-        warnings.filterwarnings('ignore', 'twisted.internet.app is deprecated',
-                                DeprecationWarning)
-
-    def tearDownClass(self):
-        warnings.filterwarnings('default', 'twisted.internet.app is deprecated',
-                                DeprecationWarning)
+    suppress = [util.suppress(message='twisted.internet.app is deprecated',
+                              category=DeprecationWarning)]
 
     def testListenUnlistenTCP(self):
         a = app.Application("foo")
@@ -74,9 +69,8 @@ class ServiceTestCase(unittest.TestCase):
         svc = app.ApplicationService("service", a)
         self.assertEquals(a.getServiceNamed("service"), svc)
         self.assertEquals(a, svc.serviceParent)
-    testRegisterService = util.suppressWarnings(testRegisterService,
-                                                ('twisted.internet.app is deprecated',
-                                                 DeprecationWarning))
+    testRegisterService.suppress = [util.suppress(message='twisted.internet.app is deprecated',
+                                                  category=DeprecationWarning)]
 
 class StopError(Exception): pass
 
