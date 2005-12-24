@@ -234,10 +234,6 @@ class Reporter(TestResult):
             status = "PASSED"
         self.write("%s%s\n", status, summary)
 
-    def wasSuccessful(self):
-        return (super(Reporter, self).wasSuccessful()
-                and len(self.couldNotImport) == 0)
-
 
 class MinimalReporter(Reporter):
     def printErrors(self):
