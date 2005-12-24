@@ -30,13 +30,21 @@ This module provides XML utilities for use with WebDAV.
 See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
 """
 
-from xml.dom.ext import Print as PrintXML
 
+#from xml.dom.ext import Print as PrintXML
 # For debugging: (FIXME: disable for normal use)
-from xml.dom.ext import PrettyPrint as PrettyPrintXML
+#from xml.dom.ext import PrettyPrint as PrettyPrintXML
+
 def PrintXML(document, stream):
     document.normalize()
-    PrettyPrintXML(document, stream)
+    # HACK: stuff in the (hopefully only) namespace. Revisit this if more than one namespace
+    # is ever used.
+    firstChild = document.firstChild
+    if firstChild is not None:
+        firstChild.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', firstChild.namespaceURI)
+    document.writexml(stream, encoding='UTF-8')
+    
+#    PrettyPrintXML(document, stream)
 
 def encodeXMLName(name):
     """
