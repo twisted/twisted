@@ -12,94 +12,161 @@ Future Plans:
     Rewrite to use the reactor instead of an ad-hoc mechanism for connecting
         protocols to transport.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 """
 
-# system imports
-import sys, os, select, errno
+from zope.interface import implements
 
-# Sibling Imports
-import abstract, fdesc, protocol
-from main import CONNECTION_LOST
+from twisted.internet import process, error, interfaces, fdesc
+from twisted.python import log, failure
 
 
-_stdio_in_use = 0
+class PipeAddress(object):
+    implements(interfaces.IAddress)
 
-class StandardIOWriter(abstract.FileDescriptor):
 
-    connected = 1
-    ic = 0
-
-    def __init__(self):
-        abstract.FileDescriptor.__init__(self)
-        self.fileno = sys.__stdout__.fileno
-        fdesc.setNonBlocking(self.fileno())
+class StandardIO(object):
+    implements(interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
+    _reader = None
+    _writer = None
+    disconnected = False
+    disconnecting = False
     
-    def writeSomeData(self, data):
-        try:
-            return os.write(self.fileno(), data)
-        except IOError, io:
-            if io.args[0] == errno.EAGAIN:
-                return 0
-            elif io.args[0] == errno.EPERM:
-                return 0
-            return CONNECTION_LOST
-        except OSError, ose:
-            if ose.errno == errno.EPIPE:
-                return CONNECTION_LOST
-            if ose.errno == errno.EAGAIN or ose.errno == errno.EINTR:
-                return 0
-            raise
-
-    def connectionLost(self, reason):
-        abstract.FileDescriptor.connectionLost(self, reason)
-        os.close(self.fileno())
-
-
-class StandardIO(abstract.FileDescriptor):
-    """I can connect Standard IO to a twisted.protocol
-    I act as a selectable for sys.stdin, and provide a write method that writes
-    to stdout.
-    """
-    
-    def __init__(self, protocol):
-        """Create me with a protocol.
-
-        This will fail if a StandardIO has already been instantiated.
-        """
-        abstract.FileDescriptor.__init__(self)
-        global _stdio_in_use
-        if _stdio_in_use:
-            raise RuntimeError, "Standard IO already in use."
-        _stdio_in_use = 1
-        self.fileno = sys.__stdin__.fileno
-        fdesc.setNonBlocking(self.fileno())
-        self.protocol = protocol
-        self.startReading()
-        self.writer = StandardIOWriter()
-        self.protocol.makeConnection(self)
-    
-    def write(self, data):
-        """Write some data to standard output.
-        """
-        self.writer.write(data)
+    def __init__(self, proto, stdin=0, stdout=1):
+        from twisted.internet import reactor
+        self.protocol = proto
         
-    def doRead(self):
-        """Some data's readable from standard input.
-        """
-        return fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
+        self._reader=process.ProcessReader(reactor, self, 'read', stdin)
+        self._reader.startReading()
+        self._writer=process.ProcessWriter(reactor, self, 'write', stdout)
+        self._writer.startReading()
+        self.protocol.makeConnection(self)
 
-    def closeStdin(self):
-        """Close standard input.
-        """
-        self.writer.loseConnection()
+    # ITransport
+    def loseWriteConnection(self):
+        if self._writer is not None:
+            self._writer.loseConnection()
+        
+    def write(self, data):
+        if self._writer is not None:
+            self._writer.write(data)
+            
+    def writeSequence(self, data):
+        if self._writer is not None:
+            self._writer.writeSequence(data)
+            
+    def loseConnection(self):
+        self.disconnecting = True
+        
+        if self._writer is not None:
+            self._writer.loseConnection()
+        if self._reader is not None:
+            # Don't loseConnection, because we don't want to SIGPIPE it.
+            self._reader.stopReading()
+        
+    def getPeer(self):
+        return PipeAddress()
+    
+    def getHost(self):
+        return PipeAddress()
+
+
+    # Callbacks from process.ProcessReader/ProcessWriter
+    def childDataReceived(self, fd, data):
+        self.protocol.dataReceived(data)
+
+    def childConnectionLost(self, fd, reason):
+        if self.disconnected:
+            return
+        
+        if reason.value.__class__ == error.ConnectionDone:
+            # Normal close
+            if fd == 'read':
+                self._readConnectionLost(reason)
+            else:
+                self._writeConnectionLost(reason)
+        else:
+            self.connectionLost(reason)
 
     def connectionLost(self, reason):
-        """The connection was lost.
-        """
+        self.disconnected = True
+        
+        # Make sure to cleanup the other half
+        _reader = self._reader
+        _writer = self._writer
+        protocol = self.protocol
+        self._reader = self._writer = None
+        self.protocol = None
+        
+        if _writer is not None and not _writer.disconnected:
+            _writer.connectionLost(reason)
+        
+        if _reader is not None and not _reader.disconnected:
+            _reader.connectionLost(reason)
+        
         try:
-            self.protocol.connectionLost(reason)
-        except TypeError:
-            import warnings
-            warnings.warn("Protocol.connectionLost() should take a 'reason' argument")
-            self.protocol.connectionLost()
+            protocol.connectionLost(reason)
+        except:
+            log.err()
+        
+    def _writeConnectionLost(self, reason):
+        self._writer=None
+        if self.disconnecting:
+            self.connectionLost(reason)
+            return
+        
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            try:
+                p.writeConnectionLost()
+            except:
+                log.err()
+                self.connectionLost(failure.Failure())
+
+    def _readConnectionLost(self, reason):
+        self._reader=None
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            try:
+                p.readConnectionLost()
+            except:
+                log.err()
+                self.connectionLost(failure.Failure())
+        else:
+            self.connectionLost(reason)
+
+    # IConsumer
+    def registerProducer(self, producer, streaming):
+        if self._writer is None:
+            producer.stopProducing()
+        else:
+            self._writer.registerProducer(producer, streaming)
+            
+    def unregisterProducer(self):
+        if self._writer is not None:
+            self._writer.unregisterProducer()
+
+    # IProducer
+    def stopProducing(self):
+        self.loseConnection()
+
+    def pauseProducing(self):
+        if self._reader is not None:
+            self._reader.pauseProducing()
+
+    def resumeProducing(self):
+        if self._reader is not None:
+            self._reader.resumeProducing()
+
+    # Stupid compatibility:
+    def closeStdin(self):
+        """Compatibility only, don't use. Same as loseWriteConnection."""
+        self.loseWriteConnection()
+
+    def stopReading(self):
+        """Compatibility only, don't use. Call pauseProducing."""
+        self.pauseProducing()
+
+    def startReading(self):
+        """Compatibility only, don't use. Call resumeProducing."""
+        self.resumeProducing()

@@ -573,8 +573,10 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         p.transport.closeStdin()
         spinUntil(lambda :p.closed, 10)
         self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
-                          "Error message from process_twisted follows:"
-                          "\n\n%s\n\n" % p.errF.getvalue())
+                          "Output follows:\n"
+                          "%s\n"
+                          "Error message from process_twisted follows:\n"
+                          "%s\n" % (p.outF.getvalue(), p.errF.getvalue()))
 
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp

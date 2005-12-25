@@ -19,7 +19,7 @@ else:
     import FCNTL
 
 # twisted imports
-from main import CONNECTION_LOST
+from main import CONNECTION_LOST, CONNECTION_DONE
 
 
 def setNonBlocking(fd):
@@ -49,7 +49,7 @@ def readFromFD(fd, callback):
         else:
             return CONNECTION_LOST
     if not output:
-        return CONNECTION_LOST
+        return CONNECTION_DONE
     callback(output)
 
 

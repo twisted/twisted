@@ -66,6 +66,22 @@ def unregisterReapProcessHandler(pid, process):
     del reapProcessHandlers[pid]
 
 
+def detectLinuxBrokenPipeBehavior():
+    global brokenLinuxPipeBehavior
+    r,w = os.pipe()
+    os.write(w, 'a')
+    reads, writes, exes = select.select([w], [], [], 0)
+    if reads:
+        # Linux < 2.6.11 says a write-only pipe is readable.
+        brokenLinuxPipeBehavior = True
+    else:
+        brokenLinuxPipeBehavior = False
+    os.close(r)
+    os.close(w)
+    
+# Call at import time
+detectLinuxBrokenPipeBehavior()
+
 class ProcessWriter(abstract.FileDescriptor):
     """(Internal) Helper class to write into a Process's input pipe.
 
@@ -74,15 +90,30 @@ class ProcessWriter(abstract.FileDescriptor):
     """
     connected = 1
     ic = 0
-
+    enableReadHack = False
+    
     def __init__(self, reactor, proc, name, fileno):
         """Initialize, specifying a Process instance to connect to.
         """
         abstract.FileDescriptor.__init__(self, reactor)
+        fdesc.setNonBlocking(fileno)
         self.proc = proc
         self.name = name
         self.fd = fileno
 
+        # Detect if this fd is actually a write-only fd. If it's
+        # valid to read, don't try to detect closing via read.
+        # This really only means that we cannot detect a TTY's write
+        # pipe being closed.
+        try:
+            os.read(self.fileno(), 0)
+        except OSError:
+            # It's a write-only pipe end, enable hack
+            self.enableReadHack = True
+            
+        if self.enableReadHack:
+            self.startReading()
+            
     def fileno(self):
         """Return the fileno() of my process's stdin.
         """
@@ -94,7 +125,7 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         try:
             rv = os.write(self.fd, data)
-            if rv == len(data):
+            if rv == len(data) and self.enableReadHack:
                 self.startReading()
             return rv
         except IOError, io:
@@ -129,16 +160,21 @@ class ProcessWriter(abstract.FileDescriptor):
         If the reactor is pollreactor, and the fd is > 1024, this will fail.
         (only occurs on broken versions of linux, though).
         """
-        fd = self.fd
-        r, w, x = select.select([fd], [fd], [], 0)
-        if r and w:
-            return CONNECTION_LOST
-
+        if self.enableReadHack:
+            if brokenLinuxPipeBehavior:
+                fd = self.fd
+                r, w, x = select.select([fd], [fd], [], 0)
+                if r and w:
+                    return CONNECTION_LOST
+            else:
+                return CONNECTION_LOST
+        else:
+            self.stopReading()
+        
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost.
         """
         abstract.FileDescriptor.connectionLost(self, reason)
-        os.close(self.fd)
         self.proc.childConnectionLost(self.name, reason)
 
 
@@ -154,10 +190,12 @@ class ProcessReader(abstract.FileDescriptor):
         """Initialize, specifying a process to connect to.
         """
         abstract.FileDescriptor.__init__(self, reactor)
+        fdesc.setNonBlocking(fileno)
         self.proc = proc
         self.name = name
         self.fd = fileno
-
+        self.startReading()
+        
     def fileno(self):
         """Return the fileno() of my process's stderr.
         """
@@ -176,7 +214,7 @@ class ProcessReader(abstract.FileDescriptor):
         return fdesc.readFromFD(self.fd, self.dataReceived)
 
     def dataReceived(self, data):
-        self.proto.childDataReceived(self.name, data)
+        self.proc.childDataReceived(self.name, data)
 
     def loseConnection(self):
         if self.connected and not self.disconnecting:
@@ -189,7 +227,6 @@ class ProcessReader(abstract.FileDescriptor):
         ProcessProtocol).
         """
         abstract.FileDescriptor.connectionLost(self, reason)
-        os.close(self.fd)
         self.proc.childConnectionLost(self.name, reason)
 
 
@@ -241,7 +278,6 @@ class Process(styles.Ephemeral):
             If childFDs is not passed, the default behaviour is to use a
             mapping that opens the usual stdin/stdout/stderr pipes.
         """
-
         if not proto:
             assert 'r' not in childFDs.values()
             assert 'w' not in childFDs.values()
@@ -299,14 +335,12 @@ class Process(styles.Ephemeral):
                 if debug: print "readFD=%d, writeFD%d" % (readFD, writeFD)
                 fdmap[childFD] = writeFD     # child writes to this
                 helpers[childFD] = readFD    # parent reads from this
-                fdesc.setNonBlocking(readFD)
             elif target == "w":
                 # we need a pipe that the parent can write to
                 readFD, writeFD = os.pipe()
                 if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
                 fdmap[childFD] = readFD      # child reads from this
                 helpers[childFD] = writeFD   # parent writes to this
-                fdesc.setNonBlocking(writeFD)
             else:
                 assert type(target) == int, '%r should be an int' % (target,)
                 fdmap[childFD] = target      # parent ignores this
@@ -361,26 +395,20 @@ class Process(styles.Ephemeral):
             os.setreuid(curruid, cureuid)
         self.status = -1 # this records the exit status of the child
 
+        self.proto = proto
+        
         # arrange for the parent-side pipes to be read and written
         for childFD, parentFD in helpers.items():
             os.close(fdmap[childFD])
 
             if childFDs[childFD] == "r":
                 reader = ProcessReader(reactor, self, childFD, parentFD)
-                reader.proto = proto
                 self.pipes[childFD] = reader
-                reader.startReading()
 
             if childFDs[childFD] == "w":
                 writer = ProcessWriter(reactor, self, childFD, parentFD)
-                writer.proto = proto
                 self.pipes[childFD] = writer
-                # we do startReading here to watch for EOF. We won't do an
-                # actual .startWriting until some data has been written to
-                # the transmit buffer.
-                writer.startReading()
 
-        self.proto = proto
         try:
             # the 'transport' is used for some compatibility methods
             if self.proto is not None:
@@ -588,6 +616,9 @@ class Process(styles.Ephemeral):
         if self.pipes.has_key(0):
             self.pipes[0].writeSequence(seq)
 
+    def childDataReceived(self, name, data):
+        self.proto.childDataReceived(name, data)
+        
     def signalProcess(self, signalID):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
             signalID = getattr(signal, 'SIG'+signalID)
@@ -608,6 +639,7 @@ class Process(styles.Ephemeral):
     def childConnectionLost(self, childFD, reason):
         # this is called when one of the helpers (ProcessReader or
         # ProcessWriter) notices their pipe has been closed
+        os.close(self.pipes[childFD].fileno())
         del self.pipes[childFD]
         try:
             self.proto.childConnectionLost(childFD)
@@ -621,7 +653,6 @@ class Process(styles.Ephemeral):
         #  all writers have indicated an error status, AND
         #  all readers have indicated EOF
         # This insures that we've gathered all output from the process.
-
         if self.pipes:
             #print "maybe, but pipes still", self.pipes.keys()
             return
