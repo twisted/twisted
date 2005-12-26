@@ -6,40 +6,13 @@ from twisted.cred import portal, checkers, credentials
 from twisted.conch.ssh import factory, keys, common
 from twisted.conch.interfaces import IConchUser
 
-from twisted.web import server
-
 import twisted.protocols.ftp
 
 from twisted.vfs.backends import inmem
-from twisted.vfs.adapters import sftp, web, ftp #, dav
+from twisted.vfs.adapters import sftp, ftp
 from twisted.vfs import ivfs, pathutils
 
 import zope.interface
-
-class NotLoggedIn(rend.Page):
-    """The resource that is returned when you are not logged in"""
-    addSlash = False
-    docFactory = loaders.stan(
-    tags.html[
-        tags.head[tags.title["Not Logged In"]],
-        tags.body[
-            tags.form(action=guard.LOGIN_AVATAR, method='post')[
-                tags.table[
-                    tags.tr[
-                        tags.td[ "Username:" ],
-                        tags.td[ tags.input(type='text',name='username') ],
-                    ],
-                    tags.tr[
-                        tags.td[ "Password:" ],
-                        tags.td[ tags.input(type='password',name='password') ],
-                    ]
-                ],
-                tags.input(type='submit'),
-                tags.p,
-            ]
-        ]
-    ]
-)
 
 
 class Realm:
@@ -78,10 +51,8 @@ def createVFSApplication(vfsRoot):
     p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
 
     # sftp
-
     # http://igloo.its.unimelb.edu.au/Webmail/tips/msg00495.html
     # ssh-keygen -q -b 1024 -t dsa -f ssh_host_dsa_key
-
     pubkey = keys.getPublicKeyString(
         '../sshkeys/ssh_host_dsa_key.pub')
     privkey = keys.getPrivateKeyObject(
@@ -105,10 +76,5 @@ def createVFSApplication(vfsRoot):
     internet.TCPServer(
         2221, f
     ).setServiceParent(application)
-
-    # dav
-##     internet.TCPServer(
-##         int( 2280 ), server.Site(dav.DavResource(vfsRoot))
-##     ).setServiceParent(application)
 
     return application
