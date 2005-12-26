@@ -7,7 +7,6 @@ from twisted.trial import unittest
 
 from twisted.vfs.backends import osfs, inmem
 from twisted.vfs.ivfs import IFileSystemContainer, IFileSystemLeaf
-from twisted.vfs import pathutils
 
 
 class OSVFSTest(unittest.TestCase):
@@ -17,73 +16,70 @@ class OSVFSTest(unittest.TestCase):
         os.mkdir(self.tmpdir)
         os.mkdir(os.path.join(self.tmpdir, 'ned'))
         open(os.path.join(self.tmpdir, 'file.txt'), 'w').write('wobble\n')
-        self.filesystem = pathutils.FileSystem(
-            osfs.OSDirectory(self.tmpdir)
-        )
+        self.root = osfs.OSDirectory(self.tmpdir)
 
     def tearDown(self):
-        shutil.rmtree( self.tmpdir )
+        shutil.rmtree(self.tmpdir)
 
     def test_listdir(self):
-        nodes = self.filesystem.fetch( '/' ).children()
+        nodes = self.root.children()
         paths = [path for (path, node) in nodes]
         paths.sort()
         self.assertEquals(paths, ['.', '..', 'file.txt', 'ned'])
 
     def test_mkdir(self):
-        self.filesystem.fetch( '/' ).createDirectory('fred')
-        nodes = self.filesystem.fetch( '/fred' ).children()
-        self.assertEquals( [ path for (path, node) in nodes ], [ '.', '..' ] )
+        new = self.root.createDirectory('fred')
+        nodes = new.children()
+        self.assertEquals([path for (path, node) in nodes], ['.', '..'])
 
     def test_rmdir(self):
-        self.filesystem.fetch( '/ned' ).remove()
-        nodes = self.filesystem.fetch( '/' ).children()
+        self.root.child('ned').remove()
+        nodes = self.root.children()
         paths = [path for (path, node) in nodes]
         paths.sort()
         self.assertEquals(paths, ['.', '..', 'file.txt'])
 
     def test_rmfile(self):
-        self.filesystem.fetch( '/file.txt' ).remove()
-        nodes = self.filesystem.fetch( '/' ).children()
+        self.root.child('file.txt').remove()
+        nodes = self.root.children()
         paths = [path for (path, node) in nodes]
         paths.sort()
         self.assertEquals(paths, ['.', '..', 'ned'])
 
     def test_rename(self):
-        self.filesystem.fetch( '/ned' ).rename('sed')
-        nodes = self.filesystem.fetch( '/' ).children()
+        self.root.child('ned').rename('sed')
+        nodes = self.root.children()
         paths = [path for (path, node) in nodes]
         paths.sort()
         self.assertEquals(paths, ['.', '..', 'file.txt', 'sed'])
 
     def test_mkfile(self):
-        new = self.filesystem.fetch( '/' ).createFile( 'fred.txt')
-        nodes = self.filesystem.fetch( '/' ).children()
+        new = self.root.createFile('fred.txt')
+        nodes = self.root.children()
         paths = [path for (path, node) in nodes]
         paths.sort()
         self.assertEquals(paths, ['.', '..', 'file.txt', 'fred.txt', 'ned'])
 
     def test_writefile(self):
-        new = self.filesystem.fetch( '/' ).createFile('fred.txt')
+        new = self.root.createFile('fred.txt')
         new.open(os.O_WRONLY)
-        new.writeChunk( 0, 'roar' )
+        new.writeChunk(0, 'roar')
         new.close()
         new.open(os.O_RDONLY)
-        text = new.readChunk( 0, 100 )
+        text = new.readChunk(0, 100)
         new.close()
-        self.assertEquals( text, 'roar' )
+        self.assertEquals(text, 'roar')
 
     def test_readfile(self):
-        fh = self.filesystem.fetch( '/file.txt' )
+        fh = self.root.child('file.txt')
         fh.open(os.O_RDONLY)
-        text = fh.readChunk( 0, 100 )
+        text = fh.readChunk(0, 100)
         fh.close()
-        self.assertEquals( text, 'wobble\n' )
+        self.assertEquals(text, 'wobble\n')
 
     def test_exists(self):
-        root = self.filesystem.fetch('/')
-        self.failUnless(root.exists('file.txt'))
-        self.failIf(root.exists('noodle'))
+        self.failUnless(self.root.exists('file.txt'))
+        self.failIf(self.root.exists('noodle'))
 
 
 
@@ -91,11 +87,10 @@ class InMemVFSTest(OSVFSTest):
 
     def setUp(self):
         root = inmem.FakeDirectory()
-        filesystem = pathutils.FileSystem( root )
         ned = inmem.FakeDirectory('ned', root)
         f = inmem.FakeFile('file.txt', root, 'wobble\n')
         root._children = { 'ned' : ned, 'file.txt' : f }
-        self.filesystem = filesystem
+        self.root = root
 
     def tearDown(self):
         pass

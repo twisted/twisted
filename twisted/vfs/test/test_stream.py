@@ -13,7 +13,6 @@ sftpAttrs = ['size', 'uid', 'gid', 'nlink', 'mtime', 'atime', 'permissions']
 class StreamAdapterInmemTest(unittest.TestCase):
     def setUp(self):
         root = inmem.FakeDirectory()
-        filesystem = pathutils.FileSystem( root )
         self.ned = ned = inmem.FakeDirectory('ned', root)
         self.f = f = inmem.FakeFile('file.txt', root, 'wobble\n')
         root._children = { 'ned' : ned, 'file.txt' : f }

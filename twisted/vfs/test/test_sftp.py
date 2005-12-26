@@ -26,13 +26,12 @@ class SFTPAdapterTest(unittest.TestCase):
         f.open(os.O_WRONLY).writeChunk(0, 'wobble\n')
         f.close()
 
-        filesystem = pathutils.FileSystem( root )
-        self.filesystem = filesystem
+        self.root = root
         self.avatar = sftp.VFSConchUser('radix', root)
         self.sftp = sftp.AdaptFileSystemUserToISFTP(self.avatar)
 
     def _assertNodes(self, dir, mynodes):
-        nodes = [x[0] for x in self.filesystem.fetch(dir).children()]
+        nodes = [x[0] for x in pathutils.fetch(self.root, dir).children()]
         nodes.sort()
         mynodes.sort()
         return self.assertEquals(nodes, mynodes)
