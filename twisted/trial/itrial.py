@@ -27,19 +27,6 @@ class IReporter(zi.Interface):
     shouldStop = zi.Attribute("@ivar shouldStop: a boolean indicating that"
                               " this reporter would like the test run to stop.")
 
-    def setUpReporter():
-        """performs reporter setup. DEPRECATED"""
-
-    def tearDownReporter():
-        """performs reporter termination. DEPRECATED"""
-
-    def reportImportError(name, exc):
-        """report an import error
-        @param name: the name that could not be imported
-        @param exc: the exception
-        @type exc: L{twisted.python.failure.Failure}
-        """
-
     def startTest(method):
         """report the beginning of a run of a single test method
         @param method: an object that is adaptable to ITestMethod
@@ -48,18 +35,6 @@ class IReporter(zi.Interface):
     def stopTest(method):
         """report the status of a single test method
         @param method: an object that is adaptable to ITestMethod
-        """
-
-    def startTrial(expectedTests):
-        """kick off this trial run
-        @param expectedTests: the number of tests we expect to run
-        """
-
-    def endTrial(suite):
-        """at the end of a test run report the overall status and print out
-        any errors caught
-        @param suite: an object implementing ITrialRoot, can be adapted to
-                      ITestStats
         """
 
     def startSuite(name):
@@ -89,3 +64,5 @@ class IReporter(zi.Interface):
 
     def addSuccess(test):
         """Record that test passed."""
+
+

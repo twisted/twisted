@@ -62,7 +62,7 @@ class TestImportErrors(packages.PackageTest):
 
     def test_nonexistentModule(self):
         d = self.runTrial('twisted.doesntexist')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'twisted.doesntexist')
         return d
 
@@ -70,33 +70,33 @@ class TestImportErrors(packages.PackageTest):
         d = self.runTrial('doesntexist')
         self.failUnlessIn(d, 'doesntexist')
         self.failUnlessIn(d, 'ValueError')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         return d
 
     def test_nonexistentPackageWithModule(self):
         d = self.runTrial('doesntexist.barney')
         self.failUnlessIn(d, 'doesntexist.barney')
         self.failUnlessIn(d, 'ValueError')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         return d
 
     def test_badpackage(self):
         d = self.runTrial('badpackage')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'badpackage')
         self.failIfIn(d, 'IOError')
         return d
 
     def test_moduleInBadpackage(self):
         d = self.runTrial('badpackage.test_module')
-        self.failUnlessIn(d, "IMPORT ERROR")
+        self.failUnlessIn(d, "[ERROR]")
         self.failUnlessIn(d, "badpackage.test_module")
         self.failIfIn(d, 'IOError')
         return d
 
     def test_badmodule(self):
         d = self.runTrial('package.test_bad_module')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'package.test_bad_module')
         self.failIfIn(d, 'IOError')
         self.failIfIn(d, '<module')
@@ -104,7 +104,7 @@ class TestImportErrors(packages.PackageTest):
 
     def test_badimport(self):
         d = self.runTrial('package.test_import_module')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'package.test_import_module')
         self.failIfIn(d, 'IOError')
         self.failIfIn(d, '<module')
@@ -112,7 +112,7 @@ class TestImportErrors(packages.PackageTest):
 
     def test_recurseImport(self):
         d = self.runTrial('package')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'test_bad_module')
         self.failUnlessIn(d, 'test_import_module')
         self.failIfIn(d, '<module')
@@ -121,7 +121,7 @@ class TestImportErrors(packages.PackageTest):
 
     def test_recurseImportErrors(self):
         d = self.runTrial('package2')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'package2')
         self.failUnlessIn(d, 'test_module')
         self.failUnlessIn(d, "No module named frotz")
@@ -131,14 +131,14 @@ class TestImportErrors(packages.PackageTest):
 
     def test_nonRecurseImportErrors(self):
         d = self.runTrial('-N', 'package2')
-        self.failUnlessIn(d, 'IMPORT ERROR')
+        self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, "No module named frotz")
         self.failIfIn(d, '<module')
         return d
 
     def test_regularRun(self):
         d = self.runTrial('package.test_module')
-        self.failIfIn(d, 'IMPORT ERROR')
+        self.failIfIn(d, '[ERROR]')
         self.failIfIn(d, 'IOError')
         self.failUnlessIn(d, 'OK')
         self.failUnlessIn(d, 'PASSED (successes=1)')
@@ -147,7 +147,7 @@ class TestImportErrors(packages.PackageTest):
     def test_filename(self):
         d = self.runTrialPure(os.path.join(self.parent,
                                            'package', 'test_module.py'))
-        self.failIfIn(d, 'IMPORT ERROR')
+        self.failIfIn(d, '[ERROR]')
         self.failIfIn(d, 'IOError')
         self.failUnlessIn(d, 'OK')
         self.failUnlessIn(d, 'PASSED (successes=1)')
@@ -157,7 +157,7 @@ class TestImportErrors(packages.PackageTest):
         ## XXX -- not really an output test, more of a script test
         d = self.runTrialPure(os.path.join(self.parent,
                                            'package', 'test_dos_module.py'))
-        self.failIfIn(d, 'IMPORT ERROR')
+        self.failIfIn(d, '[ERROR]')
         self.failIfIn(d, 'IOError')
         self.failUnlessIn(d, 'OK')
         self.failUnlessIn(d, 'PASSED (successes=1)')

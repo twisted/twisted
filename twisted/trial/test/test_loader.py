@@ -210,17 +210,6 @@ class LoaderTest(packages.PackageTest):
         suite = self.loader.loadPackage(goodpackage)
         self.failUnlessEqual(7, suite.countTestCases())
 
-    def test_loadPackageWithBadModules(self):
-        import package
-        suite = self.loader.loadPackage(package, recurse=True)
-        result = reporter.Reporter()
-        suite.run(result)
-        importErrors = [ test.id() for test, error in result.couldNotImport ]
-        importErrors.sort()
-        self.failUnlessEqual(importErrors,
-                             ['package.test_bad_module',
-                              'package.test_import_module'])
-
     def test_loadNonPackage(self):
         import sample
         self.failUnlessRaises(TypeError,
@@ -279,3 +268,14 @@ class LoaderTest(packages.PackageTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadAnything, "goodpackage")
 
+    def test_importErrors(self):
+        import package
+        suite = self.loader.loadPackage(package, recurse=True)
+        result = reporter.Reporter()
+        suite.run(result)
+        self.failUnlessEqual(False, result.wasSuccessful())
+        self.failUnlessEqual(2, len(result.errors))
+        errors = [test.id() for test, error in result.errors]
+        errors.sort()
+        self.failUnlessEqual(errors, ['package.test_bad_module',
+                                      'package.test_import_module'])

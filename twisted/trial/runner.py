@@ -332,7 +332,7 @@ class ErrorHolder(object):
                                                           self.error)
 
     def run(self, result):
-        result.reportImportError(self, self.error)
+        result.addError(self, self.error)
 
     def __call__(self, result):
         return self.run(result)

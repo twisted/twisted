@@ -103,14 +103,10 @@ class Reporter(TestResult):
         self.stream = stream
         self.tbformat = tbformat
         self.realtime = realtime
-        self.couldNotImport = []
 
     def startTest(self, test):
         super(Reporter, self).startTest(test)
         self._somethingStarted()
-
-    def reportImportError(self, name, exc):
-        self.couldNotImport.append((name, exc))
 
     def addFailure(self, test, fail):
         super(Reporter, self).addFailure(test, fail)
@@ -197,20 +193,6 @@ class Reporter(TestResult):
                 self.writeln('Expected errors: %s' % (', '.join(todo.errors),))
             self.writeln('')
 
-    def printImportErrors(self):
-        for test, error in self.couldNotImport:
-            self.writeln(self.doubleSeparator)
-            self.writeln('IMPORT ERROR:')
-            self.writeln('')
-            self.writeln('Could not import: %s' % (test.id(),))
-            if isinstance(error, failure.Failure):
-                what = self._formatFailureTraceback(error)
-            elif type(error) == types.TupleType:
-                what = error.args[0]
-            else:
-                what = "%s\n" % error
-            self.writeln(what)
-
     def printErrors(self):
         self.write('\n')
         self.printErrorList("[SKIPPED]", self.skips)
@@ -218,7 +200,6 @@ class Reporter(TestResult):
         self.printErrorList("[FAIL]", self.failures)
         self.printErrorList("[ERROR]", self.errors)
         self.printUnexpectedSuccesses()
-        self.printImportErrors()
 
     def printSummary(self):
         summaries = []

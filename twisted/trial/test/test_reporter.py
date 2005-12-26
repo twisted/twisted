@@ -8,7 +8,7 @@ import time, re, StringIO
 from twisted.trial import unittest, runner, reporter
 from twisted.trial.test import erroneous
 
-class TestReporter(unittest.TestCase):
+class TestErrorReporting(unittest.TestCase):
     doubleSeparator = re.compile(r'^=+$')
     
     def stringComparison(self, expect, output):
@@ -30,7 +30,6 @@ class TestReporter(unittest.TestCase):
                                 % (exp,))
 
     def setUp(self):
-        super(TestReporter, self).setUp()
         self.loader = runner.TestLoader()
 
     def runTests(self, suite):
@@ -98,6 +97,4 @@ class TestReporter(unittest.TestCase):
         output = self.runTests(erroneous.DemoTest('testHiddenException'))
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
 
-        
-__unittests__ = [TestReporter]
 
