@@ -3,7 +3,6 @@ from __future__ import generators
 import time
 from twisted.web2.test.test_server import BaseCase
 from twisted.web2 import resource
-from twisted.trial import util
 from twisted.internet import reactor, interfaces
 from twisted.python import log
 

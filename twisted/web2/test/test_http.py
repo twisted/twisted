@@ -2,16 +2,20 @@ from __future__ import nested_scopes
 
 import time, sys
 from twisted.trial import unittest
-from twisted.trial.util import wait, spinUntil
 from twisted.web2 import http, http_headers, responsecode, error, iweb, stream
 from twisted.web2 import channel
 
 from twisted.internet import reactor, protocol, address, interfaces, utils
 from twisted.internet import defer
+from twisted.internet.defer import waitForDeferred, deferredGenerator
 from twisted.protocols import loopback
 from twisted.python import util
 from zope.interface import implements
 
+def deferLater(secs):
+    d = defer.Deferred()
+    reactor.callLater(secs, d.callback, None)
+    return d
 
 class PreconditionTestCase(unittest.TestCase):
     def checkPreconditions(self, request, response, expectedResult, expectedCode,
@@ -353,8 +357,14 @@ class TestConnection:
     def __init__(self):
         self.requests = []
         self.client = None
+        self.callLaters = []
+        
+    def fakeCallLater(self, secs, f):
+        assert secs == 0
+        self.callLaters.append(f)
 
 class HTTPTests(unittest.TestCase):
+        
     def connect(self, logFile=None, maxPipeline=4,
                 inputTimeOut=60000, betweenRequestsTimeOut=600000):
         cxn = TestConnection()
@@ -364,8 +374,9 @@ class HTTPTests(unittest.TestCase):
             return cxn.requests[-1]
         
         factory = channel.HTTPFactory(requestFactory=makeTestRequest, maxPipeline=maxPipeline,
-                                   inputTimeOut=inputTimeOut,
-                                   betweenRequestsTimeOut=betweenRequestsTimeOut)
+                                      inputTimeOut=inputTimeOut,
+                                      betweenRequestsTimeOut=betweenRequestsTimeOut,
+                                      _callLater = cxn.fakeCallLater)
         
         cxn.client = TestClient()
         cxn.server = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 2345))
@@ -378,7 +389,10 @@ class HTTPTests(unittest.TestCase):
         return cxn
 
     def iterate(self, cxn):
-        reactor.iterate(0)
+        callLaters = cxn.callLaters
+        cxn.callLaters = []
+        for f in callLaters:
+            f()
         cxn.serverToClient.clearBuffer()
         cxn.clientToServer.clearBuffer()
         if cxn.serverToClient.shouldLose:
@@ -687,7 +701,7 @@ class CoreHTTPTestCase(HTTPTests):
     def testTimeout_immediate(self):
         # timeout 0 => timeout on first iterate call
         cxn = self.connect(inputTimeOut = 0)
-        self.assertDone(cxn)
+        return deferLater(0).addCallback(lambda x: self.assertDone(cxn))
 
     def testTimeout_inRequest(self):
         cxn = self.connect(inputTimeOut = 0.3)
@@ -695,8 +709,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
 
         cxn.client.write("GET / HTTP/1.1\r\n")
-        time.sleep(0.5)
-        self.assertDone(cxn)
+        return deferLater(0.5).addCallback(lambda x: self.assertDone(cxn))
         
     def testTimeout_betweenRequests(self):
         cxn = self.connect(betweenRequestsTimeOut = 0.3)
@@ -716,8 +729,7 @@ class CoreHTTPTestCase(HTTPTests):
         data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
 
         self.compareResult(cxn, cmds, data)
-        time.sleep(0.5) # Wait for timeout
-        self.assertDone(cxn)
+        return deferLater(0.5).addCallback(lambda x: self.assertDone(cxn)) # Wait for timeout
 
     def testConnectionCloseRequested(self):
         cxn = self.connect()
@@ -915,7 +927,7 @@ class SimpleFactory(channel.HTTPFactory):
         p = channel.HTTPFactory.buildProtocol(self, addr)
         cl = p.connectionLost
         def newCl(reason):
-            self.testcase.connlost = True
+            reactor.callLater(0, lambda: self.testcase.connlost.callback(None))
             return cl(reason)
         p.connectionLost = newCl
         self.conn = p
@@ -937,19 +949,21 @@ class AbstractServerTestMixin:
     def testBasicWorkingness(self):
         args = ('-u', util.sibpath(__file__, "simple_client.py"), "basic",
                 str(self.port), self.type)
-        out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=args))
+        d = waitForDeferred(utils.getProcessOutputAndValue(sys.executable, args=args))
+        yield d; out,err,code = d.getResult()
+        
         self.assertEquals(code, 0, "Error output:\n%s" % (err,))
         self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-
+    testBasicWorkingness = deferredGenerator(testBasicWorkingness)
+    
     def testLingeringClose(self):
         args = ('-u', util.sibpath(__file__, "simple_client.py"),
                 "lingeringClose", str(self.port), self.type)
-        out,err,code = wait(
-            utils.getProcessOutputAndValue(sys.executable, args=args))
+        d = waitForDeferred(utils.getProcessOutputAndValue(sys.executable, args=args))
+        yield d; out,err,code = d.getResult()
         self.assertEquals(code, 0, "Error output:\n%s" % (err,))
         self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-        
+    testLingeringClose = deferredGenerator(testLingeringClose)        
 
 class TCPServerTest(unittest.TestCase, AbstractServerTestMixin):
     type = 'tcp'
@@ -958,18 +972,20 @@ class TCPServerTest(unittest.TestCase, AbstractServerTestMixin):
 
         factory.testcase = self
         self.factory = factory
-        self.connlost = False
+        self.connlost = defer.Deferred()
         
         self.socket = reactor.listenTCP(0, factory)
         self.port = self.socket.getHost().port
 
     def tearDown(self):
         # Make sure the listening port is closed
-        wait(defer.maybeDeferred(self.socket.stopListening))
+        d = defer.maybeDeferred(self.socket.stopListening)
 
-        # And make sure the established connection is, too
-        self.factory.conn.transport.loseConnection()
-        spinUntil(lambda: self.connlost)
+        def finish(v):
+            # And make sure the established connection is, too
+            self.factory.conn.transport.loseConnection()
+            return self.connlost
+        return d.addCallback(finish)
         
 
 try:
@@ -991,18 +1007,20 @@ class SSLServerTest(unittest.TestCase, AbstractServerTestMixin):
 
         factory.testcase = self
         self.factory = factory
-        self.connlost = False
+        self.connlost = defer.Deferred()
         
         self.socket = reactor.listenSSL(0, factory, sCTX)
         self.port = self.socket.getHost().port
 
     def tearDown(self):
         # Make sure the listening port is closed
-        wait(defer.maybeDeferred(self.socket.stopListening))
+        d = defer.maybeDeferred(self.socket.stopListening)
 
-        # And make sure the established connection is, too
-        self.factory.conn.transport.loseConnection()
-        spinUntil(lambda: self.connlost)
+        def finish(v):
+            # And make sure the established connection is, too
+            self.factory.conn.transport.loseConnection()
+            return self.connlost
+        return d.addCallback(finish)
         
 
 if interfaces.IReactorProcess(reactor, None) is None:

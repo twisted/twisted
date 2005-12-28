@@ -1,6 +1,6 @@
 from twisted.internet import defer
 from twisted.trial import unittest
-from twisted.trial.util import wait
+from twisted.internet.defer import waitForDeferred, deferredGenerator
 
 from twisted.web2 import stream, fileupload
 from twisted.web2.http_headers import MimeType
@@ -57,8 +57,8 @@ class MultipartTests(unittest.TestCase):
             #s = TestStream(data, maxReturn=bytes)
             s = stream.IStream(data)
             #t=time.time()
-            args, files = wait(fileupload.parseMultipartFormData(s, boundary),
-                               useWaitError=True)
+            d = waitForDeferred(fileupload.parseMultipartFormData(s, boundary))
+            yield d; args, files = d.getResult()
             #e=time.time()
             #print "%.2g"%(e-t)
             self.assertEquals(args, expected_args)
@@ -73,9 +73,10 @@ class MultipartTests(unittest.TestCase):
         #d=cgi.parse_multipart(data, {'boundary':boundary})
         #e=time.time()
         #print "CGI: %.2g"%(e-t)
-        
+    doTest = deferredGenerator(doTest)
+    
     def testNormalUpload(self):
-        self.doTest(
+        return self.doTest(
             '---------------------------155781040421463194511908194298',
 """-----------------------------155781040421463194511908194298\r
 Content-Disposition: form-data; name="foo"\r
@@ -95,7 +96,7 @@ blah\r
                      "Contents of a file\nblah\nblah")})
 
     def testStupidFilename(self):
-        self.doTest(
+        return self.doTest(
             '----------0xKhTmLbOuNdArY',
 """------------0xKhTmLbOuNdArY\r
 Content-Disposition: form-data; name="file"; filename="foo"; name="foobar.txt"\r
@@ -111,7 +112,7 @@ blah\r
                      "Contents of a file\nblah\nblah")})
     
     def testEmptyFilename(self):
-        self.doTest(
+        return self.doTest(
             'curlPYafCMnsamUw9kSkJJkSen41sAV',
 """--curlPYafCMnsamUw9kSkJJkSen41sAV\r
 cONTENT-tYPE: application/octet-stream\r
@@ -127,7 +128,7 @@ qwertyuiop\r
 
 # Failing parses
     def testMissingContentDisposition(self):
-        self.doTestError(
+        return self.doTestError(
             '----------0xKhTmLbOuNdArY',
 """------------0xKhTmLbOuNdArY\r
 Content-Type: text/html\r
@@ -139,7 +140,7 @@ Blah blah I am a stupid webbrowser\r
 
 
     def testRandomData(self):
-        self.doTestError(
+        return self.doTestError(
             'boundary',
 """--sdkjsadjlfjlj skjsfdkljsd
 sfdkjsfdlkjhsfadklj sffkj""",
@@ -150,10 +151,11 @@ class TestURLEncoded(unittest.TestCase):
     def doTest(self, data, expected_args):
         for bytes in range(1, 20):
             s = TestStream(data, maxReturn=bytes)
-            args = wait(fileupload.parse_urlencoded(s),
-                        useWaitError=True)
+            d = waitForDeferred(fileupload.parse_urlencoded(s))
+            yield d; args = d.getResult()
             self.assertEquals(args, expected_args)
-            
+    doTest = deferredGenerator(doTest)
+    
     def test_parseValid(self):
         self.doTest("a=b&c=d&c=e", {'a':['b'], 'c':['d', 'e']})
         self.doTest("a=b&c=d&c=e", {'a':['b'], 'c':['d', 'e']})

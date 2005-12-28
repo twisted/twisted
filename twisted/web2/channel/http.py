@@ -563,6 +563,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
     
     _lingerTimer = None
     chanRequest = None
+
+    def _callLater(self, secs, fun):
+        reactor.callLater(secs, fun)
     
     def __init__(self):
         # the request queue
@@ -669,7 +672,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
             # Do this in the next reactor loop so as to
             # not cause huge call stacks with fast
             # incoming requests.
-            reactor.callLater(0, self._startNextRequest)
+            self._callLater(0, self._startNextRequest)
         else:
             self.lingeringClose()
 
