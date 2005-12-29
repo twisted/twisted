@@ -6,7 +6,7 @@ import os, struct, sys, signal
 from twisted.conch import avatar
 from twisted.cred.credentials import IUsernamePassword
 from twisted.cred import portal
-from twisted.internet import reactor, defer, protocol, error, process
+from twisted.internet import reactor, defer, protocol, error
 from twisted.python import log, failure, runtime
 from twisted.trial import unittest, util
 try:
@@ -50,7 +50,6 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         log.msg("MAD(ssh): connection lost")
-        log.msg(str(process.reapProcessHandlers.keys()))
         unittest._inst.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
         self.buf = self.buf.replace('\r\n', '\n')
         unittest._inst.assertEquals(self.buf, 'goodbye\n')
