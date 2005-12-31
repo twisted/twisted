@@ -1,3 +1,16 @@
+2005-12-31  Brian Warner  <warner@lothar.com>
+
+	* test_gift.py (TestOrderedGifts.testGift): verify that the
+	presence of a gift (a third-party reference) in the arguments of a
+	method does not cause that method to be run out-of-order. Marked
+	TODO because at the moment they *are* run out-of-order.
+	* common.py (RIHelper.append): new method
+
+	* referenceable.py (TheirReferenceUnslicer.ackGift): ignore errors
+	that involve losing the connection, since if these happen, the
+	giver will decref the gift reference anyway. This removes some
+	spurious log.errs and makes the unit tests happier.
+
 2005-12-30  Brian Warner  <warner@lothar.com>
 
 	* test_negotiate.py (Versus.testVersusHTTPServerEncrypted): stall

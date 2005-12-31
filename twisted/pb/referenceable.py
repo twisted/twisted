@@ -10,7 +10,7 @@ from zope.interface import interface
 from zope.interface import implements, providedBy
 from twisted.python.components import registerAdapter
 Interface = interface.Interface
-from twisted.internet import defer
+from twisted.internet import defer, error
 from twisted.python import failure, log
 
 from twisted.pb import ipb, schema, slicer, tokens, call
@@ -553,8 +553,12 @@ class TheirReferenceUnslicer(slicer.LeafUnslicer):
         return d,d
 
     def ackGift(self, rref):
-        self.broker.remote_broker.callRemote("decgift",
-                                             giftID=self.giftID, count=1)
+        d = self.broker.remote_broker.callRemote("decgift",
+                                                 giftID=self.giftID, count=1)
+        # if we lose the connection, they'll decref the gift anyway
+        d.addErrback(lambda f: f.trap(ipb.DeadReferenceError))
+        d.addErrback(lambda f: f.trap(error.ConnectionLost))
+        d.addErrback(lambda f: f.trap(error.ConnectionDone))
         return rref
 
     def describe(self):
