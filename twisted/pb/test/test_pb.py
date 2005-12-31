@@ -25,17 +25,13 @@ except ImportError:
 if crypto and not crypto.available:
     crypto = None
 
-# this SkipTest is temporary, until I figure out why the windows buildslaves
-# keep choking on these tests. Some theories: loopback TCP not working,
-# PyCrypto not working, PyOpenSSL not working, callLater(0) not working.
-from twisted.python import runtime
-skipwindows = False
-if runtime.platform.getType() == "win32":
-    skipwindows = True
-
 def eventually(value=None):
     d = defer.Deferred()
-    reactor.callLater(0, d.callback, value)
+    # I used to use 'reactor.callLater(0, d.callback, value)' here, but not
+    # all reactors are guaranteed to execute such calls in the order in which
+    # they were scheduled. Instead, we abuse callFromThread() to accomplish
+    # this goal. I blame PenguinOfDoom.  -warner
+    reactor.callFromThread(d.callback, value)
     return d
 
 def getRemoteInterfaceName(obj):
@@ -176,7 +172,7 @@ class Loopback:
 
     connected = True
     def write(self, data):
-        reactor.callLater(0, self._write, data)
+        eventually(data).addCallback(self._write)
 
     def _write(self, data):
         if not self.connected:
@@ -194,7 +190,8 @@ class Loopback:
     def loseConnection(self, why=failure.Failure(CONNECTION_DONE)):
         if self.connected:
             self.connected = False
-            reactor.callLater(0, self._loseConnection, why)
+            # this one is slightly weird because 'why' is a Failure
+            eventually().addCallback(lambda res: self._loseConnection(why))
 
     def _loseConnection(self, why):
         self.protocol.connectionLost(why)
@@ -420,8 +417,6 @@ class Unsendable:
 
 class TestCall(TargetMixin, unittest.TestCase):
     def setUp(self):
-        if skipwindows:
-            raise unittest.SkipTest("doesn't work on win32, don't know why")
         TargetMixin.setUp(self)
         self.setupBrokers()
 
@@ -809,8 +804,6 @@ class HelperTarget(pb.Referenceable):
 class TestCopyable(TargetMixin, unittest.TestCase):
 
     def setUp(self):
-        if skipwindows:
-            raise unittest.SkipTest("doesn't work on win32, don't know why")
         TargetMixin.setUp(self)
         self.setupBrokers()
         if 0:
@@ -969,8 +962,6 @@ class TestReferenceable(TargetMixin, unittest.TestCase):
     # references to the same object are handled.
 
     def setUp(self):
-        if skipwindows:
-            raise unittest.SkipTest("doesn't work on win32, don't know why")
         TargetMixin.setUp(self)
         self.setupBrokers()
         if 0:

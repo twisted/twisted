@@ -164,6 +164,10 @@ class Versus(BaseMixin, unittest.TestCase):
         d = client.getReference(url)
         d.addCallbacks(lambda res: self.fail("this is supposed to fail"),
                        lambda f: f.trap(pb.BananaError))
+        # the HTTP server needs a moment to notice that the connection has
+        # gone away. Without this, trial flunks the test because of the
+        # leftover HTTP server socket.
+        d.addCallback(self.stall, 1)
         return d
     testVersusHTTPServerEncrypted.timeout = 10
 
@@ -176,6 +180,7 @@ class Versus(BaseMixin, unittest.TestCase):
         d = client.getReference(url)
         d.addCallbacks(lambda res: self.fail("this is supposed to fail"),
                        lambda f: f.trap(pb.BananaError))
+        d.addCallback(self.stall, 1) # same reason as above
         return d
     testVersusHTTPServerUnencrypted.timeout = 10
 

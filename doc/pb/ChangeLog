@@ -1,9 +1,30 @@
 2005-12-30  Brian Warner  <warner@lothar.com>
 
+	* test_negotiate.py (Versus.testVersusHTTPServerEncrypted): stall
+	for a second after the test completes, to give the HTTP server a
+	moment to tear down its socket. Otherwise trial flunks the test
+	because of the lingering socket. I don't care for the arbitrary
+	1.0-second delay, but twisted.web doesn't give me any convenient
+	way to wait for it to shut down. (this test was only failing under
+	the gtk2 reactor, but I think this was an unlucky timing thing).
+	(Versus.testVersusHTTPServerUnencrypted): same
+
 	* negotiate.py (eventually): add an eventual-send operator
 	(Negotiation.negotiationFailed): fire connector.negotiationFailed
 	through eventually(), to give us a chance to loseConnection
 	beforehand. This helps the unit tests clean up better.
+
+	* negotiation.py (eventually): change the eventual-send operator
+	to (ab)use reactor.callFromThread instead of callLater(0). exarkun
+	warned me, but I didn't listen: callLater(0) does not guarantee
+	relative ordering of sequentially-scheduled calls, and the windows
+	reactors in fact execute them in random order. Obviously I'd like
+	the reactor to provide a clearly-defined method for this purpose.
+	* test_pb.py (eventually): same
+	(Loopback.write): same. It was the reordering of these _write
+	calls that was breaking the unit tests on windows so badly.
+	(Loopback.loseConnection): same
+
 
 2005-12-29  Brian Warner  <warner@lothar.com>
 

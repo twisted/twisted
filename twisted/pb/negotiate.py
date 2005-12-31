@@ -25,7 +25,11 @@ def eventually(value=None):
     primitive. The only requirement is that the Deferred fires after the
     current call stack has been completed."""
     d = defer.Deferred()
-    reactor.callLater(0, d.callback, value)
+    # I used to use 'reactor.callLater(0, d.callback, value)' here, but not
+    # all reactors are guaranteed to execute such calls in the order in which
+    # they were scheduled. Instead, we abuse callFromThread() to accomplish
+    # this goal. I blame PenguinOfDoom.  -warner
+    reactor.callFromThread(d.callback, value)
     return d
 
 class Negotiation(protocol.Protocol):
