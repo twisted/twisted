@@ -35,10 +35,8 @@ class EchoFactory(protocol.Factory):
 class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
     buf = ''
-    
-    def __init__(self):
-        self.done = defer.Deferred()
-    
+    done = 0
+
     def connectionMade(self):
         log.msg('MAD(ssh): connection made')
 
@@ -49,20 +47,17 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
         log.msg("ERR(ssh): '%s'" % data)
 
     def processEnded(self, reason):
-        log.msg("MAD(ssh): connection lost")
-        unittest._inst.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
+        self.done = 1
+        unittest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
         self.buf = self.buf.replace('\r\n', '\n')
-        unittest._inst.assertEquals(self.buf, 'goodbye\n')
-        
-        # give the process a chance to end
-        reactor.callLater(0, self.done.callback, True) 
+        unittest.assertEquals(self.buf, 'goodbye\n')
 
 class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
     def __init__(self, port, fac):
         self.port = port
         self.fac = fac
-        self.done = defer.Deferred()
+        self.done = 0
         self.connected = 0
         self.buf = ''
 
@@ -88,7 +83,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         log.msg('FORWARDING PROCESS CLOSED')
-        self.done.callback(True)
+        self.done = 1
 
 class ConchTestForwardingPort(protocol.Protocol):
 
@@ -108,7 +103,7 @@ class ConchTestForwardingPort(protocol.Protocol):
 
     def connectionLost(self, reason):
         log.msg('FORWARDING PORT CLOSED')
-        unittest._inst.failUnlessEqual(self.buf, self.data)
+        unittest.failUnlessEqual(self.buf, self.data)
 
         # forwarding-only clients don't die on their own
         self.proto.transport.write('\x03')
@@ -251,7 +246,9 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         else:
             self.fac.proto.transport.loseConnection()
             reactor.iterate()
-        return self.server.stopListening()
+        d = self.server.stopListening()
+        if d:
+            util.wait(d)
 
     def _getRandomPort(self):
         f = EchoFactory()
@@ -264,7 +261,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
 
     def testExec(self):
         p = ConchTestOpenSSHProcess()
-        return self.execute('echo goodbye', p)
+        self.execute('echo goodbye', p)
 
     def testLocalToRemoteForwarding(self):
         f = EchoFactory()
@@ -273,9 +270,8 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         port = serv.getHost().port
         lport = self._getRandomPort()
         p = ConchTestForwardingProcess(lport,self.fac)
-        d = self.execute('', p, preargs='-N -L%i:127.0.0.1:%i' % (lport, port))
-        d.addBoth(lambda x: serv.stopListening())
-        return d
+        self.execute('', p, preargs='-N -L%i:127.0.0.1:%i' % (lport, port))
+        serv.stopListening()
 
     def testRemoteToLocalForwarding(self):
         f = EchoFactory()
@@ -284,9 +280,8 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         port = serv.getHost().port
         lport = self._getRandomPort()
         p = ConchTestForwardingProcess(lport, self.fac)
-        d = self.execute('', p, preargs='-N -R %i:127.0.0.1:%i' % (lport, port))
-        d.addBoth(lambda x: serv.stopListening())
-        return d
+        self.execute('', p, preargs='-N -R %i:127.0.0.1:%i' % (lport, port))
+        serv.stopListening()
 
 class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
 
@@ -310,7 +305,7 @@ class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
             raise unittest.SkipTest, 'skipping test, cannot find ssh'
         cmds = (cmdline % port).split()
         reactor.spawnProcess(p, ssh_path, cmds)
-        return p.done
+        util.spinWhile(lambda: not p.done, timeout=30)
 
         # cleanup
         if not p.done:
@@ -340,7 +335,7 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         reactor.spawnProcess(p, sys.executable, cmds, env=env)
 
         # wait for process to finish
-        return p.done
+        util.spinWhile(lambda: not p.done, timeout=30)
 
         # cleanup
         if not p.done:
@@ -378,8 +373,7 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         d = connect.connect(o['host'], int(o['port']), o, vhk, uao)
         d.addErrback(lambda f: unittest.fail('Failure connecting to test server: %s' % f))
 
-        d.addCallback(lambda x: p.done)
-        return d
+        util.spinWhile(lambda: not p.done, timeout=30)
 
         # cleanup
         if not p.done:
