@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pb.test.test_pb,twisted.pb.test.test_gift -*-
 
 from zope.interface import implements
 from twisted.internet import defer, reactor
