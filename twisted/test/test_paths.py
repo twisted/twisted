@@ -246,6 +246,14 @@ class FilePathTestCase(unittest.TestCase):
         # read/write should let us do both without erasing those bytes
         f = appender.open('r+')
         self.assertEquals(f.read(), 'abcdef')
+        # ANSI C *requires* an fseek or an fgetpos between an fread and an
+        # fwrite or an fwrite and a fread.  We can't reliable get Python to
+        # invoke fgetpos, so we seek to a 0 byte offset from the current
+        # position instead.  Also, Python sucks for making this seek
+        # relative to 1 instead of a symbolic constant representing the
+        # current file position.
+        f.seek(0, 1)
+        # Put in some new bytes for us to test for later.
         f.write('ghi')
         f.close()
 
@@ -258,6 +266,7 @@ class FilePathTestCase(unittest.TestCase):
         # already.
         f = appender.open('w+')
         self.assertEquals(f.read(), '')
+        f.seek(0, 1) # Don't forget this!
         f.write('123')
         f.close()
 
@@ -268,6 +277,7 @@ class FilePathTestCase(unittest.TestCase):
         # The order of these lines may seem surprising, but it is necessary.
         # The cursor is not at the end of the file until after the first write.
         f.write('456')
+        f.seek(0, 1) # Asinine.
         self.assertEquals(f.read(), '')
 
         f.seek(0, 0)
