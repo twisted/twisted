@@ -231,7 +231,7 @@ class BlockingResolver:
             msg = "address %r not found" % (name,)
             err = error.DNSLookupError(msg)
             return defer.fail(err)
-        else:      
+        else:
             return defer.succeed(address)
 
 components.backwardsCompatImplements(BlockingResolver)
@@ -403,7 +403,7 @@ class ReactorBase:
         # now that we've called all callbacks, no need to store
         # references to them anymore, in fact this can cause problems.
         del self._eventTriggers[eventType]
-    
+
     def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
@@ -468,7 +468,7 @@ class ReactorBase:
         except ValueError:
             # element was not found in heap - oh well...
             pass
-        
+
     def _cancelCallLater(self, tple):
         self._cancellations+=1
 
@@ -495,16 +495,16 @@ class ReactorBase:
                 call.activate_delay()
                 heappush(self._pendingTimedCalls, call)
         self._newTimedCalls = []
-        
+
     def timeout(self):
         # insert new delayed calls to make sure to include them in timeout value
         self._insertNewDelayedCalls()
-        
+
         if not self._pendingTimedCalls:
             return None
-        
+
         return max(0, self._pendingTimedCalls[0].time - seconds())
-        
+
     def runUntilCurrent(self):
         """Run all pending timed calls.
         """
@@ -520,17 +520,17 @@ class ReactorBase:
                     log.err()
                 count += 1
             del self.threadCallQueue[:count]
-        
+
         # insert new delayed calls now
         self._insertNewDelayedCalls()
-        
+
         now = seconds()
         while self._pendingTimedCalls and (self._pendingTimedCalls[0].time <= now):
             call = heappop(self._pendingTimedCalls)
             if call.cancelled:
                 self._cancellations-=1
                 continue
-            
+
             if call.delayed_time > 0:
                 call.activate_delay()
                 heappush(self._pendingTimedCalls, call)
@@ -550,7 +550,7 @@ class ReactorBase:
                     e += "\n"
                     log.msg(e)
 
-        
+
         if (self._cancellations > 50 and
              self._cancellations > len(self._pendingTimedCalls) >> 1):
             self._cancellations = 0
@@ -694,7 +694,7 @@ components.backwardsCompatImplements(BaseConnector)
 
 class BasePort(abstract.FileDescriptor):
     """Basic implementation of a ListeningPort.
-    
+
     Note: This does not actually implement IListeningPort.
     """
 
