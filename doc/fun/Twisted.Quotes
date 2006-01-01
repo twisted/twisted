@@ -5421,3 +5421,10 @@ bewildered, then go off to the next corpse
 <dash> it is like getting a graduate course in techniques for annoying people
 <dash> that is why i thought of SMS
 %
+tekNico: Some guy has ported Stan to Turbogears: http://blog.develix.com/archive/2006/01/01/stan-turbogears-continued/
+idnar: that's a bit backwards
+idnar: I wouldn't say anyone ported anything
+idnar: it's just that turbogears has pluggable templating, and he plugged stan in
+tekNico: Hey, either port or plug, it's still a four letter p-word.
+exarkun: poop
+%
