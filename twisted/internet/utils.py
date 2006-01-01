@@ -7,7 +7,7 @@
 
 import sys, warnings
 
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import protocol, defer
 from twisted.python import failure, util as tputil
 
 try:
@@ -15,7 +15,10 @@ try:
 except ImportError:
     import StringIO
 
-def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor):
+def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
+    if reactor is None:
+        from twisted.internet import reactor
+
     d = defer.Deferred()
     p = protocol(d)
     reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
@@ -49,7 +52,7 @@ class _BackRelay(protocol.ProcessProtocol):
             self.deferred.callback(self.s.getvalue())
 
 
-def getProcessOutput(executable, args=(), env={}, path='.', reactor=reactor,
+def getProcessOutput(executable, args=(), env={}, path='.', reactor=None,
                      errortoo=0):
     """Spawn a process and return its output as a deferred returning a string.
 
@@ -84,7 +87,7 @@ class _ValueGetter(protocol.ProcessProtocol):
         self.deferred.callback(reason.value.exitCode)
 
 
-def getProcessValue(executable, args=(), env={}, path='.', reactor=reactor):
+def getProcessValue(executable, args=(), env={}, path='.', reactor=None):
     """Spawn a process and return its exit code as a Deferred."""
     return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path,
                                     reactor)
@@ -110,7 +113,7 @@ class _EverythingGetter(protocol.ProcessProtocol):
             self.deferred.callback((out, err, code))
 
 def getProcessOutputAndValue(executable, args=(), env={}, path='.', 
-                             reactor=reactor):
+                             reactor=None):
     """Spawn a process and returns a Deferred that will be called back with
     its output (from stdout and stderr) and it's exit code as (out, err, code)
     If a signal is raised, the Deferred will errback with the stdout and
