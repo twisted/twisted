@@ -27,10 +27,9 @@ class TestCompatibility(unittest.TestCase):
                 new = reflect.namedModule(newName)
             except ImportError, e:
                 continue
-            for someName in [x for x in vars(new).keys() if x != '__doc__']:
+            for someName in vars(new):
+                if someName == '__doc__':
+                    continue
                 self.assertIdentical(getattr(old, someName),
                                      getattr(new, someName))
-    testCompatibility = util.suppressWarnings(testCompatibility,
-                                              ('', DeprecationWarning))
-    
-            
+    testCompatibility.suppress = [util.suppress(category=DeprecationWarning)]

@@ -7,14 +7,13 @@
 Test running processes.
 """
 
+import warnings, os, sys, signal
+
+# Twisted Imports
 from twisted.trial import unittest
 from twisted.test.test_process import SignalMixin
 
-import gzip, os, popen2, time, sys, signal
-
-# Twisted Imports
 from twisted.internet import reactor, utils, interfaces
-from twisted.python import components
 
 
 class UtilsTestCase(SignalMixin, unittest.TestCase):
@@ -107,6 +106,45 @@ class UtilsTestCase(SignalMixin, unittest.TestCase):
 
         d = utils.getProcessOutputAndValue(exe, ['-u', scriptFile])
         return d.addErrback(gotOutputAndValue)
+
+
+
+class WarningSuppression(unittest.TestCase):
+    def setUp(self):
+        self.warnings = []
+        self.originalshow = warnings.showwarning
+        warnings.showwarning = self.showwarning
+
+
+    def tearDown(self):
+        warnings.showwarning = self.originalshow
+
+
+    def showwarning(self, *a, **kw):
+        self.warnings.append((a, kw))
+
+
+    def testSuppressWarnings(self):
+        def f(msg):
+            warnings.warn(msg)
+        g = utils.suppressWarnings(f, (('ignore',), dict(message="This is message")))
+
+        # Start off with a sanity check - calling the original function
+        # should emit the warning.
+        f("Sanity check message")
+        self.assertEquals(len(self.warnings), 1)
+
+        # Now that that's out of the way, call the wrapped function, and
+        # make sure no new warnings show up.
+        g("This is message")
+        self.assertEquals(len(self.warnings), 1)
+
+        # Finally, emit another warning which should not be ignored, and
+        # make sure it is not.
+        g("Unignored message")
+        self.assertEquals(len(self.warnings), 2)
+
+
 
 if interfaces.IReactorProcess(reactor, None) is None:
     UtilsTestCase.skip = "reactor doesn't implement IReactorProcess"

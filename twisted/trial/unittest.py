@@ -4,11 +4,11 @@
 # See LICENSE for details.
 
 
-import os, errno, warnings, sys, time, tempfile
+import os, errno, warnings, sys
 
-from twisted.internet import defer
-from twisted.python import failure, log, reflect
-from twisted.trial import itrial, util, reporter
+from twisted.internet import defer, utils
+from twisted.python import failure, log
+from twisted.trial import itrial, util
 from twisted.trial.util import deferredResult, deferredError
 
 pyunit = __import__('unittest')
@@ -89,7 +89,7 @@ class TestCase(pyunit.TestCase, object):
     def _run(self, methodName):
         from twisted.internet import reactor
         method = getattr(self._sharedTestCase(), methodName)
-        d = defer.maybeDeferred(util.suppressedRun, self.getSuppress(), method)
+        d = defer.maybeDeferred(utils.runWithWarningsSuppressed, self.getSuppress(), method)
         call = reactor.callLater(self.getTimeout(), defer.timeout, d)
         d.addBoth(lambda x : call.active() and call.cancel() or x)
         return d

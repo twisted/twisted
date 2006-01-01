@@ -19,7 +19,6 @@ from cStringIO import StringIO
 from zope.interface import implements
 
 from twisted.trial import unittest
-from twisted.trial.util import suppressWarnings
 # module-level 'suppress' has special meaning to Trial, so import this under
 # a different name
 from twisted.trial.util import suppress as util_suppress
@@ -27,6 +26,7 @@ from twisted.trial.util import suppress as util_suppress
 from twisted.spread import pb, util
 from twisted.internet import protocol, main, error
 from twisted.internet.app import Application
+from twisted.internet.utils import suppressWarnings
 from twisted.python import failure, log
 from twisted.cred import identity, authorizer
 from twisted.cred.error import UnauthorizedLogin
@@ -99,6 +99,38 @@ class IOPump:
         else:
             return 0
 
+_appSuppress = util_suppress(
+    message="twisted.internet.app is deprecated, use twisted.application or the reactor instead.",
+    category=DeprecationWarning)
+
+_identitySuppress = util_suppress(
+    message="Identities are deprecated, switch to credentialcheckers etc.",
+    category=DeprecationWarning)
+
+_authorizerSuppress = util_suppress(
+    message="Authorizers are deprecated, switch to portals/realms/etc.",
+    category=DeprecationWarning)
+
+_credServiceSuppress = util_suppress(
+    message="Cred services are deprecated, use realms instead.",
+    category=DeprecationWarning)
+
+_perspectiveSuppress = util_suppress(
+    message="pb.Perspective is deprecated, please use pb.Avatar.",
+    category=DeprecationWarning)
+
+_loginBackendSuppress = util_suppress(
+    message="Update your backend to use PBServerFactory, and then use login().",
+    category=DeprecationWarning)
+
+_pbServerFactorySuppress = util_suppress(
+    message="This is deprecated. Use PBServerFactory.",
+    category=DeprecationWarning)
+
+_pbClientFactorySuppress = util_suppress(
+    message="This is deprecated. Use PBClientFactory.",
+    category=DeprecationWarning)
+
 
 def connectedServerAndClient():
     """Returns a 3-tuple: (client, server, pump)
@@ -124,12 +156,15 @@ def connectedServerAndClient():
     # Challenge-response authentication:
     pump.flush()
     return c, s, pump
-connectedServerAndClient = suppressWarnings(connectedServerAndClient,
-                                            ("twisted.internet.app", DeprecationWarning),
-                                            ("Identities", DeprecationWarning),
-                                            ("Cred services", DeprecationWarning),
-                                            ("This is deprecated. Use PBServerFactory.", DeprecationWarning),
-                                            ("Authorizers are deprecated, switch to portals/realms/etc.", DeprecationWarning))
+connectedServerAndClient = suppressWarnings(
+    connectedServerAndClient,
+    _authorizerSuppress,
+    _appSuppress,
+    _identitySuppress,
+    _credServiceSuppress,
+    _pbServerFactorySuppress,
+    )
+
 class SimpleRemote(pb.Referenceable):
     def remote_thunk(self, arg):
         self.arg = arg
@@ -617,9 +652,8 @@ class BrokerTestCase(unittest.TestCase):
         accum.pop().callRemote('doNothing').addCallback(accum.append)
         pump.flush()
         assert accum.pop() == 'hello world!', 'oops...'
-    testViewPoint = suppressWarnings(testViewPoint, 
-                                     ("This is deprecated. Use PBClientFactory.", DeprecationWarning),
-                                     ("pb.Perspective is deprecated, please use pb.Avatar.", DeprecationWarning))
+    testViewPoint.suppress = [_pbClientFactorySuppress, _perspectiveSuppress]
+
 
     def testPublishable(self):
         import os
@@ -892,24 +926,6 @@ class ReconnectOnce(pb.PBClientFactory):
             connector.connect()
 
 
-def connection_suppress(*suppressions):
-    # trial's handling of .suppress is a bit uneven. Ideally we'd like these
-    # six warnings to be suppressed when triggered only by code in setUp, but
-    # trial doesn't appear to look at setUp.suppress . So, as a workaround,
-    # we include these in the .suppress attribute on all test methods of this
-    # class. This helper function makes it easier to construct an appropriate
-    # .suppress attribute for each test method.
-    messages = suppressions + (
-        "Authorizers are deprecated, switch to portals/realms/etc.",
-        "twisted.internet.app is deprecated, use twisted.application or the reactor instead.",
-        "This is deprecated. Use PBServerFactory.",
-        "Identities are deprecated, switch to credentialcheckers etc.",
-        "Cred services are deprecated, use realms instead.",
-        )
-    return [util_suppress(category=DeprecationWarning,
-                          message=msg)
-            for msg in messages]
-
 class ConnectionTestCase(unittest.TestCase):
     def setUp(self):
         self.refs = [] # these will be .broker.transport.loseConnection()'ed
@@ -929,6 +945,13 @@ class ConnectionTestCase(unittest.TestCase):
         self.svr = pb.BrokerFactory(pb.AuthRoot(auth))
         self.port = reactor.listenTCP(0, self.svr, interface="127.0.0.1")
         self.portno = self.port.getHost().port
+    setUp = suppressWarnings(setUp,
+        _authorizerSuppress,
+        _appSuppress,
+        _identitySuppress,
+        _credServiceSuppress,
+        _loginBackendSuppress)
+
 
     def tearDown(self):
         for r in self.refs:
@@ -957,9 +980,8 @@ class ConnectionTestCase(unittest.TestCase):
         d.addCallback(self.addRef)
         d.addCallback(self._checkRootObject)
         return d
-    testGetObjectAt.suppress = connection_suppress(
-        "This is deprecated. Use PBClientFactory.",
-        )
+    testGetObjectAt.suppress = [_pbClientFactorySuppress]
+
                           
     def testConnect(self):
         d = pb.connect("127.0.0.1", self.portno, "guest", "guest", "test",
@@ -967,11 +989,12 @@ class ConnectionTestCase(unittest.TestCase):
         d.addCallback(self.addRef)
         d.addCallback(self._checkIsRemoteReference)
         return d
-    testConnect.suppress = connection_suppress(
-        "This is deprecated. Use PBClientFactory.",
-        "Update your backend to use PBServerFactory, and then use login().",
-        "pb.Perspective is deprecated, please use pb.Avatar.",
-        )
+    testConnect.suppress = [_pbClientFactorySuppress,
+                            _pbServerFactorySuppress,
+                            _loginBackendSuppress,
+                            _perspectiveSuppress]
+
+
 
     def testIdentityConnector(self):
         dl = []
@@ -986,10 +1009,10 @@ class ConnectionTestCase(unittest.TestCase):
         d3 = defer.DeferredList(dl)
         d3.addCallback(lambda res: iConnector.disconnect())
         return d3
-    testIdentityConnector.suppress = connection_suppress(
-        "This is deprecated. Use PBClientFactory.",
-        "pb.Perspective is deprecated, please use pb.Avatar.",
-        )
+    testIdentityConnector.suppress = [_pbServerFactorySuppress,
+                                      _pbClientFactorySuppress,
+                                      _perspectiveSuppress]
+
 
     # tests for new, shiny API, although getPerspective stuff is also
     # deprecated:
@@ -1002,13 +1025,15 @@ class ConnectionTestCase(unittest.TestCase):
         d.addCallback(self._checkRootObject)
         d.addCallback(self._testGoodGetObject_1, factory)
         return d
+
+
     def _testGoodGetObject_1(self, res, factory):
         d = factory.getRootObject()
         d.addCallback(self.addRef)
         d.addCallback(self._checkRootObject)
         return d
-    testGoodGetObject.suppress = connection_suppress()
-    
+
+
     def testGoodPerspective(self):
         # we test getting both before and after connection
         factory = pb.PBClientFactory()
@@ -1019,28 +1044,26 @@ class ConnectionTestCase(unittest.TestCase):
         d.addCallback(self._checkIsRemoteReference)
         d.addCallback(self._testGoodPerspective_1, factory)
         return d
+
+
     def _testGoodPerspective_1(self, res, factory):
         d = factory.getPerspective("guest", "guest", "test",
                                    perspectiveName="any")
         d.addCallback(self.addRef)
         d.addCallback(self._checkIsRemoteReference)
         return d
-    testGoodPerspective.suppress = connection_suppress(
-        "pb.Perspective is deprecated, please use pb.Avatar.",
-        "Update your backend to use PBServerFactory, and then use login().",
-        )
-    
+    testGoodPerspective.suppress = [_perspectiveSuppress,
+                                    _loginBackendSuppress]
+
+
     def testGoodFailedConnect(self):
         factory = pb.PBClientFactory()
         d = factory.getPerspective("guest", "guest", "test",
                                    perspectiveName="any")
         reactor.connectTCP("127.0.0.1", 69, factory)
-        d.addCallbacks(lambda res: self.fail("should have failed"),
-                       lambda f: f.trap(error.ConnectError))
-        return d
-    testGoodFailedConnect.suppress = connection_suppress(
-        "Update your backend to use PBServerFactory, and then use login().",
-        )
+        return self.assertFailure(d, error.ConnectError)
+    testGoodFailedConnect.suppress = [_loginBackendSuppress]
+
 
     def testDisconnect(self):
         factory = pb.PBClientFactory()
@@ -1069,10 +1092,9 @@ class ConnectionTestCase(unittest.TestCase):
     def _testDisconnect_3(self, p):
         self.assertRaises(pb.DeadReferenceError,
                           p.callRemote, "getDummyViewPoint")
-    testDisconnect.suppress = connection_suppress(
-        "pb.Perspective is deprecated, please use pb.Avatar.",
-        "Update your backend to use PBServerFactory, and then use login().",
-        )
+    testDisconnect.suppress = [_perspectiveSuppress,
+                               _loginBackendSuppress]
+
 
     def testEmptyPerspective(self):
         factory = pb.PBClientFactory()
@@ -1081,19 +1103,20 @@ class ConnectionTestCase(unittest.TestCase):
         d.addCallback(self._checkIsRemoteReference)
         d.addCallback(self.addRef)
         return d
-    testEmptyPerspective.suppress = connection_suppress(
-        "pb.Perspective is deprecated, please use pb.Avatar.",
-        "Update your backend to use PBServerFactory, and then use login().",
-        )
+    testEmptyPerspective.suppress = [_perspectiveSuppress,
+                                     _loginBackendSuppress,
+                                     _pbServerFactorySuppress]
 
     def testReconnect(self):
         factory = ReconnectOnce()
         l = []
         d1 = defer.Deferred()
+
         def disconnected(p):
             d2 = factory.getPerspective("guest", "guest", "test",
                                         perspectiveName="any")
             d2.addCallback(d1.callback)
+
         d = factory.getPerspective("guest", "guest", "test",
                                    perspectiveName="any")
         reactor.connectTCP("127.0.0.1", self.portno, factory)
@@ -1103,10 +1126,9 @@ class ConnectionTestCase(unittest.TestCase):
         d1.addCallback(self._checkIsRemoteReference)
         d1.addCallback(lambda res: factory.disconnect())
         return d1
-    testReconnect.suppress = connection_suppress(
-        "pb.Perspective is deprecated, please use pb.Avatar.",
-        "Update your backend to use PBServerFactory, and then use login().",
-        )
+    testReconnect.suppress = [_pbServerFactorySuppress,
+                              _loginBackendSuppress,
+                              _perspectiveSuppress]
 
     def testImmediateClose(self):
         cc = protocol.ClientCreator(reactor, protocol.Protocol)
@@ -1116,7 +1138,6 @@ class ConnectionTestCase(unittest.TestCase):
         # clunky, but it works
         reactor.callLater(0.1, d.callback, None)
         return d
-    testImmediateClose.suppress = connection_suppress()
 
 
 # yay new cred, everyone use this:

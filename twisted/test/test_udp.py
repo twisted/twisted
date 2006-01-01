@@ -118,9 +118,10 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
             return defer.maybeDeferred(port2.stopListening).addCallback(lambda ign: assertName())
 
         return d.addCallback(cbStarted)
-    testStartStop = util.suppressWarnings(testStartStop,
-                                          ('use listenUDP and then transport.connect',
-                                           DeprecationWarning))
+    testStartStop.suppress = [
+        util.suppress(message='use listenUDP and then transport.connect',
+                      category=DeprecationWarning)]
+
 
     def testDNSFailure(self):
         client = Client()
@@ -135,10 +136,11 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
         d = self.assertFailure(d, error.DNSLookupError)
         d.addCallback(didNotConnect)
         return d
+    testDNSFailure.suppress = [
+        util.suppress(message='use listenUDP and then transport.connect',
+                      category=DeprecationWarning)]
 
-    testDNSFailure = util.suppressWarnings(testDNSFailure,
-                                           ('use listenUDP and then transport.connect',
-                                           DeprecationWarning))
+
     def testSendPackets(self):
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
@@ -179,9 +181,10 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
 
         d.addCallback(cbPackets)
         return d
-    testSendPackets = util.suppressWarnings(testSendPackets,
-                                            ('use listenUDP and then transport.connect',
-                                             DeprecationWarning))
+    testSendPackets.suppress = [
+        util.suppress(message='use listenUDP and then transport.connect',
+                      category=DeprecationWarning)]
+
 
     def testConnectionRefused(self):
         # assume no one listening on port 80 UDP
@@ -206,9 +209,10 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
         port.stopListening()
         port2.stopListening()
         reactor.iterate(); reactor.iterate()
-    testConnectionRefused = util.suppressWarnings(testConnectionRefused,
-                                                  ('use listenUDP and then transport.connect',
-                                                   DeprecationWarning))
+    testConnectionRefused.suppress = [
+        util.suppress(message='use listenUDP and then transport.connect',
+                      category=DeprecationWarning)]
+
 
 
 class UDPTestCase(unittest.TestCase):
@@ -222,9 +226,10 @@ class UDPTestCase(unittest.TestCase):
             self.assertEquals(addr, ('INET_UDP', addr.host, addr.port))
             return p.stopListening()
         return d.addCallback(cbStarted)
-    testOldAddress = util.suppressWarnings(testOldAddress,
-                                           ('IPv4Address.__getitem__',
-                                            DeprecationWarning))
+    testOldAddress.suppress = [
+        util.suppress(message='IPv4Address.__getitem__',
+                      category=DeprecationWarning)]
+
     
     def testStartStop(self):
         server = Server()

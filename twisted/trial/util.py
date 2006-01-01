@@ -21,9 +21,7 @@ from __future__ import generators
 
 import traceback, warnings, time, signal, gc, sys
 from twisted.python import failure, util, log
-from twisted.internet import defer, interfaces
-from twisted.trial import itrial
-import zope.interface as zi
+from twisted.internet import utils, defer, interfaces
 
 # Methods in this list will be omitted from a failed test's traceback if
 # they are the final frame.
@@ -430,22 +428,6 @@ def suppress(action='ignore', **kwarg):
     return ((action,), kwarg)
 
 
-def suppressedRun(suppressedWarnings, f, *a, **kw):
-    """Run the function C{f}, but with some warnings suppressed.
-
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-                               Must be a sequence of 2-tuples (args, kwargs).
-    @param f: A callable, followed by its arguments and keyword arguments
-    """
-    filters = warnings.filters[:]
-    try:
-        for args, kwargs in suppressedWarnings:
-            warnings.filterwarnings(*args, **kwargs)
-        return f(*a, **kw)
-    finally:
-        warnings.filters = filters[:]
-
-
 def timedRun(timeout, f, *a, **kw):
     return wait(defer.maybeDeferred(f, *a, **kw), timeout, useWaitError=True)
 
@@ -454,7 +436,7 @@ def testFunction(f):
     containers = [f] + getPythonContainers(f)
     suppress = acquireAttribute(containers, 'suppress', [])
     timeout = acquireAttribute(containers, 'timeout', DEFAULT_TIMEOUT)
-    return suppressedRun(suppress, lambda : timedRun(timeout, f))
+    return utils.runWithWarningsSuppressed(suppress, timedRun, timeout, f)
 
 
 def profiled(f, outputFile):
