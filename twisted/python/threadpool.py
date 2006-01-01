@@ -31,9 +31,9 @@ class ThreadPool:
     """
     This class (hopefully) generalizes the functionality of a pool of
     threads to which work can be dispatched.
-    
+
     dispatch(), dispatchWithCallback() and stop() should only be called from
-    a single thread, unless you make a subclass where stop() and 
+    a single thread, unless you make a subclass where stop() and
     _startSomeWorkers() are synchronized.
     """
     __inited = 0
@@ -43,7 +43,7 @@ class ThreadPool:
     started = 0
     workers = 0
     name = None
-    
+
     def __init__(self, minthreads=5, maxthreads=20, name=None):
         """Create a new threadpool.
 
@@ -98,7 +98,7 @@ class ThreadPool:
         state['min'] = self.min
         state['max'] = self.max
         return state
-    
+
     def _startSomeWorkers(self):
         while (
             self.workers < self.max and # Don't create too many
@@ -119,7 +119,7 @@ class ThreadPool:
         self.q.put(o)
         if self.started:
             self._startSomeWorkers()
-    
+
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
             result = apply(func, args, kwargs)
@@ -127,10 +127,10 @@ class ThreadPool:
             errback(sys.exc_info()[1])
         else:
             callback(result)
-    
+
     def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
         """Dispatch a function, returning the result to a callback function.
-        
+
         The callback function will be called in the thread - make sure it is
         thread-safe.
         """
@@ -155,7 +155,7 @@ class ThreadPool:
             self.waiters.remove(ct)
 
         self.threads.remove(ct)
-    
+
     def stop(self):
         """Shutdown the threads in the threadpool."""
         self.joined = 1
@@ -182,7 +182,7 @@ class ThreadPool:
         self.max = maxthreads
         if not self.started:
             return
-        
+
         # Kill of some threads if we have too many.
         while self.workers > self.max:
             self.stopAWorker()
@@ -191,7 +191,7 @@ class ThreadPool:
             self.startAWorker()
         # Start some threads if there is a need.
         self._startSomeWorkers()
-   
+
     def dumpStats(self):
         log.msg('queue: %s'   % self.q.queue)
         log.msg('waiters: %s' % self.waiters)
