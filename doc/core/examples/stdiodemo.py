@@ -50,10 +50,8 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
     def do_quit(self):
         """quit: Quit this session"""
         self.sendLine('Goodbye.')
-        # stop the reactor, only because this is meant to be run in Stdio.
-        # if using with Telnet, use self.transport.loseConnection() instead.
-        reactor.stop()
-            
+        self.transport.loseConnection()
+        
     def do_check(self, url):
         """check <url>: Attempt to download the given web page"""
         client.getPage(url).addCallback(
@@ -65,6 +63,10 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
 
     def __checkFailure(self, failure):
         self.sendLine("Failure: " + failure.getErrorMessage())
+
+    def connectionLost(self, reason):
+        # stop the reactor, only because this is meant to be run in Stdio.
+        reactor.stop()
 
 if __name__ == "__main__":
     stdio.StandardIO(WebCheckerCommandProtocol())
