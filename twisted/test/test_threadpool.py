@@ -24,7 +24,12 @@ class ThreadPoolTestCase(unittest.TestCase):
     def testPersistence(self):
         tp = threadpool.ThreadPool(7, 20)
         tp.start()
+
+        # XXX Sigh - race condition: start should return a Deferred
+        # which fires when all the workers it started have fully
+        # started up.
         time.sleep(0.1)
+
         self.assertEquals(len(tp.threads), 7)
         self.assertEquals(tp.min, 7)
         self.assertEquals(tp.max, 20)
@@ -33,13 +38,17 @@ class ThreadPoolTestCase(unittest.TestCase):
         s = pickle.dumps(tp)
         tp2 = pickle.loads(s)
         tp2.start()
+
+        # XXX As above
         time.sleep(0.1)
+
         self.assertEquals(len(tp2.threads), 7)
         self.assertEquals(tp2.min, 7)
         self.assertEquals(tp2.max, 20)
 
         tp.stop()
         tp2.stop()
+
 
     def testCounter(self):
         tp = threadpool.ThreadPool()
@@ -57,14 +66,24 @@ class ThreadPoolTestCase(unittest.TestCase):
         self.assertEquals(c.index, 1000)
         tp.stop()
 
+
     def testExistingWork(self):
-        done = []
-        def work(): done.append(1)
+        waiter = threading.Lock()
+        waiter.acquire()
+
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThread(work) # before start()
+        tp.callInThread(waiter.release) # before start()
         tp.start()
-        while not done: pass
-        tp.stop()
+
+        try:
+            for i in xrange(1000000):
+                if waiter.acquire(False):
+                    break
+                time.sleep(1e-5)
+            else:
+                self.fail("A long time passed without succeeding.")
+        finally:
+            tp.stop()
 
 
 class RaceConditionTestCase(unittest.TestCase):
