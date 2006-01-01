@@ -11,10 +11,10 @@ from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, threads
 from twisted.python import failure, threadable
 
-class Counter:    
+class Counter:
     index = 0
     problem = 0
-    
+
     def sync_add(self):
         """A thread-safe method."""
         self.add()
@@ -31,7 +31,7 @@ class Counter:
         # get in here, we will actually make the count go backwards when we
         # overwrite it.
         self.index = next
-    
+
     synchronized = ["sync_add"]
 threadable.synchronize(Counter)
 
@@ -49,7 +49,7 @@ class ThreadsTestCase(unittest.TestCase):
 
     def testCallInThread(self):
         c = Counter()
-        
+
         for i in range(1000):
             reactor.callInThread(c.sync_add)
 
@@ -64,7 +64,7 @@ class ThreadsTestCase(unittest.TestCase):
         # in practice, if the threads are running unsynchronized (say, using
         # c.add instead of c.sync_add), it takes about 10 repetitions of
         # this test case to expose a problem
-        
+
         when = time.time()
         oldIndex = 0
         while c.index < 1000:
@@ -114,9 +114,9 @@ class ThreadsTestCase(unittest.TestCase):
                     else:
                         self.fail("threads never started")
             oldIndex = c.index
-        
+
         self.assertEquals(c.index, 1000)
-    
+
     def testSuggestThreadPoolSize(self):
         reactor.suggestThreadPoolSize(34)
         reactor.suggestThreadPoolSize(4)
@@ -157,7 +157,7 @@ class DeferredResultTestCase(unittest.TestCase):
         # other tests.
         #
         # alas, this test appears to flunk the default reactor too
-        
+
         def nothing(): pass
         reactor.callLater(1, reactor.crash)
         reactor.callInThread(nothing)
