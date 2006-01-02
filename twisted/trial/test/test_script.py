@@ -1,4 +1,4 @@
-import inspect, StringIO, sys
+import inspect, StringIO, sys, sets
 from twisted.trial import unittest
 from twisted.scripts import trial
 from twisted.python import util, usage
@@ -26,8 +26,9 @@ class TestModuleTest(unittest.TestCase):
 
     def test_testmoduleOnScript(self):
         self.config.opt_testmodule(sibpath('scripttest.py'))
-        self.failUnlessEqual('twisted.trial.test.test_test_visitor',
-                             self.config['tests'][0])
+        self.failUnlessEqual(sets.Set(['twisted.trial.test.test_test_visitor',
+                                       'twisted.trial.test.test_class']),
+                             sets.Set(self.config['tests']))
 
     def test_testmoduleOnNonexistentFile(self):
         buffy = StringIO.StringIO()
@@ -60,27 +61,32 @@ class TestModuleTest(unittest.TestCase):
     def test_parseLocalVariable(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_tests -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests'},
+        self.failUnlessEqual({'test-case-name':
+                              'twisted.trial.test.test_tests'},
                              localVars)
 
     def test_trailingSemicolon(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_tests; -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests'},
+        self.failUnlessEqual({'test-case-name':
+                              'twisted.trial.test.test_tests'},
                              localVars)
         
     def test_parseLocalVariables(self):
-        declaration = '-*- test-case-name: twisted.trial.test.test_tests; ' \
-                      'foo: bar -*-'
+        declaration = ('-*- test-case-name: twisted.trial.test.test_tests; ' 
+                       'foo: bar -*-')
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests',
+        self.failUnlessEqual({'test-case-name':
+                              'twisted.trial.test.test_tests',
                               'foo': 'bar'},
                              localVars)
 
     def test_surroundingGuff(self):
-        declaration = '## -*- test-case-name: twisted.trial.test.test_tests -*- #'
+        declaration = ('## -*- test-case-name: '
+                       'twisted.trial.test.test_tests -*- #')
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_tests'},
+        self.failUnlessEqual({'test-case-name':
+                              'twisted.trial.test.test_tests'},
                              localVars)
 
     def test_invalidLine(self):
@@ -97,7 +103,8 @@ class TestModuleTest(unittest.TestCase):
 
     def test_variablesFromFile(self):
         localVars = trial.loadLocalVariables(sibpath('moduletest.py'))
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_test_visitor'},
+        self.failUnlessEqual({'test-case-name':
+                              'twisted.trial.test.test_test_visitor'},
                              localVars)
         
     def test_noVariablesInFile(self):
@@ -106,8 +113,24 @@ class TestModuleTest(unittest.TestCase):
 
     def test_variablesFromScript(self):
         localVars = trial.loadLocalVariables(sibpath('scripttest.py'))
-        self.failUnlessEqual({'test-case-name': 'twisted.trial.test.test_test_visitor'},
-                             localVars)
+        self.failUnlessEqual(
+            {'test-case-name': ('twisted.trial.test.test_test_visitor,'
+                                'twisted.trial.test.test_class')},
+            localVars)
+
+    def test_getTestModules(self):
+        modules = trial.getTestModules(sibpath('moduletest.py'))
+        self.failUnlessEqual(modules, ['twisted.trial.test.test_test_visitor'])
+
+    def test_getTestModules_noVars(self):
+        modules = trial.getTestModules(sibpath('novars.py'))
+        self.failUnlessEqual(len(modules), 0)
+
+    def test_getTestModules_multiple(self):
+        modules = trial.getTestModules(sibpath('scripttest.py'))
+        self.failUnlessEqual(sets.Set(modules),
+                             sets.Set(['twisted.trial.test.test_test_visitor',
+                                       'twisted.trial.test.test_class']))
 
     def test_looksLikeTestModule(self):
         for filename in ['test_script.py', 'twisted/trial/test/test_script.py']:
@@ -117,3 +140,4 @@ class TestModuleTest(unittest.TestCase):
                          sibpath('scripttest.py'), sibpath('test_foo.bat')]:
             self.failIf(trial.isTestFile(filename),
                         "%r should *not* be a test file" % (filename,))
+

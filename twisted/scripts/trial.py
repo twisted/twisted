@@ -68,6 +68,13 @@ def loadLocalVariables(filename):
     return {}
 
 
+def getTestModules(filename):
+    testCaseVar = loadLocalVariables(filename).get('test-case-name', None)
+    if testCaseVar is None:
+        return []
+    return testCaseVar.split(',')
+
+
 def isTestFile(filename):
     """Returns true if 'filename' looks like a file containing unit tests.
     False otherwise.  Doesn't care whether filename exists.
@@ -200,12 +207,11 @@ class Options(usage.Options):
         filename = os.path.abspath(filename)
         if isTestFile(filename):
             self['tests'].append(filename)
-            return            
         else:
-            localVars = loadLocalVariables(filename)
-            moduleName = localVars.get('test-case-name', None)
-        if moduleName is not None and moduleName not in self['tests']:
-            self['tests'].append(moduleName)
+            for test in getTestModules(filename):
+                if test not in self['tests']:
+                    self['tests'].append(test)
+            self['tests'].extend(getTestModules(filename))
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
