@@ -20,9 +20,6 @@ class DistribTest(unittest.TestCase):
     port2 = None
     sub = None
 
-    def setUp(self):
-        base.DelayedCall.debug = True
-
     def tearDown(self):
         if self.sub is not None:
             self.sub.publisher.broker.transport.loseConnection()
