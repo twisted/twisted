@@ -31,7 +31,6 @@ __all__ = ["http_PROPFIND"]
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web2 import responsecode
-from twisted.web2.iweb import IRequest
 from twisted.web2.http import StatusResponse
 from twisted.web2.dav import davxml
 from twisted.web2.dav.http import MultiStatusResponse, statusForFailure

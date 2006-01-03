@@ -29,7 +29,6 @@ WebDAV DELETE method
 __all__ = ["http_DELETE"]
 
 from twisted.python import log
-from twisted.web2.iweb import IRequest
 from twisted.web2 import responsecode
 
 from twisted.web2.dav.fileop import delete

@@ -31,7 +31,6 @@ __all__ = ["http_REPORT"]
 import string
 
 from twisted.python import log
-from twisted.web2.iweb import IRequest
 from twisted.web2 import responsecode
 from twisted.web2.http import StatusResponse
 from twisted.web2.dav import davxml

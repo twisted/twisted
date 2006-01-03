@@ -43,7 +43,7 @@ from twisted.python.failure import Failure
 from twisted.internet.defer import succeed, maybeDeferred
 from twisted.web2.static import File, loadMimeTypes, getTypeAndEncoding
 from twisted.web2 import responsecode
-from twisted.web2.iweb import IRequest, IResponse
+from twisted.web2.iweb import IResponse
 from twisted.web2.http import Response, HTTPError, RedirectResponse
 from twisted.web2.http_headers import ETag, MimeType
 from twisted.web2.stream import FileStream, readIntoFile, readStream

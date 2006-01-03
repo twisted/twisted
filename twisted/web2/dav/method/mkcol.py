@@ -34,7 +34,6 @@ from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.web2 import responsecode
-from twisted.web2.iweb import IRequest
 from twisted.web2.http import StatusResponse
 from twisted.web2.dav.fileop import mkcollection
 from twisted.web2.dav.http import statusForFailure

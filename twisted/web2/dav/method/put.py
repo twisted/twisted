@@ -33,7 +33,6 @@ import os
 from twisted.python import log
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, StatusResponse
-from twisted.web2.iweb import IRequest
 from twisted.web2.stream import readIntoFile
 from twisted.web2.dav.fileop import put
 
