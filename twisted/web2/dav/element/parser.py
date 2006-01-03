@@ -56,6 +56,7 @@ def registerElements(module):
 
             if not (qname in elements_by_tag_name and issubclass(element_class, elements_by_tag_name[qname])):
                 elements_by_tag_name[qname] = element_class
+                yield element_class.__name__
 
 elements_by_tag_name = {}
 

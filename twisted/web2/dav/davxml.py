@@ -56,7 +56,10 @@ import twisted.web2.dav.element.rfc2518
 import twisted.web2.dav.element.rfc3253
 import twisted.web2.dav.element.rfc3744
 
-registerElements(twisted.web2.dav.element.base)
-registerElements(twisted.web2.dav.element.rfc2518)
-registerElements(twisted.web2.dav.element.rfc3253)
-registerElements(twisted.web2.dav.element.rfc3744)
+__all__ = (
+    list(registerElements(twisted.web2.dav.element.base   )) +
+    list(registerElements(twisted.web2.dav.element.rfc2518)) +
+    list(registerElements(twisted.web2.dav.element.rfc3253)) +
+    list(registerElements(twisted.web2.dav.element.rfc3744)) +
+    ["registerElements", "WebDAVDocument", "encodeXMLName", "decodeXMLName"]
+)
