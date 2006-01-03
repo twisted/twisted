@@ -310,7 +310,7 @@ class SFTPServerForUnixConchUser:
         i.e. under _runAsUser()
         """
         if attrs.has_key("uid") and attrs.has_key("gid"):
-            os.lchown(path, attrs["uid"], attrs["gid"])
+            os.chown(path, attrs["uid"], attrs["gid"])
         if attrs.has_key("permissions"):
             os.chmod(path, attrs["permissions"])
         if attrs.has_key("atime") and attrs.has_key("mtime"):
