@@ -32,121 +32,76 @@ moo
 """ % (MESSAGE_ID)
 
 class NewsTestCase(unittest.TestCase):
-    def callback(self, result):
-        self.result = result
-
-    def errback(self, failure):
-        try:
-            self.fail('Errback called: ' + str(failure))
-        except Exception, e:
-            self.error = sys.exc_info()
-            raise
-
-    def timeout(self):
-        reactor.crash()
-        self.fail('Timed out')
-
     def setUp(self):
         self.backend = database.NewsShelf(None, 'news2.db')
         self.backend.addGroup('alt.test.nntp', 'y')
         self.backend.postRequest(POST_STRING.replace('\n', '\r\n'))
 
-    def tearDown(self):
-        try:
-            del self.result
-        except:
-            pass
-        try:
-            del self.error
-        except:
-            pass
 
     def testArticleExists(self):
         d = self.backend.articleExistsRequest(MESSAGE_ID)
-        self.assert_(d.result)
+        d.addCallback(self.failUnless)
+        return d
+
 
     def testArticleRequest(self):
         d = self.backend.articleRequest(None, None, MESSAGE_ID)
-        d.addCallbacks(self.callback, self.errback)
 
-        id = reactor.callLater(5, self.timeout)
-        while not hasattr(self, 'result') and not hasattr(self, 'error'):
-            reactor.iterate()
-        try:
-            id.cancel()
-        except ValueError: pass
+        def cbArticle(result):
+            self.failUnless(isinstance(result, tuple),
+                            'callback result is wrong type: ' + str(result))
+            self.assertEquals(len(result), 3,
+                              'callback result list should have three entries: ' +
+                              str(result))
+            self.assertEquals(result[1], MESSAGE_ID,
+                              "callback result Message-Id doesn't match: %s vs %s" %
+                              (MESSAGE_ID, result[1]))
+            body = result[2].read()
+            self.failIfEqual(body.find('\r\n\r\n'), -1,
+                             "Can't find \\r\\n\\r\\n between header and body")
+            return result
 
-        error = getattr(self, 'error', None)
-        if error:
-            raise error[0], error[1], error[2]
+        d.addCallback(cbArticle)
+        return d
 
-        self.failUnless(type(self.result) == types.TupleType,
-                        'callback result is wrong type: ' + str(self.result))
-        self.failUnless(len(self.result) == 3,
-                        'callback result list should have three entries: ' +
-                        str(self.result))
-        self.failUnless(self.result[1] == MESSAGE_ID,
-                        "callback result Message-Id doesn't match: %s vs %s" %
-                        (MESSAGE_ID, self.result[1]))
-        body = self.result[2].read()
-        self.failUnless(body.find('\r\n\r\n'),
-                        "Can't find \\r\\n\\r\\n between header and body")
 
     def testHeadRequest(self):
-        self.testArticleRequest()
-        index = self.result[0]
+        d = self.testArticleRequest()
 
-        try: del self.result
-        except: pass
+        def cbArticle(result):
+            index = result[0]
 
-        try: del self.error
-        except: pass
+            d = self.backend.headRequest("alt.test.nntp", index)
+            d.addCallback(cbHead)
+            return d
 
-        d = self.backend.headRequest("alt.test.nntp", index)
-        d.addCallbacks(self.callback, self.errback)
+        def cbHead(result):
+            self.assertEquals(result[1], MESSAGE_ID,
+                              "callback result Message-Id doesn't match: %s vs %s" %
+                              (MESSAGE_ID, result[1]))
 
-        id = reactor.callLater(5, self.timeout)
-        while not hasattr(self, 'result') and not hasattr(self, 'error'):
-            reactor.iterate()
-        try:
-            id.cancel()
-        except ValueError: pass
+            self.assertEquals(result[2][-2:], '\r\n',
+                              "headers must be \\r\\n terminated.")
 
-        error = getattr(self, 'error', None)
-        if error:
-            raise error[0], error[1], error[2]
+        d.addCallback(cbArticle)
+        return d
 
-        self.failUnless(self.result[1] == MESSAGE_ID,
-                        "callback result Message-Id doesn't match: %s vs %s" %
-                        (MESSAGE_ID, self.result[1]))
-
-        self.failUnless(self.result[2][-2:] == '\r\n',
-                        "headers must be \\r\\n terminated.")
 
     def testBodyRequest(self):
-        self.testArticleRequest()
-        index = self.result[0]
+        d = self.testArticleRequest()
 
-        try: del self.result
-        except: pass
+        def cbArticle(result):
+            index = result[0]
 
-        try: del self.error
-        except: pass
+            d = self.backend.bodyRequest("alt.test.nntp", index)
+            d.addCallback(cbBody)
+            return d
 
-        d = self.backend.bodyRequest("alt.test.nntp", index)
-        d.addCallbacks(self.callback, self.errback)
+        def cbBody(result):
+            body = result[2].read()
+            self.assertEquals(body[0:4], 'this',
+                              "message body has been altered: " +
+                              pformat(body[0:4]))
 
-        id = reactor.callLater(5, self.timeout)
-        while not hasattr(self, 'result') and not hasattr(self, 'error'):
-            reactor.iterate()
-        try:
-            id.cancel()
-        except ValueError: pass
-
-        error = getattr(self, 'error', None)
-        if error:
-            raise error[0], error[1], error[2]
-
-        body = self.result[2].read()
-        self.failUnless(body[0:4] == 'this', "message body has been altered: " +
-                        pformat(body[0:4]))
+        d.addCallback(cbArticle)
+        return d
