@@ -26,6 +26,13 @@
 HTTP Utilities
 """
 
+__all__ = [
+    "ErrorResponse",
+    "MultiStatusResponse",
+    "ResponseQueue",
+    "statusForFailure",
+]
+
 import errno
 
 from twisted.python import log

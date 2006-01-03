@@ -29,6 +29,17 @@ This API is considered private to static.py and is therefore subject to
 change.
 """
 
+__all__ = [
+    "allDataFromStream",
+    "davXMLFromStream",
+    "noDataFromStream",
+    "pathForURL",
+    "normalizeURL",
+    "joinURL",
+    "parentForURL",
+    "bindMethods",
+]
+
 import urllib
 import posixpath # Careful; this module is not documented as public API
 

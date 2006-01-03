@@ -30,6 +30,11 @@ This module provides XML utilities for use with WebDAV.
 See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
 """
 
+__all__ = [
+    "PrintXML",
+    "encodeXMLName",
+    "decodeXMLName",
+]
 
 #from xml.dom.ext import Print as PrintXML
 # For debugging: (FIXME: disable for normal use)

@@ -29,6 +29,14 @@ This API is considered private to static.py and is therefore subject to
 change.
 """
 
+__all__ = [
+    "delete",
+    "copy",
+    "move",
+    "put",
+    "mkcollection",
+]
+
 import os
 import urllib
 

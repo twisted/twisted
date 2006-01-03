@@ -30,6 +30,12 @@ This module provides XML utilities for use with WebDAV.
 See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
 """
 
+__all__ = [
+    "registerElements",
+    "WebDAVContentHandler",
+    "WebDAVDocument",
+]
+
 import StringIO
 import xml.dom.minidom
 import xml.sax

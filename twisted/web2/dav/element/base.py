@@ -30,6 +30,18 @@ This module provides XML utilities for use with WebDAV.
 See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
 """
 
+__all__ = [
+    "dav_namespace",
+    "WebDAVElement",
+    "PCDATAElement",
+    "WebDAVOneShotElement",
+    "WebDAVUnknownElement",
+    "WebDAVEmptyElement",
+    "WebDAVTextElement",
+    "WebDAVDateTimeElement",
+    "DateTimeHeaderElement",    
+]
+
 import string
 import StringIO
 import xml.dom.minidom
@@ -393,7 +405,7 @@ class WebDAVDateTimeElement (WebDAVTextElement):
         if not s:
             return None
         else:
-            return _parse_date(s)
+            return parse_date(s)
 
 class DateTimeHeaderElement (WebDAVTextElement):
     """
@@ -452,7 +464,7 @@ class DateTimeHeaderElement (WebDAVTextElement):
 # Utilities
 ##
 
-class _FixedOffset (datetime.tzinfo):
+class FixedOffset (datetime.tzinfo):
     """
     Fixed offset in minutes east from UTC.
     """
@@ -464,18 +476,18 @@ class _FixedOffset (datetime.tzinfo):
     def tzname   (self, dt): return self._name
     def dst      (self, dt): return datetime.timedelta(0)
 
-def _parse_date(date):
+def parse_date(date):
     """
     Parse an ISO 8601 date and return a corresponding datetime.datetime object.
     """
     # See http://www.iso.org/iso/en/prods-services/popstds/datesandtime.html
 
-    global _regex_date
+    global regex_date
 
-    if _regex_date is None:
+    if regex_date is None:
         import re
 
-        _regex_date = re.compile(
+        regex_date = re.compile(
             "^" +
               "(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T" +
               "(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(?:.(?P<subsecond>\d+))*" +
@@ -483,7 +495,7 @@ def _parse_date(date):
             "$"
         )
 
-    match = _regex_date.match(date)
+    match = regex_date.match(date)
     if match is not None:
         subsecond = match.group("subsecond")
         if subsecond is None:
@@ -493,15 +505,15 @@ def _parse_date(date):
 
         offset_sign = match.group("offset_sign")
         if offset_sign is None:
-            offset = _FixedOffset(0)
+            offset = FixedOffset(0)
         else:
             offset_hour   = int(match.group("offset_hour"  ))
             offset_minute = int(match.group("offset_minute"))
 
             delta = (offset_hour * 60) + offset_minute
 
-            if   offset_sign == "+": offset = _FixedOffset(0 - delta)
-            elif offset_sign == "-": offset = _FixedOffset(0 + delta)
+            if   offset_sign == "+": offset = FixedOffset(0 - delta)
+            elif offset_sign == "-": offset = FixedOffset(0 + delta)
 
         return datetime.datetime(
             int(match.group("year"  )),
@@ -516,4 +528,4 @@ def _parse_date(date):
     else:
         raise ValueError("Invalid ISO 8601 date format: %r" % (date,))
 
-_regex_date = None
+regex_date = None
