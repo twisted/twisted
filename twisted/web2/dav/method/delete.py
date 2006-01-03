@@ -44,6 +44,6 @@ def http_DELETE(self, request):
         log.err("File not found: %s" % (self.fp.path,))
         return responsecode.NOT_FOUND
 
-    depth   = request.headers.getHeader("depth", "infinity")
+    depth = request.headers.getHeader("depth", "infinity")
 
     return delete(request.uri, self.fp, depth)
