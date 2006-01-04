@@ -20,17 +20,59 @@ def isSubstring(small, big):
 # negotiation phases
 PLAINTEXT, ENCRYPTED, DECIDING, BANANA, ABANDONED = range(5)
 
+class _SimpleCallQueue:
+    # XXX TODO: merge epsilon.cooperator in, and make this more complete.
+    def __init__(self):
+        self.events = []
+        self.flushObservers = []
+        self.timer = None
+
+    def do(self, c, *a, **k):
+        self.events.append((c, a, k))
+        if not self.timer:
+            self.timer = reactor.callLater(0, self.turn)
+
+    def turn(self):
+        self.timer = None
+        c, a, k = self.events.pop(0)
+        try:
+            c(*a, **k)
+        except:
+            log.err()
+        if self.events and not self.timer:
+            self.timer = reactor.callLater(0, self.turn)
+        if not self.events:
+            observers, self.flushObservers = self.flushObservers, []
+            for o in observers:
+                o.callback(None)
+
+    def flush(self):
+        if not self.events:
+            return defer.succeed(None)
+        d = defer.Deferred()
+        self.flushObservers.append(d)
+        return d
+
+
+_theSimpleQueue = _SimpleCallQueue()
+
 def eventually(value=None):
     """This is the eventual-send operation, used as a plan-coordination
-    primitive. The only requirement is that the Deferred fires after the
-    current call stack has been completed."""
+    primitive. It will create a Deferred which fires after the current call
+    stack has been completed, and after all other deferreds previously
+    scheduled with eventually().
+    """
     d = defer.Deferred()
-    # I used to use 'reactor.callLater(0, d.callback, value)' here, but not
-    # all reactors are guaranteed to execute such calls in the order in which
-    # they were scheduled. Instead, we abuse callFromThread() to accomplish
-    # this goal. I blame PenguinOfDoom.  -warner
-    reactor.callFromThread(d.callback, value)
+    _theSimpleQueue.do(d.callback, value)
     return d
+
+def flushEventualQueue():
+    """This returns a Deferred which files when the eventual-send queue is
+    finally empty. This is useful to wait upon as the last step of a Trial
+    test method.
+    """
+    return _theSimpleQueue.flush()
+
 
 class Negotiation(protocol.Protocol):
     """This is the first protocol to speak over the wire. It is responsible

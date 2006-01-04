@@ -26,15 +26,8 @@ if crypto and not crypto.available:
     crypto = None
 
 from twisted.pb.test.common import HelperTarget, RIHelper
+from twisted.pb.negotiate import eventually, flushEventualQueue
 
-def eventually(value=None):
-    d = defer.Deferred()
-    # I used to use 'reactor.callLater(0, d.callback, value)' here, but not
-    # all reactors are guaranteed to execute such calls in the order in which
-    # they were scheduled. Instead, we abuse callFromThread() to accomplish
-    # this goal. I blame PenguinOfDoom.  -warner
-    reactor.callFromThread(d.callback, value)
-    return d
 
 def getRemoteInterfaceName(obj):
     i = getRemoteInterface(obj)
@@ -305,6 +298,7 @@ class TargetMixin:
     def tearDown(self):
         # returns a Deferred which fires when the Loopbacks are drained
         dl = [l.flush() for l in self.loopbacks]
+        dl.append(flushEventualQueue())
         return defer.DeferredList(dl)
 
     def setupTarget(self, target, txInterfaces=False):

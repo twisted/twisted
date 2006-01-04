@@ -1,3 +1,12 @@
+2006-01-02  Brian Warner  <warner@lothar.com>
+
+	* negotiate.py (eventually): add glyph's eventual-send operator,
+	based upon a queue cranked by callLater(0).
+	(flushEventualQueue): provide a way to flush that queue, so tests
+	know when to finish.
+	* test/test_pb.py: switch to negotiate.eventually
+	* test/__init__.py: add test-case-name tag
+
 2005-12-31  Brian Warner  <warner@lothar.com>
 
 	* test_gift.py (TestOrderedGifts.testGift): verify that the
