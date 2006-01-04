@@ -59,11 +59,6 @@ class IResource(Interface):
         @return: The display name of the resource if available, None otherwise.
         """
 
-    def update(self):
-        """
-        Update any cached information about the resource from its backing store.
-        """
-
     def locateChild(self, req, segments):
         """Locate another object which can be adapted to IResource.
 
