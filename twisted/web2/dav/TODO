@@ -1,23 +1,12 @@
 Clean up docstrings
 
 Resource:
-  self.allowedMethods in Resource should be a method, not an ivar.
   Does render() really make sense as distinct from render_GET?
 
 File:
   Reconcile DAVFile's listNames() with File's
-  contentTypes should be a (class) method, not an attribute.
-    loadMimeTypes() may be superfluous
 
 IResource:
-  Add some methods (from DAVFile):
-    etag()
-    exists()
-    lastModified()
-    creationDate()
-    contentLength()
-    displayName()
-    update()
   Add site to interface (it's in Resource)
 
 ISite:
