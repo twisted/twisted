@@ -14,6 +14,56 @@ class IResource(Interface):
         I am a web resource.
     """
 
+    def allowedMethods(self):
+        """
+        @return: A tuple of allowed methods.
+        """
+
+    def etag(self):
+        """
+        @return: The current etag for the resource if available, None otherwise.
+        """
+
+    def exists(self):
+        """
+        @return: True if the resource exists on the server, False otherwise.
+        """
+
+    def lastModified(self):
+        """
+        @return: The last modified time of the resource if available, None otherwise.
+        """
+
+    def creationDate(self):
+        """
+        @return: The creation date of the resource if available, None otherwise.
+        """
+
+    def contentLength(self):
+        """
+        @return: The size in bytes of the resource if available, None otherwise.
+        """
+
+    def contentType(self):
+        """
+        @return: The MIME type of the resource if available, None otherwise.
+        """
+
+    def contentEncoding(self):
+        """
+        @return: The encoding of the resource if available, None otherwise.
+        """
+
+    def displayName(self):
+        """
+        @return: The display name of the resource if available, None otherwise.
+        """
+
+    def update(self):
+        """
+        Update any cached information about the resource from its backing store.
+        """
+
     def locateChild(self, req, segments):
         """Locate another object which can be adapted to IResource.
 

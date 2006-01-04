@@ -30,17 +30,18 @@ class Data(resource.Resource):
     
     def __init__(self, data, type):
         self.data = data
-        self.type = type
+        self.type = MimeType.fromString(self.type)
         self.created_time = time.time()
     
+    def etag(self):
+        return http_headers.ETag("%X-%X" % (self.created_time, hash(self.data)),
+                                 weak=(time.time() - self.created_time <= 1))
+
+    def contentType(self):
+        return self.type
+
     def render(self, req):
-        response = http.Response(responsecode.OK, stream=self.data)
-        response.headers.setRawHeaders("content-type", (self.type, ))
-        response.headers.setHeader('etag',
-            http_headers.ETag("%X-%X" % (self.created_time, hash(self.data)),
-                              weak=(time.time() - self.created_time <= 1)))
-        
-        return response
+        return http.Response(responsecode.OK, stream=self.data)
 
 def addSlash(request):
     return "http%s://%s%s/" % (
@@ -127,30 +128,6 @@ class File(resource.Resource):
         ".bz2": "bzip2"
         }
 
-    def _initTypeAndEncoding(self):
-        self._type, self._encoding = getTypeAndEncoding(
-            self.fp.basename(),
-            self.contentTypes,
-            self.contentEncodings,
-            self.defaultType
-        )
-
-        # Handle cases not covered by getTypeAndEncoding()
-        if self.fp.isdir(): self._type = "httpd/unix-directory"
-
-    def _getType(self):
-        if not hasattr(self, "_type"):
-            self._initTypeAndEncoding()
-        return self._type
-
-    def _getEncoding(self):
-        if not hasattr(self, "_encoding"):
-            self._initTypeAndEncoding()
-        return self._encoding
-
-    type     = property(_getType    )
-    encoding = property(_getEncoding)
-
     processors = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.trp", "index.rpy"]
@@ -173,6 +150,78 @@ class File(resource.Resource):
             
         if indexNames is not None:
             self.indexNames = indexNames
+
+    def etag(self):
+        if not self.exists(): return None
+
+        st = self.fp.statinfo
+
+        #
+        # Mark ETag as weak if it was modified more recently than we can
+        # measure and report, as it could be modified again in that span
+        # and we then wouldn't know to provide a new ETag.
+        #
+        weak = (time.time() - st.st_mtime <= 1)
+
+        return http_headers.ETag(
+            "%X-%X-%X" % (st.st_ino, st.st_size, st.st_mtime),
+            weak=weak
+        )
+
+    def exists(self):
+        return self.fp.exists()
+
+    def lastModified(self):
+        if self.fp.exists():
+            return self.fp.getmtime()
+        else:
+            return None
+
+    def creationDate(self):
+        if self.fp.exists():
+            return self.fp.getmtime()
+        else:
+            return None
+
+    def contentLength(self):
+        if self.fp.exists():
+            if self.fp.isdir():
+                # Computing this would require rendering the resource; let's
+                # punt instead.
+                return None
+            return self.fp.getsize()
+        else:
+            return None
+
+    def _initTypeAndEncoding(self):
+        self._type, self._encoding = getTypeAndEncoding(
+            self.fp.basename(),
+            self.contentTypes,
+            self.contentEncodings,
+            self.defaultType
+        )
+
+        # Handle cases not covered by getTypeAndEncoding()
+        if self.fp.isdir(): self._type = "httpd/unix-directory"
+
+    def contentType(self):
+        if not hasattr(self, "_type"):
+            self._initTypeAndEncoding()
+        return MimeType.fromString(self._type)
+
+    def contentEncoding(self):
+        if not hasattr(self, "_encoding"):
+            self._initTypeAndEncoding()
+        return self._encoding
+
+    def displayName(self):
+        if self.fp.exists():
+            return self.fp.basename()
+        else:
+            return None
+
+    def restat(self):
+        self.fp.restat(False)
 
     def ignoreExt(self, ext):
         """Ignore the given extension.
@@ -230,7 +279,6 @@ class File(resource.Resource):
     def render(self, req):
         """You know what you doing."""
         self.fp.restat()
-        response = http.Response()
         
         if not self.fp.exists():
             return responsecode.NOT_FOUND
@@ -241,11 +289,6 @@ class File(resource.Resource):
                 responsecode.MOVED_PERMANENTLY,
                 {'location': req.unparseURL(path=req.path+'/')})
 
-        if self.type:
-            response.headers.setRawHeaders('content-type', (self.type,))
-        if self.encoding:
-            response.headers.setHeader('content-encoding', self.encoding)
-
         try:
             f = self.fp.open()
         except IOError, e:
@@ -255,27 +298,16 @@ class File(resource.Resource):
             else:
                 raise
 
-        st = os.fstat(f.fileno())
-        
-        # Be sure it's a regular file.
-        if not stat.S_ISREG(st.st_mode):
-            return responsecode.FORBIDDEN
-        
-        #for content-length
-        size = st.st_size
-        
-        response.headers.setHeader('last-modified', st.st_mtime)
-        
-        # Mark ETag as weak if it was modified recently, as it could
-        # be modified again without changing mtime.
-        weak = (time.time() - st.st_mtime <= 1)
-        
-        etag = http_headers.ETag(
-            "%X-%X-%X" % (st.st_ino, st.st_size, st.st_mtime),
-            weak=weak)
-        
-        response.headers.setHeader('etag', etag)
-        response.headers.setHeader('content-length', size)
+        response = http.Response()
+
+        for (header, value) in (
+            ("content-length", self.contentLength()),
+            ("content-type", self.contentType()),
+            ("content-encoding", self.contentType()),
+        ):
+            if value is not None:
+                response.headers.setHeader(header, value)
+
         response.stream = stream.FileStream(f, 0, size)
         return response
 

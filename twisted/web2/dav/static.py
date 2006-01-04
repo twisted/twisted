@@ -111,90 +111,7 @@ class DAVFile (File):
 
     ##
     # HTTP
-    #
-    # FIXME: Most of these should be in IResource, Resource
     ##
-
-    #
-    # ETag
-    #
-
-    def etag(self):
-        """
-        If the resource does not exist, returns None.
-        Otherwise, returns the etag for the resource.
-        """
-        if not self.fp.exists(): return None
-
-        st = self.fp.statinfo
-
-        #
-        # Mark ETag as weak if it was modified more recently than we can
-        # measure and report, as it could be modified again in that span
-        # and we then wouldn't know to provide a new ETag.
-        #
-        weak = (time.time() - st.st_mtime <= 1)
-
-        return ETag(
-            "%X-%X-%X" % (st.st_ino, st.st_size, st.st_mtime),
-            weak=weak
-        )
-
-    def exists(self):
-        """
-        Returns True if the resource exists on the server, False otherwise.
-        """
-        return self.fp.exists()
-
-    def lastModified(self):
-        """
-        If the resource does not exist, returns None.
-        Otherwise, returns the last modified time of the resource.
-        """
-        if self.fp.exists():
-            return self.fp.getmtime()
-        else:
-            return None
-
-    def creationDate(self):
-        """
-        If the resource does not exist, returns None.
-        Otherwise, returns the creation date of the resource.
-        """
-        if self.fp.exists():
-            return self.fp.getmtime()
-        else:
-            return None
-
-    def contentLength(self):
-        """
-        If the resource does not exist, returns None.
-        Otherwise, returns the size in bytes of the resource.
-        """
-        if self.fp.exists():
-            if self.fp.isdir():
-                # Computing this would require rendering the resource; let's
-                # punt instead.
-                return None
-            return self.fp.getsize()
-        else:
-            return None
-
-    def displayName(self):
-        """
-        If the resource does not exist, returns None.
-        Otherwise, returns the display name the resource.
-        """
-        if self.fp.exists():
-            return self.fp.basename()
-        else:
-            return None
-
-    def update(self):
-        """
-        Update any cached information about the resource from its backing store.
-        """
-        self.fp.restat(False)
 
     #
     # Preconditions
@@ -224,7 +141,7 @@ class DAVFile (File):
         #
         match = request.headers.getHeader("if-match")
         if match:
-            self.update()
+            self.restat()
 
             if match == ("*",):
                 if not self.exists():
@@ -249,7 +166,7 @@ class DAVFile (File):
         #
         match = request.headers.getHeader("if-none-match")
         if match:
-            self.update()
+            self.restat()
 
             if len(match) == 1 and match[0] == "*":
                 if self.exists():
@@ -287,7 +204,7 @@ class DAVFile (File):
         #
         ims = request.headers.getHeader("if-modified-since")
         if ims:
-            self.update()
+            self.restat()
             if ims < self.lastModified():
                 raise HTTPError(responsecode.NOT_MODIFIED)
 
@@ -299,7 +216,7 @@ class DAVFile (File):
         """
         ius = request.headers.getHeader("if-unmodified-since")
         if ius:
-            self.update()
+            self.restat()
             if ius >= self.lastModified():
                 raise HTTPError(responsecode.PRECONDITION_FAILED)
 
@@ -478,17 +395,10 @@ class DAVFile (File):
 
         assert response, "No response"
 
-        def set_headers(response):
+        def setHeaders(response):
             response = IResponse(response)
 
             response.headers.setHeader("dav", self.davComplianceClasses)
-
-            for (header, value) in (
-                ("last-modified", self.lastModified()),
-                ("etag"         , self.etag()        ),
-            ):
-                if value is not None:
-                    response.headers.setHeader(header, value)
 
             #
             # If this is a collection and the URI doesn't end in "/", add a
@@ -501,18 +411,7 @@ class DAVFile (File):
 
             return response
 
-        response.addCallback(set_headers)
-        return response
-
-    def http_OPTIONS(self, request):
-        def set_headers(response):
-            if self.type is not None:
-                response = IResponse(response)
-                response.headers.setHeader("content-type", MimeType.fromString(self.type))
-            return response
-
-        response = maybeDeferred(File.http_OPTIONS, self, request)
-        response.addCallback(set_headers)
+        response.addCallback(setHeaders)
         return response
 
     ##

@@ -8,6 +8,7 @@
 
 # System Imports
 from twisted.python import components
+from twisted.internet.defer import succeed, maybeDeferred
 from zope.interface import implements
 
 from twisted.web2 import iweb, http, server, responsecode
@@ -23,9 +24,70 @@ class Resource(object):
     implements(iweb.IResource)
 
     addSlash = False
-    allowedMethods = None
     
     # Concrete HTTP interface
+
+    def allowedMethods(self):
+        """
+        @return: A tuple of allowed methods.
+        """
+        if not hasattr(self, "_allowed_methods"):
+            self._allowed_methods = tuple([name[5:] for name in dir(self) if name.startswith('http_')])
+        return self._allowed_methods
+
+    def etag(self):
+        """
+        @return: The current etag for the resource if available, None otherwise.
+        """
+        return None
+
+    def exists(self):
+        """
+        @return: True if the resource exists on the server, False otherwise.
+        """
+        return None
+
+    def lastModified(self):
+        """
+        @return: The last modified time of the resource if available, None otherwise.
+        """
+        return None
+
+    def creationDate(self):
+        """
+        @return: The creation date of the resource if available, None otherwise.
+        """
+        return None
+
+    def contentLength(self):
+        """
+        @return: The size in bytes of the resource if available, None otherwise.
+        """
+        return None
+
+    def contentType(self):
+        """
+        @return: The MIME type of the resource if available, None otherwise.
+        """
+        return None
+
+    def contentEncoding(self):
+        """
+        @return: The encoding of the resource if available, None otherwise.
+        """
+        return None
+
+    def displayName(self):
+        """
+        @return: The display name of the resource if available, None otherwise.
+        """
+        return None
+
+    def restat(self):
+        """
+        Update any cached information about the resource from its backing store.
+        """
+        pass
 
     def locateChild(self, req, segments):
         """Return a tuple of (child, segments) representing the Resource
@@ -63,7 +125,6 @@ class Resource(object):
         path to be ''.
         """
         setattr(self, 'child_%s' % (path, ), child)
-
     
     def renderHTTP(self, req):
         """Render a given resource. See L{IResource}'s render method.
@@ -78,18 +139,29 @@ class Resource(object):
         will be the rendered page, or else a deferred that results
         in a byte string.
         """
-        m = getattr(self, 'http_' + req.method, None)
-        if not m:
-            if self.allowedMethods is None:
-                # Update allowed methods
-                self.allowedMethods = [name[5:] for name in dir(self)
-                                       if name.startswith('http_')]
-            
+        method = getattr(self, 'http_' + req.method, None)
+        if not method:
             response = http.Response(responsecode.NOT_ALLOWED)
-            response.headers.setHeader('allow', self.allowedMethods)
+            response.headers.setHeader("allow", self.allowedMethods())
             return response
-        return m(req)
 
+        def setHeaders(response):
+            response = iweb.IResponse(response)
+
+            # Content-* headers refer to the response content, not (necessarily) to
+            # the resource content, so then depend on method, and therefore can't be
+            # set here.
+            for (header, value) in (
+                ("etag", self.etag()),
+                ("last-modified", self.lastModified()),
+            ):
+                if value is not None:
+                    response.headers.setHeader(header, value)
+
+            return response
+
+        return maybeDeferred(method, req).addCallback(setHeaders)
+            
     def http_HEAD(self, req):
         """By default http_HEAD just calls http_GET. The body is discarded
         when the result is being written.
@@ -112,12 +184,8 @@ class Resource(object):
 
     def http_OPTIONS(self, req):
         """Sends back OPTIONS response."""
-        if self.allowedMethods is None:
-            # Update allowed methods
-            self.allowedMethods = [name[5:] for name in dir(self)
-                                   if name.startswith('http_')]
         response = http.Response(responsecode.OK)
-        response.headers.setHeader('allow', self.allowedMethods)
+        response.headers.setHeader("allow", self.allowedMethods())
         return response
 
     def http_TRACE(self, req):
@@ -127,6 +195,7 @@ class Resource(object):
         """Your class should implement this method to do default page rendering.
         """
         raise NotImplementedError("Subclass must implement render method.")
+
 components.backwardsCompatImplements(Resource)
 
 class PostableResource(Resource):
