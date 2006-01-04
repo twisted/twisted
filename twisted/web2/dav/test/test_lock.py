@@ -28,17 +28,25 @@ class LOCK_UNLOCK(twisted.web2.dav.test.util.TestCase):
     """
     LOCK, UNLOCK requests
     """
+    # FIXME:
+    # Check PUT
+    # Check POST
+    # Check PROPPATCH
+    # Check LOCK
+    # Check UNLOCK
+    # Check MOVE, COPY
+    # Check DELETE
+    # Check MKCOL
+    # Check null resource
+    # Check collections
+    # Check depth
+    # Check If header
+    # Refresh lock
+
     def test_LOCK_UNLOCK(self):
         """
         LOCK, UNLOCK request
         """
-        # FIXME:
-        # ?? TBD ??
-        # Check COPY
-        # Check MOVE
-        # Check PUT
-        # Check DELETE
-        # Check PROPPATCH
-        raise NotImplementedError()
+        raise NotImplementedError
 
-    test_LOCK_UNLOCK.skip = "test unimplemeted"
+    test_LOCK_UNLOCK.skip = "LOCK/UNLOCK unimplemented"
