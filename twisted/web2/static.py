@@ -151,8 +151,11 @@ class File(resource.Resource):
         if indexNames is not None:
             self.indexNames = indexNames
 
+    def exists(self):
+        return self.fp.exists()
+
     def etag(self):
-        if not self.exists(): return None
+        if not self.fp.exists(): return None
 
         st = self.fp.statinfo
 
@@ -167,9 +170,6 @@ class File(resource.Resource):
             "%X-%X-%X" % (st.st_ino, st.st_size, st.st_mtime),
             weak=weak
         )
-
-    def exists(self):
-        return self.fp.exists()
 
     def lastModified(self):
         if self.fp.exists():
@@ -219,9 +219,6 @@ class File(resource.Resource):
             return self.fp.basename()
         else:
             return None
-
-    def restat(self):
-        self.fp.restat(False)
 
     def ignoreExt(self, ext):
         """Ignore the given extension.
@@ -273,6 +270,10 @@ class File(resource.Resource):
                     segments[1:])
 
         return self.createSimilarFile(fpath.path), segments[1:]
+
+    def renderHTTP(self, req):
+        self.fp.restat(False)
+        return super(File, self).renderHTTP(req)
 
     def render(self, req):
         """You know what you doing."""

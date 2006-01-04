@@ -35,15 +35,15 @@ class Resource(object):
             self._allowed_methods = tuple([name[5:] for name in dir(self) if name.startswith('http_')])
         return self._allowed_methods
 
-    def etag(self):
-        """
-        @return: The current etag for the resource if available, None otherwise.
-        """
-        return None
-
     def exists(self):
         """
         @return: True if the resource exists on the server, False otherwise.
+        """
+        return None
+
+    def etag(self):
+        """
+        @return: The current etag for the resource if available, None otherwise.
         """
         return None
 
@@ -82,12 +82,6 @@ class Resource(object):
         @return: The display name of the resource if available, None otherwise.
         """
         return None
-
-    def restat(self):
-        """
-        Update any cached information about the resource from its backing store.
-        """
-        pass
 
     def locateChild(self, req, segments):
         """Return a tuple of (child, segments) representing the Resource
@@ -149,8 +143,8 @@ class Resource(object):
             response = iweb.IResponse(response)
 
             # Content-* headers refer to the response content, not (necessarily) to
-            # the resource content, so then depend on method, and therefore can't be
-            # set here.
+            # the resource content, so they depend on the request method, and
+            # therefore can't be set here.
             for (header, value) in (
                 ("etag", self.etag()),
                 ("last-modified", self.lastModified()),
@@ -159,8 +153,6 @@ class Resource(object):
                     response.headers.setHeader(header, value)
 
             return response
-
-        self.restat()
 
         return maybeDeferred(method, req).addCallback(setHeaders)
             

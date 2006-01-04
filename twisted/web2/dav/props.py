@@ -112,7 +112,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         self.dead_properties[key] = value
 
         # Update the resource because we've modified it
-        self.resource.restat()
+        self.resource.fp.restat()
 
     def __delitem__(self, key):
         if key in self.live_properties:
