@@ -155,7 +155,12 @@ class WebDAVElement (object):
 
     def __eq__(self, other):
         if isinstance(other, WebDAVElement):
-            return self.attributes == other.attributes and self.children == other.children
+            return (
+                self.name       == other.name       and
+                self.namespace  == other.namespace  and
+                self.attributes == other.attributes and
+                self.children   == other.children
+            )
         else:
             return NotImplemented
 
