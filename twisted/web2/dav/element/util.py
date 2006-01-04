@@ -36,20 +36,16 @@ __all__ = [
     "decodeXMLName",
 ]
 
-#from xml.dom.ext import Print as PrintXML
-# For debugging: (FIXME: disable for normal use)
-#from xml.dom.ext import PrettyPrint as PrettyPrintXML
+try:
+    import xml.dom.ext as ext
+except ImportError:
+    import twisted.web2.dav.element.xmlext as ext
 
 def PrintXML(document, stream):
     document.normalize()
-    # HACK: stuff in the (hopefully only) namespace. Revisit this if more than one namespace
-    # is ever used.
-    firstChild = document.firstChild
-    if firstChild is not None:
-        firstChild.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', firstChild.namespaceURI)
-    document.writexml(stream, encoding='UTF-8')
-    
-#    PrettyPrintXML(document, stream)
+    ext.Print(document, stream)
+    # For debugging, this is easier to read: (FIXME: disable for normal use)
+    #ext.PrettyPrint(document, stream)
 
 def encodeXMLName(name):
     """
