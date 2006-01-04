@@ -67,7 +67,7 @@ def eventually(value=None):
     return d
 
 def flushEventualQueue():
-    """This returns a Deferred which files when the eventual-send queue is
+    """This returns a Deferred which fires when the eventual-send queue is
     finally empty. This is useful to wait upon as the last step of a Trial
     test method.
     """
