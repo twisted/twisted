@@ -43,8 +43,6 @@ def http_MKCOL(self, request):
     """
     Respond to a MKCOL request. (RFC 2518, section 8.3)
     """
-    self.fp.restat(False)
-
     if self.fp.exists():
         log.err("Attempt to create collection where file exists: %s"
                 % (self.fp.path,))

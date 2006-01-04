@@ -160,6 +160,8 @@ class Resource(object):
 
             return response
 
+        self.restat()
+
         return maybeDeferred(method, req).addCallback(setHeaders)
             
     def http_HEAD(self, req):

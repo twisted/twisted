@@ -40,8 +40,6 @@ def http_PROPFIND(self, request):
     """
     Respond to a PROPFIND request. (RFC 2518, section 8.1)
     """
-    self.fp.restat(False)
-
     if not self.fp.exists():
         log.err("File not found: %s" % (self.fp.path,))
         return responsecode.NOT_FOUND

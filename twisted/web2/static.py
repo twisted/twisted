@@ -248,8 +248,6 @@ class File(resource.Resource):
         
         path=segments[0]
         
-        self.fp.restat()
-        
         if not self.fp.isdir():
             return None, ()
 
@@ -278,8 +276,6 @@ class File(resource.Resource):
 
     def render(self, req):
         """You know what you doing."""
-        self.fp.restat()
-        
         if not self.fp.exists():
             return responsecode.NOT_FOUND
 

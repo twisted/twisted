@@ -37,8 +37,6 @@ def http_DELETE(self, request):
     """
     Respond to a DELETE request. (RFC 2518, section 8.6)
     """
-    self.fp.restat(False)
-
     if not self.fp.exists():
         log.err("File not found: %s" % (self.fp.path,))
         return responsecode.NOT_FOUND

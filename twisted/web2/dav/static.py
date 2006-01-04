@@ -141,8 +141,6 @@ class DAVFile (File):
         #
         match = request.headers.getHeader("if-match")
         if match:
-            self.restat()
-
             if match == ("*",):
                 if not self.exists():
                     raise HTTPError(responsecode.PRECONDITION_FAILED)
@@ -166,8 +164,6 @@ class DAVFile (File):
         #
         match = request.headers.getHeader("if-none-match")
         if match:
-            self.restat()
-
             if len(match) == 1 and match[0] == "*":
                 if self.exists():
                     raise HTTPError(responsecode.PRECONDITION_FAILED)
@@ -204,7 +200,6 @@ class DAVFile (File):
         #
         ims = request.headers.getHeader("if-modified-since")
         if ims:
-            self.restat()
             if ims < self.lastModified():
                 raise HTTPError(responsecode.NOT_MODIFIED)
 
@@ -216,7 +211,6 @@ class DAVFile (File):
         """
         ius = request.headers.getHeader("if-unmodified-since")
         if ius:
-            self.restat()
             if ius >= self.lastModified():
                 raise HTTPError(responsecode.PRECONDITION_FAILED)
 
@@ -511,8 +505,6 @@ class DAVFile (File):
         Default rendering method, called by http_GET().
         """
         # FIXME: Why is render() useful as distinct from http_GET()?
-
-        self.fp.restat(False)
 
         if not self.fp.exists():
             log.err("File not found: %s" % (self.fp.path,))

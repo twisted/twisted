@@ -81,8 +81,6 @@ def http_PUT(self, request):
     """
     Respond to a PUT request. (RFC 2518, section 8.7)
     """
-    self.fp.restat(False)
-
     try:
         self.http_PUT_preconditions(request)
     except HTTPError, e:

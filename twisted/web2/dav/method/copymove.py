@@ -45,8 +45,6 @@ def http_COPY(self, request):
     """
     Respond to a COPY request. (RFC 2518, section 8.8)
     """
-    self.fp.restat(False)
-
     r = prepareForCopy(self, request)
     if type(r) is int or isinstance(r, StatusResponse): return r
     destination, destination_uri, depth = r
