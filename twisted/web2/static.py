@@ -282,9 +282,7 @@ class File(resource.Resource):
 
         if self.fp.isdir():
             # If this is a directory, redirect
-            return http.Response(
-                responsecode.MOVED_PERMANENTLY,
-                {'location': req.unparseURL(path=req.path+'/')})
+            return http.RedirectResponse(req.unparseURL(path=req.path+'/'))
 
         try:
             f = self.fp.open()

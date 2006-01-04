@@ -168,9 +168,7 @@ class Resource(object):
         """Ensures there is no incoming body data, and calls render."""
         if self.addSlash and req.prepath[-1] != '':
             # If this is a directory-ish resource...
-            return http.Response(
-                responsecode.MOVED_PERMANENTLY,
-                {'location': req.unparseURL(path=req.path+'/')})
+            return http.RedirectResponse(req.unparseURL(path=req.path+'/'))
             
         if req.stream.length != 0:
             return responsecode.REQUEST_ENTITY_TOO_LARGE
