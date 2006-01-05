@@ -38,19 +38,14 @@ import urllib
 import urlparse
 
 from twisted.python import log
-from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.defer import succeed, maybeDeferred
-from twisted.web2.static import File, loadMimeTypes, getTypeAndEncoding
+from twisted.web2.static import File
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
-from twisted.web2.http import Response, HTTPError, RedirectResponse
-from twisted.web2.http_headers import ETag, MimeType
-from twisted.web2.stream import FileStream, readIntoFile, readStream
-from twisted.web2.dirlist import DirectoryLister
+from twisted.web2.http import HTTPError, RedirectResponse
+from twisted.web2.http_headers import ETag
 from twisted.web2.server import StopTraversal
-from twisted.web2.dav import davxml
-from twisted.web2.dav.fileop import *
 from twisted.web2.dav.util import bindMethods
 from twisted.web2.dav.props import WebDAVPropertyStore as LivePropertyStore
 
@@ -418,51 +413,6 @@ class DAVFile (File):
         """
         pass
 
-    def locateChild(self, request, segments):
-        # If a static child is set up, return it
-        r = self.children.get(segments[0], None)
-        if r: return (r, segments[1:])
-        
-        # If we're not backed by a directory, we have no children.
-        # But check for existance first; we might be a collection resource
-        # that the request wants created.
-        self.fp.restat(False)
-        if self.fp.exists() and not self.fp.isdir(): return (None, ())
-
-        # OK, we need to return a child corresponding to the first segment
-        path = segments[0]
-
-        if path:
-            # FIXME: foom says unquote shouldn't be necessary.
-            fpath = self.fp.child(urllib.unquote(path))
-        else:
-            #
-            # Request is for a collection.
-            #
-            # In File's implementation, a resource cooresponding to
-            # an index file may be returned here.  That's perhaps not
-            # a good idea; it's certainly bad in the DAV case where
-            # a collection resource is really not the same as the
-            # cooresponding index resource, even though they may render
-            # identically in a GET request.
-            #
-            # File's implementation returns a DirectoryLister object in
-            # the case where an index file is not found.  This is also
-            # problematic here, since we generally want our chidren to be
-            # DAV resources also, and not some other type of resource.
-            #
-            # In both cases, the correct resource to return here is self,
-            # which should know how to render directories properly.
-            #
-            return (self, StopTraversal)
-
-        #
-        # Unlike File, we don't look for siblings here.
-        # Unlike File, we don't run processors here.
-        #
-
-        return self.createSimilarFile(fpath.path), segments[1:]
-
     def locateSiblingResource(self, request, uri):
         """
         Look up a resource on the same server with the given URI.
@@ -499,56 +449,6 @@ class DAVFile (File):
         while segments and segments is not StopTraversal:        
             sibling, segments = sibling.locateChild(request, segments)
         return sibling
-    
-    def render(self, request):
-        """
-        Default rendering method, called by http_GET().
-        """
-        # FIXME: Why is render() useful as distinct from http_GET()?
-
-        if not self.fp.exists():
-            log.err("File not found: %s" % (self.fp.path,))
-            return responsecode.NOT_FOUND
-
-        if self.fp.isdir():
-            if request.uri[-1] != "/":
-                # FIXME: The IRequest interface doesn't have .path and
-                # .unparseURL, but File does this.
-                return Response (
-                    responsecode.MOVED_PERMANENTLY,
-                    {'location': request.unparseURL(path=request.path+'/')}
-                )
-            else:
-                return DirectoryLister(
-                    self.fp.path,
-                    self.listNames(),
-                    self.contentTypes,
-                    self.contentEncodings,
-                    self.defaultType
-                ).render(request)
-
-        # Be sure it's a regular file.
-        if not self.fp.isfile():
-            log.err("Permission denied while reading file: %s" % (self.fp.path,))
-            return responsecode.FORBIDDEN
-
-        response = Response()
-
-        if self.type:
-            response.headers.setHeader("content-type", MimeType.fromString(self.type))
-        if self.encoding:
-            response.headers.setHeader("content-encoding", self.encoding)
-
-        response.headers.setHeader("content-length", self.contentLength())
-
-        try:
-            resource_file = self.fp.open()
-        except:
-            return statusForFailure(Failure(), "opening file for reading: %s" % (self.fp.path,))
-
-        response.stream = FileStream(resource_file, start=0, length=self.fp.getsize())
-
-        return response
 
     def createSimilarFile(self, path):
         return self.__class__(path, defaultType=self.defaultType, indexNames=self.indexNames[:])

@@ -10,7 +10,7 @@ import os, time, stat
 
 # Sibling Imports
 from twisted.web2 import http_headers, resource
-from twisted.web2 import http, iweb, stream, responsecode
+from twisted.web2 import http, iweb, stream, responsecode, server, dirlist
 
 # Twisted Imports
 from twisted.python import filepath
@@ -229,7 +229,6 @@ class File(resource.Resource):
         self.ignoredExts.append(ext)
 
     def directoryListing(self):
-        from twisted.web2 import dirlist
         return dirlist.DirectoryLister(self.fp.path,
                                        self.listNames(),
                                        self.contentTypes,
@@ -240,26 +239,24 @@ class File(resource.Resource):
         self.children[name] = child
         
     def locateChild(self, req, segments):
+        # If a static child is set up, return it
         r = self.children.get(segments[0], None)
-        if r:
-            return r, segments[1:]
+        if r: return (r, segments[1:])
         
-        path=segments[0]
-        
-        if not self.fp.isdir():
-            return None, ()
+        # If we're not backed by a directory, we have no children.
+        # But check for existance first; we might be a collection resource
+        # that the request wants created.
+        self.fp.restat(False)
+        if self.fp.exists() and not self.fp.isdir(): return (None, ())
 
+        # OK, we need to return a child corresponding to the first segment
+        path = segments[0]
+        
         if path:
             fpath = self.fp.child(path)
         else:
-            fpath = self.fp.childSearchPreauth(*self.indexNames)
-            if fpath is None:
-                return self.directoryListing(), segments[1:]
-
-        if not fpath.exists():
-            fpath = fpath.siblingExtensionSearch(*self.ignoredExts)
-            if fpath is None:
-                return None, ()
+            # Request is for a directory (collection) resource
+            return (self, server.StopTraversal)
 
         # Don't run processors on directories - if someone wants their own
         # customized directory rendering, subclass File instead.
@@ -269,6 +266,11 @@ class File(resource.Resource):
                 return (
                     processor(fpath.path),
                     segments[1:])
+
+        elif not fpath.exists():
+            sibling_fpath = fpath.siblingExtensionSearch(*self.ignoredExts)
+            if sibling_fpath is not None:
+                fpath = sibling_fpath
 
         return self.createSimilarFile(fpath.path), segments[1:]
 
@@ -282,8 +284,24 @@ class File(resource.Resource):
             return responsecode.NOT_FOUND
 
         if self.fp.isdir():
-            # If this is a directory, redirect
-            return http.RedirectResponse(req.unparseURL(path=req.path+'/'))
+            if req.uri[-1] != "/":
+                # Redirect to include trailing '/' in URI
+                return http.RedirectResponse(req.unparseURL(path=req.path+'/'))
+            else:
+                ifp = self.fp.childSearchPreauth(*self.indexNames)
+                if ifp:
+                    # Render from the index file
+                    standin = self.createSimilarFile(ifp.path)
+                else:
+                    # Render from a DirectoryLister
+                    standin = dirlist.DirectoryLister(
+                        self.fp.path,
+                        self.listNames(),
+                        self.contentTypes,
+                        self.contentEncodings,
+                        self.defaultType
+                    )
+                return standin.render(req)
 
         try:
             f = self.fp.open()
@@ -291,11 +309,22 @@ class File(resource.Resource):
             import errno
             if e[0] == errno.EACCES:
                 return responsecode.FORBIDDEN
+            elif e[0] == errno.ENOENT:
+                return responsecode.NOT_FOUND
             else:
                 raise
 
         response = http.Response()
         response.stream = stream.FileStream(f, 0, self.fp.getsize())
+
+        for (header, value) in (
+            ("content-length", self.contentLength()),
+            ("content-type", self.contentType()),
+            ("content-encoding", self.contentEncoding()),
+        ):
+            if value is not None:
+                response.headers.setHeader(header, value)
+
         return response
 
     def listNames(self):
