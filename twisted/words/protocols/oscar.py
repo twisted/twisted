@@ -859,7 +859,6 @@ class BOSConnection(SNACBased):
             self.sendSNACnr(0x01,0x04,struct.pack('!H',service))
 
     def _cbConnectService(self, snac, d):
-        d.arm()
         self.oscar_01_05(snac[2:], d)
 
     def createChat(self, shortName):
@@ -869,9 +868,7 @@ class BOSConnection(SNACBased):
         if self.services.has_key(SERVICE_CHATNAV):
             return self.services[SERVICE_CHATNAV].createChat(shortName)
         else:
-            d = defer.Deferred()
-            self.connectService(SERVICE_CHATNAV,1).addCallback(lambda s:d.arm() or s.createChat(shortName).chainDeferred(d))
-            return d
+            return self.connectService(SERVICE_CHATNAV,1).addCallback(lambda s: s.createChat(shortName))
 
 
     def joinChat(self, exchange, fullName, instance):
