@@ -177,7 +177,7 @@ class Resource(object):
             for (header, value) in (
                 ("content-length", self.contentLength()),
                 ("content-type", self.contentType()),
-                ("content-encoding", self.contentType()),
+                ("content-encoding", self.contentEncoding()),
             ):
                 if value is not None:
                     response.headers.setHeader(header, value)
