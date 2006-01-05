@@ -172,7 +172,19 @@ class Resource(object):
             
         if req.stream.length != 0:
             return responsecode.REQUEST_ENTITY_TOO_LARGE
-        return self.render(req)
+
+        def setHeaders(response):
+            for (header, value) in (
+                ("content-length", self.contentLength()),
+                ("content-type", self.contentType()),
+                ("content-encoding", self.contentType()),
+            ):
+                if value is not None:
+                    response.headers.setHeader(header, value)
+
+            return response
+
+        return maybeDeferred(render, req).addCallback(setHeaders)
 
     def http_OPTIONS(self, req):
         """Sends back OPTIONS response."""

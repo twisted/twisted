@@ -294,16 +294,7 @@ class File(resource.Resource):
                 raise
 
         response = http.Response()
-
-        for (header, value) in (
-            ("content-length", self.contentLength()),
-            ("content-type", self.contentType()),
-            ("content-encoding", self.contentType()),
-        ):
-            if value is not None:
-                response.headers.setHeader(header, value)
-
-        response.stream = stream.FileStream(f, 0, size)
+        response.stream = stream.FileStream(f, 0, self.fp.getsize())
         return response
 
     def listNames(self):
