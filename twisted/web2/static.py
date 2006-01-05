@@ -185,11 +185,12 @@ class File(resource.Resource):
 
     def contentLength(self):
         if self.fp.exists():
-            if self.fp.isdir():
+            if self.fp.isfile():
+                return self.fp.getsize()
+            else:
                 # Computing this would require rendering the resource; let's
                 # punt instead.
                 return None
-            return self.fp.getsize()
         else:
             return None
 
