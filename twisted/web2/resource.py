@@ -184,7 +184,7 @@ class Resource(object):
 
             return response
 
-        return maybeDeferred(render, req).addCallback(setHeaders)
+        return maybeDeferred(self.render, req).addCallback(setHeaders)
 
     def http_OPTIONS(self, req):
         """Sends back OPTIONS response."""
