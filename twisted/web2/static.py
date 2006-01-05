@@ -30,7 +30,7 @@ class Data(resource.Resource):
     
     def __init__(self, data, type):
         self.data = data
-        self.type = MimeType.fromString(self.type)
+        self.type = http_headers.MimeType.fromString(self.type)
         self.created_time = time.time()
     
     def etag(self):
@@ -207,7 +207,7 @@ class File(resource.Resource):
     def contentType(self):
         if not hasattr(self, "_type"):
             self._initTypeAndEncoding()
-        return MimeType.fromString(self._type)
+        return http_headers.MimeType.fromString(self._type)
 
     def contentEncoding(self):
         if not hasattr(self, "_encoding"):
