@@ -101,10 +101,10 @@ def delete(uri, filepath, depth="infinity"):
 
         uri_path = urllib.unquote(pathForURL(uri))
         if uri_path[-1] == "/": uri_path = uri_path[:-1]
-        assert filepath.path.endswith(uri_path), "%s does not end with %s" % (filepath.path, uri_path)
 
         log.msg("Deleting directory %s" % (filepath.path,))
 
+        # NOTE: len(uri_path) is wrong if os.sep is not one byte long... meh.
         request_basename = filepath.path[:-len(uri_path)]
         request_basename_len = len(request_basename)
 
