@@ -51,6 +51,8 @@ def registerElements(module):
     """
     Register XML elements defined in the given module with the parser.
     """
+    element_names = []
+
     for element_class_name in dir(module):
         element_class = getattr(module, element_class_name)
 
@@ -62,7 +64,9 @@ def registerElements(module):
 
             if not (qname in elements_by_tag_name and issubclass(element_class, elements_by_tag_name[qname])):
                 elements_by_tag_name[qname] = element_class
-                yield element_class.__name__
+                element_names.append(element_class.__name__)
+
+    return element_names
 
 elements_by_tag_name = {}
 
