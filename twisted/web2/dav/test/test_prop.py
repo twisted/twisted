@@ -103,8 +103,6 @@ class PROP(twisted.web2.dav.test.util.TestCase):
 
         return self.send(request, check_result)
 
-    test_PROPFIND.todo = "trim down the response content"
-
     def test_PROPPATCH(self):
         """
         PROPPATCH request
