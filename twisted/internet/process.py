@@ -797,7 +797,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         try:
             pid, status = os.waitpid(self.pid, os.WNOHANG)
         except OSError, e:
-            if e.errno == 10: # no child process
+            if e.errno == errno.ECHILD: # no child process
                 pid = None
             else:
                 raise
