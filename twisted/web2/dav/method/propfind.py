@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web2.dav.test.test_prop.PROP.test_PROPFIND -*-
 ##
 # Copyright (c) 2005 Apple Computer, Inc. All rights reserved.
 #

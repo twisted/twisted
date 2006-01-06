@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web2.dav.test.test_copy,twisted.web2.dav.test.test_move -*-
 ##
 # Copyright (c) 2005 Apple Computer, Inc. All rights reserved.
 #
