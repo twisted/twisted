@@ -68,6 +68,12 @@ def registerElements(module):
 
     return element_names
 
+def lookupElement(qname):
+    """
+    Return the element class for the element with the given qname.
+    """
+    return elements_by_tag_name[qname]
+
 elements_by_tag_name = {}
 
 class WebDAVContentHandler (xml.sax.handler.ContentHandler):

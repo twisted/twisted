@@ -35,7 +35,7 @@ See RFC 3253: http://www.ietf.org/rfc/rfc3253.txt (WebDAV + Versioning)
 See RFC 3744: http://www.ietf.org/rfc/rfc3744.txt (WebDAV ACLs)
 """
 
-from twisted.web2.dav.element.parser import registerElements, WebDAVDocument, elements_by_tag_name
+from twisted.web2.dav.element.parser import registerElements, WebDAVDocument, lookupElement
 from twisted.web2.dav.element.util import encodeXMLName, decodeXMLName
 
 #
