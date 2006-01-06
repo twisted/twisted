@@ -49,23 +49,17 @@ class TestTestVisitor(unittest.TestCase):
         testCase = self.loader.loadModule(sys.modules[__name__])
         testCase.visit(test_visitor)
         self.failIf(len(test_visitor.calls) < 5, str(test_visitor.calls))
-        self.assertEqual(test_visitor.calls[0], ("suite", testCase))
-        self.assertEqual(test_visitor.calls[1][0], "suite")
-        self.assertEqual(test_visitor.calls[-1], ("suite_after", testCase))
+        self.assertEqual(test_visitor.calls[1][0], "case")
 
     def test_visit_class_default(self):
         from twisted.trial.unittest import TestVisitor
-        from twisted.trial.runner import ClassSuite
         testCase = self.loader.loadMethod(self.test_visit_class_default)
         test_visitor = TestVisitor()
         testCase.visit(test_visitor)
 
     def test_visit_class(self):
-        from twisted.trial.runner import ClassSuite
         test_visitor = self.mock_visitor()
         testCase = self.loader.loadMethod(self.test_visit_class)
         testCase.visit(test_visitor)
-        self.assertEqual(len(test_visitor.calls), 3)
-        self.assertEqual(test_visitor.calls[0], ("suite", testCase))
-        self.assertEqual(test_visitor.calls[1][0], "case")
-        self.assertEqual(test_visitor.calls[2], ("suite_after", testCase))
+        self.assertEqual(len(test_visitor.calls), 1)
+        self.assertEqual(test_visitor.calls[0][0], "case")

@@ -139,8 +139,6 @@ class TestRunner(unittest.TestCase):
         # only reload if the FILE gets changed.
         self.config.optToQual['capturing'] = reflect.qual(CapturingReporter)
         self.standardReport = [
-            'startSuite', 
-            'startSuite',
             'startTest',
             'addSuccess',
             'stopTest',
@@ -150,27 +148,20 @@ class TestRunner(unittest.TestCase):
             'startTest',
             'addSuccess',
             'stopTest',
-            'endSuite',
-            'startSuite',
             'startTest',
             'addSuccess',
             'stopTest',
             'startTest',
             'addSuccess',
             'stopTest',
-            'endSuite',
-            'startSuite',
             'startTest',
             'addSuccess',
             'stopTest',
             'startTest',
             'addSuccess',
             'stopTest',
-            'endSuite',
-            'endSuite']
+            ]
         self.dryRunReport = [
-            'startSuite', 
-            'startSuite',
             'startTest',
             'addSuccess',
             'stopTest',
@@ -180,24 +171,19 @@ class TestRunner(unittest.TestCase):
             'startTest',
             'addSuccess',
             'stopTest',
-            'endSuite',
-            'startSuite',
             'startTest',
             'addSuccess',
             'stopTest',
             'startTest',
             'addSuccess',
             'stopTest',
-            'endSuite',
-            'startSuite',
             'startTest',
             'addSuccess',
             'stopTest',
             'startTest',
             'addSuccess',
             'stopTest',
-            'endSuite',
-            'endSuite']
+            ]
         
     def parseOptions(self, args):
         self.config.parseOptions(args)

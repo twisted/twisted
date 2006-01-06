@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import os, errno, warnings, sys
+import os, errno, warnings, sys, time, tempfile, sets
 
 from twisted.internet import defer, utils
 from twisted.python import failure, log
@@ -59,178 +59,7 @@ def makeTodo(value):
         return Todo(reason=reason, errors=errors)
 
 
-class TestCase(pyunit.TestCase, object):
-    zi.implements(itrial.ITestCase)
-    failureException = FailTest
-
-    def __init__(self, methodName=None):
-        super(TestCase, self).__init__(methodName)
-        self._testMethodName = methodName
-        testMethod = getattr(self, methodName)
-        self._parents = [testMethod, self]
-        self._parents.extend(util.getPythonContainers(testMethod))
-        self._prepareClassFixture()
-        self._passed = False
-
-    def _prepareClassFixture(self):
-        """Lots of tests assume that test methods all run in the same instance
-        of TestCase.  This isn't true. Calling this method ensures that
-        self.__class__._testCaseInstance contains an instance of this class
-        that will remain the same for all tests from this class.
-        """
-        if not hasattr(self.__class__, '_testCaseInstance'):
-            self.__class__._testCaseInstance = self
-        if self.__class__._testCaseInstance.__class__ != self.__class__:
-            self.__class__._testCaseInstance = self            
-
-    def _sharedTestCase(self):
-        return self.__class__._testCaseInstance
-
-    def _run(self, methodName):
-        from twisted.internet import reactor
-        method = getattr(self._sharedTestCase(), methodName)
-        d = defer.maybeDeferred(utils.runWithWarningsSuppressed, self.getSuppress(), method)
-        call = reactor.callLater(self.getTimeout(), defer.timeout, d)
-        d.addBoth(lambda x : call.active() and call.cancel() or x)
-        return d
-
-    def shortDescription(self):
-        desc = super(TestCase, self).shortDescription()
-        if desc is None:
-            return self._testMethodName
-        return desc
-
-    def __call__(self, *args, **kwargs):
-        return self.run(*args, **kwargs)
-
-    def deferSetUp(self, result):
-        d = self._run('setUp')
-        d.addCallbacks(self.deferTestMethod, self._ebDeferSetUp,
-                       callbackArgs=(result,),
-                       errbackArgs=(result,))
-        return d
-
-    def _ebDeferSetUp(self, failure, result):
-        if failure.check(SkipTest):
-            result.addSkip(self, self._getReason(failure))
-        else:
-            result.addError(self, failure)
-            result.upDownError('setUp', failure, warn=False, printStatus=False)
-            if failure.check(KeyboardInterrupt):
-                result.stop()
-
-    def deferTestMethod(self, ignored, result):
-        testMethod = getattr(self._sharedTestCase(), self._testMethodName)
-        d = self._run(self._testMethodName)
-        d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
-                       callbackArgs=(result,),
-                       errbackArgs=(result,))
-        d.addBoth(self.deferTearDown, result)
-        return d
-
-    def _cbDeferTestMethod(self, ignored, result):
-        if self.getTodo() is not None:
-            result.addUnexpectedSuccess(self, self.getTodo())
-        else:
-            self._passed = True
-        return ignored
-
-    def _ebDeferTestMethod(self, f, result):
-        todo = self.getTodo()
-        if todo is not None and todo.expected(f):
-            result.addExpectedFailure(self, f, todo)
-        elif f.check(self.failureException, FailTest):
-            result.addFailure(self, f)
-        elif f.check(KeyboardInterrupt):
-            result.addError(self, f)
-            result.stop()
-        elif f.check(SkipTest):
-            result.addSkip(self, self._getReason(f))
-        else:
-            result.addError(self, f)
-
-    def deferTearDown(self, ignored, result):
-        d = self._run('tearDown')
-        d.addErrback(self._ebDeferTearDown, result)
-        return d
-
-    def _ebDeferTearDown(self, failure, result):
-        result.addError(self, failure)
-        if failure.check(KeyboardInterrupt):
-            result.stop()
-        result.upDownError('tearDown', failure, warn=False, printStatus=True)
-        self._passed = False
-
-    def _cleanUp(self, result):
-        try:
-            util._Janitor().postMethodCleanup()
-        except util.FailureError, e:
-            result.addError(self, e.original)
-            self._passed = False
-        except:
-            result.cleanupErrors(failure.Failure())
-            self._passed = False
-        if self._passed:
-            result.addSuccess(self)
-        
-    def run(self, result):
-        log.msg("--> %s <--" % (self.id()))
-        signalStateMgr = util.SignalStateManager()
-        signalStateMgr.save()
-        result.startTest(self)
-        if self.getSkip(): # don't run test methods that are marked as .skip
-            result.addSkip(self, self.getSkip())
-            result.stopTest(self)
-            return
-        self._passed = False
-        d = self.deferSetUp(result)
-        try:
-            util.wait(d, timeout=None)
-        finally:
-            self._cleanUp(result)
-            result.stopTest(self)
-            signalStateMgr.restore()
-
-    def _getReason(self, f):
-        if len(f.value.args) > 0:
-            reason = f.value.args[0]
-        else:
-            warnings.warn(("Do not raise unittest.SkipTest with no "
-                           "arguments! Give a reason for skipping tests!"),
-                          stacklevel=2)
-            reason = f
-        return reason
-
-    def getSkip(self):
-        return util.acquireAttribute(self._parents, 'skip', None)
-
-    def getTodo(self):
-        todo = util.acquireAttribute(self._parents, 'todo', None)
-        if todo is None:
-            return None
-        return makeTodo(todo)
-
-    def getTimeout(self):
-        timeout =  util.acquireAttribute(self._parents, 'timeout',
-                                         util.DEFAULT_TIMEOUT_DURATION)
-        try:
-            return float(timeout)
-        except (ValueError, TypeError):
-            # XXX -- this is here because sometimes people will have methods
-            # called 'timeout', or set timeout to 'orange', or something
-            # Particularly, test_news.NewsTestCase and ReactorCoreTestCase
-            # both do this.
-            warnings.warn("'timeout' attribute needs to be a number.",
-                          category=DeprecationWarning)
-            return util.DEFAULT_TIMEOUT_DURATION
-
-    def getSuppress(self):
-        return util.acquireAttribute(self._parents, 'suppress', [])
-    
-    def visit(self, visitor):
-        """Call visitor.visitCase(self)."""
-        visitor.visitCase(self)
-
+class _Assertions(pyunit.TestCase, object):
     def fail(self, msg=None):
         """absolutely fails the test, do not pass go, do not collect $200
 
@@ -428,6 +257,245 @@ class TestCase(pyunit.TestCase, object):
     def failIfSubstring(self, substring, astring, msg=None):
         return self.failIfIn(substring, astring, msg)
     assertNotSubstring = failIfSubstring
+
+
+class TestCase(_Assertions):
+    zi.implements(itrial.ITestCase)
+    failureException = FailTest
+
+    def __init__(self, methodName=None):
+        super(TestCase, self).__init__(methodName)
+        self._testMethodName = methodName
+        testMethod = getattr(self, methodName)
+        self._parents = [testMethod, self]
+        self._parents.extend(util.getPythonContainers(testMethod))
+        self._shared = (hasattr(self, 'setUpClass') or
+                        hasattr(self, 'tearDownClass'))
+        if self._shared:
+            self._prepareClassFixture()
+            if not hasattr(self.__class__, '_instances'):
+                self.__class__._instances = sets.Set()
+                self.__class__._instancesRun = sets.Set()
+            self.__class__._instances.add(self)
+        self._passed = False
+
+    def _isFirst(self):
+        return len(self.__class__._instancesRun) == 0
+
+    def _isLast(self):
+        return self.__class__._instancesRun == self.__class__._instances
+
+    def _prepareClassFixture(self):
+        """Lots of tests assume that test methods all run in the same instance
+        of TestCase.  This isn't true. Calling this method ensures that
+        self.__class__._testCaseInstance contains an instance of this class
+        that will remain the same for all tests from this class.
+        """
+        if not hasattr(self.__class__, '_testCaseInstance'):
+            self.__class__._testCaseInstance = self
+        if self.__class__._testCaseInstance.__class__ != self.__class__:
+            self.__class__._testCaseInstance = self            
+
+    def _run(self, methodName):
+        from twisted.internet import reactor
+        if self._shared:
+            test = self.__class__._testCaseInstance
+        else:
+            test = self
+        method = getattr(test, methodName)
+        d = defer.maybeDeferred(utils.runWithWarningsSuppressed,
+                                self.getSuppress(), method)
+        call = reactor.callLater(self.getTimeout(), defer.timeout, d)
+        d.addBoth(lambda x : call.active() and call.cancel() or x)
+        return d
+
+    def shortDescription(self):
+        desc = super(TestCase, self).shortDescription()
+        if desc is None:
+            return self._testMethodName
+        return desc
+
+    def __call__(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+    def deferSetUpClass(self, result):
+        if not hasattr(self, 'setUpClass'):
+            d = defer.succeed(None)
+            d.addCallback(self.deferSetUp, result)
+            return d
+        d = self._run('setUpClass')
+        d.addCallbacks(self.deferSetUp, self._ebDeferSetUpClass,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        return d
+
+    def _ebDeferSetUpClass(self, error, result):
+        if error.check(SkipTest):
+            result.addSkip(self, self._getReason(error))
+            self.__class__._instancesRun.remove(self)
+        elif error.check(KeyboardInterrupt):
+            result.stop()
+        else:
+            result.upDownError('setUpClass', error, warn=True,
+                               printStatus=True)
+            result.addError(self, error)
+            self.__class__._instancesRun.remove(self)
+
+    def deferSetUp(self, ignored, result):
+        d = self._run('setUp')
+        d.addCallbacks(self.deferTestMethod, self._ebDeferSetUp,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        return d
+
+    def _ebDeferSetUp(self, failure, result):
+        if failure.check(SkipTest):
+            result.addSkip(self, self._getReason(failure))
+        else:
+            result.addError(self, failure)
+            result.upDownError('setUp', failure, warn=False, printStatus=False)
+            if failure.check(KeyboardInterrupt):
+                result.stop()
+
+    def deferTestMethod(self, ignored, result):
+        d = self._run(self._testMethodName)
+        d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        d.addBoth(self.deferTearDown, result)
+        if self._shared and hasattr(self, 'tearDownClass') and self._isLast():
+            d.addBoth(self.deferTearDownClass, result)
+        return d
+
+    def _cbDeferTestMethod(self, ignored, result):
+        if self.getTodo() is not None:
+            result.addUnexpectedSuccess(self, self.getTodo())
+        else:
+            self._passed = True
+        return ignored
+
+    def _ebDeferTestMethod(self, f, result):
+        todo = self.getTodo()
+        if todo is not None and todo.expected(f):
+            result.addExpectedFailure(self, f, todo)
+        elif f.check(self.failureException, FailTest):
+            result.addFailure(self, f)
+        elif f.check(KeyboardInterrupt):
+            result.addError(self, f)
+            result.stop()
+        elif f.check(SkipTest):
+            result.addSkip(self, self._getReason(f))
+        else:
+            result.addError(self, f)
+
+    def deferTearDown(self, ignored, result):
+        d = self._run('tearDown')
+        d.addErrback(self._ebDeferTearDown, result)
+        return d
+
+    def _ebDeferTearDown(self, failure, result):
+        result.addError(self, failure)
+        if failure.check(KeyboardInterrupt):
+            result.stop()
+        result.upDownError('tearDown', failure, warn=False, printStatus=True)
+        self._passed = False
+
+    def deferTearDownClass(self, ignored, result):
+        d = self._run('tearDownClass')
+        d.addErrback(self._ebTearDownClass, result)
+        return d
+
+    def _ebTearDownClass(self, error, result):
+        if error.check(KeyboardInterrupt):
+            result.stop()
+        result.upDownError('tearDownClass', error, warn=True, printStatus=True)
+
+    def _cleanUp(self, result):
+        try:
+            util._Janitor().postCaseCleanup()
+        except util.FailureError, e:
+            result.addError(self, e.original)
+            self._passed = False
+        except:
+            result.cleanupErrors(failure.Failure())
+            self._passed = False
+        if self._passed:
+            result.addSuccess(self)
+
+    def _classCleanUp(self, result):
+        try:
+            util._Janitor().postClassCleanup()
+        except util.FailureError, e:
+            result.cleanupErrors(e.original)
+        except:
+            result.cleanupErrors(failure.Failure())
+
+    def run(self, result):
+        log.msg("--> %s <--" % (self.id()))
+        result.startTest(self)
+        if self.getSkip(): # don't run test methods that are marked as .skip
+            result.addSkip(self, self.getSkip())
+            result.stopTest(self)
+            return
+        self._passed = False
+        first = False
+        if self._shared:
+            first = self._isFirst()
+            self.__class__._instancesRun.add(self)
+        if first:
+            d = self.deferSetUpClass(result)
+        else:
+            d = self.deferSetUp(None, result)
+        try:
+            util.wait(d, timeout=None)
+        finally:
+            self._cleanUp(result)
+            result.stopTest(self)            
+            if self._shared and self._isLast():
+                self.__class__._instancesRun = sets.Set()
+                self._classCleanUp(result)
+            if not self._shared:
+                self._classCleanUp(result)
+
+    def _getReason(self, f):
+        if len(f.value.args) > 0:
+            reason = f.value.args[0]
+        else:
+            warnings.warn(("Do not raise unittest.SkipTest with no "
+                           "arguments! Give a reason for skipping tests!"),
+                          stacklevel=2)
+            reason = f
+        return reason
+
+    def getSkip(self):
+        return util.acquireAttribute(self._parents, 'skip', None)
+
+    def getTodo(self):
+        todo = util.acquireAttribute(self._parents, 'todo', None)
+        if todo is None:
+            return None
+        return makeTodo(todo)
+
+    def getTimeout(self):
+        timeout =  util.acquireAttribute(self._parents, 'timeout',
+                                         util.DEFAULT_TIMEOUT_DURATION)
+        try:
+            return float(timeout)
+        except (ValueError, TypeError):
+            # XXX -- this is here because sometimes people will have methods
+            # called 'timeout', or set timeout to 'orange', or something
+            # Particularly, test_news.NewsTestCase and ReactorCoreTestCase
+            # both do this.
+            warnings.warn("'timeout' attribute needs to be a number.",
+                          category=DeprecationWarning)
+            return util.DEFAULT_TIMEOUT_DURATION
+
+    def getSuppress(self):
+        return util.acquireAttribute(self._parents, 'suppress', [])
+    
+    def visit(self, visitor):
+        """Call visitor.visitCase(self)."""
+        visitor.visitCase(self)
 
     def mktemp(self):
         """will return a unique name that may be used as either a temporary

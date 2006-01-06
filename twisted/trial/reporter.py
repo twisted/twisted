@@ -312,7 +312,7 @@ class TreeReporter(Reporter):
 
     def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
         super(TreeReporter, self).__init__(stream, tbformat, realtime)
-        self.indentLevel = 0
+        self._lastTest = []
 
     def addSuccess(self, test):
         super(TreeReporter, self).addSuccess(test)
@@ -344,12 +344,20 @@ class TreeReporter(Reporter):
         self.currentLine = format
         super(TreeReporter, self).write(self.currentLine)
 
-    def startSuite(self, name):
-        self.indentLevel += 1
-        self.write('%s%s\n' % (self.indent * self.indentLevel, name))
-
-    def endSuite(self, name):
-        self.indentLevel -= 1
+    def _testPrelude(self, test):
+        segments = [test.__class__.__module__, test.__class__.__name__,
+                    test.shortDescription()]
+        if len(segments) < 1:
+            return
+        indentLevel = 0
+        for seg in segments[:-1]:
+            if indentLevel < len(self._lastTest):
+                if seg != self._lastTest[indentLevel]:
+                    self.write('%s%s\n' % (self.indent * indentLevel, seg))
+            else:
+                self.write('%s%s\n' % (self.indent * indentLevel, seg))
+            indentLevel += 1
+        self._lastTest = segments
 
     def cleanupErrors(self, errs):
         self.write(self.color('    cleanup errors', self.RED))
@@ -363,7 +371,8 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
         
     def startTest(self, method):
-        self.write('%s%s ... ' % (self.indent * (self.indentLevel + 1),
+        self._testPrelude(method)
+        self.write('%s%s ... ' % (self.indent * (len(self._lastTest) - 1),
                                   method.shortDescription()))
         super(TreeReporter, self).startTest(method)
 

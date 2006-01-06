@@ -144,8 +144,7 @@ class LoaderTest(packages.PackageTest):
         import sample
         suite = self.loader.loadMethod(sample.FooTest.test_foo)
         self.failUnlessEqual(1, suite.countTestCases())
-        self.failUnlessEqual(['test_foo'],
-                             [test._testMethodName for test in suite._tests])
+        self.failUnlessEqual('test_foo', suite._testMethodName)
 
     def test_loadFailingMethod(self):
         # test added for issue1353
@@ -191,9 +190,6 @@ class LoaderTest(packages.PackageTest):
         import sample
         suite = self.loader.loadModule(sample)
         self.failUnlessEqual(7, suite.countTestCases())
-        self.failUnless(isinstance(suite, runner.NamedSuite),
-                        "%r must be a runner.NamedSuite instance"
-                        % (suite,))
 
     def test_loadNonModule(self):
         import sample
@@ -233,21 +229,17 @@ class LoaderTest(packages.PackageTest):
     def test_loadAnythingOnModule(self):
         import sample
         suite = self.loader.loadAnything(sample)
-        self.failUnlessEqual(suite.name(), sample.__name__)
+        self.failUnlessEqual(sample.__name__,
+                             suite._tests[0]._tests[0].__class__.__module__)
 
     def test_loadAnythingOnClass(self):
         import sample
         suite = self.loader.loadAnything(sample.FooTest)
-        self.failUnless(hasattr(suite, 'name'),
-                        '%r is not a named suite' % (suite,))
-        self.failUnlessEqual(suite.original, sample.FooTest)
         self.failUnlessEqual(2, suite.countTestCases())
         
     def test_loadAnythingOnMethod(self):
         import sample
         suite = self.loader.loadAnything(sample.FooTest.test_foo)
-        self.failUnless(hasattr(suite, 'name'),
-                        '%r is not a named suite' % (suite,))
         self.failUnlessEqual(1, suite.countTestCases())
 
     def test_loadAnythingOnPackage(self):

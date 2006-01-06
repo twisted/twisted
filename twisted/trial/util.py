@@ -35,31 +35,6 @@ DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
 
 
-class SignalStateManager:
-    """
-    keeps state of signal handlers and provides methods for restoration
-    """
-
-    exclude = ['SIGKILL', 'SIGSTOP', 'SIGRTMIN', 'SIGRTMAX']
-
-    def __init__(self):
-        self._store = {}
-
-    def save(self):
-        for signum in [getattr(signal, n) for n in dir(signal)
-                       if n.startswith('SIG') and n[3] != '_'
-                       and n not in self.exclude]:
-            self._store[signum] = signal.getsignal(signum)
-
-    def restore(self):
-        for signum, handler in self._store.iteritems():
-            if handler is not None:
-                signal.signal(signum, handler)
-
-    def clear(self):
-        self._store = {}
-            
-
 def deferredResult(d, timeout=None):
     """
     Waits for a Deferred to arrive, then returns or throws an exception,
@@ -111,17 +86,15 @@ PENDING_TIMED_CALLS_MSG = "pendingTimedCalls still pending (consider setting twi
 
 
 class _Janitor(object):
-    logErrCheck = postCase = True
-    cleanPending = cleanThreads = cleanReactor = postMethod = True
-
-    def postMethodCleanup(self):
-        if self.postMethod:
-            return self._dispatch('logErrCheck', 'cleanPending')
+    logErrCheck = True
+    cleanPending = cleanThreads = cleanReactor = True
 
     def postCaseCleanup(self):
-        if self.postCase:
-            return self._dispatch('logErrCheck', 'cleanReactor',
-                                  'cleanPending', 'cleanThreads')
+        return self._dispatch('logErrCheck', 'cleanPending')
+
+    def postClassCleanup(self):
+        return self._dispatch('logErrCheck', 'cleanReactor',
+                              'cleanPending', 'cleanThreads')
 
     def _dispatch(self, *attrs):
         for attr in attrs:
@@ -146,16 +119,12 @@ class _Janitor(object):
         pending = reactor.getDelayedCalls()
         if pending:
             s = PENDING_TIMED_CALLS_MSG
-
             for p in pending:
                 s += " %s\n" % (p,)
                 if p.active():
                     p.cancel() # delete the rest
                 else:
                     print "WEIRNESS! pending timed call not active+!"
-
-            spinWhile(reactor.getDelayedCalls)
-
             raise PendingTimedCallsError(s)
     do_cleanPending = classmethod(do_cleanPending)
 

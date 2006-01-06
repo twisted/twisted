@@ -176,126 +176,6 @@ class TrialSuite(TestSuite):
             self._bail()
 
 
-class NamedSuite(object):
-    def __init__(self, name, suite):
-        self._name = name
-        self._suite = suite
-
-    def name(self):
-        return self._name
-
-    def __call__(self, reporter):
-        return self.run(reporter)
-
-    def __getattr__(self, name):
-        return getattr(self._suite, name)
-
-    def run(self, reporter):
-        reporter.startSuite(self.name())
-        self._suite.run(reporter)
-        reporter.endSuite(self.name())
-        
-    def visit(self, visitor):
-        visitor.visitSuite(self)
-        self._suite.visit(visitor)
-        visitor.visitSuiteAfter(self)
-
-
-class ClassSuite(TestSuite):
-    """I run L{twisted.trial.unittest.TestCase} instances and provide
-    the correct setUp/tearDownClass methods.
-    """
-    methodPrefix = 'test'
-
-    def __init__(self, original):
-        TestSuite.__init__(self)
-        self.original = original
-
-    def __call__(self, reporter):
-        return self.run(reporter)
-
-    def _sharedTestCase(self):
-        # a property getter, called by subclasses
-        try:
-            return self.original._testCaseInstance
-        except AttributeError:
-            return None
-
-    def _run(self, methodName):
-        testCase = self._sharedTestCase()
-        return testCase._run(methodName)
-
-    def deferSetUpClass(self, result):
-        d = self._run('setUpClass')
-        d.addCallbacks(self.runTests, self._ebDeferSetUpClass,
-                       callbackArgs=(result,),
-                       errbackArgs=(result,))
-        return d
-
-    def _ebDeferSetUpClass(self, error, result):
-        if error.check(unittest.SkipTest):
-            self.original.skip = error.value[0]
-            for test in self._tests:
-                test.run(result)
-        elif error.check(KeyboardInterrupt):
-            result.stop()
-        else:
-            result.upDownError('setUpClass', error, warn=True,
-                               printStatus=True)
-            for tm in self._tests:
-                result.startTest(tm)
-                result.addError(tm, error)
-                result.stopTest(tm)
-
-    def runTests(self, ignored, result):
-        for test in self._tests:
-            if result.shouldStop:
-                return
-            test.run(result)
-        if hasattr(self.original, 'tearDownClass'):
-            return self.deferTearDownClass(result)
-
-    def deferTearDownClass(self, result):
-        d = self._run('tearDownClass')
-        d.addErrback(self._ebTearDownClass, result)
-        return d
-
-    def _ebTearDownClass(self, error, result):
-        if error.check(KeyboardInterrupt):
-            result.stop()
-        result.upDownError('tearDownClass', error, warn=True, printStatus=True)
-
-    def _cleanUp(self, result):
-        try:
-            util._Janitor().postCaseCleanup()
-        except util.FailureError, e:
-            result.cleanupErrors(e.original)
-        except:
-            result.cleanupErrors(failure.Failure())
-
-    def run(self, result):
-        if len(self._tests) == 0:
-            return
-        if hasattr(self.original, 'skip'):
-            for test in self._tests:
-                result.startTest(test)
-                result.addSkip(test, test.getSkip())
-                result.stopTest(test)
-            return
-        signalStateMgr = util.SignalStateManager()
-        signalStateMgr.save()
-        try:
-            # pyunit tests don't do setUpClass
-            if hasattr(self.original, 'setUpClass'):
-                d = self.deferSetUpClass(result)
-                util.wait(d, timeout=None)
-            else:
-                self.runTests(None, result)
-        finally:
-            self._cleanUp(result)
-            signalStateMgr.restore()
-        
-
 def name(thing):
     if isinstance(thing, str):
         return thing
@@ -347,7 +227,6 @@ class TestLoader(object):
 
     def __init__(self):
         self.suiteFactory = TestSuite
-        self.classSuiteFactory = ClassSuite
         self.sorter = name
         self._importErrors = []
 
@@ -374,13 +253,11 @@ class TestLoader(object):
         for testClass in self._findTestClasses(module):
             suite.addTest(self.loadClass(testClass))
         if not hasattr(module, '__doctests__'):
-            return NamedSuite(module.__name__, suite)
+            return suite
         docSuite = self.suiteFactory()
         for doctest in module.__doctests__:
             docSuite.addTest(self.loadDoctests(doctest))
-        modSuite = self.suiteFactory()
-        modSuite.addTests([suite, docSuite])
-        return NamedSuite(module.__name__, modSuite)
+        return self.suiteFactory([suite, docSuite])
     loadTestsFromModule = loadModule
 
     def loadClass(self, klass):
@@ -388,12 +265,9 @@ class TestLoader(object):
             raise TypeError("%r is not a class" % (klass,))
         if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
-        factory = self.classSuiteFactory
         names = self.getTestCaseNames(klass)
         tests = self.sort([ klass(self.methodPrefix+name) for name in names ])
-        suite = factory(klass)
-        suite.addTests(tests)
-        return NamedSuite(klass.__name__, suite)
+        return self.suiteFactory(tests)
     loadTestsFromTestCase = loadClass
 
     def getTestCaseNames(self, klass):
@@ -402,9 +276,7 @@ class TestLoader(object):
     def loadMethod(self, method):
         if not isinstance(method, types.MethodType):
             raise TypeError("%r not a method" % (method,))
-        suite = self.classSuiteFactory(method.im_class)
-        suite.addTest(method.im_class(method.__name__))
-        return NamedSuite(method.im_class.__name__, suite)
+        return method.im_class(method.__name__)
 
     def _findTestModules(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__),
