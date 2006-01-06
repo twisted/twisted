@@ -66,29 +66,21 @@ def http_PROPFIND(self, request):
 
             container = find.children[0]
 
-            assert isinstance(container, davxml.PropertyContainer)
-
-            properties = container.children
-
             #
-            # FIXME: Revisit AllProperties logic
-            # - skip hidden props
-            # - allprop combined with other (eg. non-hidden) props
+            # FIXME: skip hidden props
             #
-            if davxml.AllProperties() in properties:
+            if isinstance(container, davxml.AllProperties):
                 # Get all properties
                 search_properties = "all"
-            elif davxml.PropertyName() in properties:
-                if len(properties) is not 1:
-                    error = ("PROPFIND combines %s element with others: %s"
-                             % (davxml.PropertyName.sname(), container))
-                    log.err(error)
-                    return StatusResponse(responsecode.BAD_REQUEST, error)
-
+            elif isinstance(container, davxml.PropertyName):
                 # Get names only
                 search_properties = "names"
-            else:
+            elif isinstance(container, davxml.PropertyContainer):
+                properties = container.children
                 search_properties = [(p.namespace, p.name) for p in properties]
+            else:
+                raise AssertionError("Unexpected element type in %s: %s"
+                                     % (davxml.PropertyFind.sname(), container))
 
         #
         # Generate XML output stream
@@ -104,13 +96,13 @@ def http_PROPFIND(self, request):
         for resource, uri in resources:
             if uri is None:
                 uri = normalizeURL(request_uri)
-                if self.isCollection(): uri += "/"
+                if self.isCollection() and not uri.endswith("/"): uri += "/"
             else:
                 uri = joinURL(request_uri, uri)
         
             if search_properties is "names":
                 properties_by_status = {
-                    responsecode.OK: davxml.PropertyContainer(*[propertyName(p) for p in resource.properties])
+                    responsecode.OK: [propertyName(p) for p in resource.properties]
                 }
             else:
                 properties_by_status = {
@@ -121,9 +113,11 @@ def http_PROPFIND(self, request):
                 resource_properties = resource.properties
 
                 if search_properties is "all":
-                    search_properties = resource_properties.keys()
+                    properties_to_enumerate = resource_properties.keys()
+                else:
+                    properties_to_enumerate = search_properties
         
-                for property in search_properties:
+                for property in properties_to_enumerate:
                     if property in resource_properties:
                         try:
                             properties_by_status[responsecode.OK].append(resource_properties[property])
