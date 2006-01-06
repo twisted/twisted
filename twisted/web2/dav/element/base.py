@@ -335,7 +335,9 @@ class WebDAVTextElement (WebDAVElement):
     WebDAV element containing PCDATA.
     """
     def fromString(clazz, string):
-        if type(string) is str:
+        if string is None:
+            return clazz()
+        elif type(string) is str:
             return clazz(PCDATAElement(string))
         elif type(string) is unicode:
             return clazz(PCDATAElement(string.encode("utf-8")))
