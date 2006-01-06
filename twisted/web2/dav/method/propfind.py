@@ -104,7 +104,7 @@ def http_PROPFIND(self, request):
         for resource, uri in resources:
             if uri is None:
                 uri = normalizeURL(request_uri)
-                if self.isCollection: uri += "/"
+                if self.isCollection(): uri += "/"
             else:
                 uri = joinURL(request_uri, uri)
         
