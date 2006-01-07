@@ -580,13 +580,13 @@ class ReactorBase:
         def _initThreadPool(self):
             from twisted.python import threadpool
             self.threadpool = threadpool.ThreadPool(0, 10, 'twisted.internet.reactor')
-            self.threadpool.start()
+            self.callWhenRunning(self.threadpool.start)
             self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
 
         def callInThread(self, _callable, *args, **kwargs):
             """See twisted.internet.interfaces.IReactorThreads.callInThread.
             """
-            if not self.threadpool:
+            if self.threadpool is None:
                 self._initThreadPool()
             self.threadpool.callInThread(_callable, *args, **kwargs)
 

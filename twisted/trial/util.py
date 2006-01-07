@@ -20,7 +20,7 @@ Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 from __future__ import generators
 
 import traceback, warnings, time, signal, gc, sys
-from twisted.python import failure, util, log
+from twisted.python import failure, util, log, threadpool
 from twisted.internet import utils, defer, interfaces
 
 # Methods in this list will be omitted from a failed test's traceback if
@@ -111,11 +111,11 @@ class _Janitor(object):
     def do_cleanPending(cls):
         # don't import reactor when module is loaded
         from twisted.internet import reactor
-        
+
         # flush short-range timers
         reactor.iterate(0)
         reactor.iterate(0)
-        
+
         pending = reactor.getDelayedCalls()
         if pending:
             s = PENDING_TIMED_CALLS_MSG
@@ -135,6 +135,13 @@ class _Janitor(object):
             if hasattr(reactor, 'threadpool') and reactor.threadpool:
                 reactor.threadpool.stop()
                 reactor.threadpool = None
+                # *Put it back* and *start it up again*.  The
+                # reactor's threadpool is *private*: we cannot just
+                # rape it and walk away.
+                reactor.threadpool = threadpool.ThreadPool(0, 10)
+                reactor.threadpool.start()
+
+
     do_cleanThreads = classmethod(do_cleanThreads)
 
     def do_cleanReactor(cls):
@@ -208,7 +215,6 @@ def _wait(d, timeout=None, running=[]):
     if running:
         raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
 
-    running.append(None)
     results = []
     def append(any):
         if results is not None:
@@ -219,6 +225,7 @@ def _wait(d, timeout=None, running=[]):
     def stop():
         reactor.crash()
 
+    running.append(None)
     try:
         d.addBoth(append)
         if results:
@@ -239,7 +246,7 @@ def _wait(d, timeout=None, running=[]):
             else:
                 f = failure.Failure(defer.TimeoutError())
                 return f
-            
+
         if results:
             return results[0]
 
@@ -266,10 +273,10 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     """Waits (spins the reactor) for a Deferred to arrive, then returns or
     throws an exception, based on the result. The difference between this and
     deferredResult is that it actually throws the original exception, not the
-    Failure, so synchronous exception handling is much more sane.  
+    Failure, so synchronous exception handling is much more sane.
 
     There are some caveats to follow when using this method:
-    
+
       - There is an important restriction on the use of this method which may
         be difficult to predict at the time you're writing the test.The issue
         is that the reactor's L{twisted.internet.base.runUntilCurrent} is not
@@ -277,24 +284,24 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         cannot call wait from within a callback of a deferred you are waiting
         on. Also, you may or may not be able to call wait on deferreds which
         you have not created, as the originating API may violate this rule
-        without your knowledge. For an illustrative example, see 
-        L{twisted.trial.test.test_trial.WaitReentrancyTest} 
+        without your knowledge. For an illustrative example, see
+        L{twisted.trial.test.test_trial.WaitReentrancyTest}
 
       - If you are relying on the original traceback for some reason, do
         useWaitError=True. Due to the way that Deferreds and Failures work, the
         presence of the original traceback stack cannot be guaranteed without
-        passing this flag (see below).  
+        passing this flag (see below).
 
     @param timeout: None indicates that we will wait indefinately, the default
-        is to wait 4.0 seconds.  
-    @type timeout: types.FloatType 
+        is to wait 4.0 seconds.
+    @type timeout: types.FloatType
 
     @param useWaitError: The exception thrown is a
         L{twisted.trial.util.WaitError}, which saves the original failure object
         or objects in a list .failures, to aid in the retrieval of the original
         stack traces.  The tradeoff is between wait() raising the original
         exception *type* or being able to retrieve the original traceback
-        reliably. (see issue 769) 
+        reliably. (see issue 769)
     @type useWaitError: boolean
     """
     if timeout is DEFAULT_TIMEOUT:
@@ -305,7 +312,7 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         raise
     except:
         #  it would be nice if i didn't have to armor this call like
-        # this (with a blank except:, but we *are* calling user code 
+        # this (with a blank except:, but we *are* calling user code
         r = failure.Failure()
 
     if isinstance(r, failure.Failure):
@@ -375,8 +382,8 @@ def suppressWarnings(f, *warningz):
 def suppress(action='ignore', **kwarg):
     """sets up the .suppress tuple properly, pass options to this method
     as you would the stdlib warnings.filterwarnings()
-    
-    so to use this with a .suppress magic attribute you would do the 
+
+    so to use this with a .suppress magic attribute you would do the
     following:
 
       >>> from twisted.trial import unittest, util
@@ -391,7 +398,7 @@ def suppress(action='ignore', **kwarg):
 
     note that as with the todo and timeout attributes: the module level
     attribute acts as a default for the class attribute which acts as a default
-    for the method attribute. The suppress attribute can be overridden at any 
+    for the method attribute. The suppress attribute can be overridden at any
     level by specifying .suppress = []
     """
     return ((action,), kwarg)
@@ -491,7 +498,7 @@ def findObject(name):
                     # Python 2.4 has fixed this.  Yay!
                     pass
                 raise exc_info[0], exc_info[1], exc_info[2]
-            moduleNames.pop()    
+            moduleNames.pop()
     obj = topLevelPackage
     for n in names[1:]:
         try:
@@ -500,7 +507,7 @@ def findObject(name):
             return (False, obj)
     return (True, obj)
 
-        
+
 __all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
            'PendingTimedCallsError', 'WaitIsNotReentrantError',
            'deferredResult', 'deferredError', 'wait', 'extract_tb',

@@ -25,10 +25,8 @@ from qt import QSocketNotifier, QObject, SIGNAL, QTimer, QApplication
 import sys
 
 # Twisted Imports
-from twisted.python import log, threadable, failure
-
-# Sibling Imports
-import posixbase
+from twisted.python import log, failure
+from twisted.internet import posixbase
 
 reads = {}
 writes = {}
@@ -48,7 +46,7 @@ class TwistedSocketNotifier(QSocketNotifier):
             self.fn = self.read
         elif type == QSocketNotifier.Write:
             self.fn = self.write
-        QObject.connect( self, SIGNAL("activated(int)"), self.fn )
+        QObject.connect(self, SIGNAL("activated(int)"), self.fn)
 
     def shutdown(self):
         QObject.disconnect(self, SIGNAL("activated(int)"), self.fn)
@@ -90,10 +88,6 @@ class TwistedSocketNotifier(QSocketNotifier):
         self.reactor.simulate()
 
 
-# global timer
-_timer = None
-
-
 class QTReactor(posixbase.PosixReactorBase):
     """Qt based reactor."""
 
@@ -101,12 +95,15 @@ class QTReactor(posixbase.PosixReactorBase):
     # entered through .iterate()
     _crashCall = None
 
+    _timer = None
+
     def __init__(self, app=None):
         self.running = 0
         posixbase.PosixReactorBase.__init__(self)
         if app is None:
             app = QApplication([])
         self.qApp = app
+        self.addSystemEventTrigger('after', 'shutdown', self.cleanup)
 
     def addReader(self, reader):
         if not hasReader(reader):
@@ -130,8 +127,10 @@ class QTReactor(posixbase.PosixReactorBase):
         return self._removeAll(reads, writes)
 
     def simulate(self):
-        global _timer
-        if _timer: _timer.stop()
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+
         if not self.running:
             self.running = 1
             self.qApp.exit_loop()
@@ -143,19 +142,19 @@ class QTReactor(posixbase.PosixReactorBase):
 
         # gah
         timeout = self.timeout()
-        if timeout is None: timeout = 1.0
+        if timeout is None:
+            timeout = 1.0
         timeout = min(timeout, 0.1) * 1010
 
-        if not _timer:
-            _timer = QTimer()
-            QObject.connect( _timer, SIGNAL("timeout()"), self.simulate )
-        _timer.start(timeout, 1)
+        if self._timer is None:
+            self._timer = QTimer()
+            QObject.connect(self._timer, SIGNAL("timeout()"), self.simulate)
+        self._timer.start(timeout, 1)
 
     def cleanup(self):
-        global _timer
-        if _timer:
-            _timer.stop()
-            _timer = None
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
 
     def iterate(self, delay=0.0):
         log.msg(channel='system', event='iteration', reactor=self)
@@ -179,9 +178,7 @@ class QTReactor(posixbase.PosixReactorBase):
 def install(app=None):
     """Configure the twisted mainloop to be run inside the qt mainloop.
     """
+    from twisted.internet import main
+
     reactor = QTReactor(app=app)
-    reactor.addSystemEventTrigger('after', 'shutdown', reactor.cleanup )
-    reactor.simulate()
-    from twisted.internet.main import installReactor
-    installReactor(reactor)
-    return reactor
+    main.installReactor(reactor)

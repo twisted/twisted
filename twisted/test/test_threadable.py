@@ -10,6 +10,7 @@ except ImportError:
 
 from twisted.trial import unittest
 from twisted.python import threadable
+from twisted.internet import defer, reactor
 
 class TestObject:
     synchronized = ['aMethod']
@@ -34,11 +35,32 @@ class SynchronizationTestCase(unittest.TestCase):
         def tearDownClass(self):
             sys.setcheckinterval(self.checkInterval)
 
+
+    def setUp(self):
+        # XXX This is a trial hack.  We need to make sure the reactor
+        # actually *starts* for isInIOThread() to have a meaningful result.
+        # Returning a Deferred here should force that to happen, if it has
+        # not happened already.  In the future, this should not be
+        # necessary.
+        d = defer.Deferred()
+        reactor.callLater(0, d.callback, None)
+        return d
+
+
+    def testIsInIOThread(self):
+        foreignResult = []
+        t = threading.Thread(target=lambda: foreignResult.append(threadable.isInIOThread()))
+        t.start()
+        t.join()
+        self.failIf(foreignResult[0], "Non-IO thread reported as IO thread")
+        self.failUnless(threadable.isInIOThread(), "IO thread reported as not IO thread")
+
+
     def testThreadedSynchronization(self):
         o = TestObject()
 
         errors = []
-        
+
         def callMethodLots():
             try:
                 for i in xrange(1000):
