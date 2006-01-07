@@ -86,8 +86,8 @@ class PROP(twisted.web2.dav.test.util.TestCase):
 
             content_type = response.headers.getHeader("content-type")
             if content_type not in (MimeType("text", "xml"), MimeType("application", "xml")):
-                self.fail("Incorrect content-type for PROPFIND response (%s != %s)"
-                          % (response.code, responsecode.MULTI_STATUS))
+                self.fail("Incorrect content-type for PROPFIND response (%r not in %r)"
+                          % (content_type, (MimeType("text", "xml"), MimeType("application", "xml"))))
 
             return davXMLFromStream(response.stream).addCallback(check_xml)
 
