@@ -103,6 +103,9 @@ class PROP(twisted.web2.dav.test.util.TestCase):
 
         return self.send(request, check_result)
 
+    test_PROPFIND.todo = "Incorrect content-type for PROPFIND response"
+
+
     def test_PROPPATCH(self):
         """
         PROPPATCH request
