@@ -7,7 +7,7 @@
 import os, errno, warnings, sys, time, tempfile, sets
 
 from twisted.internet import defer, utils
-from twisted.python import failure, log
+from twisted.python import failure, log, reflect
 from twisted.trial import itrial, util
 from twisted.trial.util import deferredResult, deferredError
 
@@ -503,38 +503,13 @@ class TestCase(_Assertions):
         @note: you must call os.mkdir on the value returned from this
                method if you wish to use it as a directory!
         """
-        # FIXME: when we drop support for python 2.2 and start to require 2.3,
-        #        we should ditch most of this cruft and just call
-        #        tempfile.mkdtemp.
-        cls = self.__class__
-        base = os.path.join(cls.__module__, cls.__name__,
-                            self._testMethodName[:32])
-        try:
-            os.makedirs(base)
-        except OSError, e:
-            code = e[0]
-            if code == errno.EEXIST:
-                pass
-            else:
-                raise
-        pid = os.getpid()
-        while 1:
-            num = self._mktGetCounter(base)
-            name = os.path.join(base, "%s.%s" % (pid, num))
-            if not os.path.exists(name):
-                break
-        return name
-
-    # mktemp helper to increment a counter
-    def _mktGetCounter(self, base):
-        if getattr(self, "_mktCounters", None) is None:
-            self._mktCounters = {}
-        if base not in self._mktCounters:
-            self._mktCounters[base] = 2
-            return 1
-        n = self._mktCounters[base]
-        self._mktCounters[base] += 1
-        return n
+        prefix = reflect.qual(self.__class__) + '.' + self._testMethodName[:32]
+        dirname = tempfile.mkdtemp('', prefix)
+        i = 1
+        while True:
+            filename = os.path.join(dirname, str(i))
+            if not os.path.exists(filename):
+                return filename
 
 
 class TestVisitor(object):
