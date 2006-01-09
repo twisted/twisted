@@ -36,6 +36,13 @@ class TestResult(pyunit.TestResult, object):
         self.successes = []
         self._timings = []
 
+    def __repr__(self):
+        return ('<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>'
+                % (reflect.qual(self.__class__), self.testsRun,
+                   len(self.errors), len(self.failures),
+                   len(self.expectedFailures), len(self.skips),
+                   len(self.unexpectedSuccesses)))
+
     def _somethingStarted(self):
         """Note that something has started."""
         self._timings.append(time.time())

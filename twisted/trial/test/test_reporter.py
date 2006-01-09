@@ -94,6 +94,8 @@ class TestErrorReporting(unittest.TestCase):
         self.stringComparison(expect, output.splitlines())
 
     def testHiddenException(self):
+        """errors in DelayedCalls fail the test.
+        """
         output = self.runTests(erroneous.DemoTest('testHiddenException'))
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
 
