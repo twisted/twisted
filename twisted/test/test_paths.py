@@ -169,6 +169,13 @@ class FilePathTestCase(unittest.TestCase):
         self.failIf(filepath.FilePath('z') !=
                     filepath.FilePath('z'))
 
+    def testSibling(self):
+        ts = self.path.sibling('sibling_test')
+        self.assertEquals(ts.dirname(), self.path.dirname())
+        self.assertEquals(ts.basename(), 'sibling_test')
+        ts.createDirectory()
+        self.assertIn(ts, self.path.parent().children())
+
     def testTemporarySibling(self):
         ts = self.path.temporarySibling()
         self.assertEquals(ts.dirname(), self.path.dirname())
@@ -202,6 +209,30 @@ class FilePathTestCase(unittest.TestCase):
         newPaths.sort()
         oldPaths.sort()
         self.assertEquals(newPaths, oldPaths)
+
+    def testCrossMountMoveTo(self):
+        """
+        """
+        # Bit of a whitebox test - force os.rename, which moveTo tries
+        # before falling back to a slower method, to fail, forcing moveTo to
+        # use the slower behavior.
+        invokedWith = []
+        def faultyRename(src, dest):
+            invokedWith.append((src, dest))
+            if len(invokedWith) == 2:
+                raise OSError(errno.EXDEV, 'Test-induced failure simulating cross-device rename failure')
+            return originalRename(src, dest)
+
+        originalRename = os.rename
+        os.rename = faultyRename
+        try:
+            self.testMoveTo()
+            # A bit of a sanity check for this whitebox test - if our rename
+            # was never invoked, the test has probably fallen into
+            # disrepair!
+            self.failUnless(len(invokedWith) >= 2)
+        finally:
+            os.rename = originalRename
 
     def testOpen(self):
         # Opening a file for reading when it does not already exist is an error

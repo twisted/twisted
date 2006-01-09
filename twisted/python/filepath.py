@@ -316,11 +316,14 @@ class FilePath:
 
         return os.fdopen(fdint, 'w+b')
 
+    def sibling(self, path):
+        return self.parent().child(path)
+
     def temporarySibling(self):
         """
         Create a path naming a temporary sibling of this path in a secure fashion.
         """
-        sib = self.parent().child(_secureEnoughString() + self.basename())
+        sib = self.sibling(_secureEnoughString() + self.basename())
         sib.requireCreate()
         return sib
 
@@ -384,12 +387,12 @@ class FilePath:
                 #   points, even if the same filesystem is mounted on both.)
 
                 # that means it's time to copy trees of directories!
-                secsib = destination.secureSibling()
+                secsib = destination.temporarySibling()
                 self.copyTo(secsib) # slow
                 secsib.moveTo(destination) # visible
 
                 # done creating new stuff.  let's clean me up.
-                mysecsib = self.secureSibling()
+                mysecsib = self.temporarySibling()
                 self.moveTo(mysecsib) # visible
                 mysecsib.remove() # slow
             else:
