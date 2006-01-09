@@ -490,8 +490,11 @@ class MulticastTestCase(unittest.TestCase):
         p2 = reactor.listenMulticast(portno, c2, listenMultiple=True)
         self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
         c.transport.write("hello world", ("225.0.0.250", portno))
+        d = defer.Deferred()
+        reactor.callLater(0.4, d.callback, None, c, c2, p, p2)
+        return d
 
-        self.runReactor(0.4, True)
+    def _cbTestMultiListen(self, ignored, c, c2, p, p2):
         self.assertEquals(c.packets[0][0], "hello world")
         self.assertEquals(c2.packets[0][0], "hello world")
         p.stopListening()
