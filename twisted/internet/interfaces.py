@@ -702,7 +702,24 @@ class IFileDescriptor(Interface):
         Returns: the platform-specified representation of a file-descriptor
         number.
         """
+        
+    def connectionLost(self, reason):
+        """Called when the connection was lost.
 
+        This is called when the connection on a selectable object has been
+        lost.  It will be called whether the connection was closed explicitly,
+        an exception occurred in an event handler, or the other end of the
+        connection closed it first.
+
+        See also L{IHalfCloseableDescriptor} if your descriptor wants to be
+        notified separately of the two halves of the connection being closed.
+        
+        @param reason: A failure instance indicating the reason why the
+         connection was lost.  L{twisted.internet.error.ConnectionLost} and
+         L{twisted.internet.error.ConnectionDone} are of special note, but
+         the failure may be of other classes as well.
+        """
+    
 class IReadDescriptor(IFileDescriptor):
 
     def doRead(self):
