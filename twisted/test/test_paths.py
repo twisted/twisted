@@ -170,11 +170,12 @@ class FilePathTestCase(unittest.TestCase):
                     filepath.FilePath('z'))
 
     def testSibling(self):
-        ts = self.path.sibling('sibling_test')
-        self.assertEquals(ts.dirname(), self.path.dirname())
+        p = self.path.child('sibling_start')
+        ts = p.sibling('sibling_test')
+        self.assertEquals(ts.dirname(), p.dirname())
         self.assertEquals(ts.basename(), 'sibling_test')
         ts.createDirectory()
-        self.assertIn(ts, self.path.parent().children())
+        self.assertIn(ts, self.path.children())
 
     def testTemporarySibling(self):
         ts = self.path.temporarySibling()
