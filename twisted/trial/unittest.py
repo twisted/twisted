@@ -536,36 +536,6 @@ class TestCase(_Assertions):
         self._mktCounters[base] += 1
         return n
 
-    def runReactor(self, timesOrSeconds, seconds=False):
-        """DEPRECATED: just return a deferred from your test method and
-        trial with do the Right Thing. Alternatively, call
-        twisted.trial.util.wait to block until the deferred fires.
-        
-        I'll iterate the reactor for a while.
-        
-        You probably want to use expectedAssertions with this.
-        
-        @type timesOrSeconds: int
-        @param timesOrSeconds: Either the number of iterations to run,
-               or, if `seconds' is True, the number of seconds to run for.
-
-        @type seconds: bool
-        @param seconds: If this is True, `timesOrSeconds' will be
-               interpreted as seconds, rather than iterations.
-        """
-        warnings.warn("runReactor is deprecated. return a deferred from "
-                      "your test method, and trial will wait for results.",
-                      DeprecationWarning, stacklevel=2)
-        from twisted.internet import reactor
-
-        if seconds:
-            reactor.callLater(timesOrSeconds, reactor.crash)
-            reactor.run()
-            return
-
-        for i in xrange(timesOrSeconds):
-            reactor.iterate()
-
 
 class TestVisitor(object):
     
