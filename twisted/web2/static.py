@@ -7,6 +7,7 @@
 
 # System Imports
 import os, time, stat
+import tempfile
 
 # Sibling Imports
 from twisted.web2 import http_headers, resource
@@ -354,17 +355,19 @@ class FileSaver(resource.PostableResource):
         self.permissions = permissions
 
     def makeUniqueName(self, filename):
-        """called when a unique filename is needed
+        """Called when a unique filename is needed.
+        
+        filename is the name of the file as given by the client.
+        
+        Returns the fully qualified path of the file to create. The
+        file must not yet exist.
         """
+        
+        return tempfile.mktemp(suffix=os.path.splitext(filename)[1], dir=self.destination)
 
-        u = md5.new(filename)
-        u.update(str(time.time()))
-        ext = os.path.splitext(filename)[1]
-        return os.path.join(self.destination, u.hexdigest() + ext)
-
-    def isWriteable(self, filename, mimetype, filestream):
-        """returns True if it's "safe" to write this file,
-        otherwise it raises an exception
+    def isSafeToWrite(self, filename, mimetype, filestream):
+        """Returns True if it's "safe" to write this file,
+        otherwise it raises an exception.
         """
         
         if filestream.length > self.maxBytes:
@@ -372,27 +375,24 @@ class FileSaver(resource.PostableResource):
                                                                          filestream.length,
                                                                          self.maxBytes))
 
-        if os.path.exists(filename):
-            # This should really never happen
-            raise IOError("%s: File already exists" % (filename,))
- 
         if mimetype not in self.allowedTypes:
             raise IOError("%s: File type not allowed %s" % (filename, mimetype))
         
         return True
     
     def writeFile(self, filename, mimetype, fileobject):
-        """does the I/O dirty work after it calls isWriteable to make
-        sure it's safe to write this file
+        """Does the I/O dirty work after it calls isWriteable to make
+        sure it's safe to write this file.
         """
-        outname = self.makeUniqueName(os.path.join(self.destination, filename))
         filestream = stream.FileStream(fileobject)
-
-        if self.isWriteable(outname, mimetype, filestream):
-            fd = os.fdopen(os.open(outname, os.O_WRONLY | os.O_CREAT,
-                                   self.permissions), 'w', 0)
-
-            stream.readIntoFile(filestream, fd)
+        
+        if self.isSafeToWrite(filename, mimetype, filestream):
+            outname = self.makeUniqueName(filename)
+            
+            fileobject = os.fdopen(os.open(outname, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                                           self.permissions), 'w', 0)
+            
+            stream.readIntoFile(filestream, fileobject)
 
         return outname
 
