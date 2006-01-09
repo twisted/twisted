@@ -369,8 +369,8 @@ class MimeType(object):
             self.params.update(kwargs)
 
     def __eq__(self, other):
-        return (isinstance(other, MimeType) and
-                self.mediaType == other.mediaType and
+        if not isinstance(other, MimeType): return NotImplemented
+        return (self.mediaType == other.mediaType and
                 self.mediaSubtype == other.mediaSubtype and
                 self.params == other.params)
 
