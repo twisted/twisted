@@ -172,14 +172,14 @@ def statusForFailure(failure, what=None):
             log.msg("%s while %s" % (err, what))
 
     if failure.check(IOError):
-        e = failure.value
-        if e[0] == errno.EACCES:
+        e = failure.value[0]
+        if e == errno.EACCES:
             msg("Permission denied")
             return responsecode.FORBIDDEN
-        elif e[0] == errno.ENOSPC:
+        elif e == errno.ENOSPC:
             msg("Out of storage space")
             return responsecode.INSUFFICIENT_STORAGE_SPACE
-        elif e[0] == errno.ENOENT:
+        elif e == errno.ENOENT:
             msg("Not found")
             return responsecode.NOT_FOUND
         else:
