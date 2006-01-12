@@ -214,7 +214,7 @@ asynchronous, but there is no way to make third party functions asynchronous
 other than rewriting them.</p>
 
 <p>In this case, Twisted provides the ability to run the blocking code in a
-separately thread rather than letting it block your application. The <code
+separate thread rather than letting it block your application. The <code
 class="API">twisted.internet.threads.deferToThread</code> function will set up
 a thread to run your blocking function, return a Deferred and later fire that
 Deferred when the thread completes.</p>
