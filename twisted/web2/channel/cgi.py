@@ -5,7 +5,6 @@ from zope.interface import implements
 
 from twisted.internet import protocol, address
 from twisted.internet import reactor, interfaces
-from twisted.internet.stdio import StandardIO
 from twisted.web2 import http, http_headers, server, responsecode
 
 class BaseCGIChannelRequest(protocol.Protocol):
@@ -138,6 +137,7 @@ def startCGI(site):
     ...     channel.startCGI(server.Site(myToplevelResource))
     
     """
+    from twisted.internet.stdio import StandardIO
     StandardIO(CGIChannelRequest(site, os.environ))
     reactor.run()
 
