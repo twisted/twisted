@@ -1,8 +1,9 @@
 from twisted.trial import unittest
-import random
+import random, time
 
 from twisted.web2 import http_headers
 from twisted.web2.http_headers import Cookie, HeaderHandler
+from twisted.python import util
 
 class parsedvalue:
     """Marker class"""
@@ -100,25 +101,82 @@ class TokenizerTest(unittest.TestCase):
     def testRoundtrip(self):
         pass
 
+def atSpecifiedTime(when, func):
+    def inner(*a, **kw):
+        orig = time.time
+        time.time = lambda: when
+        try:
+            return func(*a, **kw)
+        finally:
+            time.time = orig
+    return util.mergeFunctionMetadata(func, inner)
+
 def parseHeader(name, val):
     head = http_headers.Headers(handler=http_headers.DefaultHTTPHandler)
     head.setRawHeaders(name,val)
     return head.getHeader(name)
+parseHeader = atSpecifiedTime(999999990, parseHeader) # Sun, 09 Sep 2001 01:46:30 GMT
 
 def generateHeader(name, val):
     head = http_headers.Headers(handler=http_headers.DefaultHTTPHandler)
     head.setHeader(name, val)
     return head.getRawHeaders(name)
+generateHeader = atSpecifiedTime(999999990, generateHeader) # Sun, 09 Sep 2001 01:46:30 GMT
 
 
 class HeaderParsingTestBase(unittest.TestCase):
     def runRoundtripTest(self, headername, table):
+        """
+        Perform some assertions about the behavior of parsing and
+        generating HTTP headers.  Specifically: parse an HTTP header
+        value, assert that the parsed form contains all the available
+        information with the correct structure; generate the HTTP
+        header value from the parsed form, assert that it contains
+        certain literal strings; finally, re-parse the generated HTTP
+        header value and assert that the resulting structured data is
+        the same as the first-pass parsed form.
+
+        @type headername: C{str}
+        @param headername: The name of the HTTP header L{table} contains values for.
+
+        @type table: A sequence of tuples describing inputs to and
+        outputs from header parsing and generation.  The tuples may be
+        either 2 or 3 elements long.  In either case: the first
+        element is a string representing an HTTP-format header value;
+        the second element is a dictionary mapping names of parameters
+        to values of those parameters (the parsed form of the header).
+        If there is a third element, it is a list of strings which
+        must occur exactly in the HTTP header value
+        string which is re-generated from the parsed form.
+        """
         for row in table:
+            if len(row) == 2:
+                rawHeaderInput, parsedHeaderData = row
+                requiredGeneratedElements = []
+            elif len(row) == 3:
+                rawHeaderInput, parsedHeaderData, requiredGeneratedElements = row
+
+
+            assert isinstance(requiredGeneratedElements, list)
+
             # parser
-            parsed = parseHeader(headername, [row[0],])
-            self.assertEquals(parsed, row[1])
+            parsed = parseHeader(headername, [rawHeaderInput,])
+            self.assertEquals(parsed, parsedHeaderData)
+
             # generator
-            self.assertEquals(generateHeader(headername, parsed), len(row) > 2 and [row[2],] or [row[0],])
+            regeneratedHeaderValue = generateHeader(headername, parsed)[0]
+            for reqEle in requiredGeneratedElements:
+                elementIndex = regeneratedHeaderValue.find(reqEle)
+                self.assertNotEqual(
+                    elementIndex, -1,
+                    "%r did not appear in generated HTTP header %r: %r" % (reqEle,
+                                                                           headername,
+                                                                           regeneratedHeaderValue))
+
+            # parser/generator
+            reparsed = parseHeader(headername, [regeneratedHeaderValue,])
+            self.assertEquals(parsed, reparsed)
+
 
     def invalidParseTest(self, headername, values):
         for val in values:
@@ -155,7 +213,7 @@ class GeneralHeaderParsingTests(HeaderParsingTestBase):
             ('private="Set-Cookie, Set-Cookie2", no-cache="PROXY-AUTHENTICATE"',
              {'private': ['set-cookie', 'set-cookie2'],
               'no-cache': ['proxy-authenticate']},
-             'private="Set-Cookie, Set-Cookie2", no-cache="Proxy-Authenticate"'),
+             ['private="Set-Cookie, Set-Cookie2"', 'no-cache="Proxy-Authenticate"']),
             )
         self.runRoundtripTest("Cache-Control", table)
         
@@ -227,15 +285,15 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
         table = (
             ("iso-8859-5, unicode-1-1;q=0.8",
              {'iso-8859-5': 1.0, 'iso-8859-1': 1.0, 'unicode-1-1': 0.8},
-             "iso-8859-5, unicode-1-1;q=0.8, iso-8859-1"),
+             ["iso-8859-5", "unicode-1-1;q=0.8", "iso-8859-1"]),
             ("iso-8859-1;q=0.7",
              {'iso-8859-1': 0.7}),
             ("*;q=.7",
              {'*': 0.7},
-             "*;q=0.7"),
+             ["*;q=0.7"]),
             ("",
              {'iso-8859-1': 1.0},
-             "iso-8859-1"), # Yes this is an actual change -- we'll say that's okay. :)
+             ["iso-8859-1"]), # Yes this is an actual change -- we'll say that's okay. :)
             )
         self.runRoundtripTest("Accept-Charset", table)
 
@@ -249,10 +307,10 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
              {'*': 1}),
             ("compress;q=0.5, gzip;q=1.0",
              {'compress': 0.5, 'gzip': 1.0, 'identity': 0.0001},
-             "compress;q=0.5, gzip"),
+             ["compress;q=0.5", "gzip"]),
             ("gzip;q=1.0, identity;q=0.5, *;q=0",
              {'gzip': 1.0, 'identity': 0.5, '*':0},
-             "gzip, identity;q=0.5, *;q=0"),
+             ["gzip", "identity;q=0.5", "*;q=0"]),
             )
         self.runRoundtripTest("Accept-Encoding", table)
 
@@ -269,10 +327,10 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
         table = (
             ("Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
              ("basic", "dXNlcm5hbWU6cGFzc3dvcmQ="),
-             "basic dXNlcm5hbWU6cGFzc3dvcmQ="),
+             ["basic dXNlcm5hbWU6cGFzc3dvcmQ="]),
             ('Digest nonce="bar", realm="foo", username="baz", response="bax"',
              ('digest', 'nonce="bar", realm="foo", username="baz", response="bax"'),
-             'digest nonce="bar", realm="foo", username="baz", response="bax"')
+             ['digest', 'nonce="bar"', 'realm="foo"', 'username="baz"', 'response="bax"'])
             )
 
         self.runRoundtripTest("Authorization", table)
@@ -282,11 +340,11 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
             ('name=value', [Cookie('name', 'value')]),
             ('"name"="value"', [Cookie('"name"', '"value"')]),
             ('name,"blah=value,"', [Cookie('name,"blah', 'value,"')]),
-            ('name,"blah  = value,"  ', [Cookie('name,"blah', 'value,"')], 'name,"blah=value,"'),
+            ('name,"blah  = value,"  ', [Cookie('name,"blah', 'value,"')], ['name,"blah=value,"']),
             ("`~!@#$%^&*()-_+[{]}\\|:'\",<.>/?=`~!@#$%^&*()-_+[{]}\\|:'\",<.>/?", [Cookie("`~!@#$%^&*()-_+[{]}\\|:'\",<.>/?", "`~!@#$%^&*()-_+[{]}\\|:'\",<.>/?")]),
             ('name,"blah  = value,"  ; name2=val2',
                [Cookie('name,"blah', 'value,"'), Cookie('name2', 'val2')],
-               'name,"blah=value,";name2=val2'),
+               ['name,"blah=value,"', 'name2=val2']),
             )
         self.runRoundtripTest("Cookie", table)
 
@@ -301,7 +359,7 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
              [Cookie('name', 'value', ports=(), version=1)]),
             ('$Version = 1, NAME = "qq\\"qq",Frob=boo',
              [Cookie('name', 'qq"qq', version=1), Cookie('frob', 'boo', version=1)],
-             '$Version="1";name="qq\\"qq";frob="boo"'),
+             ['$Version="1";name="qq\\"qq";frob="boo"']),
             )
         self.runRoundtripTest("Cookie", table2)
         
@@ -328,7 +386,7 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
              [Cookie('name,"blah', 'value,', expires=1000000000, path="/foo", domain="bar.baz", secure=True)]),
             ('name,"blah = value, ; expires="Sun, 09 Sep 2001 01:46:40 GMT"',
              [Cookie('name,"blah', 'value,', expires=1000000000)],
-             'name,"blah=value,; expires=Sun, 09 Sep 2001 01:46:40 GMT'),
+             ['name,"blah=value,', 'expires=Sun, 09 Sep 2001 01:46:40 GMT']),
             )
         self.runRoundtripTest("Set-Cookie", table)
         
@@ -369,7 +427,7 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
         # Just test stupid ; length= brokenness.
         table = (
             ("Sun, 09 Sep 2001 01:46:40 GMT", 1000000000),
-            ("Sun, 09 Sep 2001 01:46:40 GMT; length=500", 1000000000, "Sun, 09 Sep 2001 01:46:40 GMT"),
+            ("Sun, 09 Sep 2001 01:46:40 GMT; length=500", 1000000000, ["Sun, 09 Sep 2001 01:46:40 GMT"]),
             )
         
         self.runRoundtripTest("If-Modified-Since", table)
@@ -460,7 +518,7 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
     def testRetryAfter(self):
         # time() is always 999999990 when being tested.
         table = (
-            ("Sun, 09 Sep 2001 01:46:40 GMT", 1000000000, "10"),
+            ("Sun, 09 Sep 2001 01:46:40 GMT", 1000000000, ["10"]),
             ("120", 999999990+120),
             )
         self.runRoundtripTest("Retry-After", table)
@@ -471,7 +529,7 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
     def testVary(self):
         table = (
             ("*", ["*"]),
-            ("Accept, Accept-Encoding", ["accept", "accept-encoding"], "accept, accept-encoding")
+            ("Accept, Accept-Encoding", ["accept", "accept-encoding"], ["accept", "accept-encoding"])
             )
         self.runRoundtripTest("Vary", table)
         
@@ -479,9 +537,9 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
         table = (
             ('Digest realm="foo", nonce="bAr", qop="auth"',
              ['digest', {'realm': 'foo', 'nonce': 'bAr', 'qop': 'auth'}],
-             'digest realm="foo", nonce="bAr", qop="auth"'),
+             ['digest', 'realm="foo"', 'nonce="bAr"', 'qop="auth"']),
             ('Basic realm="foo"',
-             ['basic', {'realm': 'foo'}], 'basic realm="foo"'))
+             ['basic', {'realm': 'foo'}], ['basic', 'realm="foo"']))
          
         self.runRoundtripTest("WWW-Authenticate", table)
              

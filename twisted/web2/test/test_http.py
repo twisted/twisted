@@ -306,7 +306,9 @@ class TestRequest(http.Request):
     def __init__(self, *args, **kwargs):
         http.Request.__init__(self, *args, **kwargs)
         self.cmds = []
-        self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(self.headers.getAllRawHeaders())))
+        headers = list(self.headers.getAllRawHeaders())
+        headers.sort()
+        self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(headers)))
         
     def process(self):
         pass
@@ -402,7 +404,16 @@ class HTTPTests(unittest.TestCase):
 
     def compareResult(self, cxn, cmds, data):
         self.iterate(cxn)
-        self.assertEquals([req.cmds for req in cxn.requests], cmds)
+        for receivedRequest, expectedCommands in map(None, cxn.requests, cmds):
+            sortedHeaderCommands = []
+            for cmd in expectedCommands:
+                if len(cmd) == 5:
+                    sortedHeaders = list(cmd[4])
+                    sortedHeaders.sort()
+                    sortedHeaderCommands.append(cmd[:4] + (tuple(sortedHeaders),))
+                else:
+                    sortedHeaderCommands.append(cmd)
+            self.assertEquals(receivedRequest.cmds, sortedHeaderCommands)
         self.assertEquals(cxn.client.data, data)
 
     def assertDone(self, cxn, done=True):
@@ -660,7 +671,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
         cxn.client.write("GET / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\nExpect: 100-continue\r\n\r\n")
         cmds[0] += [('init', 'GET', '/', (1,1),
-                     (('Content-Length', ['5']), ('Host', ['localhost']), ('Expect', ['100-continue'])))]
+                     (('Content-Length', ['5']), ('Expect', ['100-continue']), ('Host', ['localhost'])))]
         self.compareResult(cxn, cmds, data)
 
         cxn.requests[0].stream.read()
