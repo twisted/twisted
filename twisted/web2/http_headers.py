@@ -7,6 +7,16 @@ from time import gmtime, time
 import base64
 import re
 
+# Counterpart to evilness in test_http_headers
+try:
+    _http_headers_isBeingTested
+    from twisted.python.util import OrderedDict
+    ODict = OrderedDict
+    time = lambda : 999999990 # Sun, 09 Sep 2001 01:46:30 GMT
+except:
+    ODict = dict
+
+
 def dashCapitalize(s):
     ''' Capitalize a string, making sure to treat - as a word seperator '''
     return '-'.join([ x.capitalize() for x in s.split('-')])
@@ -551,7 +561,7 @@ def parseWWWAuthenticate(header):
     scheme, rest = split(header, Token(' '))
     challenge = [parseKeyValue(arg) for arg in split(rest, Token(','))]
     
-    return [scheme[0], dict(challenge)]
+    return [scheme[0], ODict(challenge)]
 
 def parseAuthorization(header):
     scheme, rest = header[0].split(' ', 1)
@@ -679,7 +689,7 @@ def generateIfRange(dateOrETag):
 # WWW-Authenticate and Authorization
 
 def generateWWWAuthenticate(seq):
-    scheme, challenge = seq[0], dict(seq[1])
+    scheme, challenge = seq[0], ODict(seq[1])
     l = []
     for k,v in challenge.iteritems():
         l.append("%s=%s" % (k, quoteString(v)))
@@ -1127,8 +1137,8 @@ class Headers(object):
     the raw string representation. It converts between the two on demand."""
     
     def __init__(self, headers=None, rawHeaders=None, handler=DefaultHTTPHandler):
-        self._raw_headers = {}
-        self._headers = {}
+        self._raw_headers = ODict()
+        self._headers = ODict()
         self.handler = handler
         if headers is not None:
             for key, value in headers.iteritems():
@@ -1266,7 +1276,7 @@ iteritems = lambda x: x.iteritems()
 
 
 parser_general_headers = {
-    'Cache-Control':(tokenize, listParser(parseCacheControl), dict),
+    'Cache-Control':(tokenize, listParser(parseCacheControl), ODict),
     'Connection':(tokenize,filterTokens),
     'Date':(last,parseDateTime),
 #    'Pragma':tokenize
@@ -1290,13 +1300,13 @@ generator_general_headers = {
 }
 
 parser_request_headers = {
-    'Accept': (tokenize, listParser(parseAccept), dict),
-    'Accept-Charset': (tokenize, listParser(parseAcceptQvalue), dict, addDefaultCharset),
-    'Accept-Encoding':(tokenize, listParser(parseAcceptQvalue), dict, addDefaultEncoding),
-    'Accept-Language':(tokenize, listParser(parseAcceptQvalue), dict),
+    'Accept': (tokenize, listParser(parseAccept), ODict),
+    'Accept-Charset': (tokenize, listParser(parseAcceptQvalue), ODict, addDefaultCharset),
+    'Accept-Encoding':(tokenize, listParser(parseAcceptQvalue), ODict, addDefaultEncoding),
+    'Accept-Language':(tokenize, listParser(parseAcceptQvalue), ODict),
     'Authorization': (parseAuthorization,),
     'Cookie':(parseCookie,),
-    'Expect':(tokenize, listParser(parseExpect), dict),
+    'Expect':(tokenize, listParser(parseExpect), ODict),
     'From':(last,),
     'Host':(last,),
     'If-Match':(tokenize, listParser(parseStarOrETag), list),
@@ -1308,7 +1318,7 @@ parser_request_headers = {
 #    'Proxy-Authorization':str, # what is "credentials"
     'Range':(tokenize, parseRange),
     'Referer':(last,str), # TODO: URI object?
-    'TE':(tokenize, listParser(parseAcceptQvalue), dict),
+    'TE':(tokenize, listParser(parseAcceptQvalue), ODict),
     'User-Agent':(last,str),
 }
 

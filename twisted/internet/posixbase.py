@@ -14,7 +14,6 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 import warnings
 import socket
-import errno
 import os
 from zope.interface import implements, classImplements
 
@@ -83,11 +82,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def wakeUp(self):
         """Send a byte to my connection.
         """
-        try:
-            util.untilConcludes(self.w.send, 'x')
-        except OSError, e:
-            if e.errno != errno.EAGAIN:
-                raise
+        self.w.send('x')
 
     def doRead(self):
         """Read some data from my connection.
@@ -130,11 +125,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
         """Write one byte to the pipe, and flush it.
         """
         if self.o is not None:
-            try:
-                util.untilConcludes(os.write, self.o, 'x')
-            except OSError, e:
-                if e.errno != errno.EAGAIN:
-                    raise
+            util.untilConcludes(os.write, self.o, 'x')
 
     def connectionLost(self, reason):
         """Close both ends of my pipe.

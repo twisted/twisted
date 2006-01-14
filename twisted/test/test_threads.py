@@ -4,12 +4,12 @@
 
 """Test methods in twisted.internet.threads and reactor thread APIs."""
 
-import sys, os
+import time, sys, os
 
 from twisted.trial import unittest
 
-from twisted.internet import reactor, defer, interfaces, threads, protocol, error
-from twisted.python import threadable, log
+from twisted.internet import reactor, defer, interfaces, threads, utils
+from twisted.python import failure, threadable
 
 class ReactorThreadsTestCase(unittest.TestCase):
     """
@@ -149,24 +149,6 @@ for i in xrange(100):
     time.sleep(0.0)
 """
 
-
-class ThreadStartupProcessProtocol(protocol.ProcessProtocol):
-    def __init__(self, finished):
-        self.finished = finished
-        self.out = []
-        self.err = []
-
-    def outReceived(self, out):
-        self.out.append(out)
-
-    def errReceived(self, err):
-        self.err.append(err)
-
-    def processEnded(self, reason):
-        self.finished.callback((self.out, self.err, reason))
-
-
-
 class StartupBehaviorTestCase(unittest.TestCase):
     """
     Test cases for the behavior of the reactor threadpool near startup
@@ -188,32 +170,26 @@ class StartupBehaviorTestCase(unittest.TestCase):
         progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
         progfile.close()
 
-        def programFinished((out, err, reason)):
-            if reason.check(error.ProcessTerminated):
-                self.fail("Process did not exit cleanly (out: %s err: %s)" % (out, err))
-
-            if err:
-                log.msg("Unexpected output on standard error: %s" % (err,))
-            self.failIf(out, "Expected no output, instead received:\n%s" % (out,))
-
-        def programTimeout(err):
-            err.trap(error.TimeoutError)
-            proto.signalProcess('KILL')
-            return err
+        def programFinished(output):
+            self.failIf(output, "Expected no output, instead received:\n%s" % (output,))
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        d = defer.Deferred().addCallbacks(programFinished, programTimeout)
-        proto = ThreadStartupProcessProtocol(d)
-        reactor.spawnProcess(proto, sys.executable, ('python', progname), env)
+        # Notice how getProcessOutput encourages one to write broken
+        # software: the expected failure condition here is for the
+        # process to never terminate.  Not only does getProcessOutput
+        # not provide a mechanism for dealing with this circumstance,
+        # it hides all possibly objects that I could use to deal with
+        # it myself.
+        d = utils.getProcessOutput(sys.executable, (progname,), env, errortoo=True)
+        d.addCallback(programFinished)
         return d
 
 
 
 if interfaces.IReactorThreads(reactor, None) is None:
-    for cls in (ReactorThreadsTestCase,
-                DeferredResultTestCase,
-                StartupBehaviorTestCase):
+    for cls in (ReactorThreadsTestCase, ThreadsTestCase,
+                DeferredResultTestCase, StartupBehaviorTestCase):
         cls.skip = "No thread support, nothing to test here."
 else:
     import threading
