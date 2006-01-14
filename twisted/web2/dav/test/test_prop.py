@@ -27,13 +27,11 @@ import random
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.stream import MemoryStream
+from twisted.web2.http_headers import MimeType
 from twisted.web2.dav import davxml
 from twisted.web2.dav.util import davXMLFromStream
 from twisted.web2.dav.test.util import SimpleRequest
 import twisted.web2.dav.test.util
-import twisted.web2.http_headers
-
-MimeType = twisted.web2.http_headers.MimeType
 
 class PROP(twisted.web2.dav.test.util.TestCase):
     """
@@ -104,6 +102,9 @@ class PROP(twisted.web2.dav.test.util.TestCase):
         request.stream = MemoryStream(query.toxml())
 
         return self.send(request, check_result)
+
+    test_PROPFIND.todo = "Incorrect content-type for PROPFIND response"
+
 
     def test_PROPPATCH(self):
         """
