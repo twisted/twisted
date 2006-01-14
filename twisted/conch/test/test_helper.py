@@ -363,14 +363,44 @@ class BufferTestCase(unittest.TestCase):
             s3 + '\n' +
             '\n' * (HEIGHT - 3))
 
+class FakeDelayedCall:
+    called = False
+    cancelled = False
+    def __init__(self, fs, timeout, f, a, kw):
+        self.fs = fs
+        self.timeout = timeout
+        self.f = f
+        self.a = a
+        self.kw = kw
+
+    def active(self):
+        return not (self.cancelled or self.called)
+
+    def cancel(self):
+        self.cancelled = True
+#        self.fs.calls.remove(self)
+
+    def call(self):
+        self.called = True
+        self.f(*self.a, **self.kw)
+
+class FakeScheduler:
+    def __init__(self):
+        self.calls = []
+
+    def callLater(self, timeout, f, *a, **kw):
+        self.calls.append(FakeDelayedCall(self, timeout, f, a, kw))
+        return self.calls[-1]
+
 class ExpectTestCase(unittest.TestCase):
     def setUp(self):
         self.term = helper.ExpectableBuffer()
         self.term.connectionMade()
+        self.fs = FakeScheduler()
 
     def testSimpleString(self):
         result = []
-        d = self.term.expect("hello world")
+        d = self.term.expect("hello world", timeout=1, scheduler=self.fs)
         d.addCallback(result.append)
 
         self.term.write("greeting puny earthlings\n")
@@ -378,6 +408,8 @@ class ExpectTestCase(unittest.TestCase):
         self.term.write("hello world\n")
         self.failUnless(result)
         self.assertEquals(result[0].group(), "hello world")
+        self.assertEquals(len(self.fs.calls), 1)
+        self.failIf(self.fs.calls[0].active())
 
     def testBrokenUpString(self):
         result = []
@@ -432,3 +464,27 @@ class ExpectTestCase(unittest.TestCase):
         self.assertEquals(len(result), 2)
         self.assertEquals(result[0].group(), "bye")
         self.assertEquals(result[1].group(), "world")
+
+    def _cbTestTimeoutFailure(self, res):
+        self.assert_(hasattr(res, 'type'))
+        self.assertEqual(res.type, helper.ExpectationTimeout)
+
+    def testTimeoutFailure(self):
+        d = self.term.expect("hello world", timeout=1, scheduler=self.fs)
+        d.addBoth(self._cbTestTimeoutFailure)
+        self.fs.calls[0].call()
+
+    def testOverlappingTimeout(self):
+        self.term.write("not zoomtastic")
+
+        result = []
+        d1 = self.term.expect("hello world", timeout=1, scheduler=self.fs)
+        d1.addBoth(self._cbTestTimeoutFailure)
+        d2 = self.term.expect("zoom")
+        d2.addCallback(result.append)
+
+        self.fs.calls[0].call()
+
+        self.assertEquals(len(result), 1)
+        self.assertEquals(result[0].group(), "zoom")
+

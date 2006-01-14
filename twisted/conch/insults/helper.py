@@ -13,7 +13,7 @@ import re, string
 
 from zope.interface import implements
 
-from twisted.internet import defer, protocol
+from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 
 from twisted.conch.insults import insults
@@ -339,6 +339,9 @@ class TerminalBuffer(protocol.Protocol):
             lines.append(''.join(buf[:length]))
         return '\n'.join(lines)
 
+class ExpectationTimeout(Exception):
+    pass
+
 class ExpectableBuffer(TerminalBuffer):
     _mark = 0
 
@@ -350,11 +353,20 @@ class ExpectableBuffer(TerminalBuffer):
         TerminalBuffer.write(self, bytes)
         self._checkExpected()
 
+    def _timeoutExpected(self, d):
+        d.errback(ExpectationTimeout())
+        self._checkExpected()
+
     def _checkExpected(self):
         s = str(self)[self._mark:]
         while self._expecting:
-            expr, deferred = self._expecting[0]
+            expr, timer, deferred = self._expecting[0]
+            if timer and not timer.active():
+                del self._expecting[0]
+                continue
             for match in expr.finditer(s):
+                if timer:
+                    timer.cancel()
                 del self._expecting[0]
                 self._mark += match.end()
                 s = s[match.end():]
@@ -363,9 +375,12 @@ class ExpectableBuffer(TerminalBuffer):
             else:
                 return
 
-    def expect(self, expression):
+    def expect(self, expression, timeout=None, scheduler=reactor):
         d = defer.Deferred()
-        self._expecting.append((re.compile(expression), d))
+        timer = None
+        if timeout:
+            timer = scheduler.callLater(timeout, self._timeoutExpected, d)
+        self._expecting.append((re.compile(expression), timer, d))
         self._checkExpected()
         return d
 
