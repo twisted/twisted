@@ -27,7 +27,7 @@ import random
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.stream import MemoryStream
-from twisted.web2.http_headers import MimeType
+from twisted.web2 import http_headers
 from twisted.web2.dav import davxml
 from twisted.web2.dav.util import davXMLFromStream
 from twisted.web2.dav.test.util import SimpleRequest
@@ -85,9 +85,11 @@ class PROP(twisted.web2.dav.test.util.TestCase):
                           % (response.code, responsecode.MULTI_STATUS))
 
             content_type = response.headers.getHeader("content-type")
-            if content_type not in (MimeType("text", "xml"), MimeType("application", "xml")):
+            if content_type not in (http_headers.MimeType("text", "xml"),
+                                    http_headers.MimeType("application", "xml")):
                 self.fail("Incorrect content-type for PROPFIND response (%r not in %r)"
-                          % (content_type, (MimeType("text", "xml"), MimeType("application", "xml"))))
+                          % (content_type, (http_headers.MimeType("text", "xml"),
+                                            http_headers.MimeType("application", "xml"))))
 
             return davXMLFromStream(response.stream).addCallback(check_xml)
 
