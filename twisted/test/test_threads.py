@@ -9,7 +9,7 @@ import sys, os
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, interfaces, threads, protocol, error
-from twisted.python import threadable, log
+from twisted.python import failure, threadable, log
 
 class ReactorThreadsTestCase(unittest.TestCase):
     """
@@ -51,6 +51,26 @@ class ReactorThreadsTestCase(unittest.TestCase):
             [firedByReactorThread, firedByOtherThread],
             fireOnOneErrback=True)
 
+
+    def testWakerOverflow(self):
+        self.failure = None
+        waiter = threading.Event()
+        def threadedFunction():
+            # Hopefully a hundred thousand queued calls is enough to
+            # trigger the error condition
+            for i in xrange(100000):
+                try:
+                    reactor.callFromThread(lambda: None)
+                except:
+                    self.failure = failure.Failure()
+                    break
+            waiter.set()
+        reactor.callInThread(threadedFunction)
+        waiter.wait(120)
+        if not waiter.isSet():
+            self.fail("Timed out waiting for event")
+        if self.failure is not None:
+            return defer.fail(self.failure)
 
 
 class Counter:
