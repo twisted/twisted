@@ -17,12 +17,10 @@ from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet.interfaces import ITransport
 from twisted.internet import reactor, error
 from twisted.python import log, components
-from zope.interface import implements, providedBy, directlyProvides
+from zope.interface import implements, providedBy, alsoProvides
 
 class ProtocolWrapper(Protocol):
     """Wraps protocol instances and acts as their transport as well."""
-
-    implements(ITransport)
 
     disconnecting = 0
 
@@ -31,8 +29,7 @@ class ProtocolWrapper(Protocol):
         self.factory = factory
 
     def makeConnection(self, transport):
-        for iface in providedBy(transport):
-            directlyProvides(self, iface)
+        alsoProvides(self, *providedBy(transport))
         Protocol.makeConnection(self, transport)
 
     # Transport relaying
