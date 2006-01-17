@@ -462,10 +462,10 @@ class SSHSession(channel.SSHChannel):
         self.conn.sendEOF(self)
 
     def stopWriting(self):
-        self.stdio.stopReading()
+        self.stdio.pauseProducing()
 
     def startWriting(self):
-        self.stdio.startReading()
+        self.stdio.resumeProducing()
 
     def _windowResized(self, *args):
         winsz = fcntl.ioctl(0, tty.TIOCGWINSZ, '12345678')

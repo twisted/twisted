@@ -789,10 +789,10 @@ class SSHSession(channel.SSHChannel):
             pass
 
     def stopWriting(self):
-        self.stdio.stopReading()
+        self.stdio.pauseProducing()
 
     def startWriting(self):
-        self.stdio.startReading()
+        self.stdio.resumeProducing()
 
 if __name__ == '__main__':
     run()
