@@ -565,18 +565,20 @@ class IRCClient(basic.LineReceiver):
     __pychecker__ = 'unusednames=params,prefix,channel'
 
 
+    def _reallySendLine(self, line):
+        return basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
+
     def sendLine(self, line):
         if self.lineRate is None:
-            basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
+            self._reallySendLine(line)
         else:
             self._queue.append(line)
             if not self._queueEmptying:
-                self._queueEmptying = reactor.callLater(self.lineRate,
-                                                        self._sendLine)
+                self._sendLine()
 
     def _sendLine(self):
         if self._queue:
-            basic.LineReceiver.sendLine(self, lowQuote(self._queue.pop(0)) + '\r')
+            self._reallySendLine(self._queue.pop(0))
             self._queueEmptying = reactor.callLater(self.lineRate,
                                                     self._sendLine)
         else:
