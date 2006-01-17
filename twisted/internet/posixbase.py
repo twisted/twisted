@@ -86,7 +86,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         try:
             util.untilConcludes(self.w.send, 'x')
         except OSError, e:
-            if e.errno != errno.EAGAIN:
+            if e.errno != errno.WSAEWOULDBLOCK:
                 raise
 
     def doRead(self):
