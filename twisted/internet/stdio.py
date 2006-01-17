@@ -15,6 +15,7 @@ Future Plans:
 Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 """
 
+import warnings
 from zope.interface import implements
 
 from twisted.internet import process, error, interfaces, fdesc
@@ -161,6 +162,8 @@ class StandardIO(object):
     # Stupid compatibility:
     def closeStdin(self):
         """Compatibility only, don't use. Same as loseWriteConnection."""
+        warnings.warn("This function is deprecated, use loseWriteConnection instead.",
+                      category=DeprecationWarning, stacklevel=2)
         self.loseWriteConnection()
 
     def stopReading(self):
