@@ -243,25 +243,8 @@ class DAVFile (File):
         """
         Returns True if this resource is a collection resource, False otherwise.
         """
-        return bool(self.children) or self.fp.isdir()
-
-    def listNames(self):
-        """
-        Returns a list of names for all static children of this resource.
-        Note that File's implementation does not list children which were added
-        with putChild().  This implementation does.
-        File's implementation also sorts the list.  This implementation does
-        not.
-        """
-        #
-        # FIXME: Reconcile this with File's listNames().  I think File's
-        # implementation should include children added with putChild() and
-        # that DirectoryLister (or whoever) should sort the list, not this
-        # method; the caller may not care, so don't do work not asked for.
-        #
-        names = list(self.children.keys())
-        if self.fp.isdir(): names.extend(self.fp.listdir())
-        return names
+        for child in self.listChildren(): return True
+        return self.fp.isdir()
 
     def getChildren(self, depth):
         """
@@ -277,8 +260,8 @@ class DAVFile (File):
         #
         assert depth in ("0", "1", "infinity"), "Invalid depth: %s" % (depth,)
         if depth != "0" and self.isCollection():
-            for name in self.listNames():
-                child = self.childWithName(name)
+            for name in self.listChildren():
+                child = self.getChild(name)
                 if child:
                     #
                     # FIXME: This code breaks if we encounter a child that isn't
@@ -292,19 +275,6 @@ class DAVFile (File):
                                 yield (grandchild[0], name + "/" + grandchild[1])
                     else:
                         yield (child, name)
-
-    def childWithName(self, name):
-        """
-        Returns the child with the given name.
-        Returns None if no such child exists.
-        """
-        if name in self.children: return self.children[name]
-
-        child_fp = self.fp.child(name)
-        if child_fp.exists():
-            return self.createSimilarFile(child_fp.path)
-        else:
-            return None
 
     properties      = property(LivePropertyStore)
     dead_properties = property(DeadPropertyStore)

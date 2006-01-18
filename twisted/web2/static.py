@@ -24,7 +24,6 @@ def isDangerous(path):
 
 
 class Data(resource.Resource):
-    
     """
     This is a static, in-memory resource.
     """
@@ -99,7 +98,7 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
     return type, enc
 
 
-class File(resource.Resource):
+class File(resource.RenderMixin):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
@@ -116,6 +115,7 @@ class File(resource.Resource):
     listing of the /tmp/ directory, and http://server/FILE/foo/bar.html will
     return the contents of /tmp/foo/bar.html .
     """
+    implements(iweb.IResource)
 
     def _getContentTypes(self):
         if not hasattr(File, "_sharedContentTypes"):
@@ -138,11 +138,13 @@ class File(resource.Resource):
     def __init__(self, path, defaultType="text/plain", ignoredExts=(), processors=None, indexNames=None):
         """Create a file with the given path.
         """
+        super(File, self).__init__()
+
+        self._children = {}
         self.fp = filepath.FilePath(path)
         # Remove the dots from the path to split
         self.defaultType = defaultType
         self.ignoredExts = list(ignoredExts)
-        self.children = {}
         if processors is not None:
             self.processors = dict([
                 (key.lower(), value)
@@ -231,18 +233,48 @@ class File(resource.Resource):
 
     def directoryListing(self):
         return dirlist.DirectoryLister(self.fp.path,
-                                       self.listNames(),
+                                       self.listChildren(),
                                        self.contentTypes,
                                        self.contentEncodings,
                                        self.defaultType)
 
     def putChild(self, name, child):
-        self.children[name] = child
-        
+        """
+        Register a child with the given name with this resource.
+        @param name: the name of the child (a URI path segment)
+        @param child: the child to register
+        """
+        self._children[name] = child
+
+    def getChild(self, name):
+        """
+        Look up a child resource.
+        @return: the child of this resource with the given name.
+        """
+        child = self._children.get(name, None)
+        if child: return child
+
+        child_fp = self.fp.child(name)
+        if child_fp.exists():
+            return self.createSimilarFile(child_fp.path)
+        else:
+            return None
+
+    def listChildren(self):
+        """
+        @return: a sequence of the names of all known children of this resource.
+        """
+        children = self._children.keys()
+        if self.fp.isdir(): children += self.fp.listdir()
+        return children
+
     def locateChild(self, req, segments):
+        """
+        See L{IResource}C{.locateChild}.
+        """
         # If a static child is set up, return it
-        r = self.children.get(segments[0], None)
-        if r: return (r, segments[1:])
+        child = self.getChild(segments[0])
+        if child is not None: return (child, segments[1:])
         
         # If we're not backed by a directory, we have no children.
         # But check for existance first; we might be a collection resource
@@ -297,7 +329,7 @@ class File(resource.Resource):
                     # Render from a DirectoryLister
                     standin = dirlist.DirectoryLister(
                         self.fp.path,
-                        self.listNames(),
+                        self.listChildren(),
                         self.contentTypes,
                         self.contentEncodings,
                         self.defaultType
@@ -327,13 +359,6 @@ class File(resource.Resource):
                 response.headers.setHeader(header, value)
 
         return response
-
-    def listNames(self):
-        if not self.fp.isdir():
-            return []
-        directory = self.fp.listdir()
-        directory.sort()
-        return directory
 
     def createSimilarFile(self, path):
         return self.__class__(path, self.defaultType, self.ignoredExts,

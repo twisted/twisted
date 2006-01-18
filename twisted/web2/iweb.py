@@ -11,7 +11,11 @@ from zope.interface import Attribute, Interface, interface
 # server.py interfaces
 class IResource(Interface):
     """
-        I am a web resource.
+    An HTTP resource.
+
+    I serve 2 main purposes: one is to provide a standard representation for
+    what HTTP specification calls an 'entity', and the other is to provide an
+    mechanism for mapping URLs to content.
     """
 
     def locateChild(self, req, segments):
