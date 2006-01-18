@@ -43,13 +43,16 @@ try:
 except ImportError:
     unixEnabled = False
 
+processEnabled = False
 if platformType == 'posix':
     from twisted.internet import fdesc
     import process
+    processEnabled = True
 
 if platformType == "win32":
     try:
         import win32process
+        processEnabled = True
     except ImportError:
         win32process = None
 
@@ -277,13 +280,12 @@ class PosixReactorBase(ReactorBase):
                 return process.Process(self, executable, args, env, path,
                                        processProtocol, uid, gid, childFDs)
         # This is possible, just needs work - talk to itamar if you want this.
-        #elif platformType == "win32":
-        #    if win32process:
-        #        threadable.init(1)
-        #        import win32eventreactor
-        #        return win32eventreactor.Process(self, processProtocol, executable, args, env, path)
-        #    else:
-        #        raise NotImplementedError, "process not available since win32all is not installed"
+        elif platformType == "win32":
+           if win32process:
+               from twisted.internet._dumbwin32proc import Process
+               return Process(self, processProtocol, executable, args, env, path)
+           else:
+               raise NotImplementedError, "process not available since pywin32 is not installed"
         else:
             raise NotImplementedError, "process only available on Windows or POSIX"
 
@@ -444,7 +446,9 @@ class PosixReactorBase(ReactorBase):
 if sslEnabled:
     classImplements(PosixReactorBase, IReactorSSL)
 if unixEnabled:
-    classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram, IReactorProcess)
+    classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram)
+if processEnabled:
+    classImplements(PosixReactorBase, IReactorProcess)
 components.backwardsCompatImplements(PosixReactorBase)
 
 __all__ = ["PosixReactorBase"]
