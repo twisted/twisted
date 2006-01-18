@@ -22,8 +22,6 @@ from zope.interface import implements, providedBy, directlyProvides
 class ProtocolWrapper(Protocol):
     """Wraps protocol instances and acts as their transport as well."""
 
-    implements(ITransport)
-
     disconnecting = 0
 
     def __init__(self, factory, wrappedProtocol):
@@ -31,8 +29,7 @@ class ProtocolWrapper(Protocol):
         self.factory = factory
 
     def makeConnection(self, transport):
-        for iface in providedBy(transport):
-            directlyProvides(self, iface)
+        directlyProvides(self, *providedBy(self) + providedBy(transport))
         Protocol.makeConnection(self, transport)
 
     # Transport relaying
