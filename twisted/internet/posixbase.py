@@ -279,7 +279,6 @@ class PosixReactorBase(ReactorBase):
             else:
                 return process.Process(self, executable, args, env, path,
                                        processProtocol, uid, gid, childFDs)
-        # This is possible, just needs work - talk to itamar if you want this.
         elif platformType == "win32":
            if win32process:
                from twisted.internet._dumbwin32proc import Process
