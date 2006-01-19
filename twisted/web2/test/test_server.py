@@ -161,6 +161,12 @@ class SampleWebTest(BaseCase):
             f.responseStream = lambda self: None
             return f
 
+        def child_remoteAddr(self, req):
+            f = BaseTestResource()
+            f.responseCode = 200
+            f.responseText = 'Remote Addr: %r' % req.remote_addr.host
+            return f
+
     def setUp(self):
         self.root = self.SampleTestResource()
 
@@ -178,6 +184,11 @@ class SampleWebTest(BaseCase):
         return self.assertResponse(
             (self.root, 'http://host/invalidChild'),
             (404, {}, None))
+
+    def test_remoteAddrExposure(self):
+        return self.assertResponse(
+            (self.root, 'http://host/remoteAddr'),
+            (200, {}, "Remote Addr: 'remotehost'"))
 
 class URLParsingTest(BaseCase):
     class TestResource(resource.LeafResource):

@@ -110,6 +110,8 @@ class Request(http.Request):
     """
     vars:
     site
+
+    remote_addr
     
     scheme
     host
@@ -129,6 +131,7 @@ class Request(http.Request):
     @type args: A mapping of strings (the argument names) to lists of values.
                 i.e., ?foo=bar&foo=baz&quux=spam results in
                 {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+
     """
     implements(iweb.IRequest)
     
@@ -180,7 +183,7 @@ class Request(http.Request):
         return urlparse.urlunparse((
             scheme, hostport, path,
             params, querystring, fragment))
-        
+
     def _parseURL(self):
         if self.uri[0] == '/':
             # Can't use urlparse for request_uri because urlparse
@@ -253,6 +256,7 @@ class Request(http.Request):
                 return
             self._parseURL()
             self._fixupURLParts()
+            self.remote_addr = self.chanRequest.getRemoteHost()
         except:
             failedDeferred = self._processingFailed(failure.Failure())
             return
