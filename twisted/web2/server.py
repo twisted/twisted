@@ -111,7 +111,7 @@ class Request(http.Request):
     vars:
     site
 
-    remote_addr
+    remoteAddr
     
     scheme
     host
@@ -256,7 +256,7 @@ class Request(http.Request):
                 return
             self._parseURL()
             self._fixupURLParts()
-            self.remote_addr = self.chanRequest.getRemoteHost()
+            self.remoteAddr = self.chanRequest.getRemoteHost()
         except:
             failedDeferred = self._processingFailed(failure.Failure())
             return

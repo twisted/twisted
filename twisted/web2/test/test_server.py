@@ -164,7 +164,7 @@ class SampleWebTest(BaseCase):
         def child_remoteAddr(self, req):
             f = BaseTestResource()
             f.responseCode = 200
-            f.responseText = 'Remote Addr: %r' % req.remote_addr.host
+            f.responseText = 'Remote Addr: %r' % req.remoteAddr.host
             return f
 
     def setUp(self):
