@@ -35,7 +35,7 @@ headerNameTranslation = ''.join([c.isalnum() and c.upper() or '_' for c in map(c
 def createCGIEnvironment(request):
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
     # http://cgi-spec.golux.com/draft-coar-cgi-v11-03-clean.html for a better one
-    remotehost = request.chanRequest.getRemoteHost()
+    remotehost = request.remoteAddr
 
     python_path = os.pathsep.join(sys.path)
     

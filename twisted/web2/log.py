@@ -137,14 +137,14 @@ class BaseCommonAccessLoggingObserver(object):
         request = eventDict['request']
         response = eventDict['response']
         loginfo = eventDict['loginfo']
-        firstLine = '%s %s HTTP/%s' %(
+        firstLine = '%s %s HTTP/%' %(
             request.method,
             request.uri,
             '.'.join([str(x) for x in request.clientproto]))
         
         self.logMessage(
             '%s - %s [%s] "%s" %s %d "%s" "%s"' %(
-                request.chanRequest.getRemoteHost().host,
+                request.remoteAddr.host,
                 # XXX: Where to get user from?
                 "-",
                 self.logDateString(
