@@ -44,25 +44,14 @@ class WaitReentrancyTest(unittest.TestCase):
 
 
 class TestMktemp(unittest.TestCase):
-    def test_name(self):
-        name = self.mktemp()
-        dirs = os.path.dirname(name).split(os.sep)[:-1]
-        self.failUnlessEqual(
-            dirs, ['twisted.trial.test.test_util', 'TestMktemp', 'test_name'])
-
-    def test_unique(self):
-        name = self.mktemp()
-        self.failIfEqual(name, self.mktemp())
-
-    def test_created(self):
-        name = self.mktemp()
-        dirname = os.path.dirname(name)
-        self.failUnless(os.path.exists(dirname))
-        self.failIf(os.path.exists(name))
-
-    def test_location(self):
-        path = os.path.abspath(self.mktemp())
-        self.failUnless(path.startswith(os.getcwd()))
+    def testMktmp(self):
+        tmp = self.mktemp()
+        tmp1 = self.mktemp()
+        # XXX -- what does this test?
+        exp = os.path.join('twisted.trial.test.test_trial',
+                           'UtilityTestCase', 'testMktmp')
+        self.failIfEqual(tmp, tmp1)
+        self.failIf(os.path.exists(exp))
 
 
 class TestWaitInterrupt(unittest.TestCase):
