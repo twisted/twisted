@@ -28,7 +28,7 @@ class TestAssertions(unittest.TestCase):
     
     class FailingTest(unittest.TestCase):
         def test_fails(self):
-            raise TestAssertions.failureException()
+            raise self.failureException()
 
     def testFail(self):
         try:
@@ -46,7 +46,7 @@ class TestAssertions(unittest.TestCase):
         result = reporter.TestResult()
         test.run(result)
         self.failIf(result.wasSuccessful())
-        self.failUnlessEqual(len(result.errors), 0)
+        self.failUnlessEqual(result.errors, [])
         self.failUnlessEqual(len(result.failures), 1)
 
     def test_failIf(self):
