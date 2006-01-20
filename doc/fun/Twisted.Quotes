@@ -5393,11 +5393,22 @@ Jerub|and I still, to this day, curse that man.
 <jotham> you guys are like ADHD vultures, swoop in, devour my problem, leave me
 bewildered, then go off to the next corpse
 %
+<glyph> In the sentence "mang I need to get some cheetos up ins", what
+  part of speech is "up ins", and what function does it serve?  It
+  seems to me like "i need to get some cheetos" would be sufficient
+<exarkun> It serves to disambiguate from the case where one merely
+  needs to procure rights to a future shipment of cheetos, most likely
+  to be resold before delivery is taken.
+%
 <radix> php thinks 0 == "Foo"
 <radix> why
 ...
 <moshez> radix: as consistent and clear PHP is, it has its problem areas
 <moshez> radix: wait, no, I can't say that with a straight face
+%
+<jotham> something i coded was just on sky sport news
+<jotham> shame it was a horrible C++ nightmare
+<mwh> is debugging nested templates a sport now?
 %
 <mumak> Python totally needs to find a use for É
 <spiv> mumak: dude
@@ -5411,6 +5422,15 @@ bewildered, then go off to the next corpse
 <glyph> What the *crap*, how does this work
 <spiv> glyph: LD_PRELOAD
 <glyph> fuck, why is everything horrible
+%
+<radix> hrm, I meant to say <3, but I guess maybe <4 means extra <3.
+%
+<tjs> http://www.animalcaresystems.com/
+<tjs> about 20 crates with this logo just got dumped outside our office
+<tjs> full or rack-mounted mice-containers
+<tjs> unfortunately for me, I have an insatiable curiosity. and when
+  someone unloads 2 shipping containers of extremely high-tech mice
+  containment systems on my doorstep, I just have to know whats going on
 %
 <mumak> Jerub: the trial command line isn't so much of a swiss army knife as... well, Dad's old toolshed.  
 <mumak> you never know what you'll find there.  there's bound to be some cool stuff, but you can't be too sure whether it will work.  everything is either greasy, dusty or both, and nothing is where you expect it to be.
@@ -5429,4 +5449,8 @@ tekNico: Hey, either port or plug, it's still a four letter p-word.
 exarkun: poop
 %
 01:10 < KragenSitaker> PenguinOfDoom: are you watching american politics?  (< PenguinOfDoom> ugh just when I thought this show couldn't get any worse. Torture and obvious lip-syncing.)
+%
+<zooko> I pay attention to Linux development, mostly starting with lwn.net and its "Kernel" page every week.
+<zooko> I'm often reminded of the adage about sausage and legislation.
+<zooko> I use Linux, and I'm happy with it, but the more I learn about the development process the less comfortable I am.
 %
