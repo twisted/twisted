@@ -274,10 +274,14 @@ class TestCase(_Assertions):
         if self._shared:
             self._prepareClassFixture()
             if not hasattr(self.__class__, '_instances'):
-                self.__class__._instances = sets.Set()
-                self.__class__._instancesRun = sets.Set()
+                self._initInstances()
             self.__class__._instances.add(self)
         self._passed = False
+
+    def _initInstances(cls):
+        cls._instances = sets.Set()
+        cls._instancesRun = sets.Set()
+    _initInstances = classmethod(_initInstances)
 
     def _isFirst(self):
         return len(self.__class__._instancesRun) == 0
@@ -432,6 +436,8 @@ class TestCase(_Assertions):
 
     def run(self, result):
         log.msg("--> %s <--" % (self.id()))
+        if self._shared and self not in self.__class__._instances:
+            self.__class__._instances.add(self)
         result.startTest(self)
         if self.getSkip(): # don't run test methods that are marked as .skip
             result.addSkip(self, self.getSkip())
@@ -452,7 +458,7 @@ class TestCase(_Assertions):
             self._cleanUp(result)
             result.stopTest(self)            
             if self._shared and self._isLast():
-                self.__class__._instancesRun = sets.Set()
+                self._initInstances()
                 self._classCleanUp(result)
             if not self._shared:
                 self._classCleanUp(result)

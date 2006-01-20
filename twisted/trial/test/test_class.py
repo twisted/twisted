@@ -124,7 +124,7 @@ class FactoryCounting(unittest.TestCase):
         _tearDownClassRun = 0
         def setUpClass(self):
             self.__class__._setUpClassRun += 1
-            raise unittest.SkipTest()
+            raise unittest.SkipTest('reason')
 
         def test_1(self):
             pass

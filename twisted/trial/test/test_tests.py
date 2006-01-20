@@ -404,6 +404,19 @@ class FixtureTest(unittest.TestCase):
         self.assertEqual(imi, 'tearDownClass')
 
 
+class FixtureMetaTest(unittest.TestCase):
+    def test_testBrokenTearDownClass(self):
+        """FixtureTest.testBrokenTearDownClass succeeds when run twice
+        """
+        test = FixtureTest('testBrokenTearDownClass')
+        result = reporter.TestResult()
+        test(result)
+        self.failUnless(result.wasSuccessful())
+        result2 = reporter.TestResult()
+        test(result2)
+        self.failUnless(result2.wasSuccessful())
+        
+
 class SuppressionTest(unittest.TestCase):
     def runTests(self, suite):
         suite.run(reporter.TestResult())
