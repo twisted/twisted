@@ -94,9 +94,61 @@ class TestErrorReporting(unittest.TestCase):
         self.stringComparison(expect, output.splitlines())
 
     def testHiddenException(self):
-        """errors in DelayedCalls fail the test.
+        """errors in DelayedCalls fail the test
         """
         output = self.runTests(erroneous.DemoTest('testHiddenException'))
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
 
+
+class PyunitTest(unittest.TestCase):
+    def setUp(self):
+        from twisted.trial.test import sample
+        self.stream = StringIO.StringIO()
+        self.test = sample.PyunitTest('test_foo')
+    
+    def test_verboseReporter(self):
+        result = reporter.VerboseTextReporter(self.stream)
+        result.startTest(self.test)
+        output = self.stream.getvalue()
+        self.failUnlessEqual(
+            output, 'twisted.trial.test.sample.PyunitTest.test_foo ... ')
+
+    def test_treeReporter(self):
+        result = reporter.TreeReporter(self.stream)
+        result.startTest(self.test)
+        output = self.stream.getvalue()
+        output = output.splitlines()[-1].strip()
+        self.failUnlessEqual(output, result.getDescription(self.test) + ' ...')
+
+    def test_getDescription(self):
+        result = reporter.TreeReporter(self.stream)
+        output = result.getDescription(self.test)
+        self.failUnlessEqual(output, 'test_foo')
+
+
+class TrialTest(unittest.TestCase):
+    def setUp(self):
+        from twisted.trial.test import sample
+        self.stream = StringIO.StringIO()
+        self.test = TestErrorReporting('test_timing')
+    
+    def test_verboseReporter(self):
+        result = reporter.VerboseTextReporter(self.stream)
+        result.startTest(self.test)
+        output = self.stream.getvalue()
+        self.failUnlessEqual(
+            output, ('twisted.trial.test.test_reporter.TestErrorReporting'
+                     '.test_timing ... '))
+
+    def test_treeReporter(self):
+        result = reporter.TreeReporter(self.stream)
+        result.startTest(self.test)
+        output = self.stream.getvalue()
+        output = output.splitlines()[-1].strip()
+        self.failUnlessEqual(output, result.getDescription(self.test) + ' ...')
+
+    def test_getDescription(self):
+        result = reporter.TreeReporter(self.stream)
+        output = result.getDescription(self.test)
+        self.failUnlessEqual(output, "test_timing")
 

@@ -321,6 +321,9 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).__init__(stream, tbformat, realtime)
         self._lastTest = []
 
+    def getDescription(self, test):
+        return test.shortDescription() or test.id().split('.')[-1]
+
     def addSuccess(self, test):
         super(TreeReporter, self).addSuccess(test)
         self.endLine('[OK]', self.GREEN)
@@ -352,12 +355,9 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).write(self.currentLine)
 
     def _testPrelude(self, test):
-        segments = [test.__class__.__module__, test.__class__.__name__,
-                    test.shortDescription()]
-        if len(segments) < 1:
-            return
+        segments = [test.__class__.__module__, test.__class__.__name__]
         indentLevel = 0
-        for seg in segments[:-1]:
+        for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
                     self.write('%s%s\n' % (self.indent * indentLevel, seg))
@@ -379,8 +379,8 @@ class TreeReporter(Reporter):
         
     def startTest(self, method):
         self._testPrelude(method)
-        self.write('%s%s ... ' % (self.indent * (len(self._lastTest) - 1),
-                                  method.shortDescription()))
+        self.write('%s%s ... ' % (self.indent * (len(self._lastTest)),
+                                  self.getDescription(method)))
         super(TreeReporter, self).startTest(method)
 
     def color(self, text, color):
