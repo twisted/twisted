@@ -137,7 +137,7 @@ class BaseCommonAccessLoggingObserver(object):
         request = eventDict['request']
         response = eventDict['response']
         loginfo = eventDict['loginfo']
-        firstLine = '%s %s HTTP/%' %(
+        firstLine = '%s %s HTTP/%s' %(
             request.method,
             request.uri,
             '.'.join([str(x) for x in request.clientproto]))
