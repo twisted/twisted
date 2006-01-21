@@ -108,7 +108,7 @@ class TestCase(unittest.TestCase):
         URI.
         """
         path = mkdtemp(prefix=prefix + "_", dir=self.docroot)
-        uri  = joinURL("/", url_quote(os.path.basename(path)))
+        uri  = joinURL("/", url_quote(os.path.basename(path))) + "/"
 
         return (path, uri)
 
