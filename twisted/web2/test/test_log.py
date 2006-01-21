@@ -57,7 +57,9 @@ class TestLogging(BaseCase):
         else:
             message = self.blo.messages[-1]
 
-        expectedLog = '%(remotehost)s - %(user)s [%(date)s] "%(method)s %(uri)s HTTP/%(version)s" %(status)d %(length)d "%(referer)s" "%(user-agent)s"'
+        expectedLog = ('%(remotehost)s - %(user)s [%(date)s] "%(method)s '
+                       '%(uri)s HTTP/%(version)s" %(status)d %(length)d '
+                       '"%(referer)s" "%(user-agent)s"')
 
         if expected.get('logged', True):
             self.assertEquals(message, expectedLog % expected)
@@ -72,7 +74,8 @@ class TestLogging(BaseCase):
             self.assertLogged(method=method, uri=uri, status=response[0],
                               length=response[1].getHeader('content-length'))
             
-        d = self.getResponseFor(self.root, uri, method=method).addCallback(_cbCheckLog)
+        d = self.getResponseFor(self.root, uri, method=method)
+        d.addCallback(_cbCheckLog)
 
         return d
 
@@ -84,7 +87,8 @@ class TestLogging(BaseCase):
             
             def _cbCheckLog(response):
                 self.assertEquals(response[0], expected['status'])
-                self.assertLogged(length=response[1].getHeader('content-length'), **expected)
+                self.assertLogged(
+                    length=response[1].getHeader('content-length'), **expected)
             
             return self.getResponseFor(self.root,
                                        uri,
@@ -96,7 +100,8 @@ class TestLogging(BaseCase):
     
         d = test(None, uri, method, status=404, logged=True)
 
-        uri = 'http:///' # no host this should result in a 400 which doesn't get logged
+        # no host. this should result in a 400 which doesn't get logged
+        uri = 'http:///' 
 
         d.addCallback(test, uri, method, status=400, logged=False)
 
