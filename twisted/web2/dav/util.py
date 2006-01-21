@@ -123,14 +123,13 @@ def normalizeURL(url):
     
     return urllib.quote(url)
 
-def joinURL(url1, url2):
+def joinURL(*urls):
     """
-    Appends one URL to another.
-    @param url1: a URL.
-    @param url2: a URL.
-    @return: the normalized URL formed by combining C{url1} with C{url2}.
+    Appends URLs in series.
+    @param urls: URLs to join.
+    @return: the normalized URL formed by combining each URL in C{urls}.
     """
-    return "%s/%s" % (normalizeURL(url1).rstrip("/"), normalizeURL(url2).lstrip("/"))
+    return "/".join([normalizeURL(url).rstrip("/") for url in urls])
 
 def parentForURL(url):
     """
