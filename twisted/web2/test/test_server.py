@@ -33,7 +33,7 @@ class TestChanRequest:
                                       self.headers,
                                       site=self.site,
                                       prepathuri=self.prepath)
-
+        
         if content is not None:
             self.request.handleContentChunk(content)
             self.request.handleContentComplete()
@@ -76,8 +76,9 @@ class TestChanRequest:
 class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
+    responseHeaders = {}
     addSlash = False
-
+    
     def __init__(self, children=[]):
         """
         @type children: C{list} of C{tuple}
@@ -87,7 +88,8 @@ class BaseTestResource(resource.Resource):
             self.putChild(i[0], i[1])
 
     def render(self, req):
-        return http.Response(self.responseCode, stream=self.responseStream())
+        return http.Response(self.responseCode, headers=self.responseHeaders,
+                             stream=self.responseStream())
 
     def responseStream(self):
         return stream.MemoryStream(self.responseText)

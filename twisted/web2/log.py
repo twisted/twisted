@@ -56,7 +56,10 @@ class LogInfo(object):
     bytesSent=None
     startTime=None
     
-def _logfilter(request, response, startTime):
+def logFilter(request, response, startTime=None):
+    if startTime is None:
+        startTime = time.time()
+        
     def _log(success, length):
         loginfo=LogInfo()
         loginfo.bytesSent=length
@@ -71,12 +74,12 @@ def _logfilter(request, response, startTime):
     response.stream=_LogByteCounter(response.stream, _log)
     return response
 
-_logfilter.handleErrors=True
+logFilter.handleErrors = True
 
 class LogWrapperResource(resource.WrapperResource):
     def hook(self, request):
         # Insert logger
-        request.addResponseFilter(lambda req, resp: _logfilter(req, resp, time.time()), atEnd=True)
+        request.addResponseFilter(logFilter, atEnd=True)
 
 monthname = [None, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
