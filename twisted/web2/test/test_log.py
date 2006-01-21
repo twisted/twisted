@@ -20,8 +20,6 @@ class TestLogWrapperResource(resource.WrapperResource):
                                  
         req.addResponseFilter(_logFilter, atEnd=True)
 
-epoch = '31/Dec/1969:16:00:00 -0700'
-
 class TestLogging(BaseCase):
     def setUp(self):
         self.blo = BufferingLogObserver()
@@ -36,6 +34,7 @@ class TestLogging(BaseCase):
 
     def assertLogged(self, **expected):
         if 'date' not in expected:
+            epoch = log.BaseCommonAccessLoggingObserver().logDateString(0)
             expected['date'] = epoch
 
         if 'user' not in expected:
