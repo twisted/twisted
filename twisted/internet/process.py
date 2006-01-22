@@ -92,7 +92,7 @@ class ProcessWriter(abstract.FileDescriptor):
     ic = 0
     enableReadHack = False
     
-    def __init__(self, reactor, proc, name, fileno):
+    def __init__(self, reactor, proc, name, fileno, forceReadHack=False):
         """Initialize, specifying a Process instance to connect to.
         """
         abstract.FileDescriptor.__init__(self, reactor)
@@ -100,16 +100,19 @@ class ProcessWriter(abstract.FileDescriptor):
         self.proc = proc
         self.name = name
         self.fd = fileno
-
-        # Detect if this fd is actually a write-only fd. If it's
-        # valid to read, don't try to detect closing via read.
-        # This really only means that we cannot detect a TTY's write
-        # pipe being closed.
-        try:
-            os.read(self.fileno(), 0)
-        except OSError:
-            # It's a write-only pipe end, enable hack
+        
+        if forceReadHack:
             self.enableReadHack = True
+        else:
+            # Detect if this fd is actually a write-only fd. If it's
+            # valid to read, don't try to detect closing via read.
+            # This really only means that we cannot detect a TTY's write
+            # pipe being closed.
+            try:
+                os.read(self.fileno(), 0)
+            except OSError:
+                # It's a write-only pipe end, enable hack
+                self.enableReadHack = True
             
         if self.enableReadHack:
             self.startReading()
@@ -406,7 +409,7 @@ class Process(styles.Ephemeral):
                 self.pipes[childFD] = reader
 
             if childFDs[childFD] == "w":
-                writer = ProcessWriter(reactor, self, childFD, parentFD)
+                writer = ProcessWriter(reactor, self, childFD, parentFD, forceReadHack=True)
                 self.pipes[childFD] = writer
 
         try:
