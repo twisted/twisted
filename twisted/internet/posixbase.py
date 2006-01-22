@@ -77,7 +77,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         server.listen(1)
         client.connect(server.getsockname())
         reader, clientaddr = server.accept()
-        client.setblocking(1)
+        client.setblocking(0)
         reader.setblocking(0)
         self.r = reader
         self.w = client
