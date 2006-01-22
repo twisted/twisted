@@ -630,7 +630,13 @@ class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
         p.transport.write("hello world!\n")
         spinUntil(lambda :p.closed, 10)
         self.assertEquals(p.outF.getvalue(), "hello world!\r\nhello world!\r\n", "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
-    
+
+    def testBadArgs(self):
+        pyExe = sys.executable
+        pyArgs = [pyExe, "-u", "-c", "print 'hello'"]
+        p = Accumulator()
+        self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1, childFDs={1:'r'})
+
 class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test process programs that are packaged with twisted."""
 
@@ -647,6 +653,15 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
         self.assertEquals(p.errF.getvalue(), "err\nerr\n")
         self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
 
+    def testBadArgs(self):
+        pyExe = sys.executable
+        pyArgs = [pyExe, "-u", "-c", "print 'hello'"]
+        p = Accumulator()
+        self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, uid=1)
+        self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, gid=1)
+        self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1)
+        self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1:'r'})
+        
 class UtilTestCase(unittest.TestCase):
     def setUpClass(klass):
         j = os.path.join

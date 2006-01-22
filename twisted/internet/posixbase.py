@@ -273,20 +273,28 @@ class PosixReactorBase(ReactorBase):
                      uid=None, gid=None, usePTY=0, childFDs=None):
         if platformType == 'posix':
             if usePTY:
-                assert childFDs == None
+                if childFDs is not None:
+                    raise ValueError("Using childFDs is not supported with usePTY=True.")
                 return process.PTYProcess(self, executable, args, env, path,
                                           processProtocol, uid, gid, usePTY)
             else:
                 return process.Process(self, executable, args, env, path,
                                        processProtocol, uid, gid, childFDs)
         elif platformType == "win32":
-           if win32process:
-               from twisted.internet._dumbwin32proc import Process
-               return Process(self, processProtocol, executable, args, env, path)
-           else:
-               raise NotImplementedError, "process not available since pywin32 is not installed"
+            if uid is not None or gid is not None:
+                raise ValueError("The uid and gid parameters are not supported on Windows.")
+            if usePTY:
+                raise ValueError("The usePTY parameter is not supported on Windows.")
+            if childFDs:
+                raise ValueError("Customizing childFDs is not supported on Windows.")
+            
+            if win32process:
+                from twisted.internet._dumbwin32proc import Process
+                return Process(self, processProtocol, executable, args, env, path)
+            else:
+                raise NotImplementedError, "spawnProcess not available since pywin32 is not installed."
         else:
-            raise NotImplementedError, "process only available on Windows or POSIX"
+            raise NotImplementedError, "spawnProcess only available on Windows or POSIX."
 
     # IReactorUDP
 
