@@ -8,6 +8,7 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
+import os
 from zope.interface import implements
 
 from twisted.internet import protocol
@@ -30,11 +31,12 @@ class makeTelnetProtocol:
         return telnet.TelnetTransport(auth, *args)
 
 class chainedProtocolFactory:
-    def __init__(self, namespace):
-        self.namespace = namespace
-    
+    def __init__(self, *a, **kw):
+        self.protocolArgs = a
+        self.protocolKwArgs = kw
+
     def __call__(self):
-        return insults.ServerProtocol(manhole.ColoredManhole, self.namespace)
+        return insults.ServerProtocol(manhole.ColoredManhole, *self.protocolArgs, **self.protocolKwArgs)
 
 class _StupidRealm:
     implements(portal.IRealm)
@@ -55,16 +57,17 @@ class Options(usage.Options):
     optParameters = [
         ["telnetPort", "t", None, "strports description of the address on which to listen for telnet connections"],
         ["sshPort", "s", None, "strports description of the address on which to listen for ssh connections"],
-        ["passwd", "p", "/etc/passwd", "name of a passwd(5)-format username/password file"]]
+        ["passwd", "p", "/etc/passwd", "name of a passwd(5)-format username/password file"],
+        ["logdir", "l", os.curdir, "Name of a directory into which to log session transcripts"]]
 
     def __init__(self):
         usage.Options.__init__(self)
         self.users = []
         self['namespace'] = None
-    
+
     def opt_user(self, name):
         self.users.append(name)
-    
+
     def postOptions(self):
         if self['telnetPort'] is None and self['sshPort'] is None:
             raise usage.UsageError("At least one of --telnetPort and --sshPort must be specified")
@@ -90,6 +93,8 @@ def makeService(options):
 
         "passwd": Name of a passwd(5)-format username/password file.
 
+        "logdir": Name of a directory into which transcripts will be written.
+
     @rtype: L{twisted.application.service.IService}
     @return: A manhole service.
     """
@@ -106,7 +111,9 @@ def makeService(options):
         telnetRealm = _StupidRealm(telnet.TelnetBootstrapProtocol,
                                    insults.ServerProtocol,
                                    manhole.ColoredManhole,
-                                   namespace)
+                                   namespace,
+                                   options['logdir'],
+                                   'manhole')
 
         telnetPortal = portal.Portal(telnetRealm, [checker])
 
@@ -118,7 +125,7 @@ def makeService(options):
 
     if options['sshPort']:
         sshRealm = manhole_ssh.TerminalRealm()
-        sshRealm.chainedProtocolFactory = chainedProtocolFactory(namespace)
+        sshRealm.chainedProtocolFactory = chainedProtocolFactory(namespace, options['logdir'], 'manhole')
 
         sshPortal = portal.Portal(sshRealm, [checker])
         sshFactory = manhole_ssh.ConchFactory(sshPortal)

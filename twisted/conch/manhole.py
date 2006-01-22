@@ -14,7 +14,7 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
-import code, sys, StringIO, tokenize
+import code, errno, sys, os, StringIO, tokenize
 
 from twisted.conch import recvline
 
@@ -32,14 +32,14 @@ class FileWrapper:
     softspace = 0
     state = 'normal'
 
-    def __init__(self, o):
-        self.o = o
+    def __init__(self, interp):
+        self.interp = interp
 
     def flush(self):
         pass
 
     def write(self, data):
-        self.o.addOutput(data.replace('\r\n', '\n'))
+        self.interp.handler.addOutput(data.replace('\r\n', '\n'))
 
     def writelines(self, lines):
         self.write(''.join(lines))
@@ -58,11 +58,12 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     """
 
     numDeferreds = 0
-    def __init__(self, handler, locals=None, filename="<console>"):
+    def __init__(self, handler, locals=None, name="<console>", logFile=None):
         code.InteractiveInterpreter.__init__(self, locals)
         self._pendingDeferreds = {}
         self.handler = handler
-        self.filename = filename
+        self.logFile = logFile
+        self.name = name
         self.resetBuffer()
 
     def resetBuffer(self):
@@ -83,9 +84,15 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         with in some way (this is the same as runsource()).
 
         """
+        if self.logFile is not None:
+            if self.buffer:
+                self.logFile.write('... ' + line + "\n")
+            else:
+                self.logFile.write('>>> ' + line + "\n")
+
         self.buffer.append(line)
         source = "\n".join(self.buffer)
-        more = self.runsource(source, self.filename)
+        more = self.runsource(source, self.name)
         if not more:
             self.resetBuffer()
         return more
@@ -93,7 +100,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def runcode(self, *a, **kw):
         orighook, sys.displayhook = sys.displayhook, self.displayhook
         try:
-            origout, sys.stdout = sys.stdout, FileWrapper(self.handler)
+            origout, sys.stdout = sys.stdout, FileWrapper(self)
             try:
                 code.InteractiveInterpreter.runcode(self, *a, **kw)
             finally:
@@ -131,6 +138,8 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return failure
 
     def write(self, data, async=False):
+        if self.logFile is not None:
+            self.logFile.write(data)
         self.handler.addOutput(data, async)
 
 CTRL_C = '\x03'
@@ -147,16 +156,41 @@ class Manhole(recvline.HistoricRecvLine):
     local namespace for any code executed.
     """
 
+    counter = 0
+    logFile = None
     namespace = None
 
-    def __init__(self, namespace=None):
+    def __init__(self, namespace=None, logDir=None, logPrefix=None):
         recvline.HistoricRecvLine.__init__(self, namespace)
         if namespace is not None:
             self.namespace = namespace.copy()
 
+        if logDir is not None:
+            if logPrefix is None:
+                logPrefix = self.__class__.__name__
+            self.logFile = self._logFactory(logDir, logPrefix)
+
+    def _logFactory(self, logDir, logPrefix):
+        if not os.path.isdir(logDir):
+            os.makedirs(logDir)
+
+        pfx = os.path.join(logDir, logPrefix + '-')
+        while True:
+            try:
+                fd = os.open(pfx + str(Manhole.counter), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except OSError, e:
+                if e.errno == errno.EEXIST:
+                    Manhole.counter += 1
+                else:
+                    raise
+            else:
+                return os.fdopen(fd, 'w')
+
     def connectionMade(self):
         recvline.HistoricRecvLine.connectionMade(self)
-        self.interpreter = ManholeInterpreter(self, self.namespace)
+        self.interpreter = ManholeInterpreter(self, self.namespace,
+                                              self.namespace.get('__name__', '<manhole>'),
+                                              self.logFile)
         self.keyHandlers[CTRL_C] = self.handle_INT
         self.keyHandlers[CTRL_D] = self.handle_EOF
         self.keyHandlers[CTRL_BACKSLASH] = self.handle_QUIT
