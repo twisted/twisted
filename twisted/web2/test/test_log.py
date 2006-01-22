@@ -1,34 +1,14 @@
 from twisted.trial import unittest
-from twisted.web2 import log, iweb, resource, http, http_headers
+from twisted.web2 import log, iweb, resource
 from twisted.web2.test.test_server import BaseCase, BaseTestResource
 
-from twisted.internet import address
 from twisted.python import log as tlog
-
-import time
-
-from zope.interface import implements
-
-class TestRequest:
-    implements(iweb.IRequest)
-
-    def __init__(self, method='GET', uri='/', clientproto=(1, 1),
-                 remoteHost='127.0.0.1', headers={}):
-
-        self.method = method
-        self.uri = uri
-        self.clientproto = (1, 1)
-
-        self.headers = http_headers.Headers(headers)
-
-        self.remoteAddr = address.IPv4Address('TCP', remoteHost, 0)
-
+from twisted.test.test_log import FakeFile
 
 class BufferingLogObserver(log.BaseCommonAccessLoggingObserver):
     messages = ['']
     def logMessage(self, message):
         self.messages.append(message)
-
 
 class TestLogWrapperResource(resource.WrapperResource):
     def hook(self, req):
@@ -40,8 +20,7 @@ class TestLogWrapperResource(resource.WrapperResource):
                                  
         req.addResponseFilter(_logFilter, atEnd=True)
 
-
-class TestLogWrapper(BaseCase):
+class TestLogging(BaseCase):
     def setUp(self):
         self.blo = BufferingLogObserver()
         tlog.addObserver(self.blo.emit)
@@ -128,58 +107,7 @@ class TestLogWrapper(BaseCase):
 
         return d
 
-
-class TestLogObserver(unittest.TestCase):
-    def setUp(self):
-        self.timeDaylight = time.daylight
-        self.blo = BufferingLogObserver()
-        self.blo.tzForLog = 0
-        self.blo.tzForLogAlt = 0
-
-    def tearDown(self):
-        time.daylight = self.timeDaylight
-
-    def testLogDateString(self):
-        times = ((0.0, '31/Dec/1969:16:00:00 0'),
-                 (111111111.0, '9/Jul/1973:17:11:51 0'),
-                 (123456789.0, '29/Nov/1973:13:33:09 -0700',
-                  ('-0700', None, 0)),
-                 (555555555.5, '9/Aug/1987:17:59:15 0'))
         
-        for t in times:
-            if len(t) == 3:
-                (self.blo.tzForLog, self.blo.tzForLogAlt,
-                 time.daylight) = t[2]
-            else:
-                self.blo.tzForLog = 0
-                self.blo.tzForLogAlt = 0
-                time.daylight = 0
-                
-            self.assertEquals(self.blo.logDateString(t[0]),
-                              t[1])
 
-    def testEmit(self):
-        self.blo.tzForLog = 0
-        self.blo.tzForLogAlt = 0
-        time.daylight = 0
-
-        req = TestRequest(headers={'user-agent': 'NotARealBrowser/1.0',
-                                   'referer': 'not-a-real-website'})
-        resp = http.Response(200, stream='Foo')
-        loginfo = log.LogInfo()
-        loginfo.bytesSent = 3
-        loginfo.secondsTaken = 0
-        loginfo.resposneCompleted = True
         
-        self.blo.emit({'interface': iweb.IRequest,
-                       'request': req,
-                       'response': resp,
-                       'loginfo': loginfo})
 
-        logLine = '127.0.0.1 - - [31/Dec/1969:16:00:00 0] '
-        logLine += '"GET / HTTP/1.1" 200 3 "not-a-real-website" '
-        logLine += '"NotARealBrowser/1.0"'
-        
-        self.assertEquals(
-            self.blo.messages[-1],
-            logLine)
