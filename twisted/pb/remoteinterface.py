@@ -34,7 +34,6 @@ class RemoteInterfaceClass(interface.InterfaceClass):
         try:
             rname, remote_attrs = self._parseRemoteInterface(iname, attrs)
         except:
-            print "error parsing remote-interface attributes in %s" % iname
             raise
 
         # now let the normal InterfaceClass do its thing
@@ -56,7 +55,6 @@ class RemoteInterfaceClass(interface.InterfaceClass):
         try:
             registerRemoteInterface(self, rname)
         except:
-            print "error registering RemoteInterface '%s'" % rname
             raise
 
     def _parseRemoteInterface(self, iname, attrs):
