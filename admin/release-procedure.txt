@@ -1,0 +1,57 @@
+= RELEASING TWISTED CORE OR A SUBPROJECT =
+
+1. Verify that buildbot ( http://twistedmatrix.com/buildbot/ ) is ALL
+   GREEN (for all platforms that it was green for on the last
+   release).
+
+2. svn up.
+
+3. Write release notes in proj/topfiles/NEWS, including a date and a
+   version number.
+
+4. Branch the repo to /branches/releases/<a.b>.x. That last 'x' is
+   literal.
+
+5. Switch to that branch.
+
+6. Run ./admin/change-versions. Specify the versions of whatever
+   you're releasing.
+
+7. Run the release script: 
+   ./admin/release-twisted --commands=exportTemp,makeDocProj,makeBallProj
+
+8. Test the produced tarballs. Install them, run tests, etc.
+
+9. svn commit
+
+10. Tag the release.
+
+   svn cp -m 'Tagging for 0.2.0 release' $TREPO/branches/<a.b>.x \
+             $TREPO/tags/releases/<a.b.c>.
+
+11. Distribute, announce, and so forth.
+
+
+= RELEASING TWISTED SUMO =
+
+1. From Twisted trunk WC, mkdir twistedballs
+
+2. Put all current subproject tarballs into twistedballs
+
+3. Put ZopeInterface-*.tgz in twistedballs
+
+4. ./admin/release-twisted --commands=makeBallSumo
+
+5. Distribute, announce, etc.
+
+= CREATING A NEW SUBPROJECT =
+
+1. Add project name to twisted/python/dist.py, 'subprojects' list.
+
+2. mkdir twisted/<proj>/topfiles
+
+3. Create a setup.py, copying/modifying from
+   e.g. twisted/conch/topfiles/setup.py.
+
+4. If your project has extension modules, see
+   twisted/runner/topfiles/setup.py as an example.
