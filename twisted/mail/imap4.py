@@ -54,8 +54,6 @@ try:
 except:
     import StringIO
 
-infrangeobject = xrange(sys.maxint)
-
 class MessageSet(object):
     """
     Essentially an infinite bitfield, with some extra features.
@@ -103,7 +101,7 @@ class MessageSet(object):
                 raise ValueError("last already set")
 
             self._last = value
-            for i,(l,h) in zip(infrangeobject,self.ranges):
+            for i,(l,h) in enumerate(self.ranges):
                 if l is not None:
                     break # There are no more Nones after this
                 l = value
@@ -185,7 +183,7 @@ class MessageSet(object):
         self.ranges.sort()
 
         oldl, oldh = None, None
-        for i,(l,h) in zip(infrangeobject,self.ranges):
+        for i,(l,h) in enumerate(self.ranges):
             if l is None:
                 continue
             # l is >= oldl and h is >= oldh due to sort()
@@ -626,7 +624,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, '_'.join((self.state, cmd.upper())), None)
 
     def __doCommand(self, tag, handler, args, parseargs, line, uid):
-        for (i, arg) in zip(infrangeobject, parseargs):
+        for (i, arg) in enumerate(parseargs):
             if callable(arg):
                 parseargs = parseargs[i+1:]
                 maybeDeferred(arg, self, line).addCallback(

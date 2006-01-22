@@ -326,10 +326,12 @@ class CDATASection(CharacterData):
         stream.write(self.nodeValue)
         stream.write("]]>")
 
-_nextid = iter(xrange(0, sys.maxint)).next
-
-def genprefix():
-    return 'p' + str(_nextid())
+def _genprefix():
+    i = 0
+    while True:
+        yield  'p' + str(i)
+        i = i + 1
+genprefix = _genprefix().next
 
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
