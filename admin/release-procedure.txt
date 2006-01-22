@@ -1,5 +1,7 @@
 = RELEASING TWISTED CORE OR A SUBPROJECT =
 
+0. Fix all release-critical bugs in http://twistedmatrix.com/bugs/
+
 1. Verify that buildbot ( http://twistedmatrix.com/buildbot/ ) is ALL
    GREEN (for all platforms that it was green for on the last
    release).
