@@ -88,8 +88,8 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         """
         try:
             util.untilConcludes(self.w.send, 'x')
-        except OSError, e:
-            if e.errno != errno.WSAEWOULDBLOCK:
+        except socket.error, (err, msg):
+            if err != errno.WSAEWOULDBLOCK:
                 raise
 
     def doRead(self):
