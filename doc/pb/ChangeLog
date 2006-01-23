@@ -1,3 +1,10 @@
+2006-01-23  Brian Warner  <warner@lothar.com>
+
+	* base32.py: rename Base32.py to base32.py, to match Twisted
+	naming conventions
+	* crypto.py: same
+	* pb.py: same
+
 2006-01-02  Brian Warner  <warner@lothar.com>
 
 	* negotiate.py (eventually): add glyph's eventual-send operator,

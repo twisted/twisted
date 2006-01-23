@@ -10,7 +10,7 @@ from twisted.application import service, strports
 import urlparse
 urlparse.uses_netloc.append("pb")
 
-from twisted.pb import ipb, broker, Base32, negotiate, tokens, referenceable
+from twisted.pb import ipb, broker, base32, negotiate, tokens, referenceable
 from twisted.pb.tokens import PBError
 try:
     from twisted.pb import crypto
@@ -329,7 +329,7 @@ class PBService(service.MultiService):
         else:
             bytes = "".join([chr(random.randint(0,255))
                              for n in range(bits/8)])
-        return Base32.encode(bytes)
+        return base32.encode(bytes)
 
     def buildURL(self, name):
         if self.encrypted:

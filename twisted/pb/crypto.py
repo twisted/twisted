@@ -5,7 +5,7 @@ from OpenSSL import SSL
 import sslverify
 from sslverify import DistinguishedName, KeyPair
 peerFromTransport = sslverify.Certificate.peerFromTransport
-from twisted.pb import Base32
+from twisted.pb import base32
 
 class MyOptions(sslverify.OpenSSLCertificateOptions):
     def _makeContext(self):
@@ -48,7 +48,7 @@ class MyOptions(sslverify.OpenSSLCertificateOptions):
 
 def digest32(colondigest):
     digest = "".join([chr(int(c,16)) for c in colondigest.split(":")])
-    digest = Base32.encode(digest)
+    digest = base32.encode(digest)
     return digest
 
 available = True
