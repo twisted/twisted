@@ -504,10 +504,23 @@ def callRemote(self, _name, *args, **kw):
 
     <ul>
     <li>
-    Do not set the <code class="shell">svn:ignore</code> property on any file
-    or directory.  If you wish to ignore certain files use the <code
-    class="shell">global-ignores</code> feature of <code
-    class="shell">~/.subversion/config</code>.
+
+    <p>Do not set the <code class="shell">svn:ignore</code> property on any
+    file or directory.  You are not a unique snowflake.  What you wish to
+    ignore, others may wish to examine.  What others may wish you ignore,
+    <em>you</em> may wish you examine.  <code class="shell"> svn:ignore
+    </code> will affect everyone who uses the repository, and so it is not
+    the right mechanism to express personal preferences.</p>
+
+    <p>If you wish to ignore certain files use the <code class="shell">
+    global-ignores </code> feature of <code class="shell">
+    ~/.subversion/config </code>, for example:</p>
+
+    <pre class="shell">
+[miscellany]
+global-ignores = dropin.cache *.pyc *.pyo *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#* .DS_Store
+    </pre>
+
     </li>
     </ul>
 
