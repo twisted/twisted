@@ -66,7 +66,6 @@ class ErrorResponse (Response):
         Response.__init__(self, code=code, stream=output)
 
         self.headers.setHeader("content-type", MimeType("text", "xml"))
-        self.headers.setHeader("content-length", len(output))
 
         self.error = error
 
@@ -89,7 +88,6 @@ class MultiStatusResponse (Response):
                           stream=davxml.MultiStatus(*xml_responses).toxml())
 
         self.headers.setHeader("content-type", MimeType("text", "xml"))
-        self.headers.setHeader("content-length", len(output))
 
 class ResponseQueue (object):
     """

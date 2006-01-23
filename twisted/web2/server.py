@@ -353,8 +353,7 @@ class Request(http.Request):
         
         response = http.Response(
             responsecode.INTERNAL_SERVER_ERROR,
-            {'content-type': http_headers.MimeType('text','html'),
-             'content-length': len(body)},
+            {'content-type': http_headers.MimeType('text','html')},
             body)
         self.writeResponse(response)
 
@@ -393,8 +392,7 @@ class Request(http.Request):
         
         return http.Response(
             responsecode.INTERNAL_SERVER_ERROR,
-            {'content-type': http_headers.MimeType('text','html'),
-             'content-length': len(body)},
+            {'content-type': http_headers.MimeType('text','html')},
             body)
 
 class Site(object):

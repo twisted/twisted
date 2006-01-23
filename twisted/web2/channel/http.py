@@ -214,8 +214,9 @@ class HTTPParser(object):
         # to have a non-authenticating transparent proxy in front of an
         # authenticating proxy. An authenticating proxy can eat them itself.
         # 'Proxy-Connection' is an undocumented HTTP 1.0 abomination.
-        connHeaderNames = ['connection', 'keep-alive', 'te', 'trailers',
-                           'transfer-encoding', 'upgrade', 'proxy-connection']
+        connHeaderNames = ['connection', 'content-length', 'keep-alive', 'te',
+                           'trailers', 'transfer-encoding', 'upgrade',
+                           'proxy-connection']
         inHeaders = self.inHeaders
         connHeaders = http_headers.Headers()
         
@@ -232,12 +233,6 @@ class HTTPParser(object):
         
         for headername in connHeaderNames:
             move(headername)
-        
-        # Content-Length is both a connection header (defining length of
-        # transmission, and a content header (defining length of content).
-        h = inHeaders.getRawHeaders('content-length', None)
-        if h is not None:
-            connHeaders.setRawHeaders('content-length', h)
         
         return connHeaders
 
@@ -299,6 +294,7 @@ class HTTPParser(object):
 
         # Set the calculated persistence
         self.channel.setReadPersistent(readPersistent)
+        
     def abortParse(self):
         # If we're erroring out while still reading the request
         if not self.finishedReading:
@@ -381,7 +377,7 @@ class HTTPChannelRequest(HTTPParser):
         self._abortWithError(code, 'Header line too long.')
 
     def createRequest(self):
-        self.request = self.channel.requestFactory(self, self.command, self.path, self.version, self.inHeaders)
+        self.request = self.channel.requestFactory(self, self.command, self.path, self.version, self.length, self.inHeaders)
         del self.inHeaders
 
     def processRequest(self):

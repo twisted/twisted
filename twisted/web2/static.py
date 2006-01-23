@@ -351,7 +351,6 @@ class File(resource.RenderMixin):
         response.stream = stream.FileStream(f, 0, self.fp.getsize())
 
         for (header, value) in (
-            ("content-length", self.contentLength()),
             ("content-type", self.contentType()),
             ("content-encoding", self.contentEncoding()),
         ):

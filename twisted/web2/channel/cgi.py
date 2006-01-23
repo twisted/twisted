@@ -45,8 +45,7 @@ class BaseCGIChannelRequest(protocol.Protocol):
             headers.setRawHeaders(name, (val,))
             
         self._dataRemaining = int(vars.get('CONTENT_LENGTH', '0'))
-        headers.setHeader('content-length', self._dataRemaining)
-        self.request = self.requestFactory(self, vars['REQUEST_METHOD'], uri, http_vers[1:3], headers, prepathuri=vars['SCRIPT_NAME'])
+        self.request = self.requestFactory(self, vars['REQUEST_METHOD'], uri, http_vers[1:3], self._dataRemaining, headers, prepathuri=vars['SCRIPT_NAME'])
         
     def writeIntermediateResponse(self, code, headers=None):
         """Ignore, CGI doesn't support."""

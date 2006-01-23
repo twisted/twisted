@@ -30,7 +30,7 @@ class PreconditionTestCase(unittest.TestCase):
         self.assertEquals(preconditionsPass, expectedResult)
 
     def testWithoutHeaders(self):
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         out_headers = http_headers.Headers()
         response = http.Response(responsecode.OK, out_headers, None)
 
@@ -47,7 +47,7 @@ class PreconditionTestCase(unittest.TestCase):
         self.checkPreconditions(request, response, True, responsecode.OK)
 
     def testIfMatch(self):
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         out_headers = http_headers.Headers()
         response = http.Response(responsecode.OK, out_headers, None)
 
@@ -88,7 +88,7 @@ class PreconditionTestCase(unittest.TestCase):
         self.checkPreconditions(request, response, False, responsecode.PRECONDITION_FAILED)
 
     def testIfUnmodifiedSince(self):
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         out_headers = http_headers.Headers()
         response = http.Response(responsecode.OK, out_headers, None)
 
@@ -120,7 +120,7 @@ class PreconditionTestCase(unittest.TestCase):
         if time.time() < 946771200:
             raise "Your computer's clock is way wrong, this test will be invalid."
 
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         out_headers = http_headers.Headers()
         response = http.Response(responsecode.OK, out_headers, None)
 
@@ -157,7 +157,7 @@ class PreconditionTestCase(unittest.TestCase):
         self.checkPreconditions(request, response, True, responsecode.OK)
 
     def testIfNoneMatch(self):
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         out_headers = http_headers.Headers()
         response = http.Response(responsecode.OK, out_headers, None)
 
@@ -226,7 +226,7 @@ class PreconditionTestCase(unittest.TestCase):
 
     def testNoResponse(self):
         # Ensure that passing etag/lastModified arguments instead of response works.
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         request.method="PUT"
         request.headers.setRawHeaders("If-None-Match", ('"foo"',))
 
@@ -242,7 +242,7 @@ class PreconditionTestCase(unittest.TestCase):
 
 class IfRangeTestCase(unittest.TestCase):
     def testIfRange(self):
-        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+        request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         response = TestResponse()
 
         self.assertEquals(http.checkIfRange(request, response), True)
@@ -308,7 +308,7 @@ class TestRequest(http.Request):
         self.cmds = []
         headers = list(self.headers.getAllRawHeaders())
         headers.sort()
-        self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(headers)))
+        self.cmds.append(('init', self.method, self.uri, self.clientproto, self.stream.length, tuple(headers)))
 
     def process(self):
         pass
@@ -404,10 +404,10 @@ class HTTPTests(unittest.TestCase):
         for receivedRequest, expectedCommands in map(None, cxn.requests, cmds):
             sortedHeaderCommands = []
             for cmd in expectedCommands:
-                if len(cmd) == 5:
-                    sortedHeaders = list(cmd[4])
+                if len(cmd) == 6:
+                    sortedHeaders = list(cmd[5])
                     sortedHeaders.sort()
-                    sortedHeaderCommands.append(cmd[:4] + (tuple(sortedHeaders),))
+                    sortedHeaderCommands.append(cmd[:5] + (tuple(sortedHeaders),))
                 else:
                     sortedHeaderCommands.append(cmd)
             self.assertEquals(receivedRequest.cmds, sortedHeaderCommands)
@@ -435,7 +435,7 @@ class CoreHTTPTestCase(HTTPTests):
         # Second request which should not be handled
         cxn.client.write("GET /two\r\n")
 
-        cmds[0] += [('init', 'GET', '/', (0,9), ()), ('contentComplete',)]
+        cmds[0] += [('init', 'GET', '/', (0,9), 0, ()), ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
         response = TestResponse()
@@ -466,8 +466,8 @@ class CoreHTTPTestCase(HTTPTests):
         # Second request which should not be handled
         cxn.client.write("GET /two HTTP/1.0\r\n\r\n")
 
-        cmds[0] += [('init', 'GET', '/', (1,0),
-                     (('Content-Length', ['5']), ('Host', ['localhost']),)),
+        cmds[0] += [('init', 'GET', '/', (1,0), 5,
+                     (('Host', ['localhost']),)),
                     ('contentChunk', 'Input'),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
@@ -499,8 +499,8 @@ class CoreHTTPTestCase(HTTPTests):
         # Third request shouldn't be handled
         cxn.client.write("GET /three HTTP/1.0\r\n\r\n")
 
-        cmds[0] += [('init', 'GET', '/', (1,0),
-                     (('Content-Length', ['5']), ('Host', ['localhost']),)),
+        cmds[0] += [('init', 'GET', '/', (1,0), 5,
+                     (('Host', ['localhost']),)),
                     ('contentChunk', 'Input'),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
@@ -522,7 +522,7 @@ class CoreHTTPTestCase(HTTPTests):
 
         # Now for second request:
         cmds.append([])
-        cmds[1] += [('init', 'GET', '/two', (1,0), ()),
+        cmds[1] += [('init', 'GET', '/two', (1,0), 0, ()), 
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
@@ -552,12 +552,12 @@ class CoreHTTPTestCase(HTTPTests):
         cxn.client.write("GET /four HTTP/1.1\r\nHost: localhost\r\n\r\n")
 
         cmds.append([])
-        cmds[0] += [('init', 'GET', '/', (1,1),
-                     (('Content-Length', ['5']), ('Host', ['localhost']),)),
+        cmds[0] += [('init', 'GET', '/', (1,1), 5, 
+                     (('Host', ['localhost']),)),
                     ('contentChunk', 'Input'),
                     ('contentComplete',)]
         cmds.append([])
-        cmds[1] += [('init', 'GET', '/two', (1,1),
+        cmds[1] += [('init', 'GET', '/two', (1,1), 0, 
                      (('Host', ['localhost']),)),
                     ('contentComplete',)]
 
@@ -579,7 +579,7 @@ class CoreHTTPTestCase(HTTPTests):
 
         # Now the third request gets read:
         cmds.append([])
-        cmds[2] += [('init', 'GET', '/three', (1,1),
+        cmds[2] += [('init', 'GET', '/three', (1,1), 0,
                      (('Host', ['localhost']),)),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
@@ -607,7 +607,7 @@ class CoreHTTPTestCase(HTTPTests):
 
         # Fourth request shows up
         cmds.append([])
-        cmds[3] += [('init', 'GET', '/four', (1,1),
+        cmds[3] += [('init', 'GET', '/four', (1,1), 0,
                      (('Host', ['localhost']),)),
                     ('contentComplete',)]
         data += "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nThree"
@@ -631,7 +631,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
         cxn.client.write("GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nHost: localhost\r\n\r\n5\r\nInput\r\n")
 
-        cmds[0] += [('init', 'GET', '/', (1,1),
+        cmds[0] += [('init', 'GET', '/', (1,1), None,
                      (('Host', ['localhost']),)),
                     ('contentChunk', 'Input')]
 
@@ -667,8 +667,8 @@ class CoreHTTPTestCase(HTTPTests):
         cmds = [[]]
         data = ""
         cxn.client.write("GET / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\nExpect: 100-continue\r\n\r\n")
-        cmds[0] += [('init', 'GET', '/', (1,1),
-                     (('Content-Length', ['5']), ('Expect', ['100-continue']), ('Host', ['localhost'])))]
+        cmds[0] += [('init', 'GET', '/', (1,1), 5,
+                     (('Expect', ['100-continue']), ('Host', ['localhost'])))]
         self.compareResult(cxn, cmds, data)
 
         cxn.requests[0].stream.read()
@@ -697,8 +697,8 @@ class CoreHTTPTestCase(HTTPTests):
         cmds = [[]]
         data = ""
         cxn.client.write("GET / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\nExpect: 100-continue\r\n\r\n")
-        cmds[0] += [('init', 'GET', '/', (1,1),
-                     (('Content-Length', ['5']), ('Host', ['localhost']), ('Expect', ['100-continue'])))]
+        cmds[0] += [('init', 'GET', '/', (1,1), 5,
+                     (('Host', ['localhost']), ('Expect', ['100-continue'])))]
         self.compareResult(cxn, cmds, data)
 
         response = TestResponse()
@@ -720,7 +720,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
 
         cxn.client.write("GET / HTTP/1.1\r\nHost: localhost\r\nFoo: yada\r\n yada\r\n\r\n")
-        cmds[0] += [('init', 'GET', '/', (1,1),
+        cmds[0] += [('init', 'GET', '/', (1,1), 0,
                      (('Host', ['localhost']), ('Foo', ['yada yada']),)),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
@@ -747,7 +747,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
 
         cxn.client.write("GET / HTTP/1.1\r\n\r\n")
-        cmds[0] += [('init', 'GET', '/', (1,1), ()),
+        cmds[0] += [('init', 'GET', '/', (1,1), 0, ()),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
@@ -767,13 +767,13 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
 
         cxn.client.write("GET / HTTP/1.1\r\n\r\n")
-        cmds[0] += [('init', 'GET', '/', (1,1), ()),
+        cmds[0] += [('init', 'GET', '/', (1,1), 0, ()),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
         cxn.client.write("GET / HTTP/1.1\r\nConnection: close\r\n\r\n")
         cmds.append([])
-        cmds[1] += [('init', 'GET', '/', (1,1), ()),
+        cmds[1] += [('init', 'GET', '/', (1,1), 0, ()),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
@@ -801,8 +801,8 @@ class CoreHTTPTestCase(HTTPTests):
 
         # Some broken clients (old IEs) send an extra CRLF after post
         cxn.client.write("POST / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\n\r\nInput\r\n")
-        cmds[0] += [('init', 'POST', '/', (1,1),
-                     (('Content-Length', ['5']), ('Host', ['localhost']))),
+        cmds[0] += [('init', 'POST', '/', (1,1), 5,
+                     (('Host', ['localhost']),)),
                     ('contentChunk', 'Input'),
                     ('contentComplete',)]
 
@@ -810,7 +810,7 @@ class CoreHTTPTestCase(HTTPTests):
 
         cxn.client.write("GET /two HTTP/1.1\r\n\r\n")
         cmds.append([])
-        cmds[1] += [('init', 'GET', '/two', (1,1), ()),
+        cmds[1] += [('init', 'GET', '/two', (1,1), 0, ()),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
 
@@ -823,7 +823,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
 
         cxn.client.write("GET / HTTP/1.1\r\nHost: localhost\r\n\r\nGET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
-        cmds[0] += [('init', 'GET', '/', (1,1),
+        cmds[0] += [('init', 'GET', '/', (1,1), 0,
                      (('Host', ['localhost']),)),
                     ('contentComplete',)]
         self.compareResult(cxn, cmds, data)
@@ -835,6 +835,33 @@ class CoreHTTPTestCase(HTTPTests):
         self.compareResult(cxn, cmds, data)
         self.assertDone(cxn)
 
+    def testIgnoreBogusContentLength(self):
+        # Ensure that content-length is ignored when transfer-encoding
+        # is also specified.
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+        cxn.client.write("GET / HTTP/1.1\r\nContent-Length: 100\r\nTransfer-Encoding: chunked\r\nHost: localhost\r\n\r\n5\r\nInput\r\n")
+
+        cmds[0] += [('init', 'GET', '/', (1,1), None,
+                     (('Host', ['localhost']),)),
+                    ('contentChunk', 'Input')]
+
+        self.compareResult(cxn, cmds, data)
+
+        cxn.client.write("0\r\n\r\n")
+        cmds[0] += [('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        response = TestResponse()
+        response.finish()
+        cxn.requests[0].writeResponse(response)
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+
+        cxn.client.loseConnection()
+        self.assertDone(cxn)
+
 class ErrorTestCase(HTTPTests):
     def assertStartsWith(self, first, second, msg=None):
         self.assert_(first.startswith(second), '%r.startswith(%r)' % (first, second))
@@ -842,8 +869,9 @@ class ErrorTestCase(HTTPTests):
     def checkError(self, cxn, code):
         self.iterate(cxn)
         self.assertStartsWith(cxn.client.data, "HTTP/1.1 %d "%code)
-        self.assert_(cxn.client.data.find("\r\nConnection: close\r\n") != -1)
-
+        self.assertIn("\r\nConnection: close\r\n", cxn.client.data)
+        # Ensure error messages have a defined content-length.
+        self.assertIn("\r\nContent-Length:", cxn.client.data)
         self.assertDone(cxn)
 
     def testChunkingError1(self):
@@ -941,7 +969,7 @@ class PipelinedErrorTestCase(ErrorTestCase):
         cxn = ErrorTestCase.connect(self)
         cxn.client.write("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
 
-        cmds = [[('init', 'GET', '/', (1,1),
+        cmds = [[('init', 'GET', '/', (1,1), 0,
                  (('Host', ['localhost']),)),
                 ('contentComplete', )]]
         data = ""

@@ -277,12 +277,14 @@ class IChanRequestCallbacks(Interface):
     """The bits that are required of a Request for interfacing with a
     IChanRequest object"""
 
-    def __init__(chanRequest, command, path, version, in_headers):
+    def __init__(chanRequest, command, path, version, contentLength, inHeaders):
         """Create a new Request object.
         @param chanRequest: the IChanRequest object creating this request
         @param command: the HTTP command e.g. GET
         @param path: the HTTP path e.g. /foo/bar.html
-        @param version: the parsed HTTP version e.g. (1,1)"""
+        @param version: the parsed HTTP version e.g. (1,1)
+        @param contentLength: how much data to expect, or None if unknown
+        @param inHeaders: the request headers"""
 
     def process():
         """Process the request. Called as soon as it's possibly reasonable to

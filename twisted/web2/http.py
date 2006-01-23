@@ -115,7 +115,6 @@ class StatusResponse (Response):
         Response.__init__(self, code=code, stream=output)
 
         self.headers.setHeader("content-type", http_headers.MimeType("text", "html", mime_params))
-        self.headers.setHeader("content-length", len(output))
 
         self.description = description
 
@@ -311,7 +310,7 @@ class Request(object):
     
     known_expects = ('100-continue',)
     
-    def __init__(self, chanRequest, command, path, version, headers):
+    def __init__(self, chanRequest, command, path, version, contentLength, headers):
         """
         @param chanRequest: the channel request we're associated with.
         """
@@ -326,7 +325,7 @@ class Request(object):
             doStartReading = self._sendContinue
         else:
             doStartReading = None
-        self.stream = _NotifyingProducerStream(headers.getHeader('content-length', None), doStartReading)
+        self.stream = _NotifyingProducerStream(contentLength, doStartReading)
         self.stream.registerProducer(self.chanRequest, True)
         
     def checkExpect(self):

@@ -15,7 +15,7 @@ class TestChanRequest:
     remoteHost = address.IPv4Address('TCP', 'remotehost', 34567)
 
     
-    def __init__(self, site, method, prepath, uri,
+    def __init__(self, site, method, prepath, uri, length=None,
                  headers=None, version=(1,1), content=None):
         self.site = site
         self.method = method
@@ -30,6 +30,7 @@ class TestChanRequest:
                                       self.method,
                                       self.uri,
                                       self.http_version,
+                                      length,
                                       self.headers,
                                       site=self.site,
                                       prepathuri=self.prepath)
@@ -104,22 +105,20 @@ class BaseCase(unittest.TestCase):
     version = (1, 1)
     wait_timeout = 5.0
     
-    def chanrequest(self, root, uri, headers, method, version, prepath, content):
+    def chanrequest(self, root, uri, length, headers, method, version, prepath, content):
         site = server.Site(root)
-        return TestChanRequest(site, method, prepath, uri, headers, version, content)
+        return TestChanRequest(site, method, prepath, uri, length, headers, version, content)
 
     def getResponseFor(self, root, uri, headers={},
-                       method=None, version=None, prepath='', content=None):
+                       method=None, version=None, prepath='', content=None, length=None):
         if not isinstance(headers, http_headers.Headers):
             headers = http_headers.Headers(headers)
-        if not headers.hasHeader('content-length'):
-            headers.setHeader('content-length', 0)
         if method is None:
             method = self.method
         if version is None:
             version = self.version
 
-        cr = self.chanrequest(root, uri, headers, method, version, prepath, content)
+        cr = self.chanrequest(root, uri, length, headers, method, version, prepath, content)
         cr.request.process()
         return cr.deferredFinish
 

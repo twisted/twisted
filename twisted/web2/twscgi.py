@@ -33,6 +33,8 @@ class SCGIClientResource(resource.LeafResource):
         return doSCGI(request, self.host, self.port)
 
 def doSCGI(request, host, port):
+    if request.stream.length is None:
+        return http.Response(responsecode.LENGTH_REQUIRED)
     factory = SCGIClientProtocolFactory(request)
     reactor.connectTCP(self.host, self.port, factory)
     return factory.deferred
@@ -45,7 +47,7 @@ class SCGIClientProtocol(basic.LineReceiver):
         self.request = request
         self.deferred = deferred
         self.response = http.Response(stream=stream.ProducerStream())
-    
+
     def connectionMade(self):
         # Ooh, look someone did all the hard work for me :).
         env = twcgi.createCGIEnvironment(self.request)

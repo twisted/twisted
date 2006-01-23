@@ -24,8 +24,8 @@ class TestFileSaver(BaseCase):
         
         return self.getResponseFor(resrc, '/',
                             headers={'host': 'foo',
-                                     'content-length': len(content),
                                      'content-type': ctype },
+                            length=len(content),
                             method='POST',
                             content="""-----weeboundary\r
 Content-Disposition: form-data; name="%s"; filename="%s"\r
