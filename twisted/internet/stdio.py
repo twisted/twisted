@@ -32,11 +32,11 @@ class StandardIO(object):
     _writer = None
     disconnected = False
     disconnecting = False
-    
+
     def __init__(self, proto, stdin=0, stdout=1):
         from twisted.internet import reactor
         self.protocol = proto
-        
+
         self._reader=process.ProcessReader(reactor, self, 'read', stdin)
         self._reader.startReading()
         self._writer=process.ProcessWriter(reactor, self, 'write', stdout)
@@ -47,27 +47,27 @@ class StandardIO(object):
     def loseWriteConnection(self):
         if self._writer is not None:
             self._writer.loseConnection()
-        
+
     def write(self, data):
         if self._writer is not None:
             self._writer.write(data)
-            
+
     def writeSequence(self, data):
         if self._writer is not None:
             self._writer.writeSequence(data)
-            
+
     def loseConnection(self):
         self.disconnecting = True
-        
+
         if self._writer is not None:
             self._writer.loseConnection()
         if self._reader is not None:
             # Don't loseConnection, because we don't want to SIGPIPE it.
             self._reader.stopReading()
-        
+
     def getPeer(self):
         return PipeAddress()
-    
+
     def getHost(self):
         return PipeAddress()
 
@@ -79,7 +79,7 @@ class StandardIO(object):
     def childConnectionLost(self, fd, reason):
         if self.disconnected:
             return
-        
+
         if reason.value.__class__ == error.ConnectionDone:
             # Normal close
             if fd == 'read':
@@ -91,31 +91,31 @@ class StandardIO(object):
 
     def connectionLost(self, reason):
         self.disconnected = True
-        
+
         # Make sure to cleanup the other half
         _reader = self._reader
         _writer = self._writer
         protocol = self.protocol
         self._reader = self._writer = None
         self.protocol = None
-        
+
         if _writer is not None and not _writer.disconnected:
             _writer.connectionLost(reason)
-        
+
         if _reader is not None and not _reader.disconnected:
             _reader.connectionLost(reason)
-        
+
         try:
             protocol.connectionLost(reason)
         except:
             log.err()
-        
+
     def _writeConnectionLost(self, reason):
         self._writer=None
         if self.disconnecting:
             self.connectionLost(reason)
             return
-        
+
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
@@ -142,7 +142,7 @@ class StandardIO(object):
             producer.stopProducing()
         else:
             self._writer.registerProducer(producer, streaming)
-            
+
     def unregisterProducer(self):
         if self._writer is not None:
             self._writer.unregisterProducer()
