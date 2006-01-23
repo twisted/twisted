@@ -467,8 +467,8 @@ class CompoundStreamTest:
     >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
 
     Again, the length is the sum:
-    >>> s.length
-    58L
+    >>> int(s.length)
+    58
     
     >>> str(s.read())
     "We've got some text!\\n"
