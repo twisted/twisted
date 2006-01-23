@@ -486,6 +486,31 @@ def callRemote(self, _name, *args, **kw):
     consistent. If you can't summarize your changes in one short line, this
     is probably a sign that they should be broken into multiple checkins.</p>
 
+    <h2>Source Control</h2>
+
+    <p>Twisted currently uses Subversion for source control.  All
+    development <strong>should</strong> occur using branches; when a task is
+    considered complete another Twisted developer may review it and if no
+    problems are found, it may be merged into trunk (TODO: Describe this
+    more thoroughly (Divmod wiki has <a
+    href="http://divmod.org/trac/wiki/BranchBasedDevelopment">a start</a>)). 
+    Branches <strong>must</strong> be used for major development.  Branches
+    should be managed using <a
+    href="http://divmod.org/trac/wiki/DivmodCombinator">Combinator</a> (but
+    if you can manage them in some other way without anyone noticing, knock
+    yourself out).</p>
+
+    <p>Certain features of Subversion should be avoided.</p>
+
+    <ul>
+    <li>
+    Do not set the <code class="shell">svn:ignore</code> property on any file
+    or directory.  If you wish to ignore certain files use the <code
+    class="shell">global-ignores</code> feature of <code
+    class="shell">~/.subversion/config</code>.
+    </li>
+    </ul>
+
     <h2>Recommendations</h2>
 
     <p>These things aren't necessarily standardizeable (in that
