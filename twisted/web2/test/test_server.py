@@ -95,6 +95,7 @@ class BaseTestResource(resource.Resource):
     def responseStream(self):
         return stream.MemoryStream(self.responseText)
 
+_unset = object()
 class BaseCase(unittest.TestCase):
     """
     Base class for test cases that involve testing the result
@@ -110,9 +111,15 @@ class BaseCase(unittest.TestCase):
         return TestChanRequest(site, method, prepath, uri, length, headers, version, content)
 
     def getResponseFor(self, root, uri, headers={},
-                       method=None, version=None, prepath='', content=None, length=None):
+                       method=None, version=None, prepath='', content=None, length=_unset):
         if not isinstance(headers, http_headers.Headers):
             headers = http_headers.Headers(headers)
+        if length is _unset:
+            if content is not None:
+                length = len(content)
+            else:
+                length = 0
+            
         if method is None:
             method = self.method
         if version is None:
