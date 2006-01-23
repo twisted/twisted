@@ -3,17 +3,13 @@ from __future__ import generators
 import re
 from zope.interface import implements
 import urllib
+import tempfile
 
 from twisted.internet import defer
 from twisted.web2.stream import IStream, FileStream, BufferedStream, readStream
 from twisted.web2.stream import generatorToStream, readAndDiscard
 from twisted.web2 import http_headers
 from cStringIO import StringIO
-
-try:
-    from tempfile import NamedTemporaryFile as TemporaryFile
-except:
-    from tempfile import TemporaryFile
 
 # This functionality of allowing non-deferreds to be yielded
 # perhaps ought to be part of defgen
@@ -271,7 +267,7 @@ def parseMultipartFormData(stream, boundary,
             outfile = StringIO()
             maxBuf = min(maxSize, maxMem)
         else:
-            outfile = TemporaryFile()
+            outfile = tempfile.NamedTemporaryFile()
             maxBuf = maxSize
         x = wait(readIntoFile(stream, outfile, maxBuf)); yield x; x=x.getResult()
         if filename is None:
