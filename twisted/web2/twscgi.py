@@ -30,11 +30,13 @@ class SCGIClientResource(resource.LeafResource):
         self.port = port
     
     def renderHTTP(self, request):
-        factory = SCGIClientProtocolFactory(request)
-        reactor.connectTCP(self.host, self.port, factory)
-        return factory.deferred
-        
-        
+        return doSCGI(request, self.host, self.port)
+
+def doSCGI(request, host, port):
+    factory = SCGIClientProtocolFactory(request)
+    reactor.connectTCP(self.host, self.port, factory)
+    return factory.deferred
+    
 class SCGIClientProtocol(basic.LineReceiver):
     """Protocol for talking to a SCGI server.
     """

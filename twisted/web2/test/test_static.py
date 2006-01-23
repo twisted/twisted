@@ -37,17 +37,17 @@ Content-Type: %s\r
 
     def _CbAssertInResponse(self, (code, headers, data, failed),
                             expected_response, expectedFailure=False):
-	
-	expected_code, expected_headers, expected_data = expected_response
-	self.assertEquals(code, expected_code)
-	
-	if expected_data is not None:
-	    self.failUnlessSubstring(expected_data, data)
+        
+        expected_code, expected_headers, expected_data = expected_response
+        self.assertEquals(code, expected_code)
+        
+        if expected_data is not None:
+            self.failUnlessSubstring(expected_data, data)
 
-	for key, value in expected_headers.iteritems():
-	    self.assertEquals(headers.getHeader(key), value)
+        for key, value in expected_headers.iteritems():
+            self.assertEquals(headers.getHeader(key), value)
 
-	self.assertEquals(failed, expectedFailure)
+        self.assertEquals(failed, expectedFailure)
 
     def fileNameFromResponse(self, response):
         (code, headers, data, failure) = response

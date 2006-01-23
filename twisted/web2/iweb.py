@@ -284,6 +284,10 @@ class IChanRequestCallbacks(Interface):
         @param path: the HTTP path e.g. /foo/bar.html
         @param version: the parsed HTTP version e.g. (1,1)"""
 
+    def process():
+        """Process the request. Called as soon as it's possibly reasonable to
+        return a response. handleContentComplete may or may not have been called already."""
+        
     def handleContentChunk(data):
         """Called when a piece of incoming data has been received."""
         

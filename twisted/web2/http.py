@@ -81,6 +81,9 @@ class Response(object):
         if stream is not None:
             self.stream = IByteStream(stream)
 
+    def __repr__(self):
+        return "<%s.%s code=%d, streamlen=%s>" % (self.__module__, self.__class__.__name__, self.code, self.stream.length)
+
 class StatusResponse (Response):
     """
     A Response object which simply contains a status code and a description of
@@ -130,7 +133,7 @@ class RedirectResponse (StatusResponse):
         )
 
         self.headers.setHeader("location", location)
-
+        
 def NotModifiedResponse(oldResponse=None):
     if oldResponse is not None:
         headers=http_headers.Headers()
@@ -335,7 +338,7 @@ class Request(object):
                 raise HTTPError(responsecode.EXPECTATION_FAILED)
     
     def process(self):
-        """called by __init__ to let you process the request.
+        """Called by channel to let you process the request.
         
         Can be overridden by a subclass to do something useful."""
         pass
@@ -385,7 +388,7 @@ class Request(object):
             # and decide to do so anyways at the same time we're sending back 
             # this response. Thus, the read state is unknown after this.
             # We must close the connection.
-            self.chanRequest.persistent = False
+            self.chanRequest.channel.setReadPersistent(False)
             # Nothing more will be read
             self.chanRequest.allContentReceived()
 

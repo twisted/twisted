@@ -35,10 +35,10 @@ class HeaderHandler(object):
     HTTPGenerators = {}
 
     def __init__(self, parsers=None, generators=None):
-	if parsers:
-	    self.HTTPParsers.update(parsers)
-	if generators:
-	    self.HTTPGenerators.update(generators)
+        if parsers:
+            self.HTTPParsers.update(parsers)
+        if generators:
+            self.HTTPGenerators.update(generators)
 
     def parse(self, name, header):
         parser = self.HTTPParsers.get(name, None)
@@ -71,22 +71,22 @@ class HeaderHandler(object):
         return header
 
     def updateParsers(self, parsers):
-	casemappingify(parsers)
-	self.HTTPParsers.update(lowerify(parsers))
+        casemappingify(parsers)
+        self.HTTPParsers.update(lowerify(parsers))
 
     def addParser(self, name, value):
-	self.updateParsers({name: value})
+        self.updateParsers({name: value})
 
     def updateGenerators(self, generators):
-	casemappingify(generators)
-	self.HTTPGenerators.update(lowerify(generators))
+        casemappingify(generators)
+        self.HTTPGenerators.update(lowerify(generators))
 
     def addGenerators(self, name, value):
-	self.updateGenerators({name: value})
+        self.updateGenerators({name: value})
 
     def update(self, parsers, generators):
-	self.updateParsers(parsers)
-	self.updateGenerators(generators)
+        self.updateParsers(parsers)
+        self.updateGenerators(generators)
 
 
 DefaultHTTPHandler = HeaderHandler()
@@ -248,7 +248,7 @@ def split(seq, delim):
     for item in seq:
         if item == delim:
             yield cur
-            cur = []
+            cur = []        
         else:
             cur.append(item)
     yield cur
@@ -345,7 +345,7 @@ def generateKeyValues(kvs):
 
 class MimeType(object):
     def fromString(klass, mimeTypeString):
-	return DefaultHTTPHandler.parse('content-type', [mimeTypeString])
+        return DefaultHTTPHandler.parse('content-type', [mimeTypeString])
 
     fromString = classmethod(fromString)
 
@@ -1141,18 +1141,18 @@ class Headers(object):
         self._headers = {}
 
     def _toParsed(self, name):
-	r = self._raw_headers.get(name, None)
-	h = self.handler.parse(name, r)
-	if h is not None:
-	    self._headers[name] = h
-	return h
+        r = self._raw_headers.get(name, None)
+        h = self.handler.parse(name, r)
+        if h is not None:
+            self._headers[name] = h
+        return h
 
     def _toRaw(self, name):
-	h = self._headers.get(name, None)
-	r = self.handler.generate(name, h)
-	if r is not None:
-	    self._raw_headers[name] = r
-	return r
+        h = self._headers.get(name, None)
+        r = self.handler.generate(name, h)
+        if r is not None:
+            self._raw_headers[name] = r
+        return r
 
     def hasHeader(self, name):
         """Does a header with the given name exist?"""

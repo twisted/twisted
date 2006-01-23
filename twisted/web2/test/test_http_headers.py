@@ -48,8 +48,8 @@ class HeadersAPITest(unittest.TestCase):
 
         rawvalue = ("value1", "value2")
         rawvalue2 = ("value3", "value4")
-	handler = HeaderHandler(parsers={'test':(parse,)},
-				generators={'test':(generate,)})
+        handler = HeaderHandler(parsers={'test':(parse,)},
+                                generators={'test':(generate,)})
 
         h = http_headers.Headers(handler=handler)
         h.setRawHeaders("test", rawvalue)
@@ -666,9 +666,9 @@ class TestMimeType(unittest.TestCase):
                                           (('param', None),
                                            ('key', 'value')))
 
-	stringMime = http_headers.MimeType.fromString('text/plain;key=value;param')
+        stringMime = http_headers.MimeType.fromString('text/plain;key=value;param')
 
         self.assertEquals(kwargMime, dictMime)
         self.assertEquals(dictMime, tupleMime)
         self.assertEquals(kwargMime, tupleMime)
-	self.assertEquals(kwargMime, stringMime)
+        self.assertEquals(kwargMime, stringMime)
