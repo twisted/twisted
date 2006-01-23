@@ -6,6 +6,7 @@
 """Session Initialization Protocol tests."""
 
 from twisted.trial import unittest
+from twisted.trial.util import spinUntil
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
 
@@ -593,8 +594,7 @@ class LiveTest(unittest.TestCase):
         r.addHeader("via", sip.Via("127.0.0.1", port=p).toString())
         self.client.sendMessage(sip.URL(host="127.0.0.1", port=self.serverAddress[1]),
                                 r)
-        while not len(self.client.received):
-            reactor.iterate()
+        spinUntil(lambda: len(self.client.received))
         self.assertEquals(len(self.client.received), 1)
         r = self.client.received[0]
         self.assertEquals(r.code, 200)
@@ -613,8 +613,7 @@ class LiveTest(unittest.TestCase):
         r.addHeader("via", sip.Via("127.0.0.1", port=p, rport=True).toString())
         self.client.sendMessage(sip.URL(host="127.0.0.1", port=self.serverAddress[1]),
                                 r)
-        while not len(self.client.received):
-            reactor.iterate()
+        spinUntil(lambda: len(self.client.received))
         self.assertEquals(len(self.client.received), 1)
         r = self.client.received[0]
         self.assertEquals(r.code, 200)
