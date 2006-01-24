@@ -59,8 +59,19 @@ class ErrorResponse (Response):
     def __init__(self, code, error):
         """
         @param code: a response code.
-        @param error: an L{davxml.WebDAVElement} identifying the error.
+        @param error: an L{davxml.WebDAVElement} identifying the error, or a
+            tuple C{(namespace, name)} with which to create an empty element
+            denoting the error.  (The latter is useful in the case of
+            preconditions ans postconditions, not all of which have defined
+            XML element classes.)
         """
+        if type(error) is tuple:
+            xml_namespace, xml_name = error
+            class EmptyError (davxml.WebDAVEmptyElement):
+                namespace = xml_namespace
+                name      = xml_name
+            error = EmptyError()
+
         output = davxml.Error(error).toxml()
 
         Response.__init__(self, code=code, stream=output)
