@@ -242,15 +242,15 @@ class DAVFile (File):
 
     def contentType(self):
         # Allow dead property to override
-        if (davxml.dav_namespace, "getcontenttype") in self.dead_properties:
-            return self.dead_properties[(davxml.dav_namespace, "getcontenttype")]
+        if (davxml.dav_namespace, "getcontenttype") in self.deadProperties:
+            return self.deadProperties[(davxml.dav_namespace, "getcontenttype")]
         else:
             return super(DAVFile, self).contentType()
 
     def displayName(self):
         # Allow dead property to override
-        if (davxml.dav_namespace, "displayname") in self.dead_properties:
-            return self.dead_properties[(davxml.dav_namespace, "displayname")]
+        if (davxml.dav_namespace, "displayname") in self.deadProperties:
+            return self.deadProperties[(davxml.dav_namespace, "displayname")]
         else:
             return super(DAVFile, self).displayName()
 
@@ -291,8 +291,8 @@ class DAVFile (File):
                     else:
                         yield (child, name)
 
-    properties      = property(LivePropertyStore)
-    dead_properties = property(DeadPropertyStore)
+    properties     = property(LivePropertyStore)
+    deadProperties = property(DeadPropertyStore)
 
     def hasProperty(self, property):
         """

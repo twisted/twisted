@@ -50,7 +50,7 @@ class xattrPropertyStore (object, UserDict.DictMixin):
     # Dead properties are stored as extended attributes on disk.  In order to
     # avoid conflicts with other attributes, prefix dead property names.
     #
-    dead_property_xattr_prefix = "WebDAV:"
+    deadPropertyXattrPrefix = "WebDAV:"
 
     def _encode(clazz, name):
         #
@@ -62,11 +62,11 @@ class xattrPropertyStore (object, UserDict.DictMixin):
         for i in range(len(result)):
             c = result[i]
             if c in "%/": result[i] = "%%%02X" % (ord(c),)
-        r = clazz.dead_property_xattr_prefix + ''.join(result)
+        r = clazz.deadPropertyXattrPrefix + ''.join(result)
         return r
 
     def _decode(clazz, name):
-        name = urllib.unquote(name[len(clazz.dead_property_xattr_prefix):])
+        name = urllib.unquote(name[len(clazz.deadPropertyXattrPrefix):])
 
         index = name.find("}")
     
@@ -112,7 +112,7 @@ class xattrPropertyStore (object, UserDict.DictMixin):
             return False
 
     def __iter__(self):
-        prefix     = self.dead_property_xattr_prefix
+        prefix     = self.deadPropertyXattrPrefix
         prefix_len = len(prefix)
 
         for key in self.attrs:
@@ -123,7 +123,7 @@ class xattrPropertyStore (object, UserDict.DictMixin):
                 pass
 
     def keys(self):
-        prefix     = self.dead_property_xattr_prefix
+        prefix     = self.deadPropertyXattrPrefix
         prefix_len = len(prefix)
 
         return [ self._decode(key) for key in self.attrs if key.startswith(prefix) ]

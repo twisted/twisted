@@ -45,7 +45,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
     davxml.WebDAVElement instances.
     """
 
-    live_properties = (
+    liveProperties = (
         (dav_namespace, "resourcetype"    ),
         (dav_namespace, "getetag"         ),
         (dav_namespace, "getcontenttype"  ),
@@ -56,14 +56,14 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         (dav_namespace, "supportedlock"   ),
     )
 
-    overridable_live_properties = (
+    overridableLiveProperties = (
         ((dav_namespace, "getcontenttype"), davxml.GETContentType),
         ((dav_namespace, "displayname"   ), davxml.DisplayName   ),
     )
 
     def __init__(self, resource):
         self.resource = resource
-        self.dead_properties = resource.dead_properties
+        self.deadProperties = resource.deadProperties
 
     def __getitem__(self, key):
         namespace, name = key
@@ -71,8 +71,8 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         if namespace == dav_namespace:
             if name == "resourcetype":
                 # Allow live property to be overriden by dead property
-                if key in self.dead_properties:
-                    return self.dead_properties[key]
+                if key in self.deadProperties:
+                    return self.deadProperties[key]
                 if self.resource.isCollection():
                     return davxml.ResourceType.collection
                 return davxml.ResourceType.empty
@@ -101,41 +101,41 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
                     davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
                 )
 
-        return self.dead_properties[key]
+        return self.deadProperties[key]
 
     def __setitem__(self, key, value):
         assert isinstance(value, davxml.WebDAVElement)
 
-        for qname, clazz in self.overridable_live_properties:
+        for qname, clazz in self.overridableLiveProperties:
             if key == qname:
                 if not isinstance(value, clazz):
                     raise ValueError("Invalid value for %s property: %r" % (key, value))
                 else:
                     break
         else:
-            if key in self.live_properties:
+            if key in self.liveProperties:
                 raise ValueError("Live property %r cannot be set." % (key,))
 
-        self.dead_properties[key] = value
+        self.deadProperties[key] = value
 
         # Update the resource because we've modified it
         self.resource.fp.restat()
 
     def __delitem__(self, key):
-        if key in self.live_properties:
+        if key in self.liveProperties:
             raise ValueError("Live property %s cannot be removed." % (key,))
 
-        del(self.dead_properties[key])
+        del(self.deadProperties[key])
 
     def __contains__(self, key):
-        return key in self.live_properties or key in self.dead_properties
+        return key in self.liveProperties or key in self.deadProperties
 
     def __iter__(self):
-        for key in self.live_properties: yield key
-        for key in self.dead_properties: yield key
+        for key in self.liveProperties: yield key
+        for key in self.deadProperties: yield key
 
     def keys(self):
-        return tuple(self.live_properties) + tuple(self.dead_properties)
+        return tuple(self.liveProperties) + tuple(self.deadProperties)
 
     def allpropKeys(self):
         keys = []
