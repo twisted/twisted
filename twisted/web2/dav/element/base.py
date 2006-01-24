@@ -164,6 +164,9 @@ class WebDAVElement (object):
         else:
             return NotImplemented
 
+    def __contains__(self, child):
+        return child in self.children
+
     def writeXML(self, output):
         document = xml.dom.minidom.Document()
         self.addToDOM(document, None)
