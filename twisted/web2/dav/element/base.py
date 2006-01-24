@@ -144,9 +144,6 @@ class WebDAVElement (object):
 
         self.attributes = attributes
 
-    def __str__(self):
-        return "(%s)%s" % (self.__class__, self.sname())
-
     def __repr__(self):
         if hasattr(self, "children"):
             return "<%s %r: %r>" % (self.sname(), self.attributes, self.children)
@@ -163,6 +160,9 @@ class WebDAVElement (object):
             )
         else:
             return NotImplemented
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __contains__(self, child):
         return child in self.children
@@ -256,6 +256,9 @@ class PCDATAElement (object):
             return self.data == other
         else:
             return NotImplemented
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def isWhitespace(self):
         for char in str(self):
