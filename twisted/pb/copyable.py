@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pb.test.test_copyable -*-
 
 # this module is responsible for all copy-by-value objects
 

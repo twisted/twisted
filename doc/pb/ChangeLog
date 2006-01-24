@@ -1,5 +1,9 @@
 2006-01-23  Brian Warner  <warner@lothar.com>
 
+	* test/test_copyable.py: split Copyable tests out of test_pb.py
+	* test/common.py: factor out some more common test utility pieces
+	* copyable.py: add suitable test-case-name tag
+
 	* base32.py: rename Base32.py to base32.py, to match Twisted
 	naming conventions
 	* crypto.py: same
