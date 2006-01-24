@@ -1057,8 +1057,6 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
 
     def __init__(self, controller):
         self.controller = controller
-        self.liveMessages = {}
-        self.resends = {}
         self.id = random.randrange(2 ** 10, 2 ** 15)
 
     def pickID(self):
@@ -1079,9 +1077,6 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         self.resends = {}
 
     def writeMessage(self, message, address):
-        if not self.transport:
-            # XXX transport might not get created automatically, use callLater?
-            self.startListening()
         self.transport.write(message.toStr(), address)
 
     def startListening(self):
@@ -1124,6 +1119,12 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
 
         @rtype: C{Deferred}
         """
+        from twisted.internet import reactor
+
+        if not self.transport:
+            # XXX transport might not get created automatically, use callLater?
+            self.startListening()
+
         if id is None:
             id = self.pickID()
         else:
@@ -1131,14 +1132,13 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         m = Message(id, recDes=1)
         m.queries = queries
 
-        from twisted.internet import reactor
-
         resultDeferred = defer.Deferred()        
         cancelCall = reactor.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
 
         self.writeMessage(m, address)
         return resultDeferred
+
 
     def _clearFailed(self, deferred, id):
         try:
