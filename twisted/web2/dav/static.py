@@ -239,6 +239,20 @@ class DAVFile (File):
     # WebDAV
     ##
 
+    def contentType(self):
+        # Allow dead property to override
+        if (dav_namespace, "getcontenttype") in self.dead_properties:
+            return self.dead_properties[(dav_namespace, "getcontenttype")]
+        else:
+            return super(DAVFile, self).contentType()
+
+    def displayName(self):
+        # Allow dead property to override
+        if (dav_namespace, "displayname") in self.dead_properties:
+            return self.dead_properties[(dav_namespace, "displayname")]
+        else:
+            return super(DAVFile, self).displayName()
+
     def isCollection(self):
         """
         Returns True if this resource is a collection resource, False otherwise.

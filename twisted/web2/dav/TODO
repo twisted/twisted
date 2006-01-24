@@ -1,11 +1,3 @@
-Clean up docstrings
-
-Resource:
-  Does render() really make sense as distinct from render_GET?
-
-File:
-  Reconcile DAVFile's listNames() with File's
-
 IResource:
   Add site to interface (it's in Resource)
 
@@ -18,11 +10,7 @@ IDAVResource:
 
 Integrate authentication configuration into DAV methods.
 
-Add attributes to http_* methods?
-  per resource ALLOW?
-    allowed()
-  pre/post conditions per method (see deltaV)
-    checkPreConditions()
-    checkPostConditions() - perhaps more like an exception handler?
+Most HTTP preconditions up to Resource.
+pre/post conditions per method (see deltaV)
 
 Figure out how to do logging without hacking renderHTTP()

@@ -75,10 +75,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
                 return davxml.GETETag.fromString(self.resource.etag().generate())
     
             if name == "getcontenttype":
-                # Allow live property to be overriden by dead property
-                if (dav_namespace, "getcontenttype") in self.dead_properties:
-                    return self.dead_properties[(dav_namespace, "getcontenttype")]
-                return davxml.GETContentType.fromString(self.resource.type)
+                return davxml.GETContentType.fromString(self.resource.contentType())
         
             if name == "getcontentlength":
                 return davxml.GETContentLength.fromString(self.resource.contentLength())
@@ -95,7 +92,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
             if name == "supportedlock":
                 return davxml.SupportedLock(
                     davxml.LockEntry(davxml.LockScope.exclusive, davxml.LockType.write),
-                    davxml.LockEntry(davxml.LockScope.shared, davxml.LockType.write),
+                    davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
                 )
 
         return self.dead_properties[key]
@@ -103,11 +100,19 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
     def __setitem__(self, key, value):
         assert isinstance(value, davxml.WebDAVElement)
 
-        if key == (dav_namespace, "getcontenttype"):
-            if not isinstance(value, davxml.GETContentType):
-                raise ValueError("Invalid value for %s property: %r" % (key, value))
-        elif key in self.live_properties:
-            raise ValueError("Live property %r cannot be set." % (key,))
+        for qname, clazz in (
+            # These live properties may be overriden by dead properties
+            ((dav_namespace, "getcontenttype"), davxml.GETContentType),
+            ((dav_namespace, "displayname"   ), davxml.DisplayName   ),
+        ):
+            if key == qname:
+                if not isinstance(value, clazz):
+                    raise ValueError("Invalid value for %s property: %r" % (key, value))
+                else:
+                    break
+        else:
+            if key in self.live_properties:
+                raise ValueError("Live property %r cannot be set." % (key,))
 
         self.dead_properties[key] = value
 
