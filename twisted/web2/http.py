@@ -62,6 +62,9 @@ class HTTPError(Exception):
         Exception.__init__(self)
         self.response = iweb.IResponse(codeOrResponse)
 
+    def __repr__(self):
+        return "<%s %s>" % (self.__class__.__name__, self.response)
+
 class Response(object):
     implements(iweb.IResponse)
     
@@ -82,7 +85,12 @@ class Response(object):
             self.stream = IByteStream(stream)
 
     def __repr__(self):
-        return "<%s.%s code=%d, streamlen=%s>" % (self.__module__, self.__class__.__name__, self.code, self.stream.length)
+        if self.stream is None:
+            streamlen = None
+        else:
+            streamlen = self.stream.length
+
+        return "<%s.%s code=%d, streamlen=%s>" % (self.__module__, self.__class__.__name__, self.code, streamlen)
 
 class StatusResponse (Response):
     """
