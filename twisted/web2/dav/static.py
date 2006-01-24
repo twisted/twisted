@@ -40,12 +40,13 @@ import urlparse
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.defer import succeed, maybeDeferred
-from twisted.web2.static import File
 from twisted.web2 import responsecode
+from twisted.web2.static import File
 from twisted.web2.iweb import IResponse
 from twisted.web2.http import HTTPError, RedirectResponse
 from twisted.web2.http_headers import ETag
 from twisted.web2.server import StopTraversal
+from twisted.web2.dav import davxml
 from twisted.web2.dav.util import bindMethods
 from twisted.web2.dav.props import WebDAVPropertyStore as LivePropertyStore
 
@@ -241,15 +242,15 @@ class DAVFile (File):
 
     def contentType(self):
         # Allow dead property to override
-        if (dav_namespace, "getcontenttype") in self.dead_properties:
-            return self.dead_properties[(dav_namespace, "getcontenttype")]
+        if (davxml.dav_namespace, "getcontenttype") in self.dead_properties:
+            return self.dead_properties[(davxml.dav_namespace, "getcontenttype")]
         else:
             return super(DAVFile, self).contentType()
 
     def displayName(self):
         # Allow dead property to override
-        if (dav_namespace, "displayname") in self.dead_properties:
-            return self.dead_properties[(dav_namespace, "displayname")]
+        if (davxml.dav_namespace, "displayname") in self.dead_properties:
+            return self.dead_properties[(davxml.dav_namespace, "displayname")]
         else:
             return super(DAVFile, self).displayName()
 
