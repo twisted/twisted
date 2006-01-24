@@ -44,6 +44,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
     Keys are the names of the associated properties, values are
     davxml.WebDAVElement instances.
     """
+
     live_properties = (
         (dav_namespace, "resourcetype"    ),
         (dav_namespace, "getetag"         ),
@@ -53,6 +54,11 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         (dav_namespace, "creationdate"    ),
         (dav_namespace, "displayname"     ),
         (dav_namespace, "supportedlock"   ),
+    )
+
+    overridable_live_properties = (
+        ((dav_namespace, "getcontenttype"), davxml.GETContentType),
+        ((dav_namespace, "displayname"   ), davxml.DisplayName   ),
     )
 
     def __init__(self, resource):
@@ -100,11 +106,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
     def __setitem__(self, key, value):
         assert isinstance(value, davxml.WebDAVElement)
 
-        for qname, clazz in (
-            # These live properties may be overriden by dead properties
-            ((dav_namespace, "getcontenttype"), davxml.GETContentType),
-            ((dav_namespace, "displayname"   ), davxml.DisplayName   ),
-        ):
+        for qname, clazz in self.overridable_live_properties:
             if key == qname:
                 if not isinstance(value, clazz):
                     raise ValueError("Invalid value for %s property: %r" % (key, value))
