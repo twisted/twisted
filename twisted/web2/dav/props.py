@@ -71,8 +71,8 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         if namespace == dav_namespace:
             if name == "resourcetype":
                 # Allow live property to be overriden by dead property
-                if (dav_namespace, "resourcetype") in self.dead_properties:
-                    return self.dead_properties[(dav_namespace, "resourcetype")]
+                if key in self.dead_properties:
+                    return self.dead_properties[key]
                 if self.resource.isCollection():
                     return davxml.ResourceType.collection
                 return davxml.ResourceType.empty
