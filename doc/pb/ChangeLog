@@ -1,4 +1,33 @@
+2006-01-25  Brian Warner  <warner@lothar.com>
+
+	* copyable.py: refactor ICopyable and IRemoteCopy to make it
+	possible to register adapters for third-party classes.
+	(RemoteCopy): allow RemoteCopy to auto-register with the
+	fully-qualified classname. This is only useful if you inherit from
+	both pb.Copyable and pb.RemoteCopy at the same time, otherwise the
+	sender and receiver will be using different names so they won't
+	match up.
+
+	* broker.py (PBRootUnslicer.open): now that registerRemoteCopy is
+	done purely in terms of Unslicers, remove all the special-case code
+	that handled IRemoteCopy
+	(PBRootSlicer.slicerForObject): since zope.interface won't do
+	transitive adaptation, manually handle the
+	ThirdPartyClass -> ICopyable -> ISlicer case
+
+	* test/test_copyable.py: clean up, improve comments
+	(MyRemoteCopy3Unslicer): update to match new RemoteCopyUnslicer
+	behavior. This needs to be documented and made easier. Also switch
+	from pb.registerRemoteCopy to registerRemoteCopyUnslicerFactory,
+	which is a mouthful.
+	(Registration): split this out, update to match new debug tables
+	in copyable.py
+	(Adaptation): test ICopyable adapters
+
 2006-01-23  Brian Warner  <warner@lothar.com>
+
+	* common.py: remove missing test_gift from the test-case-name tag,
+	not sure how that got in there
 
 	* test/test_copyable.py: split Copyable tests out of test_pb.py
 	* test/common.py: factor out some more common test utility pieces
