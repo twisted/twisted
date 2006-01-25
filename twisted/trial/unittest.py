@@ -25,6 +25,13 @@ class SkipTest(Exception):
     entire TestCase.
     """
 
+class TodoTest(Exception):
+    """
+    Raise this (with a reason) to denote an expected failure in the current
+    test. You may also set method.todo to a reason string to denote a reason, or
+    set class.todo to do so for the entire TestCase.
+    """
+
 
 class FailTest(AssertionError):
     """Raised to indicate the current test has failed to pass."""
@@ -57,6 +64,8 @@ def makeTodo(value):
         except TypeError:
             errors = [errors]
         return Todo(reason=reason, errors=errors)
+    if isinstance(value, failure.Failure):
+        return Todo(reason=str(value))
 
 
 class _Assertions(pyunit.TestCase, object):
@@ -337,6 +346,9 @@ class TestCase(_Assertions):
         if error.check(SkipTest):
             result.addSkip(self, self._getReason(error))
             self.__class__._instancesRun.remove(self)
+        elif error.check(TodoTest):
+            result.addExpectedFailure(self, error, makeTodo(error))
+            self.__class__._instancesRun.remove(self)
         elif error.check(KeyboardInterrupt):
             result.stop()
         else:
@@ -355,6 +367,8 @@ class TestCase(_Assertions):
     def _ebDeferSetUp(self, failure, result):
         if failure.check(SkipTest):
             result.addSkip(self, self._getReason(failure))
+        elif failure.check(TodoTest):
+            result.addExpectedFailure(self, failure, makeTodo(failure))
         else:
             result.addError(self, failure)
             result.upDownError('setUp', failure, warn=False, printStatus=False)
@@ -389,6 +403,8 @@ class TestCase(_Assertions):
             result.stop()
         elif f.check(SkipTest):
             result.addSkip(self, self._getReason(f))
+        elif f.check(TodoTest):
+            result.addExpectedFailure(self, f, makeTodo(f))
         else:
             result.addError(self, f)
 
@@ -467,8 +483,9 @@ class TestCase(_Assertions):
         if len(f.value.args) > 0:
             reason = f.value.args[0]
         else:
-            warnings.warn(("Do not raise unittest.SkipTest with no "
-                           "arguments! Give a reason for skipping tests!"),
+            warnings.warn(("Do not raise unittest.SkipTest or "
+                           "unittest.TodoTest with no arguments! Give a reason "
+                           "for skipping tests!"),
                           stacklevel=2)
             reason = f
         return reason
