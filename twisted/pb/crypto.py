@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pb.test.test_crypto -*-
 
 available = False # hack to deal with half-broken imports in python <2.4
 

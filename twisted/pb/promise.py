@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pb.test.test_promise -*-
 
 from twisted.python import util, failure
 from twisted.internet import defer

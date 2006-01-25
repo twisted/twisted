@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.pb.test.test_sturdyref -*-
 
 # this module is responsible for sending and receiving OnlyReferenceable and
 # Referenceable (callable) objects. All details of actually invoking methods

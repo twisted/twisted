@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pb.test.test_negotiate -*-
 
 from twisted.python import log
 from twisted.python.failure import Failure
