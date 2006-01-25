@@ -293,7 +293,7 @@ class IUnslicer(Interface):
         object you were just given. To absorb the error and keep going with
         your sequence, return None."""
 
-    def receiveClose(self):
+    def receiveClose():
         """Called when the Close token is received. Returns a tuple of
         (object/referenceable-deferred, complete-deferred), or an
         BananaFailure if something went wrong. There are four potential
@@ -334,7 +334,7 @@ class IUnslicer(Interface):
         If necessary, unbanana.setObject should be called, then the Deferred
         created in start() should be fired with the new object."""
 
-    def finish(self):
+    def finish():
         """Called when the unslicer is popped off the stack. This is called
         even if the pop is because of an exception. The unslicer should
         perform cleanup, including firing the Deferred with an
@@ -344,12 +344,12 @@ class IUnslicer(Interface):
         object be returned from finish() instead of receiveClose?
         """
 
-    def describe(self):
+    def describe():
         """Return a short string describing where in the object tree this
         unslicer is sitting, relative to its parent. These strings are
         obtained from every unslicer in the stack, and joined to describe
         where any problems occurred."""
 
-    def where(self):
+    def where():
         """This returns a string that describes the location of this
         unslicer, starting at the root of the object tree."""

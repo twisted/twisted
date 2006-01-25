@@ -19,10 +19,10 @@ class ICopyable(Interface):
     """I represent an object which is passed-by-value across PB connections.
     """
 
-    def getTypeToCopy(self):
+    def getTypeToCopy():
         """Return a string which names the class. This string must match
         the one that gets registered at the receiving end."""
-    def getStateToCopy(self):
+    def getStateToCopy():
         """Return a state dictionary (with plain-string keys) which will be
         serialized and sent to the remote end. This state object will be
         given to the receiving object's setCopyableState method."""
@@ -195,7 +195,7 @@ class IRemoteCopy(Interface):
     any arguments.
     """
 
-    def setCopyableState(self, statedict):
+    def setCopyableState(statedict):
         """I accept an attribute dictionary name/value pairs and use it to
         set my internal state.
 

@@ -18,7 +18,7 @@ class IResource(Interface):
     mechanism for mapping URLs to content.
     """
 
-    def locateChild(self, req, segments):
+    def locateChild(req, segments):
         """Locate another object which can be adapted to IResource.
 
         @return: A 2-tuple of (resource, remaining-path-segments),
@@ -35,7 +35,7 @@ class IResource(Interface):
                  handle.
         """
 
-    def renderHTTP(self, req):
+    def renderHTTP(req):
         """Return an IResponse or a deferred which will fire an
         IResponse. This response will be written to the web browser
         which initiated the request.

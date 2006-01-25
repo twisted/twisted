@@ -8,7 +8,7 @@ class IConchUser(Interface):
     @ivar conn: The SSHConnection object for this user.
     """
 
-    def lookupChannel(self, channelType, windowSize, maxPacket, data):
+    def lookupChannel(channelType, windowSize, maxPacket, data):
         """
         The other side requested a channel of some sort.
         channelType is the type of channel being requested,
@@ -28,7 +28,7 @@ class IConchUser(Interface):
         @rtype:             subclass of C{SSHChannel}/C{tuple}
         """
 
-    def lookupSubsystem(self, subsystem, data):
+    def lookupSubsystem(subsystem, data):
         """
         The other side requested a subsystem.
         subsystem is the name of the subsystem being requested.
@@ -37,7 +37,7 @@ class IConchUser(Interface):
         We return a Protocol.
         """
 
-    def gotGlobalRequest(self, requestType, data):
+    def gotGlobalRequest(requestType, data):
         """
         A global request was sent from the other side.
         
@@ -49,7 +49,7 @@ class IConchUser(Interface):
 
 class ISession(Interface):
 
-    def getPty(self, term, windowSize, modes):
+    def getPty(term, windowSize, modes):
         """
         Get a psuedo-terminal for use by a shell or command.
 
@@ -57,31 +57,31 @@ class ISession(Interface):
         fails, raise an exception.
         """
 
-    def openShell(self, proto):
+    def openShell(proto):
         """
         Open a shell and connect it to proto.
 
         proto should be a ProcessProtocol instance.
         """
 
-    def execCommand(self, proto, command):
+    def execCommand(proto, command):
         """
         Execute a command.
 
         proto should be a ProcessProtocol instance.
         """
 
-    def windowChanged(self, newWindowSize):
+    def windowChanged(newWindowSize):
         """
         Called when the size of the remote screen has changed.
         """
 
-    def eofReceived(self):
+    def eofReceived():
         """
         Called when the other side has indicated no more data will be sent.
         """
         
-    def closed(self):
+    def closed():
         """
         Called when the session is closed.
         """
@@ -95,7 +95,7 @@ class ISFTPServer(Interface):
     that the user has permission for their actions.
     """
 
-    def gotVersion(self, otherVersion, extData):
+    def gotVersion(otherVersion, extData):
         """
         Called when the client sends their version info.
 
@@ -110,7 +110,7 @@ class ISFTPServer(Interface):
         """
         return {}
 
-    def openFile(self, filename, flags, attrs):
+    def openFile(filename, flags, attrs):
         """
         Called when the clients asks to open a file.
 
@@ -139,7 +139,7 @@ class ISFTPServer(Interface):
         with the object.
         """
 
-    def removeFile(self, filename):
+    def removeFile(filename):
         """
         Remove the given file.
 
@@ -149,7 +149,7 @@ class ISFTPServer(Interface):
         called back when it succeeds.
         """
 
-    def renameFile(self, oldpath, newpath):
+    def renameFile(oldpath, newpath):
         """
         Rename the given file.
 
@@ -160,7 +160,7 @@ class ISFTPServer(Interface):
         called back when it succeeds.
         """
 
-    def makeDirectory(self, path, attrs):
+    def makeDirectory(path, attrs):
         """
         Make a directory.
 
@@ -172,7 +172,7 @@ class ISFTPServer(Interface):
         is called back when it is created.
         """
 
-    def removeDirectory(self, path):
+    def removeDirectory(path):
         """
         Remove a directory (non-recursively)
 
@@ -185,7 +185,7 @@ class ISFTPServer(Interface):
         is called back when it is removed.
         """
 
-    def openDirectory(self, path):
+    def openDirectory(path):
         """
         Open a directory for scanning.
 
@@ -216,7 +216,7 @@ class ISFTPServer(Interface):
         attrs is a dictionary in the format of the attrs argument to openFile.
         """
 
-    def getAttrs(self, path, followLinks):
+    def getAttrs(path, followLinks):
         """
         Return the attributes for the given path.
 
@@ -229,7 +229,7 @@ class ISFTPServer(Interface):
         argument to openFile or a Deferred that is called back with same.
         """
 
-    def setAttrs(self, path, attrs):
+    def setAttrs(path, attrs):
         """
         Set the attributes for the path.
 
@@ -241,7 +241,7 @@ class ISFTPServer(Interface):
         called back when they are.
         """
 
-    def readLink(self, path):
+    def readLink(path):
         """
         Find the root of a set of symbolic links.
 
@@ -251,7 +251,7 @@ class ISFTPServer(Interface):
         returns the same.
         """
 
-    def makeLink(self, linkPath, targetPath):
+    def makeLink(linkPath, targetPath):
         """
         Create a symbolic link.
 
@@ -262,7 +262,7 @@ class ISFTPServer(Interface):
         returns the same.
         """
 
-    def realPath(self, path):
+    def realPath(path):
         """
         Convert any path to an absolute path.
 
@@ -272,7 +272,7 @@ class ISFTPServer(Interface):
         that returns the same.
         """
 
-    def extendedRequest(self, extendedName, extendedData):
+    def extendedRequest(extendedName, extendedData):
         """
         This is the extension mechanism for SFTP.  The other side can send us
         arbitrary requests.
@@ -294,7 +294,7 @@ class ISFTPFile(Interface):
     interface should be returned from openFile().
     """
 
-    def close(self):
+    def close():
         """
         Close the file.
 
@@ -302,7 +302,7 @@ class ISFTPFile(Interface):
         Deferred that is called back when the close succeeds.
         """
 
-    def readChunk(self, offset, length):
+    def readChunk(offset, length):
         """
         Read from the file.
 
@@ -317,7 +317,7 @@ class ISFTPFile(Interface):
         called back with same.
         """
 
-    def writeChunk(self, offset, data):
+    def writeChunk(offset, data):
         """
         Write to the file.
 
@@ -328,7 +328,7 @@ class ISFTPFile(Interface):
         called when it completes.
         """
 
-    def getAttrs(self):
+    def getAttrs():
         """
         Return the attributes for the file.
 
@@ -336,7 +336,7 @@ class ISFTPFile(Interface):
         argument to openFile or a Deferred that is called back with same.
         """
 
-    def setAttrs(self, attrs):
+    def setAttrs(attrs):
         """
         Set the attributes for the file.
 
