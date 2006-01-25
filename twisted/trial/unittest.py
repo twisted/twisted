@@ -25,6 +25,7 @@ class SkipTest(Exception):
     entire TestCase.
     """
 
+
 class TodoTest(Exception):
     """
     Raise this (with a reason) to denote an expected failure in the current
@@ -65,7 +66,7 @@ def makeTodo(value):
             errors = [errors]
         return Todo(reason=reason, errors=errors)
     if isinstance(value, failure.Failure):
-        return Todo(reason=str(value))
+        return Todo(reason=str(value.value))
 
 
 class _Assertions(pyunit.TestCase, object):
