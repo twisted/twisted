@@ -6,6 +6,11 @@ from twisted.pb.test.common import TargetMixin, HelperTarget
 from twisted.pb import pb, copyable, tokens, schema
 from twisted.pb.tokens import Violation
 
+# MyCopyable1 is the basic pb.Copyable/pb.RemoteCopy pair. This one does not
+# use auto-registration. (well, it does, but the pb.RemoteCopy's name is
+# different, so the auto-registration is useless, so we explicitly register
+# the correct name)
+
 class MyCopyable1(pb.Copyable):
     # the getTypeToCopy name will be the fully-qualified class name, which
     # will depend upon how you first import this
@@ -13,6 +18,9 @@ class MyCopyable1(pb.Copyable):
 class MyRemoteCopy1(pb.RemoteCopy):
     pass
 pb.registerRemoteCopy(reflect.qual(MyCopyable1), MyRemoteCopy1)
+
+# MyCopyable2 overrides the various pb.Copyable/pb.RemoteCopy methods. It
+# also sets 'copytype' to auto-register with a matching name
 
 class MyCopyable2(pb.Copyable):
     def getTypeToCopy(self):
@@ -25,6 +33,7 @@ class MyRemoteCopy2(pb.RemoteCopy):
         self.c = 1
         self.d = state["b"]
 
+# MyCopyable3 uses a custom Slicer and a custom Unslicer
 
 class MyCopyable3(MyCopyable2):
     def getTypeToCopy(self):
@@ -45,8 +54,11 @@ class MyRemoteCopy3(pb.RemoteCopy):
     pass
 class MyRemoteCopy3Unslicer(copyable.RemoteCopyUnslicer):
     def __init__(self):
-        self.factory = MyRemoteCopy3
         self.schema = None
+    def factory(self, state):
+        obj = MyRemoteCopy3()
+        obj.setCopyableState(state)
+        return obj
     def receiveClose(self):
         obj,d = copyable.RemoteCopyUnslicer.receiveClose(self)
         obj.f = "yes"
@@ -56,7 +68,11 @@ class MyRemoteCopy3Unslicer(copyable.RemoteCopyUnslicer):
 # can verify that it overrides the inherited CopyableSlicer behavior. We
 # also register an Unslicer to create the results.
 components.registerAdapter(MyCopyable3Slicer, MyCopyable3, tokens.ISlicer)
-pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
+copyable.registerRemoteCopyUnslicerFactory("MyCopyable3name",
+                                           MyRemoteCopy3Unslicer)
+
+
+# MyCopyable4 uses auto-registration, and adds a stateSchema
 
 class MyCopyable4(pb.Copyable):
     pass
@@ -66,12 +82,13 @@ class MyRemoteCopy4(pb.RemoteCopy):
                                                  ('bar', str))
     pass
 
+# MyCopyable5 disables auto-registration
+
 class MyRemoteCopy5(pb.RemoteCopy):
     copytype = None # disable auto-registration
 
 
-
-class TestCopyable(TargetMixin, unittest.TestCase):
+class Copyable(TargetMixin, unittest.TestCase):
 
     def setUp(self):
         TargetMixin.setUp(self)
@@ -215,12 +232,63 @@ class TestCopyable(TargetMixin, unittest.TestCase):
         why.trap(Violation)
         self.failUnlessSubstring("token too large", str(why))
 
+class Registration(unittest.TestCase):
     def testRegistration(self):
-        copyable_factories = copyable.CopyableRegistry.values()
-        self.failUnless(MyRemoteCopy1 in copyable_factories)
-        self.failUnless(MyRemoteCopy2 in copyable_factories)
-        self.failUnlessIdentical(copyable.CopyableRegistry["MyCopyable2name"],
+        rc_classes = copyable.debug_RemoteCopyClasses
+        copyable_classes = rc_classes.values()
+        self.failUnless(MyRemoteCopy1 in copyable_classes)
+        self.failUnless(MyRemoteCopy2 in copyable_classes)
+        self.failUnlessIdentical(rc_classes["MyCopyable2name"],
                                  MyRemoteCopy2)
-        self.failIf(MyRemoteCopy5 in copyable_factories)
+        self.failIf(MyRemoteCopy5 in copyable_classes)
 
+
+##############
+# verify that ICopyable adapters are actually usable
+
+
+class TheThirdPartyClassThatIWantToCopy:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+def copy_ThirdPartyClass(orig):
+    return "TheThirdPartyClassThatIWantToCopy_name", orig.__dict__
+copyable.registerCopier(TheThirdPartyClassThatIWantToCopy,
+                        copy_ThirdPartyClass)
+
+def make_ThirdPartyClass(state):
+    # unpack the state into constructor arguments
+    a = state['a']; b = state['b']
+    # now create the object with the constructor
+    return TheThirdPartyClassThatIWantToCopy(a, b)
+copyable.registerRemoteCopyFactory("TheThirdPartyClassThatIWantToCopy_name",
+                                   make_ThirdPartyClass)
+
+class Adaptation(TargetMixin, unittest.TestCase):
+    def setUp(self):
+        TargetMixin.setUp(self)
+        self.setupBrokers()
+        if 0:
+            print
+            self.callingBroker.doLog = "TX"
+            self.targetBroker.doLog = " rx"
+    def send(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("set", obj=arg)
+        d.addCallback(self.failUnless)
+        # some of these tests require that we return a Failure object, so we
+        # have to wrap this in a tuple to survive the Deferred.
+        d.addCallback(lambda res: (target.obj,))
+        return d
+
+    def testAdaptation(self):
+        obj = TheThirdPartyClassThatIWantToCopy(45, 91)
+        d = self.send(obj)
+        d.addCallback(self._testAdaptation_1)
+        return d
+    def _testAdaptation_1(self, (res,)):
+        self.failUnless(isinstance(res, TheThirdPartyClassThatIWantToCopy))
+        self.failUnlessEqual(res.a, 45)
+        self.failUnlessEqual(res.b, 91)
 

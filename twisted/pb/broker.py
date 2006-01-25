@@ -84,20 +84,9 @@ class PBRootUnslicer(slicer.RootUnslicer):
                 except KeyError:
                     raise Violation("unknown RemoteCopy class '%s'" \
                                     % classname)
-                if tokens.IUnslicer.implementedBy(factory):
-                    child = factory()
-                    child.broker = self.broker
-                    return child
-                if copyable.IRemoteCopy.implementedBy(factory):
-                    if factory.nonCyclic:
-                        child = copyable.NonCyclicRemoteCopyUnslicer(factory)
-                    else:
-                        child = copyable.RemoteCopyUnslicer(factory)
-                    child.broker = self.broker
-                    return child
-                why = "RemoteCopy class '%s' has weird factory %s" \
-                                % (classname, factory)
-                raise Violation(why)
+                child = factory()
+                child.broker = self.broker
+                return child
             else:
                 return None # still need classname
         for reg in self.openRegistry:
@@ -130,6 +119,23 @@ class PBRootSlicer(slicer.RootSlicer):
                    }
     def registerReference(self, refid, obj):
         assert 0
+
+    def slicerForObject(self, obj):
+        # zope.interface doesn't do transitive adaptation, which is a shame
+        # because we want to let people register ICopyable adapters for
+        # third-party code, and there is an ICopyable->ISlicer adapter
+        # defined in copyable.py, but z.i won't do the transitive
+        #  ThirdPartyClass -> ICopyable -> ISlicer
+        # so instead we manually do it here
+        s = tokens.ISlicer(obj, None)
+        if s:
+            return s
+        copier = copyable.ICopyable(obj, None)
+        if copier:
+            s = tokens.ISlicer(copier)
+            return s
+        return slicer.RootSlicer.slicerForObject(self, obj)
+
 
 class RIBroker(remoteinterface.RemoteInterface):
     def getReferenceByName(name=str):
