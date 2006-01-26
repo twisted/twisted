@@ -22,6 +22,7 @@
 # DRI: Wilfredo Sanchez, wsanchez@apple.com
 ##
 
+from twisted.trial.unittest import TodoTest
 from twisted.web2.iweb import IResponse
 from twisted.web2.stream import MemoryStream
 from twisted.web2 import responsecode
@@ -38,6 +39,4 @@ class REPORT_expand(twisted.web2.dav.test.util.TestCase):
         """
         DAV:expand-property REPORT request.
         """
-        raise NotImplementedError()
-
-    test_REPORT_expand_property.skip = "test unimplemeted"
+        raise TodoTest("test unimplemeted")

@@ -22,6 +22,7 @@
 # DRI: Wilfredo Sanchez, wsanchez@apple.com
 ##
 
+from twisted.trial.unittest import TodoTest
 import twisted.web2.dav.test.util
 
 class MOVE(twisted.web2.dav.test.util.TestCase):
@@ -37,6 +38,4 @@ class MOVE(twisted.web2.dav.test.util.TestCase):
         # Try in nonexistant parent collection.
         # Check overwrite header.
         # Check that properties are being moved
-        raise NotImplementedError()
-
-    test_MOVE.skip = "test unimplemeted"
+        raise TodoTest("test unimplemeted")
