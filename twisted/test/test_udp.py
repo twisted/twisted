@@ -6,7 +6,7 @@
 from twisted.trial import unittest, util
 
 from twisted.internet import protocol, reactor, error, defer, interfaces, address
-from twisted.python import failure, components
+from twisted.python import log, failure, components
 
 
 class Mixin:
@@ -39,6 +39,7 @@ class Server(Mixin, protocol.DatagramProtocol):
         if self.packetReceived is not None:
             d, self.packetReceived = self.packetReceived, None
             d.callback(None)
+
 
 
 class Client(Mixin, protocol.ConnectedDatagramProtocol):
@@ -403,6 +404,45 @@ class UDPTestCase(unittest.TestCase):
         def stoppedListening(ign):
             self.failIf(repr(p).find(portNo) != -1)
         return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
+
+
+class ReactorShutdownInteraction(unittest.TestCase):
+
+    def testShutdownFromDatagramReceived(self):
+
+        # udp.Port's doRead calls recvfrom() in a loop, as an optimization.
+        # It is important this loop terminate under various conditions. 
+        # Previously, if datagramReceived synchronously invoked
+        # reactor.stop(), under certain reactors, the Port's socket would
+        # synchronously disappear, causing an AttributeError inside that
+        # loop.  This was mishandled, causing the loop to spin forever. 
+        # This test is primarily to ensure that the loop never spins
+        # forever.
+
+        server = Server()
+        finished = defer.Deferred()
+        p = reactor.listenUDP(0, server, interface='127.0.0.1')
+        pr = server.packetReceived = defer.Deferred()
+
+        def pktRece(ignored):
+            # Simulate reactor.stop() behavior :(
+            server.transport.connectionLost()
+            # Then delay this Deferred chain until the protocol has been
+            # disconnected, as the reactor should do in an error condition
+            # such as we are inducing.  This is very much a whitebox test.
+            reactor.callLater(0, finished.callback, None)
+        pr.addCallback(pktRece)
+
+        def flushErrors(ignored):
+            # We are breaking abstraction and calling private APIs, any
+            # number of horrible errors might occur.  As long as the reactor
+            # doesn't hang, this test is satisfied.  (There may be room for
+            # another, stricter test.)
+            log.flushErrors()
+        finished.addCallback(flushErrors)
+        server.transport.write('\0' * 64, ('127.0.0.1', server.transport.getHost().port))
+        return finished
+
 
 
 class MulticastTestCase(unittest.TestCase):

@@ -105,14 +105,13 @@ class Port(base.BasePort):
         self.protocol.makeConnection(self)
         self.startReading()
 
+
     def doRead(self):
         """Called when my socket is ready for reading."""
         read = 0
         while read < self.maxThroughput:
             try:
                 data, addr = self.socket.recvfrom(self.maxPacketSize)
-                read += len(data)
-                self.protocol.datagramReceived(data, addr)
             except socket.error, se:
                 no = se.args[0]
                 if no in (EAGAIN, EINTR, EWOULDBLOCK):
@@ -122,8 +121,10 @@ class Port(base.BasePort):
                         self.protocol.connectionRefused()
                 else:
                     raise
-            except:
-                log.deferr()
+            else:
+                read += len(data)
+                self.protocol.datagramReceived(data, addr)
+
 
     def write(self, datagram, addr=None):
         """Write a datagram.
