@@ -37,8 +37,14 @@ class ClosingFactory(protocol.ServerFactory):
 class MyProtocol(protocol.Protocol):
     made = closed = failed = 0
     data = ""
+
+    factory = None
+
     def connectionMade(self):
         self.made = 1
+        if self.factory is not None and self.factory.protocolConnectionMade is not None:
+            d, self.factory.protocolConnectionMade = self.factory.protocolConnectionMade, None
+            d.callback(None)
 
     def dataReceived(self, data):
         self.data += data
@@ -51,9 +57,12 @@ class MyServerFactory(protocol.ServerFactory):
 
     called = 0
 
+    protocolConnectionMade = None
+
     def buildProtocol(self, addr):
         self.called += 1
         p = MyProtocol()
+        p.factory = self
         self.protocol = p
         return p
 
@@ -913,9 +922,9 @@ class HalfClose2TestCase(unittest.TestCase):
 
     def setUp(self):
         self.f = f = MyServerFactory()
+        self.f.protocolConnectionMade = defer.Deferred()
         self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
-        reactor.iterate()
-        reactor.iterate()
+
         # XXX we don't test server side yet since we don't do it yet
         d = protocol.ClientCreator(reactor, MyProtocol).connectTCP(
             p.getHost().host, p.getHost().port)
@@ -924,6 +933,10 @@ class HalfClose2TestCase(unittest.TestCase):
 
     def _gotClient(self, client):
         self.client = client
+        # Now wait for the server to catch up - it doesn't matter if this
+        # Deferred has already fired and gone away, in that case we'll
+        # return None and not wait at all, which is precisely correct.
+        return self.f.protocolConnectionMade
 
     def tearDown(self):
         self.client.transport.loseConnection()
